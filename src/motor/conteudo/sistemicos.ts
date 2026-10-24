@@ -13,7 +13,8 @@ import { educacaoDaVida, paisDaVida } from '../mundo/vida';
 import { redeDeSaude } from '../sistemas/saude';
 import { cotidiano, previdencia, registroCivil } from './local';
 import { dinheiro as moeda } from '../texto';
-import { disponivel as guardado, pagar as pagarGuardado, parcelaPrice, rendaPropriaMensal } from '../sistemas/dinheiro';
+import { disponivel as guardado } from '../sistemas/dinheiro';
+import { cabeFesta as cabeFestaDe, cabeLuxo, casar as casarCom, faltaDaFesta, PRAZO_DA_FESTA } from '../sistemas/casamento';
 import type { Conteudo, Ctx } from './base';
 import type { Vida } from '../tipos';
 import { ocupacaoOuNula } from '../dados/ocupacoes';
@@ -37,9 +38,9 @@ export function carreiraNoFimDoMedio(v: Vida): { agora: string; a: string; pergu
 import * as P from './papeis';
 import { iniciarPausa, podeReduzir } from '../sistemas/pausa';
 import { dinheiro, envolvimento, estresse, fato, feliz, prox, tensao, custa, local } from './efeitos';
-import { idade, idadePessoa, lembrarCom, marcarFato, temFato } from '../nucleo';
+import { idade, idadePessoa, temFato } from '../nucleo';
 import { deslocamento } from '../sistemas/transporte';
-import { iniciarCaso, mudarEstagio, terminar } from '../sistemas/romance';
+import { estaNoivo, ficarNoivos, iniciarCaso, mudarEstagio, terminar } from '../sistemas/romance';
 import { morarJuntos } from '../sistemas/moradia';
 import { registrarNascimento } from '../sistemas/familia';
 import { fazerEnem, largarEscola, podeFazerEnem, temEscolaridade } from '../sistemas/escola';
@@ -142,7 +143,8 @@ export const SISTEMICOS: Conteudo[] = [
       },
       {
         id: 'trair', texto: c => `Arriscar algo com ${c.p.pessoa.nome}, escondido`,
-        disponivel: c => (P.parceiro(c.v).length > 0 ? true : false),
+        // REWORK 11: caso escondido só entre adultos (antes, um namoro de 17 anos abria um caso aqui).
+        disponivel: c => P.parceiro(c.v).length > 0 && c.idade >= 18 && idadePessoa(c.v, c.p.pessoa) >= 18,
         resolver: c => {
           // O caso começa escondido. Pode durar, acabar ou aparecer — o sistema de romance cuida.
           const atual = P.parceiro(c.v)[0];
@@ -197,28 +199,33 @@ export const SISTEMICOS: Conteudo[] = [
     papeis: { pessoa: P.parceiro },
     quando: c => {
       const rom = c.v.vinculos[c.p.pessoa.id].romance!;
-      return rom.estagio !== 'casamento' && c.v.t - c.v.vinculos[c.p.pessoa.id].tInicio >= 30 && rom.envolvimento >= 70 && !temFato(c.v, `noivado_${c.p.pessoa.id}`);
+      return rom.estagio !== 'casamento' && c.v.t - c.v.vinculos[c.p.pessoa.id].tInicio >= 30 && rom.envolvimento >= 70 && !estaNoivo(c.v, c.v.vinculos[c.p.pessoa.id]) && !(c.v.fatos[`pedido_adiado_${c.p.pessoa.id}`] !== undefined && c.v.t - c.v.fatos[`pedido_adiado_${c.p.pessoa.id}`] < 12);
     },
     titulo: 'O pedido',
     texto: c => `No meio de um jantar comum, ${c.p.pessoa.nome} ficou em silêncio, tirou uma caixinha do bolso e perguntou se você quer casar.`,
     opcoes: [
       { id: 'sim', texto: 'Sim', comportamento: { familia: 1 },
-        resolver: c => ({ texto: 'Sim. O resto da noite foi ligação para a família.', memoria: `Ficou noiv${c.g('o', 'a', 'e')} de ${c.p.pessoa.nome}.`, relevancia: 'marco', tom: 'bom', efeito: () => { marcarFato(c.v, `noivado_${c.p.pessoa.id}`); envolvimento(c, 'pessoa', 10); feliz(c, 10); marcoAfetivo(c.v, c.p.pessoa, c.v.vinculos[c.p.pessoa.id], 'noivado'); } }) },
+        resolver: c => ({ texto: 'Sim. O resto da noite foi ligação para a família.', memoria: `Ficou noiv${c.g('o', 'a', 'e')} de ${c.p.pessoa.nome}.`, relevancia: 'marco', tom: 'bom', efeito: () => { ficarNoivos(c.v, c.v.vinculos[c.p.pessoa.id]); envolvimento(c, 'pessoa', 10); feliz(c, 10); marcoAfetivo(c.v, c.p.pessoa, c.v.vinculos[c.p.pessoa.id], 'noivado'); } }) },
+      { id: 'pensar', texto: 'Pedir um tempo para pensar', resolver: c => ({ texto: `${c.p.pessoa.nome} disse que espera. Guardou a caixinha na gaveta, não no lixo.`, memoria: null, efeito: () => { c.v.fatos[`pedido_adiado_${c.p.pessoa.id}`] = c.v.t; envolvimento(c, 'pessoa', -5); } }) },
       { id: 'nao_agora', texto: 'Dizer que ainda não é a hora', resolver: c => ({ texto: `${c.p.pessoa.nome} guardou a caixinha. A noite acabou cedo.`, memoria: `Recusou o pedido de casamento de ${c.p.pessoa.nome}.`, tom: 'ruim', efeito: () => { envolvimento(c, 'pessoa', -18); tensao(c, 'pessoa', 20); } }) }
     ]
   },
   {
     id: 'rom_casamento', tipo: 'decisao', idade: [18, 95], tema: 'amor', prioritario: true, prioridade: 5, repetir: 0,
     papeis: { pessoa: P.parceiro },
-    quando: c => temFato(c.v, `noivado_${c.p.pessoa.id}`) && c.v.vinculos[c.p.pessoa.id].romance?.estagio !== 'casamento' && c.v.t - (c.v.fatos[`noivado_${c.p.pessoa.id}`] ?? c.v.t) >= 12,
+    // REWORK 11 · REL-16: quem está planejando o casamento (Pessoas) não é atropelado pela decisão rápida.
+    quando: c => estaNoivo(c.v, c.v.vinculos[c.p.pessoa.id]) && !c.v.vinculos[c.p.pessoa.id].romance?.noivado?.plano && c.v.t - (c.v.fatos[`noivado_${c.p.pessoa.id}`] ?? c.v.t) >= 12,
     titulo: 'Como vai ser o casamento',
     texto: c => `A data está marcada. Falta decidir o tamanho da festa — e de onde vem o dinheiro. Você tem ${c.v.financas.conta > 0 ? `${moeda(c.v.financas.conta)} na conta` : 'pouco dinheiro na conta'}${totalAplicado(c.v) > 1000 ? ` e ${moeda(totalAplicado(c.v))} aplicados` : ''}.`,
     opcoes: [
       { id: 'cartorio', texto: c => `Só ${registroCivil(c.v)} e um almoço com os mais próximos`, comportamento: { disciplina: 1 },
         resolver: c => ({ texto: cotidiano(c.v).registroCivil ? `Assinaram n${registroCivil(c.v)} de manhã. O almoço foi na casa de um parente, com churrasco.` : `Assinaram n${registroCivil(c.v)} de manhã. O almoço foi na casa de um parente.`, memoria: `Casou-se com ${c.p.pessoa.nome} n${registroCivil(c.v)}, com almoço para os mais próximos.`, relevancia: 'marco', tom: 'bom', efeito: () => casar(c, 2500) }) },
       { id: 'festa', texto: 'Festa num salão, para uns cem convidados', disponivel: c => cabeFesta(c, 28000), resolver: c => ({ texto: 'Teve DJ, bolo de três andares e tio dançando até o fim.', memoria: `Casou-se com ${c.p.pessoa.nome} numa festa para cem convidados.`, relevancia: 'marco', tom: 'bom', efeito: () => casar(c, Math.round(28000 * economiaLocal(c.v.moradia.municipioId).custo)) }) },
-      { id: 'festao', texto: 'O casamento dos sonhos, nem que seja parcelado', comportamento: { impulsividade: 1 }, disponivel: c => cabeFesta(c, 75000),
-        resolver: c => ({ texto: 'Igreja cheia, trezentos convidados, fotos lindas — e um carnê de doze vezes.', memoria: `Casou-se com ${c.p.pessoa.nome} numa festa de trezentos convidados.`, relevancia: 'marco', tom: 'bom', efeito: () => casar(c, Math.round(75000 * economiaLocal(c.v.moradia.municipioId).custo)) }) }
+      // REWORK 11 · REL-16: "parcelado" só quando falta dinheiro — e o texto diz o prazo da dívida que é criada (24 meses).
+      { id: 'festao', texto: c => (faltaDaFesta(c.v, c.p.pessoa, 75000) > 0 ? `O casamento dos sonhos, parcelado em ${PRAZO_DA_FESTA} vezes` : 'O casamento dos sonhos: trezentos convidados'), comportamento: { impulsividade: 1 }, disponivel: c => cabeFesta(c, 75000),
+        resolver: c => { const parc = faltaDaFesta(c.v, c.p.pessoa, 75000) > 0; return { texto: `Igreja cheia, trezentos convidados, fotos lindas${parc ? ` — e ${PRAZO_DA_FESTA} parcelas para pagar` : ''}.`, memoria: `Casou-se com ${c.p.pessoa.nome} numa festa de trezentos convidados.`, relevancia: 'marco', tom: 'bom', efeito: () => casar(c, Math.round(75000 * economiaLocal(c.v.moradia.municipioId).custo)) }; } },
+      { id: 'luxo', texto: 'Uma festa de três dias, num lugar escolhido a dedo', comportamento: { impulsividade: 1 }, disponivel: c => cabeLuxo(c.v, c.p.pessoa, 400000),
+        resolver: c => ({ texto: 'Três dias de festa, convidados vindos de longe, nada faltou — e nada ficou para pagar depois.', memoria: `Casou-se com ${c.p.pessoa.nome} numa festa de três dias.`, relevancia: 'marco', tom: 'bom', efeito: () => casar(c, Math.round(400000 * economiaLocal(c.v.moradia.municipioId).custo)) }) }
     ]
   },
   {
@@ -457,36 +464,11 @@ function custoParticular(c: Ctx): number {
   return (cond?.id === 'cancer' ? 45000 : 6000) * redeDeSaude(c.v).fatorParticular;
 }
 
-/** A festa cabe? O que faltar vira parcela, e a parcela precisa caber na renda do casal. */
-function cabeFesta(c: Ctx, base: number): true | string {
-  const custo = Math.round(base * economiaLocal(c.v.moradia.municipioId).custo);
-  const parte = Math.round(custo * (c.p.pessoa.renda > 0 ? 0.55 : 0.8));
-  const falta = Math.max(0, parte - guardado(c.v));
-  if (falta === 0) return true;
-  const renda = rendaPropriaMensal(c.v) + c.p.pessoa.renda;
-  return parcelaPrice(falta, 0.025, 24) <= renda * 0.25 ? true : 'Não cabe: nem juntando o que têm, a parcela da festa caberia na renda de vocês.';
-}
-
+/** A festa cabe? (`sistemas/casamento`: o que faltar vira parcela, e a parcela precisa caber na renda do casal.) */
+const cabeFesta = (c: Ctx, base: number) => cabeFestaDe(c.v, c.p.pessoa, base);
+/** A cerimônia (`sistemas/casamento.casar`): estágio, casa, quem paga, a parcela só se faltar, a lua de mel possível. */
 function casar(c: Ctx, custo: number): void {
-  const p = c.p.pessoa;
-  const vin = c.v.vinculos[p.id];
-  mudarEstagio(c.v, vin, 'casamento');
-  if (!vin.convivio.includes('casa')) morarJuntos(c.v, p);
-  const f = c.v.financas;
-  // A família e a outra pessoa ajudam com uma parte; o resto sai do guardado e, se faltar, vira parcelamento.
-  const parte = Math.round(custo * (p.renda > 0 ? 0.55 : 0.8));
-  const tem = guardado(c.v);
-  pagarGuardado(c.v, Math.min(parte, tem));
-  const falta = parte - Math.min(parte, tem);
-  if (falta > 0) {
-    const jurosMes = 0.025;
-    f.dividas.push({ id: `festa${c.v.seq++}`, tipo: 'emprestimo', saldo: falta, jurosMes, parcela: Math.round(parcelaPrice(falta, jurosMes, 24)), descricao: 'Parcelas da festa de casamento', tInicio: c.v.t, prazo: 24 });
-  }
-  feliz(c, 12);
-  lembrarCom(c.v, p.id, 'Casaram-se.', 'casamento', 3);
-  // REWORK 10 · REL-02: o casamento aproxima de verdade — sem apagar o que a relação carrega.
-  marcoAfetivo(c.v, p, vin, 'casamento');
-  for (const g of [...P.genitor(c.v), ...P.irmao(c.v)]) if (c.v.vinculos[g.id].proximidade >= 40) lembrarCom(c.v, g.id, `Esteve no seu casamento com ${p.nome}.`, 'casamento', 1);
+  casarCom(c.v, c.p.pessoa, custo);
 }
 
 function tensaoPessoa(c: Ctx, id: string, n: number): void {

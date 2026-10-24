@@ -344,9 +344,30 @@ export interface Romance {
    * REWORK 10.5 · REL-06: o acordo do casal. Ausente = exclusivo (o padrão: sair com outra pessoa é traição). 'aberto' =
    * os dois combinaram que podem (consentido — não é infidelidade; e o combinado pode ser desfeito).
    */
-  acordo?: 'aberto';
+  acordo?: 'aberto' | 'poliamor';
   /** REWORK 10.5 · REL-06: a parceria (NPC) teve alguém fora do combinado: quando começou e quando você soube. */
   infiel?: { t: number; descoberto?: number; respondido?: number };
+  /**
+   * REWORK 11 · REL-11.4: um vínculo romântico CONSENTIDO fora da parceria principal (dentro de um acordo aberto ou de
+   * poliamor). Não é segredo (≠ `secreto`) e nunca é a parceria principal (`parceiro()`): sem casa, finanças ou guarda.
+   */
+  paralelo?: true;
+  /** REWORK 11 · REL-11.3: como terminou (quando `ex`): quem terminou e se houve traição. */
+  porque?: { quem: 'jogador' | 'ela'; motivo?: 'traicao' };
+  /** REWORK 11 · REL-16: o noivado como estado (desde quando) e o casamento planejado (quando houver). */
+  noivado?: { t: number; plano?: PlanoDeCasamento };
+}
+
+/** REWORK 11 · REL-16: o casamento planejado (`sistemas/casamento`). Os custos saem dos preços locais na hora. */
+export interface PlanoDeCasamento {
+  local: 'cartorio' | 'casa' | 'salao' | 'religioso' | 'ar_livre' | 'destino';
+  cerimonia: 'civil' | 'religiosa' | 'simbolica';
+  convidados: number;
+  estilo: 'simples' | 'classico' | 'luxo';
+  luaDeMel: boolean;
+  /** Quando foi combinado, e se a outra pessoa preferia outra coisa (e disse). */
+  t: number;
+  discorda?: boolean;
 }
 
 /** Um marco da história compartilhada. Só o que importa — nunca "um ano normal". */
@@ -2870,6 +2891,14 @@ export interface ContaSocial {
   advertencias?: number;
   /** 0..100: a fama de briguento nessa rede (trollar, rebater, xingar). */
   toxicidade?: number;
+  /**
+   * REWORK 11 · SOC-11: a moderação — quantas suspensões a conta já teve, o motivo da última punição (dito ao jogador),
+   * o banimento permanente (quando; a conta fica `apagada` e a renda zera sozinha) e o recurso já usado (quando).
+   */
+  suspensoes?: number;
+  motivoPunicao?: string;
+  banida?: number;
+  recurso?: number;
   /** O que a conta já viveu, em números (as publicações antigas saem; a história fica). */
   totais?: { publicacoes: number; virais: number; receita: number; polemicas: number; maior: number };
   /** FIX pós-playtest humano: os tipos dos últimos ecos de publicação (antirrepetição; ids curtos, no máximo 3). */

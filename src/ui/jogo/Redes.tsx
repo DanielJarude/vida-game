@@ -16,7 +16,7 @@ import type { Acao } from '../../motor/acoes';
 import { idade } from '../../motor/nucleo';
 import { anoDe } from '../../motor/tempo';
 import { PLATAFORMAS, ORDEM_PLATAFORMAS } from '../../motor/dados/redes';
-import { celebridadesDoPais, conteudosPossiveis, custoDaCampanha, custoDePromover, custoDoPacote, custoDoSelo, LIMITE_DO_ANO, leituraDaConta, leituraDoBalanco, PACOTES, seguidoresConhecidos, usaPlataforma } from '../../motor/sistemas/redes';
+import { BANIMENTO_MESES, celebridadesDoPais, conteudosPossiveis, custoDaCampanha, custoDePromover, custoDoPacote, custoDoSelo, LIMITE_DO_ANO, leituraDaConta, leituraDoBalanco, PACOTES, seguidoresConhecidos, usaPlataforma, type Conteudo } from '../../motor/sistemas/redes';
 import { contaAtiva, seguidoresEmPalavras } from '../../motor/sistemas/redesBase';
 import { BotaoAcao, navegarAbas } from '../comum';
 import { disponibilidade } from '../../motor/acoes';
@@ -182,10 +182,16 @@ function NumerosDaConta({ vida, id }: { vida: Vida; id: PlataformaId }) {
     <section className="numeros-rede" aria-label={`${pl.nome}: histórico e estatísticas`} style={{ ['--cor-plataforma' as string]: pl.cor }}>
       <h3 className="numeros-rede__titulo"><Glifo id={id} tamanho={18} /> {pl.nome}: histórico e números</h3>
       <BalancoDoPublico vida={vida} conta={c} publico={pl.publico[1]} />
-      {anos.length > 1 && (
-        <ol className="numeros-rede__anos" aria-label={`${pl.publico[1]} no fim de cada ano`}>
-          {anos.map(b => <li key={b.desde}><span className="numeros-rede__ano">{anoDe(b.desde)}</span> <strong>{seguidoresEmPalavras(b.fim ?? 0)}</strong></li>)}
-        </ol>
+      {/* REWORK 11 · SOC-11.5: o histórico é o fechamento de cada ano (a legenda é visível, não só para o leitor de tela) e
+          termina no número de agora — o que entrou no ano em curso aparece como "agora", não como contradição. */}
+      {anos.length >= 1 && (
+        <div className="numeros-rede__historico">
+          <p className="nota numeros-rede__legenda">No fim de cada ano — e o número de agora:</p>
+          <ol className="numeros-rede__anos" aria-label={`${pl.publico[1]} no fim de cada ano, e agora`}>
+            {anos.map(b => <li key={b.desde}><span className="numeros-rede__ano">{anoDe(b.desde)}</span> <strong>{seguidoresEmPalavras(b.fim ?? 0)}</strong></li>)}
+            <li className="numeros-rede__ano--agora"><span className="numeros-rede__ano">agora ({anoDe(vida.t)})</span> <strong>{seguidoresEmPalavras(c.seguidores)}</strong></li>
+          </ol>
+        </div>
       )}
       {t && (
         <dl className="numeros-rede__totais">
@@ -211,12 +217,14 @@ function ResumoDasContas({ vida, abrir }: { vida: Vida; abrir: (id: PlataformaId
           const c = contaAtiva(vida, id)!;
           const ult = c.anos?.[c.anos.length - 1];
           const d = ult && ult.fim !== undefined ? ult.fim - ult.inicio : undefined;
+          const noAno = crescimentoNoAno(vida, c);
           return (
             <li key={id}>
               <button type="button" className="numeros-rede__conta" style={{ ['--cor-plataforma' as string]: PLATAFORMAS[id].cor }} onClick={() => abrir(id)}>
                 <Glifo id={id} tamanho={18} /> <span>{PLATAFORMAS[id].nome}</span>
-                <strong>{seguidoresEmPalavras(c.seguidores)}</strong>
-                {d !== undefined && d !== 0 && <span className={`numeros-rede__delta numeros-rede__delta--${d > 0 ? 'ganho' : 'perda'}`}>{d > 0 ? '+' : '−'}{seguidoresEmPalavras(Math.abs(d))} no último ano</span>}
+                <strong>{seguidoresEmPalavras(c.seguidores)}</strong> <span className="nota">hoje</span>
+                {noAno && <span className={`numeros-rede__delta numeros-rede__delta--${noAno.valor > 0 ? 'ganho' : 'perda'}`}>{noAno.texto}</span>}
+                {ult && d !== undefined && d !== 0 && <span className={`numeros-rede__delta numeros-rede__delta--${d > 0 ? 'ganho' : 'perda'}`}>{d > 0 ? '+' : '−'}{seguidoresEmPalavras(Math.abs(d))} em {anoDe(ult.desde)} (ano fechado)</span>}
               </button>
             </li>
           );
@@ -224,6 +232,19 @@ function ResumoDasContas({ vida, abrir }: { vida: Vida; abrir: (id: PlataformaId
       </ul>
     </section>
   );
+}
+
+/**
+ * REWORK 11 · SOC-11.5: quanto o público mudou no ano EM CURSO (o balanço aberto: desde o fechamento do ano anterior) —
+ * "+X desde o fim de 2055". Sem balanço aberto, ou sem mudança, nada.
+ */
+export function crescimentoNoAno(vida: Vida, c: ContaSocial): { valor: number; texto: string } | undefined {
+  const b = leituraDoBalanco(vida, c, 'aberto');
+  if (!b) return undefined;
+  const valor = c.seguidores - b.inicio;
+  if (!valor) return undefined;
+  const fechou = c.anos?.length ? anoDe(c.anos[c.anos.length - 1].desde) : undefined;
+  return { valor, texto: `${valor > 0 ? '+' : '−'}${seguidoresEmPalavras(Math.abs(valor))} ${fechou !== undefined ? `desde o fim de ${fechou}` : 'desde o começo do registro'}` };
 }
 
 /** O que cada rede conta no perfil (o motor guarda o total de publicações, os virais, o maior alcance). */
@@ -249,12 +270,14 @@ interface Notificacao { id: string; app: PlataformaId; texto: string; tom: 'bom'
 function notificacoes(vida: Vida): Notificacao[] {
   const out: Notificacao[] = [];
   for (const id of ORDEM_PLATAFORMAS) {
+    const guardada = vida.redes?.contas[id];
+    if (guardada?.banida !== undefined && guardada.apagada !== undefined && vida.t - guardada.banida <= 12) out.push({ id: `${id}:ban`, app: id, texto: `A conta foi banida${guardada.motivoPunicao ? ` (${guardada.motivoPunicao})` : ''}.`, tom: 'ruim' });
     const l = leituraDaConta(vida, id);
     if (!l) continue;
     const c = l.conta;
     const pl = PLATAFORMAS[id];
     const ult = c.publicacoes.filter(x => !x.apagada).slice(-1)[0];
-    if (l.suspensa) out.push({ id: `${id}:susp`, app: id, texto: `A conta foi suspensa depois das denúncias.`, tom: 'ruim' });
+    if (l.suspensa) out.push({ id: `${id}:susp`, app: id, texto: `A conta foi suspensa depois das denúncias${c.motivoPunicao ? ` (${c.motivoPunicao})` : ''}.`, tom: 'ruim' });
     if (ult && vida.t - ult.t <= 12) out.push({ id: `${id}:${ult.id}`, app: id, texto: `${ult.viral ? 'Viralizou: ' : ''}“${ult.texto}” — ${seguidoresEmPalavras(ult.alcance)} ${VER[id]}${ult.novos > 0 ? `, +${seguidoresEmPalavras(ult.novos)} ${ult.novos === 1 ? pl.publico[0] : pl.publico[1]}` : ''}${ult.reacao ? ` · ${ult.reacao}` : ''}.`, tom: ult.polemica ? 'ruim' : ult.viral ? 'bom' : 'neutro' });
     if (l.renda > 0) out.push({ id: `${id}:renda`, app: id, texto: `Rendendo ${dinheiroCurto(l.renda)} por mês.`, tom: 'bom' });
     if (c.pedidoVerificacao !== undefined) out.push({ id: `${id}:verif`, app: id, texto: 'O pedido de verificação está em análise — a resposta sai na virada do ano.', tom: 'neutro' });
@@ -263,8 +286,26 @@ function notificacoes(vida: Vida): Notificacao[] {
 }
 
 function TelaInicial({ vida, avisos, abrir }: { vida: Vida; avisos: Notificacao[]; abrir: (id: PlataformaId) => void }) {
+  // REWORK 11 · SOC-11: publicar começa pela plataforma (fora de um app); dentro de um app, esse passo é pulado.
+  const [publicar, setPublicar] = useState(false);
+  const ondePublicar = ORDEM_PLATAFORMAS.filter(id => { const l = leituraDaConta(vida, id); return l && !l.suspensa; });
   return (
     <div className="celular__inicio">
+      {ondePublicar.length > 0 && (
+        <div className="fluxo-post">
+          {!publicar
+            ? <button type="button" className="botao botao--principal" onClick={() => setPublicar(true)}>Publicar</button>
+            : (
+              <>
+                <h3 className="celular__secao">Publicar onde?</h3>
+                <ul className="fluxo-post__opcoes">
+                  {ondePublicar.map(id => <li key={id}><button type="button" className="botao botao--secundario fluxo-post__opcao" style={{ ['--cor-plataforma' as string]: PLATAFORMAS[id].cor }} onClick={() => abrir(id)}><span><Glifo id={id} tamanho={16} /> {PLATAFORMAS[id].nome}</span><span className="fluxo-post__dica">{seguidoresEmPalavras(contaAtiva(vida, id)!.seguidores)} {PLATAFORMAS[id].publico[1]}</span></button></li>)}
+                </ul>
+                <button type="button" className="link" onClick={() => setPublicar(false)}>Cancelar</button>
+              </>
+            )}
+        </div>
+      )}
       <h3 className="celular__secao">Notificações</h3>
       {avisos.length === 0
         ? <p className="nota">{ORDEM_PLATAFORMAS.some(p => contaAtiva(vida, p)) ? 'Nada novo neste ano.' : 'Nenhuma conta ainda. Toque num app embaixo para criar.'}</p>
@@ -294,7 +335,7 @@ export function BalancoDoPublico({ vida, conta, publico }: { vida: Vida; conta: 
   if (!b) return null;
   return (
     <section className="balanco-publico" aria-label="De onde veio o público">
-      <h4 className="plataforma-painel__sub">O público em {b.ano}</h4>
+      <h4 className="plataforma-painel__sub">O público em {b.ano} (ano fechado)</h4>
       <p className="balanco-publico__de-para"><span>{seguidoresEmPalavras(b.inicio)}</span> <span aria-hidden>→</span><span className="sr-only">para</span> <strong>{seguidoresEmPalavras(b.fim)}</strong> {publico}</p>
       <p className="nota balanco-publico__posts">{b.publicacoes === 0 ? 'Nenhuma publicação no ano.' : `${b.publicacoes} ${b.publicacoes === 1 ? 'publicação' : 'publicações'} no ano.`}</p>
       {b.linhas.length === 0
@@ -327,6 +368,8 @@ function Plataforma({ vida, agir, id, abrirPessoa }: { vida: Vida; agir: (a: Aca
   const l = leituraDaConta(vida, id);
   const estilo = { ['--cor-plataforma' as string]: pl.cor };
   if (!l) {
+    const guardada = vida.redes?.contas[id];
+    const banida = guardada?.banida !== undefined && guardada.apagada !== undefined ? guardada : undefined;
     const conhecidos = Object.values(vida.vinculos).map(x => vida.pessoas[x.pessoaId]).filter(p => p?.vivo && !p.especie && usaPlataforma(vida, p, id)).length;
     return (
       <section className="plataforma-painel" style={estilo} aria-label={pl.nome}>
@@ -334,6 +377,12 @@ function Plataforma({ vida, agir, id, abrirPessoa }: { vida: Vida; agir: (a: Aca
         <p className="plataforma-painel__como">{pl.como}</p>
         {id !== 'onlyfans' && conhecidos > 0 && <p className="nota">{conhecidos === 1 ? 'Uma pessoa da sua vida está' : `${conhecidos} pessoas da sua vida estão`} lá.</p>}
         {id === 'onlyfans' && <p className="nota">Só para maiores de idade, com documento. Paga por assinante; quem você conhece pode descobrir — o parceiro, a família, o trabalho.</p>}
+        {banida && (
+          <div className="plataforma-painel__bloco">
+            <p className="nota nota--ruim"><span aria-hidden>! </span>A {pl.nome} baniu a sua conta em {anoDe(banida.banida!)}{banida.motivoPunicao ? `, por ${banida.motivoPunicao}` : ''}, depois de {banida.suspensoes ?? 3} suspensões. Uma conta nova aqui, só a partir de {anoDe(banida.banida! + BANIMENTO_MESES)}.</p>
+            <BotaoAcao vida={vida} acao={{ tipo: 'rede', op: { oque: 'recorrer', plataforma: id } }} agir={agir} variante="secundario" mostrarChance ocultarImpossivel>Recorrer do banimento</BotaoAcao>
+          </div>
+        )}
         <BotaoAcao vida={vida} acao={{ tipo: 'rede', op: { oque: 'criar', plataforma: id } }} agir={agir} variante="principal">Criar uma conta no {pl.nome}</BotaoAcao>
       </section>
     );
@@ -364,7 +413,7 @@ function Plataforma({ vida, agir, id, abrirPessoa }: { vida: Vida; agir: (a: Aca
         {/* REWORK 7.5: o perfil no formato da rede — o banner do canal, a fileira de números do perfil, o "ao vivo". */}
         <span className="plataforma-painel__avatar"><Retrato visual={vida.eu.visual} genero={vida.eu.genero} idade={idade(vida)} semente={vida.eu.semente ?? 'eu'} tamanho={id === 'youtube' || id === 'twitch' ? 48 : 56} rotulo={`@${c.arroba}`} /></span>
         <h3 className="plataforma-painel__titulo"><Glifo id={id} tamanho={26} /> @{c.arroba}{l.verificacao && (l.verificacao.startsWith('verificada') || l.verificacao === 'selo pago' || l.verificacao === 'identidade verificada') ? <span className="selo-verificado" title={l.verificacao} aria-label={l.verificacao}>✓</span> : null}</h3>
-        <p className="plataforma-painel__numero"><strong>{seguidoresEmPalavras(c.seguidores)}</strong> {pl.publico[1]}{c.comprados ? <span className="nota"> ({seguidoresEmPalavras(l.real)} de verdade)</span> : null}</p>
+        <p className="plataforma-painel__numero"><strong>{seguidoresEmPalavras(c.seguidores)}</strong> {pl.publico[1]} <span className="nota">hoje</span>{c.comprados ? <span className="nota"> ({seguidoresEmPalavras(l.real)} de verdade)</span> : null}{(() => { const x = crescimentoNoAno(vida, c); return x ? <span className="nota plataforma-painel__no-ano"> · {x.texto}</span> : null; })()}</p>
         <p className="plataforma-painel__perfil">{perfilDaRede(id, c)}</p>
       </header>
       <dl className="plataforma-painel__dados">
@@ -373,9 +422,10 @@ function Plataforma({ vida, agir, id, abrirPessoa }: { vida: Vida; agir: (a: Aca
         <div><dt>Renda</dt><dd>{l.renda > 0 ? `${dinheiroCurto(l.renda)}/mês` : c.monetizada !== undefined ? 'monetizada (sem renda agora)' : 'não monetizada'}</dd></div>
         {l.verificacao && <div><dt>Selo</dt><dd>{l.verificacao}</dd></div>}
       </dl>
-      {l.suspensa && <p className="nota nota--ruim"><span aria-hidden>! </span>A conta está suspensa: a {pl.nome} puniu as denúncias. Até lá, nada de publicar.</p>}
+      {l.suspensa && <p className="nota nota--ruim"><span aria-hidden>! </span>A conta está suspensa até {anoDe(c.suspensaAte!)}: a {pl.nome} puniu as denúncias{c.motivoPunicao ? ` (${c.motivoPunicao})` : ''}. Até lá, nada de publicar.{(c.suspensoes ?? 0) >= 2 ? ' Mais uma suspensão e a conta é banida.' : ''}</p>}
+      {l.suspensa && <BotaoAcao vida={vida} acao={{ tipo: 'rede', op: { oque: 'recorrer', plataforma: id } }} agir={agir} variante="discreto" mostrarChance ocultarImpossivel>Recorrer da suspensão</BotaoAcao>}
       {l.toxica && !l.suspensa && <p className="nota nota--atencao">A conta ficou com fama de briguenta: menos gente quer ser marcada por você, e a próxima denúncia pesa.</p>}
-      {(c.advertencias ?? 0) > 0 && !l.suspensa && <p className="nota">Advertências: {c.advertencias} de 3.</p>}
+      {(c.advertencias ?? 0) > 0 && !l.suspensa && <p className="nota">Advertências: {c.advertencias} de 3{c.motivoPunicao ? ` — a última por ${c.motivoPunicao}` : ''}.{(c.suspensoes ?? 0) > 0 ? ` A conta já foi suspensa ${c.suspensoes === 1 ? 'uma vez' : `${c.suspensoes} vezes`}; na terceira suspensão, é banida.` : ''}</p>}
       {conhecidos.length > 0 && <p className="nota">Da sua vida, acompanham você aqui: {conhecidos.slice(0, 4).map(p => p.nome).join(', ')}{conhecidos.length > 4 ? ` e mais ${conhecidos.length - 4}` : ''}.</p>}
       </div>
 
@@ -383,15 +433,7 @@ function Plataforma({ vida, agir, id, abrirPessoa }: { vida: Vida; agir: (a: Aca
       <h4 className="plataforma-painel__sub">{pl.verbo}</h4>
       <p className="nota">{l.noAno >= LIMITE_DO_ANO ? 'O ano já teve publicação demais.' : l.noAno >= 3 ? `Já foram ${l.noAno} neste ano: cada nova alcança um pouco menos.` : 'O que a sua vida tem para mostrar agora:'}</p>
       {avisoComum && <p className="acao__aviso app-tela__aviso">{avisoComum}</p>}
-      <div className="grupo-acoes grupo-acoes--linha plataforma-painel__temas">
-        {conteudos.map(t => (
-          <div key={t.tema} className="tema-post">
-            <BotaoAcao vida={vida} acao={{ tipo: 'rede', op: { oque: 'publicar', plataforma: id, tema: t.tema, promover } }} agir={agir} variante={t.tema === 'opiniao' || t.tema === 'rebater' || t.tema === 'politica' ? 'discreto' : 'secundario'} semAviso={!!avisoComum}>{t.rotulo}</BotaoAcao>
-            {t.dica && <span className="tema-post__dica">{t.dica}</span>}
-          </div>
-        ))}
-      </div>
-      {id !== 'onlyfans' && <label className="rede__promover"><input type="checkbox" checked={promover} onChange={e => setPromover(e.target.checked)} /> Impulsionar a publicação ({dinheiroCurto(custoDePromover(vida))})</label>}
+      <FluxoPublicar key={`${id}:${l.noAno}`} vida={vida} agir={agir} id={id} conteudos={conteudos} promover={promover} setPromover={setPromover} />
       </div>
 
       <div className={painel('feed')} role="tabpanel" aria-label="Feed">
@@ -448,5 +490,61 @@ function Plataforma({ vida, agir, id, abrirPessoa }: { vida: Vida; agir: (a: Aca
       {abrirPessoa && conhecidos.length > 0 && <p className="nota">Seguir, deixar de seguir ou bloquear alguém: na ficha da pessoa, em Pessoas.</p>}
       </div>
     </section>
+  );
+}
+
+/**
+ * REWORK 11 · SOC-11 — PUBLICAR EM PASSOS (a plataforma já está escolhida: estamos dentro do app): o TIPO de conteúdo (o
+ * que a vida, a idade, o trabalho e esta rede oferecem — `conteudosPossiveis`), CONFIGURAR (impulsionar, com o preço; o
+ * risco dito) e CONFIRMAR. A ação é a de sempre (`rede · publicar`): nenhuma função antiga se perdeu.
+ */
+function FluxoPublicar({ vida, agir, id, conteudos, promover, setPromover, aoPublicar }: { vida: Vida; agir: (a: Acao) => boolean; id: PlataformaId; conteudos: Conteudo[]; promover: boolean; setPromover: (x: boolean) => void; aoPublicar?: () => void }) {
+  const [tema, setTema] = useState<TemaPublicacao | null>(null);
+  const [passo, setPasso] = useState<'tipo' | 'configurar' | 'confirmar'>('tipo');
+  const pl = PLATAFORMAS[id];
+  const escolhido = conteudos.find(t => t.tema === tema);
+  const arriscado = (t: TemaPublicacao) => t === 'opiniao' || t === 'rebater' || t === 'politica';
+  const PASSOS: { id: typeof passo; rotulo: string }[] = [{ id: 'tipo', rotulo: '1. O quê' }, { id: 'configurar', rotulo: '2. Como' }, { id: 'confirmar', rotulo: '3. Publicar' }];
+  return (
+    <div className="fluxo-post" aria-label="Publicar, passo a passo">
+      <ol className="fluxo-post__passos">{PASSOS.map(x => <li key={x.id} aria-current={passo === x.id ? 'step' : undefined}>{x.rotulo}</li>)}</ol>
+      {passo === 'tipo' && (
+        <ul className="fluxo-post__opcoes plataforma-painel__temas" aria-label="O tipo de conteúdo">
+          {conteudos.map(t => {
+            const d = disponibilidade(vida, { tipo: 'rede', op: { oque: 'publicar', plataforma: id, tema: t.tema } });
+            const pode = podeTentar(d);
+            return (
+              <li key={t.tema}>
+                <button type="button" className={`botao botao--${arriscado(t.tema) ? 'discreto' : 'secundario'} fluxo-post__opcao`} disabled={!pode} onClick={() => { setTema(t.tema); setPasso('configurar'); }}>
+                  <span><TemaDesenho tema={t.tema} tamanho={18} /> {t.rotulo}</span>
+                  {t.dica && <span className="fluxo-post__dica">{t.dica}</span>}
+                  {!pode && d.motivo && <span className="fluxo-post__dica">{d.motivo}</span>}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {passo === 'configurar' && escolhido && (
+        <div className="plataforma-painel__bloco">
+          <p><strong>{escolhido.rotulo}</strong>{escolhido.dica ? <span className="nota"> — {escolhido.dica}</span> : null}</p>
+          {id !== 'onlyfans' && <label className="rede__promover"><input type="checkbox" checked={promover} onChange={e => setPromover(e.target.checked)} /> Impulsionar a publicação ({dinheiroCurto(custoDePromover(vida))}): alcança mais gente — e chama mais atenção.</label>}
+          {arriscado(escolhido.tema) && <p className="nota nota--atencao">Pode virar briga nos comentários — e a briga pode ser denunciada (advertência, suspensão; na terceira suspensão, a conta é banida).</p>}
+          <div className="grupo-acoes grupo-acoes--linha">
+            <button type="button" className="botao botao--secundario" onClick={() => setPasso('confirmar')}>Continuar</button>
+            <button type="button" className="link" onClick={() => { setTema(null); setPasso('tipo'); }}>← Escolher outro</button>
+          </div>
+        </div>
+      )}
+      {passo === 'confirmar' && escolhido && (
+        <div className="plataforma-painel__bloco">
+          <p>No {pl.nome}: <strong>{escolhido.rotulo}</strong>{promover ? `, impulsionada (${dinheiroCurto(custoDePromover(vida))})` : ''}.</p>
+          <div className="grupo-acoes grupo-acoes--linha">
+            <BotaoAcao vida={vida} acao={{ tipo: 'rede', op: { oque: 'publicar', plataforma: id, tema: escolhido.tema, promover } }} agir={agir} variante="principal" aoAgir={() => { setTema(null); setPasso('tipo'); aoPublicar?.(); }}>{pl.verbo}</BotaoAcao>
+            <button type="button" className="link" onClick={() => setPasso('configurar')}>← Voltar</button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

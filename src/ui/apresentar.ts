@@ -122,6 +122,8 @@ export const faseDaVida = (i: number): string => capituloDaVida(i);
 
 export function rotuloDe(v: Vida, p: Pessoa, vin: Vinculo): string {
   if (vin.romance?.secreto && vin.romance.estagio !== 'ex') return 'alguém que você vê escondido';
+  // REWORK 11 · REL-11.4: o vínculo consentido fora da parceria principal (não é segredo).
+  if (vin.romance?.paralelo && vin.romance.estagio !== 'ex') return vin.romance.estagio === 'saindo' ? 'saindo juntos, dentro do combinado' : `${descreverEstagio(p.genero, vin.romance.estagio)} (poliamor)`;
   if (!vin.parentesco && v.fatos[`ex_genro_${p.id}`] !== undefined) return flex(p.genero, 'ex-genro', 'ex-nora', 'ex-genre');
   if (vin.parentesco) {
     const r = rotuloParentesco(p, vin.parentesco);

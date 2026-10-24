@@ -75,16 +75,22 @@ export const avos = (v: Vida) => parentes(v, 'avo');
 export const filhos = (v: Vida) => parentes(v, 'filho', 'enteado');
 export const pets = (v: Vida) => parentes(v, 'pet');
 
-/** Parceria romântica atual (namoro ou mais). Um caso escondido não é a parceria. */
+/**
+ * REWORK 11 · REL-11.4: o romance que fica FORA da parceria principal — o caso escondido (`secreto`) ou o vínculo
+ * consentido de um acordo aberto/poliamor (`paralelo`). Nenhum dos dois é a parceria de moradia, dinheiro e filhos.
+ */
+export const foraDaParceria = (rom: Vinculo['romance']) => !!rom && (!!rom.secreto || !!rom.paralelo);
+
+/** Parceria romântica atual (namoro ou mais). Um caso escondido (ou um vínculo paralelo consentido) não é a parceria. */
 export function parceiro(v: Vida): { p: Pessoa; vin: Vinculo } | undefined {
   return vinculosVivos(v).find(
-    x => x.vin.romance && ['namoro', 'morando_junto', 'casamento'].includes(x.vin.romance.estagio) && !x.vin.romance.secreto
+    x => x.vin.romance && ['namoro', 'morando_junto', 'casamento'].includes(x.vin.romance.estagio) && !foraDaParceria(x.vin.romance)
   );
 }
 
 /** Alguém com quem está saindo (antes do namoro). */
 export function saindoCom(v: Vida): { p: Pessoa; vin: Vinculo }[] {
-  return vinculosVivos(v).filter(x => x.vin.romance?.estagio === 'saindo' && !x.vin.romance.secreto);
+  return vinculosVivos(v).filter(x => x.vin.romance?.estagio === 'saindo' && !foraDaParceria(x.vin.romance));
 }
 
 export function amigos(v: Vida, minimo: 'amigo' | 'amigo_proximo' = 'amigo'): Pessoa[] {

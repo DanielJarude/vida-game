@@ -72,6 +72,9 @@ describe('Redes sociais: criar, postar, apagar — o clique muda a vida', () => 
     expect(screen.getByText(/^@/, { selector: '.plataforma-painel__titulo, .plataforma-painel__titulo *' })).toBeTruthy();
     const post = screen.getByRole('button', { name: 'Uma foto do dia' });
     fireEvent.click(post);
+    // REWORK 11 · SOC-11: publicar é em passos (o tipo → configurar → confirmar); a ação no fim é a mesma.
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Publicar' }));
     expect(document.querySelectorAll('.rede__publicacoes .publicacao').length).toBe(1);
     fireEvent.click(screen.getByRole('button', { name: /A conta: crescer, verificar/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Apagar a conta…' }));

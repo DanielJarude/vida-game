@@ -11,7 +11,7 @@
 import type { Conteudo, Ctx } from './base';
 import type { Pessoa, Vida } from '../tipos';
 import { envolvimento, estresse, prox, tensao, local } from './efeitos';
-import { idadePessoa, lembrarCom, vinculosVivos } from '../nucleo';
+import { idadePessoa, lembrarCom, vinculosVivos, foraDaParceria } from '../nucleo';
 import { flex } from '../texto';
 import { lacoCom, oLaco, paisDe } from '../sistemas/rede';
 import { moraComFamiliaDeOrigem } from '../sistemas/domicilio';
@@ -31,7 +31,7 @@ const dele = (p: Pessoa) => flex(p.genero, 'dele', 'dela', 'delu');
 function parceriaEnlutada(v: Vida, x: Pessoa): Pessoa | undefined {
   for (const { p, vin } of vinculosVivos(v)) {
     const rom = vin.romance;
-    if (!rom || !['namoro', 'morando_junto', 'casamento'].includes(rom.estagio) || rom.secreto) continue;
+    if (!rom || !['namoro', 'morando_junto', 'casamento'].includes(rom.estagio) || foraDaParceria(rom)) continue;
     if (lacoCom(v, p.id, x.id) === 'filho') return p;
   }
   return undefined;

@@ -9,7 +9,7 @@
  */
 
 import type { Pessoa, Vida, Vinculo } from '../tipos';
-import { idadePessoa } from '../nucleo';
+import { idadePessoa, foraDaParceria } from '../nucleo';
 
 export type Papel =
   | 'parceiro' | 'saindo' | 'caso' | 'interesse' | 'ex'
@@ -52,7 +52,7 @@ const ATIVOS = ['namoro', 'morando_junto', 'casamento'];
 export function papelDe(p: Pessoa, vin: Vinculo): Papel {
   if (p.especie) return 'pet';
   const rom = vin.romance;
-  if (rom && rom.secreto && rom.estagio !== 'ex') return 'caso';
+  if (rom && (rom.secreto || rom.paralelo) && rom.estagio !== 'ex') return 'caso';
   if (rom && ATIVOS.includes(rom.estagio)) return 'parceiro';
   if (rom?.estagio === 'saindo') return 'saindo';
   switch (vin.parentesco) {
@@ -154,7 +154,7 @@ export function vinculoReal(v: Vida, p: Pessoa, vin: Vinculo): boolean {
 export function parceriaAtual(v: Vida): { p: Pessoa; vin: Vinculo } | undefined {
   for (const vin of Object.values(v.vinculos)) {
     const p = v.pessoas[vin.pessoaId];
-    if (p?.vivo && vin.romance && ATIVOS.includes(vin.romance.estagio) && !vin.romance.secreto) return { p, vin };
+    if (p?.vivo && vin.romance && ATIVOS.includes(vin.romance.estagio) && !foraDaParceria(vin.romance)) return { p, vin };
   }
   return undefined;
 }

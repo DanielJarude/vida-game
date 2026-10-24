@@ -18,8 +18,7 @@ import { economiaLocal, paisDaCidade } from '../dados/lugares';
 import { clamp, rngDe } from '../rng';
 import type { Pessoa, Processo, Vida } from '../tipos';
 import {
-  emRecessao, escrever, filhos, idade, idadePessoa, irmaos, lembrarCom, marcarFato, novoId, pais, parceiro, temFato, vinculosVivos
-} from '../nucleo';
+  emRecessao, escrever, filhos, idade, idadePessoa, irmaos, lembrarCom, marcarFato, novoId, pais, parceiro, temFato, vinculosVivos, foraDaParceria } from '../nucleo';
 import { ancestralidadeDe, misturar, tradicaoDoFilho } from './identidade';
 import { criarPessoa, vincular, visualHerdado } from '../pessoas';
 import { geneticaDe } from './identidade';
@@ -343,18 +342,57 @@ export function fertilidadeAnual(idadeGestante: number): number {
 
 export const gestacaoEmCurso = (v: Vida) => v.processos.find(p => p.tipo === 'gestacao') as Extract<Processo, { tipo: 'gestacao' }> | undefined;
 
-/** Quem do casal gesta: o jogador ou a outra pessoa. */
+/**
+ * Quem do casal gesta: o jogador ou a outra pessoa. REWORK 11 · REL-11.2: só quando é biologicamente possível — um dos
+ * dois gesta e o outro não (antes, um casal de duas pessoas que gestam "engravidava" sozinho). A pessoa do jogo não
+ * guarda o corpo: quem é do gênero feminino gesta; do masculino, não; não binário, o jogo não presume.
+ */
 function gestanteDoCasal(v: Vida, p: Pessoa): 'eu' | 'parceiro' | null {
-  if (v.corpo.podeGestar) return 'eu';
-  if (p.genero === 'feminino') return 'parceiro';
+  const ela = p.genero === 'feminino' ? true : p.genero === 'masculino' ? false : undefined;
+  if (ela === undefined) return null;
+  if (v.corpo.podeGestar && !ela) return 'eu';
+  if (!v.corpo.podeGestar && ela) return 'parceiro';
   return null;
+}
+
+/** REWORK 11 · REL-11.2: este par pode, biologicamente, conceber (quem gesta + quem não gesta, nas idades férteis)? */
+export function podemConceber(v: Vida, p: Pessoa): boolean {
+  const quem = gestanteDoCasal(v, p);
+  if (!quem) return false;
+  return fertilidadeAnual(quem === 'eu' ? idade(v) : idadePessoa(v, p)) > 0;
+}
+
+/** A chance de uma noite (adultos): sem proteção ~5% na idade mais fértil; com preservativo, uma falha rara (~0,4%). */
+export const chanceDoEncontro = (fert: number, protegido: boolean) => (fert / 0.85) * (protegido ? 0.004 : 0.05);
+
+/**
+ * REWORK 11 · REL-11.2: a gravidez que pode vir de UM encontro (a intimidade escolhida pelo jogador, com ou sem
+ * proteção) — nunca automática: a chance é a de uma noite, pela fertilidade de quem gesta. As mesmas guardas da
+ * concepção do ano (sem gestação em curso, regime fechado, os dois adultos). Vale também para um caso escondido (antes,
+ * um caso "nunca engravidava"): o modelo é o mesmo — e uma gravidez assim é difícil de esconder.
+ */
+export function conceberPorEncontro(v: Vida, r: Rng, p: Pessoa, protegido: boolean): boolean {
+  if (gestacaoEmCurso(v) || v.justica?.prisao?.regime === 'fechado') return false;
+  if (idade(v) < 18 || idadePessoa(v, p) < 18) return false;
+  const quem = gestanteDoCasal(v, p);
+  if (!quem) return false;
+  const fert = fertilidadeAnual(quem === 'eu' ? idade(v) : idadePessoa(v, p));
+  if (fert === 0 || !r.chance(chanceDoEncontro(fert, protegido))) return false;
+  const tConcepcao = v.t - 2;
+  v.processos.push({
+    tipo: 'gestacao', id: novoId(v, 'g'), tConcepcao, tParto: tConcepcao + 9,
+    gestanteId: quem === 'eu' ? 'eu' : p.id, outroId: quem === 'eu' ? p.id : 'eu', descoberta: false, planejada: false
+  });
+  const rom = v.vinculos[p.id]?.romance;
+  if (rom?.secreto && !Object.keys(v.fatos).some(k => k.startsWith('caso_descoberto:')) && r.chance(0.6)) v.fatos[`caso_descoberto:${p.id}`] = v.t;
+  return true;
 }
 
 export function processarConcepcao(v: Vida, r: Rng): void {
   if (gestacaoEmCurso(v)) return;
   // REWORK 5: o regime fechado separa o casal (a vida não segue "normal" dentro da cela).
   if (v.justica?.prisao?.regime === 'fechado') return;
-  const par = parceiro(v) ?? vinculosVivos(v).find(x => x.vin.romance?.estagio === 'saindo' && !x.vin.romance.secreto);
+  const par = parceiro(v) ?? vinculosVivos(v).find(x => x.vin.romance?.estagio === 'saindo' && !foraDaParceria(x.vin.romance));
   if (!par || !par.vin.romance) return;
   // Sem gravidez entre adolescente e adulto, nem antes dos 16.
   const [a, b] = [idade(v), idadePessoa(v, par.p)];

@@ -75,7 +75,8 @@ import { disponibilidadePolitica, executarPolitica, type AcaoPoliticaCmd } from 
 import { abrirConflitoPendente } from './conteudo/compromissos';
 import { horarioQueImpede, noServicoInicial, propor } from './sistemas/compromissos';
 import { definirObjetivo, podeDefinirObjetivo } from './sistemas/vestibular';
-import { buscarAlguem, disponibilidadeBusca, type ContextoBusca } from './sistemas/busca';
+import { buscarAlguem, buscarAmizade, disponibilidadeAmizade, disponibilidadeBusca, type ContextoAmizade, type ContextoBusca } from './sistemas/busca';
+import { disponibilidadeCasamento, executarCasamento, type OpCasamento } from './sistemas/casamento';
 import { disponibilidadePedirAjuda, pedirAjuda, principal as principalDaOrigem, type MotivoDeAjuda } from './sistemas/origem';
 import { autonomia } from './sistemas/autonomia';
 import { comprarItem, disponibilidadeAparencia, disponibilidadeComprarItem, disponibilidadeUsarItem, mudarAparencia, usarItem, type MudancaVisual } from './sistemas/estilo';
@@ -177,7 +178,7 @@ export type Acao =
   | { tipo: 'habilitacao'; qual: 'nautica' | 'piloto' | 'multimotor' }
   /** O que o dinheiro compra além de objetos: uma viagem, um curso caro, um tempo sabático, uma doação, um presente grande. */
   /** A porta (a categoria) e a escolha de dentro dela (o destino, o curso, a pessoa e o presente): `experiencias`. */
-  | { tipo: 'experiencia'; id: TipoExperiencia; escolha?: string }
+  | { tipo: 'experiencia'; id: TipoExperiencia; escolha?: string; luaDeMel?: true }
   /** Dar nome ao que é seu: a banda ou o grupo, o negócio, uma obra (o jogo sugere; a pessoa decide). */
   | { tipo: 'renomear'; alvo: AlvoDeNome; nome: string; k?: number }
   /** Adotar um animal do abrigo da cidade. */
@@ -215,6 +216,10 @@ export type Acao =
   | { tipo: 'objetivo_estudo'; cursoId?: string }
   /** Procurar alguém (a busca ativa de um relacionamento), num contexto da vida. */
   | { tipo: 'conhecer_alguem'; contexto: ContextoBusca }
+  /** REWORK 11 · REL-11.1: procurar amizade (não romance), com ou sem parceria. */
+  | { tipo: 'fazer_amizade'; contexto: ContextoAmizade }
+  /** REWORK 11 · REL-16: o casamento com a parceria noiva — planejar (o lugar, a cerimônia, os convidados) e celebrar. */
+  | ({ tipo: 'casamento'; pessoaId: string } & OpCasamento)
   /** Pedir ajuda à família (a casa de origem), por uma necessidade concreta (`origem`). */
   | { tipo: 'pedir_ajuda_familia'; motivo: MotivoDeAjuda }
   /** Morando com a família e com renda: quanto põe nas contas de casa. */
@@ -353,6 +358,8 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'enem': return podeFazerEnem(v);
     case 'objetivo_estudo': return podeDefinirObjetivo(v, a.cursoId);
     case 'conhecer_alguem': return disponibilidadeBusca(v, a.contexto);
+    case 'fazer_amizade': return disponibilidadeAmizade(v, a.contexto);
+    case 'casamento': return disponibilidadeCasamento(v, a.pessoaId, a);
     case 'confirmar_matricula': {
       const ap = v.educacao.aprovacao;
       if (!ap || ap.tAte <= v.t) return bloqueio('incompativel', 'Não há vaga esperando confirmação.');
@@ -636,7 +643,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'trajetoria': return disponibilidadeParalela(v, a.oque, a.k);
     case 'cnh_preparar': return disponibilidadePrepararCnh(v, a.como);
     case 'habilitacao': return disponibilidadeHabilitacao(v, a.qual);
-    case 'experiencia': return disponibilidadeExperiencia(v, a.id, a.escolha);
+    case 'experiencia': return disponibilidadeExperiencia(v, a.id, a.escolha, a.luaDeMel);
     case 'renomear': return disponibilidadeRenomear(v, a.alvo, a.nome, a.k);
     case 'cnh_prova': return cnhEmProva(v) ? PERMITIDO : bloqueio('incompativel', 'A prova ainda não foi marcada.');
     case 'cnh':
@@ -962,6 +969,11 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       const out = buscarAlguem(v, r, a.contexto);
       return { resultado: out.resultado, titulo: out.titulo ?? 'Conhecer alguém', pessoaId: out.pessoaId };
     }
+    case 'fazer_amizade': {
+      const out = buscarAmizade(v, r, a.contexto);
+      return { resultado: out.resultado, titulo: out.titulo ?? 'Fazer amizades', pessoaId: out.pessoaId };
+    }
+    case 'casamento': return { resultado: executarCasamento(v, a.pessoaId, a), titulo: a.op === 'celebrar' ? 'O casamento' : 'O planejamento do casamento' };
     case 'confirmar_matricula': {
       const ap = v.educacao.aprovacao!;
       v.educacao.aprovacao = undefined;
@@ -1325,7 +1337,7 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       return ok(`${habilitacaoDaVida(v).regra.autoescolaObrigatoria ? 'Matrícula na autoescola feita' : 'Inscrição para a prova feita, com algumas aulas de direção'}. A prova teórica é em alguns meses (as perguntas, você responde); estudar o manual e fazer aulas extras ajudam.`);
     case 'cnh_preparar': return ok(prepararCnh(v, a.como));
     case 'habilitacao': return ok(iniciarHabilitacao(v, a.qual));
-    case 'experiencia': return { resultado: viverExperiencia(v, r, a.id, a.escolha), titulo: nomeDaExperiencia(a.id) };
+    case 'experiencia': return { resultado: viverExperiencia(v, r, a.id, a.escolha, a.luaDeMel), titulo: a.luaDeMel ? 'Lua de mel' : nomeDaExperiencia(a.id) };
     case 'renomear': return ok(renomear(v, a.alvo, a.nome, a.k));
     case 'cnh_prova': {
       const d = conteudoPorId('cnh_prova');

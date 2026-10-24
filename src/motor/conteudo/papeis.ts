@@ -3,7 +3,7 @@
 import { hashMisturado } from '../rng';
 import type { Papel } from './base';
 import type { Convivio, Parentesco, Pessoa, Vida } from '../tipos';
-import { idadePessoa, vinculosVivos } from '../nucleo';
+import { idadePessoa, vinculosVivos, foraDaParceria } from '../nucleo';
 
 const deParentesco = (...tipos: Parentesco[]): Papel => v =>
   vinculosVivos(v).filter(x => x.vin.parentesco && tipos.includes(x.vin.parentesco)).map(x => x.p);
@@ -44,16 +44,16 @@ export const genteDe = (tipo: Convivio): Papel => v =>
   vinculosVivos(v).filter(x => !x.vin.parentesco && x.vin.convivio.includes(tipo) && !x.vin.romance).map(x => x.p);
 
 export const parceiro: Papel = v =>
-  vinculosVivos(v).filter(x => x.vin.romance && ['namoro', 'morando_junto', 'casamento'].includes(x.vin.romance.estagio) && !x.vin.romance.secreto).map(x => x.p);
+  vinculosVivos(v).filter(x => x.vin.romance && ['namoro', 'morando_junto', 'casamento'].includes(x.vin.romance.estagio) && !foraDaParceria(x.vin.romance)).map(x => x.p);
 
 export const conjuge: Papel = v =>
-  vinculosVivos(v).filter(x => x.vin.romance && ['morando_junto', 'casamento'].includes(x.vin.romance.estagio) && !x.vin.romance.secreto).map(x => x.p);
+  vinculosVivos(v).filter(x => x.vin.romance && ['morando_junto', 'casamento'].includes(x.vin.romance.estagio) && !foraDaParceria(x.vin.romance)).map(x => x.p);
 
 export const namorado: Papel = v =>
-  vinculosVivos(v).filter(x => x.vin.romance?.estagio === 'namoro' && !x.vin.romance.secreto).map(x => x.p);
+  vinculosVivos(v).filter(x => x.vin.romance?.estagio === 'namoro' && !foraDaParceria(x.vin.romance)).map(x => x.p);
 
 export const saindoCom: Papel = v =>
-  vinculosVivos(v).filter(x => x.vin.romance?.estagio === 'saindo' && !x.vin.romance.secreto).map(x => x.p);
+  vinculosVivos(v).filter(x => x.vin.romance?.estagio === 'saindo' && !foraDaParceria(x.vin.romance)).map(x => x.p);
 
 /** O caso escondido (quando há). */
 export const caso: Papel = v =>

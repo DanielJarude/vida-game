@@ -356,12 +356,20 @@ describe('P1/P2 · veículos, lojas, estilo', () => {
   it('autoescola: a prova teórica é respondida pelo jogador — acertar ajuda; a preparação conta', () => {
     let v = adulto(19, { semente: 62 });
     v.financas.conta = 20000;
+    // REWORK 11: a vida desta semente mudou aos 18 (o casal de duas mulheres não engravida mais — REL-11.2), e com ela o
+    // acaso dos anos seguintes. As duas perguntas que o jogador não responde são sorteadas pela preparação (~66% cada com
+    // uma apostila: ~11% de reprovar mesmo acertando as três) — o teste fixa o acaso da prova, como antes ele vinha fixo
+    // da vida da semente.
+    v = { ...v, rng: 62 };
     v = executar(v, { tipo: 'cnh' }).vida;
     v = executar(v, { tipo: 'cnh_preparar', como: 'teoria' }).vida;
     for (let k = 0; k < 2 && !cnhEmProva(v); k++) { v = avancarAno(v).vida; if (v.momento && v.momento.situacaoId !== 'cnh_prova') v.momento = null; }
     expect(cnhEmProva(v)).toBeTruthy();
     // Responde certo as três perguntas.
     for (let k = 0; k < 3 && cnhEmProva(v); k++) {
+      // REWORK 11: uma decisão de outra coisa aberta no mesmo ano (a vida desta semente mudou: sem a gravidez impossível
+      // do casal de duas mulheres) não pode receber a resposta da prova.
+      if (v.momento && v.momento.situacaoId !== 'cnh_prova') v = transacao(v, x => { x.momento = null; }).vida;
       if (!v.momento) v = executar(v, { tipo: 'cnh_prova' }).vida;
       const q = perguntaAtual(cnhEmProva(v)!)!;
       expect(PERGUNTAS_CNH.some(x => x.id === q.id)).toBe(true);

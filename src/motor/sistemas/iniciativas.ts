@@ -25,7 +25,7 @@ import { registrarAjudaDada, responsaveis } from './origem';
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
 import type { Chamado, Pessoa, TipoChamado, Vida, Vinculo } from '../tipos';
-import { escrever, idade, idadePessoa, lembrarCom, marcarFato, parceiro, temFato, vinculosVivos } from '../nucleo';
+import { escrever, idade, idadePessoa, lembrarCom, marcarFato, parceiro, temFato, vinculosVivos, foraDaParceria } from '../nucleo';
 import { abalar } from './abalo';
 import { flex, comPreposicao } from '../texto';
 import { papelDe, vinculoReal, type Papel } from './vinculos';
@@ -326,7 +326,7 @@ function novaIniciativa(v: Vida, r: Rng): void {
   const eu = idade(v);
   const lista: Candidato[] = [];
   const par = parceiro(v);
-  const solteiro = !par && !vinculosVivos(v).some(x => x.vin.romance && !x.vin.romance.secreto && (x.vin.romance.estagio === 'saindo' || x.vin.romance.pediuTempo !== undefined));
+  const solteiro = !par && !vinculosVivos(v).some(x => x.vin.romance && !foraDaParceria(x.vin.romance) && (x.vin.romance.estagio === 'saindo' || x.vin.romance.pediuTempo !== undefined));
   for (const { p, vin } of vinculosVivos(v)) {
     if (p.especie || vin.chamado || !p.nome) continue;
     const papel = papelDe(p, vin);

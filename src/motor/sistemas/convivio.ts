@@ -37,7 +37,7 @@ import { discutir, estadoDaRelacao, romper } from './lacos';
 import { machucarNaBriga } from './lesoes';
 import { abalar } from './abalo';
 import { flex, comPreposicao } from '../texto';
-import { terminar } from './romance';
+import { estaNoivo, terminar } from './romance';
 import { abrirProcesso } from './justica';
 import { pagar, vereditoDePagar } from './dinheiro';
 import { economiaLocal } from '../dados/lugares';
@@ -614,7 +614,7 @@ export const INTERACOES_DE_CONVIVIO: Interacao[] = [
   },
   {
     id: 'marcar_casamento',
-    quando: c => humano(c) && parceria(c) && c.v.fatos[`noivado_${c.p.id}`] !== undefined && c.vin.romance?.estagio !== 'casamento',
+    quando: c => humano(c) && parceria(c) && estaNoivo(c.v, c.vin),
     disponivel: c => (c.v.t - (c.v.fatos[`noivado_${c.p.id}`] ?? c.v.t) < 4 ? bloqueio('requisito', 'Ficaram noivos agora: casamento leva uns meses para organizar.') : PERMITIDO),
     rotulo: c => `Marcar a data do casamento com ${c.p.nome}`,
     executar: c => ({ decisao: 'rom_casamento', papeis: { pessoa: c.p.id } })

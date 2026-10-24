@@ -23,14 +23,15 @@ import { clamp, rngDe } from '../rng';
 import type { Pessoa, Vida, Vinculo } from '../tipos';
 import { escrever, idadePessoa, lembrarCom, parceiro } from '../nucleo';
 import { bloqueio, PERMITIDO } from '../plausibilidade';
-import { atraiGenero, interesseInicial, mudarEstagio } from './romance';
+import { acordoConsentido, atraiGenero, interesseInicial, mudarEstagio } from './romance';
 import { compatibilidade } from './social';
 import type { CtxI, Interacao } from './interacoes';
 import { flex } from '../texto';
 import { municipio } from '../dados/lugares';
 
 const o = (p: Pessoa) => flex(p.genero, 'o', 'a', 'e');
-const aberto = (v: Vida) => parceiro(v)?.vin.romance?.acordo === 'aberto';
+/** Há um acordo que permite outra pessoa (aberto ou poliamor — REWORK 11 · REL-11.4). */
+const aberto = (v: Vida) => acordoConsentido(parceiro(v)?.vin.romance);
 
 /* ============================================================ Intimidade e compromisso (REL-09) */
 
@@ -123,7 +124,7 @@ export const INTERACOES_DE_AFETO: Interacao[] = [
   },
   {
     id: 'propor_acordo_aberto', variante: 'discreto', chance: true,
-    quando: c => c.papel === 'parceiro' && c.eu >= 18 && c.ip >= 18 && c.vin.romance?.acordo !== 'aberto',
+    quando: c => c.papel === 'parceiro' && c.eu >= 18 && c.ip >= 18 && !c.vin.romance?.acordo,
     disponivel: c => (c.vin.tensao >= 60 ? bloqueio('incompativel', 'Com a tensão desse tamanho, essa conversa viraria briga.') : { grau: 'improvavel', motivo: 'Uma conversa difícil: a resposta é dela — e pode ser não.', chance: chanceDoAcordo(c) }),
     rotulo: c => `Conversar com ${c.p.nome} sobre abrir a relação`,
     executar: (c, r) => {
@@ -142,19 +143,46 @@ export const INTERACOES_DE_AFETO: Interacao[] = [
     }
   },
   {
+    // REWORK 11 · REL-11.4: o poliamor — mais de um vínculo romântico, todos sabendo e de acordo. A parceria principal
+    // continua sendo esta (a casa, o dinheiro, os filhos); o outro vínculo é `paralelo`. A resposta é dela.
+    id: 'propor_poliamor', variante: 'discreto', chance: true,
+    quando: c => c.papel === 'parceiro' && c.eu >= 18 && c.ip >= 18 && c.vin.romance?.acordo !== 'poliamor',
+    disponivel: c => (c.vin.tensao >= 60 ? bloqueio('incompativel', 'Com a tensão desse tamanho, essa conversa viraria briga.') : { grau: 'improvavel', motivo: 'Mais do que abrir: outro vínculo de verdade, com todo mundo sabendo. A resposta é dela — e pode ser não.', chance: chancePoliamor(c) }),
+    rotulo: c => `Conversar com ${c.p.nome} sobre poliamor (outro vínculo, todos sabendo)`,
+    executar: (c, r) => {
+      const rom = c.vin.romance!;
+      if (r.chance(chancePoliamor(c))) {
+        rom.acordo = 'poliamor';
+        lembrarCom(c.v, c.p.id, 'Combinaram viver o poliamor: outros vínculos, todos sabendo.', 'romance', 2);
+        escrever(c.v, { texto: `Você e ${c.p.nome} combinaram o poliamor: um outro vínculo pode existir — à vista, com o acordo de todos.`, relevancia: 'biografia', tema: 'amor', escolha: true, pessoas: [c.p.id] });
+        return { resultado: `${c.p.nome} quis entender cada detalhe — quem sabe o quê, o que muda em casa. E topou: a casa e a vida de vocês continuam as mesmas.`, titulo: c.p.nome };
+      }
+      c.vin.tensao = clamp(c.vin.tensao + 12);
+      rom.envolvimento = clamp(rom.envolvimento - 5);
+      if (!c.vin.conflito) c.vin.conflito = { t: c.v.t, assunto: 'a proposta de poliamor', gravidade: 1, quem: 'eu' };
+      lembrarCom(c.v, c.p.id, 'Você propôs o poliamor; não foi aceito.', 'conflito', 1);
+      return { resultado: `${c.p.nome} disse que não — ${rom.acordo === 'aberto' ? 'sair com alguém é uma coisa; outro amor, outra' : 'não é o que quer para vocês'}.`, titulo: c.p.nome };
+    }
+  },
+  {
     id: 'voltar_exclusivo', variante: 'discreto',
-    quando: c => c.papel === 'parceiro' && c.vin.romance?.acordo === 'aberto',
+    quando: c => c.papel === 'parceiro' && acordoConsentido(c.vin.romance),
     rotulo: c => `Combinar com ${c.p.nome} de voltar a ser só os dois`,
     executar: c => {
       delete c.vin.romance!.acordo;
       // O que havia fora, dentro do combinado, acaba aqui (continuar seria outra coisa).
-      for (const x of Object.values(c.v.vinculos)) if (x.pessoaId !== c.p.id && x.romance?.secreto && x.romance.estagio !== 'ex') mudarEstagio(c.v, x, 'ex');
+      for (const x of Object.values(c.v.vinculos)) if (x.pessoaId !== c.p.id && (x.romance?.paralelo || x.romance?.secreto) && x.romance.estagio !== 'ex') mudarEstagio(c.v, x, 'ex');
       lembrarCom(c.v, c.p.id, 'Voltaram a ser só os dois.', 'romance', 1);
       return { resultado: `Vocês voltaram a ser só os dois. ${c.p.nome} pareceu aliviad${o(c.p)}.`, titulo: c.p.nome };
     }
   }
 ];
-export const GRUPOS_DE_AFETO = { flertar_comprometido: 'romance', propor_acordo_aberto: 'decisoes', voltar_exclusivo: 'decisoes' } as const;
+export const GRUPOS_DE_AFETO = { flertar_comprometido: 'romance', propor_acordo_aberto: 'decisoes', propor_poliamor: 'decisoes', voltar_exclusivo: 'decisoes' } as const;
+
+/** O poliamor pede mais da parceria do que abrir a relação: a chance é menor (maior se já vivem um acordo aberto). */
+function chancePoliamor(c: CtxI): number {
+  return clamp(chanceDoAcordo(c) * 0.7 + (c.vin.romance?.acordo === 'aberto' ? 0.1 : 0), 0.02, 0.5);
+}
 
 function chanceDoAcordo(c: CtxI): number {
   const t = c.p.temperamento;
@@ -190,8 +218,9 @@ export function processarAfetos(v: Vida): void {
   const longe = p.municipioId !== v.moradia.municipioId;
   const chance = clamp(0.008 + (rom.envolvimento < 45 ? 0.03 : 0) + (vin.tensao >= 45 ? 0.02 : 0) + (longe ? 0.02 : 0) - t.responsabilidade * 0.01 + Math.max(0, t.extroversao) * 0.005, 0.002, 0.08);
   if (!r.chance(chance)) return;
-  if (rom.acordo === 'aberto') {
-    escrever(v, { texto: `${p.nome} começou a sair com alguém${longe ? ` em ${municipio(p.municipioId).nome}` : ''}, como vocês combinaram. Você soube por ${flex(p.genero, 'ele', 'ela', 'elu')} mesm${o(p)}.`, relevancia: 'cotidiano', tema: 'amor', pessoas: [p.id] });
+  if (acordoConsentido(rom)) {
+    const poli = rom.acordo === 'poliamor';
+    escrever(v, { texto: `${p.nome} começou a ${poli ? 'namorar' : 'sair com'} alguém${longe ? ` em ${municipio(p.municipioId).nome}` : ''}, como vocês combinaram. Você soube por ${flex(p.genero, 'ele', 'ela', 'elu')} mesm${o(p)}${poli ? ' — e conheceu a pessoa' : ''}.`, relevancia: 'cotidiano', tema: 'amor', pessoas: [p.id] });
     return;
   }
   rom.infiel = { t: v.t };

@@ -9,7 +9,7 @@
  */
 
 import type { Vida } from '../tipos';
-import { vinculosVivos } from '../nucleo';
+import { vinculosVivos, foraDaParceria } from '../nucleo';
 import { anoDe } from '../tempo';
 import { flex, listaNatural } from '../texto';
 import { nomeLugar } from '../dados/lugares';
@@ -29,7 +29,7 @@ export function retrospectiva(v: Vida): string[] {
 
   // O amor mais longo (e como terminou).
   const romances = Object.values(v.vinculos)
-    .filter(x => x.romance && x.romance.estagio !== 'interesse' && x.romance.estagio !== 'saindo' && !x.romance.secreto && v.pessoas[x.pessoaId])
+    .filter(x => x.romance && x.romance.estagio !== 'interesse' && x.romance.estagio !== 'saindo' && !foraDaParceria(x.romance) && v.pessoas[x.pessoaId])
     // Um caso escondido não é "uma história de anos"; só conta o que chegou a namoro (ou mais).
     .filter(x => !x.historia.some(h => h.texto === 'Começaram a se ver escondido.'))
     .map(x => {

@@ -13,7 +13,7 @@ import type { Conteudo, Ctx } from './base';
 import type { Pessoa, Vida } from '../tipos';
 import * as P from './papeis';
 import { dinheiro, envolvimento, estresse, feliz, gp, prox, tensao, custa, local } from './efeitos';
-import { idade, idadePessoa, lembrarCom, vinculosVivos } from '../nucleo';
+import { idade, idadePessoa, lembrarCom, vinculosVivos, foraDaParceria } from '../nucleo';
 import { encerrarCaso, mudarEstagio, reacaoATraicao, terminar } from '../sistemas/romance';
 import { gestacaoEmCurso } from '../sistemas/familia';
 import { quemFicou } from '../sistemas/luto';
@@ -39,7 +39,7 @@ function outroGenitorNaDespedida(c: Ctx): string {
   const co = vinculosVivos(c.v).find(k => !k.p.especie && lacoCom(c.v, k.p.id, x.id) === 'filho');
   if (!co) return '';
   const rom = co.vin.romance;
-  const atual = rom && ['namoro', 'morando_junto', 'casamento'].includes(rom.estagio) && !rom.secreto;
+  const atual = rom && ['namoro', 'morando_junto', 'casamento'].includes(rom.estagio) && !foraDaParceria(rom);
   if (atual) return ` ${co.p.nome} está ao seu lado; ${flex(co.p.genero, 'ele', 'ela', 'elu')} perdeu ${flex(x.genero, 'o filho', 'a filha', 'e filhe')} também.`;
   return ` ${co.p.nome}, ${flex(co.p.genero, 'o pai', 'a mãe', 'a mãe')} ${flex(x.genero, 'dele', 'dela', 'delu')}, ${co.p.municipioId !== c.v.moradia.municipioId ? 'está na estrada' : 'já está lá'}.`;
 }

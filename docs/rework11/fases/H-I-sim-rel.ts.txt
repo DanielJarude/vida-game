@@ -1,0 +1,126 @@
+/**
+ * A6 / Fases H-I (recriada) — medidas de antes e depois. ROOT é trocado pelo caminho da árvore (base ou nova).
+ *   A  rom_casamento com 23 mi: o texto do festão, as dívidas criadas, o fato do noivado depois
+ *   B  rom_casamento com conta zero e renda que cabe: o texto, o prazo da dívida
+ *   C  disponibilidade da busca no app num acordo aberto
+ *   D  adolescente de 17 com namoro: convidar (caso escondido) e intimidade aparecem?
+ *   E  casal de duas mulheres "tentando": gestações em 5 anos (200 casais)
+ *   F  conta tóxica no X, 10 anos de opinião/política: advertências, suspensões, banimentos (40 vidas)
+ *   G  OnlyFans: renda com 1.000 assinantes (não pode mudar)
+ */
+import { executar } from 'ROOT/src/motor/acoes';
+import { avancarAno } from 'ROOT/src/motor/ano';
+import { criarVida } from 'ROOT/src/motor/criacao';
+import { transacao, parceiro } from 'ROOT/src/motor/nucleo';
+import { criarPessoa, vincular } from 'ROOT/src/motor/pessoas';
+import { criarRng } from 'ROOT/src/motor/rng';
+import { carregarMundo } from 'ROOT/src/motor/mundo/carregar';
+import { interacoesPara } from 'ROOT/src/motor/sistemas/interacoes';
+import { processarConcepcao, gestacaoEmCurso } from 'ROOT/src/motor/sistemas/familia';
+import { rendaDaConta, contaAtiva } from 'ROOT/src/motor/sistemas/redesBase';
+import type { Vida } from 'ROOT/src/motor/tipos';
+
+const em = (v: Vida, f: (x: Vida) => void) => transacao(v, x => { f(x); }).vida;
+function base(idade: number, semente: number, genero: 'feminino' | 'masculino' = 'masculino'): Vida {
+  let v = criarVida({ nome: 'Sim', sobrenome: 'Silva', genero, municipioId: 'recife-pe', semente });
+  for (let k = 0; k < idade && !v.morte; k++) { v = avancarAno(v).vida; v = em(v, x => { x.momento = null; x.caminhos.pendente = undefined; }); }
+  return em(v, x => { for (const vin of Object.values(x.vinculos)) vin.romance = undefined; });
+}
+function comPar(v: Vida, estagio: string, idade: number, genero: 'feminino' | 'masculino', renda = 0): { v: Vida; id: string } {
+  let id = '';
+  const w = em(v, x => {
+    const p = criarPessoa(x, criarRng(x.seq + 3), { idade, genero, municipioId: x.moradia.municipioId });
+    p.atracao = x.eu.genero === 'masculino' ? 'homens' : 'mulheres'; p.renda = renda;
+    const vin = vincular(x, p, { origem: 'romance', proximidade: 80, convivio: ['casa'] });
+    vin.romance = { estagio: estagio as 'namoro', tEstagio: x.t - 60, tInicio: x.t - 60, envolvimento: 90, planoFilhos: 'evitando' };
+    id = p.id;
+  });
+  return { v: w, id };
+}
+
+async function main() {
+  await carregarMundo();
+  const out: string[] = [];
+  const adulto = base(30, 9001);
+  // A
+  {
+    let { v, id } = comPar(em(adulto, x => { x.eu.atracao = 'mulheres'; x.financas.conta = 23_000_000; }), 'morando_junto', 29, 'feminino', 5000);
+    v = em(v, x => { x.fatos[`noivado_${id}`] = x.t - 13; });
+    v = executar(v, { tipo: 'pessoa', pessoaId: id, interacao: 'marcar_casamento' } as never).vida;
+    const op = v.momento?.opcoes.find(o => o.id === 'festao');
+    out.push(`A  23 mi: festão = "${op?.texto}" | bloqueio: ${op?.bloqueio}; luxo existe: ${!!v.momento?.opcoes.find(o => o.id === 'luxo')}`);
+    const r = executar(v, { tipo: 'decidir', opcaoId: 'festao' } as never);
+    out.push(`A  dívidas da festa: ${r.vida.financas.dividas.filter(d => d.id.startsWith('festa')).length}; resultado: "${(r.resultado ?? r.aviso?.texto ?? '').slice(0, 90)}"; noivado_<id> depois do casamento: ${r.vida.fatos[`noivado_${id}`] !== undefined}`);
+  }
+  // B
+  {
+    let { v, id } = comPar(em(adulto, x => { x.eu.atracao = 'mulheres'; x.financas.conta = 0; x.financas.investimentos = []; }), 'morando_junto', 29, 'feminino', 15000);
+    v = em(v, x => { x.fatos[`noivado_${id}`] = x.t - 13; });
+    v = executar(v, { tipo: 'pessoa', pessoaId: id, interacao: 'marcar_casamento' } as never).vida;
+    const op = v.momento?.opcoes.find(o => o.id === 'festao');
+    const r = executar(v, { tipo: 'decidir', opcaoId: 'festao' } as never);
+    const d = r.vida.financas.dividas.find(x => x.id.startsWith('festa'));
+    out.push(`B  conta 0: festão = "${op?.texto}"; resultado: "${(r.resultado ?? r.aviso?.texto ?? '').slice(0, 90)}"; dívida prazo: ${d?.prazo}`);
+  }
+  // C
+  {
+    const { v, id } = comPar(em(adulto, x => { x.eu.atracao = 'mulheres'; }), 'casamento', 29, 'feminino');
+    const w = em(v, x => { x.vinculos[id].romance!.acordo = 'aberto'; });
+    const { disponibilidade } = await import('ROOT/src/motor/acoes');
+    out.push(`C  busca 'app' com acordo aberto: ${JSON.stringify(disponibilidade(w, { tipo: 'conhecer_alguem', contexto: 'app' } as never))}; exclusivo: ${JSON.stringify(disponibilidade(v, { tipo: 'conhecer_alguem', contexto: 'app' } as never))}`);
+  }
+  // D
+  {
+    const teen = base(17, 9002);
+    let { v, id } = comPar(em(teen, x => { x.eu.atracao = 'mulheres'; }), 'namoro', 17, 'feminino');
+    let colega = '';
+    v = em(v, x => { const p = criarPessoa(x, criarRng(5), { idade: 17, genero: 'feminino', municipioId: x.moradia.municipioId }); p.atracao = 'homens'; vincular(x, p, { origem: 'escola', proximidade: 60, estagio: 'colega', convivio: ['escola'] }); colega = p.id; });
+    out.push(`D  17 anos com namoro: convidar para colega de 17 = ${interacoesPara(v, colega).some(x => x.id === 'convidar')}; intimidade com o namoro = ${interacoesPara(v, id).some(x => x.id === 'intimidade')}`);
+  }
+  // E
+  {
+    let gest = 0;
+    const mulher = base(25, 9003, 'feminino');
+    for (let k = 0; k < 200; k++) {
+      let { v, id } = comPar(em(mulher, x => { x.eu.atracao = 'mulheres'; }), 'casamento', 26, 'feminino');
+      v = em(v, x => { x.vinculos[id].romance!.planoFilhos = 'tentando'; });
+      for (let a = 0; a < 5; a++) { v = transacao(v, (x) => { processarConcepcao(x, criarRng(k * 31 + a)); }).vida; if (gestacaoEmCurso(v)) { gest++; break; } }
+    }
+    out.push(`E  casais de duas mulheres "tentando", 200 casais × 5 anos: ${gest} gestações (biologicamente: 0)`);
+  }
+  // F
+  {
+    let adv = 0, susp = 0, ban = 0, renda = 0;
+    for (let s = 0; s < 40; s++) {
+      let v = em(adulto, x => { x.financas.conta = 1e6; x.t += s; });
+      v = executar(v, { tipo: 'rede', op: { oque: 'criar', plataforma: 'x' } } as never).vida;
+      v = em(v, x => { const c = x.redes!.contas.x; c.toxicidade = 60; c.seguidores = 20000; c.monetizada = x.t; });
+      for (let ano = 0; ano < 10; ano++) {
+        v = em(v, x => { x.t += 12; x.anoAtual.acoes = []; if (x.redes!.contas.x.suspensaAte !== undefined) x.redes!.contas.x.suspensaAte = undefined; });
+        for (const tema of ['opiniao', 'opiniao', 'politica', 'politica']) {
+          if (!contaAtiva(v, 'x')) break;
+          const c0 = v.redes!.contas.x; const a0 = c0.advertencias ?? 0, s0 = (c0 as { suspensoes?: number }).suspensoes ?? (c0.suspensaAte !== undefined ? 1 : 0);
+          v = executar(v, { tipo: 'rede', op: { oque: 'publicar', plataforma: 'x', tema } } as never).vida;
+          const c = v.redes!.contas.x;
+          if ((c.advertencias ?? 0) > a0) adv++;
+          const s1 = (c as { suspensoes?: number }).suspensoes ?? (c.suspensaAte !== undefined ? 1 : 0);
+          if (s1 > s0) susp++;
+          v = em(v, x => { x.redes!.contas.x.toxicidade = 60; });
+        }
+      }
+      const c = v.redes!.contas.x as { banida?: number };
+      if (c.banida !== undefined) ban++;
+      renda += contaAtiva(v, 'x') ? rendaDaConta(v, v.redes!.contas.x) : 0;
+    }
+    out.push(`F  X tóxico (40 vidas × 10 anos de opinião/política): advertências por post ${adv}, suspensões ${susp}, banimentos ${ban}; renda somada no fim ${renda}`);
+  }
+  // G
+  {
+    let v = executar(em(adulto, x => { x.financas.conta = 1e6; }), { tipo: 'rede', op: { oque: 'criar', plataforma: 'onlyfans' } } as never).vida;
+    v = em(v, x => { const c = x.redes!.contas.onlyfans; c.seguidores = 1000; c.credibilidade = 70; c.engajamento = 50; c.monetizada = x.t; c.publicacoes = [0, 1, 2, 3].map(k => ({ id: `p${k}`, t: x.t - k, tema: 'exclusivo' as const, texto: 'x', alcance: 100, novos: 0 })); });
+    out.push(`G  OnlyFans, 1.000 assinantes: renda/mês ${rendaDaConta(v, v.redes!.contas.onlyfans)}`);
+  }
+  void parceiro;
+  console.log(out.join('\n'));
+}
+main();

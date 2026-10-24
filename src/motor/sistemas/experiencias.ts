@@ -45,6 +45,7 @@ import { garantirFrente, praticar } from './frentes';
 import { marcar } from './marcas';
 import { criarPessoa, vincular } from '../pessoas';
 import { novoContexto, registrarFase } from './relacoes';
+import { luaDeMelPendente, viverLuaDeMel } from './casamento';
 
 export type TipoExperiencia = 'viagem_pais' | 'viagem_exterior' | 'curso_caro' | 'sabatico' | 'bancar_projeto' | 'presente_familia';
 
@@ -98,8 +99,9 @@ export function companhiasDeViagem(v: Vida): CompanhiaDeViagem[] {
   return out;
 }
 const companhiaPadrao = (v: Vida) => (companhia(v).length ? 'casa' : 'so');
-/** Quem vai, a partir do último pedaço da escolha (`so`, `casa`, `par`, id da pessoa). */
+/** Quem vai, a partir do último pedaço da escolha (`so`, `casa`, `par`, id da pessoa; `lua`: a lua de mel, o casal). */
 function quemVai(v: Vida, quem?: string): Pessoa[] {
+  if (quem === 'lua') { const par = luaDeMelPendente(v); return par ? [par] : []; }
   const x = companhiasDeViagem(v).find(c => c.id === (quem ?? companhiaPadrao(v)));
   return x?.pessoas ?? companhia(v);
 }
@@ -377,19 +379,25 @@ export function experienciasPossiveis(v: Vida): TipoExperiencia[] {
   return EXPERIENCIAS.filter(x => d >= x.aparece && (x.id !== 'presente_familia' || presenteaveis(v).length > 0) && (x.id !== 'sabatico' || !!v.trabalho.atual)).map(x => x.id);
 }
 
-export function disponibilidadeExperiencia(v: Vida, id: TipoExperiencia, escolha?: string): Veredito {
+export function disponibilidadeExperiencia(v: Vida, id: TipoExperiencia, escolha?: string, luaDeMel?: boolean): Veredito {
   const m = EXPERIENCIAS.find(x => x.id === id);
   if (!m) return bloqueio('impossivel', 'Não existe.');
   if (idade(v) < 18) return bloqueio('requisito', 'A partir dos 18.');
   if (v.justica?.prisao) return bloqueio('impossivel', 'Não enquanto cumpre pena.');
+  // REWORK 11 · REL-16: a lua de mel é uma viagem de sempre (o mesmo catálogo e os mesmos preços) que, UMA vez, ignora o
+  // intervalo entre viagens — só para quem casou há pouco e ainda não teve a sua.
+  const lua = luaDeMel && (id === 'viagem_pais' || id === 'viagem_exterior');
+  if (luaDeMel && !lua) return bloqueio('impossivel', 'A lua de mel é uma viagem.');
+  if (lua && !luaDeMelPendente(v)) return bloqueio('incompativel', 'A lua de mel é logo depois do casamento — e uma vez só.');
   const t = v.fatos[chave(id)];
-  if (t !== undefined && v.t - t < m.intervalo) return bloqueio('incompativel', m.intervalo >= 24 ? 'Foi há pouco — a próxima fica para daqui a um tempo.' : 'Já foi este ano.');
+  if (!lua && t !== undefined && v.t - t < m.intervalo) return bloqueio('incompativel', m.intervalo >= 24 ? 'Foi há pouco — a próxima fica para daqui a um tempo.' : 'Já foi este ano.');
   if (id === 'presente_familia' && !presenteaveis(v).length) return bloqueio('impossivel', 'Não há ninguém da família por perto para presentear.');
   if (id === 'sabatico' && !v.trabalho.atual) return bloqueio('impossivel', 'Sem trabalho, não há de que tirar um tempo.');
   const viagem = id === 'viagem_pais' || id === 'viagem_exterior';
   const [destId, durId, quem] = (escolha ?? '').split(':');
   if (escolha && id !== 'sabatico' && !escolhasDaExperiencia(v, id).some(e => e.id === (viagem && quem ? `${destId}:${durId}` : escolha))) return bloqueio('impossivel', 'Essa opção não existe nesta vida.');
-  if (viagem && quem && !companhiasDeViagem(v).some(c => c.id === quem)) return bloqueio('impossivel', 'Essa pessoa não pode ir agora.');
+  if (viagem && quem && quem !== 'lua' && !companhiasDeViagem(v).some(c => c.id === quem)) return bloqueio('impossivel', 'Essa pessoa não pode ir agora.');
+  if (quem === 'lua' && !lua) return bloqueio('impossivel', 'Essa companhia é a da lua de mel.');
   return vereditoDePagar(v, custoDaExperiencia(v, id, escolha), 'Custa uns');
 }
 
@@ -412,7 +420,13 @@ export function previsaoDaViagem(v: Vida, dias: number, quem?: string): string[]
 }
 
 /** Viver a experiência escolhida. Sem escolha (saves e simulações antigas), vale a primeira opção da porta. */
-export function viverExperiencia(v: Vida, r: Rng, id: TipoExperiencia, escolha?: string): string {
+export function viverExperiencia(v: Vida, r: Rng, id: TipoExperiencia, escolha?: string, luaDeMel?: boolean): string {
+  // REWORK 11 · REL-16: a lua de mel vai a dois (o casal), seja qual for a companhia escolhida.
+  if (luaDeMel && (id === 'viagem_pais' || id === 'viagem_exterior') && luaDeMelPendente(v)) {
+    const [d, u] = (escolha ?? '').split(':');
+    escolha = `${d}:${u}:lua`;
+  }
+  const par = luaDeMel ? luaDeMelPendente(v) : undefined;
   const opcoes = escolhasDaExperiencia(v, id);
   const viagem = id === 'viagem_pais' || id === 'viagem_exterior';
   const quem = viagem ? (escolha ?? '').split(':')[2] : undefined;
@@ -445,8 +459,9 @@ export function viverExperiencia(v: Vida, r: Rng, id: TipoExperiencia, escolha?:
       if (dur.dias >= 7 && v.mente.estresseAlto) { v.mente.estresseAlto.anos = Math.max(0, v.mente.estresseAlto.anos - 1); efeitos.push('o descanso de verdade desfez parte do cansaço acumulado'); }
       if (dur.dias >= 14) for (const p of com) { const vin = v.vinculos[p.id]; if (vin && vin.tensao >= 40) { vin.tensao = clamp(vin.tensao + 8); efeitos.push(`duas semanas juntos não resolveram o que anda entre você e ${p.nome}`); } }
       if (temCoisa(v, 'camera')) { praticar(v, r, 'fotografia', 0.3 * fator, 1.2); efeitos.push('a câmera voltou com um álbum inteiro'); }
-      const texto = `Viajou para ${dest.nome} (${dur.nome})${com.length ? `, com ${nomes}` : flex(v.eu.genero, ', sozinho', ', sozinha', ', sozinhe')}.`;
-      escrever(v, { texto, relevancia: 'biografia', tema: 'lazer', tom: 'bom', escolha: true, pessoas: com.map(p => p.id) });
+      const texto = par ? `Lua de mel em ${dest.nome} (${dur.nome}) com ${par.nome}.` : `Viajou para ${dest.nome} (${dur.nome})${com.length ? `, com ${nomes}` : flex(v.eu.genero, ', sozinho', ', sozinha', ', sozinhe')}.`;
+      escrever(v, { texto, relevancia: par ? 'marco' : 'biografia', tema: par ? 'amor' : 'lazer', tom: 'bom', escolha: true, pessoas: com.map(p => p.id) });
+      if (par) viverLuaDeMel(v, par, dest.nome);
       const extra = acontecimentoDeViagem(v, r, dest.nome, com, fora, fator);
       return `${fmt(custo)} entre passagem, hospedagem e o resto. ${com.length ? 'Voltaram com fotos demais e uma história que vão repetir por anos.' : 'Voltou outra pessoa — um pouco.'}${efeitos.length ? ` ${cap(efeitos.join('; '))}.` : ''}${extra ? ` ${extra}` : ''}`;
     }
