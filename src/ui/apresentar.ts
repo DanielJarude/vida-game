@@ -12,7 +12,7 @@ import { idade, idadePessoa, moraCom, parceiro } from '../motor/nucleo';
 import { anoDe } from '../motor/tempo';
 import { flex, rotuloParentesco, listaNatural } from '../motor/texto';
 import { descreverEstagio } from '../motor/sistemas/romance';
-import { descricaoOrigem } from '../motor/sistemas/social';
+import { colegaDeEquipe, descricaoOrigem } from '../motor/sistemas/social';
 import { rotuloSerie } from '../motor/sistemas/escola';
 import { curso } from '../motor/dados/cursos';
 import { nomeOcupacaoId } from '../motor/sistemas/trabalho';
@@ -144,7 +144,8 @@ export function rotuloDe(v: Vida, p: Pessoa, vin: Vinculo): string {
   switch (vin.estagio) {
     case 'amigo_proximo': return melhorAmigoId(v) === p.id ? `${flex(p.genero, 'melhor amigo', 'melhor amiga', 'melhor amigue')}` : `${amigo} íntim${flex(p.genero, 'o', 'a', 'e')}`;
     case 'amigo': return `${amigo} ${onde}`.trim();
-    case 'colega': return `colega ${onde}`.trim();
+    // REWORK 11 · NPC-11.1: no clube, colega de equipe (e, de um clube anterior, ex-colega de equipe).
+    case 'colega': { const eq = colegaDeEquipe(v, vin); return eq ? (eq === 'atual' ? 'colega de equipe' : 'ex-colega de equipe') : `colega ${onde}`.trim(); }
     case 'afastado': return `${amigo} de outros tempos`;
     case 'ex_amigo': return `ex-${amigo}`;
     case 'rival': return `rival ${onde}`.trim();

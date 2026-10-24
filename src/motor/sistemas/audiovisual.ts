@@ -22,6 +22,7 @@
  * existe fora desta vida.
  */
 
+import { pessoaCitavel } from './citacoes';
 import type { Rng } from '../rng';
 import { clamp, rngDe } from '../rng';
 import type { AgenteArtistico, ContratoAV, ItemCurriculo, Vida } from '../tipos';
@@ -250,7 +251,7 @@ export function concluirProducao(v: Vida, c: ContratoAV, r: Rng | undefined): vo
     if (premio.venceu) somarAoNome(v, 'arte', PESO_DO_PREMIO[premio.alcance ?? 'local']);
   }
   crescerPublico(v, [1, 3, 7, 12][repercussao] * (1 + c.porte * 0.5));
-  if (c.pessoaId && v.pessoas[c.pessoaId]?.vivo) lembrarCom(v, c.pessoaId, `"${c.titulo}", juntos.`, 'trabalho', 1);
+  if (pessoaCitavel(v, c.pessoaId)) lembrarCom(v, c.pessoaId!, `"${c.titulo}", juntos.`, 'trabalho', 1);
   const efeito = repercussao >= 3 ? 'foi assunto por semanas; o seu nome apareceu nas críticas' : repercussao === 2 ? 'repercutiu; outras produções perguntaram por você' : repercussao === 1 ? 'teve público; mais uma linha forte no currículo' : 'passou sem muito barulho — mas está no currículo';
   const texto = `Terminou ${descricaoDoContrato(c)}: ${efeito}. ${contaDoContrato(c)}.`;
   escrever(v, { texto, relevancia: repercussao >= 2 || c.porte >= 2 ? 'marco' : 'biografia', tema: 'trabalho', tom: repercussao >= 1 ? 'bom' : undefined });

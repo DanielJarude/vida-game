@@ -11,7 +11,7 @@ import { idade, idadeAoMorrer, idadePessoa, moraCom, vinculosVivos } from '../mo
 import { anoDe, MESES, mesDe } from '../motor/tempo';
 import { flex, listaNatural } from '../motor/texto';
 import { municipio } from '../motor/dados/lugares';
-import { descricaoOrigem } from '../motor/sistemas/social';
+import { colegaDeEquipe, descricaoOrigem } from '../motor/sistemas/social';
 import { gestacaoEmCurso } from '../motor/sistemas/familia';
 import { circuloDe, ehDescendente, estadoCivil, filhosEmComum, importancia, papelDe, parceriaAtual, vinculoReal, type Papel } from '../motor/sistemas/vinculos';
 import { pesoDoLuto } from '../motor/sistemas/luto';
@@ -164,7 +164,7 @@ export function ondeEsta(v: Vida, p: Pessoa, vin: Vinculo): string {
   const partes: string[] = [];
   if (longe) partes.push(`Mora em ${cidade(p.municipioId)}.`);
   else if (saiu !== undefined && (ehDescendente(papelDe(p, vin)) || papelDe(p, vin) === 'irmao')) partes.push(`Saiu de casa em ${anoDe(saiu)}; mora na mesma cidade.`);
-  else if (vin.convivio.length > 0) partes.push(convivioTexto(vin));
+  else if (vin.convivio.length > 0) partes.push(colegaDeEquipe(v, vin) === 'atual' && vin.convivio.includes('trabalho') ? 'Jogam no mesmo time.' : convivioTexto(vin));
   if (semContato >= 3) partes.push(`Não se falam há ${anos(semContato)}.`);
   return partes.join(' ');
 }

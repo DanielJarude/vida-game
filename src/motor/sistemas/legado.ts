@@ -167,7 +167,8 @@ function trajetoriaDeAtuacao(v: Vida): TrajetoriaDaVida | undefined {
   // REWORK 10.5 · CAR-09: o prêmio com nome, categoria, edição e obra (quando o registro tem; os antigos, como eram).
   for (const x of itens.filter(y => y.premio)) r.push({ texto: x.premio!.categoria ? `${x.premio!.venceu ? 'Venceu' : 'Indicação'}: ${textoDoPremio({ ...x.premio!, obra: x.premio!.obra ?? x.titulo })}` : x.premio!.venceu ? `Venceu ${x.premio!.nome} por "${x.titulo}" (${anoDe(x.t)})` : `Indicação ${x.premio!.nome.replace(/^o /, 'ao ')} por "${x.titulo}" (${anoDe(x.t)})`, peso: x.premio!.venceu ? 9 : 5 });
   for (const x of itens.filter(y => y.repercussao === 3)) r.push({ texto: `"${x.titulo}" (${TIPO_AV[x.tipo]}, ${anoDe(x.t)}), ${x.papel}: o trabalho marcou`, peso: 6 + (/protagonista/.test(x.papel) ? 1 : 0) });
-  const pessoas = [...new Set(itens.map(x => x.pessoaId).filter((id): id is string => !!id && !!v.pessoas[id]))].slice(0, 6).map(id => `${v.pessoas[id].nome}${v.pessoas[id].ocupacao ? ` (${v.pessoas[id].ocupacao})` : ''}`);
+  // REWORK 11 · NPC-11.2: quem já morreu aparece como memória (com o ano), não como alguém de agora.
+  const pessoas = [...new Set(itens.map(x => x.pessoaId).filter((id): id is string => !!id && !!v.pessoas[id]))].slice(0, 6).map(id => { const p = v.pessoas[id]; return `${p.nome}${p.ocupacao ? ` (${p.ocupacao})` : ''}${p.vivo ? '' : ` — morreu${p.tMorte !== undefined ? ` em ${anoDe(p.tMorte)}` : ''}`}`; });
   const partes = [tv && `${tv} na TV e no streaming`, cinema && `${cinema} no cinema`, palco && `${palco} no teatro`, conta(['publicidade']) && `${conta(['publicidade'])} em publicidade`].filter(Boolean) as string[];
   return {
     id: 'atuacao', area: 'atuacao', titulo: 'Atuação', periodo: periodo(de, ate, ativa), de, ate, ativa,
