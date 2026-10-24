@@ -27,7 +27,7 @@ import type { Rng } from './rng';
 import type { EstiloDeVida, Imovel, Pessoa, Produto, Retorno, TipoMovimento, Veiculo, Vida } from './tipos';
 import { escrever, filhos, idade, idadePessoa, lembrarCom, marcarFato, parceiro, temFato, transacao, vinculosVivos } from './nucleo';
 import { bloqueio, podeTentar, PERMITIDO, type Veredito } from './plausibilidade';
-import { abrirDecisao, conteudoPorId, liberarOpcaoPaga, preparar, resolverDecisao } from './conteudo/motor';
+import { abrirDecisao, abrirProximaDaFila, conteudoPorId, liberarOpcaoPaga, preparar, resolverDecisao } from './conteudo/motor';
 import { modeloRotina, nivelModelo, podeComecarRotina } from './sistemas/rotinas';
 import { fazerEnem, largarEscola, opcoesDeCurso, podeFazerEnem, tentarIngresso, voltarAEstudar, type OpcaoCurso, novaMatricula, fecharNoHistorico, nomeDaMatricula } from './sistemas/escola';
 import { anoDe } from './tempo';
@@ -786,6 +786,9 @@ export function executar(vida: Vida, a: Acao): Retorno {
     pessoaId = out.pessoaId;
     // Um conflito de trajetórias criado pela ação vira pergunta na hora (nunca fica resolvido em silêncio).
     if (v.caminhos.pendente && !v.momento) abrirConflitoPendente(v, r);
+    // REWORK 11.5 · EVT-01: a decisão do ano que esperava a vez abre quando nenhuma outra está aberta (nunca se perde
+    // porque uma ação fechou a anterior por outro caminho).
+    if (!v.momento) abrirProximaDaFila(v);
     conferir(v, ...linhaDoExtrato(a));
     // REWORK 9: a agenda guarda só escolhas de coisas que existem (a atividade largada leva o lugar dela junto).
     limparAgenda(v);

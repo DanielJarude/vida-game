@@ -1432,6 +1432,21 @@ export interface Momento {
   segue?: string;
 }
 
+/** REWORK 11.5 · EVT-01: uma decisão do ano esperando a vez (o conteúdo e as pessoas — o texto é feito ao abrir). */
+export interface DecisaoNaFila {
+  id: string;
+  /** O ano (instante) para o qual ela vale. Uma adiada vale para o ano seguinte, uma vez. */
+  t: number;
+  papeis: Record<string, string>;
+  prioridade: number;
+  /** Disparada pelo estado e de peso (não espera: é deste ano). */
+  urgente?: boolean;
+  /** Já foi adiada uma vez (de um ano cheio para o seguinte). */
+  adiada?: boolean;
+  /** A entrada da biografia de que ela é consequência (a escolha que a trouxe). */
+  segue?: string;
+}
+
 /* ------------------------------------------------------------------- Rotina */
 
 /** Algo que a pessoa faz regularmente, até decidir parar. */
@@ -2455,6 +2470,84 @@ export interface Envolvimento {
   anosSecos?: number;
   /** REWORK 11 · SUB-03: contatos que traíram (falaram o seu nome para quem não devia). */
   traicoes?: number;
+  /** REWORK 11.5 · SUB-11: as especializações (cada uma com a sua prática, o seu nome e o seu risco). */
+  especializacoes?: Partial<Record<Ramo, Especializacao>>;
+  /** REWORK 11.5 · SUB-12: o que cada contato do caminho é, quer e lembra (por id de pessoa). */
+  fichas?: Record<string, FichaDeContato>;
+  /** REWORK 11.5 · SUB-13: as organizações do caminho com que se tem relação (e o que elas lembram). */
+  organizacoes?: RelacaoComOrganizacao[];
+  /** REWORK 11.5 · SUB-14: o que aconteceu no caminho, ano a ano (decisões, perdas, apreensões, saídas). */
+  diario?: { t: number; texto: string; tom?: 'bom' | 'ruim' }[];
+  /** REWORK 11.5: dívida com o caminho (o que se deve a quem adiantou mercadoria ou cobriu um prejuízo). */
+  divida?: number;
+}
+
+/**
+ * REWORK 11.5 · SUB-11 — as especializações do Submundo. Ficção abstrata: o que muda é a gente, o risco e a conta; nada
+ * descreve como se faz.
+ */
+export type Ramo = 'furtos' | 'contrabando' | 'organizado' | 'digital' | 'fraudes';
+
+export interface Especializacao {
+  /** Desde quando atua nela. */
+  tInicio: number;
+  /** A prática acumulada (0..100): cresce com os anos e as operações; parte dela vale para as vizinhas. */
+  experiencia: number;
+  /** O nome que se tem NESTA especialidade (0..100) — diferente da confiança geral do meio. */
+  nome: number;
+  /** Operações feitas · que deram errado · ganho bruto acumulado. */
+  operacoes: number;
+  falhas: number;
+  ganhos: number;
+  /** Deixou esta especialidade (e desde quando). */
+  largou?: number;
+  /** A última operação (para a recarga). */
+  ultima?: number;
+  /** Na hierarquia (só `organizado`): 1 de fora · 2 de dentro · 3 de confiança · 4 liderança. */
+  posto?: 1 | 2 | 3 | 4;
+  /** O mercado (só `contrabando`): o quanto a procura está alta (−2..2), muda ano a ano. */
+  mercado?: number;
+  /** Mercadoria/estoque adiantado e ainda não vendido (só `contrabando`), em dinheiro. */
+  estoque?: number;
+}
+
+/** O papel de um contato do caminho (quem ele é para você). */
+export type PapelDoContato = 'parceiro' | 'fornecedor' | 'comprador' | 'chefe' | 'protegido' | 'intermediario' | 'tecnico' | 'informante';
+
+/** REWORK 11.5 · SUB-12: a ficha de um contato — não um multiplicador. */
+export interface FichaDeContato {
+  papel: PapelDoContato;
+  especialidade: Ramo;
+  /** A confiança de um no outro, no caminho (0..100) — diferente da amizade. */
+  confianca: number;
+  /** O que ele espera de você (a parte combinada, a lealdade, discrição). */
+  espera: 'parte' | 'lealdade' | 'discricao' | 'volume';
+  /** O que ficou entre vocês: promessas cumpridas e quebradas, favores. */
+  cumpridas: number;
+  quebradas: number;
+  /** De que organização ele é (id da organização do caminho). */
+  organizacao?: string;
+  /** Afastou-se (e quando): não traz mais trabalho. */
+  afastado?: number;
+  /** Traiu (e quando). */
+  traiu?: number;
+  desde: number;
+}
+
+/** REWORK 11.5 · SUB-13: uma organização fictícia do caminho e a relação com ela (com memória). */
+export interface RelacaoComOrganizacao {
+  id: string;
+  nome: string;
+  especialidade: Ramo;
+  /** Membro (com posto em `organizado`), aliado, rival ou de fora. */
+  relacao: 'membro' | 'aliada' | 'rival' | 'neutra';
+  /** A lealdade que ela lê em você (0..100). */
+  lealdade: number;
+  /** O que ela lembra: promessas, alianças, conflitos, saídas (o ano e o fato). */
+  memoria: { t: number; fato: 'promessa' | 'promessa_quebrada' | 'alianca' | 'conflito' | 'traicao' | 'saida' | 'favor' | 'reconciliacao' }[];
+  desde: number;
+  /** Saiu (e quando): a organização lembra de quem saiu. */
+  saiu?: number;
 }
 
 /* ------------------------------------------------------------- Vida política */
@@ -2619,6 +2712,11 @@ export interface Vida {
   fatos: Record<string, number>;
   biografia: Entrada[];
   momento: Momento | null;
+  /**
+   * REWORK 11.5 · EVT-01: as outras decisões do ano, na ordem em que vão aparecer (a vida movimentada tem mais de uma
+   * por ano). Cada uma é conferida de novo antes de abrir — o que a escolha anterior desfez não aparece. Ausente: vazia.
+   */
+  fila?: DecisaoNaFila[];
   ocorrencias: Ocorrencia[];
   /**
    * REWORK 10.5 · EVT-05: os acontecimentos e as cenas de carreira que apareceram nas DUAS VIDAS ANTERIORES deste

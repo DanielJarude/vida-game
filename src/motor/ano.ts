@@ -70,7 +70,7 @@ import { processarPausa } from './sistemas/pausa';
 import { processarRural } from './sistemas/rural';
 import { processarTransformacao } from './sistemas/carreira';
 import { efetivarMudancaMilitar } from './sistemas/militar';
-import { abrirDecisao, aplicarAcontecimento, candidatos, conteudoPorId, preparar, sortear } from './conteudo/motor';
+import { abrirDecisao, abrirProximaDaFila, aplicarAcontecimento, candidatos, conteudoPorId, montarFila, preparar, sortear } from './conteudo/motor';
 import { contexto } from './conteudo/base';
 import { CATALOGO } from './conteudo/catalogo';
 import type { Conteudo } from './conteudo/base';
@@ -336,6 +336,11 @@ function faseDeConteudo(v: Vida, r: Rng, linhasSistemicas: number): void {
       if (x && x.c.tipo === 'decisao') abrirDecisao(v, x.c, x.ctx);
     }
   }
+
+  // 5. REWORK 11.5 · EVT-01: o resto do ano — as outras decisões disparadas pelo estado, as que esperavam do ano passado e,
+  // numa vida cheia, às vezes uma segunda. Abrem uma de cada vez, conferidas de novo (`conteudo/motor.montarFila`).
+  montarFila(v);
+  abrirProximaDaFila(v);
 }
 
 export function totalDeConteudo(): { acontecimentos: number; decisoes: number } {

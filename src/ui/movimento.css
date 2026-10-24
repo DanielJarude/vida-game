@@ -1,0 +1,10 @@
+/*
+ * REWORK 11.5 — Carreiras, Submundo e vida em movimento.
+ *
+ * As classes novas desta atualização moram aqui (a auditoria de CSS não deixa redefinir uma classe-raiz de outro
+ * arquivo). Tudo lê os tokens das paletas (`tokens.css`): nenhuma cor fixa fora de `--p-*`/semânticos, e o movimento
+ * respeita `prefers-reduced-motion`.
+ */
+
+/* -------------------------------------------------- EVT-01: o ano com mais de uma decisão */
+.momento__fila { margin: 0; font-size: var(--type-caption); color: var(--text-muted); line-height: var(--leading-snug); }

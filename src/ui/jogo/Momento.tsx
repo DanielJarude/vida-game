@@ -15,6 +15,9 @@ import { dinheiroCurto, TEMA_ROTULO } from '../apresentar';
 export function Momento({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
   const m = vida.momento!;
   const pessoas = Object.values(m.papeis).map(id => vida.pessoas[id]).filter(Boolean);
+  // REWORK 11.5 · EVT-01: o ano pode ter mais de uma decisão — quem decide sabe que há outra esperando (conferida de novo
+  // antes de abrir: pode não vir, se esta escolha a desfizer).
+  const esperando = (vida.fila ?? []).filter(x => x.t === vida.t).length;
   return (
     <Folha rotulo={m.titulo} fechavel={false} papel>
       <div className="momento">
@@ -35,6 +38,7 @@ export function Momento({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean
         )}
         <p className="momento__texto">{m.texto}</p>
         <p className="momento__pergunta"><span className="momento__vez">Sua vez</span> <span>{m.situacaoId === 'trab_entrevista' ? 'O que você responde?' : m.situacaoId === 'esp_peneira' ? 'Como você joga?' : m.situacaoId === 'pol_eleicao' ? 'Como você faz?' : 'O que você faz?'}</span></p>
+        {esperando > 0 && <p className="momento__fila">{esperando === 1 ? 'Este ano ainda tem outro assunto esperando por você, depois deste.' : `Este ano ainda tem outros ${esperando} assuntos esperando por você, depois deste.`}</p>}
         <ul className="momento__opcoes">
           {m.opcoes.map(o => (
             <li key={o.id}>

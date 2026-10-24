@@ -86,22 +86,16 @@ describe('CAR-11.9 · momentos da carreira', () => {
     x.momento = null;
   }).vida;
 
-  it('o ano da renovação não apaga o momento: ele é sorteado e espera o ano seguinte', () => {
+  // REWORK 11.5 · EVT-05: antes (REWORK 11), o ano da renovação adiava a cena para o ano seguinte (um ano, uma decisão).
+  // Com a fila do ano, a renovação e a cena acontecem no MESMO ano, uma depois da outra.
+  it('o ano da renovação não apaga o momento: a cena é do mesmo ano (a fila mostra as duas)', () => {
     let achou = false;
     for (let s = 1; s <= 30 && !achou; s++) {
-      // O sorteio do ano ocupado é derivado (da vida e do ano): cada ano, um sorteio.
       let v = transacao(jogador(), x => { x.t += s * 12; x.fatos['esp_renovacao'] = x.t; x.caminhos.situacoes = [{ id: 'fut_jornalista', t: x.t - 60, trajetoria: 'futebol', intencao: '—', desfecho: 'bom', texto: '—' }]; }).vida;
       v = transacao(v, x => processarSituacoes(x, criarRng(s))).vida;
       if (!v.caminhos.situacao) continue;
       achou = true;
-      expect(v.caminhos.situacao.dados._ocupado).toBe(1);
-      // Neste ano, a cena não abre (a renovação é a cena do ano)...
-      expect(situacaoAberta(v)).toBeUndefined();
-      // ... e no seguinte, sem renovação, ela volta.
-      const id = v.caminhos.situacao.id;
-      v = transacao(v, x => { x.t += 12; processarSituacoes(x, criarRng(s + 100)); }).vida;
-      expect(v.caminhos.situacao?.id).toBe(id);
-      expect(v.caminhos.situacao?.dados._adiada).toBe(1);
+      expect(v.caminhos.situacao.dados._ocupado).toBeUndefined();
       expect(situacaoAberta(v)).toBeDefined();
     }
     expect(achou).toBe(true);

@@ -24,6 +24,8 @@ import './ui/possibilidades.css';
 import './ui/coerencia.css';
 // REWORK 10.6: uma vida ao seu alcance (as ações principais, a faculdade, o convite aberto, o pedido da criança, as novidades).
 import './ui/alcance.css';
+// REWORK 11.5: as carreiras com cara própria (campo, prancheta, set, palco, plenário, Submundo), troféus e casamento.
+import './ui/movimento.css';
 
 iniciarTema();
 

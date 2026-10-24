@@ -320,8 +320,10 @@ export function chanceDeMomento(v: Vida, tr: Trajetoria): number {
 /** Outra decisão de peso já é a cena do ano (a crise do mandato, a proposta de clube). */
 function anoJaTemCena(v: Vida, tr: Trajetoria): boolean {
   if (tr === 'politica') return v.caminhos.politica?.mandato?.crise?.t === v.t || v.fatos['pol_eleicao'] === v.t;
-  if (tr === 'tecnico') return v.fatos['tec_proposta_hoje'] === v.t;
-  return (v.fatos['esp_proposta_hoje'] === v.t || v.fatos['esp_renovacao'] === v.t) && (tr === 'futebol' || tr === 'basquete' || tr === 'tenis' || tr === 'atleta');
+  // REWORK 11.5 · EVT-05: a renovação e a proposta (do atleta e do técnico) já não ocupam o ano — a fila do ano
+  // (`conteudo/motor.montarFila`) mostra as duas, uma depois da outra, e a cena é conferida de novo antes de abrir.
+  // Só a crise e a eleição do mandato continuam sendo "a cena do ano".
+  return false;
 }
 
 /** Os modelos que cabem agora, com o peso de cada um (recarga, tema, novidade). */
