@@ -231,7 +231,7 @@ describe('CAR-11.2 · indicações pela carreira de quem recebe', () => {
     const res = aceitarOportunidade(v, criarRng(8), conta.id);
     expect(res.entrevista).toBeUndefined();
     expect(v.caminhos.processo).toBeUndefined();
-    expect(v.trabalho.atual?.ocupacaoId).toBe('manicure');
+    expect((v.trabalho as Vida['trabalho']).atual?.ocupacaoId).toBe('manicure');
   });
 
   it('a porta de um save antigo (sem o campo novo) tem a natureza deduzida', () => {
