@@ -131,7 +131,8 @@ export default defineConfig({
           // Carreira de técnico 2.0: o banco (`tecnico`) vai junto — só o ano, as situações, o legado e a tela o chamam.
           // Sucessão (pacote pré-América do Sul): a partilha e a troca de protagonista leem o legado e a retrospectiva; só a
           // fachada (a tela do legado) e a família a chamam — vai com elas, sem ciclo.
-          if (/[\\/]src[\\/]motor[\\/]sistemas[\\/](situacoes|tecnico|visibilidade|legado|retrospectiva|familia|iniciativas|ilicito|pessoa|sucessao|tribunal|margem)\.ts/.test(id)) return 'motor-carreira';
+          // REWORK 11: as cenas que lembram (`situacoesMemoria`, que lê o banco do técnico) e as de arte só as situações chamam.
+          if (/[\\/]src[\\/]motor[\\/]sistemas[\\/](situacoes|situacoesMemoria|situacoesArte|tecnico|visibilidade|legado|retrospectiva|familia|iniciativas|ilicito|pessoa|sucessao|tribunal|margem)\.ts/.test(id)) return 'motor-carreira';
           // REWORK 10.6 · M1: o pacote dos sistemas chegou a 794 kB (5,8 kB de folga). O que lê o ofício e os caminhos da vida
           // como um todo — as ações profissionais (`profissao`), os caminhos possíveis, a mudança de país, o fechamento do ano
           // e as habilitações — só importa os sistemas e a base, e só é chamado de cima (as ações, o ano, os textos, as telas,
