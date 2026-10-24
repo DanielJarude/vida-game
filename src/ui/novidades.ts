@@ -26,6 +26,32 @@ export interface NotaDeVersao {
 
 export const NOTAS: NotaDeVersao[] = [
   {
+    versao: '11.5',
+    data: '2026-10-24',
+    titulo: 'Carreiras, Submundo e vida em movimento',
+    novidades: [
+      'Um ano pode ter mais de uma decisão: as outras esperam a vez e aparecem uma depois da outra, sempre conferidas de novo — uma vida movimentada pede mais escolhas; uma vida mansa continua mansa.',
+      'O Submundo tem frentes próprias (furtos e roubos, contrabando, crime organizado, crimes digitais, fraudes e corrupção), cada uma com prática, nome, ações, riscos e cenas — e gente com memória: contatos que confiam, cobram, se afastam e traem, e organizações que lembram.',
+      'Cada carreira especial abre com o seu lugar: o campo (ou a quadra) do atleta, a prancheta do técnico, o set do ator, o palco do músico, o plenário do político e o dossiê do Submundo.',
+      'A galeria de conquistas mostra cada título com o troféu da sua competição, os prêmios individuais, os títulos como técnico e os prêmios artísticos.',
+      'Na política, alianças com gente de verdade (confiança e favores) e promessas com prazo, cobradas no fim — e lembradas na eleição.',
+      'O técnico escolhe a estratégia do time (e ela muda os jogos); ex-goleiros podem virar treinadores de goleiros, da base à seleção.',
+      'Basquete e vôlei têm as suas copas, no formato delas.',
+      'Relações: o pedido de casamento é uma cena (onde, com que anel), um trio pode morar junto e dividir a casa, e dá para bloquear um ex.'
+    ],
+    melhorias: [
+      'Os clubes têm fase: a boa temporada pesa na seguinte, e nenhum clube domina pelo nome.',
+      'Os rivais do técnico são os clubes que estão na divisão, e o campeão do ano é o mesmo da tabela do país.',
+      'Ator conhecido ficou mais raro; quem vive de música também ganha com aulas e gravações, e os anos bons e ruins continuam existindo.',
+      'Uma gravidez de um caso: a parceria pode achar que é dela — e a dúvida só chega com causa.',
+      'No celular, os botões, abas e links pequenos ganharam a área de toque de 44 px.'
+    ],
+    correcoes: [
+      'Títulos, copas e prêmios ficam com o ano da temporada também na biografia.',
+      'Quem tem dinheiro para acertar uma conta atrasada não aparece mais "no vermelho": o painel diz a pendência e que acertar resolve.'
+    ]
+  },
+  {
     versao: '11',
     data: '2026-10-24',
     titulo: 'Carreiras vivas',

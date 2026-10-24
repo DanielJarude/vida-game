@@ -223,3 +223,34 @@ describe('REL-23 · bloquear o ex', () => {
     expect(v.vinculos[pid].distancia).toBeUndefined();
   });
 });
+
+describe('REWORK 11.5 · Fase I — coerência', () => {
+  it('quem tem dinheiro para acertar a pendência não aparece "no vermelho": a frase diz a pendência', async () => {
+    const { seguranca } = await import('../sistemas/dinheiro');
+    const v = em(adulto(40, { semente: 6 }), x => { x.financas.conta = 250_000; x.financas.negativado = true; });
+    const s = seguranca(v);
+    expect(s.nivel).not.toBe('no_vermelho');
+    expect(s.texto).toMatch(/Há dinheiro/);
+    const pobre = em(adulto(40, { semente: 6 }), x => { x.financas.conta = 100; x.financas.negativado = true; });
+    expect(seguranca(pobre).nivel).toBe('no_vermelho');
+  });
+
+  it('o título da temporada é datado no ano da temporada (a biografia e o palmarés dizem o mesmo ano)', async () => {
+    const { registrarTemporada } = await import('../sistemas/palmares');
+    const { anoDe } = await import('../tempo');
+    const v = em(adulto(27, { semente: 21, genero: 'masculino', municipioId: 'belo-horizonte-mg' }), (x, r) => {
+      x.t = Math.floor(x.t / 12) * 12 + 2;
+      const e = { modalidade: 'futebol', fase: 'profissional', clube: 'Cruzeiro', nivel: 4, tInicio: x.t - 72, tFase: x.t - 60, lesoes: 0, municipioId: 'belo-horizonte-mg', reputacao: 55, espaco: 'titular', contratoAte: x.t + 36, posicao: 'meia', temporadas: [] } as never as import('../tipos').CarreiraEsportiva;
+      x.caminhos.esporte = e;
+      const t = { ano: anoDe(x.t - 6), clube: 'Cruzeiro', nivel: 4 as const, partidas: 34, titular: 30, gols: 8, assistencias: 9, nota: 7.8, colocacao: 1, mesesFora: 0, pais: 'BR' };
+      e.temporadas = [t];
+      registrarTemporada(x, r, e, t);
+    });
+    const ano = anoDe(v.t - 6);
+    expect(ano).toBe(anoDe(v.t) - 1);
+    const entrada = v.biografia.find(b => /Campeão da Série A/.test(b.texto));
+    expect(entrada && anoDe(entrada.t)).toBe(ano);
+    const c = v.caminhos.palmares!.find(p => p.tipo === 'titulo')!;
+    expect(anoDe(c.t)).toBe(c.ano);
+  });
+});

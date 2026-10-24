@@ -454,6 +454,13 @@ export function seguranca(v: Vida): Seguranca {
   const renda = Math.max(1, o.renda);
   const financeiro = Math.max(0, b.conta) + b.aplicacoes;
   if (atraso > 0 || v.financas.negativado || b.cartao > renda * 3) {
+    // REWORK 11.5 · FIN-01: quem tem na conta (e nas aplicações) o bastante para acertar tudo e ainda viver uns meses não
+    // está "no vermelho" — tem uma pendência que o dinheiro resolve (o técnico com R$ 250 mil aparecia no vermelho por
+    // um mês de conta atrasada). O patrimônio, o saldo, o fluxo e a dívida são coisas diferentes, e a frase diz qual.
+    const acertar = b.cartao + despesa * Math.max(1, atraso);
+    if (financeiro >= acertar + despesa * 3) {
+      return { nivel: 'no_limite', meses, texto: atraso > 0 ? `Há dinheiro, mas ${atraso >= 2 ? `${Math.round(atraso)} meses de contas` : 'uma conta'} em atraso: acertar resolve.` : v.financas.negativado ? 'Há dinheiro, mas o nome ficou sujo por uma dívida antiga: acertá-la limpa o nome.' : 'Há dinheiro para quitar o cartão — e ele já passou de três meses de renda.' };
+    }
     return { nivel: 'no_vermelho', meses, texto: atraso > 0 ? `${atraso >= 2 ? `${Math.round(atraso)} meses` : 'Um mês'} de contas atrasadas.` : v.financas.negativado ? 'O nome está sujo: sem crédito até acertar.' : 'A dívida do cartão já é maior que três meses de renda.' };
   }
   // "O guardado paga a vida" mede a vida por conta própria: quem mora com a família quase não tem despesa sua, e

@@ -11,6 +11,7 @@
  * Trabalho. Agora cada coisa tem um lugar só.
  */
 
+import { PlenarioDoPolitico } from './CarreirasEspeciais';
 import { useMemo } from 'react';
 import type { Vida } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
@@ -49,6 +50,8 @@ export function VidaPublica({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao
   const preso = !!vida.justica?.prisao;
   return (
     <div className="divisao divisao--publica">
+      {/* REWORK 11.5 · UI-01: o plenário (o mandato, as alianças e as promessas, com as ações). */}
+      {pol && <PlenarioDoPolitico vida={vida} agir={agir} />}
       {pol && <PainelPolitico vida={vida} principal={modo === 'politica'} />}
       {/* REWORK 10.6 · C5: o desgaste com as causas e o caminho direto para as respostas (antes, só "Desgaste: bastante"). */}
       {pol && vida.caminhos.politica && vida.caminhos.politica.desgaste >= 15 && (() => {

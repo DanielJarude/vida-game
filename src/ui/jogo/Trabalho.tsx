@@ -15,6 +15,8 @@
  *      da vida política. Cada coisa diz, antes, com o que ela conflitaria.
  */
 
+import { GaleriaDeConquistas } from './Galeria';
+import { CampoDoAtleta, ClaqueteDoAtor, PalcoDoMusico, PlenarioDoPolitico, PranchetaDoTecnico } from './CarreirasEspeciais';
 import { habilitacaoDaVida } from '../../motor/sistemas/autoescola';
 import { regrasDaVida } from '../../motor/mundo/regras';
 import { nomeDoRegistro, previdenciaDaVida, textoLocal } from '../../motor/mundo/locais';
@@ -207,6 +209,12 @@ export function Trabalho({ vida, agir, irPara, parte, explorar: abaDeFora, aoExp
         {modo === 'negocio' && negocioAberto(vida) && <Renomear vida={vida} agir={agir} alvo="negocio" atual={negocioAberto(vida)!.nome} rotulo={`Dar outro nome a ${negocioAberto(vida)!.nome}`} />}
         {modo === 'artista' && vida.caminhos.arte?.ativo && <Renomear vida={vida} agir={agir} alvo="grupo" atual={vida.caminhos.arte.nome} rotulo={`Dar outro nome a ${vida.caminhos.arte.nome}`} />}
         {/* REWORK 10.5 · UX-19: a atuação tem um painel só, do primeiro teste ao ator conhecido (antes: a freguesia do autônomo, e depois a escada de cargos do empregado). */}
+        {/* REWORK 11.5 · UI-01: a cabeça de cada carreira especial, com o lugar dela (o set, o palco, o campo, a prancheta). */}
+        {modo === 'artista' && e && ocupacaoOuNula(e.ocupacaoId)?.trilha === 'cena' && <ClaqueteDoAtor vida={vida} />}
+        {modo === 'artista' && e && ['musica', 'orquestra'].includes(ocupacaoOuNula(e.ocupacaoId)?.trilha ?? '') && <PalcoDoMusico vida={vida} />}
+        {(modo === 'atleta' || espSemClube) && <CampoDoAtleta vida={vida} />}
+        {modo === 'tecnico' && <PranchetaDoTecnico vida={vida} agir={agir} />}
+        {pol && modo === 'politica' && !div && <PlenarioDoPolitico vida={vida} agir={agir} />}
         {modo === 'artista' && e && ocupacaoOuNula(e.ocupacaoId)?.trilha === 'cena' ? <PainelCena vida={vida} />
           : (modo === 'autonomo' || modo === 'informal' || modo === 'plataforma' || modo === 'artista') && <PainelFreguesia vida={vida} />}
         {(modo === 'rural' || modo === 'pesca') && <PainelCampo vida={vida} />}
@@ -273,6 +281,8 @@ export function Trabalho({ vida, agir, irPara, parte, explorar: abaDeFora, aoExp
       {em('historico') && (!div || modo === 'artista') && <CurriculoArtistico vida={vida} agir={agir} />}
       {em('historico') && (!div || modo === 'atleta' || sp.carreira === 'esporte') && <CarreiraNoEsporte vida={vida} aberta={modo === 'atleta' || espSemClube || parte === 'historico'} />}
       {em('historico') && <CarreiraComoTecnico vida={vida} />}
+      {/* REWORK 11.5 · TRO-01: a galeria de conquistas (títulos, prêmios, o banco, a arte) — o que ficou registrado. */}
+      {em('historico') && <GaleriaDeConquistas vida={vida} />}
       {em('historico') && <MomentosDaCarreira vida={vida} />}
       {em('historico') && (vida.trabalho.historico.length > 0 || vida.caminhos.marcas.length > 0) && <PorOndePassou vida={vida} />}
     </div>

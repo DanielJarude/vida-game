@@ -50,6 +50,7 @@ import { clubesNaDivisao, divisaoDoClube, fecharTemporadaDaLiga, forcaDoClube, f
 import { aCompeticaoId, campanhaDaSelecao, partidaDeCopa, daCompeticaoId, faseDaSelecaoEmPalavras, idDaCopa, nomeDaCompeticao, placarDe, sortearAdversarioDeCopa, torneioDeSelecoes } from './competicoes';
 import { pesoDaLicenca, vestiarioDeExAtleta } from './oficioDoTecnico';
 import { rngDe } from '../rng';
+import { bloqueio, PERMITIDO, type Veredito } from '../plausibilidade';
 
 export const OCUPACAO_TECNICO = 'tecnico_futebol';
 /** A seleção que chama um técnico: a do país dele (a nacionalidade de nascença). Sede: a capital (no Brasil, o Rio da CBF). */
@@ -777,4 +778,35 @@ function jogarAnoDeSelecao(v: Vida, r: Rng, c: CarreiraDeTecnico, p: PassagemDeT
     p.pressao = clamp(p.pressao + (fase <= 2 ? (id === 'sel:mundial' ? 45 : 30) : 5));
     if (p.pressao >= 70 && r.chance(0.7)) demitir(v, p, t);
   }
+}
+
+/* ------------------------------------------------------------ REWORK 11.5 · ESP-05: a estratégia (a prancheta) */
+
+export type EstiloDeJogo = NonNullable<CarreiraDeTecnico['estilo']>;
+/** O desenho de cada estratégia na prancheta (a formação é a forma do estilo — o que muda o jogo é o estilo). */
+export const FORMACAO_DO_ESTILO: Record<EstiloDeJogo, string> = { ofensivo: '4-3-3', equilibrado: '4-4-2', defensivo: '5-3-2' };
+export const EFEITO_DO_ESTILO: Record<EstiloDeJogo, string> = {
+  ofensivo: 'o time vai para cima: mais vitórias e mais derrotas, quase nenhum empate — e mais acaso nos jogos',
+  equilibrado: 'o jogo de sempre: a força do elenco decide',
+  defensivo: 'o time se fecha: mais empates, menos derrotas largas — e menos vitórias'
+};
+
+export function disponibilidadeTatica(v: Vida, estilo: EstiloDeJogo): Veredito {
+  const c = v.caminhos.tecnico;
+  if (!c || !passagemAtual(v)) return bloqueio('impossivel', 'A estratégia é de quem comanda um time.');
+  if ((c.estilo ?? 'equilibrado') === estilo) return bloqueio('incompativel', 'O time já joga assim.');
+  if (v.fatos['tec_tatica'] === v.t) return bloqueio('incompativel', 'Você já mudou a estratégia nesta temporada: mudar de novo confunde o vestiário.');
+  return PERMITIDO;
+}
+
+/** Muda o jeito de jogar (lido em cada jogo pelo motor do banco). Trocar no meio da temporada custa um pouco do vestiário. */
+export function mudarTatica(v: Vida, estilo: EstiloDeJogo): string {
+  const c = v.caminhos.tecnico!;
+  const p = passagemAtual(v)!;
+  const antes = c.estilo ?? 'equilibrado';
+  c.estilo = estilo;
+  v.fatos['tec_tatica'] = v.t;
+  if (p.temporadas.length > 0) p.vestiario = clamp(p.vestiario - 3);
+  escrever(v, { texto: `Mudou a estratégia ${doClube(p.clube)}: do ${FORMACAO_DO_ESTILO[antes]} para o ${FORMACAO_DO_ESTILO[estilo]}.`, relevancia: 'cotidiano', tema: 'trabalho', escolha: true });
+  return `Na prancheta, o ${FORMACAO_DO_ESTILO[estilo]}: ${EFEITO_DO_ESTILO[estilo]}.`;
 }

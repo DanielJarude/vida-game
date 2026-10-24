@@ -58,3 +58,98 @@
 .sub-diario .margem__ano { color: color-mix(in oklab, var(--dossie-tinta) 75%, transparent); }
 .sub-diario--ruim { border-left: 3px solid var(--dossie-carimbo); padding-left: var(--space-2); }
 .sub-diario--bom { border-left: 3px solid color-mix(in oklab, var(--bom, var(--tinta)) 60%, var(--superficie-topo)); padding-left: var(--space-2); }
+
+/* -------------------------------------------------- UI-01: as carreiras especiais (campo, prancheta, set, palco, plenário) */
+.carreira-especial {
+  --dossie-tinta: var(--tinta);
+  --dossie-fio: var(--fio);
+  --dossie-carimbo: var(--ruim);
+  display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4); border-radius: var(--radius-md);
+  border: 1px solid var(--fio); background: var(--superficie-topo); color: var(--tinta); min-width: 0;
+}
+.carreira-especial__cena { display: flex; gap: var(--space-4); align-items: center; flex-wrap: wrap; min-width: 0; }
+.carreira-especial__identidade { display: flex; gap: var(--space-3); align-items: center; min-width: 0; flex: 1 1 12rem; }
+.carreira-especial__nome { margin: 0; font-family: var(--font-serif); font-weight: 700; font-size: var(--type-body); overflow-wrap: anywhere; }
+.carreira-especial__sub { margin: 0; font-size: var(--type-caption); color: var(--text-secondary); line-height: var(--leading-snug); overflow-wrap: anywhere; }
+.carreira-especial__nota { margin: 0; font-size: var(--type-caption); color: var(--text-secondary); line-height: var(--leading-snug); }
+.escudo { flex: none; color: var(--tinta); }
+.placar-da-temporada { display: flex; flex-direction: column; gap: var(--space-2); }
+.placar-da-temporada__titulo { margin: 0; font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; font-weight: 700; color: var(--text-secondary); }
+.placar-da-temporada__numeros { margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 7rem), 1fr)); gap: var(--space-2); }
+.placar-da-temporada__numeros > div { border: 1px solid var(--fio); border-radius: 6px; padding: var(--space-2); background: var(--superficie); min-width: 0; }
+.placar-da-temporada__numeros dt { font-size: var(--type-meta); color: var(--text-secondary); text-transform: uppercase; letter-spacing: var(--tracking-meta); }
+.placar-da-temporada__numeros dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+
+/* o campo e a quadra */
+.carreira-especial--campo { border-top: 4px solid color-mix(in oklab, var(--bom) 70%, var(--tinta)); }
+.gramado { width: min(100%, 9.5rem); height: auto; flex: none; }
+.gramado--quadra { width: min(100%, 12rem); }
+.gramado__grama { fill: color-mix(in oklab, var(--bom) 32%, var(--superficie)); stroke: none; }
+.gramado__linha { fill: none; stroke: color-mix(in oklab, var(--superficie-topo) 80%, var(--tinta)); stroke-width: 1; }
+.gramado__voce { fill: var(--acao); stroke: var(--superficie-topo); stroke-width: 1.2; }
+
+/* a prancheta */
+.carreira-especial--prancheta { border-top: 4px solid var(--tinta-2); }
+.prancheta__desenho { width: min(100%, 9.5rem); height: auto; flex: none; }
+.prancheta__fundo { fill: color-mix(in oklab, var(--tinta) 82%, var(--superficie)); }
+.prancheta__linha { fill: none; stroke: color-mix(in oklab, var(--superficie-topo) 55%, transparent); stroke-width: 1; }
+.prancheta__peca { fill: var(--superficie-topo); stroke: var(--acao); stroke-width: 1.2; }
+.prancheta__estrategias .botao { min-height: var(--touch-target); }
+.prancheta__goleiros { display: flex; flex-direction: column; gap: var(--space-1); border-top: 1px dashed var(--fio); padding-top: var(--space-3); }
+
+/* o set (a claquete) */
+.carreira-especial--set { border-top: 4px solid var(--tinta); }
+.claquete { position: relative; border-radius: 6px; background: var(--tinta); color: var(--superficie-topo); padding: 22px var(--space-3) var(--space-3); overflow: hidden; }
+.claquete__topo { position: absolute; inset: 0 0 auto 0; height: 14px; background: repeating-linear-gradient(-45deg, var(--superficie-topo) 0 10px, var(--tinta) 10px 20px); }
+.claquete__texto { font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace; font-weight: 700; overflow-wrap: anywhere; }
+
+/* o palco do músico */
+.carreira-especial--palco { border-top: 4px solid var(--p-tempo, var(--acao)); }
+.ribalta { width: 100%; max-width: 22rem; height: auto; }
+.ribalta__chao { fill: color-mix(in oklab, var(--tinta) 70%, var(--superficie)); }
+.ribalta__luz { fill: color-mix(in oklab, var(--acao) 30%, transparent); }
+.ribalta__voce { fill: var(--acao); }
+.repertorio { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; font-size: var(--type-caption); line-height: var(--leading-snug); }
+
+/* o plenário */
+.carreira-especial--plenario { border-top: 4px solid var(--p-cidade, var(--tinta-2)); }
+.plenario__selo { width: 3.5rem; height: 3.5rem; flex: none; }
+.plenario__aro { fill: var(--superficie); stroke: var(--tinta-2); stroke-width: 2; }
+.plenario__traco { fill: none; stroke: var(--tinta); stroke-width: 1.6; stroke-linejoin: round; }
+.plenario__bloco { display: flex; flex-direction: column; gap: var(--space-2); border-top: 1px dashed var(--fio); padding-top: var(--space-3); }
+
+/* -------------------------------------------------- TRO-01: a galeria de conquistas */
+.galeria { display: flex; flex-direction: column; gap: var(--space-4); }
+.galeria__grupo { display: flex; flex-direction: column; gap: var(--space-2); }
+.galeria__titulo { margin: 0; font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; font-weight: 700; color: var(--text-secondary); display: flex; gap: var(--space-2); align-items: baseline; }
+.galeria__conta { font-variant-numeric: tabular-nums; color: var(--text-muted); }
+.galeria__estante { list-style: none; margin: 0; padding: var(--space-3); display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fill, minmax(min(46%, 8.5rem), 1fr)); border-radius: var(--radius-md); background: linear-gradient(to bottom, var(--superficie) 0, var(--superficie) calc(100% - 10px), color-mix(in oklab, var(--tinta) 14%, var(--superficie)) calc(100% - 10px)); border: 1px solid var(--fio); }
+.galeria__item { display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; min-width: 0; }
+.galeria__nome { margin: 0; font-weight: 600; font-size: var(--type-caption); line-height: var(--leading-snug); overflow-wrap: anywhere; }
+.galeria__meta { margin: 0; font-size: var(--type-meta); color: var(--text-secondary); overflow-wrap: anywhere; }
+.trofeu { width: 3rem; height: 3.45rem; stroke: color-mix(in oklab, var(--tinta) 55%, transparent); stroke-width: 0.8; }
+.trofeu--ouro { fill: color-mix(in oklab, var(--p-trabalho) 78%, var(--superficie-topo)); }
+.trofeu--prata { fill: color-mix(in oklab, var(--tinta-2) 32%, var(--superficie-topo)); }
+.trofeu--bronze { fill: color-mix(in oklab, var(--p-trabalho) 55%, var(--ruim)); }
+
+/* -------------------------------------------------- REL-24: o convite do casamento */
+.convite { text-align: center; padding: var(--space-4) var(--space-3); border-radius: var(--radius-md); border: 1px solid color-mix(in oklab, var(--p-pessoas, var(--acao)) 45%, transparent); outline: 3px double color-mix(in oklab, var(--p-pessoas, var(--acao)) 30%, transparent); outline-offset: -8px; background: var(--superficie-topo); display: flex; flex-direction: column; gap: 4px; }
+.convite__ornamento { margin: 0; color: var(--p-pessoas, var(--acao)); font-size: var(--type-body); }
+.convite__nomes { margin: 0; font-size: 1.6rem; line-height: 1.1; color: var(--tinta); overflow-wrap: anywhere; }
+.convite__linha { margin: 0; font-size: var(--type-caption); color: var(--text-secondary); line-height: var(--leading-snug); }
+.convite__plano { margin: 0; font-family: var(--font-serif); font-weight: 600; overflow-wrap: anywhere; }
+
+/* -------------------------------------------------- MOB-01: alvos de toque de 44 px no celular
+ * O QA do REWORK 11 achou, a 390 px, de 2 a 27 alvos por cena com 32–40 px (abas, chips, links de "ir para", o voltar do
+ * celular, os dias da agenda). Na tela estreita, todo alvo interativo desses padrões passa a ter a altura de toque do
+ * sistema (`--touch-target`): o desenho continua o mesmo — só a área cresce (o texto fica centrado na altura nova).
+ */
+@media (max-width: 720px) {
+  .aba, .chip, .subnav__item, .app-abas__item, .voce-indice a, .detalhe-agenda__dia, .detalhe-agenda__hora select, .ficha-valor, .bilhete__numero,
+  .estresse__ir, .agenda__ir, .agenda__abrir, .agenda__acoes .botao, .celular__voltar, .comparar > summary, .entrada__rosto, .enquanto__pessoa,
+  .nota-agenda__ir, .rotina-resumo .link, .ficha-hab__historico summary, .retrato-vida__voce, .caminho__mais summary, .proximo-caminho__ir,
+  .ligacao-caminho .link, .secao .nota .link, .dossie__outras summary {
+    min-height: var(--touch-target);
+  }
+  .entrada__rosto, .enquanto__pessoa, .nota-agenda__ir, .rotina-resumo .link, .retrato-vida__voce, .proximo-caminho__ir, .ligacao-caminho .link, .secao .nota .link { display: inline-flex; align-items: center; }
+}

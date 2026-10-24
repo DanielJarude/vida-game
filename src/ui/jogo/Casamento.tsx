@@ -31,6 +31,14 @@ export function PlanejarCasamento({ vida, p, vin, agir }: { vida: Vida; p: Pesso
   return (
     <section className="casamento" aria-label="O planejamento do casamento">
       <h3 className="ficha__subtitulo">O casamento</h3>
+      {/* REWORK 11.5 · REL-24: o convite — o que já está combinado, dito como um convite (os nomes, o pedido, o plano). */}
+      <div className="convite" aria-label="O convite">
+        <p className="convite__ornamento" aria-hidden>✦</p>
+        <p className="convite__nomes manuscrito">{vida.eu.nome} &amp; {p.nome}</p>
+        <p className="convite__linha">Noivos desde {Math.floor((vin.romance?.noivado?.t ?? vida.t) / 12)}{vin.romance?.noivado?.lugar ? ` · o pedido foi ${vin.romance.noivado.lugar === 'casa' ? 'em casa' : vin.romance.noivado.lugar === 'publico' ? 'em público' : 'num jantar'}` : ''}{vin.romance?.noivado?.anel ? ` · ${vin.romance.noivado.anel === 'nenhum' ? 'sem anel' : `anel ${vin.romance.noivado.anel === 'classico' ? 'clássico' : vin.romance.noivado.anel}`}` : ''}</p>
+        <p className="convite__plano">{LOCAIS[plano.local].rotulo} · {CERIMONIAS[plano.cerimonia].rotulo} · {plano.convidados} convidados · {ESTILOS[plano.estilo].rotulo}{plano.luaDeMel ? ' · lua de mel' : ''}</p>
+        <p className="convite__linha">{salvo ? (igualAoSalvo ? 'Este é o plano combinado.' : 'Mudanças ainda não combinadas.') : 'Ainda um rascunho: nada combinado.'} Orçamento: {dinheiroCurto(custo)}.</p>
+      </div>
       <p className="ficha__porque">{pref.texto}</p>
       <div className="campo"><span className="campo__rotulo">Onde</span>
         <Escolha rotulo="Onde" opcoes={Object.entries(LOCAIS).map(([id, l]) => ({ id: id as Plano['local'], rotulo: l.rotulo }))} valor={plano.local} aoMudar={x => { mudar('local', x); const m = LOCAIS[x].max; if (m !== undefined && plano.convidados > m) mudar('convidados', [...CONVIDADOS].reverse().find(n => n <= m) ?? 10); }} />
