@@ -28,6 +28,7 @@ import { abalar } from '../sistemas/abalo';
 import { novaOportunidade } from '../sistemas/oportunidades';
 import { mudarAgora } from '../sistemas/processos';
 import { proximoDegrau, subirDeCargo, nomeOcupacao } from '../sistemas/trabalho';
+import { semVocabularioCorporativo } from '../sistemas/oficioDoTecnico';
 import { ocupacao, ocupacaoOuNula } from '../dados/ocupacoes';
 import { curso } from '../dados/cursos';
 import { cidadeLonge } from './local';
@@ -261,7 +262,7 @@ export const ACONTECIMENTOS_10: Conteudo[] = [
   /* =================================================================== TRABALHO */
   {
     id: 'trab10_promocao', tipo: 'decisao', peso: 2, idade: [20, 64], tema: 'trabalho', repetir: 4,
-    quando: c => { const e = emprego(c); const oc = e && ocupacaoOuNula(e.ocupacaoId); return !!e && !!oc && !e.posAposentadoria && !e.formacaoAte && e.contrato !== 'eletivo' && e.desempenho >= 60 && c.v.t - (e.tPosto ?? e.tInicio) >= 24 && !!proximoDegrau(c.v, e, oc) && livre(c); },
+    quando: c => { const e = emprego(c); const oc = e && ocupacaoOuNula(e.ocupacaoId); return !!e && !!oc && !semVocabularioCorporativo(e) && !e.posAposentadoria && !e.formacaoAte && e.contrato !== 'eletivo' && e.desempenho >= 60 && c.v.t - (e.tPosto ?? e.tInicio) >= 24 && !!proximoDegrau(c.v, e, oc) && livre(c); },
     titulo: 'A proposta',
     texto: c => { const e = emprego(c)!; const prox_ = proximoDegrau(c.v, e, ocupacao(e.ocupacaoId))!; return `A chefia chamou: há uma vaga de ${nomeOcupacao(c.v, prox_)}. O salário sobe; a responsabilidade e as horas também.`; },
     opcoes: [
@@ -291,7 +292,7 @@ export const ACONTECIMENTOS_10: Conteudo[] = [
   },
   {
     id: 'trab10_salario', tipo: 'decisao', peso: 2, idade: [20, 64], tema: 'trabalho', repetir: 3,
-    quando: c => { const e = emprego(c); return !!e && !e.posAposentadoria && e.contrato !== 'servidor' && e.contrato !== 'autonomo' && e.contrato !== 'informal' && e.contrato !== 'eletivo' && c.v.t - (e.tPosto ?? e.tInicio) >= 24 && e.desempenho >= 50; },
+    quando: c => { const e = emprego(c); return !!e && !semVocabularioCorporativo(e) && !e.posAposentadoria && e.contrato !== 'servidor' && e.contrato !== 'autonomo' && e.contrato !== 'informal' && e.contrato !== 'eletivo' && c.v.t - (e.tPosto ?? e.tInicio) >= 24 && e.desempenho >= 50; },
     titulo: 'A conversa sobre salário',
     texto: () => 'Dois anos no mesmo salário, com mais trabalho a cada mês. A avaliação anual é semana que vem.',
     opcoes: [
@@ -304,7 +305,7 @@ export const ACONTECIMENTOS_10: Conteudo[] = [
   },
   {
     id: 'trab10_transferencia', tipo: 'decisao', peso: 2, idade: [22, 60], tema: 'trabalho', repetir: 6,
-    quando: c => { const e = emprego(c); return !!e && e.contrato === 'clt' && (ocupacaoOuNula(e.ocupacaoId)?.nivel ?? 0) >= 2 && livre(c); },
+    quando: c => { const e = emprego(c); return !!e && e.contrato === 'clt' && !semVocabularioCorporativo(e) && (ocupacaoOuNula(e.ocupacaoId)?.nivel ?? 0) >= 2 && livre(c); },
     titulo: 'A transferência',
     texto: () => `A empresa vai abrir uma unidade em outra cidade, longe daqui, e quer você lá: salário maior, tudo novo.`,
     opcoes: [

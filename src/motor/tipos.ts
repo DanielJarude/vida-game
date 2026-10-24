@@ -1705,7 +1705,8 @@ export interface PassagemDeTecnico {
   /** Ajuste de força do elenco para a próxima temporada (reforços, preparação, titulares poupados). */
   ajuste?: number;
   /** A decisão (a final do estadual) que ficou para o momento — ou para o sorteio neutro, se o ano não a mostrar. */
-  decisao?: { competicao: string; adversario: string; forca: number; ano: number; t: number };
+  /** `unica` (REWORK 11 · ESP-11.8): final em jogo único (a copa nacional de fora do Brasil); sem ela, ida e volta. */
+  decisao?: { competicao: string; adversario: string; forca: number; ano: number; t: number; unica?: boolean };
   /** Quando renovou pela última vez (o momento da renovação lê isto). */
   tRenovacao?: number;
   /** A passagem começou no meio da temporada (o clube em crise demitiu o técnico e chamou você): de onde se pegou o time. */
@@ -1742,6 +1743,8 @@ export interface TemporadaDeTecnico {
   colocacao?: number;
   /** O estadual: até onde foi. */
   estadual?: 'campeão' | 'vice' | 'semifinal' | 'primeira fase';
+  /** REWORK 11 · ESP-11.8: fora do Brasil, a copa nacional (id estável de `competicoes`) e até onde foi. */
+  copa?: { id: string; fase: FaseDeCopa };
   titulos?: string[];
   acesso?: boolean;
   rebaixamento?: boolean;

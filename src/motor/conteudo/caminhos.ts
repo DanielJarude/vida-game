@@ -20,6 +20,7 @@ import * as P from './papeis';
 import { estresse, fato, feliz, custa, local } from './efeitos';
 import { escrever, idade, lembrarCom, marcarFato, parceiro, temFato, idadePessoa } from '../nucleo';
 import { portaAmadora } from '../sistemas/perfisEsportivos';
+import { semVocabularioCorporativo } from '../sistemas/oficioDoTecnico';
 import { conviteDaBase, encerrarCarreira, entrarPeloAmador, etapaNaBase, fazerPeneira, IDADE_CONVITE, NOME_MOD, nomeDeClube } from '../sistemas/esporte';
 import { dinheiro as fmt } from '../texto';
 import { conflitoDoContrato, contaDoContrato, descricaoDoContrato, podePausar as podePausarAV, resolverConflitoAV } from '../sistemas/audiovisual';
@@ -429,7 +430,8 @@ export const CAMINHOS: Conteudo[] = [
   },
   {
     id: 'car_curso_empresa', tipo: 'acontecimento', idade: [20, 58], tema: 'trabalho', repetir: 7,
-    quando: c => { const e = c.v.trabalho.atual; return !!e && ['clt', 'servidor', 'militar'].includes(e.contrato) && ocupacao(e.ocupacaoId).trilha !== 'atleta' && noTrabalho(c.v, 'organizacao') && e.desempenho >= 55 && c.r.chance(0.5); },
+    // REWORK 11 · ESP-11.7: "a empresa pagou um curso" não é do atleta nem da comissão técnica de clube (o curso deles é a licença).
+    quando: c => { const e = c.v.trabalho.atual; return !!e && ['clt', 'servidor', 'militar'].includes(e.contrato) && !semVocabularioCorporativo(e) && noTrabalho(c.v, 'organizacao') && e.desempenho >= 55 && c.r.chance(0.5); },
     narrar: c => {
       const oc = ocupacao(c.v.trabalho.atual!.ocupacaoId);
       return { texto: c.r.pick([`A empresa pagou um curso de atualização em ${ROTULO_TRILHA[oc.trilha] ?? 'na área'}. Três semanas de aula à noite.`, 'Veio uma certificação nova obrigatória; a turma inteira estudou junta nas sextas.', 'Um sistema novo chegou ao trabalho. Quem aprendeu primeiro virou referência.']), relevancia: 'cotidiano', efeito: () => { const e = c.v.trabalho.atual!; e.desempenho = clamp(e.desempenho + 4); } };

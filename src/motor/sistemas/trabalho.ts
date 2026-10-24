@@ -51,6 +51,8 @@ import { habilidade, praticar } from './frentes';
 import { modeloFrente } from '../dados/frentes';
 import { marcar } from './marcas';
 import { chanceNoConcurso, editalAberto } from './concurso';
+import { clubeDaComissao } from './comissao';
+import { artigoDoClube } from '../dados/clubes';
 import { flex, ge } from '../texto';
 import { anoDe } from '../tempo';
 import { abalar } from './abalo';
@@ -432,6 +434,11 @@ export function contratar(v: Vida, r: Rng, oc: Ocupacao, via = 'curriculo'): Emp
       e.empregador = comArtigo(org.nome);
       if (antes) escrever(v, { texto: `Voltou a trabalhar ${naOrganizacao(org.nome)}, ${Math.max(1, Math.round((v.t - antes.tFim) / 12))} anos depois de sair.`, relevancia: 'biografia', tema: 'trabalho' });
     }
+  }
+  // REWORK 11 · ESP-11.7: a comissão técnica de clube é de um clube concreto (nome, cidade, divisão) — não "um clube".
+  if (oc.trilha === 'treino' && oc.setor === 'esporte' && oc.contrato === 'clt' && (oc.modalidade || oc.nivel >= 3)) {
+    const c = clubeDaComissao(v, oc.modalidade);
+    if (c.nome !== 'um clube') { e.clube = c.nome; e.empregador = /^equipe/.test(c.nome) ? `a ${c.nome}` : `${artigoDoClube(c.nome)} ${c.nome}`; e.municipioId = c.cidade; e.orgId = undefined; }
   }
   t.atual = e;
   // A área escolhida é da PESSOA (`areasDoOficio`): vai para todo trabalho do mesmo ofício — outra trilha dele (dev → dados),

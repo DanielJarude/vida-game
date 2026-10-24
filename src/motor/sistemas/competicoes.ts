@@ -20,7 +20,7 @@
  */
 
 import { clamp, rngDe, type Rng } from '../rng';
-import type { FaseDeCopa, Vida } from '../tipos';
+import type { Dominio, FaseDeCopa, Vida } from '../tipos';
 import { clubesDoPais, divisaoDoNivel } from '../dados/clubes';
 import { paisDoCatalogo, temPerfil, perfilDoPais } from '../mundo/registro';
 import { forcaNaLiga, ligaDe } from './ligas';
@@ -89,6 +89,9 @@ export interface Campanha { id: CompeticaoId; fase: FaseDeCopa; jogos: number; v
 const FASES: FaseDeCopa[] = ['primeira fase', 'oitavas', 'quartas', 'semifinal', 'vice', 'campeão'];
 
 /** Um adversário da fase `k` (0 = primeira fase): no começo, quem estiver no caminho; perto da final, os mais fortes. */
+export function sortearAdversarioDeCopa(r: Rng, lista: { nome: string; forca: number }[], k: number, ja: Set<string>, anonimo: () => { nome: string; forca: number }): { nome: string; forca: number } {
+  return adversario(r, lista, k, ja, anonimo);
+}
 function adversario(r: Rng, lista: { nome: string; forca: number }[], k: number, ja: Set<string>, anonimo: () => { nome: string; forca: number }): { nome: string; forca: number } {
   const livres = lista.filter(x => !ja.has(x.nome));
   if (!livres.length || r.chance(Math.max(0, 0.55 - k * 0.18))) return anonimo();
@@ -189,8 +192,8 @@ export function copaContinental(v: Vida, pais: string, ano: number, clube: strin
  * A força de uma seleção no futebol (na escala da tabela): onde o esporte é forte e popular, mais gente boa — a régua
  * de `selecao.concorrenciaNoPais` (popularidade × tamanho), de ~1 (um país pequeno sem tradição) a ~4,8.
  */
-export function forcaDaSelecao(pais: string): number {
-  const pop = temPerfil(pais) ? perfilDoPais(pais).esporte.popularidade.futebol ?? 1 : 0.7;
+export function forcaDaSelecao(pais: string, d: Dominio = 'futebol'): number {
+  const pop = temPerfil(pais) ? perfilDoPais(pais).esporte.popularidade[d] ?? 1 : 0.7;
   const tamanho = Math.log10(Math.max(1, paisDoCatalogo(pais)?.populacao ?? 30) / 1000);
   return Math.round(clamp(1.2 + (pop - 0.6) * 3.2 + tamanho * 0.45, 0.8, 4.8) * 100) / 100;
 }
@@ -199,9 +202,9 @@ export function forcaDaSelecao(pais: string): number {
  * A campanha de uma seleção num torneio (três jogos de grupo e o mata-mata), pela força do país contra a do campo do
  * torneio — o Brasil e San Marino não têm a mesma chance. `extra`: o quanto quem joga acrescenta (ninguém ganha sozinho).
  */
-export function campanhaDaSelecao(r: Rng, id: CompeticaoId, pais: string, extra: number): Campanha {
-  const mundial = id === idDaSelecao('mundial');
-  const forca = forcaDaSelecao(pais) + extra + r.normal() * 0.3;
+export function campanhaDaSelecao(r: Rng, id: CompeticaoId, pais: string, extra: number, d: Dominio = 'futebol'): Campanha {
+  const mundial = id === idDaSelecao('mundial') || id.endsWith(':mundial');
+  const forca = forcaDaSelecao(pais, d) + extra + r.normal() * 0.3;
   // O campo do torneio: no mundial, o mundo inteiro (a média sobe a cada fase); no continental, o continente.
   const media = mundial ? 3.1 : confederacaoDe(pais) === 'UEFA' || confederacaoDe(pais) === 'CONMEBOL' ? 3.2 : 2.6;
   const campo = (k: number) => ({ nome: 'uma seleção', forca: media - 0.6 + k * 0.35 + r.normal() * 0.5 });

@@ -40,14 +40,16 @@ import { flex, ge } from '../texto';
 import { anoDe } from '../tempo';
 import { aSelecao, clubePorNome, clubesDoPais, daCompeticao, divisaoDoNivel, doClube, nivelDaCompeticao, noClube, nomeDaSelecao, oClube, type Clube } from '../dados/clubes';
 import { capitalDoPais, grandesCentros, municipio, paisDaCidade } from '../dados/lugares';
-import { ocupacao } from '../dados/ocupacoes';
+import { comissaoDe, ocupacao } from '../dados/ocupacoes';
 import { habilidade } from './frentes';
 import { contratar, encerrarEmprego } from './trabalho';
 import { mudarAgora } from './processos';
 import { marcar } from './marcas';
 import { abalar } from './abalo';
-import { torneioDoAno } from './selecao';
-import { clubesNaDivisao, divisaoDoClube, fecharTemporadaDaLiga, forcaDoClube } from './ligas';
+import { clubesNaDivisao, divisaoDoClube, fecharTemporadaDaLiga, forcaDoClube, forcaNaLiga } from './ligas';
+import { aCompeticaoId, campanhaDaSelecao, daCompeticaoId, faseDaSelecaoEmPalavras, idDaCopa, nomeDaCompeticao, placarDe, sortearAdversarioDeCopa, torneioDeSelecoes } from './competicoes';
+import { pesoDaLicenca, vestiarioDeExAtleta } from './oficioDoTecnico';
+import { rngDe } from '../rng';
 
 export const OCUPACAO_TECNICO = 'tecnico_futebol';
 /** A seleção que chama um técnico: a do país dele (a nacionalidade de nascença). Sede: a capital (no Brasil, o Rio da CBF). */
@@ -71,17 +73,19 @@ const porteDe = (nome: string): Clube['porte'] | undefined => clubePorNome(nome)
 const tetoDoClube = (nome: string) => forcaDoClube(nome);
 /** A divisão em que o clube joga agora, na tabela do país dele. */
 const divisaoDe = (v: Vida, c: Clube): 1 | 2 | 3 | 4 => divisaoDoClube(v, c.nome, paisDaCidade(c.cidade));
-const nomeDaCompeticao = (nivel: number) => divisaoDoNivel(nivel) || 'copa regional';
+const nomeDaDivisao = (nivel: number, pais?: string) => divisaoDoNivel(nivel, pais) || 'copa regional';
 /**
  * O torneio curto do começo da temporada: no Brasil, o estadual; fora, a copa
  * nacional (que existe em quase todo país: a Copa del Rey, a FA Cup, a Copa
  * Argentina) — dita pelo que é, sem nome próprio. Mesma simulação.
  */
-const torneioCurto = (municipioId: string) => (paisDaCidade(municipioId) === 'BR'
-  ? { nome: 'campeonato estadual', no: 'no campeonato estadual', campeao: 'estadual', rival: 'um time do interior' }
-  : { nome: 'copa nacional', no: 'na copa nacional', campeao: 'da copa nacional', rival: 'um time menor' });
+// REWORK 11 · ESP-11.8: fora do Brasil, a copa nacional tem o nome dela (a Coppa Italia, a Copa del Rey — `competicoes`) e é
+// jogada em mata-mata com TODOS os clubes do país, a força pela divisão; o estadual é só do Brasil.
+export const torneioCurto = (municipioId: string) => { const pais = paisDaCidade(municipioId); const id = idDaCopa(pais); return pais === 'BR'
+  ? { nome: 'campeonato estadual', no: 'no campeonato estadual', campeao: 'o estadual', rival: 'um time do interior', unica: false }
+  : { nome: nomeDaCompeticao(id), no: `${aCompeticaoId(id).replace(/^a /, 'na ').replace(/^o /, 'no ')}`, campeao: aCompeticaoId(id), rival: 'um time das divisões de baixo', unica: true }; };
 /** "da Série A", "do campeonato estadual", "das divisões de acesso". */
-const daComp = (nivel: number) => daCompeticao(nomeDaCompeticao(nivel));
+const daComp = (nivel: number, pais?: string) => daCompeticao(nomeDaDivisao(nivel, pais));
 
 export interface ResumoDoTecnico { clubes: number; jogos: number; v: number; e: number; d: number; titulos: number; acessos: number; rebaixamentos: number; demissoes: number; renovacoes: number; aproveitamento: number; temporadas: number }
 
@@ -127,7 +131,8 @@ export function linhaDoTecnico(c: CarreiraDeTecnico): string {
  */
 export function trabalhoDoTecnico(v: Vida): number {
   const anos = Math.min(12, anosNoBanco(v));
-  const x = (v.mente.cognicao - 50) / 14 + (habilidade(v, 'lideranca') - 30) / 26 + anos / 6 + (Math.max(habilidade(v, 'futebol'), (v.caminhos.frentes.futebol?.auge ?? 0) * 0.85) - 60) / 36 + v.personalidade.tracos.disciplina / 140 - 0.8;
+  // REWORK 11 · ESP-11.7: a licença de treinador (C a Pro) entra aqui — o curso ensina; a estrada no banco ainda pesa mais.
+  const x = (v.mente.cognicao - 50) / 14 + (habilidade(v, 'lideranca') - 30) / 26 + anos / 6 + (Math.max(habilidade(v, 'futebol'), (v.caminhos.frentes.futebol?.auge ?? 0) * 0.85) - 60) / 36 + v.personalidade.tracos.disciplina / 140 - 0.8 + pesoDaLicenca(v);
   return Math.round(clamp(x, -3, 3.5) * 10) / 10;
 }
 export function anosNoBanco(v: Vida): number {
@@ -178,7 +183,7 @@ const posicaoEsperada = (forcas: number[]) => 1 + forcas.slice(1).filter(f => f 
 export function processarTecnico(v: Vida, r: Rng): void {
   const emp = v.trabalho.atual;
   // Quem chegou ao comando agora (promovido de auxiliar, ou contratado): a carreira começa num clube de verdade.
-  if (emp?.ocupacaoId === OCUPACAO_TECNICO && !passagemAtual(v)) iniciarComando(v, r);
+  if (emp?.ocupacaoId === OCUPACAO_TECNICO && !passagemAtual(v) && !iniciarComando(v, r)) return;
   const car = v.caminhos.tecnico;
   if (!car || car.tFim !== undefined) return;
   const p = passagemAtual(v);
@@ -203,7 +208,7 @@ export function processarTecnico(v: Vida, r: Rng): void {
 }
 
 /** O primeiro comando: um clube que caiba no nome (o passado de jogador ajuda a ser lembrado — só isso). */
-function iniciarComando(v: Vida, r: Rng): void {
+function iniciarComando(v: Vida, r: Rng): boolean {
   const es = [v.caminhos.esporte, ...(v.caminhos.carreirasEsportivas ?? [])].filter(x => x?.modalidade === 'futebol' && x.fase !== 'base');
   const exAtleta = es.length > 0;
   const nomeDeJogador = Math.max(0, ...es.map(x => (x!.reputacao ?? 30) * 0.4 + x!.nivel * 3));
@@ -211,11 +216,27 @@ function iniciarComando(v: Vida, r: Rng): void {
   v.caminhos.tecnico = c;
   c.tFim = undefined;
   // O primeiro clube: quem nunca dirigiu começa embaixo; o nome do ex-jogador abre a porta de um clube maior, não a da elite.
+  const emp = v.trabalho.atual!;
+  // REWORK 11 · ESP-11.7: promovido na comissão de um clube concreto, o comando é NESSE clube (sem mudança de cidade).
+  const daComissao = emp.postos?.some(x => x.ocupacaoId === 'auxiliar_tecnico') && emp.clube ? clubePorNome(emp.clube, paisDaCidade(emp.municipioId)) : undefined;
+  if (daComissao) {
+    const n = divisaoDe(v, daComissao);
+    assumir(v, r, c, { id: `tec_${v.t}_ini`, clube: daComissao.nome, municipioId: daComissao.cidade, nivel: n, meses: 24, salario: salarioDeTecnico(daComissao.nome, n, c.reputacao), t: v.t, validaAte: v.t, origem: 'mercado' }, true, true);
+    return true;
+  }
+  // Sem clube da comissão: um clube que caiba no nome LIGA — é uma proposta (`tec_proposta`), não uma mudança decidida
+  // por você. Até a resposta, a pessoa continua na comissão (o cargo de técnico é o da proposta).
   const nivel = nivelPeloNome(c.reputacao);
   const ultimoClube = es.map(x => x!.clube).find(n => !!clubePorNome(n) && divisaoDe(v, clubePorNome(n)!) === nivel);
   const clube = ultimoClube && r.chance(0.35) ? clubePorNome(ultimoClube)! : escolherClube(v, r, nivel);
-  const prop: PropostaDeTecnico = { id: `tec_${v.t}_ini`, clube: clube.nome, municipioId: clube.cidade, nivel: divisaoDe(v, clube), meses: 24, salario: salarioDeTecnico(clube.nome, divisaoDe(v, clube), c.reputacao), t: v.t, validaAte: v.t, origem: 'mercado' };
-  assumir(v, r, c, prop, true);
+  if (!c.proposta) {
+    c.proposta = { id: `tec_${v.t}_ini`, clube: clube.nome, municipioId: clube.cidade, nivel: divisaoDe(v, clube), meses: 24, salario: salarioDeTecnico(clube.nome, divisaoDe(v, clube), c.reputacao), t: v.t, validaAte: v.t + 11, origem: 'mercado' };
+    c.convites = (c.convites ?? 0) + 1;
+    v.fatos['tec_proposta_hoje'] = v.t;
+  }
+  const aux = comissaoDe('futebol').auxiliar;
+  if (aux) { emp.ocupacaoId = aux; emp.tPosto = v.t; }
+  return false;
 }
 
 /** A divisão que o nome abre (o mercado olha a reputação de técnico). */
@@ -241,10 +262,11 @@ export function salarioDeTecnico(clube: string, nivel: number, rep: number): num
 }
 
 /** Executa ESTA proposta (a que a decisão mostrou): fecha a passagem atual, abre a nova, muda de cidade se preciso. */
-function assumir(v: Vida, r: Rng, c: CarreiraDeTecnico, p: PropostaDeTecnico, primeira = false): void {
+function assumir(v: Vida, r: Rng, c: CarreiraDeTecnico, p: PropostaDeTecnico, primeira = false, noMesmoLugar = false): void {
   const atual = passagemAtual(v);
   if (atual) fecharPassagem(v, atual, p.selecao ? 'selecao' : 'proposta');
-  const nova: PassagemDeTecnico = { clube: p.clube, municipioId: p.municipioId, nivel: p.nivel, desde: v.t, contratoAte: v.t + p.meses, salario: p.salario, temporadas: [], pressao: porteDe(p.clube) === 'grande' || p.selecao ? 40 : 30, vestiario: 55, ...(p.selecao ? { selecao: true } : {}) };
+  // O elenco respeita quem jogou (o vestiário começa melhor); o resultado, não: a estrada no banco é outra coisa.
+  const nova: PassagemDeTecnico = { clube: p.clube, municipioId: p.municipioId, nivel: p.nivel, desde: v.t, contratoAte: v.t + p.meses, salario: p.salario, temporadas: [], pressao: porteDe(p.clube) === 'grande' || p.selecao ? 40 : 30, vestiario: 55 + vestiarioDeExAtleta(v), ...(p.selecao ? { selecao: true } : {}) };
   // No meio da temporada: o time é pego DAQUELA tabela (a que a proposta mostrou); a diretoria dá a lua de mel de quem chega para apagar incêndio.
   const meio = p.meioDeTemporada;
   if (meio && p.nivel >= 2) {
@@ -258,15 +280,17 @@ function assumir(v: Vida, r: Rng, c: CarreiraDeTecnico, p: PropostaDeTecnico, pr
   let emp = v.trabalho.atual;
   if (!emp || emp.ocupacaoId !== OCUPACAO_TECNICO) emp = contratar(v, r, ocupacao(OCUPACAO_TECNICO), 'oportunidade');
   emp.empregador = p.selecao ? aSelecao(p.clube) : oClube(p.clube);
+  emp.clube = p.selecao ? undefined : p.clube;
   emp.salario = p.salario;
   emp.tPosto = v.t;
   // A cidade do clube (a seleção não muda ninguém de cidade).
-  if (!p.selecao && p.municipioId !== v.moradia.municipioId) { emp.municipioId = p.municipioId; mudarAgora(v, p.municipioId, `para dirigir ${oClube(p.clube)}`); }
+  if (!p.selecao && noMesmoLugar) emp.municipioId = p.municipioId;
+  else if (!p.selecao && p.municipioId !== v.moradia.municipioId) { emp.municipioId = p.municipioId; mudarAgora(v, p.municipioId, `para dirigir ${oClube(p.clube)}`); }
   const g = ge(v);
   const texto = p.selecao
     ? `${flex(g, 'Chamado', 'Chamada')} para dirigir ${aSelecao(p.clube)}, aos ${idade(v)}.`
     : nova.meioDeTemporada
-      ? `No meio da temporada: ${flex(g, 'assumiu', 'assumiu')} ${oClube(p.clube)} em ${nova.meioDeTemporada.posicao}º lugar, depois de ${nova.meioDeTemporada.rodada} rodadas ${daComp(p.nivel)}, em ${municipio(p.municipioId).nome}.`
+      ? `No meio da temporada: ${flex(g, 'assumiu', 'assumiu')} ${oClube(p.clube)} em ${nova.meioDeTemporada.posicao}º lugar, depois de ${nova.meioDeTemporada.rodada} rodadas ${daComp(p.nivel, paisDaCidade(p.municipioId))}, em ${municipio(p.municipioId).nome}.`
     : primeira
       ? `${flex(g, 'Assumiu', 'Assumiu')} o comando técnico ${doClube(p.clube)}, ${p.nivel === 1 && paisDaCidade(p.municipioId) === 'BR' ? 'no campeonato estadual' : `na ${divisaoDoNivel(p.nivel, paisDaCidade(p.municipioId))}`.replace('na divisões', 'nas divisões')}: a primeira vez como ${flex(g, 'técnico', 'técnica')} principal.`
       : `Novo clube: ${flex(g, 'técnico', 'técnica')} ${doClube(p.clube)} (${divisaoDoNivel(p.nivel, paisDaCidade(p.municipioId))}), em ${municipio(p.municipioId).nome}${paisDaCidade(p.municipioId) !== paisDaVida(v) ? `, ${noPais(paisDaCidade(p.municipioId))}` : ''}.`;
@@ -328,6 +352,14 @@ function jogarTemporada(v: Vida, r: Rng, c: CarreiraDeTecnico, p: PassagemDeTecn
   p.retomada = undefined;
   if (ret && p.nivel >= 2) { t.desdeRodada = ret.rodada; jogarLiga(v, r, c, p, t, nosso, conta, ret); return; }
 
+  // 1. Fora do Brasil: a copa nacional, em mata-mata com todos os clubes do país (REWORK 11 · ESP-11.8); quem está no
+  //    nível 1 joga também a liga regional (a liga dele), sem semifinal nem final.
+  const paisDoClube = paisDaCidade(p.municipioId);
+  if (paisDoClube !== 'BR') {
+    const fora = copaDoTecnico(v, r, c, p, t, nosso, conta);
+    if (fora === 'demitido') return;
+    if (p.nivel >= 2) { jogarLiga(v, r, c, p, t, nosso, conta); return; }
+  }
   // 1. O estadual: o porte no estado (o grande da capital contra o time do interior), fase única e mata-mata.
   const uf = municipio(p.municipioId).uf;
   const rivais = clubesDoPais().filter(k => k.nome !== p.clube && municipio(k.cidade).uf === uf);
@@ -338,8 +370,8 @@ function jogarTemporada(v: Vida, r: Rng, c: CarreiraDeTecnico, p: PassagemDeTecn
   const pts = new Array(12).fill(0);
   for (const rod of tabelaDeJogos(12, false)) for (const [a, b] of rod) jogar(r, est, pts, a, b, 1, c.estilo, conta);
   const ordem = pts.map((x, i) => ({ i, x: x + est[i] * 0.01 })).sort((a, b) => b.x - a.x).map(o => o.i);
-  t.estadual = 'primeira fase';
-  if (ordem.indexOf(0) < 4) {
+  if (paisDoClube === 'BR') t.estadual = 'primeira fase';
+  if (paisDoClube === 'BR' && ordem.indexOf(0) < 4) {
     const adv = ordem[3 - ordem.indexOf(0)];
     const semi = [partida(r, est[0] - est[adv] + 1, c.estilo), partida(r, est[0] - est[adv] - 1, c.estilo)];
     semi.forEach(conta);
@@ -352,6 +384,7 @@ function jogarTemporada(v: Vida, r: Rng, c: CarreiraDeTecnico, p: PassagemDeTecn
       const fin = outros.sort((a, b) => est[b] - est[a])[r.chance(0.65) ? 0 : 1] ?? outros[0];
       t.estadual = 'vice';
       p.decisao = { competicao: torneioCurto(p.municipioId).nome, adversario: nomes[fin] || torneioCurto(p.municipioId).rival, forca: Math.round((est[0] - est[fin]) * 10) / 10, ano, t: v.t };
+      escrever(v, { texto: `Na final do estadual com ${oClube(p.clube)}: ${oClube(p.decisao.adversario).replace(/^o um /, 'um ')} do outro lado.`, relevancia: 'cotidiano', tema: 'trabalho' });
     }
   }
   // Ponto de checagem: o estadual (o grande sente mais; para o clube pequeno, o estadual é o ano inteiro).
@@ -365,7 +398,7 @@ function jogarTemporada(v: Vida, r: Rng, c: CarreiraDeTecnico, p: PassagemDeTecn
     if (fecharTemporadaDaLiga(v, paisDaCidade(p.municipioId), ano, p.clube, 1, posEstadual) === 1) {
       t.acesso = true;
       p.nivel = 2;
-      escrever(v, { texto: `Acesso: ${oClube(p.clube)} ganhou a vaga nas divisões de acesso com você no banco (${posEstadual}º no estadual).`, relevancia: 'biografia', tema: 'trabalho', tom: 'bom' });
+      escrever(v, { texto: `Acesso: ${oClube(p.clube)} ganhou a vaga ${daComp(2, paisDoClube).replace(/^d/, 'n')} com você no banco (${posEstadual}º ${paisDoClube === 'BR' ? 'no estadual' : daComp(1, paisDoClube).replace(/^d/, 'n')}).`, relevancia: 'biografia', tema: 'trabalho', tom: 'bom' });
       marcar(v, 'conquista', `Acesso com ${oClube(p.clube)} como ${flex(g, 'técnico', 'técnica')}.`, 2, { dominio: 'futebol', ocupacaoId: OCUPACAO_TECNICO });
       c.reputacao = clamp(c.reputacao + 4);
       p.pressao = clamp(p.pressao - 20);
@@ -400,9 +433,9 @@ function jogarLiga(v: Vida, r: Rng, c: CarreiraDeTecnico, p: PassagemDeTecnico, 
   }
   const pos = t.colocacao ?? 10;
   if (pos === 1) {
-    const titulo = `${flex(g, 'Campeão', 'Campeã')} ${daComp(p.nivel)}`;
+    const titulo = `${flex(g, 'Campeão', 'Campeã')} ${daComp(p.nivel, paisDaCidade(p.municipioId))}`;
     (t.titulos ??= []).push(titulo);
-    const texto = `${flex(g, 'Campeão', 'Campeã')} ${daComp(p.nivel)} como ${flex(g, 'técnico', 'técnica')} ${doClube(p.clube)} (${t.ano}): ${t.v} vitórias, ${t.e} empates e ${t.d} derrotas no ano.`;
+    const texto = `${flex(g, 'Campeão', 'Campeã')} ${daComp(p.nivel, paisDaCidade(p.municipioId))} como ${flex(g, 'técnico', 'técnica')} ${doClube(p.clube)} (${t.ano}): ${t.v} vitórias, ${t.e} empates e ${t.d} derrotas no ano.`;
     escrever(v, { texto, relevancia: p.nivel >= 3 ? 'marco' : 'biografia', tema: 'trabalho', tom: 'bom' });
     marcar(v, 'conquista', texto, p.nivel >= 3 ? 3 : 2, { dominio: 'futebol', ocupacaoId: OCUPACAO_TECNICO });
     c.reputacao = clamp(c.reputacao + 3 + p.nivel * 1.5);
@@ -420,13 +453,47 @@ function jogarLiga(v: Vida, r: Rng, c: CarreiraDeTecnico, p: PassagemDeTecnico, 
   } else if (mov === -1) {
     t.rebaixamento = true;
     p.nivel = (p.nivel - 1) as 1 | 2 | 3 | 4;
-    escrever(v, { texto: `${oClube(p.clube).replace(/^./, x => x.toUpperCase())} caiu com você no banco: ${pos}º lugar ${daComp(p.nivel + 1)}.`, relevancia: 'biografia', tema: 'trabalho', tom: 'ruim' });
+    escrever(v, { texto: `${oClube(p.clube).replace(/^./, x => x.toUpperCase())} caiu com você no banco: ${pos}º lugar ${daComp(p.nivel + 1, paisDaCidade(p.municipioId))}.`, relevancia: 'biografia', tema: 'trabalho', tom: 'ruim' });
     c.reputacao = clamp(c.reputacao - 6);
     p.pressao = clamp(p.pressao + 40);
     abalar(v, 'o rebaixamento do time que você dirigia', -5, 4);
   }
   // O que a diretoria leu no ano: a posição contra o que o elenco prometia (quem chegou no meio: contra onde pegou o time).
   c.reputacao = clamp(c.reputacao + clamp(((ret ? ret.posicao : esperada) - pos) * 0.5, -3, 4));
+}
+
+/**
+ * REWORK 11 · ESP-11.8 — a copa nacional do técnico (fora do Brasil): mata-mata com todos os clubes do país, cada um
+ * com a força da divisão em que está (a mesma régua da liga: `ligas.forcaNaLiga`, 3 pontos de jogo por divisão).
+ * Primeira fase, oitavas, quartas e semifinal são jogadas aqui; a final fica para o momento do ano (`tec_final`) — ou
+ * para o sorteio neutro. Um clube da terceira divisão chegar à final já é notícia; ser campeão, raríssimo.
+ */
+function copaDoTecnico(v: Vida, r: Rng, c: CarreiraDeTecnico, p: PassagemDeTecnico, t: TemporadaDeTecnico, nosso: (base: number) => number, conta: (k: 'v' | 'e' | 'd') => void): 'demitido' | undefined {
+  const pais = paisDaCidade(p.municipioId);
+  const id = idDaCopa(pais);
+  const lista = clubesDoPais(pais).filter(k => k.nome !== p.clube).map(k => ({ nome: k.nome, forca: forcaNaLiga(k.nome, pais, divisaoDe(v, k)) * 3 }));
+  const minha = nosso(forcaNaLiga(p.clube, pais, p.nivel) * 3);
+  const ja = new Set<string>();
+  const fases = ['primeira fase', 'oitavas', 'quartas', 'semifinal'] as const;
+  t.copa = { id, fase: 'primeira fase' };
+  for (let k = 0; k < 4; k++) {
+    const a = sortearAdversarioDeCopa(r, lista.map(x => ({ nome: x.nome, forca: x.forca / 3 })), k, ja, () => ({ nome: '', forca: 1 + r.next() }));
+    ja.add(a.nome);
+    const res = partida(r, minha - a.forca * 3 + 0.5, c.estilo);
+    conta(res);
+    const passou = res === 'v' || (res === 'e' && r.chance(Math.min(0.65, Math.max(0.35, 0.5 + (minha - a.forca * 3) * 0.02))));
+    if (!passou) { t.copa.fase = fases[k]; break; }
+    if (k === 3) {
+      const fin = sortearAdversarioDeCopa(r, lista.map(x => ({ nome: x.nome, forca: x.forca / 3 })), 4, ja, () => ({ nome: '', forca: 1.5 + r.next() }));
+      t.copa.fase = 'vice';
+      p.decisao = { competicao: nomeDaCompeticao(id), adversario: fin.nome || torneioCurto(p.municipioId).rival, forca: Math.round((minha - fin.forca * 3) * 10) / 10, ano: t.ano, t: v.t, unica: true };
+      escrever(v, { texto: `${oClube(p.clube).replace(/^./, x => x.toUpperCase())} chegou à final ${daCompeticaoId(id)} com você no banco${p.nivel <= 2 ? ' — um time das divisões de baixo na decisão' : ''}.`, relevancia: p.nivel <= 2 ? 'biografia' : 'cotidiano', tema: 'trabalho', tom: 'bom' });
+    } else t.copa.fase = fases[k + 1];
+  }
+  // A diretoria do clube grande cobra a eliminação cedo; para o pequeno, a copa é bônus.
+  if (porteDe(p.clube) === 'grande' && (t.copa.fase === 'primeira fase' || t.copa.fase === 'oitavas')) p.pressao = clamp(p.pressao + 6);
+  if (p.nivel <= 2 && (t.copa.fase === 'semifinal' || t.copa.fase === 'vice')) c.reputacao = clamp(c.reputacao + 2);
+  return undefined;
 }
 
 /**
@@ -605,7 +672,7 @@ const p2 = (p: PropostaDeTecnico) => (p.selecao ? 'da seleção' : doClube(p.clu
  * Os dois jogos entram na temporada (J = V + E + D continua valendo).
  * `neutro`: o ano não mostrou o momento — a final é jogada pela força.
  */
-export function decidirFinal(v: Vida, r: Rng, como: 'otimo' | 'bom' | 'ruim' | 'pessimo' | 'neutro'): boolean | undefined {
+export function decidirFinal(v: Vida, r: Rng, como: 'otimo' | 'bom' | 'ruim' | 'pessimo' | 'neutro'): { venceu: boolean; placar: string; unica: boolean } | undefined {
   const p = passagemAtual(v);
   const d = p?.decisao;
   if (!p || !d) return undefined;
@@ -613,23 +680,37 @@ export function decidirFinal(v: Vida, r: Rng, como: 'otimo' | 'bom' | 'ruim' | '
   const c = v.caminhos.tecnico!;
   const g = ge(v);
   const venceu = como === 'neutro' ? r.chance(1 / (1 + Math.exp(-d.forca / 2.5))) : como === 'otimo' || como === 'bom';
-  // Os dois jogos: quem ganha a final ganha (ou empata) os dois; o ótimo é vitória nas duas.
-  const jogos: ('v' | 'e' | 'd')[] = venceu ? (como === 'otimo' ? ['v', 'v'] : r.chance(0.5) ? ['v', 'e'] : ['e', 'v']) : (como === 'pessimo' ? ['d', 'd'] : r.chance(0.5) ? ['d', 'e'] : ['e', 'd']);
+  // REWORK 11 · ESP-11.8: os jogos da final saem DAQUI, com placar — e o texto do momento é montado com eles (antes, o
+  // texto dizia "vitória na ida, empate na volta" e o sorteio podia ter sido o contrário). Ida e volta no estadual; jogo
+  // único (e pênaltis, se empatar) na copa nacional de fora.
+  const unica = !!d.unica;
+  const jogos: ('v' | 'e' | 'd')[] = unica
+    ? [venceu ? (como === 'otimo' || r.chance(0.6) ? 'v' : 'e') : (como === 'pessimo' || r.chance(0.6) ? 'd' : 'e')]
+    : venceu ? (como === 'otimo' ? ['v', 'v'] : r.chance(0.5) ? ['v', 'e'] : ['e', 'v']) : (como === 'pessimo' ? ['d', 'd'] : r.chance(0.5) ? ['d', 'e'] : ['e', 'd']);
+  const rp = rngDe(v.id, 'placar_final', d.ano);
+  const placares = jogos.map(k => placarDe(rp, k));
+  // Na ida e volta, quem ganha vence (ou empata) os dois jogos: o agregado é sempre de quem levou a taça.
+  const pl = (x: [number, number]) => `${x[0]} a ${x[1]}`;
+  const placar = unica
+    ? `Jogo único: ${pl(placares[0])}${jogos[0] === 'e' ? `, e ${venceu ? 'vitória' : 'derrota'} nos pênaltis` : ''}.`
+    : `Ida: ${pl(placares[0])}; volta: ${pl(placares[1])}.`;
   if (t) for (const k of jogos) { t.jogos++; t[k]++; }
   p.decisao = undefined;
+  const tc = torneioCurto(p.municipioId);
   if (venceu) {
-    const tc = torneioCurto(p.municipioId);
-    if (t) { t.estadual = 'campeão'; (t.titulos ??= []).push(`${flex(g, 'Campeão', 'Campeã')} ${tc.campeao}`); }
-    c.reputacao = clamp(c.reputacao + 3);
-    p.pressao = clamp(p.pressao - 15);
-    const texto = `${flex(g, 'Campeão', 'Campeã')} ${tc.campeao} com ${oClube(p.clube)} (${d.ano}), contra ${oClube(d.adversario).replace(/^o um/, 'um')} na final.`;
-    escrever(v, { texto, relevancia: 'biografia', tema: 'trabalho', tom: 'bom' });
-    marcar(v, 'conquista', texto, 2, { dominio: 'futebol', ocupacaoId: OCUPACAO_TECNICO });
+    if (t) { if (t.copa) t.copa.fase = 'campeão'; else t.estadual = 'campeão'; (t.titulos ??= []).push(`${flex(g, 'Campeão', 'Campeã')} ${tc.campeao.replace(/^o /, 'do ').replace(/^a /, 'da ')}`); }
+    // Uma conquista improvável repercute à altura: quanto mais fraco o time na final, mais o nome cresce.
+    const zebra = Math.max(0, -d.forca);
+    c.reputacao = clamp(c.reputacao + 3 + Math.min(6, zebra / 1.5));
+    p.pressao = clamp(p.pressao - 15 - Math.min(15, zebra * 2));
+    const texto = `${flex(g, 'Campeão', 'Campeã')} ${tc.campeao.replace(/^o /, 'do ').replace(/^a /, 'da ')} com ${oClube(p.clube)} (${d.ano}), contra ${oClube(d.adversario).replace(/^o um/, 'um')} na final${zebra >= 3 ? ' — uma zebra que o país inteiro comentou' : ''}.`;
+    escrever(v, { texto, relevancia: zebra >= 3 ? 'marco' : 'biografia', tema: 'trabalho', tom: 'bom' });
+    marcar(v, 'conquista', texto, zebra >= 3 ? 3 : 2, { dominio: 'futebol', ocupacaoId: OCUPACAO_TECNICO });
   } else {
-    if (t) t.estadual = 'vice';
+    if (t) { if (t.copa) t.copa.fase = 'vice'; else t.estadual = 'vice'; }
     p.pressao = clamp(p.pressao + (porteDe(p.clube) === 'grande' ? 10 : 4));
   }
-  return venceu;
+  return { venceu, placar, unica };
 }
 
 /* ------------------------------------------------------------ A seleção (C3) */
@@ -644,29 +725,24 @@ function jogarAnoDeSelecao(v: Vida, r: Rng, c: CarreiraDeTecnico, p: PassagemDeT
   const ano = anoDe(v.t - 6);
   const t: TemporadaDeTecnico = { ano, nivel: 4, jogos: 0, v: 0, e: 0, d: 0 };
   p.temporadas.push(t);
+  const paisSel = nacionalidadesDaVida(v)[0];
   const forca = 2.5 + trabalhoDoTecnico(v) * 0.6 + (p.vestiario - 50) / 14 + r.normal() * 1.2;
   const conta = (k: 'v' | 'e' | 'd') => { t.jogos++; t[k]++; };
   for (let k = 0; k < 10; k++) conta(partida(r, forca - r.normal() * 3, c.estilo));
-  const torneio = torneioDoAno('futebol', ano);
-  if (!torneio) return;
+  // REWORK 11 · ESP-11.4: o torneio pelo nome (a Copa do Mundo, a Copa América, a Eurocopa) e a força do país: a seleção
+  // do Brasil e a de San Marino não têm a mesma chance. O trabalho do técnico soma por cima (em força de seleção).
+  const id = torneioDeSelecoes(paisSel, ano);
+  if (!id) return;
+  const torneio = aCompeticaoId(id);
   t.torneio = torneio;
-  let pontos = 0;
-  for (let k = 0; k < 3; k++) { const x = partida(r, forca - 1 - r.next() * 3, c.estilo); conta(x); pontos += x === 'v' ? 3 : x === 'e' ? 1 : 0; }
-  const fases = ['caiu na fase de grupos', 'caiu nas oitavas', 'caiu nas quartas', 'caiu na semifinal', 'perdeu a final', 'foi campeã'];
-  let fase = 0;
-  if (pontos >= 4 || (pontos === 3 && r.chance(0.5))) {
-    fase = 1;
-    for (let k = 0; k < 4; k++) {
-      const x = partida(r, forca - 2 - k * 0.8 - r.next() * 2, c.estilo);
-      // No mata-mata, o empate vai aos pênaltis.
-      const passou = x === 'v' || (x === 'e' && r.chance(0.5));
-      conta(x);
-      if (!passou) break;
-      fase++;
-    }
-  }
+  const camp = campanhaDaSelecao(rngDe(v.id, 'selecao_tecnico', ano), id, paisSel, trabalhoDoTecnico(v) * 0.15 + (p.vestiario - 50) / 60);
+  for (let k = 0; k < camp.v; k++) conta('v');
+  for (let k = 0; k < camp.e; k++) conta('e');
+  for (let k = 0; k < camp.d; k++) conta('d');
+  const fase = ['primeira fase', 'oitavas', 'quartas', 'semifinal', 'vice', 'campeão'].indexOf(camp.fase);
+  const fases = ['primeira fase', 'oitavas', 'quartas', 'semifinal', 'vice', 'campeão'].map(f => faseDaSelecaoEmPalavras(f as never));
   const g = ge(v);
-  const de = torneio.replace(/^o /, 'do ');
+  const de = daCompeticaoId(id);
   if (fase === 5) {
     (t.titulos ??= []).push(`Campeão ${de}`.replace('Campeão', flex(g, 'Campeão', 'Campeã')));
     const texto = `${flex(g, 'Campeão', 'Campeã')} ${de} como ${flex(g, 'técnico', 'técnica')} da ${aSelecao(selecaoDe(v)).replace(/^a /, '')} (${ano}).`;
@@ -675,8 +751,8 @@ function jogarAnoDeSelecao(v: Vida, r: Rng, c: CarreiraDeTecnico, p: PassagemDeT
     c.reputacao = clamp(c.reputacao + 6);
     p.pressao = clamp(p.pressao - 30);
   } else {
-    escrever(v, { texto: `${torneio.charAt(0).toUpperCase()}${torneio.slice(1)}: a seleção que você dirigia ${fases[fase]}.`, relevancia: torneio.includes('mundial') ? 'marco' : 'biografia', tema: 'trabalho', tom: fase >= 3 ? undefined : 'ruim' });
-    p.pressao = clamp(p.pressao + (fase <= 2 ? (torneio.includes('mundial') ? 45 : 30) : 5));
+    escrever(v, { texto: `${torneio.charAt(0).toUpperCase()}${torneio.slice(1)}: a seleção que você dirigia ${fases[fase]}.`, relevancia: id === 'sel:mundial' ? 'marco' : 'biografia', tema: 'trabalho', tom: fase >= 3 ? undefined : 'ruim' });
+    p.pressao = clamp(p.pressao + (fase <= 2 ? (id === 'sel:mundial' ? 45 : 30) : 5));
     if (p.pressao >= 70 && r.chance(0.7)) demitir(v, p, t);
   }
 }

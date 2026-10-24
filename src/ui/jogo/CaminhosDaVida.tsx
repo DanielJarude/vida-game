@@ -38,6 +38,7 @@ import { idade } from '../../motor/nucleo';
 import { anoDe } from '../../motor/tempo';
 import { ocupacaoOuNula } from '../../motor/dados/ocupacoes';
 import { doClube } from '../../motor/dados/clubes';
+import { ultimoClubeDe } from '../../motor/sistemas/esporte';
 import { nomeOcupacao } from '../../motor/sistemas/trabalho';
 import { modoDoTrabalho } from '../../motor/sistemas/profissao';
 import { negocioAberto } from '../../motor/sistemas/negocio';
@@ -95,6 +96,8 @@ export function situacaoAtual(v: Vida): Ocupacao[] {
   if (n && modo !== 'negocio') out.push({ id: 'negocio', lado: 'trabalho', rotulo: n.nome, detalhe: 'o próprio negócio' });
   if (modo === 'negocio' && n && !e) out.push({ id: 'negocio', lado: 'trabalho', rotulo: n.nome, detalhe: 'o próprio negócio' });
   if (v.caminhos.esporte?.fase === 'base') out.push({ id: 'base', lado: 'trabalho', rotulo: `Na base ${doClube(v.caminhos.esporte.clube)}` });
+  // REWORK 11 · sem clube: o atleta profissional sem contrato continua atleta (sem clube), no Trabalho — não "procurando".
+  if (!e && modo === 'atleta' && v.caminhos.esporte) { const u = ultimoClubeDe(v.caminhos.esporte); out.push({ id: 'trabalho', lado: 'trabalho', rotulo: v.caminhos.esporte.modalidade === 'futebol' ? `${v.eu.genero === 'feminino' ? 'Jogadora' : 'Jogador'} profissional sem clube` : 'Atleta profissional sem clube', detalhe: u ? `último clube: ${u.clube}` : undefined }); }
   if (modo === 'procurando') out.push({ id: 'procura', lado: 'trabalho', rotulo: 'Procurando trabalho' });
   if (modo === 'aposentado') out.push({ id: 'aposentadoria', lado: 'trabalho', rotulo: 'Aposentado' + (v.eu.genero === 'feminino' ? 'a' : '') });
   if (modo === 'pausa') out.push({ id: 'pausa', lado: 'trabalho', rotulo: 'Uma pausa no trabalho' });
