@@ -173,7 +173,12 @@ export function viverCena(c: CtxI, foi: ComoFoi, prog: ProgramaDeCena, n: number
   const discordiasUsadas = new Set(marcas(c.vin).filter(x => x.startsWith('discordaram.')).map(x => Number(x.split('.')[1])));
   const discordiasLivres = (prog.discordia ?? []).map((_x, k) => k).filter(k => !discordiasUsadas.has(k));
   const qualDiscordia = tipo === 'discordaram' ? (discordiasLivres.length ? r.pick(discordiasLivres) : r.int(0, (prog.discordia?.length ?? 1) - 1)) : 0;
-  lembrar(c.vin, tipo === 'comum' ? `comum.${variacao}` : tipo === 'discordaram' ? `discordaram.${qualDiscordia}` : tipo);
+  // REWORK 11.5: o mico também não repete o mesmo (com mais anos jogados, o mesmo tropeço voltava palavra por palavra).
+  const micos = crianca ? [] : [...(prog.mico ?? []).map(x => x.replace(/\{nome\}/g, nome)), `Você tropeçou ${prog.onde.replace(/^n(o|a)/, (_m, a) => `n${a}`)} na frente de todo mundo. ${nome} riu até chorar — e prometeu não contar a ninguém (contou).`, `O celular de alguém tocou na hora errada. Era o seu.`];
+  const micosUsados = new Set(marcas(c.vin).filter(x => x.startsWith('mico.')).map(x => Number(x.split('.')[1])));
+  const micosLivres = micos.map((_x, k) => k).filter(k => !micosUsados.has(k));
+  const qualMico = tipo === 'mico' && !crianca ? (micosLivres.length ? micosLivres[r.int(0, micosLivres.length - 1)] : r.int(0, micos.length - 1)) : 0;
+  lembrar(c.vin, tipo === 'comum' ? `comum.${variacao}` : tipo === 'discordaram' ? `discordaram.${qualDiscordia}` : tipo === 'mico' && !crianca ? `mico.${qualMico}` : tipo);
   const titulo = tituloDe(prog, nome);
 
   switch (tipo) {
@@ -231,7 +236,7 @@ export function viverCena(c: CtxI, foi: ComoFoi, prog: ProgramaDeCena, n: number
       afeto(c, crianca ? 1 : 2);
       const txt = crianca
         ? r.pick([`${nome} fez birra na saída e só parou com a promessa de um sorvete. Você cedeu. Todo mundo cede.`, `${nome} derrubou o lanche inteiro no chão e chorou como se fosse o fim do mundo. Cinco minutos depois, já ria.`])
-        : r.pick([...(prog.mico ?? []).map(x => x.replace(/\{nome\}/g, nome)), `Você tropeçou ${prog.onde.replace(/^n(o|a)/, (_m, a) => `n${a}`)} na frente de todo mundo. ${nome} riu até chorar — e prometeu não contar a ninguém (contou).`, `O celular de alguém tocou na hora errada. Era o seu.`]);
+        : micos[qualMico];
       return { tipo, titulo, texto: txt };
     }
     case 'dinheiro_curto': {

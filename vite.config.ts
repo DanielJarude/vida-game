@@ -116,7 +116,7 @@ export default defineConfig({
           // (a margem, os acontecimentos do REWORK 10) e as peças que todo conteúdo usa (a base, os efeitos, os papéis, os
           // textos locais) vão para um pacote próprio, ABAIXO dos textos: eles só importam sistemas e dados; os textos os
           // importam. Sem ciclo, e o pacote dos textos volta a ter folga sem aumentar o limite.
-          if (/[\\/]src[\\/]motor[\\/]conteudo[\\/](base|efeitos|papeis|local|margem|possibilidades|acontecimentos[a-z0-9]*)\.ts/.test(id)) return 'motor-acontecimentos';
+          if (/[\\/]src[\\/]motor[\\/]conteudo[\\/](base|efeitos|papeis|local|margem|submundo|possibilidades|acontecimentos[a-z0-9]*)\.ts/.test(id)) return 'motor-acontecimentos';
           if (/[\\/]src[\\/]motor[\\/](conteudo[\\/]|sistemas[\\/](entrevista|cuidados|usos|busca|estilo|independencia|pausa|ambiente|empregabilidade|interacoes|experiencias|autoria|gestos|pertences|presentes|vidaEstudantil|estetica|conversas|conflitos)\.ts)/.test(id)) return 'motor-textos';
           if (/[\\/]src[\\/]motor[\\/](ano\.ts|acoes\.ts|fachada\.ts|sistemas[\\/]relevancia\.ts)/.test(id)) return 'motor-conteudo';
           // REWORK 3: o que só a camada de cima usa (salvar, nascer, as ações de cuidado, de estilo, de busca, a
@@ -132,7 +132,7 @@ export default defineConfig({
           // Sucessão (pacote pré-América do Sul): a partilha e a troca de protagonista leem o legado e a retrospectiva; só a
           // fachada (a tela do legado) e a família a chamam — vai com elas, sem ciclo.
           // REWORK 11: as cenas que lembram (`situacoesMemoria`, que lê o banco do técnico) e as de arte só as situações chamam.
-          if (/[\\/]src[\\/]motor[\\/]sistemas[\\/](situacoes|situacoesMemoria|situacoesArte|tecnico|visibilidade|legado|retrospectiva|familia|iniciativas|ilicito|pessoa|sucessao|tribunal|margem)\.ts/.test(id)) return 'motor-carreira';
+          if (/[\\/]src[\\/]motor[\\/]sistemas[\\/](situacoes|situacoesMemoria|situacoesArte|tecnico|visibilidade|legado|retrospectiva|familia|iniciativas|ilicito|pessoa|sucessao|tribunal|margem|submundo)\.ts/.test(id)) return 'motor-carreira';
           // REWORK 10.6 · M1: o pacote dos sistemas chegou a 794 kB (5,8 kB de folga). O que lê o ofício e os caminhos da vida
           // como um todo — as ações profissionais (`profissao`), os caminhos possíveis, a mudança de país, o fechamento do ano
           // e as habilitações — só importa os sistemas e a base, e só é chamado de cima (as ações, o ano, os textos, as telas,

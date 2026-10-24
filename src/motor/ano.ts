@@ -82,6 +82,7 @@ import { processarConhecimento } from './sistemas/conhecimento';
 import { processarBolsaDeAtleta } from './sistemas/naFormacao';
 import { processarConvivio } from './sistemas/convivio';
 import { processarTribunal } from './sistemas/tribunal';
+import { processarSubmundo } from './sistemas/submundo';
 import { processarMargem } from './sistemas/margem';
 import { processarApostas } from './sistemas/apostas';
 import { processarEcos } from './sistemas/ecos';
@@ -219,6 +220,8 @@ function viverAno(v: Vida, r: Rng): void {
   processarIlicito(v, r);
   // REWORK 10 · CRI-01: a trajetória à margem (a confiança do meio, os trabalhos maiores, os atritos, o cerco).
   processarMargem(v);
+  // REWORK 11.5 · SUB-11: os ramos do Submundo (a prática, o mercado, a organização, as pessoas com ficha, as cenas).
+  processarSubmundo(v);
   processarVeiculos(v, r);
   processarImoveis(v, r, ec);
   // REWORK 10 · JOG-01: a mão esquecida na mesa, e o jogo que virou assunto (antes das contas do ano).

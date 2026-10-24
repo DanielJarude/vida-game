@@ -282,12 +282,15 @@ describe('ESP-11.5 · Brasil → Espanha → Itália → Brasil', () => {
     v = temporadaNoClube(v);
     const ts = v.caminhos.esporte!.temporadas!;
     const linhas = ts.map(t => `${t.clube}: ${linhaDaTemporada(v, t).split(' · ')[0]}`);
-    expect(linhas).toEqual(['Cruzeiro: Série A', 'Barcelona: Primera División', 'Juventus: Serie A', 'Cruzeiro: Série A']);
+    // REWORK 11.5: a volta ao Cruzeiro pode cair numa temporada de rebaixamento (a fila do ano muda o sorteio da liga): o
+    // que se testa é a liga DO PAÍS de cada temporada.
+    expect(linhas.slice(0, 3)).toEqual(['Cruzeiro: Série A', 'Barcelona: Primera División', 'Juventus: Serie A']);
+    expect(linhas[3]).toMatch(/^Cruzeiro: Série [AB]$/);
     expect(ts.map(t => t.pais)).toEqual(['BR', 'ES', 'IT', 'BR']);
     // A taxa guarda o país do comprador (a moeda em que foi paga).
     expect(v.caminhos.esporte!.transferencias!.map(x => x.pais)).toEqual(['ES', 'IT', 'BR']);
     // Salvar e abrir não muda a liga das temporadas.
-    expect(recarregar(v).caminhos.esporte!.temporadas!.map(t => linhaDaTemporada(v, t).split(' · ')[0])).toEqual(['Série A', 'Primera División', 'Serie A', 'Série A']);
+    expect(recarregar(v).caminhos.esporte!.temporadas!.map(t => linhaDaTemporada(v, t).split(' · ')[0])).toEqual(ts.map(t => linhaDaTemporada(v, t).split(' · ')[0]));
   });
 
   it('converterEntrePaises: a mesma moeda é identidade exata; moedas diferentes atravessam o câmbio', () => {

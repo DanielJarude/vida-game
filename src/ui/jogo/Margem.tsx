@@ -15,6 +15,8 @@ import { leituraDoProcesso, perfilDaVida } from '../../motor/sistemas/tribunal';
 import { situacaoNaJustica } from '../../motor/sistemas/justica';
 import { anoDe } from '../../motor/tempo';
 import { dinheiroCurto } from '../leituraMaterial';
+import { PainelDoSubmundo } from './Submundo';
+import { NOME_DO_RAMO, ramosAtivos } from '../../motor/sistemas/ramos';
 
 const NOME: Record<string, string> = { pequenos: 'coisas erradas com a turma', patrimonial: 'receptação', fraude: 'fraude', mercado: 'comércio ilegal', grupo: 'grupo criminoso', corrupcao: 'corrupção', violencia: 'agressão' };
 const DESFECHO: Record<string, string> = { socioeducativa: 'medida socioeducativa (não é ficha de adulto)', alternativa: 'condenação, pena alternativa', prisao: 'condenação, prisão', absolvicao: 'absolvição', acordo: 'acordo (sem condenação)' };
@@ -25,6 +27,9 @@ export function situacaoNoSubmundo(v: Vida): string {
   if (v.justica?.prisao) return 'Cumprindo pena';
   if (v.justica?.foragido) return 'Foragido da Justiça';
   if (v.justica?.processo) return 'Respondendo a um processo';
+  // REWORK 11.5: as frentes em que atua (os ramos), em vez de só a categoria.
+  const frentes = ramosAtivos(env);
+  if (env && env.parou === undefined && frentes.length) return `Por fora: ${frentes.map(r => NOME_DO_RAMO[r].toLowerCase()).join(' + ')} — ${(env.reputacao ?? 0) >= 60 ? 'de confiança no meio' : (env.reputacao ?? 0) >= 30 ? 'já confiam em você' : 'ainda gente de fora'}`;
   if (env && env.parou === undefined) return `Por fora: ${NOME[env.categoria] ?? 'um esquema'} — ${(env.reputacao ?? 0) >= 60 ? 'de confiança no meio' : (env.reputacao ?? 0) >= 30 ? 'já confiam em você' : 'ainda gente de fora'}`;
   if ((v.justica?.antecedentes.length ?? 0) > 0) return 'Fora disso, com antecedentes';
   if (env) return 'Fora disso — o passado ainda pode chegar';
@@ -57,6 +62,8 @@ export function AMargem({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean
           </div>
         </div>
       )}
+      {/* REWORK 11.5 · SUB-17: as frentes, a gente e as organizações do caminho (o dossiê). */}
+      {env && <PainelDoSubmundo vida={vida} agir={agir} />}
       {proc && (
         <div className="margem__processo papel papel--sem-dobra" aria-label="O processo">
           <p className="margem__cabeca"><span>Processo</span><span>{NOME[j!.processo!.categoria] ?? ''} · desde {anoDe(j!.processo!.tInicio)}</span></p>

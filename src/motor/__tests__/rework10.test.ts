@@ -174,7 +174,9 @@ describe('ROT-05 · a base junto com a faculdade e o trabalho', () => {
     const lido = interpretar(JSON.stringify(v));
     expect(lido.tipo).toBe('ok');
     if (lido.tipo === 'ok') expect(JSON.stringify(lido.vida)).toBe(JSON.stringify(v));
-    for (let k = 0; k < 4; k++) { v = resolver(avancarAno(v).vida); expect(v.morte).toBeUndefined(); }
+    // REWORK 11.5: o que se testa é o ano passar com a base, o curso e o turno guardados (sem travar). Com a fila do ano,
+    // a vida desta semente pode morrer de causa sorteada antes dos 22 — o ano terminou do mesmo jeito.
+    for (let k = 0; k < 4 && !v.morte; k++) { const t = v.t; v = resolver(avancarAno(v).vida); expect(v.t).toBe(t + 12); }
   });
 });
 

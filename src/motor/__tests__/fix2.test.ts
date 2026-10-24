@@ -348,7 +348,9 @@ describe('estado pessoal: causas como fonte única', () => {
     // Pré-condição (REWORK 10.5): o ano do alívio sem um luto. Com a vida-base de agora, morre alguém próximo
     // exatamente nesse ano, e a cabeça pesa por outra causa; o mesmo ano segue então com outro sorteio — o que se
     // testa é o alívio da semana, não a falta de lutos.
-    const aliviada = v;
+    // REWORK 11.5: com a fila do ano (mais decisões por ano), a vida-base desta semente perde alguém nos anos da
+    // sobrecarga; o luto que vem de ANTES do ano do alívio é outra causa — fica fora da pré-condição.
+    const aliviada = transacao(v, x => { x.luto = []; }).vida;
     for (let tentativa = 0; tentativa < 5; tentativa++) {
       v = { ...structuredClone(aliviada), rng: (aliviada.rng + tentativa * 7919) >>> 0 };
       v = avancarAno(v).vida; if (v.momento) v = responder(v);

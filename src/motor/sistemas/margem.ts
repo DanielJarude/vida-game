@@ -28,6 +28,8 @@ import { disponivel, pagar, vereditoDePagar } from './dinheiro';
 import { economiaLocal } from '../dados/lugares';
 import { assumir, contratarAdvogado, cooperar, pedirReabilitacao, vereditoDaReabilitacao, vereditoDeCooperar, vereditoDoAdvogado } from './tribunal';
 import { novaOportunidade } from './oportunidades';
+import { garantirRamos, ramoPrincipal } from './ramos';
+import { anotar } from './submundo';
 
 const preco = (v: Vida, x: number) => Math.round(x * economiaLocal(v.moradia.municipioId).custo / 100) * 100;
 
@@ -51,9 +53,13 @@ export function processarMargem(v: Vida): void {
   // falar demais (a traição sobe a exposição — e ele sai da sua lista); o trabalho maior só chega por um contato vivo.
   const vivos = contatosVivos(v);
   if ((env.reputacao ?? 0) >= 30 && cs.length < 6 && r.chance(0.18)) novoContatoDoCaminho(v);
-  if (vivos >= 1 && r.chance(Math.min(0.1, 0.02 * vivos + (env.atritos ?? 0) * 0.015))) { traicao(v); return; }
+  // REWORK 11.5: a chance de traição sobe com as promessas quebradas e a desconfiança de quem está em volta.
+  const quebradas = Object.values(env.fichas ?? {}).reduce((s2, f) => s2 + (f.afastado === undefined && f.traiu === undefined ? f.quebradas : 0), 0);
+  if (vivos >= 1 && r.chance(Math.min(0.14, 0.02 * vivos + (env.atritos ?? 0) * 0.015 + quebradas * 0.015))) { traicao(v); return; }
   const ultimo = v.fatos['ilic_trabalho'] ?? env.tInicio;
-  if ((env.reputacao ?? 0) >= 25 && vivos >= 1 && v.t - ultimo >= 18 && !env.cautela && r.chance(0.45 + Math.min(0.2, vivos * 0.05))) { v.fatos['ilic_trabalho'] = v.t; return; }
+  // REWORK 11.5: com a fila do ano, o trabalho maior não perde mais a vez para outra decisão do mesmo ano (antes, ~40% dos
+  // sorteados nunca apareciam) — a chance cai na mesma proporção, e o ramo tem as suas próprias cenas grandes.
+  if ((env.reputacao ?? 0) >= 25 && vivos >= 1 && v.t - ultimo >= 18 && !env.cautela && r.chance(0.28 + Math.min(0.12, vivos * 0.03))) { v.fatos['ilic_trabalho'] = v.t; return; }
   if (env.nivel >= 2 && (env.categoria === 'mercado' || env.categoria === 'grupo') && r.chance(0.2 + (env.atritos ?? 0) * 0.05)) v.fatos['ilic_atrito'] = v.t;
 }
 
@@ -66,13 +72,26 @@ export function novoContatoDoCaminho(v: Vida): void {
   p.temperamento.responsabilidade = -0.55;
   vincular(v, p, { origem: 'vizinhanca', estagio: 'conhecido', proximidade: 25, convivio: [] });
   (env.contatos ??= []).push(p.id);
+  // REWORK 11.5 · SUB-12: o contato tem ficha — o ramo em que vocês se conheceram, o papel, a confiança, o que espera.
+  garantirRamos(v, env);
+  const ramo = ramoPrincipal(env);
+  (env.fichas ??= {})[p.id] = { papel: ramo === 'contrabando' ? 'fornecedor' : ramo === 'organizado' ? 'parceiro' : 'intermediario', especialidade: ramo, confianca: 32 + r.int(0, 12), espera: ramo === 'organizado' ? 'lealdade' : 'parte', cumpridas: 0, quebradas: 0, desde: v.t };
 }
 
 /** Um contato falou o seu nome para quem não devia: a exposição sobe, e ele sai da lista. */
 function traicao(v: Vida): void {
   const env = v.caminhos.envolvimento!;
-  const ids = [...new Set([...(env.contatos ?? []), ...(env.contatoId ? [env.contatoId] : [])])].filter(id => v.pessoas[id]?.vivo);
-  const id = rngDe(v.id, 'traicao', v.t).pick(ids);
+  const ids = [...new Set([...(env.contatos ?? []), ...(env.contatoId ? [env.contatoId] : [])])].filter(id => v.pessoas[id]?.vivo && env.fichas?.[id]?.afastado === undefined && env.fichas?.[id]?.traiu === undefined);
+  if (!ids.length) return;
+  // REWORK 11.5 · SUB-12: trai quem menos confia — e quem viu promessas quebradas (não um sorteio cego).
+  const id = rngDe(v.id, 'traicao', v.t).weighted(ids, x => { const f = env.fichas?.[x]; return f ? 1 + f.quebradas * 2 + Math.max(0, 50 - f.confianca) / 15 : 1; })!;
+  const ficha = env.fichas?.[id];
+  if (ficha) {
+    ficha.traiu = v.t;
+    const org = ficha.organizacao ? env.organizacoes?.find(o => o.id === ficha.organizacao) : undefined;
+    if (org) { org.memoria.push({ t: v.t, fato: 'traicao' }); org.lealdade = clamp(org.lealdade - 10); }
+    anotar(v, `${v.pessoas[id].nome} falou o seu nome para quem não devia.`, 'ruim');
+  }
   env.exposicao = clamp(env.exposicao + 15);
   env.traicoes = (env.traicoes ?? 0) + 1;
   env.contatos = (env.contatos ?? []).filter(x => x !== id);

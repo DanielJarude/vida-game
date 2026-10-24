@@ -18,6 +18,8 @@
  *     para não se repetirem.
  */
 
+import { normalizarSubmundo } from './sistemas/submundo';
+import { conteudoPorId } from './conteudo/motor';
 import { ehEspecialidadeMedica } from './dados/especialidades';
 import { derivarPredisposicoes } from './sistemas/pessoa';
 import { OCUPACOES_DE_ATLETA, posicaoSugerida } from './sistemas/esporte';
@@ -106,7 +108,7 @@ export function ler(s: Armazenamento | null = armazenamentoPadrao()): Leitura {
  */
 export function interpretar(bruto: string): Leitura {
   const r = interpretarSemNormalizar(bruto);
-  if (r.tipo === 'ok') { normalizarRework75(r.vida); normalizarRework97(r.vida); normalizarRework106(r.vida); normalizarRework11Relacoes(r.vida); normalizarRework11Esportes(r.vida); normalizarRework11Artes(r.vida); fixarEstatura(r.vida, true); }
+  if (r.tipo === 'ok') { normalizarRework75(r.vida); normalizarRework97(r.vida); normalizarRework106(r.vida); normalizarRework11Relacoes(r.vida); normalizarRework11Esportes(r.vida); normalizarRework11Artes(r.vida); normalizarRework115(r.vida); fixarEstatura(r.vida, true); }
   return r;
 }
 
@@ -1691,4 +1693,14 @@ export function normalizarRework75(v: Vida): void {
       if (e.texto.includes(errada) && !e.texto.includes(`aos ${certa} anos`)) e.texto = e.texto.replace(errada, `aos ${certa} anos`);
     }
   }
+}
+
+/**
+ * REWORK 11.5 — as vidas salvas antes: (1) o envolvimento ganha o ramo da sua categoria (com a prática dos anos que já
+ * tinha) e as fichas dos contatos que já existiam (`submundo.normalizarSubmundo`); (2) a fila do ano perde o que não
+ * existe mais no catálogo. Só campos opcionais; nada é reescrito. Idempotente.
+ */
+export function normalizarRework115(v: Vida): void {
+  normalizarSubmundo(v);
+  if (v.fila) { v.fila = v.fila.filter(x => conteudoPorId(x.id)?.tipo === 'decisao'); if (!v.fila.length) delete v.fila; }
 }

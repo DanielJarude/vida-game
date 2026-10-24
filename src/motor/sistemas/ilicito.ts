@@ -40,6 +40,7 @@ import { marcar } from './marcas';
 import { flex, ge } from '../texto';
 import { criarPessoa, vincular } from '../pessoas';
 import { mesesProcurando, patrimonioPagaAVida } from './intencao';
+import { exposicaoDosRamos, fatorDosRamos, garantirRamos, novaEspecializacao, RAMO_DA_CATEGORIA, ramosAtivos } from './ramos';
 
 /** Renda mensal por categoria e nível (reais de hoje): dinheiro rápido, com teto. */
 const RENDA: Record<CategoriaIlicita, [number, number, number]> = {
@@ -52,10 +53,13 @@ const RENDA: Record<CategoriaIlicita, [number, number, number]> = {
 const EXPOSICAO: Record<CategoriaIlicita, number> = { pequenos: 14, patrimonial: 14, fraude: 12, mercado: 18, grupo: 24, corrupcao: 13 };
 const DESCOBERTA: Record<1 | 2 | 3, number> = { 1: 0.3, 2: 0.42, 3: 0.52 };
 
+/** REWORK 11.5: a renda mensal de referência do envolvimento (a tabela por categoria e nível) — a régua das operações. */
+export const rendaDeReferencia = (env: Envolvimento) => RENDA[env.categoria][env.nivel - 1];
+
 export const ativo = (v: Vida) => { const e = v.caminhos.envolvimento; return !!e && e.parou === undefined; };
 
 /** Acesso a dinheiro que não é seu: o que torna uma fraude possível (sem dizer como). */
-function temAcesso(v: Vida): boolean {
+export function temAcesso(v: Vida): boolean {
   const e = v.trabalho.atual;
   if (v.caminhos.negocio && v.caminhos.negocio.estado !== 'fechado') return true;
   if (!e) return false;
@@ -71,7 +75,8 @@ export function contatosVivos(v: Vida): number {
   const env = v.caminhos.envolvimento;
   if (!env) return 0;
   const ids = new Set([...(env.contatos ?? []), ...(env.contatoId ? [env.contatoId] : [])]);
-  return [...ids].filter(id => v.pessoas[id]?.vivo).length;
+  // REWORK 11.5 · SUB-12: o contato que se afastou (ou traiu) já não traz trabalho nem protege.
+  return [...ids].filter(id => v.pessoas[id]?.vivo && env.fichas?.[id]?.afastado === undefined && env.fichas?.[id]?.traiu === undefined).length;
 }
 
 /** REWORK 11 · SUB-02: a chance de um ano ativo não render nada (15–25%, conforme a confiança do meio, os contatos e a conjuntura). */
@@ -240,7 +245,10 @@ function anoEnvolvido(v: Vida, r: Rng, env: Envolvimento): void {
   const vivos = contatosVivos(v);
   const seco = ra.chance(chanceDeAnoSeco(v, env));
   const fatorContatos = 1 + Math.min(0.2, vivos * 0.05);
-  const bruto = Math.round(renda * 12 * (0.6 + r.next() * 0.8) * (env.cautela ? 0.5 : 1) * fatorContatos / 100) * 100;
+  // REWORK 11.5 · SUB-11: os ramos em que se atua (a prática, o nome, o mercado do contrabando) mudam o ano — um ramo
+  // só, com prática média, rende o mesmo de antes.
+  garantirRamos(v, env);
+  const bruto = Math.round(renda * 12 * (0.6 + r.next() * 0.8) * (env.cautela ? 0.5 : 1) * fatorContatos * fatorDosRamos(env) / 100) * 100;
   const ganho = seco ? 0 : bruto;
   // O dinheiro de fora vai como vem: uma parte some no próprio caminho (quem cobra para não ver, o que se perde, o que
   // se gasta para não aparecer). Os ganhos registram o bruto (é o que a Justiça cobra de volta).
@@ -258,7 +266,7 @@ function anoEnvolvido(v: Vida, r: Rng, env: Envolvimento): void {
   const anos = (v.t - env.tInicio) / 12;
   // Quem tem mandato é mais vigiado; os contatos de confiança cobrem um pouco (até 3 pontos ao ano).
   const visado = env.categoria === 'corrupcao' && v.caminhos.politica?.mandato ? 5 : 0;
-  const cresce = Math.max(3, EXPOSICAO[env.categoria] + (env.nivel - 1) * 6 + (reincidente(v) ? 6 : 0) + visado - Math.min(6, anos * 1.2) - Math.min(3, vivos));
+  const cresce = Math.max(3, exposicaoDosRamos(env, EXPOSICAO[env.categoria]) + (env.nivel - 1) * 6 + (reincidente(v) ? 6 : 0) + visado - Math.min(6, anos * 1.2) - Math.min(3, vivos));
   env.exposicao = clamp(env.cautela ? env.exposicao * 0.85 + cresce * 0.35 : env.exposicao + cresce);
   // A cabeça de quem vive com medo de ser descoberto; a casa que desconfia.
   abalar(v, 'o que se faz por fora', 0, 4 + env.nivel * 2);
@@ -324,6 +332,16 @@ export function moita(v: Vida, sim: boolean): void {
 export function entrar(v: Vida, cat: CategoriaIlicita, contatoId: string | undefined, r: Rng): void {
   const antes = v.caminhos.envolvimento;
   v.caminhos.envolvimento = { categoria: cat, nivel: 1, tInicio: v.t, exposicao: Math.round((antes?.exposicao ?? 0) * 0.5) + 8, contatoId, ganhos: antes?.ganhos ?? 0 };
+  // REWORK 11.5 · SUB-11: quem volta não começa do zero — a prática dos ramos, os contatos e as organizações lembram.
+  const novo = v.caminhos.envolvimento;
+  if (antes) {
+    if (antes.especializacoes) garantirRamos(v, antes);
+    for (const k of ['especializacoes', 'fichas', 'organizacoes', 'diario', 'divida', 'traicoes', 'anosSecos'] as const) if (antes[k] !== undefined) (novo as unknown as Record<string, unknown>)[k] = antes[k];
+    if (antes.contatos) novo.contatos = [...antes.contatos];
+  }
+  const ramo = RAMO_DA_CATEGORIA[cat];
+  const esp = (novo.especializacoes ??= {});
+  if (esp[ramo]) { delete esp[ramo]!.largou; esp[ramo]!.tInicio = v.t; } else esp[ramo] = novaEspecializacao(v, novo, ramo);
   const primeiro = Math.round(RENDA[cat][0] * (2 + r.next() * 2) / 100) * 100;
   v.financas.conta += primeiro;
   v.caminhos.envolvimento.ganhos += primeiro;
@@ -337,7 +355,12 @@ export function escalar(v: Vida): void {
   const e = v.caminhos.envolvimento;
   if (!e || e.parou !== undefined || e.nivel >= 3) return;
   e.nivel = (e.nivel + 1) as 2 | 3;
-  if (e.nivel === 3 && e.categoria === 'mercado') e.categoria = 'grupo';
+  if (e.nivel === 3 && e.categoria === 'mercado') {
+    e.categoria = 'grupo';
+    // REWORK 11.5: o grupo vira um ramo próprio (a organização) — o comércio de antes continua sendo prática.
+    garantirRamos(v, e);
+    if (!e.especializacoes!.organizado || e.especializacoes!.organizado.largou !== undefined) e.especializacoes!.organizado = novaEspecializacao(v, e, 'organizado');
+  }
   e.exposicao = clamp(e.exposicao + 8);
 }
 
@@ -345,6 +368,8 @@ export function parar(v: Vida, motivo: string): void {
   const e = v.caminhos.envolvimento;
   if (!e || e.parou !== undefined) return;
   e.parou = v.t;
+  // REWORK 11.5: largar o caminho é largar todos os ramos (a prática fica; a organização lembra de quem saiu).
+  for (const r of ramosAtivos(e)) e.especializacoes![r]!.largou = v.t;
   marcarFato(v, 'saiu_do_esquema');
   if (e.nivel === 3) v.fatos['pressao_grupo'] = v.t;
   const texto = `Largou o esquema${motivo ? `: ${motivo}` : ''}.`;

@@ -8,3 +8,53 @@
 
 /* -------------------------------------------------- EVT-01: o ano com mais de uma decisão */
 .momento__fila { margin: 0; font-size: var(--type-caption); color: var(--text-muted); line-height: var(--leading-snug); }
+
+/* -------------------------------------------------- SUB-17: o dossiê do Submundo (papel escuro, fichas, carimbos) */
+.dossie {
+  --dossie-fundo: color-mix(in oklab, var(--tinta) 90%, var(--superficie));
+  --dossie-tinta: var(--superficie-topo);
+  --dossie-fio: color-mix(in oklab, var(--superficie-topo) 22%, transparent);
+  --dossie-carimbo: color-mix(in oklab, var(--ruim, var(--acao)) 55%, var(--superficie-topo));
+  background: var(--dossie-fundo); color: var(--dossie-tinta);
+  border-radius: var(--radius-md, 10px); padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-4);
+  box-shadow: 0 1px 0 var(--dossie-fio) inset;
+}
+.dossie .botao { color: var(--dossie-tinta); border-color: var(--dossie-fio); background: color-mix(in oklab, var(--superficie-topo) 8%, transparent); min-height: var(--touch-target, 44px); }
+.dossie .botao:disabled { opacity: 0.6; }
+.dossie .acao__motivo, .dossie .acao__aviso { color: color-mix(in oklab, var(--dossie-tinta) 78%, transparent); }
+.dossie__cabeca { display: flex; justify-content: space-between; align-items: center; gap: var(--space-2); flex-wrap: wrap; border-bottom: 1px dashed var(--dossie-fio); padding-bottom: var(--space-2); }
+.dossie__titulo { margin: 0; font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace; font-size: var(--type-body); letter-spacing: 0.08em; text-transform: uppercase; }
+.dossie__carimbo { font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; font-weight: 700; border: 2px solid var(--dossie-carimbo); color: var(--dossie-tinta); padding: 2px 8px; border-radius: 4px; transform: rotate(-2deg); }
+.dossie__carimbo--menor { transform: none; border-width: 1px; }
+.dossie__rotulo { margin: 0; font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; font-weight: 700; color: color-mix(in oklab, var(--dossie-tinta) 82%, transparent); }
+.dossie__nota { font-size: var(--type-caption); color: color-mix(in oklab, var(--dossie-tinta) 82%, transparent); margin: 0; }
+.dossie__exposicao { display: grid; grid-template-columns: auto 1fr; gap: var(--space-1) var(--space-3); align-items: center; }
+.dossie__exposicao .dossie__nota { grid-column: 1 / -1; }
+.dossie__ramos { display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr)); }
+.dossie__bloco { display: flex; flex-direction: column; gap: var(--space-2); border-top: 1px dashed var(--dossie-fio); padding-top: var(--space-3); }
+.dossie__outras summary { cursor: pointer; min-height: var(--touch-target, 44px); display: flex; align-items: center; font-weight: 600; }
+.sub-barra { display: inline-block; width: 100%; min-width: 5rem; height: 8px; border-radius: 4px; background: color-mix(in oklab, var(--dossie-tinta, var(--tinta)) 16%, transparent); overflow: hidden; vertical-align: middle; }
+.sub-barra__cheio { display: block; height: 100%; background: var(--dossie-tinta, var(--tinta)); border-radius: 4px; }
+.sub-ramo { border: 1px solid var(--dossie-fio); border-radius: 8px; padding: var(--space-3); display: flex; flex-direction: column; gap: var(--space-2); background: color-mix(in oklab, var(--superficie-topo) 5%, transparent); }
+.sub-ramo--largado { opacity: 0.75; }
+.sub-ramo__cabeca { margin: 0; display: flex; gap: var(--space-2); align-items: baseline; flex-wrap: wrap; }
+.sub-ramo__nome { font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace; font-weight: 700; }
+.sub-ramo__selo { font-size: var(--type-meta); text-transform: uppercase; letter-spacing: var(--tracking-meta); border: 1px solid var(--dossie-fio); padding: 0 6px; border-radius: 999px; }
+.sub-ramo__dados { margin: 0; display: grid; grid-template-columns: 1fr; gap: 4px; font-size: var(--type-caption); }
+.sub-ramo__dados > div { display: grid; grid-template-columns: 7.5rem 1fr; gap: var(--space-2); align-items: center; }
+.sub-ramo__dados dt { color: color-mix(in oklab, var(--dossie-tinta) 78%, transparent); }
+.sub-ramo__dados dd { margin: 0; overflow-wrap: anywhere; }
+.sub-ramo__acoes { display: flex; flex-direction: column; gap: var(--space-2); }
+.sub-acao { display: flex; flex-direction: column; gap: 2px; }
+.sub-acao__previsao { margin: 0; font-size: var(--type-caption); color: color-mix(in oklab, var(--dossie-tinta) 82%, transparent); }
+.sub-contatos, .sub-orgs, .sub-diario { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.sub-contato, .sub-org { display: flex; flex-direction: column; gap: 4px; padding-bottom: var(--space-2); border-bottom: 1px solid var(--dossie-fio); }
+.sub-contato--afastado, .sub-contato--traiu, .sub-contato--morto { opacity: 0.75; }
+.sub-contato__nome { margin: 0; display: flex; flex-direction: column; gap: 0; }
+.sub-contato__nome > span:first-child { font-weight: 600; }
+.sub-contato__papel { font-size: var(--type-caption); color: color-mix(in oklab, var(--dossie-tinta) 80%, transparent); }
+.sub-contato__confianca { display: grid; grid-template-columns: auto 1fr; gap: var(--space-2); align-items: center; }
+.sub-diario { font-size: var(--type-caption); line-height: var(--leading-snug); }
+.sub-diario .margem__ano { color: color-mix(in oklab, var(--dossie-tinta) 75%, transparent); }
+.sub-diario--ruim { border-left: 3px solid var(--dossie-carimbo); padding-left: var(--space-2); }
+.sub-diario--bom { border-left: 3px solid color-mix(in oklab, var(--bom, var(--tinta)) 60%, var(--superficie-topo)); padding-left: var(--space-2); }

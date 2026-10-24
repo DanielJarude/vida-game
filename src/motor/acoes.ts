@@ -24,10 +24,10 @@ import { declararIntencao, patrimonioPagaAVida, podeDeclararIntencao, registrarP
 import { entrarNaVida, paisDaVida, perfilDaVida } from './mundo/vida';
 import { OCUPACOES_DE_ATLETA } from './sistemas/esporte';
 import type { Rng } from './rng';
-import type { EstiloDeVida, Imovel, Pessoa, Produto, Retorno, TipoMovimento, Veiculo, Vida } from './tipos';
+import type { EstiloDeVida, Imovel, Pessoa, Produto, Ramo, Retorno, TipoMovimento, Veiculo, Vida } from './tipos';
 import { escrever, filhos, idade, idadePessoa, lembrarCom, marcarFato, parceiro, temFato, transacao, vinculosVivos } from './nucleo';
 import { bloqueio, podeTentar, PERMITIDO, type Veredito } from './plausibilidade';
-import { abrirDecisao, abrirProximaDaFila, conteudoPorId, liberarOpcaoPaga, preparar, resolverDecisao } from './conteudo/motor';
+import { abrirDecisao, abrirProximaDaFila, candidatos, conteudoPorId, liberarOpcaoPaga, preparar, resolverDecisao } from './conteudo/motor';
 import { modeloRotina, nivelModelo, podeComecarRotina } from './sistemas/rotinas';
 import { fazerEnem, largarEscola, opcoesDeCurso, podeFazerEnem, tentarIngresso, voltarAEstudar, type OpcaoCurso, novaMatricula, fecharNoHistorico, nomeDaMatricula } from './sistemas/escola';
 import { anoDe } from './tempo';
@@ -100,6 +100,8 @@ import { disponibilidadeOficio, executarOficio, type OqueOficio } from './sistem
 import { disponibilidadeFormacao, executarFormacao, type OqueFormacao } from './sistemas/naFormacao';
 import { reacaoDaParceriaAMudanca } from './sistemas/convivio';
 import { disponibilidadeMargem, executarMargem, type OqueMargem } from './sistemas/margem';
+import { disponibilidadeSubmundo, executarSubmundo, type OqueSubmundo } from './sistemas/submundo';
+import { NOME_DO_RAMO } from './sistemas/ramos';
 import { disponibilidadeAposta, executarAposta, type OpAposta } from './sistemas/apostas';
 import { bloqueioDaLiberdade, disponibilidadePrisao, executarPrisao, type OquePrisao } from './sistemas/prisao';
 
@@ -252,6 +254,8 @@ export type Acao =
   | { tipo: 'agenda'; op: OpAgenda }
   /** REWORK 10 · CRI-01: a vida à margem e o processo (procurar ajuda, negociar a saída, assumir, cooperar, a defesa, a reabilitação). */
   | { tipo: 'margem'; oque: OqueMargem }
+  /** REWORK 11.5 · SUB-15: as ações de cada ramo do Submundo (o serviço, o lote, a tarefa do grupo, a encomenda, o acerto, a denúncia). */
+  | { tipo: 'submundo'; oque: OqueSubmundo; ramo?: Ramo; pessoaId?: string }
   /** REWORK 10.5 · ECO-04: o dinheiro da criança (pedir aos responsáveis, brigadeiros com a família, tarefas pagas). */
   | { tipo: 'crianca'; oque: OqueCrianca }
   /** REWORK 10.6 · INF-02: pedir aos responsáveis para comprar algo da loja (inteiro, ou completando o que se tem). */
@@ -315,6 +319,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     }
     case 'agenda': return disponibilidadeDaAgenda(v, a.op);
     case 'margem': return disponibilidadeMargem(v, a.oque);
+    case 'submundo': return disponibilidadeSubmundo(v, a.oque, a.ramo, a.pessoaId);
     case 'crianca': return disponibilidadeCrianca(v, a.oque);
     case 'pedir_compra': return disponibilidadePedidoDeCompra(v, a.coisaId, !!a.completar, a.responsavelId);
     case 'pedir_veiculo': {
@@ -778,6 +783,7 @@ export function executar(vida: Vida, a: Acao): Retorno {
     // O extrato (`extrato`): o que mexeu no dinheiro antes (os acontecimentos do fim do ano) e o que esta escolha
     // mexeu ficam, cada um, com o seu nome — nenhum real some sem linha.
     conferir(v, 'Acontecimentos do fim do ano', 'acontecimento');
+    const tinhaMomento = !!v.momento;
     // REWORK 9 · PROG-01: o que a escolha fizer com uma frente é atribuído a ela (`acao:oficio`, `acao:formacao`…).
     const out = praticandoPor(`acao:${a.tipo}`, () => executarNaTransacao(v, r, a));
     resultado = out.resultado;
@@ -786,9 +792,9 @@ export function executar(vida: Vida, a: Acao): Retorno {
     pessoaId = out.pessoaId;
     // Um conflito de trajetórias criado pela ação vira pergunta na hora (nunca fica resolvido em silêncio).
     if (v.caminhos.pendente && !v.momento) abrirConflitoPendente(v, r);
-    // REWORK 11.5 · EVT-01: a decisão do ano que esperava a vez abre quando nenhuma outra está aberta (nunca se perde
-    // porque uma ação fechou a anterior por outro caminho).
-    if (!v.momento) abrirProximaDaFila(v);
+    // REWORK 11.5 · EVT-01: a decisão do ano que esperava a vez abre quando esta ação fechou a que estava aberta por outro
+    // caminho (o conflito resolvido em Caminhos) — nunca se perde por isso. (A resolução normal já abre a próxima.)
+    if (tinhaMomento && !v.momento) abrirProximaDaFila(v);
     conferir(v, ...linhaDoExtrato(a));
     // REWORK 9: a agenda guarda só escolhas de coisas que existem (a atividade largada leva o lugar dela junto).
     limparAgenda(v);
@@ -851,6 +857,12 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       return { resultado: `${quem.p.nome} topou: a ${m.nome} é sua.`, titulo: 'O pedido' };
     }
     case 'parar_tratamento': return ok(pararTratamento(v, a.condicaoId), 'ruim');
+    case 'submundo': {
+      const x = executarSubmundo(v, r, a.oque, a.ramo, a.pessoaId);
+      // O que a ação desencadeou agora (o parceiro pego depois do serviço que deu errado) vira a pergunta na hora.
+      if (!v.momento) { const c = candidatos(v, r, k => k.tipo === 'decisao' && /^sub[a-z]?_/.test(k.id))[0]; if (c && c.c.tipo === 'decisao') abrirDecisao(v, c.c, c.ctx); }
+      return { resultado: x.texto, titulo: a.ramo ? NOME_DO_RAMO[a.ramo] : 'O caminho' };
+    }
     case 'margem': {
       const resultado = executarMargem(v, r, a.oque);
       // REWORK 10.5 · CRI-02: quem procura o contato recebe a proposta na hora (a mesma decisão de quando ela vem sozinha).

@@ -2480,6 +2480,10 @@ export interface Envolvimento {
   diario?: { t: number; texto: string; tom?: 'bom' | 'ruim' }[];
   /** REWORK 11.5: dívida com o caminho (o que se deve a quem adiantou mercadoria ou cobriu um prejuízo). */
   divida?: number;
+  /** REWORK 11.5: quem está em cada cena do caminho deste ano (id da decisão → id da pessoa). */
+  cenas?: Record<string, string>;
+  /** REWORK 11.5: a organização de cada cena deste ano (id da decisão → id da organização). */
+  cenasOrg?: Record<string, string>;
 }
 
 /**

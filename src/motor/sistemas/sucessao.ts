@@ -774,6 +774,7 @@ export function continuarComo(vida: Vida, herdeiroId: string): { vida: Vida; err
     v.rotinas = [];
     v.biografia = [];
     v.momento = null;
+    delete v.fila;
     v.ocorrencias = [];
     v.anoAtual = { acoes: [] };
     v.luto = [{ pessoaId: oldId, t: tMorte, peso: pesoLuto }];
