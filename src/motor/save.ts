@@ -105,7 +105,7 @@ export function ler(s: Armazenamento | null = armazenamentoPadrao()): Leitura {
  */
 export function interpretar(bruto: string): Leitura {
   const r = interpretarSemNormalizar(bruto);
-  if (r.tipo === 'ok') { normalizarRework75(r.vida); normalizarRework97(r.vida); normalizarRework106(r.vida); fixarEstatura(r.vida, true); }
+  if (r.tipo === 'ok') { normalizarRework75(r.vida); normalizarRework97(r.vida); normalizarRework106(r.vida); normalizarRework11Relacoes(r.vida); fixarEstatura(r.vida, true); }
   return r;
 }
 
@@ -1587,6 +1587,25 @@ export function normalizarRework106(v: Vida): void {
   if (v.trabalho?.atual && v.trabalho.paralela) unificarCarreiraArtistica(v);
   // A formação dos parentes de partida guardada pelo id do curso ('eng_civil') vira o nome, como em todo o resto.
   for (const p of Object.values(v.pessoas ?? {})) { if (!p.formacao || CURSOS.some(c => c.nome === p.formacao)) continue; const c = CURSOS.find(x => x.id === p.formacao); if (c) p.formacao = c.nome; }
+}
+
+/**
+ * REWORK 11 · Fase H: (1) o vínculo de fora DENTRO de um acordo aberto era gravado como caso escondido (`secreto`): vira
+ * `paralelo` (consentido, à vista). (2) O noivado vira estado do romance (`Romance.noivado`); o fato `noivado_<id>` que
+ * sobreviveu a um casamento ou a um término (o bug antigo) é apagado. Idempotente; nada mais muda.
+ */
+export function normalizarRework11Relacoes(v: Vida): void {
+  const vins = Object.values(v.vinculos ?? {});
+  const principal = vins.find(x => x.romance && ['namoro', 'morando_junto', 'casamento'].includes(x.romance.estagio) && !x.romance.secreto && !x.romance.paralelo && v.pessoas?.[x.pessoaId]?.vivo);
+  if (principal?.romance?.acordo === 'aberto' || principal?.romance?.acordo === 'poliamor') {
+    for (const x of vins) if (x !== principal && x.romance?.secreto && x.romance.estagio !== 'ex') { delete x.romance.secreto; x.romance.paralelo = true; }
+  }
+  for (const k of Object.keys(v.fatos ?? {})) {
+    if (!k.startsWith('noivado_')) continue;
+    const rom = v.vinculos?.[k.slice('noivado_'.length)]?.romance;
+    if (!rom || rom.estagio === 'casamento' || rom.estagio === 'ex') { delete v.fatos[k]; if (rom) delete rom.noivado; continue; }
+    rom.noivado ??= { t: v.fatos[k] };
+  }
 }
 
 export function normalizarRework75(v: Vida): void {

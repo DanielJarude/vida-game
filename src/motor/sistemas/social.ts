@@ -16,7 +16,7 @@ import type { Rng } from '../rng';
 import { contatoReal, desgasteSemConvivio, soReacao } from './desgaste';
 import { clamp } from '../rng';
 import type { Convivio, Pessoa, Vida, Vinculo } from '../tipos';
-import { escrever, idade, idadePessoa, lembrarCom, vinculosVivos } from '../nucleo';
+import { escrever, idade, idadePessoa, lembrarCom, vinculosVivos, foraDaParceria } from '../nucleo';
 import { criarPessoa, vincular } from '../pessoas';
 import { cidadesDoPais, municipio, paisDaCidade } from '../dados/lugares';
 import { moraComFamiliaDeOrigem } from './domicilio';
@@ -128,7 +128,7 @@ export function recalcularConvivio(v: Vida): void {
 function moraJunto(v: Vida, p: Pessoa, vin: Vinculo, naCasaDosPais: boolean): boolean {
   const par = vin.parentesco;
   // Casal mora junto — a não ser que um dos dois esteja em outra cidade (relação à distância).
-  if (vin.romance && (vin.romance.estagio === 'morando_junto' || vin.romance.estagio === 'casamento') && !vin.romance.secreto) return p.municipioId === v.moradia.municipioId;
+  if (vin.romance && (vin.romance.estagio === 'morando_junto' || vin.romance.estagio === 'casamento') && !foraDaParceria(vin.romance)) return p.municipioId === v.moradia.municipioId;
   if (naCasaDosPais) {
     // Na casa de um irmão, ele é o dono da casa: continua morando junto (antes, perdia a "casa" todo ano e a mudança se repetia).
     if (v.moradia.tipo === 'parente' && v.moradia.anfitriaoId === p.id) return p.municipioId === v.moradia.municipioId;

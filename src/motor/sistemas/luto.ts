@@ -20,7 +20,7 @@
 import type { Rng } from '../rng';
 import type { Pessoa, Vida, Vinculo } from '../tipos';
 import { animal, palavraDoBicho } from '../dados/animais';
-import { escrever, idade, idadePessoa, lembrarCom, marcarFato, vinculosVivos } from '../nucleo';
+import { escrever, idade, idadePessoa, lembrarCom, marcarFato, vinculosVivos, foraDaParceria } from '../nucleo';
 import { flex, ge, listaNatural, rotuloParentesco } from '../texto';
 import { MESES, anoDe, mesDe } from '../tempo';
 import { descricaoOrigem } from './social';
@@ -45,7 +45,7 @@ function quemFicouNaMorte(v: Vida, p: Pessoa, vin: Vinculo, ficaram: Atingido[])
     const outro = ficaram.find(a => a.laco === 'filho');
     if (outro) {
       const vo = v.vinculos[outro.p.id];
-      const atual = vo?.romance && ['namoro', 'morando_junto', 'casamento'].includes(vo.romance.estagio) && !vo.romance.secreto;
+      const atual = vo?.romance && ['namoro', 'morando_junto', 'casamento'].includes(vo.romance.estagio) && !foraDaParceria(vo.romance);
       partes.push(atual ? `Você e ${outro.p.nome} perderam ${flex(p.genero, 'o filho', 'a filha', 'e filhe')}.` : `${outro.p.nome}, ${flex(outro.p.genero, 'o pai', 'a mãe', 'a mãe')} ${flex(p.genero, 'dele', 'dela', 'delu')}, também ficou de luto.`);
     }
   }

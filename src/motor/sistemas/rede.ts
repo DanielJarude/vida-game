@@ -18,7 +18,7 @@
 
 import type { Genero, Pessoa, Vida } from '../tipos';
 import { clamp } from '../rng';
-import { idadePessoa, lembrarCom, vinculosVivos } from '../nucleo';
+import { idadePessoa, lembrarCom, vinculosVivos, foraDaParceria } from '../nucleo';
 import { flex, listaNatural } from '../texto';
 import { importancia, papelDe } from './vinculos';
 
@@ -40,14 +40,14 @@ export function paisDe(v: Vida, id: string): string[] {
 export function conjugeDe(v: Vida, id: string): string | undefined {
   if (id === 'eu') {
     // A parceria viva de agora vem antes da que morreu (quem fica viúvo e se casa de novo).
-    const pares = Object.values(v.vinculos).filter(x => x.romance && ['namoro', 'morando_junto', 'casamento'].includes(x.romance.estagio) && !x.romance.secreto && (v.pessoas[x.pessoaId]?.vivo || x.romance.fim === 'morte'));
+    const pares = Object.values(v.vinculos).filter(x => x.romance && ['namoro', 'morando_junto', 'casamento'].includes(x.romance.estagio) && !foraDaParceria(x.romance) && (v.pessoas[x.pessoaId]?.vivo || x.romance.fim === 'morte'));
     return (pares.find(x => v.pessoas[x.pessoaId]?.vivo) ?? pares.sort((a, b) => b.romance!.tEstagio - a.romance!.tEstagio)[0])?.pessoaId;
   }
   const p = v.pessoas[id];
   if (!p) return undefined;
   if (p.parceiroId) return p.parceiroId;
   const rom = v.vinculos[id]?.romance;
-  if (rom && ['namoro', 'morando_junto', 'casamento'].includes(rom.estagio) && !rom.secreto) return 'eu';
+  if (rom && ['namoro', 'morando_junto', 'casamento'].includes(rom.estagio) && !foraDaParceria(rom)) return 'eu';
   return undefined;
 }
 

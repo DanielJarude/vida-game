@@ -18,11 +18,11 @@
 
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
-import type { Vida } from '../tipos';
-import { escrever, idade, lembrarCom, parceiro, vinculosVivos } from '../nucleo';
-import { bloqueio, PERMITIDO, type Veredito } from '../plausibilidade';
+import type { Pessoa, Vida, Vinculo } from '../tipos';
+import { escrever, idade, lembrarCom, parceiro, vinculosVivos, foraDaParceria } from '../nucleo';
+import { bloqueio, PERMITIDO, podeTentar, type Veredito } from '../plausibilidade';
 import { criarPessoa, vincular } from '../pessoas';
-import { interesseInicial, podeTerRomance } from './romance';
+import { acordoConsentido, interesseInicial, podeTerRomance } from './romance';
 import { compatibilidade, ROTINAS_SOCIAIS } from './social';
 import { nivelDeOferta } from '../dados/lugares';
 import { vereditoDePagar } from './dinheiro';
@@ -73,8 +73,11 @@ export function disponibilidadeBusca(v: Vida, ctx: ContextoBusca): Veredito {
   if (i < 15) return bloqueio('impossivel', 'Ainda é cedo para isso.');
   if (v.justica?.prisao) return bloqueio('impossivel', 'Não daqui.');
   const par = parceiro(v);
-  if (par) return bloqueio('incompativel', `Você está com ${par.p.nome}.`);
-  if (vinculosVivos(v).some(x => x.vin.romance && !x.vin.romance.secreto && (x.vin.romance.estagio === 'saindo' || x.vin.romance.pediuTempo !== undefined))) return bloqueio('incompativel', 'Você já está saindo com alguém (ou esperando uma resposta).');
+  // REWORK 11 · REL-11.1: com parceria, procurar alguém é possível — dentro do combinado (acordo aberto/poliamor), ou
+  // como escolha consciente: seria traição (o veredito diz, e a parceria pode perceber — `buscarAlguem`).
+  const combinado = !!par && acordoConsentido(par.vin.romance);
+  if (par && i < 18) return bloqueio('incompativel', `Você está com ${par.p.nome}.`);
+  if (vinculosVivos(v).some(x => x.vin.romance && !foraDaParceria(x.vin.romance) && (x.vin.romance.estagio === 'saindo' || x.vin.romance.pediuTempo !== undefined))) return bloqueio('incompativel', 'Você já está saindo com alguém (ou esperando uma resposta).');
   // Uma conversa do aplicativo em andamento é uma iniciativa em curso: o próximo passo é com essa pessoa (`relacoes`).
   const conversa = vinculosVivos(v).find(x => x.vin.romance?.estagio === 'interesse' && etapaDoApp(v, x.vin) && x.vin.contexto?.etapa !== 'encerrado');
   if (conversa) return bloqueio('incompativel', `Você está conversando com ${conversa.p.nome} pelo aplicativo: o próximo passo é com ${flex(conversa.p.genero, 'ele', 'ela', 'elu')}.`);
@@ -83,11 +86,15 @@ export function disponibilidadeBusca(v: Vida, ctx: ContextoBusca): Veredito {
   if (feitas.includes(`buscar:${ctx}`)) return bloqueio('incompativel', 'Você já tentou por aqui este ano. Outro lugar, talvez.');
   if (feitas.length >= buscasPossiveisNoAno(v)) return bloqueio('incompativel', `Este ano já foram ${feitas.length} tentativas: a semana não tem mais noites livres para isso.`);
   switch (ctx) {
-    case 'amigos': return amigosNaCidade(v).length ? PERMITIDO : bloqueio('requisito', 'Precisa de amigos por perto para apresentarem alguém.');
-    case 'atividade': return atividadeSocial(v) ? PERMITIDO : bloqueio('requisito', 'Nenhuma atividade da semana põe você no meio de gente.');
-    case 'estudo_trabalho': return diaADia(v) ? PERMITIDO : bloqueio('requisito', 'Sem escola, faculdade ou trabalho com gente em volta.');
-    case 'noite': return i < 18 ? bloqueio('impossivel', 'A partir dos 18.') : vereditoDePagar(v, CUSTO_NOITE, 'Uma noite fora custa uns');
-    case 'app': return i < 18 ? bloqueio('impossivel', 'A partir dos 18.') : PERMITIDO;
+    case 'amigos': return traicao(amigosNaCidade(v).length ? PERMITIDO : bloqueio('requisito', 'Precisa de amigos por perto para apresentarem alguém.'));
+    case 'atividade': return traicao(atividadeSocial(v) ? PERMITIDO : bloqueio('requisito', 'Nenhuma atividade da semana põe você no meio de gente.'));
+    case 'estudo_trabalho': return traicao(diaADia(v) ? PERMITIDO : bloqueio('requisito', 'Sem escola, faculdade ou trabalho com gente em volta.'));
+    case 'noite': return i < 18 ? bloqueio('impossivel', 'A partir dos 18.') : traicao(vereditoDePagar(v, CUSTO_NOITE, 'Uma noite fora custa uns'));
+    case 'app': return i < 18 ? bloqueio('impossivel', 'A partir dos 18.') : traicao(PERMITIDO);
+  }
+  function traicao(x: Veredito): Veredito {
+    if (!par || combinado || !podeTentar(x)) return combinado && podeTentar(x) ? { ...x, motivo: x.motivo ?? 'Dentro do combinado de vocês.' } : x;
+    return { grau: 'irregular', motivo: `Você está com ${par.p.nome}: procurar alguém seria traição — e ${flex(par.p.genero, 'ele', 'ela', 'elu')} pode perceber.` };
   }
 }
 
@@ -154,11 +161,15 @@ export function buscarAlguem(v: Vida, r: Rng, ctx: ContextoBusca): SaidaBusca {
         : ctx === 'noite' ? `Numa noite fora, você conheceu ${p.nome}`
           : `${diaADia(v) === 'trabalho' ? 'No trabalho' : diaADia(v) === 'faculdade' ? 'Na faculdade' : 'Na escola'}, você e ${p.nome} começaram a conversar de verdade`;
   if (amigo) lembrarCom(v, amigo.p.id, `Apresentou ${p.nome} a você.`, 'amizade', 1);
+  // REWORK 11 · REL-11.1: procurar alguém estando num relacionamento exclusivo é escolha com risco — a parceria pode
+  // perceber (o celular, o aplicativo, a noite fora): ciúme, confiança abalada, a pergunta no ar.
+  const parc = parceiro(v);
+  const percebeu = parc && !acordoConsentido(parc.vin.romance) && r.chance(ctx === 'app' ? 0.22 : ctx === 'noite' ? 0.18 : 0.1) ? notarBusca(v, parc.p, parc.vin, ctx) : '';
   const pode = podeTerRomance(v, p, vin);
   if (!pode || interesse < 45) {
     if (vin.contexto) vin.contexto.etapa = 'encerrado';
     const texto = ctx === 'app' ? `Você curtiu o perfil de ${p.nome}; o match veio, a conversa não. Parou no "oi, tudo bem?".` : `${onde}. A conversa foi educada — e só. ${flex(p.genero, 'Ele', 'Ela', 'Elu')} não pareceu interessad${flex(p.genero, 'o', 'a', 'e')}.`;
-    return { resultado: texto, titulo: p.nome, pessoaId: p.id };
+    return { resultado: `${texto}${percebeu}`, titulo: p.nome, pessoaId: p.id };
   }
   vin.romance = { estagio: 'interesse', tEstagio: v.t, envolvimento: interesse };
   if (ctx === 'app') {
@@ -167,13 +178,88 @@ export function buscarAlguem(v: Vida, r: Rng, ctx: ContextoBusca): SaidaBusca {
     lembrarCom(v, p.id, 'Deram match num aplicativo.', 'inicio', 1);
     escrever(v, { texto: `Deu match com ${p.nome} num aplicativo de encontros.`, relevancia: 'cotidiano', tema: 'amor', escolha: true, pessoas: [p.id] });
     const procura = vin.contexto!.busca === 'relacionamento' ? 'procura um relacionamento' : vin.contexto!.busca === 'casual' ? 'diz que quer algo sem compromisso' : 'diz que "ainda não sabe o que procura"';
-    return { resultado: `Deu match com ${p.nome}: os dois curtiram. No perfil, ${p.ocupacao ? `${p.ocupacao}, ` : ''}${procura}. O próximo passo é conversar (em Pessoas).`, titulo: p.nome, pessoaId: p.id };
+    return { resultado: `Deu match com ${p.nome}: os dois curtiram. No perfil, ${p.ocupacao ? `${p.ocupacao}, ` : ''}${procura}. O próximo passo é conversar (em Pessoas).${percebeu}`, titulo: p.nome, pessoaId: p.id };
   }
   vin.proximidade = clamp(vin.proximidade + 8);
   lembrarCom(v, p.id, ctx === 'amigos' ? `Foram apresentados por ${amigo?.p.nome ?? 'amigos'}.` : 'A primeira conversa de verdade.', 'inicio', 1);
   const faisca = interesse >= 62 ? 'Houve faísca dos dois lados: a conversa foi longe.' : 'Pareceu haver interesse — dá para chamar para sair e ver.';
   escrever(v, { texto: `${onde}.`, relevancia: 'cotidiano', tema: 'amor', escolha: true, pessoas: [p.id] });
-  return { resultado: `${onde}. ${faisca}`, titulo: p.nome, pessoaId: p.id };
+  return { resultado: `${onde}. ${faisca}${percebeu}`, titulo: p.nome, pessoaId: p.id };
+}
+
+/** A parceria percebeu a busca: o ciúme tem causa (a mesma leitura do flerte comprometido, `afetos`). */
+function notarBusca(v: Vida, par: Pessoa, vin: Vinculo, ctx: ContextoBusca): string {
+  vin.tensao = clamp(vin.tensao + 18);
+  vin.confianca = clamp(vin.confianca - 10);
+  const oque = ctx === 'app' ? 'o aplicativo de encontros no seu celular' : ctx === 'noite' ? 'a noite fora, procurando gente' : 'que você andava procurando alguém';
+  if (!vin.conflito || vin.conflito.gravidade < 2) vin.conflito = { t: v.t, assunto: oque, gravidade: 2, quem: 'eu' };
+  lembrarCom(v, par.id, `Descobriu ${oque}.`, 'conflito', 2);
+  return ` ${par.nome} percebeu ${oque}. A conversa em casa foi difícil.`;
+}
+
+/* ============================================================ Fazer amizades (REWORK 11 · REL-11.1) */
+
+/**
+ * A busca que não é romântica: puxar conversa, aceitar o convite do grupo, chegar mais perto de alguém da atividade.
+ * Para qualquer estado civil (fazer amigos estando com alguém não é traição). Cada lugar uma vez no ano, no mesmo
+ * limite de noites livres da busca romântica; a pessoa que aparece fica como conhecida (sem romance) — a amizade, se
+ * vier, é construída depois (`social`), como qualquer outra.
+ */
+export type ContextoAmizade = Exclude<ContextoBusca, 'app'>;
+export const ROTULO_AMIZADE: Record<ContextoAmizade, string> = {
+  amigos: 'Ir ao encontro dos amigos e conhecer quem eles trazem',
+  atividade: 'Puxar conversa com alguém da sua atividade',
+  estudo_trabalho: 'Chegar mais perto de alguém do dia a dia',
+  noite: 'Sair com um grupo novo'
+};
+const amizadesDoAno = (v: Vida) => v.anoAtual.acoes.filter(a => a.startsWith('amizade:'));
+
+export function contextosDeAmizade(v: Vida): ContextoAmizade[] {
+  const i = idade(v);
+  const out: ContextoAmizade[] = [];
+  if (amigosNaCidade(v).length) out.push('amigos');
+  if (atividadeSocial(v)) out.push('atividade');
+  if (diaADia(v)) out.push('estudo_trabalho');
+  if (i >= 18) out.push('noite');
+  return out;
+}
+
+export function disponibilidadeAmizade(v: Vida, ctx: ContextoAmizade): Veredito {
+  const i = idade(v);
+  if (i < 10) return bloqueio('impossivel', 'Ainda é cedo para isso.');
+  if (v.justica?.prisao) return bloqueio('impossivel', 'Não daqui.');
+  const feitas = amizadesDoAno(v);
+  if (feitas.includes(`amizade:${ctx}`)) return bloqueio('incompativel', 'Você já tentou por aqui este ano.');
+  if (feitas.length >= buscasPossiveisNoAno(v)) return bloqueio('incompativel', `Este ano já foram ${feitas.length} tentativas: a semana não tem mais noites livres.`);
+  if (!contextosDeAmizade(v).includes(ctx)) return bloqueio('requisito', ctx === 'noite' ? 'A partir dos 18.' : ctx === 'amigos' ? 'Precisa de amigos por perto.' : ctx === 'atividade' ? 'Nenhuma atividade da semana põe você no meio de gente.' : 'Sem escola, faculdade ou trabalho com gente em volta.');
+  if (ctx === 'noite') return vereditoDePagar(v, CUSTO_NOITE, 'Uma noite fora custa uns');
+  return PERMITIDO;
+}
+
+export function buscarAmizade(v: Vida, r: Rng, ctx: ContextoAmizade): SaidaBusca {
+  v.anoAtual.acoes.push(`amizade:${ctx}`);
+  if (ctx === 'noite') v.financas.conta -= CUSTO_NOITE;
+  const i = idade(v);
+  const soc = v.personalidade.tracos.sociabilidade;
+  const antes = amizadesDoAno(v).length - 1;
+  if (!r.chance(clamp(0.55 + soc / 200 + (v.mente.felicidade - 50) / 300 - antes * 0.08, 0.15, 0.9))) {
+    return { resultado: ctx === 'noite' ? 'Foi uma noite boa, mas cada um voltou para o seu canto. Ninguém novo, desta vez.' : 'Você puxou conversa; ficou na conversa. Ninguém novo, por enquanto.' };
+  }
+  const faixa = i < 18 ? [Math.max(10, i - 2), Math.min(17, i + 2)] : [Math.max(18, i - 10), Math.min(85, i + 10)];
+  const p = criarPessoa(v, r, { idade: r.int(faixa[0], faixa[1]), municipioId: v.moradia.municipioId });
+  const amigo = ctx === 'amigos' ? r.pick(amigosNaCidade(v)) : undefined;
+  const rot = ctx === 'atividade' ? atividadeSocial(v) : undefined;
+  const origem = ctx === 'amigos' || ctx === 'noite' ? 'apresentado' : ctx === 'atividade' ? 'rotina' : diaADia(v) === 'trabalho' ? 'trabalho' : diaADia(v) === 'faculdade' ? 'faculdade' : 'escola';
+  const comp = compatibilidade(v, p);
+  const vin = vincular(v, p, { origem, proximidade: clamp(Math.round(22 + comp * 10 + r.int(0, 8))), estagio: 'conhecido' });
+  if (rot) { vin.ambiente = `rotina:${rot.id}:${v.moradia.municipioId}`; vin.convivio = ['rotina']; }
+  vin.contexto = novoContexto(ctx === 'amigos' ? 'amigos' : ctx === 'noite' ? 'noite' : ctx === 'atividade' ? 'atividade' : diaADia(v) === 'trabalho' ? 'trabalho' : diaADia(v) === 'faculdade' ? 'faculdade' : 'escola', {});
+  registrarFase(v, vin, 'conhecido');
+  lembrarCom(v, p.id, amigo ? `Conheceram-se por ${amigo.p.nome}.` : 'A primeira conversa de verdade.', 'inicio', 1);
+  if (amigo) lembrarCom(v, amigo.p.id, `Apresentou ${p.nome} a você.`, 'amizade', 1);
+  const onde = ctx === 'amigos' ? `${amigo?.p.nome ?? 'Os amigos'} trouxe ${p.nome}` : ctx === 'noite' ? `Num grupo novo, você conheceu ${p.nome}` : ctx === 'atividade' ? `${cap(ROTINAS_SOCIAIS[rot!.id].onde)}, você e ${p.nome} começaram a conversar` : `No dia a dia, você e ${p.nome} começaram a conversar de verdade`;
+  escrever(v, { texto: `${onde}.`, relevancia: 'cotidiano', tema: 'amizade', escolha: true, pessoas: [p.id] });
+  return { resultado: `${onde}. ${comp > 0.15 ? 'A conversa fluiu: dá vontade de repetir.' : 'Uma conversa boa — se vira amizade, o tempo diz.'}`, titulo: p.nome, pessoaId: p.id };
 }
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);

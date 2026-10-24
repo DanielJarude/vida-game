@@ -29,7 +29,7 @@ import { pesoDaAparenciaPara } from './predisposicao';
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
 import type { EstagioRomance, Genero, Pessoa, Romance, Vida, Vinculo } from '../tipos';
-import { escrever, idade, idadePessoa, lembrarCom, parceiro, vinculosVivos } from '../nucleo';
+import { escrever, idade, idadePessoa, lembrarCom, parceiro, vinculosVivos, foraDaParceria } from '../nucleo';
 import { compatibilidade } from './social';
 import { flex, listaNatural } from '../texto';
 import { bloqueio, PERMITIDO, podeTentar, type Veredito } from '../plausibilidade';
@@ -105,6 +105,10 @@ export function mudarEstagio(v: Vida, vin: Vinculo, estagio: EstagioRomance, fim
   if (estagio === 'ex') {
     rom.fim = fim ?? 'termino';
     rom.secreto = undefined;
+    rom.paralelo = undefined;
+    // REWORK 11 · REL-16: o noivado morre com a relação (antes, o fato `noivado_<id>` sobrevivia ao fim: quem voltava
+    // ouvia "vocês já estão noivos" e via "marcar a data" na hora).
+    desfazerNoivado(v, vin);
     // Ex não é amigo por ter sido par (Relações 2.0): quem já era amigo ANTES do romance volta a ser um amigo de antes
     // (afastado, com a porta aberta); quem se conheceu como par fica conhecido — a amizade, se vier, é escolha dos dois.
     const eramAmigos = vin.historia.some(h => h.tipo === 'amizade' && h.t < (rom.tInicio ?? vin.tInicio));
@@ -113,6 +117,24 @@ export function mudarEstagio(v: Vida, vin: Vinculo, estagio: EstagioRomance, fim
     rom.planoFilhos = undefined;
     rom.segredo = undefined;
   }
+}
+
+/* ------------------------------------------------------------- Noivado (REWORK 11 · REL-16) */
+
+/** Noivos: o estado mora no romance; o fato `noivado_<id>` acompanha (é o que o conteúdo e os saves antigos leem). */
+export const estaNoivo = (v: Vida, vin: Vinculo) => !!vin.romance && vin.romance.estagio !== 'casamento' && vin.romance.estagio !== 'ex' && (!!vin.romance.noivado || v.fatos[`noivado_${vin.pessoaId}`] !== undefined);
+
+export function ficarNoivos(v: Vida, vin: Vinculo): void {
+  if (!vin.romance) return;
+  vin.romance.noivado = { t: v.t };
+  v.fatos[`noivado_${vin.pessoaId}`] = v.t;
+  delete v.fatos[`pedido_adiado_${vin.pessoaId}`];
+}
+
+/** O noivado acaba (o casamento aconteceu, a relação acabou ou os dois desfizeram): estado e fato juntos. */
+export function desfazerNoivado(v: Vida, vin: Vinculo): void {
+  if (vin.romance) delete vin.romance.noivado;
+  delete v.fatos[`noivado_${vin.pessoaId}`];
 }
 
 /* ------------------------------------------------------------- Interesse */
@@ -173,7 +195,7 @@ export function processarRomance(v: Vida, r: Rng): void {
       continue;
     }
     if (rom.estagio === 'ex') continue;
-    if (rom.secreto) { processarCaso(v, r, p, vin); continue; }
+    if (rom.secreto || rom.paralelo) { processarCaso(v, r, p, vin); continue; }
 
     const c = compatibilidade(v, p);
     const longe = p.municipioId !== v.moradia.municipioId;
@@ -263,7 +285,7 @@ function responderDepoisDoTempo(v: Vida, r: Rng, p: Pessoa, vin: Vinculo): void 
   const perto = v.anoAtual.acoes.some(a => a.endsWith(`:${p.id}`));
   const valor = rom.envolvimento + (perto ? 8 : -4) + compatibilidade(v, p) * 6 + r.normal() * 6;
   const ele = flex(p.genero, 'ele', 'ela', 'elu');
-  const outra = vinculosVivos(v).some(x => x.p.id !== p.id && x.vin.romance?.estagio === 'saindo' && !x.vin.romance.secreto);
+  const outra = vinculosVivos(v).some(x => x.p.id !== p.id && x.vin.romance?.estagio === 'saindo' && !foraDaParceria(x.vin.romance));
   if (valor >= 56 && !parceiro(v) && !p.parceiroId && !outra) {
     mudarEstagio(v, vin, 'saindo');
     rom.envolvimento = Math.max(rom.envolvimento, 58);
@@ -322,6 +344,8 @@ export function terminar(v: Vida, p: Pessoa, vin: Vinculo, quem: 'jogador' | 'el
   const moravam = era === 'morando_junto' || era === 'casamento';
   const emComum = filhosEmComum(v, p.id).filter(f => f.vivo);
   mudarEstagio(v, vin, 'ex', era === 'casamento' ? 'divorcio' : 'termino');
+  // REWORK 11 · REL-11.3: como acabou fica no romance (quem terminou, se houve traição) — o ex responde a partir disso.
+  rom.porque = { quem, ...(motivo ? { motivo } : {}) };
   // Ex não é amigo: o que eram antes (amigos, colegas) não volta sozinho. Se voltar, é porque os dois quiseram.
   vin.estagio = 'afastado';
   vin.aproximacao = undefined;
@@ -384,10 +408,13 @@ export function iniciarCaso(v: Vida, p: Pessoa, vin: Vinculo): void {
   const par = parceiro(v);
   const env = vin.romance?.envolvimento ?? interesseInicial(v, p);
   // REWORK 10.5 · REL-06: num acordo aberto, sair com outra pessoa é o combinado — não é segredo nem traição.
-  if (par?.vin.romance?.acordo === 'aberto') {
-    vin.romance = { estagio: 'saindo', tEstagio: v.t, tInicio: v.t, envolvimento: Math.max(50, env), secreto: true };
-    lembrarCom(v, p.id, 'Começaram a sair, dentro do combinado.', 'romance', 2);
-    escrever(v, { texto: `Começou a sair com ${p.nome} — dentro do combinado com ${par.p.nome}.`, relevancia: 'biografia', tema: 'amor', escolha: true, pessoas: [p.id, par.p.id] });
+  // REWORK 11 · REL-11.4: e por isso o vínculo é `paralelo` (consentido, à vista), não `secreto` (antes era gravado como
+  // segredo: a descoberta, a exposição e a ficha o tratavam como um caso escondido).
+  if (par && acordoConsentido(par.vin.romance)) {
+    vin.romance = { estagio: 'saindo', tEstagio: v.t, tInicio: v.t, envolvimento: Math.max(50, env), paralelo: true };
+    const poli = par.vin.romance?.acordo === 'poliamor';
+    lembrarCom(v, p.id, poli ? 'Começaram a sair — com todo mundo sabendo.' : 'Começaram a sair, dentro do combinado.', 'romance', 2);
+    escrever(v, { texto: poli ? `Começou a sair com ${p.nome}; ${par.p.nome} sabe e está de acordo (poliamor).` : `Começou a sair com ${p.nome} — dentro do combinado com ${par.p.nome}.`, relevancia: 'biografia', tema: 'amor', escolha: true, pessoas: [p.id, par.p.id] });
     return;
   }
   vin.romance = { estagio: 'saindo', tEstagio: v.t, tInicio: v.t, envolvimento: Math.max(50, env), secreto: true };
@@ -407,10 +434,17 @@ export function iniciarCaso(v: Vida, p: Pessoa, vin: Vinculo): void {
 function processarCaso(v: Vida, r: Rng, p: Pessoa, vin: Vinculo): void {
   const rom = vin.romance!;
   const par = parceiro(v);
-  const combinado = par?.vin.romance?.acordo === 'aberto';
-  if (!par || (!par.vin.romance?.segredo && !combinado)) {
-    // Sem relação principal (terminou, morreu): deixa de ser segredo.
+  const combinado = acordoConsentido(par?.vin.romance);
+  if (!par || (!par.vin.romance?.segredo && !combinado && !rom.paralelo)) {
+    // Sem relação principal (terminou, morreu): deixa de ser segredo (e de ser "paralelo": agora é a relação que há).
     rom.secreto = undefined;
+    rom.paralelo = undefined;
+    return;
+  }
+  // REWORK 11 · REL-11.4: o paralelo sem o acordo (desfeito por outra via) não continua escondido — acaba aqui.
+  if (rom.paralelo && !combinado) {
+    mudarEstagio(v, vin, 'ex');
+    escrever(v, { texto: `Sem o combinado de antes, o que havia com ${p.nome} acabou.`, relevancia: 'cotidiano', tema: 'amor', pessoas: [p.id] });
     return;
   }
   const meses = v.t - (rom.tInicio ?? rom.tEstagio);
@@ -422,9 +456,10 @@ function processarCaso(v: Vida, r: Rng, p: Pessoa, vin: Vinculo): void {
   vin.tUltimoContato = v.t;
 
   if (rom.envolvimento < 30) {
+    const paralelo = !!rom.paralelo;
     mudarEstagio(v, vin, 'ex');
-    escrever(v, { texto: `${p.nome} terminou o caso. Disse que não queria mais ser segredo de ninguém.`, relevancia: 'biografia', tema: 'amor', pessoas: [p.id] });
-    lembrarCom(v, p.id, 'O caso acabou.', 'conflito', 1);
+    escrever(v, { texto: paralelo ? `${p.nome} quis parar: disse que queria alguém só para si.` : `${p.nome} terminou o caso. Disse que não queria mais ser segredo de ninguém.`, relevancia: 'biografia', tema: 'amor', pessoas: [p.id] });
+    lembrarCom(v, p.id, paralelo ? 'O que havia entre vocês acabou.' : 'O caso acabou.', 'conflito', 1);
     return;
   }
   // Num acordo aberto, não há o que descobrir.
@@ -467,6 +502,9 @@ export function reacaoATraicao(v: Vida, r: Rng, par: Pessoa, vinPar: Vinculo, co
 }
 
 /** O caso sai do segredo: termina (o jogador escolheu parar). */
+/** O acordo do casal permite outra pessoa (aberto: sair com alguém; poliamor: também um segundo vínculo, consentido). */
+export const acordoConsentido = (rom?: Romance) => rom?.acordo === 'aberto' || rom?.acordo === 'poliamor';
+
 export function encerrarCaso(v: Vida, p: Pessoa, vin: Vinculo): void {
   mudarEstagio(v, vin, 'ex');
   lembrarCom(v, p.id, 'Você terminou o caso.', 'conflito', 1);

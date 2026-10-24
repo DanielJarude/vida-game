@@ -12,6 +12,7 @@
  */
 
 import { aplicarDimensoes, GRUPOS_DE_AFETO, INTERACOES_DE_AFETO } from './afetos';
+import { GRUPOS_ADULTOS, INTERACOES_ADULTAS } from './afetosAdultos';
 import { registrarTentativa, sincronizarMagoa } from './magoas';
 import { interacaoNaPrisao } from './prisao';
 import { dinheiro as moeda } from '../texto';
@@ -20,11 +21,11 @@ import { animal } from '../dados/animais';
 import { clamp } from '../rng';
 import type { Dominio, Pessoa, Vida, Vinculo } from '../tipos';
 import { praticar } from './frentes';
-import { escrever, idade, idadePessoa, lembrarCom, marcarFato, parceiro } from '../nucleo';
+import { escrever, idade, idadePessoa, lembrarCom, marcarFato, parceiro, foraDaParceria } from '../nucleo';
 import { bloqueio, PERMITIDO, type Veredito } from '../plausibilidade';
 import { compatibilidade } from './social';
 import {
-  atraiGenero, encerrarCaso, iniciarCaso, interesseInicial, mudarEstagio, podeTerRomance, reacaoATraicao,
+  acordoConsentido, atraiGenero, encerrarCaso, estaNoivo, ficarNoivos, iniciarCaso, interesseInicial, mudarEstagio, podeTerRomance, reacaoATraicao,
   regraDeIdade, romanceAdolescente, terminar
 } from './romance';
 import { morarJuntos } from './moradia';
@@ -690,7 +691,7 @@ export const INTERACOES: Interacao[] = [
       const rom = c.vin.romance;
       // REWORK 10.5 · UX-14 / REL-06: com parceria, o convite é para quem você poderia querer (o gênero, quem não está
       // comprometido à vista) — antes, aparecia para qualquer um e a tela o escondia (a categoria Romance abria vazia).
-      if (parceiro(c.v)) return (!rom || rom.estagio === 'interesse' || (rom.estagio === 'ex' && rom.fim !== 'morte')) && (!c.v.eu.atracao || atraiGenero(c.v.eu.atracao, c.p.genero)) && !(c.p.parceiroId && c.vin.proximidade >= 35) && c.eu >= 16 && c.ip >= 16;
+      if (parceiro(c.v)) return (!rom || rom.estagio === 'interesse' || (rom.estagio === 'ex' && rom.fim !== 'morte')) && (!c.v.eu.atracao || atraiGenero(c.v.eu.atracao, c.p.genero)) && !(c.p.parceiroId && c.vin.proximidade >= 35) && c.eu >= 18 && c.ip >= 18;
       if (!iniciativaPossivel(c) || c.longe) return false;
       // No aplicativo, o caminho é o dele: conversar, marcar o encontro (`app_conversar`, `app_encontro`).
       if (etapaDoApp(c.v, c.vin) === 'match' || etapaDoApp(c.v, c.vin) === 'conversa') return false;
@@ -702,7 +703,7 @@ export const INTERACOES: Interacao[] = [
     disponivel: c => disponibilidadeConvite(c),
     variante: 'secundario',
     prioridade: c => (c.vin.romance?.estagio === 'interesse' ? 4 : c.vin.romance?.estagio === 'ex' ? 0.8 : 2),
-    rotulo: c => (parceiro(c.v) ? (parceiro(c.v)!.vin.romance?.acordo === 'aberto' ? `Chamar ${c.p.nome} para sair (vocês combinaram que pode)` : `Chamar ${c.p.nome} para sair, escondido`) : c.vin.romance?.estagio === 'ex' ? `Tentar de novo com ${c.p.nome}` : c.eu < 18 ? `Chamar ${c.p.nome} para sair depois da aula` : `Chamar ${c.p.nome} para sair`),
+    rotulo: c => (parceiro(c.v) ? (acordoConsentido(parceiro(c.v)!.vin.romance) ? `Chamar ${c.p.nome} para sair (vocês combinaram que pode)` : `Chamar ${c.p.nome} para sair, escondido`) : c.vin.romance?.estagio === 'ex' ? `Tentar de novo com ${c.p.nome}` : c.eu < 18 ? `Chamar ${c.p.nome} para sair depois da aula` : `Chamar ${c.p.nome} para sair`),
     executar: (c, r) => {
       const traicao = !!parceiro(c.v);
       if (!c.v.eu.atracao) c.v.eu.atracao = c.p.genero === 'masculino' ? 'homens' : c.p.genero === 'feminino' ? 'mulheres' : 'ambos';
@@ -712,7 +713,7 @@ export const INTERACOES: Interacao[] = [
           return { resultado: `${c.p.nome} agradeceu o convite e disse que prefere deixar as coisas como estão.` };
         }
         iniciarCaso(c.v, c.p, c.vin);
-        return { resultado: parceiro(c.v)?.vin.romance?.acordo === 'aberto' ? `${c.p.nome} topou — e sabe do combinado de vocês.` : `${c.p.nome} topou. Ninguém mais sabe.` };
+        return { resultado: acordoConsentido(parceiro(c.v)?.vin.romance) ? `${c.p.nome} topou — e sabe do combinado de vocês.` : `${c.p.nome} topou. Ninguém mais sabe.` };
       }
       return responderConvite(c, r);
     }
@@ -747,7 +748,7 @@ export const INTERACOES: Interacao[] = [
   {
     id: 'encerrar_caso', variante: 'perigo',
     quando: c => c.papel === 'caso',
-    rotulo: () => 'Terminar o caso',
+    rotulo: c => (c.vin.romance?.paralelo ? `Terminar com ${c.p.nome}` : 'Terminar o caso'),
     executar: c => {
       encerrarCaso(c.v, c.p, c.vin);
       aplicarPersonalidade(c.v, 'acao:encerrar_caso', { familia: 1 });
@@ -764,7 +765,7 @@ export const INTERACOES: Interacao[] = [
       const ja = c.vin.habitos?.['sair'] ?? 0;
       if (c.papel === 'saindo' && ja === 0) return romanceAdolescente(c.v, c.p) ? `Primeiro encontro com ${c.p.nome}` : `Marcar o primeiro encontro com ${c.p.nome}`;
       if (parceriaAtiva(c) && ja >= 4) return romanceAdolescente(c.v, c.p) ? 'Manter o cinema de sábado' : 'Manter as saídas só de vocês';
-      return romanceAdolescente(c.v, c.p) ? 'Ir ao cinema juntos' : c.papel === 'caso' ? `Encontrar ${c.p.nome}` : 'Sair só vocês dois';
+      return romanceAdolescente(c.v, c.p) ? 'Ir ao cinema juntos' : c.papel === 'caso' && !c.vin.romance?.paralelo ? `Encontrar ${c.p.nome}` : 'Sair só vocês dois';
     },
     executar: (c, r) => {
       const n = habito(c, 'sair');
@@ -773,7 +774,7 @@ export const INTERACOES: Interacao[] = [
       if (parceriaAtiva(c)) costume(c, n, 4, romanceAdolescente(c.v, c.p) ? 'O cinema de sábado era de vocês.' : 'Mantiveram as saídas só de vocês dois, mesmo com a vida corrida.');
       return { resultado: variar(n, romanceAdolescente(c.v, c.p)
         ? ['Pipoca grande, filme ruim, e a melhor tarde do mês.', 'Andaram pelo shopping sem comprar nada, conversando.']
-        : c.papel === 'caso' ? ['Um encontro de duas horas num lugar onde ninguém conhece vocês.', 'Hotel no centro, celular desligado, volta separados.']
+        : c.papel === 'caso' && !c.vin.romance?.paralelo ? ['Um encontro de duas horas num lugar onde ninguém conhece vocês.', 'Hotel no centro, celular desligado, volta separados.']
           : ['Um jantar sem pressa, sem celular, só vocês.', 'Um bar novo, uma mesa na calçada, e a conversa de quando se conheceram.', 'Saíram para dançar como não faziam há anos.', 'Um fim de semana fora, só os dois.']) };
     }
   },
@@ -787,16 +788,6 @@ export const INTERACOES: Interacao[] = [
       costume(c, n, 5, 'Os pequenos carinhos do dia a dia nunca sumiram.');
       // REWORK 7.5: o gesto depende do momento do casal (`conversas`): a semana puxada, a relação morna, a lembrança.
       return { resultado: romanceAdolescente(c.v, c.p) ? variar(n, [`${c.p.nome} respondeu com três corações e uma foto.`, `${c.p.nome} visualizou, demorou, e respondeu: "eu também".`]) : demonstrarCarinho(c, n) };
-    }
-  },
-  {
-    id: 'intimidade',
-    quando: c => parceriaAtiva(c) && c.eu >= 18 && c.ip >= 18 && c.casa,
-    rotulo: () => 'Uma noite só de vocês',
-    executar: c => {
-      const n = habito(c, 'intimidade');
-      envolver(c, 4); acalmar(c, 5); cuidou(c);
-      return { resultado: variar(n, ['A casa quieta, a porta trancada, e ninguém com pressa.', 'Uma noite que lembrou o começo.']) };
     }
   },
   {
@@ -1005,7 +996,9 @@ export const INTERACOES: Interacao[] = [
     disponivel: c => {
       if (c.eu < 18 || c.ip < 18) return bloqueio('ilegal', 'Casamento exige maioridade (16 com autorização dos pais, na lei; no jogo, 18).');
       if (c.v.t - (c.vin.romance!.tInicio ?? c.vin.tInicio) < 18) return bloqueio('requisito', 'Estão juntos há pouco tempo.');
-      if (c.v.fatos[`noivado_${c.p.id}`] !== undefined) return bloqueio('incompativel', 'Vocês já estão noivos.');
+      if (estaNoivo(c.v, c.vin)) return bloqueio('incompativel', 'Vocês já estão noivos.');
+      // REWORK 11 · REL-16: quem pediu um tempo para pensar responde depois — perguntar de novo antes é insistir.
+      if (c.v.fatos[`pedido_adiado_${c.p.id}`] !== undefined && c.v.t - c.v.fatos[`pedido_adiado_${c.p.id}`] < 12) return bloqueio('incompativel', `${c.p.nome} pediu um tempo para pensar no pedido. Ainda não deu esse tempo.`);
       return vereditoDoPedido(c.v, c.p, 'noivado');
     },
     rotulo: () => 'Pedir em casamento',
@@ -1013,12 +1006,21 @@ export const INTERACOES: Interacao[] = [
       const rom = c.vin.romance!;
       // REWORK 10 · NPC-04: há quem não queira casar (com ninguém) — o sim dessa pessoa é raro, por mais que ame.
       const resistencia = naoQuerCasar(c.p) ? 0.35 : 1;
-      if (r.chance(clamp((rom.envolvimento - 40) / 35 * resistencia - c.vin.tensao / 300, 0.03, 0.95))) {
-        marcarFato(c.v, `noivado_${c.p.id}`);
+      const chance = clamp((rom.envolvimento - 40) / 35 * resistencia - c.vin.tensao / 300, 0.03, 0.95);
+      const x = r.next();
+      if (x < chance) {
+        ficarNoivos(c.v, c.vin);
         escrever(c.v, { texto: `Pediu ${c.p.nome} em casamento. A resposta foi sim.`, relevancia: 'marco', tema: 'amor', tom: 'bom', escolha: true, pessoas: [c.p.id] });
         lembrarCom(c.v, c.p.id, 'Ficaram noivos.', 'romance', 3);
         const pesa = marcoAfetivo(c.v, c.p, c.vin, 'noivado');
         return { resultado: `Sim. ${c.p.nome} chorou, você chorou, o garçom bateu palmas.${pesa ? ` ${pesa}` : ''}` };
+      }
+      // REWORK 11 · REL-16: entre o sim e o não, o "preciso pensar" (quem gosta, mas não está pronto): sem briga, com espera.
+      if (x < chance + 0.2 && !naoQuerCasar(c.p) && rom.envolvimento >= 50 && c.vin.tensao < 40) {
+        c.v.fatos[`pedido_adiado_${c.p.id}`] = c.v.t;
+        lembrarCom(c.v, c.p.id, `Você pediu ${c.p.nome} em casamento; ${ele(c.p)} pediu um tempo para pensar.`, 'romance', 2);
+        escrever(c.v, { texto: `Pediu ${c.p.nome} em casamento. A resposta foi "preciso pensar".`, relevancia: 'biografia', tema: 'amor', escolha: true, pessoas: [c.p.id] });
+        return { resultado: `${c.p.nome} segurou a sua mão, emocionad${o(c.p)}, e pediu um tempo — não é não; é "ainda não sei". Dá para perguntar de novo daqui a um ano.` };
       }
       escrever(c.v, { texto: `Pediu ${c.p.nome} em casamento e ouviu um não.`, relevancia: 'biografia', tema: 'amor', tom: 'ruim', escolha: true, pessoas: [c.p.id] });
       return { resultado: recusaAfetiva(c.v, c.p, c.vin, 'noivado') };
@@ -1097,7 +1099,8 @@ export const INTERACOES: Interacao[] = [
   // REWORK 10 · Fase C: conversar, conviver, decidir, confrontar, reparar (`convivio`).
   ...INTERACOES_DE_CONVIVIO,
   // REWORK 10.5 · REL-06: o flerte estando com alguém, o acordo aberto (e voltar a ser só os dois).
-  ...INTERACOES_DE_AFETO
+  ...INTERACOES_DE_AFETO,
+  ...INTERACOES_ADULTAS
 ];
 
 /* ------------------------------------------------------- Aproximação */
@@ -1248,7 +1251,7 @@ function disponibilidadeConvite(c: CtxI): Veredito {
     if (c.p.parceiroId) return bloqueio('impossivel', `${c.p.nome} está com outra pessoa.`);
     return bloqueio('impossivel', 'Não vai rolar.');
   }
-  if (parceiro(c.v)?.vin.romance?.acordo === 'aberto') return { grau: 'permitido', motivo: 'Dentro do combinado: vocês abriram a relação.', chance: chanceConvite(c) };
+  if (acordoConsentido(parceiro(c.v)?.vin.romance)) return { grau: 'permitido', motivo: parceiro(c.v)!.vin.romance!.acordo === 'poliamor' ? 'Dentro do combinado: poliamor, todos sabendo.' : 'Dentro do combinado: vocês abriram a relação.', chance: chanceConvite(c) };
   return { grau: 'irregular', motivo: 'Você está num relacionamento. Seria traição.', chance: chanceConvite(c) };
 }
 
@@ -1277,7 +1280,7 @@ function iniciativaPossivel(c: CtxI): boolean {
   if (c.v.eu.atracao && !atraiGenero(c.v.eu.atracao, c.p.genero)) return false;
   if (c.p.parceiroId && c.vin.proximidade >= 35) return false;
   // Uma história de cada vez: saindo com alguém (ou esperando uma resposta), não se começa outra.
-  if (Object.values(c.v.vinculos).some(x => x.pessoaId !== c.p.id && c.v.pessoas[x.pessoaId]?.vivo && x.romance && !x.romance.secreto && (x.romance.estagio === 'saindo' || x.romance.pediuTempo !== undefined))) return false;
+  if (Object.values(c.v.vinculos).some(x => x.pessoaId !== c.p.id && c.v.pessoas[x.pessoaId]?.vivo && x.romance && !foraDaParceria(x.romance) && (x.romance.estagio === 'saindo' || x.romance.pediuTempo !== undefined))) return false;
   if (!atraiGenero(c.p.atracao, c.v.eu.genero) && c.vin.proximidade >= 55) return false;
   const recusa = c.v.fatos[`recusa_romance_${c.p.id}`];
   if (recusa !== undefined && c.v.t - recusa < 36) return false;
@@ -1295,7 +1298,7 @@ function interesseEntreAmigos(c: CtxI): boolean {
   if (c.vin.formacao && c.vin.formacao.papel !== 'colega' && (c.vin.formacao.tFim === undefined || c.eu < 18)) return false;
   if (!podeTentarIdade(c) || parceiro(c.v)) return false;
   if (c.v.eu.atracao && !atraiGenero(c.v.eu.atracao, c.p.genero)) return false;
-  if (Object.values(c.v.vinculos).some(x => x.pessoaId !== c.p.id && c.v.pessoas[x.pessoaId]?.vivo && x.romance && !x.romance.secreto && (x.romance.estagio === 'saindo' || x.romance.pediuTempo !== undefined))) return false;
+  if (Object.values(c.v.vinculos).some(x => x.pessoaId !== c.p.id && c.v.pessoas[x.pessoaId]?.vivo && x.romance && !foraDaParceria(x.romance) && (x.romance.estagio === 'saindo' || x.romance.pediuTempo !== undefined))) return false;
   const recusa = c.v.fatos[`recusa_romance_${c.p.id}`];
   return recusa === undefined || c.v.t - recusa >= 36;
 }
@@ -1357,6 +1360,9 @@ export function interesseDoOutro(c: CtxI, r?: Rng): { valor: number; motivo?: Mo
   x -= c.vin.tensao * 0.3;
   // A origem da relação (o app abre a porta; o trabalho, pouco; a infância traz história): contexto, não destino (`relacoes`).
   x += pesoDoContexto(c.v, c.vin);
+  // REWORK 11 · REL-11.3: o ex responde lendo como acabou — quem terminou foi ele (já decidiu uma vez); ele foi traído.
+  const por = c.vin.romance?.estagio === 'ex' ? c.vin.romance.porque : undefined;
+  if (por?.quem === 'ela') x -= por.motivo === 'traicao' ? 28 : 8;
   let motivo: MotivoDoNao | undefined;
   if (c.p.aperto && c.v.t - c.p.aperto.t <= 18 && (c.p.aperto.tipo === 'separacao' || c.p.aperto.tipo === 'luto')) { x -= 12; motivo = 'momento'; }
   if (r) x += r.normal() * 6;
@@ -1522,6 +1528,7 @@ function ouve(c: CtxI): boolean {
 const porId = new Map(INTERACOES.map(x => [x.id, x]));
 for (const [id, g] of Object.entries(GRUPOS_DO_CONVIVIO)) registrarGrupo(id, g);
 for (const [id, g] of Object.entries(GRUPOS_DE_AFETO)) registrarGrupo(id, g);
+for (const [id, g] of Object.entries(GRUPOS_ADULTOS)) registrarGrupo(id, g);
 
 const PESO_VARIANTE = { principal: 3, secundario: 2, discreto: 1, perigo: 0 } as const;
 
