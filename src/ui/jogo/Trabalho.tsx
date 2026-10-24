@@ -282,7 +282,7 @@ function AcoesPrincipaisDoTrabalho({ vida, irPara }: { vida: Vida; irPara: (a: A
   const enviadas = vida.anoAtual.acoes.filter(x => x.startsWith('candidatura:')).length + vida.trabalho.candidaturas.length;
   const carreira = !!e && !['aprendiz', 'estagio'].includes(e.contrato);
   const acoes: { id: string; rotulo: string; destino: Aba; nota?: string }[] = [
-    { id: 'vagas', rotulo: e ? 'Mudar de trabalho: ver vagas' : vida.trabalho.historico.length ? 'Procurar trabalho' : 'Procurar o primeiro trabalho', destino: 'vagas', nota: e && (modo === 'atleta' || modo === 'artista') ? 'a carreira continua sua — mudar é escolha' : undefined },
+    { id: 'vagas', rotulo: e ? 'Mudar de trabalho: ver vagas' : vida.trabalho.historico.length ? 'Procurar trabalho' : 'Procurar o primeiro trabalho', destino: 'vagas', nota: e && (modo === 'atleta' || modo === 'artista') ? 'a carreira continua sua — mudar é escolha' : !e && modo === 'atleta' ? 'outro trabalho encerra a carreira de atleta' : undefined },
     { id: 'candidaturas', rotulo: 'Candidaturas e entrevistas', destino: 'vagas', nota: enviadas ? `${enviadas} em andamento` : 'nenhuma em andamento' },
     { id: 'carreira', rotulo: 'Minha carreira', destino: 'minha_carreira', nota: carreira ? 'experiência, currículo, projetos, reconhecimento' : 'o currículo, por onde você passou' },
     { id: 'outras', rotulo: 'Outras possibilidades', destino: 'negocio', nota: 'por conta, um negócio, um trabalho em paralelo' }

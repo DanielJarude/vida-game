@@ -22,7 +22,7 @@ import type { Emprego, PassagemDeTecnico, Vida } from '../tipos';
 import { ocupacaoOuNula } from '../dados/ocupacoes';
 import { economiaLocal } from '../dados/lugares';
 import { escrever } from '../nucleo';
-import { flex, ge } from '../texto';
+import { dinheiro, flex, ge } from '../texto';
 import { habilidade } from './frentes';
 import { marcar } from './marcas';
 import { pagar, vereditoDePagar } from './dinheiro';
@@ -113,7 +113,7 @@ export function verbosDoBanco(v: Vida): VerboDoBanco[] {
   const pc = proximoCurso(v);
   const l = licencaDe(v);
   if (l?.emCurso) out.push({ oque: 'licenca', rotulo: `Licença ${NIVEIS_DE_LICENCA[l.emCurso.nivel]} de treinador em curso`, porque: `Termina em ${Math.ceil((l.emCurso.ate - v.t) / 12) <= 1 ? 'menos de um ano' : `${Math.ceil((l.emCurso.ate - v.t) / 12)} anos`}.`, peso: 0 });
-  else if (pc) out.push({ oque: 'licenca', rotulo: `Fazer a licença ${NIVEIS_DE_LICENCA[pc.nivel]} de treinador`, porque: pc.falta ? `Pede ${pc.falta}.` : `${pc.meses} meses de curso, nas folgas, uns ${Math.round(pc.custo).toLocaleString('pt-BR')} na moeda daqui: o que se aprende pesa no trabalho do banco — e o mercado olha o diploma.`, peso: pc.falta ? 1 : nivelDaLicenca(v) === 0 ? 6 : 4 });
+  else if (pc) out.push({ oque: 'licenca', rotulo: `Fazer a licença ${NIVEIS_DE_LICENCA[pc.nivel]} de treinador`, porque: pc.falta ? `Pede ${pc.falta}.` : `${pc.meses} meses de curso, nas folgas, uns ${dinheiro(pc.custo)}: o que se aprende pesa no trabalho do banco — e o mercado olha o diploma.`, peso: pc.falta ? 1 : nivelDaLicenca(v) === 0 ? 6 : 4 });
   if (!feito(v, 'analise')) out.push({ oque: 'analise', rotulo: tecnicoDeTime ? 'Montar a análise tática da temporada (os adversários, o plano de jogo)' : 'Preparar a análise dos adversários para o técnico', porque: tecnicoDeTime ? 'Horas de vídeo com a comissão: o time chega aos jogos sabendo o que vem. Cansa.' : 'O relatório que o técnico leva para a preleção: quem prepara bem é lembrado quando o banco abre.', peso: 4 });
   if (!feito(v, 'elenco')) out.push({ oque: 'elenco', rotulo: tecnicoDeTime ? 'Cuidar do elenco: conversar com os líderes, explicar quem joga e por quê' : 'Fazer a ponte entre a comissão e os jogadores', porque: tecnicoDeTime ? 'O vestiário pesa nos jogos. A conversa franca pode unir — ou expor.' : 'Os jogadores confiam em quem escuta.', peso: comando && comando.vestiario < 45 ? 7 : 3 });
   if (tecnicoDeTime && comando && !feito(v, 'diretoria')) out.push({ oque: 'diretoria', rotulo: comando.pressao >= 60 ? 'Sentar com a diretoria antes que a pressão vire demissão' : 'Alinhar com a diretoria o que se espera — e pedir reforço', porque: 'Uma conversa dura: pode tirar a pressão de cima, trazer um reforço — ou irritar quem decide.', peso: comando.pressao >= 60 ? 7 : 2 });

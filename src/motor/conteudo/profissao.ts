@@ -381,7 +381,7 @@ export const PROFISSAO: Conteudo[] = [
       { id: 'renovar', texto: 'Renovar', disponivel: c => (clubeQuerRenovar(c.v, c.v.caminhos.esporte!) ? true : false),
         consequencia: c => { const es = c.v.caminhos.esporte!; return `Salário do novo contrato: ${fmt(salarioDaRenovacao(c.v, es))} por mês (bruto), ${prazoDeContrato(es, es.espaco === 'titular' ? 36 : 24) / 12 === 1 ? 'um ano' : es.espaco === 'titular' ? 'três anos' : 'dois anos'}.`; },
         resolver: c => ({ texto: mercadoEsportivo(c.v.caminhos.esporte!.modalidade).assinatura, memoria: null, efeito: () => { const es = c.v.caminhos.esporte!; assinarContrato(c.v, es, es.espaco === 'titular' ? 36 : 24, 1, true); } }) },
-      { id: 'descer', texto: c => { const p = propostaNaMesa(c.v)!; return c.v.caminhos.esporte?.modalidade === 'futebol' ? `Aceitar a proposta ${doClube(p.clube)} (${divisaoDe('futebol', p.nivel)})` : `Aceitar a proposta de uma equipe ${p.nivel === 1 ? 'regional' : 'de nível menor'}`; },
+      { id: 'descer', texto: c => { const p = propostaNaMesa(c.v)!; return c.v.caminhos.esporte?.modalidade === 'futebol' ? `Aceitar a proposta ${doClube(p.clube)} (${divisaoDe('futebol', p.nivel, paisDaCidade(p.municipioId))})` : `Aceitar a proposta de uma equipe ${p.nivel === 1 ? 'regional' : 'de nível menor'}`; },
         disponivel: c => { const es = c.v.caminhos.esporte!; const p = propostaNaMesa(c.v); return p && p.nivel < es.nivel ? true : false; },
         consequencia: c => consequenciaDaProposta(c, propostaNaMesa(c.v)!),
         resolver: c => ({ texto: mercadoEsportivo(c.v.caminhos.esporte!.modalidade).descer, memoria: null, efeito: () => aceitarProposta(c, propostaNaMesa(c.v)!) }) },
@@ -489,12 +489,12 @@ export const PROFISSAO: Conteudo[] = [
       const quem = es.modalidade === 'futebol' ? `${cap(oClube(p.clube))}, de ${d.nome}${lá !== paisDaVida(c.v) ? `, ${noPais(lá)}` : ''},` : p.nivel > es.nivel ? 'Uma equipe maior' : 'Uma equipe de nível menor';
       const anos = p.meses >= 24 ? `${Math.round(p.meses / 12)} anos` : 'um ano';
       const comeco = p.origem === 'emprestimo'
-        ? `Sem minutos no time, ${oClube(es.clube)} quer emprestar você por ${p.meses >= 12 ? 'um ano' : `${p.meses} meses`}: ${quem.replace(/,$/, '')} quer você para jogar (${divisaoDe(es.modalidade, p.nivel)}). O contrato continua ${doClube(es.clube)}; no fim, a volta.`
+        ? `Sem minutos no time, ${oClube(es.clube)} quer emprestar você por ${p.meses >= 12 ? 'um ano' : `${p.meses} meses`}: ${quem.replace(/,$/, '')} quer você para jogar (${divisaoDe(es.modalidade, p.nivel, paisDaCidade(p.municipioId))}). O contrato continua ${doClube(es.clube)}; no fim, a volta.`
         : p.origem === 'compra'
           ? `O empréstimo acaba. ${cap(oClube(es.clube))} quer ficar com você de vez: contrato de ${anos}${es.emprestimo ? ` — e ${oClube(es.emprestimo.clube)} topa negociar` : ''}. Se não, é a volta ${es.emprestimo ? aoClube(es.emprestimo.clube) : 'ao clube de origem'}.`
           : p.origem === 'liberacao'
-        ? `Sem espaço ${mercadoEsportivo(es.modalidade).time}, ${oClube(es.clube)} quer liberar você. ${quem} topa: ${divisaoDe(es.modalidade, p.nivel)}, contrato de ${anos}, lugar entre os titulares.`
-        : `${quem} quer você: ${es.modalidade === 'futebol' ? divisaoDoNivel(p.nivel, lá) : divisaoDe(es.modalidade, p.nivel)}${p.nivel > es.nivel ? ', divisão acima' : p.nivel < es.nivel ? ', divisão abaixo' : ''}, contrato de ${anos}${p.espaco === 'reserva' ? ', para brigar por posição' : ', para jogar'}.`;
+        ? `Sem espaço ${mercadoEsportivo(es.modalidade).time}, ${oClube(es.clube)} quer liberar você. ${quem} topa: ${divisaoDe(es.modalidade, p.nivel, paisDaCidade(p.municipioId))}, contrato de ${anos}, lugar entre os titulares.`
+        : `${quem} quer você: ${es.modalidade === 'futebol' ? divisaoDoNivel(p.nivel, lá) : divisaoDe(es.modalidade, p.nivel, paisDaCidade(p.municipioId))}${p.nivel > es.nivel ? ', divisão acima' : p.nivel < es.nivel ? ', divisão abaixo' : ''}, contrato de ${anos}${p.espaco === 'reserva' ? ', para brigar por posição' : ', para jogar'}.`;
       return `${comeco}${d.id !== c.v.moradia.municipioId ? ` A mudança seria para ${d.nome}.` : ''} ${comFamilia(c.v) && d.id !== c.v.moradia.municipioId ? 'A família iria junto — ou não.' : ''}`.trim();
     },
     opcoes: [

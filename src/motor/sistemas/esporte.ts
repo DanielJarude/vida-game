@@ -1101,7 +1101,7 @@ export function profissionalizar(v: Vida, r: Rng, nivel: number): void {
   const texto = e.modalidade === 'tenis' ? `Virou tenista profissional aos ${idade(v)}, no ${CIRCUITO_TENIS[e.nivel]}: sem clube, sem salário, a raquete e o ranking.` : e.modalidade === 'basquete' ? `Assinou o primeiro contrato de ${NOME_FUNCAO[funcaoBasquete(v)]} ${peloClube(e.clube)}, aos ${idade(v)}${e.origem === 'amador' ? ', vindo da liga amadora' : ''}.` : e.modalidade === 'futebol' ? `Assinou o primeiro contrato profissional de jogador, ${peloClube(e.clube)}, aos ${idade(v)}${outroClube}.` : `Virou atleta profissional de ${NOME_MOD[e.modalidade]}, ${peloClube(e.clube)}, aos ${idade(v)}.`;
   escrever(v, { texto, relevancia: 'marco', tema: 'trabalho', tom: 'bom', escolha: true });
   marcar(v, 'profissional', texto, 3, { dominio: e.modalidade, ocupacaoId: oc.id });
-  registrarConquista(v, { tipo: 'marco', modalidade: e.modalidade, ano: anoDe(v.t), competicao: divisaoDe(e.modalidade, e.nivel), clube: e.modalidade === 'tenis' ? undefined : e.clube, texto: `Primeiro contrato profissional, aos ${idade(v)}` });
+  registrarConquista(v, { tipo: 'marco', modalidade: e.modalidade, ano: anoDe(v.t), competicao: divisaoDe(e.modalidade, e.nivel, paisDaCidade(e.municipioId)), clube: e.modalidade === 'tenis' ? undefined : e.clube, texto: `Primeiro contrato profissional, aos ${idade(v)}` });
   marcarFato(v, 'atleta_profissional');
 }
 
@@ -1132,7 +1132,7 @@ function anoProfissional(v: Vida, r: Rng, e: CarreiraEsportiva): void {
         const nivel = Math.min(4, oferta) as 1 | 2 | 3 | 4;
         const p = criarProposta(v, e, nivel, 'sem_clube');
         const quem = p && e.modalidade === 'futebol' ? `${oClube(p.clube)}, de ${municipio(p.municipioId).nome},` : oferta < e.nivel ? 'um clube de divisão menor' : 'um clube';
-        novaOportunidade(v, { tipo: 'convite', ocupacaoId: ocupacaoDaModalidade(e.modalidade), dominio: e.modalidade, meses: 12, chave: 'volta_clube', titulo: 'Um clube ligou', texto: `Depois de meses treinando por conta, ${quem} fez proposta${p ? ` (${divisaoDe(e.modalidade, p.nivel)})` : ''}. Salário ${oferta < e.nivel ? 'menor' : 'parecido'}, contrato curto.`, bonus: nivel });
+        novaOportunidade(v, { tipo: 'convite', ocupacaoId: ocupacaoDaModalidade(e.modalidade), dominio: e.modalidade, meses: 12, chave: 'volta_clube', titulo: 'Um clube ligou', texto: `Depois de meses treinando por conta, ${quem} fez proposta${p ? ` (${divisaoDe(e.modalidade, p.nivel, paisDaCidade(p.municipioId))})` : ''}. Salário ${oferta < e.nivel ? 'menor' : 'parecido'}, contrato curto.`, bonus: nivel });
         return;
       }
       if (v.t - desde >= 12) { delete v.fatos['esp_sem_clube']; encerrarCarreira(v, e, 'sem_contrato'); }

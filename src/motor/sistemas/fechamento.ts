@@ -10,6 +10,7 @@
 
 import type { Vida } from '../tipos';
 import { anoDe } from '../tempo';
+import { paisDaCidade } from '../dados/lugares';
 import { capitalizar, dinheiro as fmt } from '../texto';
 import { perfilDe, semVinculo } from './perfisEsportivos';
 import { divisaoDe, linhaDaTemporada, nomePosicao, palavraDaNota, palavraDaReputacao } from './esporte';
@@ -28,7 +29,7 @@ export function fechamentoDoAno(v: Vida): Fechamento[] {
   const t = e?.temporadas?.[e.temporadas.length - 1];
   if (e && t && t.ano === ano && e.fase !== 'base') {
     const linhas = [linhaDaTemporada(v, t), `${palavraDaNota(t.nota).charAt(0).toUpperCase() + palavraDaNota(t.nota).slice(1)} — no mercado: ${palavraDaReputacao(e.reputacao ?? 30, e.modalidade)}.`];
-    if (e.fase === 'profissional') linhas.push(perfilDe(e.modalidade).estrutura === 'circuito' ? `O próximo ano é no ${divisaoDe(e.modalidade, e.nivel)}.` : e.espaco === 'titular' ? (perfilDe(e.modalidade).estrutura === 'equipe' ? 'A próxima temporada começa nas provas principais.' : 'A próxima temporada começa como titular.') : e.espaco === 'reserva' ? (perfilDe(e.modalidade).estrutura === 'equipe' ? 'A próxima temporada começa fora das provas principais.' : 'A próxima temporada começa no banco.') : `${capitalizar(semVinculo(e.modalidade))}, esperando proposta.`);
+    if (e.fase === 'profissional') linhas.push(perfilDe(e.modalidade).estrutura === 'circuito' ? `O próximo ano é no ${divisaoDe(e.modalidade, e.nivel, paisDaCidade(e.municipioId))}.` : e.espaco === 'titular' ? (perfilDe(e.modalidade).estrutura === 'equipe' ? 'A próxima temporada começa nas provas principais.' : 'A próxima temporada começa como titular.') : e.espaco === 'reserva' ? (perfilDe(e.modalidade).estrutura === 'equipe' ? 'A próxima temporada começa fora das provas principais.' : 'A próxima temporada começa no banco.') : `${capitalizar(semVinculo(e.modalidade))}, esperando proposta.`);
     { const nome = leituraDoNome(v); if (nome && nome.valor >= 30 && nome.origem === 'esporte') linhas.push(`Para o público: ${nome.frase}.`); }
     out.push({ titulo: `Temporada ${t.ano} — ${t.clube}${t.posicao ? ` · ${nomePosicao(v, t.posicao)}` : ''}`, linhas });
   }
