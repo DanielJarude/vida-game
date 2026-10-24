@@ -22,6 +22,8 @@ const DESCRICAO: Record<FormaDaCasa, string> = {
   apto_2q: 'um prédio de cinco andares, com marquise na entrada',
   apto_3q: 'um prédio alto com varanda em todos os andares',
   alto_padrao: 'uma torre envidraçada de alto padrão, com portaria, piscina e palmeira',
+  cobertura: 'um prédio alto com a cobertura de dois andares no topo, terraço e pérgola',
+  mansao: 'uma mansão de dois andares, com colunas na entrada, piscina e jardim',
   casa_simples: 'uma casa simples de laje, com ferro para cima e caixa-d\'água, sem garagem',
   casa_2q: 'uma casa de dois quartos, com muro baixo, portão e árvore no quintal',
   casa_3q: 'uma casa de três quartos, com garagem ao lado e quintal',
@@ -37,7 +39,7 @@ const DESCRICAO: Record<FormaDaCasa, string> = {
 export function descricaoDaCasa(l: LeituraLar): string {
   const c = l.condicao;
   const partes = [DESCRICAO[l.forma]];
-  if (l.fachada) partes.push(['apto_1q', 'apto_2q', 'apto_3q', 'kitnet', 'alto_padrao', 'funcional'].includes(l.forma) ? `de fachada ${l.fachada.nome}` : `pintada de ${l.fachada.nome}`);
+  if (l.fachada) partes.push(['apto_1q', 'apto_2q', 'apto_3q', 'kitnet', 'alto_padrao', 'cobertura', 'funcional'].includes(l.forma) ? `de fachada ${l.fachada.nome}` : `pintada de ${l.fachada.nome}`);
   if (c.nivel === 'problema') partes.push(`com andaime e rachadura na parede, pedindo reparo${c.problema ? ` (${c.problema})` : ''}`);
   else if (c.nivel === 'ruim') partes.push('com rachaduras na parede');
   else if (c.nivel === 'gasta') partes.push('com manchas de umidade na parede');
@@ -131,7 +133,7 @@ const ICONES: Record<string, string> = {
 };
 
 /** Cada tipo de moradia tem a sua silhueta (e o tamanho aparece no desenho, não só no texto). */
-const ICONE_MORADIA: Record<string, string> = { republica: 'republica', kitnet: 'kitnet', casa_simples: 'casa_simples', apto_1q: 'apto_1q', apto_2q: 'apto_2q', casa_2q: 'casa_2q', apto_3q: 'apto_3q', casa_3q: 'casa_3q', casa_grande: 'casa_grande', sitio: 'sitio', alto_padrao: 'alto_padrao' };
+const ICONE_MORADIA: Record<string, string> = { republica: 'republica', kitnet: 'kitnet', casa_simples: 'casa_simples', apto_1q: 'apto_1q', apto_2q: 'apto_2q', casa_2q: 'casa_2q', apto_3q: 'apto_3q', casa_3q: 'casa_3q', casa_grande: 'casa_grande', sitio: 'sitio', alto_padrao: 'alto_padrao', cobertura: 'alto_padrao', mansao: 'casa_grande' };
 
 /**
  * FIX pós-REWORK 4 → REWORK 8: a miniatura da casa — a MESMA silhueta da cena (o prédio baixo, a torre, a casa de

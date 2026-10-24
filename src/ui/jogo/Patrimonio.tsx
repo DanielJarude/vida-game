@@ -363,6 +363,7 @@ function CartaoEmpresa({ vida, agir, e }: { vida: Vida; agir: (a: Acao) => boole
         {!saida ? <button type="button" className="link link--discreto" onClick={() => setSaida(true)}>Vender ou fechar…</button> : (
           <div className="pat-confirmar" role="group" aria-label="Sair da empresa">
             <p className="nota">Não se desfaz. Vender a sua parte: uns {dinheiroCurto(valorDeVendaDaParte(e))} (um comprador negocia para baixo).{e.papel !== 'investidor' ? ` Fechar: rescisões e contas${e.zoo ? ', e os animais transferidos para outras instituições' : ''}; o que sobrar das instalações volta.` : ''}</p>
+            {decidir('vender_parte', 'Vender um quarto a um investidor (seguir no comando)', 'secundario')}
             {decidir('vender', 'Vender a minha parte', 'secundario')}
             {e.papel !== 'investidor' && decidir('encerrar', 'Fechar as portas', 'secundario')}
             <button type="button" className="botao botao--discreto" onClick={() => setSaida(false)}>Deixar como está</button>

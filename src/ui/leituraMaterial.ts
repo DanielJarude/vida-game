@@ -31,7 +31,7 @@ export const dinheiroCurto = (v: number) => formatarDinheiroCurto(v, undefined, 
  * parentes, o quarto de favor e a moradia funcional (vila, alojamento).
  */
 export type FormaDaCasa =
-  | 'republica' | 'kitnet' | 'apto_1q' | 'apto_2q' | 'apto_3q' | 'alto_padrao'
+  | 'republica' | 'kitnet' | 'apto_1q' | 'apto_2q' | 'apto_3q' | 'alto_padrao' | 'cobertura' | 'mansao'
   | 'casa_simples' | 'casa_2q' | 'casa_3q' | 'casa_grande' | 'sitio'
   | 'familia' | 'parente' | 'favor' | 'funcional';
 
@@ -77,7 +77,7 @@ export interface LeituraLar {
   janelasAcesas: number;
 }
 
-const FORMAS_DE_MODELO: readonly FormaDaCasa[] = ['republica', 'kitnet', 'apto_1q', 'apto_2q', 'apto_3q', 'alto_padrao', 'casa_simples', 'casa_2q', 'casa_3q', 'casa_grande', 'sitio'];
+const FORMAS_DE_MODELO: readonly FormaDaCasa[] = ['republica', 'kitnet', 'apto_1q', 'apto_2q', 'apto_3q', 'alto_padrao', 'casa_simples', 'casa_2q', 'casa_3q', 'casa_grande', 'sitio', 'cobertura', 'mansao'];
 export const formaDoModelo = (id: string): FormaDaCasa => (FORMAS_DE_MODELO as readonly string[]).includes(id) ? id as FormaDaCasa : 'apto_2q';
 
 /** A chave da fachada da casa onde se mora (a mesma do anúncio de onde ela veio: `dados/pertences.chaveDaFachada`). */

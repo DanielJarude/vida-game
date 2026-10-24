@@ -89,10 +89,12 @@ export function custosFixos(v: Vida, e: Empresa): { rotulo: string; valor: numbe
   const out: { rotulo: string; valor: number }[] = [];
   out.push({ rotulo: 'Folha (com encargos)', valor: e.equipe * t.salario * 12 * s });
   if (t.ponto) out.push({ rotulo: 'Aluguel do ponto', valor: t.ponto * e.unidades * Math.pow(c, 1.4) });
-  out.push({ rotulo: 'Manutenção das instalações', valor: e.ativos * t.manutencao });
+  // As instalações estão contadas na unidade de onde a vida está; a conta do ano é feita nos preços da cidade da empresa.
+  const k = conversao(v, e);
+  out.push({ rotulo: 'Manutenção das instalações', valor: e.ativos / k * t.manutencao });
   if (e.gestao.quem === 'contratada' && e.gestao.salario) out.push({ rotulo: 'Gestor contratado', valor: e.gestao.salario * 12 * s });
   if (t.responsavel && !(e.gestao.quem === 'propria' && v.trabalho.atual && t.responsavel.ocupacao.test(v.trabalho.atual.ocupacaoId))) out.push({ rotulo: `${t.responsavel.rotulo.charAt(0).toUpperCase()}${t.responsavel.rotulo.slice(1)}`, valor: t.responsavel.salario * 12 * s });
-  if (e.acervo) out.push({ rotulo: 'Conservação do acervo', valor: e.acervo.valor * 0.025 });
+  if (e.acervo) out.push({ rotulo: 'Conservação do acervo', valor: e.acervo.valor / k * 0.025 });
   if (e.zoo) out.push({ rotulo: 'Alimentação, veterinária e recintos', valor: e.zoo.recintos * 95000 * c * (0.7 + e.zoo.bemEstar / 170) + (e.zoo.conservacao ? 600000 * c : 0) });
   return out;
 }
@@ -365,7 +367,7 @@ function falir(v: Vida, e: Empresa): void {
 
 /* -------------------------------------------------------------- Decisões */
 
-export type DecisaoEmpresa = 'assumir' | 'contratar_gestor' | 'melhorar' | 'contratar' | 'cortar' | 'expandir' | 'preco_popular' | 'preco_medio' | 'preco_alto' | 'distribuir' | 'reinvestir' | 'aportar' | 'vender' | 'encerrar' | 'exposicao' | 'bem_estar' | 'conservacao';
+export type DecisaoEmpresa = 'assumir' | 'contratar_gestor' | 'melhorar' | 'contratar' | 'cortar' | 'expandir' | 'preco_popular' | 'preco_medio' | 'preco_alto' | 'distribuir' | 'reinvestir' | 'aportar' | 'vender' | 'vender_parte' | 'encerrar' | 'exposicao' | 'bem_estar' | 'conservacao';
 
 const capitalDaUnidade = (e: Empresa) => Math.round(tipoDeEmpresa(e.tipo).capital * Math.pow(custoLocal(e.municipioId), 1.2) / 1000) * 1000;
 
@@ -412,6 +414,10 @@ export function disponibilidadeEmpresa(v: Vida, e: Empresa | undefined, d: Decis
     case 'reinvestir': return e.distribuir ? { ok: true } : { ok: false, motivo: 'Já reinveste tudo.' };
     case 'aportar': return okDePagar(v, custoDaDecisao(v, e, d), 'O aporte é de');
     case 'vender': return valorDeVendaDaParte(e) > 0 ? { ok: true } : { ok: false, motivo: 'Ninguém compra uma empresa que só dá prejuízo — o caminho é fechar.' };
+    case 'vender_parte':
+      if (e.papel === 'investidor') return { ok: false, motivo: 'Investidor vende a parte inteira.' };
+      if (e.parte <= 0.5) return { ok: false, motivo: 'Vender mais tiraria o controle: aí é vender tudo.' };
+      return valorDeVendaDaParte(e) > 0 ? { ok: true } : { ok: false, motivo: 'Ninguém compra parte de uma empresa que só dá prejuízo.' };
     case 'encerrar': return okDePagar(v, custoDaDecisao(v, e, d), 'Fechar custa (rescisões, contas, transferências)');
     case 'exposicao': return e.acervo ? pagar(custoDaDecisao(v, e, d), 'A exposição custa') : { ok: false, motivo: 'Só museu.' };
     case 'bem_estar': return e.zoo ? pagar(custoDaDecisao(v, e, d), 'A obra nos recintos custa') : { ok: false, motivo: 'Só zoológico.' };
@@ -488,6 +494,18 @@ export function decidirEmpresa(v: Vida, e: Empresa, d: DecisaoEmpresa): string {
       escrever(v, { texto: `Vendeu ${e.parte < 1 ? `a sua parte d${t.artigo === 'a' ? 'a' : 'o'}` : ''} ${e.nome} por ${fmt(valor)} — ${ganho >= 0 ? `${fmt(ganho)} acima` : `${fmt(-ganho)} abaixo`} do que tinha posto.`.replace('  ', ' '), relevancia: 'biografia', tema: 'trabalho', tom: ganho >= 0 ? 'bom' : 'ruim', escolha: true });
       v.financas.empresas = empresas(v).filter(x => x.id !== e.id);
       return `Vendida: ${fmt(valor)} na conta.`;
+    }
+    case 'vender_parte': {
+      // Um quarto da empresa para um investidor: dinheiro agora, menos lucro depois — e você segue no comando.
+      const fatia = Math.min(0.25, e.parte - 0.5);
+      const valor = Math.round(Math.max(0, e.avaliacao ?? 0) * fatia * 0.85 / 1000) * 1000;
+      v.financas.conta += valor;
+      e.investido = Math.round(e.investido * (e.parte - fatia) / e.parte);
+      e.parte = Math.round((e.parte - fatia) * 100) / 100;
+      e.papel = 'socio';
+      e.socio ??= 'um investidor';
+      hist(`Vendeu ${Math.round(fatia * 100)}% por ${fmt(valor)}.`);
+      return `${Math.round(fatia * 100)}% vendidos por ${fmt(valor)}. Você fica com ${Math.round(e.parte * 100)}% — e com ${Math.round(e.parte * 100)}% do lucro que vier.`;
     }
     case 'encerrar': {
       const sobra = Math.round(Math.max(0, e.caixa + e.ativos * 0.35) * e.parte);

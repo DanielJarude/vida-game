@@ -26,7 +26,11 @@ export const MODELOS_MOTO: Record<string, PerfilMoto> = {
   haojue_dk150: { farol: 'redondo', aro: 'raios' }, yamaha_factor: { farol: 'redondo', aro: 'liga' }, honda_cg160: { farol: 'redondo', aro: 'liga', bagageiro: true },
   yamaha_fazer: { farol: 'anguloso', carenagem: true }, honda_cb300f: { farol: 'anguloso', grande: true }, yamaha_mt03: { farol: 'anguloso', grande: true, escapeCurto: true },
   kawasaki_ninja400: {}, royal_enfield_hunter: { aro: 'liga' },
-  honda_bros: {}, honda_sahara: { parabrisa: true, grande: true }
+  honda_bros: {}, honda_sahara: { parabrisa: true, grande: true },
+  // REWORK 12: as de outros mercados (a 125 de entrada, a Pulsar, a Grom, a 500) e as grandes.
+  honda_cb125f: { farol: 'redondo', aro: 'raios', bagageiro: true }, bajaj_pulsar: { farol: 'anguloso', carenagem: true, escapeCurto: true },
+  honda_grom: { farol: 'redondo', aro: 'liga', escapeCurto: true }, honda_cb500f: { farol: 'anguloso', grande: true, carenagem: true },
+  bmw_r1300gs: { parabrisa: true, grande: true, bau: true }
 };
 
 const roda = (cx: number, r: number, aro: 'liga' | 'raios' | 'cravos' = 'liga'): Peca => ({ tipo: 'pneu', cx, cy: CHAO - r, r, aro, raios: aro === 'liga' ? 6 : undefined, marca: 'roda' });
@@ -156,7 +160,9 @@ function trilha(cor: string, m: PerfilMoto): Peca[] {
     { tipo: 'luz', d: ret(162, 22, 8, 7, 2), cor: '#f2ead2' },
     ...(m.parabrisa ? [{ tipo: 'vidro' as const, d: suave([[158, 16], [164, 4], [170, 4], [168, 16]], true, 0.4), claro: true, marca: 'parabrisa' }] : []),
     { tipo: 'linha', d: 'M150 22l10 -6h14', larg: 2 },
-    { tipo: 'luz', d: ret(34, 38, 5, 4, 1), cor: '#c8372d' }
+    { tipo: 'luz', d: ret(34, 38, 5, 4, 1), cor: '#c8372d' },
+    // REWORK 12: a big trail de viagem leva as malas laterais de alumínio.
+    ...(m.bau ? [{ tipo: 'metal' as const, d: ret(40, 54, 34, 20, 3), cor: '#8d8f92', marca: 'mala' }] : [])
   ];
 }
 
@@ -170,10 +176,14 @@ export function moto(forma: 'cub' | 'scooter' | 'street' | 'esportiva' | 'cruise
 
 export interface PerfilBike { base?: 'urbana' | 'mtb' | 'cruiser'; eletrica?: boolean;
   /** A mountain bike de entrada (freio de aro, sem disco) e a de suspensão a ar (o amortecedor atrás, os tubos grossos). */
-  semDisco?: boolean; amortecedor?: boolean }
+  semDisco?: boolean; amortecedor?: boolean;
+  /** REWORK 12: a urbana esportiva (híbrida) sem cesta; a de trilha com a caramanhola no quadro. */
+  semCesta?: boolean; garrafa?: boolean }
 export const MODELOS_BIKE: Record<string, PerfilBike> = {
   caloi_andes: { base: 'urbana' }, caloi_strada: {}, caloi_vulcan: { semDisco: true }, oggi_hacker: {}, sense_fun: { amortecedor: true },
-  vela_2: { base: 'urbana', eletrica: true }, caloi_evibe: { base: 'cruiser', eletrica: true }, sense_impulse: { base: 'mtb', eletrica: true }
+  vela_2: { base: 'urbana', eletrica: true }, caloi_evibe: { base: 'cruiser', eletrica: true }, sense_impulse: { base: 'mtb', eletrica: true },
+  giant_escape: { semCesta: true }, trek_marlin: { garrafa: true }, rockrider_st100: { semDisco: true, garrafa: true },
+  rad_city: { base: 'urbana', eletrica: true, semCesta: true }, gazelle_ultimate: { base: 'cruiser', eletrica: true, garrafa: true }
 };
 
 export function bicicleta(forma: 'urbana' | 'estrada' | 'mtb' | 'eletrica', cor: string, versaoId?: string): Amostra {
@@ -200,7 +210,7 @@ export function bicicleta(forma: 'urbana' | 'estrada' | 'mtb' | 'eletrica', cor:
       { tipo: 'linha', d: tipo === 'cruiser' ? `M${caixa[0]} ${caixa[1]}l-4 -12c-2 -4 -16 -4 -24 0` : `M${caixa[0]} ${caixa[1]}l-2 -12c-1 -6 -12 -6 -20 -4`, larg: 2.6, marca: 'guidao' },
       { tipo: 'massa', d: cantos([[canote[0] - 12, canote[1] - 2, 4], [canote[0] + 10, canote[1] - 3, 4], [canote[0] + 8, canote[1] + 3, 3], [canote[0] - 10, canote[1] + 4, 3]]), cor: '#3b2a20', marca: 'selim' }
     );
-    if (tipo === 'urbana') pecas.push(
+    if (tipo === 'urbana' && !m.semCesta) pecas.push(
       { tipo: 'massa', d: cantos([[caixa[0] + 4, caixa[1] - 12, 2], [caixa[0] + 30, caixa[1] - 12, 2], [caixa[0] + 26, caixa[1] + 6, 2], [caixa[0] + 7, caixa[1] + 6, 2]]), cor: '#b98a4e', semVolume: true, marca: 'cesta' },
       { tipo: 'linha', d: `M${caixa[0] + 9} ${caixa[1] - 12}l1 18M${caixa[0] + 17} ${caixa[1] - 12}v18M${caixa[0] + 24} ${caixa[1] - 12}l-1 18M${caixa[0] + 5} ${caixa[1] - 4}h24`, larg: 0.7, fino: true }
     );
@@ -227,6 +237,7 @@ export function bicicleta(forma: 'urbana' | 'estrada' | 'mtb' | 'eletrica', cor:
       { tipo: 'massa', d: cantos([[canote[0] - 12, canote[1] - 4, 3], [canote[0] + 10, canote[1] - 4, 3], [canote[0] + 6, canote[1] + 1, 2], [canote[0] - 10, canote[1], 2]]), cor: PRETO, marca: 'selim' }
     );
   }
+  if (m.garrafa) pecas.push({ tipo: 'massa', d: membro([[128, 70], [136, 60]], [5, 5]), cor: '#3f8fb8', marca: 'caramanhola' });
   pecas.push({ tipo: 'metal', d: circulo(mov[0], mov[1], 6), cor: '#8d8f92' }, { tipo: 'linha', d: `M${mov[0]} ${mov[1]}l8 9h6`, larg: 2 });
   if (eletrica) pecas.push(
     // A bateria no tubo (o que faz a elétrica ser elétrica) e o motor no cubo de trás.

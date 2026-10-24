@@ -376,24 +376,30 @@ describe('estado pessoal: causas como fonte única', () => {
   });
 
   it('luto: a falta pesa no humor; com gente por perto, a recuperação é mais rápida — e não apaga a perda de um ano para o outro', () => {
-    const base = adulto(50, { semente: 80 });
-    const par = pessoa(base, 50, 'masculino');
-    const vp = vincular(base, par, { origem: 'romance', proximidade: 90, convivio: [] });
-    vp.romance = { estagio: 'ex', fim: 'morte', tEstagio: base.t, tInicio: base.t - 300, envolvimento: 80 };
-    par.vivo = false; par.tMorte = base.t;
-    base.luto = [{ pessoaId: par.id, t: base.t, peso: 100 }];
-    const sozinho = structuredClone(base);
-    for (const vin of Object.values(sozinho.vinculos)) { vin.tUltimoContato = sozinho.t - 60; vin.convivio = []; }
-    const acompanhado = structuredClone(base);
-    for (let k = 0; k < 3; k++) { const a = amigo(acompanhado, { proximidade: 85 }); a.vin.tUltimoContato = acompanhado.t; }
-    expect(fatoresHumor(sozinho).some(f => f.id === 'luto')).toBe(true);
-    expect(leituraDoEstado(sozinho, 'humor').pesando[0].texto).toMatch(/falta de/);
-    let s = sozinho, a = acompanhado;
-    for (let k = 0; k < 3; k++) { s = avancarAno(s).vida; if (s.momento) s = responder(s); a = avancarAno(a).vida; if (a.momento) a = responder(a); }
-    const lutoS = s.luto.find(l => l.pessoaId === par.id)?.peso ?? 0;
-    const lutoA = a.luto.find(l => l.pessoaId === par.id)?.peso ?? 0;
-    expect(lutoA).toBeLessThan(lutoS);
-    expect(lutoS).toBeGreaterThan(0);
+    // REWORK 12: a comparação era de UMA vida (uma semente): o acaso de três anos (um acontecimento a mais de um lado)
+    // decidia o teste. Agora, a média de três vidas — a regra (companhia acelera o luto) é que é medida.
+    let somaS = 0, somaA = 0;
+    for (const semente of [80, 81, 82]) {
+      const base = adulto(50, { semente });
+      const par = pessoa(base, 50, 'masculino');
+      const vp = vincular(base, par, { origem: 'romance', proximidade: 90, convivio: [] });
+      vp.romance = { estagio: 'ex', fim: 'morte', tEstagio: base.t, tInicio: base.t - 300, envolvimento: 80 };
+      par.vivo = false; par.tMorte = base.t;
+      base.luto = [{ pessoaId: par.id, t: base.t, peso: 100 }];
+      const sozinho = structuredClone(base);
+      for (const vin of Object.values(sozinho.vinculos)) { vin.tUltimoContato = sozinho.t - 60; vin.convivio = []; }
+      const acompanhado = structuredClone(base);
+      for (let k = 0; k < 3; k++) { const a = amigo(acompanhado, { proximidade: 85 }); a.vin.tUltimoContato = acompanhado.t; }
+      expect(fatoresHumor(sozinho).some(f => f.id === 'luto')).toBe(true);
+      expect(leituraDoEstado(sozinho, 'humor').pesando[0].texto).toMatch(/falta de/);
+      let s = sozinho, a = acompanhado;
+      for (let k = 0; k < 3; k++) { s = avancarAno(s).vida; if (s.momento) s = responder(s); a = avancarAno(a).vida; if (a.momento) a = responder(a); }
+      const lutoS = s.luto.find(l => l.pessoaId === par.id)?.peso ?? 0;
+      somaS += lutoS;
+      somaA += a.luto.find(l => l.pessoaId === par.id)?.peso ?? 0;
+      expect(lutoS).toBeGreaterThan(0);
+    }
+    expect(somaA).toBeLessThan(somaS);
   });
 
   it('atividade física: o corpo parado aparece como causa na saúde; meses de corrida a mudam de lado', () => {

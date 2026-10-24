@@ -303,6 +303,7 @@ describe('o que se possui muda o trajeto de todo dia', () => {
     expect(deslocamento(v)!.modo).toBe('bicicleta');
     expect(orcamento(v).saidas.some(l => /Passagem/.test(l.rotulo))).toBe(false);
     const sp = trabalhadora('sao-paulo-sp');
+    sp.moradia.municipioId = 'sao-paulo-sp'; // REWORK 12: a vida desta semente pode ter se mudado no caminho; a cena é a da metrópole
     sp.financas.bens.push({ id: 'b1', tipo: 'veiculo', modeloId: 'bike', nome: 'Caloi 10', valor: 1200, tCompra: sp.t, estado: 90 } as Veiculo);
     expect(deslocamento(sp)!.modo).toBe('publico');
     const m = trabalhadora(); m.trabalho.licencas.push('cnh');

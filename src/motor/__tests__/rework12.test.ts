@@ -19,7 +19,8 @@ import { custoDeTrazer, processarVeiculos, valorDeVenda, valorDeMercadoDoVeiculo
 import { migrar } from '../sistemas/migracao';
 import { colecao, estimativaDeVenda, ofertasDeColecao, processarColecao } from '../sistemas/colecao';
 import { contasDoAno, empresa, empresasAtivas, ofertasDeParticipacao, processarEmpresas, valorDaParte, valorDeVendaDaParte } from '../sistemas/empresas';
-import { cidadesDoPais } from '../dados/lugares';
+import { cidadesDoPais, paisDaCidade } from '../dados/lugares';
+import { converterEntrePaises } from '../mundo/moeda';
 import { semana } from '../sistemas/semana';
 import { CATALOGO } from '../conteudo/catalogo';
 import { interpretar, normalizarRework12, VERSAO_SAVE } from '../save';
@@ -323,6 +324,40 @@ describe('empresas: ao lado da carreira, lucro, prejuízo, venda e fim', () => {
     expect(pode(v, { tipo: 'empresa', empresaId: e.id, decisao: 'melhorar' })).toBe(false);
     v = fazer(v, { tipo: 'empresa', empresaId: e.id, decisao: 'vender' });
     expect(patrimonio(v)).toBeLessThan(antes);
+  });
+});
+
+describe('mudança de país com coleção e empresa', () => {
+  it('o valor de mercado atravessa a fronteira (coleção e empresa re-expressas no câmbio), sem criar nem sumir dinheiro', () => {
+    let v = rica('sao-paulo-sp');
+    v = fazer(v, { tipo: 'colecao_comprar', ofertaId: ofertasDeColecao(v, 'relojoaria')[0].id });
+    v.anoAtual.acoes = [];
+    v = fazer(v, { tipo: 'empresa_abrir', empresa: 'loja', comSocio: false });
+    const antes = balanco(v);
+    const id = empresasAtivas(v)[0].id;
+    const w = transacao(v, (x, r) => { migrar(x, r, 'pt:lisboa', 'trabalho'); }).vida;
+    const depois = balanco(w);
+    const k = converterEntrePaises(1, paisDaCidade(v.moradia.municipioId), 'PT');
+    // A coleção e a empresa mudam na proporção do câmbio (o mesmo valor de mercado, na unidade de lá).
+    expect(depois.colecao / antes.colecao).toBeCloseTo(k, 2);
+    expect(empresa(w, id)!.caixa / empresa(v, id)!.caixa).toBeCloseTo(k, 2);
+    expect(empresa(w, id)!.municipioId).toBe(empresa(v, id)!.municipioId);
+    // De longe, a gestão própria vira contratada no ano seguinte (a empresa fica na cidade dela).
+    const e = empresa(w, id)!;
+    e.gestao = { quem: 'propria', tInicio: w.t };
+    const z = transacao(w, (x, r) => processarEmpresas(x, r)).vida;
+    expect(empresa(z, id)?.gestao.quem ?? 'contratada').toBe('contratada');
+  });
+
+  it('vender um quarto a um investidor: dinheiro agora, a parte cai, o comando fica', () => {
+    let v = rica();
+    v = fazer(v, { tipo: 'empresa_abrir', empresa: 'clinica', comSocio: false });
+    const id = empresasAtivas(v)[0].id;
+    const conta = v.financas.conta;
+    v = fazer(v, { tipo: 'empresa', empresaId: id, decisao: 'vender_parte' });
+    expect(v.financas.conta).toBeGreaterThan(conta);
+    expect(empresa(v, id)!.parte).toBe(0.75);
+    expect(pode(v, { tipo: 'empresa', empresaId: id, decisao: 'melhorar' })).toBe(true);
   });
 });
 

@@ -851,6 +851,8 @@ function cenas(): Vida[] {
     out.push(em(facul, x => { x.educacao.matricula!.desempenho = 40; x.educacao.matricula!.tInicio = x.t - 18; x.financas.conta = 0; }));
     out.push(em(adulto(72, { semente: 34 }), x => {
       aposentar(x); x.financas.conta = 60000; x.corpo.saude = 45;
+      // REWORK 12: com os preços novos a vida desta semente mudou (e já viveu as tardes com os netos): a cena mede as respostas.
+      x.ocorrencias = x.ocorrencias.filter(o => !/^vel10_/.test(o.id)); x.justica = undefined;
       const f = comFilho(x, 44, { casa: false }); comNeto(x, f.p, 7);
     }));
     return out;

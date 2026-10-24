@@ -95,6 +95,8 @@ export const PLANTAS: Record<FormaDaCasa, Planta> = {
   casa_2q: { parede: { x: 112, y: 78, l: 84, a: 50 }, vaga: 22, bichos: 236, tijolo: true, cor: '#e0cfa8' },
   casa_3q: { parede: { x: 130, y: 74, l: 100, a: 54 }, vaga: 64, bichos: 240, tijolo: true, cor: '#d6c8ae' },
   casa_grande: { parede: { x: 62, y: 86, l: 136, a: 42 }, vaga: 196, bichos: 262, tijolo: false, cor: '#ece4d4' },
+  cobertura: { parede: { x: 128, y: 30, l: 68, a: 98 }, vaga: 12, bichos: 262, tijolo: false, cor: '#b9b2a6' },
+  mansao: { parede: { x: 70, y: 70, l: 170, a: 58 }, vaga: 30, bichos: 270, tijolo: false, cor: '#f1ebdf' },
   sitio: { parede: { x: 100, y: 86, l: 72, a: 42 }, vaga: 40, bichos: 246, tijolo: true, cor: '#efe6d2' },
   familia: { parede: { x: 104, y: 74, l: 104, a: 54 }, vaga: 24, bichos: 236, tijolo: true, cor: '#d9c79f' },
   parente: { parede: { x: 110, y: 88, l: 92, a: 40 }, vaga: 30, bichos: 250, tijolo: true, cor: '#cdbfa6' },
@@ -183,6 +185,40 @@ const FORMAS: Record<FormaDaCasa, (c: Ctx) => Peca[]> = {
         { tipo: 'linha', d: 'M214 124q3-2 6 0t6 0t6 0t6 0t6 0t6 0', larg: 0.8, cor: BRANCO_AGUA, fino: true },
         { tipo: 'linha', d: 'M252 121v-7h4v7', larg: 1, cor: METAL }
       ])
+    ];
+  },
+  /** Cobertura: o prédio alto e, no topo, dois andares recuados com terraço, pérgola e vidro do chão ao teto. */
+  cobertura: c => {
+    const w = PLANTAS.cobertura.parede;
+    const pos: [number, number, number, number][] = [];
+    for (const y of [40, 54, 68, 82, 96]) for (const x of [w.x + 8, w.x + 28, w.x + 48]) pos.push([x, y, 12, 9]);
+    return [
+      ...principal('cobertura', c), laje(w.x, w.y, w.l),
+      ...janelas(pos, c.acesas, 12, 9, '#efe9dc'),
+      marcado(undefined, { 'data-detalhe': 'cobertura' }, [
+        { tipo: 'massa', d: ret(w.x + 10, w.y - 22, w.l - 20, 22, 1), cor: '#e9e4da', marca: 'penthouse' },
+        { tipo: 'vidro', d: ret(w.x + 14, w.y - 18, w.l - 28, 14, 0.5), claro: true },
+        { tipo: 'linha', d: `M${w.x - 2} ${w.y - 26}h${w.l + 4}M${w.x + 4} ${w.y - 26}v26M${w.x + w.l - 4} ${w.y - 26}v26`, larg: 1.2, cor: '#5d646c', marca: 'pergola' }
+      ]),
+      arvore(240, 12, 14),
+      { tipo: 'massa', d: ret(w.x + 20, 112, 28, 4, 1), cor: '#2c3238' },
+      { tipo: 'vidro', d: ret(w.x + 24, 116, 20, 12, 0.5), claro: true, marca: 'porta' }
+    ];
+  },
+  /** Mansão: dois andares largos, colunas na entrada, piscina e jardim com cerca viva. */
+  mansao: c => {
+    const w = PLANTAS.mansao.parede;
+    return [
+      { tipo: 'massa', d: cantos([[w.x - 6, w.y, 1], [w.x + 20, w.y - 24, 1], [w.x + w.l - 20, w.y - 24, 1], [w.x + w.l + 6, w.y, 1]]), cor: '#6b5547', marca: 'telhado' },
+      ...principal('mansao', c), sombraDoTelhado(w.x, w.y, w.l),
+      ...janelas([[w.x + 10, w.y + 8], [w.x + 34, w.y + 8], [w.x + 122, w.y + 8], [w.x + 146, w.y + 8], [w.x + 10, w.y + 34], [w.x + 34, w.y + 34], [w.x + 122, w.y + 34], [w.x + 146, w.y + 34]], c.acesas, 14, 14, '#4a4643'),
+      marcado(undefined, { 'data-detalhe': 'colunas' }, [
+        { tipo: 'massa', d: ret(w.x + 62, w.y - 6, 46, 6, 0.5), cor: '#e9e4da' },
+        { tipo: 'massa', d: [w.x + 64, w.x + 78, w.x + 92, w.x + 104].map(x => ret(x, w.y, 3.5, w.a, 0.5)).join(''), cor: '#ffffff', marca: 'coluna' }
+      ]),
+      { tipo: 'massa', d: ret(w.x + 76, w.y + 30, 18, 28, 1), cor: '#5a3a24', marca: 'porta' },
+      marcado(undefined, { 'data-detalhe': 'piscina' }, [{ tipo: 'massa', d: ret(252, 121, 44, 7, 2), cor: '#6cb4cf', marca: 'piscina' }]),
+      marcado(undefined, { 'data-detalhe': 'jardim' }, [arbustos(36, 30), arbustos(244, 40)])
     ];
   },
   /** Casa simples de laje: ferro para cima, caixa-d'água, janela com grade, poste com fio. */

@@ -371,6 +371,16 @@ export function redenominar(v: Vida, k: number): void {
   for (const b of f.bens) { b.valor = x(b.valor); if (b.precoPago !== undefined) b.precoPago = x(b.precoPago); }
   const n = v.caminhos.negocio;
   if (n?.caixa !== undefined) n.caixa = x(n.caixa);
+  // REWORK 12: a coleção e as empresas também são dinheiro da pessoa (o valor estimado das peças; o caixa, as
+  // instalações, o investido e a avaliação das empresas, contados na unidade de onde a vida está).
+  for (const c of f.colecao ?? []) { c.valor = x(c.valor); c.precoPago = x(c.precoPago); }
+  for (const e of f.empresas ?? []) {
+    e.caixa = x(e.caixa); e.ativos = x(e.ativos); e.investido = x(e.investido);
+    if (e.avaliacao !== undefined) e.avaliacao = x(e.avaliacao);
+    if (e.retido !== undefined) e.retido = x(e.retido);
+    if (e.acervo) e.acervo.valor = x(e.acervo.valor);
+    if (e.historico) e.historico = e.historico.map(x);
+  }
   if (v.trabalho.aposentadoria) v.trabalho.aposentadoria.beneficio = Math.round(v.trabalho.aposentadoria.beneficio * k);
   for (const h of v.trabalho.historico) h.salario = Math.round(h.salario * k);
   const e = extratoAberto(v);
