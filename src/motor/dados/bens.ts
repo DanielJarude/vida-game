@@ -355,11 +355,11 @@ export const MORADIAS: readonly ModeloMoradia[] = [
   { id: 'casa_3q', nome: 'casa de três quartos', padrao: 4, quartos: 3, fatorAluguel: 1.5, preco: 540000, condominio: 0, casa: true, descricao: 'Quintal, espaço para família.' },
   { id: 'casa_grande', nome: 'casa grande', padrao: 5, quartos: 4, fatorAluguel: 2.4, preco: 980000, condominio: 0, casa: true, descricao: 'Quatro quartos, área de churrasco, espaço de sobra.' },
   { id: 'sitio', nome: 'sítio', padrao: 2, quartos: 3, fatorAluguel: 0.5, preco: 240000, condominio: 0, casa: true, rural: true, descricao: 'Casa simples e uns hectares de terra: dá para morar e produzir.' },
-  { id: 'alto_padrao', nome: 'apartamento de alto padrão', padrao: 5, quartos: 3, fatorAluguel: 2.9, preco: 1400000, condominio: 1600, casa: false, descricao: 'Portaria, piscina, bairro nobre.' },
+  { id: 'alto_padrao', nome: 'apartamento de alto padrão', padrao: 5, quartos: 3, fatorAluguel: 2.9, preco: 1200000, condominio: 1600, casa: false, descricao: 'Portaria, piscina, bairro nobre.' },
   // REWORK 12: o topo. A cobertura vale pelo endereço (só nas cidades grandes, nos bairros disputados); a mansão,
   // pelo tamanho e pelo terreno — longe do que é disputado, vale bem menos do que o apartamento de luxo bem localizado.
-  { id: 'cobertura', nome: 'cobertura', padrao: 5, quartos: 4, fatorAluguel: 4.6, preco: 2900000, condominio: 3400, casa: false, descricao: 'Dois andares, terraço, a cidade inteira lá embaixo.' },
-  { id: 'mansao', nome: 'mansão', padrao: 5, quartos: 6, fatorAluguel: 4.4, preco: 3800000, condominio: 0, casa: true, descricao: 'Seis suítes, piscina, jardim, casa de hóspedes. Muito para cuidar.' }
+  { id: 'cobertura', nome: 'cobertura', padrao: 5, quartos: 4, fatorAluguel: 5.5, preco: 2700000, condominio: 3400, casa: false, descricao: 'Dois andares, terraço, a cidade inteira lá embaixo.' },
+  { id: 'mansao', nome: 'mansão', padrao: 5, quartos: 6, fatorAluguel: 6, preco: 3200000, condominio: 0, casa: true, descricao: 'Seis suítes, piscina, jardim, casa de hóspedes. Muito para cuidar.' }
 ];
 
 /**

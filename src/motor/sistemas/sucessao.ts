@@ -97,6 +97,15 @@ export function inventario(v: Vida): ItemDoInventario[] {
     const valor = Math.max(0, Math.round(n.caixa ?? 0)) + valorDoNegocio(v, n);
     if (valor > 0) itens.push({ id: 'negocio', tipo: 'negocio', nome: n.nome, valor });
   }
+  // REWORK 12: a coleção e as participações em empresas entram no inventário pelo que rendem vendidas (o leilão das
+  // peças, a parte vendida aos sócios) — o espólio as converte em dinheiro; nada some na morte.
+  const colecao = Math.round((f.colecao ?? []).reduce((s, c) => s + c.valor * (c.certificado ? 0.8 : 0.65), 0));
+  if (colecao > 0) itens.push({ id: 'colecao', tipo: 'aplicacao', nome: 'a coleção (vendida no inventário)', valor: colecao });
+  for (const e of f.empresas ?? []) {
+    if (e.estado === 'encerrada') continue;
+    const valor = Math.round(Math.max(0, e.avaliacao ?? 0) * e.parte * 0.85);
+    if (valor > 0) itens.push({ id: `empresa:${e.id}`, tipo: 'aplicacao', nome: `a parte em ${e.nome} (vendida no inventário)`, valor });
+  }
   return itens;
 }
 

@@ -66,6 +66,13 @@ export function competenciaDaGestao(v: Vida, e: Empresa): number {
   return clamp(42 + anos * 3 + (doRamo(v, e.tipo) ? 12 : 0) + (v.caminhos.negocio ? 6 : 0), 0, 88);
 }
 
+/** A competência do gestor só aparece com o tempo (a tela diz em palavras, nunca em número). */
+export function leituraDoGestor(v: Vida, e: Empresa): string {
+  if ((v.t - e.gestao.tInicio) / 12 < 1) return 'ainda é cedo para saber';
+  const c = competenciaDaGestao(v, e);
+  return c >= 70 ? 'muito boa' : c >= 55 ? 'boa' : c >= 40 ? 'irregular' : 'fraca';
+}
+
 /** Quem está à frente, em palavras. */
 export function quemToca(e: Empresa): string {
   if (e.papel === 'investidor') return 'a gestão dos sócios majoritários';
@@ -116,8 +123,8 @@ function novaEmpresa(v: Vida, tipo: TipoEmpresa, comSocio: boolean, id: string):
   const nome = r.pick(NOMES_DE_EMPRESA[tipo]).replace('{sobrenome}', v.eu.sobrenome.split(' ').slice(-1)[0] ?? 'Silva');
   return {
     id, tipo, nome, municipioId: onde, tInicio: v.t, papel: comSocio ? 'socio' : 'dono', parte: comSocio ? 0.5 : 1, investido: comSocio ? capital / 2 : capital,
-    caixa: Math.round(capital * (1 - t.ativos)), ativos: Math.round(capital * t.ativos), unidades: 1, qualidade: 62, reputacao: 30, equipe: t.equipe, preco: 'medio',
-    gestao: { quem: 'contratada', ...gestorNovo(v, id, 0), tInicio: v.t }, distribuir: true, anosNoVermelho: 0, estado: t.obra ? 'abrindo' : 'operando',
+    caixa: Math.round(capital * (1 - t.ativos)), ativos: Math.round(capital * t.ativos), unidades: 1, qualidade: 62, reputacao: t.obra ? 45 : 40, equipe: t.equipe, preco: 'medio',
+    gestao: { quem: 'contratada', ...gestorNovo(v, id, 0, tipo), tInicio: v.t }, distribuir: true, anosNoVermelho: 0, estado: t.obra ? 'abrindo' : 'operando',
     ...(tipo === 'museu' ? { acervo: { valor: Math.round(capital * 0.35), conservacao: 75, pecas: 120 } } : {}),
     ...(tipo === 'zoologico' ? { zoo: { bemEstar: 70, recintos: 24, especies: 40, licenca: false, conservacao: false } } : {}),
     ...(comSocio ? { socio: r.pick(GESTORES)[r.chance(0.5) ? 0 : 1] } : {}),
@@ -125,12 +132,16 @@ function novaEmpresa(v: Vida, tipo: TipoEmpresa, comSocio: boolean, id: string):
   };
 }
 
-/** Um gestor para contratar: a competência é sorteada (e só se mostra com o tempo); quem é melhor cobra mais. */
-function gestorNovo(v: Vida, id: string, n: number): { nome: string; competencia: number; salario: number } {
+/**
+ * Um gestor para contratar: a competência é sorteada (e só se mostra com o tempo); quem é melhor cobra mais — e
+ * o gerente de um estúdio não ganha o que ganha o diretor de um hotel (o salário segue o porte do negócio).
+ */
+function gestorNovo(v: Vida, id: string, n: number, tipo?: TipoEmpresa): { nome: string; competencia: number; salario: number } {
   const r = rngDe(v.id, id, 'gestor', n, v.t);
   const competencia = Math.round(clamp(55 + r.normal() * 16, 15, 92));
   const [m, f] = r.pick(GESTORES);
-  return { nome: r.chance(0.5) ? m : f, competencia, salario: Math.round((9000 + competencia * 140) / 100) * 100 };
+  const escala = clamp(Math.sqrt(tipoDeEmpresa(tipo ?? 'loja').capital / 1e6), 0.45, 2.5);
+  return { nome: r.chance(0.5) ? m : f, competencia, salario: Math.round((6000 + competencia * 100) * escala / 100) * 100 };
 }
 
 export function abrirEmpresa(v: Vida, tipo: TipoEmpresa, comSocio: boolean): string {
@@ -230,7 +241,7 @@ export function contasDoAno(v: Vida, e: Empresa, r: Rng): ResultadoDoAno {
   if (e.tipo === 'academia') {
     // A carteira: entra quem a procura traz; sai quem desiste (mais no popular, menos com qualidade).
     const evasao = clamp(0.42 - e.qualidade / 400 + (e.preco === 'popular' ? 0.06 : e.preco === 'alto' ? -0.06 : 0), 0.18, 0.55) / 1;
-    const antes = e.carteira ?? Math.round(t.publico * 0.4);
+    const antes = e.carteira ?? Math.round(t.publico * e.unidades * 0.7);
     publico = Math.round(Math.min(teto, antes * (1 - evasao) + procura(v, e, r) * evasao * 1.1));
     e.carteira = publico;
   } else publico = Math.round(Math.min(teto, procura(v, e, r)));
@@ -251,14 +262,13 @@ export function processarEmpresas(v: Vida, r: Rng): void {
 }
 
 function processarEmpresa(v: Vida, e: Empresa, r: Rng): void {
-  const t = tipoDeEmpresa(e.tipo);
   // Quem se mudou não toca de longe: a gestão passa a alguém contratado (a empresa fica onde está).
   if (e.gestao.quem === 'propria' && e.municipioId !== v.moradia.municipioId) empresasNaMudanca(v, v.moradia.municipioId);
   const k = conversao(v, e);
   const contas = contasDoAno(v, e, r);
   const resultado = Math.round(contas.resultado * k);
   // O caixa no vermelho paga juros (o cheque especial da empresa).
-  if (e.caixa < 0) e.caixa = Math.round(e.caixa * 1.18);
+  if (e.caixa < 0) e.caixa = Math.round(e.caixa * 1.12);
   e.caixa += resultado;
   let nota: string | undefined;
   if (e.estado === 'abrindo') {
@@ -269,20 +279,24 @@ function processarEmpresa(v: Vida, e: Empresa, r: Rng): void {
   } else if (e.estado === 'interditada') {
     if (!e.zoo || e.zoo.bemEstar >= 55) { e.estado = 'operando'; if (e.zoo) e.zoo.licenca = true; nota = 'A interdição foi levantada.'; }
   }
-  // A distribuição: o que passa de uma reserva (seis meses de custo) vai aos donos — a sua parte cai na sua conta.
+  // A distribuição: o LUCRO acumulado que passa de uma reserva (dois meses de custo) vai aos donos — a sua parte cai
+  // na sua conta. O capital que se pôs para abrir não volta como "lucro": só o que a empresa ganhou.
   let distribuido = 0;
-  const reserva = contas.custos * k * 0.5;
-  if (e.distribuir && e.caixa > reserva && e.estado === 'operando') {
-    distribuido = Math.round((e.caixa - reserva) * 0.8);
+  e.retido = (e.retido ?? 0) + resultado;
+  const reserva = contas.custos * k / 6;
+  if (e.distribuir && e.caixa > reserva && e.retido > 0 && e.estado === 'operando') {
+    distribuido = Math.round(Math.min(e.caixa - reserva, e.retido) * 0.8);
+    e.retido -= distribuido;
     e.caixa -= distribuido;
     const minha = Math.round(distribuido * e.parte);
     v.financas.conta += minha;
     lancar(v, `Lucros distribuídos: ${e.nome}`, 'renda', minha);
   }
-  // A qualidade se gasta; a reputação segue a qualidade e o público satisfeito (devagar).
-  e.qualidade = clamp(Math.round(e.qualidade - 3 + (e.gestao.quem === 'contratada' ? ((e.gestao.competencia ?? 50) - 50) / 25 : 0)));
-  const ocupacao = contas.publico / Math.max(1, t.capacidade * e.unidades);
-  e.reputacao = clamp(Math.round(e.reputacao + (e.qualidade - 55) / 9 + (ocupacao > 0.5 ? 2 : -1) + r.normal() * 3 + 2));
+  // A qualidade se gasta devagar (a manutenção de rotina já está nos custos); quem toca bem segura, quem toca mal deixa cair.
+  // A reputação caminha para o que a casa entrega (a qualidade e a gestão) — não sobe para sempre só porque o tempo passa.
+  e.qualidade = clamp(Math.round(e.qualidade - 1 + (competenciaDaGestao(v, e) - 55) / 20));
+  const alvo = e.qualidade * 0.85 + (competenciaDaGestao(v, e) - 50) / 4;
+  e.reputacao = clamp(Math.round(e.reputacao + (alvo - e.reputacao) * 0.25 + r.normal() * 4));
   e.ativos = Math.round(e.ativos * 0.93);
   if (e.acervo) e.acervo.conservacao = clamp(Math.round(e.acervo.conservacao - 2 + (e.caixa > 0 ? 1 : -2)));
   if (e.zoo) zooNoAno(v, e, r);
@@ -292,7 +306,7 @@ function processarEmpresa(v: Vida, e: Empresa, r: Rng): void {
   e.historico = [...(e.historico ?? []), resultado].slice(-6);
   e.ultimo = { t: v.t, publico: contas.publico, receita: Math.round(contas.receita * k), custos: Math.round(contas.custos * k), apoio: contas.apoio ? Math.round(contas.apoio * k) : undefined, imposto: Math.round(contas.imposto * k), resultado, distribuido, nota };
   avaliar(v, e);
-  if (e.anosNoVermelho >= 3 && e.caixa < -contas.custos * k * 0.35) falir(v, e);
+  if (e.anosNoVermelho >= 3 && e.caixa < -contas.custos * k * 0.5) falir(v, e);
 }
 
 /** O zoológico no ano: o bem-estar segue o que se gasta e a equipe; a fiscalização vem, e às vezes interdita. */
@@ -424,7 +438,7 @@ export function decidirEmpresa(v: Vida, e: Empresa, d: DecisaoEmpresa): string {
       hist('Você assumiu a gestão.');
       return `O dia a dia é seu: algumas noites e os sábados. ${doRamo(v, e.tipo) ? 'Quem é do ramo sabe onde aperta.' : 'Sem ser do ramo, o começo ensina — e custa.'}`;
     case 'contratar_gestor': {
-      const g = gestorNovo(v, e.id, (e.historia ?? []).length);
+      const g = gestorNovo(v, e.id, (e.historia ?? []).length, e.tipo);
       e.gestao = { quem: 'contratada', ...g, tInicio: v.t };
       hist(`Contratou ${g.nome} para a gestão.`);
       return `${g.nome} assume a gestão por ${fmt(Math.round(g.salario * salarioLocal(e.municipioId)))} por mês. Se é bom, o tempo vai dizer.`;
@@ -524,7 +538,7 @@ export const valorCedidoAoMuseu = (v: Vida, e: Empresa) => (v.financas.colecao ?
 export function empresasNaMudanca(v: Vida, destinoId: string): void {
   for (const e of empresasAtivas(v)) {
     if (e.municipioId === destinoId || e.gestao.quem !== 'propria') continue;
-    const g = gestorNovo(v, e.id, 99);
+    const g = gestorNovo(v, e.id, 99, e.tipo);
     e.gestao = { quem: 'contratada', ...g, tInicio: v.t };
     (e.historia ??= []).push({ t: v.t, texto: `Com a mudança, a gestão passou a ${g.nome}.` });
   }

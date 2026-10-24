@@ -9,8 +9,9 @@
  *     liquidez); capital e cidade média, um pouco mais;
  *   - país de moradia cara comprime o rendimento (Londres, Zurique: 3–4%), país de moradia barata o abre;
  *   - o tipo pesa: o padrão alto rende menos que o simples (o luxo é caro de comprar e não se aluga por tanto);
- *   - o bairro pesa MAIS no que depende do endereço (o alto padrão, a cobertura) do que no que depende do
- *     terreno (a casa grande afastada vale pelo tamanho, e o tamanho longe vale pouco).
+ *   - o bairro pesa mais no topo (o alto padrão, a cobertura, a mansão) do que no apartamento comum: a mansão
+ *     no bairro nobre vale uma fortuna; a afastada, fora da mancha urbana, vale bem menos que o apartamento de
+ *     luxo bem localizado (o tamanho longe vale pouco).
  *
  * BEM IMPORTÁVEL (carro, moto, relógio, joia): o motor conta em poder de compra brasileiro, e a paridade
  * serve ao pão e ao aluguel — não ao carro, que tem um preço mundial. Nos catálogos, o preço é o do Brasil
@@ -27,11 +28,18 @@ import type { RegiaoMundial } from '../mundo/tipos';
 /** Rendimento bruto do aluguel por porte de cidade (o Brasil; os outros países ajustam). */
 export const RENDIMENTO_POR_PORTE: Record<string, number> = { metropole: 0.045, capital: 0.05, metropolitana: 0.052, polo: 0.048, pequena: 0.042 };
 
+/**
+ * No Brasil, o rendimento muda com a região (FipeZap): as capitais do Nordeste e do Norte rendem mais (o imóvel é
+ * barato para o aluguel que se paga — Recife, Fortaleza, Belém passam de 6%); o Sul, um pouco menos.
+ */
+const RENDIMENTO_POR_REGIAO: Record<string, number> = { Nordeste: 0.009, Norte: 0.007, 'Centro-Oeste': 0.002, Sudeste: 0, Sul: -0.003 };
+
 /** O rendimento bruto do aluguel de referência (dois quartos, bairro comum) numa cidade. */
 export function rendimentoDoMercado(municipioId: string): number {
   const m = municipio(municipioId);
   const base = RENDIMENTO_POR_PORTE[m.perfil] ?? 0.05;
-  if (m.pais === PAIS_PADRAO || !temPerfil(m.pais)) return base;
+  if (m.pais === PAIS_PADRAO) return base + (RENDIMENTO_POR_REGIAO[m.regiao ?? ''] ?? 0);
+  if (!temPerfil(m.pais)) return base;
   const e = perfilDoPais(m.pais).economia;
   if (e.rendimentoAluguel !== undefined) return e.rendimentoAluguel * base / RENDIMENTO_POR_PORTE.capital;
   return base * Math.pow(e.moradia, -0.4);
@@ -40,8 +48,9 @@ export function rendimentoDoMercado(municipioId: string): number {
 /** O quanto o endereço pesa no preço de cada tipo (1 = como um apartamento comum). */
 export function sensibilidadeAoBairro(modeloId: string): number {
   switch (modeloId) {
-    case 'alto_padrao': case 'cobertura': return 1.6;
-    case 'mansao': return 1.3;
+    case 'alto_padrao': return 1.3;
+    case 'cobertura': return 1.35;
+    case 'mansao': return 1.5;
     case 'casa_grande': return 1.15;
     case 'casa_simples': case 'kitnet': case 'republica': return 0.9;
     default: return 1;

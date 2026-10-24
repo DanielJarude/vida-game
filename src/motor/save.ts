@@ -18,6 +18,7 @@
  *     para não se repetirem.
  */
 
+import { indiceDoBairro } from './sistemas/mercado';
 import { normalizarSubmundo } from './sistemas/submundo';
 import { conteudoPorId } from './conteudo/motor';
 import { ehEspecialidadeMedica } from './dados/especialidades';
@@ -108,7 +109,7 @@ export function ler(s: Armazenamento | null = armazenamentoPadrao()): Leitura {
  */
 export function interpretar(bruto: string): Leitura {
   const r = interpretarSemNormalizar(bruto);
-  if (r.tipo === 'ok') { normalizarRework75(r.vida); normalizarRework97(r.vida); normalizarRework106(r.vida); normalizarRework11Relacoes(r.vida); normalizarRework11Esportes(r.vida); normalizarRework11Artes(r.vida); normalizarRework115(r.vida); fixarEstatura(r.vida, true); }
+  if (r.tipo === 'ok') { normalizarRework75(r.vida); normalizarRework97(r.vida); normalizarRework106(r.vida); normalizarRework11Relacoes(r.vida); normalizarRework11Esportes(r.vida); normalizarRework11Artes(r.vida); normalizarRework115(r.vida); normalizarRework12(r.vida); fixarEstatura(r.vida, true); }
   return r;
 }
 
@@ -1703,4 +1704,19 @@ export function normalizarRework75(v: Vida): void {
 export function normalizarRework115(v: Vida): void {
   normalizarSubmundo(v);
   if (v.fila) { v.fila = v.fila.filter(x => conteudoPorId(x.id)?.tipo === 'decisao'); if (!v.fila.length) delete v.fila; }
+}
+
+/**
+ * REWORK 12 — idempotente, só campos opcionais (o save continua v20): o índice do bairro dos imóveis já comprados
+ * (pelo texto do bairro, como a oferta dizia), o veículo "guardado" na cidade onde a pessoa já mora volta a estar com
+ * ela, o veículo principal que não existe mais é esquecido. Nada é apagado; nenhum valor é reescrito.
+ */
+export function normalizarRework12(v: Vida): void {
+  const f = v.financas;
+  for (const b of f.bens) {
+    if (b.tipo === 'imovel' && b.indiceBairro === undefined && b.bairro) { const i = indiceDoBairro(b.bairro); if (i !== 1) b.indiceBairro = i; }
+    if (b.tipo === 'veiculo' && b.local && b.local === v.moradia.municipioId) delete b.local;
+  }
+  if (f.veiculoPrincipal && !f.bens.some(b => b.id === f.veiculoPrincipal)) delete f.veiculoPrincipal;
+  if (f.colecao && !f.colecao.length) delete f.colecao;
 }

@@ -21,7 +21,7 @@ import { avancarEconomia, economiaInicial, type AnoEconomico } from '../sistemas
 import { aplicar, processarInvestimentos, resgatar, retornos } from '../sistemas/investimentos';
 import { animaisDoAbrigo, ofertaPorModelo, ofertasDeImoveis, ofertasDeVeiculos } from '../sistemas/mercado';
 import { animaisParaVoce, imoveisParaVoce, investimentosParaVoce, MAX_PRIMARIAS_MATERIAL, veiculosParaVoce } from '../sistemas/relevancia';
-import { disponibilidadeVeiculo, processarVeiculos, veiculoUtil, type AcaoVeiculo } from '../sistemas/veiculos';
+import { disponibilidadeVeiculo, precoNovoLocal, processarVeiculos, veiculoUtil, type AcaoVeiculo } from '../sistemas/veiculos';
 import { processarObrigacoes } from '../sistemas/obrigacoes';
 import { adotarPet, custoDosPets, disponibilidadeVeterinario, processarPets } from '../sistemas/pets';
 import { calcularHeranca, comecarVidaEmComum, construidoJunto } from '../sistemas/partilha';
@@ -32,7 +32,7 @@ import { abrirNegocio, fecharNegocio, processarNegocio } from '../sistemas/negoc
 import { fatoresCabeca } from '../sistemas/estado';
 import { interpretar, VERSAO_SAVE } from '../save';
 import { PRODUTOS } from '../dados/investimentos';
-import type { Genero, Pessoa, Vida } from '../tipos';
+import type { Genero, Pessoa, Veiculo, Vida } from '../tipos';
 
 const fixture = (nome: string) => readFileSync(join(__dirname, 'fixtures', nome), 'utf8');
 const tenta = (v: Vida, a: Acao) => podeTentar(disponibilidade(v, a));
@@ -331,7 +331,9 @@ describe('moradia', () => {
     const v = sozinha(32, 64);
     v.trabalho.atual!.salario = 9000;
     v.financas.conta = 150000;
-    const o = imoveisParaVoce(v, 'venda').para[0].item;
+    // REWORK 12: a primeira oferta que o banco aceita financiar (os preços passaram a sair do aluguel da cidade).
+    const ofertas = [...imoveisParaVoce(v, 'venda').para, ...imoveisParaVoce(v, 'venda').resto].map(x => x.item);
+    const o = ofertas.find(x => podeTentar(disponibilidade(v, { tipo: 'comprar_imovel', ofertaId: x.id, financiar: true, morar: true, prazo: 20 })))!;
     let d = executar(v, { tipo: 'comprar_imovel', ofertaId: o.id, financiar: true, morar: true, prazo: 20 }).vida;
     const saldo0 = d.financas.dividas[0].saldo;
     d = structuredClone(d); d.financas.conta += 50000;
@@ -540,7 +542,8 @@ describe('veículos', () => {
     for (let k = 0; k < 6; k++) { bici.t += 12; processarVeiculos(bici, criarRng(k)); }
     const pb = bici.financas.bens[0].tipo === 'veiculo' ? bici.financas.bens[0].problema! : undefined;
     expect(pb!.gravidade).toBeLessThan(3);
-    expect(pb!.custo).toBeLessThanOrEqual(1200 * 0.45 + 10);
+    // REWORK 12: o teto é 45% do preço de uma igual, zero, NA CIDADE (o preço local, não o de catálogo).
+    expect(pb!.custo).toBeLessThanOrEqual(precoNovoLocal(bici, bici.financas.bens[0] as Veiculo) * 0.45 + 10);
   });
 
   it('as ofertas de veículo aparecem por lugar, poucas primeiro e com motivo', () => {

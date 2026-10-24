@@ -5,13 +5,14 @@
  */
 
 import { describe, expect, it } from 'vitest';
+import { paisDaCidade } from '../dados/lugares';
 import { nova, viverAte } from './ajuda';
 import { criarRng } from '../rng';
 import { executar } from '../acoes';
 import { contratar } from '../sistemas/trabalho';
 import { ocupacao } from '../dados/ocupacoes';
 import { PALAVRA_FAIXA, VEICULOS, VEICULO_ANTIGO, VERSOES_VEICULO, modeloVeiculo, nomeDaVersao, versaoVeiculo, versoesDaClasse } from '../dados/bens';
-import { catalogoDeVeiculos, ofertaVeiculoPorModelo, ofertasDeVeiculos } from '../sistemas/mercado';
+import { catalogoDeVeiculos, ofertaVeiculoPorModelo, ofertasDeVeiculos, versoesNoPais } from '../sistemas/mercado';
 import { veiculosParaVoce } from '../sistemas/relevancia';
 import { categoriaDoVeiculo, nomeDoVeiculo, processarVeiculos, textoVeiculo } from '../sistemas/veiculos';
 import { atribuirVersoesAosVeiculos, versaoParaVeiculoAntigo } from '../sistemas/versoesVeiculo';
@@ -66,7 +67,8 @@ describe('catálogo de versões', () => {
     }
     const motoMaisBarata = Math.min(...VERSOES_VEICULO.filter(x => categoriaDe(x.classe) === 'moto').map(x => x.preco));
     expect(motoMaisBarata).toBeLessThan(2100 * 8);
-    const carroMaisBarato = Math.min(...VERSOES_VEICULO.filter(x => categoriaDe(x.classe) === 'carro').map(x => x.preco));
+    // REWORK 12: o carro zero mais barato (o clássico, que só existe usado e na garagem de colecionador, fica de fora).
+    const carroMaisBarato = Math.min(...VERSOES_VEICULO.filter(x => categoriaDe(x.classe) === 'carro' && !modeloVeiculo(x.classe).segmento).map(x => x.preco));
     expect(carroMaisBarato).toBeGreaterThan(50000);
     expect(carroMaisBarato).toBeLessThan(90000);
   });
@@ -89,9 +91,11 @@ describe('ofertas e vitrine', () => {
       for (const o of a) expect(versaoVeiculo(o.versaoId)?.classe).toBe(o.modeloId);
       expect(ofertasDeVeiculos(structuredClone(v), l)).toEqual(a);
     }
-    // A concessionária tem todos os carros zero; a loja de motos, todas as motos e bicicletas zero.
-    expect(ofertasDeVeiculos(v, 'concessionaria').filter(o => !o.usado).length).toBe(VERSOES_VEICULO.filter(x => categoriaDe(x.classe) === 'carro').length);
-    expect(ofertasDeVeiculos(v, 'motos').filter(o => !o.usado).length).toBe(VERSOES_VEICULO.filter(x => ['moto', 'bicicleta'].includes(categoriaDe(x.classe))).length);
+    // A concessionária tem todos os carros zero DO MERCADO DO PAÍS (REWORK 12: o Mobi no Brasil, a F-150 nos EUA), sem os
+    // exóticos e os clássicos (esses, na garagem de colecionador); a loja de motos, todas as motos e bicicletas do país.
+    const locais = versoesNoPais(paisDaCidade(v.moradia.municipioId));
+    expect(ofertasDeVeiculos(v, 'concessionaria').filter(o => !o.usado).length).toBe(locais.filter(x => categoriaDe(x.classe) === 'carro' && !modeloVeiculo(x.classe).segmento).length);
+    expect(ofertasDeVeiculos(v, 'motos').filter(o => !o.usado).length).toBe(locais.filter(x => ['moto', 'bicicleta'].includes(categoriaDe(x.classe))).length);
     expect(ofertasDeVeiculos(v, 'usados').every(o => o.usado)).toBe(true);
   });
 
@@ -103,7 +107,7 @@ describe('ofertas e vitrine', () => {
     const cats = new Set(c.map(o => categoriaDe(o.modeloId)));
     for (const x of ['carro', 'moto', 'bicicleta']) expect(cats.has(x as never)).toBe(true);
     expect(c.some(o => o.usado) && c.some(o => !o.usado)).toBe(true);
-    expect(c.length).toBe((['concessionaria', 'usados', 'motos', 'nautica', 'aeroclube'] as const).reduce((s, l) => s + ofertasDeVeiculos(v, l).length, 0));
+    expect(c.length).toBe((['concessionaria', 'usados', 'motos', 'nautica', 'aeroclube', 'colecionador'] as const).reduce((s, l) => s + ofertasDeVeiculos(v, l).length, 0));
   });
 
   it('"ver os outros" de cada loja vem em ordem de preço', () => {

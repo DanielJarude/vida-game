@@ -1307,6 +1307,8 @@ export interface Empresa {
    * limitada). É ele — vezes a parte — que entra no patrimônio, e ele já contém o caixa e as instalações.
    */
   avaliacao?: number;
+  /** Os lucros retidos (o que a empresa ganhou e ainda não distribuiu): só deles sai distribuição. */
+  retido?: number;
   /** Academia: os alunos matriculados (a carteira que se renova com a evasão). */
   carteira?: number;
   /** O sócio (o nome; a parte dele é 1 − parte). */
