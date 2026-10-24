@@ -10,6 +10,7 @@ import { entradaDaMorte, escrever, idade, lembrarCom, novoId } from '../nucleo';
 import { CATALOGO } from './catalogo';
 import { aplicarPersonalidade } from '../personalidade';
 import { rngDe } from '../rng';
+import { DECISOES_DE_CONTRATO, registrarDecisaoDeCarreira, trajetoriaDeSituacao } from '../sistemas/situacoes';
 
 const POR_ID = new Map<string, Conteudo>();
 function indice(): Map<string, Conteudo> {
@@ -166,8 +167,11 @@ export function resolverDecisao(v: Vida, r: Rng, opcaoId: string): { texto: stri
     if (pessoa) p[papel] = pessoa;
   }
   const ctx = contexto(v, r, p);
+  // REWORK 11 · CAR-11.9: a decisão de contrato (renovar, a proposta) entra nos momentos da carreira em que foi tomada.
+  const trDoContrato = DECISOES_DE_CONTRATO.has(d.id) ? trajetoriaDeSituacao(v) : undefined;
   const res = opcao.resolver(ctx);
   res.efeito?.(ctx);
+  if (trDoContrato) registrarDecisaoDeCarreira(v, trDoContrato, d.id, aberta.texto, res.memoria ?? res.texto, res.tom);
   if (opcao.comportamento && !d.biografica) aplicarPersonalidade(v, `${d.id}:${opcao.id}`, opcao.comportamento);
   let escrita: string | undefined;
   if (res.memoria !== null) {

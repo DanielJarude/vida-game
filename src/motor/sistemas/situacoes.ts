@@ -51,7 +51,7 @@ import { especialidadeMedica } from './medicina';
 import { criarPessoa, vincular } from '../pessoas';
 import { lembrarCom } from '../nucleo';
 import { habilidade } from './frentes';
-import { barraDaDivisao, nomePosicao, OCUPACOES_DE_ATLETA, posicaoDe } from './esporte';
+import { barraDaDivisao, carreirasEsportivas, nomePosicao, OCUPACOES_DE_ATLETA, posicaoDe } from './esporte';
 import { climaDe, mexerNoClima } from './profissao';
 import { negocioAtivo } from './negocio';
 import { empregoAcademico, publicarArtigo, registrarProducao, vidaAcademica } from './academia';
@@ -61,6 +61,7 @@ import { competicaoDe, daCompeticao, registrarConquista } from './palmares';
 import { anoDe } from '../tempo';
 import { OCUPACAO_TECNICO, decidirFinal, deixarOClube, demitirDoComando, passagemAtual, trabalhoDoTecnico } from './tecnico';
 import { economiaLocal } from '../dados/lugares';
+import { modelosComMemoria } from './situacoesMemoria';
 
 export type Trajetoria = 'futebol' | 'basquete' | 'tenis' | 'atleta' | 'tecnico' | 'medicina' | 'academia' | 'cena' | 'negocio' | 'autonomo' | 'emprego' | 'militar' | 'politica' | 'rural' | 'universidade';
 export type Desfecho = RegistroDeSituacao['desfecho'];
@@ -129,6 +130,11 @@ export interface ModeloSituacao {
   recarga?: number;
   /** Quando o tema volta anos depois: a cena lembra do que aconteceu da outra vez. */
   retorno?: (v: Vida, d: Dados, antes: RegistroDeSituacao) => string;
+  /**
+   * REWORK 11 · CAR-11.9: a cena que só existe por causa do que a carreira já viveu (o ex-clube, o título, o atrito que
+   * volta — `situacoesMemoria`). A tela separa estas ("consequências") dos momentos de decisão comuns e dos marcos.
+   */
+  natureza?: 'consequencia';
 }
 
 /* ------------------------------------------------------------ O motor */
@@ -160,7 +166,8 @@ export const modeloDaSituacao = (id: string) => MODELOS.find(m => m.id === id);
 /** A situação aberta deste ano (se ainda cabe). */
 export function situacaoAberta(v: Vida): { m: ModeloSituacao; d: Dados } | undefined {
   const s = v.caminhos.situacao;
-  if (!s || s.t !== v.t) return undefined;
+  // REWORK 11 · CAR-11.9: a cena sorteada num ano já ocupado (a renovação, a proposta) espera o ano seguinte.
+  if (!s || s.t !== v.t || s.dados._ocupado !== undefined) return undefined;
   const m = modeloDaSituacao(s.id);
   return m && m.cabe(v) ? { m, d: s.dados } : undefined;
 }
@@ -259,9 +266,23 @@ function inicioDaTrajetoria(v: Vida, tr: Trajetoria): number {
   return e?.tInicio ?? v.t;
 }
 
+/**
+ * REWORK 11 · CAR-11.9: as decisões de contrato (renovar, aceitar a proposta, o doping, a proposta ao técnico) são
+ * acontecimentos da carreira e entram na lista de momentos dela — mas não são "cenas": não contam no silêncio nem na
+ * recarga dos modelos (o ano da renovação continua sem tirar a vez do momento seguinte).
+ */
+export const DECISOES_DE_CONTRATO = new Set(['esp_renovacao', 'esp_proposta', 'esp_doping', 'esp_mercado', 'tec_proposta']);
+const ehCena = (x: RegistroDeSituacao) => !DECISOES_DE_CONTRATO.has(x.id);
+
+/** Guarda a decisão de contrato como momento da carreira (chamado por `conteudo/motor` ao resolver a decisão). */
+export function registrarDecisaoDeCarreira(v: Vida, tr: Trajetoria | undefined, id: string, intencao: string, texto: string, tom?: 'bom' | 'ruim' | 'neutro'): void {
+  if (!tr || !DECISOES_DE_CONTRATO.has(id) || !texto) return;
+  registrarMomento(v, { id, t: v.t, trajetoria: tr, intencao, desfecho: tom === 'ruim' ? 'ruim' : 'bom', texto });
+}
+
 /** Anos desde o último momento VIVIDO nesta trajetória (ou desde que ela começou). */
 export function silencioDe(v: Vida, tr: Trajetoria): number {
-  const ultimo = [...(v.caminhos.situacoes ?? [])].reverse().find(x => x.trajetoria === tr);
+  const ultimo = [...(v.caminhos.situacoes ?? [])].reverse().find(x => x.trajetoria === tr && ehCena(x));
   const desde = Math.max(ultimo?.t ?? -Infinity, inicioDaTrajetoria(v, tr));
   return Math.max(0, (v.t - desde) / 12);
 }
@@ -281,12 +302,17 @@ export function chanceDeMomento(v: Vida, tr: Trajetoria): number {
   const s = silencioDe(v, tr);
   // Quem ainda não viveu nenhum momento nesta trajetória não está "logo depois de um": a carreira nova
   // já pode produzir a sua primeira cena (a política demorava anos para ter uma situação jogável).
-  const nunca = !(v.caminhos.situacoes ?? []).some(x => x.trajetoria === tr);
+  const nunca = !(v.caminhos.situacoes ?? []).some(x => x.trajetoria === tr && ehCena(x));
   // O expediente comum tem cadência mansa (a vida em volta — a família, a casa — também pede o ano): o silêncio pesa pouco.
   // REWORK 5: quem tem um ofício com cenas próprias (a advogada, o professor, a enfermeira) vive o expediente um pouco mais.
   const oficio = (tr === 'emprego' || tr === 'autonomo') && TRILHAS_COM_OFICIO.has(trilhaAtual(v) ?? '') ? 1.45 : 1;
   if (COMUNS.has(tr)) return clamp(RITMO[tr] * oficio * (s < 1.5 && !nunca ? 0.6 : s < 3.5 ? 1 : 1.4), 0, 0.95);
-  const curva = nunca ? (s < 1 ? 0.7 : s < 2 ? 1.2 : 2) : s < 1.5 ? 0.35 : s < 2.5 ? 1 : s < 3.5 ? 1.6 : 2.4;
+  // REWORK 11 · CAR-11.9: a carreira de atleta é feita de temporadas cheias de jogo — o ano seguinte a um momento não é
+  // quase mudo (0,35 → 0,6; ainda menos da metade do ano cheio). Com os anos de renovação e proposta (que agora adiam a
+  // cena em vez de apagá-la), a temporada passa a ter um acontecimento profissional quase todo ano, entre a decisão
+  // vivida e o marco automático, sem virar o popup anual.
+  const logoDepois = tr === 'futebol' || tr === 'basquete' || tr === 'tenis' || tr === 'atleta' ? 0.6 : 0.35;
+  const curva = nunca ? (s < 1 ? 0.7 : s < 2 ? 1.2 : 2) : s < 1.5 ? logoDepois : s < 2.5 ? 1 : s < 3.5 ? 1.6 : 2.4;
   return clamp(RITMO[tr] * curva * intensidade(v, tr), 0, 0.95);
 }
 
@@ -327,15 +353,27 @@ export function processarSituacoes(v: Vida, r: Rng): void {
   // `delete`, não `= undefined`: a chave some como some no save (a vida recarregada anda igual, até na ordem do JSON).
   delete v.caminhos.situacao;
   const tr = trajetoriaDeSituacao(v);
-  if (!tr || idade(v) < 17 || v.justica?.prisao || anoJaTemCena(v, tr)) return;
-  // A cena do ano passado que outra decisão tirou da frente volta, uma vez — se ainda couber.
+  if (!tr || idade(v) < 17 || v.justica?.prisao) return;
+  // REWORK 11 · CAR-11.9: o ano em que outra decisão de peso já é a cena (a renovação, a proposta de clube, a crise do
+  // mandato) não perde o momento — ele é sorteado (com um sorteio derivado: a sequência do ano não muda) e ESPERA o ano
+  // seguinte, como a cena adiada. Antes, esses anos (61% das temporadas de futebol) simplesmente não tinham momento.
+  const ocupado = !COMUNS.has(tr) && anoJaTemCena(v, tr);
+  // A cena do ano passado que outra decisão tirou da frente volta, uma vez — se ainda couber. A que esperou um ano
+  // ocupado pode esperar mais um, se este também estiver (no máximo dois).
   const pm = anterior && anterior.t === v.t - 12 && anterior.dados._adiada === undefined ? modeloDaSituacao(anterior.id) : undefined;
-  if (anterior && pm && pm.trajetoria === tr && !COMUNS.has(tr) && pm.cabe(v)) { v.caminhos.situacao = { id: anterior.id, t: v.t, dados: { ...anterior.dados, _adiada: 1 } }; return; }
-  if (!r.chance(chanceDeMomento(v, tr))) return;
-  const x = r.weighted(candidatosDoAno(v, tr), c => c.peso);
+  if (anterior && pm && pm.trajetoria === tr && !COMUNS.has(tr) && pm.cabe(v)) {
+    const { _ocupado, ...dados } = anterior.dados;
+    if (!ocupado) { v.caminhos.situacao = { id: anterior.id, t: v.t, dados: { ...dados, _adiada: 1 } }; return; }
+    if (Number(_ocupado ?? 0) < 2) { v.caminhos.situacao = { id: anterior.id, t: v.t, dados: { ...dados, _ocupado: Number(_ocupado ?? 0) + 1 } }; return; }
+  }
+  if (ocupado && tr !== 'futebol' && tr !== 'basquete' && tr !== 'tenis' && tr !== 'atleta' && tr !== 'tecnico') return;
+  const rr = ocupado ? rngDe(v.id, 'situacao_ocupada', v.t) : r;
+  if (!rr.chance(chanceDeMomento(v, tr))) return;
+  const x = rr.weighted(candidatosDoAno(v, tr), c => c.peso);
   if (!x) return;
   const m = x.m;
-  const dados: Dados = m.contexto?.(v, r) ?? {};
+  const dados: Dados = m.contexto?.(v, rr) ?? {};
+  if (ocupado) dados._ocupado = 1;
   // Quando o tema volta: o que aconteceu da outra vez vai junto (a cena e a distribuição o leem).
   const antes = [...(v.caminhos.situacoes ?? [])].reverse().find(y => y.id === m.id);
   if (antes) { dados._antes = anoDe(antes.t); dados._antesDesfecho = antes.desfecho; }
@@ -344,8 +382,13 @@ export function processarSituacoes(v: Vida, r: Rng): void {
 
 /** Registra um momento vivido (também os que nascem fora deste motor: a crise do mandato) — a memória da carreira. */
 export function registrarMomento(v: Vida, x: RegistroDeSituacao): void {
-  (v.caminhos.situacoes ??= []).push(x);
-  if (v.caminhos.situacoes.length > 60) v.caminhos.situacoes.splice(0, v.caminhos.situacoes.length - 60);
+  const lista = (v.caminhos.situacoes ??= []);
+  lista.push(x);
+  // REWORK 11 · CAR-11.9: o teto é POR CARREIRA (40 de cada; 160 no todo). Antes, 60 no todo: numa vida com várias
+  // trajetórias, a carreira mais antiga (o futebol de um ex-jogador técnico) era a que sumia.
+  const daqui = lista.filter(y => y.trajetoria === x.trajetoria);
+  if (daqui.length > 40) lista.splice(lista.indexOf(daqui[0]), 1);
+  if (lista.length > 160) lista.splice(0, lista.length - 160);
 }
 
 /** Resolve a intenção escolhida: sorteia o desfecho pela distribuição, aplica, guarda. */
@@ -1735,11 +1778,69 @@ const MODELOS_ARTE: ModeloSituacao[] = [
     ] }
 ];
 
-export const MODELOS: ModeloSituacao[] = [...MODELOS_FUTEBOL, ...MODELOS_FUTEBOL_MAIS, ...MODELOS_PROFISSOES, ...MODELOS_ESPORTES, ...MODELOS_MILITAR, ...MODELOS_POLITICA, ...MODELOS_POLITICA_BASE, ...MODELOS_RURAL, ...MODELOS_UNIVERSIDADE, ...MODELOS_MEDICINA_MAIS, ...MODELOS_TECNICO, ...MODELOS_OFICIO, ...MODELOS_OFICIO_AUTONOMO, ...MODELOS_ARTE];
+/** REWORK 11 · CAR-11.9: as cenas que lembram (o ex-clube, o título, o atrito, a dispensa superada, o banco que volta). */
+const MODELOS_COM_MEMORIA = modelosComMemoria({ F, D, DT, trajetoria: trajetoriaDeSituacao, coragem, social, disciplina, leitura, cabeca, tecnica: v => (v.caminhos.esporte?.modalidade === 'futebol' ? tecnicaFut(v) : F('técnica', (habilidade(v, v.caminhos.esporte?.modalidade ?? 'futebol') - barraDaDivisao(v.caminhos.esporte?.modalidade ?? 'futebol', v.caminhos.esporte?.nivel ?? 1)) / 12)), nomeNoElenco: nomeFut, nomeTec, vestiario: v => (passagemAtual(v) ? vestiarioF(v) : F('vestiário', 0)) });
+
+export const MODELOS: ModeloSituacao[] = [...MODELOS_FUTEBOL, ...MODELOS_FUTEBOL_MAIS, ...MODELOS_COM_MEMORIA, ...MODELOS_PROFISSOES, ...MODELOS_ESPORTES, ...MODELOS_MILITAR, ...MODELOS_POLITICA, ...MODELOS_POLITICA_BASE, ...MODELOS_RURAL, ...MODELOS_UNIVERSIDADE, ...MODELOS_MEDICINA_MAIS, ...MODELOS_TECNICO, ...MODELOS_OFICIO, ...MODELOS_OFICIO_AUTONOMO, ...MODELOS_ARTE];
 
 /** As situações vividas, para a tela (as mais recentes primeiro). */
 export function momentosDaCarreira(v: Vida, n = 8): { ano: number; texto: string; desfecho: Desfecho; intencao: string }[] {
   return (v.caminhos.situacoes ?? []).slice(-n).reverse().map(x => ({ ano: anoDe(x.t), texto: x.texto, desfecho: x.desfecho, intencao: x.intencao }));
+}
+
+/* ------------------------------------------------------------ REWORK 11 · CAR-11.9: os momentos POR CARREIRA */
+
+/** O que entra na lista de uma carreira: a decisão vivida, a consequência de algo anterior, o marco automático. */
+export type TipoDeMomento = 'decisao' | 'consequencia' | 'marco';
+export interface ItemDeMomento { t: number; ano: number; tipo: TipoDeMomento; texto: string; desfecho?: Desfecho; intencao?: string }
+export interface MomentosDeUmaCarreira { trajetoria: string; titulo: string; atual: boolean; itens: ItemDeMomento[] }
+
+const NOME_DA_TRAJETORIA: Record<string, string> = { futebol: 'Futebol', basquete: 'Basquete', tenis: 'Tênis', atleta: 'Esporte', tecnico: 'No banco (técnico)', medicina: 'Medicina', academia: 'Vida acadêmica', cena: 'Arte', negocio: 'Negócio próprio', autonomo: 'Por conta própria', emprego: 'Emprego', militar: 'Carreira militar', politica: 'Política', rural: 'Campo', universidade: 'Universidade' };
+const trajetoriaDoEsporte = (d: string) => (d === 'futebol' || d === 'basquete' || d === 'tenis' ? d : 'atleta');
+
+/** Os marcos automáticos de uma carreira esportiva (estreia, transferências, palmarés) — o que o motor já simulou. */
+function marcosDoEsporte(v: Vida): { tr: string; item: ItemDeMomento }[] {
+  const out: { tr: string; item: ItemDeMomento }[] = [];
+  const pal = v.caminhos.palmares ?? [];
+  for (const c of carreirasEsportivas(v)) {
+    const ts = c.temporadas ?? [];
+    if (!ts.length) continue;
+    const tr = trajetoriaDoEsporte(c.modalidade);
+    const de = ts[0].ano, ate = c.fase === 'encerrada' ? ts[ts.length - 1].ano : Infinity;
+    const t0 = (de - anoDe(0)) * 12;
+    out.push({ tr, item: { t: t0, ano: de, tipo: 'marco', texto: c.modalidade === 'tenis' ? 'Primeira temporada no circuito profissional.' : `Primeira temporada no profissional, ${peloClube(ts[0].clube)}.` } });
+    for (const x of c.transferencias ?? []) if (anoDe(x.t) >= de - 1 && anoDe(x.t) <= ate) out.push({ tr, item: { t: x.t, ano: anoDe(x.t), tipo: 'marco', texto: `Transferência ${doClube(x.de)} para ${oClube(x.para)}${x.taxa > 0 ? ', com taxa de compra' : ''}.` } });
+    for (const p of pal) if (p.modalidade === c.modalidade && p.ano >= de - 1 && p.ano <= ate + 1 && p.tipo !== 'marco') out.push({ tr, item: { t: p.t, ano: p.ano, tipo: 'marco', texto: `${p.texto.replace(/\.$/, '')}.` } });
+  }
+  const tec = v.caminhos.tecnico;
+  for (const p of tec?.passagens ?? []) {
+    out.push({ tr: 'tecnico', item: { t: p.desde, ano: anoDe(p.desde), tipo: 'marco', texto: p.selecao ? `Assumiu ${aSelecaoDe(p.clube)}.` : `Assumiu o comando ${doClube(p.clube)}.` } });
+    for (const t of p.temporadas) {
+      const tt = (t.ano - anoDe(0)) * 12 + 11;
+      for (const titulo of t.titulos ?? []) out.push({ tr: 'tecnico', item: { t: tt, ano: t.ano, tipo: 'marco', texto: `Título como técnico: ${titulo}.` } });
+      if (t.acesso) out.push({ tr: 'tecnico', item: { t: tt, ano: t.ano, tipo: 'marco', texto: `Acesso com ${oClube(p.clube)}.` } });
+      if (t.rebaixamento) out.push({ tr: 'tecnico', item: { t: tt, ano: t.ano, tipo: 'marco', texto: `Rebaixamento com ${oClube(p.clube)}.` } });
+    }
+  }
+  return out;
+}
+const aSelecaoDe = (nome: string) => (/^sele/i.test(nome) ? `a ${nome.charAt(0).toLowerCase()}${nome.slice(1)}` : `a seleção (${nome})`);
+
+/**
+ * REWORK 11 · CAR-11.9 — os momentos agrupados por carreira (a de agora primeiro; as anteriores depois, da mais recente):
+ * as decisões vividas, as consequências (as cenas que lembram) e os marcos automáticos. Antes, a tela mostrava as 8
+ * últimas situações de TODAS as trajetórias misturadas — e a carreira anterior sumia.
+ */
+export function momentosPorCarreira(v: Vida): MomentosDeUmaCarreira[] {
+  const grupos = new Map<string, ItemDeMomento[]>();
+  const pôr = (tr: string, x: ItemDeMomento) => { const l = grupos.get(tr); if (l) l.push(x); else grupos.set(tr, [x]); };
+  for (const x of v.caminhos.situacoes ?? []) pôr(x.trajetoria, { t: x.t, ano: anoDe(x.t), tipo: modeloDaSituacao(x.id)?.natureza === 'consequencia' ? 'consequencia' : 'decisao', texto: x.texto, desfecho: x.desfecho, intencao: x.intencao });
+  for (const { tr, item } of marcosDoEsporte(v)) pôr(tr, item);
+  const atual = trajetoriaDeSituacao(v);
+  const ordem: Record<TipoDeMomento, number> = { marco: 0, consequencia: 1, decisao: 2 };
+  return [...grupos.entries()]
+    .map(([tr, itens]) => ({ trajetoria: tr, titulo: NOME_DA_TRAJETORIA[tr] ?? tr, atual: tr === atual, itens: itens.sort((a, b) => b.t - a.t || ordem[a.tipo] - ordem[b.tipo]) }))
+    .sort((a, b) => Number(b.atual) - Number(a.atual) || b.itens[0].t - a.itens[0].t);
 }
 
 /** Escreve a memória de um desfecho marcante na Linha da Vida (o resto fica só no registro da carreira). */
