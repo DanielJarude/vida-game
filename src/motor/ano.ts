@@ -83,6 +83,7 @@ import { processarBolsaDeAtleta } from './sistemas/naFormacao';
 import { processarConvivio } from './sistemas/convivio';
 import { processarTribunal } from './sistemas/tribunal';
 import { processarSubmundo } from './sistemas/submundo';
+import { processarTreinadorDeGoleiros } from './sistemas/treinadorDeGoleiros';
 import { processarMargem } from './sistemas/margem';
 import { processarApostas } from './sistemas/apostas';
 import { processarEcos } from './sistemas/ecos';
@@ -188,6 +189,8 @@ function viverAno(v: Vida, r: Rng): void {
   praticandoPor('treino', () => processarEsporte(v, r, agendaDoAno.presenca));
   // O banco: a temporada de quem dirige um time (clube real, jogos, pressão, contrato, propostas) — `tecnico`.
   processarTecnico(v, r);
+  // REWORK 11.5 · ESP-04: o treinador de goleiros (a comissão, o degrau, os técnicos que mudam).
+  processarTreinadorDeGoleiros(v);
   // A lesão volta (ou piora) depois da temporada que ela atravessou.
   processarLesoes(v, r);
   praticandoPor('obra', () => processarArte(v, r));

@@ -204,7 +204,7 @@ function avancar(v: Vida, pais: string, liga: LigaDoPais, ate: number, fixo?: Fi
 function jogarTemporada(v: Vida, pais: string, liga: LigaDoPais, ano: number, fixo?: Fixo): void {
   const regras = regrasDeAcesso(pais);
   const nomes = Object.keys(liga.div).sort();
-  const { pos, campeoes } = sortearPosicoes(v, pais, liga.div, ano, fixo);
+  const { pos, campeoes } = sortearPosicoes(v, pais, liga.div, ano, fixo, liga);
   aplicarTrocas(v, pais, liga, ano, nomes, pos, campeoes, regras, fixo);
 }
 
@@ -213,7 +213,7 @@ function jogarTemporada(v: Vida, pais: string, liga: LigaDoPais, ano: number, fi
  * país e do ano (`rngDe`), e os sorteios dos outros clubes não dependem de como o clube da vida entra — por isso a
  * colocação que `colocacaoNaTabela` lê antes é a mesma que a temporada fechada grava depois.
  */
-function sortearPosicoes(v: Vida, pais: string, div: Record<string, Nivel>, ano: number, fixo?: Fixo): { pos: Map<string, number>; campeoes: Partial<Record<Nivel, string>> } {
+function sortearPosicoes(v: Vida, pais: string, div: Record<string, Nivel>, ano: number, fixo?: Fixo, liga0?: LigaDoPais): { pos: Map<string, number>; campeoes: Partial<Record<Nivel, string>> } {
   const r = rngDe(v.id, 'liga', pais, ano);
   const nomes = Object.keys(div).sort();
   const pos = new Map<string, number>();
@@ -224,7 +224,7 @@ function sortearPosicoes(v: Vida, pais: string, div: Record<string, Nivel>, ano:
     const xs = nomes.filter(c => div[c] === n && c !== fixo?.clube)
       // A força do elenco diante da divisão: um grande na segunda divisão briga pelo acesso (e costuma voltar logo); um
       // tradicional que subiu briga contra a queda. (4 posições por degrau: com 3, os grandes ficavam anos embaixo.)
-      .map(c => ({ c, x: 11 - (forcaNaLiga(c, pais) - n) * 4 + r.normal() * RUIDO_DA_TEMPORADA }));
+      .map(c => ({ c, x: 11 - (forcaNaLiga(c, pais) + formaDe(liga0, c) - n) * 4 + r.normal() * RUIDO_DA_TEMPORADA }));
     if (fixo && fixo.colocacao === undefined && fixo.x !== undefined && div[fixo.clube] === n) xs.push({ c: fixo.clube, x: fixo.x });
     // REWORK 11 · ESP-11.1: as vagas que o catálogo não ocupa são de clubes sem nome no jogo, com a força média da
     // divisão — e a tabela é a ORDEM das forças dos 20 (antes, cada clube pegava a vaga mais perto do seu número, e
@@ -250,6 +250,29 @@ function sortearPosicoes(v: Vida, pais: string, div: Record<string, Nivel>, ano:
   return { pos, campeoes };
 }
 
+/**
+ * REWORK 11.5 · ESP-01 — a forma: a força de um clube não é só o porte. Com quinze grandes para vinte vagas (Brasil), a
+ * régua fixa fazia de cada temporada um sorteio entre iguais (7,6 campeões diferentes por década; nenhuma fase boa
+ * durava). Agora a temporada deixa uma marca que dura alguns anos (cai 35% ao ano): quem termina em cima entra melhor
+ * na seguinte, quem termina embaixo, pior. Nasce dos resultados — o mesmo para qualquer clube, nunca pelo nome. Quem
+ * muda de divisão recomeça perto do zero (é outro campeonato).
+ */
+const formaDe = (liga: LigaDoPais | undefined, c: string) => liga?.forma?.[c] ?? 0;
+/** A forma de um clube agora (a tela do técnico e os rivais do banco leem). */
+export const formaNaLiga = (v: Vida, pais: string, clube: string) => v.caminhos.ligas?.[pais]?.forma?.[clube] ?? 0;
+function atualizarForma(liga: LigaDoPais, antes: Record<string, Nivel>, pos: Map<string, number>): void {
+  const f = (liga.forma ??= {});
+  for (const [c, n] of Object.entries(antes)) {
+    if (n < 2) { delete f[c]; continue; }
+    const p = pos.get(c);
+    if (p === undefined) continue;
+    const alvo = ((VAGAS_POR_DIVISAO + 1) / 2 - p) / ((VAGAS_POR_DIVISAO - 1) / 2) * 0.5;
+    const nova = liga.div[c] !== n ? (f[c] ?? 0) * 0.3 : (f[c] ?? 0) * 0.65 + alvo * 0.45;
+    const x = Math.round(clamp(nova, -0.8, 0.8) * 100) / 100;
+    if (x === 0) delete f[c]; else f[c] = x;
+  }
+}
+
 /** As trocas de divisão de uma temporada jogada (acesso e rebaixamento pelas regras do país). */
 function aplicarTrocas(_v: Vida, _pais: string, liga: LigaDoPais, ano: number, nomes: string[], pos: Map<string, number>, campeoes: Partial<Record<Nivel, string>>, regras: ReturnType<typeof regrasDeAcesso>, fixo?: Fixo): void {
   const regionais = nomes.filter(c => liga.div[c] === 1).map(c => ({ c, x: pos.get(c)! }));
@@ -272,6 +295,7 @@ function aplicarTrocas(_v: Vida, _pais: string, liga: LigaDoPais, ano: number, n
     for (const { c } of candidatos.slice(0, vagas)) { novo[c] = 2; subiram.push(c); }
     liga.div = novo;
   }
+  atualizarForma(liga, antes, pos);
   // REWORK 11 · ESP-11.3: as vagas da copa continental do ano seguinte saem desta tabela (a elite, pela colocação).
   const classificados = nomes.filter(c => antes[c] === 4 && (pos.get(c) ?? 99) <= vagasContinentais(_pais));
   liga.ultima = { ano, campeoes, subiram, cairam, classificados };
@@ -317,9 +341,9 @@ export function colocacaoNaTabela(v: Vida, pais: string, ano: number, clube: str
   const copia: LigaDoPais = { ano: liga.ano, div: { ...liga.div } };
   fixar(copia, clube, nivel, pais);
   const n = copia.div[clube];
-  const forca = forcaNaLiga(clube, pais, n) + ajuste;
+  const forca = forcaNaLiga(clube, pais, n) + formaDe(liga, clube) + ajuste;
   const x = n === 1 ? 6.5 - (forca - 1) * 2 + ruido * 3 : 11 - (forca - n) * 4 + ruido * RUIDO_DA_TEMPORADA;
-  return sortearPosicoes(v, pais, copia.div, ano, { clube, x }).pos.get(clube) ?? clamp(Math.round(x), 1, n === 1 ? 12 : VAGAS_POR_DIVISAO);
+  return sortearPosicoes(v, pais, copia.div, ano, { clube, x }, liga).pos.get(clube) ?? clamp(Math.round(x), 1, n === 1 ? 12 : VAGAS_POR_DIVISAO);
 }
 
 /** O que a última temporada fechada do país deixou (o campeão de cada divisão, quem subiu e quem caiu). */

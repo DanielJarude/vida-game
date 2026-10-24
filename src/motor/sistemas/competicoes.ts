@@ -49,6 +49,9 @@ const SELECOES: Record<'mundial' | Confederacao, string> = { mundial: 'Copa do M
 export function nomeDaCompeticao(id: CompeticaoId): string {
   const [tipo, a, b] = id.split(':');
   if (tipo === 'liga') return divisaoDoNivel(Number(b), a) || 'liga nacional';
+  // REWORK 11.5 · ESP-02: as copas de quadra levam a modalidade no id (`copa:BR:volei`, `cont:CONMEBOL:basquete`).
+  if (tipo === 'copa' && (b === 'basquete' || b === 'volei')) return COPAS_DE_QUADRA[b][a] ?? `copa nacional de ${NOME_QUADRA[b]}`;
+  if (tipo === 'cont' && (b === 'basquete' || b === 'volei')) return `torneio continental de clubes de ${NOME_QUADRA[b]}`;
   if (tipo === 'copa') return COPAS[a] ?? 'copa nacional';
   if (tipo === 'cont') return CONTINENTAIS[a as Confederacao] ?? `copa continental de clubes da ${a}`;
   if (tipo === 'sel') return SELECOES[a as 'mundial' | Confederacao] ?? 'torneio de seleções';
@@ -187,6 +190,66 @@ export function copaContinental(v: Vida, pais: string, ano: number, clube: strin
   const forca = forcaNaLiga(clube, pais, 4) + forcaDaLigaDoPais(pais) + ajuste + r.normal() * 0.35;
   const lista = clubesDoContinente(conf, pais).filter(x => x.nome !== clube);
   return jogarCampanha(r, idContinental(conf), forca, lista, true, () => ({ nome: 'um campeão de uma liga menor do continente', forca: 3 + forcaDaLigaDoPais('') + r.next() }));
+}
+
+/* ------------------------------------------------------------ REWORK 11.5 · ESP-02: as copas de quadra */
+
+/*
+ * O basquete e o vôlei não copiam o futebol: a copa nacional é dos OITO melhores da elite na temporada anterior
+ * (quartas, semifinal e final — o formato das copas de quadra), e o torneio continental é dos que terminaram em cima
+ * (os dois primeiros no basquete; o campeão no vôlei), com grupo e fase final. Sem catálogo de equipes, os adversários
+ * são ditos pelo que são (uma equipe da elite, o campeão de outro país), com a força da posição deles.
+ */
+export type Quadra = 'basquete' | 'volei';
+const NOME_QUADRA: Record<Quadra, string> = { basquete: 'basquete', volei: 'vôlei' };
+/** Só onde o nome é inequívoco (o resto: dita pelo que é). */
+const COPAS_DE_QUADRA: Record<Quadra, Record<string, string>> = { basquete: { BR: 'Copa Super 8' }, volei: { BR: 'Copa Brasil de Vôlei' } };
+export const idDaCopaDeQuadra = (m: Quadra, pais: string): CompeticaoId => `copa:${pais}:${m}`;
+export const idContinentalDeQuadra = (m: Quadra, c: Confederacao): CompeticaoId => `cont:${c}:${m}`;
+
+function mataMata(r: Rng, id: CompeticaoId, forca: number, de: number, rival: (k: number) => { nome: string; forca: number }, grupos = false): Campanha {
+  const c: Campanha = { id, fase: FASES[de], jogos: 0, v: 0, e: 0, d: 0, adversarios: [] };
+  const conta = (x: 'v' | 'e' | 'd') => { c.jogos++; c[x]++; };
+  if (grupos) {
+    let pts = 0;
+    for (let k = 0; k < 3; k++) { const x = partidaDeCopa(r, forca - rival(0).forca); conta(x); pts += x === 'v' ? 3 : x === 'e' ? 1 : 0; }
+    if (!(pts >= 4 || (pts === 3 && r.chance(0.4)))) { c.fase = 'primeira fase'; return c; }
+  }
+  for (let k = de; k <= 4; k++) {
+    const a = rival(k);
+    c.adversarios.push(a.nome);
+    // Na quadra não há empate: decide quem faz mais (o empate da curva vira um jogo apertado, pela força).
+    let x = partidaDeCopa(r, forca - a.forca);
+    if (x === 'e') x = passaNosPenaltis(r, forca - a.forca) ? 'v' : 'd';
+    conta(x);
+    if (k === 4) { c.fase = x === 'v' ? 'campeão' : 'vice'; c.final = { adversario: a.nome, placar: x === 'v' ? 'vitória' : 'derrota' }; return c; }
+    if (x !== 'v') { c.fase = FASES[k]; return c; }
+    c.fase = FASES[k + 1];
+  }
+  return c;
+}
+
+/**
+ * As copas de quadra do ano para a equipe da vida: a nacional (quem terminou entre os oito da elite na temporada
+ * anterior) e a continental (os de cima). `colocacaoAnterior`: a colocação na elite no ano anterior (ou nada).
+ */
+export function copasDeQuadra(v: Vida, m: Quadra, pais: string, ano: number, clube: string, nivel: number, colocacaoAnterior: number | undefined, ajuste: number): Campanha[] {
+  if (nivel < 4 || colocacaoAnterior === undefined) return [];
+  const out: Campanha[] = [];
+  const base = 4 + ajuste + (8.5 - Math.min(20, colocacaoAnterior)) * 0.06;
+  if (colocacaoAnterior <= 8) {
+    const r = rngDe(v.id, 'copa_quadra', m, pais, ano, clube);
+    const forca = base + r.normal() * 0.3;
+    // Os rivais ficam mais fortes a cada fase (as quartas contra um dos oito; a final, quase sempre contra um dos de cima).
+    out.push(mataMata(r, idDaCopaDeQuadra(m, pais), forca, 2, k => ({ nome: k >= 4 ? 'uma das equipes de cima da liga' : 'uma equipe da elite', forca: 3.9 + (k - 2) * 0.15 + r.normal() * 0.25 })));
+  }
+  if (colocacaoAnterior <= (m === 'basquete' ? 2 : 1)) {
+    const r = rngDe(v.id, 'cont_quadra', m, pais, ano, clube);
+    const conf = confederacaoDe(pais);
+    const forca = base + forcaDaLigaDoPais(pais) * 0.6 + r.normal() * 0.3;
+    out.push(mataMata(r, idContinentalDeQuadra(m, conf), forca, 3, k => ({ nome: k >= 4 ? 'o campeão de outro país do continente' : 'uma equipe de outro país', forca: 4 + (k - 2) * 0.12 + r.normal() * 0.35 }), true));
+  }
+  return out;
 }
 
 /* ------------------------------------------------------------ Seleções */

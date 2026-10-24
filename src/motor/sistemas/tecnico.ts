@@ -46,7 +46,7 @@ import { contratar, encerrarEmprego } from './trabalho';
 import { mudarAgora } from './processos';
 import { marcar } from './marcas';
 import { abalar } from './abalo';
-import { clubesNaDivisao, divisaoDoClube, fecharTemporadaDaLiga, forcaDoClube, forcaNaLiga } from './ligas';
+import { clubesNaDivisao, divisaoDoClube, fecharTemporadaDaLiga, forcaDoClube, forcaNaLiga, formaNaLiga, ultimaTemporadaDoPais } from './ligas';
 import { aCompeticaoId, campanhaDaSelecao, partidaDeCopa, daCompeticaoId, faseDaSelecaoEmPalavras, idDaCopa, nomeDaCompeticao, placarDe, sortearAdversarioDeCopa, torneioDeSelecoes } from './competicoes';
 import { pesoDaLicenca, vestiarioDeExAtleta } from './oficioDoTecnico';
 import { rngDe } from '../rng';
@@ -429,7 +429,13 @@ function jogarTemporada(v: Vida, r: Rng, c: CarreiraDeTecnico, p: PassagemDeTecn
  */
 function jogarLiga(v: Vida, r: Rng, c: CarreiraDeTecnico, p: PassagemDeTecnico, t: TemporadaDeTecnico, nosso: (base: number) => number, conta: (k: 'v' | 'e' | 'd') => void, ret?: TabelaEmCurso): void {
   const g = ge(v);
-  const forcas = ret ? ret.forcas : [elenco(p.clube, p.nivel), ...Array.from({ length: 19 }, () => r.normal() * 3.2)];
+  // REWORK 11.5 · ESP-03: os rivais da liga são os clubes que estão DE FATO na divisão (a tabela do país: o porte e a
+  // forma de cada um), não dezenove forças anônimas; as vagas que o catálogo não ocupa seguem sem nome.
+  const paisL = paisDaCidade(p.municipioId);
+  const naDivisao = ret ? [] : clubesNaDivisao(v, p.nivel, p.clube, paisL).filter(k => divisaoDoClube(v, k.nome, paisL) === p.nivel).slice(0, 19);
+  const rr = rngDe(v.id, 'tec_rivais', v.t);
+  const forcas = ret ? ret.forcas : [elenco(p.clube, p.nivel), ...naDivisao.map(k => (forcaNaLiga(k.nome, paisL, p.nivel) + formaNaLiga(v, paisL, k.nome) - p.nivel - 0.2) * 2.5 + rr.normal() * 0.8), ...Array.from({ length: 19 - naDivisao.length }, () => r.normal() * 3.2 - 0.4)];
+  if (!ret && naDivisao.length) t.rivais = [...naDivisao].sort((a, b) => forcaNaLiga(b.nome, paisL) + formaNaLiga(v, paisL, b.nome) - forcaNaLiga(a.nome, paisL) - formaNaLiga(v, paisL, a.nome)).slice(0, 4).map(k => k.nome);
   const esperada = ret ? Math.round((ret.esperada + ret.posicao) / 2) : posicaoEsperada(forcas);
   const reais = forcas.map((f, i) => (i === 0 ? nosso(f) : ret ? f : f + r.normal() * 1.2));
   const pl = ret ? [...ret.pontos] : new Array(20).fill(0);
@@ -453,7 +459,12 @@ function jogarLiga(v: Vida, r: Rng, c: CarreiraDeTecnico, p: PassagemDeTecnico, 
     p.pressao = clamp(p.pressao - 30);
   }
   // REWORK 9 · FUT-01: a tabela do país decide (as regras dele, sem teto pelo porte; os outros clubes jogam o mesmo ano).
+  const nivelJogado = p.nivel;
   const mov = fecharTemporadaDaLiga(v, paisDaCidade(p.municipioId), t.ano, p.clube, p.nivel, pos);
+  // O campeão da divisão (quando não foi o seu time) é o da MESMA tabela do país — o nome que o mundo vai lembrar.
+  const ult = ultimaTemporadaDoPais(v, paisDaCidade(p.municipioId));
+  const campeaoDoAno = ult?.ano === t.ano ? ult.campeoes[nivelJogado] : undefined;
+  if (campeaoDoAno && campeaoDoAno !== p.clube) t.campeao = campeaoDoAno;
   if (mov === 1) {
     t.acesso = true;
     p.nivel = (p.nivel + 1) as 1 | 2 | 3 | 4;

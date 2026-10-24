@@ -1799,6 +1799,9 @@ export interface TemporadaDeTecnico {
   desdeRodada?: number;
   /** Seleção: os torneios disputados no ano e a campanha. */
   torneio?: string;
+  /** REWORK 11.5 · ESP-03: os rivais mais fortes da divisão naquele ano (clubes do catálogo) e o campeão, se não foi o seu. */
+  rivais?: string[];
+  campeao?: string;
 }
 
 export interface PropostaDeTecnico {
@@ -2246,6 +2249,11 @@ export interface LigaDoPais {
   div: Record<string, 1 | 2 | 3 | 4>;
   /** `classificados` (REWORK 11 · ESP-11.3): os clubes da elite que terminaram nas vagas da copa continental do ano seguinte. */
   ultima?: { ano: number; campeoes: Partial<Record<1 | 2 | 3 | 4, string>>; subiram: string[]; cairam: string[]; classificados?: string[] };
+  /**
+   * REWORK 11.5 · ESP-01: a FORMA de cada clube (−0,8..0,8, em degraus de força): o que as últimas temporadas deixaram
+   * (a boa fase que se sustenta um tempo, a má que pesa). Nasce dos resultados, nunca do nome. Ausente: 0.
+   */
+  forma?: Record<string, number>;
 }
 
 export interface Caminhos {
@@ -2323,6 +2331,11 @@ export interface Caminhos {
    * carreira de jogador (`esporte`), que continua consultável.
    */
   tecnico?: CarreiraDeTecnico;
+  /**
+   * REWORK 11.5 · ESP-04: a trajetória de treinador de goleiros (na comissão de um clube): o degrau (1 a base, 2 o
+   * profissional, 3 a seleção), o nome no meio, os goleiros que passaram pelas suas mãos e os técnicos com quem trabalhou.
+   */
+  treinadorDeGoleiros?: { tInicio: number; clube: string; degrau: 1 | 2 | 3; reputacao: number; revelados: number; tecnicos: number; historico: { ano: number; texto: string }[] };
   /** Última vez que cada gerador de oportunidade abriu algo (evita repetir). */
   ultimas: Record<string, number>;
   /**

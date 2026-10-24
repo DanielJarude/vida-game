@@ -48,7 +48,7 @@ import { recursosDaFamilia } from './origem';
 import { mudarAgora } from './processos';
 import { registrarTemporada, registrarConquista } from './palmares';
 import { clubesNaDivisao, colocacaoNaTabela, divisaoDoClube } from './ligas';
-import { copaContinental, copaNacional, idDaLiga, nomeDaCompeticao } from './competicoes';
+import { copaContinental, copaNacional, copasDeQuadra, idDaLiga, nomeDaCompeticao } from './competicoes';
 import { desvio, efeitoNaNota, envelhecerAtributos, perfilDeAtributos, type AtributoId } from './atributosEsportivos';
 import { avancarLicenca } from './oficioDoTecnico';
 import { processarSelecao } from './selecao';
@@ -622,6 +622,13 @@ export function fecharTemporada(v: Vida, r: Rng, e: CarreiraEsportiva): Temporad
   if (futebol) {
     const copas = [copaNacional(v, pais, ano, e.clube, e.nivel, ajuste), copaContinental(v, pais, ano, e.clube, ajuste)].filter(c => !!c);
     if (copas.length) t.copas = copas.map(c => ({ id: c!.id, fase: c!.fase, jogos: Math.round(c!.jogos * (e.espaco === 'titular' ? disp : 0.3 * disp)), ...(c!.final ? { final: `contra ${c!.final.adversario.startsWith('um') ? c!.final.adversario : oClube(c!.final.adversario)}, ${c!.final.placar}` } : {}) }));
+  }
+  // REWORK 11.5 · ESP-02: as copas de quadra (basquete e vôlei), com o formato delas: só a elite, pela colocação do ano
+  // anterior nela.
+  if (e.modalidade === 'basquete' || e.modalidade === 'volei') {
+    const anterior = [...(e.temporadas ?? [])].reverse().find(x => x.ano === ano - 1 && x.nivel === 4);
+    const copas = copasDeQuadra(v, e.modalidade, pais, ano, e.clube, e.nivel, anterior?.colocacao, ajuste);
+    if (copas.length) t.copas = copas.map(c => ({ id: c.id, fase: c.fase, jogos: Math.round(c.jogos * (e.espaco === 'titular' ? disp : 0.3 * disp)), ...(c.final ? { final: `contra ${c.final.adversario}, ${c.final.placar}` } : {}) }));
   }
   // O goleiro: os jogos sem sofrer gol saem dos gols que o time sofre (a colocação diz o time; o reflexo, o
   // posicionamento e as saídas do goleiro, o quanto passa com ele em campo) — jogo a jogo.
@@ -1403,9 +1410,11 @@ export function encerrarCarreira(v: Vida, e: CarreiraEsportiva, motivo: NonNulla
   const nome = (e.reputacao ?? 0) >= 50 && e.nivel >= 3 && i >= 28;
   if (eraPro && (temFato(v, 'pos_treinador') || (nome && hash(`${v.id}:comissao`) < 0.35))) {
     // A porta é DA MODALIDADE: a comissão técnica do próprio esporte; a escolinha (futebol) e as turmas (lutas), para quem é novo demais.
-    const aux = comissaoDe(e.modalidade).auxiliar;
+    // REWORK 11.5 · ESP-04: quem foi goleiro é chamado para treinar goleiros (a comissão tem o seu lugar).
+    const goleiro = e.modalidade === 'futebol' && e.posicao === 'goleiro' && i >= ocupacao('treinador_goleiros').idadeMin;
+    const aux = goleiro ? 'treinador_goleiros' : comissaoDe(e.modalidade).auxiliar;
     const oc = e.modalidade === 'tenis' ? 'professor_tenis' : aux && i >= ocupacao(aux).idadeMin ? aux : e.modalidade === 'futebol' ? 'treinador_escolinha' : e.modalidade === 'lutas' ? 'instrutor_lutas' : undefined;
-    if (oc) novaOportunidade(v, { tipo: 'convite', ocupacaoId: oc, dominio: e.modalidade, meses: 24, chave: 'pos_treinador', titulo: e.modalidade === 'tenis' ? 'Da quadra para a aula' : e.modalidade === 'futebol' ? 'Do campo para o banco' : perfilDe(e.modalidade).estrutura === 'clube' ? 'Da quadra para o banco' : 'Do outro lado do treino', texto: oc === 'professor_tenis' ? 'Um clube da cidade quer alguém com passado de circuito para as turmas e os juvenis: aula por hora, alunos seus.' : oc === aux ? (temFato(v, 'pos_treinador') ? 'O treinador que você conheceu no clube montou uma comissão técnica e lembrou de quem tirou os cursos ainda jogando.' : 'Um treinador que trabalhou com você montou uma comissão técnica: quer alguém que o vestiário respeite. Os cursos, você tira no caminho.') : oc === 'instrutor_lutas' ? 'Uma academia do bairro quer abrir turmas com alguém que já lutou de verdade.' : 'Uma escolinha do bairro precisa de alguém que saiba ensinar e que já tenha jogado de verdade.' });
+    if (oc) novaOportunidade(v, { tipo: 'convite', ocupacaoId: oc, dominio: e.modalidade, meses: 24, chave: 'pos_treinador', titulo: e.modalidade === 'tenis' ? 'Da quadra para a aula' : e.modalidade === 'futebol' ? 'Do campo para o banco' : perfilDe(e.modalidade).estrutura === 'clube' ? 'Da quadra para o banco' : 'Do outro lado do treino', texto: oc === 'treinador_goleiros' ? 'Um clube montando a comissão técnica quer alguém que entenda de goleiro por dentro: o treino próprio, a leitura do jogo pela área, quem joga no domingo.' : oc === 'professor_tenis' ? 'Um clube da cidade quer alguém com passado de circuito para as turmas e os juvenis: aula por hora, alunos seus.' : oc === aux ? (temFato(v, 'pos_treinador') ? 'O treinador que você conheceu no clube montou uma comissão técnica e lembrou de quem tirou os cursos ainda jogando.' : 'Um treinador que trabalhou com você montou uma comissão técnica: quer alguém que o vestiário respeite. Os cursos, você tira no caminho.') : oc === 'instrutor_lutas' ? 'Uma academia do bairro quer abrir turmas com alguém que já lutou de verdade.' : 'Uma escolinha do bairro precisa de alguém que saiba ensinar e que já tenha jogado de verdade.' });
   }
   abalar(v, eraPro ? 'o fim da carreira no esporte' : `a dispensa ${e.modalidade === 'futebol' ? 'da base' : 'da equipe'}`, -(eraPro ? 8 : 10), 6);
 }
