@@ -20,7 +20,8 @@ import { encerrarPausa, iniciarPausa, podeReduzir } from '../sistemas/pausa';
 import { escolherEspecialidade, fazerCurso, irParaReserva, MUNIC_POR_INDICE, sairDasForcas, transferir } from '../sistemas/militar';
 import { ESPECIALIDADES, SIGLA_DA } from '../dados/forcas';
 import { municipio, nivelDeOferta } from '../dados/lugares';
-import { contratar, elegibilidade, nomeOcupacao, registrarPosto, textoDeContratacao } from '../sistemas/trabalho';
+import { elegibilidade, nomeOcupacao, registrarPosto, textoDeContratacao } from '../sistemas/trabalho';
+import { contratacaoDoEvento } from '../sistemas/compromissos';
 import { OCUPACOES, ocupacao, ROTULO_TRILHA } from '../dados/ocupacoes';
 import { familiaAtual, ondaAgora, TEXTO_ONDA } from '../sistemas/carreira';
 import { novaOportunidade } from '../sistemas/oportunidades';
@@ -272,7 +273,7 @@ export const TRAJETORIAS: Conteudo[] = [
     texto: c => `Farda no armário, remuneração na conta, ${idade(c.v)} anos e muito tempo pela frente. Muita gente da reserva começa outra coisa. ${c.v.caminhos.militar?.especialidade ? `A especialidade — ${ESPECIALIDADES[c.v.caminhos.militar.especialidade].nome} — ainda vale lá fora.` : ''}`,
     opcoes: [
       { id: 'segunda', texto: 'Uma segunda carreira, no que já sabe fazer', disponivel: c => (segundaCarreira(c.v) ? true : 'Por aqui, não há vaga que aproveite o que você sabe.'),
-        resolver: c => { const oc = segundaCarreira(c.v); if (!oc) return { texto: 'Não apareceu nada que coubesse.', memoria: null }; return { texto: `Você mandou currículo com "militar da reserva" no topo. Chamaram: ${nomeOcupacao(c.v, oc)}.`, memoria: null, efeito: () => { const e = contratar(c.v, c.r, oc, 'segunda_carreira'); e.posAposentadoria = true; escrever(c.v, { texto: `Na reserva, começou uma segunda carreira: ${textoDeContratacao(c.v, oc, e).replace(/^Novo emprego: /, '')}`, relevancia: 'marco', tema: 'trabalho', tom: 'bom' }); marcar(c.v, 'mudanca_carreira', `Segunda carreira depois da reserva: ${nomeOcupacao(c.v, oc)}.`, 3, { ocupacaoId: oc.id }); } }; } },
+        resolver: c => { const oc = segundaCarreira(c.v); if (!oc) return { texto: 'Não apareceu nada que coubesse.', memoria: null }; return { memoria: null, ...contratacaoDoEvento(c.v, c.r, oc, 'segunda_carreira', `Você mandou currículo com "militar da reserva" no topo. Chamaram: ${nomeOcupacao(c.v, oc)}.`, { ajuste: { posAposentadoria: true }, depois: e => { escrever(c.v, { texto: `Na reserva, começou uma segunda carreira: ${textoDeContratacao(c.v, oc, e).replace(/^Novo emprego: /, '')}`, relevancia: 'marco', tema: 'trabalho', tom: 'bom' }); marcar(c.v, 'mudanca_carreira', `Segunda carreira depois da reserva: ${nomeOcupacao(c.v, oc)}.`, 3, { ocupacaoId: oc.id }); } }) }; } },
       { id: 'estudar', texto: 'Estudar para outra coisa (uma faculdade, um concurso civil)', comportamento: { disciplina: 1 },
         resolver: c => ({ texto: 'Você comprou apostila de novo. Desta vez, por escolha.', memoria: null, efeito: () => { fato(c, 'plano_estudar'); if (!c.v.rotinas.some(r => r.id === 'estudar_concurso')) c.v.rotinas.push({ id: 'estudar_concurso', tInicio: c.v.t, nivel: 1 }); } }) },
       { id: 'descansar', texto: 'Descansar e cuidar da família', resolver: c => ({ texto: 'Pela primeira vez em décadas, ninguém esperava você às sete.', memoria: null, efeito: () => feliz(c, 3) }) }

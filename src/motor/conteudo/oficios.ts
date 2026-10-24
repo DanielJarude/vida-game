@@ -24,7 +24,8 @@ import { escrever, idade, marcarFato } from '../nucleo';
 import { estresse } from './efeitos';
 import { ocupacao, ocupacaoOuNula } from '../dados/ocupacoes';
 import { NEGOCIOS } from '../dados/negocios';
-import { contratar, elegibilidade } from '../sistemas/trabalho';
+import { elegibilidade } from '../sistemas/trabalho';
+import { contratacaoDoEvento } from '../sistemas/compromissos';
 import { podeTentar } from '../plausibilidade';
 import { abalar } from '../sistemas/abalo';
 import { marcar } from '../sistemas/marcas';
@@ -148,7 +149,7 @@ export const OFICIOS_CONTEUDO: Conteudo[] = [
     opcoes: [
       { id: 'sair', texto: 'Sair e atender por conta', comportamento: { coragem: 1, independencia: 1 },
         consequencia: () => 'Sem salário fixo, sem chefe, sem empresa: você é o seu trabalho. A freguesia começa pequena.',
-        resolver: c => ({ texto: 'Você pediu as contas e mandou mensagem para os clientes antigos.', memoria: `Saiu do emprego para trabalhar por conta.`, relevancia: 'marco', efeito: () => { const o = oficioDe(emprego(c))!; const feitos = emprego(c).feitos ?? 0; const esp = emprego(c).especialidade; const novo = contratar(c.v, c.r, ocupacao(o.contaPropria!), 'conta_propria'); novo.especialidade = esp; if (novo.clientela !== undefined) novo.clientela = clamp(novo.clientela + feitos * 6 + 8); marcar(c.v, 'mudanca_carreira', 'Passou a trabalhar por conta.', 2); } }) },
+        resolver: c => { const o = oficioDe(emprego(c))!; const ev = contratacaoDoEvento(c.v, c.r, ocupacao(o.contaPropria!), 'conta_propria', 'Você pediu as contas e mandou mensagem para os clientes antigos.', { ajuste: { especialidade: emprego(c).especialidade, clientelaMais: (emprego(c).feitos ?? 0) * 6 + 8 }, depois: () => marcar(c.v, 'mudanca_carreira', 'Passou a trabalhar por conta.', 2) }); return { ...ev, memoria: ev.texto.startsWith('Você pediu') ? 'Saiu do emprego para trabalhar por conta.' : null, relevancia: 'marco' }; } },
       { id: 'ficar', texto: 'Ficar no emprego', resolver: () => ({ texto: 'Você agradeceu. O salário do mês que vem tem data.', memoria: null }) }
     ]
   },

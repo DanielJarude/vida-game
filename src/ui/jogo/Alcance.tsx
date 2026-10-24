@@ -19,6 +19,7 @@ import { ocupacaoOuNula } from '../../motor/dados/ocupacoes';
 import { nomeOcupacao } from '../../motor/sistemas/trabalho';
 import { modeloRotina } from '../../motor/sistemas/rotinas';
 import { analisarEntrada } from '../../motor/sistemas/compromissos';
+import { leituraDaOportunidade } from '../../motor/sistemas/indicacoes';
 import { oportunidadesAbertas } from '../../motor/sistemas/mercados';
 import { aQuemPedir, dependeDosResponsaveis, situacaoDaCompra } from '../../motor/sistemas/pedidosDaCrianca';
 import { riscoDeParar } from '../../motor/sistemas/saude';
@@ -38,10 +39,19 @@ function oQueMuda(vida: Vida, o: Oportunidade): string[] {
   const out: string[] = [];
   const oc = o.ocupacaoId ? ocupacaoOuNula(o.ocupacaoId) : undefined;
   if (oc) {
+    // REWORK 11 · Fase B (CAR-11.2): o que a porta É (emprego, mudança de carreira, por conta, ocasional), se há entrevista
+    // (quem começa por conta não passa por ela) e o que acontece com a carreira de agora — dito antes do sim, com a via
+    // que o motor usa de verdade ao aceitar.
+    const l = leituraDaOportunidade(vida, o);
     out.push(`Trabalho: ${nomeOcupacao(vida, oc)}${oc.carga === 'parcial' ? ', meio período' : ''}.`);
-    if (['aprendiz', 'estagio', 'indicacao', 'vaga', 'proposta', 'reinsercao'].includes(o.tipo)) out.push('Aceitar leva à entrevista: a vaga ainda é decidida lá.');
-    const c = analisarEntrada(vida, { tipo: 'emprego', ocupacaoId: oc.id, via: 'oportunidade' });
-    for (const x of c) out.push(`${x.motivo}: ${x.impede ? 'não dá agora' : 'ao aceitar, a vida pergunta o que fazer'}.`);
+    if (l.mudanca) out.push(l.mudanca);
+    if (l.entrevista) out.push('Aceitar leva à entrevista: a vaga ainda é decidida lá.');
+    else if (l.porConta) out.push('Por conta própria: sem entrevista — clientes seus, renda pela freguesia, sem salário fixo.');
+    const c = analisarEntrada(vida, { tipo: 'emprego', ocupacaoId: oc.id, via: l.via });
+    for (const x of c) {
+      const saidas = x.alternativas.map(a => a.texto);
+      out.push(`${x.motivo}: ${x.impede ? 'não dá agora' : saidas.length ? `ao aceitar, a vida pergunta — ${saidas.join(' ou ')}, ou recusar` : 'ao aceitar, a vida pergunta o que fazer'}.`);
+    }
   }
   if (o.atividade) { const m = modeloRotina(o.atividade); out.push(m ? `Uma atividade nova na semana: ${m.nome.toLowerCase()} (entra na agenda).` : 'Uma atividade nova na semana.'); }
   if (o.tipo === 'peneira' || o.tipo === 'seletiva') out.push('Um teste: passar abre a base (ou a equipe) — e os treinos tomam a semana.');
@@ -71,7 +81,7 @@ export function DetalheDaOportunidade({ vida, id, agir, aoFechar, abrirPessoa }:
   const meses = Math.max(0, o.tFim - vida.t);
   const muda = oQueMuda(vida, o);
   return (
-    <Folha titulo={TIPO_EM_PALAVRAS[o.tipo] ?? 'Uma porta aberta'} rotulo={`Convite: ${o.titulo}`} aoFechar={aoFechar} papel>
+    <Folha titulo={(() => { const n = leituraDaOportunidade(vida, o); return n.natureza !== 'propria' && n.natureza !== 'emprego' ? n.rotulo : TIPO_EM_PALAVRAS[o.tipo] ?? 'Uma porta aberta'; })()} rotulo={`Convite: ${o.titulo}`} aoFechar={aoFechar} papel>
       <article className="detalhe-convite" data-convite={o.id}>
         {quem && (
           <div className="detalhe-convite__quem">

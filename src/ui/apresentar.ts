@@ -3,6 +3,7 @@
  * Relações, saúde e humor aparecem como palavras, nunca como números.
  */
 
+import { situacaoProfissional } from '../motor/sistemas/situacaoProfissional';
 import { melhorAmigoId } from '../motor/sistemas/lacos';
 import { formatarDinheiroCurto } from '../motor/mundo/moeda';
 import { nomeDoPais } from '../motor/mundo/registro';
@@ -184,6 +185,8 @@ export function ocupacaoAtual(v: Vida): string {
   const esp = v.caminhos?.esporte;
   if (esp?.fase === 'base') partes.push(`${esp.modalidade === 'futebol' ? 'na base' : 'na equipe'} do ${esp.clube}`);
   if (e) partes.push(nomeOcupacaoId(v, e.ocupacaoId));
+  // REWORK 11 · Fase B: a carreira especial sem contrato é a carreira ("jogador de futebol sem clube"), não "sem trabalho".
+  else if (situacaoProfissional(v).semVinculo) partes.push(situacaoProfissional(v).rotulo.toLowerCase());
   else if (v.trabalho.aposentadoria) partes.push(flex(v.eu.tratamento ?? v.eu.genero, 'aposentado', 'aposentada', 'aposentade'));
   else if (i >= 18 && !m) partes.push('sem trabalho');
   if (partes.length === 0) return i < 2 ? 'bebê' : 'criança';

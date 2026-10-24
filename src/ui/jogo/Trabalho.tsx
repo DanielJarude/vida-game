@@ -29,6 +29,7 @@ import { familiaDaTrilha } from '../../motor/dados/carreiras';
 import { ESPECIALIDADES } from '../../motor/dados/forcas';
 import { degrausAcima, elegibilidade, horizonte, modeloDeTrabalho, nomeOcupacao, estradaNaArea, porContaPropria, proximoPasso, requisitosDaVaga, ROTULO_MODELO, temOrganizacao } from '../../motor/sistemas/trabalho';
 import { verbosDoOficio } from '../../motor/sistemas/noOficio';
+import { situacaoProfissional, type SituacaoProfissional } from '../../motor/sistemas/situacaoProfissional';
 import { acoesDasTrajetorias, acoesDoTrabalho, chefiaAtual, leituraDoClima, leituraDoTrabalho, modoDoTrabalho, ritmoDe, rotulosDoRitmo, type AcaoProfissional, type ModoTrabalho } from '../../motor/sistemas/profissao';
 import { acoesDoNegocio } from '../../motor/sistemas/gestao';
 import { contaDoAno, dedicacaoDe, donoIntegral, estrategiaDe, leituraDoNegocio, negocioAberto, negociosPossiveis, parteDoSocio, presencaDe, tetoDoMovimento, tipoDoNegocio } from '../../motor/sistemas/negocio';
@@ -154,7 +155,14 @@ export function Trabalho({ vida, agir, irPara, parte, explorar: abaDeFora, aoExp
   const desde = e ? `desde ${anoDe(e.tInicio)}` : '';
   const preso = modo === 'preso';
   const pol = leituraPolitica(vida);
-  const familia = chaveDoOficio(vida, modo);
+  // REWORK 11 · Fase B: a carreira especial sem contrato (o atleta sem clube, o técnico sem clube, o artista entre
+  // trabalhos) é a carreira dela aqui — o nome, a situação, o painel — e não "Sem trabalho".
+  const sp = situacaoProfissional(vida);
+  const semVinculo = !e && sp.semVinculo && !preso;
+  const espSemClube = semVinculo && sp.carreira === 'esporte' && !!vida.caminhos.esporte;
+  const familia = semVinculo ? (sp.carreira === 'esporte' ? 'atleta' : sp.carreira === 'arte' ? 'artista' : 'esporte') : chaveDoOficio(vida, modo);
+  const titulo = modo === 'politica' && pol ? pol.titulo : semVinculo ? sp.rotulo : l.titulo;
+  const lede = modo === 'politica' && pol ? pol.etapa : semVinculo ? fraseSemVinculo(sp) : l.frases[0];
   return (
     <div className={`trabalho trabalho--${modo} trabalho--familia-${familia}`}>
       {/* REWORK 7: cada família de carreira tem o seu emblema e o seu tom — a enfermeira, o advogado, o pedreiro, a
@@ -162,9 +170,9 @@ export function Trabalho({ vida, agir, irPara, parte, explorar: abaDeFora, aoExp
       {(!parte || parte === 'agora') && <header className={parte ? 'folio folio--oficio lado-caminho__cabeca lado-caminho__cabeca--oficio' : 'folio folio--oficio'}>
         <EmblemaDoOficio chave={familia} tamanho={56} />
         <div className="folio__corpo">
-          <p className="folio__kicker"><span className="folio__area">Trabalho</span> · {modo === 'empregado' ? textoLocal(vida, 'comContrato') : KICKER[modo] ?? ''}{desde ? ` · ${desde}` : ''}{NOME_FAMILIA[familia] ? <span className="folio__familia"> · {NOME_FAMILIA[familia]}</span> : null}</p>
-          {parte ? <h2 className="folio__titulo">{modo === 'politica' && pol ? pol.titulo : l.titulo}</h2> : <h1 className="folio__titulo">{modo === 'politica' && pol ? pol.titulo : l.titulo}</h1>}
-          {(modo === 'politica' && pol ? pol.etapa : l.frases[0]) && <p className="folio__lede">{modo === 'politica' && pol ? pol.etapa : l.frases[0]}</p>}
+          <p className="folio__kicker"><span className="folio__area">Trabalho</span> · {semVinculo ? (sp.carreira === 'esporte' ? KICKER.atleta : sp.carreira === 'arte' ? KICKER.artista : 'o banco') : modo === 'empregado' ? textoLocal(vida, 'comContrato') : KICKER[modo] ?? ''}{desde ? ` · ${desde}` : ''}{NOME_FAMILIA[familia] ? <span className="folio__familia"> · {NOME_FAMILIA[familia]}</span> : null}</p>
+          {parte ? <h2 className="folio__titulo">{titulo}</h2> : <h1 className="folio__titulo">{titulo}</h1>}
+          {lede && <p className="folio__lede" data-situacao-profissional={sp.situacao}>{lede}</p>}
         </div>
       </header>}
 
@@ -198,7 +206,7 @@ export function Trabalho({ vida, agir, irPara, parte, explorar: abaDeFora, aoExp
         {modo === 'artista' && e && ocupacaoOuNula(e.ocupacaoId)?.trilha === 'cena' ? <PainelCena vida={vida} />
           : (modo === 'autonomo' || modo === 'informal' || modo === 'plataforma' || modo === 'artista') && <PainelFreguesia vida={vida} />}
         {(modo === 'rural' || modo === 'pesca') && <PainelCampo vida={vida} />}
-        {modo === 'atleta' && <PainelAtleta vida={vida} />}
+        {(modo === 'atleta' || espSemClube) && <PainelAtleta vida={vida} />}
         {modo === 'base' && !div && <PainelBase vida={vida} />}
         {modo === 'base' && div && <p className="ligacao-caminho"><span>A base, os treinos e a peneira estão em Outros caminhos.</span> <button type="button" className="link" onClick={() => irPara('outros_caminhos')}>Ir para Outros caminhos →</button></p>}
         {modo === 'militar' && <PainelFarda vida={vida} />}
@@ -258,7 +266,7 @@ export function Trabalho({ vida, agir, irPara, parte, explorar: abaDeFora, aoExp
           divisão, o currículo artístico e a carreira de técnico não apareciam aqui). */}
       {parte === 'historico' && <ExperienciaNaCarreira vida={vida} />}
       {em('historico') && (!div || modo === 'artista') && <CurriculoArtistico vida={vida} agir={agir} />}
-      {em('historico') && (!div || modo === 'atleta') && <CarreiraNoEsporte vida={vida} aberta={modo === 'atleta' || parte === 'historico'} />}
+      {em('historico') && (!div || modo === 'atleta' || sp.carreira === 'esporte') && <CarreiraNoEsporte vida={vida} aberta={modo === 'atleta' || espSemClube || parte === 'historico'} />}
       {em('historico') && <CarreiraComoTecnico vida={vida} />}
       {em('historico') && <MomentosDaCarreira vida={vida} />}
       {em('historico') && (vida.trabalho.historico.length > 0 || vida.caminhos.marcas.length > 0) && <PorOndePassou vida={vida} />}
@@ -276,8 +284,10 @@ function AcoesPrincipaisDoTrabalho({ vida, irPara }: { vida: Vida; irPara: (a: A
   const modo = modoDoTrabalho(vida);
   const enviadas = vida.anoAtual.acoes.filter(x => x.startsWith('candidatura:')).length + vida.trabalho.candidaturas.length;
   const carreira = !!e && !['aprendiz', 'estagio'].includes(e.contrato);
+  const sp = situacaoProfissional(vida);
+  const semVinculo = !e && sp.semVinculo;
   const acoes: { id: string; rotulo: string; destino: Aba; nota?: string }[] = [
-    { id: 'vagas', rotulo: e ? 'Mudar de trabalho: ver vagas' : vida.trabalho.historico.length ? 'Procurar trabalho' : 'Procurar o primeiro trabalho', destino: 'vagas', nota: e && (modo === 'atleta' || modo === 'artista') ? 'a carreira continua sua — mudar é escolha' : undefined },
+    { id: 'vagas', rotulo: e ? 'Mudar de trabalho: ver vagas' : semVinculo ? 'Ver outros trabalhos' : vida.trabalho.historico.length ? 'Procurar trabalho' : 'Procurar o primeiro trabalho', destino: 'vagas', nota: semVinculo ? 'a carreira continua sua — outro trabalho é escolha, e a vida pergunta antes' : e && (modo === 'atleta' || modo === 'artista') ? 'a carreira continua sua — mudar é escolha' : undefined },
     { id: 'candidaturas', rotulo: 'Candidaturas e entrevistas', destino: 'vagas', nota: enviadas ? `${enviadas} em andamento` : 'nenhuma em andamento' },
     { id: 'carreira', rotulo: 'Minha carreira', destino: 'minha_carreira', nota: carreira ? 'experiência, currículo, projetos, reconhecimento' : 'o currículo, por onde você passou' },
     { id: 'outras', rotulo: 'Outras possibilidades', destino: 'negocio', nota: 'por conta, um negócio, um trabalho em paralelo' }
@@ -306,6 +316,7 @@ function ExperienciaNaCarreira({ vida }: { vida: Vida }) {
     <section className="experiencia-carreira" aria-labelledby="titulo-experiencia" data-painel="minha-carreira">
       <h2 id="titulo-experiencia" className="secao-fio">A experiência</h2>
       {e && <Linha rotulo="Agora" valor={`${cap(nomeOcupacao(vida, ocupacao(e.ocupacaoId)))}, desde ${anoDe(e.tInicio)}`} />}
+      {!e && (() => { const sp = situacaoProfissional(vida); return sp.semVinculo ? <Linha rotulo="Agora" valor={[sp.rotulo, sp.detalhe].filter(Boolean).join(' · ')} /> : null; })()}
       {vida.trabalho.paralela && <Linha rotulo="Em paralelo" valor={cap(nomeOcupacao(vida, ocupacao(vida.trabalho.paralela.ocupacaoId)))} />}
       {exp.map(([trilha, m]) => <Linha key={trilha} rotulo={ROTULO_TRILHA[trilha] ? cap(ROTULO_TRILHA[trilha]) : trilha} valor={anos(m)} />)}
       <Linha rotulo="Trabalhos" valor={String(vida.trabalho.historico.length + (e ? 1 : 0))} />
@@ -561,6 +572,11 @@ const CLUBES_REAIS = 'Clubes reais; peneiras, contratos, divisões e resultados 
 export function PainelAtleta({ vida }: { vida: Vida }) {
   const es = vida.caminhos.esporte!;
   const i = idade(vida);
+  // REWORK 11 · Fase B: o vínculo vem da leitura única — sem emprego de atleta, não há clube atual nem salário de contrato
+  // (antes, o clube antigo aparecia como atual, e o salário de OUTRO trabalho aparecia como "salário do contrato").
+  const sp = situacaoProfissional(vida);
+  const comContrato = sp.carreira === 'esporte' && sp.situacao === 'ativo';
+  const salarioDoClube = comContrato ? sp.contrato?.salario ?? vida.trabalho.atual?.salario : undefined;
   const auge = augeDe(vida, es);
   const t = es.temporadas?.[es.temporadas.length - 1];
   const noto = leituraDoNome(vida)?.frase;
@@ -578,7 +594,7 @@ export function PainelAtleta({ vida }: { vida: Vida }) {
     <section className="painel painel--atleta" aria-label="A carreira no esporte">
       <div className="placar">
         <span className={`placar__espaco placar__espaco--${es.espaco ?? 'reserva'}`}>{tenis ? 'No circuito' : es.espaco === 'titular' ? 'Titular' : es.espaco === 'reserva' ? 'Reserva' : cap(semVinculo(es.modalidade))}</span>
-        <span className="placar__clube">{tenis ? `ranking ${t?.ranking ?? '—'}º` : es.clube}{es.posicao ? ` · ${nomePosicao(vida, es.posicao)}` : ''}{papel}</span>
+        <span className="placar__clube">{tenis ? `ranking ${t?.ranking ?? '—'}º` : comContrato ? es.clube : sp.ultimoOnde ? `último clube: ${sp.ultimoOnde.nome}` : 'sem clube'}{es.posicao ? ` · ${nomePosicao(vida, es.posicao)}` : ''}{papel}</span>
       </div>
       {t && (
         <div className="temporada" aria-label="A última temporada">
@@ -591,13 +607,15 @@ export function PainelAtleta({ vida }: { vida: Vida }) {
         <p className="nota carreira-totais">Na carreira: {es.totais.temporadas} temporadas · {es.totais.partidas} jogos{es.modalidade === 'futebol' ? ` · ${es.totais.gols} gols · ${es.totais.assistencias} assistências · ${es.totais.minutos.toLocaleString('pt-BR')} minutos` : ''}{es.transferencias?.length ? ` · ${es.transferencias.length} ${es.transferencias.length === 1 ? 'transferência' : 'transferências'} (a maior: ${dinheiroCurto(Math.max(...es.transferencias.map(x => x.taxa)))} entre os clubes)` : ''}</p>
       )}
       <dl className="dados">
-        <Dado rotulo={tenis ? 'Circuito' : 'Divisão (no jogo)'}>{divisaoDe(es.modalidade, es.nivel)}</Dado>
+        <Dado rotulo={tenis ? 'Circuito' : comContrato ? 'Divisão (no jogo)' : 'Última divisão'}>{divisaoDe(es.modalidade, es.nivel)}</Dado>
         {tenis
-          ? <Dado rotulo="Renda">premiação: uns {vida.trabalho.atual ? dinheiroCurto(vida.trabalho.atual.salario) : '—'}/mês (a média do último ano), sem salário; treinador e viagens por sua conta</Dado>
-          : <>
-            <Dado rotulo="Contrato">{es.contratoAte ? `até ${anoDe(es.contratoAte)}` : '—'}</Dado>
-            <Dado rotulo="Salário do contrato">{vida.trabalho.atual ? `${dinheiroCurto(vida.trabalho.atual.salario)}/mês, bruto` : '—'}</Dado>
-          </>}
+          ? <Dado rotulo="Renda">{salarioDoClube !== undefined ? <>premiação: uns {dinheiroCurto(salarioDoClube)}/mês (a média do último ano), sem salário; treinador e viagens por sua conta</> : 'sem premiação agora: fora do circuito'}</Dado>
+          : comContrato
+            ? <>
+              <Dado rotulo="Contrato">{es.contratoAte ? `até ${anoDe(es.contratoAte)}` : '—'}</Dado>
+              {salarioDoClube !== undefined && <Dado rotulo="Salário do contrato">{dinheiroCurto(salarioDoClube)}/mês, bruto</Dado>}
+            </>
+            : <Dado rotulo="Contrato">nenhum agora{sp.detalhe ? ` (${sp.detalhe})` : ''} — sem salário de clube</Dado>}
         <Dado rotulo="No mercado">{palavraDaReputacao(es.reputacao ?? 30, es.modalidade)}{tenis ? (oferta > es.nivel ? ' · o ranking já dá o circuito acima' : oferta < es.nivel ? ' · o ranking não sustenta este circuito' : '') : oferta > es.nivel ? ' · clubes maiores olham' : oferta < es.nivel ? (oferta === 0 ? ' · sem interesse de outros clubes' : ' · o interesse vem de divisões menores') : ''}</Dado>
         {noto && <Dado rotulo="O público">{noto}</Dado>}
         <Dado rotulo="Treino">{es.foco === 'forcar' ? 'dobrado (evolui e machuca mais)' : es.foco === 'preservar' ? 'poupando o corpo' : tenis ? 'o de sempre, com o seu treinador' : 'o normal do clube'}</Dado>
@@ -607,6 +625,14 @@ export function PainelAtleta({ vida }: { vida: Vida }) {
       <p className="nota">{tenis ? 'Não há idade para parar: o corpo declina, o ranking mostra, e a conta do circuito diz se ainda fecha. Parar é escolha.' : 'Não há idade para parar: o corpo declina conforme a posição, a temporada mostra, e o mercado decide se ainda há lugar. Parar é escolha.'} {es.modalidade === 'futebol' ? CLUBES_REAIS : ''}</p>
     </section>
   );
+}
+
+/** REWORK 11 · Fase B — a frase de quem está numa carreira especial sem contrato (só o que o motor faz de verdade). */
+function fraseSemVinculo(sp: SituacaoProfissional): string {
+  const d = sp.detalhe ? `${cap(sp.detalhe)}. ` : '';
+  if (sp.carreira === 'esporte') return `${d}A carreira continua sua: sem contrato, não há salário de clube — o que vier (um clube, ou o fim da carreira) aparece aqui.`;
+  if (sp.carreira === 'tecnico') return `${d}A carreira de técnico continua: proposta de clube ainda pode chegar — anos demais sem banco a encerram.`;
+  return `${d}A carreira continua em pausa: voltar é retorno, não recomeço.`;
 }
 
 /** A base: ainda não é emprego — é formação, com rotina de atleta. */

@@ -47,6 +47,7 @@ import { flex } from '../../motor/texto';
 import { estimativaParaCurso, fazCursinho, mesesDePreparo, objetivoCurso, PALAVRA_SITUACAO, proximoPassoVestibular } from '../../motor/sistemas/vestibular';
 import { objetivosAtivos } from '../../motor/sistemas/objetivos';
 import { oportunidadesAbertas } from '../../motor/sistemas/mercados';
+import { naturezaDaOportunidade, ROTULO_NATUREZA } from '../../motor/sistemas/indicacoes';
 import type { Objetivo } from '../../motor/tipos';
 import { HistoricoEscolar } from './HistoricoAcademico';
 
@@ -343,6 +344,8 @@ export function PortasAbertas({ vida, agir, filtro, titulo }: { vida: Vida; agir
           <li key={o.id} className="porta">
             <div className="porta__texto">
               <strong>{o.titulo}</strong>
+              {/* REWORK 11 · Fase B: a natureza da porta, à vista (a mudança de carreira nunca passa por "vaga compatível"). */}
+              {(() => { const n = naturezaDaOportunidade(vida, o); return n === 'mudanca_carreira' || n === 'por_conta' || n === 'ocasional' ? <span className="porta__natureza" data-natureza={n}>{ROTULO_NATUREZA[n]}</span> : null; })()}
               <p>{o.texto}</p>
               <span className="porta__prazo">Até {anoDe(o.tFim)}</span>
             </div>

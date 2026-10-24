@@ -12,9 +12,9 @@ import { paisDaVida, perfilDaVida } from '../mundo/vida';
 import { oPais, paraPais } from '../mundo/registro';
 import { redeDeSaude } from '../sistemas/saude';
 import { cidadesDaVida, deEscritorio, temFesta, transferencia } from './local';
-import { nomeOcupacaoId, contratar, encerrarEmprego, elegibilidade, degrausAcima } from '../sistemas/trabalho';
+import { nomeOcupacaoId, encerrarEmprego, elegibilidade, degrausAcima } from '../sistemas/trabalho';
 import { editaisAbertos } from '../sistemas/concurso';
-import { noServicoInicial, propor } from '../sistemas/compromissos';
+import { contratarComAnalise, noServicoInicial, propor } from '../sistemas/compromissos';
 import { NEGOCIOS, donoIntegral } from '../sistemas/negocio';
 import { marcar } from '../sistemas/marcas';
 import { ocupacao } from '../dados/ocupacoes';
@@ -466,8 +466,7 @@ function mudarPorProposta(c: Ctx, destinoId: string, juntos: boolean): void {
   // Quem não vai fica: tira a parceria da casa antes da mudança levar todo mundo.
   if (par && !juntos) { const vin = c.v.vinculos[par.id]; vin.convivio = vin.convivio.filter(x => x !== 'casa'); vin.tensao = Math.min(100, vin.tensao + 25); for (const x of Object.values(c.v.vinculos)) if (x.parentesco === 'filho' && x.convivio.includes('casa') && c.v.pessoas[x.pessoaId] && idadePessoa(c.v, c.v.pessoas[x.pessoaId]) < 18) x.convivio = x.convivio.filter(y => y !== 'casa'); }
   mudarAgora(c.v, destinoId, 'por causa de uma proposta de trabalho');
-  const novo = contratar(c.v, c.r, prox, 'proposta');
-  novo.salario = Math.max(salario, novo.salario);
+  contratarComAnalise(c.v, c.r, prox, 'proposta', { ajuste: { salarioMinimo: salario } });
   if (par && juntos) { const vin = c.v.vinculos[par.id]; vin.tensao = Math.min(100, vin.tensao + (parceriaTopa(c) ? 5 : 18)); lembrarCom(c.v, par.id, `Mudaram juntos para ${municipio(destinoId).nome}.`, 'casa', 2); }
   marcar(c.v, 'mudanca_cidade', `Mudou-se para ${municipio(destinoId).nome} por uma proposta de trabalho${par && !juntos ? `, sem ${par.nome}` : ''}.`, 3, { trilha: prox.trilha });
 }

@@ -40,6 +40,7 @@ import { ocupacaoOuNula } from '../../motor/dados/ocupacoes';
 import { doClube } from '../../motor/dados/clubes';
 import { nomeOcupacao } from '../../motor/sistemas/trabalho';
 import { modoDoTrabalho } from '../../motor/sistemas/profissao';
+import { situacaoProfissional } from '../../motor/sistemas/situacaoProfissional';
 import { negocioAberto } from '../../motor/sistemas/negocio';
 import { nomeDaMatricula, rotuloSerie } from '../../motor/sistemas/escola';
 import { instituicaoAtual } from '../../motor/sistemas/formacao';
@@ -85,17 +86,20 @@ export function situacaoAtual(v: Vida): Ocupacao[] {
   if (v.rotinas.some(r => r.id === 'estudar_concurso')) out.push({ id: 'concurso', lado: 'formacao', rotulo: 'Estudando para concurso' });
   const modo = modoDoTrabalho(v);
   const e = v.trabalho.atual;
+  // REWORK 11 · Fase B: a carreira especial sem contrato (o atleta sem clube, o técnico sem clube, o artista entre
+  // trabalhos) continua sendo a carreira — na divisão Trabalho, com o nome dela; nunca "Procurando trabalho".
+  const sp = situacaoProfissional(v);
   if (e) {
     const oc = ocupacaoOuNula(e.ocupacaoId);
     out.push({ id: 'trabalho', lado: 'trabalho', rotulo: oc ? nomeOcupacao(v, oc) : 'Trabalhando', detalhe: [e.empregador, `desde ${anoDe(e.tInicio)}`].filter(Boolean).join(' · ') });
-  }
+  } else if (sp.semVinculo) out.push({ id: 'trabalho', lado: 'trabalho', rotulo: sp.rotulo, detalhe: sp.detalhe });
   const p = v.trabalho.paralela;
   if (p) { const oc = ocupacaoOuNula(p.ocupacaoId); out.push({ id: 'paralela', lado: 'trabalho', rotulo: oc ? nomeOcupacao(v, oc) : 'Um segundo trabalho', detalhe: 'em paralelo' }); }
   const n = negocioAberto(v);
   if (n && modo !== 'negocio') out.push({ id: 'negocio', lado: 'trabalho', rotulo: n.nome, detalhe: 'o próprio negócio' });
   if (modo === 'negocio' && n && !e) out.push({ id: 'negocio', lado: 'trabalho', rotulo: n.nome, detalhe: 'o próprio negócio' });
   if (v.caminhos.esporte?.fase === 'base') out.push({ id: 'base', lado: 'trabalho', rotulo: `Na base ${doClube(v.caminhos.esporte.clube)}` });
-  if (modo === 'procurando') out.push({ id: 'procura', lado: 'trabalho', rotulo: 'Procurando trabalho' });
+  if (modo === 'procurando' && !sp.semVinculo) out.push({ id: 'procura', lado: 'trabalho', rotulo: 'Procurando trabalho' });
   if (modo === 'aposentado') out.push({ id: 'aposentadoria', lado: 'trabalho', rotulo: 'Aposentado' + (v.eu.genero === 'feminino' ? 'a' : '') });
   if (modo === 'pausa') out.push({ id: 'pausa', lado: 'trabalho', rotulo: 'Uma pausa no trabalho' });
   if (modo === 'preso') out.push({ id: 'pena', lado: 'trabalho', rotulo: 'Cumprindo pena' });
@@ -122,6 +126,8 @@ export function faseDosCaminhos(v: Vida): string {
   if (modo === 'crianca' || modo === 'estudante') return estuda ? (v.educacao.basica ? 'Os anos de escola' : 'Estudando') : 'Fora da escola';
   if (modo === 'base') return estuda ? 'A escola e a base' : 'A base, o sonho do esporte';
   if (modo === 'aposentado') return estuda ? 'Aposentadoria — e voltar a estudar' : 'Depois do trabalho';
+  const sp = situacaoProfissional(v);
+  if (sp.semVinculo && !v.trabalho.atual) return sp.carreira === 'esporte' ? (estuda ? 'O esporte e os estudos' : 'A vida de atleta, sem clube agora') : sp.carreira === 'tecnico' ? 'O banco, entre um clube e outro' : 'A carreira, entre um trabalho e outro';
   if (modo === 'procurando') return estuda ? 'Estudando e procurando trabalho' : 'Entre um trabalho e outro';
   if (modo === 'sem_procurar') return estuda ? 'Estudando' : 'Sem trabalho, por escolha';
   if (modo === 'pausa') return 'Uma pausa para cuidar';
@@ -147,6 +153,8 @@ export function estadoDaDivisao(v: Vida, d: Exclude<DivisaoCaminhos, 'inicio'>):
     const e = v.trabalho.atual;
     if (modo === 'preso') return 'Cumprindo pena';
     if (e && modo !== 'politica') { const oc = ocupacaoOuNula(e.ocupacaoId); return `${oc ? cap(nomeOcupacao(v, oc)) : 'Trabalhando'} · desde ${anoDe(e.tInicio)}`; }
+    const sp = situacaoProfissional(v);
+    if (!e && sp.semVinculo) return [cap(sp.rotulo), sp.detalhe].filter(Boolean).join(' · ');
     if (modo === 'negocio') return negocioAberto(v)?.nome ?? 'O próprio negócio';
     if (modo === 'procurando') return 'Procurando trabalho — as vagas estão aqui';
     if (modo === 'aposentado') return 'Aposentadoria';
@@ -165,7 +173,7 @@ export function estadoDaDivisao(v: Vida, d: Exclude<DivisaoCaminhos, 'inicio'>):
   const esp = v.caminhos.esporte;
   const portas = oportunidadesAbertas(v).filter(o => ['peneira', 'seletiva', 'banda', 'grupo'].includes(o.tipo)).length;
   const partes = [
-    esp?.fase === 'base' ? `Na base ${doClube(esp.clube)}` : esp?.fase === 'profissional' ? 'Atleta profissional' : '',
+    esp?.fase === 'base' ? `Na base ${doClube(esp.clube)}` : esp?.fase === 'profissional' ? (situacaoProfissional(v).semVinculo ? `${cap(situacaoProfissional(v).rotulo)} (a carreira está em Trabalho)` : 'Atleta profissional (a carreira está em Trabalho)') : '',
     v.caminhos.arte?.ativo ? v.caminhos.arte.nome : '',
     portas ? `${portas} ${portas === 1 ? 'porta aberta' : 'portas abertas'}` : ''
   ].filter(Boolean);
@@ -189,7 +197,12 @@ function ordemDasDivisoesBase(v: Vida): Exclude<DivisaoCaminhos, 'inicio' | 'sub
   const modo = modoDoTrabalho(v);
   const estuda = (!!v.educacao.basica && !v.educacao.evadiu) || !!v.educacao.matricula;
   if (modo === 'politica' || modo === 'servidor' || (naPolitica(v) && !v.trabalho.atual)) return ['publica', 'trabalho', 'estudos', 'outros'];
-  if (modo === 'base' || modo === 'atleta' || modo === 'artista' || v.caminhos.esporte?.fase === 'base') return ['outros', estuda ? 'estudos' : 'trabalho', estuda ? 'trabalho' : 'estudos', 'publica'];
+  // A base é formação (mora em Outros caminhos). REWORK 11 · Fase B: a carreira de atleta, de técnico ou de artista — com
+  // contrato ou sem — mora em Trabalho (o painel, o contrato ou a falta dele, as ações): Trabalho vem primeiro, e Outros
+  // caminhos logo depois (as portas do esporte e da arte). Antes, o atleta com clube via Outros primeiro, e o sem clube
+  // via "Procurando trabalho" primeiro e a carreira só no fim, em "Em andamento".
+  if (modo === 'base' || v.caminhos.esporte?.fase === 'base') return ['outros', estuda ? 'estudos' : 'trabalho', estuda ? 'trabalho' : 'estudos', 'publica'];
+  if (modo === 'atleta' || modo === 'artista' || (situacaoProfissional(v).semVinculo && !v.trabalho.atual)) return ['trabalho', 'outros', 'estudos', 'publica'];
   if (i < 14) return ['estudos', 'outros', 'trabalho', 'publica'];
   if (estuda && !v.trabalho.atual) return ['estudos', 'trabalho', 'outros', 'publica'];
   return ['trabalho', 'estudos', 'publica', 'outros'];
@@ -198,6 +211,8 @@ function ordemDasDivisoesBase(v: Vida): Exclude<DivisaoCaminhos, 'inicio' | 'sub
 /** O próximo passo que mais importa agora (um, com o lugar onde se dá) — lido do motor, nunca inventado. */
 export function proximoNosCaminhos(v: Vida): { texto: string; divisao: Exclude<DivisaoCaminhos, 'inicio'>; parte?: ParteCaminhos } | undefined {
   const modo = modoDoTrabalho(v);
+  const sp = situacaoProfissional(v);
+  if (sp.semVinculo && !v.trabalho.atual) return { texto: `${cap(sp.rotulo)}${sp.detalhe ? ` (${sp.detalhe})` : ''}: a carreira continua — a situação e o que dá para fazer estão em Trabalho.`, divisao: 'trabalho', parte: 'agora' };
   if (modo === 'procurando') return { texto: 'Procurar trabalho: as vagas ao seu alcance, com o que cada uma pede.', divisao: 'trabalho', parte: 'oportunidades' };
   const pp = proximoPasso(v);
   if (pp) return { texto: pp.resumo, divisao: 'trabalho', parte: 'agora' };

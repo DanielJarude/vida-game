@@ -20,7 +20,7 @@
 
 import { aEquipe } from './esporte';
 import type { Rng } from '../rng';
-import type { CompromissoPendente, Dominio, Negocio, NovoCompromisso, PlanoDeConflito, Vida } from '../tipos';
+import type { AjusteDeEmprego, CompromissoPendente, Dominio, Emprego, Negocio, NovoCompromisso, PlanoDeConflito, Vida } from '../tipos';
 import { escrever, idade, lembrarCom } from '../nucleo';
 import { iniciarRural } from './rural';
 import { doClube, oClube } from '../dados/clubes';
@@ -29,7 +29,10 @@ import { ocupacao, ocupacaoOuNula } from '../dados/ocupacoes';
 import { municipio } from '../dados/lugares';
 import { listaNatural } from '../texto';
 import { contratar, eDasForcas, encerrarEmprego, nomeOcupacao, textoDeContratacao } from './trabalho';
-import { entrarNaBase, profissionalizar, NOME_MOD } from './esporte';
+import { encerrarCarreira, entrarNaBase, profissionalizar, NOME_MOD, OCUPACOES_DE_ATLETA } from './esporte';
+import { atletaSemClube, tecnicoSemClube } from './situacaoProfissional';
+import { flex, ge } from '../texto';
+import type { Ocupacao } from '../dados/ocupacoes';
 import { fem, negocioFeminino, presencaDe, socioVivo, abrirNegocio, dedicarAoNegocio, fecharNegocio, negocioAberto, passarParaHorasVagas, podeTocarNasHorasVagas, tipoDoNegocio, tipoNegocio, valorDoNegocio, venderNegocio } from './negocio';
 import { marcar } from './marcas';
 import { incorporarAoServico } from './militar';
@@ -53,7 +56,7 @@ const VIA_CURSO = '__curso__';
 
 /* ============================================================== O que existe */
 
-type IdAtual = 'curso' | 'emprego' | 'base' | 'negocio' | 'servico' | 'mandato' | 'cidade' | 'agenda';
+type IdAtual = 'curso' | 'emprego' | 'base' | 'negocio' | 'servico' | 'mandato' | 'cidade' | 'agenda' | 'carreira';
 
 export interface Alternativa {
   /** O que se larga (id aplicável) — ou `conciliar`. */
@@ -149,6 +152,9 @@ function conflitoComEmprego(v: Vida, novo: NovoCompromisso): ConflitoDeEntrada |
     alternativas.push({ larga: 'negocio_fechar', texto: valorDoNegocio(v, n) > 0 ? `vender ${n.nome}` : `fechar ${n.nome}`, consequencia: valorDoNegocio(v, n) > 0 ? `${n.nome} é ${fem(n.nome, 'vendido')}: o dinheiro entra, a história acaba.` : `${n.nome} ${fechaAs(n)}.` });
     return { com: 'negocio', rotulo: n.nome, motivo: `${n.nome} é o seu trabalho de todo dia`, alternativas };
   }
+  // REWORK 11 · Fase B: a contratação que vem de um acontecimento que JÁ decidiu a troca (a efetivação do aprendiz, o
+  // "pedir as contas para trabalhar por conta", a proposta em outra cidade aceita) não pergunta de novo pelo emprego.
+  if (novo.tipo === 'emprego' && novo.substitui) return undefined;
   const nome = nomeEmprego(v);
   // Emprego novo no lugar do atual: quem se candidatou pela tela de vagas já escolheu trocar (e foi avisado antes).
   // Convite, bolsa, indicação, concurso, retorno: ninguém escolheu ainda o que fazer com o trabalho de agora — pergunta.
@@ -171,7 +177,9 @@ function conflitoComEmprego(v: Vida, novo: NovoCompromisso): ConflitoDeEntrada |
   }
   const oc = ocupacao(e.ocupacaoId);
   const estavel = e.contrato === 'servidor' ? ' — e a estabilidade do cargo' : '';
-  const alternativas: Alternativa[] = [{ larga: 'emprego', texto: `deixar o trabalho de ${nome}`, consequencia: `O trabalho de ${nome}${oc.concurso ? ' (concursado)' : ''} acaba${estavel}. O que você fez ali fica no currículo.` }];
+  // REWORK 11 · Fase B: deixar o clube por outro trabalho é encerrar a carreira de atleta (dito antes; feito na hora, com registro).
+  const atleta = OCUPACOES_DE_ATLETA.includes(e.ocupacaoId) && v.caminhos.esporte?.fase === 'profissional';
+  const alternativas: Alternativa[] = [{ larga: 'emprego', texto: atleta ? `deixar o clube e encerrar a carreira de ${nome}` : `deixar o trabalho de ${nome}`, consequencia: atleta ? `A carreira de ${nome} acaba agora: temporadas, números e títulos ficam no histórico; proposta de clube deixa de chegar.` : `O trabalho de ${nome}${oc.concurso ? ' (concursado)' : ''} acaba${estavel}. O que você fez ali fica no currículo.` }];
   if (novo.tipo === 'emprego' && novo.via !== VIA_CURSO) {
     const noc = ocupacao(novo.ocupacaoId);
     // Pausar não é apagar: quem trabalha por projeto pausa a agenda; o servidor pede licença sem salário.
@@ -185,6 +193,34 @@ function conflitoComEmprego(v: Vida, novo: NovoCompromisso): ConflitoDeEntrada |
     }
   }
   return { com: 'emprego', rotulo: `o trabalho de ${nome}`, motivo: `Você trabalha como ${nome}${e.carga === 'integral' ? ', o dia inteiro' : ''}`, alternativas };
+}
+
+/**
+ * REWORK 11 · Fase B — a carreira especial SEM contrato não é desemprego. O atleta sem clube que aceita um emprego
+ * comum (a indicação da amiga manicure) deixava de ser atleta na virada do ano, em silêncio (`esporte`: quem tem outro
+ * trabalho sai da carreira). Agora a vida pergunta ANTES, e o plano encerra a carreira NA HORA, com o registro de
+ * sempre (`esporte.encerrarCarreira`: "Pendurou as chuteiras"). O técnico sem clube segue com o telefone ligado mesmo
+ * em outro trabalho (`tecnico`: as propostas continuam, um pouco menos, até quatro anos sem banco) — a pergunta diz
+ * que dá para fazer em paralelo. A carreira artística em pausa continua em pausa (não se perde nada: sem pergunta).
+ */
+function conflitoComCarreiraEspecial(v: Vida, novo: NovoCompromisso): ConflitoDeEntrada | undefined {
+  if (novo.tipo !== 'emprego' || v.trabalho.atual) return undefined;
+  const noc = ocupacaoOuNula(novo.ocupacaoId);
+  if (!noc || OCUPACOES_DE_ATLETA.includes(noc.id)) return undefined;
+  const g = ge(v);
+  const es = atletaSemClube(v);
+  if (es) {
+    const jog = es.modalidade === 'futebol' ? flex(g, 'jogador', 'jogadora') : 'atleta';
+    const sem = es.modalidade === 'tenis' ? 'sem quem banque o circuito' : ['futebol', 'basquete', 'volei'].includes(es.modalidade) ? 'sem clube' : 'sem equipe';
+    return { com: 'carreira', rotulo: `a carreira de ${jog} (${sem})`, motivo: `Você é ${jog} profissional ${sem}, esperando proposta — e um trabalho fixo encerra a carreira`,
+      alternativas: [{ larga: 'carreira_esporte', texto: `encerrar a carreira de ${jog}`, consequencia: `A carreira de ${jog} acaba agora: temporadas, números e títulos ficam no histórico; proposta de clube deixa de chegar.` }] };
+  }
+  if (tecnicoSemClube(v) && noc.trilha !== 'treino') {
+    const tec = flex(g, 'técnico', 'técnica');
+    return { com: 'carreira', rotulo: `a carreira de ${tec} (sem clube)`, motivo: `Você é ${tec} sem clube, esperando proposta`,
+      alternativas: [{ texto: `seguir como ${tec} sem clube, em paralelo`, consequencia: `A carreira de ${tec} continua: proposta de clube ainda pode chegar (um pouco menos, com outro trabalho) — quatro anos sem banco a encerram.` }] };
+  }
+  return undefined;
 }
 
 /** Duas ocupações da mesma trilha artística (a identidade profissional é uma só; muda o degrau). */
@@ -328,6 +364,7 @@ export function analisarEntrada(v: Vida, novo: NovoCompromisso): ConflitoDeEntra
       push(conflitoComCurso(v, novo, pesado && cursoIntegral, oc.formacaoInicial ? '__longe__' : undefined));
       push(conflitoComBase(v, novo));
       push(conflitoComEmprego(v, novo));
+      push(conflitoComCarreiraEspecial(v, novo));
       // REWORK 9: o horário — a escola, as atividades da semana. Os conflitos grandes (o curso integral, outro
       // emprego) já foram ditos acima; aqui, o que o expediente novo atravessa na agenda.
       if (!oc.formacaoInicial) push(conflitoDeHorario(v, oc.id));
@@ -549,10 +586,26 @@ function largar(v: Vida, id: string, motivo: string, novo: NovoCompromisso): voi
       escrever(v, { texto: `Trancou ${nomeDoCurso(m.cursoId)} ${motivo}.`, relevancia: 'biografia', tema: 'estudo', escolha: true });
       return;
     }
+    case 'carreira_esporte': {
+      const es = v.caminhos.esporte;
+      if (es?.fase !== 'profissional') return;
+      delete v.fatos['esp_sem_clube'];
+      encerrarCarreira(v, es, 'escolha');
+      return;
+    }
     case 'emprego': {
       const e = v.trabalho.atual;
       if (!e) return;
       const nome = nomeEmprego(v);
+      const es = v.caminhos.esporte;
+      // REWORK 11 · Fase B: o atleta que deixa o clube por outra trajetória encerra a carreira agora — com o registro de
+      // sempre (antes, o motor do esporte a encerrava na virada do ano, sem texto).
+      if (es?.fase === 'profissional' && OCUPACOES_DE_ATLETA.includes(e.ocupacaoId)) {
+        delete v.fatos['esp_sem_clube'];
+        encerrarCarreira(v, es, 'escolha');
+        escrever(v, { texto: `Deixou o clube ${motivo}.`, relevancia: 'biografia', tema: 'trabalho', escolha: true });
+        return;
+      }
       encerrarEmprego(v, novo.tipo === 'negocio' || novo.tipo === 'dedicar_negocio' ? 'deixou para se dedicar ao negócio' : 'deixou por outra trajetória');
       escrever(v, { texto: `Deixou o trabalho de ${nome} ${motivo}.`, relevancia: 'biografia', tema: 'trabalho', escolha: true });
       return;
@@ -635,7 +688,8 @@ function aplicarNovo(v: Vida, r: Rng, novo: NovoCompromisso, nasHorasVagas: bool
         e = entrarComoParalela(v, contratar(v, r, oc, novo.via));
         v.trabalho.atual = guardado;
         v.trabalho.desempregadoDesde = undefined;
-      } else e = contratar(v, r, oc, novo.via);
+      } else { fimDaCarreiraDeAtletaPor(v, oc); e = contratar(v, r, oc, novo.via); }
+      aplicarAjuste(e, novo.ajuste);
       if (novo.extra === 'rural_familia' || novo.extra === 'rural_arrendada') iniciarRural(v, novo.extra === 'rural_familia' ? 'familia' : 'arrendada');
       if (novo.extra === 'arte') {
         marcar(v, 'profissional', larga.includes('novo_paralela') ? `Começou a trabalhar como ${nomeOcupacao(v, oc)} em paralelo, aos ${idade(v)}.` : `Passou a viver da arte: ${nomeOcupacao(v, oc)}, aos ${idade(v)}.`, 3, { ocupacaoId: oc.id, dominio: oc.habilidade?.dominio });
@@ -666,6 +720,82 @@ function aplicarNovo(v: Vida, r: Rng, novo: NovoCompromisso, nasHorasVagas: bool
       return;
     }
   }
+}
+
+/**
+ * REWORK 11 · Fase B — um trabalho principal que não é de atleta encerra a carreira de atleta AGORA, com o registro de
+ * sempre (`esporte.encerrarCarreira`: a marca, a biografia, o convite para a comissão de quem se preparou). Antes, o
+ * emprego novo entrava e a carreira acabava na virada do ano, sem uma linha (`esporte`, o ramo de quem tem outro
+ * trabalho). Quem chega aqui já escolheu: pela tela de vagas (que avisa) ou pela pergunta (que diz que encerra).
+ */
+function fimDaCarreiraDeAtletaPor(v: Vida, oc: Ocupacao): void {
+  const es = v.caminhos.esporte;
+  if (es?.fase !== 'profissional' || OCUPACOES_DE_ATLETA.includes(oc.id)) return;
+  delete v.fatos['esp_sem_clube'];
+  encerrarCarreira(v, es, 'escolha');
+}
+
+/* ===================================================== Contratar fora de `propor` */
+
+/** O que a contratação ajusta no emprego novo (guardado no pendente: a pergunta pode ficar para depois). */
+function aplicarAjuste(e: Emprego, a?: AjusteDeEmprego): void {
+  if (!a) return;
+  if (a.posAposentadoria) e.posAposentadoria = true;
+  if (a.especialidade) e.especialidade = a.especialidade;
+  if (a.clientelaMais && e.clientela !== undefined) e.clientela = Math.max(0, Math.min(100, e.clientela + a.clientelaMais));
+  if (a.salarioMinimo) e.salario = Math.max(e.salario, a.salarioMinimo);
+}
+
+/**
+ * Os conflitos que PEDEM pergunta numa contratação que não passa por `propor` (o curso integral, a base, a carreira
+ * especial sem contrato, a escola sem turno que resolva). O horário que um turno resolve não pergunta: a agenda se
+ * reconcilia depois de contratar, e diz (`agenda.reconciliarObrigacoes`). Pura: os textos dos acontecimentos a leem
+ * antes de dizer "começou".
+ */
+export function conflitosDaContratacao(v: Vida, oc: Ocupacao, via: string, substitui = true): ConflitoDeEntrada[] {
+  return analisarEntrada(v, { tipo: 'emprego', ocupacaoId: oc.id, via, substitui }).filter(c => c.com !== 'agenda' || c.impede);
+}
+
+/**
+ * REWORK 11 · Fase B (pendência 10.6) — CONTRATAR COM ANÁLISE: as contratações que não passavam por `propor` (a
+ * efetivação do aprendiz, a proposta em outra cidade, o pós-carreira, a procura longa, o trabalho por conta, a segunda
+ * carreira da reserva) entravam sem olhar o curso integral, a base, a carreira parada nem a agenda. Agora:
+ *   · sem conflito grande → contrata, ajusta e reconcilia a agenda (o turno que bate muda, e fica dito);
+ *   · com conflito grande → a vida pergunta, como numa vaga (o pendente guarda o ajuste e o texto da oferta);
+ *   · com outra escolha grande em aberto → a oferta passa, dita.
+ * `substitui` (padrão): o acontecimento já decidiu trocar o trabalho de agora — ele não volta a ser perguntado.
+ */
+export function contratarComAnalise(v: Vida, r: Rng, oc: Ocupacao, via: string, o: { texto?: string; ajuste?: AjusteDeEmprego; substitui?: boolean } = {}): { resultado: 'feito' | 'pendente' | 'perdido'; emprego?: Emprego } {
+  const novo: NovoCompromisso = { tipo: 'emprego', ocupacaoId: oc.id, via, texto: o.texto, substitui: o.substitui ?? true, ...(o.ajuste ? { ajuste: o.ajuste } : {}) };
+  const grandes = analisarEntrada(v, novo).filter(c => c.com !== 'agenda' || c.impede);
+  if (!grandes.length) {
+    fimDaCarreiraDeAtletaPor(v, oc);
+    const e = contratar(v, r, oc, via);
+    aplicarAjuste(e, o.ajuste);
+    reconciliacao?.(v);
+    return { resultado: 'feito', emprego: e };
+  }
+  const d = descreverOferta(v, novo);
+  if (v.caminhos.pendente) {
+    escrever(v, { texto: `${cap(d.curto)} chegou quando outra escolha grande estava em aberto — e o prazo passou.`, relevancia: 'cotidiano', tema: 'trabalho' });
+    return { resultado: 'perdido' };
+  }
+  v.caminhos.pendente = { novo, t: v.t, oferta: d.oferta, conflitos: grandes.map(c => c.motivo), planos: planosDeConflito(v, novo, grandes) };
+  return { resultado: 'pendente' };
+}
+
+/**
+ * Para os acontecimentos (os `resolver` das decisões): o texto de sempre quando cabe; quando há conflito grande, o
+ * texto diz a escolha que vem (e o `efeito` abre a pergunta) — nunca "começou" para um trabalho que ainda não entrou.
+ * `depois` roda só se o emprego entrou agora (o registro e as marcas do acontecimento).
+ */
+export function contratacaoDoEvento(v: Vida, r: Rng, oc: Ocupacao, via: string, texto: string, o: { ajuste?: AjusteDeEmprego; substitui?: boolean; depois?: (e: Emprego) => void } = {}): { texto: string; efeito: () => void } {
+  const conf = conflitosDaContratacao(v, oc, via, o.substitui ?? true);
+  const m = conf[0]?.motivo;
+  return {
+    texto: m ? `${cap(nomeOcupacao(v, oc))}: dá para começar — mas ${m.charAt(0).toLowerCase()}${m.slice(1)}. Antes, uma escolha.` : texto,
+    efeito: () => { const res = contratarComAnalise(v, r, oc, via, { ajuste: o.ajuste, substitui: o.substitui }); if (res.emprego) o.depois?.(res.emprego); }
+  };
 }
 
 /* ============================================================== Utilidades */

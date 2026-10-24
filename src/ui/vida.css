@@ -657,6 +657,7 @@ button.agora-sinal:hover { color: var(--text-primary); }
 .porta__texto strong { font-family: var(--font-serif); font-weight: 500; font-size: var(--type-lead); color: var(--text-primary); }
 .porta__texto p { font-family: var(--font-serif); color: var(--text-secondary); line-height: var(--leading-normal); max-width: 60ch; }
 .porta__prazo { font-size: var(--type-caption); color: var(--text-muted); }
+.porta__natureza { display: block; font-size: var(--type-caption); font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; }
 .porta__acoes { display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-1); flex: none; padding-right: var(--space-3); }
 .carreira { margin: var(--space-3) 0; display: flex; flex-direction: column; gap: var(--space-1); }
 .marcos-caminho { display: flex; flex-direction: column; margin-bottom: var(--space-3); }

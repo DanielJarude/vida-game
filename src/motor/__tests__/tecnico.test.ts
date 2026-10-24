@@ -251,6 +251,9 @@ describe('contratação no meio da temporada', () => {
     return transacao(tecnico(), x => {
       demitirDoComando(x);
       const c = x.caminhos.tecnico!;
+      // REWORK 11 · Fase B: a proposta de mercado que a vida sorteada às vezes já deixou na mesa sai antes — o cenário é a
+      // CRISE (a vida de 40 anos da semente mudou de trajetória com as indicações e o vocabulário corporativo novos).
+      c.proposta = undefined;
       for (let s = semente; s < semente + 400 && !c.proposta; s++) propostaDeCrise(x, criarRng(s), c);
       x.momento = null;
     }).vida;
