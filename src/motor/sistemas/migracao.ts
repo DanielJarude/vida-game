@@ -270,7 +270,15 @@ export function migrar(v: Vida, r: Rng, destinoId: string, motivo: MotivoMigraca
   // 6. A história, em palavras de gente.
   escrever(v, { texto: textoDaMigracao(v, origemId, destinoId, motivo), relevancia: 'marco', tema: 'lugar', escolha: true });
   marcar(v, 'mudanca_cidade', `${paisNatal(v) === pais ? 'Voltou' : 'Mudou-se'} ${paraPais(pais)}, aos ${idade(v)}.`, 3);
-  abalar(v, `a mudança ${paraPais(pais)}`, 0, fala ? 10 : 18);
+  // REWORK 11 · ROT-11.3: mudanças em sequência não se empilham inteiras (a segunda em dois anos já encontra a vida
+  // na mala), e a transferência de clube ou empresa chega com a vida arrumada por quem chamou.
+  abalar(v, `a mudança ${paraPais(pais)}`, 0, Math.round((fala ? 10 : 18) * fatorDaMudanca(v, motivo)));
+}
+
+/** REWORK 11 · ROT-11.3: quanto do abalo de uma mudança de país pesa (1 = inteiro). */
+export function fatorDaMudanca(v: Vida, motivo?: string): number {
+  const anteriores = (v.mundo?.migracoes ?? []).filter(m => m.t < v.t && v.t - m.t < 24);
+  return (anteriores.length ? 0.5 : 1) * (motivo === 'trabalho' || motivo === 'esporte' ? 0.6 : 1);
 }
 
 /**
@@ -304,7 +312,7 @@ export function migrarComAFamilia(v: Vida, destinoId: string, quem?: string, opc
   const texto = `A família ${ja ? 'voltou' : 'se mudou'} para ${cidade}, ${noPais(pais)}${quem ? `: ${quem} foi trabalhar lá` : ''}. Você foi junto, com ${idade(v)} anos.`;
   if (opcoes.escrever !== false) escrever(v, { texto, relevancia: 'marco', tema: 'lugar' });
   marcar(v, 'mudanca_cidade', `${ja ? 'Voltou' : 'Mudou-se'} com a família ${paraPais(pais)}, aos ${idade(v)}.`, 3);
-  abalar(v, `a mudança ${paraPais(pais)}`, 0, fala ? 10 : 16);
+  abalar(v, `a mudança ${paraPais(pais)}`, 0, Math.round((fala ? 10 : 16) * fatorDaMudanca(v)));
   return texto;
 }
 
@@ -402,7 +410,7 @@ export function processarMundo(v: Vida, r: Rng): void {
     escrever(v, { texto: `Depois de ${anosLa} anos ${noPais(pais)}, o ${lingua} deixou de ser esforço: já sonha nele de vez em quando.`, relevancia: 'biografia', tema: 'lugar', tom: 'bom' });
   }
   // A cabeça de quem chegou há pouco e ainda não fala a língua sente o peso (sem virar drama: passa com os anos).
-  if (mu.adaptacao < 40) v.mente.felicidade = clamp(v.mente.felicidade - (40 - mu.adaptacao) / 10, 0, 100);
+  // REWORK 11 · ROT-11.3: deixou de ser uma subtração direta, sem nome: é a causa 'a adaptação' de `estado.fatoresHumor`.
   // A naturalização pedida sai.
   if (mu.naturalizacao && v.t >= mu.naturalizacao.t) {
     const p = mu.naturalizacao.pais;

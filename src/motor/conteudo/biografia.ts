@@ -250,7 +250,9 @@ function marcoMaisForte(vin: Vinculo) {
 interface Plano { chave: string; oque: string; t: number }
 const PLANOS: [string, string][] = [
   ['plano_faculdade', 'fazer faculdade'], ['plano_estudar', 'voltar a estudar'], ['plano_tecnico', 'fazer um curso técnico'],
-  ['plano_concurso', 'passar num concurso'], ['quis_mudar_area', 'mudar de área']
+  ['plano_concurso', 'passar num concurso'], ['quis_mudar_area', 'mudar de área'],
+  // REWORK 11 (pendência 10.6 · F9): a formação da área, escolhida no fim do médio, é um plano — cobrado como os outros.
+  ['plano_formacao_da_area', 'fazer a formação da área']
 ];
 
 function planoPendente(v: Vida): Plano | undefined {
@@ -271,7 +273,7 @@ function planoPendente(v: Vida): Plano | undefined {
 }
 
 const rotinaDoPlano = (v: Vida, p: Plano): string | undefined =>
-  p.chave === 'plano_concurso' ? 'estudar_concurso' : !v.educacao.concluidos.some(x => x.nivel === 'superior') ? 'cursinho' : undefined;
+  p.chave === 'plano_concurso' ? 'estudar_concurso' : p.chave === 'plano_formacao_da_area' ? undefined : !v.educacao.concluidos.some(x => x.nivel === 'superior') ? 'cursinho' : undefined;
 
 /** Um filho em idade de estudar, que ainda não tem diploma nem está estudando. */
 const filhoParaEstudar = (v: Vida) => filhosVivos(v).filter(f => { const i = idadePessoa(v, f); return i >= 14 && i <= 30 && !f.formacao && !f.estudo; });

@@ -6,7 +6,7 @@
  * fica o orçamento, confirmar — sem oito telas.
  */
 
-import { PedidoDeCompra } from '../Alcance';
+import { PedidoDeCompra, PedidoDeVeiculo } from '../Alcance';
 import { dependeDosResponsaveis } from '../../../motor/sistemas/pedidosDaCrianca';
 import { CLINICAS, PROCEDIMENTOS, emRecuperacao, precoDoProcedimento, revisavel, riscoDe, type Clinica } from '../../../motor/sistemas/estetica';
 import { municipio } from '../../../motor/dados/lugares';
@@ -513,7 +513,9 @@ function DetalheVeiculo({ vida, agir, o, voltar }: { vida: Vida; agir: (a: Acao)
       {m.habilitacao && <p className="nota">{leituraDaHabilitacao(vida, m.habilitacao)}</p>}
       {m.tripulacao && <p className="nota">Voa com tripulação contratada (dois pilotos com a habilitação do tipo): você não pilota.</p>}
       {m.patrimonioMin && <p className="nota">Quem vende pede patrimônio de pelo menos {dinheiroCurto(m.patrimonioMin)}.</p>}
-      <BotaoAcao vida={vida} acao={{ tipo: 'comprar_veiculo', ofertaId: o.id, financiar, entrada }} agir={agir} variante="principal">{financiar ? 'Financiar' : 'Comprar'}</BotaoAcao>
+      {dependeDosResponsaveis(vida) && m.categoria === 'bicicleta'
+        ? <PedidoDeVeiculo vida={vida} modeloId={m.id} preco={o.preco} agir={agir} />
+        : <BotaoAcao vida={vida} acao={{ tipo: 'comprar_veiculo', ofertaId: o.id, financiar, entrada }} agir={agir} variante="principal">{financiar ? 'Financiar' : 'Comprar'}</BotaoAcao>}
     </div>
   );
 }

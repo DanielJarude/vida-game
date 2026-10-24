@@ -7,8 +7,8 @@
  */
 
 import { disponibilidadeCrianca, executarCrianca, type OqueCrianca } from './sistemas/dinheiroDaCrianca';
-import { disponibilidadePedidoDeCompra, executarPedidoDeCompra } from './sistemas/pedidosDaCrianca';
-import { pararTratamento, podeParaTratamento } from './sistemas/saude';
+import { adultoPaga, aQuemPedir, dependeDosResponsaveis, disponibilidadePedidoDeCompra, executarPedidoDeCompra, respostaDoResponsavel } from './sistemas/pedidosDaCrianca';
+import { pararTratamento, podeParaTratamento, redeDeSaude } from './sistemas/saude';
 import { praticandoPor } from './sistemas/progressao';
 import { disponibilidadeDaAgenda, disponibilidadeDaPostura, executarNaAgenda, limparAgenda, resultadoDaPostura, type OpAgenda } from './sistemas/agenda';
 import { disponibilidadeGesto, fazerGesto, type GestoDeMemoria } from './sistemas/memoria';
@@ -251,6 +251,8 @@ export type Acao =
   | { tipo: 'crianca'; oque: OqueCrianca }
   /** REWORK 10.6 · INF-02: pedir aos responsáveis para comprar algo da loja (inteiro, ou completando o que se tem). */
   | { tipo: 'pedir_compra'; coisaId: string; completar?: boolean; responsavelId?: string }
+  /** REWORK 11 (pendência 10.6 · INF-04): a criança pede a bicicleta aos adultos, da loja de veículos. */
+  | { tipo: 'pedir_veiculo'; modeloId: string; responsavelId?: string }
   /** REWORK 10.6 · P4: parar um tratamento (o risco é dito antes; a consequência depende da condição). */
   | { tipo: 'parar_tratamento'; condicaoId: string }
   /** REWORK 10 · JOG-01: loteria, roleta, caça-níquel e blackjack — só com o dinheiro do jogo (`apostas`). */
@@ -310,6 +312,17 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'margem': return disponibilidadeMargem(v, a.oque);
     case 'crianca': return disponibilidadeCrianca(v, a.oque);
     case 'pedir_compra': return disponibilidadePedidoDeCompra(v, a.coisaId, !!a.completar, a.responsavelId);
+    case 'pedir_veiculo': {
+      const m = modeloVeiculo(a.modeloId);
+      if (!dependeDosResponsaveis(v)) return bloqueio('impossivel', i >= 16 ? 'A partir daqui, a compra é sua.' : 'Sem os adultos da casa por perto, não há a quem pedir.');
+      if (!m || m.cnh || m.habilitacao || m.raro || m.categoria !== 'bicicleta') return bloqueio('impossivel', 'Isso não é coisa que se peça aos adultos.');
+      if (i < m.idadeMin) return bloqueio('impossivel', `A partir dos ${m.idadeMin}.`);
+      if (v.financas.bens.some(b => b.tipo === 'veiculo' && modeloVeiculo(b.modeloId)?.categoria === 'bicicleta')) return bloqueio('incompativel', 'Você já tem uma bicicleta.');
+      if (v.anoAtual.acoes.includes(`crianca:pedido:veiculo:${m.id}`)) return bloqueio('incompativel', 'Você já pediu isso este ano.');
+      if (a.responsavelId && !aQuemPedir(v).some(x => x.p.id === a.responsavelId)) return bloqueio('impossivel', 'Essa pessoa não é um dos seus responsáveis.');
+      if (!ofertaVeiculoPorModelo(v, m.id, true) && !ofertaVeiculoPorModelo(v, m.id)) return bloqueio('impossivel', 'Não há nenhuma à venda agora.');
+      return PERMITIDO;
+    }
     case 'parar_tratamento': return podeParaTratamento(v, a.condicaoId);
     case 'aposta': return disponibilidadeAposta(v, a.op);
     case 'rotina': return a.ativa ? podeComecarRotina(v, a.id, a.nivel ?? (v.rotinas.find(r => r.id === a.id)?.nivel ?? 1)) : v.rotinas.some(r => r.id === a.id) ? PERMITIDO : bloqueio('incompativel', 'Não faz parte da rotina.');
@@ -805,6 +818,26 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
     case 'aposta': { const res = executarAposta(v, r, a.op); if (a.op.jogo === 'controle') return ok(a.op.oque === 'autoexcluir' ? 'Fora das apostas por um ano: a mesa fica fechada para você.' : v.apostas?.limiteAnual ? 'Limite de perda do ano: definido.' : 'O limite saiu.'); return res ? ok(res.texto, res.recebido > res.apostado ? 'bom' : res.recebido < res.apostado ? 'ruim' : 'neutro') : ok('A mão continua: pedir ou parar?'); }
     case 'crianca': { const x = executarCrianca(v, r, a.oque); return ok(x.texto, x.tom); }
     case 'pedir_compra': { const x = executarPedidoDeCompra(v, r, a.coisaId, !!a.completar, a.responsavelId); return { resultado: x.texto, titulo: 'O pedido' }; }
+    case 'pedir_veiculo': {
+      v.anoAtual.acoes.push(`crianca:pedido:veiculo:${a.modeloId}`);
+      const o = (ofertaVeiculoPorModelo(v, a.modeloId, true) ?? ofertaVeiculoPorModelo(v, a.modeloId))!;
+      const m = modeloVeiculo(o.modeloId);
+      const quem = aQuemPedir(v).find(x => x.p.id === a.responsavelId) ?? aQuemPedir(v)[0];
+      const res = respostaDoResponsavel(v, r, quem, o.preco);
+      if (!res.sim) {
+        escrever(v, { texto: `Pediu a ${quem.p.nome} ${m.nome === 'bicicleta' ? 'uma bicicleta' : `uma ${m.nome}`}. Não deu: ${res.motivo === 'dinheiro' ? 'o dinheiro da casa está contado' : 'agora não'}.`, relevancia: 'cotidiano', tema: 'familia', escolha: true });
+        return { resultado: `${res.texto} Dá para guardar dinheiro e voltar depois.`, titulo: 'O pedido' };
+      }
+      adultoPaga(quem.p, o.preco);
+      const id = `v${v.seq++}`;
+      const cores = variantesDeVeiculo(m.categoria);
+      const cor = o.cor ? { cor: o.cor, nome: o.corNome } : cores[Math.floor(rngDe(v.id, id, 'cor').next() * cores.length)];
+      v.financas.bens.push({ id, tipo: 'veiculo', cor: cor.cor, corNome: cor.nome, modeloId: m.id, nome: m.nome, valor: o.preco, precoPago: o.preco, tCompra: v.t, estado: o.estado, anoFabricacao: o.anoFabricacao, usado: o.usado, dono: 'eu', historia: [{ t: v.t, texto: `Presente de ${quem.p.nome}${o.usado ? `, usada, ano ${o.anoFabricacao}` : ''}.` }] });
+      v.fatos['veiculos_comprados'] = (v.fatos['veiculos_comprados'] ?? 0) + 1;
+      lembrarCom(v, quem.p.id, `Comprou ${m.nome === 'bicicleta' ? 'a sua primeira bicicleta' : `uma ${m.nome}`} para você.`, 'apoio', 1, v.t, 'ela');
+      escrever(v, { texto: `${quem.p.nome} comprou ${m.nome === 'bicicleta' ? 'uma bicicleta' : `uma ${m.nome}`} para você${o.usado ? ', usada' : ''}.`, relevancia: 'cotidiano', tema: 'familia', tom: 'bom', escolha: true, pessoas: [quem.p.id] });
+      return { resultado: `${quem.p.nome} topou: a ${m.nome} é sua.`, titulo: 'O pedido' };
+    }
     case 'parar_tratamento': return ok(pararTratamento(v, a.condicaoId), 'ruim');
     case 'margem': {
       const resultado = executarMargem(v, r, a.oque);
@@ -855,6 +888,13 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
         return ok(`${m.nome} entrou na sua semana (${nivelModelo(m, nivel).rotulo.toLowerCase()}).`);
       }
       v.rotinas = v.rotinas.filter(x => x.id !== a.id);
+      // REWORK 11 (pendência 10.6 · A3): a terapia era o tratamento da depressão ou da ansiedade. Largá-la sem plano
+      // (sem o acompanhamento médico por fora) é parar o tratamento — registrado como tal.
+      if (a.id === 'terapia' && !v.financas.planoDeSaude) {
+        const mentais = v.corpo.condicoes.filter(c => (c.id === 'depressao' || c.id === 'ansiedade') && c.tratando && c.diagnosticada !== false);
+        for (const c of mentais) pararTratamento(v, c.id);
+        if (mentais.length) return ok(`Terapia saiu da sua semana. Com ela, parou o tratamento ${mentais.length === 1 ? (mentais[0].id === 'depressao' ? 'da depressão' : 'da ansiedade') : 'da depressão e da ansiedade'}.`, 'ruim');
+      }
       if (atual && m.pratica && v.t - atual.tInicio >= 24) {
         const anos = Math.floor((v.t - atual.tInicio) / 12);
         escrever(v, { texto: `Parou de ${m.nome.toLowerCase().replace(/^jogar bola$/, 'jogar bola')} depois de ${anos} anos.`.replace('Parou de tocar um instrumento', 'Parou de tocar'), relevancia: anos >= 5 ? 'biografia' : 'cotidiano', tema: 'lazer', escolha: true });
@@ -1219,7 +1259,20 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
     case 'plano_saude':
       v.financas.planoDeSaude = a.ativo;
       if (a.ativo) for (const c of v.corpo.condicoes) if (c.cronica) c.tratando = true;
-      return ok(a.ativo ? 'Plano de saúde contratado.' : 'Plano de saúde cancelado.');
+      if (a.ativo) return ok('Plano de saúde contratado.');
+      {
+        // REWORK 11 (pendência 10.6 · A3): cancelar o plano não é neutro para quem trata algo crônico. Onde só há seguro
+        // privado, o tratamento para de verdade (fica registrado, e o corpo pode cobrar); onde há rede pública, ele segue
+        // por ela, com fila — e isso é dito.
+        const tratando = v.corpo.condicoes.filter(c => c.cronica && c.tratando && c.diagnosticada !== false);
+        if (!tratando.length) return ok('Plano de saúde cancelado.');
+        const rede = redeDeSaude(v);
+        if (rede.sistema === 'seguro') {
+          for (const c of tratando) pararTratamento(v, c.id);
+          return ok(`Plano de saúde cancelado. Sem ele, o tratamento ${tratando.length === 1 ? `de ${tratando[0].nome}` : 'das condições crônicas'} parou.`, 'ruim');
+        }
+        return ok(`Plano de saúde cancelado. O tratamento ${tratando.length === 1 ? `de ${tratando[0].nome}` : 'das condições crônicas'} segue ${rede.pelo}, com mais espera.`);
+      }
     case 'renegociar': {
       // Tudo o que está no rotativo ou em cobrança vira um acordo só, com parcela fixa.
       const caras = v.financas.dividas.filter(d => d.tipo === 'cartao' && d.saldo > 0);

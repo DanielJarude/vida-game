@@ -85,6 +85,12 @@
 .bloco-agenda__horas { font-variant-numeric: tabular-nums; color: var(--text-secondary); }
 .bloco-agenda--curto { flex-direction: row; align-items: center; padding-block: 0; }
 .bloco-agenda--curto .bloco-agenda__nome { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: var(--weight-medium); }
+/* REWORK 11 (pendência 10.6 · 7): o bloco curto (o trajeto de 15 min) tinha 5–17 px de altura para o toque. A área de
+   toque cresce para os lados vazios (até 32 px no total); os blocos longos ficam por cima, então o vizinho não perde
+   nada do seu toque. */
+.bloco-agenda--curto { overflow: visible; }
+.bloco-agenda--curto::before { content: ''; position: absolute; left: 0; right: 0; top: -10px; bottom: -10px; }
+.bloco-agenda:not(.bloco-agenda--curto) { z-index: 1; }
 .bloco-agenda--trajeto { background: repeating-linear-gradient(90deg, color-mix(in oklab, var(--cor-bloco) 18%, var(--superficie)) 0 6px, var(--superficie) 6px 9px); }
 .bloco-agenda--alternado { background: repeating-linear-gradient(135deg, color-mix(in oklab, var(--cor-bloco) 26%, var(--superficie)) 0 6px, var(--superficie) 6px 12px); }
 .bloco-agenda--conflito { box-shadow: inset 3px 0 0 var(--ruim), inset 0 0 0 2px var(--ruim); }

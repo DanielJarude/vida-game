@@ -214,6 +214,14 @@ export function sobrecargaDaSemana(v: Vida): { fixos: number; atividades: number
 
 export const BASE_HUMOR = 52;
 
+/**
+ * REWORK 11 · ROT-11.3: as horas livres da semana, pela agenda (entre 7h e 23h). A agenda registra a conta (ela importa
+ * este módulo, não o contrário); sem registro (um teste que não carrega a agenda), a semana conta como sem folga.
+ */
+let horasLivresDaSemana: ((v: Vida) => number) | undefined;
+export function registrarHorasLivres(f: (v: Vida) => number): void { horasLivresDaSemana = f; }
+const semanaSemFolga = (v: Vida) => !horasLivresDaSemana || horasLivresDaSemana(v) < 25;
+
 /** O que puxa o humor para cima ou para baixo agora (soma = alvo − 52). */
 export function fatoresHumor(v: Vida): Fator[] {
   const i = idade(v);
@@ -250,6 +258,13 @@ export function fatoresHumor(v: Vida): Fator[] {
   else if (li.intencao === 'sem_procurar' && !v.educacao.matricula && mesesSemProcurar(v) >= 24 && !v.rotinas.some(r => (BEM_ESTAR[r.id]?.humor ?? 0) > 0)) out.push({ id: 'sem_projeto', texto: 'os dias sem um projeto', efeito: -3 });
   const sentido = sentidoDoTrabalho(v);
   if (sentido) out.push({ id: 'sentido', texto: sentido.texto, efeito: sentido.efeito });
+  // REWORK 11 · ROT-11.3: a realização — o título, a convocação, o prêmio dos últimos dois anos. Pesa e vai passando (não
+  // garante felicidade: o resto da lista continua valendo); antes, nada do que se conquistava entrava na conta.
+  const real = realizacaoRecente(v);
+  if (real) out.push({ id: 'realizacao', texto: real.texto, efeito: real.efeito });
+  // A adaptação ao país novo (antes, uma subtração direta e sem nome em `migracao`): passa com a língua e os anos.
+  const adapt = v.mundo?.adaptacao;
+  if (adapt !== undefined && adapt < 40 && v.fatos['chegou_pais'] !== undefined && v.t - v.fatos['chegou_pais'] < 72) out.push({ id: 'adaptacao', texto: 'a adaptação ao país novo', efeito: -(40 - adapt) / 5 });
   const ritmoH = pesoDoRitmo(v).humor;
   if (ritmoH) out.push({ id: 'ritmo', texto: ritmoH.texto, efeito: ritmoH.efeito });
   const polH = pesoDaPolitica(v).humor;
@@ -280,6 +295,23 @@ export function fatoresHumor(v: Vida): Fator[] {
   if (Math.abs(animo) >= 0.15) out.push({ id: 'temperamento', texto: animo > 0 ? 'um temperamento que tende a ver o lado bom' : 'um temperamento que tende ao lado mais pesado das coisas', efeito: animo * 7 });
   out.push(...fatoresDeAtividades(v, 'humor'));
   return out.filter(f => Math.abs(f.efeito) >= 0.5);
+}
+
+/** REWORK 11 · ROT-11.3: as conquistas dos últimos 24 meses (palmarés), com peso que decai. */
+export function realizacaoRecente(v: Vida): { texto: string; efeito: number } | undefined {
+  const PESO: Partial<Record<string, number>> = { titulo: 4, selecao: 3, premio: 3, acesso: 2 };
+  let soma = 0;
+  let maior: { texto: string; peso: number } | undefined;
+  for (const c of v.caminhos.palmares ?? []) {
+    const idadeDela = v.t - c.t;
+    const base = PESO[c.tipo];
+    if (!base || idadeDela < 0 || idadeDela >= 24) continue;
+    const peso = base * (c.papel === 'elenco' ? 0.6 : 1) * (1 - idadeDela / 36);
+    soma += peso;
+    if (!maior || peso > maior.peso) maior = { texto: c.tipo === 'titulo' ? `a conquista (${c.competicao})` : c.tipo === 'selecao' ? 'vestir a camisa do país' : c.tipo === 'premio' ? `o reconhecimento (${c.competicao})` : 'o acesso conquistado', peso };
+  }
+  if (!maior || soma < 0.5) return undefined;
+  return { texto: maior.texto, efeito: Math.min(9, soma) };
 }
 
 export function alvoHumor(v: Vida): number {
@@ -329,7 +361,13 @@ export function fatoresCabeca(v: Vida): Fator[] {
   if (expo) out.push({ id: 'exposicao', texto: expo.texto, efeito: expo.efeito });
   const s = sobrecargaDaSemana(v);
   if (s.fixos > 0.01) out.push({ id: 'semana_fixa', texto: `compromissos que não cabem na semana: ${listaNatural(s.rotulos.slice(0, 3))}`, efeito: Math.round(s.fixos * 36) });
-  else if (s.apertada) out.push({ id: 'semana_apertada', texto: 'quase nada da semana sobra para você', efeito: 6 });
+  else if (s.apertada && semanaSemFolga(v)) {
+    // REWORK 11 · ROT-11.3: "apertada" pela soma de pesos E pelos horários (menos de 25 horas livres entre 7h e 23h). A
+    // semana cheia do que a pessoa escolheu e de que gosta pesa menos — e é dita assim.
+    const sentido = sentidoDoTrabalho(v);
+    if (sentido && sentido.efeito > 0) out.push({ id: 'semana_apertada', texto: 'uma semana cheia, mas do que escolheu fazer', efeito: 3 });
+    else out.push({ id: 'semana_apertada', texto: 'quase nada da semana sobra para você', efeito: 6 });
+  }
   // REWORK 9.5: a criança sente menos na cabeça o que passa (os pais seguram a rotina) — sente no cansaço.
   if (s.atividades > 0.01) out.push({ id: 'semana', texto: 'uma rotina de atividades exigente demais', efeito: Math.round(s.atividades * 23 * (i < 12 ? 0.5 : 1)) });
   // REWORK 9.7 · BAL-01: o tempo livre vale alguma coisa. Antes, só o excesso da semana pesava — e tudo o que só gastava

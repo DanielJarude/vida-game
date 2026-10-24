@@ -71,3 +71,10 @@
 /* ============================================================ De onde vem o dinheiro da criança (INF-03) */
 .origem-do-dinheiro { margin: var(--space-1) 0 var(--space-2); padding-left: 1.1rem; display: grid; gap: 4px; font-size: var(--type-caption); color: var(--text-secondary); line-height: 1.45; }
 .origem-do-dinheiro strong { color: var(--text-primary); }
+
+/* REWORK 11 · QA (regressão da loja de instrumentos): com o pedido aos responsáveis, a terceira coluna do cartão crescia
+   com o pedido e espremia o nome, o preço e a descrição entre 481 e ~720 px. O pedido passa a ocupar a largura toda do
+   cartão, embaixo; o botão "Comprar" sozinho continua na coluna da direita. */
+.oferta.oferta--objeto:has(.pedido-compra) { grid-template-columns: 76px minmax(0, 1fr); }
+.oferta.oferta--objeto:has(.pedido-compra) > .oferta__comprar { grid-column: 1 / -1; justify-items: stretch; }
+@media (max-width: 480px) { .oferta.oferta--objeto:has(.pedido-compra) { grid-template-columns: 72px minmax(0, 1fr); } }

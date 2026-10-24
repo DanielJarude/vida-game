@@ -133,11 +133,9 @@
 
 /* ---------------------------------------------------------- O veículo na cor dele */
 
-.oferta.oferta--objeto { grid-template-columns: 52px 1fr auto; }
 .oferta__objeto { display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .oferta__cores { display: flex; gap: 2px; }
 .oferta__cores span { width: 8px; height: 8px; border-radius: 50%; box-shadow: 0 0 0 1px var(--rule-strong); }
-@media (max-width: 480px) { .oferta.oferta--objeto { grid-template-columns: 44px 1fr; } .oferta.oferta--objeto > :last-child { grid-column: 1 / -1; } }
 
 /* ---------------------------------------------------------- Baixar o app (Android) */
 .baixar-app { margin: var(--space-4) auto 0; max-width: 520px; text-align: center; }

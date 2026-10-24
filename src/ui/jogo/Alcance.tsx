@@ -20,7 +20,7 @@ import { nomeOcupacao } from '../../motor/sistemas/trabalho';
 import { modeloRotina } from '../../motor/sistemas/rotinas';
 import { analisarEntrada } from '../../motor/sistemas/compromissos';
 import { oportunidadesAbertas } from '../../motor/sistemas/mercados';
-import { dependeDosResponsaveis, situacaoDaCompra } from '../../motor/sistemas/pedidosDaCrianca';
+import { aQuemPedir, dependeDosResponsaveis, situacaoDaCompra } from '../../motor/sistemas/pedidosDaCrianca';
 import { riscoDeParar } from '../../motor/sistemas/saude';
 import { BotaoAcao, Folha, Linha } from '../comum';
 import { dinheiroCurto } from '../apresentar';
@@ -130,6 +130,33 @@ export function PedidoDeCompra({ vida, coisaId, agir }: { vida: Vida; coisaId: s
         {s.tem > 0 && s.falta > 0 && <BotaoAcao vida={vida} acao={{ tipo: 'pedir_compra', coisaId, completar: true, responsavelId: quem }} agir={agir} variante="discreto" ocultarBloqueado>{`Pedir ajuda para completar ${dinheiroCurto(s.falta)}`}</BotaoAcao>}
       </div>
       {s.falta > 0 && <p className="nota">Ou guardar e voltar depois: a mesada, as tarefas pagas e os presentes enchem o cofrinho (Vida · Dinheiro).</p>}
+    </div>
+  );
+}
+
+/** REWORK 11 (pendência 10.6 · INF-04) — a bicicleta da loja de veículos: o preço e o pedido a quem cuida de você. */
+export function PedidoDeVeiculo({ vida, modeloId, preco, agir }: { vida: Vida; modeloId: string; preco: number; agir: (a: Acao) => boolean }) {
+  const quemPode = aQuemPedir(vida).map(x => ({ id: x.p.id, nome: x.p.nome }));
+  const [quem, setQuem] = useState<string | undefined>(quemPode[0]?.id);
+  if (!dependeDosResponsaveis(vida) || !quemPode.length) return null;
+  const pedir = disponibilidade(vida, { tipo: 'pedir_veiculo', modeloId, responsavelId: quem });
+  if (pedir.grau === 'impossivel') return null;
+  const nome = quemPode.find(x => x.id === quem)?.nome ?? quemPode[0].nome;
+  return (
+    <div className="pedido-compra" data-pedido={modeloId}>
+      <dl className="pedido-compra__conta">
+        <div><dt>Preço</dt><dd>{dinheiroCurto(preco)}</dd></div>
+      </dl>
+      {quemPode.length > 1 && (
+        <label className="pedido-compra__quem">Pedir a
+          <select value={quem} onChange={e => setQuem(e.target.value)}>
+            {quemPode.map(x => <option key={x.id} value={x.id}>{x.nome}</option>)}
+          </select>
+        </label>
+      )}
+      <div className="grupo-acoes grupo-acoes--linha">
+        <BotaoAcao vida={vida} acao={{ tipo: 'pedir_veiculo', modeloId, responsavelId: quem }} agir={agir} variante="principal">{`Pedir a ${nome}`}</BotaoAcao>
+      </div>
     </div>
   );
 }

@@ -40,6 +40,7 @@ import { rngDe } from '../rng';
 import { registrarAnaliseDaBase, registrarAnaliseDeHorario, registrarReconciliacao, type Alternativa, type ConflitoDeEntrada } from './compromissos';
 import { ocupacao, ocupacaoOuNula } from '../dados/ocupacoes';
 import { bloqueio, PERMITIDO, type Veredito } from '../plausibilidade';
+import { registrarHorasLivres } from './estado';
 
 export const DIAS = ['segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado', 'domingo'] as const;
 export const DIAS_CURTOS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'] as const;
@@ -163,8 +164,23 @@ export function blocosDoTrabalho(v: Vida, hip?: TrabalhoHipotetico): Bloco[] {
     { ...base, id: 'trabalho_tarde', rotulo: 'Treino no clube (tarde)', dias: [0, 1, 3, 4], inicio: h(15), fim: h(17) },
     { ...base, id: 'trabalho_jogo', rotulo: 'Jogo', detalhe: 'a rodada do fim de semana', dias: [6], inicio: h(16), fim: h(18, 30) }
   ];
+  // REWORK 11 · ROT-11.1: cada ofício tem a sua semana. "Fora" queria dizer "dias longe de casa", e virava um bloco
+  // único de segunda a sexta, das 6h às 22h (80 horas) — para o auxiliar técnico, o músico, o representante.
+  if (oc?.trilha === 'treino' && oc.setor === 'esporte' && (oc.nivel ?? 0) >= 4) return [
+    { ...base, id: 'trabalho', rotulo: rot, detalhe: 'treino e preparação', dias: UTEIS, inicio: h(8), fim: h(12, 30) },
+    { ...base, id: 'trabalho_tarde', rotulo: `${rot} — análise e reunião`, dias: [0, 1, 3], inicio: h(14), fim: h(17) },
+    { ...base, id: 'trabalho_jogo', rotulo: 'Jogo', detalhe: 'a rodada do fim de semana', dias: [6], inicio: h(15), fim: h(19) }
+  ];
+  if (oc?.trilha === 'musica' && oc.jornada === 'fora') return [
+    { ...base, id: 'trabalho', rotulo: `${rot} — ensaio e estúdio`, dias: [1, 2, 3], inicio: h(14), fim: h(19) },
+    { ...base, id: 'trabalho_show', rotulo: `${rot} — shows`, detalhe: 'a noite de trabalho', dias: [4, 5], inicio: h(19), fim: FECHA }
+  ];
+  if (oc?.trilha === 'cena') return [
+    { ...base, id: 'trabalho', rotulo: `${rot} — ensaios, testes e gravações`, dias: [0, 1, 2, 3, 4], inicio: h(10), fim: h(18) }
+  ];
+  if (oc?.trilha === 'estrada') return [{ ...base, id: 'trabalho', rotulo: rot, detalhe: 'dias na estrada', dias: [0, 1, 2, 3], inicio: h(6), fim: h(19) }];
   if (oc?.jornada === 'plantao') return [{ ...base, id: 'trabalho', rotulo: rot, detalhe: 'plantões de 12 horas', dias: [0, 2, 4], inicio: h(7), fim: h(19) }, { ...base, id: 'trabalho_fds', rotulo: `${rot} — fim de semana alternado`, dias: [6], inicio: h(7), fim: h(19), alternado: true }];
-  if (oc?.jornada === 'fora') return [{ ...base, id: 'trabalho', rotulo: rot, detalhe: 'dias fora de casa', dias: UTEIS, inicio: h(6), fim: h(22) }];
+  if (oc?.jornada === 'fora') return [{ ...base, id: 'trabalho', rotulo: rot, detalhe: 'dias de rua e viagem', dias: UTEIS, inicio: h(8), fim: h(18) }];
   if (oc?.jornada === 'longa') return [{ ...base, id: 'trabalho', rotulo: rot, detalhe: 'jornada longa', dias: UTEIS, inicio: h(7), fim: h(19) }, { ...base, id: 'trabalho_sab', rotulo: `${rot} — sábado`, dias: [5], inicio: h(7), fim: h(12) }];
   if (carga === 'parcial') {
     const turnos: Turno[] = idade(v) >= 18 ? ['manha', 'tarde', 'noite'] : ['manha', 'tarde'];
@@ -277,10 +293,6 @@ export function blocosFixos(v: Vida, o: { semTrabalho?: boolean; trabalho?: Trab
   if (i >= 18) {
     const cuidar = moraCom(v).filter(p => { const pr = v.vinculos[p.id]?.parentesco; return (pr === 'mae' || pr === 'pai' || pr === 'avo' || pr === 'sogro') && idadePessoa(v, p) >= 75 && p.saude < 45; });
     if (cuidar.length && !(pa && cuidar.some(p => p.id === pa.pessoaId))) out.push({ id: 'cuidar', origem: 'cuidado', rotulo: `Cuidar de ${listaNatural(cuidar.map(p => p.nome))}`, dias: TODOS, inicio: h(20), fim: h(21), obrigatorio: true, movel: false });
-    const bichos = vinculosVivos(v).filter(x => x.p.especie && x.vin.convivio.includes('casa') && x.p.pet?.tutor === 'eu' && animal(x.p.especie).semana > 0).map(x => x.p);
-    const caes = bichos.filter(p => p.especie === 'cachorro');
-    if (caes.length) out.push({ id: 'pets', origem: 'pets', rotulo: caes.length === 1 ? `Passear com ${caes[0].nome}` : `Passear com ${listaNatural(caes.map(p => p.nome))}`, dias: TODOS, inicio: h(6, 30), fim: h(7), obrigatorio: true, movel: false });
-    else if (bichos.length) out.push({ id: 'pets', origem: 'pets', rotulo: `Cuidar de ${listaNatural(bichos.map(p => p.nome))}`, dias: TODOS, inicio: h(21), fim: h(21, 30), obrigatorio: true, movel: false });
   }
   // O trajeto de todo dia útil, antes e depois do compromisso principal (a mesma conta de `transporte`).
   const d = deslocamento(v);
@@ -292,6 +304,36 @@ export function blocosFixos(v: Vida, o: { semTrabalho?: boolean; trabalho?: Trab
     const rot = d.rotulo;
     out.push({ id: 'trajeto_ida', origem: 'trajeto', rotulo: rot, dias: ida.dias, inicio: Math.max(ABRE, ida.inicio - meia), fim: ida.inicio, obrigatorio: true, movel: false });
     if (volta.fim + meia <= FECHA) out.push({ id: 'trajeto_volta', origem: 'trajeto', rotulo: rot, dias: volta.dias, inicio: volta.fim, fim: volta.fim + meia, obrigatorio: true, movel: false });
+  }
+  // REWORK 11 · ROT-11.2: o cuidado da casa (filhos, quem precisa de ajuda) é delegável. Nos dias em que o trabalho
+  // atravessa o horário e mora outro adulto em casa, quem cobre é essa pessoa — dito no bloco, sem conflito inventado.
+  const adulto = moraCom(v).find(p => !p.especie && idadePessoa(v, p) >= 18);
+  if (adulto) for (let k = 0; k < out.length; k++) {
+    const b = out[k];
+    if (b.origem !== 'filhos' && b.id !== 'cuidar') continue;
+    const choca = out.filter(x => (x.origem === 'trabalho' || x.origem === 'paralela' || x.origem === 'negocio') && sobrepoe(x, b));
+    if (!choca.length) continue;
+    const dias = b.dias.filter(d => !choca.some(x => x.dias.includes(d)));
+    out[k] = { ...b, dias, detalhe: `nos outros dias, ${adulto.nome} cobre` };
+  }
+  for (let k = out.length - 1; k >= 0; k--) if ((out[k].origem === 'filhos' || out[k].id === 'cuidar') && !out[k].dias.length) out.splice(k, 1);
+  if (i >= 18) {
+    // REWORK 11 · ROT-11.2: o bicho tem janela, não hora marcada. O passeio e a comida procuram o primeiro horário livre
+    // em volta do trabalho, da escola e do trajeto; se nenhum cabe e mora mais alguém (12+) em casa, a tarefa é dividida
+    // e não vira conflito. Só quem cuida sozinho e não tem hora nenhuma fica com o choque.
+    const bichos = vinculosVivos(v).filter(x => x.p.especie && x.vin.convivio.includes('casa') && x.p.pet?.tutor === 'eu' && animal(x.p.especie).semana > 0).map(x => x.p);
+    const caes = bichos.filter(p => p.especie === 'cachorro');
+    if (bichos.length) {
+      const rot = caes.length ? (caes.length === 1 ? `Passear com ${caes[0].nome}` : `Passear com ${listaNatural(caes.map(p => p.nome))}`) : `Cuidar de ${listaNatural(bichos.map(p => p.nome))}`;
+      const dur = 30;
+      const janelas = caes.length ? [h(6, 30), h(7), h(19, 30), h(20), h(21), h(22), h(22, 30)] : [h(21), h(20), h(21, 30), h(22), h(22, 30), h(7), h(6, 30)];
+      const rigidos = out.filter(b => !b.movel);
+      const cabe = janelas.find(ini => !rigidos.some(b => sobrepoe({ dias: TODOS, inicio: ini, fim: ini + dur }, b)));
+      const ajuda = moraCom(v).find(p => !p.especie && idadePessoa(v, p) >= 12);
+      if (cabe !== undefined) out.push({ id: 'pets', origem: 'pets', rotulo: rot, detalhe: 'no horário que sobra', dias: TODOS, inicio: cabe, fim: cabe + dur, obrigatorio: true, movel: false });
+      else if (ajuda) out.push({ id: 'pets', origem: 'pets', rotulo: `${rot} (com ${ajuda.nome})`, detalhe: 'dividido com quem mora junto', dias: [5, 6], inicio: h(10), fim: h(10, 30), obrigatorio: true, movel: false });
+      else out.push({ id: 'pets', origem: 'pets', rotulo: rot, dias: TODOS, inicio: janelas[0], fim: janelas[0] + dur, obrigatorio: true, movel: false });
+    }
   }
   return out;
 }
@@ -999,3 +1041,14 @@ registrarAnaliseDaBase(baseComONovo);
 registrarAnaliseDeHorario(conflitoDeHorario);
 registrarReconciliacao(reconciliarObrigacoes);
 registrarHorarioDaAtividade(horarioDaAtividade);
+
+/** REWORK 11 · ROT-11.3: as horas livres da semana (7h–23h), para a leitura da cabeça (`estado`). Uma conta por vida e mês. */
+const livresEm = new WeakMap<Vida, { chave: string; h: number }>();
+registrarHorasLivres(v => {
+  const chave = `${v.t}|${v.trabalho.atual?.ocupacaoId ?? ''}|${v.educacao.matricula?.cursoId ?? ''}|${v.rotinas.length}|${JSON.stringify(v.agenda ?? null)}`;
+  const c = livresEm.get(v);
+  if (c && c.chave === chave) return c.h;
+  const hs = agendaDaSemana(v).livre.reduce((s, m) => s + m, 0) / 60;
+  livresEm.set(v, { chave, h: hs });
+  return hs;
+});

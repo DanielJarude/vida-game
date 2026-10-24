@@ -147,6 +147,6 @@ details.ficha__grupo .grupo-acoes { padding-bottom: var(--space-2); }
 .oferta.oferta--objeto { grid-template-columns: 76px minmax(0, 1fr) auto; }
 .oferta--objeto .oferta__objeto { width: 76px; padding: 4px; border-radius: var(--radius-md); background: var(--bg-inset); }
 .oferta--objeto .oferta__objeto .desenho-objeto { width: 64px; height: 64px; }
-@media (max-width: 480px) { .oferta.oferta--objeto { grid-template-columns: 72px minmax(0, 1fr); } .oferta--objeto .oferta__objeto { width: 72px; } }
+@media (max-width: 480px) { .oferta.oferta--objeto { grid-template-columns: 72px minmax(0, 1fr); } .oferta--objeto .oferta__objeto { width: 72px; } .oferta.oferta--objeto > :last-child { grid-column: 1 / -1; } }
 .ficha__grupo .grupo-acoes { flex-direction: row; flex-wrap: wrap; }
 .ficha__grupo--romance .ficha__subtitulo { color: var(--tom-pessoas); }
