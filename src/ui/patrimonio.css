@@ -1,0 +1,88 @@
+/*
+ * REWORK 12 — o Patrimônio em partes (resumo, imóveis, garagem, coleção, empresas, objetos), as lojas de peças,
+ * o "antes de decidir" das compras grandes. Classes próprias (`pat-*`); as partes escondidas ficam no documento.
+ */
+
+.pat { gap: var(--space-4); }
+.pat-parte { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
+.pat-parte--oculta { display: none; }
+
+/* O resumo: os números por parte, a liquidez, o que rende e o que custa por mês. */
+.pat-numeros { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--space-2); margin: 0; }
+.pat-numeros__item { display: flex; flex-direction: column; gap: 2px; padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); background: var(--veu-1); border-left: 4px solid var(--rule-strong); min-width: 0; }
+.pat-numeros__item dt { font-size: var(--type-caption); color: var(--text-muted); }
+.pat-numeros__item dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.pat-numeros__item--imoveis { border-left-color: var(--patrimonio-imovel); }
+.pat-numeros__item--veiculos { border-left-color: var(--patrimonio-veiculo); }
+.pat-numeros__item--aplicacoes { border-left-color: var(--patrimonio-aplicado); }
+.pat-numeros__item--colecao { border-left-color: var(--patrimonio-colecao); }
+.pat-numeros__item--empresas, .pat-numeros__item--negocio { border-left-color: var(--patrimonio-empresa); }
+.pat-numeros__item--deve { border-left-color: var(--danger-line); }
+.pat-numeros__item--liquido { grid-column: 1 / -1; border-left-color: var(--tinta); }
+.pat-numeros__item--liquido dd { font-size: var(--type-subheading); }
+
+.pat-liquidez { padding: var(--space-3); border-radius: var(--radius-sm); border: 1px solid var(--rule-strong); }
+.pat-liquidez p { margin: 0 0 var(--space-1); }
+
+.pat-recorrente { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--space-3); }
+.pat-recorrente ul { list-style: none; margin: var(--space-1) 0 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-1); }
+.pat-recorrente li { display: flex; justify-content: space-between; gap: var(--space-2); font-size: var(--type-caption); border-bottom: 1px dotted var(--rule); padding-bottom: 2px; }
+.pat-recorrente li span { min-width: 0; overflow-wrap: anywhere; }
+.pat-recorrente li strong { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.pat-evolucao { display: flex; flex-direction: column; gap: var(--space-1); }
+.pat-rolagem { overflow-x: auto; max-width: 100%; }
+.pat-tabela { border-collapse: collapse; font-size: var(--type-caption); width: 100%; }
+.pat-tabela th, .pat-tabela td { text-align: left; padding: var(--space-1) var(--space-2); border-bottom: 1px solid var(--rule); font-variant-numeric: tabular-nums; }
+.pat-tabela--garagem { min-width: 520px; }
+.pat-selo { display: inline-block; margin-left: var(--space-1); padding: 0 6px; border-radius: 999px; font-size: var(--type-meta); border: 1px solid var(--rule-strong); font-weight: 500; }
+
+.pat-contas-imoveis { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.pat-contas-imoveis li { display: flex; flex-direction: column; gap: 2px; padding: var(--space-2) 0; border-bottom: 1px solid var(--rule); }
+
+.pat-guardado { padding: var(--space-3); border-radius: var(--radius-sm); background: var(--veu-1); display: flex; flex-direction: column; gap: var(--space-1); }
+.pat-guardado p { margin: 0; }
+
+.pat-lojas { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.pat-lojas .botao { min-height: 44px; }
+
+/* A coleção. */
+.pat-pecas { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); }
+.pat-peca { padding: var(--space-3); border-radius: var(--radius-sm); border: 1px solid var(--rule); border-left: 4px solid var(--patrimonio-colecao); display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+.pat-peca__cabeca { display: flex; flex-direction: column; gap: 2px; }
+.pat-peca__meta { font-size: var(--type-caption); color: var(--text-muted); }
+.pat-confirmar { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-2); border: 1px dashed var(--rule-strong); border-radius: var(--radius-sm); width: 100%; }
+.pat-confirmar .nota { margin: 0; }
+
+/* As empresas. */
+.pat-empresa { padding: var(--space-3); border-radius: var(--radius-sm); border: 1px solid var(--rule); border-left: 4px solid var(--patrimonio-empresa); display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+.pat-empresa--em_crise, .pat-empresa--interditada { border-left-color: var(--danger-line); }
+.pat-empresa__cabeca { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-2); }
+.pat-empresa__cabeca h3 { margin: 0; }
+.pat-empresa__cabeca .nota { margin: 2px 0 0; }
+.pat-empresa__estado { flex: none; font-size: var(--type-caption); padding: 2px 8px; border-radius: 999px; border: 1px solid var(--rule-strong); }
+.pat-empresa__estado--em_crise, .pat-empresa__estado--interditada { border-color: var(--danger-line); color: var(--danger); }
+.pat-decisoes { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-3); margin-top: var(--space-2); }
+.pat-decisoes > div { display: flex; flex-direction: column; gap: var(--space-1); }
+.pat-saida { display: flex; }
+.pat-abrir { display: flex; flex-direction: column; gap: var(--space-2); align-items: flex-start; }
+.pat-abrir__corpo { display: flex; flex-direction: column; gap: var(--space-2); width: 100%; }
+.pat-abrir__corpo select { min-height: 44px; max-width: 100%; }
+.pat-participacoes { display: flex; flex-direction: column; gap: var(--space-2); }
+
+/* O antes de decidir das compras grandes (imóvel, veículo). */
+.antes-de-decidir { padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); background: var(--veu-1); }
+.antes-de-decidir .rotulo-pequeno { margin: 0 0 var(--space-1); }
+.antes-de-decidir dl { margin: 0; display: flex; flex-direction: column; gap: var(--space-1); }
+.antes-de-decidir dl > div { display: grid; grid-template-columns: minmax(96px, 30%) 1fr; gap: var(--space-2); font-size: var(--type-caption); }
+.antes-de-decidir dt { font-weight: 600; }
+.antes-de-decidir dd { margin: 0; overflow-wrap: anywhere; }
+
+.balanco__bloco--colecao { background: var(--patrimonio-colecao); }
+.balanco__bloco--empresas { background: var(--patrimonio-empresa); }
+
+@media (max-width: 420px) {
+  .pat-numeros { grid-template-columns: 1fr 1fr; }
+  .antes-de-decidir dl > div { grid-template-columns: 1fr; gap: 0; }
+  .pat-empresa__cabeca { flex-direction: column; }
+}

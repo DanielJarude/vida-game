@@ -82,7 +82,14 @@ function Seguranca({ s }: { s: ReturnType<typeof leituraDaSeguranca> }) {
 
 /* ------------------------------------------------ O que tem, o que deve */
 
-export function OQueTem({ vida, agir, abrir }: Props & { abrir: (l: QualLugar) => void }) {
+/** REWORK 12: os bens de um tipo (os imóveis, ou os veículos), cada um como o objeto que é — para as partes do Patrimônio. */
+export function BensDoTipo({ vida, agir, tipo }: Props & { tipo: 'imovel' | 'veiculo' }) {
+  const bens = leituraDosBens(vida).filter(x => x.tipo === tipo);
+  if (!bens.length) return null;
+  return <div className="objetos">{bens.map(x => <Objeto key={x.id} vida={vida} agir={agir} b={x} />)}</div>;
+}
+
+export function OQueTem({ vida, agir, abrir, semBens }: Props & { abrir: (l: QualLugar) => void; /** REWORK 12: os bens moram nas partes Imóveis e Garagem. */ semBens?: boolean }) {
   const b = balanco(vida);
   const bens = leituraDosBens(vida);
   const seg = leituraDaSeguranca(vida);
@@ -95,6 +102,8 @@ export function OQueTem({ vida, agir, abrir }: Props & { abrir: (l: QualLugar) =
     { id: 'veiculos', rotulo: 'Veículos', valor: b.veiculos },
     { id: 'aplicacoes', rotulo: 'Guardado e aplicado', valor: b.aplicacoes },
     { id: 'negocio', rotulo: 'Caixa do negócio', valor: b.negocio },
+    { id: 'colecao', rotulo: 'Coleção', valor: b.colecao },
+    { id: 'empresas', rotulo: 'Empresas', valor: b.empresas },
     { id: 'conta', rotulo: 'Na conta', valor: Math.max(0, b.conta) }
   ].filter(x => x.valor > 0);
   const deve = [
@@ -130,12 +139,12 @@ export function OQueTem({ vida, agir, abrir }: Props & { abrir: (l: QualLugar) =
         </>
       )}
 
-      {bens.some(x => x.tipo === 'imovel') && (
+      {!semBens && bens.some(x => x.tipo === 'imovel') && (
         <div className="objetos">
           {bens.filter(x => x.tipo === 'imovel').map(x => <Objeto key={x.id} vida={vida} agir={agir} b={x} />)}
         </div>
       )}
-      {bens.some(x => x.tipo === 'veiculo') && (
+      {!semBens && bens.some(x => x.tipo === 'veiculo') && (
         <section className="seus-veiculos" aria-labelledby="seus-veiculos">
           <h3 id="seus-veiculos" className="subtitulo">Seus veículos</h3>
           <p className="nota">Manter é o padrão: cada um segue custando (uso, taxas, oficina) e perdendo valor devagar. Vender, usar de outro jeito ou trocar é escolha.</p>
@@ -206,6 +215,9 @@ function Objeto({ vida, agir, b }: Props & { b: LeituraBem }) {
       <div className="grupo-acoes grupo-acoes--linha objeto__acoes">
         {b.tipo === 'veiculo' && <BotaoAcao vida={vida} acao={{ tipo: 'veiculo', bemId: b.id, oque: 'revisao' }} agir={agir} variante="discreto" ocultarBloqueado>Fazer a revisão</BotaoAcao>}
         {b.tipo === 'veiculo' && <BotaoAcao vida={vida} acao={{ tipo: 'veiculo', bemId: b.id, oque: 'usar' }} agir={agir} variante="discreto" ocultarBloqueado>Voltar a usar</BotaoAcao>}
+        {b.tipo === 'veiculo' && <BotaoAcao vida={vida} acao={{ tipo: 'veiculo', bemId: b.id, oque: 'principal' }} agir={agir} variante="discreto" ocultarBloqueado>Usar no dia a dia</BotaoAcao>}
+        {b.tipo === 'veiculo' && <BotaoAcao vida={vida} acao={{ tipo: 'veiculo', bemId: b.id, oque: 'restaurar' }} agir={agir} variante="discreto" ocultarBloqueado>Restaurar</BotaoAcao>}
+        {b.tipo === 'veiculo' && <BotaoAcao vida={vida} acao={{ tipo: 'veiculo', bemId: b.id, oque: 'trazer' }} agir={agir} variante="discreto" ocultarBloqueado>Trazer para cá</BotaoAcao>}
         {b.tipo === 'imovel' && <BotaoAcao vida={vida} acao={{ tipo: 'imovel', bemId: b.id, oque: 'morar' }} agir={agir} variante="discreto" ocultarBloqueado>Morar aqui</BotaoAcao>}
         {b.tipo === 'imovel' && <BotaoAcao vida={vida} acao={{ tipo: 'imovel', bemId: b.id, oque: 'alugar' }} agir={agir} variante="discreto" ocultarBloqueado>Alugar para alguém</BotaoAcao>}
         {b.tipo === 'imovel' && <BotaoAcao vida={vida} acao={{ tipo: 'imovel', bemId: b.id, oque: 'retomar' }} agir={agir} variante="discreto" ocultarBloqueado>Pedir o imóvel de volta</BotaoAcao>}

@@ -332,7 +332,7 @@ describe('moradia', () => {
     v.trabalho.atual!.salario = 9000;
     v.financas.conta = 150000;
     // REWORK 12: a primeira oferta que o banco aceita financiar (os preços passaram a sair do aluguel da cidade).
-    const ofertas = [...imoveisParaVoce(v, 'venda').para, ...imoveisParaVoce(v, 'venda').resto].map(x => x.item);
+    const ofertas = [...imoveisParaVoce(v, 'venda').para.map(x => x.item), ...imoveisParaVoce(v, 'venda').resto];
     const o = ofertas.find(x => podeTentar(disponibilidade(v, { tipo: 'comprar_imovel', ofertaId: x.id, financiar: true, morar: true, prazo: 20 })))!;
     let d = executar(v, { tipo: 'comprar_imovel', ofertaId: o.id, financiar: true, morar: true, prazo: 20 }).vida;
     const saldo0 = d.financas.dividas[0].saldo;

@@ -40,6 +40,8 @@ import { corDoVeiculo } from '../../motor/dados/pertences';
 import { DesenhoObjeto } from './material/Objetos';
 import { Retrato } from '../avatar/Retrato';
 import { LOJAS_DE_COISAS, type QualLugar } from './material/Lugares';
+import { LOJAS_DE_COLECAO, type LojaDeColecao } from '../../motor/dados/colecionaveis';
+import { lojaDeColecaoNaCidade, ofertasDeColecao } from '../../motor/sistemas/colecao';
 
 interface Props { vida: Vida; agir: (a: Acao) => boolean; abrir: (l: QualLugar) => void }
 
@@ -106,6 +108,7 @@ function vitrines(v: Vida): { grupo: string; id: string; lugares: Vitrine[] }[] 
   const nautica = lojaNaCidade(v.moradia.municipioId, 'nautica') && (din >= 60000 || temRaro(v, 'embarcacao'));
   const aero = lojaNaCidade(v.moradia.municipioId, 'aeroclube') && (din >= 350000 || temRaro(v, 'aeronave'));
   const veiculosSeus = v.financas.bens.filter(b => b.tipo === 'veiculo');
+  const colecionador = i >= 18 && lojaNaCidade(v.moradia.municipioId, 'colecionador') && (din >= 300000 || veiculosSeus.some(b => b.tipo === 'veiculo' && !!modeloVeiculo(b.modeloId).segmento));
 
   return [
     { grupo: 'Onde morar', id: 'moradia', lugares: [{
@@ -119,6 +122,8 @@ function vitrines(v: Vida): { grupo: string; id: string; lugares: Vitrine[] }[] 
       { id: 'motos', nome: 'Motos e bicicletas', oque: 'Novas e usadas; bicicleta é de qualquer idade', idadeMin: 8, porque: 'Com essa idade, a bicicleta vem da família.', vitrine: motos.desenho, preco: motos.preco ? `a partir de ${dinheiroCurto(motos.preco)}` : undefined },
       ...(nautica ? [{ id: 'nautica' as QualLugar, nome: 'Loja náutica', oque: 'Moto aquática, lancha, veleiro', idadeMin: 18, porque: 'A partir dos 18.', vitrine: vitrineDeVeiculos(v, 'nautica').desenho }] : []),
       ...(aero ? [{ id: 'aeroclube' as QualLugar, nome: 'Aeroclube e hangar', oque: 'Do ultraleve ao jato; a formação de piloto', idadeMin: 18, porque: 'A partir dos 18.', vitrine: vitrineDeVeiculos(v, 'aeroclube').desenho }] : []),
+      // REWORK 12: a garagem de colecionador (superesportivos, altíssimo luxo, clássicos), nas cidades grandes, para quem pode olhar.
+      ...(colecionador ? [{ id: 'colecionador' as QualLugar, nome: 'Garagem de colecionador', oque: 'Superesportivos, altíssimo luxo e clássicos com história', idadeMin: 18, porque: 'A partir dos 18.', vitrine: vitrineDeVeiculos(v, 'colecionador').desenho, preco: `a partir de ${dinheiroCurto(vitrineDeVeiculos(v, 'colecionador').preco ?? 0)}` }] : []),
       ...(temVeiculo ? [{ id: 'oficina' as QualLugar, nome: 'Oficina', oque: 'Revisão e conserto do que é seu', idadeMin: 0, vitrine: veiculosSeus.slice(0, 1).map(b => b.tipo === 'veiculo' ? <DesenhoVeiculo key={b.id} forma={formaDaVersao(versaoVeiculo(b.versaoId), b.modeloId)} versaoId={b.versaoId} cor={corDoVeiculo(b, modeloVeiculo(b.modeloId).categoria).cor} estado={b.estado} largura={88} /> : null), seu: veiculosSeus.some(b => b.tipo === 'veiculo' && b.problema) ? 'Há um conserto esperando' : undefined }] : [])
     ] },
     { grupo: 'As coisas do dia a dia', id: 'objetos', lugares: LOJAS_DE_COISAS.map(daLoja) },
@@ -126,6 +131,12 @@ function vitrines(v: Vida): { grupo: string; id: string; lugares: Vitrine[] }[] 
       { id: 'estilo', nome: 'Ótica, roupas e acessórios', oque: 'Óculos, chapéus, roupas, um relógio — o que aparece no retrato', idadeMin: AUTONOMIA.compra_pessoal.idade, porque: AUTONOMIA.compra_pessoal.antes, vitrine: null },
       { id: 'clinica', nome: 'Clínica de cirurgia plástica', oque: 'Nariz, orelhas, pálpebras, lifting, cabelo, lábios', idadeMin: 16, porque: 'Cirurgia estética, só depois dos 16 (a maior parte, dos 18).', vitrine: null }
     ] },
+    // REWORK 12: luxo e coleção — relógios, joias, arte, antiguidades, memorabilia, o leilão. Só o que existe na cidade.
+    ...(i >= 18 ? [{ grupo: 'Luxo e coleção', id: 'colecao', lugares: (Object.keys(LOJAS_DE_COLECAO) as LojaDeColecao[]).filter(l => lojaDeColecaoNaCidade(v.moradia.municipioId, l)).map(l => {
+      const ofertas = ofertasDeColecao(v, l);
+      const minhas = (v.financas.colecao ?? []).filter(c => ofertas.some(o => o.categoria === c.categoria)).length;
+      return { id: l as QualLugar, nome: LOJAS_DE_COLECAO[l].nome, oque: LOJAS_DE_COLECAO[l].frase.split('.')[0], idadeMin: 18, porque: 'A partir dos 18.', vitrine: null, preco: ofertas.length ? `a partir de ${dinheiroCurto(Math.min(...ofertas.map(o => o.preco)))}` : undefined, seu: minhas ? `Na sua coleção: ${minhas} ${minhas === 1 ? 'peça' : 'peças'} deste tipo` : undefined };
+    }) }] : []),
     { grupo: 'Serviços', id: 'servicos', lugares: [
       { id: 'banco', nome: 'Banco', oque: 'Guardar, investir, pedir empréstimo', idadeMin: 18, porque: 'Conta e investimento no seu nome, a partir dos 18.', vitrine: null, seu: v.financas.investimentos.length ? `${v.financas.investimentos.length} ${v.financas.investimentos.length === 1 ? 'aplicação' : 'aplicações'}` : undefined }
     ] },
@@ -144,15 +155,19 @@ const O_QUE: Record<LojaDeCoisas, string> = {
 /** A vitrine tem objetos de verdade na frente (senão, a fachada mostra o interior da loja). */
 const temObjetos = (v: ReactNode) => (Array.isArray(v) ? v.some(Boolean) : Boolean(v));
 
+/** REWORK 12: as lojas novas usam a fachada de um lugar parecido (a relojoaria e a joalheria, a da ótica; a galeria, a da livraria). */
+const FACHADA_DE: Partial<Record<QualLugar, LugarDaCidade>> = { comprar: 'alugar', colecionador: 'concessionaria', relojoaria: 'estilo', joalheria: 'estilo', galeria: 'livraria', antiquario: 'casa', memorabilia: 'esportes', leilao: 'banco' };
+const fachadaDoLugar = (id: QualLugar): LugarDaCidade => FACHADA_DE[id] ?? (id as LugarDaCidade);
+
 function CartaoVitrine({ x, i, abrir }: { x: Vitrine; i: number; abrir: (l: QualLugar) => void }) {
   const cedo = i < x.idadeMin;
   return (
     <li className={`vitrine${cedo ? ' vitrine--cedo' : ''}`}>
       <button type="button" className="vitrine__abrir" onClick={() => abrir(x.id)} disabled={cedo} aria-describedby={cedo ? `cedo-${x.id}` : undefined}>
         {/* REWORK 9: na loja de porta lateral, os objetos ficam na frente do vidro (no máximo dois), nunca na porta. */}
-        <span className="vitrine__objetos" aria-hidden data-porta={PORTA_DA_FACHADA[x.id === 'comprar' ? 'alugar' : x.id as LugarDaCidade] ?? undefined}>
-          <Fachada lugar={x.id === 'comprar' ? 'alugar' : x.id} largura={360} altura={112} vazia={!temObjetos(x.vitrine)} className="vitrine__fachada" />
-          {PORTA_DA_FACHADA[x.id === 'comprar' ? 'alugar' : x.id as LugarDaCidade] && temObjetos(x.vitrine)
+        <span className="vitrine__objetos" aria-hidden data-porta={PORTA_DA_FACHADA[fachadaDoLugar(x.id)] ?? undefined}>
+          <Fachada lugar={fachadaDoLugar(x.id)} largura={360} altura={112} vazia={!temObjetos(x.vitrine)} className="vitrine__fachada" />
+          {PORTA_DA_FACHADA[fachadaDoLugar(x.id)] && temObjetos(x.vitrine)
             ? <span className="vitrine__produtos">{Array.isArray(x.vitrine) ? x.vitrine.slice(0, 2) : x.vitrine}</span>
             : x.vitrine}
         </span>

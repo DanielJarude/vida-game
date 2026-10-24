@@ -16,7 +16,6 @@ import { coisasDaVida } from '../../motor/sistemas/coisas';
 import { coisa } from '../../motor/dados/coisas';
 import { varianteDe } from '../../motor/sistemas/pertences';
 import { DesenhoObjeto } from './material/Objetos';
-import { Pertences } from './Pertences';
 import { useState } from 'react';
 import type { Vida } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
@@ -32,7 +31,8 @@ import { ondeMora } from '../apresentar';
 import { nomeLugar } from '../../motor/dados/lugares';
 import { balanco, seguranca } from '../../motor/sistemas/dinheiro';
 import { leituraDaSeguranca } from '../leituraMaterial';
-import { Lar, OQueTem, ViverACasa } from './Casa';
+import { Lar, ViverACasa } from './Casa';
+import { Patrimonio } from './Patrimonio';
 import { ODinheiro } from './Dinheiro';
 import { Cidade } from './Cidade';
 import { Lugar, type QualLugar } from './material/Lugares';
@@ -85,12 +85,8 @@ export function VidaConcreta({ vida, agir, secao, irSecao, abrirPessoa }: Props)
         {secao === 'compras' && <Compras vida={vida} agir={agir} abrir={setLugar} />}
         {/* REWORK 9.5: o patrimônio é um inventário — o balanço e os bens grandes (imóveis, veículos, aplicações, dívidas
             presas a bens) e, depois, os objetos (usar, cuidar, vender). Antes, metade disso morava em Dinheiro. */}
-        {secao === 'pertences' && (
-          <div className="patrimonio">
-            {i >= 12 && <OQueTem vida={vida} agir={agir} abrir={setLugar} />}
-            <Pertences vida={vida} agir={agir} abrir={setLugar} semVeiculos={i >= 12} />
-          </div>
-        )}
+        {/* REWORK 12: o Patrimônio em partes — resumo (ativos, dívidas, liquidez), imóveis, garagem, coleção, empresas, objetos. */}
+        {secao === 'pertences' && <Patrimonio vida={vida} agir={agir} abrir={setLugar} />}
         {secao === 'cidade' && <Cidade vida={vida} agir={agir} irCompras={() => irSecao('compras')} abrir={setLugar} />}
         {/* REWORK 9: as viagens são experiência material (destino, custo, com quem) — saíram de Tempo livre. */}
         {secao === 'viagens' && (i >= 12 ? <Experiencias vida={vida} agir={agir} /> : <p className="nota">Viajar, por enquanto, é com a família — quando ela decide ir.</p>)}

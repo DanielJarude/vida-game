@@ -223,6 +223,8 @@
   --patrimonio-veiculo: color-mix(in oklab, var(--tom-casa) 26%, transparent);
   --patrimonio-aplicado: color-mix(in oklab, var(--tom-rumo) 34%, transparent);
   --patrimonio-negocio: color-mix(in oklab, var(--tom-trabalho) 36%, transparent);
+  --patrimonio-colecao: color-mix(in oklab, var(--tom-pessoas) 34%, transparent);
+  --patrimonio-empresa: color-mix(in oklab, var(--tom-trabalho) 52%, transparent);
   --patrimonio-conta: var(--veu-2);
   --patrimonio-obrigacao: var(--veu-2);
   --patrimonio-obrigacao-fraca: var(--veu-1);

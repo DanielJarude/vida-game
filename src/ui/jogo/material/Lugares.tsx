@@ -43,9 +43,12 @@ import { BALCOES, ITENS_ESTILO, type CategoriaItem } from '../../../motor/dados/
 import { precoDoItem, temItem } from '../../../motor/sistemas/estilo';
 
 const capitalizar = (x: string) => x.charAt(0).toUpperCase() + x.slice(1);
+import { LOJAS_DE_COLECAO, type LojaDeColecao } from '../../../motor/dados/colecionaveis';
+import { LojaDeColecaoDaCidade } from '../Patrimonio';
+import { custosAntesDeComprarImovel, custosAntesDeComprarVeiculo } from '../../leituraPatrimonio';
 import { dinheiroCheio, dinheiroCurto, formaDoModelo } from '../../leituraMaterial';
 
-export type QualLugar = 'alugar' | 'comprar' | 'concessionaria' | 'usados' | 'motos' | 'nautica' | 'aeroclube' | 'oficina' | 'banco' | 'abrigo' | 'pets' | 'estilo' | 'clinica' | LojaDeCoisas;
+export type QualLugar = 'alugar' | 'comprar' | 'concessionaria' | 'usados' | 'motos' | 'nautica' | 'aeroclube' | 'colecionador' | 'oficina' | 'banco' | 'abrigo' | 'pets' | 'estilo' | 'clinica' | LojaDeCoisas | LojaDeColecao;
 /** As lojas das coisas da vida (`dados/coisas`). */
 export const LOJAS_DE_COISAS: LojaDeCoisas[] = ['eletronicos', 'casa', 'instrumentos', 'esportes', 'livraria'];
 
@@ -53,7 +56,9 @@ interface Props { vida: Vida; agir: (a: Acao) => boolean; qual: QualLugar; aoFec
 
 const TITULO: Record<QualLugar, string> = {
   alugar: 'Imobiliária', comprar: 'Imobiliária', concessionaria: 'Concessionária', usados: 'Carros usados', motos: 'Motos e bicicletas', nautica: 'Loja náutica', aeroclube: 'Aeroclube e hangar', oficina: 'Oficina', banco: 'Banco', abrigo: 'Abrigo de animais', pets: 'Loja e criadouro de animais', estilo: 'Ótica, roupas e acessórios', clinica: 'Clínica de cirurgia plástica',
-  ...NOME_LOJA
+  colecionador: 'Garagem de colecionador',
+  ...NOME_LOJA,
+  ...Object.fromEntries(Object.entries(LOJAS_DE_COLECAO).map(([k, x]) => [k, x.nome])) as Record<LojaDeColecao, string>
 };
 
 export function Lugar({ vida, agir, qual, aoFechar, trocar }: Props) {
@@ -68,7 +73,8 @@ export function Lugar({ vida, agir, qual, aoFechar, trocar }: Props) {
             <Imobiliaria vida={vida} agir={agirEFechar} modo={qual === 'alugar' ? 'aluguel' : 'venda'} />
           </>
         )}
-        {(qual === 'concessionaria' || qual === 'usados' || qual === 'motos' || qual === 'nautica' || qual === 'aeroclube') && <Veiculos vida={vida} agir={agirEFechar} lugar={qual} />}
+        {(qual === 'concessionaria' || qual === 'usados' || qual === 'motos' || qual === 'nautica' || qual === 'aeroclube' || qual === 'colecionador') && <Veiculos vida={vida} agir={agirEFechar} lugar={qual} />}
+        {qual in LOJAS_DE_COLECAO && <LojaDeColecaoDaCidade vida={vida} agir={agir} loja={qual as LojaDeColecao} />}
         {qual === 'oficina' && <Oficina vida={vida} agir={agir} />}
         {qual === 'banco' && <Banco vida={vida} agir={agir} />}
         {qual === 'abrigo' && <Abrigo vida={vida} agir={agirEFechar} />}
@@ -365,8 +371,20 @@ function DetalheImovel({ vida, agir, o, voltar }: { vida: Vida; agir: (a: Acao) 
         {financiar && <div><dt>Total pago no fim</dt><dd>{dinheiroCurto(c.total)}</dd></div>}
       </dl>
       {financiar && <p className="nota">Um financiamento é uma obrigação presa à casa: enquanto paga, a parte que já é sua cresce. {c.social ? 'Pela renda, entra num programa habitacional, com juro menor.' : ''}</p>}
+      <AntesDeDecidir linhas={custosAntesDeComprarImovel(vida, o, morar)} />
       <label className="marcar"><input type="checkbox" checked={morar} onChange={e => setMorar(e.target.checked)} /> Morar lá (sem marcar: comprar para alugar)</label>
       <BotaoAcao vida={vida} acao={acao} agir={agir} variante="principal">{financiar ? 'Financiar e comprar' : 'Comprar à vista'}</BotaoAcao>
+    </div>
+  );
+}
+
+/** REWORK 12 · 10.2: antes de uma compra grande, o que ela custa todo mês, o que muda já e o que pode dar errado — sem prometer retorno. */
+function AntesDeDecidir({ linhas }: { linhas: { rotulo: string; texto: string }[] }) {
+  if (!linhas.length) return null;
+  return (
+    <div className="antes-de-decidir" role="group" aria-label="Antes de decidir">
+      <p className="rotulo-pequeno">Antes de decidir</p>
+      <dl>{linhas.map(l => <div key={l.rotulo}><dt>{l.rotulo}</dt><dd>{l.texto}</dd></div>)}</dl>
     </div>
   );
 }
@@ -512,6 +530,7 @@ function DetalheVeiculo({ vida, agir, o, voltar }: { vida: Vida; agir: (a: Acao)
         <div><dt>Tipo</dt><dd>{NOME_FORMA[formaDaVersao(x, o.modeloId)]}</dd></div>
         {m.categoria === 'carro' && <div><dt>Lugares</dt><dd>{lugares}</dd></div>}
       </dl>
+      <AntesDeDecidir linhas={custosAntesDeComprarVeiculo(vida, o)} />
       {m.habilitacao && <p className="nota">{leituraDaHabilitacao(vida, m.habilitacao)}</p>}
       {m.tripulacao && <p className="nota">Voa com tripulação contratada (dois pilotos com a habilitação do tipo): você não pilota.</p>}
       {m.patrimonioMin && <p className="nota">Quem vende pede patrimônio de pelo menos {dinheiroCurto(m.patrimonioMin)}.</p>}
