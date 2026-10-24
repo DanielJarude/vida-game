@@ -20,6 +20,7 @@ import { acoesDasTrajetorias, acoesDoTrabalho, modoDoTrabalho, type AcaoProfissi
 import { leituraPolitica, naPolitica } from '../../motor/sistemas/politica';
 import { causasDoDesgaste } from '../../motor/sistemas/desgastePolitico';
 import { emConstrucao } from '../../motor/sistemas/caminhosDeVida';
+import { situacaoProfissional } from '../../motor/sistemas/situacaoProfissional';
 import { AcoesVivas } from '../comum';
 import type { Aba } from '../navegacao';
 import { EmConstrucao } from './Caminhos';
@@ -28,7 +29,7 @@ import { DesenvolvimentoReal } from './Progresso';
 import { AMargem, temMargem } from './Margem';
 import { BotaoAcao } from '../comum';
 import { foragido } from '../../motor/sistemas/prisao';
-import { CarreiraComoTecnico, CarreiraNoEsporte, Concursos, CurriculoArtistico, Devolutivas, OutrosCaminhos, PainelAtleta, PainelBase, PainelDaPena, PainelForagido, PainelPolitico, ehAcaoPublica } from './Trabalho';
+import { CarreiraComoTecnico, CarreiraNoEsporte, Concursos, CurriculoArtistico, Devolutivas, OutrosCaminhos, PainelBase, PainelDaPena, PainelForagido, PainelPolitico, ehAcaoPublica } from './Trabalho';
 
 /** Para onde vai cada passo de um caminho (as divisões novas no lugar das abas da procura de antes). */
 function irDoPasso(irPara: (a: Aba) => void) {
@@ -85,14 +86,19 @@ export function OutrosCaminhosDaVida({ vida, agir, irPara }: { vida: Vida; agir:
   const grupo = useMemo(() => acoesDasTrajetorias(vida, disponibilidade).find(g => g.id === 'grupo'), [vida]);
   const arte = vida.caminhos.arte;
   // REWORK 10.6 · C4: a carreira já começada vem primeiro, como "Em andamento" — nunca no meio das portas de quem começa.
-  const emAndamento = esp?.fase === 'profissional' || (modo === 'artista' && !!vida.trabalho.atual);
+  // REWORK 11 · Fase B: a carreira (com contrato ou sem) MORA em Trabalho; aqui fica a linha da situação, lida do mesmo
+  // lugar (`situacaoProfissional`), e a ligação — que agora leva a uma tela que mostra a carreira (antes, o atleta sem
+  // clube era mandado a "Meu trabalho", que dizia "Sem trabalho").
+  const sp = useMemo(() => situacaoProfissional(vida), [vida]);
+  const naCarreira = sp.carreira === 'esporte' && (sp.situacao === 'ativo' || sp.semVinculo);
+  const emAndamento = esp?.fase === 'profissional' || (modo === 'artista' && !!vida.trabalho.atual) || (sp.semVinculo && !vida.trabalho.atual);
   return (
     <div className="divisao divisao--outros">
       {emAndamento && (
         <section className="divisao__secao em-andamento" aria-labelledby="titulo-em-andamento" data-em-andamento>
           <h2 id="titulo-em-andamento" className="secao-fio">Em andamento</h2>
-          {esp?.fase === 'profissional' ? <PainelAtleta vida={vida} /> : <p className="nota-grande">A sua carreira artística segue: os trabalhos, as propostas e o dinheiro estão em Trabalho · Meu trabalho; o currículo, logo abaixo.</p>}
-          <p className="ligacao-caminho"><span>{esp?.fase === 'profissional' ? 'O contrato, os treinos extras e o dia a dia do clube estão em Trabalho · Meu trabalho.' : 'As propostas e as produções estão em Trabalho · Meu trabalho.'}</span> <button type="button" className="link" onClick={() => irPara('trabalho')}>Ir para Meu trabalho →</button></p>
+          <p className="nota-grande" data-situacao-profissional={sp.situacao}>{naCarreira || sp.semVinculo ? `${sp.rotulo}${sp.detalhe ? ` — ${sp.detalhe}` : ''}.` : 'A sua carreira artística segue; o currículo está logo abaixo.'}</p>
+          <p className="ligacao-caminho"><span>{sp.semVinculo ? 'Sem contrato agora: a situação da carreira e o que dá para fazer estão em Trabalho.' : naCarreira ? 'O clube, o contrato, os treinos extras e o dia a dia estão em Trabalho.' : 'Os trabalhos, as propostas e o dinheiro estão em Trabalho.'}</span> <button type="button" className="link" onClick={() => irPara('trabalho')}>Ir para Trabalho →</button></p>
         </section>
       )}
       <PortasAbertas vida={vida} agir={agir} filtro={o => ['peneira', 'seletiva', 'banda', 'grupo'].includes(o.tipo)} titulo="Portas do esporte e da arte" />

@@ -22,7 +22,7 @@ import { OCUPACOES_DE_ATLETA } from './esporte';
 import { conviteDaEspecialidade } from './medicina';
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
-import type { Dominio, Oportunidade, TipoOportunidade, Vida } from '../tipos';
+import type { Dominio, NaturezaDaOportunidade, Oportunidade, TipoOportunidade, Vida } from '../tipos';
 import { escrever, idade, idadePessoa, lembrarCom, marcarFato, novoId, parentes, temFato, vinculosVivos, somarExperiencia } from '../nucleo';
 import { ocupacao, ocupacaoOuNula, type Ocupacao } from '../dados/ocupacoes';
 import { cursoOuNulo } from '../dados/cursos';
@@ -42,16 +42,18 @@ import { conviteDoProfessor, exColegasDaArea, ofereceAqui } from './formacao';
 import { flex, ge } from '../texto';
 import { apresentarNoFestival } from './cena';
 import { mercadoDoTrabalho, oportunidadeCoerente } from './mercados';
+import { carreiraEspecialAtiva, situacaoProfissional } from './situacaoProfissional';
+import { distanciaDaCarreira, LIMIAR_MUDANCA, naturezaDaOportunidade, pontuarIndicacao } from './indicacoes';
 
 export const LIMITE_OPORTUNIDADES = 4;
 
-export function novaOportunidade(v: Vida, o: { tipo: TipoOportunidade; titulo: string; texto: string; meses: number; chave: string; ocupacaoId?: string; dominio?: Dominio; pessoaId?: string; municipioId?: string; bonus?: number; atividade?: string }): Oportunidade | undefined {
+export function novaOportunidade(v: Vida, o: { tipo: TipoOportunidade; titulo: string; texto: string; meses: number; chave: string; ocupacaoId?: string; dominio?: Dominio; pessoaId?: string; municipioId?: string; bonus?: number; atividade?: string; natureza?: NaturezaDaOportunidade }): Oportunidade | undefined {
   const lista = v.caminhos.oportunidades;
   // Uma carreira de mercado próprio (o clube, o palco, a academia) não recebe as portas do emprego comum (`mercados`).
   if (oportunidadeCoerente(v, o) !== true) return undefined;
   if (lista.some(x => x.tipo === o.tipo && x.ocupacaoId === o.ocupacaoId && x.dominio === o.dominio)) return undefined;
   if (lista.length >= LIMITE_OPORTUNIDADES) lista.shift();
-  const op: Oportunidade = { id: novoId(v, 'op'), tipo: o.tipo, titulo: o.titulo, texto: o.texto, tInicio: v.t, tFim: v.t + o.meses, ocupacaoId: o.ocupacaoId, dominio: o.dominio, pessoaId: o.pessoaId, municipioId: o.municipioId, bonus: o.bonus, ...(o.atividade ? { atividade: o.atividade } : {}) };
+  const op: Oportunidade = { id: novoId(v, 'op'), tipo: o.tipo, titulo: o.titulo, texto: o.texto, tInicio: v.t, tFim: v.t + o.meses, ocupacaoId: o.ocupacaoId, dominio: o.dominio, pessoaId: o.pessoaId, municipioId: o.municipioId, bonus: o.bonus, ...(o.atividade ? { atividade: o.atividade } : {}), ...(o.natureza ? { natureza: o.natureza } : {}) };
   lista.push(op);
   v.caminhos.ultimas[o.chave] = v.t;
   return op;
@@ -103,21 +105,35 @@ export function processarOportunidades(v: Vida, r: Rng): void {
   }
 
   // Indicação: gente que você conhece, trabalhando em algum lugar.
+  // REWORK 11 · Fase B (CAR-11.2): a vaga é escolhida para QUEM RECEBE (a estrada, a formação, o interesse, a renda e a
+  // distância da carreira — `indicacoes.pontuarIndicacao`), entre o que cada conhecido pode indicar; antes, valia a
+  // trilha de um conhecido sorteado. Quem tem carreira especial viva (o atleta, o técnico, mesmo sem clube) recebe
+  // raramente, e de preferência da própria área; a de fora continua possível, dita como mudança de carreira.
   if (i >= 17 && i <= 64 && (semTrabalho(v) || trabalhoFraco(v)) && !v.trabalho.aposentadoria && podeGerar(v, 'indicacao', 1)) {
     const conhecidos = vinculosVivos(v).filter(x => x.p.ocupacaoId && x.p.renda > 0 && x.p.municipioId === v.moradia.municipioId && idadePessoa(v, x.p) >= 18 && x.vin.proximidade >= 40 && !x.p.especie);
+    const sp = situacaoProfissional(v);
+    const especial = carreiraEspecialAtiva(sp);
     // Quem está sem trabalho ou no informal é quem mais recebe indicação (e quem mais precisa).
-    const chance = clamp(0.1 + conhecidos.length * 0.05, 0, 0.55) * (semTrabalho(v) ? 1 : v.trabalho.atual?.contrato === 'informal' ? 0.8 : 0.5);
+    const chance = clamp(0.1 + conhecidos.length * 0.05, 0, 0.55) * (semTrabalho(v) ? 1 : v.trabalho.atual?.contrato === 'informal' ? 0.8 : 0.5) * (especial ? 0.3 : 1);
     if (conhecidos.length && r.chance(chance)) {
-      const quem = r.pick(conhecidos);
-      const trilha = ocupacao(quem.p.ocupacaoId!).trilha;
-      const entradas = OCUPACOES_POR_TRILHA(trilha).filter(oc => !oc.concurso && !oc.entrada && oc.contrato !== 'estagio' && oc.contrato !== 'aprendiz' && v.trabalho.atual?.ocupacaoId !== oc.id)
-        .filter(oc => { const d = elegibilidade(v, oc); return d.grau === 'permitido' || d.grau === 'improvavel'; })
-        .sort((a, b) => b.nivel - a.nivel);
-      const oc = entradas.find(x => x.nivel <= Math.max(1, ocupacao(quem.p.ocupacaoId!).nivel)) ?? entradas[entradas.length - 1];
-      if (oc) {
-        const onde = porContaPropria(oc) ? 'passar serviço para você' : 'indicar você onde trabalha';
-        novaOportunidade(v, { tipo: 'indicacao', ocupacaoId: oc.id, pessoaId: quem.p.id, meses: 12, chave: 'indicacao', bonus: 0.28, titulo: `Indicação de ${quem.p.nome}`,
-          texto: `${quem.p.nome}, que trabalha como ${quem.p.ocupacao}, disse que pode ${onde}: ${nomeOcupacao(v, oc)}${porContaPropria(oc) ? ' — por conta própria (clientes seus, preço seu, sem patrão nem salário fixo)' : ' — vaga de emprego, com entrevista'}.` });
+      // (O sorteio do conhecido continua no gerador principal — a sequência de números não muda; ele ganha um peso.)
+      const sorteado = r.pick(conhecidos);
+      const rr = rngDe(v.id, 'indicacao', v.t);
+      const opcoes = conhecidos.flatMap(x => {
+        const oc = entradaPelaPessoa(v, x.p.ocupacaoId!);
+        return oc ? [{ quem: x.p, oc, nota: pontuarIndicacao(v, oc) + (x === sorteado ? 0.6 : 0) + x.vin.proximidade / 100 + rr.next() * 0.4 }] : [];
+      });
+      const daArea = opcoes.filter(c => distanciaDaCarreira(v, c.oc) < LIMIAR_MUDANCA);
+      const lista = !especial ? opcoes : daArea.length ? daArea : rr.chance(0.35) ? opcoes : [];
+      const melhor = lista.sort((a, b) => b.nota - a.nota)[0];
+      if (melhor) {
+        const { quem, oc } = melhor;
+        const pc = porContaPropria(oc);
+        const natureza = naturezaDaOportunidade(v, { tipo: 'indicacao', ocupacaoId: oc.id });
+        const onde = pc ? 'passar serviço para você' : 'indicar você onde trabalha';
+        const outra = natureza !== 'mudanca_carreira' ? '' : especial && sp.profissao ? ` Seria outra carreira: antes do sim, a vida pergunta o que fazer com a de ${sp.profissao}.` : ' Seria mudar de área.';
+        novaOportunidade(v, { tipo: 'indicacao', ocupacaoId: oc.id, pessoaId: quem.id, meses: 12, chave: 'indicacao', bonus: 0.28, natureza, titulo: `Indicação de ${quem.nome}`,
+          texto: `${quem.nome}, que trabalha como ${quem.ocupacao}, disse que pode ${onde}: ${nomeOcupacao(v, oc)}${pc ? ' — por conta própria (clientes seus, preço seu, sem patrão nem salário fixo; sem entrevista)' : ' — vaga de emprego, com entrevista'}.${outra}` });
       }
     }
   }
@@ -242,7 +258,8 @@ function portasDaFormacao(v: Vida): void {
     }
   }
   const r = rngDe(v.id, 'rede_formacao', v.t);
-  if (i >= 21 && i <= 50 && (semTrabalho(v) || trabalhoFraco(v)) && !v.trabalho.aposentadoria && podeGerar(v, 'indicacao_formacao', 4)) {
+  // REWORK 11 · Fase B: a carreira especial viva (mesmo sem clube) recebe pouco — e o que vier é dito pelo que é.
+  if (i >= 21 && i <= 50 && (semTrabalho(v) || trabalhoFraco(v)) && !v.trabalho.aposentadoria && podeGerar(v, 'indicacao_formacao', 4) && (!carreiraEspecialAtiva(situacaoProfissional(v)) || r.chance(0.3))) {
     const areas = [...new Set(v.educacao.concluidos.filter(c => c.nivel !== 'livre').map(c => c.area))];
     for (const area of areas) {
       const quem = exColegasDaArea(v, area).find(p => p.municipioId === v.moradia.municipioId);
@@ -253,7 +270,7 @@ function portasDaFormacao(v: Vida): void {
       if (!oc) continue;
       const vin = v.vinculos[quem.id];
       const anos = vin?.formacao?.tFim !== undefined ? Math.max(1, Math.floor((v.t - vin.formacao.tFim) / 12)) : 0;
-      novaOportunidade(v, { tipo: 'indicacao', ocupacaoId: oc.id, pessoaId: quem.id, meses: 12, chave: 'indicacao_formacao', bonus: 0.3, titulo: `Indicação de ${quem.nome}, da sua turma`,
+      novaOportunidade(v, { tipo: 'indicacao', ocupacaoId: oc.id, pessoaId: quem.id, meses: 12, chave: 'indicacao_formacao', bonus: 0.3, natureza: naturezaDaOportunidade(v, { tipo: 'indicacao', ocupacaoId: oc.id }), titulo: `Indicação de ${quem.nome}, da sua turma`,
         texto: `${quem.nome} estudou com você${anos ? ` — faz ${anos} ${anos === 1 ? 'ano' : 'anos'} que não se viam` : ''}. Hoje trabalha como ${quem.ocupacao} e lembrou de você para uma vaga: ${nomeOcupacao(v, oc)}.` });
       break;
     }
@@ -282,6 +299,16 @@ const TEXTO_RETOMAR: Partial<Record<Dominio, string>> = {
 
 import { OCUPACOES } from '../dados/ocupacoes';
 const OCUPACOES_POR_TRILHA = (trilha: string): Ocupacao[] => OCUPACOES.filter(x => x.trilha === trilha);
+
+/** O que um conhecido pode indicar: a entrada da trilha dele que cabe em você, até o nível dele (a regra de antes). */
+function entradaPelaPessoa(v: Vida, ocupacaoId: string): Ocupacao | undefined {
+  const dele = ocupacaoOuNula(ocupacaoId);
+  if (!dele) return undefined;
+  const entradas = OCUPACOES_POR_TRILHA(dele.trilha).filter(oc => !oc.concurso && !oc.entrada && oc.contrato !== 'estagio' && oc.contrato !== 'aprendiz' && v.trabalho.atual?.ocupacaoId !== oc.id)
+    .filter(oc => { const d = elegibilidade(v, oc); return d.grau === 'permitido' || d.grau === 'improvavel'; })
+    .sort((a, b) => b.nivel - a.nivel);
+  return entradas.find(x => x.nivel <= Math.max(1, dele.nivel)) ?? entradas[entradas.length - 1];
+}
 
 /* ------------------------------------------------------------- Aceitar */
 
