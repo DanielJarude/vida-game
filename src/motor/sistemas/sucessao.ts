@@ -355,6 +355,8 @@ export interface Sucessor {
   saude?: string;
   /** Quem ficaria com a guarda (menor de idade). */
   guarda?: string;
+  /** REWORK 12.05: menor sem adulto da família que possa assumir — a guarda é da Justiça, e a história continua. */
+  acolhimento?: string;
 }
 
 /** Filhos e filhas vivos (biológicos ou adotivos): quem pode continuar a história. Nunca ninguém inventado. */
@@ -379,8 +381,10 @@ export function sucessores(v: Vida): Sucessor[] {
       pessoa: p,
       idade: i,
       laco: flex(p.genero, 'filho', 'filha', 'filhe') + (v.fatos[`adotado_${p.id}`] !== undefined ? flex(p.genero, ' adotivo', ' adotiva', ' adotive') : ''),
-      pode: i >= 18 || !!tutor,
-      motivo: i < 18 && !tutor ? 'Não há um adulto da família que possa assumir a guarda — quem decidiria seria a Justiça.' : undefined,
+      // REWORK 12.05: a guarda e quem o jogador controla são perguntas diferentes — sem adulto da família, a guarda
+      // vai para a Justiça (o acolhimento), mas a vida continua jogável.
+      pode: true,
+      ...(i < 18 && !tutor ? { acolhimento: `${flex(p.genero, 'Ele', 'Ela', 'Elu')} ainda é menor de idade. Como não há um adulto da família que possa assumir a guarda, ela será decidida pela Justiça. Você continua acompanhando a vida ${flex(p.genero, 'dele', 'dela', 'delu')}.` } : {}),
       onde: `${mesmaCasa ? 'morava com você' : 'mora'} em ${nomeLugar(p.municipioId)}`,
       ocupacao: i < 18 ? (i >= 4 ? 'estudante' : 'criança') : p.ocupacao ? `${p.ocupacao}${p.formacao ? ` · ${p.formacao}` : ''}` : (p.formacao ?? 'sem ocupação'),
       familia,
@@ -612,7 +616,9 @@ export function continuarComo(vida: Vida, herdeiroId: string): { vida: Vida; err
 
     // 4. A pessoa que continua: o que ela já era.
     const i = idadePessoa(v, h);
-    const novoT = v.t + (((h.tNasc - v.t) % 12) + 12) % 12;
+    // REWORK 12.05: a vida dela continua de onde está, na idade que tem (antes o relógio saltava até o próximo
+    // aniversário — a filha de 15 voltava com 16). O ano dela passa a contar a partir daqui.
+    const novoT = v.t;
     const vidaNpc = h.vida;
     const pred = derivarPredisposicoes(`${v.id}:${h.id}`);
     const aptidao = vidaNpc?.aptidao ?? 0;
@@ -680,6 +686,10 @@ export function continuarComo(vida: Vida, herdeiroId: string): { vida: Vida; err
       } else {
         v.moradia = { tipo: 'parente', municipioId: g.municipioId, aluguel: 0, padrao: 3, tInicio: novoT, anfitriaoId: g.id };
       }
+    } else if (i < 18) {
+      // REWORK 12.05: ninguém da família pode assumir — a Justiça decide a guarda, e a criança fica acolhida na cidade
+      // onde já vivia (sem anfitrião: a casa é a do acolhimento) até a maioridade. Ninguém é inventado para isso.
+      v.moradia = { tipo: 'parente', municipioId: h.municipioId, aluguel: 0, padrao: 3, tInicio: novoT, acolhimento: true };
     } else if (moravaJunto && casaFicouCom === herdeiroId && imovelDaCasa) {
       v.moradia = { tipo: 'propria', municipioId: imovelDaCasa.municipioId, imovelId: imovelDaCasa.id, modeloId: imovelDaCasa.modeloId, aluguel: 0, padrao: antigaMoradia.padrao, tInicio: antigaMoradia.tInicio, ...(imovelDaCasa.bairro ? { bairro: imovelDaCasa.bairro } : {}) };
     } else if (moravaJunto && conjuge && residentes.includes(conjuge.id) && (casaFicouCom === conjuge.id || antigaMoradia.tipo !== 'propria')) {
@@ -818,6 +828,9 @@ export function continuarComo(vida: Vida, herdeiroId: string): { vida: Vida; err
     if (i < 18 && guarda) {
       const g = v.pessoas[guarda.id];
       if (!h.genitores?.includes(guarda.id)) escrever(v, { t: tMorte + 1, texto: `A guarda ficou com ${g.nome}. Foi para a casa ${flex(g.genero, 'dele', 'dela', 'delu')}${g.municipioId !== antigaMoradia.municipioId ? `, em ${nomeLugar(g.municipioId)}` : ''}.`, relevancia: 'marco', tema: 'familia', pessoas: [g.id] });
+    } else if (v.moradia.acolhimento) {
+      const juiz = paisDaCidade(v.moradia.municipioId) === 'BR' ? 'a Vara da Infância e da Juventude' : 'a Justiça da infância';
+      escrever(v, { t: tMorte + 1, texto: `Não havia um adulto da família que pudesse assumir a guarda: o caso foi para ${juiz}. Ficou em acolhimento, em ${nomeLugar(v.moradia.municipioId)}, ${flex(h.genero, 'acompanhado', 'acompanhada', 'acompanhade')} pela assistência social até os 18.`, relevancia: 'marco', tema: 'familia', pessoas: [oldId] });
     } else if (moravaJunto && v.moradia.tipo === 'aluguel' && casa && casaFicouCom === undefined) {
       escrever(v, { t: tMorte + 1, texto: 'A casa onde morava foi vendida no inventário. Mudou-se.', relevancia: 'biografia', tema: 'casa', tom: 'ruim' });
     }

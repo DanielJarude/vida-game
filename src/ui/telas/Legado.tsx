@@ -147,6 +147,7 @@ export function ContinuarFamilia({ vida, c }: { vida: Vida; c: ControleVida }) {
                 <span>{x.dinheiro}{x.traco ? ` · ${x.traco}` : ''}</span>
                 {x.saude && <span>Saúde: {x.saude}.</span>}
                 {x.guarda && <span>A guarda ficaria com {x.guarda}.</span>}
+                {x.acolhimento && <span className="legado__acolhimento">{x.acolhimento}</span>}
                 {!x.pode && <span className="legado__erro">{x.motivo}</span>}
               </span>
             </button>

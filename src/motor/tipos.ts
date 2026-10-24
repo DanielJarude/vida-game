@@ -1426,6 +1426,12 @@ export interface Moradia {
   divide?: number;
   /** Morando de favor na casa de um parente: de quem é a casa (é ela que não "sai de casa"). */
   anfitriaoId?: string;
+  /**
+   * REWORK 12.05: menor de idade sob a guarda decidida pela Justiça (acolhimento: família acolhedora ou casa de
+   * acolhimento), quando não há adulto da família que possa assumir. Só com `tipo: 'parente'` e sem `anfitriaoId`;
+   * acaba na maioridade (`obrigacoes.casaSemFamilia`).
+   */
+  acolhimento?: true;
   /** Aluguel atrasado (meses). */
   atraso?: number;
   atrasoDesde?: number;

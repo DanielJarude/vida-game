@@ -1272,6 +1272,7 @@ button.agora-sinal:hover { color: var(--text-primary); }
 .legado__sucessor:disabled { opacity: 0.6; cursor: not-allowed; }
 .legado__sucessor .retrato { border-radius: 50%; }
 .legado__sucessor-texto { display: flex; flex-direction: column; gap: 2px; font-size: var(--type-caption); color: var(--text-secondary); min-width: 0; }
+.legado__acolhimento { color: var(--text-primary); }
 .legado__sucessor-nome { font-family: var(--font-serif); font-size: var(--type-subheading); color: var(--text-primary); }
 .legado__confirmar { margin-top: var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--rule-strong); display: flex; flex-direction: column; gap: var(--space-3); align-items: flex-start; }
 .legado__confirmar p { font-family: var(--font-serif); font-size: var(--type-lead); margin: 0; max-width: var(--measure-prosa); }

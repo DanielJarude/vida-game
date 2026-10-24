@@ -5,7 +5,8 @@ import { idade } from '../nucleo';
 import { criarPessoa, vincular } from '../pessoas';
 import { criarRng } from '../rng';
 import { garantirVida } from '../sistemas/filhos';
-import type { Genero, Parentesco, Pessoa, Vida, Vinculo } from '../tipos';
+import { calcularHeranca } from '../sistemas/partilha';
+import type { Genero, Imovel, Parentesco, Pessoa, Vida, Vinculo } from '../tipos';
 
 /** Uma vida adulta, sem romance nem trabalho, morando por conta própria. */
 export function adulto(i: number, o: { semente?: number; genero?: Genero; municipioId?: string } = {}): Vida {
@@ -66,4 +67,38 @@ export function comNeto(v: Vida, filho: Pessoa, i: number, outroId?: string): { 
 /** Tira todos os pais do jogador (para cenários sem avós). */
 export function semPais(v: Vida): void {
   for (const vin of Object.values(v.vinculos)) if (vin.parentesco === 'mae' || vin.parentesco === 'pai') { const p = v.pessoas[vin.pessoaId]; if (p) p.vivo = false; }
+}
+
+/* REWORK 12.05 — o caso real que motivou o hotfix, como fixture (não é o save do jogador). */
+
+/** Sem ninguém da família: pais, irmãos, filhos de antes e parcerias saem do mundo da vida (mortos ou apagados). */
+export function sozinho(v: Vida): void {
+  semPais(v);
+  for (const p of Object.values(v.pessoas)) if (p.genitores?.includes('eu')) { delete v.pessoas[p.id]; delete v.vinculos[p.id]; }
+  for (const [id, vin] of Object.entries(v.vinculos)) {
+    if (vin.parentesco === 'filho' || vin.parentesco === 'neto' || vin.parentesco === 'enteado') { delete v.vinculos[id]; delete v.pessoas[id]; continue; }
+    if (vin.parentesco === 'irmao' || vin.parentesco === 'meio_irmao' || vin.parentesco === 'avo' || vin.romance) { if (v.pessoas[id]) v.pessoas[id].vivo = false; }
+  }
+  for (const p of Object.values(v.pessoas)) if (p.parceiroId) p.parceiroId = undefined;
+}
+
+/** René, 52, em Sydney, que adotou Frankie: ela tem 15 e morava com ele. Ninguém mais da família vive. */
+export function reneEFrankie(): { v: Vida; frankie: string } {
+  const v = adulto(52, { semente: 31, genero: 'masculino', municipioId: 'au:sydney' });
+  v.eu.nome = 'René';
+  sozinho(v);
+  const { p: f } = comFilho(v, 15, { casa: true, genero: 'feminino' });
+  f.nome = 'Frankie';
+  v.fatos[`adotado_${f.id}`] = v.t - 9 * 12;
+  v.vinculos[f.id].tInicio = v.t - 9 * 12;
+  v.vinculos[f.id].historia.push({ t: v.t - 9 * 12, texto: 'Chegou em casa pela adoção.', tipo: 'casa', peso: 3 });
+  v.financas.dividas = [];
+  v.financas.negativado = false;
+  v.financas.conta = 40000;
+  const casa: Imovel = { id: 'icasa', tipo: 'imovel', modeloId: 'apto_2q', nome: 'apartamento de dois quartos', valor: 600000, tCompra: v.t - 100, municipioId: v.moradia.municipioId, estado: 70, dono: 'eu' };
+  v.financas.bens = [casa];
+  v.moradia = { tipo: 'propria', municipioId: v.moradia.municipioId, imovelId: 'icasa', modeloId: 'apto_2q', aluguel: 0, padrao: 3, tInicio: v.t - 100 };
+  // Na tela do legado, o apartamento ficou para Frankie (sem isso, a partilha vende o imóvel no inventário).
+  v.morte = { t: v.t, causa: 'infarto', heranca: calcularHeranca(v), decisoes: { bens: { icasa: f.id } } };
+  return { v, frankie: f.id };
 }

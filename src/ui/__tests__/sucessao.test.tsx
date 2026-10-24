@@ -8,7 +8,7 @@ import { beforeAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { App, precarregar } from '../App';
 import { ler, salvar } from '../../motor/save';
-import { adulto, comFilho, comParceiro } from '../../motor/__tests__/cenarios';
+import { adulto, comFilho, comParceiro, reneEFrankie } from '../../motor/__tests__/cenarios';
 import { calcularHeranca } from '../../motor/sistemas/partilha';
 import { partilhar } from '../../motor/sistemas/sucessao';
 import { dinheiro } from '../../motor/texto';
@@ -110,5 +110,28 @@ describe('tela do legado', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Encerrar esta história' }));
     expect(screen.getByRole('button', { name: 'Viver outra vida' })).toBeTruthy();
     expect(screen.queryByRole('heading', { name: 'Continuar a família' })).toBeNull();
+  });
+});
+
+describe('REWORK 12.05 · filha adotiva menor, sem adulto da família', () => {
+  it('Frankie aparece escolhível, com a explicação da guarda; "Continuar como Frankie" segue a vida dela aos 15', () => {
+    const { v } = reneEFrankie();
+    salvar(v);
+    abrir();
+    const botao = screen.getByRole('button', { name: /Frankie, 15 · filha adotiva/ }) as HTMLButtonElement;
+    expect(botao.disabled).toBe(false);
+    expect(botao.textContent).toContain('a guarda, ela será decidida pela Justiça');
+    expect(screen.queryByText(/quem decidiria seria a Justiça/)).toBeNull();
+    // Encerrar continua possível para quem quiser.
+    expect(screen.getByRole('button', { name: 'Encerrar esta história' })).toBeTruthy();
+    fireEvent.click(botao);
+    fireEvent.click(screen.getByRole('button', { name: 'Continuar como Frankie' }));
+    const r = ler();
+    expect(r.tipo).toBe('ok');
+    const nova = (r as { vida: Vida }).vida;
+    expect(nova.eu.nome).toBe('Frankie');
+    expect(nova.morte).toBeUndefined();
+    expect(Math.floor((nova.t - nova.eu.tNasc) / 12)).toBe(15);
+    expect(nova.moradia.acolhimento).toBe(true);
   });
 });

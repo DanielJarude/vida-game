@@ -32,7 +32,9 @@ export function processarObrigacoes(v: Vida): void {
   const ha = (desde: number | undefined, meses: number) => desde !== undefined && v.t - desde >= meses;
   if ((v.moradia.tipo === 'aluguel' || v.moradia.tipo === 'republica') && (v.moradia.atraso ?? 0) >= 4 && ha(v.moradia.atrasoDesde, 12)) despejo(v);
   // A casa da família sem a família: quem ficou passa a sustentar a própria casa.
-  if ((v.moradia.tipo === 'pais' || v.moradia.tipo === 'parente') && idade(v) >= 18 && !vinculosVivos(v).some(x => x.vin.convivio.includes('casa') && !x.p.especie && ['mae', 'pai', 'avo', 'tio', 'madrasta', 'padrasto', ...(v.moradia.tipo === 'parente' ? ['irmao', 'meio_irmao'] : [])].includes(x.vin.parentesco ?? ''))) casaSemFamilia(v);
+  // REWORK 12.05: o acolhimento acaba na maioridade (mesmo que um irmão acolhido junto já seja adulto).
+  if (v.moradia.acolhimento && idade(v) >= 18) casaSemFamilia(v);
+  else if ((v.moradia.tipo === 'pais' || v.moradia.tipo === 'parente') && idade(v) >= 18 && !vinculosVivos(v).some(x => x.vin.convivio.includes('casa') && !x.p.especie && ['mae', 'pai', 'avo', 'tio', 'madrasta', 'padrasto', ...(v.moradia.tipo === 'parente' ? ['irmao', 'meio_irmao'] : [])].includes(x.vin.parentesco ?? ''))) casaSemFamilia(v);
   // Morar de favor tem prazo: depois de uns anos, é preciso ir — para a família ou para o aluguel mais barato.
   if (v.justica?.prisao) return;
   if (v.moradia.tipo === 'cedida' && !v.moradia.funcional && v.t - v.moradia.tInicio >= 36) fimDoFavor(v);
@@ -94,6 +96,7 @@ function despejo(v: Vida): void {
 }
 
 function casaSemFamilia(v: Vida): void {
+  if (v.moradia.acolhimento) escrever(v, { texto: 'Fez 18 anos e o acolhimento terminou: a guarda da Justiça acaba na maioridade.', relevancia: 'biografia', tema: 'casa' });
   const herdada = v.financas.bens.find(b => b.tipo === 'imovel' && b.herdado && b.municipioId === v.moradia.municipioId && !b.alugadoPor);
   if (herdada && herdada.tipo === 'imovel') {
     const m = modeloMoradia(herdada.modeloId);
