@@ -288,7 +288,7 @@ certos, sem aumentar o limite).
 
 Commits na branch `claude/rework12.2-negocios-luxo-mercados` (a partir de `4625dbc`):
 - `49230eb` — motor e telas (checkpoint)
-- (final) — acontecimentos, ajustes de QA, simulações, relatório
+- `eb0c9f3` — acontecimentos, ajustes de QA, simulações, relatório (este)
 
 ## 14. Estado de publicação
 
