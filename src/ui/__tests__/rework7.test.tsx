@@ -178,7 +178,7 @@ describe('compra: adquirir → possuir → usar → efeito → save', () => {
     const min = Math.min(...ofertasDeVeiculos(v, 'concessionaria').map(o => o.preco));
     expect(within(conc).getByText(`a partir de ${dinheiroCurto(min)}`)).toBeTruthy();
     // Os grupos seguem a vida: morar, ir e vir, as coisas, o corpo, os serviços, os bichos.
-    expect([...container.querySelectorAll('.vitrines__titulo')].map(h => h.textContent)).toEqual(['Onde morar', 'Ir e vir', 'As coisas do dia a dia', 'O que se usa no corpo', 'Luxo e coleção', 'Serviços', 'Os bichos']);
+    expect([...container.querySelectorAll('.vitrines__titulo')].map(h => h.textContent)).toEqual(['Onde morar', 'Ir e vir', 'As coisas do dia a dia', 'O que se usa no corpo', 'Luxo e coleção', 'Serviços', 'Os bichos', 'Segunda mão, procedência incerta']);
   });
 
   it('a loja de instrumentos diz o que rende no que você pratica — e o que já é seu dali', () => {

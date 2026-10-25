@@ -122,7 +122,7 @@ export const ITENS_ESTILO: readonly ItemEstilo[] = [
 export const BALCOES: { id: 'otica' | 'roupas' | 'joias'; nome: string; categorias: CategoriaItem[] }[] = [
   { id: 'otica', nome: 'Ótica', categorias: ['oculos'] },
   { id: 'roupas', nome: 'Roupas e chapéus', categorias: ['roupa', 'chapeu'] },
-  { id: 'joias', nome: 'Relojoaria e joalheria', categorias: ['acessorio'] }
+  { id: 'joias', nome: 'Relógios e joias de usar', categorias: ['acessorio'] }
 ];
 
 const POR_ID = new Map(ITENS_ESTILO.map(x => [x.id, x]));

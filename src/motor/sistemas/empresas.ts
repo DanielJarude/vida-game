@@ -124,7 +124,7 @@ export function planoDeAbertura(v: Vida, tipo: TipoEmpresa, comSocio: boolean): 
   const custoAnual = Math.round(custosFixos(v, rascunho).reduce((s, x) => s + x.valor, 0) / 1000) * 1000;
   const receitaTipica = Math.round(t.publico * fatorDaCidade(t, onde) * t.ticket.medio * custoLocal(onde) / 1000) * 1000;
   const grande = ['metropole', 'capital'].includes(municipio(onde).perfil);
-  const motivo = idade(v) < 18 ? 'A partir dos 18.' : t.cidadeGrande && !grande ? `${t.rotulo} pede cidade grande: público e equipe especializada não existem aqui.` : empresasAtivas(v).filter(e => e.papel !== 'investidor').length >= 4 ? 'Já são quatro empresas: mais uma, ninguém acompanha.' : undefined;
+  const motivo = idade(v) < 18 ? 'A partir dos 18.' : t.cidadeGrande && !grande ? `${t.rotulo} pede cidade grande: público e equipe especializada não existem aqui.` : empresasAtivas(v).filter(e => e.papel !== 'investidor').length >= 8 ? 'Já são oito empresas: mais uma, nem com gestores se acompanha.' : undefined;
   return { tipo, capital, capitalDaPessoa, comSocio, custoAnual, receitaTipica, disponivel: !motivo, motivo };
 }
 

@@ -48,8 +48,10 @@ export interface OfertaParalela {
   mercado: MercadoParalelo;
   pecaId: string;
   nome: string;
-  /** O que a peça valeria se fosse o que dizem (o mercado legal). */
+  /** O que a peça valeria se fosse o que dizem (o mercado legal de revenda). */
   valorDeMercado: number;
+  /** O que custaria numa loja de verdade, com papel (a referência do desconto). */
+  precoDeLoja: number;
   preco: number;
   /** O que se vê: o vendedor, os papéis, o preço. */
   sinais: string[];
@@ -99,8 +101,8 @@ export function ofertasParalelas(v: Vida, m: MercadoParalelo): OfertaParalela[] 
     const fator = cfg.preco[0] + r.next() * (cfg.preco[1] - cfg.preco[0]);
     // O sinal que se vê: quase sempre um da verdade; às vezes, um que engana (a peça boa que parece duvidosa e vice-versa).
     const verdade = r.chance(0.7) ? origem : r.pick(['legitima', 'falsificada', 'roubada'] as Origem[]);
-    const sinais = [r.pick(SINAIS[verdade]), fator < 0.5 ? 'o preço é bem abaixo do que se vê nas lojas' : 'o preço é um pouco abaixo do de mercado'];
-    out.push({ id: `pp-${m}-${ano}-${i}`, mercado: m, pecaId: p.id, nome: p.nome, valorDeMercado, preco: Math.round(Math.max(100, p.preco * k * fator) / 100) * 100, sinais, origem });
+    const sinais = [r.pick(SINAIS[verdade]), fator < 0.5 ? 'o preço é menos da metade do de loja' : 'o preço fica abaixo do de loja'];
+    out.push({ id: `pp-${m}-${ano}-${i}`, mercado: m, pecaId: p.id, nome: p.nome, valorDeMercado, precoDeLoja: Math.round(p.preco * k / 100) * 100, preco: Math.round(Math.max(100, p.preco * k * fator) / 100) * 100, sinais, origem });
   }
   return out;
 }

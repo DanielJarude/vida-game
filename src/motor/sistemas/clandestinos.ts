@@ -146,6 +146,18 @@ export function processarClandestinos(v: Vida, rAno: Rng): void {
     for (const n of negociosAtivos(v)) desmantelar(v, n, 'A investigação chegou: o negócio foi desmantelado e o que havia nele, apreendido.');
     return;
   }
+  // Quem saiu do caminho não toca mais nada por fora: o negócio fica com o sócio (ou com quem disputava o espaço).
+  if (e.parou !== undefined) {
+    for (const n of negociosAtivos(v)) {
+      const quem = n.socios[0] ? v.pessoas[n.socios[0].pessoaId]?.nome : n.rival ? orgPorId(v, n.rival)?.nome : undefined;
+      n.estado = 'tomado';
+      n.tFim = v.t;
+      n.historia.push({ t: v.t, texto: `Quando você saiu, ficou com ${quem ?? 'quem estava por perto'} — sem acerto.` });
+      if (n.fachadaId) { const em = empresasAtivas(v).find(z => z.id === n.fachadaId); if (em?.fachada) em.fachada.tFim = v.t; n.fachadaId = undefined; }
+    }
+    for (const em of empresasAtivas(v).filter(x => x.fachada)) anoDaFachada(v, em);
+    return;
+  }
   for (const n of negociosAtivos(v)) anoDoNegocio(v, e, n, rngDe(v.id, 'nc-ano', n.id, v.t), rAno);
   for (const o of (e.organizacoes ?? []).filter(x => x.propria && x.saiu === undefined)) anoDaOrganizacaoPropria(v, o);
   for (const em of empresasAtivas(v).filter(x => x.fachada && x.fachada.tFim === undefined || x.fachada && (x.fachada.suspeita ?? 0) > 0)) anoDaFachada(v, em);

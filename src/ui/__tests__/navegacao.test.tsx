@@ -182,7 +182,7 @@ describe('Vida: moradia, dinheiro, compras, tempo, cidade — num lugar só', ()
     const folha = screen.getByRole('dialog', { name: 'Ótica, roupas e acessórios' });
     expect(within(folha).getByText('Óculos escuros')).toBeTruthy();
     // Os balcões: a ótica, as roupas, a relojoaria e a joalheria (não uma prateleira só).
-    fireEvent.click(within(folha).getByRole('radio', { name: 'Relojoaria e joalheria' }));
+    fireEvent.click(within(folha).getByRole('radio', { name: 'Relógios e joias de usar' }));
     expect(within(folha).getByText(/Um anônimo com ele continua anônimo/)).toBeTruthy();
     expect(within(folha).getAllByRole('button', { name: 'Comprar' }).length).toBeGreaterThan(3);
   });

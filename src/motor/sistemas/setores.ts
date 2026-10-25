@@ -114,7 +114,11 @@ function novoAnimal(e: Empresa, especie: string, recinto: string, origem: Animal
   const usados = new Set((e.setor?.zoo?.animais ?? []).filter(a => a.especie === especie).map(a => a.nome));
   const livres = x.nomes.filter(z => !usados.has(z));
   const nome = livres.length ? r.pick(livres) : `${r.pick(x.nomes)} ${['II', 'III', 'IV', 'V'][n % 4]}`;
-  return { id: `${e.id}-a${n}-${especie}`, especie, nome, genero: r.chance(0.5) ? 'masculino' : 'feminino', nasceu, saude: 85, origem, recinto, chegou: nasceu > e.tInicio ? nasceu : e.tInicio, ...(historia ? { historia: [historia] } : {}) };
+  // O id é único no acervo (os que morreram deixam o número livre na lista, não no registro).
+  const ids = new Set((e.setor?.zoo?.animais ?? []).map(a => a.id));
+  let id = `${e.id}-a${n}-${especie}`;
+  for (let k = 2; ids.has(id); k++) id = `${e.id}-a${n}-${especie}-${k}`;
+  return { id, especie, nome, genero: r.chance(0.5) ? 'masculino' : 'feminino', nasceu, saude: 85, origem, recinto, chegou: nasceu > e.tInicio ? nasceu : e.tInicio, ...(historia ? { historia: [historia] } : {}) };
 }
 
 /** Os números antigos do zoológico (recintos, espécies, bem-estar) passam a ser lidos do acervo (uma fonte só). */

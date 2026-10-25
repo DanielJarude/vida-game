@@ -89,7 +89,7 @@ export function MercadoParaleloDaCidade({ vida, agir, mercado, aoComprar }: { vi
             <li key={o.id} className="oferta oferta--estilo mercado-incerto__oferta">
               <span className="oferta__texto">
                 <strong>{cap(o.nome)}</strong>
-                <span className="nota">Numa loja de verdade, com papel, valeria uns {dinheiroCurto(o.valorDeMercado)}.</span>
+                <span className="nota">Numa loja, com papel, custaria uns {dinheiroCurto(o.precoDeLoja)}; revendida, se for o que dizem, valeria uns {dinheiroCurto(o.valorDeMercado)}.</span>
                 <span className="nota">O que se vê: {o.sinais.join('; ')}.</span>
                 {inv && <span className={`oferta__motivo${inv === 'legitima' ? '' : ' oferta__motivo--ruim'}`}>A investigação: {SINAL_DA_INVESTIGACAO[inv]}.</span>}
               </span>
