@@ -12,6 +12,10 @@ import { BotaoAcao } from '../comum';
 import { leituraDoSubmundo, previsaoDaAcao, ROTULO_DA_ACAO } from '../../motor/sistemas/submundo';
 import { NOME_DO_RAMO } from '../../motor/sistemas/ramos';
 import { dinheiroCurto } from '../leituraMaterial';
+import { capitalDoModelo, leituraDosNegocios, MODELOS_CLANDESTINOS, NOME_DO_ESTAGIO, ROTULO_CLANDESTINO, type OqueClandestino } from '../../motor/sistemas/clandestinos';
+import { contatosAtivos } from '../../motor/sistemas/submundo';
+import { empresasAtivas } from '../../motor/sistemas/empresas';
+import { anoDe } from '../../motor/tempo';
 
 const palavraDoRisco = (x: number) => (x < 0.12 ? 'baixo' : x < 0.25 ? 'médio' : x < 0.4 ? 'alto' : 'muito alto');
 const RELACAO: Record<string, string> = { membro: 'você é de dentro', aliada: 'aliada', rival: 'rival', neutra: 'sem lado' };
@@ -37,6 +41,7 @@ export function PainelDoSubmundo({ vida, agir }: { vida: Vida; agir: (a: Acao) =
         <h3 id="titulo-dossie" className="dossie__titulo">Dossiê do caminho</h3>
         <span className="dossie__carimbo">{ativo ? 'em atividade' : 'arquivado'}</span>
       </header>
+      <p className="dossie__estagio">{NOME_DO_ESTAGIO[leituraDosNegocios(vida).estagio]}</p>
       <div className="dossie__exposicao">
         <span className="dossie__rotulo">Exposição</span>
         <Barra valor={s.exposicao} rotulo="Exposição às autoridades" />
@@ -79,6 +84,8 @@ export function PainelDoSubmundo({ vida, agir }: { vida: Vida; agir: (a: Acao) =
           </article>
         ))}
       </div>
+
+      <NegociosPorFora vida={vida} agir={agir} ativo={ativo} />
 
       {ativo && s.podeEntrar.length > 0 && (
         <details className="dossie__outras">
@@ -136,5 +143,83 @@ export function PainelDoSubmundo({ vida, agir }: { vida: Vida; agir: (a: Acao) =
         </div>
       )}
     </section>
+  );
+}
+
+/**
+ * REWORK 12.2 — os negócios por fora: os que estão de pé (com sócios, caixa, exposição, fachada, as decisões) e os que
+ * acabaram (com a história); abrir um novo; a organização própria (tenentes, coesão, alianças). Só números e gente.
+ */
+function NegociosPorFora({ vida, agir, ativo }: { vida: Vida; agir: (a: Acao) => boolean; ativo: boolean }) {
+  const l = leituraDosNegocios(vida);
+  const e = vida.caminhos.envolvimento;
+  const org = l.organizacao;
+  const empresas = empresasAtivas(vida).filter(x => x.papel !== 'investidor');
+  const d = (oque: OqueClandestino, negocioId?: string, alvo?: string, rotulo?: string, variante: 'secundario' | 'discreto' = 'discreto') =>
+    <BotaoAcao key={`${oque}-${negocioId}-${alvo}`} vida={vida} acao={{ tipo: 'clandestino', oque, negocioId, alvo }} agir={agir} variante={variante} ocultarBloqueado semAviso={variante === 'discreto'}>{rotulo ?? ROTULO_CLANDESTINO[oque]}</BotaoAcao>;
+  if (!l.negocios.length && !ativo) return null;
+  return (
+    <div className="dossie__bloco dossie__negocios">
+      <h4 className="dossie__rotulo">Negócios por fora</h4>
+      {!l.negocios.length && <p className="dossie__nota">Nenhum negócio seu. Abrir um é mais dinheiro possível — e mais gente sabendo, um sócio que pode trair, um rival que cobra, a apreensão que leva o que estava empatado.</p>}
+      <ul className="sub-negocios">
+        {l.negocios.map(({ n, modelo, desde, socios, fachada }) => (
+          <li key={n.id} className={`sub-negocio sub-negocio--${n.estado}`}>
+            <p className="sub-contato__nome"><span>{n.nome.charAt(0).toUpperCase() + n.nome.slice(1)}</span><span className="sub-contato__papel">{modelo.nome.toLowerCase()} · desde {desde}{n.estado !== 'ativo' ? ` · ${n.estado === 'encerrado' ? 'encerrado' : n.estado === 'tomado' ? 'passado adiante' : 'desmantelado'} em ${anoDe(n.tFim ?? vida.t)}` : ''}</span></p>
+            {n.estado === 'ativo' && (
+              <>
+                <dl className="sub-ramo__dados">
+                  <div><dt>Empatado</dt><dd>{dinheiroCurto(n.capital)}</dd></div>
+                  <div><dt>Caixa</dt><dd>{n.caixa < 0 ? '− ' : ''}{dinheiroCurto(Math.abs(n.caixa))}</dd></div>
+                  {n.ultimo && <div><dt>O último ano</dt><dd>{dinheiroCurto(n.ultimo.receita)} entraram, {dinheiroCurto(n.ultimo.despesa)} saíram</dd></div>}
+                  <div><dt>Nome no meio</dt><dd><Barra valor={n.reputacao} rotulo={`Nome de ${n.nome}`} /></dd></div>
+                  <div><dt>Chama atenção</dt><dd><Barra valor={n.exposicao} rotulo={`Exposição de ${n.nome}`} /></dd></div>
+                  <div><dt>Ritmo</dt><dd>{['com cautela', 'o de sempre', 'acelerado'][n.ritmo]}</dd></div>
+                  {socios.length > 0 && <div><dt>Sócios</dt><dd>{socios.map(x => `${x.nome} (${Math.round(x.parte * 100)}%, confiança ${x.confianca >= 60 ? 'alta' : x.confianca >= 35 ? 'média' : 'baixa'})`).join('; ')}</dd></div>}
+                  {fachada && <div><dt>Fachada</dt><dd>{fachada}</dd></div>}
+                </dl>
+                {n.ultimo?.nota && <p className="dossie__nota">{n.ultimo.nota}</p>}
+                {ativo && (
+                  <div className="grupo-acoes sub-ramo__acoes">
+                    {d('retirar', n.id, undefined, `Tirar uns ${dinheiroCurto(Math.round(Math.max(0, n.caixa) * 0.9))} do caixa`, 'secundario')}
+                    {d('aportar', n.id)}
+                    {([0, 1, 2] as const).filter(x => x !== n.ritmo).map(x => d(`ritmo_${x}`, n.id))}
+                    {contatosAtivos(vida).filter(c => !n.socios.some(sc => sc.pessoaId === c.id)).slice(0, 2).map(c => d('socio', n.id, c.id, `Chamar ${vida.pessoas[c.id].nome} para sócio`))}
+                    {n.socios.map(sc => d('romper_socio', n.id, sc.pessoaId, `Romper com ${vida.pessoas[sc.pessoaId]?.nome ?? 'o sócio'}`))}
+                    {!n.fachadaId && empresas.filter(x => !x.fachada).map(x => d('fachada', n.id, x.id, `Usar ${x.nome} como fachada`))}
+                    {d('desligar_fachada', n.id)}
+                    {d('passar_adiante', n.id)}
+                    {d('encerrar', n.id)}
+                  </div>
+                )}
+              </>
+            )}
+            {n.historia.length > 0 && <details className="dossie__outras"><summary>A história</summary><ol className="sub-diario">{n.historia.slice(-8).map((h, k) => <li key={k} className={h.tom ? `sub-diario--${h.tom}` : undefined}><span className="margem__ano">{anoDe(h.t)}</span> {h.texto}</li>)}</ol></details>}
+          </li>
+        ))}
+      </ul>
+      {ativo && (
+        <details className="dossie__outras">
+          <summary>Abrir um negócio por fora</summary>
+          <div className="grupo-acoes">
+            {MODELOS_CLANDESTINOS.map(m => <BotaoAcao key={m.tipo} vida={vida} acao={{ tipo: 'clandestino', oque: 'abrir', alvo: m.tipo }} agir={agir} variante="discreto" ocultarImpossivel>{`${m.nome} (${dinheiroCurto(capitalDoModelo(vida, m.tipo))}) — ${m.descricao}`}</BotaoAcao>)}
+          </div>
+        </details>
+      )}
+      {ativo && !org && l.negocios.some(x => x.n.estado === 'ativo') && d('fundar_organizacao', undefined, undefined, 'Fundar a própria organização', 'secundario')}
+      {org && e && (
+        <div className="dossie__bloco">
+          <h4 className="dossie__rotulo">{org.nome.charAt(0).toUpperCase() + org.nome.slice(1)} · o seu comando</h4>
+          <p className="dossie__nota">Coesão: {org.propria!.coesao >= 60 ? 'firme' : org.propria!.coesao >= 45 ? 'rachando' : 'à beira de uma disputa'}. Dividem o comando: {org.propria!.tenentes.map(id => vida.pessoas[id]?.nome).filter(Boolean).join(', ') || 'ninguém'}.</p>
+          {ativo && (
+            <div className="grupo-acoes">
+              {contatosAtivos(vida).filter(c => !org.propria!.tenentes.includes(c.id)).slice(0, 2).map(c => d('tenente', undefined, c.id, `Dar comando a ${vida.pessoas[c.id].nome}`))}
+              {(e.organizacoes ?? []).filter(o => !o.propria && o.relacao !== 'membro').map(o => o.relacao === 'aliada' ? d('romper_alianca', undefined, o.id, `Romper a aliança com ${o.nome}`) : d('alianca', undefined, o.id, `Propor aliança a ${o.nome}`))}
+              {d('dissolver')}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 }

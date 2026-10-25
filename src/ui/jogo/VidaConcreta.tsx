@@ -32,7 +32,7 @@ import { nomeLugar } from '../../motor/dados/lugares';
 import { balanco, seguranca } from '../../motor/sistemas/dinheiro';
 import { leituraDaSeguranca } from '../leituraMaterial';
 import { Lar, ViverACasa } from './Casa';
-import { Patrimonio } from './Patrimonio';
+import { Patrimonio, type PartePatrimonio } from './Patrimonio';
 import { ODinheiro } from './Dinheiro';
 import { Cidade } from './Cidade';
 import { Lugar, type QualLugar } from './material/Lugares';
@@ -49,6 +49,7 @@ interface Props { vida: Vida; agir: (a: Acao) => boolean; secao: SecaoVida; irSe
 
 export function VidaConcreta({ vida, agir, secao, irSecao, abrirPessoa }: Props) {
   const [lugar, setLugar] = useState<QualLugar | null>(null);
+  const [partePat, setPartePat] = useState<PartePatrimonio>('resumo');
   const i = idade(vida);
   return (
     <div className={`vida-concreta vida-concreta--${secao} material`}>
@@ -86,13 +87,13 @@ export function VidaConcreta({ vida, agir, secao, irSecao, abrirPessoa }: Props)
         {/* REWORK 9.5: o patrimônio é um inventário — o balanço e os bens grandes (imóveis, veículos, aplicações, dívidas
             presas a bens) e, depois, os objetos (usar, cuidar, vender). Antes, metade disso morava em Dinheiro. */}
         {/* REWORK 12: o Patrimônio em partes — resumo (ativos, dívidas, liquidez), imóveis, garagem, coleção, empresas, objetos. */}
-        {secao === 'pertences' && <Patrimonio vida={vida} agir={agir} abrir={setLugar} />}
+        {secao === 'pertences' && <Patrimonio vida={vida} agir={agir} abrir={setLugar} parte={partePat} irParte={setPartePat} />}
         {secao === 'cidade' && <Cidade vida={vida} agir={agir} irCompras={() => irSecao('compras')} abrir={setLugar} />}
         {/* REWORK 9: as viagens são experiência material (destino, custo, com quem) — saíram de Tempo livre. */}
         {secao === 'viagens' && (i >= 12 ? <Experiencias vida={vida} agir={agir} /> : <p className="nota">Viajar, por enquanto, é com a família — quando ela decide ir.</p>)}
         {secao === 'apostas' && <Apostas vida={vida} agir={agir} />}
       </div>
-      {lugar && <Lugar vida={vida} agir={agir} qual={lugar} aoFechar={() => setLugar(null)} trocar={setLugar} />}
+      {lugar && <Lugar vida={vida} agir={agir} qual={lugar} aoFechar={() => setLugar(null)} trocar={setLugar} verNoPatrimonio={p => { setLugar(null); setPartePat(p); irSecao('pertences'); }} />}
     </div>
   );
 }

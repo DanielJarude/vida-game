@@ -164,9 +164,16 @@ export function rivalDoRamo(v: Vida, ramo: Ramo): RelacaoComOrganizacao {
   return o;
 }
 
+const GRAVE = new Set(['traicao', 'promessa_quebrada', 'conflito', 'saida']);
+
 export function lembrarOrg(o: RelacaoComOrganizacao, t: number, fato: RelacaoComOrganizacao['memoria'][number]['fato'], lealdade = 0): void {
   o.memoria.push({ t, fato });
-  if (o.memoria.length > 20) o.memoria.splice(0, o.memoria.length - 20);
+  // REWORK 12.2: o que é grave (a traição, a promessa quebrada, o conflito) não sai da memória para dar lugar ao miúdo:
+  // quando a lista enche, esquece-se primeiro o favor e a promessa cumprida mais antigos.
+  while (o.memoria.length > 20) {
+    const k = o.memoria.findIndex(m => !GRAVE.has(m.fato));
+    o.memoria.splice(k >= 0 ? k : 0, 1);
+  }
   o.lealdade = clamp(o.lealdade + lealdade);
 }
 
@@ -662,7 +669,8 @@ export function leituraDoSubmundo(v: Vida): {
   return {
     ramos,
     contatos,
-    organizacoes: orgs.map(o => ({ nome: o.nome, ramo: NOME_DO_RAMO[o.especialidade], relacao: o.relacao, lealdade: o.lealdade, saiu: o.saiu !== undefined, lembra: o.memoria.slice(-4).map(m => `${anoDe(m.t)} · ${LEMBRA[m.fato]}`) })),
+    // REWORK 12.2: o que é grave (traição, promessa quebrada, conflito, saída) aparece sempre, por antigo que seja.
+    organizacoes: orgs.map(o => ({ nome: o.nome, ramo: NOME_DO_RAMO[o.especialidade], relacao: o.relacao, lealdade: o.lealdade, saiu: o.saiu !== undefined, lembra: [...new Set([...o.memoria.filter(m => GRAVE.has(m.fato)), ...o.memoria.slice(-4)])].sort((x, y) => x.t - y.t).slice(-6).map(m => `${anoDe(m.t)} · ${LEMBRA[m.fato]}`) })),
     exposicao: Math.round(e.exposicao), divida: e.divida ?? 0,
     diario: (e.diario ?? []).slice(-12).reverse().map(x => ({ ano: anoDe(x.t), texto: x.texto, ...(x.tom ? { tom: x.tom } : {}) })),
     podeEntrar: e.parou === undefined ? RAMOS.filter(r => !e.especializacoes?.[r] || e.especializacoes[r]!.largou !== undefined) : []

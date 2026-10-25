@@ -179,7 +179,7 @@ export function semana(v: Vida): Semana {
   }
   // Bicho pede tempo: o passeio do cachorro todo dia, a conversa com o papagaio, a gaiola, o aquário (quem cuida é a casa inteira, mas o tempo sai de alguém).
   if (i >= 18) {
-    const bichos = vinculosVivos(v).filter(x => x.p.especie && x.vin.convivio.includes('casa') && x.p.pet?.tutor === 'eu' && animal(x.p.especie).semana > 0).map(x => x.p);
+    const bichos = vinculosVivos(v).filter(x => x.p.especie && x.vin.convivio.includes('casa') && x.p.pet?.tutor === 'eu' && !x.p.pet?.cuidador && animal(x.p.especie).semana > 0).map(x => x.p);
     if (bichos.length) {
       const peso = Math.min(0.75, bichos.reduce((s, p) => s + animal(p.especie).semana, 0)) * (moraCom(v).some(p => idadePessoa(v, p) >= 12) ? 0.5 : 1);
       const caes = bichos.filter(p => p.especie === 'cachorro');

@@ -17,12 +17,16 @@ import { useState, type ReactNode } from 'react';
 import type { Acao } from '../../motor/acoes';
 import type { Colecionavel, Empresa, TipoEmpresa, Veiculo, Vida } from '../../motor/tipos';
 import { idade } from '../../motor/nucleo';
+import { anoDe } from '../../motor/tempo';
 import { modeloVeiculo } from '../../motor/dados/bens';
 import { economiaLocal, municipio } from '../../motor/dados/lugares';
 import { custosDeVeiculo, guardadoLonge, nomeComCor, ondeEsta, custoDeTrazer } from '../../motor/sistemas/veiculos';
 import { aluguelDeMercado } from '../../motor/sistemas/imoveis';
-import { colecao, estimativaDeVenda, lojaDeColecaoNaCidade, ofertasDeColecao, PROCEDENCIA_EM_PALAVRAS, valorDaColecao, custoDaColecao } from '../../motor/sistemas/colecao';
-import { LOJAS_DE_COLECAO, NOME_CATEGORIA_COLECAO, NOME_RARIDADE, type LojaDeColecao } from '../../motor/dados/colecionaveis';
+import { colecao, custoDoServico, estimativaDeVenda, lojaDeColecaoNaCidade, ofertasDeColecao, PROCEDENCIA_EM_PALAVRAS, propostasDeColecionadores, ROTULO_SERVICO, valorDaColecao, custoDaColecao, type OfertaDeColecao, type ServicoDeColecao } from '../../motor/sistemas/colecao';
+import { LOJAS_DE_COLECAO, NOME_CATEGORIA_COLECAO, NOME_RARIDADE, pecaDeColecao, type LojaDeColecao } from '../../motor/dados/colecionaveis';
+import type { CategoriaColecao } from '../../motor/tipos';
+import { itemEstilo } from '../../motor/dados/estilo';
+import { PainelDoRamo, VisaoGeralDasEmpresas } from './NegocioDoRamo';
 import { custoDaDecisao, empresasAtivas, leituraDoGestor, ofertasDeParticipacao, planoDeAbertura, quemToca, valorDaParte, valorDeVendaDaParte, type DecisaoEmpresa } from '../../motor/sistemas/empresas';
 import { NOME_PRECO_EMPRESA, TIPOS_DE_EMPRESA, tipoDeEmpresa } from '../../motor/dados/empresas';
 import { lojaNaCidade } from '../../motor/sistemas/mercado';
@@ -41,8 +45,11 @@ interface Props { vida: Vida; agir: (a: Acao) => boolean; abrir: (l: QualLugar) 
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-export function Patrimonio({ vida, agir, abrir }: Props) {
-  const [parte, setParte] = useState<PartePatrimonio>('resumo');
+/** REWORK 12.2: a parte aberta pode vir de fora (o atalho "Ver no patrimônio" depois de uma compra). */
+export function Patrimonio({ vida, agir, abrir, parte: parteDeFora, irParte }: Props & { parte?: PartePatrimonio; irParte?: (p: PartePatrimonio) => void }) {
+  const [parteLocal, setParteLocal] = useState<PartePatrimonio>('resumo');
+  const parte = parteDeFora ?? parteLocal;
+  const setParte = (p: PartePatrimonio) => { setParteLocal(p); irParte?.(p); };
   const i = idade(vida);
   if (i < 12) return <Pertences vida={vida} agir={agir} abrir={abrir} semVeiculos={false} />;
   const f = vida.financas;
@@ -52,7 +59,7 @@ export function Patrimonio({ vida, agir, abrir }: Props) {
     { id: 'garagem', rotulo: 'Garagem', conta: f.bens.filter(b => b.tipo === 'veiculo').length },
     { id: 'colecao', rotulo: 'Coleção', conta: colecao(vida).length },
     { id: 'empresas', rotulo: 'Empresas', conta: empresasAtivas(vida).length },
-    { id: 'objetos', rotulo: 'Objetos', conta: (f.coisas ?? []).length }
+    { id: 'objetos', rotulo: 'Objetos', conta: (f.coisas ?? []).length + (vida.eu.estilo?.itens.length ?? 0) }
   ];
   const painel = (id: PartePatrimonio, filho: ReactNode) => (
     <div key={id} role="tabpanel" id={parte === id ? 'patrimonio-painel' : undefined} aria-labelledby={`patrimonio-aba-${id}`} className={`pat-parte${parte === id ? '' : ' pat-parte--oculta'}`}>{filho}</div>
@@ -65,7 +72,7 @@ export function Patrimonio({ vida, agir, abrir }: Props) {
       {painel('garagem', <Garagem vida={vida} agir={agir} abrir={abrir} />)}
       {painel('colecao', <Colecao vida={vida} agir={agir} abrir={abrir} />)}
       {painel('empresas', <Empresas vida={vida} agir={agir} />)}
-      {painel('objetos', <Pertences vida={vida} agir={agir} abrir={abrir} semVeiculos />)}
+      {painel('objetos', <Objetos vida={vida} agir={agir} abrir={abrir} irColecao={() => setParte('colecao')} />)}
     </div>
   );
 }
@@ -115,6 +122,43 @@ function PainelDoPatrimonio({ vida }: { vida: Vida }) {
         </div>
       )}
     </Secao>
+  );
+}
+
+/* ------------------------------------------------------------------ Objetos */
+
+/**
+ * REWORK 12.2 · PAT-12.2-01 — "comprei um relógio e a aba Objetos ficou vazia": o que se compra na ótica, nas roupas e
+ * na relojoaria/joalheria (o que se USA no corpo) ficava em `eu.estilo` e não aparecia aqui. Agora aparece, com o
+ * usar e o guardar; as coisas da vida continuam embaixo; e, quando não há nada, a tela diz onde mora cada tipo de bem.
+ */
+function Objetos({ vida, agir, abrir, irColecao }: Props & { irColecao: () => void }) {
+  const usados = vida.eu.estilo?.itens ?? [];
+  const coisas = vida.financas.coisas ?? [];
+  const pecas = colecao(vida).length;
+  return (
+    <>
+      {usados.length > 0 && (
+        <Secao titulo="O que você usa: roupas, óculos, relógios, joias">
+          <ul className="pat-usados">
+            {usados.map(x => {
+              const it = itemEstilo(x.itemId);
+              if (!it) return null;
+              return (
+                <li key={x.id} className="pat-usado">
+                  <span><strong>{it.nome}</strong>{it.luxo ? <span className="etiqueta-luxo">luxo</span> : null}<span className="nota"> · {x.usando ? 'em uso' : 'guardado'} · desde {anoDe(x.t)} · pagou {dinheiroCurto(x.preco)}</span></span>
+                  <BotaoAcao vida={vida} acao={{ tipo: 'usar_item', itemId: x.itemId, usar: !x.usando }} agir={agir} variante="discreto">{x.usando ? 'Guardar' : 'Usar'}</BotaoAcao>
+                </li>
+              );
+            })}
+          </ul>
+          <p className="nota">É de usar, não de investir: na revenda, roupa e acessório valem pouco. Um relógio de coleção (com caixa, papéis e mercado de revenda) mora em Coleção.</p>
+        </Secao>
+      )}
+      {(coisas.length > 0 || !usados.length) && <Pertences vida={vida} agir={agir} abrir={abrir} semVeiculos />}
+      {pecas > 0 && <p className="nota pat-onde">As peças de coleção ({pecas}) ficam em <button type="button" className="link" onClick={irColecao}>Coleção →</button></p>}
+      {!usados.length && !coisas.length && <p className="nota pat-onde">Onde fica cada coisa: o que se usa no corpo e as coisas da vida, aqui; relógios, joias, arte e antiguidades de coleção, em Coleção; carros e motos, em Garagem; casas, em Imóveis; negócios, em Empresas.</p>}
+    </>
   );
 }
 
@@ -211,6 +255,23 @@ function Colecao({ vida, agir, abrir }: Props) {
       {lista.length ? (
         <p className="nota">{lista.length} {lista.length === 1 ? 'peça' : 'peças'}, uns <strong>{dinheiroCurto(total)}</strong> no mercado hoje (pagou {dinheiroCurto(pago)}). O valor é estimado: só a venda diz o número de verdade.{seguro ? ` Seguro e guarda: ${dinheiroCurto(seguro)}/mês.` : ''}</p>
       ) : <p className="nota">Nenhuma peça. Relógio, joia, arte, antiguidade, memorabilia: a margem da loja fica na compra, e a revenda depende de quem quiser.</p>}
+      {propostasDeColecionadores(vida).length > 0 && (
+        <div className="pat-propostas">
+          <p className="rotulo-pequeno">Propostas de compra deste ano</p>
+          <ul className="ofertas">
+            {propostasDeColecionadores(vida).map(p => (
+              <li key={p.id} className="oferta oferta--estilo">
+                <span className="oferta__texto"><strong>{cap(p.quem)} quer {p.nome}</strong><span className="nota">Sem comissão de casa; a proposta vale só este ano.</span></span>
+                <span className="oferta__preco">{dinheiroCurto(p.valor)}</span>
+                <span className="oferta__comprar grupo-acoes grupo-acoes--linha">
+                  <BotaoAcao vida={vida} acao={{ tipo: 'colecao_proposta', propostaId: p.id, aceitar: true }} agir={agir} variante="secundario">Aceitar</BotaoAcao>
+                  <BotaoAcao vida={vida} acao={{ tipo: 'colecao_proposta', propostaId: p.id, aceitar: false }} agir={agir} variante="discreto">Recusar</BotaoAcao>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {lista.length > 0 && <ul className="pat-pecas">{lista.map(c => <Peca key={c.id} vida={vida} agir={agir} c={c} museus={museus} />)}</ul>}
       {idade(vida) >= 18 && (
         <div className="pat-lojas" aria-label="Onde se compram peças">
@@ -229,6 +290,7 @@ function Peca({ vida, agir, c, museus }: { vida: Vida; agir: (a: Acao) => boolea
       <div className="pat-peca__cabeca">
         <strong>{cap(c.nome)}</strong>
         <span className="pat-peca__meta">{NOME_CATEGORIA_COLECAO[c.categoria].um} · {NOME_RARIDADE[c.raridade]} · {PROCEDENCIA_EM_PALAVRAS[c.procedencia]}{c.certificado ? '' : ' (sem certificado)'}</span>
+        <span className="pat-peca__meta">{[pecaDeColecao(c.pecaId)?.fabricante, pecaDeColecao(c.pecaId)?.periodo, pecaDeColecao(c.pecaId)?.material].filter(Boolean).join(' · ')}{c.autenticidade ? ` · autenticidade ${c.autenticidade === 'verificada' ? 'verificada' : c.autenticidade === 'presumida' ? 'presumida (a palavra de quem vendeu)' : 'duvidosa'}` : ''}{c.avaliada !== undefined ? ` · avaliada em ${anoDe(c.avaliada)}` : ''}</span>
       </div>
       <dl className="objeto__numeros">
         <div><dt>Vale (estimado)</dt><dd>{dinheiroCurto(c.valor)}</dd></div>
@@ -237,6 +299,11 @@ function Peca({ vida, agir, c, museus }: { vida: Vida; agir: (a: Acao) => boolea
       </dl>
       {c.afeto && <p className="nota">Importa por outra razão: {c.afeto}.</p>}
       {c.emprestadaA && <p className="nota">Em exposição no museu (continua sua).</p>}
+      {c.emprestadaFora && <p className="nota">Emprestada a {c.emprestadaFora.instituicao} até {anoDe(c.emprestadaFora.ate)}.</p>}
+      {(c.historia ?? []).length > 1 && <details className="detalhes"><summary>A história da peça</summary><ul className="pat-historia">{(c.historia ?? []).map((h, k) => <li key={k}><span className="nota">{anoDe(h.t)}</span> {h.texto}</li>)}</ul></details>}
+      <div className="grupo-acoes grupo-acoes--linha pat-servicos">
+        {(['avaliar', 'autenticar', 'restaurar', 'emprestar'] as ServicoDeColecao[]).map(sv => <BotaoAcao key={sv} vida={vida} acao={{ tipo: 'colecao_servico', pecaId: c.id, servico: sv }} agir={agir} variante="discreto" ocultarBloqueado>{`${ROTULO_SERVICO[sv]}${custoDoServico(c, sv) > 0 ? ` (${dinheiroCurto(custoDoServico(c, sv))})` : ''}`}</BotaoAcao>)}
+      </div>
       <div className="grupo-acoes grupo-acoes--linha">
         {museus.map(e => <BotaoAcao key={e.id} vida={vida} acao={{ tipo: 'colecao_ceder', pecaId: c.id, empresaId: e.id }} agir={agir} variante="discreto" ocultarBloqueado>Ceder ao {e.nome}</BotaoAcao>)}
         {!vender ? <button type="button" className="link link--discreto" onClick={() => setVender(true)}>Vender…</button> : (
@@ -252,28 +319,74 @@ function Peca({ vida, agir, c, museus }: { vida: Vida; agir: (a: Acao) => boolea
   );
 }
 
-/** A loja de peças da cidade (aberta em Compras ou na Coleção): o que vende, o preço, o que vale depois de sair da loja. */
-export function LojaDeColecaoDaCidade({ vida, agir, loja }: { vida: Vida; agir: (a: Acao) => boolean; loja: LojaDeColecao }) {
-  const ofertas = ofertasDeColecao(vida, loja);
+/**
+ * A loja de peças da cidade (aberta em Compras ou na Coleção): o que vende, o que se verifica em cada peça (quem fez,
+ * quando, de quê, o estado, a autenticidade, a liquidez), o preço e o que vale depois de sair da loja. REWORK 12.2:
+ * filtros (preço, categoria, raridade), a venda privada (sob consulta, para quem a casa reconhece) e o leilão especial.
+ */
+export function LojaDeColecaoDaCidade({ vida, agir, loja, aoComprar }: { vida: Vida; agir: (a: Acao) => boolean; loja: LojaDeColecao; aoComprar?: () => void }) {
+  const todas = ofertasDeColecao(vida, loja);
   const l = LOJAS_DE_COLECAO[loja];
+  const [faixa, setFaixa] = useState<'todas' | 'ate100' | 'ate1m' | 'acima'>('todas');
+  const [cat, setCat] = useState<CategoriaColecao | 'todas'>('todas');
+  const [rar, setRar] = useState<'todas' | 'comum' | 'rara'>('todas');
+  const cats = [...new Set(todas.map(o => o.categoria))];
+  const filtra = (o: OfertaDeColecao) => (faixa === 'todas' || (faixa === 'ate100' ? o.preco <= 100000 : faixa === 'ate1m' ? o.preco > 100000 && o.preco <= 1_000_000 : o.preco > 1_000_000)) && (cat === 'todas' || o.categoria === cat) && (rar === 'todas' || (rar === 'comum' ? o.raridade === 'comum' || o.raridade === 'incomum' : o.raridade === 'rara' || o.raridade === 'unica'));
+  const vitrine = todas.filter(o => !o.canal).filter(filtra);
+  const privadas = todas.filter(o => o.canal === 'privada').filter(filtra);
+  const especiais = todas.filter(o => o.canal === 'especial').filter(filtra);
+  const altas = (loja === 'relojoaria' || loja === 'joalheria' || loja === 'galeria' || loja === 'antiquario') && !todas.some(o => o.canal === 'privada');
+  const agirEVer = (a: Acao) => { const ok = agir(a); if (ok) aoComprar?.(); return ok; };
   return (
     <div className="loja-estilo pat-loja">
       <p className="nota">{l.frase}</p>
-      {!ofertas.length && <p className="nota">{lojaDeColecaoNaCidade(vida.moradia.municipioId, loja) ? 'Nada à venda este ano.' : 'Não há uma destas na cidade: só nas metrópoles e capitais.'}</p>}
-      <ul className="ofertas">
-        {ofertas.map(o => (
-          <li key={o.id} className="oferta oferta--estilo">
-            <span className="oferta__texto">
-              <strong>{cap(o.nome)}</strong>
-              <span>{NOME_CATEGORIA_COLECAO[o.categoria].um} · {NOME_RARIDADE[o.raridade]}{o.certificado ? ' · com certificado' : ' · sem procedência'}</span>
-              <span className="nota">Depois de comprada, no mercado de revenda, deve valer uns {dinheiroCurto(o.valorEstimado)} — não é promessa: o valor anda com o mercado.</span>
-            </span>
-            <span className="oferta__preco">{dinheiroCurto(o.preco)}{loja === 'leilao' ? <small>com a comissão</small> : null}</span>
-            <span className="oferta__comprar"><BotaoAcao vida={vida} acao={{ tipo: 'colecao_comprar', ofertaId: o.id }} agir={agir} variante="secundario">{loja === 'leilao' ? 'Dar o lance' : 'Comprar'}</BotaoAcao></span>
-          </li>
-        ))}
-      </ul>
+      {todas.length > 3 && (
+        <div className="pat-filtros" role="group" aria-label="Filtrar as peças">
+          <label className="campo"><span className="campo__rotulo">Preço</span><select value={faixa} onChange={ev => setFaixa(ev.target.value as typeof faixa)}><option value="todas">Todos</option><option value="ate100">Até {dinheiroCurto(100000)}</option><option value="ate1m">{dinheiroCurto(100000)} a {dinheiroCurto(1_000_000)}</option><option value="acima">Acima de {dinheiroCurto(1_000_000)}</option></select></label>
+          {cats.length > 1 && <label className="campo"><span className="campo__rotulo">Categoria</span><select value={cat} onChange={ev => setCat(ev.target.value as typeof cat)}><option value="todas">Todas</option>{cats.map(c => <option key={c} value={c}>{NOME_CATEGORIA_COLECAO[c].varios}</option>)}</select></label>}
+          <label className="campo"><span className="campo__rotulo">Raridade</span><select value={rar} onChange={ev => setRar(ev.target.value as typeof rar)}><option value="todas">Todas</option><option value="comum">De série e pouco comuns</option><option value="rara">Raras e únicas</option></select></label>
+        </div>
+      )}
+      {!todas.length && <p className="nota">{lojaDeColecaoNaCidade(vida.moradia.municipioId, loja) ? 'Nada à venda este ano.' : 'Não há uma destas na cidade: só nas metrópoles e capitais.'}</p>}
+      {todas.length > 0 && !vitrine.length && !privadas.length && !especiais.length && <p className="nota">Nenhuma peça com esses filtros.</p>}
+      <ListaDePecas vida={vida} agir={agirEVer} lista={vitrine} leilao={loja === 'leilao'} />
+      {privadas.length > 0 && (
+        <section className="pat-canal" aria-label="Sob consulta">
+          <h3 className="subtitulo">Sob consulta · venda privada</h3>
+          <p className="nota">A casa liga para quem pode comprar. Peças com histórico de donos, sem a margem da vitrine — e com o prêmio de quem vende.</p>
+          <ListaDePecas vida={vida} agir={agirEVer} lista={privadas} />
+        </section>
+      )}
+      {especiais.length > 0 && (
+        <section className="pat-canal pat-canal--especial" aria-label="Leilão especial">
+          <h3 className="subtitulo">O leilão especial da temporada</h3>
+          <p className="nota">As peças históricas e únicas: uma de cada no mundo. Quem arremata entra na lista de donos — e ela não volta tão cedo.</p>
+          <ListaDePecas vida={vida} agir={agirEVer} lista={especiais} leilao />
+        </section>
+      )}
+      {altas && <p className="nota">As peças acima de alguns milhões não ficam na vitrine: a casa oferece sob consulta a clientes com patrimônio que ela reconheça.</p>}
     </div>
+  );
+}
+
+function ListaDePecas({ vida, agir, lista, leilao }: { vida: Vida; agir: (a: Acao) => boolean; lista: OfertaDeColecao[]; leilao?: boolean }) {
+  if (!lista.length) return null;
+  return (
+    <ul className="ofertas">
+      {lista.map(o => (
+        <li key={o.id} className="oferta oferta--estilo pat-oferta">
+          <span className="oferta__texto">
+            <strong>{cap(o.nome)}</strong>
+            <span>{NOME_CATEGORIA_COLECAO[o.categoria].um} · {NOME_RARIDADE[o.raridade]} · {o.autenticidade === 'verificada' ? 'autenticidade verificada' : o.autenticidade === 'presumida' ? 'autenticidade presumida' : 'sem procedência'}</span>
+            <span className="nota">{[o.fabricante, o.periodo, o.material].filter(Boolean).join(' · ')}{o.estado < 100 ? ` · estado ${o.estado >= 85 ? 'ótimo' : o.estado >= 70 ? 'bom' : 'marcado pelo tempo'}` : ' · nova'} · revenda {o.liquidez === 'alta' ? 'rápida' : o.liquidez === 'media' ? 'em semanas' : 'lenta (e com desconto, se tiver pressa)'}</span>
+            {o.donos?.length ? <span className="nota">Antes: {o.donos.join(', depois ')}.</span> : null}
+            <span className="nota">Depois de comprada, no mercado de revenda, deve valer uns {dinheiroCurto(o.valorEstimado)} — não é promessa.</span>
+          </span>
+          <span className="oferta__preco">{dinheiroCurto(o.preco)}{leilao ? <small>com a comissão</small> : null}</span>
+          <span className="oferta__comprar"><BotaoAcao vida={vida} acao={{ tipo: 'colecao_comprar', ofertaId: o.id }} agir={agir} variante="secundario">{leilao ? 'Dar o lance' : 'Comprar'}</BotaoAcao></span>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -286,6 +399,7 @@ function Empresas({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
   return (
     <Secao titulo="Empresas">
       <p className="nota">Empresa sua não é salário: o caixa é dela; o lucro só vira seu quando é distribuído. Dá para ter uma sem largar a profissão — com alguém contratado tocando, ou tocando você mesm{vida.eu.genero === 'feminino' ? 'a' : 'o'} (algumas noites e os sábados).</p>
+      <VisaoGeralDasEmpresas vida={vida} />
       {lista.map(e => <CartaoEmpresa key={e.id} vida={vida} agir={agir} e={e} />)}
       {idade(vida) >= 18 && (
         <div className="pat-abrir">
@@ -345,15 +459,16 @@ function CartaoEmpresa({ vida, agir, e }: { vida: Vida; agir: (a: Acao) => boole
       </dl>
       {!u && <p className="nota">{e.estado === 'abrindo' ? 'Em obra: o primeiro ano é de custo, sem público.' : 'O primeiro ano ainda não fechou.'}</p>}
       <p className="nota">Quem toca: {quemToca(e)}{e.papel !== 'investidor' && e.gestao.quem === 'contratada' ? ` — a gestão, até aqui: ${leituraDoGestor(vida, e)}` : ''}. Qualidade {e.qualidade >= 70 ? 'alta' : e.qualidade >= 50 ? 'boa' : e.qualidade >= 35 ? 'caindo' : 'baixa'}; reputação {e.reputacao >= 70 ? 'ótima' : e.reputacao >= 50 ? 'boa' : e.reputacao >= 35 ? 'mediana' : 'fraca'}. Preço {NOME_PRECO_EMPRESA[e.preco]}.{e.distribuir ? '' : ' O lucro fica na empresa.'}</p>
-      {e.acervo && <p className="nota">Acervo: {e.acervo.pecas} peças, uns {dinheiroCurto(e.acervo.valor)}; conservação {e.acervo.conservacao >= 70 ? 'em dia' : e.acervo.conservacao >= 45 ? 'atrasada' : 'em risco'}{e.acervo.exposicao && vida.t - (e.acervo.tExposicao ?? 0) < 12 ? '; exposição temporária em cartaz' : ''}.</p>}
-      {e.zoo && <p className="nota">{e.zoo.recintos} recintos, {e.zoo.especies} espécies. Bem-estar animal {e.zoo.bemEstar >= 75 ? 'bom' : e.zoo.bemEstar >= 55 ? 'aceitável' : 'abaixo do exigido'}; licença {e.zoo.licenca ? 'em dia' : 'suspensa'}{e.zoo.conservacao ? '; no programa de conservação' : ''}.</p>}
+      {e.setor && <PainelDoRamo vida={vida} agir={agir} e={e} />}
+      {e.acervo && !e.setor?.museu && <p className="nota">Acervo: {e.acervo.pecas} peças, uns {dinheiroCurto(e.acervo.valor)}; conservação {e.acervo.conservacao >= 70 ? 'em dia' : e.acervo.conservacao >= 45 ? 'atrasada' : 'em risco'}{e.acervo.exposicao && vida.t - (e.acervo.tExposicao ?? 0) < 12 ? '; exposição temporária em cartaz' : ''}.</p>}
+      {e.zoo && !e.setor?.zoo && <p className="nota">{e.zoo.recintos} recintos, {e.zoo.especies} espécies. Bem-estar animal {e.zoo.bemEstar >= 75 ? 'bom' : e.zoo.bemEstar >= 55 ? 'aceitável' : 'abaixo do exigido'}; licença {e.zoo.licenca ? 'em dia' : 'suspensa'}{e.zoo.conservacao ? '; no programa de conservação' : ''}.</p>}
       {u?.nota && <p className="nota">{u.nota}</p>}
       {e.papel !== 'investidor' && e.estado !== 'encerrada' && (
         <details className="objeto__fazer">
           <summary className="objeto__fazer-titulo">Decidir sobre {e.nome}</summary>
           <div className="pat-decisoes">
             <div><p className="rotulo-pequeno">Quem toca</p>{decidir('assumir', 'Tocar você mesm' + (vida.eu.genero === 'feminino' ? 'a' : 'o'))}{decidir('contratar_gestor', e.gestao.quem === 'propria' ? 'Contratar alguém' : 'Trocar o gestor')}</div>
-            <div><p className="rotulo-pequeno">Crescer e cuidar</p>{decidir('melhorar', `Reformar e equipar (${custo('melhorar')})`)}{decidir('contratar', 'Contratar mais gente')}{decidir('expandir', `Abrir outra unidade (${custo('expandir')})`)}{decidir('exposicao', `Montar uma exposição (${custo('exposicao')})`)}{decidir('bem_estar', `Ampliar os recintos (${custo('bem_estar')})`)}{decidir('conservacao', 'Entrar num programa de conservação')}</div>
+            <div><p className="rotulo-pequeno">Crescer e cuidar</p>{decidir('melhorar', `Reformar e equipar (${custo('melhorar')})`)}{decidir('contratar', 'Contratar mais gente')}{decidir('expandir', `Abrir outra unidade (${custo('expandir')})`)}{!e.setor?.museu && decidir('exposicao', `Montar uma exposição (${custo('exposicao')})`)}{!e.setor?.zoo && decidir('bem_estar', `Ampliar os recintos (${custo('bem_estar')})`)}{decidir('conservacao', 'Entrar num programa de conservação')}</div>
             <div><p className="rotulo-pequeno">Preço e lucro</p>{decidir('preco_popular', 'Preço popular')}{decidir('preco_medio', 'Preço médio')}{decidir('preco_alto', 'Alto padrão')}{decidir('reinvestir', 'Reinvestir o lucro')}{decidir('distribuir', 'Distribuir o lucro')}</div>
             <div><p className="rotulo-pequeno">Quando aperta</p>{decidir('aportar', `Pôr dinheiro seu (${custo('aportar')})`)}{decidir('cortar', 'Cortar a equipe')}</div>
           </div>

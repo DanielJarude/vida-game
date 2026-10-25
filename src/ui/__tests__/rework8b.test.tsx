@@ -114,10 +114,12 @@ describe('as coisas da vida: uma forma própria para cada coisa, na cor do objet
 });
 
 describe('os lugares como fachadas', () => {
-  it('17 lugares, 17 fachadas diferentes, cada uma com a placa', () => {
-    expect(LUGARES_DA_CIDADE.length).toBe(17);
+  // REWORK 12.2: + as casas de luxo e coleção (relojoaria, joalheria, galeria, antiquário, memorabilia, leilão), os
+  // exóticos e os quatro mercados de procedência incerta — cada um com o seu desenho (nenhuma fachada emprestada).
+  it('28 lugares, 28 fachadas diferentes, cada uma com a placa', () => {
+    expect(LUGARES_DA_CIDADE.length).toBe(28);
     const tracos = LUGARES_DA_CIDADE.map(l => traco(<Fachada lugar={l} vazia largura={300} altura={110} />));
-    expect(new Set(tracos).size).toBe(17);
+    expect(new Set(tracos).size).toBe(28);
   });
 
   it('com objetos na frente, o interior some; sem objetos, a vitrine mostra o de dentro', () => {

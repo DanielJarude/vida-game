@@ -48,6 +48,8 @@ export function agendarMudanca(v: Vida, destinoId: string, motivo: string, tEfet
  */
 let migrador: ((v: Vida, destinoId: string, motivo: string) => void) | undefined;
 export const registrarMigrador = (f: typeof migrador) => { migrador = f; };
+/** REWORK 12.2: o que mais precisa saber de uma mudança (sem que este módulo importe quem está acima dele). */
+export const AO_MUDAR: ((v: Vida, origem: string, destino: string) => void)[] = [];
 
 export function mudarAgora(v: Vida, destinoId: string, motivo: string, opcoes: { internacional?: boolean; comAFamilia?: boolean } = {}): void {
   // Outra cidade em outro país não é mudança de cidade: é migração — com porta, câmbio, língua (`migracao`). Quem
@@ -104,6 +106,8 @@ export function concluirMudanca(v: Vida, p: Extract<Processo, { tipo: 'mudanca' 
     .sort((a, b) => b.vin.proximidade - a.vin.proximidade).slice(0, 6);
   for (const { p: q } of ficam) lembrarCom(v, q.id, `Você se mudou para ${municipio(p.destinoId).nome}; ${q.nome} ficou em ${municipio(origem).nome}.`, 'distancia', 2);
   for (const { p: pet, vin } of vinculosVivos(v)) if (pet.especie && vin.convivio.includes('casa')) pet.municipioId = p.destinoId;
+  // REWORK 12.2: quem tem o que acompanhar a mudança (os animais exóticos e as instalações deles) diz aqui o que fez.
+  for (const f of AO_MUDAR) f(v, origem, p.destinoId);
 
   // O negócio: o que é da cidade fica na cidade (com quem o toque, ou fecha); o que é da internet vai junto.
   const n = negocioAberto(v);

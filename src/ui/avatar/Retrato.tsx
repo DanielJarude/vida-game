@@ -555,7 +555,7 @@ const Bigodes = ({ x, y, lado = 1, comp = 14 }: { x: number; y: number; lado?: 1
 const aroSe = (pelo: string) => (luminancia(pelo) < 0.06 ? misturar(pelo, '#ffffff', 0.45) : undefined);
 const escolha = <T,>(xs: readonly T[], semente: string, sal = 0): T => xs[(hash(semente) >>> sal) % xs.length];
 
-const FUNDO_PET: Record<string, string> = { cao: '#dfe6f0', gato: '#e6e0ea', roedor: '#e9e2d4', coelho: '#e3ebe2', ave: '#e8e4d2', peixe: '#cfe3ea', reptil: '#dfe8d4' };
+const FUNDO_PET: Record<string, string> = { cao: '#dfe6f0', gato: '#e6e0ea', roedor: '#e9e2d4', mamifero: '#e9e2d4', coelho: '#e3ebe2', ave: '#e8e4d2', peixe: '#cfe3ea', reptil: '#dfe8d4' };
 
 /**
  * REWORK 4: o fundo do retrato do bicho é escolhido pelo CONTRASTE com a pelagem (o gato branco não some mais num
@@ -814,7 +814,86 @@ const Aquario = () => (
   </g>
 );
 
+
+/* REWORK 12.2 — os exóticos, cada um com a sua silhueta. */
+const Arara: DesenhoBicho = () => (
+  <Ave p={{ corpo: '#2f6db3', cabeca: '#2f6db3', asa: '#2a5a96', cauda: 'longa', escala: 1.08, bico: 'gancho' }}
+    enfeite={<ellipse cx="64" cy="36" rx="5" ry="3.4" fill="#f4ece0" />}>
+    <ellipse cx="54" cy="58" rx="9" ry="12" fill="#e8b830" />
+  </Ave>
+);
+const Furao: DesenhoBicho = ({ semente }) => {
+  const c = escolha(['#8a6a4a', '#d9c7a8', '#4a3a2c'], semente);
+  return (
+    <g>
+      <Sombra y={84} rx={40} />
+      <path d="M 12 74 C 18 60 40 58 62 62 C 74 64 80 70 84 76 C 70 84 40 84 18 82 Z" fill={c} />
+      <path d="M 12 74 C 4 70 2 62 8 58" stroke={c} strokeWidth="6" strokeLinecap="round" fill="none" />
+      <ellipse cx="80" cy="66" rx="12" ry="9" fill={c} />
+      <path d="M 70 62 C 76 58 86 58 92 64 C 88 70 78 70 70 66 Z" fill="#f2ebe0" />
+      <circle cx="74" cy="57" r="3.4" fill={c} /><circle cx="86" cy="57" r="3.4" fill={c} />
+      <Olho x={79} y={63} r={1.8} /><Olho x={87} y={63} r={1.8} />
+      <circle cx="93" cy="67" r="1.6" fill="#3a2a2a" />
+      <path d="M 28 82 v6 M 44 83 v6 M 62 82 v6 M 74 80 v6" stroke={c} strokeWidth="4" strokeLinecap="round" />
+    </g>
+  );
+};
+const Ourico: DesenhoBicho = () => (
+  <g>
+    <Sombra y={84} rx={34} />
+    <path d="M 18 82 C 14 56 34 38 58 40 C 76 42 84 58 84 82 Z" fill="#7a6a58" />
+    <path d={Array.from({ length: 14 }, (_, k) => { const a = Math.PI * (1.05 + k * 0.065); return `M ${50 + 30 * Math.cos(a)} ${80 + 34 * Math.sin(a)} l ${(-4 * Math.cos(a + 0.4)).toFixed(1)} ${(-6 * Math.sin(a + 0.2) - 3).toFixed(1)}`; }).join(' ')} stroke="#4a3a2c" strokeWidth="1.6" strokeLinecap="round" />
+    <path d="M 76 66 C 86 64 94 70 96 78 C 88 82 80 80 74 78 Z" fill="#efe2cc" />
+    <Olho x={84} y={70} r={1.8} /><circle cx="96" cy="77" r="1.8" fill="#2b2826" />
+  </g>
+);
+const Lagarto = ({ c, escuro, barba }: { c: string; escuro: string; barba?: boolean }) => (
+  <g>
+    <Sombra y={88} rx={40} />
+    <path d="M 18 76 C 8 78 4 88 20 90 C 40 92 60 88 70 82 L 70 74 C 54 74 34 72 18 76 Z" fill={c} />
+    <path d="M 20 72 C 30 62 52 60 68 64 L 70 78 C 54 80 34 80 20 78 Z" fill={c} />
+    <path d="M 64 62 C 70 54 84 54 92 62 C 94 68 90 72 82 72 L 66 74 Z" fill={c} />
+    {barba && <path d="M 66 72 C 70 80 80 82 86 72 Z" fill={escuro} />}
+    <path d="M 30 66 l 4 -4 M 40 64 l 4 -5 M 50 63 l 4 -5 M 60 63 l 3 -4" stroke={escuro} strokeWidth="2" strokeLinecap="round" />
+    <Olho x={82} y={62} r={2.2} />
+    <path d="M 58 78 L 62 88 L 66 90 M 30 80 L 26 90 L 30 92" stroke={c} strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+  </g>
+);
+const Gecko: DesenhoBicho = () => (
+  <g><Lagarto c="#e8c45a" escuro="#5a4a2a" />
+    {[[30, 72], [44, 70], [54, 74], [70, 66], [86, 66], [38, 82], [58, 84]].map(([x, y], k) => <circle key={k} cx={x} cy={y} r="1.8" fill="#3a2e22" />)}</g>
+);
+const DragaoBarbudo: DesenhoBicho = () => <Lagarto c="#c9a06a" escuro="#7a5a32" barba />;
+const Piton: DesenhoBicho = () => (
+  <g>
+    <Sombra y={86} rx={38} />
+    <path d="M 20 78 C 20 62 44 56 58 64 C 72 72 76 84 60 88 C 44 92 28 88 26 80 C 24 72 40 70 50 74" stroke="#7a5a32" strokeWidth="13" strokeLinecap="round" fill="none" />
+    <path d="M 20 78 C 20 62 44 56 58 64 C 72 72 76 84 60 88 C 44 92 28 88 26 80" stroke="#c9a06a" strokeWidth="5" strokeDasharray="6 7" strokeLinecap="round" fill="none" />
+    <path d="M 50 74 C 58 70 66 64 74 58 C 80 54 88 54 90 60 C 90 66 82 68 76 66 Z" fill="#7a5a32" />
+    <Olho x={84} y={58} r={1.8} />
+  </g>
+);
+const Disco: DesenhoBicho = () => (
+  <g>
+    <Aquario />
+    <circle cx="48" cy="52" r="22" fill="#3a8ec8" />
+    <path d="M 34 38 Q 48 52 34 66 M 44 32 Q 58 52 44 72 M 54 31 Q 66 52 54 73" stroke="#e8892a" strokeWidth="2.4" fill="none" opacity="0.8" />
+    <path d="M 68 52 L 80 42 L 80 62 Z" fill="#3a8ec8" />
+    <Olho x={34} y={50} r={2.8} />
+  </g>
+);
+const Palhaco: DesenhoBicho = () => (
+  <g>
+    <Aquario />
+    <ellipse cx="48" cy="52" rx="22" ry="13" fill="#e8742a" />
+    <path d="M 36 40 C 33 48 33 56 36 64 L 41 64 C 38 56 38 48 41 40 Z M 52 39 C 49 47 49 57 52 65 L 57 65 C 54 57 54 47 57 39 Z" fill="#f4f1ea" stroke="#2b2826" strokeWidth="0.8" />
+    <path d="M 68 52 C 76 42 86 42 88 48 C 84 52 84 54 88 58 C 86 64 76 62 68 52 Z" fill="#e8742a" stroke="#2b2826" strokeWidth="0.8" />
+    <Olho x={30} y={50} r={2.6} />
+  </g>
+);
+
 const DESENHO_PET: Record<string, DesenhoBicho> = {
   cachorro: Cao, gato: Gato, hamster: Hamster, porquinho: Porquinho, coelho: Coelho, chinchila: Chinchila,
-  papagaio: Papagaio, periquito: Periquito, calopsita: Calopsita, canario: Canario, iguana: Iguana, jabuti: Jabuti, peixe: Peixe, betta: Betta
+  papagaio: Papagaio, periquito: Periquito, calopsita: Calopsita, canario: Canario, iguana: Iguana, jabuti: Jabuti, peixe: Peixe, betta: Betta,
+  arara: Arara, furao: Furao, ourico: Ourico, gecko: Gecko, dragao_barbudo: DragaoBarbudo, piton_bola: Piton, acara_disco: Disco, peixe_palhaco: Palhaco
 };

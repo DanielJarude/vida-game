@@ -27,6 +27,7 @@ import { paisDaVida } from '../mundo/vida';
 import { okDePagar } from './dinheiro';
 import { lancar } from './extrato';
 import type { Veredito } from '../plausibilidade';
+import { anoDoSetor, bemEstarDoZoo, efeitosDoSetor, garantirSetor, sincronizarZoo, temaMaisForte, montarExposicaoDoTema } from './setores';
 
 export const empresas = (v: Vida): Empresa[] => v.financas.empresas ?? [];
 export const empresasAtivas = (v: Vida) => empresas(v).filter(e => e.estado !== 'encerrada');
@@ -39,18 +40,18 @@ export const valorDasEmpresas = (v: Vida) => empresas(v).reduce((s, e) => s + va
 /* ------------------------------------------------------- O lugar e o ramo */
 
 /** O quanto a cidade rende para este tipo (o porte; o turismo para hotel, museu e zoológico). */
-function fatorDaCidade(t: TipoDeEmpresa, municipioId: string): number {
+export function fatorDaCidade(t: TipoDeEmpresa, municipioId: string): number {
   const p = municipio(municipioId).perfil;
   const porte = { metropole: 1.25, capital: 1, metropolitana: 0.85, polo: 0.75, pequena: 0.5 }[p] ?? 0.8;
   return t.turismo ? porte * (pertoDaAgua(municipioId) ? 1.15 : 1) : porte;
 }
 
 /** Os preços da cidade (o prato, a diária, o salário) — o custo de vida e o nível de salário locais. */
-const custoLocal = (municipioId: string) => economiaLocal(municipioId).custo;
-const salarioLocal = (municipioId: string) => economiaLocal(municipioId).salario;
+export const custoLocal = (municipioId: string) => economiaLocal(municipioId).custo;
+export const salarioLocal = (municipioId: string) => economiaLocal(municipioId).salario;
 
 /** Os números de uma empresa em outro país estão nos preços de lá: convertidos para os da vida. */
-const conversao = (v: Vida, e: Empresa) => converterEntrePaises(1, paisDaCidade(e.municipioId), paisDaVida(v));
+export const conversao = (v: Vida, e: Empresa) => converterEntrePaises(1, paisDaCidade(e.municipioId), paisDaVida(v));
 
 /** A pessoa é do ramo (o médico e a clínica, o músico e o estúdio)? */
 export function doRamo(v: Vida, tipo: TipoEmpresa): boolean {
@@ -60,11 +61,17 @@ export function doRamo(v: Vida, tipo: TipoEmpresa): boolean {
 }
 
 /** A competência de quem toca (0..100). A própria cresce com os anos; a do gestor contratado é a que ele tem. */
+const COMPLEXIDADE: Partial<Record<TipoEmpresa, number>> = { hotel: 12, zoologico: 14, clinica: 10, museu: 8, restaurante: 4 };
+
 export function competenciaDaGestao(v: Vida, e: Empresa): number {
   if (e.gestao.quem === 'contratada') return e.gestao.competencia ?? 50;
   const anos = Math.min(10, (v.t - e.gestao.tInicio) / 12);
   // Quem toca aprende com os anos — até um teto: a pessoa tem outra profissão (e quem não é do ramo para mais cedo).
-  return clamp(40 + anos * 2.5 + (doRamo(v, e.tipo) ? 10 : 0) + (v.caminhos.negocio ? 5 : 0), 0, doRamo(v, e.tipo) ? 76 : 66);
+  // REWORK 12.2: o teto desce no negócio complexo (o hotel, o zoológico, a clínica, o museu pedem ofício que não se
+  // aprende tocando nas horas vagas) — e desce mais para quem toca várias empresas ao mesmo tempo.
+  const complexo = COMPLEXIDADE[e.tipo] ?? 0;
+  const varias = Math.max(0, empresasAtivas(v).filter(x => x.gestao.quem === 'propria' && x.papel !== 'investidor').length - 1) * 6;
+  return clamp(38 + anos * 2.5 + (doRamo(v, e.tipo) ? 10 : 0) + (v.caminhos.negocio ? 5 : 0) - varias, 0, (doRamo(v, e.tipo) ? 76 : 64) - (doRamo(v, e.tipo) ? complexo / 2 : complexo));
 }
 
 /** A competência do gestor só aparece com o tempo (a tela diz em palavras, nunca em número). */
@@ -96,7 +103,9 @@ export function custosFixos(v: Vida, e: Empresa): { rotulo: string; valor: numbe
   if (e.gestao.quem === 'contratada' && e.gestao.salario) out.push({ rotulo: 'Gestor contratado', valor: e.gestao.salario * 12 * s });
   if (t.responsavel && !(e.gestao.quem === 'propria' && v.trabalho.atual && t.responsavel.ocupacao.test(v.trabalho.atual.ocupacaoId))) out.push({ rotulo: `${t.responsavel.rotulo.charAt(0).toUpperCase()}${t.responsavel.rotulo.slice(1)}`, valor: t.responsavel.salario * 12 * s });
   if (e.acervo) out.push({ rotulo: 'Conservação do acervo', valor: e.acervo.valor / k * 0.025 });
-  if (e.zoo) out.push({ rotulo: 'Alimentação, veterinária e recintos', valor: e.zoo.recintos * 95000 * c * (0.7 + e.zoo.bemEstar / 170) + (e.zoo.conservacao ? 600000 * c : 0) });
+  if (e.zoo && !e.setor?.zoo) out.push({ rotulo: 'Alimentação, veterinária e recintos', valor: e.zoo.recintos * 95000 * c * (0.7 + e.zoo.bemEstar / 170) + (e.zoo.conservacao ? 600000 * c : 0) });
+  // REWORK 12.2: o que é próprio do ramo (o chef, os serviços do hotel, os profissionais da clínica, os animais).
+  if (e.setor) out.push(...efeitosDoSetor(v, e).fixos.filter(x => Math.abs(x.valor) >= 1));
   return out;
 }
 
@@ -111,6 +120,7 @@ export function planoDeAbertura(v: Vida, tipo: TipoEmpresa, comSocio: boolean): 
   const capital = Math.round(t.capital * Math.pow(custoLocal(onde), 1.2) / 1000) * 1000;
   const capitalDaPessoa = comSocio ? Math.round(capital / 2 / 1000) * 1000 : capital;
   const rascunho = novaEmpresa(v, tipo, comSocio, 'teste');
+  garantirSetor(v, rascunho);
   const custoAnual = Math.round(custosFixos(v, rascunho).reduce((s, x) => s + x.valor, 0) / 1000) * 1000;
   const receitaTipica = Math.round(t.publico * fatorDaCidade(t, onde) * t.ticket.medio * custoLocal(onde) / 1000) * 1000;
   const grande = ['metropole', 'capital'].includes(municipio(onde).perfil);
@@ -139,7 +149,7 @@ function novaEmpresa(v: Vida, tipo: TipoEmpresa, comSocio: boolean, id: string):
  * Um gestor para contratar: a competência é sorteada (e só se mostra com o tempo); quem é melhor cobra mais — e
  * o gerente de um estúdio não ganha o que ganha o diretor de um hotel (o salário segue o porte do negócio).
  */
-function gestorNovo(v: Vida, id: string, n: number, tipo?: TipoEmpresa): { nome: string; competencia: number; salario: number } {
+export function gestorNovo(v: Vida, id: string, n: number, tipo?: TipoEmpresa): { nome: string; competencia: number; salario: number } {
   const r = rngDe(v.id, id, 'gestor', n, v.t);
   const competencia = Math.round(clamp(55 + r.normal() * 16, 15, 92));
   const [m, f] = r.pick(GESTORES);
@@ -151,6 +161,7 @@ export function abrirEmpresa(v: Vida, tipo: TipoEmpresa, comSocio: boolean): str
   const p = planoDeAbertura(v, tipo, comSocio);
   const id = `em${v.seq++}`;
   const e = novaEmpresa(v, tipo, comSocio, id);
+  garantirSetor(v, e);
   v.financas.conta -= p.capitalDaPessoa;
   (v.financas.empresas ??= []).push(e);
   const t = tipoDeEmpresa(tipo);
@@ -222,6 +233,8 @@ function procura(v: Vida, e: Empresa, r: Rng): number {
   const gestao = 0.85 + competenciaDaGestao(v, e) / 380;
   const sorte = Math.max(0.55, 1 + r.normal() * 0.12);
   let base = t.publico * e.unidades * fatorDaCidade(t, e.municipioId) * rep * qual * gestao * t.procura[e.preco] * ciclo * sorte;
+  // REWORK 12.2: o ramo decide o resto (a nota do restaurante, a ocupação do hotel, os animais, as obras).
+  if (e.setor) return base * efeitosDoSetor(v, e).procura * (e.tipo === 'estudio' && doRamo(v, 'estudio') && e.papel !== 'investidor' ? 1 + Math.min(0.5, (v.notoriedade?.valor ?? 0) / 120) : 1);
   if (e.tipo === 'museu' && e.acervo) base *= (0.6 + Math.min(1.2, (e.acervo.valor + valorCedidoAoMuseu(v, e)) / Math.max(1, t.capital * 0.6)) * 0.4) * (e.acervo.exposicao && v.t - (e.acervo.tExposicao ?? 0) < 12 ? 1.45 : 1);
   if (e.tipo === 'zoologico' && e.zoo) base *= (0.55 + e.zoo.bemEstar / 220) * (0.7 + e.zoo.especies / 130);
   if (e.tipo === 'estudio' && doRamo(v, 'estudio') && e.papel !== 'investidor') base *= 1 + Math.min(0.5, (v.notoriedade?.valor ?? 0) / 120);
@@ -239,21 +252,24 @@ export function contasDoAno(v: Vida, e: Empresa, r: Rng): ResultadoDoAno {
     return { publico: 0, receita: 0, custos: Math.round(fixos), apoio: 0, imposto: 0, resultado: -Math.round(fixos) };
   }
   // A capacidade cresce com a equipe (a clínica atende o que os profissionais dão conta; a academia, o que a sala comporta).
-  const teto = t.capacidade * e.unidades * Math.min(1.3, 0.55 + 0.45 * e.equipe / (t.equipe * e.unidades));
+  const ef = efeitosDoSetor(v, e);
+  const teto = t.capacidade * e.unidades * Math.min(1.3, 0.55 + 0.45 * e.equipe / (t.equipe * e.unidades)) * ef.capacidade;
   let publico: number;
   if (e.tipo === 'academia') {
     // A carteira: entra quem a procura traz; sai quem desiste (mais no popular, menos com qualidade).
-    const evasao = clamp(0.42 - e.qualidade / 400 + (e.preco === 'popular' ? 0.06 : e.preco === 'alto' ? -0.06 : 0), 0.18, 0.55) / 1;
+    const evasao = clamp(0.42 - e.qualidade / 400 + (e.preco === 'popular' ? 0.06 : e.preco === 'alto' ? -0.06 : 0) + ef.evasao, 0.12, 0.6) / 1;
     const antes = e.carteira ?? Math.round(t.publico * e.unidades * 0.7);
     publico = Math.round(Math.min(teto, antes * (1 - evasao) + procura(v, e, r) * evasao * 1.1));
     e.carteira = publico;
   } else publico = Math.round(Math.min(teto, procura(v, e, r)));
-  const receita = publico * t.ticket[e.preco] * c;
+  const receita = publico * t.ticket[e.preco] * ef.ticket * c;
   const fixos = custosFixos(v, e).reduce((s, x) => s + x.valor, 0);
-  const custos = fixos + receita * (t.variavel + t.outros);
+  const custos = fixos + receita * (t.variavel * ef.variavel + t.outros);
   // O apoio (museu, zoológico): patrocínio e incentivo cobrem parte do custo — mais para quem tem reputação e cuida bem.
-  const cuidado = e.zoo ? e.zoo.bemEstar / 100 * (e.zoo.conservacao ? 1.3 : 1) : e.acervo ? e.acervo.conservacao / 100 : 1;
-  const apoio = t.apoio ? custos * t.apoio * clamp((e.reputacao - 20) / 70, 0, 1.2) * cuidado : 0;
+  const cuidado = e.setor?.zoo ? 1 : e.zoo ? e.zoo.bemEstar / 100 * (e.zoo.conservacao ? 1.3 : 1) : e.acervo ? e.acervo.conservacao / 100 : 1;
+  // O patrocínio contratado do museu entra como apoio (já nos preços da vida: volta para os da cidade da empresa).
+  const patrocinio = e.setor?.museu?.patrocinio ? e.setor.museu.patrocinio.anual / conversao(v, e) : 0;
+  const apoio = (t.apoio ? custos * t.apoio * clamp((e.reputacao - 20) / 70, 0, 1.2) * cuidado * ef.apoio : 0) + patrocinio;
   const antesDoImposto = receita + apoio - custos;
   const imposto = Math.max(0, antesDoImposto) * 0.24 + receita * 0.03;
   return { publico, receita: Math.round(receita), custos: Math.round(custos), apoio: Math.round(apoio), imposto: Math.round(imposto), resultado: Math.round(antesDoImposto - imposto) };
@@ -267,6 +283,7 @@ export function processarEmpresas(v: Vida, r: Rng): void {
 function processarEmpresa(v: Vida, e: Empresa, r: Rng): void {
   // Quem se mudou não toca de longe: a gestão passa a alguém contratado (a empresa fica onde está).
   if (e.gestao.quem === 'propria' && e.municipioId !== v.moradia.municipioId) empresasNaMudanca(v, v.moradia.municipioId);
+  garantirSetor(v, e);
   const k = conversao(v, e);
   const contas = contasDoAno(v, e, r);
   const resultado = Math.round(contas.resultado * k);
@@ -280,7 +297,8 @@ function processarEmpresa(v: Vida, e: Empresa, r: Rng): void {
     nota = 'Obra concluída: abriu ao público.';
     escrever(v, { texto: `${e.nome} abriu ao público.`, relevancia: 'biografia', tema: 'trabalho', tom: 'bom' });
   } else if (e.estado === 'interditada') {
-    if (!e.zoo || e.zoo.bemEstar >= 55) { e.estado = 'operando'; if (e.zoo) e.zoo.licenca = true; nota = 'A interdição foi levantada.'; }
+    if (e.setor?.zoo) sincronizarZoo(e);
+    if ((!e.zoo || e.zoo.bemEstar >= 55) && (!e.setor?.clinica || e.setor.clinica.conformidade >= 50)) { e.estado = 'operando'; if (e.zoo) e.zoo.licenca = true; nota = 'A interdição foi levantada.'; }
   }
   // A distribuição: o LUCRO acumulado que passa de uma reserva (dois meses de custo) vai aos donos — a sua parte cai
   // na sua conta. O capital que se pôs para abrir não volta como "lucro": só o que a empresa ganhou.
@@ -298,7 +316,9 @@ function processarEmpresa(v: Vida, e: Empresa, r: Rng): void {
   // A qualidade se gasta devagar (a manutenção de rotina já está nos custos); quem toca bem segura, quem toca mal deixa cair.
   // A reputação caminha para o que a casa entrega (a qualidade e a gestão) — não sobe para sempre só porque o tempo passa.
   e.qualidade = clamp(Math.round(e.qualidade - 1.5 + (competenciaDaGestao(v, e) - 55) / 25));
-  const alvo = Math.min(82, e.qualidade * 0.85 + (competenciaDaGestao(v, e) - 50) / 4);
+  // REWORK 12.2: o ramo diz o que a casa entrega (a nota, o bem-estar, a ocupação) e até onde a reputação vai.
+  const doRamo12 = efeitosDoSetor(v, e);
+  const alvo = Math.min(doRamo12.teto, e.qualidade * 0.85 + (competenciaDaGestao(v, e) - 50) / 4 + doRamo12.reputacao);
   e.reputacao = clamp(Math.round(e.reputacao + (alvo - e.reputacao) * 0.25 + r.normal() * 4));
   // A concorrência: de tempos em tempos abre alguém igual perto (ou o bairro muda) — o público some por uns anos.
   if (e.estado === 'operando' && r.chance(e.tipo === 'museu' || e.tipo === 'zoologico' ? 0.04 : 0.12)) {
@@ -307,6 +327,8 @@ function processarEmpresa(v: Vida, e: Empresa, r: Rng): void {
   }
   e.ativos = Math.round(e.ativos * 0.93);
   if (e.acervo) e.acervo.conservacao = clamp(Math.round(e.acervo.conservacao - 2 + (e.caixa > 0 ? 1 : -2)));
+  const notaDoRamo = anoDoSetor(v, e, contas.publico);
+  if (notaDoRamo) nota = nota ?? notaDoRamo;
   if (e.zoo) zooNoAno(v, e, r);
   // O vermelho: um ano ruim aperta; anos seguidos com o caixa negativo levam à crise e, depois, à falência.
   if (e.caixa < 0) { e.anosNoVermelho += 1; if (e.estado === 'operando') e.estado = 'em_crise'; }
@@ -322,7 +344,8 @@ function zooNoAno(v: Vida, e: Empresa, r: Rng): void {
   const z = e.zoo!;
   const t = tipoDeEmpresa('zoologico');
   const equipe = e.equipe / t.equipe;
-  z.bemEstar = clamp(Math.round(z.bemEstar + (equipe - 1) * 20 + (e.caixa < 0 ? -6 : 1) - 2 + r.normal() * 3));
+  if (e.setor?.zoo) z.bemEstar = bemEstarDoZoo(e);
+  else z.bemEstar = clamp(Math.round(z.bemEstar + (equipe - 1) * 20 + (e.caixa < 0 ? -6 : 1) - 2 + r.normal() * 3));
   if (r.chance(0.35) || z.bemEstar < 45) {
     z.tFiscalizacao = v.t;
     if (z.bemEstar < 40) {
@@ -375,7 +398,7 @@ function falir(v: Vida, e: Empresa): void {
 
 export type DecisaoEmpresa = 'assumir' | 'contratar_gestor' | 'melhorar' | 'contratar' | 'cortar' | 'expandir' | 'preco_popular' | 'preco_medio' | 'preco_alto' | 'distribuir' | 'reinvestir' | 'aportar' | 'vender' | 'vender_parte' | 'encerrar' | 'exposicao' | 'bem_estar' | 'conservacao';
 
-const capitalDaUnidade = (e: Empresa) => Math.round(tipoDeEmpresa(e.tipo).capital * Math.pow(custoLocal(e.municipioId), 1.2) / 1000) * 1000;
+export const capitalDaUnidade = (e: Empresa) => Math.round(tipoDeEmpresa(e.tipo).capital * Math.pow(custoLocal(e.municipioId), 1.2) / 1000) * 1000;
 
 /** Quanto custa cada decisão (o que sai do caixa — e, se o caixa não tem, do seu bolso como aporte). */
 export function custoDaDecisao(v: Vida, e: Empresa, d: DecisaoEmpresa): number {
@@ -432,7 +455,7 @@ export function disponibilidadeEmpresa(v: Vida, e: Empresa | undefined, d: Decis
 }
 
 /** Tira do caixa; o que faltar sai da sua conta (um aporte, contado como investido). */
-function gastar(v: Vida, e: Empresa, valor: number): void {
+export function gastar(v: Vida, e: Empresa, valor: number): void {
   const doCaixa = Math.min(Math.max(0, e.caixa), valor);
   e.caixa -= doCaixa;
   const resto = valor - doCaixa;
@@ -525,13 +548,15 @@ export function decidirEmpresa(v: Vida, e: Empresa, d: DecisaoEmpresa): string {
     }
     case 'exposicao':
       gastar(v, e, custo);
+      if (e.setor?.museu) { const tema = temaMaisForte(e); if (tema) return montarExposicaoDoTema(v, e, tema); }
       e.acervo!.exposicao = 'a exposição do ano';
       e.acervo!.tExposicao = v.t;
       e.reputacao = clamp(e.reputacao + 6);
       return `Exposição temporária montada (${fmt(custo)}): fila na porta por alguns meses — e o nome do museu no jornal.`;
     case 'bem_estar':
       gastar(v, e, custo);
-      e.zoo!.bemEstar = clamp(e.zoo!.bemEstar + 18);
+      if (e.setor?.zoo) { for (const q of e.setor.zoo.recintos) q.qualidade = clamp(q.qualidade + 18); sincronizarZoo(e); }
+      else e.zoo!.bemEstar = clamp(e.zoo!.bemEstar + 18);
       e.ativos += Math.round(custo * 0.6);
       return `Recintos ampliados, enriquecimento ambiental, mais veterinários (${fmt(custo)}): os animais vivem melhor — e a fiscalização vê.`;
     case 'conservacao':

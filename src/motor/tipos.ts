@@ -146,7 +146,9 @@ export type Especie =
   | 'calopsita' | 'periquito' | 'canario' | 'papagaio'
   | 'hamster' | 'porquinho' | 'coelho' | 'chinchila'
   | 'peixe' | 'betta'
-  | 'jabuti' | 'iguana';
+  | 'jabuti' | 'iguana'
+  /** REWORK 12.2: os exóticos (a loja especializada, conforme a lei de cada país). */
+  | 'arara' | 'furao' | 'ourico' | 'gecko' | 'dragao_barbudo' | 'piton_bola' | 'acara_disco' | 'peixe_palhaco';
 
 /** Um animal da casa. Não é patrimônio: é alguém que mora junto e depende de cuidado. */
 export interface InfoPet {
@@ -168,6 +170,14 @@ export interface InfoPet {
   vidaMax: number;
   /** A semente do desenho (o id que tinha no abrigo): o bicho adotado é o mesmo que se viu na lista, não outro. */
   semente?: string;
+  /** REWORK 12.2: alguém contratado cuida no dia a dia (viagem, trabalho puxado): custa por mês, tira o bicho da semana. */
+  cuidador?: boolean;
+  /** REWORK 12.2: a instalação em que vive (id em `financas.instalacoes`). */
+  instalacao?: string;
+  /** REWORK 12.2: fugiu (quando) — continua na história, não na casa. */
+  fugiu?: number;
+  /** REWORK 12.2: entregue a uma instituição (o seu zoológico, um criadouro autorizado): quem cuida agora. */
+  instituicao?: string;
 }
 
 export interface Aperto {
@@ -1214,6 +1224,18 @@ export interface Financas {
   empresas?: Empresa[];
   /** REWORK 12: o veículo principal (o do dia a dia, quando há mais de um). Ausente = o sistema escolhe. */
   veiculoPrincipal?: string;
+  /** REWORK 12.2: o que os animais exóticos pedem (terrário, viveiro, aquário marinho) — `sistemas/exoticos`. */
+  instalacoes?: InstalacaoAnimal[];
+}
+
+/** REWORK 12.2: uma instalação para animal exótico (sem ela, a loja não vende a espécie que precisa dela). */
+export interface InstalacaoAnimal {
+  id: string;
+  tipo: string;
+  t: number;
+  preco: number;
+  /** A cidade onde está montada (na mudança, vai junto se o animal vai). */
+  municipioId: string;
 }
 
 /* ---------------------------------------------------- REWORK 12 · coleção */
@@ -1224,7 +1246,7 @@ export type RaridadeColecao = 'comum' | 'incomum' | 'rara' | 'unica';
  * De onde a peça veio — é a procedência que sustenta o valor. Peça sem procedência vale como peça sem
  * procedência (uma camisa "da final" comprada na calçada vale o que vale uma réplica), não como a lenda.
  */
-export type ProcedenciaColecao = 'loja' | 'galeria' | 'leilao' | 'antiquario' | 'herdada' | 'propria' | 'presente' | 'sem_procedencia';
+export type ProcedenciaColecao = 'loja' | 'galeria' | 'leilao' | 'antiquario' | 'herdada' | 'propria' | 'presente' | 'sem_procedencia' | 'privada' | 'paralelo';
 
 /** Uma peça de coleção. Valor ESTIMADO: só a venda diz o que ela vale de fato. */
 export interface Colecionavel {
@@ -1249,6 +1271,28 @@ export interface Colecionavel {
   historia?: EpisodioBem[];
   /** Cedida ao museu de que a pessoa é dona (em exposição, segue sendo dela). */
   emprestadaA?: string;
+  /**
+   * REWORK 12.2 — o que se sabe da autenticidade: verificada (laudo), presumida (a palavra de quem vendeu) ou
+   * duvidosa (sem papel, origem incerta). A verdade (`falsa`, `roubada`) não aparece na tela até alguém verificar.
+   */
+  autenticidade?: 'verificada' | 'presumida' | 'duvidosa';
+  falsa?: boolean;
+  roubada?: boolean;
+  /** Avaliada por um perito (quando): o valor da tela passa a ser o do laudo. */
+  avaliada?: number;
+  /** Emprestada a um museu de fora (até quando). */
+  emprestadaFora?: { instituicao: string; ate: number };
+  /** A chave da peça histórica única (uma só no mundo de cada continuidade). */
+  unica?: string;
+}
+
+/** REWORK 12.2 — por onde andou cada peça única desta continuidade (nunca duas iguais). */
+export interface RegistroDePecaUnica {
+  /** Quem tem: você (a peça está na coleção), o mercado (vendida; pode voltar a leilão anos depois) ou um museu. */
+  com: 'voce' | 'mercado' | 'museu';
+  t: number;
+  /** Os donos que a vida conheceu (nomes), na ordem. */
+  donos: string[];
 }
 
 /* ---------------------------------------------------- REWORK 12 · empresas */
@@ -1324,6 +1368,151 @@ export interface Empresa {
   /** Zoológico: o bem-estar dos animais (0..100), os recintos, a licença e a última fiscalização. */
   zoo?: { bemEstar: number; recintos: number; especies: number; licenca: boolean; tFiscalizacao?: number; conservacao: boolean };
   historia?: EpisodioBem[];
+  /** REWORK 12.2: o que é próprio do ramo (o cardápio, os quartos, os recintos, o acervo) — `sistemas/negocios`. */
+  setor?: SetorDaEmpresa;
+  /** REWORK 12.2: a empresa serve de fachada a um negócio por fora (o risco é dela também) — `sistemas/clandestinos`. */
+  fachada?: { negocioId: string; tInicio: number; suspeita: number; tFim?: number; descoberta?: number };
+}
+
+/* ------------------------------------------------- REWORK 12.2 · negócios vivos */
+
+export type ConceitoRestaurante = 'popular' | 'familiar' | 'especializado' | 'alta_gastronomia' | 'luxo';
+export type Nivel3 = 1 | 2 | 3;
+
+/** Alguém com nome à frente de uma área (o chef, o curador, o técnico de som): o talento só se vê com o tempo. */
+export interface ProfissionalChave { nome: string; talento: number; salario: number; t: number }
+
+/** Um animal do zoológico: um indivíduo, com nome, idade, saúde e história — não um número de estoque. */
+export interface AnimalDoZoo {
+  id: string;
+  especie: string;
+  nome: string;
+  genero: 'masculino' | 'feminino';
+  /** Mês (t da vida) em que nasceu. */
+  nasceu: number;
+  /** 0..100. */
+  saude: number;
+  origem: 'acervo' | 'transferencia' | 'nascido' | 'resgate' | 'conservacao' | 'doacao';
+  recinto: string;
+  chegou: number;
+  /** De onde veio, em palavras ("transferido do zoológico de Curitiba"; "era de Fulano, entregue à instituição"). */
+  historia?: string[];
+  /** O animal que era seu (pet) e foi para o zoológico: o id da pessoa-animal de antes. */
+  deQuem?: string;
+}
+
+export interface RecintoDoZoo { id: string; habitat: string; vagas: number; qualidade: number; t: number }
+
+/** Uma obra do museu (os destaques; a reserva técnica é `acervo.pecas`). */
+export interface ObraDoMuseu {
+  id: string;
+  nome: string;
+  tema: string;
+  periodo: string;
+  valor: number;
+  conservacao: number;
+  exposta: boolean;
+  /** O que se sabe (laudo) — e a verdade, escondida até alguém verificar. */
+  autenticidade: 'verificada' | 'presumida';
+  falsa?: boolean;
+  origem: 'acervo' | 'compra' | 'doacao' | 'emprestimo';
+  /** Empréstimo recebido: de quem e até quando (depois, volta). */
+  de?: string;
+  ate?: number;
+  /** Emprestada a outro museu: a quem e até quando. */
+  fora?: { instituicao: string; ate: number };
+}
+
+export interface SetorDaEmpresa {
+  /** O gestor contratado decide o dia a dia do ramo (o dono decide só o grande). */
+  delegar?: boolean;
+  /** 0..100: o quanto a cidade lembra da casa (a divulgação; cai sozinha). */
+  divulgacao?: number;
+  /** Um ano ruim de verdade (a falta de insumo, o surto, o escândalo) já aconteceu neste ano? */
+  tCrise?: number;
+  /** O mercado do negócio (o bairro que muda, a moda que passa): −0,35..+0,3 sobre a procura, anda devagar. */
+  mercado?: number;
+  restaurante?: {
+    conceito: ConceitoRestaurante;
+    culinaria: string;
+    ingredientes: Nivel3;
+    fornecedor: 'atacado' | 'local' | 'importador';
+    chef?: ProfissionalChave;
+    pratos: string[];
+    ambiente: number;
+    atendimento: number;
+    prestigio: number;
+    nota?: number;
+    avaliacoes?: { t: number; nota: number; texto: string }[];
+  };
+  hotel?: {
+    estrelas: 2 | 3 | 4 | 5;
+    publico: 'negocios' | 'lazer' | 'familias' | 'luxo' | 'eventos';
+    quartos: number;
+    servicos: string[];
+    atendimento: 'enxuto' | 'padrao' | 'personalizado';
+    temporada: 'fixa' | 'dinamica' | 'pacotes';
+    ocupacao?: number;
+    diaria?: number;
+  };
+  clinica?: {
+    especialidades: string[];
+    atendimento: 'convenios' | 'misto' | 'particular';
+    equipamento: number;
+    conformidade: number;
+    tInspecao?: number;
+  };
+  academia?: { modalidades: string[]; equipamentos: number; instrutores: number; retencao: string[]; evasao?: number };
+  estudio?: { servicos: string[]; equipamento: number; tecnico?: ProfissionalChave; creditos: { t: number; texto: string }[]; proposta?: { t: number; artista: string; desconto: number } };
+  loja?: { segmento: string; estoque: Nivel3; fornecedor: 'nacional' | 'importador' | 'direto'; variedade: number; online: boolean; encalhe: number };
+  museu?: {
+    linha: 'cultural' | 'equilibrada' | 'comercial';
+    obras: ObraDoMuseu[];
+    exposicao?: { tema: string; t: number; ate: number; qualidade: number; nome: string };
+    curador?: ProfissionalChave;
+    seguranca: number;
+    patrocinio?: { nome: string; anual: number; ate: number };
+  };
+  zoo?: {
+    recintos: RecintoDoZoo[];
+    animais: AnimalDoZoo[];
+    alimentacao: Nivel3;
+    veterinarios: number;
+    educacao: boolean;
+    /** Os que já passaram (morreram, foram transferidos): a memória do zoológico. */
+    memoria?: { t: number; texto: string }[];
+  };
+}
+
+/* ------------------------------------------- REWORK 12.2 · negócios por fora */
+
+export type TipoClandestino = 'mercadorias' | 'intermediacao' | 'rede_contrabando' | 'fraudes' | 'colecionaveis' | 'organizacao';
+
+/** Um negócio por fora da lei, da pessoa. Abstrato: gente, dinheiro, risco e o que sobra — nunca como se faz. */
+export interface NegocioClandestino {
+  id: string;
+  nome: string;
+  tipo: TipoClandestino;
+  ramo: Ramo;
+  tInicio: number;
+  /** O que se pôs (e o que está empatado nele). */
+  capital: number;
+  caixa: number;
+  /** 0..100: o nome no meio (quem compra, quem fornece). */
+  reputacao: number;
+  /** 0..100: o quanto chama atenção (soma à exposição da pessoa). */
+  exposicao: number;
+  /** 0..2: tocado com cautela (0), no ritmo (1) ou acelerado (2). */
+  ritmo: 0 | 1 | 2;
+  socios: { pessoaId: string; parte: number }[];
+  /** A organização rival que disputa o mesmo espaço (id em `organizacoes`). */
+  rival?: string;
+  /** A empresa legal que serve de fachada (id em `financas.empresas`). */
+  fachadaId?: string;
+  estado: 'ativo' | 'encerrado' | 'desmantelado' | 'tomado';
+  tFim?: number;
+  ultimo?: { t: number; receita: number; despesa: number; retirado: number; nota?: string };
+  historia: { t: number; texto: string; tom?: 'bom' | 'ruim' }[];
 }
 
 /** Um ano de uma empresa, em números (o que se mostra; o caixa já mudou). */
@@ -2659,6 +2848,10 @@ export interface Envolvimento {
   cenas?: Record<string, string>;
   /** REWORK 11.5: a organização de cada cena deste ano (id da decisão → id da organização). */
   cenasOrg?: Record<string, string>;
+  /** REWORK 12.2: os negócios por fora que a pessoa abriu, comprou ou de que é sócia (os encerrados ficam, com a história). */
+  negocios?: NegocioClandestino[];
+  /** REWORK 12.2: o que se comprou num mercado paralelo sabendo (ou devendo saber) a origem — pesa se vier à tona. */
+  receptacao?: number;
 }
 
 /**
@@ -2727,6 +2920,8 @@ export interface RelacaoComOrganizacao {
   desde: number;
   /** Saiu (e quando): a organização lembra de quem saiu. */
   saiu?: number;
+  /** REWORK 12.2: a organização é da pessoa (ela fundou e comanda): o negócio-base e quem divide o comando. */
+  propria?: { negocioId?: string; tenentes: string[]; coesao: number };
 }
 
 /* ------------------------------------------------------------- Vida política */
@@ -2905,6 +3100,8 @@ export interface Vida {
   rng: number;
   seq: number;
   t: number;
+  /** REWORK 12.2: as peças únicas desta continuidade (quem tem cada uma): nunca duas iguais, nem depois da sucessão. */
+  pecasUnicas?: Record<string, RegistroDePecaUnica>;
   eu: Personagem;
   corpo: Corpo;
   mente: Mente;

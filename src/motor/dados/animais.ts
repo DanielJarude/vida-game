@@ -25,7 +25,7 @@
 
 import type { Especie } from '../tipos';
 
-export type GrupoAnimal = 'cao' | 'gato' | 'ave' | 'roedor' | 'coelho' | 'peixe' | 'reptil';
+export type GrupoAnimal = 'cao' | 'gato' | 'ave' | 'roedor' | 'coelho' | 'peixe' | 'reptil' | 'mamifero';
 export type OrigemCompra = 'abrigo' | 'loja' | 'criadouro';
 
 export interface Animal {
@@ -55,6 +55,8 @@ export interface Animal {
   barulho?: boolean;
   /** Sofre com calor forte. */
   calorFaz?: boolean;
+  /** REWORK 12.2: exótico — só na loja especializada, com as regras de `sistemas/exoticos` (a lei, a instalação). */
+  exotico?: boolean;
   descricao: string;
   /** Como é conviver, em poucas palavras. */
   jeitos: [string, string][];
@@ -195,6 +197,79 @@ export const ANIMAIS: readonly Animal[] = [
     interacao: { rotulo: 'Cuidar de', textos: ['Luz trocada, folhas frescas; {nome} ficou horas no ponto quente do terrário.'] },
     cotidiano: ['{nome} escapou do terrário e foi achada tomando sol na janela.'],
     morteCedo: ['uma doença dos ossos (faltou luz certa)', 'uma infecção']
+  },
+  // ------------------------------------------------------------ REWORK 12.2 · os exóticos (loja especializada; a lei de cada país)
+  {
+    id: 'arara', exotico: true, nome: ['arara-canindé', 'arara-canindé'], generoFixo: 'f', grupo: 'ave', vida: [35, 60], custo: 260, semana: 0.3, vinculo: 3, espaco: 'quintal', origens: ['criadouro'], preco: [9000, 16000], silvestre: true, barulho: true,
+    descricao: 'Azul e amarela, um metro de ponta a ponta. Pede viveiro grande, voo, companhia todo dia e veterinário de aves — e vive mais que muita gente.',
+    jeitos: [J('grita quando a casa acorda'), J('gosta de colo e de briga'), J('desmonta tudo o que alcança com o bico')],
+    nomes: [['Azulão', 'Juca', 'Céu', 'Ipê'], ['Arara', 'Celeste', 'Jandaia', 'Iara']],
+    interacao: { rotulo: 'Soltar no viveiro com', textos: ['{nome} voou de um poleiro ao outro e desceu para o seu braço.', '{nome} desmontou a casca de uma castanha inteira na sua frente.'] },
+    cotidiano: ['{nome} aprendeu a abrir o trinco do viveiro com o bico.', 'O vizinho do lado já sabe a que horas {nome} acorda.'],
+    morteCedo: ['uma infecção respiratória', 'uma intoxicação por metal']
+  },
+  {
+    id: 'furao', exotico: true, nome: ['furão', 'furão'], generoFixo: 'm', grupo: 'mamifero', vida: [6, 10], custo: 230, semana: 0.25, vinculo: 2.5, espaco: 'qualquer', origens: ['criadouro'], preco: [3500, 6000],
+    descricao: 'De criadouro, castrado e com microchip. Brinca, rouba meia, dorme dezoito horas; precisa sair da gaiola todo dia e de veterinário que conheça a espécie.',
+    jeitos: [J('esconde chave embaixo do sofá'), J('dança de lado quando está feliz'), J('dorme em qualquer gaveta aberta')],
+    nomes: [['Bandido', 'Chico', 'Tufo', 'Ozzy'], ['Pantufa', 'Fumaça', 'Lola', 'Pipoca']],
+    interacao: { rotulo: 'Brincar com', textos: ['{nome} roubou a sua meia e correu para debaixo da cama.', '{nome} deu a dança de lado — e dormiu no meio da brincadeira.'] },
+    cotidiano: ['{nome} escondeu todas as chaves da casa dentro de uma bota.', '{nome} fugiu por um vão do armário e foi achado dormindo numa gaveta.'],
+    morteCedo: ['uma doença das glândulas', 'uma obstrução intestinal']
+  },
+  {
+    id: 'ourico', exotico: true, nome: ['ouriço-pigmeu', 'ouriço-pigmeu'], generoFixo: 'm', grupo: 'mamifero', vida: [4, 6], custo: 120, semana: 0.1, vinculo: 1.5, espaco: 'qualquer', origens: ['criadouro'], preco: [1800, 3200],
+    descricao: 'Noturno, solitário, sensível ao frio: pede gaiola ampla aquecida, roda, insetos na dieta. Vive pouco.',
+    jeitos: [J('vira uma bola de espinhos ao menor barulho'), J('corre na roda a noite inteira')],
+    nomes: [['Espinho', 'Bolota', 'Sônico', 'Tico'], ['Pitanga', 'Agulha', 'Mel', 'Bolinha']],
+    interacao: { rotulo: 'Cuidar de', textos: ['{nome} saiu da bola e cheirou a sua mão por um minuto inteiro.'] },
+    cotidiano: ['{nome} correu na roda a noite toda — e acordou a casa.'],
+    morteCedo: ['um problema neurológico raro da espécie', 'um tumor']
+  },
+  {
+    id: 'gecko', exotico: true, nome: ['lagartixa-leopardo', 'lagartixa-leopardo'], generoFixo: 'f', grupo: 'reptil', vida: [12, 20], custo: 70, semana: 0.05, vinculo: 0.8, espaco: 'qualquer', origens: ['criadouro'], preco: [600, 1500],
+    descricao: 'Pequena, pintada, noturna: terrário com ponto quente, insetos vivos, cálcio. Sossegada — e vive quase vinte anos.',
+    jeitos: [J('lambe o ar quando a mão chega perto'), J('passa o dia escondida na toca úmida')],
+    nomes: [['Leo', 'Pintado', 'Gecko', 'Tigre'], ['Pintada', 'Jade', 'Mel', 'Areia']],
+    interacao: { rotulo: 'Cuidar do terrário de', textos: ['Insetos, água, a lâmpada trocada; {nome} saiu da toca para olhar.'] },
+    cotidiano: ['{nome} trocou a pele inteira de uma vez e comeu a pele velha.'],
+    morteCedo: ['uma doença óssea (faltou cálcio)', 'uma infecção']
+  },
+  {
+    id: 'dragao_barbudo', exotico: true, nome: ['dragão-barbudo', 'dragão-barbudo'], generoFixo: 'm', grupo: 'reptil', vida: [8, 14], custo: 140, semana: 0.1, vinculo: 1.2, espaco: 'espaco', origens: ['criadouro'], preco: [900, 2200],
+    descricao: 'Lagarto do deserto australiano, de cativeiro: terrário grande, luz ultravioleta, calor, verduras e insetos. Manso, gosta de colo quente.',
+    jeitos: [J('acena com a pata quando vê outro lagarto'), J('escurece a barba quando contrariado')],
+    nomes: [['Rex', 'Smaug', 'Draco', 'Barbudo'], ['Duna', 'Sahara', 'Pistache', 'Areia']],
+    interacao: { rotulo: 'Dar colo a', textos: ['{nome} dormiu no seu peito, quentinho, por meia hora.'] },
+    cotidiano: ['{nome} acenou com a pata para o próprio reflexo no vidro.'],
+    morteCedo: ['uma doença óssea (faltou luz ultravioleta)', 'uma infecção']
+  },
+  {
+    id: 'piton_bola', exotico: true, nome: ['píton-real', 'píton-real'], generoFixo: 'f', grupo: 'reptil', vida: [20, 30], custo: 110, semana: 0.05, vinculo: 0.6, espaco: 'espaco', origens: ['criadouro'], preco: [1200, 4000],
+    descricao: 'Serpente de criadouro, dócil, um metro e pouco: terrário trancado, calor, alimentação a cada semana ou duas. Foge pela menor fresta.',
+    jeitos: [J('vira uma bola quando se assusta'), J('passa semanas sem querer comer')],
+    nomes: [['Kaa', 'Monty', 'Novelo', 'Nagini'], ['Nagini', 'Jiboia', 'Pérola', 'Medusa']],
+    interacao: { rotulo: 'Cuidar do terrário de', textos: ['Terrário limpo, água trocada; {nome} se enrolou na pedra quente.'] },
+    cotidiano: ['{nome} trocou de pele inteira, num tubo só.', 'Por uma tarde, ninguém sabia onde {nome} estava. Estava atrás da estante.'],
+    morteCedo: ['uma infecção respiratória', 'uma doença de pele por umidade errada']
+  },
+  {
+    id: 'acara_disco', exotico: true, nome: ['acará-disco', 'acará-disco'], generoFixo: 'm', grupo: 'peixe', vida: [8, 12], custo: 90, semana: 0.08, vinculo: 0.8, espaco: 'qualquer', origens: ['loja'], preco: [150, 600],
+    descricao: 'O rei do aquário amazônico: água quente, mole e limpa, cardume pequeno. Exigente — e lindo quando dá certo.',
+    jeitos: [J('vem para o vidro pedir comida'), J('fica pálido quando a água piora')],
+    nomes: [['Rei', 'Disco', 'Ametista', 'Sol'], ['Rainha', 'Turquesa', 'Lua', 'Coral']],
+    interacao: { rotulo: 'Cuidar do aquário de', textos: ['Teste da água, troca parcial; {nome} voltou a ganhar cor.'] },
+    cotidiano: ['O casal de {nome} desovou no vidro do aquário.'],
+    morteCedo: ['um problema na água do aquário', 'uma infecção']
+  },
+  {
+    id: 'peixe_palhaco', exotico: true, nome: ['peixe-palhaço', 'peixe-palhaço'], generoFixo: 'm', grupo: 'peixe', vida: [8, 15], custo: 160, semana: 0.1, vinculo: 0.8, espaco: 'qualquer', origens: ['loja'], preco: [120, 400],
+    descricao: 'Marinho, nascido em cativeiro: aquário de água salgada com anêmona, filtro, iluminação, teste toda semana. O peixe é barato; o mar em casa, não.',
+    jeitos: [J('vive escondido na anêmona'), J('defende o seu canto do aquário')],
+    nomes: [['Nemo', 'Marlin', 'Laranja', 'Recife'], ['Coral', 'Anêmona', 'Pérola', 'Maré']],
+    interacao: { rotulo: 'Cuidar do aquário de', textos: ['Salinidade, filtro, luz; {nome} entrou e saiu da anêmona, à vontade.'] },
+    cotidiano: ['{nome} adotou a anêmona nova no primeiro dia.'],
+    morteCedo: ['uma falha do filtro numa noite de calor', 'uma doença de pele de peixe marinho']
   }
 ];
 

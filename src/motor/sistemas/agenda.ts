@@ -356,7 +356,7 @@ export function blocosFixos(v: Vida, o: { semTrabalho?: boolean; trabalho?: Trab
     // REWORK 11 · ROT-11.2: o bicho tem janela, não hora marcada. O passeio e a comida procuram o primeiro horário livre
     // em volta do trabalho, da escola e do trajeto; se nenhum cabe e mora mais alguém (12+) em casa, a tarefa é dividida
     // e não vira conflito. Só quem cuida sozinho e não tem hora nenhuma fica com o choque.
-    const bichos = vinculosVivos(v).filter(x => x.p.especie && x.vin.convivio.includes('casa') && x.p.pet?.tutor === 'eu' && animal(x.p.especie).semana > 0).map(x => x.p);
+    const bichos = vinculosVivos(v).filter(x => x.p.especie && x.vin.convivio.includes('casa') && x.p.pet?.tutor === 'eu' && !x.p.pet?.cuidador && animal(x.p.especie).semana > 0).map(x => x.p);
     const caes = bichos.filter(p => p.especie === 'cachorro');
     if (bichos.length) {
       const rot = caes.length ? (caes.length === 1 ? `Passear com ${caes[0].nome}` : `Passear com ${listaNatural(caes.map(p => p.nome))}`) : `Cuidar de ${listaNatural(bichos.map(p => p.nome))}`;

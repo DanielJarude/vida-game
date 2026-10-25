@@ -153,3 +153,10 @@
   }
   .entrada__rosto, .enquanto__pessoa, .nota-agenda__ir, .rotina-resumo .link, .retrato-vida__voce, .proximo-caminho__ir, .ligacao-caminho .link, .secao .nota .link { display: inline-flex; align-items: center; }
 }
+
+/* REWORK 12.2 — o estágio no caminho e os negócios por fora (no dossiê). */
+.dossie__estagio { margin: 0; font-size: var(--type-caption); letter-spacing: 0.06em; text-transform: uppercase; color: color-mix(in oklab, var(--dossie-tinta) 82%, transparent); }
+.dossie__negocios { gap: var(--space-2); }
+.sub-negocios { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); }
+.sub-negocio { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-2); border: 1px solid var(--dossie-fio); border-radius: var(--radius-sm); min-width: 0; }
+.sub-negocio--encerrado, .sub-negocio--desmantelado, .sub-negocio--tomado { opacity: 0.8; border-style: dashed; }

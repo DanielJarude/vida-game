@@ -28,7 +28,7 @@ import type { Veredito } from '../plausibilidade';
 export const petsDaCasa = (v: Vida) => vinculosVivos(v).filter(x => x.p.especie && x.vin.convivio.includes('casa')).map(x => x.p);
 
 /** Os animais que são SEUS (você cuida e paga), estejam onde estiverem. */
-export const seusPets = (v: Vida) => parentes(v, 'pet').filter(p => (p.pet?.tutor ?? (moraComFamiliaDeOrigem(v) ? 'familia' : 'eu')) === 'eu');
+export const seusPets = (v: Vida) => parentes(v, 'pet').filter(p => (p.pet?.tutor ?? (moraComFamiliaDeOrigem(v) ? 'familia' : 'eu')) === 'eu' && p.pet?.fugiu === undefined);
 
 export function infoPet(v: Vida, p: Pessoa): InfoPet {
   if (!p.pet) {

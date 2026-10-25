@@ -16,6 +16,8 @@
 import { textoLocal } from '../../motor/mundo/locais';
 import { useState } from 'react';
 import { custoDaConsulta, custoDoTratamento, estadoDoPet, infoPet } from '../../motor/sistemas/pets';
+import { EXOTICOS, temInstalacao, zoologicosParaOPet } from '../../motor/sistemas/exoticos';
+import { animal } from '../../motor/dados/animais';
 import { dinheiroCurto } from '../leituraMaterial';
 import type { Atracao, Marco, Pessoa, Vida, Vinculo } from '../../motor/tipos';
 import { disponibilidade, type Acao } from '../../motor/acoes';
@@ -726,6 +728,11 @@ function FichaPet({ vida, agir, p }: { vida: Vida; agir: (a: Acao) => boolean; p
     <div className="ficha-pet">
       <p className="ficha-pet__estado">{estadoDoPet(vida, p).charAt(0).toUpperCase() + estadoDoPet(vida, p).slice(1)}.</p>
       <p className="nota">{origem}{info.origem === 'familia' ? '' : `, em ${chegou}`}. {info.jeito.charAt(0).toUpperCase() + info.jeito.slice(1)}.{info.tutor === 'familia' ? ' Quem cuida é a família.' : ''}</p>
+      {info.fugiu !== undefined && <p className="nota">Fugiu em {anoDe(info.fugiu)} e não foi encontrad{animal(p.especie).generoFixo === 'f' ? 'a' : 'o'}.</p>}
+      {info.instituicao && <p className="nota">Vive agora com {info.instituicao}.</p>}
+      {EXOTICOS[p.especie!] && info.tutor === 'eu' && info.fugiu === undefined && (
+        <p className="nota">{EXOTICOS[p.especie!]!.ambiente}; {EXOTICOS[p.especie!]!.alimentacao}; {EXOTICOS[p.especie!]!.social}.{temInstalacao(vida, EXOTICOS[p.especie!]!.instalacao) ? '' : ' Sem a instalação certa em casa: adoece e foge com mais facilidade.'}{info.cuidador ? ' Tem alguém pago cuidando no dia a dia.' : ''}</p>
+      )}
       {info.origem === 'ilegal' && <p className="nota nota--ruim"><span aria-hidden>! </span>Sem documento, é crime manter um silvestre ({textoLocal(vida, 'leiDeFauna')}): a fiscalização pode levar e multar. Entregar por conta própria não tem multa.</p>}
       <div className="grupo-acoes grupo-acoes--linha">
         {info.origem === 'ilegal' && <BotaoAcao vida={vida} acao={{ tipo: 'entregar_pet', petId: p.id }} agir={agir} variante="secundario">Entregar ao órgão ambiental</BotaoAcao>}
@@ -734,6 +741,9 @@ function FichaPet({ vida, agir, p }: { vida: Vida; agir: (a: Acao) => boolean; p
         {d && <BotaoAcao vida={vida} acao={{ tipo: 'veterinario', petId: p.id, opcao: 'paliativo' }} agir={agir} variante="discreto" ocultarBloqueado>Cuidar para que não sofra</BotaoAcao>}
         {!d && <BotaoAcao vida={vida} acao={{ tipo: 'veterinario', petId: p.id, opcao: 'consulta' }} agir={agir} variante="discreto" ocultarBloqueado>{`Levar ao veterinário (${dinheiroCurto(custoDaConsulta(vida))})`}</BotaoAcao>}
         {!emCasa && <BotaoAcao vida={vida} acao={{ tipo: 'levar_pet', petId: p.id }} agir={agir} variante="discreto" ocultarBloqueado>Trazer para a sua casa</BotaoAcao>}
+        {/* REWORK 12.2: quem viaja ou trabalha muito paga alguém para cuidar; quem tem um zoológico pode entregar o bicho à instituição. */}
+        {emCasa && info.tutor === 'eu' && <BotaoAcao vida={vida} acao={{ tipo: 'pet_cuidador', petId: p.id, ligar: !info.cuidador }} agir={agir} variante="discreto" ocultarBloqueado>{info.cuidador ? 'Dispensar o cuidador' : 'Pagar alguém para cuidar no dia a dia'}</BotaoAcao>}
+        {emCasa && zoologicosParaOPet(vida, p).map(({ e }) => <BotaoAcao key={e.id} vida={vida} acao={{ tipo: 'pet_ao_zoo', petId: p.id, empresaId: e.id }} agir={agir} variante="discreto">{`Entregar ao ${e.nome}`}</BotaoAcao>)}
       </div>
     </div>
   );

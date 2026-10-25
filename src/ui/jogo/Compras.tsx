@@ -42,6 +42,8 @@ import { Retrato } from '../avatar/Retrato';
 import { LOJAS_DE_COISAS, type QualLugar } from './material/Lugares';
 import { LOJAS_DE_COLECAO, type LojaDeColecao } from '../../motor/dados/colecionaveis';
 import { lojaDeColecaoNaCidade, ofertasDeColecao } from '../../motor/sistemas/colecao';
+import { lojaDeExoticosNaCidade } from '../../motor/sistemas/exoticos';
+import { MERCADOS_PARALELOS, mercadosVisiveis } from '../../motor/sistemas/paralelos';
 
 interface Props { vida: Vida; agir: (a: Acao) => boolean; abrir: (l: QualLugar) => void }
 
@@ -142,8 +144,12 @@ function vitrines(v: Vida): { grupo: string; id: string; lugares: Vitrine[] }[] 
     ] },
     { grupo: 'Os bichos', id: 'animais', lugares: [
       { id: 'abrigo', nome: 'Abrigo de animais', oque: 'Adotar um cão, um gato — às vezes, outro bicho', idadeMin: 18, porque: 'Adotar é coisa de adulto.', vitrine: bichos.length ? bichos.map(a => <Retrato key={a.id} visual={undefined} genero={a.genero} idade={a.idade} semente={a.id} tamanho={52} especie={a.especie} porte={a.porte} rotulo={a.nome} />) : null, preco: 'adoção, sem custo' },
-      { id: 'pets', nome: 'Loja e criadouro de animais', oque: 'Aves, roedores, peixes; silvestres só com documento', idadeMin: 18, porque: 'Comprar um animal é coisa de adulto.', vitrine: null }
-    ] }
+      { id: 'pets', nome: 'Loja e criadouro de animais', oque: 'Aves, roedores, peixes; silvestres só com documento', idadeMin: 18, porque: 'Comprar um animal é coisa de adulto.', vitrine: null },
+      // REWORK 12.2: os exóticos (cidade grande), conforme a lei do lugar — com a instalação e o cuidado que cada um pede.
+      ...(lojaDeExoticosNaCidade(v.moradia.municipioId) ? [{ id: 'exoticos' as QualLugar, nome: 'Animais exóticos', oque: 'Répteis, aves, pequenos mamíferos e peixes que a lei daqui permite', idadeMin: 18, porque: 'Comprar um animal é coisa de adulto.', vitrine: null }] : [])
+    ] },
+    // REWORK 12.2: o que se compra de segunda mão, sem saber direito de onde veio (o mercado por fora, só para quem tem gente no caminho).
+    ...(mercadosVisiveis(v).length ? [{ grupo: 'Segunda mão, procedência incerta', id: 'paralelos', lugares: mercadosVisiveis(v).map(m => ({ id: m as QualLugar, nome: MERCADOS_PARALELOS[m].nome, oque: MERCADOS_PARALELOS[m].frase.split('.')[0], idadeMin: 18, porque: 'A partir dos 18.', vitrine: null })) }] : [])
   ];
 }
 
@@ -155,8 +161,8 @@ const O_QUE: Record<LojaDeCoisas, string> = {
 /** A vitrine tem objetos de verdade na frente (senão, a fachada mostra o interior da loja). */
 const temObjetos = (v: ReactNode) => (Array.isArray(v) ? v.some(Boolean) : Boolean(v));
 
-/** REWORK 12: as lojas novas usam a fachada de um lugar parecido (a relojoaria e a joalheria, a da ótica; a galeria, a da livraria). */
-const FACHADA_DE: Partial<Record<QualLugar, LugarDaCidade>> = { comprar: 'alugar', colecionador: 'concessionaria', relojoaria: 'estilo', joalheria: 'estilo', galeria: 'livraria', antiquario: 'casa', memorabilia: 'esportes', leilao: 'banco' };
+/** REWORK 12.2: cada casa de luxo e coleção tem a sua fachada (a relojoaria não é mais a ótica; a galeria não é a livraria). */
+const FACHADA_DE: Partial<Record<QualLugar, LugarDaCidade>> = { comprar: 'alugar', colecionador: 'concessionaria' };
 const fachadaDoLugar = (id: QualLugar): LugarDaCidade => FACHADA_DE[id] ?? (id as LugarDaCidade);
 
 function CartaoVitrine({ x, i, abrir }: { x: Vitrine; i: number; abrir: (l: QualLugar) => void }) {

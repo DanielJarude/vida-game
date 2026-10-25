@@ -44,26 +44,32 @@ import { precoDoItem, temItem } from '../../../motor/sistemas/estilo';
 
 const capitalizar = (x: string) => x.charAt(0).toUpperCase() + x.slice(1);
 import { LOJAS_DE_COLECAO, type LojaDeColecao } from '../../../motor/dados/colecionaveis';
-import { LojaDeColecaoDaCidade } from '../Patrimonio';
+import { LojaDeColecaoDaCidade, type PartePatrimonio } from '../Patrimonio';
+import { LojaDeExoticos, MercadoParaleloDaCidade } from './LugaresDoLuxo';
+import { MERCADOS_PARALELOS, type MercadoParalelo } from '../../../motor/sistemas/paralelos';
 import { custosAntesDeComprarImovel, custosAntesDeComprarVeiculo } from '../../leituraPatrimonio';
 import { dinheiroCheio, dinheiroCurto, formaDoModelo } from '../../leituraMaterial';
 
-export type QualLugar = 'alugar' | 'comprar' | 'concessionaria' | 'usados' | 'motos' | 'nautica' | 'aeroclube' | 'colecionador' | 'oficina' | 'banco' | 'abrigo' | 'pets' | 'estilo' | 'clinica' | LojaDeCoisas | LojaDeColecao;
+export type QualLugar = 'alugar' | 'comprar' | 'concessionaria' | 'usados' | 'motos' | 'nautica' | 'aeroclube' | 'colecionador' | 'oficina' | 'banco' | 'abrigo' | 'pets' | 'estilo' | 'clinica' | LojaDeCoisas | LojaDeColecao | 'exoticos' | MercadoParalelo;
 /** As lojas das coisas da vida (`dados/coisas`). */
 export const LOJAS_DE_COISAS: LojaDeCoisas[] = ['eletronicos', 'casa', 'instrumentos', 'esportes', 'livraria'];
 
-interface Props { vida: Vida; agir: (a: Acao) => boolean; qual: QualLugar; aoFechar: () => void; trocar: (l: QualLugar) => void }
+interface Props { vida: Vida; agir: (a: Acao) => boolean; qual: QualLugar; aoFechar: () => void; trocar: (l: QualLugar) => void; /** REWORK 12.2: o atalho depois de uma compra que vira patrimônio. */ verNoPatrimonio?: (p: PartePatrimonio) => void }
 
 const TITULO: Record<QualLugar, string> = {
   alugar: 'Imobiliária', comprar: 'Imobiliária', concessionaria: 'Concessionária', usados: 'Carros usados', motos: 'Motos e bicicletas', nautica: 'Loja náutica', aeroclube: 'Aeroclube e hangar', oficina: 'Oficina', banco: 'Banco', abrigo: 'Abrigo de animais', pets: 'Loja e criadouro de animais', estilo: 'Ótica, roupas e acessórios', clinica: 'Clínica de cirurgia plástica',
-  colecionador: 'Garagem de colecionador',
+  colecionador: 'Garagem de colecionador', exoticos: 'Animais exóticos',
+  ...Object.fromEntries(Object.entries(MERCADOS_PARALELOS).map(([k, x]) => [k, x.nome])) as Record<MercadoParalelo, string>,
   ...NOME_LOJA,
   ...Object.fromEntries(Object.entries(LOJAS_DE_COLECAO).map(([k, x]) => [k, x.nome])) as Record<LojaDeColecao, string>
 };
 
-export function Lugar({ vida, agir, qual, aoFechar, trocar }: Props) {
+export function Lugar({ vida, agir, qual, aoFechar, trocar, verNoPatrimonio }: Props) {
   // Depois de uma ação que muda a vida (comprou, alugou), a folha fecha.
   const agirEFechar = (a: Acao) => { const ok = agir(a); if (ok) aoFechar(); return ok; };
+  // REWORK 12.2 · PAT-12.2-01: o que se compra e vira patrimônio diz onde ficou (e leva até lá).
+  const [comprou, setComprou] = useState<PartePatrimonio | null>(null);
+  const agirEVer = (parte: PartePatrimonio) => (a: Acao) => { const ok = agir(a); if (ok && (a.tipo === 'comprar_item' || a.tipo === 'colecao_comprar' || a.tipo === 'paralelo')) setComprou(parte); return ok; };
   return (
     <Folha titulo={TITULO[qual]} rotulo={TITULO[qual]} aoFechar={aoFechar} largura="larga">
       <div className="lugar-folha">
@@ -74,12 +80,15 @@ export function Lugar({ vida, agir, qual, aoFechar, trocar }: Props) {
           </>
         )}
         {(qual === 'concessionaria' || qual === 'usados' || qual === 'motos' || qual === 'nautica' || qual === 'aeroclube' || qual === 'colecionador') && <Veiculos vida={vida} agir={agirEFechar} lugar={qual} />}
-        {qual in LOJAS_DE_COLECAO && <LojaDeColecaoDaCidade vida={vida} agir={agir} loja={qual as LojaDeColecao} />}
+        {comprou && verNoPatrimonio && <p className="lugar-comprou" role="status">Comprado — já está no seu patrimônio. <button type="button" className="link" onClick={() => verNoPatrimonio(comprou)}>Ver no patrimônio →</button></p>}
+        {qual in LOJAS_DE_COLECAO && <LojaDeColecaoDaCidade vida={vida} agir={agirEVer('colecao')} loja={qual as LojaDeColecao} />}
+        {qual === 'exoticos' && <LojaDeExoticos vida={vida} agir={agirEFechar} />}
+        {qual in MERCADOS_PARALELOS && <MercadoParaleloDaCidade vida={vida} agir={agirEVer('colecao')} mercado={qual as MercadoParalelo} />}
         {qual === 'oficina' && <Oficina vida={vida} agir={agir} />}
         {qual === 'banco' && <Banco vida={vida} agir={agir} />}
         {qual === 'abrigo' && <Abrigo vida={vida} agir={agirEFechar} />}
         {qual === 'pets' && <LojaDeAnimais vida={vida} agir={agirEFechar} />}
-        {qual === 'estilo' && <LojaDeEstilo vida={vida} agir={agir} />}
+        {qual === 'estilo' && <LojaDeEstilo vida={vida} agir={agirEVer('objetos')} />}
         {qual === 'clinica' && <ClinicaEstetica vida={vida} agir={agirEFechar} />}
         {(LOJAS_DE_COISAS as string[]).includes(qual) && <LojaDeCoisasDaVida vida={vida} agir={agir} loja={qual as LojaDeCoisas} />}
       </div>

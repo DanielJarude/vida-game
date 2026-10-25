@@ -19,6 +19,7 @@
  */
 
 import { indiceDoBairro } from './sistemas/mercado';
+import { garantirSetor } from './sistemas/setores';
 import { normalizarSubmundo } from './sistemas/submundo';
 import { conteudoPorId } from './conteudo/motor';
 import { ehEspecialidadeMedica } from './dados/especialidades';
@@ -109,7 +110,7 @@ export function ler(s: Armazenamento | null = armazenamentoPadrao()): Leitura {
  */
 export function interpretar(bruto: string): Leitura {
   const r = interpretarSemNormalizar(bruto);
-  if (r.tipo === 'ok') { normalizarRework75(r.vida); normalizarRework97(r.vida); normalizarRework106(r.vida); normalizarRework11Relacoes(r.vida); normalizarRework11Esportes(r.vida); normalizarRework11Artes(r.vida); normalizarRework115(r.vida); normalizarRework12(r.vida); fixarEstatura(r.vida, true); }
+  if (r.tipo === 'ok') { normalizarRework75(r.vida); normalizarRework97(r.vida); normalizarRework106(r.vida); normalizarRework11Relacoes(r.vida); normalizarRework11Esportes(r.vida); normalizarRework11Artes(r.vida); normalizarRework115(r.vida); normalizarRework12(r.vida); normalizarRework122(r.vida); fixarEstatura(r.vida, true); }
   return r;
 }
 
@@ -1711,6 +1712,17 @@ export function normalizarRework115(v: Vida): void {
  * (pelo texto do bairro, como a oferta dizia), o veículo "guardado" na cidade onde a pessoa já mora volta a estar com
  * ela, o veículo principal que não existe mais é esquecido. Nada é apagado; nenhum valor é reescrito.
  */
+/**
+ * REWORK 12.2 — o que é próprio do ramo de cada empresa (o cardápio, os quartos, as obras, os animais) nasce do estado
+ * que a empresa já tinha (o bem-estar do zoológico, a conservação do acervo), sempre igual para a mesma empresa: ler
+ * duas vezes não muda nada. Nada sai: os campos antigos ficam (e passam a ser lidos do acervo). Bens comprados antes
+ * (os itens de estilo) já estavam no save — só não apareciam em Objetos; não há o que recuperar.
+ */
+export function normalizarRework122(v: Vida): void {
+  for (const e of v.financas.empresas ?? []) if (e.estado !== 'encerrada') garantirSetor(v, e);
+  if (v.pecasUnicas && !Object.keys(v.pecasUnicas).length) delete v.pecasUnicas;
+}
+
 export function normalizarRework12(v: Vida): void {
   const f = v.financas;
   for (const b of f.bens) {

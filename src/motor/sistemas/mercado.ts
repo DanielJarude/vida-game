@@ -456,7 +456,7 @@ export function ofertasDePets(v: Vida): OfertaDePet[] {
   const r = rngDe(v, `pets:${ano}:${v.moradia.municipioId}`);
   const c = Math.sqrt(economiaLocal(v.moradia.municipioId).custo);
   const out: OfertaDePet[] = [];
-  const especies = ANIMAIS.filter(a => a.origens.includes('loja') || a.origens.includes('criadouro'));
+  const especies = ANIMAIS.filter(a => !a.exotico && (a.origens.includes('loja') || a.origens.includes('criadouro')));
   const escolhidas = [...especies];
   for (let k = escolhidas.length - 1; k > 0; k--) { const j = r.int(0, k); [escolhidas[k], escolhidas[j]] = [escolhidas[j], escolhidas[k]]; }
   escolhidas.length = Math.min(6, escolhidas.length);

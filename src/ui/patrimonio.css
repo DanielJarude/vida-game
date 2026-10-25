@@ -95,3 +95,70 @@
 @media (max-width: 420px) {
   .lugar-folha .escolha__item { min-height: 44px; }
 }
+
+/* ------------------------------------------------------------------ REWORK 12.2 */
+
+/* Objetos: o que se usa no corpo (PAT-12.2-01), e onde mora cada tipo de bem. */
+.pat-usados { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.pat-usado { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); padding: var(--space-2) 0; border-bottom: 1px solid var(--rule); }
+.pat-usado > span { min-width: 0; overflow-wrap: anywhere; }
+.pat-onde { padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); background: var(--veu-1); }
+
+/* A loja de peças: filtros, os canais (sob consulta, leilão especial), os atributos de cada peça. */
+.pat-filtros { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: flex-end; }
+.pat-filtros .campo { min-width: 140px; flex: 1 1 140px; }
+.pat-filtros select { min-height: var(--touch-target, 44px); width: 100%; }
+.pat-canal { display: flex; flex-direction: column; gap: var(--space-2); padding-top: var(--space-3); border-top: 1px solid var(--rule-strong); }
+.pat-canal--especial { border-top: 2px solid var(--patrimonio-colecao); }
+.pat-oferta .oferta__texto { min-width: 0; overflow-wrap: anywhere; }
+.pat-servicos { gap: var(--space-1); }
+.pat-historia { list-style: none; margin: var(--space-1) 0 0; padding: 0; display: flex; flex-direction: column; gap: 2px; font-size: var(--type-caption); }
+.pat-propostas { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3); border: 1px solid var(--rule-strong); border-radius: var(--radius-sm); }
+
+/* O atalho depois da compra. */
+.lugar-comprou { margin: 0 0 var(--space-3); padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); background: var(--veu-1); border-left: 4px solid var(--patrimonio-colecao); }
+.lugar-comprou .link { min-height: var(--touch-target, 44px); }
+
+/* O painel do ramo dentro do cartão da empresa. */
+.ramo { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
+.ramo-indicadores { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: var(--space-2); margin: 0; }
+.ramo-indicador { display: flex; flex-direction: column; gap: 2px; padding: var(--space-2); border-radius: var(--radius-sm); background: var(--veu-1); border-left: 3px solid var(--rule-strong); min-width: 0; }
+.ramo-indicador dt { font-size: var(--type-caption); color: var(--text-muted); }
+.ramo-indicador dd { margin: 0; overflow-wrap: anywhere; }
+.ramo-indicador--bom { border-left-color: var(--patrimonio-aplicado); }
+.ramo-indicador--ruim { border-left-color: var(--danger-line); }
+.ramo-alertas { margin: 0; padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); border: 1px solid var(--danger-line); font-size: var(--type-caption); }
+.ramo-bloco { display: flex; flex-direction: column; gap: var(--space-1); }
+.ramo-bloco > summary { cursor: pointer; min-height: var(--touch-target, 44px); display: flex; align-items: center; }
+.ramo-avaliacoes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-1); font-size: var(--type-caption); }
+.ramo-nota { display: inline-block; min-width: 2.4em; text-align: center; font-weight: 600; border: 1px solid var(--rule-strong); border-radius: var(--radius-sm); font-variant-numeric: tabular-nums; }
+.ramo-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.ramo-item { padding: var(--space-2) 0; border-bottom: 1px solid var(--rule); display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+.ramo-item p { margin: 0; overflow-wrap: anywhere; }
+.ramo-item--ruim { border-left: 3px solid var(--danger-line); padding-left: var(--space-2); }
+.ramo-animais { display: flex; flex-wrap: wrap; gap: var(--space-1); }
+.ramo-animal { display: inline-block; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--rule); font-size: var(--type-caption); }
+.ramo-animal--ruim { border-color: var(--danger-line); }
+.ramo-decidir { display: flex; flex-direction: column; gap: var(--space-3); }
+.ramo-delegar { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-2); border-radius: var(--radius-sm); background: var(--veu-1); }
+.ramo-grupos { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--space-3); }
+.ramo-grupo { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+.ramo-opcoes__lista { display: flex; flex-wrap: wrap; gap: var(--space-1); }
+.ramo-opcao { min-height: var(--touch-target, 44px); padding: var(--space-1) var(--space-2); border-radius: var(--radius-sm); border: 1px solid var(--rule-strong); background: transparent; color: inherit; font: inherit; font-size: var(--type-caption); display: inline-flex; flex-direction: column; align-items: flex-start; justify-content: center; text-align: left; cursor: pointer; }
+.ramo-opcao small { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.ramo-opcao--atual { border-width: 2px; border-color: var(--tinta); font-weight: 600; cursor: default; }
+.ramo-opcao:disabled:not(.ramo-opcao--atual) { opacity: 0.55; cursor: not-allowed; }
+.ramo-opcao:focus-visible { outline: 2px solid var(--tinta); outline-offset: 2px; }
+.ramo-opcoes__dica { margin: var(--space-1) 0 0; }
+.ramo-visao .pat-tabela { min-width: 560px; }
+.ramo-visao caption { text-align: left; font-weight: 600; padding-bottom: var(--space-1); }
+
+/* A loja de exóticos e os mercados de procedência incerta. */
+.exoticos { display: flex; flex-direction: column; gap: var(--space-3); }
+.exoticos__proibidos { padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); border: 1px dashed var(--rule-strong); font-size: var(--type-caption); }
+.exoticos__proibidos ul { margin: var(--space-1) 0 0; padding-left: var(--space-4); }
+.mercado-incerto { display: flex; flex-direction: column; gap: var(--space-3); }
+.mercado-incerto__oferta .oferta__texto { min-width: 0; overflow-wrap: anywhere; }
+.mercado-incerto__bicho { padding: var(--space-3); border-radius: var(--radius-sm); border: 1px solid var(--danger-line); display: flex; flex-direction: column; gap: var(--space-2); }
+.mercado-incerto__bicho p { margin: 0; }
+.oferta__motivo--ruim { color: var(--danger-text, inherit); }

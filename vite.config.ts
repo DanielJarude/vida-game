@@ -132,7 +132,7 @@ export default defineConfig({
           // Sucessão (pacote pré-América do Sul): a partilha e a troca de protagonista leem o legado e a retrospectiva; só a
           // fachada (a tela do legado) e a família a chamam — vai com elas, sem ciclo.
           // REWORK 11: as cenas que lembram (`situacoesMemoria`, que lê o banco do técnico) e as de arte só as situações chamam.
-          if (/[\\/]src[\\/]motor[\\/]sistemas[\\/](situacoes|situacoesMemoria|situacoesArte|tecnico|visibilidade|legado|retrospectiva|familia|iniciativas|ilicito|pessoa|sucessao|tribunal|margem|submundo)\.ts/.test(id)) return 'motor-carreira';
+          if (/[\\/]src[\\/]motor[\\/]sistemas[\\/](situacoes|situacoesMemoria|situacoesArte|tecnico|visibilidade|legado|retrospectiva|familia|iniciativas|ilicito|pessoa|sucessao|tribunal|margem|submundo|clandestinos|paralelos)\.ts/.test(id)) return 'motor-carreira';
           // REWORK 10.6 · M1: o pacote dos sistemas chegou a 794 kB (5,8 kB de folga). O que lê o ofício e os caminhos da vida
           // como um todo — as ações profissionais (`profissao`), os caminhos possíveis, a mudança de país, o fechamento do ano
           // e as habilitações — só importa os sistemas e a base, e só é chamado de cima (as ações, o ano, os textos, as telas,
@@ -142,7 +142,8 @@ export default defineConfig({
           // REWORK 12: o patrimônio novo (a coleção, as empresas) num pacote próprio, ENTRE os sistemas e quem os chama
           // (o ano, as ações, os acontecimentos, as telas). Importam só os sistemas e a base: sem ciclo, e o pacote dos
           // textos (o mais apertado) não cresce.
-          if (/[\\/]src[\\/]motor[\\/]sistemas[\\/](colecao|empresas)\.ts/.test(id)) return 'motor-patrimonio';
+          // REWORK 12.2: o que é próprio de cada ramo (`setores`) e os exóticos vêm junto (importam empresas e a base).
+          if (/[\\/]src[\\/]motor[\\/]sistemas[\\/](colecao|empresas|setores|exoticos)\.ts/.test(id)) return 'motor-patrimonio';
           if (/[\\/]src[\\/]motor[\\/]dados[\\/]/.test(id)) return 'motor-dados';
           // Pacote pré-América do Sul: a CAMADA DE BASE — os sistemas-folha que só importam os catálogos e uns aos outros
           // (núcleo, texto, tempo, mercado, origem, rede, notoriedade, economia...) — vai com os catálogos, embaixo de

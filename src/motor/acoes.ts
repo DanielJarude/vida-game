@@ -108,6 +108,11 @@ import { disponibilidadeAposta, executarAposta, type OpAposta } from './sistemas
 import { bloqueioDaLiberdade, disponibilidadePrisao, executarPrisao, type OquePrisao } from './sistemas/prisao';
 import { comprarColecao, disponibilidadeComprarColecao, disponibilidadeVenderColecao, venderColecao, type ModoDeVenda } from './sistemas/colecao';
 import { abrirEmpresa, cederAoMuseu, comprarParticipacao, decidirEmpresa, disponibilidadeEmpresa, empresa, ofertasDeParticipacao, planoDeAbertura, type DecisaoEmpresa } from './sistemas/empresas';
+import { decidirObra, decidirSetor, disponibilidadeObra, disponibilidadeSetor, garantirSetor } from './sistemas/setores';
+import { disponibilidadeProposta, disponibilidadeServicoColecao, responderProposta, servicoColecao, type ServicoDeColecao } from './sistemas/colecao';
+import { legalidade, comprarExotico, comprarInstalacao, definirCuidador, disponibilidadeComprarExotico, disponibilidadeCuidador, disponibilidadeInstalacao, disponibilidadePetAoZoo, petAoZoo } from './sistemas/exoticos';
+import { disponibilidadeAnimalPorFora, disponibilidadeParalelo, executarAnimalPorFora, executarParalelo, type OqueAnimalPorFora, type OqueParalelo } from './sistemas/paralelos';
+import { decidirClandestino, disponibilidadeClandestino, type OqueClandestino } from './sistemas/clandestinos';
 import type { TipoEmpresa } from './tipos';
 
 /** Id de uma interação do catálogo (`sistemas/interacoes`). O que existe depende da pessoa e do momento. */
@@ -213,6 +218,30 @@ export type Acao =
   | { tipo: 'empresa'; empresaId: string; decisao: DecisaoEmpresa }
   /** REWORK 12: comprar uma participação (investidor) numa empresa à venda. */
   | { tipo: 'participacao'; ofertaId: string }
+  /** REWORK 12.2: uma decisão do ramo (o cardápio, os quartos, as especialidades, os recintos, as exposições). */
+  | { tipo: 'setor'; empresaId: string; decisao: string; alvo?: string }
+  /** REWORK 12.2: uma obra do museu (verificar a autenticidade, restaurar, emprestar, expor ou recolher). */
+  | { tipo: 'obra'; empresaId: string; obraId: string; oque: 'verificar' | 'restaurar_obra' | 'emprestar_obra' | 'expor' }
+  /** REWORK 12.2: deixar (ou não) o gestor contratado decidir o dia a dia do ramo. */
+  | { tipo: 'empresa_delegar'; empresaId: string; delegar: boolean }
+  /** REWORK 12.2: avaliar, autenticar, restaurar ou emprestar uma peça da coleção. */
+  | { tipo: 'colecao_servico'; pecaId: string; servico: ServicoDeColecao }
+  /** REWORK 12.2: responder à proposta de um colecionador por uma peça sua. */
+  | { tipo: 'colecao_proposta'; propostaId: string; aceitar: boolean }
+  /** REWORK 12.2: comprar um animal exótico (loja especializada, conforme a lei do lugar). */
+  | { tipo: 'exotico_comprar'; ofertaId: string }
+  /** REWORK 12.2: montar a instalação que um exótico pede (terrário, viveiro, aquário marinho). */
+  | { tipo: 'instalacao_comprar'; instalacao: string }
+  /** REWORK 12.2: alguém pago para cuidar do bicho no dia a dia (viagem, semana puxada). */
+  | { tipo: 'pet_cuidador'; petId: string; ligar: boolean }
+  /** REWORK 12.2: entregar o seu animal ao seu zoológico (o mesmo bicho, com a história). */
+  | { tipo: 'pet_ao_zoo'; petId: string; empresaId: string }
+  /** REWORK 12.2: num mercado de procedência duvidosa: investigar, comprar ou denunciar. */
+  | { tipo: 'paralelo'; ofertaId: string; oque: OqueParalelo }
+  /** REWORK 12.2: o animal oferecido por fora — recusar, denunciar, acolher o resgatado no seu zoológico. */
+  | { tipo: 'animal_por_fora'; oque: OqueAnimalPorFora; empresaId?: string }
+  /** REWORK 12.2: os negócios por fora (abrir, tocar, sócios, fachada, a organização própria). */
+  | { tipo: 'clandestino'; oque: OqueClandestino; negocioId?: string; alvo?: string }
   /** Pagar (ou parar de pagar) o INSS como facultativo durante uma pausa de cuidado. */
   | { tipo: 'facultativo'; ativo: boolean }
   /** Como ir ao trabalho e ao estudo (`auto`: o jeito mais rápido que se tem). */
@@ -589,6 +618,32 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
       return vereditoDePagar(v, p.capitalDaPessoa, a.comSocio ? 'A sua metade do capital é' : 'O capital para abrir é');
     }
     case 'empresa': return deOk(disponibilidadeEmpresa(v, empresa(v, a.empresaId), a.decisao));
+    case 'setor': return deOk(disponibilidadeSetor(v, empresa(v, a.empresaId), a.decisao, a.alvo));
+    case 'obra': return deOk(disponibilidadeObra(v, empresa(v, a.empresaId), a.oque, a.obraId));
+    case 'empresa_delegar': {
+      const e = empresa(v, a.empresaId);
+      if (!e || e.estado === 'encerrada' || e.papel === 'investidor') return bloqueio('impossivel', 'Não se aplica.');
+      if (e.gestao.quem !== 'contratada') return bloqueio('requisito', 'Delegar o dia a dia pede um gestor contratado.');
+      return (e.setor?.delegar !== false) === a.delegar ? bloqueio('incompativel', a.delegar ? 'O gestor já decide o dia a dia.' : 'Você já decide o dia a dia.') : PERMITIDO;
+    }
+    case 'colecao_servico': return deOk(disponibilidadeServicoColecao(v, a.pecaId, a.servico));
+    case 'colecao_proposta': return deOk(disponibilidadeProposta(v, a.propostaId));
+    case 'exotico_comprar': return deOk(disponibilidadeComprarExotico(v, a.ofertaId));
+    case 'instalacao_comprar': return deOk(disponibilidadeInstalacao(v, a.instalacao));
+    case 'pet_cuidador': return deOk(disponibilidadeCuidador(v, a.petId, a.ligar));
+    case 'pet_ao_zoo': return deOk(disponibilidadePetAoZoo(v, a.petId, a.empresaId));
+    case 'paralelo': {
+      const d = disponibilidadeParalelo(v, a.ofertaId, a.oque);
+      if (d.ok && d.ilegal && a.oque === 'comprar') return { grau: 'irregular', motivo: 'Comprar sem perguntar de onde veio, aqui, é receptação: a peça pode ser apreendida — e quem comprou sabendo responde.' };
+      return deOk(d);
+    }
+    case 'animal_por_fora': return deOk(disponibilidadeAnimalPorFora(v, a.oque, a.empresaId));
+    case 'clandestino': {
+      const d = disponibilidadeClandestino(v, a.oque, a.negocioId, a.alvo);
+      if (!d.ok) return deOk(d);
+      const crime = ['abrir', 'aportar', 'ritmo_1', 'ritmo_2', 'socio', 'fachada', 'fundar_organizacao', 'tenente', 'alianca'].includes(a.oque);
+      return crime ? { grau: 'irregular', motivo: 'É crime: mais dinheiro possível, mais gente sabendo, mais a perder quando a conta chegar.' } : PERMITIDO;
+    }
     case 'participacao': {
       const o = ofertasDeParticipacao(v).find(x => x.id === a.ofertaId);
       if (!o) return bloqueio('impossivel', 'Essa participação já foi vendida.');
@@ -665,6 +720,10 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'levar_pet': {
       const p = v.pessoas[a.petId];
       if (!p?.especie || !p.vivo) return bloqueio('impossivel', 'Não há esse animal.');
+      // REWORK 12.2: o que fugiu não está para ser trazido; o que foi para uma instituição (o zoológico, o criadouro), lá fica.
+      if (p.pet?.fugiu !== undefined) return bloqueio('impossivel', 'Fugiu e não foi encontrado.');
+      if (p.pet?.instituicao) return bloqueio('impossivel', `Vive agora com ${p.pet.instituicao}.`);
+      if (p.especie && legalidade(p.especie, v.moradia.municipioId) === 'proibido') return bloqueio('ilegal', 'A lei daqui não permite essa espécie em casa.');
       if (moraComFamiliaDeOrigem(v)) return bloqueio('incompativel', 'Vocês já moram na mesma casa.');
       if (p.pet?.tutor === 'eu' && v.vinculos[p.id].convivio.includes('casa')) return bloqueio('incompativel', 'Já mora com você.');
       if (p.municipioId !== v.moradia.municipioId) return bloqueio('requisito', 'Mora em outra cidade.');
@@ -876,7 +935,10 @@ function linhaDoExtrato(a: Acao): [string, TipoMovimento] {
     case 'pessoa': return ['Com as pessoas: presentes, visitas, ajudas', 'escolha'];
     case 'aposta': return ['Apostas (loteria e cassino)', 'escolha'];
     case 'colecao_comprar': case 'colecao_vender': case 'colecao_ceder': return ['Coleção: compra e venda de peças', 'escolha'];
-    case 'empresa_abrir': case 'empresa': case 'participacao': return ['Empresas: capital, aportes e vendas', 'escolha'];
+    case 'empresa_abrir': case 'empresa': case 'participacao': case 'setor': case 'obra': case 'empresa_delegar': return ['Empresas: capital, aportes e vendas', 'escolha'];
+    case 'colecao_servico': case 'colecao_proposta': case 'paralelo': return ['Coleção: compra e venda de peças', 'escolha'];
+    case 'exotico_comprar': case 'instalacao_comprar': case 'pet_cuidador': case 'pet_ao_zoo': case 'animal_por_fora': return ['Os bichos: compras e cuidados', 'escolha'];
+    case 'clandestino': return ['Negócios por fora', 'escolha'];
     default: return ['Compras, viagens e outras escolhas', 'escolha'];
   }
 }
@@ -1157,6 +1219,22 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
     case 'colecao_ceder': return ok(cederAoMuseu(v, empresa(v, a.empresaId)!, a.pecaId), 'bom');
     case 'empresa_abrir': { v.anoAtual.acoes.push('abriu_empresa'); return { resultado: abrirEmpresa(v, a.empresa, a.comSocio), titulo: 'Uma empresa sua' }; }
     case 'empresa': { const e = empresa(v, a.empresaId)!; return { resultado: decidirEmpresa(v, e, a.decisao), titulo: e.nome }; }
+    case 'setor': { const e = empresa(v, a.empresaId)!; return { resultado: decidirSetor(v, e, a.decisao, a.alvo), titulo: e.nome }; }
+    case 'obra': { const e = empresa(v, a.empresaId)!; return { resultado: decidirObra(v, e, a.oque, a.obraId), titulo: e.nome }; }
+    case 'empresa_delegar': {
+      const e = empresa(v, a.empresaId)!;
+      garantirSetor(v, e).delegar = a.delegar;
+      return { resultado: a.delegar ? `${e.gestao.nome ?? 'O gestor'} passa a decidir o dia a dia (o cardápio, o estoque, os reparos), com o caixa da empresa. As grandes decisões continuam suas.` : 'O dia a dia volta a ser decidido por você: o gestor executa o que você mandar.', titulo: e.nome };
+    }
+    case 'colecao_servico': return ok(servicoColecao(v, a.pecaId, a.servico));
+    case 'colecao_proposta': return ok(responderProposta(v, a.propostaId, a.aceitar), a.aceitar ? 'bom' : 'neutro');
+    case 'exotico_comprar': { const pet = comprarExotico(v, r, a.ofertaId); return { resultado: `${pet.nome} chegou em casa, com os documentos em ordem.`, titulo: 'Um bicho em casa', pessoaId: pet.id }; }
+    case 'instalacao_comprar': return ok(comprarInstalacao(v, a.instalacao), 'bom');
+    case 'pet_cuidador': return ok(definirCuidador(v, a.petId, a.ligar));
+    case 'pet_ao_zoo': return { resultado: petAoZoo(v, a.petId, a.empresaId), titulo: 'Para o zoológico', pessoaId: a.petId };
+    case 'paralelo': { const x = executarParalelo(v, a.ofertaId, a.oque); return ok(x.texto, x.tom ?? 'neutro'); }
+    case 'animal_por_fora': { const x = executarAnimalPorFora(v, a.oque, a.empresaId); return ok(x.texto, x.tom ?? 'neutro'); }
+    case 'clandestino': return { resultado: decidirClandestino(v, a.oque, a.negocioId, a.alvo), titulo: 'Negócios por fora' };
     case 'participacao': return ok(comprarParticipacao(v, a.ofertaId), 'bom');
     case 'mei': { const antes = temFato(v, 'formalizou_mei'); formalizar(v); escrever(v, { texto: antes ? `Abriu um MEI de novo, agora como ${nomeOcupacao(v, ocupacao(v.trabalho.atual!.ocupacaoId))}.` : 'Formalizou o trabalho como MEI: CNPJ, nota fiscal e a guia do mês.', relevancia: 'biografia', tema: 'trabalho', escolha: true }); return ok('Agora é MEI: uma guia por mês, tempo de INSS contando.', 'bom'); }
     case 'deslocamento': {

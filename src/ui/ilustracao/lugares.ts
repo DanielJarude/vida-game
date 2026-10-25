@@ -15,7 +15,9 @@ import { cantos, circulo, elipse, lembrar, escurecer, membro, ret, suave, type A
 
 export type LugarDaCidade =
   | 'alugar' | 'concessionaria' | 'usados' | 'motos' | 'nautica' | 'aeroclube' | 'oficina' | 'banco' | 'abrigo' | 'pets'
-  | 'estilo' | 'clinica' | 'eletronicos' | 'casa' | 'instrumentos' | 'esportes' | 'livraria';
+  | 'estilo' | 'clinica' | 'eletronicos' | 'casa' | 'instrumentos' | 'esportes' | 'livraria'
+  /** REWORK 12.2: as casas de luxo e coleção, os exóticos e os mercados de procedência duvidosa, cada um com a sua cara. */
+  | 'relojoaria' | 'joalheria' | 'galeria' | 'antiquario' | 'memorabilia' | 'leilao' | 'exoticos' | 'feira' | 'antiquario_vago' | 'privada_incerta' | 'por_fora';
 
 const CHAO = 112, X0 = 140, X1 = 340;
 const VIDRO_LOJA = '#efe7d4', ESCURO = '#2b2826', METAL = '#b8b4ad', BRANCO = '#f2efe9';
@@ -103,6 +105,29 @@ const simChave = (cor: string, x = 196, y = 23): Peca[] => { return [{ tipo: 'ma
 const simOculos = (cor: string, x = 196, y = 24): Peca[] => { return [{ tipo: 'linha', d: `${circulo(x - 5, y, 4)}${circulo(x + 5, y, 4)}M${x - 1} ${y}h2`, larg: 1.6, cor, marca: 'simbolo' }]; };
 const simAncora = (cor: string, x = 196, y = 23): Peca[] => { return [{ tipo: 'linha', d: `M${x} ${y - 6}v14M${x - 7} ${y + 2}q7 9 14 0M${x - 4} ${y - 3}h8`, larg: 1.8, cor, marca: 'simbolo' }, { tipo: 'linha', d: circulo(x, y - 8, 2), larg: 1.4, cor }]; };
 const simTela = (cor: string, x = 196, y = 23): Peca[] => { return [{ tipo: 'massa', d: ret(x - 9, y - 7, 18, 12, 1.5) + ret(x - 3, y + 6, 6, 2, 0.5), cor, semVolume: true, marca: 'simbolo' }]; };
+
+
+const simRelogio = (cor: string, x = 196, y = 23): Peca[] => [{ tipo: 'linha', d: `${circulo(x, y, 7)}M${x} ${y}v-5M${x} ${y}l4 2`, larg: 1.5, cor, marca: 'simbolo' }];
+const simDiamante = (cor: string, x = 196, y = 23): Peca[] => [{ tipo: 'massa', d: `M${x - 8} ${y - 3}l3-4h10l3 4-8 10z`, cor, semVolume: true, marca: 'simbolo' }, { tipo: 'linha', d: `M${x - 8} ${y - 3}h16M${x - 3} ${y - 7}l3 14 3-14`, larg: 0.6, cor: ESCURO }];
+const simVaso = (cor: string, x = 196, y = 23): Peca[] => [{ tipo: 'massa', d: `M${x - 3} ${y - 9}h6v2c4 2 6 6 4 11-1 3-3 4-7 4s-6-1-7-4c-2-5 0-9 4-11z`, cor, semVolume: true, marca: 'simbolo' }];
+const simTaca = (cor: string, x = 196, y = 23): Peca[] => [{ tipo: 'massa', d: `M${x - 7} ${y - 8}h14c0 7-3 10-6 11v3h3v2h-8v-2h3v-3c-3-1-6-4-6-11z`, cor, semVolume: true, marca: 'simbolo' }, { tipo: 'linha', d: `M${x - 7} ${y - 6}c-4 0-4 6 1 6M${x + 7} ${y - 6}c4 0 4 6-1 6`, larg: 1.2, cor }];
+const simMartelo = (cor: string, x = 196, y = 23): Peca[] => [{ tipo: 'massa', d: ret(x - 8, y - 8, 10, 6, 1.5) + membro([[x - 3, y - 4], [x + 6, y + 6]], [2, 2]), cor, semVolume: true, marca: 'simbolo' }, { tipo: 'massa', d: ret(x - 9, y + 6, 10, 2.5, 1), cor, semVolume: true }];
+const simFolha = (cor: string, x = 196, y = 23): Peca[] => [{ tipo: 'massa', d: `M${x - 8} ${y + 7}C${x - 8} ${y - 4} ${x} ${y - 9} ${x + 8} ${y - 8}C${x + 8} ${y + 2} ${x + 2} ${y + 7} ${x - 8} ${y + 7}z`, cor, semVolume: true, marca: 'simbolo' }, { tipo: 'linha', d: `M${x - 8} ${y + 7}L${x + 5} ${y - 5}`, larg: 0.8, cor: ESCURO }];
+const simQuadro = (cor: string, x = 196, y = 23): Peca[] => [{ tipo: 'linha', d: ret(x - 9, y - 7, 18, 14, 0.5), larg: 1.6, cor, marca: 'simbolo' }, { tipo: 'massa', d: `M${x - 6} ${y + 4}l5-6 3 3 3-4 2 7z`, cor, semVolume: true }];
+
+/** Uma joia/relógio pousado numa almofada de vitrine. */
+const almofada = (x: number, y: number, cor: string): Peca[] => [{ tipo: 'massa', d: ret(x - 11, y, 22, 7, 2.5), cor, marca: 'almofada' }];
+const relogioDePulso = (x: number, y: number, caixa: string, pulseira: string): Peca[] => [
+  { tipo: 'massa', d: ret(x - 3, y - 9, 6, 18, 2), cor: pulseira, semVolume: true },
+  { tipo: 'metal', d: circulo(x, y, 5), cor: caixa }, { tipo: 'massa', d: circulo(x, y, 3.6), cor: '#f4f1ea', semVolume: true },
+  { tipo: 'linha', d: `M${x} ${y}v-2.6M${x} ${y}l1.8 1`, larg: 0.6, cor: ESCURO }
+];
+const quadro = (x: number, y: number, w: number, h: number, a: string, b: string): Peca[] => [
+  { tipo: 'massa', d: ret(x, y, w, h, 0.5), cor: '#2b2826', marca: 'moldura' },
+  { tipo: 'massa', d: ret(x + 2, y + 2, w - 4, h - 4, 0.3), cor: a, semVolume: true },
+  { tipo: 'massa', d: `M${x + 2} ${y + h - 2}L${x + w * 0.45} ${y + h * 0.4}L${x + w * 0.7} ${y + h * 0.65}L${x + w - 2} ${y + h * 0.3}V${y + h - 2}Z`, cor: b, semVolume: true }
+];
+const lampada = (x: number, y: number): Peca[] => [{ tipo: 'linha', d: `M${x} ${y - 6}v4`, larg: 0.6, cor: '#5a5650' }, { tipo: 'luz', d: `M${x - 3} ${y}h6l5 20h-16z`, cor: '#fff3c4' }];
 
 /* Interiores (o que a vitrine mostra quando não há objetos na frente). */
 const balcao = (cor: string, x0 = 168, x1 = 280): Peca => ({ tipo: 'massa', d: ret(x0, 84, x1 - x0, 26, 2), cor, marca: 'balcao' });
@@ -326,6 +351,150 @@ const LOJAS: Record<LugarDaCidade, () => Amostra> = {
       { tipo: 'massa', d: suave([[246, 102], [252, 92], [262, 92], [266, 98], [282, 102], [282, 108], [246, 108]], true, 0.35), cor: '#2f6db3', marca: 'tenis' }
     ]
   }),
+relojoaria: () => loja({
+    // Pedra escura, placa dourada, o relógio grande na fachada; na vitrine, relógios de pulso em almofadas de veludo.
+    parede: '#22313a', textura: 'pedra', placa: { cor: '#c9a54a', texto: 'RELOJOARIA', tinta: '#1d2226', simbolo: simRelogio('#1d2226') }, porta: 'dir', luz: '#f1e7cf',
+    interior: [
+      ...[0, 1, 2].flatMap(k => [...almofada(176 + k * 34, 92, '#5b1f2c'), ...relogioDePulso(176 + k * 34, 84, k === 1 ? '#c9a54a' : '#c7c7c7', k === 0 ? '#2b2826' : k === 1 ? '#7a4a24' : '#9aa0a6')]),
+      { tipo: 'massa', d: ret(164, 99, 104, 9, 1), cor: '#3a2a20', marca: 'balcao' },
+      ...lampada(192, 52), ...lampada(242, 52)
+    ],
+    frente: [{ tipo: 'metal', d: ret(X0 - 4, 22, 3, 24, 0.5), cor: '#8d8a85' }, { tipo: 'metal', d: circulo(X0 - 3, 50, 10), cor: '#c9a54a', marca: 'relogio-rua' }, { tipo: 'massa', d: circulo(X0 - 3, 50, 7.6), cor: '#f4f1ea', semVolume: true }, { tipo: 'linha', d: `M${X0 - 3} 50v-5.5M${X0 - 3} 50l4 2.5`, larg: 1, cor: ESCURO }]
+  }),
+  joalheria: () => loja({
+    // Mármore claro, placa preta com letras douradas, o diamante; na vitrine, o busto com o colar e os anéis no expositor.
+    parede: '#e8e2d6', textura: 'pedra', placa: { cor: '#161616', texto: 'JOALHERIA', tinta: '#d8b65a', simbolo: simDiamante('#d8b65a') }, porta: 'dir', toldo: { cor: '#161616' }, luz: '#f6efe0',
+    interior: [
+      { tipo: 'massa', d: `M186 106c0-14 6-20 14-22v-8a7 7 0 1 1 8 0v8c8 2 14 8 14 22z`, cor: '#2b2826', marca: 'busto' },
+      { tipo: 'linha', d: 'M192 90q12 12 24 0', larg: 1.4, cor: '#d8b65a', marca: 'colar' }, { tipo: 'massa', d: `M202.5 100l1.5-3 1.5 3-1.5 2z`, cor: '#9fd4e8', semVolume: true },
+      { tipo: 'massa', d: ret(232, 92, 44, 14, 1.5), cor: '#2b2826', marca: 'expositor' }, { tipo: 'vidro', d: ret(232, 80, 44, 12, 1), claro: true },
+      ...[0, 1, 2].flatMap((k): Peca[] => [{ tipo: 'linha', d: circulo(241 + k * 13, 90, 3), larg: 1.2, cor: '#d8b65a' }, { tipo: 'massa', d: circulo(241 + k * 13, 86.5, 1.4), cor: ['#9fd4e8', '#c8402a', '#3f9b4a'][k], semVolume: true }])
+    ]
+  }),
+  galeria: () => ({
+    // A caixa branca: fachada lisa, vidro do chão ao teto, nome pequeno; dentro, quadros com luz e a escultura no pedestal.
+    vb: [480, 120],
+    pecas: [
+      ...rua(),
+      { tipo: 'massa', d: ret(X0, 8, X1 - X0, CHAO - 8, 0.5), cor: '#f4f2ee', marca: 'predio' },
+      { tipo: 'massa', d: ret(X0 + 10, 30, X1 - X0 - 20, CHAO - 32, 0.5), cor: '#fbfaf7', marca: 'vitrine' },
+      { tipo: 'linha', d: `M${X0 + 10} 30H${X1 - 10}M${X0 + 120} 30V${CHAO - 2}`, larg: 1.2, cor: '#2b2826' },
+      { tipo: 'texto', x: 186, y: 22, texto: 'GALERIA', tam: 9, cor: '#2b2826', marca: 'nome' },
+      ...simQuadro('#2b2826', 222, 18),
+      ...[...quadro(160, 46, 30, 22, '#3d5d8f', '#e2b72d'), ...quadro(204, 42, 22, 30, '#b5573a', '#2b2826'), ...lampada(175, 38), ...lampada(215, 34),
+        { tipo: 'massa' as const, d: ret(286, 82, 18, 26, 0.5), cor: '#e7e3dc', marca: 'pedestal' }, { tipo: 'massa' as const, d: suave([[288, 82], [292, 64], [298, 60], [302, 70], [300, 82]], true, 0.5), cor: '#8a5a32', marca: 'escultura' }
+      ].map(p => ({ ...p, classe: 'fachada__interior' })),
+      { tipo: 'massa', d: ret(X1 - 54, 52, 30, CHAO - 54, 0.5), cor: '#e4e1db', marca: 'porta' }
+    ]
+  }),
+  antiquario: () => loja({
+    // Madeira escura e envelhecida, placa bordô com o vaso; dentro, o relógio de pé, a poltrona, o candelabro, o gramofone.
+    parede: '#4a3324', textura: 'ripas', placa: { cor: '#6b2430', texto: 'ANTIQUÁRIO', tinta: '#e9dcc0', simbolo: simVaso('#e9dcc0') }, porta: 'esq', luz: '#e8d4a8',
+    interior: [
+      { tipo: 'massa', d: ret(208, 52, 16, 56, 2), cor: '#6e3f22', marca: 'relogio-pe' }, { tipo: 'massa', d: circulo(216, 62, 5), cor: '#efe2c4', semVolume: true }, { tipo: 'linha', d: 'M216 62v-3M216 62l2.4 1.4M216 72v18', larg: 0.8, cor: ESCURO },
+      { tipo: 'massa', d: suave([[236, 108], [236, 86], [244, 80], [262, 80], [268, 88], [268, 108]], true, 0.3), cor: '#7a2f2f', marca: 'poltrona' },
+      { tipo: 'massa', d: ret(276, 98, 18, 10, 1), cor: '#6e3f22' }, { tipo: 'massa', d: 'M280 98l-2-14q8-6 14 2l-4 12z', cor: '#c9a23a', semVolume: true, marca: 'gramofone' },
+      { tipo: 'linha', d: 'M250 50v8M240 62q10 6 20 0M240 62v4M250 62v4M260 62v4', larg: 1, cor: '#c9a23a', marca: 'lustre' }
+    ]
+  }),
+  memorabilia: () => loja({
+    // Verde de gramado, placa com a taça; dentro, a camisa emoldurada, a taça, a bola autografada e as flâmulas.
+    parede: '#1f4d36', placa: { cor: '#f2efe9', texto: 'MEMORABILIA', tinta: '#1f4d36', simbolo: simTaca('#1f4d36') }, porta: 'dir', toldo: { cor: '#f2efe9', listra: '#1f4d36' }, luz: '#f1eee6',
+    interior: [
+      { tipo: 'massa', d: ret(166, 50, 40, 46, 1), cor: '#2b2826', marca: 'moldura' }, { tipo: 'massa', d: 'M174 58l8-4h12l8 4 4 8-5 2-1-3v24h-24v-24l-1 3-5-2z', cor: '#c8372d', semVolume: true, marca: 'camisa' },
+      { tipo: 'texto', x: 186, y: 76, texto: '10', tam: 8, cor: BRANCO },
+      ...simTaca('#d8b65a', 230, 84).map(p => ({ ...p, marca: 'taca' })), { tipo: 'massa', d: ret(220, 98, 20, 10, 1), cor: '#6e3f22' },
+      { tipo: 'massa', d: circulo(262, 96, 8), cor: BRANCO, marca: 'bola' }, { tipo: 'linha', d: 'M257 94q3 3 8-1', larg: 0.7, cor: '#2f6db3' },
+      { tipo: 'massa', d: 'M248 54h30l-30 8z', cor: '#e2b72d', semVolume: true, marca: 'flamula' }
+    ]
+  }),
+  leilao: () => ({
+    // O casarão de pedra, os estandartes da temporada, as portas altas; dentro, a tribuna com o martelo e o lote no cavalete.
+    vb: [480, 120],
+    pecas: [
+      ...rua(),
+      { tipo: 'massa', d: ret(X0, 18, X1 - X0, CHAO - 18, 0), cor: '#cfc6b4', marca: 'predio' },
+      ...textura('pedra', '#cfc6b4', 18),
+      { tipo: 'massa', d: ret(X0 - 6, 14, X1 - X0 + 12, 8, 0), cor: '#b8ad98', semVolume: true },
+      { tipo: 'massa', d: ret(X0 + 30, 26, 140, 18, 1), cor: '#4a1f2a', marca: 'placa' },
+      ...simMartelo('#e9dcc0', 196, 35),
+      { tipo: 'texto', x: 246, y: 39, texto: 'LEILÕES', tam: 10, cor: '#e9dcc0', marca: 'nome' },
+      { tipo: 'massa', d: ret(X0 + 28, 52, 104, CHAO - 54, 1), cor: '#efe6d2', marca: 'vitrine' },
+      ...[{ tipo: 'massa' as const, d: ret(170, 84, 22, 24, 1), cor: '#5a3a24', marca: 'tribuna' }, ...simMartelo('#2b2826', 181, 78), ...quadro(214, 58, 34, 26, '#4f7a4b', '#e2b72d'),
+        { tipo: 'linha' as const, d: 'M218 84l-6 24M244 84l6 24M231 84v24', larg: 1.2, cor: '#5a3a24' }].map(p => ({ ...p, classe: 'fachada__interior' })),
+      { tipo: 'massa', d: ret(X1 - 52, 50, 36, CHAO - 50, 1), cor: '#3a2a20', marca: 'porta' },
+      ...[X0 - 14, X1 + 6].flatMap((x): Peca[] => [{ tipo: 'metal', d: ret(x + 3, 10, 2, 50, 0.5), cor: '#8d8a85' }, { tipo: 'massa', d: `M${x - 4} 14h16v34l-8-5-8 5z`, cor: '#4a1f2a', marca: 'estandarte' }])
+    ]
+  }),
+  exoticos: () => loja({
+    // Verde tropical, a folha na placa; dentro, o terrário com o lagarto, a arara no poleiro e o aquário marinho.
+    parede: '#2f5a3f', placa: { cor: '#e2c24a', texto: 'EXÓTICOS', tinta: '#1f3a28', simbolo: simFolha('#1f3a28') }, porta: 'dir', luz: '#e9f0e4',
+    interior: [
+      { tipo: 'massa', d: ret(162, 80, 44, 26, 1.5), cor: '#c9b98a', marca: 'terrario' }, { tipo: 'vidro', d: ret(162, 72, 44, 8, 1), claro: true },
+      { tipo: 'massa', d: 'M170 98q6-6 14-2l8-2q4 2 0 4l-8 1q-8 4-14-1z', cor: '#e0a33a', semVolume: true, marca: 'lagarto' },
+      { tipo: 'linha', d: 'M214 60v48M206 64h22', larg: 1.4, cor: '#6e3f22' },
+      { tipo: 'massa', d: elipse(222, 56, 5, 7) + circulo(225, 49, 4), cor: '#2f6db3', semVolume: true, marca: 'arara' }, { tipo: 'massa', d: elipse(222, 60, 3, 4), cor: '#e2b72d', semVolume: true }, { tipo: 'massa', d: 'M220 62l-3 14 5-12z', cor: '#2f6db3', semVolume: true },
+      { tipo: 'massa', d: ret(240, 66, 44, 30, 2), cor: '#2a5f9a', opacidade: 0.85, marca: 'aquario-marinho' },
+      { tipo: 'massa', d: 'M256 80q5-5 10 0q-5 5-10 0zM266 80l4-3v6z', cor: '#e07b2c', semVolume: true, marca: 'palhaco' }, { tipo: 'linha', d: 'M259 76v8M263 76v8', larg: 1, cor: BRANCO },
+      { tipo: 'massa', d: ret(238, 96, 48, 10, 1), cor: '#3a3a3a' }
+    ]
+  }),
+  feira: () => ({
+    // A feira de domingo: duas barracas de lona listrada, as mesas com o que for (um abajur, um relógio, um vaso), sem prédio.
+    vb: [480, 120],
+    pecas: [
+      ...rua(),
+      { tipo: 'massa', d: ret(X0 - 20, 96, X1 - X0 + 40, CHAO - 96, 0), cor: '#cfc8bb', semVolume: true, marca: 'chao' },
+      ...[0, 1].flatMap((k): Peca[] => {
+        const x = X0 - 10 + k * 112;
+        return [
+          { tipo: 'massa', d: `M${x} 46L${x + 50} 30L${x + 100} 46Z`, cor: k ? '#2f6db3' : '#c8372d', marca: 'lona' },
+          { tipo: 'massa', d: Array.from({ length: 5 }, (_, j) => `M${x + 10 + j * 20} ${46 - (j < 3 ? j : 4 - j) * 4.8}l10 ${-2.4}v${(j < 2 ? 2.4 : -2.4)}z`).join(''), cor: BRANCO, semVolume: true, opacidade: 0.6 },
+          { tipo: 'metal', d: ret(x + 2, 46, 2, 50, 0.5) + ret(x + 96, 46, 2, 50, 0.5), cor: '#8d8a85' },
+          { tipo: 'massa', d: ret(x + 4, 86, 92, 6, 1), cor: '#8a5a32', marca: 'mesa' },
+          { tipo: 'massa', d: k ? `${circulo(x + 30, 80, 5)}${ret(x + 54, 72, 8, 14, 1)}` : `${ret(x + 20, 70, 4, 16, 0.5)}M${x + 14} 70l8-10 8 10z${elipse(x + 64, 80, 9, 5)}`, cor: k ? '#c9a23a' : '#b0563f', semVolume: true, classe: 'fachada__interior', marca: 'achados' }
+        ];
+      }),
+      { tipo: 'massa', d: ret(212, 34, 56, 12, 2), cor: '#e2b72d', marca: 'placa' }, { tipo: 'texto', x: 240, y: 43, texto: 'FEIRA', tam: 7.5, cor: ESCURO, marca: 'nome' }
+    ]
+  }),
+  antiquario_vago: () => loja({
+    // A loja que já viu dias melhores: placa desbotada ("compro e vendo"), vitrine empoeirada, caixas empilhadas.
+    parede: '#8b7a64', textura: 'tijolo', placa: { cor: '#b9a98a', texto: 'COMPRO E VENDO', tinta: '#4a3f33' }, porta: 'esq', luz: '#d9cbb0',
+    interior: [
+      { tipo: 'massa', d: ret(216, 86, 26, 22, 1) + ret(244, 92, 22, 16, 1) + ret(226, 70, 22, 16, 1), cor: '#a8865a', marca: 'caixas' },
+      { tipo: 'massa', d: ret(274, 64, 14, 44, 1), cor: '#6e3f22', marca: 'armario' }, { tipo: 'massa', d: circulo(281, 74, 4), cor: '#efe2c4', semVolume: true },
+      { tipo: 'massa', d: ret(198, 46, 136, 62, 0), cor: '#b5ad9c', opacidade: 0.25, semVolume: true, marca: 'poeira' }
+    ],
+    frente: [{ tipo: 'massa', d: ret(X0 + 22, 30, 50, 4, 1), cor: '#6b5a48', semVolume: true, opacidade: 0.5 }]
+  }),
+  privada_incerta: () => ({
+    // A negociação privada: a portaria de um prédio residencial elegante, o interfone, a plaquinha discreta — nenhuma vitrine.
+    vb: [480, 120],
+    pecas: [
+      ...rua(),
+      { tipo: 'massa', d: ret(X0, 4, X1 - X0, CHAO - 4, 0), cor: '#d9d4ca', marca: 'predio' },
+      ...[0, 1, 2].flatMap((k): Peca[] => [0, 1, 2, 3].map(j => ({ tipo: 'vidro', d: ret(X0 + 14 + j * 46, 10 + k * 22, 30, 14, 1) }))),
+      { tipo: 'massa', d: ret(212, 74, 56, CHAO - 74, 1), cor: '#2b2826', marca: 'portaria' }, { tipo: 'vidro', d: ret(216, 78, 48, 30, 1) },
+      { tipo: 'massa', d: ret(272, 84, 10, 14, 1), cor: '#8d8a85', marca: 'interfone' }, { tipo: 'massa', d: ret(274, 88, 6, 2, 0.5) + ret(274, 92, 6, 2, 0.5), cor: '#2b2826', semVolume: true },
+      { tipo: 'metal', d: ret(196, 82, 12, 8, 0.5), cor: '#c9a23a', marca: 'plaquinha' }
+    ]
+  }),
+  por_fora: () => ({
+    // O mercado por fora: o fundo de um galpão numa rua sem saída, a porta de enrolar meio aberta, a luz fraca, sem placa.
+    vb: [480, 120],
+    pecas: [
+      ...rua(),
+      { tipo: 'massa', d: ret(X0 - 6, 20, X1 - X0 + 12, CHAO - 20, 0), cor: '#55524e', marca: 'galpao' },
+      ...textura('tijolo', '#55524e', 20),
+      { tipo: 'massa', d: ret(190, 50, 100, 30, 0.5), cor: '#7d7973', marca: 'porta-enrolar' },
+      { tipo: 'linha', d: Array.from({ length: 7 }, (_, k) => `M190 ${54 + k * 4}H290`).join(''), larg: 0.6, cor: '#5d5a55' },
+      { tipo: 'massa', d: ret(190, 80, 100, CHAO - 80, 0), cor: '#1f1d1b', marca: 'fresta' },
+      { tipo: 'luz', d: 'M226 80h28l14 32h-56z', cor: '#e0c97a' },
+      { tipo: 'massa', d: ret(156, 92, 22, 20, 1) + ret(162, 76, 16, 16, 1), cor: '#7a5a3a', marca: 'caixotes' },
+      { tipo: 'linha', d: 'M300 40q6-6 12 0t12 0', larg: 1.6, cor: '#c8372d', marca: 'pichacao' }
+    ]
+  }),
   livraria: () => loja({
     // A livraria clássica: a madeira verde-escura, as prateleiras cheias na vitrine, o livro aberto na placa.
     parede: '#2c4a3e', placa: { cor: '#d6ad45', texto: 'LIVRARIA', tinta: ESCURO, simbolo: simLivro(ESCURO) }, porta: 'dir', luz: '#efe2c4',
@@ -340,7 +509,8 @@ const FACHADAS = lembrar<Amostra>(64);
  * vitrine de Compras põe os objetos na frente do VIDRO, não da porta. Conferido contra o desenho em `rework9.test`.
  */
 export const PORTA_DA_FACHADA: Partial<Record<LugarDaCidade, 'esq' | 'dir'>> = {
-  alugar: 'esq', nautica: 'esq', motos: 'dir', oficina: 'dir', pets: 'dir', estilo: 'dir', clinica: 'dir', eletronicos: 'dir', casa: 'dir', instrumentos: 'dir', esportes: 'dir', livraria: 'dir'
+  alugar: 'esq', nautica: 'esq', motos: 'dir', oficina: 'dir', pets: 'dir', estilo: 'dir', clinica: 'dir', eletronicos: 'dir', casa: 'dir', instrumentos: 'dir', esportes: 'dir', livraria: 'dir',
+  relojoaria: 'dir', joalheria: 'dir', antiquario: 'esq', memorabilia: 'dir', exoticos: 'dir', antiquario_vago: 'esq'
 };
 
 export function amostraDaFachada(lugar: LugarDaCidade): Amostra {

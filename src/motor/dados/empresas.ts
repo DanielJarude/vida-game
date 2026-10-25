@@ -69,7 +69,7 @@ export const TIPOS_DE_EMPRESA: readonly TipoDeEmpresa[] = [
   {
     id: 'restaurante', nome: 'um restaurante', rotulo: 'Restaurante', artigo: 'o', descricao: 'Mesa cheia, margem fina, concorrência na esquina. Abre muito, fecha muito.',
     capital: 450000, ativos: 0.65, publico: 24000, capacidade: 40000, ticket: { popular: 48, medio: 88, alto: 210 }, procura: { popular: 1.3, medio: 1, alto: 0.5 },
-    variavel: 0.45, outros: 0.14, ponto: 150000, equipe: 16, salario: 3400, manutencao: 0.06, ciclo: 1.2,
+    variavel: 0.42, outros: 0.14, ponto: 150000, equipe: 16, salario: 3400, manutencao: 0.06, ciclo: 1.2,
     doRamo: /cozinh|chef|garcom|lanchonete|confeit|padeir|gastronom/, publicoNome: ['cliente', 'refeições servidas']
   },
   {
@@ -87,7 +87,7 @@ export const TIPOS_DE_EMPRESA: readonly TipoDeEmpresa[] = [
   },
   {
     id: 'estudio', nome: 'um estúdio de gravação', rotulo: 'Estúdio', artigo: 'o', descricao: 'Horas vendidas, equipamento que envelhece, o nome de quem já gravou ali.',
-    capital: 380000, ativos: 0.8, publico: 1400, capacidade: 2600, ticket: { popular: 140, medio: 260, alto: 600 }, procura: { popular: 1.4, medio: 1, alto: 0.45 },
+    capital: 380000, ativos: 0.8, publico: 1400, capacidade: 2600, ticket: { popular: 125, medio: 230, alto: 520 }, procura: { popular: 1.4, medio: 1, alto: 0.45 },
     variavel: 0.08, outros: 0.14, ponto: 60000, equipe: 2, salario: 4200, manutencao: 0.1, ciclo: 0.9, cidadeGrande: true,
     doRamo: /music|cantor|produtor|instrument|banda|dj|compositor/, publicoNome: ['cliente', 'horas de estúdio']
   },
