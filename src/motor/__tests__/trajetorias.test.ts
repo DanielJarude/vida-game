@@ -258,14 +258,19 @@ describe('envolvimento ilegal: oportunidade, decisão, risco, consequência', ()
     expect(w.caminhos.envolvimento!.ganhos).toBeGreaterThan(0);
   });
 
-  it('com o tempo, a exposição vira processo — em algum momento, na maioria das vidas', () => {
-    let processos = 0;
+  // REWORK 12.2 · ajuste do Submundo: o risco é proporcional — o contrabando frequente chama investigação na maioria das
+  // vidas, e parte delas vira processo; não é mais processo quase certo em oito anos.
+  it('com o tempo, a exposição vira investigação na maioria das vidas — e parte delas, processo', () => {
+    let processos = 0, investigadas = 0;
     for (let s = 0; s < 10; s++) {
       let w = emTransacao(adulto(26, 22), x => { entrar(x, 'mercado', undefined, criarRng(s)); x.caminhos.envolvimento!.nivel = 2; }).vida;
       for (let k = 0; k < 8 && !w.justica; k++) w = emTransacao(w, x => { x.t += 12; processarIlicito(x, criarRng(100 + s * 10 + k)); }).vida;
+      if ((w.fatos['investigacoes'] ?? 0) > 0) investigadas++;
       if (w.justica?.processo || w.justica?.prisao) processos++;
     }
-    expect(processos).toBeGreaterThanOrEqual(5);
+    expect(investigadas).toBeGreaterThanOrEqual(5);
+    expect(processos).toBeGreaterThanOrEqual(1);
+    expect(processos).toBeLessThan(10);
   });
 
   it('sentença: pena alternativa gera antecedente que fecha a segurança pública e pesa na carteira — e o tempo alivia', () => {

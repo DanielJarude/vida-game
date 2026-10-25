@@ -41,9 +41,15 @@ const preco = (v: Vida, x: number) => Math.round(x * economiaLocal(v.moradia.mun
 export const honorarios = (v: Vida) => Math.round(clamp(disponivel(v) * 0.2, preco(v, 9000), preco(v, 45000)) / 100) * 100;
 
 /** A pena-base em anos (antes do país, da reincidência e do que se decidiu no processo). */
-const PENA_BASE = { pequenos: 1, patrimonial: 2, fraude: 3, mercado: 5, grupo: 7, violencia: 1, corrupcao: 4 } as const;
+const PENA_BASE = { pequenos: 1, patrimonial: 2, fraude: 3, mercado: 3, grupo: 7, violencia: 1, corrupcao: 4 } as const;
 /** O que é leve (cabe multa ou pena alternativa a quem é primário). */
 const LEVE = new Set(['pequenos', 'patrimonial', 'violencia']);
+/**
+ * REWORK 12.2 · ajuste do Submundo: o crime sem violência (fraude, contrabando, corrupção) de quem é primário, com pena
+ * de até quatro anos, cabe pena restritiva de direitos (serviço, multa, a perda do que entrou) em vez de prisão — o
+ * organizado e a reincidência, não.
+ */
+const SEM_VIOLENCIA = new Set(['fraude', 'mercado', 'corrupcao']);
 
 /* ---------------------------------------------------------------- A abertura */
 
@@ -161,7 +167,7 @@ function sentenciar(v: Vida, r: Rng): void {
   const reduz = (p.cooperou ? 0.45 : 0) + (p.assumiu ? 0.25 : 0);
   const anosBrutos = (PENA_BASE[cat] + r.int(0, 2)) * (rein ? 1.5 : 1) * perfil.severidade * (1 - Math.min(0.6, reduz));
   // O leve, para quem é primário e não estava preso: a multa (onde ela é a resposta) ou a pena alternativa.
-  if (LEVE.has(cat) && !rein && !presoAntes && anosBrutos <= 2.5) {
+  if ((LEVE.has(cat) && !rein && !presoAntes && anosBrutos <= 2.5) || (SEM_VIOLENCIA.has(cat) && !rein && !presoAntes && anosBrutos <= 4)) {
     if (perfil.multa || cat === 'violencia') {
       const multa = multaPenal(v, r.int(30, 120));
       pagar(v, Math.min(multa, Math.max(0, disponivel(v))));

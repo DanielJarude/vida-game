@@ -294,3 +294,107 @@ Commits na branch `claude/rework12.2-negocios-luxo-mercados` (a partir de `4625d
 
 **Nada foi publicado.** Sem push, sem merge, sem deploy; `main` e `claude/fix-pos-rework3-playtest` continuam em `4625dbc`.
 O pacote está inteiro, commitado só na branch local de desenvolvimento, aguardando autorização expressa.
+
+## 15. Ajuste final do Submundo (rebalanceamento antes da publicação)
+
+### 15.1 Causa do excesso de punições (auditoria)
+
+As simulações de §11.2 mostravam quase todo envolvido processado. Com um simulador próprio de 15 perfis e as mesmas
+sementes (`scripts/sim/submundo122.ts`), a linha de base confirmou que era **sistêmico, não da amostra**: **24 de 24 vidas
+processadas em todos os perfis criminosos — inclusive o ocasional**, que faz um serviço pequeno a cada três anos, na moita
+(31 investigações, só 7 arquivadas). As causas, no código:
+
+1. **A exposição era uma catraca** (`ilicito.anoEnvolvido`): enquanto ativo, só subia — pelo menos 3 pontos por ano, de 14 a
+   24 conforme a categoria, e cada operação somava de novo. Sem esfriar, toda carreira recorrente encostava em 100 e a
+   descoberta virava certeza.
+2. **Investigação ≈ processo** (`andamentoDaInvestigacao`): a chance de virar processo era ~85% da exposição **por ano**
+   (até 80%), sorteada de novo todo ano sem prazo; arquivar pedia dois anos e exposição baixa.
+3. **Depois de parar, o passado abria processo direto** ("uma investigação antiga chegou até você" chamava `abrirProcesso`),
+   pulando a investigação.
+4. **Contagem dupla do negócio por fora (REWORK 12.2)**: a exposição do negócio subia sem teto e somava, todo ano, à da
+   pessoa, por cima do crescimento anual da categoria, que já representa aquela atividade.
+5. **Sem meio-termo na sentença** (`tribunal.sentenciar`): contrabando, fraude e corrupção nunca eram "leves" — toda
+   condenação era prisão, mesmo para primário sem violência; a pena-base do contrabando (5) passava do limite das penas
+   alternativas, e a abertura do processo de contrabando já trazia 35% de prisão preventiva.
+
+Não havia condenação automática anual por ter um negócio por fora (verificado), e os antecedentes já persistiam.
+
+### 15.2 Alterações (pequenas, por mecanismo — nenhum multiplicador global)
+
+- **Exposição com memória que esfria**: a cada ano, o rastro antigo sobra numa fração (`RASTRO.fica`) e o que se fez soma;
+  o nível passa a ser proporcional à atividade (o ocasional se estabiliza baixo; o organizado fundo, alto). A descoberta
+  só conta o que passa de um ruído de fundo (exposição − 15).
+- **Rastro por especialização** (`RASTRO` em `ilicito.ts`): a rua esquece depressa (furtos 0,72), o contrabando médio
+  (0,8), o organizado devagar (0,85), o digital e a fraude quase nada (0,9 e 0,92 — registro e papel); o **peso da prova**
+  numa investigação vai de 0,85 (furto) a 1,3 (fraude); e "a prática ensina a não aparecer" vale inteira na rua e só 30%
+  no digital e na fraude (o papel se acumula). Sem isso, o crime discreto virava o caminho seguro — a primeira rodada do
+  ajuste mostrou a fraude dominando o honesto do mesmo salário em todos os percentis; corrigido.
+- **Investigação pesa a prova e tem prazo**: vira processo com chance de exposição × 0,55 (0,3 se a pessoa esfriou) ×
+  peso da prova + escala + reincidência, no máximo 60% ao ano; pode ser arquivada a partir do primeiro ano; com três anos
+  sem o bastante, arquiva (a exposição cai pela metade).
+- **Depois de parar**: o passado ainda pode chegar, como **investigação** (que pode ser arquivada), só enquanto a
+  exposição não esfriou (> 20); os antecedentes ficam; nenhum risco novo nasce de atividade que não aconteceu.
+- **Pena proporcional**: crime sem violência (fraude, contrabando, corrupção) de primário com pena até quatro anos →
+  pena alternativa (serviço, multa) e a perda do que entrou; pena-base do contrabando 5 → 3; prisão preventiva no
+  contrabando 35% → 10% (30% para reincidente) e no grupo 55% → 35% (55% para reincidente). O crime organizado e a
+  reincidência continuam com prisão como regra.
+- **Negócio por fora sem contagem dupla**: a exposição do negócio se estabiliza (o rastro esfria, o ritmo e a escala do ano
+  somam) e só a parte acima de 20 soma à da pessoa; retirar dinheiro chama atenção na proporção do valor, até 10 pontos.
+
+Arquivos: `sistemas/ilicito.ts`, `justica.ts`, `tribunal.ts`, `clandestinos.ts` (motor); nenhuma tela mudou.
+
+### 15.3 Antes × depois (24 vidas por perfil, 30 anos, mesmas sementes, São Paulo)
+
+Patrimônio líquido aos 30 anos (p10 / p50 / p90) e o que aconteceu na vida inteira (processos = julgados ou pendentes;
+"presos" conta prisões por condenação).
+
+| Perfil | Antes: 30a p50 | Antes: proc / presos | Depois: 30a p10 / p50 / p90 | Depois: invest. / arquiv. / proc. / absolv. / cond. sem prisão / presos | Depois: desfechos |
+|---|---|---|---|---|---|
+| Honesto (assistente) | 294k | 0 / 0 | 14k / 294k / 1,5 mi | 0 | todos nunca investigados |
+| Honesto (analista, mesmo salário da fraude) | — | — | −6k / 93k / 876k | 0 | — |
+| Honesto (R$ 1 mi aplicado) | — | — | 723k / 1,5 mi / 2,5 mi | 0 | — |
+| Ocasional | 205k | 24 / 3 | −30k / 115k / 1,0 mi | 17 / 15 / 2 / 0 / 0 / 2 | 10 nunca investigados, 12 investigados sem processo |
+| Recorrente (furtos) | 96k | 24 / 10 | 3k / 244k / 1,1 mi | 33 / 28 / 4 / 2 / 0 / 1 | 16 investigados sem processo |
+| Especialista em furtos | 222k | 24 / 8 | 38k / 341k / 733k | 33 / 19 / 12 / 5 / 2 / 4 | os cinco desfechos aparecem |
+| Contrabando | 141k | 24 / 11 | 26k / 321k / 1,5 mi | 31 / 17 / 11 / 5 / 5 / 1 | os cinco desfechos aparecem |
+| Crime organizado | 176k | 24 / 15 | −24k / 129k / 828k | 40 / 16 / 23 / 7 / 0 / 16 | quase todos processados (escala e violência) |
+| Digital | 257k | 24 / 10 | 10k / 121k / 1,5 mi | 41 / 18 / 23 / 10 / 6 / 5 | o rastro digital fica |
+| Fraudes (com cargo) | 264k | 23 / 8 | −14k / 362k / 1,0 mi | 34 / 12 / 22 / 10 / 6 / 5 | bom nos primeiros anos, o papel cobra depois |
+| Dono de negócio por fora (R$ 1 mi) | 1,9 mi* | 24 / 14 | 722k / 1,8 mi / 2,7 mi | 38 / 25 / 11 / 1 / 8 / 2 | 11 de 24 negócios fracassaram (antes: 24) |
+| Integrante de organização | 99k | 24 / 13 | −37k / 157k / 1,3 mi | 50 / 29 / 20 / 8 / 0 / 12 | |
+| Líder de organização (R$ 1 mi) | 731k* | 24 / 11 | 195k / 732k / 2,2 mi | 35 / 12 / 23 / 13 / 0 / 9 | 23 de 24 organizações desmanteladas |
+| Abandona no 5º ano | 251k | 11 / 2 | 0 / 178k / 1,5 mi | 4 / 3 / 1 / 0 / 0 / 1 | 23 de 24 saídas limpas (sem processo novo) |
+| Reincidente | 285k | 24 / 18 | 3k / 244k / 675k | 39 / 25 / 12 / 2 / 0 / 9 | prisão continua sendo a regra quando processado |
+
+\* "antes" do dono e do líder vem de uma rodada com o mesmo capital de R$ 1 mi.
+
+Leitura:
+- O ocasional e o recorrente deixaram de ser processados quase sempre (de 24/24 para 2/24 e 4/24): são investigados, e a
+  maioria das investigações é arquivada. O crime organizado, o integrante e o reincidente continuam com processo e prisão
+  frequentes — a intensidade e a escala importam.
+- Os desfechos se espalharam: nos perfis do meio (furtos, contrabando) aparecem os cinco (nunca investigado, investigado
+  sem processo, absolvido, condenado sem prisão, preso).
+- **O crime não é o melhor caminho garantido, e não há teto invisível**: na mediana, furtos e contrabando ficam um pouco
+  acima do honesto assistente (341k e 321k contra 294k), com p10 parecido e o risco de prisão; digital, organizado,
+  integrante e ocasional ficam abaixo; a fraude rende mais que o honesto com o mesmo salário na mediana (362k contra 93k
+  — essa linha de base do analista saiu baixa nesta amostra e é ruidosa), mas tem o pior p10 e 22 de 24 processados; o
+  dono do negócio por fora e o líder ficam abaixo de quem aplicou o mesmo R$ 1 mi (1,8 mi e 732k contra 1,5 mi na
+  mediana; o dono tem cauda maior, o líder perde quase sempre a organização). Quem abandona cedo sai limpo em 23 de 24.
+- Nenhuma anomalia (NaN, dinheiro duplicado, patrimônio absurdo) em 360 vidas.
+
+### 15.4 Testes do ajuste
+
+Novos em `rework122.test.ts` ("ajuste do Submundo"): exposição sem catraca (estabiliza no ocasional, alta no organizado);
+investigação sem processo automático (parte vira processo, parte arquiva, nenhuma passa de três anos); processo sem
+condenação automática e pena proporcional (contrabando primário: absolvição e alternativa > prisão; organizado e
+reincidente: mais prisão); negócio por fora sem condenação anual e sem soma infinita (acelerar chama mais que a cautela);
+saída do crime (a exposição esfria, o passado chega como investigação, os antecedentes ficam). Mantidos: memória que não
+esquece traição, saves antigos idempotentes, contas sem NaN, nenhum ciclo de lucro. Ajustados por mudança intencional de
+regra: `trajetorias.test.ts` (o contrabando frequente agora é investigado na maioria das vidas e processado em parte, não
+"processado na maioria em oito anos") e um teste do negócio por fora em `rework122` (a exposição vem do ritmo, não da
+existência).
+
+Verificações finais (sequenciais, cópia Linux, Node 22): typecheck limpo; **suíte completa 117 arquivos, 1.997 testes, todos
+verdes numa única execução**; build sem erro (todos os pacotes abaixo de 800 kB; maior: motor-textos 782,8 kB); smoke itch.io
+21/21; PWA offline 36/36. Saves: só regra mudou — nenhum campo novo, nenhuma migração; os testes de save antigo do 12.2 e o
+12.05 passam.

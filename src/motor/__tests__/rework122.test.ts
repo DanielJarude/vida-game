@@ -30,7 +30,8 @@ import { colecao, ofertasDeColecao, ofertasEspeciais, processarColecao, proposta
 import { legalidade, ofertasExoticas, proibidosAqui, seusExoticos } from '../sistemas/exoticos';
 import { mercadosVisiveis, ofertaDeAnimalPorFora, ofertasParalelas, processarParalelos } from '../sistemas/paralelos';
 import { estagioDoSubmundo, negocios, processarClandestinos } from '../sistemas/clandestinos';
-import { entrar } from '../sistemas/ilicito';
+import { entrar, parar, processarIlicito } from '../sistemas/ilicito';
+import { processarJustica } from '../sistemas/justica';
 import { criarContato, lembrarOrg, organizacaoDoRamo } from '../sistemas/submundo';
 import { orcamento } from '../sistemas/dinheiro';
 import { semana } from '../sistemas/semana';
@@ -450,14 +451,22 @@ describe('Submundo: negócios por fora, fachada, organização', () => {
     expect(disponibilidade(v, { tipo: 'clandestino', oque: 'abrir', alvo: 'organizacao' }).grau).not.toBe('permitido');
   });
 
-  it('o negócio por fora gira, chama atenção (soma à exposição) e, quando a Justiça chega, é desmantelado — com a história', () => {
+  it('o negócio por fora gira, chama atenção (acelerar chama mais que a cautela) e, quando a Justiça chega, é desmantelado — com a história', () => {
+    const comRitmo = (ritmo: 'ritmo_0' | 'ritmo_2') => {
+      let w = envolvido();
+      w = fazer(w, { tipo: 'clandestino', oque: 'abrir', alvo: 'mercadorias' });
+      w = fazer(w, { tipo: 'clandestino', oque: ritmo, negocioId: negocios(w)[0].id });
+      for (let k = 0; k < 5; k++) w = transacao(w, (x, r) => { x.t += 12; processarClandestinos(x, r); }).vida;
+      return w;
+    };
+    const acelerado = comRitmo('ritmo_2');
+    const cauteloso = comRitmo('ritmo_0');
+    expect(acelerado.caminhos.envolvimento!.exposicao).toBeGreaterThan(cauteloso.caminhos.envolvimento!.exposicao);
     let v = envolvido();
     v = fazer(v, { tipo: 'clandestino', oque: 'abrir', alvo: 'mercadorias' });
-    const exp0 = v.caminhos.envolvimento!.exposicao;
     v = transacao(v, (x, r) => { x.t += 12; processarClandestinos(x, r); }).vida;
     const n = negocios(v)[0];
     expect(n.ultimo).toBeTruthy();
-    expect(v.caminhos.envolvimento!.exposicao).toBeGreaterThan(exp0);
     v = transacao(v, (x, r) => { x.justica = { antecedentes: [], processo: { tInicio: x.t, tJulgamento: x.t + 12, categoria: 'mercado', defesa: 'publica' } }; processarClandestinos(x, r); }).vida;
     expect(negocios(v)[0].estado).toBe('desmantelado');
     expect(negocios(v)[0].historia.length).toBeGreaterThan(1);
@@ -564,5 +573,93 @@ describe('saves', () => {
       const c = contasDoAno(v, emp(v), criarRng(1));
       for (const x of Object.values(c)) expect(Number.isFinite(x), t.id).toBe(true);
     }
+  });
+});
+
+/* ================================================================== AJUSTE DO SUBMUNDO (risco proporcional) */
+
+describe('ajuste do Submundo: risco proporcional, consequência real', () => {
+  const ilicito = (cat: Parameters<typeof entrar>[1], semente: number, mexer?: (v: Vida) => void): Vida => transacao(rica('sao-paulo-sp', 200_000, semente), (x, r) => {
+    entrar(x, cat, undefined, r);
+    mexer?.(x);
+  }).vida;
+  const umAno = (v: Vida, s: number) => transacao(v, x => { x.t += 12; processarIlicito(x, criarRng(9000 + s + x.t)); processarJustica(x, criarRng(7000 + s + x.t)); }).vida;
+
+  it('a exposição não é catraca: sem fazer mais nada, ela se estabiliza abaixo do teto; o crime organizado fundo continua alto', () => {
+    let leve = ilicito('pequenos', 3);
+    let fundo = ilicito('grupo', 3, x => { x.caminhos.envolvimento!.nivel = 3; });
+    const exp: number[] = [];
+    for (let k = 0; k < 25; k++) {
+      leve = transacao(umAno(leve, k), x => { x.justica = undefined; delete x.caminhos.envolvimento!.investigado; }).vida;
+      fundo = transacao(umAno(fundo, k), x => { x.justica = undefined; delete x.caminhos.envolvimento!.investigado; }).vida;
+      exp.push(leve.caminhos.envolvimento!.exposicao);
+    }
+    expect(Math.max(...exp.slice(10))).toBeLessThan(70);
+    expect(fundo.caminhos.envolvimento!.exposicao).toBeGreaterThan(Math.max(...exp.slice(10)));
+  });
+
+  it('investigação não vira processo automaticamente: parte vira processo, parte é arquivada — e nenhuma dura mais de três anos', () => {
+    let processos = 0, arquivadas = 0;
+    for (let s = 0; s < 30; s++) {
+      let v = ilicito('patrimonial', 100 + s, x => { const e = x.caminhos.envolvimento!; e.investigado = x.t; e.exposicao = 45; });
+      for (let k = 0; k < 4 && v.caminhos.envolvimento!.investigado !== undefined && !v.justica?.processo; k++) v = umAno(v, s * 10 + k);
+      if (v.justica?.processo || (v.justica?.antecedentes.length ?? 0) > 0) processos++;
+      else { arquivadas++; expect(v.caminhos.envolvimento!.investigado).toBeUndefined(); }
+    }
+    expect(processos).toBeGreaterThan(0);
+    expect(arquivadas).toBeGreaterThan(0);
+  });
+
+  it('processo não é condenação automática; a pena é proporcional: o primário do crime sem violência pode cumprir pena alternativa, o organizado e o reincidente vão presos mais', () => {
+    const desfechos = (cat: 'mercado' | 'grupo', rein: boolean) => {
+      const out: Record<string, number> = {};
+      const base = rica('sao-paulo-sp', 200_000, 200);
+      for (let s = 0; s < 40; s++) {
+        let v = structuredClone(base);
+        v = transacao(v, (x, r) => {
+          x.justica = { antecedentes: rein ? [{ t: x.t - 60, categoria: cat, desfecho: 'prisao', anos: 2 }] : [] };
+          entrar(x, cat, undefined, r);
+          x.justica.processo = { tInicio: x.t, tJulgamento: x.t, categoria: cat, defesa: 'publica' };
+          processarJustica(x, criarRng(s * 31 + (rein ? 7 : 0) + (cat === 'grupo' ? 13 : 0)));
+        }).vida;
+        const d = v.justica!.antecedentes[v.justica!.antecedentes.length - 1].desfecho;
+        out[d] = (out[d] ?? 0) + 1;
+      }
+      return out;
+    };
+    const contrabandoPrimario = desfechos('mercado', false);
+    const organizado = desfechos('grupo', false);
+    const reincidente = desfechos('mercado', true);
+    expect(contrabandoPrimario.absolvicao ?? 0).toBeGreaterThan(0);
+    expect(contrabandoPrimario.alternativa ?? 0).toBeGreaterThan(contrabandoPrimario.prisao ?? 0);
+    expect(organizado.prisao ?? 0).toBeGreaterThan(organizado.alternativa ?? 0);
+    expect(reincidente.prisao ?? 0).toBeGreaterThan(contrabandoPrimario.prisao ?? 0);
+  });
+
+  it('ter um negócio por fora não é condenação anual, e o rastro dele não soma sem fim à exposição da pessoa', () => {
+    let v = envolvido();
+    v = fazer(v, { tipo: 'clandestino', oque: 'abrir', alvo: 'mercadorias' });
+    const exp0 = v.caminhos.envolvimento!.exposicao;
+    for (let k = 0; k < 15; k++) v = transacao(v, (x, r) => { x.t += 12; processarClandestinos(x, r); }).vida;
+    expect(v.justica?.processo).toBeUndefined();
+    expect(v.justica?.antecedentes ?? []).toHaveLength(0);
+    const n = negocios(v)[0];
+    if (n.estado === 'ativo') expect(n.exposicao).toBeLessThan(80);
+    expect(v.caminhos.envolvimento!.exposicao - exp0).toBeLessThan(80);
+  });
+
+  it('quem sai do caminho para de gerar risco novo: a exposição esfria; o passado ainda pode virar investigação (não processo direto); os antecedentes ficam', () => {
+    let v = ilicito('patrimonial', 5, x => { const e = x.caminhos.envolvimento!; e.exposicao = 60; x.justica = { antecedentes: [{ t: x.t - 24, categoria: 'patrimonial', desfecho: 'alternativa' }] }; });
+    v = transacao(v, x => parar(x, 'decidiu sair')).vida;
+    let investigacaoAntiga = false;
+    for (let k = 0; k < 12; k++) {
+      const antes = v.justica?.processo;
+      v = transacao(v, x => { x.t += 12; processarIlicito(x, criarRng(500 + k)); }).vida;
+      if (!antes && v.justica?.processo && v.caminhos.envolvimento!.investigado === undefined && !investigacaoAntiga) throw new Error('processo direto, sem investigação');
+      if (v.caminhos.envolvimento!.investigado !== undefined) investigacaoAntiga = true;
+    }
+    expect(v.caminhos.envolvimento!.exposicao).toBeLessThan(25);
+    expect(v.justica!.antecedentes.some(a => a.desfecho === 'alternativa')).toBe(true);
+    expect(estagioDoSubmundo(v)).toBe('saida');
   });
 });

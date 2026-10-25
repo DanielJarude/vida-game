@@ -181,8 +181,11 @@ function anoDoNegocio(v: Vida, e: NonNullable<Vida['caminhos']['envolvimento']>,
   n.caixa += lucro - dosSocios;
   let nota: string | undefined;
   n.reputacao = clamp(n.reputacao + (lucro > 0 ? 3 : -2) + (n.ritmo === 2 ? 2 : 0));
-  n.exposicao = clamp(n.exposicao + m.exposicao * ritmo * (fachada ? 0.6 : 1) - 4);
-  e.exposicao = clamp(e.exposicao + Math.round(n.exposicao / 6));
+  // REWORK 12.2 · ajuste: o negócio chama atenção pelo que faz no ano (o ritmo, a escala) e o rastro antigo esfria — o nível
+  // se estabiliza; e só a parte que passa da prática que o ano do caminho já conta soma à exposição da pessoa (sem contar
+  // duas vezes a mesma atividade).
+  n.exposicao = clamp(Math.round(n.exposicao * 0.7 + m.exposicao * ritmo * (fachada ? 0.6 : 1)));
+  e.exposicao = clamp(e.exposicao + Math.max(0, Math.round((n.exposicao - 20) / 8)));
   // A apreensão: o que estava empatado vai embora.
   if (r.chance(m.apreensao * ritmo + n.exposicao / 500)) {
     const perda = Math.round(n.capital * (0.35 + r.next() * 0.35));
@@ -368,7 +371,7 @@ export function decidirClandestino(v: Vida, oque: OqueClandestino, negocioId?: s
       v.financas.conta += x;
       e.ganhos += x;
       // Dinheiro que aparece sem explicação chama atenção — com uma empresa por trás, chama menos (e o risco vai para ela).
-      const chama = Math.round(Math.min(18, x / Math.max(1, 20000 * custo(v))) * (n!.fachadaId ? 0.4 : 1));
+      const chama = Math.round(Math.min(10, x / Math.max(1, 40000 * custo(v))) * (n!.fachadaId ? 0.4 : 1));
       e.exposicao = clamp(e.exposicao + chama);
       const em = n!.fachadaId ? empresasAtivas(v).find(z => z.id === n!.fachadaId) : undefined;
       if (em?.fachada) em.fachada.suspeita = clamp(em.fachada.suspeita + Math.round(chama * 1.5));

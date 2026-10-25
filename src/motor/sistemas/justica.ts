@@ -114,7 +114,8 @@ export function abrirProcesso(v: Vida, r: Rng, categoria: CategoriaDoProcesso): 
   const par = parceiro(v);
   if (par) par.vin.tensao = clamp(par.vin.tensao + 25);
   // Espera presa: só nos casos graves, e nunca garantida.
-  const graves = categoria === 'grupo' ? 0.55 : categoria === 'mercado' ? 0.35 : categoria === 'patrimonial' && reincidente(v) ? 0.25 : 0;
+  // REWORK 12.2 · ajuste do Submundo: a prisão preventiva é para o grave (o grupo) e para quem reincide — não a regra.
+  const graves = categoria === 'grupo' ? (reincidente(v) ? 0.55 : 0.35) : categoria === 'mercado' ? (reincidente(v) ? 0.3 : 0.1) : categoria === 'patrimonial' && reincidente(v) ? 0.25 : 0;
   if (r.chance(graves * (particular ? 0.6 : 1))) {
     prender(v, j.processo.tJulgamento, 'fechado', 'preventiva');
   }

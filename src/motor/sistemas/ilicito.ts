@@ -28,7 +28,7 @@
 
 import type { Rng } from '../rng';
 import { clamp, rngDe } from '../rng';
-import type { CategoriaIlicita, Envolvimento, Pessoa, Vida } from '../tipos';
+import type { CategoriaIlicita, Envolvimento, Pessoa, Ramo, Vida } from '../tipos';
 import { escrever, idade, idadePessoa, lembrarCom, marcarFato, parceiro, vinculosVivos } from '../nucleo';
 import { ocupacaoOuNula } from '../dados/ocupacoes';
 import { nivelDeOferta } from '../dados/lugares';
@@ -52,6 +52,20 @@ const RENDA: Record<CategoriaIlicita, [number, number, number]> = {
 };
 const EXPOSICAO: Record<CategoriaIlicita, number> = { pequenos: 14, patrimonial: 14, fraude: 12, mercado: 18, grupo: 24, corrupcao: 13 };
 const DESCOBERTA: Record<1 | 2 | 3, number> = { 1: 0.3, 2: 0.42, 3: 0.52 };
+/**
+ * REWORK 12.2 · ajuste do Submundo — o RASTRO de cada ramo: quanto da exposição sobra de um ano para o outro (a rua
+ * esquece depressa; o papel e o registro digital, não) e o PESO DA PROVA quando uma investigação avalia o que existe
+ * (o documento da fraude convence mais que a testemunha do furto). É o que faz o crime discreto não ser o caminho seguro.
+ */
+/** `aprende`: o quanto os anos de prática ensinam a não aparecer (na rua, muito; no papel que se acumula, pouco). */
+const RASTRO: Record<Ramo, { fica: number; prova: number; aprende: number }> = {
+  furtos: { fica: 0.72, prova: 0.85, aprende: 1 },
+  contrabando: { fica: 0.8, prova: 1, aprende: 1 },
+  organizado: { fica: 0.85, prova: 1.05, aprende: 1 },
+  digital: { fica: 0.9, prova: 1.2, aprende: 0.3 },
+  fraudes: { fica: 0.92, prova: 1.3, aprende: 0.3 }
+};
+const rastro = (env: Envolvimento) => RASTRO[RAMO_DA_CATEGORIA[env.categoria]];
 
 /** REWORK 11.5: a renda mensal de referência do envolvimento (a tabela por categoria e nível) — a régua das operações. */
 export const rendaDeReferencia = (env: Envolvimento) => RENDA[env.categoria][env.nivel - 1];
@@ -229,9 +243,12 @@ function anoEnvolvido(v: Vida, r: Rng, env: Envolvimento): void {
     // Uma investigação aberta antes de parar segue o próprio curso.
     if (env.investigado !== undefined && andamentoDaInvestigacao(v, r, env)) return;
     // O passado esfria devagar — mas pode chegar.
-    if (env.investigado === undefined && env.exposicao > 4 && r.chance(env.exposicao / 100 * 0.18)) {
-      escrever(v, { texto: 'Uma investigação antiga chegou até você, anos depois de ter parado.', relevancia: 'marco', tema: 'trabalho', tom: 'ruim' });
-      abrirProcesso(v, r, env.categoria);
+    // REWORK 12.2 · ajuste do Submundo: o passado pode chegar — como INVESTIGAÇÃO (que pode virar processo ou ser
+    // arquivada), não como processo direto; e só enquanto há o que achar (a exposição que ainda não esfriou).
+    if (env.investigado === undefined && env.exposicao > 20 && r.chance(env.exposicao / 100 * 0.12)) {
+      env.investigado = v.t;
+      v.fatos['investigacoes'] = (v.fatos['investigacoes'] ?? 0) + 1;
+      escrever(v, { texto: 'Uma investigação antiga voltou a fazer perguntas sobre o que você fazia, anos depois de ter parado.', relevancia: 'biografia', tema: 'trabalho', tom: 'ruim' });
       return;
     }
     env.exposicao = Math.round(env.exposicao * 0.6);
@@ -268,8 +285,12 @@ function anoEnvolvido(v: Vida, r: Rng, env: Envolvimento): void {
   const anos = (v.t - env.tInicio) / 12;
   // Quem tem mandato é mais vigiado; os contatos de confiança cobrem um pouco (até 3 pontos ao ano).
   const visado = env.categoria === 'corrupcao' && v.caminhos.politica?.mandato ? 5 : 0;
-  const cresce = Math.max(3, exposicaoDosRamos(env, EXPOSICAO[env.categoria]) + (env.nivel - 1) * 6 + (reincidente(v) ? 6 : 0) + visado - Math.min(6, anos * 1.2) - Math.min(3, vivos));
-  env.exposicao = clamp(env.cautela ? env.exposicao * 0.85 + cresce * 0.35 : env.exposicao + cresce);
+  const cresce = Math.max(3, exposicaoDosRamos(env, EXPOSICAO[env.categoria]) + (env.nivel - 1) * 6 + (reincidente(v) ? 6 : 0) + visado - Math.min(6, anos * 1.2) * rastro(env).aprende - Math.min(3, vivos));
+  // REWORK 12.2 · ajuste do Submundo: a exposição não é catraca. O rastro antigo esfria todo ano (testemunha que muda,
+  // assunto que morre) e o que se faz agora soma — o nível fica proporcional ao que se faz: o ocasional se estabiliza
+  // baixo; o crime intenso e o organizado continuam perto do teto.
+  const fica = rastro(env).fica;
+  env.exposicao = clamp(Math.round(env.cautela ? env.exposicao * (fica - 0.05) + cresce * 0.35 : env.exposicao * fica + cresce));
   // A cabeça de quem vive com medo de ser descoberto; a casa que desconfia.
   abalar(v, 'o que se faz por fora', 0, 4 + env.nivel * 2);
   const par = parceiro(v);
@@ -284,7 +305,7 @@ function anoEnvolvido(v: Vida, r: Rng, env: Envolvimento): void {
   // Investigação em andamento: vira processo (o que existe contra a pessoa é bastante) — ou é arquivada, se esfriou.
   if (env.investigado !== undefined) {
     if (andamentoDaInvestigacao(v, r, env)) return;
-  } else if (r.chance(env.exposicao / 100 * DESCOBERTA[env.nivel])) {
+  } else if (r.chance(Math.max(0, env.exposicao - 15) / 100 * DESCOBERTA[env.nivel])) {
     // Descoberta não é prisão programada: primeiro, alguém começa a fazer perguntas (e a pessoa fica sabendo).
     env.investigado = v.t;
     v.fatos['investigacoes'] = (v.fatos['investigacoes'] ?? 0) + 1;
@@ -305,14 +326,16 @@ function anoEnvolvido(v: Vida, r: Rng, env: Envolvimento): void {
 function andamentoDaInvestigacao(v: Vida, r: Rng, env: Envolvimento): boolean {
   const anos = (v.t - env.investigado!) / 12;
   const esfriou = env.parou !== undefined || env.cautela;
-  const chanceProcesso = clamp(env.exposicao / 100 * (esfriou ? 0.45 : 0.85) + (env.nivel - 1) * 0.08, 0.08, 0.8);
+  // REWORK 12.2 · ajuste do Submundo: a investigação pesa o que existe — a exposição, a escala (o nível), a reincidência —
+  // e não é sorteada de novo até dar processo: sem o bastante em três anos, arquiva.
+  const chanceProcesso = clamp(env.exposicao / 100 * (esfriou ? 0.3 : 0.55) * rastro(env).prova + (env.nivel - 1) * 0.06 + (reincidente(v) ? 0.08 : 0), 0.05, 0.6);
   if (r.chance(chanceProcesso)) {
     env.investigado = undefined;
     escrever(v, { texto: 'A investigação virou processo.', relevancia: 'marco', tema: 'trabalho', tom: 'ruim' });
     abrirProcesso(v, r, env.categoria);
     return true;
   }
-  if (anos >= 2 && (esfriou || env.exposicao < 35) && r.chance(esfriou ? 0.55 : 0.25)) {
+  if (anos >= 3 || (anos >= 1 && r.chance((esfriou ? 0.5 : 0.2) + (env.exposicao < 40 ? 0.2 : 0)))) {
     env.investigado = undefined;
     env.exposicao = Math.round(env.exposicao * 0.6);
     v.fatos['investigacoes_arquivadas'] = (v.fatos['investigacoes_arquivadas'] ?? 0) + 1;
