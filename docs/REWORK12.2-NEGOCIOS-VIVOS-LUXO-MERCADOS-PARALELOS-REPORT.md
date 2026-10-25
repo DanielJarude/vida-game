@@ -292,8 +292,8 @@ Commits na branch `claude/rework12.2-negocios-luxo-mercados` (a partir de `4625d
 
 ## 14. Estado de publicação
 
-**Nada foi publicado.** Sem push, sem merge, sem deploy; `main` e `claude/fix-pos-rework3-playtest` continuam em `4625dbc`.
-O pacote está inteiro, commitado só na branch local de desenvolvimento, aguardando autorização expressa.
+**Publicado em 2026-10-25, com autorização expressa**, depois do ajuste final do Submundo (§15) e de todas as verificações.
+Ver §16.
 
 ## 15. Ajuste final do Submundo (rebalanceamento antes da publicação)
 
@@ -398,3 +398,23 @@ Verificações finais (sequenciais, cópia Linux, Node 22): typecheck limpo; **s
 verdes numa única execução**; build sem erro (todos os pacotes abaixo de 800 kB; maior: motor-textos 782,8 kB); smoke itch.io
 21/21; PWA offline 36/36. Saves: só regra mudou — nenhum campo novo, nenhuma migração; os testes de save antigo do 12.2 e o
 12.05 passam.
+
+## 16. Publicação
+
+- **Estado antes**: `main`, `origin/main` e `origin/claude/fix-pos-rework3-playtest` em `4625dbc` (12.05); produção
+  servindo `index-B-gj3KK-.js` (o build do 12.05). Branch de produção do Cloudflare confirmada: o último deploy de
+  produção veio de `claude/fix-pos-rework3-playtest`, e essa branch não tem URL de prévia própria (só as branches de
+  prévia têm).
+- **Dev**: `claude/rework12.2-negocios-luxo-mercados` enviada com `7d2588b` → só prévia (`735d24cb.vida-game.pages.dev`,
+  "Branch Preview URL"); produção continuou no build do 12.05. Os 33 arquivos da prévia são idênticos byte a byte ao build
+  aprovado.
+- **main**: avanço rápido (fast-forward) `4625dbc → 7d2588b`, sem merge commit, sem force push. O push da `main` não gera
+  deploy (conferido: produção inalterada).
+- **Produção**: `claude/fix-pos-rework3-playtest` avançada `4625dbc → 7d2588b` (fast-forward) → **um** deploy de produção,
+  Cloudflare Pages **success** (`ad9668dd`). https://vida-game.pages.dev passou a servir `index-Co5oWusL.js`; **os 33
+  arquivos publicados (HTML, JS, CSS) são idênticos (sha256) ao build aprovado**.
+- **Smoke em produção** (`rework122.mjs`, URL de produção, paleta clara, 1440/390/360): Objetos, painel do ramo,
+  zoológico, relojoaria, exóticos, feira, mercado por fora, dossiê do Submundo — 0 problemas; as notas da versão 12.2
+  aparecem para quem vinha da 12/12.05 (com a correção de Objetos listada).
+- Este registro (só documentação) foi para a branch de desenvolvimento e para a `main` depois do deploy; a branch de
+  produção ficou em `7d2588b` (o código publicado é o mesmo — não houve segundo deploy).
