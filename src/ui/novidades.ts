@@ -43,13 +43,15 @@ export const NOTAS: NotaDeVersao[] = [
       'O Submundo também ocupa a semana (os encontros, a organização, os negócios), e o que se faz no ano tem limite de tempo.',
       'Na prisão, dá para escrever para a família e cuidar da saúde.',
       'Dar errado nem sempre é só prejuízo: às vezes ensina, rende um contato, uma dívida, um conflito ou uma nova chance.',
-      'Responder a um processo não encerra mais o caminho sozinho: quem responde fica na moita e decide o resto.'
+      'Responder a um processo não encerra mais o caminho sozinho: quem responde fica na moita e decide o resto.',
+      'Quem comanda delega: a exposição pessoal de quem está no alto de uma organização é menor — e a organização protege e banca a defesa de quem é leal a ela.'
     ],
     correcoes: [
       'A tela do Submundo não mostra mais a introdução para iniciantes a quem já tem anos de história: é uma tela só, organizada em partes.',
       'O dinheiro do crime aparece no extrato do ano numa linha própria ("Por fora"), separado por origem — antes, ia para "Acontecimentos do ano" ou para "Compras".',
       'A pergunta "O que está virando isso" não aparece mais todo ano: só quando algo importante acontece, e o rumo também pode ser escolhido na tela.',
-      'O patrimônio no Dinheiro compara com dois anos atrás, dizendo o período (a seta não contradiz mais o valor ao lado).'
+      'O patrimônio no Dinheiro compara com dois anos atrás, dizendo o período (a seta não contradiz mais o valor ao lado).',
+      'Aceitar um trabalho grande não leva mais a exposição ao máximo de uma vez só.'
     ]
   },
   {

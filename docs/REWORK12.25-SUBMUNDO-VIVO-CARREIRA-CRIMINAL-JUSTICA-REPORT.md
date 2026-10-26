@@ -324,7 +324,64 @@ Branch `claude/rework12.25-submundo-vivo`, a partir de `9b3db08`:
 | `d1eeda6` | contrações nos textos do Submundo; gerador de saves do QA |
 | `949728b` | procurado/foragido flexionados pelo gênero |
 | `697cf9d` | intervalos das cenas que ainda repetiam; verificação de saves antigos |
-| (este) | relatório final |
+| `81da248` | relatório final (primeira entrega) |
+| `46b65c3` | risco proporcional de quem é de dentro (o bug do risco das encomendas, quem comanda delega, a organização protege e banca a defesa, prova fraca, preventiva), intervalos das cenas antigas, simulador com custódia e o líder cauteloso |
+| (seguinte) | relatório: validação e publicação |
+
+## 15. Validação antes da publicação (pedido de 2026-10-26)
+
+**1. Simulações longas depois dos ajustes de frequência** — refeitas com 15 perfis × 24 vidas × 30 anos (`sim125c`). As
+cenas antigas que repetiam (`subc_mercado`, `subx_denuncia`, e também `subf_escala`, `subd_encomenda`, `subd_exposto`,
+`subx_conflito`) ganharam intervalo de 3 anos e **deixaram de aparecer** entre as repetições em menos de 3 anos; o que
+sobra é a pergunta do rumo motivada por investigação (intervalo de 2 anos, intencional) e o "trabalho maior" do 11.5
+(~0,5 por vida). Anos sem escolha interessante: 0 (mediana) em todos os perfis ativos. Nenhuma regressão de patrimônio:
+as cinco especializações ficam entre ~0,5 e ~1,7 mi de mediana em 20–30 anos.
+
+**2. A taxa de prisão de integrantes e líderes (e o pedido de 30–40%)** — investigada pela causa, não por um número:
+
+- **Bug real**: o risco de uma encomenda usava a exposição *anual* do ramo (9–20 pontos) como fator — uma encomenda grande
+  "arriscava" ~190 pontos e uma só levava a exposição ao teto. Corrigido (risco relativo aos furtos: 6/10/16 pontos ×
+  0,6–1,4 pelo ramo). Isso afetava todo perfil que aceita trabalho.
+- **Incoerência**: quanto mais alto o posto, mais exposição pessoal — o oposto de "quem comanda delega". Agora a exposição
+  pessoal cresce até o posto de responsável por uma área e diminui acima; a exposição anual "de rua" de quem comanda pesa
+  metade, e a investigação chega menos até ele (camadas entre a pessoa e os fatos).
+- **A lealdade tem retorno**: a organização protege quem é de dentro e leal (lealdade ≥ 50: investigação 30% menos
+  provável) e banca a defesa dele (advogado particular sem custo). Quem é infiel ou expulso não tem isso.
+- **Prova fraca pesa a favor**: com provas abaixo de 40, a absolvição sobe (antes, com provas "fracas", a condenação ainda
+  passava da metade). Continua com teto de 70%: dinheiro não compra absolvição.
+- **Preventiva** do grupo: primário 35% → 12%, reincidente 55% → 30% (a regra é responder em liberdade).
+
+Resultado (24 vidas por perfil, 30 anos; "condenado à prisão" = sentença de prisão que ficou depois do recurso;
+"custódia" inclui a preventiva):
+
+| Perfil | Condenados à prisão (antes → depois) | Passaram por custódia | Patrimônio p50 aos 30 anos |
+|---|---|---|---|
+| integrante de organização | 75% → **25%** | 42% | 16,7 mi |
+| líder (faz pessoalmente ~3 trabalhos graves por ano, 30 anos) | 83% → **46%** | 67% | 3,1 mi (p90 51 mi) |
+| líder cauteloso (delega o grande, recolhe sob pressão) — perfil novo | — → **13%** | 38% | 8,6 mi |
+| profissional | **25%** | 29% | 4,4 mi |
+| contrabando / digital / fraudes / furtos | 33% / 17% / 21% / 17% | 33% / 25% / 21% / 25% | 1,3 / 1,7 / 0,8 / 0,9 mi |
+| dono de negócio por fora / milionário | 13% / 8% | 17% / 13% | 2,8 / 44 mi |
+| foragido (falta à audiência de propósito) | 58% | 83% | 0,7 mi |
+
+O líder que joga no limite por 30 anos fica em 46% (um pouco acima da faixa pedida) e o cauteloso em 13%: preferi manter
+essa diferença — é uma escolha do jogador, e o pedido era não reduzir números arbitrariamente. Entre os perfis de
+organização, a média fica em ~28%.
+
+**3. Os cinco problemas do playtest** continuam corrigidos e testados (`motor/__tests__/rework125.test.ts` e
+`ui/__tests__/rework125.test.tsx`: tela única sem a introdução para quem tem histórico, carimbo correto, linha "por fora" no
+extrato, rumo com motivo e intervalo, ações por papel, organização com relação, hierarquia e disputa). A pena alternativa
+continua ocupando o sábado na agenda (teste de regressão) e a sucessão de menores (`rework1205.test.ts`) passou na suíte.
+
+**4. Testes depois das alterações**: typecheck limpo; suíte completa **2.042 / 2.042** (dois testes novos para o risco das
+encomendas e a proteção da organização); build sem avisos (maior pacote 783,6 kB); smoke itch.io 21/21; PWA offline 36/36;
+**30/30 saves** (os de QA do 11, 11.5, 12.2 e 12.25) abrem, são idempotentes, vivem três anos e conciliam o extrato. A
+interface não mudou desde a auditoria visual (348 capturas, 0 problemas).
+
+**5. Branch de produção**: `origin/claude/fix-pos-rework3-playtest` continuava em `7d2588b` e `origin/main` em `9b3db08`,
+os mesmos da auditoria inicial.
+
+Commit desta rodada: `46b65c3` (ver §14).
 
 ## 15. Estado de publicação
 
