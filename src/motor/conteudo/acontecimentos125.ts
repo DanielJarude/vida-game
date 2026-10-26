@@ -78,7 +78,7 @@ export const ACONTECIMENTOS_125: Conteudo[] = ([
   },
   /* ------------------------------------------------------------- o pedido de um contato */
   {
-    id: 'sub125_pedido', tipo: 'decisao', idade: [14, 90], tema: 'escolha', prioritario: true, prioridade: 2, repetir: 2,
+    id: 'sub125_pedido', tipo: 'decisao', idade: [14, 90], tema: 'escolha', prioritario: true, prioridade: 2, repetir: 3,
     papeis: { quem: daCena('sub125_pedido') },
     quando: c => deHoje(c, 'sub125_pedido') && !!ficha(c) && !c.v.justica?.prisao,
     titulo: c => `${quem(c).nome} pediu uma coisa`,

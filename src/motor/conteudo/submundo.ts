@@ -83,7 +83,7 @@ export const SUBMUNDO: Conteudo[] = ([
   },
   /* ------------------------------------------------------------- contrabando: o mercado e a rival */
   {
-    id: 'subc_mercado', tipo: 'decisao', idade: [18, 80], tema: 'escolha', prioritario: true, prioridade: 3, repetir: 2,
+    id: 'subc_mercado', tipo: 'decisao', idade: [18, 80], tema: 'escolha', prioritario: true, prioridade: 3, repetir: 3,
     papeis: { contato: daCena('subc_mercado') },
     quando: c => deHoje(c, 'subc_mercado') && noRamo(c, 'contrabando') && !!org(c, 'subc_mercado'),
     titulo: c => `${cap(org(c, 'subc_mercado')!.nome)} quer conversar`,
@@ -219,7 +219,7 @@ export const SUBMUNDO: Conteudo[] = ([
   },
   /* ------------------------------------------------------------- fraudes e corrupção: a ameaça */
   {
-    id: 'subx_denuncia', tipo: 'decisao', idade: [18, 85], tema: 'escolha', prioritario: true, prioridade: 3, repetir: 2,
+    id: 'subx_denuncia', tipo: 'decisao', idade: [18, 85], tema: 'escolha', prioritario: true, prioridade: 3, repetir: 3,
     papeis: { contato: daCena('subx_denuncia') },
     quando: c => deHoje(c, 'subx_denuncia') && noRamo(c, 'fraudes'),
     titulo: c => `${quem(c).nome} ameaça contar`,
