@@ -182,4 +182,152 @@ sabe perde a confiança), prometer sair (começa a saída aos poucos) ou pedir q
   mais segura, uma perda parcial — e, às vezes, a exposição. Depois de dois erros seguidos, o meio oferece o que cabe (a
   chance sobe 12 pontos).
 
-[[CONTINUA3]]
+## 9. Balanceamento — diversão antes do punitivismo
+
+O que mudou, e por quê (medido no simulador, §10):
+
+- **Oportunidade constante**: além dos contatos de confiança e da organização, o próprio meio procura quem tem nome ou
+  prática (um intermediário novo chega com uma proposta). Nos perfis ativos, a mediana de **anos sem nenhuma escolha
+  interessante é 0**.
+- **Recompensas que valem o risco**: a encomenda paga 2,5/6/14 meses da renda de referência (antes, as operações da tela
+  pagavam 0,5–5 meses, sem patamar), vezes o patamar.
+- **Sem sequência infinita de fracassos**: a chance base de um trabalho pequeno é 84%; depois de dois erros seguidos, +12
+  pontos. No simulador, a maior sequência de fracassos (p90) foi de 1 a 3.
+- **Fracassos que contam história** (seis desfechos, só um deles é "a exposição sobe").
+- **Justiça proporcional preservada** (o reequilíbrio do 12.2 ficou intacto: rastro por ramo, investigação com prazo, pena
+  alternativa para o primário sem violência). O que mudou foi o processo deixar de encerrar a carreira, e o advogado da
+  investigação passar a valer. O crime organizado intenso e a reincidência continuam perigosos (líderes e integrantes
+  terminam presos em boa parte das vidas — ver §10).
+- **Repetição**: a pergunta do rumo caiu de "a cada dois anos por regra" para ~0,2 por ano ativo (uma a cada cinco anos,
+  sempre com motivo); as cenas antigas dos ramos ganharam intervalo de 2–3 anos; a disputa interna só vem com a
+  organização rachada.
+- **Sem teto artificial e sem igualar carreiras**: a liderança enriquece muito mais que o furto; o contrabando e a fraude
+  ficam no meio; tudo com anos secos, confisco na condenação e prisão possível.
+
+## 10. Resultados das simulações
+
+`scripts/sim/submundo125.ts` — 14 perfis × 12 vidas × 30 anos (São Paulo e Rio), cada perfil jogando com as ações da tela
+e respondendo às perguntas do caminho de forma coerente. Patrimônio líquido p10/p50/p90 aos 10, 20 e 30 anos:
+
+| Perfil | 10 anos | 20 anos | 30 anos | 1ª progressão (mediana) | Liderança | Desfechos na Justiça (12 vidas) | Saídas |
+|---|---|---|---|---|---|---|---|
+| nunca entrou | −41k / 2k / 110k | −32k / 94k / 749k | −85k / 231k / 2,5mi | — | — | nenhum | — |
+| ocasional | −21k / 1k / 13k | −59k / 3k / 273k | −24k / 135k / 2,4mi | 5 anos (10/12) | — | 1 investigação, 0 processos | 12 (todas limpas: prometeu à família) |
+| profissional | −16k / 103k / 337k | 258k / 1,2mi / 3,0mi | 1,4mi / 4,0mi / 10,3mi | 3 anos (12/12) | 10/12, mediana 16 anos | 11 processos: 9 absolvições, 1 sem prisão, 1 prisão | 2 |
+| integrante | 371k / 864k / 2,1mi | −572k / 1,6mi / 10,4mi | 1k / 405k / 25,5mi | 2 anos | 11/12, mediana 9 anos | 17 processos: 8 absolvições, 9 prisões | 8 |
+| líder | 539k / 3,8mi / 5,4mi | 247k / 14,5mi / 19,9mi | 43k / 3,4mi / 34,3mi | 1 ano | 12/12 | 18 processos: 8 absolvições, 10 prisões | 9 |
+| dono de negócio por fora | 662k / 859k / 1,4mi | 824k / 1,6mi / 2,4mi | 599k / 1,7mi / 2,5mi | 3 anos | — | 24: 16 absolvições, 4 sem prisão, 4 prisões | 5 |
+| milionário (20 mi) | 25,0 / 25,9 / 26,7mi | 29,7 / 32,4 / 35,4mi | 38,1 / 42,1 / 46,9mi | 3 anos | — | 21: 8 absolvições, 6 sem prisão, 7 prisões | 7 |
+| foragido (falta à audiência) | −64k / 18k / 120k | −13k / 99k / 426k | 58k / 340k / 1,0mi | 6 anos | — | 20: 10 absolvições, 9 prisões; 9 com mandado | 7 |
+| preso (4 anos) | −1k / 40k / 57k | 18k / 116k / 1,3mi | 153k / 717k / 3,4mi | — | — | a pena de partida | — |
+| ex (sai aos poucos no 4º ano) | −18k / 4k / 184k | −63k / 6k / 720k | −23k / 496k / 1,5mi | 3 anos | — | 0 processos | 12 (limpas) |
+| furtos | −16k / 103k / 278k | 127k / 581k / 957k | −33k / 1,0mi / 1,7mi | 3 anos | — | 11: 8 absolvições, 1 sem prisão, 2 prisões | 3 |
+| contrabando | 49k / 173k / 634k | 28k / 678k / 1,3mi | 2k / 1,3mi / 1,7mi | 3 anos | — | 22: 17 absolvições, 1 sem prisão, 4 prisões | 4 |
+| digital | −99k / 86k / 254k | 0k / 282k / 1,0mi | 5k / 537k / 1,4mi | 3 anos | — | 24: 8 absolvições, 9 sem prisão, 7 prisões | 8 |
+| fraudes | 20k / 326k / 584k | 1k / 927k / 1,6mi | 0k / 814k / 2,2mi | 3 anos | — | 26: 20 absolvições, 1 sem prisão, 5 prisões | 5 |
+
+Diversão medida (mesma rodada):
+
+- **Oportunidades diferentes por vida** (tipos de encomenda + cenas do caminho, mediana): 13 a 16 nos perfis ativos (7 no
+  ocasional, que recusa quase tudo).
+- **Pergunta do rumo por ano ativo**: 0,16 a 0,33 (era ~0,5 por regra fixa, mais as investigações).
+- **Cenas repetidas em menos de 3 anos**: concentradas em `subc_mercado` e `subx_denuncia` (cenas do 11.5) e no pedido de
+  contato — os três ganharam intervalo de 3 anos depois desta rodada.
+- **Anos sem escolha interessante** (mediana): 0 em todos os perfis ativos.
+- **Maior sequência de fracassos** (p90): 1 a 3.
+- **Tempo até a liderança**: 9 anos (mediana) para quem começa aliado de uma organização; 16 anos para quem começa no
+  furto e chega lá pelas propostas e pela filiação.
+- **Abandonar é possível**: todas as saídas do "ex" e do "ocasional" ficaram limpas (sem processo depois); nos perfis
+  intensos, ~90% das saídas ficaram limpas.
+- **Diversidade de desfechos**: há vidas que enriquecem muito, vidas que perdem tudo na prisão (o p10 do líder aos 30 anos é
+  43 mil), vidas presas que reconstroem (o preso chega a 717 mil de mediana aos 30) e vidas que saem limpas.
+- **Viabilidade das especializações**: as cinco chegam a centenas de milhares/um milhão de mediana em 20–30 anos, com
+  perfis de risco diferentes (o digital e a fraude condenam mais sem prisão; o contrabando absolve mais; o organizado
+  prende mais).
+- **Contas**: zero linhas de ajuste no extrato em 5.040 anos simulados; zero anomalias (NaN/infinito).
+- **Mundo**: as organizações trocam de comando (sucessões ao longo de 30 anos), nenhuma cidade fica vazia (a que acaba é
+  substituída), nenhuma org extinta em cascata.
+
+Observação honesta: o p10 negativo de vários perfis aos 10 anos é o mesmo do perfil que nunca entrou (o cenário começa com
+emprego de assistente administrativo e pouco dinheiro); não é efeito do crime.
+
+## 11. Compatibilidade de saves
+
+- **Versão do save continua 20**; tudo novo é opcional (`Envolvimento.carreira/encomendas/rumo/saindo/familia/cenas125`,
+  campos novos da ficha e da relação com organização, `Justica.defesa`, `foragido.motivo/abrigo/mudouEndereco`,
+  `Vida.mundoCriminal`, o tipo de movimento `por_fora`).
+- `normalizarRework125` (idempotente): cria a carreira a partir da prática dos ramos, torna coerente quem "largou" com
+  frentes ainda ativas, e dá às organizações da relação uma organização viva com **o mesmo id e o mesmo nome**.
+- Quem nunca entrou não ganha nada novo no save.
+- Testado: um save no formato do 12.2 com "o pessoal dos Soares" (memória de promessa cumprida) abre com a organização
+  intacta; abrir duas vezes dá o mesmo JSON; os **23 saves de QA do 11, 11.5 e 12.2** (`scripts/sim/saves125.ts`) abrem,
+  são idempotentes, vivem três anos e conciliam o extrato; a suíte do 12.05 (sucessão de menores) passou inteira.
+- A sucessão leva o mundo do crime para a próxima geração (as organizações continuam) e o **legado sem cargo**
+  (`mundoCriminal.legado`); a regra de sucessão e herança do 12.05 não mudou.
+
+## 12. Testes executados
+
+Na ordem pedida (§26), sequencialmente, nada pesado em paralelo:
+
+| Verificação | Resultado |
+|---|---|
+| Testes direcionados (`motor/__tests__/rework125.test.ts`, 36 testes; `ui/__tests__/rework125.test.tsx`, 7 testes; mais os de Submundo/Justiça/prisão/UI antigos) | todos aprovados |
+| Typecheck (`tsc --noEmit`, na cópia Linux) | limpo |
+| Suíte completa (`vitest run`) | **2.040 / 2.040**, 119 arquivos (antes: 1.997) |
+| Build (`npm run build`) | sem avisos; nenhum pacote acima de 800 kB (o limite não foi mudado). Maiores: `motor-textos` 783,6 kB (era 782,8), `Jogo` 758,8 kB, `motor` 751,0 kB, `motor-carreira` 534,9 kB (onde mora o Submundo novo) |
+| Smoke itch.io (`scripts/itch/smoke.mjs`) | 21/21 |
+| PWA offline (`scripts/pwa/offline.mjs`) | 36/36 |
+| QA visual (`scripts/playtest/rework125.mjs`, saves de `gerarRework125.ts`) | 15 cenas × 4 paletas × 1440/390 (+360 e 390×560 em 9 cenas) = 348 capturas: **0 problemas** de sobreposição, contraste < 3:1, rolagem horizontal, borda estourada ou erro de console; nenhum alvo < 44 px nos componentes novos (os 8 apontados são do Dinheiro e da agenda, anteriores) |
+| Simulações (`scripts/sim/submundo125.ts`) | 14 perfis × 12 vidas × 30 anos, medidas aos 10/20/30 (§10): 0 ajustes no extrato, 0 anomalias |
+| Saves antigos (`scripts/sim/saves125.ts` + testes) | 23/23 saves de QA do 11/11.5/12.2; formato 12.2 com organização e memória; idempotência |
+| Revisão do que mudou fora do escopo | abaixo |
+
+**O que mudou fora do Submundo, e por quê**: `agenda.ts`/`semana.ts`/`Agenda.tsx` (o caminho como bloco da semana, pedido
+no §20); `Dinheiro.tsx`/`leituraMaterial.ts` (FIN-12.25-01: a linha "por fora", o grupo no extrato, a seta do patrimônio);
+`sucessao.ts` (o mundo do crime e o legado sem cargo passam ao herdeiro — duas linhas, sem tocar na regra do 12.05);
+`acoes.ts` (a ação `crime`, a linha do extrato das ações do Submundo, a viagem ao exterior bloqueada para quem é procurado);
+`texto.ts`/`conteudo/base.ts` (a contração "de a → da", aplicada só aos textos do Submundo); `Trabalho.tsx` (dois botões
+novos na prisão); `justica.ts` (o processo não encerra mais a carreira; a prisão da pena encerra; o gancho do procurado;
+o advogado de antes); `trajetorias.ts` (a pergunta do rumo); `rework10.test.ts` (o estado montado à mão passa pela
+normalização nova, como o próprio teste já fazia com a do 11.5); `novidades.ts` (a nota da versão 12.25, como toda entrega);
+`vite.config.ts` (os módulos novos no pacote `motor-carreira`).
+
+## 13. Pendências reais
+
+- **Não testado num aparelho de verdade** (só Playwright em 360/390/1440).
+- **O save real do jogador do playtest não estava disponível**: o UI-12.25-01 foi reproduzido pela causa (processo que
+  encerrava o envolvimento), não pelo arquivo dele.
+- **A pergunta do rumo ainda pode aparecer duas vezes em três anos** quando os motivos se encadeiam (o primeiro ano e, dois
+  anos depois, uma investigação) — é intencional (motivos diferentes), mas pode parecer repetição.
+- **As cenas antigas do 11.5** (`subc_mercado`, `subx_denuncia`) e o pedido de contato ganharam intervalo de 3 anos depois
+  da rodada longa do simulador; a rodada não foi refeita com esse ajuste (a suíte completa foi).
+- **Crime organizado continua o mais perigoso**: no simulador, líderes e integrantes terminam presos em ~75% das vidas em
+  30 anos (o p50 do líder cai de 14,5 mi aos 20 para 3,4 mi aos 30, pelo confisco). É coerente com o pedido ("crime
+  organizado intenso pode continuar perigoso"), mas vale olhar no playtest se a curva está boa.
+- **Território é textual** (regiões por nome, presença e voz da comunidade em barras); não há mapa — como permitido no §10.
+- **Mercados paralelos** continuam no Patrimônio/Compras (12.2); a parte "Negócios" do Submundo mostra só os negócios por fora.
+- **A família reage em 5 posturas**; não há cena própria para o cônjuge que decide ir embora por causa do crime (a tensão
+  existe e o término pelas regras antigas continua possível).
+- APK Android **não** foi regenerado.
+
+## 14. Commits
+
+Branch `claude/rework12.25-submundo-vivo`, a partir de `9b3db08`:
+
+| Commit | O quê |
+|---|---|
+| `3ffe2af` | motor (checkpoint 1): carreira, contas por fora, rumo com motivo, encomendas, contatos, organizações vivas, Justiça por etapas e mandado |
+| `356a17a` | motor (checkpoint 2): acontecimentos, agenda do caminho, legado, normalização, processo sem fim automático, simulador |
+| `c197444` | interface: o Submundo numa tela só; dinheiro por fora no painel; prisão com cartas e saúde |
+| `cfb9a59` | testes do 12.25 (motor e telas) |
+| `53c33f6` | notas da versão, ajustes, QA visual, rascunho do relatório |
+| `d1eeda6` | contrações nos textos do Submundo; gerador de saves do QA |
+| `949728b` | procurado/foragido flexionados pelo gênero |
+| `697cf9d` | intervalos das cenas que ainda repetiam; verificação de saves antigos |
+| (este) | relatório final |
+
+## 15. Estado de publicação
+
+**Nada foi publicado.** Nenhum push, merge ou deploy; a branch de produção (`claude/fix-pos-rework3-playtest`, em
+`7d2588b`) e a `main` (`9b3db08`) não foram tocadas. A versão das notas cadastrada é **12.25**. Aguardando autorização
+expressa para push, merge e publicação.
