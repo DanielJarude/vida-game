@@ -88,6 +88,12 @@ import { processarBolsaDeAtleta } from './sistemas/naFormacao';
 import { processarConvivio } from './sistemas/convivio';
 import { processarTribunal } from './sistemas/tribunal';
 import { processarSubmundo } from './sistemas/submundo';
+import { processarCarreiraCriminal, processarLegado } from './sistemas/carreiraCriminal';
+import { processarEncomendas } from './sistemas/encomendas';
+import { processarRede } from './sistemas/redeCriminal';
+import { processarFaccoes } from './sistemas/faccoes';
+// REWORK 12.25: a vida de quem é procurado se registra em `justica` ao carregar (como o tribunal).
+import './sistemas/defesa';
 import { processarTrio } from './sistemas/afetosAdultos';
 import { processarAliancas } from './sistemas/aliancas';
 import { processarTreinadorDeGoleiros } from './sistemas/treinadorDeGoleiros';
@@ -240,6 +246,13 @@ function viverAno(v: Vida, r: Rng): void {
   // REWORK 11.5 · SUB-11: os ramos do Submundo (a prática, o mercado, a organização, as pessoas com ficha, as cenas).
   processarSubmundo(v);
   processarClandestinos(v, r);
+  // REWORK 12.25: o Submundo vivo — as pessoas do caminho, as organizações (que andam sozinhas), as encomendas, a carreira
+  // (o patamar, os marcos, a família, a saída aos poucos) e o legado de quem herdou esse nome.
+  processarRede(v);
+  processarFaccoes(v);
+  processarEncomendas(v);
+  processarCarreiraCriminal(v);
+  processarLegado(v);
   processarVeiculos(v, r);
   processarImoveis(v, r, ec);
   // REWORK 12: a coleção (o mercado das peças) e as empresas (o ano de cada uma; a distribuição cai na conta).

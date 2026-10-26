@@ -27,8 +27,9 @@ import { anoDe } from '../tempo';
 import { flex, ge } from '../texto';
 import { abalar } from './abalo';
 import { marcar } from './marcas';
+import { ganchoDoProcurado } from './justica';
 
-export type OquePrisao = 'estudar' | 'trabalhar' | 'conviver' | 'visitas' | 'defensoria' | 'preparar_saida' | 'fugir' | 'entregar_se'
+export type OquePrisao = 'estudar' | 'trabalhar' | 'conviver' | 'visitas' | 'defensoria' | 'preparar_saida' | 'fugir' | 'entregar_se' | 'saude' | 'cartas'
   | 'faccao_aceitar' | 'faccao_recusar' | 'briga_evitar' | 'briga_enfrentar' | 'briga_transferencia' | 'motim_ficar' | 'motim_participar';
 
 export const presoAgora = (v: Vida) => !!v.justica?.prisao;
@@ -139,7 +140,8 @@ function situacaoDaVez(v: Vida): LeituraDaPena['situacao'] {
 
 export function disponibilidadePrisao(v: Vida, oque: OquePrisao): Veredito {
   const j = v.justica;
-  if (oque === 'entregar_se') return j?.foragido ? PERMITIDO : bloqueio('impossivel', 'Não se aplica.');
+  // REWORK 12.25: entregar-se na unidade é de quem fugiu da pena; quem tem mandado se apresenta ao fórum (`defesa`).
+  if (oque === 'entregar_se') return j?.foragido && (j.foragido.motivo ?? 'fuga') === 'fuga' ? PERMITIDO : bloqueio('impossivel', 'Não se aplica.');
   const p = j?.prisao;
   if (!p) return bloqueio('impossivel', 'Só para quem cumpre pena.');
   const menor = idade(v) < 18;
@@ -150,6 +152,9 @@ export function disponibilidadePrisao(v: Vida, oque: OquePrisao): Veredito {
       if (menor) return bloqueio('impossivel', 'Na internação, o que existe é a escola.');
       return v.fatos['remicao_trabalho'] !== undefined ? bloqueio('incompativel', 'Você já trabalha na unidade.') : (p.disciplina ?? 70) < 40 ? bloqueio('requisito', 'Com faltas disciplinares, a vaga de trabalho vai para outro.') : PERMITIDO;
     case 'conviver': return feito('conviver') ? bloqueio('incompativel', 'Neste ano você já se aproximou de alguém do pavilhão.') : PERMITIDO;
+    // REWORK 12.25: cuidar da saúde (a enfermaria, o banho de sol, o corpo) e escrever para quem está fora.
+    case 'saude': return feito('saude') ? bloqueio('incompativel', 'Neste ano você já cuidou disso.') : PERMITIDO;
+    case 'cartas': return feito('cartas') ? bloqueio('incompativel', 'As cartas deste ano já foram.') : !vinculosVivos(v).some(x => !x.p.especie && (x.vin.parentesco || x.vin.romance)) ? bloqueio('impossivel', 'Não há para quem escrever.') : PERMITIDO;
     case 'visitas': return feito('visitas') ? bloqueio('incompativel', 'O pedido de visitas deste ano já foi feito.') : PERMITIDO;
     case 'defensoria':
       if (menor) return bloqueio('impossivel', 'Na internação, quem acompanha é a equipe da unidade.');
@@ -211,6 +216,20 @@ export function executarPrisao(v: Vida, oque: OquePrisao): { texto: string; tom:
         return { texto: `A defensoria revisou o cálculo da pena e achou um erro a seu favor: ${menos} meses a menos.`, tom: 'bom' };
       }
       return { texto: 'O pedido entrou na fila da defensoria. A resposta: ainda não — falta tempo, ou falta o papel do comportamento. Para o ano, de novo.', tom: 'neutro' };
+    }
+    case 'saude': {
+      v.corpo.saude = clamp(v.corpo.saude + 6);
+      v.corpo.forma = clamp(v.corpo.forma + 4);
+      abalar(v, 'o cuidado consigo', 2, -4);
+      return { texto: 'A enfermaria, o banho de sol levado a sério, os exercícios na cela. O corpo agradece — e a cabeça também.', tom: 'bom' };
+    }
+    case 'cartas': {
+      const quem = vinculosVivos(v).filter(x => !x.p.especie && (x.vin.parentesco || x.vin.romance)).sort((a, b) => b.vin.proximidade - a.vin.proximidade).slice(0, 4);
+      for (const x of quem) { x.vin.proximidade = clamp(x.vin.proximidade + 4); x.vin.tUltimoContato = v.t; }
+      const filho = quem.find(x => x.vin.parentesco === 'filho');
+      if (filho) lembrarCom(v, filho.p.id, 'Recebia cartas de quem estava preso, toda semana.', 'apoio', 2);
+      abalar(v, 'as cartas', 3, -3);
+      return { texto: `Você escreveu para ${quem.map(x => x.p.nome).join(', ').replace(/, ([^,]*)$/, ' e $1')}. Algumas cartas voltaram com resposta — e a distância ficou um pouco menor.`, tom: 'bom' };
     }
     case 'preparar_saida':
       p!.preparouSaida = v.t;
@@ -343,12 +362,17 @@ export function processarPrisao(v: Vida): void {
   }
 }
 
+/** REWORK 12.25: a vida de quem é procurado (o mandado, o endereço novo, o abrigo) vem de `defesa`, registrada em `justica`. */
 function anoForagido(v: Vida): void {
   const j = v.justica!;
   const f = j.foragido!;
   const r = rngDe(v.id, 'foragido', v.t);
+  const procurado = ganchoDoProcurado();
   v.mente.estresse = clamp(v.mente.estresse + 8);
-  if (r.chance(0.3)) {
+  procurado?.ano(v);
+  if (!j.foragido) return;
+  if (r.chance(procurado ? procurado.chance(v) : 0.3)) {
+    if (procurado?.capturar(v)) { abalar(v, 'a captura', -12, 14); return; }
     j.foragido = undefined;
     j.prisao = { tInicio: v.t, tFim: v.t + f.restante + 12, regime: 'fechado', penaMeses: f.restante + 12, disciplina: 30 };
     if (v.trabalho.atual) v.trabalho.atual = undefined;

@@ -14,6 +14,8 @@ import * as P from './papeis';
 import { estresse, fato, feliz, prox, tensao, custa, local } from './efeitos';
 import { escrever, filhos, idade, idadePessoa, lembrarCom, marcarFato, parceiro, somarExperiencia, temFato, vinculosVivos } from '../nucleo';
 import { CATEGORIAS, entrar, escalar, moita, parar } from '../sistemas/ilicito';
+import { MOTIVO_DO_RUMO, registrarRumo } from '../sistemas/porFora';
+import { comecarASair } from '../sistemas/carreiraCriminal';
 import { mudarAgora, custoDeMudanca } from '../sistemas/processos';
 import { disponivel, pagar } from '../sistemas/dinheiro';
 import { encerrarPausa, iniciarPausa, podeReduzir } from '../sistemas/pausa';
@@ -89,6 +91,9 @@ export const TRAJETORIAS: Conteudo[] = [
     ]
   },
   {
+    // REWORK 12.25 · NAR-12.25-01: a pergunta vem com motivo (`porFora.pedirRumo`: o primeiro ano, a investigação, a
+    // promoção, a perda grande, a família, o meio oferecendo mais) e com intervalo — não mais a cada dois anos. A escolha
+    // fica registrada (`env.rumo`), e o rumo também se escolhe na tela do Submundo, a qualquer hora.
     id: 'ilic_rumo', tipo: 'decisao', idade: [13, 75], tema: 'escolha', prioritario: true, prioridade: 3, repetir: 1,
     quando: c => deHoje(c, 'ilic_rumo') && !!c.v.caminhos.envolvimento && c.v.caminhos.envolvimento.parou === undefined && !c.v.justica?.prisao,
     titulo: 'O que está virando isso',
@@ -96,19 +101,31 @@ export const TRAJETORIAS: Conteudo[] = [
       const e = c.v.caminhos.envolvimento!;
       const anos = Math.max(1, Math.round((c.v.t - e.tInicio) / 12));
       const par = parceiro(c.v);
-      return `${anos === 1 ? 'Um ano' : `${anos} anos`} disso. Entraram ${fmt(e.ganhos)} por fora${e.investigado !== undefined ? ', e agora há uma investigação' : e.exposicao >= 45 ? ', e gente demais já sabe' : ''}. ${par ? `${par.p.nome} desconfia de onde vem o dinheiro.` : ''} ${e.nivel < 3 ? 'Quem está acima oferece mais — mais dinheiro, mais compromisso.' : 'O grupo conta com você.'}`;
+      const motivo = MOTIVO_DO_RUMO[c.v.fatos['ilic_rumo_motivo'] ?? 0];
+      const porque = {
+        primeiro_ano: 'Um ano disso.',
+        investigacao: 'Alguém começou a fazer perguntas: há uma investigação.',
+        promocao: 'O seu nome cresceu no meio — e com ele, o que esperam de você.',
+        perda: 'O ano levou o que não devia (uma pessoa, um dinheiro, a calma).',
+        familia: 'Em casa, já não dá para fingir que nada acontece.',
+        proposta_maior: 'Quem está acima oferece mais — mais dinheiro, mais compromisso.',
+        volta: 'Você voltou ao que tinha deixado.'
+      }[motivo];
+      return `${porque} ${anos === 1 ? '' : `${anos} anos no caminho; `}entraram ${fmt(e.ganhos)} por fora${e.exposicao >= 45 && motivo !== 'investigacao' ? ', e gente demais já sabe' : ''}. ${par ? `${par.p.nome} desconfia de onde vem o dinheiro.` : ''}`.replace(/\s+/g, ' ').trim();
     },
     opcoes: [
       { id: 'parar_esquema', texto: 'Parar de vez', comportamento: { disciplina: 1 },
         resolver: c => ({ texto: c.v.caminhos.envolvimento!.nivel >= 3 ? 'Você avisou que estava fora. Ninguém disse nada — e isso era o que dava medo.' : 'Você parou. O dinheiro fácil fez falta no primeiro mês; o sono voltou no segundo.', memoria: null, efeito: () => parar(c.v, 'decidiu sair') }) },
+      { id: 'sair_aos_poucos', texto: 'Sair aos poucos, sem porta batida (em um ano)', comportamento: { disciplina: 1 }, disponivel: c => (c.v.caminhos.envolvimento?.saindo !== undefined ? false : true),
+        resolver: c => ({ texto: comecarASair(c.v), memoria: null }) },
       { id: 'mudar_de_vez', texto: 'Parar e mudar de cidade, para longe de todo mundo', comportamento: { coragem: 1 },
         disponivel: c => (idade(c.v) < 18 ? 'Sem idade para recomeçar longe sozinho.' : custa(c, custoDeMudanca(c.v.moradia.municipioId, capitalDoEstado(c.v.moradia.municipioId)), 'Não há dinheiro para recomeçar longe.')),
         resolver: c => ({ texto: 'Uma mala, um número de telefone novo, uma cidade onde ninguém sabe o seu nome.', memoria: null, efeito: () => { const aqui = c.v.moradia.municipioId; const d = capitalDoEstado(aqui) !== aqui ? capitalDoEstado(aqui) : cidadeLonge(c.v, 'sao-paulo-sp'); parar(c.v, 'mudou de cidade para cortar os contatos'); pagar(c.v, custoDeMudanca(aqui, d)); mudarAgora(c.v, d, 'para recomeçar longe dos contatos de antes'); delete c.v.fatos['pressao_grupo']; } }) },
       { id: 'moita', texto: 'Ficar na moita: menos dinheiro, menos exposição', comportamento: { disciplina: 1 }, disponivel: c => (c.v.caminhos.envolvimento?.cautela ? false : true),
-        resolver: c => ({ texto: 'Menos encomenda, menos gente sabendo, o telefone desligado mais cedo. O dinheiro cai pela metade; o medo, um pouco.', memoria: null, efeito: () => moita(c.v, true) }) },
-      { id: 'seguir_esquema', texto: c => (c.v.caminhos.envolvimento?.cautela ? 'Voltar ao ritmo de antes' : 'Seguir do mesmo jeito'), resolver: c => ({ texto: c.v.caminhos.envolvimento?.cautela ? 'Você voltou ao ritmo de antes. Mais dinheiro, mais gente em volta.' : 'Você seguiu. Cada ano parece o último sem problema.', memoria: null, efeito: () => moita(c.v, false) }) },
+        resolver: c => ({ texto: 'Menos encomenda, menos gente sabendo, o telefone desligado mais cedo. O dinheiro cai pela metade; o medo, um pouco.', memoria: null, efeito: () => { moita(c.v, true); registrarRumo(c.v, 'moita', MOTIVO_DO_RUMO[c.v.fatos['ilic_rumo_motivo'] ?? 0]); } }) },
+      { id: 'seguir_esquema', texto: c => (c.v.caminhos.envolvimento?.cautela ? 'Voltar ao ritmo de antes' : 'Seguir do mesmo jeito'), resolver: c => ({ texto: c.v.caminhos.envolvimento?.cautela ? 'Você voltou ao ritmo de antes. Mais dinheiro, mais gente em volta.' : 'Você seguiu. Cada ano parece o último sem problema.', memoria: null, efeito: () => { moita(c.v, false); registrarRumo(c.v, 'seguir', MOTIVO_DO_RUMO[c.v.fatos['ilic_rumo_motivo'] ?? 0]); } }) },
       { id: 'fundo', texto: 'Ir mais fundo', comportamento: { impulsividade: 1, coragem: 1 }, disponivel: c => ((c.v.caminhos.envolvimento?.nivel ?? 3) < 3 ? true : false),
-        resolver: c => ({ texto: 'Mais dinheiro, mais gente em volta, mais coisa para esconder.', memoria: 'Foi mais fundo no esquema.', relevancia: 'marco', tom: 'ruim', efeito: () => escalar(c.v) }) }
+        resolver: c => ({ texto: 'Mais dinheiro, mais gente em volta, mais coisa para esconder.', memoria: 'Foi mais fundo no esquema.', relevancia: 'marco', tom: 'ruim', efeito: () => { escalar(c.v); registrarRumo(c.v, 'fundo', MOTIVO_DO_RUMO[c.v.fatos['ilic_rumo_motivo'] ?? 0]); } }) }
     ]
   },
   {

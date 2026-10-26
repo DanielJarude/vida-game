@@ -261,6 +261,8 @@ const GRUPOS_EXTRATO: { rotulo: string; tipos: string[] }[] = [
   { rotulo: 'Rendimentos (e a inflação no dinheiro parado)', tipos: ['rendimento'] },
   { rotulo: 'Posto nas aplicações', tipos: ['aporte'] },
   { rotulo: 'Tirado das aplicações', tipos: ['resgate'] },
+  // REWORK 12.25 · FIN-12.25-01: o que é do Submundo (o que rendeu, os negócios, as encomendas, os custos, as perdas), à parte.
+  { rotulo: 'Por fora (o Submundo)', tipos: ['por_fora'] },
   { rotulo: 'Acontecimentos do ano', tipos: ['acontecimento'] },
   { rotulo: 'Escolhas e compras', tipos: ['escolha'] },
   { rotulo: 'Diferença sem explicação', tipos: ['ajuste'] }

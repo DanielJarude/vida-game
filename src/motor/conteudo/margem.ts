@@ -11,7 +11,8 @@ import { marcarFato, parceiro } from '../nucleo';
 import { parar, moita } from '../sistemas/ilicito';
 import { novoContatoDoCaminho } from '../sistemas/margem';
 import { machucarNaBriga } from '../sistemas/lesoes';
-import { pagar, disponivel } from '../sistemas/dinheiro';
+import { disponivel } from '../sistemas/dinheiro';
+import { movimentoPorFora, pagarJustica, pagarPorFora } from '../sistemas/porFora';
 import { abrirProcesso } from '../sistemas/justica';
 import { aceitarAcordo, assumir, contratarAdvogado, cooperar, honorarios, pagarFianca, perfilDaVida, recorrer } from '../sistemas/tribunal';
 import { dinheiro as fmt } from '../texto';
@@ -46,7 +47,7 @@ export const MARGEM: Conteudo[] = [
               e.exposicao = clamp(e.exposicao + (deuErrado ? 22 : 12));
               if (deuErrado) { machucarNaBriga(c.v, c.r, 2); e.reputacao = clamp((e.reputacao ?? 0) - 6); }
               // REWORK 11 · SUB-03: quem fez o trabalho maior junto passa a conhecer você (mais um contato do caminho).
-              else { const g = ganhoGrande(c); c.v.financas.conta += g; e.ganhos += g; e.reputacao = clamp((e.reputacao ?? 0) + 12); novoContatoDoCaminho(c.v); }
+              else { const g = ganhoGrande(c); movimentoPorFora(c.v, 'ocasional', g); e.ganhos += g; e.reputacao = clamp((e.reputacao ?? 0) + 12); novoContatoDoCaminho(c.v); }
             }
           };
         } },
@@ -55,7 +56,7 @@ export const MARGEM: Conteudo[] = [
         resolver: c => {
           const aceitam = c.r.chance(clamp(0.3 + (env(c).reputacao ?? 0) / 150, 0.2, 0.8));
           return { texto: aceitam ? 'Aceitaram a sua parte. Você ganhou mais — e passou a ser lembrado como quem cobra.' : 'Não aceitaram, e não esqueceram que você pediu.', memoria: null,
-            efeito: () => { const e = env(c); if (aceitam) { const g = Math.round(ganhoGrande(c) * 1.3); c.v.financas.conta += g; e.ganhos += g; e.trabalhos = (e.trabalhos ?? 0) + 1; e.exposicao = clamp(e.exposicao + 12); } else { e.atritos = (e.atritos ?? 0) + 1; e.reputacao = clamp((e.reputacao ?? 0) - 5); } } };
+            efeito: () => { const e = env(c); if (aceitam) { const g = Math.round(ganhoGrande(c) * 1.3); movimentoPorFora(c.v, 'ocasional', g); e.ganhos += g; e.trabalhos = (e.trabalhos ?? 0) + 1; e.exposicao = clamp(e.exposicao + 12); } else { e.atritos = (e.atritos ?? 0) + 1; e.reputacao = clamp((e.reputacao ?? 0) - 5); } } };
         } },
       { id: 'recusar', texto: 'Recusar este', comportamento: { disciplina: 1 },
         consequencia: c => (env(c).nivel >= 3 ? 'O grupo vai cobrar a recusa.' : 'O meio esfria com você — e você dorme melhor.'),
@@ -73,7 +74,7 @@ export const MARGEM: Conteudo[] = [
     opcoes: [
       { id: 'ceder', texto: 'Pagar a diferença e encerrar o assunto', comportamento: { disciplina: 1 },
         disponivel: c => (disponivel(c.v) >= local(c, 1000) ? true : 'Não há dinheiro para pagar a diferença.'),
-        resolver: c => ({ texto: 'Você pagou. O assunto morreu ali — e ficou a impressão de que você paga quando apertam.', memoria: null, efeito: () => { pagar(c.v, Math.min(disponivel(c.v), Math.round(env(c).ganhos * 0.08))); env(c).reputacao = clamp((env(c).reputacao ?? 0) - 4); } }) },
+        resolver: c => ({ texto: 'Você pagou. O assunto morreu ali — e ficou a impressão de que você paga quando apertam.', memoria: null, efeito: () => { pagarPorFora(c.v, 'custos', Math.min(disponivel(c.v), Math.round(env(c).ganhos * 0.08))); env(c).reputacao = clamp((env(c).reputacao ?? 0) - 4); } }) },
       { id: 'enfrentar', texto: 'Enfrentar', comportamento: { coragem: 2, impulsividade: 1 },
         resolver: c => {
           const machucou = c.r.chance(0.35);
@@ -96,7 +97,7 @@ export const MARGEM: Conteudo[] = [
         resolver: c => ({ texto: 'Telefone novo, nenhum contato com ninguém do caminho. A espera é a parte pior.', memoria: null, efeito: () => { moita(c.v, true); parar(c.v, 'a investigação chegou perto'); env(c).exposicao = clamp(env(c).exposicao - 10); } }) },
       { id: 'advogado', texto: c => `Procurar um advogado antes de tudo (uns ${fmt(honorarios(c.v))})`, disponivel: c => (disponivel(c.v) >= honorarios(c.v) ? true : 'Não há dinheiro para um advogado agora.'),
         consequencia: () => 'Se virar processo, a defesa já está pronta (e mais forte).',
-        resolver: c => ({ texto: 'O advogado ouviu tudo, anotou pouco e disse: "Daqui para a frente, você não fala com ninguém sem mim."', memoria: null, efeito: () => { pagar(c.v, honorarios(c.v)); marcarFato(c.v, 'advogado_preventivo'); env(c).exposicao = clamp(env(c).exposicao - 6); } }) },
+        resolver: c => ({ texto: 'O advogado ouviu tudo, anotou pouco e disse: "Daqui para a frente, você não fala com ninguém sem mim."', memoria: null, efeito: () => { pagarJustica(c.v, honorarios(c.v)); c.v.fatos['advogado_preventivo'] = c.v.t; env(c).exposicao = clamp(env(c).exposicao - 6); } }) },
       { id: 'assumir', texto: 'Procurar as autoridades e assumir', comportamento: { coragem: 2 },
         consequencia: () => 'Vira processo agora — com a pena menor de quem assumiu, e o fim da espera.',
         resolver: c => ({ texto: 'Você foi até lá e contou o que fez. Saiu com um processo nas costas e o peso fora do peito.', memoria: 'Procurou as autoridades e assumiu o que tinha feito.', relevancia: 'marco',

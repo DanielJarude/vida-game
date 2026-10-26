@@ -36,6 +36,7 @@ import { registrarAssuntoDaJustica } from './exposicao';
 import { perderMandatoPorPrisao, voltarAoTrabalho } from './politica';
 import { registrarQuemApareceu } from './rede';
 import { economiaLocal } from '../dados/lugares';
+import { medir } from './extrato';
 
 export const garantirJustica = (v: Vida): Justica => (v.justica ??= { antecedentes: [] });
 
@@ -47,6 +48,16 @@ export const garantirJustica = (v: Vida): Justica => (v.justica ??= { antecedent
 export interface Tribunal { aoAbrir: (v: Vida, r: Rng) => void; sentenciar: (v: Vida, r: Rng) => void }
 let tribunal: Tribunal | undefined;
 export function registrarTribunal(t: Tribunal): void { tribunal = t; }
+
+/**
+ * REWORK 12.25 — a vida de quem é procurado (o mandado da audiência a que faltou, a pena alternativa abandonada, a fuga):
+ * o ano, a chance de ser encontrado e a captura de quem tem mandado moram em `defesa`, que se registra aqui ao carregar.
+ * `prisao` (num pacote ao lado) lê daqui — sem ciclo entre pacotes.
+ */
+export interface Procurado { ano: (v: Vida) => void; chance: (v: Vida) => number; capturar: (v: Vida) => boolean }
+let procurado: Procurado | undefined;
+export function registrarProcurado(x: Procurado): void { procurado = x; }
+export const ganchoDoProcurado = () => procurado;
 
 /** Condenação na vida adulta (o que a investigação social de um concurso encontra). */
 export const antecedenteAdulto = (v: Vida) => !!v.justica?.antecedentes.some(a => a.desfecho === 'prisao' || a.desfecho === 'alternativa');
@@ -94,8 +105,10 @@ export function abrirProcesso(v: Vida, r: Rng, categoria: CategoriaDoProcesso): 
   if (env) { env.parou = env.parou ?? v.t; env.exposicao = 0; }
   if (i < 18) { medidaSocioeducativa(v, r, categoria); return; }
   if (j.processo || j.prisao) return;
-  const particular = disponivel(v) >= 18000;
-  if (particular) pagar(v, Math.round(clamp(disponivel(v) * 0.25, 12000, 45000) / 100) * 100);
+  // REWORK 12.25: quem já tinha um advogado acompanhando a investigação chega ao processo com ele (já pago).
+  const antes = v.fatos['advogado_preventivo'] !== undefined && v.t - v.fatos['advogado_preventivo'] <= 36;
+  const particular = antes || disponivel(v) >= 18000;
+  if (particular && !antes) medir(v, 'Justiça: advogados, fianças e custas', 'despesa', () => pagar(v, Math.round(clamp(disponivel(v) * 0.25, 12000, 45000) / 100) * 100));
   j.processo = { tInicio: v.t, tJulgamento: v.t + r.int(10, 24), categoria, defesa: particular ? 'particular' : 'publica' };
   const e = v.trabalho.atual;
   // Fraude descoberta no emprego: justa causa, sem multa nem seguro.
@@ -270,7 +283,8 @@ function r0(v: Vida): number {
 export function processarJustica(v: Vida, r: Rng): void {
   const j = v.justica;
   if (!j) return;
-  if (j.processo && v.t >= j.processo.tJulgamento) (tribunal ? tribunal.sentenciar : sentenca)(v, r);
+  // REWORK 12.25: com mandado (a pessoa não apareceu), o julgamento espera.
+  if (j.processo && v.t >= j.processo.tJulgamento && !j.foragido) (tribunal ? tribunal.sentenciar : sentenca)(v, r);
   if (j.alternativa && v.t >= j.alternativa.tFim) {
     j.alternativa = undefined;
     escrever(v, { texto: 'Terminou de cumprir a pena alternativa. A última assinatura no fórum foi numa quinta-feira.', relevancia: 'biografia', tema: 'trabalho' });

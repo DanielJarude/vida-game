@@ -101,6 +101,7 @@ import { disponibilidadeFormacao, executarFormacao, type OqueFormacao } from './
 import { reacaoDaParceriaAMudanca } from './sistemas/convivio';
 import { disponibilidadeMargem, executarMargem, type OqueMargem } from './sistemas/margem';
 import { disponibilidadeSubmundo, executarSubmundo, type OqueSubmundo } from './sistemas/submundo';
+import { disponibilidadeCrime, executarCrime, type AcaoDoCrime } from './sistemas/acoesDoCrime';
 import { NOME_DO_RAMO } from './sistemas/ramos';
 import { disponibilidadeAlianca, executarAlianca, type OqueAlianca } from './sistemas/aliancas';
 import { disponibilidadeTatica, mudarTatica, type EstiloDeJogo } from './sistemas/tecnico';
@@ -302,6 +303,8 @@ export type Acao =
   | { tipo: 'margem'; oque: OqueMargem }
   /** REWORK 11.5 · SUB-15: as ações de cada ramo do Submundo (o serviço, o lote, a tarefa do grupo, a encomenda, o acerto, a denúncia). */
   | { tipo: 'submundo'; oque: OqueSubmundo; ramo?: Ramo; pessoaId?: string }
+  /** REWORK 12.25: as encomendas, os contatos, as organizações, a Justiça e o rumo do Submundo (`acoesDoCrime`). */
+  | { tipo: 'crime'; acao: AcaoDoCrime }
   /** REWORK 11.5 · POL-05: as alianças e as promessas (formar, cumprir, romper, pedir apoio, prometer na campanha). */
   | { tipo: 'alianca'; oque: OqueAlianca; id?: string }
   /** REWORK 11.5 · ESP-05: a estratégia do time (a prancheta do técnico): muda o jeito de jogar lido em cada jogo. */
@@ -370,6 +373,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'agenda': return disponibilidadeDaAgenda(v, a.op);
     case 'margem': return disponibilidadeMargem(v, a.oque);
     case 'submundo': return disponibilidadeSubmundo(v, a.oque, a.ramo, a.pessoaId);
+    case 'crime': return disponibilidadeCrime(v, a.acao);
     case 'alianca': return disponibilidadeAlianca(v, a.oque, a.id);
     case 'tatica': return disponibilidadeTatica(v, a.estilo);
     case 'crianca': return disponibilidadeCrianca(v, a.oque);
@@ -938,7 +942,10 @@ function linhaDoExtrato(a: Acao): [string, TipoMovimento] {
     case 'empresa_abrir': case 'empresa': case 'participacao': case 'setor': case 'obra': case 'empresa_delegar': return ['Empresas: capital, aportes e vendas', 'escolha'];
     case 'colecao_servico': case 'colecao_proposta': case 'paralelo': return ['Coleção: compra e venda de peças', 'escolha'];
     case 'exotico_comprar': case 'instalacao_comprar': case 'pet_cuidador': case 'pet_ao_zoo': case 'animal_por_fora': return ['Os bichos: compras e cuidados', 'escolha'];
-    case 'clandestino': return ['Negócios por fora', 'escolha'];
+    // REWORK 12.25 · FIN-12.25-01: o que é do caminho tem linha própria (antes, a ação do Submundo caía em "Compras, viagens").
+    case 'clandestino': case 'submundo': return ['Por fora: outros movimentos do caminho', 'por_fora'];
+    case 'crime': return a.acao.area === 'justica' ? ['Justiça: advogados, fianças e custas', 'despesa'] : ['Por fora: outros movimentos do caminho', 'por_fora'];
+    case 'margem': return ['Justiça: advogados, fianças e custas', 'despesa'];
     default: return ['Compras, viagens e outras escolhas', 'escolha'];
   }
 }
@@ -981,6 +988,12 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       // O que a ação desencadeou agora (o parceiro pego depois do serviço que deu errado) vira a pergunta na hora.
       if (!v.momento) { const c = candidatos(v, r, k => k.tipo === 'decisao' && /^sub[a-z]?_/.test(k.id))[0]; if (c && c.c.tipo === 'decisao') abrirDecisao(v, c.c, c.ctx); }
       return { resultado: x.texto, titulo: a.ramo ? NOME_DO_RAMO[a.ramo] : 'O caminho' };
+    }
+    case 'crime': {
+      const x = executarCrime(v, a.acao);
+      // O que a ação desencadeou agora (o pedido de um contato, a disputa) vira a pergunta na hora.
+      if (!v.momento) { const c = candidatos(v, r, k => k.tipo === 'decisao' && /^sub(125)?[a-z]?_/.test(k.id))[0]; if (c && c.c.tipo === 'decisao') abrirDecisao(v, c.c, c.ctx); }
+      return { resultado: x.texto, titulo: x.titulo };
     }
     case 'margem': {
       const resultado = executarMargem(v, r, a.oque);

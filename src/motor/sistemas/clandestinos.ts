@@ -34,6 +34,7 @@ import { abalar } from './abalo';
 import { ramosAtivos, NOME_DO_RAMO } from './ramos';
 import { anotar, contatosAtivos, lembrarOrg, nomeDeOrganizacao, organizacaoDoRamo, orgPorId, rivalDoRamo } from './submundo';
 import { empresasAtivas } from './empresas';
+import { movimentoPorFora } from './porFora';
 
 
 const env = (v: Vida) => v.caminhos.envolvimento;
@@ -121,7 +122,7 @@ export function abrirClandestino(v: Vida, tipo: TipoClandestino): string {
   const capital = capitalDoModelo(v, tipo);
   const r = rngDe(v.id, 'clandestino', tipo, v.t);
   const socio = contatosAtivos(v, ramo)[0];
-  v.financas.conta -= capital;
+  movimentoPorFora(v, 'investimento', -capital);
   v.anoAtual.acoes.push('clandestino:abrir');
   const n: NegocioClandestino = {
     id: `nc${v.seq++}`, nome: r.pick(m.nomes), tipo, ramo, tInicio: v.t, capital, caixa: Math.round(capital * 0.25), reputacao: 25 + Math.round((e.especializacoes?.[ramo]?.nome ?? 0) * 0.3), exposicao: 10, ritmo: 1,
@@ -364,11 +365,11 @@ export function decidirClandestino(v: Vida, oque: OqueClandestino, negocioId?: s
   const n = negocios(v).find(x => x.id === negocioId);
   const hist = (texto: string, tom?: 'bom' | 'ruim') => n?.historia.push({ t: v.t, texto, ...(tom ? { tom } : {}) });
   switch (oque) {
-    case 'aportar': { const x = Math.round(n!.capital * 0.3 / 1000) * 1000; v.financas.conta -= x; n!.capital += x; hist(`Mais ${fmt(x)} no negócio.`); return `${fmt(x)} a mais empatados em ${n!.nome}: mais giro, mais a perder.`; }
+    case 'aportar': { const x = Math.round(n!.capital * 0.3 / 1000) * 1000; movimentoPorFora(v, 'investimento', -x); n!.capital += x; hist(`Mais ${fmt(x)} no negócio.`); return `${fmt(x)} a mais empatados em ${n!.nome}: mais giro, mais a perder.`; }
     case 'retirar': {
       const x = Math.round(n!.caixa * 0.9 / 100) * 100;
       n!.caixa -= x;
-      v.financas.conta += x;
+      movimentoPorFora(v, 'negocios', x);
       e.ganhos += x;
       // Dinheiro que aparece sem explicação chama atenção — com uma empresa por trás, chama menos (e o risco vai para ela).
       const chama = Math.round(Math.min(10, x / Math.max(1, 40000 * custo(v))) * (n!.fachadaId ? 0.4 : 1));
@@ -408,7 +409,7 @@ export function decidirClandestino(v: Vida, oque: OqueClandestino, negocioId?: s
     case 'passar_adiante': {
       const o = rivalDoRamo(v, n!.ramo).relacao === 'rival' ? organizacaoDoRamo(v, n!.ramo) : rivalDoRamo(v, n!.ramo);
       const valor = Math.round(n!.capital * 0.45 / 1000) * 1000;
-      v.financas.conta += valor;
+      movimentoPorFora(v, 'negocios', valor);
       lembrarOrg(o, v.t, 'favor', 6);
       n!.estado = 'tomado';
       n!.tFim = v.t;
@@ -419,7 +420,7 @@ export function decidirClandestino(v: Vida, oque: OqueClandestino, negocioId?: s
     case 'fundar_organizacao': {
       const forte = negociosAtivos(v).find(z => z.reputacao >= 50)!;
       const x = Math.round(300000 * custo(v) / 1000) * 1000;
-      v.financas.conta -= x;
+      movimentoPorFora(v, 'investimento', -x);
       const tenentes = contatosAtivos(v).filter(c => c.f.confianca >= 50).slice(0, 2).map(c => c.id);
       const k = (e.organizacoes ?? []).length;
       const o: RelacaoComOrganizacao = { id: `org_propria_${v.t}`, nome: nomeDeOrganizacao(v.moradia.municipioId, forte.ramo === 'organizado' ? 'organizado' : forte.ramo, 10 + k), especialidade: forte.ramo, relacao: 'membro', lealdade: 70, memoria: [], desde: v.t, propria: { negocioId: forte.id, tenentes, coesao: 60 } };
@@ -455,7 +456,7 @@ function encerrar(v: Vida, n: NegocioClandestino, porque: string): void {
   n.estado = 'encerrado';
   n.tFim = v.t;
   const devolve = Math.max(0, Math.round(n.caixa * 0.8));
-  v.financas.conta += devolve;
+  movimentoPorFora(v, 'negocios', devolve);
   n.caixa = 0;
   n.historia.push({ t: v.t, texto: porque });
   if (n.fachadaId) { const em = empresasAtivas(v).find(z => z.id === n.fachadaId); if (em?.fachada) em.fachada.tFim = v.t; n.fachadaId = undefined; }

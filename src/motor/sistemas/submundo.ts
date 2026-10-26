@@ -25,11 +25,12 @@ import { criarPessoa, vincular } from '../pessoas';
 import { sortearSobrenome } from '../dados/nomes';
 import { economiaLocal, paisDaCidade } from '../dados/lugares';
 import { abalar } from './abalo';
-import { disponivel, pagar, vereditoDePagar } from './dinheiro';
+import { disponivel, vereditoDePagar } from './dinheiro';
 import { preso } from './justica';
 import { ativo, parar, rendaDeReferencia, temAcesso } from './ilicito';
 import { categoriaDoRamo, chanceDeFalha, garantirRamos, NOME_DO_RAMO, novaEspecializacao, PERFIL, RAMOS, ramoPrincipal, ramosAtivos } from './ramos';
 import { machucarNaBriga } from './lesoes';
+import { movimentoPorFora, pagarPorFora } from './porFora';
 import { dinheiroCurto } from '../texto';
 import { anoDe } from '../tempo';
 
@@ -145,6 +146,15 @@ export function organizacaoDoRamo(v: Vida, ramo: Ramo): RelacaoComOrganizacao {
   const os = (e.organizacoes ??= []);
   const ja = os.find(o => o.especialidade === ramo && o.relacao !== 'rival' && o.saiu === undefined);
   if (ja) return ja;
+  // REWORK 12.25: se a cidade já tem as suas organizações (`faccoes`), é com uma delas que se trabalha (a de nome conhecido).
+  const viva = Object.values(v.mundoCriminal?.orgs ?? {}).find(x => x.municipioId === v.moradia.municipioId && x.ramo === ramo && x.estado !== 'extinta' && !os.some(o => o.id === x.id && (o.relacao === 'rival' || o.saiu !== undefined)));
+  if (viva) {
+    const ja2 = os.find(o => o.id === viva.id);
+    if (ja2) { ja2.relacao = ramo === 'organizado' ? 'membro' : ja2.relacao === 'neutra' ? 'aliada' : ja2.relacao; return ja2; }
+    const o: RelacaoComOrganizacao = { id: viva.id, nome: viva.nome, especialidade: ramo, relacao: ramo === 'organizado' ? 'membro' : 'aliada', lealdade: 40, memoria: [], desde: v.t };
+    os.push(o);
+    return o;
+  }
   const k = os.filter(o => o.especialidade === ramo).length;
   const id = `org_${ramo}_${v.moradia.municipioId}_${k}`;
   const o: RelacaoComOrganizacao = { id, nome: nomeDeOrganizacao(v.moradia.municipioId, ramo, k), especialidade: ramo, relacao: ramo === 'organizado' ? 'membro' : 'aliada', lealdade: 40, memoria: [], desde: v.t };
@@ -158,6 +168,15 @@ export function rivalDoRamo(v: Vida, ramo: Ramo): RelacaoComOrganizacao {
   const os = (e.organizacoes ??= []);
   const ja = os.find(o => o.especialidade === ramo && o.relacao === 'rival');
   if (ja) return ja;
+  // REWORK 12.25: a rival é uma das organizações vivas da cidade (a do mesmo ramo com que não se trabalha), se houver.
+  const viva = Object.values(v.mundoCriminal?.orgs ?? {}).find(x => x.municipioId === v.moradia.municipioId && x.ramo === ramo && x.estado !== 'extinta' && !os.some(o => o.id === x.id && o.relacao !== 'neutra'));
+  if (viva) {
+    const rel = os.find(o => o.id === viva.id);
+    if (rel) { rel.relacao = 'rival'; rel.lealdade = Math.min(rel.lealdade, 15); return rel; }
+    const o: RelacaoComOrganizacao = { id: viva.id, nome: viva.nome, especialidade: ramo, relacao: 'rival', lealdade: 15, memoria: [], desde: v.t };
+    os.push(o);
+    return o;
+  }
   const k = os.filter(o => o.especialidade === ramo).length;
   const o: RelacaoComOrganizacao = { id: `org_${ramo}_${v.moradia.municipioId}_${k}`, nome: nomeDeOrganizacao(v.moradia.municipioId, ramo, k), especialidade: ramo, relacao: 'rival', lealdade: 15, memoria: [], desde: v.t };
   os.push(o);
@@ -305,7 +324,7 @@ function anoDoContrabando(v: Vida, e: Envolvimento, r: Rng): void {
   s.estoque = 0;
   s.ganhos += Math.max(0, valor - estoque);
   e.ganhos += Math.max(0, valor - estoque);
-  v.financas.conta += valor;
+  movimentoPorFora(v, 'ocasional', valor);
   s.operacoes++;
   anotar(v, valor >= estoque ? `O lote saiu: ${fmt(v, valor)} por ${fmt(v, estoque)} investidos.` : `O lote saiu no prejuízo: ${fmt(v, valor)} por ${fmt(v, estoque)} investidos.`, valor >= estoque ? 'bom' : 'ruim');
 }
@@ -360,6 +379,9 @@ export function valorDaOperacao(v: Vida, ramo: Ramo, meses: number): number {
   return preco(v, rendaDeReferencia(e) * meses * PERFIL[ramo].renda * (0.8 + (s?.experiencia ?? 0) / 250) * (ramo === 'contrabando' ? 1 + (s?.mercado ?? 0) * 0.15 : 1));
 }
 
+/** O lote do contrabando (REWORK 12.25: com o preço negociado com o fornecedor, quando houver — vale no ano). */
+export const custoDoLote = (v: Vida) => Math.round(valorDaOperacao(v, 'contrabando', 2) * (v.fatos['sub125_desconto'] !== undefined && v.t - v.fatos['sub125_desconto'] <= 12 ? 0.8 : 1) / 100) * 100;
+
 /** O que a tela diz antes de escolher: o risco e o que pode render (sem método — números e gente). */
 export function previsaoDaAcao(v: Vida, ramo: Ramo, oque: OqueSubmundo): { risco: number; ganho?: [number, number]; custo?: number } | undefined {
   const e = env(v);
@@ -368,7 +390,7 @@ export function previsaoDaAcao(v: Vida, ramo: Ramo, oque: OqueSubmundo): { risco
   switch (oque) {
     case 'servico_pequeno': return { risco: chanceDeFalha(e, ramo, 1, parceiro), ganho: [valorDaOperacao(v, ramo, 0.5), valorDaOperacao(v, ramo, 1.5)] };
     case 'servico_maior': return { risco: chanceDeFalha(e, ramo, 3, parceiro), ganho: [valorDaOperacao(v, ramo, 2), valorDaOperacao(v, ramo, 5)] };
-    case 'comprar_lote': return { risco: 0.07 + e.exposicao / 500, custo: valorDaOperacao(v, 'contrabando', 2) };
+    case 'comprar_lote': return { risco: 0.07 + e.exposicao / 500, custo: custoDoLote(v) };
     case 'encomenda': return { risco: chanceDeFalha(e, 'digital', 2, false), ganho: [valorDaOperacao(v, 'digital', 0.5), valorDaOperacao(v, 'digital', 3.5)] };
     case 'esquema_de_influencia': return { risco: chanceDeFalha(e, 'fraudes', 2, false) + (v.caminhos.politica?.mandato ? 0.08 : 0), ganho: [valorDaOperacao(v, 'fraudes', 1.5), valorDaOperacao(v, 'fraudes', 4)] };
     case 'tarefa_do_grupo': return { risco: chanceDeFalha(e, 'organizado', 1, parceiro), ganho: [valorDaOperacao(v, 'organizado', 1), valorDaOperacao(v, 'organizado', 2)] };
@@ -416,7 +438,7 @@ export function disponibilidadeSubmundo(v: Vida, oque: OqueSubmundo, ramo?: Ramo
     case 'comprar_lote': {
       if ((s!.estoque ?? 0) > 0) return bloqueio('incompativel', 'Ainda há mercadoria guardada.');
       if (!contatosAtivos(v, 'contrabando', 'fornecedor').length) return bloqueio('requisito', 'Sem fornecedor, não há lote.');
-      const d = vereditoDePagar(v, valorDaOperacao(v, 'contrabando', 2), 'O lote pede uns');
+      const d = vereditoDePagar(v, custoDoLote(v), 'O lote pede uns');
       if (d.grau !== 'permitido') return d;
       break;
     }
@@ -438,7 +460,7 @@ export function executarSubmundo(v: Vida, r: Rng, oque: OqueSubmundo, ramo?: Ram
   const e = env(v)!;
   if (ramo && oque !== 'entrar_ramo' && oque !== 'largar_ramo') v.fatos[`sub_acao_${ramo}_${oque}`] = v.t;
   const s = ramo ? e.especializacoes?.[ramo] : undefined;
-  const ganhar = (x: number) => { const liq = Math.round(x * 0.7 / 100) * 100; v.financas.conta += liq; e.ganhos += x; if (s) s.ganhos += x; return liq; };
+  const ganhar = (x: number) => { const liq = Math.round(x * 0.7 / 100) * 100; movimentoPorFora(v, 'ocasional', liq); e.ganhos += x; if (s) s.ganhos += x; return liq; };
   const operou = (falhou: boolean) => { if (!s) return; s.operacoes++; if (falhou) s.falhas++; s.ultima = v.t; s.experiencia = clamp(s.experiencia + (falhou ? 2 : 4)); };
   const parceiro = () => contatosAtivos(v, ramo, 'parceiro')[0];
   switch (oque) {
@@ -481,8 +503,9 @@ export function executarSubmundo(v: Vida, r: Rng, oque: OqueSubmundo, ramo?: Ram
       return { texto: escala === 3 ? `Deu certo. ${fmt(v, liq)} ficaram com você, depois da parte de cada um.` : `Deu certo, e foi pouco: ${fmt(v, liq)}.` };
     }
     case 'comprar_lote': {
-      const custo = valorDaOperacao(v, 'contrabando', 2);
-      pagar(v, custo);
+      const custo = custoDoLote(v);
+      if (v.fatos['sub125_desconto'] !== undefined) delete v.fatos['sub125_desconto'];
+      pagarPorFora(v, 'custos', custo);
       s!.estoque = custo;
       const f = contatosAtivos(v, 'contrabando', 'fornecedor')[0];
       if (f) promessa(v, f.id, true);
@@ -494,7 +517,7 @@ export function executarSubmundo(v: Vida, r: Rng, oque: OqueSubmundo, ramo?: Ram
       const valor = Math.round((s!.estoque ?? 0) * (0.8 + (s!.mercado ?? 0) * 0.12 + r.next() * 0.2) / 100) * 100;
       const custo = s!.estoque ?? 0;
       s!.estoque = 0;
-      v.financas.conta += valor;
+      movimentoPorFora(v, 'ocasional', valor);
       s!.ganhos += Math.max(0, valor - custo); e.ganhos += Math.max(0, valor - custo);
       operou(valor < custo);
       const c = contatosAtivos(v, 'contrabando', 'comprador')[0];
@@ -573,7 +596,7 @@ export function executarSubmundo(v: Vida, r: Rng, oque: OqueSubmundo, ramo?: Ram
       return { texto: `A encomenda foi entregue. ${fmt(v, liq)} — o valor muda muito de uma para outra.` };
     }
     case 'aprender': {
-      pagar(v, preco(v, 1500));
+      pagarPorFora(v, 'custos', preco(v, 1500));
       const t = contatosAtivos(v, 'digital', 'tecnico')[0]!;
       s!.experiencia = clamp(s!.experiencia + 9);
       t.f.confianca = clamp(t.f.confianca + 4);
@@ -616,14 +639,14 @@ export function executarSubmundo(v: Vida, r: Rng, oque: OqueSubmundo, ramo?: Ram
       return { texto: 'Você contou o que sabia a quem investiga. O seu lado da história conta a seu favor — e quem estava junto não vai esquecer.' };
     }
     case 'cumprir_combinado': {
-      pagar(v, preco(v, 1500));
+      pagarPorFora(v, 'custos', preco(v, 1500));
       v.fatos[`sub_combinado_${pessoaId}`] = v.t;
       promessa(v, pessoaId!, true);
       return { texto: `Você acertou o que devia a ${v.pessoas[pessoaId!].nome}. A confiança volta devagar.` };
     }
     case 'acertar_divida': {
       const d = e.divida ?? 0;
-      pagar(v, d);
+      pagarPorFora(v, 'custos', d);
       e.divida = 0;
       anotar(v, `Acertou a dívida de ${fmt(v, d)}.`, 'bom');
       return { texto: 'Dívida paga. Ninguém mais tem esse assunto com você.' };

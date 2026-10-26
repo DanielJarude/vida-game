@@ -41,6 +41,7 @@ import { flex, ge } from '../texto';
 import { criarPessoa, vincular } from '../pessoas';
 import { mesesProcurando, patrimonioPagaAVida } from './intencao';
 import { creditarRamos, exposicaoDosRamos, fatorDosRamos, garantirRamos, novaEspecializacao, RAMO_DA_CATEGORIA, ramosAtivos } from './ramos';
+import { movimentoPorFora, pedirRumo, registrarRumo } from './porFora';
 
 /** Renda mensal por categoria e nível (reais de hoje): dinheiro rápido, com teto. */
 const RENDA: Record<CategoriaIlicita, [number, number, number]> = {
@@ -269,14 +270,15 @@ function anoEnvolvido(v: Vida, r: Rng, env: Envolvimento): void {
   const ganho = seco ? 0 : bruto;
   // O dinheiro de fora vai como vem: uma parte some no próprio caminho (quem cobra para não ver, o que se perde, o que
   // se gasta para não aparecer). Os ganhos registram o bruto (é o que a Justiça cobra de volta).
-  v.financas.conta += Math.round(ganho * 0.65);
+  // REWORK 12.25 · FIN-12.25-01: com linha própria no extrato (antes, ia para "Acontecimentos do ano").
+  movimentoPorFora(v, 'recorrente', Math.round(ganho * 0.65));
   env.ganhos += ganho;
   // REWORK 11.5: o que entrou no ano também é de cada frente (a tela do dossiê diz quanto cada uma rendeu).
   creditarRamos(env, ganho);
   env.anosSecos = (env.anosSecos ?? 0) + (seco ? 1 : 0);
   if (seco) {
     const perda = env.nivel >= 2 ? Math.round(renda * 12 * (0.08 + ra.next() * 0.1) / 100) * 100 : 0;
-    v.financas.conta -= perda;
+    movimentoPorFora(v, 'custos', -perda);
     if (env.nivel >= 2 && (env.categoria === 'mercado' || env.categoria === 'grupo')) env.atritos = (env.atritos ?? 0) + 1;
     escrever(v, { texto: perda ? 'Um ano em que o que se fazia por fora não rendeu nada — e ainda deixou uma conta a acertar com quem estava junto.' : 'Um ano em que o que se fazia por fora não rendeu nada.', relevancia: 'cotidiano', tema: 'trabalho', tom: 'ruim' });
   }
@@ -311,11 +313,13 @@ function anoEnvolvido(v: Vida, r: Rng, env: Envolvimento): void {
     v.fatos['investigacoes'] = (v.fatos['investigacoes'] ?? 0) + 1;
     escrever(v, { texto: 'Alguém começou a fazer perguntas: há uma investigação sobre o que você faz por fora. Ainda não é processo.', relevancia: 'biografia', tema: 'trabalho', tom: 'ruim' });
     abalar(v, 'a investigação', -4, 10);
-    v.fatos['ilic_rumo'] = v.t; // a pergunta do rumo abre agora: parar, ficar na moita, seguir
+    pedirRumo(v, 'investigacao'); // a pergunta do rumo abre agora: parar, ficar na moita, seguir
     return;
   }
-  // A cada dois anos, a vida pergunta de novo.
-  if ((v.t - env.tInicio) % 24 === 12 || (v.t - env.tInicio) === 12) v.fatos['ilic_rumo'] = v.t;
+  // REWORK 12.25 · NAR-12.25-01: a pergunta do rumo não volta mais "a cada dois anos" (o playtest a recebeu todo ano, sem
+  // nada ter mudado). Ela vem com motivo — o primeiro ano (`carreiraCriminal`), a investigação, a promoção, a perda grande,
+  // a família — e com intervalo. Aqui, o motivo é o meio oferecendo mais a quem já tem nome.
+  if ((env.reputacao ?? 0) >= 30 + (env.nivel - 1) * 25 && env.nivel < 3 && !env.cautela) pedirRumo(v, 'proposta_maior');
 }
 
 /**
@@ -328,7 +332,9 @@ function andamentoDaInvestigacao(v: Vida, r: Rng, env: Envolvimento): boolean {
   const esfriou = env.parou !== undefined || env.cautela;
   // REWORK 12.2 · ajuste do Submundo: a investigação pesa o que existe — a exposição, a escala (o nível), a reincidência —
   // e não é sorteada de novo até dar processo: sem o bastante em três anos, arquiva.
-  const chanceProcesso = clamp(env.exposicao / 100 * (esfriou ? 0.3 : 0.55) * rastro(env).prova + (env.nivel - 1) * 0.06 + (reincidente(v) ? 0.08 : 0), 0.05, 0.6);
+  // REWORK 12.25: um advogado acompanhando desde a investigação (`defesa`, `ilic_cerco`) faz o que existe pesar menos.
+  const advogado = v.fatos['advogado_preventivo'] !== undefined && v.t - v.fatos['advogado_preventivo'] <= 36 ? 0.85 : 1;
+  const chanceProcesso = clamp((env.exposicao / 100 * (esfriou ? 0.3 : 0.55) * rastro(env).prova + (env.nivel - 1) * 0.06 + (reincidente(v) ? 0.08 : 0)) * advogado, 0.05, 0.6);
   if (r.chance(chanceProcesso)) {
     env.investigado = undefined;
     escrever(v, { texto: 'A investigação virou processo.', relevancia: 'marco', tema: 'trabalho', tom: 'ruim' });
@@ -368,7 +374,7 @@ export function entrar(v: Vida, cat: CategoriaIlicita, contatoId: string | undef
   const esp = (novo.especializacoes ??= {});
   if (esp[ramo]) { delete esp[ramo]!.largou; esp[ramo]!.tInicio = v.t; } else esp[ramo] = novaEspecializacao(v, novo, ramo);
   const primeiro = Math.round(RENDA[cat][0] * (2 + r.next() * 2) / 100) * 100;
-  v.financas.conta += primeiro;
+  movimentoPorFora(v, 'ocasional', primeiro);
   v.caminhos.envolvimento.ganhos += primeiro;
   v.fatos['vezes_envolvido'] = (v.fatos['vezes_envolvido'] ?? 0) + 1;
   marcarFato(v, 'envolveu_se');
@@ -393,6 +399,8 @@ export function parar(v: Vida, motivo: string): void {
   const e = v.caminhos.envolvimento;
   if (!e || e.parou !== undefined) return;
   e.parou = v.t;
+  delete e.saindo;
+  registrarRumo(v, 'parar', motivo || undefined);
   // REWORK 11.5: largar o caminho é largar todos os ramos (a prática fica; a organização lembra de quem saiu).
   for (const r of ramosAtivos(e)) e.especializacoes![r]!.largou = v.t;
   marcarFato(v, 'saiu_do_esquema');

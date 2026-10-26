@@ -26,7 +26,7 @@ import { escrever, idade, lembrarCom, marcarFato, pais, parceiro } from '../nucl
 import { bloqueio, PERMITIDO, type Veredito } from '../plausibilidade';
 import { marcar } from './marcas';
 import { abalar } from './abalo';
-import { disponivel, pagar, vereditoDePagar } from './dinheiro';
+import { disponivel, vereditoDePagar } from './dinheiro';
 import { dinheiro, flex, ge } from '../texto';
 import { anoDe } from '../tempo';
 import { garantirJustica, prender, registrarTribunal, reincidente, soltar } from './justica';
@@ -34,6 +34,7 @@ import { perfilPenal, type PerfilPenal } from '../mundo/justicaPorPais';
 import { paisDaVida } from '../mundo/vida';
 import { economiaLocal } from '../dados/lugares';
 import { salarioMinimoDoPais } from '../mundo/economia';
+import { pagarJustica, pagarPorFora } from './porFora';
 
 export const perfilDaVida = (v: Vida): PerfilPenal => perfilPenal(paisDaVida(v));
 const preco = (v: Vida, x: number) => Math.round(x * economiaLocal(v.moradia.municipioId).custo / 100) * 100;
@@ -135,7 +136,7 @@ export function confiscar(v: Vida, fracao: number, oque: string): number {
   if (devido <= 0) return 0;
   const tem = Math.max(0, disponivel(v));
   const paga = Math.min(tem, devido);
-  if (paga > 0) pagar(v, paga);
+  if (paga > 0) pagarPorFora(v, 'perdas', paga);
   const falta = devido - paga;
   if (falta > 0) {
     const prazo = 60;
@@ -170,7 +171,7 @@ function sentenciar(v: Vida, r: Rng): void {
   if ((LEVE.has(cat) && !rein && !presoAntes && anosBrutos <= 2.5) || (SEM_VIOLENCIA.has(cat) && !rein && !presoAntes && anosBrutos <= 4)) {
     if (perfil.multa || cat === 'violencia') {
       const multa = multaPenal(v, r.int(30, 120));
-      pagar(v, Math.min(multa, Math.max(0, disponivel(v))));
+      pagarPorFora(v, 'perdas', Math.min(multa, Math.max(0, disponivel(v))));
       j.antecedentes.push({ t: v.t, categoria: cat, desfecho: 'alternativa', multa });
       if (!perfil.multa) j.alternativa = { tFim: v.t + r.int(6, 12) };
       if (cat !== 'violencia') confiscar(v, 0.8, NOME_DO_CONFISCO(cat));
@@ -213,7 +214,7 @@ registrarTribunal({ aoAbrir, sentenciar });
 export function contratarAdvogado(v: Vida): string {
   const p = v.justica?.processo;
   if (!p) return 'Não há processo em andamento.';
-  pagar(v, honorarios(v));
+  pagarJustica(v, honorarios(v));
   p.defesa = 'particular';
   p.defesaEscolhida = true;
   return 'Um advogado particular assumiu: leu o processo inteiro na primeira semana e mudou a estratégia.';
@@ -264,7 +265,7 @@ export function aceitarAcordo(v: Vida, r: Rng): string {
   if ((p.categoria as string) !== 'violencia') confiscar(v, 0.6, 'O acordo pediu a reparação do dano');
   if (perfil.acordo === 'limitado' && leve && !reincidente(v)) {
     const multa = multaPenal(v, r.int(20, 60));
-    pagar(v, Math.min(multa, Math.max(0, disponivel(v))));
+    pagarPorFora(v, 'perdas', Math.min(multa, Math.max(0, disponivel(v))));
     j.antecedentes.push({ t: v.t, categoria: p.categoria, desfecho: 'acordo', multa });
     if (j.prisao) soltar(v, 'acordo');
     escrever(v, { texto: `Fechou um acordo com a acusação: reparar o que dava, pagar e cumprir condições por um tempo. O processo se encerra sem condenação.`, relevancia: 'marco', tema: 'trabalho', tom: 'neutro' });
@@ -289,7 +290,7 @@ export function aceitarAcordo(v: Vida, r: Rng): string {
 export function pagarFianca(v: Vida): string {
   const j = v.justica!;
   const p = j.processo!;
-  pagar(v, p.fianca!);
+  pagarJustica(v, p.fianca!);
   p.fianca = undefined;
   if (j.prisao) { j.prisao = undefined; j.tSaida = v.t; }
   escrever(v, { texto: 'Pagou a fiança e foi esperar o julgamento em liberdade.', relevancia: 'biografia', tema: 'trabalho' });

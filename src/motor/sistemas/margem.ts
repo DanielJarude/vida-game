@@ -24,12 +24,13 @@ import { bloqueio, PERMITIDO, type Veredito } from '../plausibilidade';
 import { abrirAPorta, ativo, contatosVivos, parar } from './ilicito';
 import { criarPessoa, vincular } from '../pessoas';
 import { abalar } from './abalo';
-import { disponivel, pagar, vereditoDePagar } from './dinheiro';
+import { disponivel, vereditoDePagar } from './dinheiro';
 import { economiaLocal } from '../dados/lugares';
 import { assumir, contratarAdvogado, cooperar, pedirReabilitacao, vereditoDaReabilitacao, vereditoDeCooperar, vereditoDoAdvogado } from './tribunal';
 import { novaOportunidade } from './oportunidades';
 import { garantirRamos, ramoPrincipal } from './ramos';
 import { anotar } from './submundo';
+import { pagarPorFora } from './porFora';
 
 const preco = (v: Vida, x: number) => Math.round(x * economiaLocal(v.moradia.municipioId).custo / 100) * 100;
 
@@ -151,7 +152,7 @@ export function executarMargem(v: Vida, r: Rng, oque: OqueMargem): string {
     }
     case 'negociar_saida': {
       const valor = precoDaSaida(v);
-      pagar(v, Math.min(valor, Math.max(0, disponivel(v))));
+      pagarPorFora(v, 'custos', Math.min(valor, Math.max(0, disponivel(v))));
       env!.saidaNegociada = v.t;
       delete v.fatos['pressao_grupo'];
       if (ativo(v)) parar(v, 'negociou a saída');

@@ -1533,7 +1533,7 @@ export interface AnoDeEmpresa {
 }
 
 /** O que move dinheiro, para o extrato: renda e despesa do mês a mês, o que se põe e se tira das aplicações, e o resto. */
-export type TipoMovimento = 'renda' | 'despesa' | 'rendimento' | 'aporte' | 'resgate' | 'divida' | 'familia' | 'acontecimento' | 'escolha' | 'ajuste';
+export type TipoMovimento = 'renda' | 'despesa' | 'rendimento' | 'aporte' | 'resgate' | 'divida' | 'familia' | 'acontecimento' | 'escolha' | 'ajuste' | 'por_fora';
 
 /** Uma linha do extrato: quanto mexeu na conta e quanto mexeu nas aplicações (um aporte é −conta, +aplicado). */
 export interface LinhaExtrato {
@@ -2852,6 +2852,128 @@ export interface Envolvimento {
   negocios?: NegocioClandestino[];
   /** REWORK 12.2: o que se comprou num mercado paralelo sabendo (ou devendo saber) a origem — pesa se vier à tona. */
   receptacao?: number;
+  /** REWORK 12.25: a carreira (a prática geral, o patamar alcançado, os marcos, se o crime virou a ocupação principal). */
+  carreira?: CarreiraCriminal;
+  /** REWORK 12.25: as encomendas — as que chegam (propostas de contatos e organizações) e as que se encomendam a alguém. */
+  encomendas?: EncomendaCriminal[];
+  /** REWORK 12.25 · NAR-12.25-01: as decisões sobre o rumo (com o motivo): a pergunta não volta sem razão. */
+  rumo?: { t: number; escolha: 'parar' | 'mudar' | 'moita' | 'seguir' | 'fundo' | 'sair_aos_poucos'; motivo?: string }[];
+  /** REWORK 12.25: tentando sair aos poucos (desde quando): o que se tem vai sendo desfeito, e o caminho termina no prazo. */
+  saindo?: number;
+  /** REWORK 12.25: o que a família sabe e como reage (por id de pessoa). */
+  familia?: Record<string, ReacaoDaFamilia>;
+  /** REWORK 12.25: as cenas novas deste ano (id da decisão → id da pessoa ou da organização). */
+  cenas125?: Record<string, string>;
+}
+
+/** REWORK 12.25 — a carreira no Submundo como profissão: a prática geral, os patamares, os marcos. */
+export interface CarreiraCriminal {
+  /** A prática geral do caminho (cresce com o que se faz, dá certo ou não). */
+  xp: number;
+  /** O maior patamar já alcançado: 0 começo · 1 experiente · 2 influente · 3 liderança · 4 grande escala. */
+  patamar: 0 | 1 | 2 | 3 | 4;
+  /** Os marcos da carreira (a primeira encomenda, o primeiro posto, quando virou a ocupação principal...). */
+  marcos: { t: number; texto: string }[];
+  /** O crime virou a ocupação principal (desde quando) — reconhecido pela vida, não declarado. */
+  principal?: number;
+  /** Quantas operações seguidas deram errado (o jogo evita a sequência infinita de fracassos). */
+  falhasSeguidas?: number;
+}
+
+/** REWORK 12.25 — uma encomenda: abstrata (o tipo, a gravidade, o valor, o risco, o prazo) — nunca como se faz. */
+export interface EncomendaCriminal {
+  id: string;
+  /** Recebida (alguém propõe a você) ou delegada (você encomenda a alguém). */
+  direcao: 'recebida' | 'delegada';
+  ramo: Ramo;
+  /** A chave do tipo de trabalho (`encomendas.TIPOS`). */
+  tipo: string;
+  gravidade: 1 | 2 | 3;
+  /** Quem propõe (recebida) ou quem executa (delegada). */
+  pessoaId?: string;
+  orgId?: string;
+  /** Recebida: o pagamento combinado. Delegada: o custo adiantado. */
+  valor: number;
+  /** Delegada: o retorno esperado se der certo. */
+  retorno?: number;
+  /** A chance de dar certo (0..1) e a exposição se der errado. */
+  chance: number;
+  risco: number;
+  t: number;
+  /** Recebida: até quando a proposta vale. Delegada: quando o resultado chega. */
+  tPrazo: number;
+  estado: 'aberta' | 'em_andamento' | 'concluida' | 'falhou' | 'recusada' | 'expirou' | 'traida';
+  /** Já se negociou (uma vez só). */
+  negociada?: boolean;
+  resultado?: string;
+  tFim?: number;
+}
+
+/** REWORK 12.25 — o que um familiar sabe do caminho e como reage (a personalidade, a relação, a gravidade). */
+export interface ReacaoDaFamilia {
+  /** 1 desconfia · 2 sabe. */
+  sabe: 1 | 2;
+  postura: 'apoia' | 'preocupada' | 'rejeita' | 'pede_para_sair' | 'reconciliada';
+  t: number;
+  /** A última conversa sobre isso (para não repetir a cena todo ano). */
+  tConversa?: number;
+}
+
+/**
+ * REWORK 12.25 — uma organização do mundo do crime (fictícia), que existe sem o jogador: o tipo (pelo país e pelo ramo),
+ * a força, a coesão, a hierarquia com os nomes dela, o quadro de gente com nome, a liderança e a sucessão, as alianças e
+ * rivalidades, a influência por região da cidade e a história. A relação do jogador com ela fica em `RelacaoComOrganizacao`
+ * (mesmo id).
+ */
+export interface OrgViva {
+  id: string;
+  nome: string;
+  /** O estilo (dá os nomes da hierarquia e o jeito de falar dela). */
+  estilo: 'faccao' | 'familia' | 'rede' | 'circulo' | 'coletivo' | 'turma' | 'sindicato';
+  ramo: Ramo;
+  municipioId: string;
+  /** 0..100: o tamanho e o alcance. */
+  forca: number;
+  /** 0..100: o quanto está unida (baixa: disputa interna). */
+  coesao: number;
+  /** A pressão da Justiça e da sociedade sobre ela (0..100). */
+  pressao: number;
+  /** A gente com nome: liderança, quem sobe, quem cai (sem virar pessoa da vida até o jogador conhecer). */
+  quadro: MembroDaOrg[];
+  aliadas: string[];
+  rivais: string[];
+  /** A influência em cada região da cidade (0..100). */
+  influencia: Record<string, number>;
+  /** A sucessão aberta (a liderança vaga): os candidatos e o apoio do jogador. */
+  disputa?: { t: number; candidatos: string[]; apoio?: string; motivo: string };
+  /** A prioridade que a liderança escolheu (o jogador, quando lidera). */
+  prioridade?: 'expandir' | 'consolidar' | 'discricao' | 'negocios';
+  estado: 'ativa' | 'enfraquecida' | 'extinta';
+  historia: { t: number; texto: string }[];
+  desde: number;
+}
+
+/** Um nome do quadro de uma organização (vira `Pessoa` só quando o jogador o conhece: `pessoaId`). */
+export interface MembroDaOrg {
+  id: string;
+  nome: string;
+  genero: Genero;
+  tNasc: number;
+  /** 0..6: a posição na hierarquia (6 = quem manda). */
+  nivel: number;
+  desde: number;
+  estado: 'ativo' | 'preso' | 'morto' | 'saiu';
+  pessoaId?: string;
+}
+
+/** REWORK 12.25: o mundo do crime que a vida conhece (as organizações das cidades por onde o caminho passou). */
+export interface MundoCriminal {
+  orgs: Record<string, OrgViva>;
+  /** A região da cidade onde a pessoa mora (o nome da região; muda com a mudança). */
+  regiao?: { municipioId: string; id: string };
+  /** A voz dos moradores e do comércio de cada região (0..100): a comunidade também age. */
+  comunidade?: Record<string, number>;
+  tAtualizado: number;
 }
 
 /**
@@ -2904,6 +3026,22 @@ export interface FichaDeContato {
   /** Traiu (e quando). */
   traiu?: number;
   desde: number;
+  /**
+   * REWORK 12.25 — favores e dívidas entre vocês: positivo, ele deve a você; negativo, você deve a ele (cada favor é um).
+   * Com memória (`historia`) e consequência: a dívida esquecida é cobrada; o favor devido abre portas.
+   */
+  favores?: number;
+  /** REWORK 12.25: a amizade (0..100), diferente da confiança no caminho: quem é amigo perdoa um atraso, quem não é cobra. */
+  amizade?: number;
+  /** REWORK 12.25: o que ele quer da vida agora (muda com o tempo — e muda o que ele aceita). */
+  interesse?: 'dinheiro' | 'subir' | 'sair' | 'familia' | 'vinganca' | 'seguranca';
+  /** REWORK 12.25: a última vez de cada ação com ele (tipo → quando) e o quanto a confiança já subiu neste ano por conversa. */
+  tAcoes?: Record<string, number>;
+  ganhoNoAno?: { t: number; x: number };
+  /** REWORK 12.25: o que aconteceu entre vocês (no máximo 10 linhas). */
+  historia?: { t: number; texto: string; tom?: 'bom' | 'ruim' }[];
+  /** REWORK 12.25: reconciliou-se (e quando) depois de se afastar. */
+  reconciliado?: number;
 }
 
 /** REWORK 11.5 · SUB-13: uma organização fictícia do caminho e a relação com ela (com memória). */
@@ -2922,6 +3060,12 @@ export interface RelacaoComOrganizacao {
   saiu?: number;
   /** REWORK 12.2: a organização é da pessoa (ela fundou e comanda): o negócio-base e quem divide o comando. */
   propria?: { negocioId?: string; tenentes: string[]; coesao: number };
+  /** REWORK 12.25: a posição na hierarquia (0 associado … 6 quem manda), para quem é de dentro. */
+  nivel?: number;
+  /** REWORK 12.25: o último pedido feito à organização (por tipo → quando), para não virar máquina de apertar botão. */
+  pedidos?: Record<string, number>;
+  /** REWORK 12.25: expulso (e quando). */
+  expulso?: number;
 }
 
 /* ------------------------------------------------------------- Vida política */
@@ -3148,6 +3292,8 @@ export interface Vida {
   caminhos: Caminhos;
   /** Antecedentes, processo em andamento, pena. Ausente = nunca teve problema com a Justiça. */
   justica?: Justica;
+  /** REWORK 12.25: o mundo do crime que esta vida conhece (só existe para quem passou pelo Submundo). */
+  mundoCriminal?: MundoCriminal;
   /**
    * O que é privado e quem sabe: um caso, um processo, o que se fez por fora.
    * Só vira assunto público quando alguém fala (e a vida pública da pessoa
@@ -3367,7 +3513,9 @@ export interface Justica {
     pendente?: 'faccao' | 'briga' | 'motim'; tPendente?: number; assistencia?: number; preparouSaida?: number;
   };
   /** REWORK 5: fugiu (ou não voltou do semiaberto): o resto da pena espera; a recaptura pode vir a qualquer ano. */
-  foragido?: { t: number; restante: number };
+  foragido?: { t: number; restante: number; motivo?: 'fuga' | 'mandado' | 'descumprimento'; abrigo?: number; mudouEndereco?: number };
+  /** REWORK 12.25: as escolhas do processo (a estratégia, a audiência) e o que se recorreu de uma condenação sem prisão. */
+  defesa?: { estrategia?: 'negar' | 'contestar' | 'atenuantes' | 'delegar'; tEstrategia?: number; audiencia?: { t: number; foi?: 'compareceu' | 'preparou' | 'faltou' } ; contestou?: boolean };
   /** Pena alternativa em cumprimento (prestação de serviços). */
   alternativa?: { tFim: number };
   /** Saiu da prisão em (a volta tem suas próprias portas e barreiras). */
