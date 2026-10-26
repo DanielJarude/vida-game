@@ -326,7 +326,8 @@ Branch `claude/rework12.25-submundo-vivo`, a partir de `9b3db08`:
 | `697cf9d` | intervalos das cenas que ainda repetiam; verificação de saves antigos |
 | `81da248` | relatório final (primeira entrega) |
 | `46b65c3` | risco proporcional de quem é de dentro (o bug do risco das encomendas, quem comanda delega, a organização protege e banca a defesa, prova fraca, preventiva), intervalos das cenas antigas, simulador com custódia e o líder cauteloso |
-| (seguinte) | relatório: validação e publicação |
+| `db05778` | relatório: validação antes da publicação; notas da versão (**publicado**) |
+| (este, só na `main`) | relatório: publicação |
 
 ## 15. Validação antes da publicação (pedido de 2026-10-26)
 
@@ -383,8 +384,18 @@ os mesmos da auditoria inicial.
 
 Commit desta rodada: `46b65c3` (ver §14).
 
-## 15. Estado de publicação
+## 16. Estado de publicação
 
-**Nada foi publicado.** Nenhum push, merge ou deploy; a branch de produção (`claude/fix-pos-rework3-playtest`, em
-`7d2588b`) e a `main` (`9b3db08`) não foram tocadas. A versão das notas cadastrada é **12.25**. Aguardando autorização
-expressa para push, merge e publicação.
+**Publicado em 2026-10-26**, com a autorização do usuário, depois da validação do §15:
+
+- `origin/claude/rework12.25-submundo-vivo` criada (push normal) em `db05778`.
+- `main`: fast-forward `9b3db08 → db05778` (sem merge commit, sem force).
+- Produção (`claude/fix-pos-rework3-playtest`): fast-forward `7d2588b → db05778`, **um único push** de produção.
+- Cloudflare Pages: o check do commit `db05778` concluiu com sucesso ("Deploy successful", deploy `f2faa3c2`, o preview da
+  branch de desenvolvimento); o deploy de produção veio do push da branch de produção.
+- **Versão servida**: `https://vida-game.pages.dev` serve `assets/index-a0cYXNDC.js`; a raiz e os 46 outros arquivos
+  (pacotes JS e CSS, service worker, manifesto, fontes, ícones) são **idênticos byte a byte (sha256)** ao build local de
+  `db05778`. Antes do deploy servia `index-Co5oWusL.js` (12.2).
+- Este commit de relatório foi feito só na `main` (push na `main` não gera deploy); produção e a branch de desenvolvimento
+  ficam em `db05778`.
+- APK Android não regenerado.
