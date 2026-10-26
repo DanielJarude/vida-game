@@ -125,7 +125,7 @@ function garantirMundo(v: Vida): MundoCriminal {
 
 function novoMembro(v: Vida, o: { municipioId: string; id: string }, r: Rng, nivel: number, k: number): MembroDaOrg {
   const genero = r.chance(0.78) ? 'masculino' : 'feminino';
-  const idadeM = clamp(22 + nivel * 6 + r.int(-5, 12), 19, 78);
+  const idadeM = clamp(20 + nivel * 4 + r.int(-3, 14), 19, 70);
   const tNasc = v.t - idadeM * 12 - r.int(0, 11);
   const pais = paisDaCidade(o.municipioId);
   const sob = sortearSobrenome(r, pais);
@@ -226,10 +226,11 @@ export function relacaoCom(v: Vida, o: OrgViva): RelacaoComOrganizacao {
 
 /** O posto (0..6) de quem é de dentro; os saves antigos liam o posto do ramo organizado (1..4). */
 export function nivelDe(v: Vida, rel: RelacaoComOrganizacao): number {
-  if (rel.nivel !== undefined) return rel.nivel;
   if (rel.propria) return 6;
-  if (rel.relacao !== 'membro') return -1;
-  return Math.max(0, (env(v)?.especializacoes?.organizado?.posto ?? 1) - 1);
+  if (rel.relacao !== 'membro') return rel.nivel ?? -1;
+  // O posto do ramo organizado (as cenas antigas o sobem) também conta: o nível nunca fica atrás dele.
+  const doPosto = rel.especialidade === 'organizado' ? Math.max(0, (env(v)?.especializacoes?.organizado?.posto ?? 1) - 1) : 0;
+  return Math.max(rel.nivel ?? 0, doPosto);
 }
 
 function definirNivel(v: Vida, rel: RelacaoComOrganizacao, nivel: number): void {
@@ -252,9 +253,30 @@ export function processarFaccoes(v: Vida): void {
   garantirCidade(v);
   const m = garantirMundo(v);
   for (const o of orgsDoMundo(v)) if (o.estado !== 'extinta') anoDaOrg(v, o);
+  renovarCidade(v);
   anoDaComunidade(v);
   m.tAtualizado = v.t;
   anoDoJogadorNasOrgs(v);
+  cenasDoAno(v);
+}
+
+/** As cenas que o mundo traz ao jogador neste ano (uma de cada, com intervalo): a rivalidade no seu pedaço, a aliança oferecida. */
+function cenasDoAno(v: Vida): void {
+  const e = env(v)!;
+  if (!ativo(v) || preso(v)) return;
+  const r = rngDe(v.id, 'cenas_faccoes', v.t);
+  const reg = regiaoDaPessoa(v);
+  const ult = (k: string) => v.fatos[k] !== undefined && v.t - v.fatos[k] < 36;
+  const minha = (e.organizacoes ?? []).find(o => (o.relacao === 'membro' || o.propria) && o.saiu === undefined && o.expulso === undefined);
+  const o = minha ? orgViva(v, minha.id) : undefined;
+  if (o && !ult('sub125_rivalidade')) {
+    const rival = o.rivais.map(x => orgViva(v, x)).find(x => x && x.estado !== 'extinta' && (x.influencia[reg] ?? 0) >= 25 && (o.influencia[reg] ?? 0) >= 20);
+    if (rival && r.chance(0.4)) { (e.cenas125 ??= {})['sub125_rivalidade'] = `${o.id}|${rival.id}`; v.fatos['sub125_rivalidade'] = v.t; }
+  }
+  if ((e.reputacao ?? 0) >= 40 && !ult('sub125_alianca')) {
+    const alvo = orgsDaCidade(v).find(x => vinculoComOrg(e.organizacoes?.find(y => y.id === x.id)) === 'conhecido' && x.forca >= 30 && !e.organizacoes?.some(y => y.id === x.id && y.relacao === 'rival'));
+    if (alvo && r.chance(0.25)) { (e.cenas125 ??= {})['sub125_alianca'] = alvo.id; v.fatos['sub125_alianca'] = v.t; }
+  }
 }
 
 function anoDaOrg(v: Vida, o: OrgViva): void {
@@ -263,7 +285,8 @@ function anoDaOrg(v: Vida, o: OrgViva): void {
   const jogadorLidera = !!rel && rel.saiu === undefined && rel.expulso === undefined && (rel.propria || nivelDe(v, rel) >= 6) && !preso(v);
   const pr = o.prioridade ?? 'consolidar';
   // A força: o acaso, a prioridade, a pressão, as alianças e as rivalidades.
-  o.forca = clamp(Math.round(o.forca + (r.next() - 0.5) * 8 + (pr === 'expandir' ? 4 : pr === 'discricao' ? -2 : 0) - o.pressao / 25 + o.aliadas.length - o.rivais.length * 1.2 + (o.coesao < 35 ? -3 : 0)));
+  // (Com volta ao tamanho de costume: o mundo não se esvazia sozinho — quem cai é quem é empurrado.)
+  o.forca = clamp(Math.round(o.forca + (r.next() - 0.5) * 8 + (45 - o.forca) * 0.1 + (pr === 'expandir' ? 4 : pr === 'discricao' ? -2 : 0) - Math.max(0, o.pressao - 30) / 15 + o.aliadas.length * 0.8 - o.rivais.length * 0.6 + (o.coesao < 35 ? -3 : 0)));
   o.pressao = clamp(Math.round(o.pressao * 0.85 + o.forca / 12 + (pr === 'expandir' ? 4 : pr === 'discricao' ? -5 : 0)));
   o.coesao = clamp(Math.round(o.coesao + (58 - o.coesao) * 0.1 + (r.next() - 0.5) * 10 - (o.disputa ? 8 : 0) + (pr === 'consolidar' ? 4 : 0)));
   // Uma operação da Justiça (o ano em que a pressão vira prisão de alguém do quadro).
@@ -320,6 +343,24 @@ function anoDaOrg(v: Vida, o: OrgViva): void {
     if (o.estado === 'enfraquecida' && r.chance(0.4)) { o.estado = 'extinta'; historia(o, v.t, `${cap(o.nome)} deixou de existir: os que sobraram foram para outros lados.`); }
     else o.estado = 'enfraquecida';
   } else if (o.estado === 'enfraquecida' && o.forca >= 15) o.estado = 'ativa';
+}
+
+/** O espaço que uma organização extinta deixou não fica vazio por muito tempo: outra nasce (o mundo continua). */
+function renovarCidade(v: Vida): void {
+  const cidades = [...new Set(orgsDoMundo(v).map(o => o.municipioId))];
+  for (const c of cidades) {
+    const vivas = orgsDaCidade(v, c);
+    const ramos = [...new Set(orgsDoMundo(v).filter(o => o.municipioId === c).map(o => o.ramo))];
+    for (const ramo of ramos) {
+      if (vivas.some(o => o.ramo === ramo)) continue;
+      if (!rngDe(v.id, 'renovar', c, ramo, v.t).chance(0.35)) continue;
+      const k = orgsDoMundo(v).filter(o => o.municipioId === c).length;
+      const o = criarOrgViva(v, c, ramo, `mundo_${c}_${k}`);
+      o.forca = 15 + Math.round(o.forca / 3);
+      o.desde = v.t;
+      historia(o, v.t, `${cap(o.nome)} surgiu no espaço que outra organização deixou.`);
+    }
+  }
 }
 
 /** A voz dos moradores e do comércio de cada região: cresce quando alguém quer mandar demais ali, e cobra o poder público. */
@@ -381,6 +422,8 @@ function resolverDisputa(v: Vida, o: OrgViva, r: Rng): void {
   if (m) m.nivel = 6;
   for (const x of o.quadro) if (x.id !== vencedor && x.nivel >= 6) x.nivel = 5;
   historia(o, v.t, `A disputa terminou ${jeito}: ${m?.nome ?? 'alguém'} passou a mandar.`);
+  // Quem trabalha com ela sem ser de dentro fica sabendo (e o que se combinou com a direção antiga vale menos).
+  if (rel && rel.relacao === 'aliada' && rel.saiu === undefined && ativo(v)) { (env(v)!.cenas125 ??= {})['sub125_novo_lider'] = o.id; v.fatos['sub125_novo_lider'] = v.t; }
   if (!rel || rel.relacao !== 'membro' || rel.saiu !== undefined) return;
   const n = nivelDe(v, rel);
   if (d.candidatos.includes('jogador')) {

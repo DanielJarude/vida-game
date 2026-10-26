@@ -31,6 +31,8 @@ import { abalar } from './abalo';
 
 const env = (v: Vida) => v.caminhos.envolvimento;
 
+export { nivelNaOrganizacao, temOrganizacaoPropria, tempoDoCaminho } from './tempoDoCrime';
+import { nivelNaOrganizacao, temOrganizacaoPropria } from './tempoDoCrime';
 export { contasPorFora, movimentoPorFora, pagarPorFora, pedirRumo, registrarRumo, ultimoRumo, ROTULO_POR_FORA, MOTIVO_DO_RUMO, type FonteDoCrime, type MotivoDoRumo } from './porFora';
 
 /* ================================================================ carreira */
@@ -60,15 +62,6 @@ export function marco(v: Vida, texto: string, bio = true): void {
 export const NOME_DO_PATAMAR = ['começo', 'experiente', 'influente', 'liderança', 'grande escala'] as const;
 /** O tamanho das oportunidades em cada patamar (o valor de referência de uma encomenda, de uma parte, de um negócio). */
 export const ESCALA_DO_PATAMAR = [1, 2.2, 4.5, 9, 20] as const;
-
-/** O maior posto que se tem hoje numa organização de que se é de dentro (−1: nenhum). */
-export function nivelNaOrganizacao(v: Vida): number {
-  const os = env(v)?.organizacoes ?? [];
-  let n = -1;
-  for (const o of os) if (o.relacao === 'membro' && o.saiu === undefined && o.expulso === undefined) n = Math.max(n, o.nivel ?? Math.max(0, (env(v)?.especializacoes?.organizado?.posto ?? 1) - 1));
-  return n;
-}
-export const temOrganizacaoPropria = (v: Vida) => !!env(v)?.organizacoes?.some(o => o.propria && o.saiu === undefined);
 
 /** O patamar de agora (pelo que se é hoje: o posto, os negócios, o nome no meio, o patrimônio). */
 export function patamarAtual(v: Vida): 0 | 1 | 2 | 3 | 4 {
@@ -237,24 +230,6 @@ export function leituraDaFamilia(v: Vida): { id: string; nome: string; sabe: 'de
 
 /* ================================================================ tempo (a semana) */
 
-/**
- * O quanto o caminho ocupa a semana (lido pela agenda e pela semana): os encontros (o nível, as frentes), a organização
- * (o posto), os negócios por fora tocados de perto. Quem está na moita ocupa menos; quem está preso, nada.
- */
-export function tempoDoCaminho(v: Vida): { noites: number; sabado: boolean; peso: number; rotulo: string } | undefined {
-  const e = env(v);
-  if (!e || e.parou !== undefined || v.justica?.prisao || v.justica?.foragido) return undefined;
-  const nivel = nivelNaOrganizacao(v);
-  const negocios = (e.negocios ?? []).filter(n => n.estado === 'ativo' && n.ritmo > 0).length;
-  let noites = e.cautela ? 1 : e.nivel >= 2 || ramosAtivos(e).length >= 2 ? 2 : 1;
-  if (nivel >= 0) noites += 1;
-  noites = Math.min(4, noites + Math.min(2, negocios));
-  const sabado = nivel >= 2 || negocios >= 2 || (e.nivel >= 3 && !e.cautela);
-  const peso = Math.round((noites * 0.2 + (sabado ? 0.3 : 0)) * 100) / 100;
-  const rotulo = nivel >= 4 || temOrganizacaoPropria(v) ? 'A organização (o comando)' : nivel >= 0 ? 'Os compromissos com a organização' : negocios ? 'Os negócios por fora' : 'Os encontros por fora';
-  return { noites, sabado, peso, rotulo };
-}
-
 /** Quantos trabalhos por fora cabem no ano (o tempo é finito: o emprego, a escola e a família também estão na semana). */
 export function capacidadeDoAno(v: Vida): number {
   if (v.justica?.prisao) return 0;
@@ -334,9 +309,9 @@ export function legadoDoSubmundo(morto: Vida): { orgs: string[]; nome: number } 
 
 /** Cedo ou tarde, para quem cresceu com esse nome: a organização do pai (ou da mãe) aparece. A escolha é de quem herdou. */
 export function processarLegado(v: Vida): void {
-  const nome = v.fatos['legado_sub_nome'];
-  if (nome === undefined || v.fatos['legado_sub_visto'] !== undefined) return;
+  const l = v.mundoCriminal?.legado;
+  if (!l || v.fatos['legado_sub_visto'] !== undefined) return;
   const i = idade(v);
-  if (i < 18 || i > 45 || ativo(v) || preso(v) || v.momento) return;
-  if (rngDe(v.id, 'legado_sub', v.t).chance(0.1 + nome / 400)) { v.fatos['sub125_legado'] = v.t; v.fatos['legado_sub_visto'] = v.t; }
+  if (i < 18 || i > 45 || ativo(v) || preso(v)) return;
+  if (rngDe(v.id, 'legado_sub', v.t).chance(0.1 + l.nome / 400)) { v.fatos['sub125_legado'] = v.t; v.fatos['legado_sub_visto'] = v.t; }
 }

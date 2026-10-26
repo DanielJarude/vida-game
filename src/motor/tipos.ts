@@ -2974,6 +2974,8 @@ export interface MundoCriminal {
   /** A voz dos moradores e do comércio de cada região (0..100): a comunidade também age. */
   comunidade?: Record<string, number>;
   tAtualizado: number;
+  /** O que ficou de quem veio antes (sucessão): as organizações que lembram o nome da família, e de quem. Não é cargo. */
+  legado?: { orgs: string[]; nome: number; de: string; t: number };
 }
 
 /**

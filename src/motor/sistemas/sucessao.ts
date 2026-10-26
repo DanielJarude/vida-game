@@ -60,6 +60,7 @@ import { trajetoriasDaVida } from './legado';
 import { economiasEstimadas } from './economiasNpc';
 import { condicaoDaPessoa, garantirCondicoes, habitosDaPessoa, saudeConhecida } from './corpo';
 import { lancar } from './extrato';
+import { legadoDoSubmundo } from './carreiraCriminal';
 
 export { economiasEstimadas, taxaDePoupanca } from './economiasNpc';
 
@@ -800,6 +801,10 @@ export function continuarComo(vida: Vida, herdeiroId: string): { vida: Vida; err
     v.justica = undefined;
     v.segredos = undefined;
     v.deslocamento = undefined;
+    // REWORK 12.25: o mundo do crime continua (as organizações existem sem ninguém); o nome da família no meio fica como
+    // lembrança delas — nunca como cargo: quem herdou decide se quer ouvir (`sub125_legado`).
+    const legadoSub = legadoDoSubmundo(vida);
+    if (v.mundoCriminal || legadoSub) v.mundoCriminal = { ...(v.mundoCriminal ?? { orgs: {}, tAtualizado: novoT }), regiao: undefined, legado: legadoSub ? { ...legadoSub, de: nomeMorto, t: tMorte } : v.mundoCriminal?.legado };
     // Filho de alguém conhecido é conhecido por associação — pouco, e passa (o motor deixa decair: não há fonte própria).
     const pico = vida.notoriedade?.pico ?? 0;
     v.notoriedade = pico >= 25 ? { valor: Math.round(Math.min(18, pico * 0.18) * 10) / 10, pico: Math.round(Math.min(18, pico * 0.18) * 10) / 10, t: novoT } : undefined;

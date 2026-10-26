@@ -102,7 +102,9 @@ export function abrirProcesso(v: Vida, r: Rng, categoria: CategoriaDoProcesso): 
   const j = garantirJustica(v);
   const i = idade(v);
   const env = v.caminhos.envolvimento;
-  if (env) { env.parou = env.parou ?? v.t; env.exposicao = 0; }
+  // REWORK 12.25: ser processado não é o fim do caminho (antes, o processo encerrava o envolvimento sozinho): quem responde
+  // fica na moita — menos dinheiro, menos exposição — e decide o resto. O que encerra, se vier, é a prisão (`prender`).
+  if (env) { if (env.parou === undefined) env.cautela = true; env.exposicao = 0; }
   if (i < 18) { medidaSocioeducativa(v, r, categoria); return; }
   if (j.processo || j.prisao) return;
   // REWORK 12.25: quem já tinha um advogado acompanhando a investigação chega ao processo com ele (já pago).
@@ -205,6 +207,13 @@ export function prender(v: Vida, tFim: number, regime: 'fechado' | 'semiaberto',
   // Preso não exerce mandato: o cargo acaba (antes, o mandato seguia "vivo" dentro da cela).
   if (motivo !== 'internacao') { perderMandatoPorPrisao(v, motivo); registrarAssuntoDaJustica(v, 'prisao'); }
   if (v.trabalho.atual) encerrarEmprego(v, 'prisão');
+  // REWORK 12.25: a prisão da pena encerra o caminho (a volta, se houver, é escolha depois: `sub125_retorno`).
+  const env = v.caminhos.envolvimento;
+  if (env && env.parou === undefined && motivo === 'pena') {
+    env.parou = v.t;
+    delete env.saindo;
+    for (const s of Object.values(env.especializacoes ?? {})) if (s && s.largou === undefined) s.largou = v.t;
+  }
   v.trabalho.desempregadoDesde = undefined;
   v.trabalho.horasExtras = false;
   // Fora da semana tudo o que não cabe numa unidade.

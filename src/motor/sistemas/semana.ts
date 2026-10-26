@@ -23,6 +23,8 @@ import { animal } from '../dados/animais';
 import { atividadeExiste, modeloRotina, nivelDa, nivelModelo, ROTINAS } from './rotinas';
 import { pesoDoRitmoNaSemana, ritmoDe } from './ritmo';
 import { semanaDaPolitica } from './politica';
+import { tempoDoCaminho } from './tempoDoCrime';
+
 
 export interface Compromisso {
   id: string;
@@ -117,6 +119,9 @@ export function semana(v: Vida): Semana {
     fixos.push({ id: 'prisao', rotulo: j.prisao.regime === 'fechado' ? 'A rotina da unidade prisional' : 'O semiaberto (trabalho de dia, a unidade à noite)', peso: Math.max(0, base - (j.prisao.regime === 'fechado' ? 1 : 1.25)), tipo: 'cuidado' });
   }
   if (j?.alternativa) fixos.push({ id: 'pena', rotulo: 'Prestação de serviços à comunidade', peso: 0.5, tipo: 'cuidado' });
+  // REWORK 12.25: o que se faz por fora também ocupa a semana (os encontros, a organização, os negócios).
+  const sub = tempoDoCaminho(v);
+  if (sub) fixos.push({ id: 'submundo', rotulo: sub.rotulo, peso: sub.peso, tipo: 'trabalho' });
   const pa = v.trabalho.pausa;
   if (pa) {
     const quem = pa.pessoaId ? v.pessoas[pa.pessoaId] : undefined;

@@ -38,7 +38,7 @@ const quem = (c: Ctx) => c.p.contato;
 export const SUBMUNDO: Conteudo[] = [
   /* ------------------------------------------------------------- furtos e roubos: o parceiro */
   {
-    id: 'subf_parceiro', tipo: 'decisao', idade: [14, 80], tema: 'escolha', prioritario: true, prioridade: 3, repetir: 1,
+    id: 'subf_parceiro', tipo: 'decisao', idade: [14, 80], tema: 'escolha', prioritario: true, prioridade: 3, repetir: 3,
     papeis: { contato: daCena('subf_parceiro') },
     quando: c => deHoje(c, 'subf_parceiro') && noRamo(c, 'furtos'),
     titulo: c => (deHoje(c, 'subf_pego') ? `${quem(c).nome} foi pego` : `${quem(c).nome} quer trazer mais gente`),
@@ -82,7 +82,7 @@ export const SUBMUNDO: Conteudo[] = [
   },
   /* ------------------------------------------------------------- contrabando: o mercado e a rival */
   {
-    id: 'subc_mercado', tipo: 'decisao', idade: [18, 80], tema: 'escolha', prioritario: true, prioridade: 3, repetir: 1,
+    id: 'subc_mercado', tipo: 'decisao', idade: [18, 80], tema: 'escolha', prioritario: true, prioridade: 3, repetir: 2,
     papeis: { contato: daCena('subc_mercado') },
     quando: c => deHoje(c, 'subc_mercado') && noRamo(c, 'contrabando') && !!org(c, 'subc_mercado'),
     titulo: c => `${cap(org(c, 'subc_mercado')!.nome)} quer conversar`,
@@ -105,7 +105,7 @@ export const SUBMUNDO: Conteudo[] = [
   },
   /* ------------------------------------------------------------- contrabando: a conta da apreensão */
   {
-    id: 'subc_apreensao', tipo: 'decisao', idade: [18, 80], tema: 'escolha', prioritario: true, prioridade: 4, repetir: 1,
+    id: 'subc_apreensao', tipo: 'decisao', idade: [18, 80], tema: 'escolha', prioritario: true, prioridade: 4, repetir: 2,
     papeis: { contato: daCena('subc_apreensao') },
     quando: c => deHoje(c, 'subc_apreensao') && ativo(c) && (env(c).divida ?? 0) > 0,
     titulo: c => `${quem(c).nome} quer o dinheiro do lote`,
@@ -124,7 +124,7 @@ export const SUBMUNDO: Conteudo[] = [
   },
   /* ------------------------------------------------------------- crime organizado: a disputa interna */
   {
-    id: 'subo_disputa', tipo: 'decisao', idade: [16, 80], tema: 'escolha', prioritario: true, prioridade: 3, repetir: 1,
+    id: 'subo_disputa', tipo: 'decisao', idade: [16, 80], tema: 'escolha', prioritario: true, prioridade: 3, repetir: 3,
     papeis: { contato: daCena('subo_disputa') },
     quando: c => deHoje(c, 'subo_disputa') && noRamo(c, 'organizado') && !!org(c, 'subo_disputa'),
     titulo: c => `Uma disputa dentro de ${org(c, 'subo_disputa')!.nome}`,
@@ -161,7 +161,7 @@ export const SUBMUNDO: Conteudo[] = [
   },
   /* ------------------------------------------------------------- crimes digitais: a encomenda grande */
   {
-    id: 'subd_encomenda', tipo: 'decisao', idade: [16, 75], tema: 'escolha', prioritario: true, prioridade: 3, repetir: 1,
+    id: 'subd_encomenda', tipo: 'decisao', idade: [16, 75], tema: 'escolha', prioritario: true, prioridade: 3, repetir: 2,
     papeis: { contato: daCena('subd_encomenda') },
     quando: c => deHoje(c, 'subd_encomenda') && noRamo(c, 'digital'),
     titulo: 'Uma encomenda grande',

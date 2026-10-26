@@ -13,7 +13,7 @@ import { avancarAno } from '../ano';
 import { executar } from '../acoes';
 import { transacao } from '../nucleo';
 import { criarRng } from '../rng';
-import { normalizarRework115, interpretar } from '../save';
+import { normalizarRework115, normalizarRework125, interpretar } from '../save';
 import type { NovoCompromisso, Vida } from '../tipos';
 import { analisarEntrada, notaDaBaseCom, propor } from '../sistemas/compromissos';
 import { agendaDaSemana, baseComONovo, sobrepoe } from '../sistemas/agenda';
@@ -645,8 +645,9 @@ describe('CRI-01 · o processo: absolvição, condenação, prisão, acordo, fia
 
   it('save/load com processo, acordo, recurso e a trajetória: ida e volta idêntica', () => {
     // REWORK 11.5: o envolvimento montado à mão não tem os ramos (o save de antes os ganha ao abrir, `normalizarRework115`):
-    // o estado de partida já passa pela mesma normalização, e a ida e volta continua idêntica.
-    const v = em(processada('fraude', { provas: 66 }), x => { x.justica!.processo!.acordo = { t: x.t, recusado: true }; x.caminhos.envolvimento!.reputacao = 40; x.caminhos.envolvimento!.contatos = ['a']; x.justica!.recurso = { t: x.t, tFim: x.t + 12 }; normalizarRework115(x); });
+    // o estado de partida já passa pela mesma normalização, e a ida e volta continua idêntica. (REWORK 12.25: e pela do
+    // Submundo vivo — a carreira e as organizações do mundo.)
+    const v = em(processada('fraude', { provas: 66 }), x => { x.justica!.processo!.acordo = { t: x.t, recusado: true }; x.caminhos.envolvimento!.reputacao = 40; x.caminhos.envolvimento!.contatos = ['a']; x.justica!.recurso = { t: x.t, tFim: x.t + 12 }; normalizarRework115(x); normalizarRework125(x); });
     const lido = interpretar(JSON.stringify(v));
     expect(lido.tipo).toBe('ok');
     if (lido.tipo === 'ok') expect(JSON.stringify(lido.vida)).toBe(JSON.stringify(v));

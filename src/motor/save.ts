@@ -21,6 +21,8 @@
 import { indiceDoBairro } from './sistemas/mercado';
 import { garantirSetor } from './sistemas/setores';
 import { normalizarSubmundo } from './sistemas/submundo';
+import { garantirCarreira } from './sistemas/carreiraCriminal';
+import { garantirCidade } from './sistemas/faccoes';
 import { conteudoPorId } from './conteudo/motor';
 import { ehEspecialidadeMedica } from './dados/especialidades';
 import { derivarPredisposicoes } from './sistemas/pessoa';
@@ -110,7 +112,7 @@ export function ler(s: Armazenamento | null = armazenamentoPadrao()): Leitura {
  */
 export function interpretar(bruto: string): Leitura {
   const r = interpretarSemNormalizar(bruto);
-  if (r.tipo === 'ok') { normalizarRework75(r.vida); normalizarRework97(r.vida); normalizarRework106(r.vida); normalizarRework11Relacoes(r.vida); normalizarRework11Esportes(r.vida); normalizarRework11Artes(r.vida); normalizarRework115(r.vida); normalizarRework12(r.vida); normalizarRework122(r.vida); fixarEstatura(r.vida, true); }
+  if (r.tipo === 'ok') { normalizarRework75(r.vida); normalizarRework97(r.vida); normalizarRework106(r.vida); normalizarRework11Relacoes(r.vida); normalizarRework11Esportes(r.vida); normalizarRework11Artes(r.vida); normalizarRework115(r.vida); normalizarRework12(r.vida); normalizarRework122(r.vida); normalizarRework125(r.vida); fixarEstatura(r.vida, true); }
   return r;
 }
 
@@ -1718,6 +1720,23 @@ export function normalizarRework115(v: Vida): void {
  * duas vezes não muda nada. Nada sai: os campos antigos ficam (e passam a ser lidos do acervo). Bens comprados antes
  * (os itens de estilo) já estavam no save — só não apareciam em Objetos; não há o que recuperar.
  */
+/**
+ * REWORK 12.25: o Submundo vivo num save antigo — a carreira (a prática geral sai da dos ramos), as organizações do caminho
+ * passam a existir no mundo (o mesmo id e o mesmo nome: "o pessoal dos Soares" continua sendo o pessoal dos Soares), e os
+ * estados que se contradiziam (largou o caminho, mas a frente seguia ativa; parou, mas "saindo") ficam coerentes.
+ * Idempotente: nada é apagado, nada é reescrito duas vezes.
+ */
+export function normalizarRework125(v: Vida): void {
+  const e = v.caminhos?.envolvimento;
+  if (!e) return;
+  garantirCarreira(e);
+  if (e.parou !== undefined) {
+    delete e.saindo;
+    for (const s of Object.values(e.especializacoes ?? {})) if (s && s.largou === undefined) s.largou = e.parou;
+  }
+  garantirCidade(v);
+}
+
 export function normalizarRework122(v: Vida): void {
   for (const e of v.financas.empresas ?? []) if (e.estado !== 'encerrada') garantirSetor(v, e);
   if (v.pecasUnicas && !Object.keys(v.pecasUnicas).length) delete v.pecasUnicas;

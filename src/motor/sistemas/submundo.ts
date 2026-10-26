@@ -291,7 +291,10 @@ function cenaDoRamo(v: Vida, e: Envolvimento, ramo: Ramo, xp: number, r: Rng): {
       const s = e.especializacoes!.organizado!;
       const org = organizacaoDoRamo(v, 'organizado');
       if ((s.posto ?? 1) < 4 && s.experiencia >= 22 * (s.posto ?? 1) && org.lealdade >= 45 && r.chance(0.55)) return { id: 'subo_promocao', pessoa: quem('chefe'), org: org.id };
-      return { id: 'subo_disputa', pessoa: quem('parceiro') ?? quem(), org: org.id };
+      // REWORK 12.25: a disputa interna só quando a organização está rachada de verdade (a sucessão do comando é outra
+      // cena: `faccoes`) — antes, ela vinha quase todo ano, igual.
+      const viva = v.mundoCriminal?.orgs[org.id];
+      return viva && viva.coesao < 50 && !viva.disputa ? { id: 'subo_disputa', pessoa: quem('parceiro') ?? quem(), org: org.id } : undefined;
     }
     case 'digital':
       return r.chance(0.5) ? { id: 'subd_encomenda', pessoa: quem('intermediario') ?? criarContato(v, 'digital', 'intermediario') } : { id: 'subd_exposto', pessoa: quem() };

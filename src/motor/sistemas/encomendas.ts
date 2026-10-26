@@ -61,7 +61,8 @@ export const TIPOS: Record<Ramo, { id: string; nome: string; g: 1 | 2 | 3 }[]> =
 };
 export const tipoDeEncomenda = (id: string) => Object.values(TIPOS).flat().find(t => t.id === id);
 
-const MESES_DA_GRAVIDADE = [0, 1.2, 3, 7] as const;
+/** Meses da renda de referência que cada gravidade vale (REWORK 12.25: o trabalho tem de valer a pena — e o risco). */
+const MESES_DA_GRAVIDADE = [0, 2.5, 6, 14] as const;
 const BASE_DA_CHANCE = [0, 0.84, 0.72, 0.6] as const;
 const EXPOSICAO_DO_ERRO = [0, 6, 10, 16] as const;
 
@@ -78,7 +79,9 @@ export function chanceDoTrabalho(v: Vida, ramo: Ramo, g: 1 | 2 | 3, confianca = 
   const e = env(v)!;
   const s = e.especializacoes?.[ramo];
   const seguidas = garantirCarreira(e).falhasSeguidas ?? 0;
-  return clamp(BASE_DA_CHANCE[g] + (s?.experiencia ?? 0) / 250 + (confianca - 40) / 400 - e.exposicao / 600 - (PERFIL[ramo].falha - 1) * 0.1 + (seguidas >= 2 ? 0.12 : 0) + (e.cautela ? 0.05 : 0), 0.3, 0.94);
+  // O favor de um contato (`redeCriminal`: alguém do seu lado neste ano) ajuda no próximo trabalho.
+  const apoio = v.fatos['sub125_apoio'] === v.t ? 0.08 : 0;
+  return clamp(BASE_DA_CHANCE[g] + (s?.experiencia ?? 0) / 250 + (confianca - 40) / 400 - e.exposicao / 600 - (PERFIL[ramo].falha - 0.2) * 0.5 + (seguidas >= 2 ? 0.12 : 0) + (e.cautela ? 0.05 : 0) + apoio, 0.3, 0.94);
 }
 
 export const encomendas = (v: Vida) => env(v)?.encomendas ?? [];
@@ -136,7 +139,14 @@ export function processarEncomendas(v: Vida): void {
     if (jaAbertas + novas >= 3) break;
     if (c.f.confianca < 32 || c.f.papel === 'informante') continue;
     if (!ramosAtivos(e).includes(c.f.especialidade) && c.f.especialidade !== ramoPrincipal(e)) continue;
-    if (r.chance(0.18 + c.f.confianca / 300 + (c.f.favores ?? 0) * 0.04 + (e.cautela ? -0.12 : 0))) { proporEncomenda(v, r, c.f.especialidade, { pessoaId: c.id }); novas++; }
+    if (r.chance(0.25 + c.f.confianca / 250 + (c.f.favores ?? 0) * 0.04 + (e.cautela ? -0.12 : 0))) { proporEncomenda(v, r, c.f.especialidade, { pessoaId: c.id }); novas++; }
+  }
+  // O meio também procura quem tem nome (ou prática): alguém novo chega com uma proposta — e vira contato.
+  if (jaAbertas + novas < 2 && r.chance(0.35 + (e.reputacao ?? 0) / 250 + garantirCarreira(e).xp / 400 - (e.cautela ? 0.2 : 0))) {
+    const ramo = ramoPrincipal(e);
+    const id = criarContato(v, ramo, ramo === 'contrabando' ? 'comprador' : 'intermediario', 23);
+    proporEncomenda(v, r, ramo, { pessoaId: id });
+    novas++;
   }
   const org = (e.organizacoes ?? []).find(o => (o.relacao === 'membro' || o.relacao === 'aliada') && o.saiu === undefined && o.expulso === undefined && !o.propria);
   if (org && jaAbertas + novas < 4 && r.chance(0.35 + org.lealdade / 250 + (org.relacao === 'membro' ? 0.15 : 0))) proporEncomenda(v, r, org.especialidade, { orgId: org.id });

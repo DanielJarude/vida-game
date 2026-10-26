@@ -36,12 +36,12 @@ const AREA_DA_ORIGEM: Partial<Record<Bloco['origem'], Aba>> = {
 };
 const ROTULO_DA_ORIGEM: Record<Bloco['origem'], string> = {
   escola: 'Escola', curso: 'Curso', estudo: 'Estudo', trabalho: 'Trabalho', paralela: 'Trabalho por fora', negocio: 'Negócio', politica: 'Política', rotina: 'Atividade',
-  filhos: 'Filhos', cuidado: 'Cuidado', pets: 'Bichos', prisao: 'Pena', pena: 'Pena', trajeto: 'Trajeto'
+  filhos: 'Filhos', cuidado: 'Cuidado', pets: 'Bichos', prisao: 'Pena', pena: 'Pena', trajeto: 'Trajeto', submundo: 'Por fora'
 };
 /** A família visual do bloco (a cor vem do tom de cada área — as quatro paletas). */
 const FAMILIA: Record<Bloco['origem'], string> = {
   escola: 'estudo', curso: 'estudo', estudo: 'estudo', trabalho: 'trabalho', paralela: 'trabalho', negocio: 'trabalho', politica: 'trabalho', rotina: 'atividade',
-  filhos: 'casa', cuidado: 'casa', pets: 'casa', prisao: 'pena', pena: 'pena', trajeto: 'trajeto'
+  filhos: 'casa', cuidado: 'casa', pets: 'casa', prisao: 'pena', pena: 'pena', trajeto: 'trajeto', submundo: 'pena'
 };
 
 /** As horas da régua (a cada duas, das 6h à meia-noite). */

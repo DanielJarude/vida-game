@@ -41,6 +41,7 @@ import { registrarAnaliseDaBase, registrarAnaliseDeHorario, registrarReconciliac
 import { ocupacao, ocupacaoOuNula } from '../dados/ocupacoes';
 import { bloqueio, PERMITIDO, type Veredito } from '../plausibilidade';
 import { registrarHorasLivres } from './estado';
+import { tempoDoCaminho } from './tempoDoCrime';
 
 export const DIAS = ['segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado', 'domingo'] as const;
 export const DIAS_CURTOS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'] as const;
@@ -50,7 +51,7 @@ export const TODOS: Dia[] = [0, 1, 2, 3, 4, 5, 6];
 export const ABRE = 6 * 60;
 export const FECHA = 24 * 60;
 
-export type OrigemDoBloco = 'escola' | 'curso' | 'estudo' | 'trabalho' | 'paralela' | 'negocio' | 'politica' | 'rotina' | 'filhos' | 'cuidado' | 'pets' | 'prisao' | 'pena' | 'trajeto';
+export type OrigemDoBloco = 'escola' | 'curso' | 'estudo' | 'trabalho' | 'paralela' | 'negocio' | 'politica' | 'rotina' | 'filhos' | 'cuidado' | 'pets' | 'prisao' | 'pena' | 'trajeto' | 'submundo';
 /** As fontes que têm turno (e o jogador pode escolher). */
 export type FonteDeTurno = 'escola' | 'curso' | 'trabalho';
 
@@ -282,6 +283,14 @@ export function blocosFixos(v: Vida, o: { semTrabalho?: boolean; trabalho?: Trab
     if (e.estado === 'encerrada' || e.papel === 'investidor' || e.gestao.quem !== 'propria') continue;
     out.push({ id: `empresa_${e.id}`, origem: 'negocio', rotulo: `${e.nome} (a gestão)`, dias: [1, 3], inicio: h(19), fim: h(21), obrigatorio: true, movel: false });
     out.push({ id: `empresa_${e.id}_sab`, origem: 'negocio', rotulo: `${e.nome} (sábado)`, dias: [5], inicio: h(9), fim: h(12), obrigatorio: true, movel: false });
+  }
+  // REWORK 12.25: o Submundo também é semana — os encontros, a organização, os negócios por fora (a pena alternativa,
+  // acima, continua como sempre esteve). Quem está na moita ocupa uma noite; quem comanda, mais.
+  const sub = tempoDoCaminho(v);
+  if (sub) {
+    const noites: Dia[][] = [[2], [1, 3], [0, 2, 4], [0, 1, 3, 4]];
+    out.push({ id: 'submundo', origem: 'submundo', rotulo: sub.rotulo, dias: noites[sub.noites - 1], inicio: h(20), fim: h(22, 30), obrigatorio: true, movel: false });
+    if (sub.sabado) out.push({ id: 'submundo_sab', origem: 'submundo', rotulo: `${sub.rotulo} (sábado)`, dias: [5], inicio: h(14), fim: h(18), obrigatorio: true, movel: false });
   }
   const pol = semanaDaPolitica(v);
   if (pol) {
@@ -841,7 +850,7 @@ export interface FichaDoBloco {
 const ORIGEM_EM_PALAVRAS: Record<OrigemDoBloco, string> = {
   escola: 'a escola', curso: 'a matrícula', estudo: 'a dedicação que você escolheu para os estudos', trabalho: 'o trabalho', paralela: 'a trajetória em paralelo', negocio: 'o negócio',
   politica: 'a vida política', rotina: 'uma atividade que você escolheu', filhos: 'os filhos em casa', cuidado: 'quem precisa de você',
-  pets: 'os bichos da casa', prisao: 'a pena', pena: 'a pena', trajeto: 'o trajeto de todo dia'
+  pets: 'os bichos da casa', prisao: 'a pena', pena: 'a pena', trajeto: 'o trajeto de todo dia', submundo: 'o que você faz por fora'
 };
 
 /** A ficha de um bloco: origem, obrigação, se remarca, custo, efeito, até quando, horas por semana. */
@@ -859,6 +868,7 @@ export function fichaDoBloco(v: Vida, b: Bloco, custoDe?: (id: string, nivel: nu
     case 'pets': return { ...base, efeito: 'o bicho bem cuidado', termina: 'enquanto ele estiver com você' };
     case 'prisao': case 'pena': return { ...base, efeito: 'o cumprimento da pena', termina: 'até o fim da pena' };
     case 'trajeto': return { ...base, efeito: 'ir e voltar — a condução muda quanto (Vida · Cidade)', termina: 'enquanto o trajeto for esse' };
+    case 'submundo': return { ...base, efeito: 'os encontros, a organização, os negócios por fora: o que mantém o caminho andando', termina: 'enquanto você estiver nisso (o rumo se escolhe em Caminhos · Submundo)' };
     case 'rotina': {
       const r = v.rotinas.find(x => x.id === b.ref);
       const m = r ? modeloRotina(r.id) : undefined;

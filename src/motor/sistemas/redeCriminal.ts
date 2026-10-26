@@ -404,6 +404,11 @@ export function processarRede(v: Vida): void {
       }
     }
   }
+  // Um parceiro antigo reaparece (quem se afastou sem trair, há anos, e de quem se gostava).
+  if (!(v.fatos['sub125_reaparece'] !== undefined && v.t - v.fatos['sub125_reaparece'] < 48) && !v.justica?.prisao) {
+    const antigo = Object.entries(e.fichas).find(([id, f]) => f.afastado !== undefined && f.traiu === undefined && v.t - f.afastado >= 36 && v.pessoas[id]?.vivo && (f.amizade ?? 30) >= 25);
+    if (antigo && r.chance(0.15)) { v.fatos['sub125_reaparece'] = v.t; (e.cenas125 ??= {})['sub125_reaparece'] = antigo[0]; }
+  }
   // A dívida velha é cobrada (uma por ano).
   if (ativo(v) && !(v.fatos['sub125_cobra'] !== undefined && v.t - v.fatos['sub125_cobra'] < 24)) {
     const devedor = contatosAtivos(v).find(c => (c.f.favores ?? 0) <= -2);
