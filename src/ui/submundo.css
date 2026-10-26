@@ -1,0 +1,78 @@
+/*
+ * REWORK 12.25 — o Submundo numa tela só (`jogo/SubmundoVivo.tsx`): a situação no alto (o risco e a progressão lado a
+ * lado), as partes (abas), os cartões de propostas, contatos e organizações, as escadas (patamar e hierarquia), as etapas
+ * da Justiça e o território. Classes próprias (`svivo-*`: a auditoria de CSS não deixa redefinir uma classe-raiz de outro
+ * arquivo); só os tokens das paletas; cabe em 360 px sem rolagem lateral.
+ */
+
+.svivo { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
+.svivo__partes { margin: 0; }
+.svivo__partes .subnav__lista { flex-wrap: wrap; }
+.svivo__painel { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
+
+/* -------------------------------------------------- a situação */
+.svivo-situacao {
+  --dossie-fundo: color-mix(in oklab, var(--tinta) 90%, var(--superficie));
+  --dossie-tinta: var(--superficie-topo);
+  --dossie-fio: color-mix(in oklab, var(--superficie-topo) 22%, transparent);
+  --dossie-carimbo: color-mix(in oklab, var(--ruim, var(--acao)) 55%, var(--superficie-topo));
+  background: var(--dossie-fundo); color: var(--dossie-tinta);
+  border-radius: var(--radius-md); padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); min-width: 0;
+}
+.svivo-situacao .link { color: var(--dossie-tinta); text-decoration: underline; text-underline-offset: 3px; min-height: var(--touch-target, 44px); text-align: left; }
+.svivo-situacao__cabeca { display: flex; justify-content: space-between; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+.svivo-situacao__titulo { margin: 0; font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace; font-size: var(--type-title, 1.25rem); letter-spacing: 0.04em; }
+.svivo-chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.svivo-chip { font-size: var(--type-caption); border: 1px solid var(--dossie-fio, var(--fio)); border-radius: 999px; padding: 2px 10px; }
+.svivo-chip--preso, .svivo-chip--foragido, .svivo-chip--procurado { border-color: var(--dossie-carimbo, var(--ruim)); font-weight: 700; }
+.svivo-atencao { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-1); border-top: 1px dashed var(--dossie-fio); padding-top: var(--space-2); }
+
+/* -------------------------------------------------- medidas lado a lado */
+.svivo-duas { display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); }
+.svivo-tres { display: grid; gap: var(--space-2) var(--space-3); grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr)); }
+.svivo-duas__lado, .svivo-tres > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.svivo-rotulo { margin: 0; font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; font-weight: 700; opacity: 0.85; }
+.svivo-nota { margin: 0; font-size: var(--type-caption); line-height: var(--leading-snug); overflow-wrap: anywhere; }
+.svivo-medidor { display: block; width: 100%; height: 8px; border-radius: 4px; overflow: hidden; background: color-mix(in oklab, currentColor 16%, transparent); }
+.svivo-medidor__cheio { display: block; height: 100%; border-radius: 4px; background: currentColor; }
+.svivo-medidor--risco .svivo-medidor__cheio { background: color-mix(in oklab, var(--ruim, currentColor) 75%, currentColor); }
+.svivo-medidor--progresso .svivo-medidor__cheio { background: color-mix(in oklab, var(--bom, currentColor) 75%, currentColor); }
+
+/* -------------------------------------------------- blocos e cartões */
+.svivo-bloco { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3); border: 1px solid var(--fio); border-radius: var(--radius-md); background: var(--superficie-topo); color: var(--tinta); min-width: 0; }
+.svivo-bloco--alerta { border-color: color-mix(in oklab, var(--ruim) 60%, var(--fio)); border-width: 2px; }
+.svivo-bloco__titulo { margin: 0; font-size: var(--type-body); font-weight: 700; }
+.svivo-lista { margin: 0; padding-left: 1.1rem; display: flex; flex-direction: column; gap: 4px; font-size: var(--type-caption); line-height: var(--leading-snug); }
+.svivo-cartoes { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr)); }
+.svivo-cartao { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3); border: 1px solid var(--fio); border-radius: var(--radius-md); background: var(--superficie-topo); color: var(--tinta); min-width: 0; }
+.svivo-cartao--fora { opacity: 0.8; border-style: dashed; }
+.svivo-cartao--g3 { border-left: 4px solid color-mix(in oklab, var(--ruim) 55%, var(--fio)); }
+.svivo-cartao--dentro { border-left: 4px solid var(--tinta); }
+.svivo-cartao__titulo { margin: 0; font-weight: 700; overflow-wrap: anywhere; }
+.svivo-contas { margin: 0; display: flex; flex-direction: column; gap: 2px; font-size: var(--type-caption); }
+.svivo-contas > div { display: flex; justify-content: space-between; gap: var(--space-2); flex-wrap: wrap; }
+.svivo-contas dt { opacity: 0.85; }
+.svivo-contas dd { margin: 0; font-variant-numeric: tabular-nums; text-align: right; overflow-wrap: anywhere; }
+.svivo-contas--sai { color: var(--ruim); }
+.svivo-contas__total { border-top: 1px solid var(--fio); padding-top: 2px; font-weight: 700; }
+.svivo-detalhes summary { cursor: pointer; min-height: var(--touch-target, 44px); display: flex; align-items: center; font-weight: 600; font-size: var(--type-caption); }
+.svivo-form { display: grid; gap: var(--space-2); grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); align-items: end; }
+.svivo-form select { min-height: var(--touch-target, 44px); max-width: 100%; }
+.svivo-dossie { padding: var(--space-3); border-radius: var(--radius-md); display: flex; flex-direction: column; gap: var(--space-3); }
+
+/* -------------------------------------------------- as escadas (o patamar, a hierarquia) e as etapas da Justiça */
+.svivo-escada, .svivo-etapas { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px; counter-reset: degrau; }
+.svivo-escada__degrau, .svivo-etapas__etapa { font-size: var(--type-caption); padding: 4px 10px; border: 1px solid var(--fio); border-radius: 999px; opacity: 0.7; }
+.svivo-escada__degrau--feito, .svivo-etapas__etapa--passou { opacity: 0.9; text-decoration: line-through; text-decoration-color: color-mix(in oklab, currentColor 40%, transparent); }
+.svivo-escada__degrau--atual, .svivo-etapas__etapa--agora { opacity: 1; font-weight: 700; border-width: 2px; border-color: var(--tinta); }
+.svivo-escada--org .svivo-escada__degrau { font-size: var(--type-meta); }
+
+/* -------------------------------------------------- o território */
+.svivo-territorio { width: 100%; border-collapse: collapse; font-size: var(--type-caption); table-layout: fixed; }
+.svivo-territorio th, .svivo-territorio td { text-align: left; padding: 4px 6px 4px 0; vertical-align: middle; overflow-wrap: anywhere; }
+.svivo-territorio thead th { font-size: var(--type-meta); text-transform: uppercase; letter-spacing: var(--tracking-meta); opacity: 0.85; }
+.svivo-territorio tbody th { font-weight: 600; width: 38%; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .svivo-medidor__cheio { transition: width 0.4s ease; }
+}

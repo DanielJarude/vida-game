@@ -39,7 +39,7 @@ export function PainelDoSubmundo({ vida, agir }: { vida: Vida; agir: (a: Acao) =
     <section className="dossie" aria-labelledby="titulo-dossie">
       <header className="dossie__cabeca">
         <h3 id="titulo-dossie" className="dossie__titulo">Dossiê do caminho</h3>
-        <span className="dossie__carimbo">{ativo ? 'em atividade' : 'arquivado'}</span>
+        <span className="dossie__carimbo">{carimboDoCaminho(vida)}</span>
       </header>
       <p className="dossie__estagio">{NOME_DO_ESTAGIO[leituraDosNegocios(vida).estagio]}</p>
       <div className="dossie__exposicao">
@@ -48,53 +48,8 @@ export function PainelDoSubmundo({ vida, agir }: { vida: Vida; agir: (a: Acao) =
         <span className="dossie__nota">{s.exposicao < 25 ? 'pouca gente sabe' : s.exposicao < 55 ? 'gente demais já sabe' : 'é questão de tempo'}</span>
       </div>
 
-      <div className="dossie__ramos">
-        {s.ramos.map(r => (
-          <article key={r.ramo} className={`sub-ramo${r.ativa ? '' : ' sub-ramo--largado'}`} aria-label={r.nome}>
-            <p className="sub-ramo__cabeca"><span className="sub-ramo__nome">{r.nome}</span>{r.principal && <span className="sub-ramo__selo">principal</span>}{!r.ativa && <span className="sub-ramo__selo">largado</span>}</p>
-            <dl className="sub-ramo__dados">
-              <div><dt>Prática</dt><dd><Barra valor={r.experiencia} rotulo={`Prática em ${r.nome}`} /></dd></div>
-              <div><dt>Nome no meio</dt><dd><Barra valor={r.fama} rotulo={`Nome em ${r.nome}`} /></dd></div>
-              <div><dt>Operações</dt><dd>{r.operacoes}{r.falhas ? ` (${r.falhas} deram errado)` : ''}</dd></div>
-              <div><dt>Entrou</dt><dd>{r.ganhos > 0 ? dinheiroCurto(r.ganhos) : 'nada ainda'}</dd></div>
-              {r.posto && <div><dt>Posto</dt><dd>{r.posto}</dd></div>}
-              {r.mercado !== undefined && <div><dt>Mercado</dt><dd>{MERCADO[r.mercado + 2]}{r.estoque ? ` · guardado: ${dinheiroCurto(r.estoque)}` : ''}</dd></div>}
-              <div><dt>Desde</dt><dd>{r.desde}</dd></div>
-            </dl>
-            {r.ativa && ativo && (
-              <div className="grupo-acoes sub-ramo__acoes">
-                {r.acoes.map(oque => {
-                  const p = previsaoDaAcao(vida, r.ramo, oque);
-                  return (
-                    <div key={oque} className="sub-acao">
-                      <BotaoAcao vida={vida} acao={{ tipo: 'submundo', oque, ramo: r.ramo }} agir={agir} variante="secundario" semAviso>{ROTULO_DA_ACAO[oque]}</BotaoAcao>
-                      {p && (p.risco > 0 || p.ganho || p.custo) && (
-                        <p className="sub-acao__previsao">
-                          {p.risco > 0 && <>risco de dar errado: <strong>{palavraDoRisco(p.risco)}</strong></>}
-                          {p.ganho && <> · pode render {dinheiroCurto(p.ganho[0])} a {dinheiroCurto(p.ganho[1])}</>}
-                          {p.custo && <> · custa {dinheiroCurto(p.custo)}</>}
-                        </p>
-                      )}
-                    </div>
-                  );
-                })}
-                <BotaoAcao vida={vida} acao={{ tipo: 'submundo', oque: 'largar_ramo', ramo: r.ramo }} agir={agir} variante="discreto" ocultarImpossivel ocultarBloqueado>Largar esta frente</BotaoAcao>
-              </div>
-            )}
-          </article>
-        ))}
-      </div>
-
+      <FrentesDoCaminho vida={vida} agir={agir} />
       <NegociosPorFora vida={vida} agir={agir} ativo={ativo} />
-
-      {ativo && s.podeEntrar.length > 0 && (
-        <details className="dossie__outras">
-          <summary>Outras frentes</summary>
-          <div className="grupo-acoes">
-            {s.podeEntrar.map(r => <BotaoAcao key={r} vida={vida} acao={{ tipo: 'submundo', oque: 'entrar_ramo', ramo: r }} agir={agir} variante="discreto" ocultarImpossivel>{`Atuar também em ${NOME_DO_RAMO[r].toLowerCase()}`}</BotaoAcao>)}
-          </div>
-        </details>
-      )}
 
       <div className="dossie__bloco">
         <h4 className="dossie__rotulo">Gente do caminho</h4>
@@ -147,10 +102,81 @@ export function PainelDoSubmundo({ vida, agir }: { vida: Vida; agir: (a: Acao) =
 }
 
 /**
+ * REWORK 12.25: as frentes (os ramos com prática, nome, operações e as ações de cada um, com o risco dito antes) e as
+ * outras em que dá para começar — a parte "Carreira" do Submundo usa esta peça sozinha.
+ */
+export function FrentesDoCaminho({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
+  const s = leituraDoSubmundo(vida);
+  if (!s) return null;
+  const ativo = !!vida.caminhos.envolvimento && vida.caminhos.envolvimento.parou === undefined && !vida.justica?.prisao;
+  return (
+    <>
+      <div className="dossie__ramos">
+        {s.ramos.map(r => (
+          <article key={r.ramo} className={`sub-ramo${r.ativa ? '' : ' sub-ramo--largado'}`} aria-label={r.nome}>
+            <p className="sub-ramo__cabeca"><span className="sub-ramo__nome">{r.nome}</span>{r.principal && <span className="sub-ramo__selo">principal</span>}{!r.ativa && <span className="sub-ramo__selo">largado</span>}</p>
+            <dl className="sub-ramo__dados">
+              <div><dt>Prática</dt><dd><Barra valor={r.experiencia} rotulo={`Prática em ${r.nome}`} /></dd></div>
+              <div><dt>Nome no meio</dt><dd><Barra valor={r.fama} rotulo={`Nome em ${r.nome}`} /></dd></div>
+              <div><dt>Operações</dt><dd>{r.operacoes}{r.falhas ? ` (${r.falhas} deram errado)` : ''}</dd></div>
+              <div><dt>Entrou</dt><dd>{r.ganhos > 0 ? dinheiroCurto(r.ganhos) : 'nada ainda'}</dd></div>
+              {r.posto && <div><dt>Posto</dt><dd>{r.posto}</dd></div>}
+              {r.mercado !== undefined && <div><dt>Mercado</dt><dd>{MERCADO[r.mercado + 2]}{r.estoque ? ` · guardado: ${dinheiroCurto(r.estoque)}` : ''}</dd></div>}
+              <div><dt>Desde</dt><dd>{r.desde}</dd></div>
+            </dl>
+            {r.ativa && ativo && (
+              <div className="grupo-acoes sub-ramo__acoes">
+                {r.acoes.map(oque => {
+                  const p = previsaoDaAcao(vida, r.ramo, oque);
+                  return (
+                    <div key={oque} className="sub-acao">
+                      <BotaoAcao vida={vida} acao={{ tipo: 'submundo', oque, ramo: r.ramo }} agir={agir} variante="secundario" semAviso>{ROTULO_DA_ACAO[oque]}</BotaoAcao>
+                      {p && (p.risco > 0 || p.ganho || p.custo) && (
+                        <p className="sub-acao__previsao">
+                          {p.risco > 0 && <>risco de dar errado: <strong>{palavraDoRisco(p.risco)}</strong></>}
+                          {p.ganho && <> · pode render {dinheiroCurto(p.ganho[0])} a {dinheiroCurto(p.ganho[1])}</>}
+                          {p.custo && <> · custa {dinheiroCurto(p.custo)}</>}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+                <BotaoAcao vida={vida} acao={{ tipo: 'submundo', oque: 'largar_ramo', ramo: r.ramo }} agir={agir} variante="discreto" ocultarImpossivel ocultarBloqueado>Largar esta frente</BotaoAcao>
+              </div>
+            )}
+          </article>
+        ))}
+      </div>
+
+      {ativo && s.podeEntrar.length > 0 && (
+        <details className="dossie__outras">
+          <summary>Outras frentes</summary>
+          <div className="grupo-acoes">
+            {s.podeEntrar.map(r => <BotaoAcao key={r} vida={vida} acao={{ tipo: 'submundo', oque: 'entrar_ramo', ramo: r }} agir={agir} variante="discreto" ocultarImpossivel>{`Atuar também em ${NOME_DO_RAMO[r].toLowerCase()}`}</BotaoAcao>)}
+          </div>
+        </details>
+      )}
+
+    </>
+  );
+}
+
+/** REWORK 12.25 · UI-12.25-01: o carimbo diz o estado de verdade (antes, "arquivado" valia também para quem estava preso). */
+export function carimboDoCaminho(v: Vida): string {
+  const e = v.caminhos.envolvimento;
+  if (v.justica?.prisao) return 'pena em curso';
+  if (v.justica?.foragido) return 'procurado';
+  if (!e) return 'sem registro';
+  if (e.parou !== undefined) return 'largado';
+  if (e.saindo !== undefined) return 'saindo';
+  return e.cautela ? 'na moita' : 'em atividade';
+}
+
+/**
  * REWORK 12.2 — os negócios por fora: os que estão de pé (com sócios, caixa, exposição, fachada, as decisões) e os que
  * acabaram (com a história); abrir um novo; a organização própria (tenentes, coesão, alianças). Só números e gente.
  */
-function NegociosPorFora({ vida, agir, ativo }: { vida: Vida; agir: (a: Acao) => boolean; ativo: boolean }) {
+export function NegociosPorFora({ vida, agir, ativo }: { vida: Vida; agir: (a: Acao) => boolean; ativo: boolean }) {
   const l = leituraDosNegocios(vida);
   const e = vida.caminhos.envolvimento;
   const org = l.organizacao;

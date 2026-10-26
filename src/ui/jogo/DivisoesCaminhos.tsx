@@ -27,10 +27,9 @@ import type { Aba } from '../navegacao';
 import { EmConstrucao } from './Caminhos';
 import { PortasAbertas } from './Estudos';
 import { DesenvolvimentoReal } from './Progresso';
-import { AMargem, temMargem } from './Margem';
-import { BotaoAcao } from '../comum';
-import { foragido } from '../../motor/sistemas/prisao';
-import { CarreiraComoTecnico, CarreiraNoEsporte, Concursos, CurriculoArtistico, Devolutivas, OutrosCaminhos, PainelBase, PainelDaPena, PainelForagido, PainelPolitico, ehAcaoPublica } from './Trabalho';
+import { temMargem } from './Margem';
+import { SubmundoVivo } from './SubmundoVivo';
+import { CarreiraComoTecnico, CarreiraNoEsporte, Concursos, CurriculoArtistico, Devolutivas, OutrosCaminhos, PainelBase, PainelPolitico, ehAcaoPublica } from './Trabalho';
 
 /** Para onde vai cada passo de um caminho (as divisões novas no lugar das abas da procura de antes). */
 function irDoPasso(irPara: (a: Aba) => void) {
@@ -140,34 +139,11 @@ export function OutrosCaminhosDaVida({ vida, agir, irPara }: { vida: Vida; agir:
  */
 export function Submundo({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean; irPara: (a: Aba) => void }) {
   const i = idade(vida);
-  const env = vida.caminhos.envolvimento;
-  const dentro = !!env && env.parou === undefined;
-  const preso = !!vida.justica?.prisao;
+  // REWORK 12.25 · UI-12.25-01: uma tela só, que lê um estado só (antes, "À margem e a Justiça" e "A porta" apareciam
+  // juntas para quem tinha anos de histórico: o processo encerrava o envolvimento, e a tela achava que a pessoa estava fora).
   return (
     <div className="divisao divisao--submundo">
-      {preso && <PainelDaPena vida={vida} agir={agir} />}
-      {foragido(vida) && <PainelForagido vida={vida} agir={agir} />}
-      <AMargem vida={vida} agir={agir} />
-      {!temMargem(vida) && !preso && (
-        <section className="divisao__secao submundo__situacao" aria-labelledby="titulo-submundo-situacao">
-          <h2 id="titulo-submundo-situacao" className="secao-fio">A situação</h2>
-          <p>Nenhum envolvimento: a ficha está limpa e ninguém do meio sabe o seu nome.</p>
-        </section>
-      )}
-      {!dentro && !preso && i >= 14 && (
-        <section className="divisao__secao submundo__porta" aria-labelledby="titulo-submundo-porta">
-          <h2 id="titulo-submundo-porta" className="secao-fio">A porta</h2>
-          <p className="nota">O crime não tem vaga nem edital: a porta aparece pela vida — a turma, a necessidade, um contato antigo, o acesso a um dinheiro que não é seu — ou quando você a procura. A decisão é sempre sua.</p>
-          <div className="grupo-acoes"><BotaoAcao vida={vida} acao={{ tipo: 'margem', oque: 'procurar_contato' }} agir={agir} variante="discreto">Procurar um contato</BotaoAcao></div>
-          <ul className="submundo__pesa">
-            <li>Dinheiro rápido, com teto — e só uma parte chega à conta.</li>
-            <li>A exposição cresce a cada ano: investigação, processo, prisão, antecedentes.</li>
-            <li>Quem está perto também paga: a família, o trabalho, os amigos.</li>
-            <li>Sair é possível a qualquer momento — num grupo, custa pressão ou um acerto.</li>
-          </ul>
-        </section>
-      )}
-      {i < 14 && !temMargem(vida) && <p className="vazio">Nada disso faz parte da sua vida.</p>}
+      {i < 14 && !temMargem(vida) ? <p className="vazio">Nada disso faz parte da sua vida.</p> : <SubmundoVivo vida={vida} agir={agir} />}
     </div>
   );
 }

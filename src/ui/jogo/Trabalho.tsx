@@ -875,6 +875,8 @@ export function PainelDaPena({ vida, agir }: { vida: Vida; agir: (a: Acao) => bo
         <BotaoAcao vida={vida} agir={agir} acao={P('trabalhar')} ocultarImpossivel>Trabalhar na unidade (remição e pecúlio)</BotaoAcao>
         <BotaoAcao vida={vida} agir={agir} acao={P('visitas')}>Pôr a família na lista de visitas</BotaoAcao>
         <BotaoAcao vida={vida} agir={agir} acao={P('conviver')}>Aproximar-se de alguém do pavilhão</BotaoAcao>
+        <BotaoAcao vida={vida} agir={agir} acao={P('cartas')} ocultarImpossivel>Escrever para a família</BotaoAcao>
+        <BotaoAcao vida={vida} agir={agir} acao={P('saude')} ocultarImpossivel>Cuidar da saúde (enfermaria, banho de sol)</BotaoAcao>
         <BotaoAcao vida={vida} agir={agir} acao={P('defensoria')} ocultarImpossivel>Pedir à defensoria que reveja a pena</BotaoAcao>
         <BotaoAcao vida={vida} agir={agir} acao={P('preparar_saida')} ocultarImpossivel>Preparar a saída (curso e programa de egressos)</BotaoAcao>
         <BotaoAcao vida={vida} agir={agir} acao={P('fugir')} variante="discreto" mostrarChance>Tentar fugir</BotaoAcao>

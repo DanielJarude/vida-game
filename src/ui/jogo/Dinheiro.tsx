@@ -17,17 +17,22 @@ import { negocioAberto } from '../../motor/sistemas/negocio';
 import { BotaoAcao, Dado, Escolha, Linha, Valor } from '../comum';
 import { dinheiroCheio, dinheiroCurto, leituraDaSeguranca, leituraDoExtrato, leituraDoMes, type LeituraDoExtrato } from '../leituraMaterial';
 import { intencaoProfissional } from '../../motor/sistemas/intencao';
+import { contasPorFora } from '../../motor/sistemas/porFora';
 
 const TONS = ['t1', 't2', 't3', 't4', 't5', 't6'];
 
-function tendencia(v: Vida): { palavra: string; seta: string } | undefined {
-  const h = v.financas.historico.map(x => x.ativos - x.obrigacoes);
-  if (h.length < 3) return undefined;
-  const a = h[h.length - 3];
-  const b = h[h.length - 1];
+/**
+ * REWORK 12.25 · FIN-12.25-01: a tendência compara o patrimônio de AGORA (o mesmo número ao lado) com o de dois anos
+ * atrás, e diz o período. Antes, comparava duas fotografias antigas entre si — e a seta podia contradizer o valor mostrado
+ * (um ano de dinheiro por fora entrando, e "vem encolhendo" ao lado).
+ */
+function tendencia(v: Vida, agora: number): { palavra: string; seta: string } | undefined {
+  const antes = v.financas.historico.filter(x => x.t <= v.t - 24).pop();
+  if (!antes) return undefined;
+  const a = antes.ativos - antes.obrigacoes;
   const base = Math.max(5000, Math.abs(a));
-  const d = (b - a) / base;
-  return d > 0.08 ? { palavra: 'vem crescendo', seta: '↗' } : d < -0.08 ? { palavra: 'vem encolhendo', seta: '↘' } : { palavra: 'parado', seta: '→' };
+  const d = (agora - a) / base;
+  return d > 0.08 ? { palavra: 'cresceu em dois anos', seta: '↗' } : d < -0.08 ? { palavra: 'encolheu em dois anos', seta: '↘' } : { palavra: 'estável em dois anos', seta: '→' };
 }
 
 export function ODinheiro({ vida, agir, irParaCasa }: { vida: Vida; agir: (a: Acao) => boolean; irParaCasa?: () => void }) {
@@ -62,7 +67,8 @@ export function ODinheiro({ vida, agir, irParaCasa }: { vida: Vida; agir: (a: Ac
   const emCasa = -m.orcamento.saidas.filter(l => l.grupo === 'moradia' || l.grupo === 'casa' || l.grupo === 'filhos').reduce((s, l) => s + l.valor, 0);
   const parcelas = f.dividas.filter(d => d.parcela > 0 && d.saldo > 0);
   const atrasadas = f.dividas.filter(d => (d.atraso ?? 0) > 0).length + ((vida.moradia.atraso ?? 0) > 0 ? 1 : 0);
-  const t = tendencia(vida);
+  const t = tendencia(vida, b.liquido);
+  const porFora = vida.caminhos.envolvimento ? contasPorFora(vida).totalAno : 0;
   const extrato = leituraDoExtrato(vida);
   const intencao = intencaoProfissional(vida);
   const total = Math.max(m.orcamento.renda, m.orcamento.despesa, 1);
@@ -86,6 +92,8 @@ export function ODinheiro({ vida, agir, irParaCasa }: { vida: Vida; agir: (a: Ac
         <Dado rotulo="Patrimônio">{dinheiroCurto(b.liquido)}{t && <small> {t.seta} {t.palavra}</small>}</Dado>
       </dl>
       {aplicado > 0 && <p className="nota">{rendeuTexto(vida)}</p>}
+      {/* REWORK 12.25 · FIN-12.25-01: o que entra (e sai) por fora não é salário — aparece aqui pelo ano, e no extrato numa linha própria. */}
+      {porFora !== 0 && <p className="nota">Por fora, no último ano: {porFora > 0 ? 'entraram' : 'saíram'} {dinheiroCurto(Math.abs(porFora))} (operações, encomendas, negócios, a parte da organização, os custos e as perdas). Não é renda do mês: varia de um ano para outro. O detalhe está na conta do ano, abaixo, e em Caminhos · Submundo.</p>}
       {/* A mesma leitura que Trabalho e Você usam (`intencao`): o patrimônio que paga a vida e o que a pessoa quer fazer com o tempo. */}
       {intencao.intencao !== 'nao_se_aplica' && (intencao.livre || intencao.intencao === 'sem_procurar') && <p className="nota">{intencao.texto}</p>}
       {negocio && (negocio.caixa ?? 0) >= 1000 && <p className="nota">No caixa de {negocio.nome}: {dinheiroCurto(negocio.caixa ?? 0)} — do negócio; vira seu quando você tira (em Caminhos).</p>}

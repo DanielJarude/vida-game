@@ -17,6 +17,8 @@ import { anoDe } from '../../motor/tempo';
 import { dinheiroCurto } from '../leituraMaterial';
 import { PainelDoSubmundo } from './Submundo';
 import { NOME_DO_RAMO, ramosAtivos } from '../../motor/sistemas/ramos';
+import { estadoNoSubmundo, NOME_DO_ESTADO } from '../../motor/sistemas/carreiraCriminal';
+import type { ReactNode } from 'react';
 
 const NOME: Record<string, string> = { pequenos: 'coisas erradas com a turma', patrimonial: 'receptação', fraude: 'fraude', mercado: 'comércio ilegal', grupo: 'grupo criminoso', corrupcao: 'corrupção', violencia: 'agressão' };
 const DESFECHO: Record<string, string> = { socioeducativa: 'medida socioeducativa (não é ficha de adulto)', alternativa: 'condenação, pena alternativa', prisao: 'condenação, prisão', absolvicao: 'absolvição', acordo: 'acordo (sem condenação)' };
@@ -25,7 +27,11 @@ const DESFECHO: Record<string, string> = { socioeducativa: 'medida socioeducativ
 export function situacaoNoSubmundo(v: Vida): string {
   const env = v.caminhos.envolvimento;
   if (v.justica?.prisao) return 'Cumprindo pena';
-  if (v.justica?.foragido) return 'Foragido da Justiça';
+  // REWORK 12.25: o mandado (a audiência a que faltou, a pena abandonada) também é ser procurado — não só a fuga.
+  if (v.justica?.foragido) return v.justica.foragido.motivo === 'mandado' || v.justica.foragido.motivo === 'descumprimento' ? 'Procurado pela Justiça' : 'Foragido da Justiça';
+  // REWORK 12.25: de dentro de uma organização, na liderança, saindo — o estado unificado (`carreiraCriminal`).
+  const est = estadoNoSubmundo(v).estado;
+  if (est === 'lideranca' || est === 'integrante' || est === 'saindo') return `${NOME_DO_ESTADO[est]}${v.justica?.processo ? ' · respondendo a um processo' : ''}`;
   if (v.justica?.processo) return 'Respondendo a um processo';
   // REWORK 11.5: as frentes em que atua (os ramos), em vez de só a categoria.
   const frentes = ramosAtivos(env);
@@ -43,11 +49,9 @@ export function AMargem({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean
   if (!temMargem(vida)) return null;
   const m = leituraDaMargem(vida);
   const proc = leituraDoProcesso(vida);
-  const j = vida.justica;
   const env = vida.caminhos.envolvimento;
   const ativo = !!env && env.parou === undefined;
   const situacao = situacaoNaJustica(vida);
-  const perfil = perfilDaVida(vida);
   return (
     <section className="margem divisao__secao" aria-labelledby="titulo-margem">
       <h2 id="titulo-margem" className="secao-fio">À margem e a Justiça</h2>
@@ -64,30 +68,48 @@ export function AMargem({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean
       )}
       {/* REWORK 11.5 · SUB-17: as frentes, a gente e as organizações do caminho (o dossiê). */}
       {env && <PainelDoSubmundo vida={vida} agir={agir} />}
-      {proc && (
-        <div className="margem__processo papel papel--sem-dobra" aria-label="O processo">
-          <p className="margem__cabeca"><span>Processo</span><span>{NOME[j!.processo!.categoria] ?? ''} · desde {anoDe(j!.processo!.tInicio)}</span></p>
-          <ul className="margem__linhas">{proc.linhas.map((l, k) => <li key={k}>{l}</li>)}</ul>
-          <div className="grupo-acoes">
-            <BotaoAcao vida={vida} acao={{ tipo: 'margem', oque: 'advogado' }} agir={agir} variante="secundario" ocultarImpossivel>Contratar um advogado particular</BotaoAcao>
-            <BotaoAcao vida={vida} acao={{ tipo: 'margem', oque: 'assumir' }} agir={agir} variante="discreto" ocultarImpossivel>Assumir o que fez</BotaoAcao>
-            {perfil.colaboracao && <BotaoAcao vida={vida} acao={{ tipo: 'margem', oque: 'cooperar' }} agir={agir} variante="discreto" ocultarImpossivel>Colaborar com a investigação</BotaoAcao>}
-          </div>
-        </div>
-      )}
+      {proc && <FichaDoProcesso vida={vida} agir={agir} />}
       {situacao && !proc && <p className="nota margem__situacao">{situacao}</p>}
-      {j && j.antecedentes.length > 0 && (
-        <div className="margem__ficha">
-          <h3 className="margem__titulo">A ficha</h3>
-          <ul className="margem__antecedentes">
-            {j.antecedentes.map((a, k) => (
-              <li key={k}><span className="margem__ano">{anoDe(a.t)}</span> {NOME[a.categoria] ?? a.categoria} — {DESFECHO[a.desfecho] ?? a.desfecho}{a.anos ? ` (${a.anos} ${a.anos === 1 ? 'ano' : 'anos'})` : ''}{a.multa ? ` · multa de ${dinheiroCurto(a.multa)}` : ''}{a.reabilitado !== undefined ? ` · reabilitado em ${anoDe(a.reabilitado)}` : ''}</li>
-            ))}
-          </ul>
-          <BotaoAcao vida={vida} acao={{ tipo: 'margem', oque: 'reabilitacao' }} agir={agir} variante="secundario" ocultarImpossivel>Pedir a reabilitação</BotaoAcao>
-          <p className="nota">A reabilitação, aqui, pode ser pedida {perfil.reabilitacaoAnos} anos depois do fim da pena, sem nada novo.</p>
-        </div>
-      )}
+      <FichaDeAntecedentes vida={vida} agir={agir} />
     </section>
+  );
+}
+
+/** O processo como ficha (as provas, a defesa) e as decisões que cabem ao jogador. REWORK 12.25: também na parte Justiça. */
+export function FichaDoProcesso({ vida, agir, children }: { vida: Vida; agir: (a: Acao) => boolean; children?: ReactNode }) {
+  const proc = leituraDoProcesso(vida);
+  const j = vida.justica;
+  if (!proc || !j?.processo) return null;
+  const perfil = perfilDaVida(vida);
+  return (
+    <div className="margem__processo papel papel--sem-dobra" aria-label="O processo">
+      <p className="margem__cabeca"><span>Processo</span><span>{NOME[j.processo.categoria] ?? ''} · desde {anoDe(j.processo.tInicio)}</span></p>
+      <ul className="margem__linhas">{proc.linhas.map((l, k) => <li key={k}>{l}</li>)}</ul>
+      <div className="grupo-acoes">
+        <BotaoAcao vida={vida} acao={{ tipo: 'margem', oque: 'advogado' }} agir={agir} variante="secundario" ocultarImpossivel>Contratar um advogado particular</BotaoAcao>
+        <BotaoAcao vida={vida} acao={{ tipo: 'margem', oque: 'assumir' }} agir={agir} variante="discreto" ocultarImpossivel>Assumir o que fez</BotaoAcao>
+        {perfil.colaboracao && <BotaoAcao vida={vida} acao={{ tipo: 'margem', oque: 'cooperar' }} agir={agir} variante="discreto" ocultarImpossivel>Colaborar com a investigação</BotaoAcao>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+/** A ficha de antecedentes, com a reabilitação quando a lei do país deixa pedir. */
+export function FichaDeAntecedentes({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
+  const j = vida.justica;
+  if (!j || !j.antecedentes.length) return null;
+  const perfil = perfilDaVida(vida);
+  return (
+    <div className="margem__ficha">
+      <h3 className="margem__titulo">A ficha</h3>
+      <ul className="margem__antecedentes">
+        {j.antecedentes.map((a, k) => (
+          <li key={k}><span className="margem__ano">{anoDe(a.t)}</span> {NOME[a.categoria] ?? a.categoria} — {DESFECHO[a.desfecho] ?? a.desfecho}{a.anos ? ` (${a.anos} ${a.anos === 1 ? 'ano' : 'anos'})` : ''}{a.multa ? ` · multa de ${dinheiroCurto(a.multa)}` : ''}{a.reabilitado !== undefined ? ` · reabilitado em ${anoDe(a.reabilitado)}` : ''}</li>
+        ))}
+      </ul>
+      <BotaoAcao vida={vida} acao={{ tipo: 'margem', oque: 'reabilitacao' }} agir={agir} variante="secundario" ocultarImpossivel>Pedir a reabilitação</BotaoAcao>
+      <p className="nota">A reabilitação, aqui, pode ser pedida {perfil.reabilitacaoAnos} anos depois do fim da pena, sem nada novo.</p>
+    </div>
   );
 }

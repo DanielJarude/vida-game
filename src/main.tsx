@@ -26,6 +26,8 @@ import './ui/coerencia.css';
 import './ui/alcance.css';
 // REWORK 11.5: as carreiras com cara própria (campo, prancheta, set, palco, plenário, Submundo), troféus e casamento.
 import './ui/movimento.css';
+// REWORK 12.25: o Submundo numa tela só (a situação, as partes, as propostas, as pessoas, as organizações, a Justiça).
+import './ui/submundo.css';
 
 iniciarTema();
 
