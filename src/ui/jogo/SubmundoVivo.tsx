@@ -25,7 +25,7 @@ import { dinheiroCurto } from '../leituraMaterial';
 import { anoDe } from '../../motor/tempo';
 import { contrair } from '../../motor/texto';
 import { idade } from '../../motor/nucleo';
-import { capacidadeDoAno, contasPorFora, estadoNoSubmundo, feitosNoAno, garantirCarreira, leituraDaFamilia, NOME_DA_CONDICAO, NOME_DO_ESTADO, NOME_DO_PATAMAR, patamarAtual, tempoDoCaminho, type FonteDoCrime } from '../../motor/sistemas/carreiraCriminal';
+import { capacidadeDoAno, contasPorFora, estadoNoSubmundo, feitosNoAno, garantirCarreira, leituraDaFamilia, nomeDaCondicao, NOME_DO_ESTADO, NOME_DO_PATAMAR, patamarAtual, tempoDoCaminho, type FonteDoCrime } from '../../motor/sistemas/carreiraCriminal';
 import { leituraDasEncomendas, TIPOS, custoDeDelegar, limiteDeDelegadas } from '../../motor/sistemas/encomendas';
 import { acoesComContato, rotuloDaAcaoComContato } from '../../motor/sistemas/redeCriminal';
 import { leituraDasOrganizacoes, nomeDaRegiao, regiaoDaPessoa, type OqueOrg } from '../../motor/sistemas/faccoes';
@@ -141,7 +141,7 @@ function Situacao({ vida, ir }: { vida: Vida; ir: (p: Parte) => void }) {
         <h2 id="titulo-svivo" className="svivo-situacao__titulo">{NOME_DO_ESTADO[est.estado]}</h2>
         <span className="dossie__carimbo">{carimboDoCaminho(vida)}</span>
       </header>
-      {est.condicoes.length > 0 && <ul className="svivo-chips" aria-label="O que se soma a isso">{est.condicoes.map(x => <li key={x} className={`svivo-chip svivo-chip--${x}`}>{NOME_DA_CONDICAO[x]}</li>)}</ul>}
+      {est.condicoes.length > 0 && <ul className="svivo-chips" aria-label="O que se soma a isso">{est.condicoes.map(x => <li key={x} className={`svivo-chip svivo-chip--${x}`}>{nomeDaCondicao(vida, x)}</li>)}</ul>}
       {e && (
         <div className="svivo-duas">
           <div className="svivo-duas__lado">

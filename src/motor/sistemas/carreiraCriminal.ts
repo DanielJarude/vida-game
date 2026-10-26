@@ -99,6 +99,13 @@ export const NOME_DA_CONDICAO: Record<CondicaoNoSubmundo, string> = {
   preso: 'cumprindo pena', pena_alternativa: 'cumprindo pena alternativa', antecedentes: 'com antecedentes'
 };
 
+/** O nome da condição, flexionado pelo gênero de quem vive (procurado, procurada, procurade). */
+export function nomeDaCondicao(v: Vida, c: CondicaoNoSubmundo): string {
+  const g = v.eu.tratamento ?? v.eu.genero;
+  const o = g === 'feminino' ? 'a' : g === 'nao_binario' ? 'e' : 'o';
+  return c === 'procurado' ? `procurad${o} pela Justiça` : c === 'foragido' ? `foragid${o}` : NOME_DA_CONDICAO[c];
+}
+
 /** O crime virou a ocupação principal? (Sem emprego com carteira, e o que entra por fora é o que paga a vida.) */
 export function crimeEhPrincipal(v: Vida): boolean {
   const e = env(v);
@@ -134,7 +141,7 @@ export function estadoNoSubmundo(v: Vida): { estado: EstadoNoSubmundo; condicoes
     else if (crimeEhPrincipal(v) || garantirCarreira(e).xp >= 30 || e.nivel >= 2) estado = 'profissional';
     else estado = v.t - e.tInicio < 12 && (garantirCarreira(e).xp < 8) ? 'contato_inicial' : 'ocasional';
   }
-  const titulo = [NOME_DO_ESTADO[estado], ...condicoes.filter(c => c !== 'antecedentes' || estado === 'ex' || estado === 'nunca').map(c => NOME_DA_CONDICAO[c])].join(' · ');
+  const titulo = [NOME_DO_ESTADO[estado], ...condicoes.filter(c => c !== 'antecedentes' || estado === 'ex' || estado === 'nunca').map(c => nomeDaCondicao(v, c))].join(' · ');
   return { estado, condicoes, titulo };
 }
 

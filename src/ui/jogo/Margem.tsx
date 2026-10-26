@@ -28,7 +28,7 @@ export function situacaoNoSubmundo(v: Vida): string {
   const env = v.caminhos.envolvimento;
   if (v.justica?.prisao) return 'Cumprindo pena';
   // REWORK 12.25: o mandado (a audiência a que faltou, a pena abandonada) também é ser procurado — não só a fuga.
-  if (v.justica?.foragido) return v.justica.foragido.motivo === 'mandado' || v.justica.foragido.motivo === 'descumprimento' ? 'Procurado pela Justiça' : 'Foragido da Justiça';
+  if (v.justica?.foragido) { const o = (v.eu.tratamento ?? v.eu.genero) === 'feminino' ? 'a' : (v.eu.tratamento ?? v.eu.genero) === 'nao_binario' ? 'e' : 'o'; return v.justica.foragido.motivo === 'mandado' || v.justica.foragido.motivo === 'descumprimento' ? `Procurad${o} pela Justiça` : `Foragid${o} da Justiça`; }
   // REWORK 12.25: de dentro de uma organização, na liderança, saindo — o estado unificado (`carreiraCriminal`).
   const est = estadoNoSubmundo(v).estado;
   if (est === 'lideranca' || est === 'integrante' || est === 'saindo') return `${NOME_DO_ESTADO[est]}${v.justica?.processo ? ' · respondendo a um processo' : ''}`;
