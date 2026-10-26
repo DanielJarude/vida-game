@@ -23,6 +23,7 @@ import type { Acao } from '../../motor/acoes';
 import { BotaoAcao, Subnav, type ItemDeSubnav } from '../comum';
 import { dinheiroCurto } from '../leituraMaterial';
 import { anoDe } from '../../motor/tempo';
+import { contrair } from '../../motor/texto';
 import { idade } from '../../motor/nucleo';
 import { capacidadeDoAno, contasPorFora, estadoNoSubmundo, feitosNoAno, garantirCarreira, leituraDaFamilia, NOME_DA_CONDICAO, NOME_DO_ESTADO, NOME_DO_PATAMAR, patamarAtual, tempoDoCaminho, type FonteDoCrime } from '../../motor/sistemas/carreiraCriminal';
 import { leituraDasEncomendas, TIPOS, custoDeDelegar, limiteDeDelegadas } from '../../motor/sistemas/encomendas';
@@ -387,7 +388,7 @@ function Organizacoes({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }
   if (!os.length) return <p className="svivo-nota">Nenhuma organização conhecida por aqui.</p>;
   return (
     <>
-      <p className="svivo-nota">Você mora em {nomeDaRegiao(vida.moradia.municipioId, reg)}. Aliado não é integrante: trabalha junto, sem ser de dentro.</p>
+      <p className="svivo-nota">{contrair(`Você mora em ${nomeDaRegiao(vida.moradia.municipioId, reg)}.`)} Aliado não é integrante: trabalha junto, sem ser de dentro.</p>
       <ul className="svivo-cartoes">
         {os.map(o => {
           const A = (oque: OqueOrg, alvo?: string) => crime({ area: 'org', oque, orgId: o.id, alvo });
@@ -410,7 +411,7 @@ function Organizacoes({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }
                 {o.conhecida && <div><span className="svivo-rotulo">Lealdade que leem em você</span><Medidor valor={o.lealdade} rotulo={`Lealdade com ${o.nome}`} tom="progresso" /></div>}
               </div>
               {o.disputa && dentro && (
-                <div className="svivo-bloco svivo-bloco--alerta" role="group" aria-label={`A disputa em ${o.nome}`}>
+                <div className="svivo-bloco svivo-bloco--alerta" role="group" aria-label={contrair(`A disputa em ${o.nome}`)}>
                   <p className="svivo-cartao__titulo">A liderança está em disputa</p>
                   <p className="svivo-nota">{cap(o.disputa.motivo)}. Candidatos: {o.disputa.candidatos.map(c => c.nome).join(', ')}.{o.disputa.apoio ? ` Você apoia ${o.disputa.candidatos.find(c => c.id === o.disputa!.apoio)?.nome}.` : ''}</p>
                   <div className="grupo-acoes">
@@ -438,10 +439,10 @@ function Organizacoes({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }
                     <BotaoAcao vida={vida} acao={A('prioridade_discricao')} agir={agir} variante="discreto" ocultarImpossivel ocultarBloqueado>Prioridade: sumir do radar</BotaoAcao>
                     <BotaoAcao vida={vida} acao={A('mediar')} agir={agir} variante="secundario" ocultarImpossivel>Resolver a briga interna</BotaoAcao>
                     <BotaoAcao vida={vida} acao={A('recolher')} agir={agir} variante="secundario" ocultarImpossivel>Mandar recolher (a pressão está alta)</BotaoAcao>
-                    <BotaoAcao vida={vida} acao={A('presenca', reg)} agir={agir} variante="discreto" ocultarImpossivel>{`Fazer-se presente em ${nomeDaRegiao(vida.moradia.municipioId, reg)}`}</BotaoAcao>
+                    <BotaoAcao vida={vida} acao={A('presenca', reg)} agir={agir} variante="discreto" ocultarImpossivel>{contrair(`Fazer-se presente em ${nomeDaRegiao(vida.moradia.municipioId, reg)}`)}</BotaoAcao>
                     {os.filter(x => x.id !== o.id && x.daqui && x.estado !== 'extinta').map(x => o.aliadas.includes(x.nome)
-                      ? <BotaoAcao key={x.id} vida={vida} acao={A('romper', x.id)} agir={agir} variante="discreto" ocultarImpossivel>{`Romper com ${x.nome}`}</BotaoAcao>
-                      : <BotaoAcao key={x.id} vida={vida} acao={A('alianca', x.id)} agir={agir} variante="discreto" ocultarImpossivel>{`Propor aliança a ${x.nome}`}</BotaoAcao>)}
+                      ? <BotaoAcao key={x.id} vida={vida} acao={A('romper', x.id)} agir={agir} variante="discreto" ocultarImpossivel>{contrair(`Romper com ${x.nome}`)}</BotaoAcao>
+                      : <BotaoAcao key={x.id} vida={vida} acao={A('alianca', x.id)} agir={agir} variante="discreto" ocultarImpossivel>{contrair(`Propor aliança a ${x.nome}`)}</BotaoAcao>)}
                   </div>
                 </details>
               )}

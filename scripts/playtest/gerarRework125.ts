@@ -32,7 +32,7 @@ const SP = process.env.SP ?? `${process.env.HOME}/vida-trabalho/qa125`;
 mkdirSync(`${SP}/saves`, { recursive: true });
 const salvar = (nome: string, v: Vida) => { v.momento = null; delete v.fila; v.caminhos.pendente = undefined; writeFileSync(`${SP}/saves/vida-r125-${nome}.json`, JSON.stringify(v)); console.log(nome, v.eu.nome, idade(v), JSON.stringify(v).length); };
 const tenta = (v: Vida, a: Acao): Vida => { if (!podeTentar(disponibilidade(v, a))) { console.log('  não deu:', JSON.stringify(a).slice(0, 100), disponibilidade(v, a).motivo); return v; } const r = executar(v, a).vida; r.momento = null; delete r.fila; return r; };
-const responder = (v: Vida) => { for (let k = 0; k < 12 && v.momento; k++) { const op = v.momento.opcoes.find(o => !o.bloqueio && !/parar|largar|sair|faltar|prometer/.test(o.id)) ?? v.momento.opcoes.find(o => !o.bloqueio) ?? v.momento.opcoes[0]; v = executar(v, { tipo: 'decidir', opcaoId: op.id }).vida; } return v; };
+const responder = (v: Vida) => { for (let k = 0; k < 12 && v.momento; k++) { const op = v.momento.opcoes.find(o => !o.bloqueio && !/parar|largar|sair|faltar|prometer|mudar|denunciar|cooperar|entregar|assumir|cortar/.test(o.id)) ?? v.momento.opcoes.find(o => !o.bloqueio) ?? v.momento.opcoes[0]; v = executar(v, { tipo: 'decidir', opcaoId: op.id }).vida; } return v; };
 const ano = (v: Vida) => { v = responder(avancarAno(v).vida); v.momento = null; delete v.fila; return v; };
 const base = (i: number, semente: number, cidade: string, conta = 150_000) => {
   const v = adulto(i, { semente, municipioId: cidade });
@@ -63,8 +63,8 @@ const crime = (acao: Extract<Acao, { tipo: 'crime' }>['acao']): Acao => ({ tipo:
     proporEncomenda(x, rngDe('qa', 2), 'contrabando', { pessoaId: f }, 2);
     e.familia = { [Object.keys(x.vinculos).find(id => x.vinculos[id].parentesco === 'mae')!]: { sabe: 2, postura: 'preocupada', t: x.t } };
   }).vida;
-  const parceiro = Object.entries(v.caminhos.envolvimento!.fichas!).find(([, f]) => f.papel === 'parceiro' && f.afastado === undefined)?.[0];
-  if (parceiro) v = tenta(v, crime({ area: 'encomenda', oque: 'delegar', pessoaId: parceiro, trabalho: TIPOS.furtos[0].id }));
+  const quem = Object.entries(v.caminhos.envolvimento!.fichas!).find(([id, f]) => f.afastado === undefined && f.traiu === undefined && f.confianca >= 30 && v.pessoas[id]?.vivo);
+  if (quem) v = tenta(v, crime({ area: 'encomenda', oque: 'delegar', pessoaId: quem[0], trabalho: TIPOS[quem[1].especialidade][0].id }));
   salvar('profissional', v);
 }
 

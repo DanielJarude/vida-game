@@ -109,7 +109,7 @@ describe('as partes: propostas, contatos, organizações, rumo', () => {
     render(<main><SubmundoVivo vida={v} agir={nada} /></main>);
     aba('Organizações');
     expect(screen.getAllByText(/na liderança|de dentro/).length).toBeGreaterThan(0);
-    const disputa = screen.getByRole('group', { name: /A disputa em/ });
+    const disputa = screen.getByRole('group', { name: /^A disputa n[oa]s? / });
     expect(within(disputa).getAllByRole('button', { name: /^Apoiar/ }).length).toBe(2);
     expect(within(disputa).getByRole('button', { name: 'Ficar de fora' })).toBeTruthy();
     expect(screen.getAllByRole('table').length).toBeGreaterThan(0);

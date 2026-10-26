@@ -27,6 +27,19 @@ function neutroDe(masc: string): string {
 }
 
 /** Artigo definido ("o", "a", "e") para uma pessoa. */
+/**
+ * REWORK 12.25: as contrações do português quando um nome que começa com artigo entra numa frase ("a família Vieira",
+ * "o centro"): de + a = da, em + o = no, a + a = à, por + o = pelo. Usada nos textos do Submundo, onde os nomes de
+ * organização e de região levam artigo; não é aplicada a todo texto (lá, "antes de a festa começar" é correto).
+ */
+export function contrair(texto: string): string {
+  const T: Record<string, Record<string, string>> = { de: { o: 'do', a: 'da', os: 'dos', as: 'das' }, em: { o: 'no', a: 'na', os: 'nos', as: 'nas' }, a: { o: 'ao', a: 'à', os: 'aos', as: 'às' }, por: { o: 'pelo', a: 'pela', os: 'pelos', as: 'pelas' } };
+  return texto.replace(/(^|[\s(—])(de|em|a|por|De|Em|A|Por) (os|as|o|a) (?=\p{L})/gu, (_m, antes: string, prep: string, art: string) => {
+    const c = T[prep.toLowerCase()][art];
+    return `${antes}${prep[0] === prep[0].toUpperCase() ? c.charAt(0).toUpperCase() + c.slice(1) : c} `;
+  });
+}
+
 export const artigo = (g: Genero) => flex(g, 'o', 'a', 'e');
 /** Contração "do/da/de". */
 export const doDa = (g: Genero) => flex(g, 'do', 'da', 'de');

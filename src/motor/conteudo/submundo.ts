@@ -8,6 +8,7 @@
  * (a fila do ano decide quantas cabem). Nenhuma opção descreve como se faz coisa alguma.
  */
 import type { Conteudo, Ctx, Papel } from './base';
+import { comContracao } from './base';
 import type { Pessoa, Vida } from '../tipos';
 import { estresse, feliz } from './efeitos';
 import { parceiro } from '../nucleo';
@@ -35,7 +36,7 @@ const ganhar = (c: Ctx, x: number, ramo?: Parameters<typeof valorDaOperacao>[1])
 const daCena = (id: string): Papel => Object.assign((v: Vida): Pessoa[] => { const p = v.caminhos.envolvimento?.cenas?.[id]; return p && v.pessoas[p]?.vivo ? [v.pessoas[p]] : []; }, { fixo: true });
 const quem = (c: Ctx) => c.p.contato;
 
-export const SUBMUNDO: Conteudo[] = [
+export const SUBMUNDO: Conteudo[] = ([
   /* ------------------------------------------------------------- furtos e roubos: o parceiro */
   {
     id: 'subf_parceiro', tipo: 'decisao', idade: [14, 80], tema: 'escolha', prioritario: true, prioridade: 3, repetir: 3,
@@ -280,7 +281,7 @@ export const SUBMUNDO: Conteudo[] = [
         resolver: c => ({ texto: 'Você fingiu que não ouviu. A pressão voltou.', memoria: null, tom: 'ruim', efeito: () => { c.v.fatos['pressao_grupo'] = c.v.t; abalar(c.v, 'a dívida do passado', -5, 8); } }) }
     ]
   }
-];
+] as Conteudo[]).map(comContracao);
 
 
 /** Para os testes e a contagem de conteúdo. */

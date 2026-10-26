@@ -29,6 +29,7 @@ import { criarPessoa, vincular } from '../pessoas';
 import { sortearNome, sortearSobrenome } from '../dados/nomes';
 import { economiaLocal, municipio, paisDaCidade } from '../dados/lugares';
 import { anoDe } from '../tempo';
+import { contrair } from '../texto';
 import { vereditoDePagar } from './dinheiro';
 import { ativo } from './ilicito';
 import { preso } from './justica';
@@ -192,7 +193,7 @@ function relacionar(a: OrgViva, b: OrgViva, como: 'rival' | 'aliada' | 'nada'): 
 }
 
 function historia(o: OrgViva, t: number, texto: string): void {
-  o.historia.push({ t, texto });
+  o.historia.push({ t, texto: contrair(texto) });
   if (o.historia.length > 20) o.historia.splice(0, o.historia.length - 20);
 }
 
@@ -415,7 +416,7 @@ function resolverDisputa(v: Vida, o: OrgViva, r: Rng): void {
     if (rel) { definirNivel(v, rel, 6); lembrarOrg(rel, v.t, 'alianca', 10); }
     historia(o, v.t, `A disputa terminou ${jeito}: você passou a mandar.`);
     marco(v, `Chegou ao topo de ${o.nome}: ${nomeDoNivel(o, 6)}.`);
-    escrever(v, { texto: `Passou a comandar ${o.nome}. A disputa terminou ${jeito}.`, relevancia: 'marco', tema: 'trabalho', tom: 'ruim', escolha: true });
+    escrever(v, { texto: contrair(`Passou a comandar ${o.nome}. A disputa terminou ${jeito}.`), relevancia: 'marco', tema: 'trabalho', tom: 'ruim', escolha: true });
     return;
   }
   const m = o.quadro.find(x => x.id === vencedor);
@@ -482,7 +483,7 @@ function anoDoJogadorNasOrgs(v: Vida): void {
       lembrarOrg(rel, v.t, 'saida', -10);
       v.fatos['pressao_grupo'] = v.t;
       anotar(v, `Foi posto para fora de ${o.nome}.`, 'ruim');
-      escrever(v, { texto: `Foi expuls${v.eu.genero === 'feminino' ? 'a' : v.eu.genero === 'nao_binario' ? 'e' : 'o'} de ${o.nome}. Quem sai assim não sai em paz.`, relevancia: 'marco', tema: 'trabalho', tom: 'ruim' });
+      escrever(v, { texto: contrair(`Foi expuls${v.eu.genero === 'feminino' ? 'a' : v.eu.genero === 'nao_binario' ? 'e' : 'o'} de ${o.nome}. Quem sai assim não sai em paz.`), relevancia: 'marco', tema: 'trabalho', tom: 'ruim' });
       abalar(v, 'a expulsão', -8, 12);
       pedirRumo(v, 'perda');
       continue;
@@ -509,7 +510,7 @@ function promover(v: Vida, o: OrgViva, rel: RelacaoComOrganizacao, como: string)
   const texto = `${como} Agora: ${nomeDoNivel(o, n)}, em ${o.nome}.`;
   anotar(v, texto, 'bom');
   if (n >= 3) marco(v, `Chegou a ${nomeDoNivel(o, n)} em ${o.nome}.`);
-  else escrever(v, { texto: `Subiu em ${o.nome}: ${nomeDoNivel(o, n)}.`, relevancia: 'biografia', tema: 'trabalho', escolha: true });
+  else escrever(v, { texto: contrair(`Subiu em ${o.nome}: ${nomeDoNivel(o, n)}.`), relevancia: 'biografia', tema: 'trabalho', escolha: true });
   if (n >= 3 && !Object.values(e.fichas ?? {}).some(f => f.papel === 'protegido' && f.organizacao === o.id && f.afastado === undefined)) {
     const rr = rngDe(v.id, 'protegido_org', o.id, v.t);
     const p = criarPessoa(v, rr, { genero: rr.chance(0.7) ? 'masculino' : 'feminino', idade: Math.max(18, idade(v) - rr.int(2, 12)), municipioId: v.moradia.municipioId });

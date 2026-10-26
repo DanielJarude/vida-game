@@ -31,7 +31,7 @@ import { ativo, parar, rendaDeReferencia, temAcesso } from './ilicito';
 import { categoriaDoRamo, chanceDeFalha, garantirRamos, NOME_DO_RAMO, novaEspecializacao, PERFIL, RAMOS, ramoPrincipal, ramosAtivos } from './ramos';
 import { machucarNaBriga } from './lesoes';
 import { movimentoPorFora, pagarPorFora } from './porFora';
-import { dinheiroCurto } from '../texto';
+import { contrair, dinheiroCurto } from '../texto';
 import { anoDe } from '../tempo';
 
 const preco = (v: Vida, x: number) => Math.round(x * economiaLocal(v.moradia.municipioId).custo / 100) * 100;
@@ -44,7 +44,7 @@ const esp = (v: Vida, r: Ramo) => env(v)?.especializacoes?.[r];
 export function anotar(v: Vida, texto: string, tom?: 'bom' | 'ruim'): void {
   const e = env(v);
   if (!e) return;
-  (e.diario ??= []).push({ t: v.t, texto, ...(tom ? { tom } : {}) });
+  (e.diario ??= []).push({ t: v.t, texto: contrair(texto), ...(tom ? { tom } : {}) });
   if (e.diario.length > 40) e.diario.splice(0, e.diario.length - 40);
 }
 
@@ -557,7 +557,7 @@ export function executarSubmundo(v: Vida, r: Rng, oque: OqueSubmundo, ramo?: Ram
         lembrarOrg(org, v.t, 'alianca', 4);
         if (s!.posto === 4) { const prot = criarContato(v, 'organizado', 'protegido'); anotar(v, `Passou a ter gente sob o seu comando (${v.pessoas[prot].nome}, entre outros).`); }
         anotar(v, `Subiu em ${org.nome}: ${POSTO[s!.posto!]}.`, 'bom');
-        escrever(v, { texto: `Subiu dentro de ${org.nome}.`, relevancia: 'biografia', tema: 'trabalho', tom: 'ruim', escolha: true });
+        escrever(v, { texto: contrair(`Subiu dentro de ${org.nome}.`), relevancia: 'biografia', tema: 'trabalho', tom: 'ruim', escolha: true });
         return { texto: `Agora você é ${POSTO[s!.posto!]}. Mais dinheiro, mais responsabilidade — e mais olhos em você.` };
       }
       lembrarOrg(org, v.t, 'conflito', -8);
@@ -574,12 +574,12 @@ export function executarSubmundo(v: Vida, r: Rng, oque: OqueSubmundo, ramo?: Ram
         v.fatos['pressao_grupo'] = v.t;
         abalar(v, 'a saída mal recebida', -8, 12);
         anotar(v, `${cap(org.nome)} não aceitou a sua saída.`, 'ruim');
-        if (!ramosAtivos(e).length) parar(v, `saiu de ${org.nome}, sem a bênção de ninguém`);
+        if (!ramosAtivos(e).length) parar(v, contrair(`saiu de ${org.nome}, sem a bênção de ninguém`));
         return { texto: 'Você disse que estava fora. A resposta veio em forma de silêncio — e de um carro parado na esquina.', tom: 'ruim' };
       }
       lembrarOrg(org, v.t, 'saida', -5);
       anotar(v, `Saiu de ${org.nome} sem guerra.`, 'bom');
-      if (!ramosAtivos(e).length) parar(v, `saiu de ${org.nome}`);
+      if (!ramosAtivos(e).length) parar(v, contrair(`saiu de ${org.nome}`));
       return { texto: 'Aceitaram. Ninguém sai de verdade de um lugar desses — mas ninguém vai bater na sua porta.' };
     }
     case 'encomenda': {

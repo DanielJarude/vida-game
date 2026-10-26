@@ -19,7 +19,7 @@ import { noPais } from './mundo/registro';
 import type { MotivoMigracao } from './tipos';
 import { avaliarMigracao, migrar, pedirNaturalizacao, podeNaturalizar } from './sistemas/migracao';
 import { daMoedaLocal } from './mundo/moeda';
-import { dinheiro as moeda } from './texto';
+import { contrair, dinheiro as moeda } from './texto';
 import { declararIntencao, patrimonioPagaAVida, podeDeclararIntencao, registrarProcura } from './sistemas/intencao';
 import { entrarNaVida, paisDaVida, perfilDaVida } from './mundo/vida';
 import { OCUPACOES_DE_ATLETA } from './sistemas/esporte';
@@ -988,7 +988,7 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       const x = executarSubmundo(v, r, a.oque, a.ramo, a.pessoaId);
       // O que a ação desencadeou agora (o parceiro pego depois do serviço que deu errado) vira a pergunta na hora.
       if (!v.momento) { const c = candidatos(v, r, k => k.tipo === 'decisao' && /^sub[a-z]?_/.test(k.id))[0]; if (c && c.c.tipo === 'decisao') abrirDecisao(v, c.c, c.ctx); }
-      return { resultado: x.texto, titulo: a.ramo ? NOME_DO_RAMO[a.ramo] : 'O caminho' };
+      return { resultado: contrair(x.texto), titulo: a.ramo ? NOME_DO_RAMO[a.ramo] : 'O caminho' };
     }
     case 'crime': {
       const x = executarCrime(v, a.acao);
@@ -1248,7 +1248,7 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
     case 'pet_ao_zoo': return { resultado: petAoZoo(v, a.petId, a.empresaId), titulo: 'Para o zoológico', pessoaId: a.petId };
     case 'paralelo': { const x = executarParalelo(v, a.ofertaId, a.oque); return ok(x.texto, x.tom ?? 'neutro'); }
     case 'animal_por_fora': { const x = executarAnimalPorFora(v, a.oque, a.empresaId); return ok(x.texto, x.tom ?? 'neutro'); }
-    case 'clandestino': return { resultado: decidirClandestino(v, a.oque, a.negocioId, a.alvo), titulo: 'Negócios por fora' };
+    case 'clandestino': return { resultado: contrair(decidirClandestino(v, a.oque, a.negocioId, a.alvo)), titulo: 'Negócios por fora' };
     case 'participacao': return ok(comprarParticipacao(v, a.ofertaId), 'bom');
     case 'mei': { const antes = temFato(v, 'formalizou_mei'); formalizar(v); escrever(v, { texto: antes ? `Abriu um MEI de novo, agora como ${nomeOcupacao(v, ocupacao(v.trabalho.atual!.ocupacaoId))}.` : 'Formalizou o trabalho como MEI: CNPJ, nota fiscal e a guia do mês.', relevancia: 'biografia', tema: 'trabalho', escolha: true }); return ok('Agora é MEI: uma guia por mês, tempo de INSS contando.', 'bom'); }
     case 'deslocamento': {

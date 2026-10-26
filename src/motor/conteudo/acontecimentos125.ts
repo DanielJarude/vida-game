@@ -21,6 +21,7 @@
  * Nenhuma opção descreve como se faz coisa alguma.
  */
 import type { Conteudo, Ctx, Papel } from './base';
+import { comContracao } from './base';
 import type { Pessoa, Vida } from '../tipos';
 import { feliz, estresse } from './efeitos';
 import { clamp } from '../rng';
@@ -48,7 +49,7 @@ const orgDaCena = (c: Ctx, id: string) => { const o = c.v.caminhos.envolvimento?
 const quem = (c: Ctx) => c.p.quem;
 const ficha = (c: Ctx) => env(c).fichas?.[quem(c).id];
 
-export const ACONTECIMENTOS_125: Conteudo[] = [
+export const ACONTECIMENTOS_125: Conteudo[] = ([
   /* ------------------------------------------------------------- a família */
   {
     id: 'sub125_familia', tipo: 'decisao', idade: [14, 95], tema: 'familia', prioritario: true, prioridade: 3, repetir: 3,
@@ -253,7 +254,7 @@ export const ACONTECIMENTOS_125: Conteudo[] = [
         resolver: c => ({ texto: 'Você disse com calma: quando a pena acabar, acabou tudo. Ninguém respondeu.', memoria: 'Na prisão, avisou à organização que estava fora.', efeito: () => { const o = (env(c).organizacoes ?? []).find(x => x.relacao === 'membro' && x.saiu === undefined && x.especialidade === 'organizado'); if (o) { o.saiu = c.v.t; lembrarOrg(o, c.v.t, 'saida', -8); } if (env(c).parou === undefined) parar(c.v, 'decidiu, na prisão, que estava fora'); abalar(c.v, 'a decisão', 2, 4); } }) }
     ]
   }
-];
+] as Conteudo[]).map(comContracao);
 
 /** Para os testes e a contagem de conteúdo. */
 export const IDS_DO_125 = ACONTECIMENTOS_125.map(x => x.id);

@@ -23,7 +23,7 @@ import { escrever, idade, pais, parceiro } from '../nucleo';
 import { bloqueio, PERMITIDO, type Veredito } from '../plausibilidade';
 import { economiaLocal } from '../dados/lugares';
 import { anoDe } from '../tempo';
-import { flex, ge } from '../texto';
+import { contrair, flex, ge } from '../texto';
 import { disponivel, vereditoDePagar } from './dinheiro';
 import { garantirJustica, prender, registrarProcurado } from './justica';
 import { honorarios, perfilDaVida, recorrer } from './tribunal';
@@ -123,7 +123,7 @@ export function disponibilidadeDefesa(v: Vida, oque: OqueDefesa): Veredito {
       if (!j?.foragido) return bloqueio('impossivel', 'Só para quem está sendo procurado.');
       if (j.foragido.abrigo !== undefined && v.t - j.foragido.abrigo < 24) return bloqueio('incompativel', 'Você já está abrigad' + g(v) + '.');
       const quem = abrigoPossivel(v);
-      return quem ? { grau: 'irregular', motivo: `${cap(quem.org.nome)} tem presença em ${nomeDaRegiao(v.moradia.municipioId, regiaoDaPessoa(v))}: o abrigo existe — e cobra depois.` } : bloqueio('requisito', 'Ninguém com presença por aqui deve isso a você (nenhuma organização aliada ou de que você seja de dentro).');
+      return quem ? { grau: 'irregular', motivo: contrair(`${cap(quem.org.nome)} tem presença em ${nomeDaRegiao(v.moradia.municipioId, regiaoDaPessoa(v))}: o abrigo existe — e cobra depois.`) } : bloqueio('requisito', 'Ninguém com presença por aqui deve isso a você (nenhuma organização aliada ou de que você seja de dentro).');
     }
     case 'apresentar_se':
       if (!j?.foragido) return bloqueio('impossivel', 'Não há de que se apresentar.');

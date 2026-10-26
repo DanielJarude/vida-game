@@ -28,6 +28,7 @@ import { preso } from './justica';
 import { anotar } from './submundo';
 import { ramosAtivos } from './ramos';
 import { abalar } from './abalo';
+import { contrair } from '../texto';
 
 const env = (v: Vida) => v.caminhos.envolvimento;
 
@@ -53,6 +54,7 @@ export function marco(v: Vida, texto: string, bio = true): void {
   if (!e) return;
   const c = garantirCarreira(e);
   if (c.marcos.some(m => m.texto === texto)) return;
+  texto = contrair(texto);
   c.marcos.push({ t: v.t, texto });
   if (c.marcos.length > 30) c.marcos.splice(0, c.marcos.length - 30);
   anotar(v, texto, 'bom');

@@ -19,7 +19,7 @@
 import type { Escopo } from '../mundo/escopo';
 import type { Rng } from '../rng';
 import type { EventoSocial, Genero, Pessoa, Relevancia, Tema, TipoMarco, Traco, Vida } from '../tipos';
-import { flex } from '../texto';
+import { contrair, flex } from '../texto';
 import { idade } from '../nucleo';
 
 export interface Ctx {
@@ -134,3 +134,14 @@ export function contexto(v: Vida, r: Rng, p: Record<string, Pessoa> = {}): Ctx {
 }
 
 export const txt = (x: string | ((c: Ctx) => string), c: Ctx) => (typeof x === 'string' ? x : x(c));
+
+/**
+ * REWORK 12.25: uma cena cujos textos levam nomes com artigo ("a família Vieira", "o centro") passa as frases pela
+ * contração (`texto.contrair`: "de a" → "da", "em o" → "no") — o título, o texto, as opções, o resultado e a memória.
+ */
+export function comContracao<T extends Conteudo>(c: T): T {
+  const k = (x: string | ((cx: Ctx) => string)) => (typeof x === 'string' ? contrair(x) : (cx: Ctx) => contrair(x(cx)));
+  const res = (r: Resultado): Resultado => ({ ...r, texto: contrair(r.texto), ...(typeof r.memoria === 'string' ? { memoria: contrair(r.memoria) } : {}) });
+  if (c.tipo === 'acontecimento') return { ...c, narrar: (cx: Ctx) => { const n = c.narrar(cx); return n ? { ...n, texto: contrair(n.texto) } : n; } };
+  return { ...c, titulo: k(c.titulo), texto: (cx: Ctx) => contrair(c.texto(cx)), opcoes: c.opcoes.map(o => ({ ...o, texto: k(o.texto), resolver: (cx: Ctx) => res(o.resolver(cx)), ...(o.consequencia ? { consequencia: (cx: Ctx) => { const t = o.consequencia!(cx); return t && contrair(t); } } : {}) })) };
+}

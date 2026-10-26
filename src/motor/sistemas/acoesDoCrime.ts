@@ -15,6 +15,7 @@ import { escalar, moita } from './ilicito';
 import { preso } from './justica';
 import { anotar } from './submundo';
 import { escrever } from '../nucleo';
+import { contrair } from '../texto';
 
 export type OqueRumo = 'moita' | 'voltar_ritmo' | 'fundo' | 'sair_aos_poucos' | 'desistir_de_sair';
 
@@ -70,6 +71,11 @@ export function disponibilidadeCrime(v: Vida, a: AcaoDoCrime): Veredito {
 }
 
 export function executarCrime(v: Vida, a: AcaoDoCrime): { texto: string; tom?: 'bom' | 'ruim'; titulo: string } {
+  const x = executarNaArea(v, a);
+  return { ...x, texto: contrair(x.texto) };
+}
+
+function executarNaArea(v: Vida, a: AcaoDoCrime): { texto: string; tom?: 'bom' | 'ruim'; titulo: string } {
   switch (a.area) {
     case 'encomenda': return { ...executarEncomenda(v, a.oque, a.id, a.pessoaId, a.trabalho), titulo: a.oque === 'delegar' ? 'Uma encomenda' : 'O trabalho' };
     case 'contato': return { ...executarContato(v, a.pessoaId, a.oque), titulo: v.pessoas[a.pessoaId]?.nome ?? 'O contato' };

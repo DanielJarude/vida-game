@@ -39,6 +39,7 @@ import { blocosFixos } from '../sistemas/agenda';
 import { semana } from '../sistemas/semana';
 import { continuarComo } from '../sistemas/sucessao';
 import { criarRng, rngDe } from '../rng';
+import { contrair } from '../texto';
 
 const pode = (v: Vida, a: Acao) => podeTentar(disponibilidade(v, a));
 const fazer = (v: Vida, a: Acao) => { const d = disponibilidade(v, a); expect(podeTentar(d), `${JSON.stringify(a)}: ${d.motivo}`).toBe(true); return executar(v, a).vida; };
@@ -551,6 +552,18 @@ describe('sair do crime e o que fica para quem vem depois', () => {
     const rels = w.caminhos.envolvimento!.organizacoes ?? [];
     expect(rels.some(o => o.relacao === 'aliada')).toBe(true);
     expect(rels.some(o => o.relacao === 'membro' && (o.nivel ?? 0) >= 5)).toBe(false);
+  });
+});
+
+/* ================================================================ textos */
+
+describe('os nomes com artigo entram nas frases com contração', () => {
+  it('de a → da, em o → no, a a → à, por os → pelos; Maiúscula preservada; o que não é contração fica', () => {
+    expect(contrair('Saiu de a família Vieira e foi morar em a zona norte.')).toBe('Saiu da família Vieira e foi morar na zona norte.');
+    expect(contrair('Propor aliança a o círculo de Oliveira; passou por os Soares.')).toBe('Propor aliança ao círculo de Oliveira; passou pelos Soares.');
+    expect(contrair('Propor aliança a a família Vieira')).toBe('Propor aliança à família Vieira');
+    expect(contrair('De a turma do Magro, ninguém.')).toBe('Da turma do Magro, ninguém.');
+    expect(contrair('Você agora é de dentro, de verdade.')).toBe('Você agora é de dentro, de verdade.');
   });
 });
 
