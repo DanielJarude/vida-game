@@ -65,6 +65,11 @@ export const tipoDeEncomenda = (id: string) => Object.values(TIPOS).flat().find(
 const MESES_DA_GRAVIDADE = [0, 2.5, 6, 14] as const;
 const BASE_DA_CHANCE = [0, 0.84, 0.72, 0.6] as const;
 const EXPOSICAO_DO_ERRO = [0, 6, 10, 16] as const;
+/**
+ * O quanto o ramo expõe, RELATIVO aos furtos (a exposição de `PERFIL` é em pontos por ano, não um fator: usá-la direto fazia
+ * uma encomenda grande "arriscar" ~190 pontos — uma só levava a exposição ao teto).
+ */
+const fatorDeExposicao = (ramo: Ramo) => PERFIL[ramo].exposicao / PERFIL.furtos.exposicao;
 
 /** O valor de um trabalho (a régua do ramo, o patamar, e — para quem já é muito rico — a escala do patrimônio). */
 export function valorDoTrabalho(v: Vida, ramo: Ramo, g: 1 | 2 | 3): number {
@@ -103,7 +108,7 @@ export function proporEncomenda(v: Vida, r: Rng, ramo: Ramo, de: { pessoaId?: st
   const valor = Math.round(valorDoTrabalho(v, ramo, tipo.g) * (0.85 + r.next() * 0.35) / 100) * 100;
   const x: EncomendaCriminal = {
     id: novoId(v, 'enc'), direcao: 'recebida', ramo, tipo: tipo.id, gravidade: tipo.g, ...de,
-    valor, chance: Math.round(chanceDoTrabalho(v, ramo, tipo.g, conf) * 100) / 100, risco: Math.round(EXPOSICAO_DO_ERRO[tipo.g] * PERFIL[ramo].exposicao),
+    valor, chance: Math.round(chanceDoTrabalho(v, ramo, tipo.g, conf) * 100) / 100, risco: Math.round(EXPOSICAO_DO_ERRO[tipo.g] * fatorDeExposicao(ramo)),
     t: v.t, tPrazo: v.t + 12, estado: 'aberta'
   };
   (e.encomendas ??= []).push(x);
@@ -343,7 +348,7 @@ function delegar(v: Vida, r: Rng, pessoaId: string, tipo: string): { texto: stri
   const x: EncomendaCriminal = {
     id: novoId(v, 'enc'), direcao: 'delegada', ramo, tipo, gravidade: t.g, pessoaId, valor: custo,
     retorno: Math.round(valor * (0.95 + r.next() * 0.3) / 100) * 100, chance: Math.round(chance * 100) / 100,
-    risco: Math.round(EXPOSICAO_DO_ERRO[t.g] * PERFIL[ramo].exposicao * 0.6), t: v.t, tPrazo: v.t + 12, estado: 'em_andamento'
+    risco: Math.round(EXPOSICAO_DO_ERRO[t.g] * fatorDeExposicao(ramo) * 0.6), t: v.t, tPrazo: v.t + 12, estado: 'em_andamento'
   };
   (e.encomendas ??= []).push(x);
   e.exposicao = clamp(e.exposicao + 2);

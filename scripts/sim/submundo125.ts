@@ -43,9 +43,9 @@ const pct = (xs: number[], p: number) => { const s = [...xs].sort((a, b) => a - 
 const k = (x: number) => (!Number.isFinite(x) ? '—' : Math.abs(x) >= 1e6 ? `${(x / 1e6).toFixed(1)}mi` : `${Math.round(x / 1000)}k`);
 const tenta = (v: Vida, a: Acao): Vida => (podeTentar(disponibilidade(v, a)) ? executar(v, a).vida : v);
 
-type Perfil = 'nunca' | 'ocasional' | 'profissional' | 'integrante' | 'lider' | 'dono' | 'milionario' | 'foragido' | 'preso' | 'ex' | 'furtos' | 'contrabando' | 'digital' | 'fraudes';
-const PERFIS = (process.env.PERFIS?.split(',') as Perfil[]) ?? ['nunca', 'ocasional', 'profissional', 'integrante', 'lider', 'dono', 'milionario', 'foragido', 'preso', 'ex', 'furtos', 'contrabando', 'digital', 'fraudes'];
-const CATEGORIA: Record<Perfil, CategoriaIlicita | undefined> = { nunca: undefined, ocasional: 'pequenos', profissional: 'patrimonial', integrante: 'grupo', lider: 'grupo', dono: 'mercado', milionario: 'fraude', foragido: 'patrimonial', preso: 'patrimonial', ex: 'patrimonial', furtos: 'patrimonial', contrabando: 'mercado', digital: 'fraude', fraudes: 'fraude' };
+type Perfil = 'nunca' | 'ocasional' | 'profissional' | 'integrante' | 'lider' | 'lider_cauteloso' | 'dono' | 'milionario' | 'foragido' | 'preso' | 'ex' | 'furtos' | 'contrabando' | 'digital' | 'fraudes';
+const PERFIS = (process.env.PERFIS?.split(',') as Perfil[]) ?? ['nunca', 'ocasional', 'profissional', 'integrante', 'lider', 'lider_cauteloso', 'dono', 'milionario', 'foragido', 'preso', 'ex', 'furtos', 'contrabando', 'digital', 'fraudes'];
+const CATEGORIA: Record<Perfil, CategoriaIlicita | undefined> = { nunca: undefined, ocasional: 'pequenos', profissional: 'patrimonial', integrante: 'grupo', lider: 'grupo', lider_cauteloso: 'grupo', dono: 'mercado', milionario: 'fraude', foragido: 'patrimonial', preso: 'patrimonial', ex: 'patrimonial', furtos: 'patrimonial', contrabando: 'mercado', digital: 'fraude', fraudes: 'fraude' };
 const crimeContinua = (p: Perfil, ano: number) => p !== 'nunca' && !(p === 'ex' && ano >= 4);
 
 interface Medidas { cenas: Map<string, number[]>; rumos: number; anosAtivos: number; anosSemEscolha: number; tiposVistos: Set<string> }
@@ -63,7 +63,7 @@ function responder(v: Vida, p: Perfil, ano: number, m: Medidas): Vida {
     else if (mo.id === 'jus_defesa') op = livre('particular') ?? livre('publica');
     else if (mo.id === 'jus_recurso') op = livre('recorrer');
     else if (mo.id === 'sub125_familia') op = p === 'ex' || p === 'ocasional' ? livre('prometer') ?? livre('contar') : livre('contar');
-    else if (mo.id === 'sub125_disputa') op = p === 'lider' ? livre('disputar') ?? livre('apoiar_1') : livre('apoiar_1') ?? livre('neutro');
+    else if (mo.id === 'sub125_disputa') op = (p === 'lider' || p === 'lider_cauteloso') ? livre('disputar') ?? livre('apoiar_1') : livre('apoiar_1') ?? livre('neutro');
     else if (mo.id === 'sub125_retorno' || mo.id === 'sub125_legado') op = livre('recusar');
     else if (mo.id === 'sub125_abrigo') op = livre('aceitar') ?? livre('mudar') ?? livre('seguir');
     else if (mo.id === 'pri_rotina') op = livre('os_dois') ?? livre('estudar');
@@ -80,7 +80,7 @@ function comecar(p: Perfil, s: number): Vida {
   v.trabalho.atual = undefined;
   contratar(v, criarRng(s), ocupacao(p === 'fraudes' || p === 'milionario' ? 'analista_financeiro' : 'assistente_adm'));
   v.financas.dividas = []; v.financas.negativado = false; v.momento = null; delete v.fila;
-  v.financas.conta = p === 'milionario' ? 20_000_000 : p === 'dono' || p === 'lider' ? 600_000 : 40_000;
+  v.financas.conta = p === 'milionario' ? 20_000_000 : p === 'dono' || p === 'lider' || p === 'lider_cauteloso' ? 600_000 : 40_000;
   delete v.fatos['proposta_ilicita'];
   v.justica = undefined;
   v.caminhos.envolvimento = undefined;
@@ -93,7 +93,7 @@ function comecar(p: Perfil, s: number): Vida {
     const ramo: Ramo = cat === 'mercado' ? 'contrabando' : cat === 'grupo' ? 'organizado' : cat === 'fraude' ? 'fraudes' : 'furtos';
     criarContato(x, ramo, ramo === 'contrabando' ? 'fornecedor' : ramo === 'organizado' ? 'chefe' : 'parceiro');
     garantirCidade(x);
-    if (p === 'lider') {
+    if ((p === 'lider' || p === 'lider_cauteloso')) {
       for (const s2 of Object.values(e.especializacoes ?? {})) if (s2) { s2.experiencia = 60; s2.posto = 4; }
       e.reputacao = 65;
       const o = orgsDaCidade(x).find(z => z.ramo === 'organizado')!;
@@ -117,7 +117,7 @@ function politica(p: Perfil, v: Vida, ano: number, m: Medidas): Vida {
     for (const x of abertas(v)) {
       m.tiposVistos.add(x.tipo);
       conta({ tipo: 'crime', acao: { area: 'encomenda', oque: 'aceitar', id: x.id } });
-      if (p === 'ocasional' && (x.gravidade > 1 || x.chance < 0.7)) { crime({ tipo: 'crime', acao: { area: 'encomenda', oque: 'recusar', id: x.id } }); continue; }
+      if ((p === 'ocasional' && (x.gravidade > 1 || x.chance < 0.7)) || (p === 'lider_cauteloso' && x.gravidade === 3)) { crime({ tipo: 'crime', acao: { area: 'encomenda', oque: 'recusar', id: x.id } }); continue; }
       if (!x.negociada && x.gravidade >= 2) crime({ tipo: 'crime', acao: { area: 'encomenda', oque: 'negociar', id: x.id } });
       crime({ tipo: 'crime', acao: { area: 'encomenda', oque: 'aceitar', id: x.id } });
     }
@@ -136,15 +136,15 @@ function politica(p: Perfil, v: Vida, ano: number, m: Medidas): Vida {
       if (c) crime({ tipo: 'crime', acao: { area: 'encomenda', oque: 'delegar', pessoaId: c.id, trabalho: TIPOS[c.f.especialidade][ano % 3 === 2 ? 1 : 0].id } });
     }
     // As organizações: filiar, pedir tarefa, pedir promoção, disputar, administrar.
-    if (p === 'integrante' || p === 'lider' || p === 'profissional') {
+    if (p === 'integrante' || (p === 'lider' || p === 'lider_cauteloso') || p === 'profissional') {
       for (const o of orgsDaCidade(v).filter(z => v.caminhos.envolvimento?.organizacoes?.some(r => r.id === z.id))) {
         crime({ tipo: 'crime', acao: { area: 'org', oque: 'filiar', orgId: o.id } });
         crime({ tipo: 'crime', acao: { area: 'org', oque: 'tarefa', orgId: o.id } });
         crime({ tipo: 'crime', acao: { area: 'org', oque: 'promocao', orgId: o.id } });
-        if (p === 'lider') {
+        if ((p === 'lider' || p === 'lider_cauteloso')) {
           crime({ tipo: 'crime', acao: { area: 'org', oque: 'disputar', orgId: o.id } });
           if (o.coesao < 50) crime({ tipo: 'crime', acao: { area: 'org', oque: 'mediar', orgId: o.id } });
-          if (o.pressao >= 50) crime({ tipo: 'crime', acao: { area: 'org', oque: 'recolher', orgId: o.id } });
+          if (o.pressao >= (p === 'lider_cauteloso' ? 35 : 50)) crime({ tipo: 'crime', acao: { area: 'org', oque: 'recolher', orgId: o.id } });
           else crime({ tipo: 'crime', acao: { area: 'org', oque: ano % 2 ? 'prioridade_negocios' : 'prioridade_consolidar', orgId: o.id } });
         }
       }
@@ -180,11 +180,11 @@ function politica(p: Perfil, v: Vida, ano: number, m: Medidas): Vida {
 
 for (const p of PERFIS) {
   const pat = { 10: [] as number[], 20: [] as number[], 30: [] as number[] };
-  const c = { vidas: 0, primeiraProgressao: [] as number[], lideranca: [] as number[], tipos: [] as number[], rumoPorAno: [] as number[], repetidas: 0, semEscolha: [] as number[], seqFalhas: [] as number[], saidas: 0, saidasLimpas: 0, mandados: 0, prisoes: 0, absolv: 0, alternativas: 0, processos: 0, investigacoes: 0, ajustes: 0, anomalias: 0, porForaAno: [] as number[], estados: {} as Record<string, number>, encomendas: 0, delegadasOk: 0, delegadasTraidas: 0, orgsExtintas: 0, sucessoes: 0, quaisRepetem: {} as Record<string, number> };
+  const c = { vidas: 0, primeiraProgressao: [] as number[], lideranca: [] as number[], tipos: [] as number[], rumoPorAno: [] as number[], repetidas: 0, semEscolha: [] as number[], seqFalhas: [] as number[], saidas: 0, saidasLimpas: 0, mandados: 0, prisoes: 0, absolv: 0, alternativas: 0, processos: 0, investigacoes: 0, ajustes: 0, anomalias: 0, porForaAno: [] as number[], estados: {} as Record<string, number>, encomendas: 0, delegadasOk: 0, delegadasTraidas: 0, orgsExtintas: 0, sucessoes: 0, quaisRepetem: {} as Record<string, number>, vidasPresas: 0, vidasCondenadas: 0, anosPresos: 0, diag: [] as string[] };
   for (let s = 0; s < N; s++) {
     let v = comecar(p, s);
     const m: Medidas = { cenas: new Map(), rumos: 0, anosAtivos: 0, anosSemEscolha: 0, tiposVistos: new Set() };
-    let prog: number | undefined, lid: number | undefined, maxFalhas = 0, foiProcurado = false;
+    let prog: number | undefined, lid: number | undefined, maxFalhas = 0, foiProcurado = false, presoAnos = 0, ultProc: number | undefined;
     for (let a = 0; a < ANOS && !v.morte; a++) {
       v = politica(p, v, a, m);
       const r = avancarAno(v);
@@ -198,6 +198,9 @@ for (const p of PERFIS) {
         maxFalhas = Math.max(maxFalhas, car.falhasSeguidas ?? 0);
       }
       if (v.justica?.foragido) foiProcurado = true;
+      if (v.justica?.prisao) presoAnos++;
+      const pr = v.justica?.processo;
+      if (pr && pr.tInicio !== ultProc) { ultProc = pr.tInicio; const rl = (e?.organizacoes ?? []).find(o => o.relacao === 'membro' && o.saiu === undefined); c.diag.push(`${pr.categoria}/n${rl ? nivelDe(v, rl) : '-'}/prov${pr.provas}`); }
       const ex = v.financas.extrato;
       if (ex && ex.tFim === v.t) { const cc = conciliar(ex); if (!cc.ok) c.ajustes++; c.porForaAno.push(ex.linhas.filter(l => l.tipo === 'por_fora').reduce((s2, l) => s2 + l.conta, 0)); }
       const b = balanco(v).liquido;
@@ -217,6 +220,9 @@ for (const p of PERFIS) {
     if (foiProcurado) c.mandados++;
     const ants = v.justica?.antecedentes ?? [];
     c.prisoes += ants.filter(x => x.desfecho === 'prisao').length;
+    if (presoAnos > 0) c.vidasPresas++;
+    if (ants.some(x => x.desfecho === 'prisao')) c.vidasCondenadas++;
+    c.anosPresos += presoAnos;
     c.absolv += ants.filter(x => x.desfecho === 'absolvicao').length;
     c.alternativas += ants.filter(x => x.desfecho === 'alternativa' || x.desfecho === 'acordo').length;
     c.processos += ants.length;
@@ -236,5 +242,6 @@ for (const p of PERFIS) {
   console.log(`  1ª progressão: ${c.primeiraProgressao.length}/${c.vidas} vidas, mediana ${med(c.primeiraProgressao)} anos · liderança: ${c.lideranca.length}/${c.vidas}, mediana ${med(c.lideranca)} anos`);
   console.log(`  oportunidades diferentes (mediana) ${med(c.tipos)} · rumo por ano ativo ${(c.rumoPorAno.reduce((a, b) => a + b, 0) / Math.max(1, c.rumoPorAno.length)).toFixed(2)} · cenas repetidas <3 anos: ${c.repetidas} ${JSON.stringify(c.quaisRepetem)} · anos sem escolha (mediana) ${med(c.semEscolha)} · maior sequência de fracassos (p90) ${pct(c.seqFalhas, 0.9)}`);
   console.log(`  encomendas cumpridas ${c.encomendas} · delegadas ok ${c.delegadasOk} traídas ${c.delegadasTraidas} · invest ${c.investigacoes} · processos ${c.processos} (absolv ${c.absolv}, sem prisão ${c.alternativas}, prisão ${c.prisoes}) · com mandado ${c.mandados} · saídas ${c.saidas} (limpas ${c.saidasLimpas})`);
+  console.log(`  condenadas à prisão: ${c.vidasCondenadas}/${c.vidas} (${Math.round(c.vidasCondenadas / c.vidas * 100)}%) · passaram por custódia (inclui preventiva): ${c.vidasPresas}/${c.vidas} (${Math.round(c.vidasPresas / c.vidas * 100)}%) · anos presos por vida ${(c.anosPresos / c.vidas).toFixed(1)} · processos abertos (categoria/posto/provas): ${c.diag.slice(0, 14).join(' ')}`);
   console.log(`  por fora/ano (p50 dos anos) ${k(pct(c.porForaAno, 0.5))} p90 ${k(pct(c.porForaAno, 0.9))} · estados finais ${JSON.stringify(c.estados)} · sucessões nas orgs ${c.sucessoes} · orgs extintas ${c.orgsExtintas} · ajustes no extrato ${c.ajustes} · anomalias ${c.anomalias}`);
 }

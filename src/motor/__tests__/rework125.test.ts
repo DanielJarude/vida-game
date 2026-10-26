@@ -23,7 +23,7 @@ import { executar, disponibilidade, type Acao } from '../acoes';
 import { avancarAno } from '../ano';
 import { podeTentar } from '../plausibilidade';
 import { interpretar, normalizarRework125, VERSAO_SAVE } from '../save';
-import { entrar, processarIlicito } from '../sistemas/ilicito';
+import { entrar, processarIlicito, protecaoDaOrganizacao } from '../sistemas/ilicito';
 import { criarContato, contatosAtivos, organizacaoDoRamo, lembrarOrg } from '../sistemas/submundo';
 import { conciliar, conferir } from '../sistemas/extrato';
 import { contasPorFora, estadoNoSubmundo, garantirCarreira, patamarAtual, processarCarreiraCriminal, processarLegado, capacidadeDoAno, tempoDoCaminho } from '../sistemas/carreiraCriminal';
@@ -445,6 +445,26 @@ describe('a Justiça por etapas, com escolhas', () => {
     v = fazer(v, crime({ area: 'justica', oque: 'recorrer' }));
     expect(v.justica!.recurso).toBeDefined();
     expect(etapaAtual(v)!.etapa).toBe('cumprimento');
+  });
+});
+
+describe('o risco proporcional de quem é de dentro (ajuste da publicação)', () => {
+  it('o risco de uma encomenda fica em pontos de exposição razoáveis (antes, uma grande valia ~190)', () => {
+    const v = noCaminho('grupo');
+    for (const ramo of ['furtos', 'contrabando', 'organizado', 'digital', 'fraudes'] as const) {
+      const w = em(v, x => { proporEncomenda(x, rngDe('r', ramo), ramo, {}, 3); });
+      expect(abertas(w)[abertas(w).length - 1].risco).toBeLessThanOrEqual(25);
+    }
+  });
+  it('a organização banca a defesa de quem é de dentro e leal; e a investigação chega menos a quem ela protege', () => {
+    let v = noCaminho('grupo', 44);
+    v = em(v, x => { const o = orgsDaCidade(x).find(z => z.ramo === 'organizado')!; const rel = relacaoCom(x, o); rel.relacao = 'membro'; rel.lealdade = 70; x.financas.conta = 0; x.financas.investimentos = []; });
+    expect(protecaoDaOrganizacao(v.caminhos.envolvimento!)).toBeLessThan(1);
+    const w = em(v, (x, r) => { abrirProcesso(x, r, 'grupo'); });
+    expect(w.justica!.processo!.defesa).toBe('particular');
+    expect(w.financas.conta).toBe(0);
+    const infiel = em(v, x => { x.caminhos.envolvimento!.organizacoes!.forEach(o => { o.lealdade = 20; }); });
+    expect(protecaoDaOrganizacao(infiel.caminhos.envolvimento!)).toBe(1);
   });
 });
 

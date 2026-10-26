@@ -42,6 +42,7 @@ import { criarPessoa, vincular } from '../pessoas';
 import { mesesProcurando, patrimonioPagaAVida } from './intencao';
 import { creditarRamos, exposicaoDosRamos, fatorDosRamos, garantirRamos, novaEspecializacao, RAMO_DA_CATEGORIA, ramosAtivos } from './ramos';
 import { movimentoPorFora, pedirRumo, registrarRumo } from './porFora';
+import { nivelNaOrganizacao } from './tempoDoCrime';
 
 /** Renda mensal por categoria e nível (reais de hoje): dinheiro rápido, com teto. */
 const RENDA: Record<CategoriaIlicita, [number, number, number]> = {
@@ -292,7 +293,9 @@ function anoEnvolvido(v: Vida, r: Rng, env: Envolvimento): void {
   // assunto que morre) e o que se faz agora soma — o nível fica proporcional ao que se faz: o ocasional se estabiliza
   // baixo; o crime intenso e o organizado continuam perto do teto.
   const fica = rastro(env).fica;
-  env.exposicao = clamp(Math.round(env.cautela ? env.exposicao * (fica - 0.05) + cresce * 0.35 : env.exposicao * fica + cresce));
+  // REWORK 12.25: quem comanda uma organização (posto ≥ 4) não está na rua: o que se faz por ela cresce menos na conta dele.
+  const naRua = nivelNaOrganizacao(v) >= 4 ? 0.5 : 1;
+  env.exposicao = clamp(Math.round(env.cautela ? env.exposicao * (fica - 0.05) + cresce * 0.35 * naRua : env.exposicao * fica + cresce * naRua));
   // A cabeça de quem vive com medo de ser descoberto; a casa que desconfia.
   abalar(v, 'o que se faz por fora', 0, 4 + env.nivel * 2);
   const par = parceiro(v);
@@ -307,7 +310,7 @@ function anoEnvolvido(v: Vida, r: Rng, env: Envolvimento): void {
   // Investigação em andamento: vira processo (o que existe contra a pessoa é bastante) — ou é arquivada, se esfriou.
   if (env.investigado !== undefined && !v.justica?.processo) {
     if (andamentoDaInvestigacao(v, r, env)) return;
-  } else if (!v.justica?.processo && r.chance(Math.max(0, env.exposicao - 15) / 100 * DESCOBERTA[env.nivel])) {
+  } else if (!v.justica?.processo && r.chance(Math.max(0, env.exposicao - 15) / 100 * DESCOBERTA[env.nivel] * protecaoDaOrganizacao(env))) {
     // (REWORK 12.25: com um processo já correndo, o que se faz agora não abre outra investigação no mesmo ano — o processo
     // de agora é a conta; antes, o processo encerrava o caminho e isso não acontecia.)
     // Descoberta não é prisão programada: primeiro, alguém começa a fazer perguntas (e a pessoa fica sabendo).
@@ -336,7 +339,9 @@ function andamentoDaInvestigacao(v: Vida, r: Rng, env: Envolvimento): boolean {
   // e não é sorteada de novo até dar processo: sem o bastante em três anos, arquiva.
   // REWORK 12.25: um advogado acompanhando desde a investigação (`defesa`, `ilic_cerco`) faz o que existe pesar menos.
   const advogado = v.fatos['advogado_preventivo'] !== undefined && v.t - v.fatos['advogado_preventivo'] <= 36 ? 0.85 : 1;
-  const chanceProcesso = clamp((env.exposicao / 100 * (esfriou ? 0.3 : 0.55) * rastro(env).prova + (env.nivel - 1) * 0.06 + (reincidente(v) ? 0.08 : 0)) * advogado, 0.05, 0.6);
+  // REWORK 12.25: quem comanda (posto ≥ 4) tem gente entre si e os fatos — a investigação chega menos até a pessoa.
+  const camadas = nivelNaOrganizacao(v) >= 4 ? 0.55 : 1;
+  const chanceProcesso = clamp((env.exposicao / 100 * (esfriou ? 0.3 : 0.55) * rastro(env).prova + (env.nivel - 1) * 0.06 + (reincidente(v) ? 0.08 : 0)) * advogado * camadas, 0.05, 0.6);
   if (r.chance(chanceProcesso)) {
     env.investigado = undefined;
     escrever(v, { texto: 'A investigação virou processo.', relevancia: 'marco', tema: 'trabalho', tom: 'ruim' });
@@ -352,6 +357,12 @@ function andamentoDaInvestigacao(v: Vida, r: Rng, env: Envolvimento): boolean {
   }
   return false;
 }
+
+/**
+ * REWORK 12.25: a organização protege quem é de dentro e leal (quem avisa, quem cala, quem segura a informação) — a
+ * investigação chega menos. Quem é infiel, de fora ou foi expulso não tem isso.
+ */
+export const protecaoDaOrganizacao = (env: Envolvimento) => (env.organizacoes?.some(o => o.relacao === 'membro' && o.saiu === undefined && o.expulso === undefined && o.lealdade >= 50) ? 0.7 : 1);
 
 /** Na moita (ou voltar ao de antes): menos dinheiro, menos exposição. */
 export function moita(v: Vida, sim: boolean): void {

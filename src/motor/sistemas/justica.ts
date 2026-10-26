@@ -109,8 +109,11 @@ export function abrirProcesso(v: Vida, r: Rng, categoria: CategoriaDoProcesso): 
   if (j.processo || j.prisao) return;
   // REWORK 12.25: quem já tinha um advogado acompanhando a investigação chega ao processo com ele (já pago).
   const antes = v.fatos['advogado_preventivo'] !== undefined && v.t - v.fatos['advogado_preventivo'] <= 36;
-  const particular = antes || disponivel(v) >= 18000;
-  if (particular && !antes) medir(v, 'Justiça: advogados, fianças e custas', 'despesa', () => pagar(v, Math.round(clamp(disponivel(v) * 0.25, 12000, 45000) / 100) * 100));
+  // REWORK 12.25: a organização banca a defesa de quem é de dentro e leal (a lealdade tem retorno).
+  const daOrg = !!env?.organizacoes?.some(o => o.relacao === 'membro' && o.saiu === undefined && o.expulso === undefined && o.lealdade >= 50);
+  const particular = antes || daOrg || disponivel(v) >= 18000;
+  const pago = antes || daOrg;
+  if (particular && !pago) medir(v, 'Justiça: advogados, fianças e custas', 'despesa', () => pagar(v, Math.round(clamp(disponivel(v) * 0.25, 12000, 45000) / 100) * 100));
   j.processo = { tInicio: v.t, tJulgamento: v.t + r.int(10, 24), categoria, defesa: particular ? 'particular' : 'publica' };
   const e = v.trabalho.atual;
   // Fraude descoberta no emprego: justa causa, sem multa nem seguro.
@@ -119,7 +122,7 @@ export function abrirProcesso(v: Vida, r: Rng, categoria: CategoriaDoProcesso): 
     escrever(v, { texto: `A fraude veio à tona. Saiu ${e.empregador.replace(/^(uma|a) /, 'da ').replace(/^(um|o) /, 'do ')} por justa causa, sem acerto — e com um processo pela frente.`, relevancia: 'marco', tema: 'trabalho', tom: 'ruim' });
     marcar(v, 'demissao', 'Demitido por justa causa: a fraude foi descoberta.'.replace('Demitido', flex(ge(v), 'Demitido', 'Demitida', 'Demitide')), 3);
   } else {
-    escrever(v, { texto: `${categoria === 'violencia' ? 'A ocorrência virou processo: passou a responder' : `Foi ${flex(ge(v), 'detido', 'detida', 'detide')} e passou a responder`} a um processo por ${NOME_CATEGORIA[categoria]}.${particular ? ' Um advogado particular assumiu a defesa, pago com o que havia guardado.' : ' A defesa ficou com a Defensoria Pública.'}`, relevancia: 'marco', tema: 'trabalho', tom: 'ruim' });
+    escrever(v, { texto: `${categoria === 'violencia' ? 'A ocorrência virou processo: passou a responder' : `Foi ${flex(ge(v), 'detido', 'detida', 'detide')} e passou a responder`} a um processo por ${NOME_CATEGORIA[categoria]}.${daOrg && !antes ? ' A organização mandou um advogado: a defesa é por conta dela.' : particular ? ' Um advogado particular assumiu a defesa, pago com o que havia guardado.' : ' A defesa ficou com a Defensoria Pública.'}`, relevancia: 'marco', tema: 'trabalho', tom: 'ruim' });
   }
   marcarFato(v, 'respondeu_processo');
   // Processo é registro público: para quem tem nome, vira notícia.
@@ -130,7 +133,8 @@ export function abrirProcesso(v: Vida, r: Rng, categoria: CategoriaDoProcesso): 
   if (par) par.vin.tensao = clamp(par.vin.tensao + 25);
   // Espera presa: só nos casos graves, e nunca garantida.
   // REWORK 12.2 · ajuste do Submundo: a prisão preventiva é para o grave (o grupo) e para quem reincide — não a regra.
-  const graves = categoria === 'grupo' ? (reincidente(v) ? 0.55 : 0.35) : categoria === 'mercado' ? (reincidente(v) ? 0.3 : 0.1) : categoria === 'patrimonial' && reincidente(v) ? 0.25 : 0;
+  // REWORK 12.25: a espera presa no grupo caiu (primário 35% → 12%, reincidente 55% → 30%): a regra é responder em liberdade.
+  const graves = categoria === 'grupo' ? (reincidente(v) ? 0.3 : 0.12) : categoria === 'mercado' ? (reincidente(v) ? 0.3 : 0.1) : categoria === 'patrimonial' && reincidente(v) ? 0.25 : 0;
   if (r.chance(graves * (particular ? 0.6 : 1))) {
     prender(v, j.processo.tJulgamento, 'fechado', 'preventiva');
   }

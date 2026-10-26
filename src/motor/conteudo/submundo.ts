@@ -62,7 +62,7 @@ export const SUBMUNDO: Conteudo[] = ([
   },
   /* ------------------------------------------------------------- furtos e roubos: a escala */
   {
-    id: 'subf_escala', tipo: 'decisao', idade: [16, 75], tema: 'escolha', prioritario: true, prioridade: 3, repetir: 2,
+    id: 'subf_escala', tipo: 'decisao', idade: [16, 75], tema: 'escolha', prioritario: true, prioridade: 3, repetir: 3,
     papeis: { contato: daCena('subf_escala') },
     quando: c => deHoje(c, 'subf_escala') && noRamo(c, 'furtos'),
     titulo: 'Um serviço maior do que tudo',
@@ -162,7 +162,7 @@ export const SUBMUNDO: Conteudo[] = ([
   },
   /* ------------------------------------------------------------- crimes digitais: a encomenda grande */
   {
-    id: 'subd_encomenda', tipo: 'decisao', idade: [16, 75], tema: 'escolha', prioritario: true, prioridade: 3, repetir: 2,
+    id: 'subd_encomenda', tipo: 'decisao', idade: [16, 75], tema: 'escolha', prioritario: true, prioridade: 3, repetir: 3,
     papeis: { contato: daCena('subd_encomenda') },
     quando: c => deHoje(c, 'subd_encomenda') && noRamo(c, 'digital'),
     titulo: 'Uma encomenda grande',
@@ -182,7 +182,7 @@ export const SUBMUNDO: Conteudo[] = ([
   },
   /* ------------------------------------------------------------- crimes digitais: exposto */
   {
-    id: 'subd_exposto', tipo: 'decisao', idade: [16, 75], tema: 'escolha', prioritario: true, prioridade: 3, repetir: 2,
+    id: 'subd_exposto', tipo: 'decisao', idade: [16, 75], tema: 'escolha', prioritario: true, prioridade: 3, repetir: 3,
     quando: c => deHoje(c, 'subd_exposto') && noRamo(c, 'digital'),
     titulo: 'O seu apelido apareceu',
     texto: () => 'Alguém juntou as pontas: o apelido que você usa no meio apareceu ligado a coisas que você fez. Ainda não ligaram ao seu nome de verdade.',
@@ -199,7 +199,7 @@ export const SUBMUNDO: Conteudo[] = ([
   },
   /* ------------------------------------------------------------- fraudes e corrupção: o conflito de interesse */
   {
-    id: 'subx_conflito', tipo: 'decisao', idade: [18, 85], tema: 'escolha', prioritario: true, prioridade: 3, repetir: 1,
+    id: 'subx_conflito', tipo: 'decisao', idade: [18, 85], tema: 'escolha', prioritario: true, prioridade: 3, repetir: 3,
     papeis: { contato: daCena('subx_conflito') },
     quando: c => deHoje(c, 'subx_conflito') && noRamo(c, 'fraudes'),
     titulo: c => `Um pedido de ${quem(c).nome}`,

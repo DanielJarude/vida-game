@@ -471,7 +471,10 @@ function anoDoJogadorNasOrgs(v: Vida): void {
       const seco = r.chance(o.coesao < 35 ? 0.35 : 0.15);
       const parte = seco ? 0 : Math.round(parteDoAno(v, o, n) * (0.7 + r.next() * 0.6) / 100) * 100;
       if (parte > 0) { movimentoPorFora(v, 'organizacao', parte); e.ganhos += parte; }
-      e.exposicao = clamp(e.exposicao + 2 + Math.round(n * 1.5) + Math.round(o.pressao / 30));
+      // Quem sobe até o comando passa a delegar: a exposição pessoal cresce até o posto de responsável por uma área e,
+      // dali para cima, diminui (outros fazem a rua) — o que pesa é a pressão sobre a organização inteira.
+      const pessoal = n <= 3 ? n * 1.5 : Math.max(0, 4.5 - (n - 3) * 1.5);
+      e.exposicao = clamp(e.exposicao + 2 + Math.round(pessoal) + Math.round(o.pressao / 30));
       ganharPratica(v, 2 + n);
       rel.lealdade = clamp(rel.lealdade + (e.cautela ? -3 : 1));
     }

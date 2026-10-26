@@ -114,7 +114,9 @@ export function processarTribunal(v: Vida, r: Rng): void {
 export function chanceDeAbsolvicao(v: Vida): number {
   const p = v.justica!.processo!;
   const provas = p.provas ?? 50;
-  return clamp((p.defesa === 'particular' ? 0.3 : 0.18) + (55 - provas) / 160 - (p.assumiu ? 0.2 : 0) - (p.cooperou ? 0.25 : 0), 0.02, 0.7) * (reincidente(v) ? 0.5 : 1);
+  // REWORK 12.25: prova fraca (abaixo de 40) pesa de verdade a favor de quem responde — antes, com provas "fracas", a
+  // condenação ainda passava da metade. Continua com teto: dinheiro não compra absolvição.
+  return clamp((p.defesa === 'particular' ? 0.3 : 0.18) + (55 - provas) / 160 + Math.max(0, 40 - provas) / 80 - (p.assumiu ? 0.2 : 0) - (p.cooperou ? 0.25 : 0), 0.02, 0.7) * (reincidente(v) ? 0.5 : 1);
 }
 
 /** A multa penal: dias-multa pela renda (um dia de renda por dia, metade a dois terços), com piso. */
