@@ -759,7 +759,8 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'trajetoria': return disponibilidadeParalela(v, a.oque, a.k);
     case 'cnh_preparar': return disponibilidadePrepararCnh(v, a.como);
     case 'habilitacao': return disponibilidadeHabilitacao(v, a.qual);
-    case 'experiencia': return disponibilidadeExperiencia(v, a.id, a.escolha, a.luaDeMel);
+    // REWORK 12.25: quem é procurado (o mandado, a fuga) não passa por fronteira — o passaporte acusaria.
+    case 'experiencia': return a.id === 'viagem_exterior' && v.justica?.foragido ? bloqueio('impossivel', 'Quem é procurado não passa por uma fronteira: o passaporte acusaria.') : disponibilidadeExperiencia(v, a.id, a.escolha, a.luaDeMel);
     case 'renomear': return disponibilidadeRenomear(v, a.alvo, a.nome, a.k);
     case 'cnh_prova': return cnhEmProva(v) ? PERMITIDO : bloqueio('incompativel', 'A prova ainda não foi marcada.');
     case 'cnh':

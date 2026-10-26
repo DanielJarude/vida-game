@@ -122,7 +122,7 @@ export function estadoNoSubmundo(v: Vida): { estado: EstadoNoSubmundo; condicoes
   if ((j?.antecedentes ?? []).some(a => a.desfecho === 'prisao' || a.desfecho === 'alternativa') && !condicoes.includes('preso')) condicoes.push('antecedentes');
   let estado: EstadoNoSubmundo;
   const proposta = v.fatos['proposta_ilicita'] !== undefined && v.fatos['proposta_ilicita'] === v.t;
-  if (!e) estado = proposta || v.fatos['procurou_contato'] !== undefined ? 'contato_inicial' : 'nunca';
+  if (!e) estado = proposta || (v.fatos['procurou_contato'] !== undefined && v.t - v.fatos['procurou_contato'] < 24) ? 'contato_inicial' : 'nunca';
   else if (e.parou !== undefined) estado = 'ex';
   else if (e.saindo !== undefined) estado = 'saindo';
   else {

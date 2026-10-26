@@ -242,11 +242,11 @@ function anoEnvolvido(v: Vida, r: Rng, env: Envolvimento): void {
   if (preso(v)) return;
   if (env.parou !== undefined) {
     // Uma investigação aberta antes de parar segue o próprio curso.
-    if (env.investigado !== undefined && andamentoDaInvestigacao(v, r, env)) return;
+    if (env.investigado !== undefined && !v.justica?.processo && andamentoDaInvestigacao(v, r, env)) return;
     // O passado esfria devagar — mas pode chegar.
     // REWORK 12.2 · ajuste do Submundo: o passado pode chegar — como INVESTIGAÇÃO (que pode virar processo ou ser
     // arquivada), não como processo direto; e só enquanto há o que achar (a exposição que ainda não esfriou).
-    if (env.investigado === undefined && env.exposicao > 20 && r.chance(env.exposicao / 100 * 0.12)) {
+    if (env.investigado === undefined && !v.justica?.processo && env.exposicao > 20 && r.chance(env.exposicao / 100 * 0.12)) {
       env.investigado = v.t;
       v.fatos['investigacoes'] = (v.fatos['investigacoes'] ?? 0) + 1;
       escrever(v, { texto: 'Uma investigação antiga voltou a fazer perguntas sobre o que você fazia, anos depois de ter parado.', relevancia: 'biografia', tema: 'trabalho', tom: 'ruim' });
@@ -305,9 +305,11 @@ function anoEnvolvido(v: Vida, r: Rng, env: Envolvimento): void {
     abalar(v, 'o susto', -6, 10);
   }
   // Investigação em andamento: vira processo (o que existe contra a pessoa é bastante) — ou é arquivada, se esfriou.
-  if (env.investigado !== undefined) {
+  if (env.investigado !== undefined && !v.justica?.processo) {
     if (andamentoDaInvestigacao(v, r, env)) return;
-  } else if (r.chance(Math.max(0, env.exposicao - 15) / 100 * DESCOBERTA[env.nivel])) {
+  } else if (!v.justica?.processo && r.chance(Math.max(0, env.exposicao - 15) / 100 * DESCOBERTA[env.nivel])) {
+    // (REWORK 12.25: com um processo já correndo, o que se faz agora não abre outra investigação no mesmo ano — o processo
+    // de agora é a conta; antes, o processo encerrava o caminho e isso não acontecia.)
     // Descoberta não é prisão programada: primeiro, alguém começa a fazer perguntas (e a pessoa fica sabendo).
     env.investigado = v.t;
     v.fatos['investigacoes'] = (v.fatos['investigacoes'] ?? 0) + 1;
