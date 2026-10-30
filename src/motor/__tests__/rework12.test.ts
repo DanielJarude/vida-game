@@ -26,6 +26,8 @@ import { CATALOGO } from '../conteudo/catalogo';
 import { interpretar, normalizarRework12, VERSAO_SAVE } from '../save';
 import { inventario } from '../sistemas/sucessao';
 import type { Imovel, Veiculo, Vida } from '../tipos';
+import { contratar } from '../sistemas/trabalho';
+import { ocupacao } from '../dados/ocupacoes';
 
 const pode = (v: Vida, a: Acao) => podeTentar(disponibilidade(v, a));
 const fazer = (v: Vida, a: Acao) => { expect(pode(v, a), JSON.stringify(disponibilidade(v, a))).toBe(true); return executar(v, a).vida; };
@@ -35,8 +37,12 @@ function rica(cidade = 'sao-paulo-sp', conta = 30_000_000): Vida {
   const v = adulto(38, { municipioId: cidade, semente: 41 });
   v.financas.conta = conta;
   v.financas.dividas = [];
+  // Sem dívidas, por definição do cenário — e, portanto, sem o nome sujo que a vida da semente possa ter deixado.
+  v.financas.negativado = false;
   v.trabalho.licencas.push('cnh');
-  if (v.trabalho.atual) v.trabalho.atual.salario = 25000;
+  // Pré-condição dita (o catálogo maior muda a vida com semente): a pessoa rica TEM um emprego (o banco lê a renda dele).
+  if (!v.trabalho.atual) contratar(v, criarRng(41), ocupacao('analista_adm'), 'curriculo');
+  v.trabalho.atual!.salario = 25000;
   return v;
 }
 

@@ -111,7 +111,7 @@ export const ACONTECIMENTOS_123: Conteudo[] = [
     id: 'esc123_professor_marcou', manual: true, tipo: 'acontecimento', idade: [10, 22], tema: 'escola', repetir: 0, peso: 1,
     quando: c => !!c.v.educacao.basica || !!c.v.educacao.matricula,
     marco: { chave: 'professor_que_marcou' },
-    narrar: c => ({ texto: c.r.pick(['Uma professora devolveu a sua redação com uma frase na margem: "você escreve como quem pensa". Você guardou a folha por anos.', 'Um professor ficou depois da aula para explicar de novo, só para você. Foi a primeira vez que a matéria fez sentido.']), relevancia: 'biografia', tom: 'bom', efeito: () => { cognicao(c, 2); feliz(c, 3); c.v.fatos['professor_marcou'] = c.v.t; } })
+    narrar: c => ({ texto: c.r.pick(['Uma professora devolveu um trabalho seu com uma frase na margem: "você pensa por conta própria". Você guardou a folha por anos.', 'Um professor ficou depois da aula para explicar de novo, só para você. Foi a primeira vez que a matéria fez sentido.']), relevancia: 'biografia', tom: 'bom', efeito: () => { cognicao(c, 2); feliz(c, 3); c.v.fatos['professor_marcou'] = c.v.t; } })
   },
   {
     id: 'esc123_reencontro_professor', manual: true, tipo: 'acontecimento', idade: [30, 80], tema: 'escola', repetir: 0, peso: 1,

@@ -365,20 +365,26 @@ describe('P1/P2 · veículos, lojas, estilo', () => {
     v = executar(v, { tipo: 'cnh_preparar', como: 'teoria' }).vida;
     for (let k = 0; k < 2 && !cnhEmProva(v); k++) { v = avancarAno(v).vida; if (v.momento && v.momento.situacaoId !== 'cnh_prova') v.momento = null; }
     expect(cnhEmProva(v)).toBeTruthy();
-    // Responde certo as três perguntas.
-    for (let k = 0; k < 3 && cnhEmProva(v); k++) {
-      // REWORK 11: uma decisão de outra coisa aberta no mesmo ano (a vida desta semente mudou: sem a gravidez impossível
-      // do casal de duas mulheres) não pode receber a resposta da prova.
-      if (v.momento && v.momento.situacaoId !== 'cnh_prova') v = transacao(v, x => { x.momento = null; }).vida;
-      if (!v.momento) v = executar(v, { tipo: 'cnh_prova' }).vida;
-      const q = perguntaAtual(cnhEmProva(v)!)!;
-      expect(PERGUNTAS_CNH.some(x => x.id === q.id)).toBe(true);
-      v = executar(v, { tipo: 'decidir', opcaoId: `r${q.certa}` }).vida;
+    // Responde certo as três perguntas. REWORK 12.3: o acaso da prova (~11% de reprovar mesmo acertando as três, com a
+    // apostila) é medido em dez provas a partir do mesmo estado, em vez de fixado pela semente (o caminho até a prova muda
+    // quando o catálogo cresce).
+    const naProva = v;
+    let passou = 0;
+    for (let s = 1; s <= 10; s++) {
+      let w = { ...naProva, rng: 1000 + s * 7919 };
+      for (let k = 0; k < 3 && cnhEmProva(w); k++) {
+        if (w.momento && w.momento.situacaoId !== 'cnh_prova') w = transacao(w, x => { x.momento = null; }).vida;
+        if (!w.momento) w = executar(w, { tipo: 'cnh_prova' }).vida;
+        const q = perguntaAtual(cnhEmProva(w)!)!;
+        expect(PERGUNTAS_CNH.some(x => x.id === q.id)).toBe(true);
+        w = executar(w, { tipo: 'decidir', opcaoId: `r${q.certa}` }).vida;
+      }
+      expect(cnhEmProva(w)).toBeUndefined();
+      const p = w.processos.find(x => x.tipo === 'cnh');
+      if (w.trabalho.licencas.includes('cnh') || (p && p.tipo === 'cnh' && p.teoricaOk)) passou++;
     }
-    expect(cnhEmProva(v)).toBeUndefined();
-    const p = v.processos.find(x => x.tipo === 'cnh');
-    // Ou tirou a carteira, ou passou na teórica e falta a prática — nunca reprovou na teórica acertando tudo com a apostila estudada.
-    expect(v.trabalho.licencas.includes('cnh') || (p && p.tipo === 'cnh' && p.teoricaOk)).toBeTruthy();
+    // Acertar as três com a apostila passa quase sempre.
+    expect(passou).toBeGreaterThanOrEqual(7);
   });
 });
 

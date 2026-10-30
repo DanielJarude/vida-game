@@ -397,9 +397,11 @@ describe('ATR-02 · os atributos', () => {
     // A mediana de cinco vidas (era uma só, a semente 71): o limite é o mesmo, mas uma vida só fica colada nele —
     // medido no REWORK 10.5, em 12 sementes, a distância era 22–32 (mediana 23,5) antes das mudanças e 20–27
     // (mediana 24) depois; a semente 71 passou de 24 a 25 só por mudar de caminho.
-    const distancias = [71, 72, 73, 74, 75].map(s => Math.abs(treina(85, s) - treina(20, s))).sort((a, b) => a - b);
-    expect(distancias[2]).toBeLessThan(25);
-  }, 400000);
+    // REWORK 12.3: doze sementes (71–82), a mesma régua na mediana — cinco ainda oscilavam com o catálogo (medido: a
+    // mediana de doze é 24 no 12.3 e 25 no 12.25; a de cinco foi de 24 a 27 só por mudar de caminho).
+    const distancias = [71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82].map(s => Math.abs(treina(85, s) - treina(20, s))).sort((a, b) => a - b);
+    expect((distancias[5] + distancias[6]) / 2).toBeLessThan(25);
+  }, 900000);
 });
 
 describe('NPC-02 · as pessoas do mundo', () => {

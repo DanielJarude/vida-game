@@ -82,7 +82,8 @@ describe('o painel do ramo', () => {
     const conceito = screen.getByRole('radiogroup', { name: 'Conceito' });
     expect(within(conceito).getAllByRole('radio').filter(r => r.getAttribute('aria-checked') === 'true')).toHaveLength(1);
     const zoo = v.financas.empresas!.find(e => e.tipo === 'zoologico')!;
-    expect(screen.getByText(new RegExp(`^${zoo.setor!.zoo!.animais[0].nome}`))).toBeTruthy();
+    // (o nome pode aparecer em mais de um lugar do painel — o animal e a sua história)
+    expect(screen.getAllByText(new RegExp(`^${zoo.setor!.zoo!.animais[0].nome}`)).length).toBeGreaterThan(0);
   });
 });
 

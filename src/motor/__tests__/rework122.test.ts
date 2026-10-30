@@ -14,6 +14,8 @@
  *   PARALELOS    a feira para todos e o por fora só com o caminho; a cópia não vira dinheiro; o animal não é produto
  *   SAVES        normalização idempotente, ida e volta, nada duplicado, versão 20
  */
+import { contratar } from '../sistemas/trabalho';
+import { ocupacao } from '../dados/ocupacoes';
 import { describe, expect, it } from 'vitest';
 import { adulto } from './cenarios';
 import { transacao } from '../nucleo';
@@ -35,7 +37,7 @@ import { processarJustica } from '../sistemas/justica';
 import { criarContato, lembrarOrg, organizacaoDoRamo } from '../sistemas/submundo';
 import { orcamento } from '../sistemas/dinheiro';
 import { semana } from '../sistemas/semana';
-import { migrar } from '../sistemas/migracao';
+import { avaliarMigracao, migrar } from '../sistemas/migracao';
 import { cidadesDoPais } from '../dados/lugares';
 import { itensDaPessoa } from '../sistemas/estilo';
 import { TIPOS_DE_EMPRESA } from '../dados/empresas';
@@ -407,6 +409,9 @@ describe('animais exóticos', () => {
       x.financas.instalacoes = [{ id: 'i1', tipo: 'gaiola_ampla', t: x.t, preco: 1000, municipioId: x.moradia.municipioId }];
       const pet = adotarPet(x, r, { especie: 'furao', nome: 'Bandido', genero: 'masculino', idade: 1, jeito: 'curioso', porte: 'pequeno', historia: 'criadouro' }, 'criador');
       pet.pet!.instalacao = 'i1';
+      // Pré-condição dita (a vida da semente muda com o catálogo): há um trabalho para levar — é ele que abre o visto.
+      if (!x.trabalho.atual) contratar(x, r, ocupacao('analista_adm'), 'curriculo');
+      expect(avaliarMigracao(x, la.id, 'trabalho').via).toBeTruthy();
       migrar(x, r, la.id, 'trabalho');
     }).vida;
     const bandido = Object.values(v.pessoas).find(p => p.nome === 'Bandido')!;
