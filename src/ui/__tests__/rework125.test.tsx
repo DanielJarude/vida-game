@@ -57,7 +57,8 @@ describe('UI-12.25-01 · uma tela só', () => {
     const painel = document.querySelector('[data-divisao="submundo"]') as HTMLElement;
     expect(within(painel).queryByRole('heading', { name: 'A porta' })).toBeNull();
     expect(within(painel).queryByRole('heading', { name: 'À margem e a Justiça' })).toBeNull();
-    expect(within(painel).getAllByRole('tab').map(t => t.textContent?.replace(/\d+$/, ''))).toEqual(['Visão geral', 'Carreira', 'Atividades', 'Contatos', 'Organizações', 'Negócios', 'Justiça', 'Histórico']);
+    // REWORK 12.3: as partes novas (o mercado por fora, quando há acesso; os pedidos por fora) entram antes da Justiça.
+    expect(within(painel).getAllByRole('tab').map(t => t.textContent?.replace(/\d+$/, '')).filter(t => t !== 'Mercados paralelos')).toEqual(['Visão geral', 'Carreira', 'Atividades', 'Contatos', 'Organizações', 'Negócios', 'Pedidos por fora', 'Justiça', 'Histórico']);
     expect(painel.textContent).toMatch(/respondendo a processo/);
     fireEvent.click(within(painel).getByRole('tab', { name: /^Justiça/ }));
     expect(within(painel).getByRole('list', { name: 'As etapas da Justiça' }).textContent).toMatch(/Processo|Julgamento/);

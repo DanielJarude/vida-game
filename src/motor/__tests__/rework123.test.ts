@@ -282,3 +282,207 @@ describe('C8 · o dinheiro de fora e a Justiça', () => {
     expect(bloqueado).toBeGreaterThan(0);
   });
 });
+
+/* ================================================================ A · facções */
+
+import { garantirCidade, orgsDaCidade, relacaoCom, estadoEntre, definirEstado, processarFaccoes, deDentro, resolverDupla, alcanceDe, disponibilidadeOrg } from '../sistemas/faccoes';
+import type { OrgViva } from '../tipos';
+import { cidadesDoPais } from '../dados/lugares';
+
+function comOrgs(semente = 51): Vida {
+  let v = adulto(30, { semente, municipioId: 'sao-paulo-sp' });
+  v.financas.conta = 200_000;
+  v.momento = null; delete v.fila;
+  v = em(v, (x, r) => { entrar(x, 'grupo', undefined, r); garantirCidade(x); });
+  return v;
+}
+
+describe('A · facções vivas', () => {
+  it('é possível ser de dentro de duas; entre rivais, abertamente, as duas cobram (a cena de escolher lado)', () => {
+    let v = comOrgs();
+    v = em(v, x => {
+      const [a, b] = orgsDaCidade(x);
+      definirEstado(a, b, 'rivalidade');
+      for (const o of [a, b]) { const rel = relacaoCom(x, o); rel.relacao = 'membro'; rel.nivel = 1; rel.lealdade = 60; }
+    });
+    expect(deDentro(v).length).toBeGreaterThanOrEqual(2);
+    v = em(v, x => { x.t += 12; processarFaccoes(x); });
+    expect(v.caminhos.envolvimento!.cenas125?.['sub123_dupla']).toBeTruthy();
+    expect(v.fatos['sub123_dupla']).toBe(v.t);
+    const [a, b] = v.caminhos.envolvimento!.cenas125!['sub123_dupla'].split('|');
+    const n = em(v, x => { resolverDupla(x, a, b, 'escolher'); });
+    const relB = n.caminhos.envolvimento!.organizacoes!.find(o => o.id === b)!;
+    expect(relB.saiu).toBeDefined();
+  });
+  it('vínculo secreto: a desconfiança cresce com os anos e um dia vem à tona', () => {
+    let v = comOrgs(53);
+    v = em(v, x => {
+      const [a, b] = orgsDaCidade(x);
+      definirEstado(a, b, 'concorrencia');
+      const ra = relacaoCom(x, a); ra.relacao = 'membro'; ra.nivel = 1; ra.lealdade = 60;
+      const rb = relacaoCom(x, b); rb.relacao = 'membro'; rb.nivel = 0; rb.lealdade = 60; rb.secreto = true;
+    });
+    let veio = false;
+    for (let k = 0; k < 12 && !veio; k++) { v = em(v, x => { x.t += 12; processarFaccoes(x); }); veio = deDentro(v).every(r => !r.secreto); }
+    expect(veio).toBe(true);
+  });
+  it('as relações entre organizações mudam sozinhas ao longo dos anos', () => {
+    let v = comOrgs(55);
+    const antes = (x: Vida) => { const os = orgsDaCidade(x); const m: string[] = []; for (let i = 0; i < os.length; i++) for (let j = i + 1; j < os.length; j++) m.push(estadoEntre(os[i], os[j])); return m.join(','); };
+    const a0 = antes(v);
+    const vistos = new Set<string>();
+    for (let k = 0; k < 20; k++) { v = em(v, x => { x.t += 12; processarFaccoes(x); }); for (const e of antes(v).split(',')) vistos.add(e); }
+    expect(antes(v)).not.toBe(a0);
+    expect(vistos.size).toBeGreaterThanOrEqual(3);
+  });
+  it('mudar de país não apaga o vínculo; fora do alcance, ele para (sem render) e só se pode conversar ou sair', () => {
+    let v = comOrgs(57);
+    let org: OrgViva | undefined;
+    v = em(v, x => { org = orgsDaCidade(x)[0]; org.forca = 20; org.alcance = undefined; const rel = relacaoCom(x, org); rel.relacao = 'membro'; rel.nivel = 2; rel.lealdade = 70; });
+    expect(alcanceDe(org!)).not.toBe('internacional');
+    v = em(v, x => { x.moradia.municipioId = cidadesDoPais('PT')[0].id; x.t += 12; processarFaccoes(x); });
+    const rel = v.caminhos.envolvimento!.organizacoes!.find(o => o.id === org!.id)!;
+    expect(rel.saiu).toBeUndefined();
+    expect(rel.distancia).toBe('fora');
+    expect(podeTentar(disponibilidadeOrg(v, org!.id, 'tarefa'))).toBe(false);
+  });
+});
+
+/* ================================================================ B · contratante ocasional, mercados */
+
+import { disponibilidadeServico, encomendarServico, processarServicos, alvosPossiveis } from '../sistemas/servicosPorFora';
+import { mercadosLegais, mercadosClandestinos } from '../sistemas/paralelos';
+import { pessoaNova } from './cenarios';
+import { vincular } from '../pessoas';
+
+describe('B · o contratante ocasional não vira do meio', () => {
+  function comConflito(): { v: Vida; alvo: string } {
+    const v = adulto(35, { semente: 61 });
+    v.financas.conta = 100_000;
+    v.momento = null; delete v.fila;
+    const amigo = pessoaNova(v, 36);
+    amigo.temperamento.responsabilidade = -0.7;
+    const va = vincular(v, amigo, { origem: 'vizinhanca', proximidade: 50, confianca: 60, convivio: ['vizinhanca'] });
+    va.confianca = 60;
+    const inimigo = pessoaNova(v, 40);
+    const vi = vincular(v, inimigo, { origem: 'trabalho', proximidade: 20, convivio: ['trabalho'] });
+    vi.tensao = 70;
+    return { v, alvo: inimigo.id };
+  }
+  it('pede por um intermediário, sem criar envolvimento nem carreira; o pedido fica registrado com risco', () => {
+    const { v, alvo } = comConflito();
+    expect(alvosPossiveis(v).map(p => p.id)).toContain(alvo);
+    const d = disponibilidadeServico(v, 'intimidacao', alvo);
+    expect(d.grau).toBe('irregular');
+    expect(d.motivo).toMatch(/Saída legal/);
+    const n = em(v, x => { encomendarServico(x, 'intimidacao', alvo); });
+    expect(n.caminhos.envolvimento).toBeUndefined();
+    expect(n.caminhos.contratante!.servicos).toHaveLength(1);
+  });
+  it('o que foi encomendado pode vir à tona e virar processo (como mandante)', () => {
+    const { v, alvo } = comConflito();
+    let n = em(v, x => { encomendarServico(x, 'agressao', alvo); x.caminhos.contratante!.servicos[0].resultado = 'feito'; x.caminhos.contratante!.servicos[0].risco = 1; });
+    n = em(n, x => { x.t += 12; processarServicos(x); });
+    expect(n.caminhos.contratante!.servicos[0].descoberto).toBeDefined();
+    expect(n.justica?.processo?.categoria).toBe('violencia');
+  });
+  it('Vida → Compras só tem mercados legais; o mercado por fora é do Submundo (e de quem foi apresentado)', () => {
+    let v = adulto(30, { semente: 63, municipioId: 'sao-paulo-sp' });
+    expect(mercadosLegais(v).every(m => m !== 'por_fora')).toBe(true);
+    expect(mercadosClandestinos(v)).toHaveLength(0);
+    v = em(v, x => { x.caminhos.contratante = { servicos: [], apresentado: x.t }; });
+    expect(mercadosClandestinos(v)).toEqual(['por_fora']);
+    expect(v.caminhos.envolvimento).toBeUndefined();
+  });
+});
+
+/* ================================================================ D · a narrativa do crime */
+
+import { proporEncomenda, abertas } from '../sistemas/encomendas';
+import { consequencias, fotografar, variante } from '../sistemas/relatoDoCrime';
+import { criarContato as novoContato } from '../sistemas/submundo';
+
+describe('D · o relato do crime', () => {
+  it('o texto do trabalho nomeia quem propôs e diz o valor que de fato entrou; as consequências batem com o estado', () => {
+    let feitos = 0;
+    for (let k = 0; k < 12; k++) {
+      let v = adulto(30, { semente: 700 + k });
+      v.financas.conta = 50_000; v.momento = null; delete v.fila;
+      let pid = '';
+      v = em(v, (x, r) => { entrar(x, 'patrimonial', undefined, r); pid = novoContato(x, 'furtos', 'parceiro', 60); proporEncomenda(x, r, 'furtos', { pessoaId: pid }, 1); });
+      const enc = abertas(v)[0];
+      const antes = v.financas.conta;
+      const r = executar(v, { tipo: 'crime', acao: { area: 'encomenda', oque: 'aceitar', id: enc.id } });
+      const nome = v.pessoas[pid].nome;
+      expect(r.resultado).toContain(nome);
+      const x = r.vida.caminhos.envolvimento!.encomendas!.find(y => y.id === enc.id)!;
+      if (x.estado === 'concluida') {
+        feitos++;
+        const entrou = r.vida.financas.conta - antes;
+        expect(entrou).toBeGreaterThan(0);
+        expect(r.mudancas?.join(' ')).toMatch(/Entrou/);
+        expect(r.resultado).not.toMatch(/Deu errado/);
+      } else expect(r.resultado).not.toMatch(/Saiu como combinado/);
+    }
+    expect(feitos).toBeGreaterThan(0);
+  });
+  it('a mesma frase não volta em seguida (variantes com memória)', () => {
+    let v = adulto(30, { semente: 77 });
+    v = em(v, (x, r) => entrar(x, 'patrimonial', undefined, r));
+    const usadas: string[] = [];
+    v = em(v, x => { for (let k = 0; k < 3; k++) usadas.push(variante(x, 'teste', ['a', 'b', 'c'], k)); });
+    expect(new Set(usadas).size).toBe(3);
+  });
+  it('as consequências medidas não inventam nada quando nada muda', () => {
+    const v = adulto(30, { semente: 78 });
+    expect(consequencias(v, fotografar(v))).toEqual([]);
+  });
+});
+
+/* ================================================================ E · equipe e concursos */
+
+import { garantirEquipe, processarEquipe, leituraDaEquipe } from '../sistemas/equipe';
+import { contratar } from '../sistemas/trabalho';
+import { ocupacao } from '../dados/ocupacoes';
+import { editalDe, chanceNoConcurso, inscrever, processarConcursos } from '../sistemas/concurso';
+
+describe('E · a gente do trabalho e os concursos', () => {
+  it('o emprego tem chefia e colegas com nome, que continuam os mesmos de um ano para o outro', () => {
+    let v = adulto(30, { semente: 81 });
+    v = em(v, (x, r) => { x.trabalho.atual = undefined; contratar(x, r, ocupacao('analista_adm'), 'curriculo'); garantirEquipe(x); });
+    const eq = v.trabalho.atual!.equipe!;
+    expect(eq.chefeId).toBeTruthy();
+    expect(eq.colegas.length).toBeGreaterThanOrEqual(2);
+    const nomes = leituraDaEquipe(v).map(x => x.nome);
+    v = em(v, x => { x.t += 12; processarEquipe(x); });
+    const depois = leituraDaEquipe(v).map(x => x.nome);
+    expect(depois.filter(n => nomes.includes(n)).length).toBeGreaterThanOrEqual(1);
+  });
+  it('o conflito com a chefia abre a conversa, com saídas legais (e nenhuma por fora)', () => {
+    let v = adulto(30, { semente: 83 });
+    v = em(v, (x, r) => { x.trabalho.atual = undefined; contratar(x, r, ocupacao('analista_adm'), 'curriculo'); const eq = garantirEquipe(x)!; x.vinculos[eq.chefeId!].tensao = 80; x.t += 12; processarEquipe(x); });
+    const d = conteudoPorId('trab123_conflito') as Decisao;
+    const ctx = preparar(d, v, rngDe('t', 1));
+    expect(ctx).toBeTruthy();
+    const ids = d.opcoes.map(o => o.id);
+    expect(ids).toEqual(expect.arrayContaining(['conversar', 'rh', 'transferencia', 'sindicato', 'sair']));
+  });
+  it('o edital tem vagas e inscritos; a aprovação diz a classificação e respeita as vagas', () => {
+    let v = adulto(26, { semente: 85 });
+    const oc = ocupacao('tecnico_publico');
+    const ed = editalDe(v, oc);
+    expect(ed.vagas).toBeGreaterThan(0);
+    expect(ed.inscritos).toBe(ed.vagas * ed.porVaga);
+    expect(chanceNoConcurso(v, oc)).toBeLessThanOrEqual(0.6);
+    let aprov = 0, reserva = 0;
+    for (let k = 0; k < 30; k++) {
+      let w = em(v, x => { x.caminhos.concurso.meses = 40; inscrever(x, oc); x.trabalho.candidaturas[0].chance = 0.5; });
+      w = em(w, x => { x.t += 12; processarConcursos(x, rngDe('conc', k)); });
+      const txt = w.biografia.map(e => e.texto).join(' ');
+      if (/Aprovad[oae] no concurso.*lugar, para/.test(txt) && !/fora das vagas/.test(txt)) { aprov++; const m = /\((\d+)º lugar, para (\d+)/.exec(txt)!; expect(Number(m[1])).toBeLessThanOrEqual(Number(m[2])); }
+      if (/fora das vagas/.test(txt)) { reserva++; const m = /\((\d+)º lugar, para (\d+)/.exec(txt)!; expect(Number(m[1])).toBeGreaterThan(Number(m[2])); }
+    }
+    expect(aprov).toBeGreaterThan(0);
+    expect(reserva + aprov).toBeLessThan(30);
+  }, 120_000);
+});
