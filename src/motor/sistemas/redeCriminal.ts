@@ -25,7 +25,8 @@ import { preso } from './justica';
 import { afastar, anotar, contatosAtivos, criarContato, lembrarOrg, orgPorId, NOME_DO_PAPEL } from './submundo';
 import { NOME_DO_RAMO, ramosAtivos } from './ramos';
 import { escalaDe, movimentoPorFora, nivelNaOrganizacao, pagarPorFora } from './carreiraCriminal';
-import { proporEncomenda } from './encomendas';
+import { proporEncomenda, tipoDeEncomenda } from './encomendas';
+import { assuntoDaConversa } from './relatoDoCrime';
 import { dinheiroCurto } from '../texto';
 
 const env = (v: Vida) => v.caminhos.envolvimento;
@@ -160,17 +161,19 @@ export function executarContato(v: Vida, id: string, oque: OqueContato): { texto
       f.interesse ??= interesseDe(v, id);
       const quer = QUER[f.interesse];
       lembrarCom(v, id, 'Uma conversa longa, sem pressa.', 'apoio', 1);
+      // REWORK 12.3 · D: do que se falou sai do estado (o trabalho de vocês, a organização dele, a sua investigação...).
+      const assunto = assuntoDaConversa(v, id, quer);
       // Às vezes, a conversa traz trabalho; às vezes, um pedido.
       if (ativo(v) && f.papel !== 'chefe' && r.chance(0.3 + d / 400)) {
         const x = proporEncomenda(v, r, f.especialidade, { pessoaId: id });
-        if (x) return { texto: `${nome} falou de ${quer} — e, no fim, de um trabalho. A proposta está em Encomendas.`, tom: 'bom' };
+        if (x) return { texto: `${assunto} No fim, ${nome} trouxe um trabalho: ${tipoDeEncomenda(x.tipo)?.nome ?? 'uma proposta'} (está em Encomendas).`, tom: 'bom' };
       }
       if (r.chance(0.22)) {
         v.fatos['sub125_pedido'] = v.t;
         (e.cenas125 ??= {})['sub125_pedido'] = id;
-        return { texto: `${nome} falou de ${quer}. Antes de ir embora, pediu uma coisa a você.` };
+        return { texto: `${assunto} Antes de ir embora, ${nome} pediu uma coisa a você.` };
       }
-      return { texto: `${nome} falou de ${quer}.${subiu ? ' A conversa aproximou vocês.' : ' Vocês já se falaram muito neste ano: a confiança agora vem do que se cumpre.'}` };
+      return { texto: `${assunto}${subiu ? '' : ' (Vocês já se falaram muito neste ano: a confiança agora vem do que se cumpre.)'}` };
     }
     case 'pedir_favor': {
       const devia = (f.favores ?? 0) > 0;

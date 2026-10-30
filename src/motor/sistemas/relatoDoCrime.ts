@@ -23,6 +23,7 @@ import { orgPorId } from './submundo';
 import { patamarAtual } from './carreiraCriminal';
 import { anoDe } from '../tempo';
 import { totalAplicado } from './investimentos';
+import { tipoDeEncomenda } from './encomendas';
 
 const env = (v: Vida) => v.caminhos.envolvimento;
 const cap = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
@@ -105,16 +106,17 @@ export function contextoDaEncomenda(v: Vida, x: EncomendaCriminal, nome: string)
   const p = x.pessoaId ? v.pessoas[x.pessoaId] : undefined;
   if (p) {
     const hist = historicoCom(v, p.id);
-    const ja = hist ? cap(hist) : p.nome;
-    return { de: p.nome, pessoa: p, frase: variante(v, 'ctx_contato', [`${ja} chamou você para ${nome}.`, `${ja} trouxe a proposta: ${nome}.`, `Foi ${hist ?? p.nome} quem apareceu com ${nome}.`], x.id) };
+    // A oração do histórico ("Felipe, que já tinha trabalhado com você,") fecha com vírgula antes do verbo.
+    const ja = hist ? `${cap(hist)},` : p.nome;
+    return { de: p.nome, pessoa: p, frase: variante(v, 'ctx_contato', [`${ja} chamou você para ${nome}.`, `${ja} trouxe a proposta: ${nome}.`, `${ja} veio com um pedido: ${nome}.`], x.id) };
   }
   const o = x.orgId ? orgViva(v, x.orgId) : undefined;
   if (o) {
     const passou = quemPassou(v, o);
-    return { de: o.nome, org: o, frase: passou ? variante(v, 'ctx_org', [`${cap(o.nome)} precisava de ${nome}; ${passou} passou o pedido a você.`, `O pedido veio de ${o.nome}, pela boca de ${passou}: ${nome}.`], x.id) : `${cap(o.nome)} pediu ${nome}.` };
+    return { de: o.nome, org: o, frase: passou ? variante(v, 'ctx_org', [`${cap(o.nome)} tinha um pedido — ${nome} —, e ${passou} o passou a você.`, `O pedido veio de ${o.nome}, pela boca de ${passou}: ${nome}.`], x.id) : `${cap(o.nome)} tinha um pedido: ${nome}.` };
   }
   const rel = x.orgId ? orgPorId(v, x.orgId) : undefined;
-  return { de: rel?.nome ?? 'alguém do meio', frase: `${cap(rel?.nome ?? 'Alguém do meio')} propôs ${nome}.` };
+  return { de: rel?.nome ?? 'alguém do meio', frase: `${cap(rel?.nome ?? 'Alguém do meio')} tinha um pedido: ${nome}.` };
 }
 
 /* ================================================================ reações */
@@ -263,3 +265,48 @@ export function textoDaInvestigacao(v: Vida, ramo?: string): string {
       : 'Alguém começou a fazer perguntas';
   return `${porque}${ramo ? ` sobre ${ramo}` : ' sobre o que você faz por fora'}. É uma investigação — ainda não é processo, e muitas terminam arquivadas.`;
 }
+
+/**
+ * REWORK 12.3 · D2/D6/D7: do que se falou numa conversa com um contato — escolhido do que o estado tem (o trabalho que fizeram
+ * juntos, a notícia da organização dele, a sua investigação, a dívida entre vocês, a briga entre organizações) e, só na
+ * falta disso, do que ele quer da vida. Antes, a conversa era sempre "X falou de dinheiro… A conversa aproximou vocês".
+ */
+export function assuntoDaConversa(v: Vida, pessoaId: string, quer: string): string {
+  const e = env(v);
+  const p = v.pessoas[pessoaId];
+  const f = e?.fichas?.[pessoaId];
+  if (!e || !p || !f) return `${p?.nome ?? 'O contato'} falou de ${quer}.`;
+  const n = p.nome;
+  const assuntos: { k: string; texto: string }[] = [];
+  const junto = [...(e.encomendas ?? [])].reverse().find(x => x.pessoaId === pessoaId && x.tFim !== undefined && v.t - x.tFim <= 36 && (x.estado === 'concluida' || x.estado === 'falhou'));
+  if (junto) {
+    const nome = TIPO_NOME(junto.tipo);
+    assuntos.push({ k: 'junto', texto: junto.estado === 'concluida' ? `${n} ainda ri do dia de ${nome}, em ${anoDe(junto.tFim!)}: "foi limpo".` : `${n} voltou ao assunto de ${nome}, que deu errado em ${anoDe(junto.tFim!)} — quer entender onde falharam.` });
+  }
+  const o = f.organizacao ? orgViva(v, f.organizacao) : undefined;
+  const novidade = o?.historia.filter(h => v.t - h.t <= 24).slice(-1)[0];
+  if (o && novidade) assuntos.push({ k: 'org', texto: `${n} contou as novidades de ${o.nome}: ${novidade.texto.charAt(0).toLowerCase()}${novidade.texto.slice(1)}` });
+  if (e.investigado !== undefined) assuntos.push({ k: 'investigacao', texto: vozDe(v, pessoaId) === 'desconfiado' ? `${n} falou pouco e olhou muito para a porta: sabe que há perguntas sendo feitas sobre você.` : `${n} perguntou da investigação, baixinho, e disse para você não mudar de rotina agora.` });
+  if ((f.favores ?? 0) < 0) assuntos.push({ k: 'divida', texto: variante(v, 'conv_divida', [`${n} não cobrou nada — mas mencionou, de passagem, o favor que você ainda deve.`, `${n} falou de tudo, menos do favor que você deve. Foi pior do que se tivesse falado.`, `No fim, ${n} perguntou, como quem não quer nada, quando você acerta o que deve.`], pessoaId) });
+  if ((f.favores ?? 0) > 0) assuntos.push({ k: 'deve', texto: variante(v, 'conv_deve', [`${n} lembrou que ainda lhe deve uma, e que não esqueceu.`, `${n} disse que, quando você precisar, é só chamar: a dívida é dele.`, `${n} pagou a conta do bar "por conta do que te devo" — e disse que ainda não é o bastante.`], pessoaId) });
+  const minha = (e.organizacoes ?? []).find(x => (x.relacao === 'membro' || x.propria) && x.saiu === undefined);
+  const om = minha ? orgViva(v, minha.id) : undefined;
+  const tensao = om ? Object.entries(om.relacoes ?? {}).find(([, s]) => s === 'conflito' || s === 'ruptura') : undefined;
+  if (om && tensao) { const b = orgViva(v, tensao[0]); if (b) assuntos.push({ k: 'guerra', texto: `${n} quis saber como anda a briga entre ${om.nome} e ${b.nome} — no bairro, todo mundo pergunta.` }); }
+  if (f.traiu !== undefined) assuntos.push({ k: 'traicao', texto: `${n} evitou o assunto de ${anoDe(f.traiu)}. Você também.` });
+  const porVoz: Record<Voz, string[]> = {
+    leal: [`${n} falou de ${quer}, com a franqueza de sempre.`, `Uma conversa longa com ${n}, sobre ${quer}.`],
+    desconfiado: [`${n} falou de ${quer} — medindo cada palavra.`, `${n} desconversou o quanto pôde; no fim, falou de ${quer}.`],
+    pragmatico: [`${n} foi direto ao ponto: ${quer}.`, `${n} falou de ${quer}, e de quanto isso custa.`],
+    esquentado: [`${n} reclamou de tudo — e, no meio, de ${quer}.`, `${n} falou alto sobre ${quer}; você pediu para baixar a voz.`],
+    caloroso: [`${n} pagou o café e falou de ${quer}, como quem fala com um amigo.`, `Com ${n}, a conversa foi de ${quer} até a família.`]
+  };
+  assuntos.push({ k: 'quer', texto: variante(v, `conv_quer_${vozDe(v, pessoaId)}`, porVoz[vozDe(v, pessoaId)], pessoaId) });
+  // O assunto: o que mais pesa agora, evitando repetir o da última conversa com a mesma pessoa.
+  const ultimo = v.fatos[`conv_assunto_${pessoaId}`];
+  const ordem = ['investigacao', 'guerra', 'junto', 'org', 'divida', 'deve', 'traicao', 'quer'];
+  const escolhido = assuntos.filter(a => ordem.indexOf(a.k) !== ultimo).sort((a, b) => ordem.indexOf(a.k) - ordem.indexOf(b.k))[0] ?? assuntos[assuntos.length - 1];
+  v.fatos[`conv_assunto_${pessoaId}`] = ordem.indexOf(escolhido.k);
+  return escolhido.texto;
+}
+const TIPO_NOME = (tipo: string) => tipoDeEncomenda(tipo)?.nome ?? 'um trabalho';
