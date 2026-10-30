@@ -35,7 +35,9 @@ import { paisDaVida } from '../mundo/vida';
 import { economiaLocal } from '../dados/lugares';
 import { salarioMinimoDoPais } from '../mundo/economia';
 import { pagarJustica, pagarPorFora } from './porFora';
+import { lancar } from './extrato';
 import { ajusteDoJuiz, ator, designar, lembrarAtor, quemE } from './atoresJudiciais';
+import { registrarDesfechoComInfluencia } from './corrupcaoJudicial';
 
 export const perfilDaVida = (v: Vida): PerfilPenal => perfilPenal(paisDaVida(v));
 const preco = (v: Vida, x: number) => Math.round(x * economiaLocal(v.moradia.municipioId).custo / 100) * 100;
@@ -66,8 +68,9 @@ function aoAbrir(v: Vida, r: Rng): void {
   const env = v.caminhos.envolvimento;
   const base = p.categoria === 'violencia'
     ? 40 + (v.fatos['denuncia_agressao'] === v.t ? 15 : 0)
-    : (env ? Math.max(env.exposicao, 25) : 45) + (p.categoria === 'grupo' ? 10 : 0);
+    : (env ? Math.max(v.fatos['exposicao_na_abertura'] ?? env.exposicao, 25) : 45) + (p.categoria === 'grupo' ? 10 : 0);
   p.provas = clamp(Math.round(base + (r.next() - 0.5) * 20), 10, 95);
+  bloquear(v, p.provas, p.categoria);
   // A defesa é escolha: a pergunta abre (o jogo não paga o advogado sozinho).
   v.fatos['jus_defesa'] = v.t;
   const perfil = perfilDaVida(v);
@@ -134,23 +137,63 @@ export function multaPenal(v: Vida, dias: number): number {
  * manda devolver uma parte do que se ganhou — do que há na conta e nas aplicações; o que faltar vira dívida, em
  * parcelas. É o que impede o caminho de ser, no fim, a melhor maneira de enriquecer. A agressão não tem "ganho".
  */
-export function confiscar(v: Vida, fracao: number, oque: string): number {
+export function confiscar(v: Vida, fracao: number, oque: string, provas = 60): number {
   const env = v.caminhos.envolvimento;
-  if (!env) return 0;
+  const j = v.justica;
+  if (!env) { liberarBloqueio(v); return 0; }
   const jaDevolvido = v.fatos['confiscado_total'] ?? 0;
-  const devido = Math.round(Math.max(0, env.ganhos - jaDevolvido) * fracao / 100) * 100;
-  if (devido <= 0) return 0;
+  // REWORK 12.3 · C8: a Justiça não conhece tudo o que entrou — conhece o que as provas mostram (de 35% a 95% do que se
+  // ganhou). O que foi "posto em ordem" aparece menos, mas aparece (a ocultação não protege por inteiro).
+  const regularizado = Math.min(env.regularizado ?? 0, env.ganhos);
+  const conhecida = clamp(0.35 + provas / 150, 0.35, 0.95);
+  const conhecido = (env.ganhos - regularizado) * conhecida + regularizado * conhecida * 0.4;
+  const devido = Math.round(Math.max(0, conhecido - jaDevolvido) * fracao / 100) * 100;
+  if (devido <= 0) { liberarBloqueio(v); return 0; }
+  // O que estava bloqueado paga primeiro; o resto, da conta; o que faltar, em parcelas.
+  const doBloqueio = Math.min(j?.bloqueado?.valor ?? 0, devido);
+  if (j?.bloqueado) { j.bloqueado.valor -= doBloqueio; }
   const tem = Math.max(0, disponivel(v));
-  const paga = Math.min(tem, devido);
+  const paga = Math.min(tem, devido - doBloqueio);
   if (paga > 0) pagarPorFora(v, 'perdas', paga);
-  const falta = devido - paga;
+  const falta = devido - doBloqueio - paga;
   if (falta > 0) {
     const prazo = 60;
     v.financas.dividas.push({ id: `confisco${v.seq++}`, tipo: 'acordo', saldo: falta, jurosMes: 0.004, parcela: Math.ceil(falta / prazo), descricao: oque, tInicio: v.t, prazo });
   }
   v.fatos['confiscado_total'] = jaDevolvido + devido;
-  escrever(v, { texto: `${oque}: ${dinheiro(devido)}${falta > 0 ? ` — ${dinheiro(paga)} na hora e o resto em parcelas` : ''}.`, relevancia: 'biografia', tema: 'dinheiro', tom: 'ruim' });
+  liberarBloqueio(v);
+  escrever(v, { texto: `${oque}: ${dinheiro(devido)}${doBloqueio > 0 ? ` (${dinheiro(doBloqueio)} do que estava bloqueado)` : ''}${falta > 0 ? ` — ${dinheiro(paga)} na hora e o resto em parcelas` : ''}.`, relevancia: 'biografia', tema: 'dinheiro', tom: 'ruim' });
   return devido;
+}
+
+/**
+ * REWORK 12.3 · C8: o bloqueio de valores no começo de um processo grave (fraude, comércio ilegal, grupo, corrupção), quando
+ * as provas são consideráveis: uma parte do que a Justiça conhece sai da conta até o fim. Na absolvição, volta; na
+ * condenação, paga o confisco primeiro. Não é perda: é dinheiro parado (e por isso não conta no patrimônio enquanto dura).
+ */
+const BLOQUEIA = new Set(['fraude', 'mercado', 'grupo', 'corrupcao']);
+function bloquear(v: Vida, provas: number, categoria: string): void {
+  const env = v.caminhos.envolvimento;
+  const j = v.justica!;
+  if (!env || !BLOQUEIA.has(categoria) || provas < 50 || j.bloqueado) return;
+  const conhecido = Math.max(0, env.ganhos - (env.regularizado ?? 0) * 0.6) * clamp(0.35 + provas / 150, 0.35, 0.95) - (v.fatos['confiscado_total'] ?? 0);
+  const valor = Math.round(Math.min(Math.max(0, v.financas.conta), conhecido * 0.35) / 100) * 100;
+  if (valor < 1000) return;
+  v.financas.conta -= valor;
+  lancar(v, 'Justiça: valores bloqueados no processo', 'despesa', -valor);
+  j.bloqueado = { valor, t: v.t };
+  escrever(v, { texto: `A Justiça bloqueou ${dinheiro(valor)} da sua conta enquanto o processo corre.`, relevancia: 'biografia', tema: 'dinheiro', tom: 'ruim' });
+}
+/** O que sobrou bloqueado volta para a conta (o processo acabou). */
+export function liberarBloqueio(v: Vida): void {
+  const j = v.justica;
+  if (!j?.bloqueado) return;
+  const x = Math.round(j.bloqueado.valor);
+  j.bloqueado = undefined;
+  if (x <= 0) return;
+  v.financas.conta += x;
+  lancar(v, 'Justiça: valores desbloqueados', 'acontecimento', x);
+  escrever(v, { texto: `O bloqueio acabou: ${dinheiro(x)} voltaram para a sua conta.`, relevancia: 'cotidiano', tema: 'dinheiro', tom: 'bom' });
 }
 const NOME_DO_CONFISCO = (cat: string) => (cat === 'fraude' || cat === 'corrupcao' ? 'A Justiça mandou reparar o dano (devolver o que foi desviado)' : 'A Justiça confiscou o que entrou por fora');
 
@@ -169,11 +212,14 @@ function sentenciar(v: Vida, r: Rng): void {
     const juiz = ator(v, p.juizId), def = ator(v, p.defensorId);
     const comQuem = p.defesa === 'particular' ? (p.pagaPor === 'organizacao' ? `, com ${def?.nome ?? 'o advogado'} que a organização pôs no caso` : `, com a defesa de ${def?.nome ?? 'um advogado particular'}`) : def ? `, com ${def.nome} na defesa pública` : '';
     lembrarAtor(v, p.juizId, `absolveu você num processo por ${NOME_CATEGORIA[cat]}`);
+    if (p.influencia) registrarDesfechoComInfluencia(v, true);
+    liberarBloqueio(v);
     escrever(v, { texto: `Absolvi${flex(g, 'do', 'da', 'de')} no processo${juiz ? ` (${quemE(juiz)})` : ''}${comQuem}. O alívio veio junto com o cansaço de ter esperado.`, relevancia: 'marco', tema: 'trabalho', tom: 'bom' });
     abalar(v, 'a absolvição', 8, -8);
     return;
   }
   lembrarAtor(v, p.juizId, `condenou você num processo por ${NOME_CATEGORIA[cat]}`);
+  if (p.influencia) registrarDesfechoComInfluencia(v, false);
   // A pena: a base da categoria, o país, a reincidência, e o que se decidiu (assumir, cooperar).
   const reduz = (p.cooperou ? 0.45 : 0) + (p.assumiu ? 0.25 : 0);
   const anosBrutos = (PENA_BASE[cat] + r.int(0, 2)) * (rein ? 1.5 : 1) * perfil.severidade * (1 - Math.min(0.6, reduz));
@@ -184,7 +230,7 @@ function sentenciar(v: Vida, r: Rng): void {
       pagarPorFora(v, 'perdas', Math.min(multa, Math.max(0, disponivel(v))));
       j.antecedentes.push({ t: v.t, categoria: cat, desfecho: 'alternativa', multa });
       if (!perfil.multa) j.alternativa = { tFim: v.t + r.int(6, 12) };
-      if (cat !== 'violencia') confiscar(v, 0.8, NOME_DO_CONFISCO(cat));
+      if (cat !== 'violencia') confiscar(v, 0.8, NOME_DO_CONFISCO(cat), p.provas);
       escrever(v, { texto: `Condenad${flex(g, 'o', 'a', 'e')}: uma multa de ${dinheiro(multa)}${perfil.multa ? '' : ' e alguns meses de serviço à comunidade'}. A ficha, agora, existe.`, relevancia: 'marco', tema: 'trabalho', tom: 'ruim' });
       marcar(v, 'fracasso', 'Condenação a multa.', 2);
       abalar(v, 'a condenação', -6, 8);
@@ -193,7 +239,7 @@ function sentenciar(v: Vida, r: Rng): void {
     const meses = r.int(10, 24);
     j.alternativa = { tFim: v.t + meses };
     j.antecedentes.push({ t: v.t, categoria: cat, desfecho: 'alternativa' });
-    if ((cat as string) !== 'violencia') confiscar(v, 0.8, NOME_DO_CONFISCO(cat));
+    if ((cat as string) !== 'violencia') confiscar(v, 0.8, NOME_DO_CONFISCO(cat), p.provas);
     escrever(v, { texto: `Condenad${flex(g, 'o', 'a', 'e')} a pena alternativa: prestação de serviços à comunidade por ${Math.round(meses / 12) || 1} ano${meses >= 18 ? 's' : ''}, em liberdade. A ficha, agora, existe.`, relevancia: 'marco', tema: 'trabalho', tom: 'ruim' });
     marcar(v, 'fracasso', 'Condenação a pena alternativa.', 3);
     abalar(v, 'a condenação', -8, 10);
@@ -201,7 +247,7 @@ function sentenciar(v: Vida, r: Rng): void {
   }
   const anos = Math.max(1, Math.round(anosBrutos));
   j.antecedentes.push({ t: v.t, categoria: cat, desfecho: 'prisao', anos });
-  if (cat !== 'violencia') confiscar(v, 0.9, NOME_DO_CONFISCO(cat));
+  if (cat !== 'violencia') confiscar(v, 0.9, NOME_DO_CONFISCO(cat), p.provas);
   const fechado = Math.round(anos * 12 * (rein ? 0.45 : 0.3));
   const inicio = presoAntes ? presoAntes.tInicio : v.t;
   const fim = Math.max(v.t + 6, inicio + fechado);
@@ -295,7 +341,7 @@ export function aceitarAcordo(v: Vida, r: Rng): string {
   const g = ge(v);
   const leve = LEVE.has(p.categoria) || p.categoria === 'fraude';
   // Todo acordo começa por reparar o dano (devolver parte do que entrou por fora).
-  if ((p.categoria as string) !== 'violencia') confiscar(v, 0.6, 'O acordo pediu a reparação do dano');
+  if ((p.categoria as string) !== 'violencia') confiscar(v, 0.6, 'O acordo pediu a reparação do dano', p.provas);
   if (perfil.acordo === 'limitado' && leve && !reincidente(v)) {
     const multa = multaPenal(v, r.int(20, 60));
     pagarPorFora(v, 'perdas', Math.min(multa, Math.max(0, disponivel(v))));
@@ -383,7 +429,10 @@ export function leituraDoProcesso(v: Vida): { linhas: string[] } | undefined {
   const provas = (p.provas ?? 50) >= 70 ? 'fortes' : (p.provas ?? 50) >= 40 ? 'consideráveis' : 'fracas';
   return { linhas: [
     `O julgamento deve sair em ${anoDe(p.tJulgamento)}. As provas contra você são ${provas}.`,
-    p.defesa === 'particular' ? 'A defesa é de um advogado particular.' : `A defesa é de ${perfil.defensoria}.`,
+    // REWORK 12.3 · C3/C6: quem defende, quem paga, quem julga e quem acusa — com nome (e o reencontro, se houver).
+    (() => { const d = ator(v, p.defensorId); return p.defesa === 'particular' ? `A defesa é de ${d ? d.nome : 'um advogado particular'}, ${p.pagaPor === 'organizacao' ? 'paga pela organização' : p.pagaPor === 'antecipado' ? 'que já acompanhava a investigação' : 'contratado por você'}.` : `A defesa é de ${perfil.defensoria}${d ? ` (${d.nome})` : ''}.`; })(),
+    ...((() => { const j = ator(v, p.juizId), pr = ator(v, p.promotorId); return j ? [`Quem julga: ${quemE(j)}${j.processos > 1 ? ' (não é a primeira vez que vocês se cruzam)' : ''}.${pr ? ` Quem acusa: ${quemE(pr)}.` : ''}`] : []; })()),
+    ...(p.influencia ? ['Há dinheiro seu no processo, por fora dos autos. Ninguém sabe — por enquanto.'] : []),
     ...(p.assumiu ? ['Você assumiu o que fez.'] : []), ...(p.cooperou ? ['Você colaborou com a investigação.'] : []),
     ...(p.acordo && !p.acordo.aceito && !p.acordo.recusado ? ['A acusação ofereceu um acordo.'] : []),
     ...(p.fianca ? [`A fiança foi arbitrada: dá para esperar o julgamento solt${flex(ge(v), 'o', 'a', 'e')}, pagando.`] : []),

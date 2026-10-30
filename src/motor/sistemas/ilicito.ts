@@ -37,10 +37,11 @@ import { redeDeApoio } from './estado';
 import { abalar } from './abalo';
 import { abrirProcesso, preso, reincidente } from './justica';
 import { marcar } from './marcas';
-import { flex, ge } from '../texto';
+import { contrair, flex, ge } from '../texto';
+import { resumoDoAno, textoDaInvestigacao } from './relatoDoCrime';
 import { criarPessoa, vincular } from '../pessoas';
 import { mesesProcurando, patrimonioPagaAVida } from './intencao';
-import { creditarRamos, exposicaoDosRamos, fatorDosRamos, garantirRamos, novaEspecializacao, RAMO_DA_CATEGORIA, ramosAtivos } from './ramos';
+import { creditarRamos, exposicaoDosRamos, fatorDosRamos, garantirRamos, NOME_DO_RAMO, novaEspecializacao, RAMO_DA_CATEGORIA, ramosAtivos } from './ramos';
 import { movimentoPorFora, pedirRumo, registrarRumo } from './porFora';
 import { nivelNaOrganizacao } from './tempoDoCrime';
 
@@ -277,12 +278,16 @@ function anoEnvolvido(v: Vida, r: Rng, env: Envolvimento): void {
   // REWORK 11.5: o que entrou no ano também é de cada frente (a tela do dossiê diz quanto cada uma rendeu).
   creditarRamos(env, ganho);
   env.anosSecos = (env.anosSecos ?? 0) + (seco ? 1 : 0);
+  let perdaDoAno = 0;
   if (seco) {
     const perda = env.nivel >= 2 ? Math.round(renda * 12 * (0.08 + ra.next() * 0.1) / 100) * 100 : 0;
+    perdaDoAno = perda;
     movimentoPorFora(v, 'custos', -perda);
     if (env.nivel >= 2 && (env.categoria === 'mercado' || env.categoria === 'grupo')) env.atritos = (env.atritos ?? 0) + 1;
-    escrever(v, { texto: perda ? 'Um ano em que o que se fazia por fora não rendeu nada — e ainda deixou uma conta a acertar com quem estava junto.' : 'Um ano em que o que se fazia por fora não rendeu nada.', relevancia: 'cotidiano', tema: 'trabalho', tom: 'ruim' });
   }
+  // REWORK 12.3 · D2: o ano por fora numa linha, com o que de fato aconteceu (o que rendeu, os trabalhos, com quem).
+  const resumo = resumoDoAno(v, Math.round(ganho * 0.65), seco, perdaDoAno);
+  if (resumo) escrever(v, { texto: contrair(resumo), relevancia: 'cotidiano', tema: 'trabalho', tom: seco ? 'ruim' : 'neutro' });
   // A exposição cresce com o que se faz — menos para quem já aprendeu a não aparecer (os anos no caminho),
   // e bem menos na moita (que também deixa esfriar o que já se sabia).
   const anos = (v.t - env.tInicio) / 12;
@@ -316,7 +321,7 @@ function anoEnvolvido(v: Vida, r: Rng, env: Envolvimento): void {
     // Descoberta não é prisão programada: primeiro, alguém começa a fazer perguntas (e a pessoa fica sabendo).
     env.investigado = v.t;
     v.fatos['investigacoes'] = (v.fatos['investigacoes'] ?? 0) + 1;
-    escrever(v, { texto: 'Alguém começou a fazer perguntas: há uma investigação sobre o que você faz por fora. Ainda não é processo.', relevancia: 'biografia', tema: 'trabalho', tom: 'ruim' });
+    escrever(v, { texto: contrair(textoDaInvestigacao(v, ramosAtivos(env).length === 1 ? `o que você faz em ${NOME_DO_RAMO[ramosAtivos(env)[0]].toLowerCase()}` : undefined)), relevancia: 'biografia', tema: 'trabalho', tom: 'ruim' });
     abalar(v, 'a investigação', -4, 10);
     pedirRumo(v, 'investigacao'); // a pergunta do rumo abre agora: parar, ficar na moita, seguir
     return;

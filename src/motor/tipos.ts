@@ -2860,6 +2860,12 @@ export interface Envolvimento {
   receptacao?: number;
   /** REWORK 12.25: a carreira (a prática geral, o patamar alcançado, os marcos, se o crime virou a ocupação principal). */
   carreira?: CarreiraCriminal;
+  /** REWORK 12.3 · C8: quanto do que entrou por fora foi "posto em ordem" (aparece menos para a Justiça — mas aparece). */
+  regularizado?: number;
+  /** REWORK 12.3 · C8: o ano em que se pôs dinheiro em ordem pela última vez (uma vez por ano). */
+  anoRegularizou?: number;
+  /** REWORK 12.3 · D7: as variantes de texto usadas há pouco (chave#índice → quando), para a mesma frase não voltar logo. */
+  relatos?: { k: string; t: number }[];
   /** REWORK 12.25: as encomendas — as que chegam (propostas de contatos e organizações) e as que se encomendam a alguém. */
   encomendas?: EncomendaCriminal[];
   /** REWORK 12.25 · NAR-12.25-01: as decisões sobre o rumo (com o motivo): a pergunta não volta sem razão. */
@@ -3589,6 +3595,10 @@ export interface TentativaDeCorrupcao {
   risco: number;
   descoberta?: number;
   categoria: CategoriaDoProcesso;
+  /** Como terminou o processo em que houve a tentativa (a absolvição comprada pode ser anulada quando vem à tona). */
+  desfecho?: 'absolvicao' | 'condenacao';
+  /** A denúncia (ou a descoberta) já virou processo próprio. */
+  processada?: number;
 }
 
 /** Um acontecimento privado e quem sabe dele. */

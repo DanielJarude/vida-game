@@ -167,3 +167,118 @@ describe('C5/C6 · a defesa é a escolhida, e o advogado particular sempre apare
     expect(ids.size).toBeLessThanOrEqual(6);
   });
 });
+
+/* ================================================================ C1 / C2 · corrupção judicial */
+
+import { entrar } from '../sistemas/ilicito';
+import { criarContato } from '../sistemas/submundo';
+import { canais, disponibilidadeCorrupcao, tentarCorromper } from '../sistemas/corrupcaoJudicial';
+import { processarJustica } from '../sistemas/justica';
+import { chanceDeAbsolvicao, liberarBloqueio } from '../sistemas/tribunal';
+import { podeTentar } from '../plausibilidade';
+
+function comProcessoEContato(semente: number, integridade?: number): Vida {
+  let v = adulto(34, { semente });
+  v.financas.conta = 400_000;
+  v.momento = null; delete v.fila;
+  v = em(v, (x, r) => {
+    entrar(x, 'fraude', undefined, r);
+    const id = criarContato(x, 'fraudes', 'intermediario', 70);
+    x.caminhos.envolvimento!.fichas![id].confianca = 70;
+    abrirProcesso(x, rngDe('proc', semente), 'fraude');
+    x.momento = null; delete x.fila;
+    if (integridade !== undefined) x.justica!.atores![x.justica!.processo!.juizId!].integridade = integridade;
+  });
+  return v;
+}
+
+describe('C1/C2 · tentar corromper o processo', () => {
+  it('sem caminho até quem julga, a tentativa fica indisponível, com o motivo', () => {
+    let v = adulto(34, { semente: 3 });
+    v.financas.conta = 400_000;
+    v = em(v, x => abrirProcesso(x, rngDe('p', 3), 'violencia'));
+    const d = disponibilidadeCorrupcao(v, 'contato');
+    expect(podeTentar(d)).toBe(false);
+    expect(d.motivo).toMatch(/caminho até quem julga/);
+    expect(canais(v)).toHaveLength(0);
+  });
+  it('com um intermediário de confiança e dinheiro, está disponível — e é dita ilegal', () => {
+    const v = comProcessoEContato(5);
+    const d = disponibilidadeCorrupcao(v, 'contato');
+    expect(d.grau).toBe('irregular');
+    expect(d.motivo).toMatch(/É crime/);
+  });
+  it('os desfechos variam (recusa, denúncia, aceite, golpe) e nada garante absolvição', () => {
+    const vistos = new Set<string>();
+    for (let k = 0; k < 40; k++) {
+      const v = comProcessoEContato(200 + k, k % 2 === 0 ? 30 : undefined);
+      const n = em(v, x => { tentarCorromper(x, 'contato'); });
+      const t = n.justica!.corrupcoes![0];
+      vistos.add(t.resultado);
+      if (n.justica!.processo?.influencia) expect(chanceDeAbsolvicao(n)).toBeLessThanOrEqual(0.85);
+      // uma tentativa por processo
+      expect(podeTentar(disponibilidadeCorrupcao(n, 'contato'))).toBe(false);
+    }
+    expect(vistos.has('recusa') || vistos.has('denuncia')).toBe(true);
+    expect(vistos.has('aceito') || vistos.has('parcial')).toBe(true);
+  }, 120_000);
+  it('a denúncia vira processo por corrupção quando o de agora termina; persiste no save', () => {
+    let v: Vida | undefined;
+    for (let k = 0; k < 60 && !v; k++) {
+      const n = em(comProcessoEContato(400 + k, 97), x => { tentarCorromper(x, 'contato'); });
+      if (n.justica!.corrupcoes![0].resultado === 'denuncia') v = n;
+    }
+    expect(v).toBeTruthy();
+    const relido = (interpretar(JSON.stringify(v!)) as { vida: Vida }).vida;
+    expect(relido.justica!.corrupcoes![0].resultado).toBe('denuncia');
+    // o processo de agora termina (sentença), e o da corrupção abre no ano seguinte
+    let w = em(relido, x => { x.t = x.justica!.processo!.tJulgamento; processarJustica(x, rngDe('s', 1)); x.justica!.prisao = undefined; x.justica!.alternativa = undefined; });
+    w = em(w, x => { x.t += 12; processarJustica(x, rngDe('s', 2)); });
+    expect(w.justica!.processo?.categoria).toBe('corrupcao');
+  }, 120_000);
+  it('o que foi aceito pode vir à tona anos depois: o juiz é afastado e a absolvição comprada é anulada', () => {
+    let v: Vida | undefined;
+    for (let k = 0; k < 120 && !v; k++) {
+      const n = em(comProcessoEContato(600 + k, 20), x => { tentarCorromper(x, 'contato'); });
+      if (n.justica!.corrupcoes![0].resultado === 'aceito') v = n;
+    }
+    expect(v).toBeTruthy();
+    let w = em(v!, x => {
+      const j = x.justica!;
+      j.antecedentes.push({ t: x.t, categoria: 'fraude', desfecho: 'absolvicao' });
+      j.processo = undefined; liberarBloqueio(x);
+      j.corrupcoes![0].desfecho = 'absolvicao';
+      j.corrupcoes![0].risco = 1;
+      x.t += 12;
+      processarJustica(x, rngDe('d', 1));
+    });
+    const t = w.justica!.corrupcoes![0];
+    expect(t.descoberta).toBeDefined();
+    expect(w.justica!.atores![t.alvoId].afastado).toBeDefined();
+    expect(w.justica!.processo?.categoria).toBe('fraude');
+    expect(w.biografia.some(e => /Veio à tona/.test(e.texto))).toBe(true);
+    // e depois, a corrupção vira processo próprio
+    w = em(w, x => { x.justica!.processo = undefined; x.t += 12; processarJustica(x, rngDe('d', 2)); });
+    expect(w.justica!.processo?.categoria).toBe('corrupcao');
+  }, 120_000);
+});
+
+describe('C8 · o dinheiro de fora e a Justiça', () => {
+  it('o bloqueio sai da conta com linha própria e volta inteiro na absolvição', () => {
+    let v = adulto(34, { semente: 9 });
+    v.financas.conta = 500_000;
+    v = em(v, (x, r) => { entrar(x, 'fraude', undefined, r); x.caminhos.envolvimento!.ganhos = 900_000; x.caminhos.envolvimento!.exposicao = 80; });
+    let bloqueado = 0;
+    for (let k = 0; k < 20 && !bloqueado; k++) {
+      const n = em(v, x => abrirProcesso(x, rngDe('b', k), 'fraude'));
+      bloqueado = n.justica?.bloqueado?.valor ?? 0;
+      if (bloqueado) {
+        expect(n.biografia.some(e => /bloqueou/.test(e.texto))).toBe(true);
+        const w = em(n, x => liberarBloqueio(x));
+        expect(w.financas.conta).toBe(n.financas.conta + bloqueado);
+        expect(w.justica!.bloqueado).toBeUndefined();
+      }
+    }
+    expect(bloqueado).toBeGreaterThan(0);
+  });
+});

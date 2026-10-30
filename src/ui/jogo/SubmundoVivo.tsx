@@ -167,7 +167,7 @@ function Situacao({ vida, ir }: { vida: Vida; ir: (p: Parte) => void }) {
 
 /* ================================================================ visão geral */
 
-const FONTE: Record<FonteDoCrime, string> = { recorrente: 'o que o caminho rendeu', ocasional: 'operações e serviços', negocios: 'negócios por fora', encomendas: 'encomendas', organizacao: 'a parte da organização', investimento: 'posto nos negócios', custos: 'custos do caminho', perdas: 'apreensões, confiscos e multas' };
+const FONTE: Record<FonteDoCrime, string> = { recorrente: 'o que o caminho rendeu', ocasional: 'operações e serviços', negocios: 'negócios por fora', encomendas: 'encomendas', organizacao: 'a parte da organização', investimento: 'posto nos negócios', custos: 'custos do caminho', perdas: 'apreensões, confiscos e multas', corrupcao: 'posto para influenciar a Justiça' };
 
 function VisaoGeral({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
   const e = vida.caminhos.envolvimento;

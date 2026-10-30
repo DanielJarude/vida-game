@@ -18,7 +18,7 @@ const preso = (v: Vida) => !!v.justica?.prisao;
 /* ================================================================ contas */
 
 /** De onde vem (ou para onde vai) cada real do caminho — cada um com a sua linha no extrato. */
-export type FonteDoCrime = 'recorrente' | 'ocasional' | 'negocios' | 'encomendas' | 'organizacao' | 'investimento' | 'custos' | 'perdas';
+export type FonteDoCrime = 'recorrente' | 'ocasional' | 'negocios' | 'encomendas' | 'organizacao' | 'investimento' | 'custos' | 'perdas' | 'corrupcao';
 
 export const ROTULO_POR_FORA: Record<FonteDoCrime, string> = {
   recorrente: 'Por fora: o que o caminho rendeu no ano',
@@ -28,7 +28,8 @@ export const ROTULO_POR_FORA: Record<FonteDoCrime, string> = {
   organizacao: 'Por fora: a parte que veio da organização',
   investimento: 'Por fora: dinheiro posto nos negócios clandestinos',
   custos: 'Por fora: custos do caminho (acertos, mercadoria, gente, dívidas)',
-  perdas: 'Por fora: apreensões, confiscos, multas e perdas'
+  perdas: 'Por fora: apreensões, confiscos, multas e perdas',
+  corrupcao: 'Por fora: dinheiro posto para influenciar a Justiça'
 };
 const FONTE_DO_ROTULO = Object.fromEntries(Object.entries(ROTULO_POR_FORA).map(([k, x]) => [x, k])) as Record<string, FonteDoCrime>;
 

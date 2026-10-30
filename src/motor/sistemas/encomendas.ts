@@ -28,6 +28,7 @@ import { escalaDe, ganharPratica, garantirCarreira, marco, movimentoPorFora, niv
 import { dinheiroCurto } from '../texto';
 import { abalar } from './abalo';
 import { historiaDoContato, mudarConfianca } from './redeCriminal';
+import { contextoDaEncomenda, reacaoAoFracasso, reacaoAoSucesso, reacaoDaOrg, seuLugar, variante, vozDe } from './relatoDoCrime';
 
 const env = (v: Vida) => v.caminhos.envolvimento;
 
@@ -208,7 +209,8 @@ export function executarEncomenda(v: Vida, oque: OqueEncomenda, id?: string, pes
     x.estado = 'recusada'; x.tFim = v.t;
     if (x.pessoaId) { mudarConfianca(v, x.pessoaId, -2); historiaDoContato(v, x.pessoaId, 'Você recusou um trabalho dele.'); }
     if (x.orgId) { const o = orgPorId(v, x.orgId); if (o) o.lealdade = clamp(o.lealdade - (o.relacao === 'membro' ? 4 : 1)); }
-    return { texto: `Você recusou ${nome}. ${quem ? `${cap(quem)} entendeu — e vai lembrar na próxima.` : ''}`.trim() };
+    const reac = x.pessoaId ? ({ leal: 'entendeu, e disse que a porta continua aberta', desconfiado: 'anotou a recusa — e vai lembrar', pragmatico: 'levou a proposta para outra pessoa no mesmo dia', esquentado: 'não gostou e deixou isso claro', caloroso: 'disse que não tem problema, e pareceu sincero' } as const)[vozDe(v, x.pessoaId)] : x.orgId ? (orgPorId(v, x.orgId)?.relacao === 'membro' ? 'anotou: de quem é de dentro, recusa pesa' : 'seguiu em frente sem você') : undefined;
+    return { texto: `Você recusou ${nome}.${quem && reac ? ` ${cap(quem)} ${reac}.` : ''}` };
   }
   if (oque === 'negociar') {
     x.negociada = true;
@@ -235,38 +237,58 @@ export function executarEncomenda(v: Vida, oque: OqueEncomenda, id?: string, pes
   return realizar(v, r, x);
 }
 
-/** Um trabalho feito pela própria pessoa (a encomenda aceita): dá certo — ou dá errado de um jeito que conta história. */
+/**
+ * Um trabalho feito pela própria pessoa (a encomenda aceita): dá certo (inteiro, pela metade, ou melhor que o combinado) — ou
+ * dá errado de um jeito que conta história. REWORK 12.3 · D: o texto sai do estado (quem propôs e o que há entre vocês, o
+ * seu lugar no trabalho, a reação de quem estava junto) — `relatoDoCrime`.
+ */
 function realizar(v: Vida, r: Rng, x: EncomendaCriminal): { texto: string; tom?: 'bom' | 'ruim' } {
   const e = env(v)!;
   const c = garantirCarreira(e);
   const s = e.especializacoes?.[x.ramo];
   const nome = tipoDeEncomenda(x.tipo)?.nome ?? 'o trabalho';
-  const deu = r.chance(x.chance);
+  const ctx = contextoDaEncomenda(v, x, nome);
+  const lugar = seuLugar(v, x.gravidade, x.id);
+  const y = r.next();
+  const deu = y < x.chance;
+  // REWORK 12.3 · D4: o sucesso tem graus — o inesperado (o comprador pagou mais, sobrou mercadoria) e o parcial (pagaram
+  // menos, parte ficou para trás) — e cada um mexe no dinheiro, na confiança e no nome de um jeito.
+  const desfecho: 'inesperado' | 'completo' | 'parcial' = !deu ? 'completo' : y < x.chance * 0.1 ? 'inesperado' : y > x.chance * 0.86 ? 'parcial' : 'completo';
   if (s) { s.operacoes++; s.ultima = v.t; s.experiencia = clamp(s.experiencia + (deu ? 4 : 2) + x.gravidade); }
   x.tFim = v.t;
   if (deu) {
     x.estado = 'concluida';
     c.falhasSeguidas = 0;
-    const liq = Math.round(x.valor * 0.8 / 100) * 100;
+    const fator = desfecho === 'inesperado' ? 1.3 + r.next() * 0.2 : desfecho === 'parcial' ? 0.55 + r.next() * 0.2 : 1;
+    const liq = Math.round(x.valor * 0.8 * fator / 100) * 100;
     movimentoPorFora(v, 'encomendas', liq);
-    e.ganhos += x.valor;
-    if (s) s.ganhos += x.valor;
-    e.exposicao = clamp(e.exposicao + Math.round(x.risco * 0.3));
-    e.reputacao = clamp((e.reputacao ?? 0) + x.gravidade * 2);
+    e.ganhos += Math.round(x.valor * fator);
+    if (s) s.ganhos += Math.round(x.valor * fator);
+    e.exposicao = clamp(e.exposicao + Math.round(x.risco * (desfecho === 'parcial' ? 0.5 : 0.3)));
+    e.reputacao = clamp((e.reputacao ?? 0) + x.gravidade * (desfecho === 'parcial' ? 1 : 2) + (desfecho === 'inesperado' ? 2 : 0));
     ganharPratica(v, 3 + x.gravidade * 2);
-    if (x.pessoaId) { mudarConfianca(v, x.pessoaId, 3 + x.gravidade); historiaDoContato(v, x.pessoaId, 'Fizeram um trabalho juntos, e deu certo.', 'bom'); }
-    if (x.orgId) { const o = orgPorId(v, x.orgId); if (o) lembrarOrg(o, v.t, 'favor', 3 + x.gravidade * 2); }
-    if (!c.marcos.some(m => m.texto.startsWith('A primeira encomenda'))) marco(v, 'A primeira encomenda cumprida: o nome passou a circular de outro jeito.', false);
+    if (x.pessoaId) { mudarConfianca(v, x.pessoaId, (desfecho === 'parcial' ? 1 : 3) + x.gravidade); historiaDoContato(v, x.pessoaId, desfecho === 'parcial' ? `${cap(nome)}: saiu pela metade.` : `${cap(nome)}: deu certo.`, 'bom'); }
+    if (x.orgId) { const o = orgPorId(v, x.orgId); if (o) lembrarOrg(o, v.t, 'favor', desfecho === 'parcial' ? 2 : 3 + x.gravidade * 2); }
+    const primeira = !c.marcos.some(m => m.texto.startsWith('A primeira encomenda'));
+    if (primeira) marco(v, 'A primeira encomenda cumprida: o nome passou a circular de outro jeito.', false);
     if (x.gravidade === 3) marco(v, `Cumpriu um trabalho grande: ${nome}.`, false);
-    anotar(v, `Cumpriu ${nome}: ${dinheiroCurto(liq)}.`, 'bom');
-    x.resultado = `Deu certo: ${dinheiroCurto(liq)} no bolso.`;
-    return { texto: `Deu certo. ${cap(nome)} rendeu ${dinheiroCurto(liq)} depois das partes — e um pouco mais de nome no meio.`, tom: 'bom' };
+    anotar(v, `${cap(nome)} (${ctx.de}): ${desfecho === 'parcial' ? 'pela metade, ' : desfecho === 'inesperado' ? 'melhor que o combinado, ' : ''}${dinheiroCurto(liq)}.`, 'bom');
+    x.resultado = desfecho === 'parcial' ? `Saiu pela metade: ${dinheiroCurto(liq)}.` : desfecho === 'inesperado' ? `Melhor que o combinado: ${dinheiroCurto(liq)}.` : `Deu certo: ${dinheiroCurto(liq)} no bolso.`;
+    const resultado = desfecho === 'inesperado'
+      ? variante(v, 'enc_inesperado', [`Saiu melhor que o combinado: ${dinheiroCurto(liq)} para você, depois das partes.`, `Sobrou mais do que se esperava, e a sua parte ficou em ${dinheiroCurto(liq)}.`], x.id)
+      : desfecho === 'parcial'
+        ? variante(v, 'enc_parcial', [`Deu certo pela metade: pagaram menos que o combinado, e a sua parte ficou em ${dinheiroCurto(liq)}.`, `Uma parte se perdeu no caminho. Sobraram ${dinheiroCurto(liq)} para você — e mais gente do que devia viu.`], x.id)
+        : variante(v, `enc_ok_${x.gravidade}`, [`Saiu como combinado: ${dinheiroCurto(liq)} para você depois das partes.`, `Ninguém viu, ninguém perguntou: ${dinheiroCurto(liq)} no seu bolso.`, `Foi limpo. A sua parte: ${dinheiroCurto(liq)}.`], x.id);
+    const reacao = ctx.pessoa ? reacaoAoSucesso(v, ctx.pessoa.id, liq) : ctx.org ? reacaoDaOrg(v, ctx.org, true) : '';
+    const fecho = primeira ? ' Foi a primeira encomenda cumprida: o seu nome passou a circular.' : '';
+    return { texto: `${ctx.frase} ${lugar}. ${resultado} ${reacao}${fecho}`.replace(/\s+/g, ' ').trim(), tom: 'bom' };
   }
   x.estado = 'falhou';
   c.falhasSeguidas = (c.falhasSeguidas ?? 0) + 1;
   const out = falhaInteressante(v, r, x);
   x.resultado = out.texto;
-  return out;
+  const reacao = ctx.pessoa ? reacaoAoFracasso(v, ctx.pessoa.id) : ctx.org ? reacaoDaOrg(v, ctx.org, false) : '';
+  return { texto: `${ctx.frase} ${lugar}. ${out.texto} ${reacao}`.replace(/\s+/g, ' ').trim(), tom: out.tom };
 }
 
 /**
@@ -295,41 +317,42 @@ export function falhaInteressante(v: Vida, r: Rng, x: EncomendaCriminal): { text
     case 'aprendeu':
       if (s) s.experiencia = clamp(s.experiencia + 5);
       anotar(v, `${cap(nome)} deu errado — e ensinou.`);
-      return { texto: `Deu errado, e saiu barato: nada entrou, ninguém viu. Você aprendeu o que não repetir (a prática subiu).`, tom: undefined };
+      return { texto: variante(v, 'falha_aprendeu', ['Deu errado, e saiu barato: nada entrou, ninguém viu. Você aprendeu o que não repetir.', 'Não deu. Ninguém se feriu, nada se perdeu — só o tempo, e uma lição que fica.', 'Voltou de mãos vazias, mas sabendo exatamente onde errou.'], x.id), tom: undefined };
     case 'contato': {
       const id = criarContato(v, x.ramo, undefined, 7);
       anotar(v, `${cap(nome)} deu errado; ${v.pessoas[id].nome} viu como você se virou.`);
-      return { texto: `Deu errado — mas ${v.pessoas[id].nome}, que estava por perto, gostou de como você segurou a situação. Um contato novo.`, tom: undefined };
+      return { texto: variante(v, 'falha_contato', [`Deu errado — mas ${v.pessoas[id].nome}, que estava por perto, gostou de como você segurou a situação. Um contato novo.`, `Não saiu nada. Saiu, porém, um conhecido: ${v.pessoas[id].nome} viu você manter a calma e pediu o seu número.`], x.id), tom: undefined };
     }
     case 'divida': {
       const valor = Math.round(x.valor * 0.3 / 100) * 100;
       e.divida = (e.divida ?? 0) + valor;
       if (x.pessoaId) { const f = e.fichas?.[x.pessoaId]; if (f) f.favores = (f.favores ?? 0) - 1; }
       anotar(v, `${cap(nome)} deu errado e deixou uma dívida de ${dinheiroCurto(valor)}.`, 'ruim');
-      return { texto: `Deu errado, e o prejuízo de quem estava junto virou dívida sua: ${dinheiroCurto(valor)}.`, tom: 'ruim' };
+      const credor = x.pessoaId ? v.pessoas[x.pessoaId]?.nome : x.orgId ? orgPorId(v, x.orgId)?.nome : undefined;
+      return { texto: variante(v, 'falha_divida', [`Deu errado, e o prejuízo ${credor ? `de ${credor}` : 'de quem estava junto'} virou dívida sua: ${dinheiroCurto(valor)}.`, `Não deu, e alguém tinha de cobrir a perda. Ficou com você: ${dinheiroCurto(valor)} devidos${credor ? ` a ${credor}` : ''}.`], x.id), tom: 'ruim' };
     }
     case 'conflito': {
       const o = x.orgId ? orgPorId(v, x.orgId) : rivalDoRamo(v, x.ramo);
       if (o) lembrarOrg(o, v.t, 'conflito', -6);
       e.atritos = (e.atritos ?? 0) + 1;
       anotar(v, `${cap(nome)} deu errado e virou assunto com ${o?.nome ?? 'gente do meio'}.`, 'ruim');
-      return { texto: `Deu errado, e ${o ? o.nome : 'gente do meio'} pôs a culpa em você. Vai ter conversa.`, tom: 'ruim' };
+      return { texto: variante(v, 'falha_conflito', [`Deu errado, e ${o ? o.nome : 'gente do meio'} pôs a culpa em você. Vai ter conversa.`, `Não deu certo — e, para ${o ? o.nome : 'quem estava em volta'}, o culpado tem nome: o seu.`], x.id), tom: 'ruim' };
     }
     case 'oportunidade': {
       const outra = proporEncomenda(v, r, x.ramo, { ...(x.pessoaId ? { pessoaId: x.pessoaId } : {}), ...(x.orgId ? { orgId: x.orgId } : {}) }, 1);
       if (outra) { outra.chance = Math.min(0.95, outra.chance + 0.08); outra.tPrazo = v.t + 18; }
-      return { texto: `Deu errado, mas quem propôs não desistiu de você: já tem outra coisa, menor e mais segura, esperando.`, tom: undefined };
+      return { texto: variante(v, 'falha_oportunidade', ['Deu errado, mas quem propôs não desistiu de você: já tem outra coisa, menor e mais segura, esperando em Encomendas.', 'Não deu. Mesmo assim, voltaram a chamar: um trabalho menor, com mais chance, está em Encomendas.'], x.id), tom: undefined };
     }
     case 'perda': {
       const custo = Math.round(x.valor * 0.15 / 100) * 100;
       pagarPorFora(v, 'perdas', custo);
-      return { texto: `Deu errado. Nada entrou, e ainda foi preciso cobrir ${dinheiroCurto(custo)} do que se perdeu.`, tom: 'ruim' };
+      return { texto: variante(v, 'falha_perda', [`Deu errado. Nada entrou, e ainda foi preciso cobrir ${dinheiroCurto(custo)} do que se perdeu.`, `Não só não rendeu: custou ${dinheiroCurto(custo)} do seu bolso para fechar o buraco.`], x.id), tom: 'ruim' };
     }
     default: {
       e.exposicao = clamp(e.exposicao + x.risco);
       e.reputacao = clamp((e.reputacao ?? 0) - 3);
       anotar(v, `${cap(nome)} deu errado e deixou rastro.`, 'ruim');
-      return { texto: `Deu errado — e deixou rastro. Mais gente sabe do seu nome agora.`, tom: 'ruim' };
+      return { texto: variante(v, 'falha_exposto', ['Deu errado — e deixou rastro. Mais gente sabe do seu nome agora.', 'Não deu, e pior: alguém viu, alguém comentou. O seu nome começou a circular onde não devia.'], x.id), tom: 'ruim' };
     }
   }
 }

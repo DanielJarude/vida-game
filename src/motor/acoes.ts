@@ -895,6 +895,7 @@ export function executar(vida: Vida, a: Acao): Retorno {
   let aviso: Retorno['aviso'];
   let titulo: string | undefined;
   let pessoaId: string | undefined;
+  let consequencias: string[] | undefined;
   const antes = vida.biografia.length;
   const { vida: nova } = transacao(vida, (v, r) => {
     // O extrato (`extrato`): o que mexeu no dinheiro antes (os acontecimentos do fim do ano) e o que esta escolha
@@ -907,6 +908,7 @@ export function executar(vida: Vida, a: Acao): Retorno {
     aviso = out.aviso;
     titulo = out.titulo;
     pessoaId = out.pessoaId;
+    consequencias = out.consequencias;
     // Um conflito de trajetórias criado pela ação vira pergunta na hora (nunca fica resolvido em silêncio).
     if (v.caminhos.pendente && !v.momento) abrirConflitoPendente(v, r);
     // REWORK 11.5 · EVT-01: a decisão do ano que esperava a vez abre quando esta ação fechou a que estava aberta por outro
@@ -916,7 +918,8 @@ export function executar(vida: Vida, a: Acao): Retorno {
     // REWORK 9: a agenda guarda só escolhas de coisas que existem (a atividade largada leva o lugar dela junto).
     limparAgenda(v);
   });
-  const mudancas = nova.biografia.slice(antes).filter(e => e.relevancia !== 'tecnico').map(e => e.texto);
+  // REWORK 12.3 · D10: as consequências objetivas da ação (o Submundo as mede) vêm antes do que entrou na Linha da Vida.
+  const mudancas = [...(consequencias ?? []), ...nova.biografia.slice(antes).filter(e => e.relevancia !== 'tecnico').map(e => e.texto)];
   return { vida: nova, resultado, aviso, titulo, pessoaId: pessoaId ?? (a.tipo === 'pessoa' && titulo ? a.pessoaId : undefined), ...(mudancas.length ? { mudancas } : {}) };
 }
 
@@ -945,13 +948,13 @@ function linhaDoExtrato(a: Acao): [string, TipoMovimento] {
     case 'exotico_comprar': case 'instalacao_comprar': case 'pet_cuidador': case 'pet_ao_zoo': case 'animal_por_fora': return ['Os bichos: compras e cuidados', 'escolha'];
     // REWORK 12.25 · FIN-12.25-01: o que é do caminho tem linha própria (antes, a ação do Submundo caía em "Compras, viagens").
     case 'clandestino': case 'submundo': return ['Por fora: outros movimentos do caminho', 'por_fora'];
-    case 'crime': return a.acao.area === 'justica' ? ['Justiça: advogados, fianças e custas', 'despesa'] : ['Por fora: outros movimentos do caminho', 'por_fora'];
+    case 'crime': return a.acao.area === 'justica' ? ['Justiça: advogados, fianças e custas', 'despesa'] : a.acao.area === 'corrupcao' ? ['Por fora: dinheiro posto para influenciar a Justiça', 'por_fora'] : ['Por fora: outros movimentos do caminho', 'por_fora'];
     case 'margem': return ['Justiça: advogados, fianças e custas', 'despesa'];
     default: return ['Compras, viagens e outras escolhas', 'escolha'];
   }
 }
 
-interface Saida { resultado?: string; aviso?: Retorno['aviso']; titulo?: string; pessoaId?: string }
+interface Saida { resultado?: string; aviso?: Retorno['aviso']; titulo?: string; pessoaId?: string; consequencias?: string[] }
 const ok = (texto: string, tom: 'bom' | 'ruim' | 'neutro' = 'neutro'): Saida => ({ aviso: { texto, tom } });
 
 function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
@@ -994,7 +997,7 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       const x = executarCrime(v, a.acao);
       // O que a ação desencadeou agora (o pedido de um contato, a disputa) vira a pergunta na hora.
       if (!v.momento) { const c = candidatos(v, r, k => k.tipo === 'decisao' && /^sub(125)?[a-z]?_/.test(k.id))[0]; if (c && c.c.tipo === 'decisao') abrirDecisao(v, c.c, c.ctx); }
-      return { resultado: x.texto, titulo: x.titulo };
+      return { resultado: x.texto, titulo: x.titulo, consequencias: x.consequencias };
     }
     case 'margem': {
       const resultado = executarMargem(v, r, a.oque);

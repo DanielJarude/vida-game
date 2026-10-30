@@ -16,6 +16,8 @@ import { preso } from './justica';
 import { anotar } from './submundo';
 import { escrever } from '../nucleo';
 import { contrair } from '../texto';
+import { consequencias, fotografar } from './relatoDoCrime';
+import { disponibilidadeCorrupcao, disponibilidadeRegularizar, regularizar, tentarCorromper, type CanalDeCorrupcao } from './corrupcaoJudicial';
 
 export type OqueRumo = 'moita' | 'voltar_ritmo' | 'fundo' | 'sair_aos_poucos' | 'desistir_de_sair';
 
@@ -24,7 +26,11 @@ export type AcaoDoCrime =
   | { area: 'contato'; oque: OqueContato; pessoaId: string }
   | { area: 'org'; oque: OqueOrg; orgId: string; alvo?: string }
   | { area: 'justica'; oque: OqueDefesa }
-  | { area: 'rumo'; oque: OqueRumo };
+  | { area: 'rumo'; oque: OqueRumo }
+  /** REWORK 12.3 · C1: a tentativa de corromper o processo (ilegal; separada da defesa, que é legal). */
+  | { area: 'corrupcao'; canal: CanalDeCorrupcao }
+  /** REWORK 12.3 · C8: pôr em ordem o dinheiro que entrou por fora (abstrato; não protege por inteiro). */
+  | { area: 'dinheiro'; oque: 'regularizar' };
 
 export const ROTULO_DO_RUMO: Record<OqueRumo, string> = {
   moita: 'Ficar na moita (menos dinheiro, menos exposição)', voltar_ritmo: 'Voltar ao ritmo de antes', fundo: 'Ir mais fundo (mais dinheiro, mais compromisso)',
@@ -67,12 +73,20 @@ export function disponibilidadeCrime(v: Vida, a: AcaoDoCrime): Veredito {
     case 'org': return disponibilidadeOrg(v, a.orgId, a.oque, a.alvo);
     case 'justica': return disponibilidadeDefesa(v, a.oque);
     case 'rumo': return disponibilidadeRumo(v, a.oque);
+    case 'corrupcao': return disponibilidadeCorrupcao(v, a.canal);
+    case 'dinheiro': return disponibilidadeRegularizar(v);
   }
 }
 
-export function executarCrime(v: Vida, a: AcaoDoCrime): { texto: string; tom?: 'bom' | 'ruim'; titulo: string } {
+/**
+ * REWORK 12.3 · D3/D9/D10: a ação devolve o relato (contexto e resultado) e, separadas, as CONSEQUÊNCIAS objetivas — medidas
+ * antes e depois (o dinheiro, a confiança de cada um, a lealdade da organização, o posto, a exposição, a dívida). O texto e
+ * os números saem do mesmo estado: não se contradizem.
+ */
+export function executarCrime(v: Vida, a: AcaoDoCrime): { texto: string; tom?: 'bom' | 'ruim'; titulo: string; consequencias: string[] } {
+  const antes = fotografar(v);
   const x = executarNaArea(v, a);
-  return { ...x, texto: contrair(x.texto) };
+  return { ...x, texto: contrair(x.texto), consequencias: consequencias(v, antes).map(contrair) };
 }
 
 function executarNaArea(v: Vida, a: AcaoDoCrime): { texto: string; tom?: 'bom' | 'ruim'; titulo: string } {
@@ -82,5 +96,7 @@ function executarNaArea(v: Vida, a: AcaoDoCrime): { texto: string; tom?: 'bom' |
     case 'org': return { ...executarOrg(v, a.orgId, a.oque, a.alvo), titulo: 'A organização' };
     case 'justica': return { ...executarDefesa(v, a.oque), titulo: 'A Justiça' };
     case 'rumo': return { ...executarRumo(v, a.oque), titulo: 'O rumo' };
+    case 'corrupcao': return { ...tentarCorromper(v, a.canal), titulo: 'Por fora dos autos' };
+    case 'dinheiro': return { ...regularizar(v), titulo: 'O dinheiro de fora' };
   }
 }

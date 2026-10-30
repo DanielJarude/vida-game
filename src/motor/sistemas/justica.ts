@@ -47,6 +47,9 @@ export const garantirJustica = (v: Vida): Justica => (v.justica ??= { antecedent
 export interface Tribunal { aoAbrir: (v: Vida, r: Rng) => void; sentenciar: (v: Vida, r: Rng) => void }
 let tribunal: Tribunal | undefined;
 export function registrarTribunal(t: Tribunal): void { tribunal = t; }
+/** REWORK 12.3 · C1: o ano da corrupção judicial (o que vem à tona, a denúncia que vira processo) — registrado por `corrupcaoJudicial`. */
+let corrupcaoAnual: ((v: Vida, r: Rng) => void) | undefined;
+export function registrarCorrupcaoAnual(f: (v: Vida, r: Rng) => void): void { corrupcaoAnual = f; }
 
 /**
  * REWORK 12.25 — a vida de quem é procurado (o mandado da audiência a que faltou, a pena alternativa abandonada, a fuga):
@@ -103,7 +106,9 @@ export function abrirProcesso(v: Vida, r: Rng, categoria: CategoriaDoProcesso): 
   const env = v.caminhos.envolvimento;
   // REWORK 12.25: ser processado não é o fim do caminho (antes, o processo encerrava o envolvimento sozinho): quem responde
   // fica na moita — menos dinheiro, menos exposição — e decide o resto. O que encerra, se vier, é a prisão (`prender`).
-  if (env) { if (env.parou === undefined) env.cautela = true; env.exposicao = 0; }
+  // REWORK 12.3: a exposição de antes é o que a acusação tem — as provas saem dela (antes, era zerada ANTES de as provas
+  // serem medidas, e todo processo do caminho começava com provas fracas).
+  if (env) { v.fatos['exposicao_na_abertura'] = env.exposicao; if (env.parou === undefined) env.cautela = true; env.exposicao = 0; }
   if (i < 18) { medidaSocioeducativa(v, r, categoria); return; }
   if (j.processo || j.prisao) return;
   // REWORK 12.25: quem já tinha um advogado acompanhando a investigação chega ao processo com ele (já pago).
@@ -306,6 +311,7 @@ function r0(v: Vida): number {
 export function processarJustica(v: Vida, r: Rng): void {
   const j = v.justica;
   if (!j) return;
+  corrupcaoAnual?.(v, r);
   // REWORK 12.25: com mandado (a pessoa não apareceu), o julgamento espera.
   if (j.processo && v.t >= j.processo.tJulgamento && !j.foragido) (tribunal ? tribunal.sentenciar : sentenca)(v, r);
   if (j.alternativa && v.t >= j.alternativa.tFim) {
