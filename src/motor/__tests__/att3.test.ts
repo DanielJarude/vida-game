@@ -4,6 +4,7 @@
  * investimentos, pets, herança, negócio e a migração do save v9 → v10.
  */
 
+import { economiaLocal } from '../dados/lugares';
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -108,10 +109,16 @@ describe('dinheiro pessoal não é dinheiro da casa', () => {
   });
 
   it('a mesada quase toda vira lanche e saída: aos 17, o guardado é uma fração do que a criança recebeu', () => {
-    const v = viverAte(nova({ semente: 32, classe: 'alta' }), 17);
-    const recebido = [8, 9, 10, 11, 12, 13, 14, 15, 16].reduce((s, i) => s + 450 * Math.min(1, (i - 6) / 10) * 12, 0);
-    expect(v.financas.conta).toBeLessThan(recebido * 0.35);
-  });
+    // REWORK 12.3: a mesma régua (35% do recebido), na média de quatro vidas — uma vida só, com semente, muda de história
+    // quando o catálogo cresce (um presente da avó, um bico de fim de semana), e o teste mede o hábito, não uma história.
+    const fracoes = [32, 33, 34, 35].map(s => {
+      const v = viverAte(nova({ semente: s, classe: 'alta' }), 17);
+      const bico = v.ocorrencias.some(o => o.id === 'ado123_primeiro_trabalho') ? 400 * economiaLocal(v.moradia.municipioId).custo : 0;
+      const recebido = [8, 9, 10, 11, 12, 13, 14, 15, 16].reduce((x, i) => x + 450 * Math.min(1, (i - 6) / 10) * 12, 0) + bico;
+      return v.financas.conta / recebido;
+    });
+    expect(fracoes.reduce((x, y) => x + y, 0) / fracoes.length).toBeLessThan(0.35);
+  }, 120_000);
 
   it('adulto que mora com os pais e trabalha: ajuda nas contas, gasta o dele — e não paga o mercado da casa', () => {
     // Premissa: alguém de 20 anos que ainda mora com os pais (a semente é só o começo da busca).

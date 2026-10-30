@@ -238,7 +238,11 @@ describe('coleção: raridade, procedência, revenda', () => {
 
   it('a coleção valiosa paga seguro e guarda; a coleção entra no balanço uma vez', () => {
     let v = rica();
+    // Pré-condição dita (o sorteio das vidas com semente muda quando o catálogo cresce): uma peça acima de 100 mil na galeria
+    // no ano — senão, o ano seguinte.
+    for (let k = 0; k < 6 && !ofertasDeColecao(v, 'galeria').some(o => o.preco > 100000); k++) v = { ...v, t: v.t + 12 };
     const caros = ofertasDeColecao(v, 'galeria').filter(o => o.preco > 100000).slice(0, 1);
+    expect(caros.length).toBe(1);
     for (const o of caros) v = fazer(v, { tipo: 'colecao_comprar', ofertaId: o.id });
     const b = balanco(v);
     expect(b.colecao).toBe(Math.round(colecao(v).reduce((s, c) => s + c.valor, 0)));
@@ -364,7 +368,8 @@ describe('mudança de país com coleção e empresa', () => {
 describe('liquidez × patrimônio', () => {
   it('rico em imóvel e curto de caixa não aparece "no vermelho"; a dívida desconta uma vez', () => {
     let v = rica('sao-paulo-sp', 5_000_000);
-    const o = ofertasDeImoveis(v, 'venda').filter(x => x.modeloId === 'alto_padrao' || x.modeloId === 'cobertura').sort((a, b) => b.preco - a.preco)[0];
+    // O imóvel de alto padrão mais caro que cabe à vista (com escritura e impostos) — a pré-condição do teste, dita.
+    const o = ofertasDeImoveis(v, 'venda').filter(x => (x.modeloId === 'alto_padrao' || x.modeloId === 'cobertura') && x.preco * 1.06 < v.financas.conta).sort((a, b) => b.preco - a.preco)[0];
     v = fazer(v, { tipo: 'comprar_imovel', ofertaId: o.id, financiar: false, morar: true });
     v.financas.conta = 3000;
     expect(['no_vermelho', 'dependente']).not.toContain(seguranca(v).nivel);

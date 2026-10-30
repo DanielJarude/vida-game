@@ -298,6 +298,26 @@ export function decisoesDoAno(v: Vida): number {
   return ids.size;
 }
 
+/**
+ * REWORK 12.3 · F4/F6: a vida comum do 12.3 (infância, família, escola, casa, dinheiro, saúde, cidade) com sorteio próprio:
+ * no máximo um por ano, numa parte dos anos, depois do resto do ano — o acontecimento entra na Linha da Vida; a decisão
+ * abre se nada estiver aberto, senão espera na fila (o teto de decisões do ano continua valendo).
+ */
+const DA_VIDA_COMUM = /^(inf|ado|fam|esc|fac|casa|din|sau|cid)123_/;
+export function vidaComumDoAno(v: Vida): void {
+  if (v.morte) return;
+  const r = rngDe(v.id, 'vida_comum_123', v.t);
+  if (!r.chance(0.3)) return;
+  const lista: { c: Conteudo; ctx: Ctx }[] = [];
+  for (const c of CATALOGO) { if (!c.manual || !DA_VIDA_COMUM.test(c.id)) continue; const ctx = preparar(c, v, r); if (ctx) lista.push({ c, ctx }); }
+  const x = r.weighted(lista, y => peso(y.c, y.ctx));
+  if (!x) return;
+  if (x.c.tipo === 'acontecimento') { aplicarAcontecimento(v, x.c, x.ctx); return; }
+  if (!v.momento) { abrirDecisao(v, x.c, x.ctx); return; }
+  if (esperandoNoAno(v) >= 2) return;
+  (v.fila ??= []).push({ id: x.c.id, t: v.t, papeis: Object.fromEntries(Object.entries(x.ctx.p).map(([k, p]) => [k, p.id])), prioridade: 0 });
+}
+
 /** Quantas decisões ainda esperam neste ano (para a tela: "mais uma decisão neste ano"). */
 export const esperandoNoAno = (v: Vida) => (v.fila ?? []).filter(x => x.t === v.t).length;
 

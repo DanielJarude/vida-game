@@ -4,6 +4,9 @@
  * hábitos, cidade e cultura. Regras da casa (as mesmas de sempre): papéis com pessoas reais, `quando` lido do estado (sem
  * sorteio), cada opção muda alguma coisa (a relação, o dinheiro, a saúde, a carreira), e o que é de uma vez só tem marco.
  * Os que lembram do passado (F5) leem o passado de verdade: a dívida antiga, o colega reencontrado, o professor de anos atrás.
+ *
+ * Os da vida comum são `manual` e têm sorteio próprio (`motor.vidaComumDoAno`, um gerador derivado): entram na vida sem
+ * mudar a sequência do sorteio principal do ano (as vidas de antes continuam as mesmas até um deles acontecer).
  */
 import type { Conteudo, Ctx } from './base';
 import type { Pessoa, Vida } from '../tipos';
@@ -54,8 +57,8 @@ export const ACONTECIMENTOS_123: Conteudo[] = [
 
   /* ================================================================ F4 · infância e adolescência */
   {
-    id: 'inf123_amizade_rompida', tipo: 'decisao', idade: [8, 14], tema: 'amizade', repetir: 4, peso: 2,
-    papeis: { amigo: P.amigoProximo },
+    id: 'inf123_amizade_rompida', manual: true, tipo: 'decisao', idade: [8, 14], tema: 'amizade', repetir: 4, peso: 2,
+    papeis: { amigo: P.fixo(P.amigoProximo) },
     titulo: c => `${c.p.amigo.nome} contou um segredo seu`,
     texto: c => `Aquilo que você contou só para ${c.p.amigo.nome} apareceu na boca da turma inteira.`,
     opcoes: [
@@ -65,13 +68,13 @@ export const ACONTECIMENTOS_123: Conteudo[] = [
     ]
   },
   {
-    id: 'ado123_primeiro_trabalho', tipo: 'decisao', idade: [15, 17], tema: 'trabalho', repetir: 0, peso: 2,
+    id: 'ado123_primeiro_trabalho', manual: true, tipo: 'decisao', idade: [15, 17], tema: 'trabalho', repetir: 0, peso: 2,
     quando: c => !c.v.trabalho.atual,
     marco: { chave: 'primeiro_dinheiro_proprio' },
     titulo: 'Um dinheiro só seu',
     texto: c => `${P.tioOuPrimo(c.v)[0]?.nome ?? 'Um vizinho'} precisa de ajuda nos fins de semana: uns ${local(c, 300)} por mês.`,
     opcoes: [
-      { id: 'aceitar', texto: 'Aceitar', comportamento: { disciplina: 1 }, resolver: c => ({ texto: 'O primeiro dinheiro que não veio de casa. Você contou três vezes.', memoria: 'Ganhou o primeiro dinheiro próprio, ajudando nos fins de semana.', relevancia: 'biografia', tom: 'bom', efeito: () => { dinheiro(c, local(c, 1800)); feliz(c, 4); estresse(c, 3); } }) },
+      { id: 'aceitar', texto: 'Aceitar', comportamento: { disciplina: 1 }, resolver: c => ({ texto: 'O primeiro dinheiro que não veio de casa. Você contou três vezes — e a maior parte foi embora em lanche, cinema e um tênis.', memoria: 'Ganhou o primeiro dinheiro próprio, ajudando nos fins de semana.', relevancia: 'biografia', tom: 'bom', efeito: () => { dinheiro(c, local(c, 400)); feliz(c, 4); estresse(c, 3); } }) },
       { id: 'estudar', texto: 'Recusar: o fim de semana é do estudo', resolver: c => ({ texto: 'Você recusou. Os sábados ficaram com os livros.', memoria: null, efeito: () => { cognicao(c, 1); } }) },
       { id: 'brincar', texto: 'Recusar: ainda é cedo', resolver: () => ({ texto: 'Ainda dá tempo de ser só adolescente.', memoria: null }) }
     ]
@@ -79,8 +82,8 @@ export const ACONTECIMENTOS_123: Conteudo[] = [
 
   /* ================================================================ F4 · família e relações (F5: o passado volta) */
   {
-    id: 'fam123_divida_antiga', tipo: 'decisao', idade: [25, 90], tema: 'familia', repetir: 6, peso: 2,
-    papeis: { quem: P.qualquer(P.irmao, P.tioOuPrimo, P.amigo) },
+    id: 'fam123_divida_antiga', manual: true, tipo: 'decisao', idade: [25, 90], tema: 'familia', repetir: 6, peso: 2,
+    papeis: { quem: P.fixo(P.qualquer(P.irmao, P.tioOuPrimo, P.amigo)) },
     quando: c => (c.v.vinculos[c.p.quem.id]?.historia ?? []).some(h => c.v.t - h.t >= 60 && /empresta|dinheiro|ajud/i.test(h.texto)),
     titulo: c => `${c.p.quem.nome} lembrou de uma coisa antiga`,
     texto: c => { const h = c.v.vinculos[c.p.quem.id].historia.find(x => c.v.t - x.t >= 60 && /empresta|dinheiro|ajud/i.test(x.texto))!; return `Num almoço, ${c.p.quem.nome} puxou o assunto de ${anoDe(h.t)}: "${h.texto.replace(/\.$/, '')}". Não foi cobrança — mas também não foi por acaso.`; },
@@ -91,8 +94,8 @@ export const ACONTECIMENTOS_123: Conteudo[] = [
     ]
   },
   {
-    id: 'fam123_cuidar_dos_pais', tipo: 'decisao', idade: [35, 75], tema: 'familia', repetir: 5, peso: 3,
-    papeis: { quem: P.comIdade(P.genitor, 72) },
+    id: 'fam123_cuidar_dos_pais', manual: true, tipo: 'decisao', idade: [35, 75], tema: 'familia', repetir: 5, peso: 3,
+    papeis: { quem: P.fixo(P.comIdade(P.genitor, 72)) },
     quando: c => (c.p.quem.saude ?? 100) < 55 && !c.v.vinculos[c.p.quem.id].convivio.includes('casa'),
     titulo: c => `${c.p.quem.nome} já não dá conta sozinh${gp(c, 'quem', 'o', 'a')}`,
     texto: c => `Uma queda na cozinha, nada grave. Mas ${c.p.quem.nome}, com ${idadePessoa(c.v, c.p.quem)} anos, não deveria mais morar sozinh${gp(c, 'quem', 'o', 'a')}. ${P.irmao(c.v).length ? `${P.irmao(c.v)[0].nome} já disse que não pode.` : 'Não há irmãos para dividir.'}`,
@@ -105,20 +108,20 @@ export const ACONTECIMENTOS_123: Conteudo[] = [
 
   /* ================================================================ F4 · escola e faculdade */
   {
-    id: 'esc123_professor_marcou', tipo: 'acontecimento', idade: [10, 22], tema: 'escola', repetir: 0, peso: 1,
+    id: 'esc123_professor_marcou', manual: true, tipo: 'acontecimento', idade: [10, 22], tema: 'escola', repetir: 0, peso: 1,
     quando: c => !!c.v.educacao.basica || !!c.v.educacao.matricula,
     marco: { chave: 'professor_que_marcou' },
     narrar: c => ({ texto: c.r.pick(['Uma professora devolveu a sua redação com uma frase na margem: "você escreve como quem pensa". Você guardou a folha por anos.', 'Um professor ficou depois da aula para explicar de novo, só para você. Foi a primeira vez que a matéria fez sentido.']), relevancia: 'biografia', tom: 'bom', efeito: () => { cognicao(c, 2); feliz(c, 3); c.v.fatos['professor_marcou'] = c.v.t; } })
   },
   {
-    id: 'esc123_reencontro_professor', tipo: 'acontecimento', idade: [30, 80], tema: 'escola', repetir: 0, peso: 1,
+    id: 'esc123_reencontro_professor', manual: true, tipo: 'acontecimento', idade: [30, 80], tema: 'escola', repetir: 0, peso: 1,
     quando: c => c.v.fatos['professor_marcou'] !== undefined && c.v.t - c.v.fatos['professor_marcou'] >= 180,
     narrar: c => ({ texto: `Numa fila de banco, alguém chamou o seu nome: era quem, em ${anoDe(c.v.fatos['professor_marcou'])}, tinha ficado depois da aula por você. Lembrava de tudo. Você também.`, relevancia: 'biografia', tom: 'bom', efeito: () => { feliz(c, 4); } })
   },
   {
-    id: 'fac123_grupo_trabalho', tipo: 'decisao', idade: [17, 30], tema: 'estudo', repetir: 3, peso: 2,
+    id: 'fac123_grupo_trabalho', manual: true, tipo: 'decisao', idade: [17, 30], tema: 'estudo', repetir: 3, peso: 2,
     quando: c => !!c.v.educacao.matricula && !c.v.educacao.matricula.trancado,
-    papeis: { colega: P.qualquer(P.colegaDe('faculdade'), P.colegaDe('escola')) },
+    papeis: { colega: P.fixo(P.qualquer(P.colegaDe('faculdade'), P.colegaDe('escola'))) },
     titulo: 'O trabalho em grupo',
     texto: c => `No trabalho em grupo, ${c.p.colega.nome} sumiu. Faltam dez dias e metade não existe.`,
     opcoes: [
@@ -130,7 +133,7 @@ export const ACONTECIMENTOS_123: Conteudo[] = [
 
   /* ================================================================ F4 · casa e comunidade */
   {
-    id: 'casa123_vizinho_obra', tipo: 'decisao', idade: [20, 90], tema: 'casa', repetir: 5, peso: 2,
+    id: 'casa123_vizinho_obra', manual: true, tipo: 'decisao', idade: [20, 90], tema: 'casa', repetir: 5, peso: 2,
     titulo: 'A obra do vizinho',
     texto: () => 'O vizinho começou uma obra que não acaba: furadeira às sete, entulho na calçada, uma rachadura nova na sua parede.',
     opcoes: [
@@ -140,14 +143,14 @@ export const ACONTECIMENTOS_123: Conteudo[] = [
     ]
   },
   {
-    id: 'casa123_mutirao', tipo: 'acontecimento', idade: [16, 85], tema: 'lugar', repetir: 6, peso: 1,
+    id: 'casa123_mutirao', manual: true, tipo: 'acontecimento', idade: [16, 85], tema: 'lugar', repetir: 6, peso: 1,
     quando: c => c.v.fatos['participa_comunidade'] !== undefined,
     narrar: c => ({ texto: c.r.pick(['O mutirão da praça juntou trinta pessoas num sábado: bancos pintados, árvores novas, churrasco no fim.', 'A festa da rua, organizada pela associação, foi até tarde. Você conheceu metade dos vizinhos de verdade.']), relevancia: 'cotidiano', tom: 'bom', efeito: () => { feliz(c, 4); estresse(c, -3); } })
   },
 
   /* ================================================================ F4 · dinheiro e patrimônio */
   {
-    id: 'din123_golpe_telefone', tipo: 'decisao', idade: [18, 95], tema: 'dinheiro', repetir: 6, peso: 2,
+    id: 'din123_golpe_telefone', manual: true, tipo: 'decisao', idade: [18, 95], tema: 'dinheiro', repetir: 6, peso: 2,
     quando: c => c.v.financas.conta > local(c, 2000),
     titulo: 'A ligação do banco',
     texto: () => 'Uma voz educada, do "banco", diz que houve uma compra suspeita e pede para confirmar uns dados.',
@@ -157,8 +160,8 @@ export const ACONTECIMENTOS_123: Conteudo[] = [
     ]
   },
   {
-    id: 'din123_emprestimo_amigo', tipo: 'decisao', idade: [20, 85], tema: 'dinheiro', repetir: 5, peso: 2,
-    papeis: { amigo: P.amigoProximo },
+    id: 'din123_emprestimo_amigo', manual: true, tipo: 'decisao', idade: [20, 85], tema: 'dinheiro', repetir: 5, peso: 2,
+    papeis: { amigo: P.fixo(P.amigoProximo) },
     titulo: c => `${c.p.amigo.nome} pediu dinheiro emprestado`,
     texto: c => `${c.p.amigo.nome} está apertad${gp(c, 'amigo', 'o', 'a')}: precisa de ${local(c, 3000)} até o fim do mês. Promete devolver em seis.`,
     opcoes: [
@@ -168,15 +171,15 @@ export const ACONTECIMENTOS_123: Conteudo[] = [
     ]
   },
   {
-    id: 'din123_devolveu', tipo: 'acontecimento', idade: [20, 95], tema: 'dinheiro', repetir: 0, peso: 4,
-    papeis: { amigo: P.qualquer(P.amigo, P.amigoProximo) },
+    id: 'din123_devolveu', manual: true, tipo: 'acontecimento', idade: [20, 95], tema: 'dinheiro', repetir: 0, peso: 4,
+    papeis: { amigo: P.fixo(P.qualquer(P.amigo, P.amigoProximo)) },
     quando: c => { const t = c.v.fatos[`emprestou_${c.p.amigo.id}`]; return t !== undefined && c.v.t - t >= 6 && c.v.t - t <= 36; },
     narrar: c => { const paga = c.p.amigo.temperamento.responsabilidade > -0.2; return { texto: paga ? `${c.p.amigo.nome} devolveu o empréstimo de ${anoDe(c.v.fatos[`emprestou_${c.p.amigo.id}`])} — inteiro, com um bolo junto.` : `O empréstimo de ${anoDe(c.v.fatos[`emprestou_${c.p.amigo.id}`])} para ${c.p.amigo.nome} nunca voltou. Vocês nunca falaram disso.`, relevancia: 'cotidiano', tom: paga ? 'bom' : 'ruim', efeito: () => { delete c.v.fatos[`emprestou_${c.p.amigo.id}`]; if (paga) { dinheiro(c, local(c, 3000)); prox(c, 'amigo', 6); } else { tensao(c, 'amigo', 15); lembrarCom(c.v, c.p.amigo.id, 'Não devolveu o dinheiro emprestado.', 'conflito', 2); } } }; }
   },
 
   /* ================================================================ F4 · saúde e hábitos */
   {
-    id: 'sau123_checkup', tipo: 'decisao', idade: [35, 90], tema: 'saude', repetir: 5, peso: 2,
+    id: 'sau123_checkup', manual: true, tipo: 'decisao', idade: [35, 90], tema: 'saude', repetir: 5, peso: 2,
     titulo: 'O exame de rotina',
     texto: () => 'O médico pediu exames de rotina. Já faz um tempo que você adia.',
     opcoes: [
@@ -185,8 +188,8 @@ export const ACONTECIMENTOS_123: Conteudo[] = [
     ]
   },
   {
-    id: 'sau123_parceiro_habito', tipo: 'decisao', idade: [22, 85], tema: 'saude', repetir: 4, peso: 2,
-    papeis: { par: P.parceiro },
+    id: 'sau123_parceiro_habito', manual: true, tipo: 'decisao', idade: [22, 85], tema: 'saude', repetir: 4, peso: 2,
+    papeis: { par: P.fixo(P.parceiro) },
     quando: c => c.v.corpo.forma < 45 || !!c.v.corpo.habitos.fuma,
     titulo: c => `${c.p.par.nome} quer mudar de vida — com você`,
     texto: c => `${c.p.par.nome} comprou dois pares de tênis e propôs: caminhada todo dia, às seis, os dois${c.v.corpo.habitos.fuma ? ' — e o cigarro fora de casa' : ''}.`,
@@ -198,7 +201,7 @@ export const ACONTECIMENTOS_123: Conteudo[] = [
 
   /* ================================================================ F4 · cidade e cultura */
   {
-    id: 'cid123_festival', tipo: 'decisao', idade: [14, 85], tema: 'lugar', repetir: 4, peso: 2,
+    id: 'cid123_festival', manual: true, tipo: 'decisao', idade: [14, 85], tema: 'lugar', repetir: 4, peso: 2,
     titulo: 'O festival da cidade',
     texto: c => `Fim de semana de festival: música na praça, comida de rua, ${P.amigo(c.v).length ? `${P.amigo(c.v)[0].nome} chamando` : 'a cidade inteira na rua'}.`,
     opcoes: [
