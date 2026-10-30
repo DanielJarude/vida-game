@@ -40,7 +40,7 @@ import { CURSOS, cursoOuNulo } from './dados/cursos';
 import { ocupacaoOuNula } from './dados/ocupacoes';
 import { modeloVeiculo, VEICULO_ANTIGO } from './dados/bens';
 import { economiaInicial } from './sistemas/economia';
-import { temperamentoAleatorio } from './nucleo';
+import { MARCOS_DA_INFANCIA, temperamentoAleatorio } from './nucleo';
 import { criarRng } from './rng';
 import { visualAleatorio } from './pessoas';
 import { areaDaPos, capitalDoEstado, nivelEsc, nomeDaFormacao } from './sistemas/escola';
@@ -112,7 +112,7 @@ export function ler(s: Armazenamento | null = armazenamentoPadrao()): Leitura {
  */
 export function interpretar(bruto: string): Leitura {
   const r = interpretarSemNormalizar(bruto);
-  if (r.tipo === 'ok') { normalizarRework75(r.vida); normalizarRework97(r.vida); normalizarRework106(r.vida); normalizarRework11Relacoes(r.vida); normalizarRework11Esportes(r.vida); normalizarRework11Artes(r.vida); normalizarRework115(r.vida); normalizarRework12(r.vida); normalizarRework122(r.vida); normalizarRework125(r.vida); fixarEstatura(r.vida, true); }
+  if (r.tipo === 'ok') { normalizarRework75(r.vida); normalizarRework97(r.vida); normalizarRework106(r.vida); normalizarRework11Relacoes(r.vida); normalizarRework11Esportes(r.vida); normalizarRework11Artes(r.vida); normalizarRework115(r.vida); normalizarRework12(r.vida); normalizarRework122(r.vida); normalizarRework125(r.vida); normalizarRework123(r.vida); fixarEstatura(r.vida, true); }
   return r;
 }
 
@@ -1735,6 +1735,30 @@ export function normalizarRework125(v: Vida): void {
     for (const s of Object.values(e.especializacoes ?? {})) if (s && s.largou === undefined) s.largou = e.parou;
   }
   garantirCidade(v);
+}
+
+/**
+ * REWORK 12.3 · F1: os marcos de uma vez só passam a morar na pessoa. Num save antigo, eles saem do que a vida já registrou:
+ * os fatos dos filhos (`palavra_<id>`, `passos_<id>`, `escola_<id>`), os acontecimentos da infância de quem é jogado, e —
+ * para quem continua uma história (sucessão) já dentro da janela de um marco — o marco que a vida anterior pode ter narrado
+ * (não há como saber: na dúvida, ele não se repete). Idempotente.
+ */
+const MARCOS_DE_FATO: [string, string][] = [['palavra_', 'primeira_palavra'], ['passos_', 'primeiros_passos'], ['escola_', 'primeiro_dia_de_aula']];
+export function normalizarRework123(v: Vida): void {
+  for (const [k, t] of Object.entries(v.fatos ?? {})) {
+    const m = MARCOS_DE_FATO.find(([pre]) => k.startsWith(pre));
+    const p = m ? v.pessoas[k.slice(m[0].length)] : undefined;
+    if (m && p) (p.marcos ??= {})[m[1]] ??= t;
+  }
+  for (const [id, chave] of MARCOS_DA_INFANCIA) {
+    const o = v.ocorrencias.find(x => x.id === id);
+    if (o) (v.eu.marcos ??= {})[chave] ??= o.t;
+  }
+  const ultima = v.linhagem?.geracoes[v.linhagem.geracoes.length - 1];
+  if (ultima) {
+    const idadeNaSucessao = Math.floor((ultima.tMorte - v.eu.tNasc) / 12);
+    for (const [, chave, desde] of MARCOS_DA_INFANCIA) if (idadeNaSucessao >= desde) (v.eu.marcos ??= {})[chave] ??= ultima.tMorte;
+  }
 }
 
 export function normalizarRework122(v: Vida): void {

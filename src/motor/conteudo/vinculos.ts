@@ -117,7 +117,7 @@ export const VINCULOS: Conteudo[] = [
 
   /* ================================================================= FILHOS */
   {
-    id: 'fil_palavra', tipo: 'acontecimento', idade: [16, 70], tema: 'filhos', repetir: 0,
+    id: 'fil_palavra', tipo: 'acontecimento', idade: [16, 70], tema: 'filhos', repetir: 0, marco: { chave: 'primeira_palavra', papel: 'filho' },
     papeis: { filho: P.filhoEmCasa(1, 2) },
     quando: c => !temFato(c.v, `palavra_${c.p.filho.id}`),
     narrar: c => ({

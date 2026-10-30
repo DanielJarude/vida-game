@@ -6,7 +6,7 @@ import { lugarDe, noEscopo } from '../mundo/escopo';
 import type { Rng } from '../rng';
 import type { DecisaoNaFila, Momento, Pessoa, Vida } from '../tipos';
 import { contexto, txt, type Acontecimento, type Conteudo, type Ctx, type Decisao } from './base';
-import { entradaDaMorte, escrever, filhos, idade, idadePessoa, lembrarCom, novoId, parceiro } from '../nucleo';
+import { entradaDaMorte, escrever, filhos, idade, idadePessoa, lembrarCom, novoId, parceiro, registrarMarco, temMarco } from '../nucleo';
 import { CATALOGO } from './catalogo';
 import { aplicarPersonalidade } from '../personalidade';
 import { clamp, rngDe } from '../rng';
@@ -45,6 +45,7 @@ export function preparar(c: Conteudo, v: Vida, r: Rng): Ctx | null {
       p[nome] = (sel as { fixo?: boolean }).fixo ? candidatos[0] : r.pick(candidatos);
     }
   }
+  if (c.marco && temMarco(v, c.marco.papel ? p[c.marco.papel]?.id ?? '' : 'eu', c.marco.chave)) return null;
   const ctx = contexto(v, r, p);
   ctx.vezes = v.ocorrencias.filter(o => o.id === c.id).length;
   if (c.quando && !c.quando(ctx)) return null;
@@ -77,15 +78,18 @@ export function sortear(v: Vida, r: Rng, filtro: (c: Conteudo) => boolean): { c:
   return r.weighted(lista, x => peso(x.c, x.ctx));
 }
 
-function registrarOcorrencia(v: Vida, id: string): void {
+function registrarOcorrencia(v: Vida, id: string, ctx?: Ctx): void {
   v.ocorrencias.push({ id, t: v.t, idade: idade(v) });
+  // REWORK 12.3 · F1: o marco de uma vez só fica na pessoa no instante em que aparece (a decisão aberta já é o marco).
+  const m = conteudoPorId(id)?.marco;
+  if (m && ctx) { const quem = m.papel ? ctx.p[m.papel]?.id : 'eu'; if (quem) registrarMarco(v, quem, m.chave); }
 }
 
 /* ---------------------------------------------------------- Acontecimento */
 
 export function aplicarAcontecimento(v: Vida, a: Acontecimento, ctx: Ctx): boolean {
   const n = a.narrar(ctx);
-  registrarOcorrencia(v, a.id);
+  registrarOcorrencia(v, a.id, ctx);
   if (!n) return false;
   n.efeito?.(ctx);
   // A segunda vez de algo comum já não é biografia: é textura.
@@ -111,7 +115,7 @@ export function aplicarAcontecimento(v: Vida, a: Acontecimento, ctx: Ctx): boole
 /* --------------------------------------------------------------- Decisão */
 
 export function abrirDecisao(v: Vida, d: Decisao, ctx: Ctx): Momento {
-  registrarOcorrencia(v, d.id);
+  registrarOcorrencia(v, d.id, ctx);
   const opcoes = d.opcoes
     .map(o => {
       const disp = o.disponivel ? o.disponivel(ctx) : true;
@@ -277,6 +281,7 @@ export function prepararCom(c: Conteudo, v: Vida, r: Rng, papeis: Record<string,
     p[nome] = v.pessoas[id];
   }
   if (c.papeis && Object.keys(c.papeis).some(k => !p[k])) return null;
+  if (c.marco && temMarco(v, c.marco.papel ? p[c.marco.papel]?.id ?? '' : 'eu', c.marco.chave)) return null;
   const ctx = contexto(v, r, p);
   ctx.vezes = v.ocorrencias.filter(o => o.id === c.id).length;
   if (c.quando && !c.quando(ctx)) return null;

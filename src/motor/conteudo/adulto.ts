@@ -316,14 +316,14 @@ export const ADULTO: Conteudo[] = [
 
   /* =============================================================== FILHOS */
   {
-    id: 'adu_filho_passos', tipo: 'acontecimento', idade: [16, 70], tema: 'filhos',
+    id: 'adu_filho_passos', tipo: 'acontecimento', idade: [16, 70], tema: 'filhos', marco: { chave: 'primeiros_passos', papel: 'filho' },
     papeis: { filho: P.filho(1, 1) },
     repetir: 0,
     quando: c => !temFato(c.v, `passos_${c.p.filho.id}`),
     narrar: c => ({ texto: `${c.p.filho.nome} deu os primeiros passos na sala, na sua direção.`, relevancia: 'biografia', tom: 'bom', efeito: () => { fato(c, `passos_${c.p.filho.id}`); prox(c, 'filho', 6); feliz(c, 5); }, lembrar: ['filho', 'Deu os primeiros passos na sua direção.'] })
   },
   {
-    id: 'adu_filho_escola', tipo: 'acontecimento', idade: [18, 75], tema: 'filhos', repetir: 0,
+    id: 'adu_filho_escola', tipo: 'acontecimento', idade: [18, 75], tema: 'filhos', repetir: 0, marco: { chave: 'primeiro_dia_de_aula', papel: 'filho' },
     papeis: { filho: P.filhoEmCasa(6, 6) },
     quando: c => !temFato(c.v, `escola_${c.p.filho.id}`),
     narrar: c => ({ texto: `Primeiro dia de aula de ${c.p.filho.nome}. ${gp(c, 'filho', 'Ele', 'Ela')} entrou sem olhar para trás; quem ficou no portão foi você.`, relevancia: 'biografia', efeito: () => fato(c, `escola_${c.p.filho.id}`), lembrar: ['filho', 'O primeiro dia de aula: você ficou no portão.'] })

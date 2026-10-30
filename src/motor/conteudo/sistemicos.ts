@@ -40,7 +40,7 @@ import { iniciarPausa, podeReduzir } from '../sistemas/pausa';
 import { dinheiro, envolvimento, estresse, fato, feliz, prox, tensao, custa, local } from './efeitos';
 import { idade, idadePessoa, temFato } from '../nucleo';
 import { deslocamento } from '../sistemas/transporte';
-import { estaNoivo, ficarNoivos, iniciarCaso, mudarEstagio, terminar } from '../sistemas/romance';
+import { desfazerNoivado, estaNoivo, ficarNoivos, iniciarCaso, mudarEstagio, terminar } from '../sistemas/romance';
 import { morarJuntos } from '../sistemas/moradia';
 import { registrarNascimento } from '../sistemas/familia';
 import { fazerEnem, largarEscola, podeFazerEnem, temEscolaridade } from '../sistemas/escola';
@@ -214,7 +214,10 @@ export const SISTEMICOS: Conteudo[] = [
     id: 'rom_casamento', tipo: 'decisao', idade: [18, 95], tema: 'amor', prioritario: true, prioridade: 5, repetir: 0,
     papeis: { pessoa: P.parceiro },
     // REWORK 11 · REL-16: quem está planejando o casamento (Pessoas) não é atropelado pela decisão rápida.
-    quando: c => estaNoivo(c.v, c.v.vinculos[c.p.pessoa.id]) && !c.v.vinculos[c.p.pessoa.id].romance?.noivado?.plano && c.v.t - (c.v.fatos[`noivado_${c.p.pessoa.id}`] ?? c.v.t) >= 12,
+    // REWORK 12.3 · G1: o noivado não vira casamento sozinho. Quem adiou espera um ano inteiro antes de a pergunta voltar; e
+    // a pergunta tem a porta de adiar e a de desfazer (antes, todas as opções casavam).
+    quando: c => estaNoivo(c.v, c.v.vinculos[c.p.pessoa.id]) && !c.v.vinculos[c.p.pessoa.id].romance?.noivado?.plano && c.v.t - (c.v.fatos[`noivado_${c.p.pessoa.id}`] ?? c.v.t) >= 12
+      && !(c.v.fatos[`casamento_adiado_${c.p.pessoa.id}`] !== undefined && c.v.t - c.v.fatos[`casamento_adiado_${c.p.pessoa.id}`] < 12),
     titulo: 'Como vai ser o casamento',
     texto: c => `A data está marcada. Falta decidir o tamanho da festa — e de onde vem o dinheiro. Você tem ${c.v.financas.conta > 0 ? `${moeda(c.v.financas.conta)} na conta` : 'pouco dinheiro na conta'}${totalAplicado(c.v) > 1000 ? ` e ${moeda(totalAplicado(c.v))} aplicados` : ''}.`,
     opcoes: [
@@ -225,7 +228,16 @@ export const SISTEMICOS: Conteudo[] = [
       { id: 'festao', texto: c => (faltaDaFesta(c.v, c.p.pessoa, 75000) > 0 ? `O casamento dos sonhos, parcelado em ${PRAZO_DA_FESTA} vezes` : 'O casamento dos sonhos: trezentos convidados'), comportamento: { impulsividade: 1 }, disponivel: c => cabeFesta(c, 75000),
         resolver: c => { const parc = faltaDaFesta(c.v, c.p.pessoa, 75000) > 0; return { texto: `Igreja cheia, trezentos convidados, fotos lindas${parc ? ` — e ${PRAZO_DA_FESTA} parcelas para pagar` : ''}.`, memoria: `Casou-se com ${c.p.pessoa.nome} numa festa de trezentos convidados.`, relevancia: 'marco', tom: 'bom', efeito: () => casar(c, Math.round(75000 * economiaLocal(c.v.moradia.municipioId).custo)) }; } },
       { id: 'luxo', texto: 'Uma festa de três dias, num lugar escolhido a dedo', comportamento: { impulsividade: 1 }, disponivel: c => cabeLuxo(c.v, c.p.pessoa, 400000),
-        resolver: c => ({ texto: 'Três dias de festa, convidados vindos de longe, nada faltou — e nada ficou para pagar depois.', memoria: `Casou-se com ${c.p.pessoa.nome} numa festa de três dias.`, relevancia: 'marco', tom: 'bom', efeito: () => casar(c, Math.round(400000 * economiaLocal(c.v.moradia.municipioId).custo)) }) }
+        resolver: c => ({ texto: 'Três dias de festa, convidados vindos de longe, nada faltou — e nada ficou para pagar depois.', memoria: `Casou-se com ${c.p.pessoa.nome} numa festa de três dias.`, relevancia: 'marco', tom: 'bom', efeito: () => casar(c, Math.round(400000 * economiaLocal(c.v.moradia.municipioId).custo)) }) },
+      { id: 'adiar', texto: 'Adiar: ainda não é a hora de casar', consequencia: c => `Continuam noivos. A conversa volta daqui a um ano${(c.v.fatos[`casamento_adiado_${c.p.pessoa.id}`] ?? -1) >= 0 ? ' — e adiar de novo pesa mais' : ''}.`,
+        resolver: c => {
+          const vezes = (c.v.fatos[`casamento_adiamentos_${c.p.pessoa.id}`] ?? 0) + 1;
+          return { texto: vezes === 1 ? `${c.p.pessoa.nome} respirou fundo e disse que espera. O anel continua no dedo.` : `${c.p.pessoa.nome} aceitou esperar mais uma vez, mas perguntou, baixo, se você quer mesmo casar.`, memoria: null,
+            efeito: () => { c.v.fatos[`casamento_adiado_${c.p.pessoa.id}`] = c.v.t; c.v.fatos[`casamento_adiamentos_${c.p.pessoa.id}`] = vezes; envolvimento(c, 'pessoa', vezes === 1 ? -4 : -10); if (vezes > 1) tensao(c, 'pessoa', 8); } };
+        } },
+      { id: 'desfazer', texto: 'Desfazer o noivado (continuar juntos, sem casar)', comportamento: { independencia: 1 }, consequencia: c => `O namoro continua — se ${c.p.pessoa.nome} aceitar a conversa. Dói.`,
+        resolver: c => ({ texto: `${c.p.pessoa.nome} devolveu o anel em silêncio. Continuam juntos, por enquanto — mas alguma coisa mudou de lugar.`, memoria: `Desfez o noivado com ${c.p.pessoa.nome}.`, relevancia: 'biografia', tom: 'ruim',
+          efeito: () => { desfazerNoivado(c.v, c.v.vinculos[c.p.pessoa.id]); delete c.v.fatos[`casamento_adiado_${c.p.pessoa.id}`]; c.v.fatos[`pedido_adiado_${c.p.pessoa.id}`] = c.v.t; envolvimento(c, 'pessoa', -15); tensao(c, 'pessoa', 18); } }) }
     ]
   },
   {

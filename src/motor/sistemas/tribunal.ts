@@ -29,12 +29,13 @@ import { abalar } from './abalo';
 import { disponivel, vereditoDePagar } from './dinheiro';
 import { dinheiro, flex, ge } from '../texto';
 import { anoDe } from '../tempo';
-import { garantirJustica, prender, registrarTribunal, reincidente, soltar } from './justica';
+import { garantirJustica, NOME_CATEGORIA, prender, registrarTribunal, reincidente, soltar } from './justica';
 import { perfilPenal, type PerfilPenal } from '../mundo/justicaPorPais';
 import { paisDaVida } from '../mundo/vida';
 import { economiaLocal } from '../dados/lugares';
 import { salarioMinimoDoPais } from '../mundo/economia';
 import { pagarJustica, pagarPorFora } from './porFora';
+import { ajusteDoJuiz, ator, designar, lembrarAtor, quemE } from './atoresJudiciais';
 
 export const perfilDaVida = (v: Vida): PerfilPenal => perfilPenal(paisDaVida(v));
 const preco = (v: Vida, x: number) => Math.round(x * economiaLocal(v.moradia.municipioId).custo / 100) * 100;
@@ -116,7 +117,10 @@ export function chanceDeAbsolvicao(v: Vida): number {
   const provas = p.provas ?? 50;
   // REWORK 12.25: prova fraca (abaixo de 40) pesa de verdade a favor de quem responde — antes, com provas "fracas", a
   // condenação ainda passava da metade. Continua com teto: dinheiro não compra absolvição.
-  return clamp((p.defesa === 'particular' ? 0.3 : 0.18) + (55 - provas) / 160 + Math.max(0, 40 - provas) / 80 - (p.assumiu ? 0.2 : 0) - (p.cooperou ? 0.25 : 0), 0.02, 0.7) * (reincidente(v) ? 0.5 : 1);
+  // REWORK 12.3 · C3: o rigor de quem julga mexe pouco (±5 pontos). C1: a influência comprada soma por fora do teto dos
+  // autos, com o seu próprio teto (85%): nem a corrupção garante absolvição — o processo tem provas, e o juiz, limites.
+  const autos = clamp((p.defesa === 'particular' ? 0.3 : 0.18) + (55 - provas) / 160 + Math.max(0, 40 - provas) / 80 - (p.assumiu ? 0.2 : 0) - (p.cooperou ? 0.25 : 0) + ajusteDoJuiz(ator(v, p.juizId)), 0.02, 0.7) * (reincidente(v) ? 0.5 : 1);
+  return p.influencia ? Math.min(0.85, autos + p.influencia) : autos;
 }
 
 /** A multa penal: dias-multa pela renda (um dia de renda por dia, metade a dois terços), com piso. */
@@ -162,10 +166,14 @@ function sentenciar(v: Vida, r: Rng): void {
   if (r.chance(chanceDeAbsolvicao({ ...v, justica: { ...j, processo: p } }))) {
     j.antecedentes.push({ t: v.t, categoria: cat, desfecho: 'absolvicao' });
     if (presoAntes) soltar(v, 'absolvição');
-    escrever(v, { texto: `Absolvi${flex(g, 'do', 'da', 'de')} no processo${p.defesa === 'particular' ? ', com a defesa que você pagou' : ''}. O alívio veio junto com o cansaço de ter esperado.`, relevancia: 'marco', tema: 'trabalho', tom: 'bom' });
+    const juiz = ator(v, p.juizId), def = ator(v, p.defensorId);
+    const comQuem = p.defesa === 'particular' ? (p.pagaPor === 'organizacao' ? `, com ${def?.nome ?? 'o advogado'} que a organização pôs no caso` : `, com a defesa de ${def?.nome ?? 'um advogado particular'}`) : def ? `, com ${def.nome} na defesa pública` : '';
+    lembrarAtor(v, p.juizId, `absolveu você num processo por ${NOME_CATEGORIA[cat]}`);
+    escrever(v, { texto: `Absolvi${flex(g, 'do', 'da', 'de')} no processo${juiz ? ` (${quemE(juiz)})` : ''}${comQuem}. O alívio veio junto com o cansaço de ter esperado.`, relevancia: 'marco', tema: 'trabalho', tom: 'bom' });
     abalar(v, 'a absolvição', 8, -8);
     return;
   }
+  lembrarAtor(v, p.juizId, `condenou você num processo por ${NOME_CATEGORIA[cat]}`);
   // A pena: a base da categoria, o país, a reincidência, e o que se decidiu (assumir, cooperar).
   const reduz = (p.cooperou ? 0.45 : 0) + (p.assumiu ? 0.25 : 0);
   const anosBrutos = (PENA_BASE[cat] + r.int(0, 2)) * (rein ? 1.5 : 1) * perfil.severidade * (1 - Math.min(0.6, reduz));
@@ -212,16 +220,39 @@ registrarTribunal({ aoAbrir, sentenciar });
 
 /* ---------------------------------------------------------------- As decisões do processo (as opções chamam aqui) */
 
-/** Contratar um advogado particular (se ainda é a defesa pública). */
+/** Contratar um advogado particular (se ainda é a defesa pública). REWORK 12.3 · C3/C5: com nome, e pago por você. */
 export function contratarAdvogado(v: Vida): string {
   const p = v.justica?.processo;
   if (!p) return 'Não há processo em andamento.';
-  pagarJustica(v, honorarios(v));
-  p.defesa = 'particular';
-  p.defesaEscolhida = true;
-  return 'Um advogado particular assumiu: leu o processo inteiro na primeira semana e mudou a estratégia.';
+  const preco = honorarios(v);
+  pagarJustica(v, preco);
+  const a = designar(v, 'advogado', v.moradia.municipioId, 'contratado');
+  lembrarAtor(v, a.id, `foi contratado por você para um processo por ${NOME_CATEGORIA[p.categoria]}`);
+  const volta = a.processos > 1 ? ` Já tinha defendido você antes: conhece a sua história.` : '';
+  Object.assign(p, { defesa: 'particular', pagaPor: 'voce', defensorId: a.id, defesaEscolhida: true });
+  return `${a.nome} assumiu a defesa por ${dinheiro(preco)}: leu o processo inteiro na primeira semana e mudou a estratégia.${volta}`;
 }
-export const vereditoDoAdvogado = (v: Vida): Veredito => (!v.justica?.processo ? bloqueio('impossivel', 'Não há processo.') : v.justica.processo.defesa === 'particular' ? bloqueio('incompativel', 'A defesa já é de um advogado particular.') : vereditoDePagar(v, honorarios(v), 'Um advogado particular cobra uns'));
+/** Dispensar o advogado que veio de outro lugar (a organização, o de antes) e ficar com a defesa pública. */
+export function ficarComDefesaPublica(v: Vida): string {
+  const p = v.justica?.processo;
+  if (!p) return 'Não há processo em andamento.';
+  const tinha = p.defesa === 'particular' ? ator(v, p.defensorId) : undefined;
+  const d = designar(v, 'defensor', v.moradia.municipioId, 'publica');
+  lembrarAtor(v, d.id, `defendeu você num processo por ${NOME_CATEGORIA[p.categoria]}`);
+  const orgPagava = p.pagaPor === 'organizacao';
+  Object.assign(p, { defesa: 'publica', defensorId: d.id, defesaEscolhida: true });
+  delete p.pagaPor;
+  if (orgPagava) for (const o of v.caminhos.envolvimento?.organizacoes ?? []) if (o.relacao === 'membro' && o.saiu === undefined) o.lealdade = clamp(o.lealdade - 4);
+  return tinha
+    ? `Você dispensou ${tinha.nome}${orgPagava ? ' — e, com ele, o favor da organização (quem manda reparou)' : ''}. ${d.nome}, ${quemE(d).split(' ')[1] === 'defensora' ? 'a defensora' : 'o defensor'} designado, tem uma pilha de processos e cinco minutos para o seu.`
+    : `${d.nome} ficou com o seu caso: ${perfilDaVida(v).defensoria}, com uma pilha de processos na mesa e pouco tempo para cada um. Fez o que pôde.`;
+}
+export const vereditoDoAdvogado = (v: Vida): Veredito => {
+  const p = v.justica?.processo;
+  if (!p) return bloqueio('impossivel', 'Não há processo.');
+  if (p.defesa === 'particular') return bloqueio('incompativel', p.pagaPor === 'organizacao' ? 'A organização já pôs um advogado particular no seu caso.' : 'A defesa já é de um advogado particular.');
+  return vereditoDePagar(v, honorarios(v), 'Um advogado particular cobra uns');
+};
 
 /** Assumir o que se fez: menos chance de absolvição, pena menor; a família ouve de você. */
 export function assumir(v: Vida): string {

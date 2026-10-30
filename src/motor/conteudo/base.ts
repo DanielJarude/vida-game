@@ -60,6 +60,13 @@ interface Base {
   prioridade?: number;
   /** Marco garantido: acontece na janela de idade se as condições valerem. */
   garantido?: boolean;
+  /**
+   * REWORK 12.3 · F1/F2: MARCO ÚNICO POR PESSOA. `chave` é o marco ("primeira_palavra"); `papel` é de quem é o marco (ausente:
+   * de quem é jogado). O marco fica na pessoa (`Pessoa.marcos`/`Personagem.marcos`) e vale para TODOS os conteúdos com a
+   * mesma chave — a primeira palavra da filha (`fil_palavra`) e a da própria pessoa (`bb_primeira_palavra`) são o mesmo
+   * marco quando a filha passa a ser jogada. Não é intervalo: é "no máximo uma vez por pessoa", em qualquer geração.
+   */
+  marco?: { chave: string; papel?: string };
   /** Só abre por comando do jogador (ex.: entrevista de emprego). Nunca sorteado. */
   manual?: boolean;
   /**

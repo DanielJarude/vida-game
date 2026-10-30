@@ -36,6 +36,12 @@ export interface Pessoa {
   genero: Genero;
   tNasc: number;
   vivo: boolean;
+  /**
+   * REWORK 12.3 · F1: os marcos de uma vez só DESTA pessoa ("primeira_palavra", "primeiros_passos"…) → instante. Ficam na
+   * pessoa (não nos fatos de quem joga): sobrevivem à sucessão — a filha que já falou não fala "pela primeira vez" de novo
+   * quando passa a ser jogada. Ausente: nenhum marco registrado.
+   */
+  marcos?: Record<string, number>;
   tMorte?: number;
   causaMorte?: string;
   temperamento: Temperamento;
@@ -3184,6 +3190,8 @@ export interface Personagem {
   genero: Genero;
   tNasc: number;
   municipioNatal: string;
+  /** REWORK 12.3 · F1: os marcos de uma vez só de quem é jogado (os mesmos de `Pessoa.marcos`; passam junto na sucessão). */
+  marcos?: Record<string, number>;
   /**
    * Nacionalidades (ISO 3166-1), na ordem em que vieram — a primeira é a de
    * nascença. NASCER, TER NACIONALIDADE E MORAR SÃO COISAS DIFERENTES: o país
@@ -3501,6 +3509,18 @@ export interface Justica {
   processo?: {
     tInicio: number; tJulgamento: number; categoria: CategoriaDoProcesso; defesa: 'publica' | 'particular';
     provas?: number; defesaEscolhida?: boolean; acordo?: { t: number; aceito?: boolean; recusado?: boolean }; fianca?: number; assumiu?: boolean; cooperou?: boolean;
+    /**
+     * REWORK 12.3 · C5/C6: QUEM PAGA a defesa particular — você (contratou), a organização (banca quem é leal) ou o advogado
+     * que já acompanhava a investigação. Ausente com defesa particular: saves antigos (o jogo pagava sozinho; lido como "você").
+     */
+    pagaPor?: 'voce' | 'organizacao' | 'antecipado';
+    /** REWORK 12.3 · C3: as pessoas do processo (ids em `Justica.atores`): quem julga, quem acusa, quem defende. */
+    juizId?: string; promotorId?: string; defensorId?: string;
+    /**
+     * REWORK 12.3 · C1: a influência indevida comprada (pontos de chance de absolvição, já com o teto) e a tentativa deste
+     * processo (uma por processo). Nunca garante nada: o juiz decide também pelo que está nos autos.
+     */
+    influencia?: number; tentouSubornar?: number;
   };
   /** REWORK 10: o recurso contra a condenação, com a resposta em `tFim`. */
   recurso?: { t: number; tFim: number };
@@ -3520,8 +3540,55 @@ export interface Justica {
   defesa?: { estrategia?: 'negar' | 'contestar' | 'atenuantes' | 'delegar'; tEstrategia?: number; audiencia?: { t: number; foi?: 'compareceu' | 'preparou' | 'faltou' } ; contestou?: boolean };
   /** Pena alternativa em cumprimento (prestação de serviços). */
   alternativa?: { tFim: number };
+  /**
+   * REWORK 12.3 · C3: as pessoas do sistema de Justiça que esta vida conheceu (juízes, promotores, advogados, defensores),
+   * com nome, comarca, integridade e história: o mesmo juiz pode voltar num processo futuro na mesma cidade.
+   */
+  atores?: Record<string, AtorJudicial>;
+  /** REWORK 12.3 · C1: as tentativas de corromper alguém do processo (o que aconteceu e o que ainda pode vir à tona). */
+  corrupcoes?: TentativaDeCorrupcao[];
+  /** REWORK 12.3 · C8: o que a Justiça bloqueou no processo em curso (volta na absolvição; paga o confisco na condenação). */
+  bloqueado?: { valor: number; t: number };
   /** Saiu da prisão em (a volta tem suas próprias portas e barreiras). */
   tSaida?: number;
+}
+
+/** REWORK 12.3 · C3: alguém do sistema de Justiça, com nome e história (não um modificador anônimo). */
+export interface AtorJudicial {
+  id: string;
+  nome: string;
+  genero: Genero;
+  papel: 'juiz' | 'promotor' | 'advogado' | 'defensor';
+  /** A comarca (a cidade onde atua). */
+  municipioId: string;
+  /** 0..100: o quanto não se dobra (a maioria é íntegra; ninguém é comprável "por natureza"). */
+  integridade: number;
+  /** 0..100: o rigor (o juiz que pesa a mão; o promotor que não larga). */
+  rigor: number;
+  tDesde: number;
+  /** Quantos processos desta vida passaram por essa pessoa. */
+  processos: number;
+  /** O que aconteceu com você e essa pessoa (até 8 linhas). */
+  historia: { t: number; texto: string }[];
+  /** Afastada do cargo (a corrupção descoberta, a aposentadoria). */
+  afastado?: number;
+  /** Aceitou dinheiro seu (o segredo que os dois guardam). */
+  comprometido?: number;
+}
+
+/** REWORK 12.3 · C1: uma tentativa de corromper alguém do processo — abstrata (o que se decidiu e o que aconteceu). */
+export interface TentativaDeCorrupcao {
+  t: number;
+  alvoId: string;
+  valor: number;
+  /** Quem levou a proposta: um intermediário do meio, um contato seu, ou o seu próprio peso (dinheiro e nome). */
+  via: 'intermediario' | 'contato' | 'influencia';
+  viaPessoaId?: string;
+  resultado: 'recusa' | 'denuncia' | 'golpe' | 'aceito' | 'parcial';
+  /** Chance por ano de vir à tona (cai com o tempo). Zero: não há o que descobrir. */
+  risco: number;
+  descoberta?: number;
+  categoria: CategoriaDoProcesso;
 }
 
 /** Um acontecimento privado e quem sabe dele. */

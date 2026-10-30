@@ -39,7 +39,7 @@ import type {
   Bem, Condicao, DecisoesDeHeranca, Emprego, Entrada, Escolaridade, Genero, Geracao, Heranca, Imovel, Linhagem, Parentesco, Personalidade, Pessoa, Posses, Traco, Vida, Vinculo
 } from '../tipos';
 import { clamp } from '../rng';
-import { idadePessoa, escrever, novoId, transacao } from '../nucleo';
+import { idadePessoa, escrever, MARCOS_DA_INFANCIA, novoId, transacao } from '../nucleo';
 import { anoDe, idadeEm, MESES, mesDe } from '../tempo';
 import { flex, dinheiro as fmt, listaNatural, rotuloParentesco } from '../texto';
 import { regrasDoPais, nomeDoDestino, type RegrasDeSucessao } from '../dados/sucessao';
@@ -524,6 +524,20 @@ function registrarGeracao(v: Vida, pessoaId: string, p: Partilha, sucessor?: Pes
   };
 }
 
+/**
+ * REWORK 12.3 · F1: os marcos de uma vez só de quem continua — os da ficha dela e os que a vida de quem morreu registrou
+ * como fato (saves de antes do 12.3: `palavra_<id>`, `passos_<id>`, `escola_<id>`).
+ */
+const MARCOS_DOS_FATOS: [string, string][] = [['palavra_', 'primeira_palavra'], ['passos_', 'primeiros_passos'], ['escola_', 'primeiro_dia_de_aula']];
+function marcosDoHerdeiro(vida: Vida, h: Pessoa): Record<string, number> | undefined {
+  const m: Record<string, number> = { ...(h.marcos ?? {}) };
+  for (const [prefixo, chave] of MARCOS_DOS_FATOS) { const t = vida.fatos[`${prefixo}${h.id}`]; if (t !== undefined) m[chave] ??= t; }
+  // A janela que já abriu antes de a pessoa passar a ser jogada não abre de novo (a mesma regra da leitura de saves antigos).
+  const i = Math.floor((vida.morte!.t - h.tNasc) / 12);
+  for (const [, chave, desde] of MARCOS_DA_INFANCIA) if (i >= desde) m[chave] ??= vida.morte!.t;
+  return Object.keys(m).length ? m : undefined;
+}
+
 /** O temperamento da pessoa vira a personalidade de quem passa a ser jogado (a personalidade emergente que ela já tinha). */
 function personalidadeDe(p: Pessoa, t: number): Personalidade {
   const tp = p.temperamento;
@@ -601,6 +615,8 @@ export function continuarComo(vida: Vida, herdeiroId: string): { vida: Vida; err
         ...(c.tDiagnostico !== undefined ? { tDiagnostico: c.tDiagnostico } : {}), ...(c.tarde ? { tarde: true } : {})
       }))
     };
+    // REWORK 12.3 · F1: os marcos de quem morreu ficam na ficha dele (a árvore lembra).
+    if (v.eu.marcos) morto.marcos = { ...v.eu.marcos };
     v.pessoas[oldId] = morto;
 
     // 2. A partilha chega a quem ficou (exceto a parte de quem continua, que vem para a conta dela).
@@ -638,7 +654,9 @@ export function continuarComo(vida: Vida, herdeiroId: string): { vida: Vida; err
       // REWORK 4: quem continua é quem já era — a ancestralidade, a tradição e a semente do retrato dela (a roupa e o
       // fundo do rosto não mudam na troca).
       ...(h.ancestralidade ? { ancestralidade: h.ancestralidade } : {}), ...(h.tradicao ? { tradicao: h.tradicao } : {}),
-      semente: h.id
+      semente: h.id,
+      // REWORK 12.3 · F1: os marcos de uma vez só dela continuam dela (a primeira palavra, os primeiros passos).
+      ...(marcosDoHerdeiro(vida, h) ? { marcos: marcosDoHerdeiro(vida, h) } : {})
     };
     v.corpo = {
       saude: clamp(Math.round(h.saude)),

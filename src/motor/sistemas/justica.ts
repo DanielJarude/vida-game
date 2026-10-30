@@ -26,7 +26,7 @@ import type { CategoriaDoProcesso, Justica, Vida } from '../tipos';
 import { escrever, filhos, idade, lembrarCom, marcarFato, pais, parceiro, vinculosVivos } from '../nucleo';
 import { marcar } from './marcas';
 import { abalar } from './abalo';
-import { disponivel, pagar } from './dinheiro';
+import { designar, lembrarAtor, quemE, reencontro } from './atoresJudiciais';
 import { encerrarEmprego, temNegocioAberto } from './trabalho';
 import { flex, ge } from '../texto';
 import { anoDe } from '../tempo';
@@ -36,7 +36,6 @@ import { registrarAssuntoDaJustica } from './exposicao';
 import { perderMandatoPorPrisao, voltarAoTrabalho } from './politica';
 import { registrarQuemApareceu } from './rede';
 import { economiaLocal } from '../dados/lugares';
-import { medir } from './extrato';
 
 export const garantirJustica = (v: Vida): Justica => (v.justica ??= { antecedentes: [] });
 
@@ -85,7 +84,7 @@ export function penaDeAntecedentes(v: Vida): number {
   return base * tempo * reconstruiu * (conden.length > 1 ? 1.4 : 1);
 }
 
-const NOME_CATEGORIA: Record<CategoriaDoProcesso, string> = {
+export const NOME_CATEGORIA: Record<CategoriaDoProcesso, string> = {
   pequenos: 'coisas erradas com a turma', patrimonial: 'receptação de mercadoria de origem ilegal', fraude: 'fraude', mercado: 'comércio ilegal', grupo: 'envolvimento com um grupo criminoso',
   // REWORK 10: o que se faz a alguém (a agressão, a ameaça) e o desvio de quem tem cargo.
   violencia: 'agressão', corrupcao: 'corrupção'
@@ -111,10 +110,21 @@ export function abrirProcesso(v: Vida, r: Rng, categoria: CategoriaDoProcesso): 
   const antes = v.fatos['advogado_preventivo'] !== undefined && v.t - v.fatos['advogado_preventivo'] <= 36;
   // REWORK 12.25: a organização banca a defesa de quem é de dentro e leal (a lealdade tem retorno).
   const daOrg = !!env?.organizacoes?.some(o => o.relacao === 'membro' && o.saiu === undefined && o.expulso === undefined && o.lealdade >= 50);
-  const particular = antes || daOrg || disponivel(v) >= 18000;
-  const pago = antes || daOrg;
-  if (particular && !pago) medir(v, 'Justiça: advogados, fianças e custas', 'despesa', () => pagar(v, Math.round(clamp(disponivel(v) * 0.25, 12000, 45000) / 100) * 100));
-  j.processo = { tInicio: v.t, tJulgamento: v.t + r.int(10, 24), categoria, defesa: particular ? 'particular' : 'publica' };
+  // REWORK 12.3 · C5/C6: o jogo não contrata (nem paga) advogado sozinho — antes, quem tinha 18 mil ganhava um advogado
+  // pago "com o que havia guardado" e a opção de contratar sumia da pergunta da defesa (que só oferecia a defensoria, e o
+  // texto dela contradizia o estado). Agora a defesa começa como é: a que já existe (a organização, o advogado de antes)
+  // ou a pública, até o jogador escolher (`jus_defesa`).
+  const particular = antes || daOrg;
+  j.processo = { tInicio: v.t, tJulgamento: v.t + r.int(10, 24), categoria, defesa: particular ? 'particular' : 'publica', ...(particular ? { pagaPor: antes ? 'antecipado' as const : 'organizacao' as const } : {}) };
+  // REWORK 12.3 · C3: quem julga, quem acusa, quem defende (pessoas da comarca, que podem voltar num processo futuro).
+  const juiz = designar(v, 'juiz', v.moradia.municipioId, 'j');
+  const promotor = designar(v, 'promotor', v.moradia.municipioId, 'p');
+  const defensor = designar(v, particular ? 'advogado' : 'defensor', v.moradia.municipioId, 'd');
+  Object.assign(j.processo, { juizId: juiz.id, promotorId: promotor.id, defensorId: defensor.id });
+  const reviu = reencontro(v, juiz);
+  lembrarAtor(v, juiz.id, `recebeu o seu processo por ${NOME_CATEGORIA[categoria]}`);
+  lembrarAtor(v, promotor.id, `acusou você num processo por ${NOME_CATEGORIA[categoria]}`);
+  lembrarAtor(v, defensor.id, `defendeu você num processo por ${NOME_CATEGORIA[categoria]}`);
   const e = v.trabalho.atual;
   // Fraude descoberta no emprego: justa causa, sem multa nem seguro.
   if (categoria === 'fraude' && e) {
@@ -122,7 +132,7 @@ export function abrirProcesso(v: Vida, r: Rng, categoria: CategoriaDoProcesso): 
     escrever(v, { texto: `A fraude veio à tona. Saiu ${e.empregador.replace(/^(uma|a) /, 'da ').replace(/^(um|o) /, 'do ')} por justa causa, sem acerto — e com um processo pela frente.`, relevancia: 'marco', tema: 'trabalho', tom: 'ruim' });
     marcar(v, 'demissao', 'Demitido por justa causa: a fraude foi descoberta.'.replace('Demitido', flex(ge(v), 'Demitido', 'Demitida', 'Demitide')), 3);
   } else {
-    escrever(v, { texto: `${categoria === 'violencia' ? 'A ocorrência virou processo: passou a responder' : `Foi ${flex(ge(v), 'detido', 'detida', 'detide')} e passou a responder`} a um processo por ${NOME_CATEGORIA[categoria]}.${daOrg && !antes ? ' A organização mandou um advogado: a defesa é por conta dela.' : particular ? ' Um advogado particular assumiu a defesa, pago com o que havia guardado.' : ' A defesa ficou com a Defensoria Pública.'}`, relevancia: 'marco', tema: 'trabalho', tom: 'ruim' });
+    escrever(v, { texto: `${categoria === 'violencia' ? 'A ocorrência virou processo: passou a responder' : `Foi ${flex(ge(v), 'detido', 'detida', 'detide')} e passou a responder`} a um processo por ${NOME_CATEGORIA[categoria]}.${daOrg && !antes ? ` A organização mandou um advogado (${defensor.nome}): a defesa é por conta dela.` : antes ? ` ${defensor.nome}, que já acompanhava a investigação, assumiu a defesa.` : ' Até você escolher, a defesa é a pública.'}${reviu ? ` ${quemE(juiz).charAt(0).toUpperCase()}${quemE(juiz).slice(1)} vai julgar. ${reviu}` : ''}`, relevancia: 'marco', tema: 'trabalho', tom: 'ruim' });
   }
   marcarFato(v, 'respondeu_processo');
   // Processo é registro público: para quem tem nome, vira notícia.

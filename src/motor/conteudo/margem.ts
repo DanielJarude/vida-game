@@ -14,7 +14,7 @@ import { machucarNaBriga } from '../sistemas/lesoes';
 import { disponivel } from '../sistemas/dinheiro';
 import { movimentoPorFora, pagarJustica, pagarPorFora } from '../sistemas/porFora';
 import { abrirProcesso } from '../sistemas/justica';
-import { aceitarAcordo, assumir, contratarAdvogado, cooperar, honorarios, pagarFianca, perfilDaVida, recorrer } from '../sistemas/tribunal';
+import { aceitarAcordo, assumir, contratarAdvogado, cooperar, ficarComDefesaPublica, honorarios, pagarFianca, perfilDaVida, recorrer } from '../sistemas/tribunal';
 import { dinheiro as fmt } from '../texto';
 import { clamp } from '../rng';
 import { economiaLocal } from '../dados/lugares';
@@ -22,6 +22,8 @@ import { economiaLocal } from '../dados/lugares';
 const deHoje = (c: Ctx, chave: string) => c.v.fatos[chave] === c.v.t;
 const env = (c: Ctx) => c.v.caminhos.envolvimento!;
 const proc = (c: Ctx) => c.v.justica!.processo!;
+/** O nome de quem defende hoje (REWORK 12.3 · C3). */
+const defensorDe = (c: Ctx) => { const id = proc(c).defensorId; return id ? c.v.justica?.atores?.[id]?.nome : undefined; };
 /** O dinheiro de um trabalho maior (uns meses de renda de uma vez), no custo de onde se vive. */
 const ganhoGrande = (c: Ctx) => Math.round((1000 + env(c).nivel * 1100) * 6 * economiaLocal(c.v.moradia.municipioId).custo / 100) * 100;
 const naoPreso = (c: Ctx) => !c.v.justica?.prisao;
@@ -117,12 +119,23 @@ export const MARGEM: Conteudo[] = [
     id: 'jus_defesa', tipo: 'decisao', idade: [18, 95], tema: 'escolha', prioritario: true, prioridade: 5, repetir: 0,
     quando: c => deHoje(c, 'jus_defesa') && !!c.v.justica?.processo && !c.v.justica.processo.defesaEscolhida,
     titulo: 'A defesa',
-    texto: c => `O processo está aberto: ${proc(c).provas! >= 70 ? 'as provas contra você são fortes' : proc(c).provas! >= 40 ? 'há provas consideráveis contra você' : 'as provas são frágeis'}. Quem vai defender você?`,
+    // REWORK 12.3 · C5/C6: as opções dizem o estado real. Quem já tem advogado (da organização, ou o que acompanhava a
+    // investigação) vê "manter"; contratar aparece SEMPRE para quem tem a defesa pública — bloqueado com o motivo e o preço
+    // quando o dinheiro não alcança (antes, sumia). Escolher a pública muda mesmo a defesa (antes, só o texto mudava).
+    texto: c => {
+      const quem = defensorDe(c);
+      const tem = proc(c).defesa === 'particular' ? (proc(c).pagaPor === 'organizacao' ? ` A organização já pôs ${quem ?? 'um advogado'} no caso, por conta dela.` : ` ${quem ?? 'O advogado'}, que já acompanhava a investigação, está com o caso.`) : '';
+      return `O processo está aberto: ${proc(c).provas! >= 70 ? 'as provas contra você são fortes' : proc(c).provas! >= 40 ? 'há provas consideráveis contra você' : 'as provas são frágeis'}.${tem} Quem vai defender você?`;
+    },
     opcoes: [
-      { id: 'publica', texto: c => `Ficar com ${perfilDaVida(c.v).defensoria}`, consequencia: () => 'De graça; sobrecarregada — a chance de absolvição é menor.',
-        resolver: c => ({ texto: 'Uma defensora com quarenta processos na mesa e cinco minutos para o seu. Fez o que pôde.', memoria: null, efeito: () => { proc(c).defesaEscolhida = true; } }) },
-      { id: 'particular', texto: c => `Contratar um advogado particular (uns ${fmt(honorarios(c.v))})`, disponivel: c => (proc(c).defesa === 'particular' ? false : disponivel(c.v) >= honorarios(c.v) ? true : 'O que você tem não paga um advogado.'),
-        consequencia: () => 'Mais chance de absolvição, ou de uma pena menor.',
+      { id: 'manter', texto: c => `Manter ${defensorDe(c) ?? 'o advogado'}${proc(c).pagaPor === 'organizacao' ? ' (pago pela organização)' : ''}`, disponivel: c => proc(c).defesa === 'particular',
+        consequencia: () => 'Um advogado particular, sem custo para você agora.',
+        resolver: c => ({ texto: `${defensorDe(c) ?? 'O advogado'} continua no caso. A primeira reunião foi longa e cheia de perguntas.`, memoria: null, efeito: () => { proc(c).defesaEscolhida = true; } }) },
+      { id: 'publica', texto: c => (proc(c).defesa === 'particular' ? `Dispensar e ficar com ${perfilDaVida(c.v).defensoria}` : `Ficar com ${perfilDaVida(c.v).defensoria}`),
+        consequencia: c => (proc(c).pagaPor === 'organizacao' ? 'De graça; sobrecarregada — e a organização vai reparar que você recusou a ajuda dela.' : 'De graça; sobrecarregada — a chance de absolvição é menor.'),
+        resolver: c => ({ texto: ficarComDefesaPublica(c.v), memoria: null }) },
+      { id: 'particular', texto: c => `Contratar um advogado particular (uns ${fmt(honorarios(c.v))})`, disponivel: c => (proc(c).defesa === 'particular' ? false : disponivel(c.v) >= honorarios(c.v) ? true : `Um advogado particular cobra uns ${fmt(honorarios(c.v))} (pelo que você tem); você tem ${fmt(Math.max(0, disponivel(c.v)))} disponível.`),
+        consequencia: () => 'Mais chance de absolvição, ou de uma pena menor. Honorários não compram sentença.',
         resolver: c => ({ texto: contratarAdvogado(c.v), memoria: null }) },
       { id: 'assumir', texto: 'Assumir o que fez', comportamento: { coragem: 1 }, consequencia: () => 'A absolvição fica mais longe; a pena, se vier, menor.',
         resolver: c => ({ texto: assumir(c.v), memoria: 'Assumiu o que fez, no processo.', efeito: () => { proc(c).defesaEscolhida = true; } }) }

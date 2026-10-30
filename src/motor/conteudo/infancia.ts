@@ -26,7 +26,7 @@ export const INFANCIA: Conteudo[] = [
   /* ============================================================ MARCOS */
   {
     // Nem toda vida guarda a história dos primeiros passos — e quem guarda, guarda do seu jeito (quem estava, o irmão, o bicho).
-    id: 'bb_primeiros_passos', tipo: 'acontecimento', idade: [1, 1], tema: 'infancia', garantido: true,
+    id: 'bb_primeiros_passos', tipo: 'acontecimento', idade: [1, 1], tema: 'infancia', garantido: true, marco: { chave: 'primeiros_passos' },
     papeis: { quem: P.genitorEmCasa },
     quando: c => rngDe(c.v.id, 'marco', 'passos').next() < 0.6,
     narrar: c => {
@@ -46,7 +46,7 @@ export const INFANCIA: Conteudo[] = [
   },
   {
     // A primeira palavra é marco de parte das vidas (não de todas) — e a cena depende de quem está em casa.
-    id: 'bb_primeira_palavra', tipo: 'decisao', idade: [2, 2], tema: 'infancia', garantido: true, biografica: true,
+    id: 'bb_primeira_palavra', tipo: 'decisao', idade: [2, 2], tema: 'infancia', garantido: true, biografica: true, marco: { chave: 'primeira_palavra' },
     papeis: { quem: P.genitorEmCasa },
     quando: c => rngDe(c.v.id, 'marco', 'palavra').next() < 0.5,
     titulo: 'A primeira palavra',
@@ -66,7 +66,7 @@ export const INFANCIA: Conteudo[] = [
     ]
   },
   {
-    id: 'inf_primeiro_dia_aula', tipo: 'acontecimento', idade: [6, 7], tema: 'escola', garantido: true,
+    id: 'inf_primeiro_dia_aula', tipo: 'acontecimento', idade: [6, 7], tema: 'escola', garantido: true, marco: { chave: 'primeiro_dia_de_aula' },
     quando: c => !!c.v.educacao.basica && c.v.educacao.basica.etapa === 'fundamental1' && c.v.educacao.basica.serie === 1,
     papeis: { quem: P.genitorEmCasa },
     // REWORK 4: o FATO (quem levou, como você reagiu, o que ficou, o irmão na mesma escola, o primeiro colega) e a
@@ -78,7 +78,7 @@ export const INFANCIA: Conteudo[] = [
     }
   },
   {
-    id: 'inf_alfabetizacao', tipo: 'acontecimento', idade: [7, 8], tema: 'escola', garantido: true,
+    id: 'inf_alfabetizacao', tipo: 'acontecimento', idade: [7, 8], tema: 'escola', garantido: true, marco: { chave: 'alfabetizacao' },
     quando: c => !!c.v.educacao.basica,
     narrar: c => {
       const d = c.v.educacao.basica!.desempenho;

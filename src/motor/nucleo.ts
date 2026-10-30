@@ -207,6 +207,23 @@ export function lembrarCom(v: Vida, pessoaId: string, texto: string, tipo?: Tipo
 
 export const fato = (v: Vida, chave: string) => v.fatos[chave];
 export const temFato = (v: Vida, chave: string) => v.fatos[chave] !== undefined;
+
+/** REWORK 12.3 · F1: os marcos de uma vez só de alguém ('eu' = quem é jogado). */
+const marcosDe = (v: Vida, pessoaId: string) => (pessoaId === 'eu' ? v.eu.marcos : v.pessoas[pessoaId]?.marcos);
+/** O marco já aconteceu com essa pessoa (em qualquer geração)? */
+export const temMarco = (v: Vida, pessoaId: string, chave: string) => marcosDe(v, pessoaId)?.[chave] !== undefined;
+/**
+ * Os marcos da infância de quem é jogado: o acontecimento, a chave, e a idade em que a janela abre. Quem passa a ser
+ * jogado (sucessão) já depois dessa idade não vive o marco "pela primeira vez" de novo — a vida anterior pode tê-lo
+ * narrado como marco do filho (`fil_palavra`), e na dúvida ele não se repete.
+ */
+export const MARCOS_DA_INFANCIA: [id: string, chave: string, desde: number][] = [['bb_primeiros_passos', 'primeiros_passos', 1], ['bb_primeira_palavra', 'primeira_palavra', 2], ['inf_primeiro_dia_aula', 'primeiro_dia_de_aula', 6], ['inf_alfabetizacao', 'alfabetizacao', 7]];
+/** Registra o marco (a primeira vez vale: registrar de novo não muda o instante). */
+export function registrarMarco(v: Vida, pessoaId: string, chave: string, t = v.t): void {
+  const alvo = pessoaId === 'eu' ? v.eu : v.pessoas[pessoaId];
+  if (!alvo) return;
+  (alvo.marcos ??= {})[chave] ??= t;
+}
 export function marcarFato(v: Vida, chave: string): void {
   if (v.fatos[chave] === undefined) v.fatos[chave] = v.t;
 }
