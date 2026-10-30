@@ -261,7 +261,8 @@ function evoluirRelacoes(v: Vida, municipioId: string): void {
     if (minha && ativo(v) && !preso(v)) {
       anotar(v, frase, depois === 'conflito' || depois === 'ruptura' ? 'ruim' : depois === 'tregua' || depois === 'alianca' ? 'bom' : undefined);
       if (depois === 'conflito') {
-        e!.exposicao = clamp(e!.exposicao + 3);
+        // Quem está na moita fica fora da linha de frente: a guerra não pesa na exposição dele.
+        if (!e!.cautela) e!.exposicao = clamp(e!.exposicao + 3);
         escrever(v, { texto: contrair(`${frase.replace(/\.$/, '')} — e você é de dentro de ${minha.nome}. O bairro ficou mais tenso; todo mundo anda olhando para os lados.`), relevancia: 'biografia', tema: 'trabalho', tom: 'ruim' });
       } else if (depois === 'tregua' || depois === 'ruptura' || depois === 'alianca') escrever(v, { texto: contrair(frase), relevancia: 'cotidiano', tema: 'trabalho' });
     }

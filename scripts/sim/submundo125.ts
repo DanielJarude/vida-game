@@ -60,7 +60,7 @@ function responder(v: Vida, p: Perfil, ano: number, m: Medidas): Vida {
     let op;
     if (mo.id === 'ilic_rumo') op = !crime ? livre('sair_aos_poucos') ?? livre('parar_esquema') : p === 'ocasional' ? livre('moita') : livre('seguir_esquema');
     else if (mo.id === 'ilic_proposta') op = livre('recusar_proposta');
-    else if (mo.id === 'jus_defesa') op = livre('particular') ?? livre('publica');
+    else if (mo.id === 'jus_defesa') op = livre('manter') ?? livre('particular') ?? livre('publica');
     else if (mo.id === 'jus_recurso') op = livre('recorrer');
     else if (mo.id === 'sub125_familia') op = p === 'ex' || p === 'ocasional' ? livre('prometer') ?? livre('contar') : livre('contar');
     else if (mo.id === 'sub125_disputa') op = (p === 'lider' || p === 'lider_cauteloso') ? livre('disputar') ?? livre('apoiar_1') : livre('apoiar_1') ?? livre('neutro');

@@ -68,7 +68,10 @@ function aoAbrir(v: Vida, r: Rng): void {
   const env = v.caminhos.envolvimento;
   const base = p.categoria === 'violencia'
     ? 40 + (v.fatos['denuncia_agressao'] === v.t ? 15 : 0)
-    : (env ? Math.max(v.fatos['exposicao_na_abertura'] ?? env.exposicao, 25) : 45) + (p.categoria === 'grupo' ? 10 : 0);
+    // REWORK 12.3: a exposição de antes do processo pesa nas provas (antes, era zerada antes de ser lida: toda prova saía
+    // fraca) — com inclinação suave, para não desfazer o equilíbrio medido no 12.25 (o simulador: quem é de dentro de uma
+    // organização não pode ser condenado quase sempre).
+    : (env ? 22 + Math.max(0, (v.fatos['exposicao_na_abertura'] ?? env.exposicao) - 25) * 0.1 : 45) + (p.categoria === 'grupo' ? 10 : 0);
   p.provas = clamp(Math.round(base + (r.next() - 0.5) * 20), 10, 95);
   bloquear(v, p.provas, p.categoria);
   // A defesa é escolha: a pergunta abre (o jogo não paga o advogado sozinho).
