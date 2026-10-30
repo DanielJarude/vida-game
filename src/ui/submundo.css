@@ -76,3 +76,11 @@
 @media (prefers-reduced-motion: no-preference) {
   .svivo-medidor__cheio { transition: width 0.4s ease; }
 }
+
+/* REWORK 12.3: as relações entre organizações, o selo do que é ilegal, a lista simples */
+.svivo-relacoes { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); font-size: var(--texto-pequeno, 0.9rem); }
+.svivo-relacoes__item--conflito strong, .svivo-relacoes__item--ruptura strong { color: var(--ruim); }
+.svivo-relacoes__item--alianca strong, .svivo-relacoes__item--cooperacao strong, .svivo-relacoes__item--tregua strong { color: var(--bom); }
+.svivo-selo-ilegal { display: inline-block; margin-left: var(--space-1); padding: 0 0.4em; border: 1px solid currentColor; border-radius: var(--radius-sm, 4px); font-size: 0.75em; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; vertical-align: middle; }
+.svivo-bloco--ilegal { border-left: 3px solid color-mix(in oklab, var(--ruim) 60%, var(--fio)); padding-left: var(--space-3); }
+.svivo-lista-simples { margin: 0; padding-left: 1.2em; font-size: var(--texto-pequeno, 0.9rem); }

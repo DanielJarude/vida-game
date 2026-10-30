@@ -17,6 +17,7 @@ import { anotar } from './submundo';
 import { escrever } from '../nucleo';
 import { contrair } from '../texto';
 import { consequencias, fotografar } from './relatoDoCrime';
+import { disponibilidadeServico, encomendarServico, type TipoDeServico } from './servicosPorFora';
 import { disponibilidadeCorrupcao, disponibilidadeRegularizar, regularizar, tentarCorromper, type CanalDeCorrupcao } from './corrupcaoJudicial';
 
 export type OqueRumo = 'moita' | 'voltar_ritmo' | 'fundo' | 'sair_aos_poucos' | 'desistir_de_sair';
@@ -30,7 +31,9 @@ export type AcaoDoCrime =
   /** REWORK 12.3 · C1: a tentativa de corromper o processo (ilegal; separada da defesa, que é legal). */
   | { area: 'corrupcao'; canal: CanalDeCorrupcao }
   /** REWORK 12.3 · C8: pôr em ordem o dinheiro que entrou por fora (abstrato; não protege por inteiro). */
-  | { area: 'dinheiro'; oque: 'regularizar' };
+  | { area: 'dinheiro'; oque: 'regularizar' }
+  /** REWORK 12.3 · B2: o serviço por fora de quem não é do meio. */
+  | { area: 'servico'; tipo: TipoDeServico; alvoId?: string };
 
 export const ROTULO_DO_RUMO: Record<OqueRumo, string> = {
   moita: 'Ficar na moita (menos dinheiro, menos exposição)', voltar_ritmo: 'Voltar ao ritmo de antes', fundo: 'Ir mais fundo (mais dinheiro, mais compromisso)',
@@ -75,6 +78,7 @@ export function disponibilidadeCrime(v: Vida, a: AcaoDoCrime): Veredito {
     case 'rumo': return disponibilidadeRumo(v, a.oque);
     case 'corrupcao': return disponibilidadeCorrupcao(v, a.canal);
     case 'dinheiro': return disponibilidadeRegularizar(v);
+    case 'servico': return disponibilidadeServico(v, a.tipo, a.alvoId);
   }
 }
 
@@ -98,5 +102,6 @@ function executarNaArea(v: Vida, a: AcaoDoCrime): { texto: string; tom?: 'bom' |
     case 'rumo': return { ...executarRumo(v, a.oque), titulo: 'O rumo' };
     case 'corrupcao': return { ...tentarCorromper(v, a.canal), titulo: 'Por fora dos autos' };
     case 'dinheiro': return { ...regularizar(v), titulo: 'O dinheiro de fora' };
+    case 'servico': return { ...encomendarServico(v, a.tipo, a.alvoId), titulo: 'Um pedido por fora' };
   }
 }

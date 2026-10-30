@@ -22,7 +22,7 @@
  */
 import { clamp, rngDe } from '../rng';
 import type { Rng } from '../rng';
-import type { MembroDaOrg, MundoCriminal, OrgViva, Ramo, RelacaoComOrganizacao, Vida } from '../tipos';
+import type { EstadoEntreOrgs, MembroDaOrg, MundoCriminal, OrgViva, Ramo, RelacaoComOrganizacao, Vida } from '../tipos';
 import { escrever, idade } from '../nucleo';
 import { bloqueio, PERMITIDO, type Veredito } from '../plausibilidade';
 import { criarPessoa, vincular } from '../pessoas';
@@ -192,6 +192,82 @@ function relacionar(a: OrgViva, b: OrgViva, como: 'rival' | 'aliada' | 'nada'): 
   if (como === 'aliada') { a.aliadas.push(b.id); b.aliadas.push(a.id); }
 }
 
+/* ================================================================ REWORK 12.3 · A2: as relações entre organizações */
+
+export const NOME_DO_ESTADO_ENTRE: Record<EstadoEntreOrgs, string> = {
+  alianca: 'aliadas', cooperacao: 'cooperando num negócio', neutralidade: 'neutras', concorrencia: 'concorrentes', rivalidade: 'rivais',
+  tregua: 'em trégua', conflito: 'em conflito aberto', ruptura: 'romperam'
+};
+/** O estado entre duas organizações (o registrado; nos saves antigos, o das listas). */
+export function estadoEntre(a: OrgViva, b: OrgViva): EstadoEntreOrgs {
+  const x = a.relacoes?.[b.id];
+  if (x) return x;
+  return a.aliadas.includes(b.id) ? 'alianca' : a.rivais.includes(b.id) ? 'rivalidade' : a.ramo === b.ramo ? 'concorrencia' : 'neutralidade';
+}
+/** Muda o estado (nos dois lados) e mantém as listas de aliadas e rivais coerentes. */
+export function definirEstado(a: OrgViva, b: OrgViva, e: EstadoEntreOrgs): void {
+  (a.relacoes ??= {})[b.id] = e;
+  (b.relacoes ??= {})[a.id] = e;
+  relacionar(a, b, e === 'alianca' || e === 'cooperacao' ? 'aliada' : e === 'rivalidade' || e === 'conflito' || e === 'ruptura' ? 'rival' : 'nada');
+}
+
+/** O que muda de um ano para o outro (as probabilidades saem do estado, da força e da disputa pelo mesmo espaço). */
+function proximoEstado(a: OrgViva, b: OrgViva, e: EstadoEntreOrgs, r: Rng): EstadoEntreOrgs {
+  const disputam = Object.keys(a.influencia).some(k => (a.influencia[k] ?? 0) >= 20 && (b.influencia[k] ?? 0) >= 20);
+  const fortes = a.forca >= 40 && b.forca >= 40;
+  const x = r.next();
+  switch (e) {
+    case 'neutralidade': return a.ramo === b.ramo ? (x < 0.08 ? 'concorrencia' : e) : x < 0.05 ? 'cooperacao' : x < 0.07 ? 'concorrencia' : e;
+    case 'concorrencia': return x < (disputam ? 0.12 : 0.06) ? 'rivalidade' : x > 0.95 ? 'neutralidade' : e;
+    case 'rivalidade': return x < (disputam && fortes ? 0.12 : 0.04) ? 'conflito' : x > 0.93 ? 'tregua' : x > 0.9 ? 'concorrencia' : e;
+    case 'conflito': return x < 0.35 ? 'tregua' : e;
+    case 'tregua': return x < 0.25 ? 'neutralidade' : x > 0.88 ? 'conflito' : e;
+    case 'alianca': return x < 0.04 ? 'ruptura' : x > 0.96 ? 'neutralidade' : e;
+    case 'cooperacao': return x < 0.4 ? 'neutralidade' : x > 0.9 ? 'alianca' : e;
+    case 'ruptura': return 'rivalidade';
+  }
+}
+
+const FRASE_DA_MUDANCA: Partial<Record<EstadoEntreOrgs, (a: string, b: string) => string>> = {
+  conflito: (a, b) => `${a} e ${b} entraram em conflito aberto.`,
+  tregua: (a, b) => `${a} e ${b} fizeram uma trégua.`,
+  ruptura: (a, b) => `A aliança entre ${a} e ${b} acabou mal.`,
+  alianca: (a, b) => `${a} e ${b} fecharam uma aliança.`,
+  cooperacao: (a, b) => `${a} e ${b} passaram a dividir um negócio.`,
+  rivalidade: (a, b) => `${a} e ${b} viraram rivais.`,
+  concorrencia: (a, b) => `${a} e ${b} passaram a disputar o mesmo mercado.`,
+  neutralidade: (a, b) => `${a} e ${b} deixaram as diferenças de lado.`
+};
+
+/** O ano das relações de uma cidade: cada par uma vez; o conflito custa; quem é de dentro de um dos lados fica sabendo. */
+function evoluirRelacoes(v: Vida, municipioId: string): void {
+  const os = orgsDaCidade(v, municipioId);
+  const e = env(v);
+  for (let i = 0; i < os.length; i++) for (let j = i + 1; j < os.length; j++) {
+    const a = os[i], b = os[j];
+    const r = rngDe(v.id, 'rel_orgs', a.id, b.id, v.t);
+    const antes = estadoEntre(a, b);
+    if (antes === 'conflito') {
+      // O conflito (abstrato): os dois lados perdem força e gente presa; a cidade fica mais vigiada.
+      for (const o of [a, b]) { o.forca = clamp(o.forca - 5); o.pressao = clamp(o.pressao + 8); o.coesao = clamp(o.coesao - 2); }
+    }
+    const depois = proximoEstado(a, b, antes, r);
+    if (depois === antes) continue;
+    definirEstado(a, b, depois);
+    const frase = FRASE_DA_MUDANCA[depois]?.(cap(a.nome), b.nome) ?? '';
+    historia(a, v.t, frase); historia(b, v.t, frase);
+    // Quem é de dentro (ou aliado) de um dos lados vive isso.
+    const minha = (e?.organizacoes ?? []).find(x => (x.id === a.id || x.id === b.id) && (x.relacao === 'membro' || x.propria) && x.saiu === undefined && x.expulso === undefined);
+    if (minha && ativo(v) && !preso(v)) {
+      anotar(v, frase, depois === 'conflito' || depois === 'ruptura' ? 'ruim' : depois === 'tregua' || depois === 'alianca' ? 'bom' : undefined);
+      if (depois === 'conflito') {
+        e!.exposicao = clamp(e!.exposicao + 3);
+        escrever(v, { texto: contrair(`${frase.replace(/\.$/, '')} — e você é de dentro de ${minha.nome}. O bairro ficou mais tenso; todo mundo anda olhando para os lados.`), relevancia: 'biografia', tema: 'trabalho', tom: 'ruim' });
+      } else if (depois === 'tregua' || depois === 'ruptura' || depois === 'alianca') escrever(v, { texto: contrair(frase), relevancia: 'cotidiano', tema: 'trabalho' });
+    }
+  }
+}
+
 function historia(o: OrgViva, t: number, texto: string): void {
   o.historia.push({ t, texto: contrair(texto) });
   if (o.historia.length > 20) o.historia.splice(0, o.historia.length - 20);
@@ -254,6 +330,7 @@ export function processarFaccoes(v: Vida): void {
   garantirCidade(v);
   const m = garantirMundo(v);
   for (const o of orgsDoMundo(v)) if (o.estado !== 'extinta') anoDaOrg(v, o);
+  for (const cid of new Set(orgsDoMundo(v).map(o => o.municipioId))) evoluirRelacoes(v, cid);
   renovarCidade(v);
   anoDaComunidade(v);
   m.tAtualizado = v.t;
@@ -320,17 +397,7 @@ function anoDaOrg(v: Vida, o: OrgViva): void {
       abrirDisputa(v, o, r, caiu);
     }
   } else if (o.disputa && v.t - o.disputa.t >= 12) resolverDisputa(v, o, r);
-  // Alianças e rivalidades entre as organizações da mesma cidade.
-  const outras = orgsDaCidade(v, o.municipioId).filter(x => x.id !== o.id);
-  if (outras.length && r.chance(0.07)) {
-    const b = r.pick(outras);
-    const ja = o.rivais.includes(b.id) ? 'rival' : o.aliadas.includes(b.id) ? 'aliada' : 'nada';
-    const novo = ja === 'rival' ? (r.chance(0.5) ? 'nada' : 'rival') : ja === 'aliada' ? (r.chance(0.5) ? 'nada' : 'rival') : (b.ramo === o.ramo ? 'rival' : r.chance(0.5) ? 'aliada' : 'rival');
-    if (novo !== ja) {
-      relacionar(o, b, novo);
-      historia(o, v.t, novo === 'rival' ? `${cap(o.nome)} e ${b.nome} viraram rivais.` : novo === 'aliada' ? `${cap(o.nome)} e ${b.nome} fecharam um acordo.` : `${cap(o.nome)} e ${b.nome} deixaram as diferenças de lado.`);
-    }
-  }
+  // (REWORK 12.3 · A2: as alianças e rivalidades mudam em `evoluirRelacoes`, uma vez por par, pelo estado de cada par.)
   // A influência por região: a presença cresce com a força e a prioridade; as rivais disputam; a comunidade pesa.
   for (const reg of regioesDe(o.municipioId)) {
     const voz = v.mundoCriminal?.comunidade?.[`${o.municipioId}:${reg.id}`] ?? 40;
@@ -412,6 +479,9 @@ function resolverDisputa(v: Vida, o: OrgViva, r: Rng): void {
   const jeito = r.pick(JEITOS);
   o.disputa = undefined;
   if (jeito.includes('racha')) { o.forca = clamp(o.forca - 12); o.coesao = clamp(o.coesao - 5); } else o.coesao = clamp(o.coesao + 10);
+  // REWORK 12.3 · A4: o racha é de verdade — quem perdeu sai com gente e funda outra organização, rival da de origem.
+  const perdedor = jeito.includes('racha') ? d.candidatos.find(c => c !== vencedor && c !== 'jogador') : undefined;
+  if (perdedor) rachar(v, o, perdedor, d.apoio === perdedor);
   if (vencedor === 'jogador') {
     if (rel) { definirNivel(v, rel, 6); lembrarOrg(rel, v.t, 'alianca', 10); }
     historia(o, v.t, `A disputa terminou ${jeito}: você passou a mandar.`);
@@ -437,6 +507,32 @@ function resolverDisputa(v: Vida, o: OrgViva, r: Rng): void {
   else if (d.apoio && d.apoio !== vencedor) { lembrarOrg(rel, v.t, 'conflito', -10); if (n > 0 && r.chance(0.5)) definirNivel(v, rel, n - 1); anotar(v, `Apoiou quem perdeu a disputa de ${o.nome}. O novo comando sabe.`, 'ruim'); }
 }
 
+/** O racha: o candidato que perdeu leva uma parte do quadro e funda uma organização nova, rival da de origem. */
+function rachar(v: Vida, o: OrgViva, perdedorId: string, apoiouPerdedor: boolean): void {
+  const m = o.quadro.find(x => x.id === perdedorId);
+  if (!m) return;
+  const id = `racha_${o.id}_${v.t}`;
+  if (orgViva(v, id)) return;
+  const nova = criarOrgViva(v, o.municipioId, o.ramo, id);
+  nova.rachaDe = { id: o.id, t: v.t };
+  nova.forca = Math.max(12, Math.round(o.forca * 0.4));
+  // Quem foi junto: o perdedor no comando e até dois do quadro (que saem da organização de origem).
+  const foram = o.quadro.filter(x => x.estado === 'ativo' && x.id !== m.id && x.nivel <= 4).slice(-2);
+  m.estado = 'saiu';
+  for (const x of foram) x.estado = 'saiu';
+  nova.quadro = [{ ...m, id: `${id}_m0`, nivel: 6, estado: 'ativo', desde: v.t, pessoaId: m.pessoaId }, ...foram.map((x, k) => ({ ...x, id: `${id}_m${k + 1}`, estado: 'ativo' as const, nivel: Math.min(5, x.nivel + 1) })), ...nova.quadro.filter(x => x.nivel <= 2).slice(0, 2)];
+  definirEstado(o, nova, 'rivalidade');
+  historia(o, v.t, `${m.nome} saiu com gente e fundou ${nova.nome}.`);
+  historia(nova, v.t, `Nasceu de um racha em ${o.nome}, com ${m.nome} no comando.`);
+  const rel = env(v)?.organizacoes?.find(x => x.id === o.id);
+  if (rel && (rel.relacao === 'membro' || rel.relacao === 'aliada') && rel.saiu === undefined) {
+    const texto = `${cap(o.nome)} rachou: ${m.nome} saiu com gente e fundou ${nova.nome}.${apoiouPerdedor ? ` Você apoiou ${m.nome} — e ${m.nome} lembra.` : ''}`;
+    anotar(v, texto, 'ruim');
+    escrever(v, { texto: contrair(texto), relevancia: 'biografia', tema: 'trabalho', tom: 'ruim' });
+    if (apoiouPerdedor) { const nr = relacaoCom(v, nova); nr.relacao = 'aliada'; nr.lealdade = 55; lembrarOrg(nr, v.t, 'alianca', 0); }
+  }
+}
+
 /* ================================================================ o jogador nas organizações */
 
 /** A parte que cabe a quem é de dentro (pelo posto, pela força, pela influência, pela prioridade) — ou o que custa o ano. */
@@ -459,6 +555,8 @@ function anoDoJogadorNasOrgs(v: Vida): void {
   }
   if (!ativo(v)) return;
   const r = rngDe(v.id, 'jogador_orgs', v.t);
+  atualizarDistancias(v);
+  vigiarDuplaLealdade(v);
   for (const rel of e.organizacoes ?? []) {
     if (rel.saiu !== undefined || rel.expulso !== undefined) continue;
     const o = orgViva(v, rel.id);
@@ -466,10 +564,13 @@ function anoDoJogadorNasOrgs(v: Vida): void {
     if (rel.relacao !== 'membro' && !rel.propria) continue;
     const n = nivelDe(v, rel);
     if (rel.nivel === undefined && !rel.propria) definirNivel(v, rel, n);
+    // REWORK 12.3 · A6: de fora do alcance, o vínculo não se apaga — mas não rende, e a confiança esfria.
+    if (rel.distancia === 'fora') { rel.lealdade = clamp(rel.lealdade - 5); continue; }
+    const longe = rel.distancia === 'longe' ? 0.5 : 1;
     // A parte do ano (a organização própria já paga pelos negócios dela: `clandestinos`).
     if (!rel.propria) {
       const seco = r.chance(o.coesao < 35 ? 0.35 : 0.15);
-      const parte = seco ? 0 : Math.round(parteDoAno(v, o, n) * (0.7 + r.next() * 0.6) / 100) * 100;
+      const parte = seco ? 0 : Math.round(parteDoAno(v, o, n) * longe * (0.7 + r.next() * 0.6) / 100) * 100;
       if (parte > 0) { movimentoPorFora(v, 'organizacao', parte); e.ganhos += parte; }
       // Quem sobe até o comando passa a delegar: a exposição pessoal cresce até o posto de responsável por uma área e,
       // dali para cima, diminui (outros fazem a rua) — o que pesa é a pressão sobre a organização inteira.
@@ -503,6 +604,122 @@ function anoDoJogadorNasOrgs(v: Vida): void {
   }
 }
 
+/* ================================================================ REWORK 12.3 · A6: a distância (mudança de cidade e de país) */
+
+/** Até onde uma organização chega (pela força e pelo estilo; as redes e os coletivos atravessam fronteira mais fácil). */
+export function alcanceDe(o: OrgViva): NonNullable<OrgViva['alcance']> {
+  if (o.alcance) return o.alcance;
+  const viaja = o.estilo === 'rede' || o.estilo === 'coletivo' || o.estilo === 'sindicato';
+  return o.forca >= (viaja ? 60 : 80) ? 'internacional' : o.forca >= 50 ? 'nacional' : o.forca >= 28 ? 'regional' : 'local';
+}
+export const NOME_DO_ALCANCE: Record<NonNullable<OrgViva['alcance']>, string> = { local: 'só na cidade', regional: 'na região', nacional: 'no país inteiro', internacional: 'fora do país também' };
+
+function distanciaPara(v: Vida, o: OrgViva): 'perto' | 'longe' | 'fora' {
+  const aqui = v.moradia.municipioId;
+  if (o.municipioId === aqui) return 'perto';
+  let ma, mb;
+  try { ma = municipio(o.municipioId); mb = municipio(aqui); } catch { return 'fora'; }
+  const alc = alcanceDe(o);
+  if (ma.pais !== mb.pais) return alc === 'internacional' ? 'longe' : 'fora';
+  if (ma.uf === mb.uf) return alc === 'local' ? 'fora' : 'longe';
+  return alc === 'nacional' || alc === 'internacional' ? 'longe' : 'fora';
+}
+
+/** A distância de cada vínculo de dentro, recalculada no ano — e dita quando muda (o vínculo nunca é apagado). */
+function atualizarDistancias(v: Vida): void {
+  for (const rel of env(v)?.organizacoes ?? []) {
+    if (rel.saiu !== undefined || rel.expulso !== undefined || (rel.relacao !== 'membro' && rel.relacao !== 'aliada' && !rel.propria)) continue;
+    const o = orgViva(v, rel.id);
+    if (!o) continue;
+    const d = distanciaPara(v, o);
+    const antes = rel.distancia ?? 'perto';
+    if (d === antes) { rel.distancia = d; continue; }
+    rel.distancia = d;
+    const txt = d === 'perto' ? `De volta perto de ${o.nome}: o vínculo voltou a ser do dia a dia.`
+      : d === 'longe' ? `Longe de ${o.nome}, o vínculo continua — à distância (${NOME_DO_ALCANCE[alcanceDe(o)]}): menos parte, menos tarefas.`
+        : `${cap(o.nome)} não chega aonde você está agora (${NOME_DO_ALCANCE[alcanceDe(o)]}). O vínculo fica, mas parado: não rende, e a confiança esfria a cada ano longe.`;
+    anotar(v, txt, d === 'fora' ? 'ruim' : undefined);
+    escrever(v, { texto: contrair(txt), relevancia: 'cotidiano', tema: 'trabalho' });
+  }
+}
+
+/* ================================================================ REWORK 12.3 · A1: mais de uma organização */
+
+/** As organizações de que se é de dentro agora. */
+export const deDentro = (v: Vida) => (env(v)?.organizacoes ?? []).filter(o => (o.relacao === 'membro' || o.propria) && o.saiu === undefined && o.expulso === undefined);
+
+/**
+ * Ser de dentro de duas: entre aliadas, é ponte (as duas confiam um pouco mais); entre neutras, ninguém se importa muito;
+ * entre concorrentes e rivais, cada ano aumenta a desconfiança — e o que é secreto pode vir à tona. Quando vem (ou quando
+ * é aberto entre rivais), as duas cobram uma escolha (`sub123_dupla`).
+ */
+function vigiarDuplaLealdade(v: Vida): void {
+  const e = env(v)!;
+  const ds = deDentro(v);
+  if (ds.length < 2) return;
+  for (let i = 0; i < ds.length; i++) for (let j = i + 1; j < ds.length; j++) {
+    const ra = ds[i], rb = ds[j];
+    const a = orgViva(v, ra.id), b = orgViva(v, rb.id);
+    if (!a || !b) continue;
+    const est = estadoEntre(a, b);
+    if (est === 'alianca' || est === 'cooperacao') { ra.lealdade = clamp(ra.lealdade + 1); rb.lealdade = clamp(rb.lealdade + 1); continue; }
+    const peso = est === 'conflito' || est === 'ruptura' ? 22 : est === 'rivalidade' ? 15 : est === 'concorrencia' || est === 'tregua' ? 8 : 3;
+    const r = rngDe(v.id, 'dupla', a.id, b.id, v.t);
+    for (const [rel, outra] of [[ra, rb], [rb, ra]] as const) {
+      if (!outra.secreto) {
+        // Aberto: quem é de dentro de uma rival declarada perde confiança todo ano.
+        if (peso >= 15) rel.lealdade = clamp(rel.lealdade - 6);
+        continue;
+      }
+      rel.suspeita = clamp((rel.suspeita ?? 0) + peso / 3 + e.exposicao / 20 + r.int(0, 4));
+    }
+    const descoberta = [ra, rb].some(x => (x.suspeita ?? 0) >= 60 || (x.suspeita ?? 0) / 300 > r.next());
+    const abertaEntreRivais = !ra.secreto && !rb.secreto && peso >= 15;
+    if ((descoberta || abertaEntreRivais) && !(v.fatos['sub123_dupla'] !== undefined && v.t - v.fatos['sub123_dupla'] < 24)) {
+      if (descoberta) {
+        for (const x of [ra, rb]) { x.secreto = false; x.suspeita = 0; }
+        const texto = `${cap(a.nome)} e ${b.nome} descobriram que você é de dentro das duas.`;
+        anotar(v, texto, 'ruim');
+        escrever(v, { texto: contrair(texto), relevancia: 'biografia', tema: 'trabalho', tom: 'ruim' });
+      }
+      if (peso >= 8) { (e.cenas125 ??= {})['sub123_dupla'] = `${a.id}|${b.id}`; v.fatos['sub123_dupla'] = v.t; }
+    }
+  }
+}
+
+/** A resposta à cobrança (a cena `sub123_dupla`): ficar com uma, negar, ou propor ser a ponte. */
+export function resolverDupla(v: Vida, fica: string | undefined, sai: string | undefined, como: 'escolher' | 'negar' | 'ponte'): string {
+  const e = env(v)!;
+  const ra = e.organizacoes?.find(x => x.id === fica), rb = e.organizacoes?.find(x => x.id === sai);
+  const a = fica ? orgViva(v, fica) : undefined, b = sai ? orgViva(v, sai) : undefined;
+  if (!ra || !rb || !a || !b) return 'Nada mudou.';
+  const r = rngDe(v.id, 'dupla_resp', a.id, b.id, v.t);
+  if (como === 'escolher') {
+    const rival = ['rivalidade', 'conflito', 'ruptura'].includes(estadoEntre(a, b));
+    rb.saiu = v.t;
+    if (rival) { rb.expulso = v.t; lembrarOrg(rb, v.t, 'traicao', -20); v.fatos['pressao_grupo'] = v.t; }
+    else lembrarOrg(rb, v.t, 'saida', -6);
+    lembrarOrg(ra, v.t, 'alianca', 8);
+    return rival ? `Você ficou com ${a.nome}. Em ${b.nome}, o seu nome virou o de quem foi embora para o outro lado — e isso não se esquece.` : `Você ficou com ${a.nome} e saiu de ${b.nome} sem briga.`;
+  }
+  if (como === 'negar') {
+    if (r.chance(clamp(0.25 + (e.reputacao ?? 0) / 300, 0.15, 0.55))) { ra.lealdade = clamp(ra.lealdade - 4); rb.lealdade = clamp(rb.lealdade - 4); return 'Você negou, olhando nos olhos. Por enquanto, aceitaram — mas agora alguém observa.'; }
+    const perde = ra.lealdade < rb.lealdade ? ra : rb;
+    perde.expulso = v.t; perde.saiu = v.t; lembrarOrg(perde, v.t, 'traicao', -20);
+    e.exposicao = clamp(e.exposicao + 6);
+    return `Ninguém acreditou. ${cap(perde.nome)} pôs você para fora — e quem é expulso por isso fica marcado no meio.`;
+  }
+  const est = estadoEntre(a, b);
+  if (est !== 'conflito' && est !== 'ruptura' && r.chance(clamp(0.3 + (e.reputacao ?? 0) / 250, 0.2, 0.7))) {
+    definirEstado(a, b, 'cooperacao');
+    ra.lealdade = clamp(ra.lealdade + 3); rb.lealdade = clamp(rb.lealdade + 3);
+    historia(a, v.t, `${cap(a.nome)} e ${b.nome} passaram a fazer negócio por meio de você.`);
+    return `Você propôs ser a ponte entre ${a.nome} e ${b.nome} — e as duas toparam fazer negócio por meio de você. Por enquanto.`;
+  }
+  ra.lealdade = clamp(ra.lealdade - 8); rb.lealdade = clamp(rb.lealdade - 8);
+  return `A ideia de ser a ponte não colou: ${a.nome} e ${b.nome} querem saber de que lado você está.`;
+}
+
 function promover(v: Vida, o: OrgViva, rel: RelacaoComOrganizacao, como: string): string {
   const n = nivelDe(v, rel) + 1;
   definirNivel(v, rel, n);
@@ -526,7 +743,22 @@ function promover(v: Vida, o: OrgViva, rel: RelacaoComOrganizacao, como: string)
 
 /* ================================================================ as ações com uma organização */
 
-export type OqueOrg = 'conversar' | 'filiar' | 'tarefa' | 'promocao' | 'sair' | 'apoiar' | 'disputar' | 'neutro' | 'prioridade_expandir' | 'prioridade_consolidar' | 'prioridade_discricao' | 'prioridade_negocios' | 'mediar' | 'alianca' | 'romper' | 'presenca' | 'recolher' | 'conhecer';
+export type OqueOrg = 'conversar' | 'filiar' | 'tarefa' | 'promocao' | 'sair' | 'apoiar' | 'disputar' | 'neutro' | 'prioridade_expandir' | 'prioridade_consolidar' | 'prioridade_discricao' | 'prioridade_negocios' | 'mediar' | 'alianca' | 'romper' | 'presenca' | 'recolher' | 'conhecer'
+  /** REWORK 12.3: entrar sem que as outras saibam (A1); a reunião do grupo (A5); a trégua e a cooperação com outra organização (A2/A4). */
+  | 'filiar_secreto' | 'reuniao' | 'tregua' | 'cooperar';
+
+/**
+ * REWORK 12.3 · A3: o que cada posto permite, de verdade (as ações e as propostas que o motor libera em cada nível).
+ */
+export const PODERES_DO_NIVEL: string[][] = [
+  ['tarefas pequenas da organização', 'uma parte pequena do que ela faz', 'pedir para subir (uma vez por ano)'],
+  ['ir às reuniões do grupo', 'trabalhos de tamanho médio', 'ser chamado para subir sem pedir'],
+  ['encomendar trabalhos a outros', 'um caminho até o fórum (para o bem e para o mal)'],
+  ['decisões internas: acalmar brigas, mandar recolher', 'gente sob o seu comando'],
+  ['alianças, tréguas e cooperações com outras organizações', 'fazer-se presente numa região', 'disputar o comando'],
+  ['o conselho: a voz na sucessão'],
+  ['comandar: a prioridade do ano, tudo o que está acima']
+];
 
 const feito = (rel: RelacaoComOrganizacao, k: string, v: Vida) => rel.pedidos?.[k] !== undefined && v.t - rel.pedidos[k] < 12;
 
@@ -543,6 +775,9 @@ export function disponibilidadeOrg(v: Vida, orgId: string, oque: OqueOrg, alvo?:
   const dentro = vinc === 'integrante' || vinc === 'lideranca';
   if (!ativo(v) && oque !== 'conversar') return bloqueio('incompativel', 'Você não está mais nisso.');
   if (rel && feito(rel, oque, v)) return bloqueio('incompativel', 'Isso já foi feito neste ano.');
+  // REWORK 12.3 · A6: de fora do alcance, só conversar e sair; de longe, nada que peça estar presente.
+  if (rel?.distancia === 'fora' && !['conversar', 'sair', 'conhecer'].includes(oque)) return bloqueio('incompativel', `Daqui, ${o.nome} não alcança você (${NOME_DO_ALCANCE[alcanceDe(o)]}): o vínculo está parado. Dá para conversar ou sair.`);
+  if (rel?.distancia === 'longe' && ['presenca', 'mediar', 'reuniao'].includes(oque)) return bloqueio('incompativel', 'Isso pede estar na cidade dela.');
   switch (oque) {
     case 'conhecer': return rel ? bloqueio('incompativel', 'Você já sabe quem eles são.') : PERMITIDO;
     case 'conversar': return rel ? PERMITIDO : bloqueio('requisito', 'Primeiro, alguém precisa apresentar você.');
@@ -551,8 +786,29 @@ export function disponibilidadeOrg(v: Vida, orgId: string, oque: OqueOrg, alvo?:
       if (vinc === 'rival' || rel?.expulso !== undefined) return bloqueio('incompativel', 'Depois do que houve, essa porta está fechada.');
       if (!rel || rel.lealdade < 45) return bloqueio('requisito', 'Ninguém entra sem que confiem: falta lealdade (trabalhos, favores, tempo de aliança).');
       if (idade(v) < 18) return bloqueio('impossivel', 'Cedo demais.');
-      if (e.organizacoes?.some(x => x.relacao === 'membro' && x.saiu === undefined && x.id !== orgId && x.especialidade === o.ramo)) return bloqueio('incompativel', 'Você já é de dentro de outra organização do mesmo ramo.');
+      {
+        // REWORK 12.3 · A1: dá para ser de dentro de mais de uma — com consequência. Entre rivais, abertamente, é declarar lado.
+        const outras = deDentro(v).filter(x => x.id !== orgId).map(x => orgViva(v, x.id)).filter((x): x is OrgViva => !!x);
+        const rival = outras.find(x => ['rivalidade', 'conflito', 'ruptura'].includes(estadoEntre(o, x)));
+        if (rival) return { grau: 'irregular', motivo: `É crime. E ${rival.nome}, de que você já é de dentro, é rival dela: entrar abertamente é declarar lado — as duas vão cobrar.` };
+        if (outras.length) return { grau: 'irregular', motivo: `É crime. Você já é de dentro de ${outras.map(x => x.nome).join(' e ')}: ser de duas tem preço — e a confiança de cada uma passa a ser medida.` };
+      }
       return { grau: 'irregular', motivo: 'É crime. De dentro: uma parte do que a organização faz, um posto para subir — e compromissos, a pressão que vem com ela, uma saída mais difícil.' };
+    case 'filiar_secreto':
+      if (dentro) return bloqueio('incompativel', 'Você já é de dentro.');
+      if (!deDentro(v).some(x => x.id !== orgId)) return bloqueio('requisito', 'Só faz sentido esconder de quem você já é de dentro — e você não é de nenhuma.');
+      if (vinc === 'rival' || rel?.expulso !== undefined) return bloqueio('incompativel', 'Depois do que houve, essa porta está fechada.');
+      if (!rel || rel.lealdade < 50) return bloqueio('requisito', 'Para entrar em segredo, eles precisam confiar muito em você (lealdade 50 ou mais).');
+      return { grau: 'irregular', motivo: 'É crime — e um segredo. Cada ano, a desconfiança cresce (mais entre rivais); se vier à tona, as duas cobram.' };
+    case 'reuniao': return dentro && n >= 1 ? PERMITIDO : bloqueio('requisito', 'As reuniões são para quem já tem algum posto (a partir do segundo nível).');
+    case 'tregua': case 'cooperar': {
+      const b = alvo ? orgViva(v, alvo) : undefined;
+      if (!b || b.id === o.id || b.municipioId !== o.municipioId) return bloqueio('impossivel', 'Com quem?');
+      if (n < 4 && !rel?.propria) return bloqueio('requisito', 'Negociar com outra organização é coisa de quem comanda (posto 5 ou mais).');
+      const est = estadoEntre(o, b);
+      if (oque === 'tregua') return est === 'conflito' || est === 'rivalidade' || est === 'ruptura' ? vereditoDePagar(v, custoDeComando(v, o), 'Sentar à mesa custa uns') : bloqueio('incompativel', `Não há guerra a parar: estão ${NOME_DO_ESTADO_ENTRE[est]}.`);
+      return est === 'neutralidade' || est === 'concorrencia' || est === 'tregua' ? PERMITIDO : bloqueio('incompativel', `Agora não: estão ${NOME_DO_ESTADO_ENTRE[est]}.`);
+    }
     case 'tarefa': return dentro || vinc === 'aliado' || vinc === 'comercial' ? PERMITIDO : bloqueio('requisito', 'Eles não pedem nada a quem não conhecem.');
     case 'promocao':
       if (!dentro || rel?.propria) return bloqueio('impossivel', 'Só para quem é de dentro.');
@@ -662,12 +918,12 @@ export function executarOrg(v: Vida, orgId: string, oque: OqueOrg, alvo?: string
       return { texto: 'Você sentou com os lados, ouviu, pagou o que precisava ser pago. A casa ficou mais calma.', tom: 'bom' };
     case 'alianca': {
       const b = orgViva(v, alvo!)!;
-      if (r.chance(clamp(0.35 + (b.rivais.includes(o.id) ? -0.2 : 0) + (o.forca - b.forca) / 200, 0.1, 0.8))) { relacionar(o, b, 'aliada'); historia(o, v.t, `Aliança com ${b.nome}, negociada por você.`); return { texto: `${cap(b.nome)} topou o acordo.`, tom: 'bom' }; }
+      if (r.chance(clamp(0.35 + (b.rivais.includes(o.id) ? -0.2 : 0) + (o.forca - b.forca) / 200, 0.1, 0.8))) { definirEstado(o, b, 'alianca'); historia(o, v.t, `Aliança com ${b.nome}, negociada por você.`); return { texto: `${cap(b.nome)} topou o acordo.`, tom: 'bom' }; }
       return { texto: `${cap(b.nome)} recusou${b.rivais.includes(o.id) ? ': a rivalidade é velha demais' : ''}.`, tom: 'ruim' };
     }
     case 'romper': {
       const b = orgViva(v, alvo!)!;
-      relacionar(o, b, 'rival');
+      definirEstado(o, b, 'ruptura');
       historia(o, v.t, `A aliança com ${b.nome} acabou (decisão sua).`);
       return { texto: `A aliança com ${b.nome} acabou. Agora são rivais.`, tom: 'ruim' };
     }
@@ -681,6 +937,37 @@ export function executarOrg(v: Vida, orgId: string, oque: OqueOrg, alvo?: string
       const com = garantirMundo(v).comunidade ??= {};
       com[k] = clamp((com[k] ?? 40) + 4);
       return { texto: `${cap(o.nome)} passou a se fazer mais presente em ${nomeDaRegiao(o.municipioId, reg)}. Quem mora lá reparou — e não ficou parado.` };
+    }
+    case 'filiar_secreto': {
+      const chance = clamp(0.3 + (rel.lealdade - 45) / 80 + (e.reputacao ?? 0) / 300, 0.15, 0.85);
+      if (!r.chance(chance)) { lembrarOrg(rel, v.t, 'conflito', -2); return { texto: 'Ouviram a proposta e disseram que não: quem já é de outra casa, eles não querem escondido.', tom: 'ruim' }; }
+      rel.relacao = 'membro'; rel.secreto = true; rel.suspeita = 0;
+      delete rel.saiu;
+      definirNivel(v, rel, 0);
+      lembrarOrg(rel, v.t, 'alianca', 4);
+      marco(v, `Entrou para ${o.nome} sem que os outros soubessem.`);
+      const outras = deDentro(v).filter(x => x.id !== o.id).map(x => x.nome).join(' e ');
+      return { texto: `Você agora é de ${o.nome} também — ${nomeDoNivel(o, 0)} —, e ${outras} não sabe${outras.includes(' e ') ? 'm' : ''}. Cada ano, guardar isso fica mais difícil.`, tom: 'bom' };
+    }
+    case 'reuniao': {
+      rel.lealdade = clamp(rel.lealdade + 3);
+      const l = lider(o);
+      const disputa = o.disputa ? ` A sucessão está aberta: ${o.disputa.candidatos.map(c => c === 'jogador' ? 'você' : o.quadro.find(x => x.id === c)?.nome).join(' e ')}.` : '';
+      const outras = Object.entries(o.relacoes ?? {}).map(([id, est]) => ({ b: orgViva(v, id), est })).filter(x => x.b && x.b.estado !== 'extinta' && x.est !== 'neutralidade').slice(0, 2);
+      const fora = outras.length ? ` Lá fora: ${outras.map(x => `com ${x.b!.nome}, ${NOME_DO_ESTADO_ENTRE[x.est]}`).join('; ')}.` : '';
+      return { texto: `Na reunião, ${l ? `${l.nome} falou primeiro` : 'ninguém falou primeiro'}. ${o.coesao < 40 ? 'Havia dois grupos na mesa, e todo mundo percebeu.' : 'A casa está unida.'}${disputa}${fora} Você foi visto ali — e isso conta.` };
+    }
+    case 'tregua': {
+      const b = orgViva(v, alvo!)!;
+      pagarPorFora(v, 'custos', custoDeComando(v, o));
+      const chance = clamp(0.35 + (b.forca < o.forca ? 0.15 : -0.05) + (estadoEntre(o, b) === 'conflito' ? 0.1 : 0) + (b.pressao >= 50 ? 0.1 : 0), 0.15, 0.8);
+      if (r.chance(chance)) { definirEstado(o, b, 'tregua'); historia(o, v.t, `Trégua com ${b.nome}, negociada por você.`); historia(b, v.t, `Trégua com ${o.nome}.`); e.exposicao = clamp(e.exposicao - 3); return { texto: `${cap(b.nome)} aceitou a trégua. Por enquanto, ninguém avança sobre ninguém — e a rua fica mais calma.`, tom: 'bom' }; }
+      return { texto: `${cap(b.nome)} mandou dizer que não há o que conversar.`, tom: 'ruim' };
+    }
+    case 'cooperar': {
+      const b = orgViva(v, alvo!)!;
+      if (r.chance(clamp(0.35 + (o.forca - b.forca) / 200 + (estadoEntre(o, b) === 'concorrencia' ? -0.1 : 0), 0.15, 0.75))) { definirEstado(o, b, 'cooperacao'); historia(o, v.t, `Um negócio dividido com ${b.nome}, negociado por você.`); return { texto: `${cap(b.nome)} topou dividir um negócio. Não é aliança: é este ano, este negócio — e cada lado de olho no outro.`, tom: 'bom' }; }
+      return { texto: `${cap(b.nome)} recusou: preferem fazer sozinhos.`, tom: 'ruim' };
     }
     case 'recolher':
       o.pressao = clamp(o.pressao - 18);
@@ -721,7 +1008,12 @@ export function leituraDasOrganizacoes(v: Vida) {
       prioridade: o.prioridade, parte: n >= 0 && !rel?.propria && rel?.relacao === 'membro' ? parteDoAno(v, o, n) : undefined,
       lembra: rel ? [...new Set(rel.memoria.slice(-6))].map(m => `${anoDe(m.t)} · ${LEMBRA[m.fato]}`) : [],
       historia: o.historia.slice(-6).reverse().map(h => ({ ano: anoDe(h.t), texto: h.texto })),
-      cidade: municipio(o.municipioId).nome, daqui: o.municipioId === v.moradia.municipioId
+      cidade: municipio(o.municipioId).nome, daqui: o.municipioId === v.moradia.municipioId,
+      // REWORK 12.3: as relações com cada outra organização (A2), o alcance e a distância (A6), o segredo (A1), o que o posto permite (A3).
+      relacoes: orgsDaCidade(v, o.municipioId).filter(x => x.id !== o.id).map(x => ({ id: x.id, nome: x.nome, estado: estadoEntre(o, x), nomeEstado: NOME_DO_ESTADO_ENTRE[estadoEntre(o, x)] })),
+      alcance: NOME_DO_ALCANCE[alcanceDe(o)], distancia: rel?.distancia, secreto: !!rel?.secreto, suspeita: rel?.suspeita ?? 0,
+      poderes: n >= 0 && (rel?.relacao === 'membro' || rel?.propria) ? PODERES_DO_NIVEL.slice(0, Math.min(6, n) + 1).flat() : [],
+      rachaDe: o.rachaDe ? orgViva(v, o.rachaDe.id)?.nome : undefined
     };
   }).filter((x): x is NonNullable<typeof x> => !!x && (x.conhecida || x.daqui))
     .sort((a, b) => Number(b.vinculo === 'lideranca' || b.vinculo === 'integrante') - Number(a.vinculo === 'lideranca' || a.vinculo === 'integrante') || Number(b.conhecida) - Number(a.conhecida) || b.forca - a.forca);

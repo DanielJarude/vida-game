@@ -71,6 +71,8 @@ import { processarObrigacoes } from './sistemas/obrigacoes';
 import { calcularHeranca } from './sistemas/partilha';
 import { processarJustica } from './sistemas/justica';
 import { processarIlicito } from './sistemas/ilicito';
+import { processarServicos } from './sistemas/servicosPorFora';
+import { processarEquipe } from './sistemas/equipe';
 import { processarPausa } from './sistemas/pausa';
 import { processarRural } from './sistemas/rural';
 import { processarTransformacao } from './sistemas/carreira';
@@ -240,7 +242,11 @@ function viverAno(v: Vida, r: Rng): void {
   recalcularConvivio(v);
   processarOportunidades(v, r);
   processarMundoVivo(v);
+  // REWORK 12.3 · E1: a equipe do trabalho (quem chefia, os colegas, o mentor, o rival, o reencontro, as sanções).
+  processarEquipe(v);
   processarIlicito(v, r);
+  // REWORK 12.3 · B2: o que o contratante ocasional encomendou pode vir à tona (sem envolvimento, sem carreira).
+  processarServicos(v);
   // REWORK 10 · CRI-01: a trajetória à margem (a confiança do meio, os trabalhos maiores, os atritos, o cerco).
   processarMargem(v);
   // REWORK 11.5 · SUB-11: os ramos do Submundo (a prática, o mercado, a organização, as pessoas com ficha, as cenas).

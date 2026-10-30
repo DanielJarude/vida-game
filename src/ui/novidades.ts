@@ -26,6 +26,33 @@ export interface NotaDeVersao {
 
 export const NOTAS: NotaDeVersao[] = [
   {
+    versao: '12.3',
+    data: '2026-10-30',
+    titulo: 'Submundo profundo, Justiça com rostos e carreiras com gente',
+    novidades: [
+      'As mensagens do Submundo contam o que aconteceu de verdade: quem propôs, o que já houve entre vocês, o seu lugar no trabalho (do mais novo a quem só manda os seus), como cada pessoa reage pelo jeito dela — e, embaixo, o que mudou em números (dinheiro, confiança, posto, exposição).',
+      'Trabalhos que dão certo pela metade, ou melhor que o combinado; e, todo ano, uma linha com o que o caminho por fora rendeu, quantos trabalhos, com quem.',
+      'Juízes, promotores, advogados e defensores com nome e história: na mesma cidade, o mesmo juiz pode voltar — e lembrar.',
+      'É possível tentar influenciar um processo por fora (ilegal, e dito assim): quem julga pode recusar, denunciar, aceitar e entregar pouco, ou aceitar — sem garantia de absolvição — e tudo pode vir à tona anos depois.',
+      'A Justiça não conhece todo o seu dinheiro: bloqueia e confisca pelo que as provas mostram. "Pôr o dinheiro em ordem" é possível — e não protege por inteiro.',
+      'Ser de mais de uma organização (até em segredo), as relações entre elas que mudam sozinhas (aliança, concorrência, rivalidade, trégua, conflito, ruptura), tréguas e negócios negociados por quem comanda, rachas que fundam organizações novas, e vínculos que continuam à distância quando você muda de cidade ou de país.',
+      'Pedidos por fora para quem leva vida legal (sem virar do meio), sempre com a saída legal ao lado; e o mercado por fora agora mora no Submundo.',
+      'Cada emprego tem a sua gente: a chefia, os colegas, quem responde a você, às vezes um mentor e um rival — que mudam com os anos. Conflito no trabalho se resolve conversando, negociando, no RH, com transferência, sindicato ou pedindo demissão.',
+      'Concursos com edital de verdade: vagas, inscritos, classificação, cadastro reserva e convocação pela fila — e os editais que não cabem no seu perfil aparecem com o requisito que falta.',
+      'Novos acontecimentos na infância, na família, na escola, em casa, no dinheiro, na saúde e na cidade — alguns lembram o que aconteceu anos antes.'
+    ],
+    melhorias: [
+      'As decisões do processo dizem quem defende, quem paga e quem julga.',
+      'O que cada posto de uma organização permite fica dito na ficha dela.'
+    ],
+    correcoes: [
+      '"A primeira palavra" (e os outros marcos de uma vez só) não se repete mais para a mesma criança — nem quando ela passa a ser jogada.',
+      'O noivado não vira casamento sozinho: dá para adiar o casamento ou desfazer o noivado.',
+      'Contratar advogado particular aparece sempre que a defesa é pública (com o preço e o motivo quando falta dinheiro); o jogo não paga advogado por você, e a defesa narrada é a escolhida.',
+      'As provas de um processo do Submundo passaram a sair do quanto se sabia de você antes do processo (antes, começavam sempre fracas).'
+    ]
+  },
+  {
     versao: '12.25',
     data: '2026-10-25',
     titulo: 'Submundo vivo, carreira criminal e Justiça',

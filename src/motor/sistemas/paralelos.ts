@@ -62,13 +62,17 @@ export interface OfertaParalela {
 const grande = (id: string) => ['metropole', 'capital'].includes(municipio(id).perfil);
 
 /** Os mercados que esta vida enxerga hoje (o por fora, só com gente no caminho). */
+/** REWORK 12.3 · B4: Vida → Compras mostra só o que é legal; o que é clandestino mora no Submundo → Mercados paralelos. */
+export const mercadosLegais = (v: Vida) => mercadosVisiveis(v).filter(m => MERCADOS_PARALELOS[m].legal);
+export const mercadosClandestinos = (v: Vida) => mercadosVisiveis(v).filter(m => !MERCADOS_PARALELOS[m].legal);
 export function mercadosVisiveis(v: Vida): MercadoParalelo[] {
   if (idade(v) < 18) return [];
   const onde = v.moradia.municipioId;
   const out: MercadoParalelo[] = ['feira'];
   if (grande(onde)) out.push('antiquario_vago');
   if (grande(onde) && patrimonio(v) >= 2_000_000) out.push('privada_incerta');
-  if (ativo(v) && contatosAtivos(v).length > 0) out.push('por_fora');
+  // REWORK 12.3 · B4: o mercado por fora também para quem não é do meio, mas foi apresentado (o contratante ocasional).
+  if ((ativo(v) && contatosAtivos(v).length > 0) || v.caminhos.contratante?.apresentado !== undefined) out.push('por_fora');
   return out;
 }
 

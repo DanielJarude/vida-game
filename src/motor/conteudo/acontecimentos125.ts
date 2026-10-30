@@ -33,7 +33,7 @@ import { afastar, anotar, lembrarOrg, orgPorId } from '../sistemas/submundo';
 import { comecarASair, garantirCarreira } from '../sistemas/carreiraCriminal';
 import { pagarPorFora, pedirRumo } from '../sistemas/porFora';
 import { historiaDoContato, mudarConfianca, valorDeFavor } from '../sistemas/redeCriminal';
-import { executarOrg, lider, orgViva, relacaoCom, nivelDe, regiaoDaPessoa, nomeDaRegiao } from '../sistemas/faccoes';
+import { definirEstado, estadoEntre, executarOrg, lider, NOME_DO_ESTADO_ENTRE, orgViva, relacaoCom, nivelDe, regiaoDaPessoa, nomeDaRegiao, resolverDupla } from '../sistemas/faccoes';
 import { abrigoPossivel, custoDaMudanca, executarDefesa } from '../sistemas/defesa';
 import { abalar } from '../sistemas/abalo';
 import { proporEncomenda } from '../sistemas/encomendas';
@@ -163,12 +163,33 @@ export const ACONTECIMENTOS_125: Conteudo[] = ([
     texto: c => { const [a, b] = env(c).cenas125!['sub125_rivalidade'].split('|').map(x => orgViva(c.v, x)!); return `${cap(b.nome)} quer mais espaço em ${nomeDaRegiao(c.v.moradia.municipioId, regiaoDaPessoa(c.v))} — onde ${a.nome} também está. Os moradores e o comércio já reclamam do clima; quem manda em ${a.nome} quer saber o que você acha.`; },
     opcoes: [
       { id: 'tregua', texto: 'Propor uma conversa com o outro lado', comportamento: { empatia: 1 },
-        resolver: c => { const [a, b] = env(c).cenas125!['sub125_rivalidade'].split('|').map(x => orgViva(c.v, x)!); const deu = c.r.chance(0.5); return { texto: deu ? 'Houve conversa. Cada um ficou com o seu pedaço — por enquanto. O bairro respirou.' : 'A conversa não aconteceu: do outro lado, ninguém quis sentar.', memoria: null, efeito: () => { if (deu) { b.rivais = b.rivais.filter(x => x !== a.id); a.rivais = a.rivais.filter(x => x !== b.id); } const rel = env(c).organizacoes?.find(x => x.id === a.id); if (rel) lembrarOrg(rel, c.v.t, deu ? 'favor' : 'conflito', deu ? 5 : -2); } }; } },
+        resolver: c => { const [a, b] = env(c).cenas125!['sub125_rivalidade'].split('|').map(x => orgViva(c.v, x)!); const deu = c.r.chance(0.5); return { texto: deu ? 'Houve conversa. Cada um ficou com o seu pedaço — por enquanto. O bairro respirou.' : 'A conversa não aconteceu: do outro lado, ninguém quis sentar.', memoria: null, efeito: () => { if (deu) definirEstado(a, b, 'tregua'); const rel = env(c).organizacoes?.find(x => x.id === a.id); if (rel) lembrarOrg(rel, c.v.t, deu ? 'favor' : 'conflito', deu ? 5 : -2); } }; } },
       { id: 'firme', texto: 'Defender o espaço', comportamento: { coragem: 1 },
         consequencia: () => 'A organização lembra de quem ficou firme; a Justiça e o bairro também reparam.',
         resolver: c => { const [a, b] = env(c).cenas125!['sub125_rivalidade'].split('|').map(x => orgViva(c.v, x)!); const reg = regiaoDaPessoa(c.v); return { texto: 'Vocês não recuaram. O pedaço continua de quem estava — com mais gente olhando.', memoria: null, efeito: () => { a.influencia[reg] = clamp((a.influencia[reg] ?? 0) + 6); b.influencia[reg] = clamp((b.influencia[reg] ?? 0) - 6); a.pressao = clamp(a.pressao + 8); env(c).exposicao = clamp(env(c).exposicao + 6); const rel = env(c).organizacoes?.find(x => x.id === a.id); if (rel) lembrarOrg(rel, c.v.t, 'favor', 6); estresse(c, 4); } }; } },
       { id: 'recuar', texto: 'Recuar: não vale a briga', comportamento: { disciplina: 1 },
         resolver: c => { const [a, b] = env(c).cenas125!['sub125_rivalidade'].split('|').map(x => orgViva(c.v, x)!); const reg = regiaoDaPessoa(c.v); return { texto: 'Vocês cederam um pedaço. Menos dinheiro ali — e menos risco.', memoria: null, efeito: () => { a.influencia[reg] = clamp((a.influencia[reg] ?? 0) - 8); b.influencia[reg] = clamp((b.influencia[reg] ?? 0) + 6); const rel = env(c).organizacoes?.find(x => x.id === a.id); if (rel && rel.relacao === 'membro') lembrarOrg(rel, c.v.t, 'conflito', -4); } }; } }
+    ]
+  },
+  /* ------------------------------------------------------------- REWORK 12.3 · A1: de dentro de duas, e as duas sabem */
+  {
+    id: 'sub123_dupla', tipo: 'decisao', idade: [16, 90], tema: 'escolha', prioritario: true, prioridade: 4, repetir: 2,
+    quando: c => deHoje(c, 'sub123_dupla') && ativo(c) && (env(c).cenas125?.['sub123_dupla'] ?? '').split('|').every(x => !!orgViva(c.v, x)),
+    titulo: 'De que lado você está',
+    texto: c => {
+      const [a, b] = env(c).cenas125!['sub123_dupla'].split('|').map(x => orgViva(c.v, x)!);
+      const la = lider(a), lb = lider(b);
+      return `${cap(a.nome)} e ${b.nome} estão ${NOME_DO_ESTADO_ENTRE[estadoEntre(a, b)]} — e as duas sabem que você é de dentro de ambas. ${la ? `${la.nome}` : 'Quem manda numa'} mandou chamar; ${lb ? `${lb.nome}` : 'quem manda na outra'} também. Ninguém quer ouvir "depende".`;
+    },
+    opcoes: [
+      { id: 'a', texto: c => `Ficar com ${orgViva(c.v, env(c).cenas125!['sub123_dupla'].split('|')[0])!.nome}`,
+        resolver: c => { const [a, b] = env(c).cenas125!['sub123_dupla'].split('|'); return { texto: resolverDupla(c.v, a, b, 'escolher'), memoria: `Escolheu ficar com ${orgViva(c.v, a)!.nome}.`, relevancia: 'biografia' }; } },
+      { id: 'b', texto: c => `Ficar com ${orgViva(c.v, env(c).cenas125!['sub123_dupla'].split('|')[1])!.nome}`,
+        resolver: c => { const [a, b] = env(c).cenas125!['sub123_dupla'].split('|'); return { texto: resolverDupla(c.v, b, a, 'escolher'), memoria: `Escolheu ficar com ${orgViva(c.v, b)!.nome}.`, relevancia: 'biografia' }; } },
+      { id: 'negar', texto: 'Negar tudo', comportamento: { impulsividade: 1 }, consequencia: () => 'Se acreditarem, ganha tempo. Se não, uma das duas põe você para fora.',
+        resolver: c => { const [a, b] = env(c).cenas125!['sub123_dupla'].split('|'); return { texto: resolverDupla(c.v, a, b, 'negar'), memoria: null }; } },
+      { id: 'ponte', texto: 'Propor ser a ponte entre as duas', comportamento: { coragem: 1 }, consequencia: c => { const [a, b] = env(c).cenas125!['sub123_dupla'].split('|').map(x => orgViva(c.v, x)!); return estadoEntre(a, b) === 'conflito' ? 'Em conflito aberto, ninguém quer ponte.' : 'Se toparem, as duas fazem negócio por você. Se não, as duas desconfiam mais.'; },
+        resolver: c => { const [a, b] = env(c).cenas125!['sub123_dupla'].split('|'); return { texto: resolverDupla(c.v, a, b, 'ponte'), memoria: null }; } }
     ]
   },
   /* ------------------------------------------------------------- a oferta de aliança */

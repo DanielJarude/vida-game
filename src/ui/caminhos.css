@@ -132,3 +132,11 @@
 .objetivo__situacao--longe { color: var(--danger); }
 .objetivo__passo { font-family: var(--font-serif); font-style: italic; color: var(--text-secondary); max-width: 64ch; }
 .preparo-cursinho { padding: var(--space-3) 0; display: flex; flex-direction: column; gap: var(--space-2); }
+
+/* REWORK 12.3 · E1/E10: a equipe do emprego; os editais que ainda não cabem no perfil */
+.equipe-trabalho { margin-top: var(--space-2); }
+.equipe-trabalho > summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; }
+.equipe-trabalho__lista { margin: 0; padding-left: 1.2em; }
+.concursos-fora { margin-top: var(--space-3); }
+.concursos-fora > summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; }
+.lista-simples { margin: 0; padding-left: 1.2em; }

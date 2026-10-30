@@ -39,8 +39,12 @@ import { FichaDeAntecedentes, FichaDoProcesso } from './Margem';
 import { carimboDoCaminho, FrentesDoCaminho, NegociosPorFora } from './Submundo';
 import { PainelDaPena } from './Trabalho';
 import type { Ramo } from '../../motor/tipos';
+import { canais, leituraDaCorrupcao, naoRegularizado, valorDaProposta, type CanalDeCorrupcao } from '../../motor/sistemas/corrupcaoJudicial';
+import { alvosPossiveis, intermediario, SERVICOS, type TipoDeServico } from '../../motor/sistemas/servicosPorFora';
+import { mercadosClandestinos } from '../../motor/sistemas/paralelos';
+import { MercadoParaleloDaCidade } from './material/LugaresDoLuxo';
 
-type Parte = 'geral' | 'carreira' | 'atividades' | 'contatos' | 'organizacoes' | 'negocios' | 'justica' | 'historico';
+type Parte = 'geral' | 'carreira' | 'atividades' | 'contatos' | 'organizacoes' | 'negocios' | 'mercados' | 'pedidos' | 'justica' | 'historico';
 const crime = (acao: AcaoDoCrime): Acao => ({ tipo: 'crime', acao });
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const pct = (x: number) => `${Math.round(x * 100)}%`;
@@ -83,7 +87,7 @@ export function SubmundoVivo({ vida, agir }: { vida: Vida; agir: (a: Acao) => bo
   const est = estadoNoSubmundo(vida);
   const e = vida.caminhos.envolvimento;
   const j = vida.justica;
-  if (!e && !j?.processo && !j?.prisao && !j?.foragido && !(j?.antecedentes.length) && !j?.alternativa) return <APorta vida={vida} agir={agir} />;
+  if (!e && !j?.processo && !j?.prisao && !j?.foragido && !(j?.antecedentes.length) && !j?.alternativa) return <><APorta vida={vida} agir={agir} /><PedidosPorFora vida={vida} agir={agir} /><MercadoPorFora vida={vida} agir={agir} /></>;
   const enc = e ? leituraDasEncomendas(vida) : undefined;
   const orgs = e ? leituraDasOrganizacoes(vida) : [];
   const contatos = Object.keys(e?.fichas ?? {}).filter(id => vida.pessoas[id]).length;
@@ -97,6 +101,8 @@ export function SubmundoVivo({ vida, agir }: { vida: Vida; agir: (a: Acao) => bo
       { id: 'organizacoes' as const, rotulo: 'Organizações', conta: orgs.filter(o => o.disputa && (o.vinculo === 'integrante' || o.vinculo === 'lideranca')).length },
       { id: 'negocios' as const, rotulo: 'Negócios' }
     ] : []),
+    ...(mercadosClandestinos(vida).length ? [{ id: 'mercados' as const, rotulo: 'Mercados paralelos' }] : []),
+    ...(idade(vida) >= 18 ? [{ id: 'pedidos' as const, rotulo: 'Pedidos por fora' }] : []),
     { id: 'justica', rotulo: 'Justiça', conta: etapa && etapa.etapa !== 'suspeita' && etapa.etapa !== 'cumprimento' ? 1 : 0 },
     { id: 'historico', rotulo: 'Histórico' }
   ];
@@ -112,6 +118,8 @@ export function SubmundoVivo({ vida, agir }: { vida: Vida; agir: (a: Acao) => bo
         {atual === 'contatos' && <Contatos vida={vida} agir={agir} />}
         {atual === 'organizacoes' && <Organizacoes vida={vida} agir={agir} />}
         {atual === 'negocios' && <NegociosPorFora vida={vida} agir={agir} ativo={!!e && e.parou === undefined && !j?.prisao} />}
+        {atual === 'mercados' && <MercadoPorFora vida={vida} agir={agir} />}
+        {atual === 'pedidos' && <PedidosPorFora vida={vida} agir={agir} />}
         {atual === 'justica' && <Justica vida={vida} agir={agir} />}
         {atual === 'historico' && <Historico vida={vida} />}
       </div>
@@ -219,6 +227,8 @@ function VisaoGeral({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) 
             </dl>
           ) : <p className="svivo-nota">Nada entrou nem saiu por fora no último ano fechado.</p>}
           <p className="svivo-nota">Não é salário: varia de um ano para outro. Está no extrato do ano (Vida · Dinheiro), numa linha própria.</p>
+          {naoRegularizado(vida) >= 20000 && <p className="svivo-nota">Entrou por fora e ainda está "solto" (é o que a Justiça mais facilmente acha): uns {dinheiroCurto(naoRegularizado(vida))}{e?.regularizado ? `; já "posto em ordem": uns ${dinheiroCurto(e.regularizado)}` : ''}.</p>}
+          <div className="grupo-acoes"><BotaoAcao vida={vida} acao={crime({ area: 'dinheiro', oque: 'regularizar' })} agir={agir} variante="discreto" ocultarImpossivel ocultarBloqueado>Pôr o dinheiro em ordem (ilegal; não protege tudo)</BotaoAcao></div>
         </section>
       )}
       {fam.length > 0 && (
@@ -401,9 +411,16 @@ function Organizacoes({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }
                 {o.posto && <div><dt>Seu posto</dt><dd>{o.posto}{o.proximoPosto && dentro && !o.propria ? ` (próximo: ${o.proximoPosto})` : ''}</dd></div>}
                 {o.lider && <div><dt>Quem manda</dt><dd>{o.lider}</dd></div>}
                 {o.parte ? <div><dt>A sua parte (um ano bom)</dt><dd>uns {dinheiroCurto(o.parte)}</dd></div> : null}
-                {o.aliadas.length > 0 && <div><dt>Aliadas</dt><dd>{o.aliadas.join(', ')}</dd></div>}
-                {o.rivais.length > 0 && <div><dt>Rivais</dt><dd>{o.rivais.join(', ')}</dd></div>}
+                <div><dt>Alcance</dt><dd>{o.alcance}{o.distancia === 'longe' ? ' · você está longe (vínculo à distância)' : o.distancia === 'fora' ? ' · fora do alcance (vínculo parado)' : ''}</dd></div>
+                {o.secreto && <div><dt>O vínculo</dt><dd>secreto — as outras não sabem{o.suspeita >= 30 ? ' (e já desconfiam)' : ''}</dd></div>}
+                {o.rachaDe && <div><dt>Origem</dt><dd>nasceu de um racha em {o.rachaDe}</dd></div>}
               </dl>
+              {o.relacoes.length > 0 && (
+                <ul className="svivo-relacoes" aria-label={contrair(`Como ${o.nome} está com as outras`)}>
+                  {o.relacoes.map(r => <li key={r.id} className={`svivo-relacoes__item svivo-relacoes__item--${r.estado}`}>{cap(r.nome)}: <strong>{r.nomeEstado}</strong></li>)}
+                </ul>
+              )}
+              {o.poderes.length > 0 && <p className="svivo-nota">O seu posto permite: {o.poderes.join('; ')}.</p>}
               <div className="svivo-tres">
                 <div><span className="svivo-rotulo">Força</span><Medidor valor={o.forca} rotulo={`Força de ${o.nome}`} /></div>
                 <div><span className="svivo-rotulo">União</span><Medidor valor={o.coesao} rotulo={`Coesão de ${o.nome}`} /></div>
@@ -426,6 +443,8 @@ function Organizacoes({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }
                 <BotaoAcao vida={vida} acao={A('conversar')} agir={agir} variante="discreto" ocultarImpossivel ocultarBloqueado>Saber como andam as coisas</BotaoAcao>
                 <BotaoAcao vida={vida} acao={A('tarefa')} agir={agir} variante="discreto" ocultarImpossivel ocultarBloqueado>Pedir trabalho</BotaoAcao>
                 <BotaoAcao vida={vida} acao={A('filiar')} agir={agir} variante="secundario" ocultarImpossivel>Pedir para entrar</BotaoAcao>
+                <BotaoAcao vida={vida} acao={A('filiar_secreto')} agir={agir} variante="discreto" ocultarImpossivel ocultarBloqueado>Entrar sem que as outras saibam</BotaoAcao>
+                <BotaoAcao vida={vida} acao={A('reuniao')} agir={agir} variante="discreto" ocultarImpossivel ocultarBloqueado>Ir à reunião do grupo</BotaoAcao>
                 <BotaoAcao vida={vida} acao={A('promocao')} agir={agir} variante="secundario" ocultarImpossivel>Pedir para subir</BotaoAcao>
                 <BotaoAcao vida={vida} acao={A('sair')} agir={agir} variante="discreto" ocultarImpossivel>Pedir para sair</BotaoAcao>
               </div>
@@ -440,6 +459,8 @@ function Organizacoes({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }
                     <BotaoAcao vida={vida} acao={A('mediar')} agir={agir} variante="secundario" ocultarImpossivel>Resolver a briga interna</BotaoAcao>
                     <BotaoAcao vida={vida} acao={A('recolher')} agir={agir} variante="secundario" ocultarImpossivel>Mandar recolher (a pressão está alta)</BotaoAcao>
                     <BotaoAcao vida={vida} acao={A('presenca', reg)} agir={agir} variante="discreto" ocultarImpossivel>{contrair(`Fazer-se presente em ${nomeDaRegiao(vida.moradia.municipioId, reg)}`)}</BotaoAcao>
+                    {o.relacoes.filter(r => ['rivalidade', 'conflito', 'ruptura'].includes(r.estado)).map(r => <BotaoAcao key={`t${r.id}`} vida={vida} acao={A('tregua', r.id)} agir={agir} variante="secundario" ocultarImpossivel>{contrair(`Negociar uma trégua com ${r.nome}`)}</BotaoAcao>)}
+                    {o.relacoes.filter(r => ['neutralidade', 'concorrencia', 'tregua'].includes(r.estado)).map(r => <BotaoAcao key={`c${r.id}`} vida={vida} acao={A('cooperar', r.id)} agir={agir} variante="discreto" ocultarImpossivel>{contrair(`Propor um negócio a ${r.nome}`)}</BotaoAcao>)}
                     {os.filter(x => x.id !== o.id && x.daqui && x.estado !== 'extinta').map(x => o.aliadas.includes(x.nome)
                       ? <BotaoAcao key={x.id} vida={vida} acao={A('romper', x.id)} agir={agir} variante="discreto" ocultarImpossivel>{contrair(`Romper com ${x.nome}`)}</BotaoAcao>
                       : <BotaoAcao key={x.id} vida={vida} acao={A('alianca', x.id)} agir={agir} variante="discreto" ocultarImpossivel>{contrair(`Propor aliança a ${x.nome}`)}</BotaoAcao>)}
@@ -504,12 +525,84 @@ function Justica({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
         <BotaoAcao vida={vida} acao={J('recorrer')} agir={agir} variante="secundario" ocultarImpossivel ocultarBloqueado>Recorrer da condenação</BotaoAcao>
         <BotaoAcao vida={vida} acao={J('abandonar_pena')} agir={agir} variante="discreto" ocultarImpossivel>Deixar de cumprir a pena alternativa</BotaoAcao>
       </div>
+      {j?.bloqueado && <p className="svivo-nota">Bloqueado pela Justiça neste processo: <strong>{dinheiroCurto(j.bloqueado.valor)}</strong> (volta na absolvição; paga o confisco na condenação).</p>}
+      <PorForaDosAutos vida={vida} agir={agir} />
       {j?.alternativa && <p className="svivo-nota">A pena alternativa ocupa a manhã de sábado até {anoDe(j.alternativa.tFim)} (Minha semana).</p>}
       {j?.prisao && <PainelDaPena vida={vida} agir={agir} />}
       {j?.foragido && <Procurado vida={vida} agir={agir} />}
       <FichaDeAntecedentes vida={vida} agir={agir} />
       <p className="svivo-nota">As regras daqui: {regras.acordo ? 'há acordo com a acusação' : 'não há acordo com a acusação'}; {regras.fianca ? 'há fiança' : 'não há fiança'}; {regras.colaboracao ? 'a colaboração reduz a pena' : 'a colaboração não reduz a pena'}; a defesa gratuita é {regras.defensoria}. Dinheiro paga advogado, não compra absolvição.</p>
     </>
+  );
+}
+
+/* ================================================================ REWORK 12.3 · C1/H4: por fora dos autos (ilegal) */
+
+const NOME_CANAL: Record<CanalDeCorrupcao, (quem: string) => string> = {
+  contato: q => `Mandar a proposta por ${q}`, org: q => `Pedir a ${q} que chegue a quem julga`, influencia: () => 'Usar o seu próprio peso (nome, cargo, dinheiro)'
+};
+function PorForaDosAutos({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
+  const p = vida.justica?.processo;
+  const historico = leituraDaCorrupcao(vida);
+  if (!p && !historico.length) return null;
+  const cs = p ? canais(vida) : [];
+  return (
+    <div className="svivo-bloco svivo-bloco--ilegal" role="group" aria-label="Por fora dos autos — ilegal">
+      <p className="svivo-cartao__titulo">Por fora dos autos <span className="svivo-selo-ilegal">ilegal</span></p>
+      {p && <p className="svivo-nota">Isto não é defesa: é tentar comprar quem julga (uns {dinheiroCurto(valorDaProposta(vida))}). Pode ser recusado, denunciado, ou aceito sem entregar nada — e pode vir à tona anos depois. Contratar advogado é outra coisa, e é legal.</p>}
+      {p && (cs.length
+        ? <div className="grupo-acoes">{cs.map(c => <BotaoAcao key={c.canal} vida={vida} acao={crime({ area: 'corrupcao', canal: c.canal })} agir={agir} variante="discreto" ocultarImpossivel>{contrair(NOME_CANAL[c.canal](c.quem))}</BotaoAcao>)}</div>
+        : <p className="svivo-nota">Você não tem caminho até quem julga: falta um contato do meio de confiança, uma organização com gente no fórum, ou um nome com peso.</p>)}
+      {historico.length > 0 && <ul className="svivo-lista-simples">{historico.map((x, k) => <li key={k}>{x}</li>)}</ul>}
+    </div>
+  );
+}
+
+/* ================================================================ REWORK 12.3 · B2: pedidos por fora (de quem não é do meio) */
+
+function PedidosPorFora({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
+  if (idade(vida) < 18 || vida.justica?.prisao) return null;
+  const quem = intermediario(vida);
+  const alvos = alvosPossiveis(vida).slice(0, 3);
+  const feitos = vida.caminhos.contratante?.servicos ?? [];
+  return (
+    <section className="divisao__secao svivo-pedidos" aria-labelledby="titulo-pedidos-por-fora">
+      <h2 id="titulo-pedidos-por-fora" className="secao-fio">Pedidos por fora</h2>
+      <p className="svivo-nota">Quem leva vida legal também pode, numa circunstância, pedir algo por fora — sem virar do meio. É crime, e pode vir à tona. Para quase todo conflito existe saída legal, dita ao lado de cada pedido.</p>
+      {!quem ? <p className="svivo-nota">Não há a quem pedir: ninguém das suas relações vive na beira o bastante para conhecer quem faz isso.</p> : <p className="svivo-nota">Quem conhece alguém: <strong>{quem.nome}</strong>.</p>}
+      {quem && (
+        <ul className="svivo-cartoes">
+          {(Object.keys(SERVICOS) as TipoDeServico[]).map(t => {
+            const s = SERVICOS[t];
+            return (
+              <li key={t} className="svivo-cartao">
+                <p className="svivo-cartao__titulo">{s.nome} <span className="svivo-selo-ilegal">ilegal</span></p>
+                {s.legal !== '—' && <p className="svivo-nota">Saída legal: {s.legal}</p>}
+                <div className="grupo-acoes">
+                  {s.contraAlguem
+                    ? (alvos.length ? alvos.map(a => <BotaoAcao key={a.id} vida={vida} acao={crime({ area: 'servico', tipo: t, alvoId: a.id })} agir={agir} variante="discreto" ocultarImpossivel>{`Contra ${a.nome}`}</BotaoAcao>) : <span className="svivo-nota">Só aparece quem está em conflito de verdade com você.</span>)
+                    : <BotaoAcao vida={vida} acao={crime({ area: 'servico', tipo: t })} agir={agir} variante="discreto" ocultarImpossivel>Pedir</BotaoAcao>}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {feitos.length > 0 && <ul className="svivo-lista-simples">{feitos.slice().reverse().map((x, k) => <li key={k}>{anoDe(x.t)} · {SERVICOS[x.tipo].nome}{x.alvoId && vida.pessoas[x.alvoId] ? ` (${vida.pessoas[x.alvoId].nome})` : ''} — {x.resultado === 'feito' ? 'feito' : x.resultado === 'falhou' ? 'deu errado' : 'o dinheiro sumiu'}{x.descoberto !== undefined ? `; veio à tona em ${anoDe(x.descoberto)}` : ''}</li>)}</ul>}
+    </section>
+  );
+}
+
+/* ================================================================ REWORK 12.3 · B4: o mercado por fora mora aqui (não em Compras) */
+
+function MercadoPorFora({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
+  const ms = mercadosClandestinos(vida);
+  if (!ms.length) return null;
+  return (
+    <section className="divisao__secao" aria-label="Mercados paralelos">
+      <p className="svivo-nota">Comércio clandestino: peças sem papel, para quem não pergunta. Comprar sabendo é crime — e o que é roubado pode ser apreendido.</p>
+      {ms.map(m => <MercadoParaleloDaCidade key={m} vida={vida} agir={agir} mercado={m} />)}
+    </section>
   );
 }
 

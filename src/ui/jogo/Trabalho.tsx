@@ -38,7 +38,8 @@ import { contaDoAno, dedicacaoDe, donoIntegral, estrategiaDe, leituraDoNegocio, 
 import { rotuloEstrategia } from '../../motor/dados/negocios';
 import { leituraPolitica, naPolitica, nomeDaBandeira } from '../../motor/sistemas/politica';
 import { escadaMilitar, perspectivasMilitares } from '../../motor/sistemas/militar';
-import { editaisAbertos, FOCO_DO_CARGO, lerPreparo, NOME_FOCO } from '../../motor/sistemas/concurso';
+import { editaisAbertos, editalDe, FOCO_DO_CARGO, lerPreparo, NOME_DA_ESFERA, NOME_FOCO } from '../../motor/sistemas/concurso';
+import { leituraDaEquipe } from '../../motor/sistemas/equipe';
 import { caminhosPossiveis, emConstrucao, type CaminhoPossivel } from '../../motor/sistemas/caminhosDeVida';
 import { perfilParaVaga, type PerfilVaga } from '../../motor/sistemas/empregabilidade';
 import { BlocoDeVagas, CaminhosPossiveis, EmConstrucao, PerfilDaVaga, ProximoPassoPainel } from './Caminhos';
@@ -766,6 +767,7 @@ function PainelCarreiraPublica({ vida }: { vida: Vida }) {
         {docente && <Dado rotulo="Turmas">{ritmoDe(e) === 'puxado' ? 'carga a mais' : ritmoDe(e) === 'leve' ? 'carga reduzida' : 'a carga de sempre'}</Dado>}
       </dl>
       <Clima vida={vida} />
+      <EquipeDoTrabalho vida={vida} />
     </section>
   );
 }
@@ -794,6 +796,7 @@ function PainelEstrada({ vida }: { vida: Vida }) {
       <Horizonte vida={vida} />
       <p className="nota">{estradaNaArea(vida)}</p>
       <Clima vida={vida} />
+      <EquipeDoTrabalho vida={vida} />
     </section>
   );
 }
@@ -807,6 +810,22 @@ function Clima({ vida }: { vida: Vida }) {
       {chefe && <Retrato visual={chefe.visual} genero={chefe.genero} idade={idadePessoa(vida, chefe)} semente={chefe.id} tamanho={28} especie={chefe.especie} rotulo={chefe.nome} />}
       <span><span className="clima__rotulo">Clima: {c.palavra}.</span> {c.texto}</span>
     </p>
+  );
+}
+
+/** REWORK 12.3 · E1/E8: a gente do emprego, com nome (a chefia, os colegas, quem responde a você, o mentor, o rival) e as sanções administrativas. */
+function EquipeDoTrabalho({ vida }: { vida: Vida }) {
+  const eq = leituraDaEquipe(vida);
+  const sancoes = vida.trabalho.atual?.sancoes ?? [];
+  if (!eq.length && !sancoes.length) return null;
+  return (
+    <details className="equipe-trabalho">
+      <summary>A equipe ({eq.length} {eq.length === 1 ? 'pessoa' : 'pessoas'})</summary>
+      <ul className="equipe-trabalho__lista">
+        {eq.map(x => <li key={x.id}><strong>{x.nome}</strong> · {x.papel}{x.tensao >= 55 ? ' · clima pesado' : x.proximidade >= 55 ? ' · se dão bem' : ''}</li>)}
+      </ul>
+      {sancoes.length > 0 && <p className="nota">Na ficha deste emprego (administrativo, não é a Justiça): {sancoes.map(x => `${x.tipo === 'advertencia' ? 'advertência' : 'suspensão'} em ${anoDe(x.t)}`).join('; ')}.</p>}
+    </details>
   );
 }
 
@@ -1195,7 +1214,10 @@ function CatalogoDeVagas({ vida, agir, atual }: { vida: Vida; agir: (a: Acao) =>
 
 
 export function Concursos({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao) => boolean; irPara: (a: Aba) => void }) {
-  const editais = editaisAbertos(vida).map(oc => ({ oc, d: elegibilidade(vida, oc) })).filter(x => podeTentar(x.d));
+  const todos = editaisAbertos(vida).map(oc => ({ oc, d: elegibilidade(vida, oc) }));
+  const editais = todos.filter(x => podeTentar(x.d));
+  // REWORK 12.3 · E10.2: os editais abertos que não cabem no seu perfil, com o requisito que falta (não somem em silêncio).
+  const fora = todos.filter(x => !podeTentar(x.d) && x.d.grau !== 'impossivel').slice(0, 8);
   const c = vida.caminhos.concurso;
   const estudando = vida.rotinas.some(r => r.id === 'estudar_concurso');
   const anos = Math.round(c.meses / 12);
@@ -1213,6 +1235,7 @@ export function Concursos({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao) 
             <li key={oc.id} className="vaga">
               <div className="vaga__texto preparo">
                 <strong>{nomeOcupacao(vida, oc)}</strong>
+                {(() => { const ed = editalDe(vida, oc); return <span className="preparo__fator">{ed.modalidade === 'processo_seletivo' ? 'Processo seletivo' : 'Concurso'} {NOME_DA_ESFERA[ed.esfera]}: {ed.vagas} {ed.vagas === 1 ? 'vaga' : 'vagas'}, uns {ed.inscritos.toLocaleString('pt-BR')} inscritos ({ed.porVaga} por vaga). Aprovação não é posse: depois vêm a classificação e a convocação.</span>; })()}
                 <span className="preparo__palavra">Preparo: {l.palavra}.{foco ? ` Área: ${NOME_FOCO[foco]}.` : ''}</span>
                 <span>{l.frase}</span>
                 {l.desde && <span className="preparo__fator">{l.desde}</span>}
@@ -1223,6 +1246,13 @@ export function Concursos({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao) 
           );
         })}
       </ul>
+      {fora.length > 0 && (
+        <details className="concursos-fora">
+          <summary>Editais abertos que ainda não cabem no seu perfil ({fora.length})</summary>
+          <ul className="lista-simples">{fora.map(({ oc, d }) => <li key={oc.id}><strong>{nomeOcupacao(vida, oc)}</strong>: {d.motivo}</li>)}</ul>
+        </details>
+      )}
+      {vida.caminhos.concurso.reserva && <p className="nota">Cadastro reserva: {nomeOcupacao(vida, ocupacao(vida.caminhos.concurso.reserva.ocupacaoId))}{vida.caminhos.concurso.reserva.posicao ? ` — ${vida.caminhos.concurso.reserva.posicao}º lugar para ${vida.caminhos.concurso.reserva.vagas} vagas` : ''}, até {anoDe(vida.caminhos.concurso.reserva.tAte)}.</p>}
       {vida.trabalho.candidaturas.length > 0 && <p className="nota">Concurso em andamento: {vida.trabalho.candidaturas.map(x => nomeOcupacao(vida, ocupacao(x.ocupacaoId))).join(', ')} — resultado no próximo ano.</p>}
     </div>
   );

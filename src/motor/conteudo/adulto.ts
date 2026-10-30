@@ -46,6 +46,8 @@ export const ADULTO: Conteudo[] = [
       const vin = vincular(c.v, chefe, { origem: 'trabalho', proximidade: bom ? 30 : 12, convivio: ['trabalho'], estagio: 'colega' });
       vin.ambiente = `trabalho:${e.empregador}:${e.tInicio}`;
       if (!bom) vin.tensao = 25;
+      // REWORK 12.3 · E1: a chefia nova é a da equipe (não um nome solto): quem chefiava sai do dia a dia.
+      if (e.equipe) { const ant = e.equipe.chefeId; if (ant && c.v.vinculos[ant]) c.v.vinculos[ant].convivio = c.v.vinculos[ant].convivio.filter(x => x !== 'trabalho'); e.equipe.chefeId = chefe.id; }
       const jeito = bom
         ? c.r.pick(['passou a elogiar em público e cobrar em particular', 'chegou ouvindo todo mundo antes de mudar qualquer coisa', 'brigou pela equipe na primeira reunião com a diretoria'])
         : c.r.pick(['chegou mudando tudo e desconfiando de todo mundo', 'começou a mandar mensagem às dez da noite', 'passou a controlar o horário de almoço no relógio']);

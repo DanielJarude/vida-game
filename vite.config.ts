@@ -134,7 +134,7 @@ export default defineConfig({
           // REWORK 11: as cenas que lembram (`situacoesMemoria`, que lê o banco do técnico) e as de arte só as situações chamam.
           // REWORK 12.25: o Submundo vivo (a carreira, as contas por fora, as encomendas, os contatos, as organizações, a
           // Justiça por etapas e o roteador das ações) vai junto: só importa os sistemas e a base; quem o chama está acima.
-          if (/[\\/]src[\\/]motor[\\/]sistemas[\\/](situacoes|situacoesMemoria|situacoesArte|tecnico|visibilidade|legado|retrospectiva|familia|iniciativas|ilicito|pessoa|sucessao|tribunal|margem|submundo|clandestinos|paralelos|porFora|carreiraCriminal|encomendas|redeCriminal|faccoes|defesa|acoesDoCrime|relatoDoCrime|atoresJudiciais|corrupcaoJudicial)\.ts/.test(id)) return 'motor-carreira';
+          if (/[\\/]src[\\/]motor[\\/]sistemas[\\/](situacoes|situacoesMemoria|situacoesArte|tecnico|visibilidade|legado|retrospectiva|familia|iniciativas|ilicito|pessoa|sucessao|tribunal|margem|submundo|clandestinos|paralelos|porFora|carreiraCriminal|encomendas|redeCriminal|faccoes|defesa|acoesDoCrime|relatoDoCrime|atoresJudiciais|corrupcaoJudicial|servicosPorFora)\.ts/.test(id)) return 'motor-carreira';
           // REWORK 10.6 · M1: o pacote dos sistemas chegou a 794 kB (5,8 kB de folga). O que lê o ofício e os caminhos da vida
           // como um todo — as ações profissionais (`profissao`), os caminhos possíveis, a mudança de país, o fechamento do ano
           // e as habilitações — só importa os sistemas e a base, e só é chamado de cima (as ações, o ano, os textos, as telas,

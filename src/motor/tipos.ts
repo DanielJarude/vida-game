@@ -923,6 +923,13 @@ export interface Emprego {
    * (`trabalho.registrarPosto`). Saves antigos não têm: o histórico começa daqui.
    */
   postos?: { ocupacaoId: string; t: number }[];
+  /**
+   * REWORK 12.3 · E1: a gente deste emprego (ids de `pessoas`): quem chefia, os colegas, quem responde a você, o mentor, o
+   * rival, o reencontro (alguém da sua história que trabalha lá) e o conflito aberto (quem). Ausente: montada no ano.
+   */
+  equipe?: { chefeId?: string; colegas: string[]; subordinados?: string[]; mentorId?: string; rivalId?: string; reencontro?: string; conflito?: string };
+  /** REWORK 12.3 · E8: advertências e suspensões — administrativas (do emprego), não judiciais. */
+  sancoes?: { t: number; tipo: 'advertencia' | 'suspensao'; motivo: string }[];
 }
 
 export interface Candidatura {
@@ -935,6 +942,8 @@ export interface Candidatura {
   chance: number;
   /** Concursos têm prova; o resultado também depende do estudo até lá. */
   concurso: boolean;
+  /** REWORK 12.3 · E10: o edital em que se inscreveu (as vagas e quantos se inscreveram). Ausente: saves antigos. */
+  edital?: { vagas: number; inscritos: number };
 }
 
 export interface Trabalho {
@@ -2457,7 +2466,7 @@ export interface PreparoConcurso {
   aprovacoes: number;
   ultimaTentativa?: number;
   /** Aprovado fora das vagas: pode ser chamado até `tAte`. */
-  reserva?: { ocupacaoId: string; tAte: number };
+  reserva?: { ocupacaoId: string; tAte: number; /** REWORK 12.3 · E10: a posição e as vagas (a chamada respeita a fila). */ posicao?: number; vagas?: number };
 }
 
 /** Um pequeno negócio ou trabalho por conta com clientela. */
@@ -2642,6 +2651,11 @@ export interface Caminhos {
   rural?: VidaRural;
   /** Envolvimento com atividade ilegal (abstrato: risco e consequência, nunca procedimento). */
   envolvimento?: Envolvimento;
+  /**
+   * REWORK 12.3 · B2: quem leva vida legal e, numa circunstância, encomendou um serviço por fora — SEM virar do meio (não é
+   * `envolvimento`). Guarda quem foi o intermediário e o que foi pedido: o risco de vir à tona continua.
+   */
+  contratante?: { intermediarioId?: string; servicos: ServicoPorFora[]; /** foi apresentado a quem é do meio (o mercado por fora fica acessível) */ apresentado?: number };
   /** A vida política: da reunião de bairro ao mandato — e à volta para casa. */
   politica?: VidaPolitica;
   /** A obra: projetos lançados e como foram recebidos (carreira artística viva). */
@@ -2963,7 +2977,19 @@ export interface OrgViva {
   estado: 'ativa' | 'enfraquecida' | 'extinta';
   historia: { t: number; texto: string }[];
   desde: number;
+  /**
+   * REWORK 12.3 · A2: o estado da relação com cada outra organização (id → estado), que evolui sozinho todo ano. As listas
+   * `aliadas`/`rivais` continuam (derivadas daqui) para quem as lê. Ausente: derivado das listas (saves antigos).
+   */
+  relacoes?: Record<string, EstadoEntreOrgs>;
+  /** REWORK 12.3 · A6: até onde ela chega (ausente: pela força e pelo estilo). */
+  alcance?: 'local' | 'regional' | 'nacional' | 'internacional';
+  /** REWORK 12.3 · A4: nasceu de um racha (de qual organização, e quando). */
+  rachaDe?: { id: string; t: number };
 }
+
+/** REWORK 12.3 · A2: como duas organizações estão uma com a outra. */
+export type EstadoEntreOrgs = 'alianca' | 'cooperacao' | 'neutralidade' | 'concorrencia' | 'rivalidade' | 'tregua' | 'conflito' | 'ruptura';
 
 /** Um nome do quadro de uma organização (vira `Pessoa` só quando o jogador o conhece: `pessoaId`). */
 export interface MembroDaOrg {
@@ -3080,6 +3106,12 @@ export interface RelacaoComOrganizacao {
   pedidos?: Record<string, number>;
   /** REWORK 12.25: expulso (e quando). */
   expulso?: number;
+  /** REWORK 12.3 · A1: o vínculo é secreto (as outras organizações de que você é de dentro não sabem). */
+  secreto?: boolean;
+  /** REWORK 12.3 · A1: o quanto ela desconfia de que você serve a outra (0..100). */
+  suspeita?: number;
+  /** REWORK 12.3 · A6: a distância de agora (a mudança de cidade ou de país): perto, longe (à distância) ou fora do alcance. */
+  distancia?: 'perto' | 'longe' | 'fora';
 }
 
 /* ------------------------------------------------------------- Vida política */
@@ -3557,6 +3589,18 @@ export interface Justica {
   bloqueado?: { valor: number; t: number };
   /** Saiu da prisão em (a volta tem suas próprias portas e barreiras). */
   tSaida?: number;
+}
+
+/** REWORK 12.3 · B2: um serviço encomendado por quem não é do meio (abstrato: o que se pediu, contra quem, no que deu). */
+export interface ServicoPorFora {
+  t: number;
+  tipo: 'informacao' | 'favor' | 'fraude' | 'intimidacao' | 'agressao' | 'apresentacao';
+  alvoId?: string;
+  valor: number;
+  resultado: 'feito' | 'falhou' | 'golpe';
+  /** Chance por ano de vir à tona (cai com o tempo). */
+  risco: number;
+  descoberto?: number;
 }
 
 /** REWORK 12.3 · C3: alguém do sistema de Justiça, com nome e história (não um modificador anônimo). */

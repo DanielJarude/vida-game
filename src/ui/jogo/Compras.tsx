@@ -43,7 +43,7 @@ import { LOJAS_DE_COISAS, type QualLugar } from './material/Lugares';
 import { LOJAS_DE_COLECAO, type LojaDeColecao } from '../../motor/dados/colecionaveis';
 import { lojaDeColecaoNaCidade, ofertasDeColecao } from '../../motor/sistemas/colecao';
 import { lojaDeExoticosNaCidade } from '../../motor/sistemas/exoticos';
-import { MERCADOS_PARALELOS, mercadosVisiveis } from '../../motor/sistemas/paralelos';
+import { MERCADOS_PARALELOS, mercadosLegais } from '../../motor/sistemas/paralelos';
 
 interface Props { vida: Vida; agir: (a: Acao) => boolean; abrir: (l: QualLugar) => void }
 
@@ -149,7 +149,7 @@ function vitrines(v: Vida): { grupo: string; id: string; lugares: Vitrine[] }[] 
       ...(lojaDeExoticosNaCidade(v.moradia.municipioId) ? [{ id: 'exoticos' as QualLugar, nome: 'Animais exóticos', oque: 'Répteis, aves, pequenos mamíferos e peixes que a lei daqui permite', idadeMin: 18, porque: 'Comprar um animal é coisa de adulto.', vitrine: null }] : [])
     ] },
     // REWORK 12.2: o que se compra de segunda mão, sem saber direito de onde veio (o mercado por fora, só para quem tem gente no caminho).
-    ...(mercadosVisiveis(v).length ? [{ grupo: 'Segunda mão, procedência incerta', id: 'paralelos', lugares: mercadosVisiveis(v).map(m => ({ id: m as QualLugar, nome: MERCADOS_PARALELOS[m].nome, oque: MERCADOS_PARALELOS[m].frase.split('.')[0], idadeMin: 18, porque: 'A partir dos 18.', vitrine: null })) }] : [])
+    ...(mercadosLegais(v).length ? [{ grupo: 'Segunda mão e antiguidades (legais)', id: 'paralelos', lugares: mercadosLegais(v).map(m => ({ id: m as QualLugar, nome: MERCADOS_PARALELOS[m].nome, oque: MERCADOS_PARALELOS[m].frase.split('.')[0], idadeMin: 18, porque: 'A partir dos 18.', vitrine: null })) }] : [])
   ];
 }
 

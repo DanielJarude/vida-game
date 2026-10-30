@@ -93,6 +93,28 @@ export function editalAberto(v: Vida, oc: Ocupacao): boolean {
   return hashMisturado(`edital:${oc.id}:${onde}:${anoDe(v.t)}`) < p.frequencia;
 }
 
+/**
+ * REWORK 12.3 · E10.3/E10.4: o EDITAL do ano — quantas vagas e quantos se inscreveram (estável: o mesmo cargo, no mesmo
+ * lugar e ano, tem o mesmo edital). A concorrência muda de um ano para outro: o edital com mais vagas por inscrito é mais
+ * fácil (nunca garantido); o muito disputado, mais difícil (nunca impossível). Seleção simplificada (prova de títulos,
+ * contrato temporário) é "processo seletivo", não concurso de carreira.
+ */
+export interface Edital { vagas: number; inscritos: number; porVaga: number; esfera: PerfilConcurso['esfera']; modalidade: 'concurso' | 'processo_seletivo'; fator: number }
+const SELETIVOS = new Set(['professor_substituto', 'agente_saude']);
+export function editalDe(v: Vida, oc: Ocupacao): Edital {
+  const p = perfilConcurso(oc.id);
+  const m = municipio(v.moradia.municipioId);
+  const onde = p.esfera === 'municipal' ? m.id : p.esfera === 'estadual' ? m.uf : paisDaVida(v);
+  const h = (k: string) => hashMisturado(`edital:${k}:${oc.id}:${onde}:${anoDe(v.t)}`);
+  const vagas = Math.max(1, Math.round((p.esfera === 'municipal' ? 4 + h('v') * 40 : p.esfera === 'estadual' ? 20 + h('v') * 300 : 40 + h('v') * 900) * (p.teto >= 0.2 ? 1.5 : 1)));
+  // A concorrência de referência do cargo sai do teto (o cargo muito disputado tem muita gente por vaga); a do ano varia.
+  const base = Math.round(9 / p.teto);
+  const porVaga = Math.max(2, Math.round(base * (0.55 + h('c') * 1.1)));
+  const fator = clamp(Math.sqrt(base / porVaga), 0.72, 1.35);
+  return { vagas, inscritos: vagas * porVaga, porVaga, esfera: p.esfera, modalidade: SELETIVOS.has(oc.id) ? 'processo_seletivo' : 'concurso', fator };
+}
+export const NOME_DA_ESFERA = { municipal: 'municipal', estadual: 'estadual', federal: 'federal' } as const;
+
 /** Editais abertos agora (para a interface dizer "saiu o edital"). */
 export function editaisAbertos(v: Vida): Ocupacao[] {
   return OCUPACOES.filter(oc => oc.concurso && editalAberto(v, oc));
@@ -185,8 +207,10 @@ export function chanceNoConcurso(v: Vida, oc: Ocupacao): number {
   // Quem traz estrada da área passa mais vezes das etapas que não são prova (título, físico, investigação social).
   const teto = tetoDoConcurso(v, oc);
   let c = 0.01 + (teto - 0.01) * curva;
+  // REWORK 12.3 · E10.3: a concorrência deste edital (mais gente por vaga, menos chance — dentro de limites).
+  if (oc.concurso && editalAberto(v, oc)) c *= editalDe(v, oc).fator;
   if (oc.id === 'musico_orquestra') c = clamp(0.01 + (habilidade(v, 'musica') - 76) / 40, 0.01, p.teto);
-  return clamp(c, 0.01, teto);
+  return clamp(c, 0.01, Math.min(0.6, teto * 1.35));
 }
 
 /**
@@ -266,8 +290,9 @@ export function inscrever(v: Vida, oc: Ocupacao): void {
   const c = v.caminhos.concurso;
   // Voltar a tentar depois de reprovar é comportamento: persistência.
   if (c.tentativas > c.aprovacoes && c.ultimaTentativa !== undefined) marcarFato(v, 'persistiu_concurso');
-  v.trabalho.candidaturas.push({ id: `c${v.seq++}`, ocupacaoId: oc.id, tInicio: v.t, tResultado: v.t + 6, chance: chanceNoConcurso(v, oc), concurso: true });
-  escrever(v, { texto: `Inscreveu-se no concurso para ${nomeOcupacao(v, oc)}.`, relevancia: 'tecnico', tema: 'trabalho', escolha: true });
+  const ed = editalDe(v, oc);
+  v.trabalho.candidaturas.push({ id: `c${v.seq++}`, ocupacaoId: oc.id, tInicio: v.t, tResultado: v.t + 6, chance: chanceNoConcurso(v, oc), concurso: true, edital: { vagas: ed.vagas, inscritos: ed.inscritos } });
+  escrever(v, { texto: `Inscreveu-se no ${ed.modalidade === 'processo_seletivo' ? 'processo seletivo' : 'concurso'} para ${nomeOcupacao(v, oc)} (${ed.vagas} ${ed.vagas === 1 ? 'vaga' : 'vagas'}, uns ${ed.inscritos.toLocaleString('pt-BR')} inscritos).`, relevancia: 'tecnico', tema: 'trabalho', escolha: true });
 }
 
 /* ------------------------------------------------------------- O ano */
@@ -294,24 +319,28 @@ export function processarConcursos(v: Vida, r: Rng): void {
       continue;
     }
     const sorte = r.next();
+    // REWORK 12.3 · E10.4: a classificação — a posição sai do mesmo sorteio (dentro das vagas, na reserva, ou fora).
+    const ed = cand.edital;
+    const posicao = ed ? (sorte < chance ? Math.max(1, Math.ceil(ed.vagas * sorte / chance)) : sorte < chance * 1.6 ? ed.vagas + Math.max(1, Math.ceil(ed.vagas * (sorte - chance) / (chance * 0.6))) : Math.min(ed.inscritos, ed.vagas * 2 + Math.ceil((ed.inscritos - ed.vagas * 2) * (sorte - chance * 1.6) / Math.max(0.01, 1 - chance * 1.6)))) : undefined;
+    const lugar = ed && posicao ? ` (${posicao}º lugar, para ${ed.vagas} ${ed.vagas === 1 ? 'vaga' : 'vagas'})` : '';
     if (sorte < chance) {
       c.aprovacoes += 1;
-      if (tentativas > 1) escrever(v, { texto: `${flex(ge(v), 'Aprovado', 'Aprovada', 'Aprovade')} no concurso para ${nomeOcupacao(v, oc)}, na ${tentativas}ª tentativa.`, relevancia: 'biografia', tema: 'trabalho', tom: 'bom' });
+      escrever(v, { texto: `${flex(ge(v), 'Aprovado', 'Aprovada', 'Aprovade')} no concurso para ${nomeOcupacao(v, oc)}${lugar}${tentativas > 1 ? `, na ${tentativas}ª tentativa` : ''}. Falta a convocação e a posse.`, relevancia: 'biografia', tema: 'trabalho', tom: 'bom' });
       // Aprovado não é empossado: se houver o que largar (um emprego, a base, o negócio), a posse é escolha.
       propor(v, r, { tipo: 'emprego', ocupacaoId: oc.id, via: 'concurso' });
       continue;
     }
     v.fatos[`concurso_${oc.id}`] = tentativas;
     if (sorte < chance * 1.6 && !c.reserva) {
-      c.reserva = { ocupacaoId: oc.id, tAte: v.t + 24 };
-      escrever(v, { texto: `${flex(ge(v), 'Aprovado', 'Aprovada')} no concurso para ${nomeOcupacao(v, oc)}, mas fora das vagas: ficou no cadastro reserva.`, relevancia: 'biografia', tema: 'trabalho' });
+      c.reserva = { ocupacaoId: oc.id, tAte: v.t + 24, ...(ed && posicao ? { posicao, vagas: ed.vagas } : {}) };
+      escrever(v, { texto: `${flex(ge(v), 'Aprovado', 'Aprovada', 'Aprovade')} no concurso para ${nomeOcupacao(v, oc)}, mas fora das vagas${lugar}: ficou no cadastro reserva.`, relevancia: 'biografia', tema: 'trabalho' });
       marcar(v, 'reprovacao', `Cadastro reserva: ${nomeOcupacao(v, oc)}.`, 2, { ocupacaoId: oc.id });
       continue;
     }
     const perto = sorte < chance * 2.5 && chance > 0.1;
     escrever(v, {
       texto: tentativas === 1
-        ? `Não passou no concurso para ${nomeOcupacao(v, oc)}${perto ? ' — ficou a poucas questões da nota de corte' : ''}.`
+        ? `Não passou no concurso para ${nomeOcupacao(v, oc)}${lugar ? lugar.replace(' (', ' (ficou em ') : ''}${perto ? ' — a poucas questões da nota de corte' : ''}.`
         : `Mais uma reprovação no concurso para ${nomeOcupacao(v, oc)} — a ${tentativas}ª${perto ? ', agora mais perto' : ''}.`,
       relevancia: tentativas === 1 || tentativas % 3 === 0 || perto ? 'cotidiano' : 'tecnico', tema: 'trabalho', tom: 'ruim'
     });
@@ -341,7 +370,7 @@ export function processarConcursos(v: Vida, r: Rng): void {
     if (v.t > c.reserva.tAte) {
       c.reserva = undefined;
       escrever(v, { texto: `O concurso para ${nomeOcupacao(v, oc)} venceu sem que chamassem o cadastro reserva.`, relevancia: 'cotidiano', tema: 'trabalho' });
-    } else if (r.chance(0.35) && v.trabalho.atual?.ocupacaoId !== oc.id && !v.trabalho.aposentadoria && idade(v) < 70) {
+    } else if (r.chance(c.reserva.posicao && c.reserva.vagas ? clamp(0.6 - (c.reserva.posicao - c.reserva.vagas) / c.reserva.vagas * 0.5, 0.1, 0.6) : 0.35) && v.trabalho.atual?.ocupacaoId !== oc.id && !v.trabalho.aposentadoria && idade(v) < 70) {
       c.reserva = undefined;
       c.aprovacoes += 1;
       escrever(v, { texto: `Chamaram o cadastro reserva do concurso para ${nomeOcupacao(v, oc)}.`, relevancia: 'biografia', tema: 'trabalho', tom: 'bom' });
