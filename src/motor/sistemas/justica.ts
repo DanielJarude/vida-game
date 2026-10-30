@@ -48,7 +48,10 @@ export interface Tribunal { aoAbrir: (v: Vida, r: Rng) => void; sentenciar: (v: 
 let tribunal: Tribunal | undefined;
 export function registrarTribunal(t: Tribunal): void { tribunal = t; }
 /** REWORK 12.3 · C1: o ano da corrupção judicial (o que vem à tona, a denúncia que vira processo) — registrado por `corrupcaoJudicial`. */
-let corrupcaoAnual: ((v: Vida, r: Rng) => void) | undefined;
+// `var` (e não `let`): o registro pode acontecer enquanto este módulo ainda está sendo avaliado (o ciclo de importação no
+// pacote de produção) — com `let`, a variável estaria na zona morta temporal e a aplicação não montava.
+// eslint-disable-next-line no-var
+var corrupcaoAnual: ((v: Vida, r: Rng) => void) | undefined;
 export function registrarCorrupcaoAnual(f: (v: Vida, r: Rng) => void): void { corrupcaoAnual = f; }
 
 /**
