@@ -87,7 +87,33 @@ organizações moram nela; as listas `aliadas`/`rivais` continuam, derivadas), `
 - **Coerência** (D9): texto e números saem do mesmo estado; o simulador confere sucesso sem dinheiro e fracasso com frase de
   sucesso.
 
-__AMOSTRAS__
+**Exemplos reais** (do simulador `scripts/sim/narrativa123.ts`, vidas longas; texto · consequências medidas):
+
+- "Felipe chamou você para um serviço pequeno para um conhecido. Você foi junto, como o mais novo. Ninguém viu, ninguém
+  perguntou: R$ 1.000 no seu bolso. Felipe estava eufórico. Você teve de lembrar que ninguém precisava saber. Foi a primeira
+  encomenda cumprida: o seu nome passou a circular." ⟶ *Entrou R$ 1.000 por fora. · Confiança de Felipe em você: 37 → 41. ·
+  Mais gente sabe do que você faz (exposição 26 → 28).*
+- "Felipe, que já tinha trabalhado com você, chamou você para guardar e passar adiante uma mercadoria de origem ruim. Você
+  foi com a calma de quem já fez isso antes. Deu errado. Nada entrou, e ainda foi preciso cobrir R$ 2.400 do que se perdeu.
+  Felipe bateu a porta do carro e sumiu por uma semana." ⟶ *Saiu R$ 2.400.*
+- "Noah, que falou o seu nome em 2056, trouxe a proposta: uma assinatura onde não devia. Você foi com a calma de quem já fez
+  isso antes. Deu errado — mas Gael, que estava por perto, gostou de como você segurou a situação. Um contato novo. Noah
+  assumiu a parte dele no erro. \"Acontece.\""
+- "O sindicato Lima tinha um pedido — um recado da organização —, e Jefferson Marques (chefia de equipe) o passou a você.
+  Você foi com a calma de quem já fez isso antes. Foi limpo. A sua parte: R$ 9.000. O sindicato lembra de quem entrega." ⟶
+  *Entrou R$ 9.000 por fora. · O quanto o sindicato Lima confia em você: 65 → 70.*
+- (liderança) "O sindicato Lima tinha um pedido — um recado da organização —, e Diego Machado (diretoria) o passou a você.
+  Você não foi: mandou dois dos seus e acompanhou de longe. Foi limpo. A sua parte: R$ 32 mil. Thiago Rocha, que manda ali,
+  anotou o seu nome. Ali, isso vale mais que dinheiro."
+- (conversa) "Emerson perguntou da investigação, baixinho, e disse para você não mudar de rotina agora. Antes de ir embora,
+  Emerson pediu uma coisa a você."
+- (conversa) "Levi disse que, quando você precisar, é só chamar: a dívida é dele. No fim, Levi trouxe um trabalho: um
+  serviço grande, com gente de fora (está em Encomendas)."
+- (o ano) "Por fora, em 2064: o de sempre rendeu R$ 17 mil."
+
+**Medido** (5 perfis × 6 vidas × 20 anos): **1.180 textos de ação, 92% distintos** (no 12.25, a mesma medição dava 27%:
+"X falou de dinheiro… A conversa aproximou vocês" repetia por pessoa); a mesma frase exata na mesma vida em menos de 3
+anos: 52 (de 1.180); **0** sucessos sem dinheiro; **0** fracassos com frase de sucesso; 404 trabalhos (337 deram certo).
 
 ## 7. Corrupção judicial (C1–C4, C8)
 
@@ -149,19 +175,64 @@ __AMOSTRAS__
 
 - Versão continua **20**; tudo novo é opcional. `normalizarRework123` (idempotente) cria os marcos a partir dos fatos e da
   infância registrada. Testado: idempotência, ida e volta pelo save das tentativas de corrupção, saves com sucessão.
-__SAVES__
+- **46 saves de QA** do 11, 11.5, 12, 12.2 e 12.25 (`scripts/sim/saves125.ts`): todos abrem, salvar de novo dá o mesmo JSON,
+  vivem três anos e conciliam o extrato (**46/46, 0 falhas**). A auditoria visual também abriu os saves do 12.25.
 
 ## 12. Testes e simulações
 
-__TESTES__
+| Verificação | Resultado |
+|---|---|
+| Testes novos (`motor/__tests__/rework123.test.ts`, 28; `ui/__tests__/rework123.test.tsx`, 3) | todos aprovados |
+| Typecheck (`tsc --noEmit`) | limpo |
+| Suíte completa (3 rodadas; a última depois de todas as mudanças de motor) | **2.070 / 2.073** aprovados; os 3 que falharam: dois *timeouts* que também estouram no commit de base nesta máquina (`motor` "linguagem de escolha", 71 s no base e no 12.3, limite fixo de 60 s; `fix31` ajuda da família) — ambos passam com mais tempo —, e o teste do bloqueio (C8), corrigido e reaprovado depois (o bloqueio foi posto na escala nova das provas) |
+| Comparação com o commit de base (`3a768d3`, suíte completa na mesma máquina) | base: 9 falhas (7 *timeouts* + 2 de ambiente da cópia) — os *timeouts* são da máquina, não do código |
+| Testes antigos ajustados (pré-condição dita, sem afrouxar régua) | `rework12` (a pessoa rica tem emprego e não está negativada), `rework122` (há trabalho para o visto), `att3` (a mesada na média de 4 vidas, 35%), `rework97` (mediana de 12 sementes, < 25), `fixPosRework3` (a prova da autoescola medida em 10 provas, ≥ 7 aprovações), `rework7`/`rework125` (rótulos novos da tela), `ui/rework122` (o nome do animal aparece em mais de um lugar) — cada um com o motivo escrito no teste |
+| Build de produção | sem avisos; **nenhum pacote acima de 800 kB** (limite intocado): `motor-textos` 786,4 kB (era 783,6), `Jogo` 767,3, `motor` 753,2, `motor-carreira` 587,6 |
+| Smoke de produção (itch.io, `scripts/itch/smoke.mjs`) | **21/21** — e foi ele que pegou a aplicação em branco (ciclo entre pacotes), corrigida |
+| PWA offline (`scripts/pwa/offline.mjs`) | **36/36** |
+| Desempenho | 26 ms/ano contra 24–25 no base (12 vidas até os 60): +5–8% |
+
+**Simulações** (sem forçar percentuais):
+
+- `scripts/sim/marcos123.ts` — 16 vidas, 2 gerações, 12 sucessões: **0** marcos repetidos por pessoa.
+- `scripts/sim/narrativa123.ts` — §6.
+- `scripts/sim/submundo125.ts` (15 perfis × 24 vidas × 30 anos, depois da recalibração): condenados à prisão — integrante
+  33%, líder 29%, líder cauteloso 33%, profissional 8%, furtos 13%, contrabando 25%, digital 4%, fraudes 29%, dono de
+  negócio 29%, milionário 13%, foragido 54%; ocasional e "ex" 0%. Patrimônio p50 aos 30 anos: integrante 10,0 mi, líder
+  27,6 mi, cauteloso 10,6 mi, profissional 4,5 mi, contrabando 1,8 mi, fraudes 1,8 mi, furtos 1,0 mi. **0 ajustes no
+  extrato, 0 anomalias.** Média dos perfis de organização ≈ 32% (o pedido do 12.25 era 30–40%).
+- **A recalibração**, medida em 64 vidas por variante (integrante): base 34%; provas como no 12.25 (sempre fracas) 38%;
+  provas pela exposição com inclinação 0,12: 45%; **a escolhida (22 + 0,1 × exposição acima de 25): 41%**, depois 33% na
+  rodada final de 24 vidas. A correção das provas foi mantida (a exposição pesa), com inclinação suave.
 
 ## 13. QA visual
 
-__QA__
+`scripts/playtest/rework123.mjs` (a régua do 12.25: sobreposição de texto, contraste < 3:1, rolagem horizontal, borda
+estourada, erro de console), com duas cenas novas (os pedidos por fora; a Justiça com o bloco "por fora dos autos"), temas
+claro e escuro, 1440/390 (+360 e 390×560 nas marcadas): **204 capturas, 0 problemas**. As 4 notas são o bloco curto da
+agenda (alvo < 32 px), anterior ao 12.3 e já listado no 12.25. Revisão a olho das telas novas: o bloco ilegal separado da
+defesa, com selo; os pedidos com a saída legal; as relações entre organizações. Ajuste feito depois da revisão: o comando
+da organização listava "propor negócio" e "propor aliança" para as mesmas organizações (excesso de botões) — o negócio
+pontual ficou só para concorrentes e organizações em trégua. **Não testado num aparelho de verdade** (só Playwright).
 
 ## 14. Limitações e pendências
 
-__PENDENCIAS__
+- **A cautela pesa menos que no 12.25**: o líder cauteloso ficou perto do integrante (33% × 33%; no 12.25, 13% × 25%). A
+  causa principal é a correção das provas (a exposição passou a pesar); a guerra entre organizações já não expõe quem
+  está na moita. Vale olhar no playtest.
+- **Os testes de 60 s** (`motor` "linguagem de escolha", `fechamentoMundo` 4, `fix31`) estouram o tempo nesta máquina,
+  também no commit de base; passam com mais tempo.
+- **Conflito no trabalho** abre só com tensão alta (≥ 55) e no máximo a cada dois anos; outros conflitos menores continuam
+  pelas cenas antigas.
+- **Cargos públicos**: a remuneração não foi mexida. Auditada: a entrada pública fica um pouco acima da privada equivalente
+  (técnico público 5,2 mil × analista 4,4 mil); os saltos grandes estão nos cargos mais difíceis (auditor 22 mil, teto de
+  aprovação 6% e 48 meses de preparo; analista judiciário 13 mil × advogado 8,8 mil de entrada). Não vira automaticamente
+  a melhor escolha: a aprovação é rara e demora.
+- **Território** continua textual; a guerra entre organizações é abstrata (força, pressão, exposição), sem cena própria a
+  cada ano.
+- **Agenda profissional (E7)**: os compromissos da equipe não viraram blocos novos da semana (evitado o excesso de
+  microtarefas); o conflito e as sanções aparecem como cena e na ficha do emprego.
+- O APK Android não foi regenerado.
 
 ## 15. Publicação
 
