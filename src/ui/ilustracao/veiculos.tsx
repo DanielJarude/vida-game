@@ -12,8 +12,8 @@ import { aviao, barco } from './aguaEAr';
 
 const MOTOS = new Set(['cub', 'scooter', 'street', 'esportiva', 'cruiser', 'trail']);
 const BIKES = new Set(['urbana', 'estrada', 'mtb', 'eletrica']);
-const BARCOS = new Set(['jetski', 'lancha', 'veleiro']);
-const AVIOES = new Set(['ultraleve', 'monomotor', 'asa_baixa', 'bimotor', 'jato']);
+const BARCOS = new Set(['jetski', 'lancha', 'veleiro', 'iate']);
+const AVIOES = new Set(['ultraleve', 'monomotor', 'asa_baixa', 'bimotor', 'jato', 'helicoptero']);
 
 /** A cor de quem não tem cor (um desenho sem anúncio): prata, a cor mais comum de carro. */
 const PRATA = '#a9adb2';

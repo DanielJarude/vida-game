@@ -145,7 +145,7 @@ export default defineConfig({
           // (o ano, as ações, os acontecimentos, as telas). Importam só os sistemas e a base: sem ciclo, e o pacote dos
           // textos (o mais apertado) não cresce.
           // REWORK 12.2: o que é próprio de cada ramo (`setores`) e os exóticos vêm junto (importam empresas e a base).
-          if (/[\\/]src[\\/]motor[\\/]sistemas[\\/](colecao|empresas|setores|exoticos)\.ts/.test(id)) return 'motor-patrimonio';
+          if (/[\\/]src[\\/]motor[\\/]sistemas[\\/](colecao|empresas|setores|exoticos|personalizacao|gostos)\.ts/.test(id)) return 'motor-patrimonio';
           if (/[\\/]src[\\/]motor[\\/]dados[\\/]/.test(id)) return 'motor-dados';
           // Pacote pré-América do Sul: a CAMADA DE BASE — os sistemas-folha que só importam os catálogos e uns aos outros
           // (núcleo, texto, tempo, mercado, origem, rede, notoriedade, economia...) — vai com os catálogos, embaixo de

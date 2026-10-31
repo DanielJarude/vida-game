@@ -62,7 +62,15 @@ const MATERIAL: Record<string, Variante[]> = {
   camping: [{ nome: 'laranja', cor: '#e07b2c' }, { nome: 'verde-mata', cor: '#3b6b3f' }, { nome: 'azul', cor: '#2f6db3' }], tabuleiro: MADEIRA.slice(0, 3),
   livros: PAPEL, livros_estudo: PAPEL, material_arte: [{ nome: 'caixa de madeira', cor: '#b9773f' }, { nome: 'estojo colorido', cor: '#d0573b' }], jogos_tabuleiro: [{ nome: 'caixas coloridas', cor: '#c7522f' }, { nome: 'caixas azuis', cor: '#3c5e9a' }],
   tv: [ELETRONICO[0]], caixa_som: ELETRONICO, celular_simples: ELETRONICO, celular_bom: ELETRONICO, celular_topo: ELETRONICO, notebook: ELETRONICO.slice(0, 4), computador: [ELETRONICO[0], ELETRONICO[2]],
-  tablet: ELETRONICO.slice(0, 3), videogame: [{ nome: 'preto', cor: '#26252a' }, { nome: 'branco', cor: '#ecebe8' }], camera: [{ nome: 'preta', cor: '#26252a' }, { nome: 'prata e preta', cor: '#9fa4ab' }]
+  tablet: ELETRONICO.slice(0, 3), videogame: [{ nome: 'preto', cor: '#26252a' }, { nome: 'branco', cor: '#ecebe8' }], camera: [{ nome: 'preta', cor: '#26252a' }, { nome: 'prata e preta', cor: '#9fa4ab' }],
+  // REWORK 12.4
+  roupa_de_cama: [{ nome: 'branco', cor: '#ece8e1' }, { nome: 'cinza', cor: '#a7a39c' }, { nome: 'azul-claro', cor: '#9db9d6' }, { nome: 'estampado', cor: '#c58b6a' }],
+  mesa_jantar: MADEIRA.slice(0, 3), poltrona: ESTOFADO, projetor: [ELETRONICO[2], ELETRONICO[0]], mesa_sinuca: [{ nome: 'feltro verde', cor: '#2f6b45' }, { nome: 'feltro azul', cor: '#2c4f86' }, { nome: 'feltro vinho', cor: '#6b2230' }],
+  estacao_musculacao: [ESPORTE[5], ELETRONICO[1]], som_hifi: [MADEIRA[1], ELETRONICO[0]], discos: [{ nome: 'capas variadas', cor: '#b0563f' }, { nome: 'capas pretas', cor: '#2b2826' }],
+  home_studio: [ELETRONICO[0], ELETRONICO[2]], controladora_dj: [{ nome: 'preta', cor: '#26252a' }, { nome: 'branca', cor: '#ecebe8' }],
+  cavaquinho: MADEIRA, pandeiro: MADEIRA.slice(0, 3), sanfona: [{ nome: 'vermelha', cor: '#a8281f' }, { nome: 'preta', cor: '#232022' }, { nome: 'madrepérola', cor: '#e5ddd0' }, { nome: 'azul', cor: '#2f5d93' }],
+  saxofone: [{ nome: 'dourado', cor: '#caa24a' }, { nome: 'prateado', cor: '#b9bec6' }, { nome: 'preto', cor: '#2b2826' }],
+  cavalete: MADEIRA.slice(0, 2), torno_ceramica: [{ nome: 'cinza', cor: '#8d8983' }, { nome: 'azul', cor: '#3a6496' }]
 };
 
 export const variantesDaCoisa = (coisaId: string): Variante[] => MATERIAL[coisaId] ?? ELETRONICO;
@@ -126,6 +134,25 @@ const TOCAR = (extra?: Partial<UsoDeCoisa>): UsoDeCoisa[] => [
 
 export const USOS: Record<string, UsoDeCoisa[]> = {
   violao: TOCAR(), teclado: TOCAR(), guitarra: TOCAR(), bateria: TOCAR(), violino: TOCAR(), piano: TOCAR(),
+  // REWORK 12.4 — os instrumentos novos tocam como os outros; o resto, cada um com o seu uso.
+  cavaquinho: TOCAR(), pandeiro: TOCAR(), sanfona: TOCAR(), saxofone: TOCAR(),
+  controladora_dj: [
+    { id: 'mixar', rotulo: 'Mixar', pratica: ['musica', 0.35], feliz: 2, estresse: -2, textos: ['Duas horas emendando uma faixa na outra até a transição sair limpa.', 'Uma mixagem nova, gravada para ouvir no ônibus.'] },
+    { id: 'tocar_festa', rotulo: 'Tocar numa festa de alguém', com: 'perto', rotuloCom: 'Tocar na festa de {nome}', pratica: ['musica', 0.2], feliz: 3, prox: 4, textos: ['A pista de {nome} não esvaziou até as quatro.', '{nome} pediu a mesma música três vezes. Você tocou.'] }
+  ],
+  home_studio: [{ id: 'gravar', rotulo: 'Gravar uma ideia', pratica: ['musica', 0.35], feliz: 2, textos: ['Gravou uma ideia de madrugada; de manhã, ainda era boa.', 'Uma demo inteira, voz e violão, mixada em casa.'] }],
+  som_hifi: [
+    { id: 'ouvir_disco', rotulo: 'Ouvir um disco inteiro', feliz: 2, estresse: -3, textos: ['Um disco do começo ao fim, sem pular faixa.', 'A agulha no lado B, a luz baixa, o celular longe.'] },
+    { id: 'ouvir_com', rotulo: 'Ouvir música com alguém', com: 'casa', rotuloCom: 'Ouvir discos com {nome}', feliz: 2, prox: 3, textos: ['Você e {nome} escolhendo o próximo disco como quem escolhe vinho.', '{nome} descobriu na sua estante um disco que ouvia na infância.'] }
+  ],
+  discos: [{ id: 'garimpar', rotulo: 'Garimpar mais discos', feliz: 1, textos: ['Uma tarde no sebo, dedo sujo de pó, três achados.', 'Um disco que você procurava havia anos, por vinte reais.'] }],
+  mesa_sinuca: [{ id: 'sinuca_com', rotulo: 'Jogar sinuca com alguém', com: 'perto', rotuloCom: 'Chamar {nome} para a sinuca', feliz: 3, prox: 3, textos: ['{nome} encaçapou a bola sete de tabela e não parou de falar nisso.', 'Uma noite de sinuca com {nome}; a revanche ficou para sábado.'] }],
+  estacao_musculacao: [{ id: 'treinar', rotulo: 'Treinar em casa', forma: 4, estresse: -2, textos: ['Um treino inteiro sem fila de aparelho.', 'Seis meses na estação: a camiseta apertou nos braços.'] }],
+  projetor: [{ id: 'cinema_com', rotulo: 'Sessão de cinema em casa', com: 'casa', rotuloCom: 'Sessão de cinema com {nome}', feliz: 3, prox: 3, estresse: -2, textos: ['A parede inteira virou tela; {nome} trouxe a pipoca.', 'Um filme antigo na tela grande, com {nome} comentando cada cena.'] }],
+  poltrona: [{ id: 'ler', rotulo: 'Ler na poltrona', pratica: ['linguagens', 0.15], feliz: 2, estresse: -2, textos: ['Um livro inteiro numa tarde de chuva.', 'Cochilou na página trinta. Valeu igual.'] }],
+  cavalete: [{ id: 'pintar_tela', rotulo: 'Pintar uma tela', pratica: ['desenho', 0.4], feliz: 2, textos: ['Uma tela a óleo que levou três semanas e ainda não secou.', 'Pintou a vista da janela em quatro luzes diferentes.'] }],
+  torno_ceramica: [{ id: 'modelar', rotulo: 'Modelar no torno', pratica: ['desenho', 0.25], feliz: 2, estresse: -4, textos: ['O barro desabou três vezes; a quarta tigela ficou de pé.', 'Uma fornada de canecas tortas — e suas.'] }],
+  mesa_jantar: [{ id: 'jantar_com', rotulo: 'Um jantar em casa', com: 'perto', rotuloCom: 'Chamar {nome} para jantar', feliz: 2, prox: 4, textos: ['A mesa nova estreou com {nome} e uma conversa que foi até tarde.', '{nome} elogiou a comida; a mesa ajudou.'] }],
   videogame: [
     { id: 'jogar', rotulo: 'Jogar', feliz: 2, estresse: -3, textos: ['Uma noite inteira no jogo novo. Valeu o sono perdido.', 'Zerou a fase que travava fazia semanas.'] },
     { id: 'jogar_com', rotulo: 'Jogar com alguém', com: 'perto', rotuloCom: 'Jogar videogame com {nome}', feliz: 3, prox: 3, textos: ['Você e {nome} gritaram com a TV até a vizinha bater na parede.', '{nome} ganhou todas. Ninguém vai esquecer.'] }

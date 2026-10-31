@@ -28,8 +28,8 @@ export type FormaVeiculo =
   | 'compacto' | 'hatch' | 'seda' | 'suv' | 'suv_medio' | 'suv_grande' | 'picape' | 'esportivo'
   | 'cub' | 'scooter' | 'street' | 'esportiva' | 'cruiser' | 'trail'
   | 'urbana' | 'estrada' | 'mtb' | 'eletrica'
-  | 'jetski' | 'lancha' | 'veleiro'
-  | 'ultraleve' | 'monomotor' | 'asa_baixa' | 'bimotor' | 'jato';
+  | 'jetski' | 'lancha' | 'veleiro' | 'iate'
+  | 'ultraleve' | 'monomotor' | 'asa_baixa' | 'bimotor' | 'jato' | 'helicoptero';
 
 /** Habilitação para operar (separada da posse: ter um barco não é saber pilotar um). */
 export type Habilitacao = 'cnh' | 'nautica' | 'piloto' | 'multimotor';
@@ -115,6 +115,9 @@ export const VEICULOS: readonly ModeloVeiculo[] = [
   { id: 'superesportivo', nome: 'superesportivo', categoria: 'carro', segmento: 'exotico', preco: 3600000, usoMensal: 4800, taxaAnual: 0.055, idadeMin: 18, cnh: true, lugares: 2, conforto: 5, fragilidade: 1.3, descricao: 'Motor central, dois lugares, a rua inteira olhando. Pneu, freio e revisão a preço de carro popular.', usado: true, fatorConserto: 3, pesoUsado: 0.05 },
   { id: 'hiperluxo', nome: 'carro de altíssimo luxo', categoria: 'carro', segmento: 'exotico', preco: 6000000, usoMensal: 5200, taxaAnual: 0.045, idadeMin: 18, cnh: true, lugares: 5, conforto: 5, fragilidade: 1.1, descricao: 'Couro, silêncio, motorista opcional. Cada detalhe feito à mão — e cada conserto também.', usado: true, fatorConserto: 3, pesoUsado: 0.05 },
   { id: 'classico', nome: 'carro clássico', categoria: 'carro', segmento: 'classico', preco: 150000, usoMensal: 650, taxaAnual: 0.02, idadeMin: 18, cnh: true, lugares: 4, conforto: 2, fragilidade: 1.5, descricao: 'De outra época: sem ar, sem assistente, com cheiro de gasolina. Anda pouco e pede cuidado; vale pelo estado e pela história.', usado: true, fatorConserto: 1.8, pesoUsado: 0.05 },
+  // REWORK 12.4: o iate (tripulação própria: capitão e marinheiro) e o helicóptero (pista nenhuma, heliponto e hangar).
+  { id: 'iate', nome: 'iate', categoria: 'embarcacao', preco: 9500000, usoMensal: 38000, taxaAnual: 0.035, idadeMin: 18, cnh: false, raro: true, tripulacao: 32000, patrimonioMin: 25000000, lugares: 12, conforto: 5, fragilidade: 1.1, descricao: 'Cabines, cozinha, a tripulação na folha: uma casa que flutua e uma conta de marina de casa grande.', usado: true, fatorConserto: 3.4, pesoUsado: 0.15 },
+  { id: 'helicoptero', nome: 'helicóptero', categoria: 'aeronave', preco: 5200000, usoMensal: 22000, taxaAnual: 0.045, idadeMin: 18, cnh: false, habilitacao: 'piloto', raro: true, patrimonioMin: 12000000, lugares: 4, conforto: 4, fragilidade: 1.25, descricao: 'Pousa no heliponto do prédio ou no gramado da fazenda. Hora de voo cara, inspeção rígida, piloto com licença de asas rotativas.', usado: true, fatorConserto: 3.8, pesoUsado: 0.2 },
   { id: 'jato', nome: 'jato executivo', categoria: 'aeronave', preco: 25000000, usoMensal: 65000, taxaAnual: 0.025, idadeMin: 18, cnh: false, raro: true, tripulacao: 70000, patrimonioMin: 40000000, lugares: 6, conforto: 5, fragilidade: 1, descricao: 'O país em duas horas, de qualquer aeroporto. Dois pilotos na folha, hangar, programa de manutenção por hora voada: uma empresa que só gasta.', usado: true, fatorConserto: 4, pesoUsado: 0.15 }
 ];
 
@@ -234,6 +237,10 @@ export const VERSOES_VEICULO: readonly VersaoVeiculo[] = [
   { id: 'piper_archer', classe: 'monomotor', marca: 'Piper', modelo: 'Archer', dica: 'monomotor de asa baixa, quatro lugares', faixa: 'alta', preco: 2300000, artigo: 'o', pesoUsado: 0.5, forma: 'asa_baixa' },
   { id: 'piper_seneca', classe: 'bimotor', marca: 'Piper', modelo: 'Seneca V', dica: 'bimotor de seis lugares', faixa: 'intermediaria', preco: 7200000, artigo: 'o', pesoUsado: 0.6, forma: 'bimotor' },
   { id: 'beech_baron', classe: 'bimotor', marca: 'Beechcraft', modelo: 'Baron G58', dica: 'bimotor de seis lugares', faixa: 'alta', preco: 9600000, artigo: 'o', pesoUsado: 0.4, usoMensal: 30000, forma: 'bimotor' },
+  { id: 'azimut_60', classe: 'iate', marca: 'Azimut', modelo: '60 Flybridge', dica: 'iate de 60 pés', faixa: 'intermediaria', preco: 9500000, artigo: 'o', pesoUsado: 0.5, forma: 'iate' },
+  { id: 'schaefer_v66', classe: 'iate', marca: 'Schaefer', modelo: 'V66', dica: 'iate de 66 pés', faixa: 'alta', preco: 12500000, artigo: 'o', pesoUsado: 0.4, usoMensal: 44000, forma: 'iate', mercados: ['BR', 'america_sul'] },
+  { id: 'robinson_r44', classe: 'helicoptero', marca: 'Robinson', modelo: 'R44 Raven II', dica: 'helicóptero de quatro lugares', faixa: 'intermediaria', preco: 4200000, artigo: 'o', pesoUsado: 0.6, forma: 'helicoptero' },
+  { id: 'bell_505', classe: 'helicoptero', marca: 'Bell', modelo: '505 Jet Ranger X', dica: 'helicóptero a turbina, cinco lugares', faixa: 'alta', preco: 9000000, artigo: 'o', pesoUsado: 0.4, usoMensal: 30000, lugares: 5, forma: 'helicoptero' },
   { id: 'embraer_phenom100', classe: 'jato', marca: 'Embraer', modelo: 'Phenom 100EV', dica: 'jato executivo leve', faixa: 'intermediaria', preco: 25000000, artigo: 'o', pesoUsado: 0.6, forma: 'jato' },
   { id: 'cessna_citation_m2', classe: 'jato', marca: 'Cessna', modelo: 'Citation M2 Gen2', dica: 'jato executivo leve', faixa: 'alta', preco: 33000000, artigo: 'o', pesoUsado: 0.4, usoMensal: 72000, forma: 'jato' },
   // REWORK 12 · o mercado de cada lugar. Preço = o de catálogo no Brasil (o que um igual custaria aqui, com o imposto
@@ -300,8 +307,8 @@ export function formaDaVersao(x: VersaoVeiculo | undefined, classe?: string): Fo
   switch (m?.categoria) {
     case 'bicicleta': return m.eletrica ? 'eletrica' : /trilha|mountain/.test(d) ? 'mtb' : /estrada|speed/.test(d) ? 'estrada' : 'urbana';
     case 'moto': return /scooter/.test(d) || x?.id === 'honda_pop' || x?.id === 'honda_biz' ? 'scooter' : /trail|terra/.test(d) ? 'trail' : /clássica|custom/.test(d) ? 'cruiser' : /esportiva/.test(d) ? 'esportiva' : 'street';
-    case 'embarcacao': return c === 'jetski' ? 'jetski' : c === 'veleiro' ? 'veleiro' : 'lancha';
-    case 'aeronave': return c === 'ultraleve' || c === 'bimotor' || c === 'jato' ? c : /jato/.test(d) ? 'jato' : /bimotor/.test(d) ? 'bimotor' : /asa baixa/.test(d) ? 'asa_baixa' : 'monomotor';
+    case 'embarcacao': return c === 'jetski' ? 'jetski' : c === 'veleiro' ? 'veleiro' : c === 'iate' ? 'iate' : 'lancha';
+    case 'aeronave': return c === 'ultraleve' || c === 'bimotor' || c === 'jato' || c === 'helicoptero' ? c : /jato/.test(d) ? 'jato' : /bimotor/.test(d) ? 'bimotor' : /asa baixa/.test(d) ? 'asa_baixa' : 'monomotor';
     // FIX pós-playtest humano: o compacto de entrada (curto, alto, roda pequena) não é o hatch médio.
     default: return /^compacto/.test(d) ? 'compacto' : /picape/.test(d) ? 'picape' : /suv/.test(d) ? 'suv' : /esportivo/.test(d) ? 'esportivo' : /sedã/.test(d) ? 'seda' : c === 'carro_sedan' ? 'seda' : c.startsWith('carro_suv') ? 'suv' : 'hatch';
   }
@@ -311,7 +318,8 @@ export const NOME_FORMA: Record<FormaVeiculo, string> = {
   compacto: 'compacto', hatch: 'hatch', seda: 'sedã', suv: 'SUV', suv_medio: 'SUV médio', suv_grande: 'SUV de sete lugares', picape: 'picape', esportivo: 'esportivo',
   cub: 'motoneta', scooter: 'scooter', street: 'moto de rua', esportiva: 'moto esportiva', cruiser: 'moto clássica', trail: 'moto de trilha',
   urbana: 'bicicleta urbana', estrada: 'bicicleta de estrada', mtb: 'mountain bike', eletrica: 'bicicleta elétrica',
-  jetski: 'moto aquática', lancha: 'lancha', veleiro: 'veleiro', ultraleve: 'ultraleve', monomotor: 'monomotor de asa alta', asa_baixa: 'monomotor de asa baixa', bimotor: 'bimotor', jato: 'jato executivo'
+  jetski: 'moto aquática', lancha: 'lancha', veleiro: 'veleiro', ultraleve: 'ultraleve', monomotor: 'monomotor de asa alta', asa_baixa: 'monomotor de asa baixa', bimotor: 'bimotor', jato: 'jato executivo',
+  iate: 'iate', helicoptero: 'helicóptero'
 };
 
 export const versaoVeiculo = (id: string | undefined) => (id ? VERSOES_VEICULO.find(x => x.id === id) : undefined);

@@ -445,6 +445,170 @@ function jogos(cor: string): Amostra {
 }
 
 /** A forma de cada coisa do catálogo (uma por coisa: nenhuma divide desenho com outra). */
+/* ------------------------------------------------- REWORK 12.4 · a casa, o som, a arte */
+
+function roupaDeCama(cor: string): Amostra {
+  return noChao([
+    // A cama vista de lado com o edredom dobrado e os dois travesseiros: o jogo de cama, não o colchão.
+    { tipo: 'massa', d: ret(8, 70, 104, 26, 4), cor: '#d8d2c8', marca: 'cama' },
+    { tipo: 'massa', d: suave([[8, 72], [60, 64], [112, 70], [112, 90], [8, 90]], true, 0.4), cor, marca: 'edredom' },
+    { tipo: 'massa', d: ret(14, 56, 30, 14, 6) + ret(46, 56, 30, 14, 6), cor: clarear(cor, 0.35), marca: 'travesseiros' },
+    { tipo: 'linha', d: 'M8 80q52 -6 104 0', larg: 1, cor: escurecer(cor, 0.2) },
+    { tipo: 'massa', d: ret(10, 96, 6, 12, 1) + ret(104, 96, 6, 12, 1), cor: '#5a3a24', semVolume: true }
+  ], 56);
+}
+function mesaJantar(cor: string): Amostra {
+  return noChao([
+    // O tampo comprido com as pernas e duas cadeiras de encosto alto nas pontas.
+    { tipo: 'massa', d: ret(24, 58, 72, 7, 2), cor, marca: 'tampo' },
+    { tipo: 'massa', d: ret(30, 65, 5, 43, 1) + ret(85, 65, 5, 43, 1), cor: escurecer(cor, 0.2), marca: 'pernas' },
+    { tipo: 'massa', d: ret(4, 40, 6, 68, 2) + ret(4, 72, 20, 5, 1) + ret(20, 77, 3, 31, 1), cor: escurecer(cor, 0.1), marca: 'cadeira' },
+    { tipo: 'massa', d: ret(110, 40, 6, 68, 2) + ret(96, 72, 20, 5, 1) + ret(97, 77, 3, 31, 1), cor: escurecer(cor, 0.1) }
+  ], 56);
+}
+function poltrona(cor: string): Amostra {
+  return noChao([
+    // Uma poltrona só, de encosto alto e braços largos, com o abajur de pé do lado: o canto de ler.
+    { tipo: 'massa', d: ret(30, 30, 52, 48, 12), cor, marca: 'encosto' },
+    { tipo: 'massa', d: ret(22, 58, 16, 40, 7) + ret(74, 58, 16, 40, 7), cor: escurecer(cor, 0.08), marca: 'bracos' },
+    { tipo: 'massa', d: ret(36, 70, 40, 16, 5), cor: clarear(cor, 0.1), marca: 'assento' },
+    { tipo: 'metal', d: ret(103, 34, 2, 74, 1), cor: METAL },
+    { tipo: 'massa', d: cantos([[96, 22, 2], [112, 22, 2], [116, 36, 2], [92, 36, 2]]), cor: '#e9dfc8', marca: 'abajur' }
+  ], 50);
+}
+function projetor(cor: string): Amostra {
+  return naParede([
+    // A tela branca pendurada (a barra em cima, o peso embaixo) e o projetor pequeno com a lente acesa.
+    { tipo: 'metal', d: ret(10, 8, 100, 5, 2), cor: METAL, marca: 'barra' },
+    { tipo: 'massa', d: ret(14, 13, 92, 58, 1), cor: '#f2f0ea', semVolume: true, marca: 'tela' },
+    { tipo: 'massa', d: ret(14, 71, 92, 3, 1), cor: PRETO },
+    { tipo: 'massa', d: ret(40, 92, 40, 16, 4), cor, marca: 'projetor' },
+    { tipo: 'vidro', d: circulo(70, 100, 5), claro: true, marca: 'lente' }
+  ]);
+}
+function sinuca(cor: string): Amostra {
+  return noChao([
+    // A mesa vista de lado: o feltro em cima, a borda de madeira, as caçapas e as pernas grossas; o taco atravessado.
+    { tipo: 'massa', d: ret(6, 52, 108, 14, 3), cor: MADEIRA, marca: 'borda' },
+    { tipo: 'massa', d: ret(10, 50, 100, 5, 2), cor, semVolume: true, marca: 'feltro' },
+    { tipo: 'massa', d: circulo(12, 56, 3) + circulo(60, 56, 3) + circulo(108, 56, 3), cor: PRETO, semVolume: true, marca: 'cacapas' },
+    { tipo: 'massa', d: ret(14, 66, 10, 42, 2) + ret(96, 66, 10, 42, 2), cor: escurecer(MADEIRA, 0.2), marca: 'pernas' },
+    { tipo: 'linha', d: 'M20 40L104 30', larg: 2.2, cor: '#c9a46a', marca: 'taco' },
+    { tipo: 'massa', d: circulo(48, 47, 3.2), cor: BRANCO }, { tipo: 'massa', d: circulo(70, 47, 3.2), cor: '#c8372d' }
+  ], 54);
+}
+function estacao(cor: string): Amostra {
+  return noChao([
+    // A torre com a polia no alto, a pilha de pesos guiada e o banco com o encosto inclinado.
+    { tipo: 'metal', d: ret(78, 10, 6, 98, 1) + ret(104, 10, 6, 98, 1) + ret(78, 8, 32, 6, 2), cor, marca: 'torre' },
+    { tipo: 'massa', d: ret(86, 70, 16, 34, 1), cor: PRETO, marca: 'pesos' },
+    { tipo: 'linha', d: 'M94 14V70M94 14L60 30', larg: 1.2, cor: METAL, marca: 'cabo' },
+    { tipo: 'massa', d: ret(14, 80, 56, 8, 3), cor: PRETO, marca: 'banco' },
+    { tipo: 'massa', d: cantos([[14, 80, 3], [30, 46, 3], [38, 50, 3], [24, 82, 3]]), cor: PRETO },
+    { tipo: 'metal', d: ret(22, 88, 4, 20, 1) + ret(60, 88, 4, 20, 1), cor: METAL }
+  ], 50);
+}
+function somHifi(cor: string): Amostra {
+  return noChao([
+    // O toca-discos em cima do móvel (o prato, o disco, o braço) e as duas caixas de pé dos lados.
+    { tipo: 'massa', d: ret(30, 66, 60, 42, 3), cor: MADEIRA, marca: 'movel' },
+    { tipo: 'massa', d: ret(34, 56, 52, 10, 2), cor, marca: 'toca-discos' },
+    { tipo: 'massa', d: elipse(56, 56, 18, 4), cor: PRETO, marca: 'disco' },
+    { tipo: 'linha', d: 'M80 52l-12 6', larg: 1.6, cor: METAL, marca: 'braco' },
+    { tipo: 'massa', d: ret(4, 38, 20, 70, 3) + ret(96, 38, 20, 70, 3), cor: escurecer(cor, 0.15), marca: 'caixas' },
+    { tipo: 'massa', d: circulo(14, 58, 6) + circulo(14, 86, 8) + circulo(106, 58, 6) + circulo(106, 86, 8), cor: PRETO, semVolume: true }
+  ], 56);
+}
+function discos(cor: string): Amostra {
+  return noChao([
+    // A caixa de feira cheia de discos em pé, um deles para fora mostrando a capa e o vinil.
+    { tipo: 'massa', d: ret(18, 62, 84, 46, 3), cor: MADEIRA, marca: 'caixote' },
+    ...[0, 1, 2, 3, 4, 5, 6].map(k => ({ tipo: 'massa' as const, d: ret(22 + k * 11, 44 - (k % 2) * 3, 10, 22, 1), cor: k % 2 ? cor : escurecer(cor, 0.3), marca: 'capas' })),
+    { tipo: 'massa', d: circulo(86, 30, 16), cor: PRETO, marca: 'vinil' },
+    { tipo: 'massa', d: circulo(86, 30, 5), cor: '#e0b12d', semVolume: true }
+  ], 50);
+}
+function homeStudio(cor: string): Amostra {
+  return noChao([
+    // Os dois monitores de estúdio em pé, a interface no meio e o microfone no pedestal com o filtro redondo.
+    { tipo: 'massa', d: ret(6, 48, 24, 40, 3) + ret(54, 48, 24, 40, 3), cor, marca: 'monitores' },
+    { tipo: 'massa', d: circulo(18, 74, 7) + circulo(66, 74, 7), cor: PRETO, semVolume: true },
+    { tipo: 'massa', d: ret(30, 80, 24, 8, 2), cor: '#c8372d', marca: 'interface' },
+    { tipo: 'massa', d: ret(4, 88, 76, 6, 1), cor: MADEIRA },
+    { tipo: 'metal', d: ret(98, 30, 3, 78, 1), cor: METAL, marca: 'pedestal' },
+    { tipo: 'massa', d: ret(93, 16, 13, 22, 6), cor: '#8d8983', marca: 'microfone' },
+    { tipo: 'linha', d: circulo(84, 26, 9), larg: 1.4, cor: PRETO, marca: 'filtro' }
+  ], 56);
+}
+function controladora(cor: string): Amostra {
+  return noChao([
+    // A controladora larga com os dois pratos redondos e o mixer no meio (os faders), sobre a mesa.
+    { tipo: 'massa', d: ret(6, 66, 108, 26, 4), cor, marca: 'corpo' },
+    { tipo: 'massa', d: circulo(30, 79, 11) + circulo(90, 79, 11), cor: escurecer(cor, 0.4), marca: 'pratos' },
+    { tipo: 'massa', d: circulo(30, 79, 3) + circulo(90, 79, 3), cor: METAL, semVolume: true },
+    { tipo: 'linha', d: 'M54 72v14M60 72v14M66 72v14', larg: 1.4, cor: METAL, marca: 'faders' },
+    { tipo: 'massa', d: ret(0, 92, 120, 16, 2), cor: MADEIRA }
+  ], 56);
+}
+function cavaquinho(cor: string): Amostra {
+  const tampo = luzDaMadeira(cor), braco = escurecer(cor, 0.45);
+  return naParede([
+    // O violão pequeno: o corpo curto e redondo, o braço proporcionalmente longo, quatro cravelhas.
+    { tipo: 'massa', d: suave([[60, 62], [70, 63], [74, 70], [71, 78], [77, 86], [76, 98], [60, 104], [44, 98], [43, 86], [49, 78], [46, 70], [50, 63]], true, 0.5), cor: tampo, marca: 'corpo' },
+    { tipo: 'massa', d: circulo(60, 84, 5), cor: '#2e1d12', semVolume: true, marca: 'boca' },
+    { tipo: 'massa', d: ret(57.5, 20, 5, 44, 1), cor: braco, marca: 'braco' },
+    { tipo: 'massa', d: cantos([[55, 10, 2], [65, 10, 2], [64, 21, 1], [56, 21, 1]]), cor: braco, marca: 'mao' },
+    { tipo: 'linha', d: 'M55 13h-3M55 18h-3M65 13h3M65 18h3', larg: 1.6, cor: METAL }
+  ]);
+}
+function pandeiro(cor: string): Amostra {
+  return naParede([
+    // O aro de madeira com o couro claro e as platinelas (pares de discos de metal) ao redor.
+    { tipo: 'massa', d: circulo(60, 60, 40), cor, marca: 'aro' },
+    { tipo: 'massa', d: circulo(60, 60, 34), cor: '#efe6d2', semVolume: true, marca: 'couro' },
+    ...[0, 1, 2, 3, 4, 5].map(k => { const a = (k / 6) * Math.PI * 2; return { tipo: 'metal' as const, d: elipse(60 + Math.cos(a) * 37, 60 + Math.sin(a) * 37, 5, 3), cor: '#d4b25a', marca: 'platinela' }; })
+  ]);
+}
+function sanfona(cor: string): Amostra {
+  return noChao([
+    // O fole sanfonado entre os dois teclados: as dobras são a sanfona.
+    { tipo: 'massa', d: ret(6, 30, 28, 72, 4), cor, marca: 'teclado' },
+    ...[0, 1, 2, 3, 4, 5].map(k => ({ tipo: 'massa' as const, d: ret(34 + k * 9, 34, 9, 64, 1), cor: k % 2 ? '#2b2826' : '#4a4642', marca: 'fole' })),
+    { tipo: 'massa', d: ret(88, 30, 26, 72, 4), cor, marca: 'baixos' },
+    { tipo: 'massa', d: ret(10, 34, 8, 64, 1), cor: BRANCO, semVolume: true },
+    ...[0, 1, 2, 3].map(k => ({ tipo: 'massa' as const, d: circulo(101, 44 + k * 14, 3), cor: BRANCO, semVolume: true }))
+  ], 50);
+}
+function saxofone(cor: string): Amostra {
+  return naParede([
+    // O tubo em "J": o pescoço curvo com a boquilha, o corpo descendo e a campana virada para cima.
+    { tipo: 'linha', d: 'M44 14q6 -6 14 2', larg: 4, cor: PRETO, marca: 'boquilha' },
+    { tipo: 'massa', d: suave([[56, 14], [64, 18], [66, 40], [66, 88], [58, 104], [44, 108], [32, 100], [30, 84], [40, 80], [44, 92], [52, 92], [54, 84], [54, 40], [52, 20]], true, 0.45), cor, marca: 'corpo' },
+    { tipo: 'massa', d: elipse(36, 82, 10, 5), cor: escurecer(cor, 0.25), marca: 'campana' },
+    ...[0, 1, 2, 3, 4].map(k => ({ tipo: 'metal' as const, d: circulo(60, 44 + k * 9, 2.6), cor: '#efe6c8', marca: 'chaves' }))
+  ]);
+}
+function cavalete(cor: string): Amostra {
+  return noChao([
+    // O tripé de madeira com a tela em cima (já começada) e a paleta pendurada.
+    { tipo: 'linha', d: 'M60 10L30 108M60 10L90 108M60 10V100', larg: 3, cor, marca: 'tripe' },
+    { tipo: 'massa', d: ret(30, 22, 60, 46, 1), cor: '#f2efe8', marca: 'tela' },
+    { tipo: 'massa', d: suave([[36, 56], [52, 40], [70, 48], [84, 34], [84, 62], [36, 62]], true, 0.4), cor: '#6f93ad', semVolume: true },
+    { tipo: 'massa', d: circulo(70, 34, 6), cor: '#e0b12d', semVolume: true },
+    { tipo: 'massa', d: ret(28, 68, 64, 4, 1), cor: escurecer(cor, 0.2) },
+    { tipo: 'massa', d: elipse(98, 86, 12, 8), cor: MADEIRA, marca: 'paleta' }
+  ], 46);
+}
+function tornoCeramica(cor: string): Amostra {
+  return noChao([
+    // A bancada do torno com o prato que gira e o vaso de barro subindo nele.
+    { tipo: 'massa', d: ret(20, 74, 80, 34, 4), cor, marca: 'bancada' },
+    { tipo: 'massa', d: elipse(60, 72, 26, 5), cor: METAL, marca: 'prato' },
+    { tipo: 'massa', d: suave([[50, 70], [46, 56], [50, 42], [56, 36], [64, 36], [70, 42], [74, 56], [70, 70]], true, 0.4), cor: '#b5704a', marca: 'vaso' },
+    { tipo: 'massa', d: elipse(60, 37, 8, 2.4), cor: '#8a4f31', semVolume: true }
+  ], 46);
+}
+
 export const OBJETOS: Record<string, (cor: string) => Amostra> = {
   celular_simples: c => celular(c, 1, 0), celular_bom: c => celular(c, 2, 1), celular_topo: c => celular(c, 3, 2),
   notebook, computador, tablet, videogame, tv, camera, caixa_som: som,
@@ -452,7 +616,10 @@ export const OBJETOS: Record<string, (cor: string) => Amostra> = {
   colchao, sofa, escrivaninha, cozinha_equipada: cozinha,
   violao, violino, guitarra, teclado, piano, bateria,
   kit_academia: academia, esteira, chuteira_bola: chuteira, raquete, prancha, camping, tabuleiro: xadrez,
-  livros: estante, livros_estudo: livrosEstudo, material_arte: arte, jogos_tabuleiro: jogos
+  livros: estante, livros_estudo: livrosEstudo, material_arte: arte, jogos_tabuleiro: jogos,
+  roupa_de_cama: roupaDeCama, mesa_jantar: mesaJantar, poltrona, projetor, mesa_sinuca: sinuca, estacao_musculacao: estacao,
+  som_hifi: somHifi, discos, home_studio: homeStudio, controladora_dj: controladora, cavaquinho, pandeiro, sanfona, saxofone,
+  cavalete, torno_ceramica: tornoCeramica
 };
 
 /** O desenho de uma coisa (quem não está no catálogo cai numa caixa genérica, com o nome no rótulo). */

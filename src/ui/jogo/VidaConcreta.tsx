@@ -44,6 +44,8 @@ import { sobDemanda } from '../util/sobDemanda';
 
 /** REWORK 10 · JOG-01: os jogos num pacote à parte (só carregam quando se abre a seção; o service worker guarda para o offline). */
 const Apostas = sobDemanda(() => import('./Apostas').then(m => m.Apostas));
+/** REWORK 12.4: a personalização mora num pacote à parte (carrega quando a tela aparece). */
+const CasaPorDentro = sobDemanda(() => import('./Personalizar').then(m => m.CasaPorDentro));
 
 interface Props { vida: Vida; agir: (a: Acao) => boolean; secao: SecaoVida; irSecao: (s: SecaoVida) => void; irPara: (a: Aba) => void; abrirPessoa: (id: string) => void }
 
@@ -69,6 +71,7 @@ export function VidaConcreta({ vida, agir, secao, irSecao, abrirPessoa }: Props)
         {secao === 'casa' && (
           <div className="casa">
             <Lar vida={vida} agir={agir} abrir={setLugar} />
+            {i >= 16 && <CasaPorDentro vida={vida} agir={agir} />}
             <QuemMoraAqui vida={vida} abrirPessoa={abrirPessoa} />
             <NaCasa vida={vida} irSecao={irSecao} />
             <Independencia vida={vida} agir={agir} irSecao={irSecao} />

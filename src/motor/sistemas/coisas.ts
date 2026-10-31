@@ -29,6 +29,8 @@ import { autonomia } from './autonomia';
 import { moraComFamiliaDeOrigem } from './domicilio';
 import { lancar } from './extrato';
 import { dinheiro as fmt } from '../texto';
+import { bonusDosComodos, naCasaAtual } from './lar';
+import { afetoDe, registrarNoObjeto } from './memoriaDosObjetos';
 
 export const coisasDaVida = (v: Vida): CoisaTida[] => v.financas.coisas ?? [];
 export const temCoisa = (v: Vida, id: string) => coisasDaVida(v).some(c => c.coisaId === id);
@@ -86,7 +88,8 @@ export function disponibilidadeComprarCoisa(v: Vida, id: string): Veredito {
   // Os móveis e os eletrodomésticos da casa da família são da família (e decisão dos adultos dela).
   if (c.daCasa && moraComFamiliaDeOrigem(v)) return bloqueio('impossivel', 'Na casa da família, os móveis e os eletrodomésticos são decisão dos adultos da casa.');
   if (id === 'prancha' && !pertoDaAgua(v.moradia.municipioId)) return bloqueio('impossivel', 'Longe do mar, a prancha vira enfeite de parede.');
-  if (temCoisa(v, id)) return bloqueio('incompativel', `Você já tem ${c.artigo} ${c.nome}.`);
+  // REWORK 12.4: os discos se compram de lote em lote (a coleção cresce); o resto, um de cada.
+  if (temCoisa(v, id) && id !== 'discos') return bloqueio('incompativel', `Você já tem ${c.artigo} ${c.nome}.`);
   return vereditoDePagar(v, precoDaCoisa(v, id));
 }
 
@@ -94,6 +97,13 @@ export function comprarCoisa(v: Vida, id: string): string {
   const c = coisa(id)!;
   const preco = precoDaCoisa(v, id);
   pagar(v, preco);
+  const lote = id === 'discos' ? coisasDaVida(v).find(x => x.coisaId === 'discos') : undefined;
+  if (lote) {
+    lote.quantidade = (lote.quantidade ?? 1) + 1;
+    lote.preco += preco;
+    registrarNoObjeto(lote, v.t, `Mais um lote de discos (${fmt(preco)}).`);
+    return `Mais um lote no sebo: a coleção passa de ${lote.quantidade * 25} discos.`;
+  }
   receberCoisa(v, id, preco);
   const online = temLojaNaCidade(v, c.loja) ? '' : ' Veio pela internet: na cidade não há loja disso.';
   // REWORK 7: a concordância da frase ("A estante de livros é sua", "Os livros são seus") — e o nome que já traz o
@@ -111,6 +121,9 @@ export function receberCoisa(v: Vida, id: string, preco: number, dada = false): 
   const vs = variantesDaCoisa(id);
   const x = vs[Math.floor(rngDe(nova.id, 'cor').next() * vs.length)];
   nova.cor = x.cor; nova.acabamento = x.nome;
+  // REWORK 12.4: de onde veio (a memória do objeto): o presente de quem cuida, o primeiro instrumento.
+  if (dada) nova.memoria = { origem: 'presente' };
+  else if (c.loja === 'instrumentos' && id !== 'discos' && !coisasDaVida(v).some(x => coisa(x.coisaId)?.loja === 'instrumentos' && x.coisaId !== 'discos')) nova.memoria = { origem: 'compra', motivo: 'o primeiro instrumento', afeto: 20 };
   (v.financas.coisas ??= []).push(nova);
   // Só o que marca vai para a Linha da Vida (o primeiro instrumento, o primeiro computador, o piano); o resto é compra.
   const marca = c.loja === 'instrumentos' || id === 'computador' || id === 'notebook' || preco >= 8000;
@@ -130,6 +143,8 @@ export function venderCoisa(v: Vida, coisaTidaId: string): string {
   const t = coisasDaVida(v).find(x => x.id === coisaTidaId)!;
   const c = coisa(t.coisaId)!;
   const valor = valorDeRevenda(v, t);
+  // REWORK 12.4: o que tinha história sai com a história escrita (o valor afetivo não entra no preço).
+  if (afetoDe(v, t) >= 45) escrever(v, { texto: `Vendeu ${c.artigo} ${c.nome}${t.memoria?.de ? ` que tinha sido de ${t.memoria.de}` : ''}. Foi junto um pedaço da história.`, relevancia: 'cotidiano', tema: 'casa', escolha: true });
   v.financas.conta += valor;
   v.financas.coisas = coisasDaVida(v).filter(x => x !== t);
   return valor > 0 ? `Vendeu ${c.artigo} ${c.nome} usad${c.artigo === 'a' || c.artigo === 'as' ? 'a' : 'o'} por ${fmt(valor)}.` : `Deu ${c.artigo} ${c.nome}: usad${c.artigo === 'a' ? 'a' : 'o'} assim, ninguém pagaria.`;
@@ -140,8 +155,9 @@ export function venderCoisa(v: Vida, coisaTidaId: string): string {
 /** Quanto as suas coisas somam à prática de uma atividade (0.25 = +25% de qualidade), com teto. */
 export function bonusDaAtividade(v: Vida, rotinaId: string): number {
   let soma = 0;
-  for (const t of coisasDaVida(v)) soma += coisa(t.coisaId)?.ajuda?.[rotinaId] ?? 0;
-  return Math.min(0.5, soma);
+  // REWORK 12.4: só ajuda o que está com você (o violão guardado no depósito não toca) — e o cômodo equipado soma.
+  for (const t of coisasDaVida(v)) if (naCasaAtual(t) && !t.lembranca) soma += coisa(t.coisaId)?.ajuda?.[rotinaId] ?? 0;
+  return Math.min(0.5, soma + bonusDosComodos(v, rotinaId));
 }
 
 /** O que a coisa faz, em palavras (na loja e depois da compra). */
@@ -169,22 +185,29 @@ export function processarCoisas(v: Vida): void {
   for (const t of lista) {
     const c = coisa(t.coisaId);
     if (!c) { quebradas.push(t); continue; }
+    if (t.lembranca) continue;
     const r = rngDe(v.id, 'coisa', t.id, v.t);
-    t.estado = clamp(Math.round(t.estado - (100 / c.vida) * (0.75 + r.next() * 0.5)), 0, 100);
+    // REWORK 12.4: o que está guardado (depósito, outra casa) quase não se gasta; emprestado, gasta como em uso.
+    const guardada = !!t.local && !t.emprestadaA ? 0.25 : 1;
+    t.estado = clamp(Math.round(t.estado - (100 / c.vida) * (0.75 + r.next() * 0.5) * guardada), 0, 100);
     if (t.estado <= 0) quebradas.push(t);
   }
+  const guardadas: CoisaTida[] = [];
   for (const t of quebradas) {
     const c = coisa(t.coisaId);
-    if (c) escrever(v, { texto: `${cap(c.artigo)} ${c.nome} chegou ao fim, depois de ${Math.max(1, Math.round((v.t - t.t) / 12))} ${Math.round((v.t - t.t) / 12) === 1 ? 'ano' : 'anos'} de uso.`, relevancia: c.loja === 'instrumentos' || c.preco >= 8000 ? 'biografia' : 'cotidiano', tema: 'casa' });
+    // REWORK 12.4: o que tem história não vai para o lixo quando para de funcionar — fica guardado como lembrança.
+    const fica = !!c && afetoDe(v, t) >= 45;
+    if (fica) { t.lembranca = true; t.emprestadaA = undefined; registrarNoObjeto(t, v.t, 'Parou de funcionar. Ficou guardado como lembrança.'); guardadas.push(t); }
+    if (c) escrever(v, { texto: `${cap(c.artigo)} ${c.nome} chegou ao fim, depois de ${Math.max(1, Math.round((v.t - t.t) / 12))} ${Math.round((v.t - t.t) / 12) === 1 ? 'ano' : 'anos'} de uso.${fica ? ' Não teve coragem de jogar fora.' : ''}`, relevancia: c.loja === 'instrumentos' || c.preco >= 8000 ? 'biografia' : 'cotidiano', tema: 'casa' });
   }
-  v.financas.coisas = lista.filter(t => !quebradas.includes(t));
+  v.financas.coisas = lista.filter(t => !quebradas.includes(t) || guardadas.includes(t));
   // O que fica: menos peso da casa (para quem cuida da própria casa) e descanso.
   const calor = fazCalor(v.moradia.municipioId);
   const daPropriaCasa = !moraComFamiliaDeOrigem(v);
   let alivio = 0, lazer = 0;
   for (const t of coisasDaVida(v)) {
     const c = coisa(t.coisaId);
-    if (!c) continue;
+    if (!c || !naCasaAtual(t) || t.lembranca) continue;
     if (c.alivio && daPropriaCasa && (!c.calor || calor)) alivio += c.alivio;
     if (c.lazer) lazer += c.lazer;
   }
@@ -198,7 +221,17 @@ export function processarCoisas(v: Vida): void {
  * na mala. Devolve o que entrou na conta.
  */
 export function coisasNaMudancaDePais(v: Vida): number {
-  const ficam = coisasDaVida(v).filter(t => coisa(t.coisaId)?.daCasa);
+  // REWORK 12.4: só o que está na casa (o que está guardado noutro lugar fica onde está) e o que não tem história:
+  // o piano da avó vai de navio, com frete.
+  const daCasa = coisasDaVida(v).filter(t => coisa(t.coisaId)?.daCasa && naCasaAtual(t) && !t.lembranca);
+  const vaoJunto = daCasa.filter(t => afetoDe(v, t) >= 45);
+  if (vaoJunto.length) {
+    const frete = Math.round(vaoJunto.reduce((s, t) => s + Math.max(800, t.preco * 0.15), 0) / 10) * 10;
+    v.financas.conta -= frete;
+    lancar(v, 'Frete internacional dos móveis de família', 'escolha', -frete);
+    for (const t of vaoJunto) registrarNoObjeto(t, v.t, 'Atravessou o oceano na mudança, num contêiner.');
+  }
+  const ficam = daCasa.filter(t => !vaoJunto.includes(t));
   if (!ficam.length) return 0;
   const valor = ficam.reduce((s, t) => s + valorDeRevenda(v, t), 0);
   v.financas.conta += valor;

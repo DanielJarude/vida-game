@@ -17,7 +17,7 @@ import { rngDe } from '../rng';
 import { escrever, idade, marcarFato, novoId, temFato } from '../nucleo';
 import { bloqueio, PERMITIDO, type Veredito } from '../plausibilidade';
 import { AUTONOMIA, autonomia } from './autonomia';
-import { BARBAS, CORES_NATURAIS, CORES_TINTA, CORTES, ITENS_ESTILO, itemEstilo, ROUPAS, sinalDoEstilo, TIPOS_DE_CABELO } from '../dados/estilo';
+import { BARBAS, CORES_NATURAIS, CORES_TINTA, CORTES, ITENS_ESTILO, itemEstilo, lugaresDoItem, ROUPAS, sinalDoEstilo, TIPOS_DE_CABELO } from '../dados/estilo';
 import { geneticaDe, guardarGenes } from './identidade';
 import { economiaLocal } from '../dados/lugares';
 import { vereditoDePagar, pagar } from './dinheiro';
@@ -156,7 +156,9 @@ export function comprarItem(v: Vida, itemId: string, pagoPelaFamilia = false): s
   const item: ItemDeEstilo = { id: novoId(v, 'est'), itemId, t: v.t, preco, usando: true };
   v.eu.estilo.itens.push(item);
   // Passa a usar (o que ocupa o mesmo lugar sai: a mesma categoria que aparece no retrato, o mesmo pulso, o mesmo pescoço).
-  for (const x of v.eu.estilo.itens) if (x !== item && mesmoLugar(it, itemEstilo(x.itemId))) x.usando = false;
+  let saiuRoupa = false;
+  for (const x of v.eu.estilo.itens) if (x !== item && x.usando && mesmoLugar(it, itemEstilo(x.itemId))) { x.usando = false; saiuRoupa ||= !!itemEstilo(x.itemId)?.visual?.roupa; }
+  if (saiuRoupa && !it.visual?.roupa) v.eu.visual.roupa = 'basica';
   if (it.visual) Object.assign(v.eu.visual, it.visual);
   v.eu.estilo.tMudanca = v.t;
   return it.luxo ? `Comprou ${it.nome.toLowerCase()} por ${fmt(preco)}. ${efeitoDoLuxo(v)}` : `Comprou ${it.nome.toLowerCase()}${pagoPelaFamilia ? '' : ` por ${fmt(preco)}`}.`;
@@ -179,14 +181,18 @@ export function efeitoDoLuxo(v: Vida): string {
 /** Dois itens disputam o mesmo lugar (só um de cada vez)? */
 function mesmoLugar(a: ReturnType<typeof itemEstilo>, b: ReturnType<typeof itemEstilo>): boolean {
   if (!a || !b) return false;
-  if (a.lugar || b.lugar) return a.lugar === b.lugar;
-  return !!a.visual && !!b.visual && a.categoria === b.categoria;
+  // REWORK 12.4: a peça ocupa partes do corpo (a camiseta, a de cima; o vestido, a de cima e a de baixo).
+  const la = lugaresDoItem(a);
+  return lugaresDoItem(b).some(x => la.includes(x));
 }
 
 export function usarItem(v: Vida, itemId: string, usar: boolean): string {
   const it = itemEstilo(itemId)!;
   const x = itensDaPessoa(v).find(y => y.itemId === itemId)!;
-  if (usar) for (const y of itensDaPessoa(v)) if (y !== x && mesmoLugar(it, itemEstilo(y.itemId))) y.usando = false;
+  let saiuRoupa = false;
+  if (usar) for (const y of itensDaPessoa(v)) if (y !== x && y.usando && mesmoLugar(it, itemEstilo(y.itemId))) { y.usando = false; saiuRoupa ||= !!itemEstilo(y.itemId)?.visual?.roupa; }
+  // REWORK 12.4: a calça nova tira o vestido — e o retrato volta à roupa de todo dia na parte de cima.
+  if (saiuRoupa && !it.visual?.roupa) v.eu.visual.roupa = 'basica';
   if (it.visual) {
     const m: MudancaVisual = {};
     if (it.visual.oculos) m.oculos = usar ? it.visual.oculos : undefined;

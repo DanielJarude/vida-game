@@ -39,7 +39,7 @@ import { DesenhoObjeto } from './Objetos';
 import { chaveDaFachada, corConcordada, corDoVeiculo, fachadaDe, variantesDaCoisa } from '../../../motor/dados/pertences';
 import { animal, palavraDoBicho } from '../../../motor/dados/animais';
 import { CATEGORIAS_DA_LOJA, catalogoDeVeiculos, ofertasDePets, type OfertaDePet } from '../../../motor/sistemas/mercado';
-import { BALCOES, ITENS_ESTILO, type CategoriaItem } from '../../../motor/dados/estilo';
+import { BALCOES, ESTILOS, ITENS_ESTILO, type CategoriaItem } from '../../../motor/dados/estilo';
 import { precoDoItem, temItem } from '../../../motor/sistemas/estilo';
 
 const capitalizar = (x: string) => x.charAt(0).toUpperCase() + x.slice(1);
@@ -234,16 +234,23 @@ function LojaDeEstilo({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }
   // Três balcões (não uma prateleira só): a ótica, as roupas e chapéus, a relojoaria e a joalheria.
   const [balcao, setBalcao] = useState<(typeof BALCOES)[number]['id']>('otica');
   const TITULO_CAT: Record<CategoriaItem, string> = { oculos: 'Óculos', chapeu: 'Na cabeça', roupa: 'Roupas', acessorio: 'Relógios e joias' };
+  // REWORK 12.4: as roupas por estilo (o balcão tem dezenas de peças: o estilo filtra; "todos" mostra o básico de cada parte).
+  const [estilo, setEstilo] = useState('');
   const grupos: { cat: CategoriaItem; titulo: string }[] = BALCOES.find(b => b.id === balcao)!.categorias.map(cat => ({ cat, titulo: TITULO_CAT[cat] }));
+  const doEstilo = (x: (typeof ITENS_ESTILO)[number]) => !estilo || (x.estilos ?? []).includes(estilo);
   return (
     <div className="loja-estilo">
       <p className="nota">Mudar o corte, a cor ou a barba não custa nada: fica em Você · Aparência e estilo. Aqui é o que se compra — e fica com você: dá para usar, guardar e trocar depois.</p>
       <Escolha rotulo="Balcão" valor={balcao} aoMudar={setBalcao} opcoes={BALCOES.map(b => ({ id: b.id, rotulo: b.nome }))} />
+      {balcao === 'roupas' && (
+        <label className="campo"><span className="campo__rotulo">Estilo</span>
+          <select value={estilo} onChange={e => setEstilo(e.target.value)}><option value="">Todos</option>{ESTILOS.map(e => <option key={e.id} value={e.id}>{e.nome} — {e.nota}</option>)}</select></label>
+      )}
       {grupos.map(g => (
         <section key={g.cat} className="loja-estilo__grupo" aria-label={g.titulo}>
           <h3 className="subtitulo">{g.titulo}</h3>
           <ul className="ofertas">
-            {ITENS_ESTILO.filter(x => x.categoria === g.cat).map(x => {
+            {ITENS_ESTILO.filter(x => x.categoria === g.cat && doEstilo(x)).map(x => {
               const tem = temItem(vida, x.id);
               return (
                 <li key={x.id} className="oferta oferta--estilo">

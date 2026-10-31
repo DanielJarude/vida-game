@@ -18,6 +18,7 @@
  *     para não se repetirem.
  */
 
+import { normalizarLocais } from './sistemas/personalizacao';
 import { indiceDoBairro } from './sistemas/mercado';
 import { garantirSetor } from './sistemas/setores';
 import { normalizarSubmundo } from './sistemas/submundo';
@@ -112,7 +113,7 @@ export function ler(s: Armazenamento | null = armazenamentoPadrao()): Leitura {
  */
 export function interpretar(bruto: string): Leitura {
   const r = interpretarSemNormalizar(bruto);
-  if (r.tipo === 'ok') { normalizarRework75(r.vida); normalizarRework97(r.vida); normalizarRework106(r.vida); normalizarRework11Relacoes(r.vida); normalizarRework11Esportes(r.vida); normalizarRework11Artes(r.vida); normalizarRework115(r.vida); normalizarRework12(r.vida); normalizarRework122(r.vida); normalizarRework125(r.vida); normalizarRework123(r.vida); normalizarRework1235(r.vida); fixarEstatura(r.vida, true); }
+  if (r.tipo === 'ok') { normalizarRework75(r.vida); normalizarRework97(r.vida); normalizarRework106(r.vida); normalizarRework11Relacoes(r.vida); normalizarRework11Esportes(r.vida); normalizarRework11Artes(r.vida); normalizarRework115(r.vida); normalizarRework12(r.vida); normalizarRework122(r.vida); normalizarRework125(r.vida); normalizarRework123(r.vida); normalizarRework1235(r.vida); normalizarRework124(r.vida); fixarEstatura(r.vida, true); }
   return r;
 }
 
@@ -1765,6 +1766,14 @@ export function normalizarRework123(v: Vida): void {
  * REWORK 12.35 · D6: o posto do ramo organizado (11.5) e o nível da organização (12.25) eram dois; agora o nível é a fonte
  * única. Num save antigo, quem subiu pelo ramo traz o posto para o nível (uma vez: o maior dos dois). Idempotente.
  */
+/**
+ * REWORK 12.4 — nada obrigatório (todos os campos novos são opcionais: o save continua v20). Na carga, os lugares dos
+ * objetos são conferidos (um lugar que deixou de existir vira "em casa") e um objeto repetido por id fica uma vez só.
+ */
+export function normalizarRework124(v: Vida): void {
+  normalizarLocais(v);
+}
+
 export function normalizarRework1235(v: Vida): void {
   const e = v.caminhos.envolvimento;
   const posto = e?.especializacoes?.organizado?.posto;

@@ -25,6 +25,7 @@
  * pessoa é. Nada aqui move traços.
  */
 
+import { adequacaoDaRoupa, roupaPara } from '../dados/estilo';
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
 import type { Devolutiva, Vida } from '../tipos';
@@ -447,7 +448,10 @@ export function avaliar(v: Vida, oc: Ocupacao, base: number, porta: number, etap
   const notas = etapas.map(e => e.nota ?? 0);
   const media = notas.length ? notas.reduce((s, x) => s + x, 0) / notas.length : 0;
   const pratica = Math.min(0.05, v.caminhos.entrevistas.feitas * 0.01);
-  const chance = clamp(base + porta + media * 0.2 + pratica, 0.03, 0.95);
+  // REWORK 12.4: nos lugares formais (banco, escritório de advocacia, repartição), a roupa conta um pouco — a que cabe
+  // ajuda, a que destoa atrapalha. Nos outros, ninguém repara. Quem nunca comprou roupa nenhuma não perde nada.
+  const roupa = FORMAIS.has(oc.setor) ? { adequada: 0.03, neutra: 0, destoa: -0.04 }[adequacaoDaRoupa(roupaPara(v, 'trabalho'), 'trabalho')] : 0;
+  const chance = clamp(base + porta + media * 0.2 + pratica + roupa, 0.03, 0.95);
   const respostas = etapas.map(e => ({ e, resp: perguntaPorId(e.id)?.respostas.find(x => x.id === e.resposta) })).filter(x => x.resp);
   const ordem = [...respostas].sort((a, b) => (b.e.nota ?? 0) - (a.e.nota ?? 0));
   const melhor = ordem[0] && (ordem[0].e.nota ?? 0) >= 0.3 ? ordem[0].resp : undefined;
@@ -456,3 +460,5 @@ export function avaliar(v: Vida, oc: Ocupacao, base: number, porta: number, etap
   const falta: Avaliacao['falta'] = c.pede > 0 && c.exp < c.pede ? 'experiencia' : base < 0.28 && !c.formado && !!oc.area ? 'formacao' : media < -0.1 ? 'entrevista' : 'concorrencia';
   return { chance, media, melhor, pior, falta };
 }
+
+const FORMAIS = new Set(['juridico', 'financas', 'publico', 'administrativo']);

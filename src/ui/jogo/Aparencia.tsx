@@ -5,6 +5,9 @@
  * rosto antes de mudar. Nada disso é moral, e nada disso dá fama.
  */
 
+import { sobDemanda } from '../util/sobDemanda';
+/** REWORK 12.4: o guarda-roupa por estilo e ocasião (pacote sob demanda). */
+const GuardaRoupa = sobDemanda(() => import('./Personalizar').then(m => m.GuardaRoupa));
 import { useState } from 'react';
 import type { Vida, Visual } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
@@ -110,6 +113,7 @@ export function AparenciaEEstilo({ vida, agir, irPara }: Props) {
           </ul>
         </div>
       )}
+      <GuardaRoupa vida={vida} agir={agir} />
       {i >= AUTONOMIA.compra_pessoal.idade && (
         <p className="nota">{precisaDeOculos(vida) && !itens.some(x => x.itemId === 'oculos_grau') ? 'A vista anda pedindo óculos de grau. ' : ''}Óculos, chapéus, roupas: <button type="button" className="link" onClick={() => irPara('compras')}>Vida · Compras →</button></p>
       )}

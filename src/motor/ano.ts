@@ -8,6 +8,7 @@
  * Silêncio é permitido: nem todo ano precisa de uma história.
  */
 
+import { processarPersonalizacao } from './sistemas/personalizacao';
 import { fotografarEvolucao, praticandoPor } from './sistemas/progressao';
 import { cansacoNosEstudos, faixaDaSemana, estudaAgora } from './sistemas/semana';
 import { agendaDaSemana, presencaNaEscola, presencaNoCurso, presencaNoEstudo, processarAgenda } from './sistemas/agenda';
@@ -153,6 +154,8 @@ function viverAno(v: Vida, r: Rng): void {
   processarPets(v, r);
   processarExoticos(v);
   processarCoisas(v);
+  // REWORK 12.4: os lugares dos objetos, o conforto da casa, o gosto, as fases do estilo.
+  processarPersonalizacao(v);
   processarMortes(v, r);
   processarIndiretos(v);
   processarDistantes(v);

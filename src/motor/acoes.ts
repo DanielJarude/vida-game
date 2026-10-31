@@ -6,6 +6,7 @@
  * para mostrar o motivo de um bloqueio; o motor revalida na execução.
  */
 
+import { disponibilidadePersonalizar, normalizarLocais, personalizar, type OpPersonalizar } from './sistemas/personalizacao';
 import { disponibilidadeCrianca, executarCrianca, type OqueCrianca } from './sistemas/dinheiroDaCrianca';
 import { adultoPaga, aQuemPedir, dependeDosResponsaveis, disponibilidadePedidoDeCompra, executarPedidoDeCompra, respostaDoResponsavel } from './sistemas/pedidosDaCrianca';
 import { pararTratamento, podeParaTratamento, redeDeSaude } from './sistemas/saude';
@@ -282,6 +283,8 @@ export type Acao =
   | { tipo: 'usar_item'; itemId: string; usar: boolean }
   /** As coisas da vida: comprar numa loja da cidade; vender a usada (`sistemas/coisas`). */
   | { tipo: 'comprar_coisa'; coisaId: string }
+  /** REWORK 12.4: a casa, os objetos, os veículos, a roupa e o tempo livre do jeito da pessoa (`sistemas/personalizacao`). */
+  | { tipo: 'personalizar'; op: OpPersonalizar }
   | { tipo: 'vender_coisa'; coisaTidaId: string }
   /** REWORK 4: usar uma coisa sua (tocar, jogar, fotografar...), sozinho ou com alguém (`pertences`). */
   | { tipo: 'usar_coisa'; coisaTidaId: string; uso: string; pessoaId?: string }
@@ -751,6 +754,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'estetica': return disponibilidadeProcedimento(v, a.id, a.clinica, a.alvo, a.revisao);
     case 'usar_item': return disponibilidadeUsarItem(v, a.itemId, a.usar);
     case 'comprar_coisa': return disponibilidadeComprarCoisa(v, a.coisaId);
+    case 'personalizar': return disponibilidadePersonalizar(v, a.op);
     case 'vender_coisa': return disponibilidadeVenderCoisa(v, a.coisaTidaId);
     case 'usar_coisa': return disponibilidadeUsarCoisa(v, a.coisaTidaId, a.uso, a.pessoaId);
     case 'presentear': return disponibilidadePresentear(v, a.pessoaId, a.coisaId);
@@ -918,6 +922,8 @@ export function executar(vida: Vida, a: Acao): Retorno {
     conferir(v, ...linhaDoExtrato(a));
     // REWORK 9: a agenda guarda só escolhas de coisas que existem (a atividade largada leva o lugar dela junto).
     limparAgenda(v);
+    // REWORK 12.4: os objetos nunca ficam num lugar que deixou de existir (o imóvel vendido, a casa para onde se mudou).
+    normalizarLocais(v);
   });
   // REWORK 12.3 · D10: as consequências objetivas da ação (o Submundo as mede) vêm antes do que entrou na Linha da Vida.
   const mudancas = [...(consequencias ?? []), ...nova.biografia.slice(antes).filter(e => e.relevancia !== 'tecnico').map(e => e.texto)];
@@ -936,6 +942,7 @@ function linhaDoExtrato(a: Acao): [string, TipoMovimento] {
     case 'comprar_imovel': case 'vender_bem': case 'imovel': case 'comprar_veiculo': case 'veiculo': return ['Imóveis e veículos: compra, venda e reparo', 'escolha'];
     case 'migrar': return ['Mudança de país', 'escolha'];
     case 'comprar_coisa': case 'vender_coisa': return ['Coisas da casa e da vida: compra e venda', 'escolha'];
+    case 'personalizar': return a.op.o === 'cultural' || a.op.o === 'obra' ? ['Música, arte e programas culturais', 'escolha'] : a.op.o.startsWith('veiculo') ? ['Imóveis e veículos: compra, venda e reparo', 'escolha'] : ['A casa e os objetos: reformas, fretes e personalização', 'escolha'];
     case 'presentear': return ['Presentes', 'escolha'];
     case 'rede': return ['Rede social', 'escolha'];
     case 'oficio': return ['No trabalho', 'escolha'];
@@ -1544,6 +1551,7 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
     case 'estetica': { const x = fazerProcedimento(v, r, a.id as IdProcedimento, a.clinica, a.alvo, a.revisao); return { resultado: x.texto, titulo: x.titulo }; }
     case 'usar_item': return ok(usarItem(v, a.itemId, a.usar));
     case 'comprar_coisa': return ok(comprarCoisa(v, a.coisaId), 'bom');
+    case 'personalizar': return ok(personalizar(v, a.op), 'bom');
     case 'vender_coisa': return ok(venderCoisa(v, a.coisaTidaId));
     case 'usar_coisa': return ok(usarCoisa(v, a.coisaTidaId, a.uso, a.pessoaId), 'bom');
     case 'presentear': return ok(presentear(v, a.pessoaId, a.coisaId), 'bom');

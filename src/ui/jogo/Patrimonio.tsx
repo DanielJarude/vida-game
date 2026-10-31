@@ -38,6 +38,11 @@ import { Pertences } from './Pertences';
 import { Evolucao } from './material/Desenhos';
 import type { QualLugar } from './material/Lugares';
 import '../patrimonio.css';
+import { sobDemanda } from '../util/sobDemanda';
+
+/** REWORK 12.4: a personalização mora num pacote à parte (carrega quando a tela aparece). */
+const OrganizarObjetos = sobDemanda(() => import('./Personalizar').then(m => m.OrganizarObjetos));
+const PersonalizarVeiculos = sobDemanda(() => import('./Personalizar').then(m => m.PersonalizarVeiculos));
 
 export type PartePatrimonio = 'resumo' | 'imoveis' | 'garagem' | 'colecao' | 'empresas' | 'objetos';
 
@@ -136,8 +141,19 @@ function Objetos({ vida, agir, abrir, irColecao }: Props & { irColecao: () => vo
   const usados = vida.eu.estilo?.itens ?? [];
   const coisas = vida.financas.coisas ?? [];
   const pecas = colecao(vida).length;
+  // REWORK 12.4: dois modos, nunca os dois juntos — USAR (o de sempre: os usos de cada coisa) e ORGANIZAR (o inventário
+  // com busca, filtros e o lugar de cada objeto: guardar, emprestar, dar, a história).
+  const [modo, setModo] = useState<'usar' | 'organizar'>('usar');
+  const total = usados.length + coisas.length + pecas;
+  if (modo === 'organizar') return (
+    <>
+      <ModoDosObjetos modo={modo} setModo={setModo} total={total} />
+      <OrganizarObjetos vida={vida} agir={agir} />
+    </>
+  );
   return (
     <>
+      {total > 0 && idade(vida) >= 12 && <ModoDosObjetos modo={modo} setModo={setModo} total={total} />}
       {usados.length > 0 && (
         <Secao titulo="O que você usa: roupas, óculos, relógios, joias">
           <ul className="pat-usados">
@@ -159,6 +175,15 @@ function Objetos({ vida, agir, abrir, irColecao }: Props & { irColecao: () => vo
       {pecas > 0 && <p className="nota pat-onde">As peças de coleção ({pecas}) ficam em <button type="button" className="link" onClick={irColecao}>Coleção →</button></p>}
       {!usados.length && !coisas.length && <p className="nota pat-onde">Onde fica cada coisa: o que se usa no corpo e as coisas da vida, aqui; relógios, joias, arte e antiguidades de coleção, em Coleção; carros e motos, em Garagem; casas, em Imóveis; negócios, em Empresas.</p>}
     </>
+  );
+}
+
+function ModoDosObjetos({ modo, setModo, total }: { modo: 'usar' | 'organizar'; setModo: (m: 'usar' | 'organizar') => void; total: number }) {
+  return (
+    <div className="escolha pat-modo" role="radiogroup" aria-label="Ver os objetos para">
+      <button type="button" role="radio" aria-checked={modo === 'usar'} className={`escolha__item${modo === 'usar' ? ' escolha__item--ativo' : ''}`} onClick={() => setModo('usar')}>Usar</button>
+      <button type="button" role="radio" aria-checked={modo === 'organizar'} className={`escolha__item${modo === 'organizar' ? ' escolha__item--ativo' : ''}`} onClick={() => setModo('organizar')}>Organizar ({total})</button>
+    </div>
   );
 }
 
@@ -217,6 +242,7 @@ function Garagem({ vida, agir, abrir }: Props) {
           </table>
         </div>
       )}
+      {lista.length > 0 && <PersonalizarVeiculos vida={vida} agir={agir} />}
       {lista.filter(b => guardadoLonge(vida, b)).map(b => {
         const t = custoDeTrazer(vida, b);
         return (

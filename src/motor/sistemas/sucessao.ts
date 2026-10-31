@@ -32,11 +32,13 @@
  * alguém conhecido é conhecido por associação (um pouco, e isso passa).
  */
 
+import { afetoDe, registrarNoObjeto } from './memoriaDosObjetos';
+import { itemEstilo } from '../dados/estilo';
 import { genesDe } from './identidade';
 import { nacionalidadesDaPessoa, paisDaPessoa, paisDaVida } from '../mundo/vida';
 import { converterEntrePaises } from '../mundo/moeda';
 import type {
-  Bem, Condicao, DecisoesDeHeranca, Emprego, Entrada, Escolaridade, Genero, Geracao, Heranca, Imovel, Linhagem, Parentesco, Personalidade, Pessoa, Posses, Traco, Vida, Vinculo
+  Bem, Colecionavel, Condicao, EpisodioBem, MemoriaDoObjeto, DecisoesDeHeranca, Emprego, Entrada, Escolaridade, Genero, Geracao, Heranca, Imovel, Linhagem, Parentesco, Personalidade, Pessoa, Posses, Traco, Vida, Vinculo
 } from '../tipos';
 import { clamp } from '../rng';
 import { idadePessoa, escrever, MARCOS_DA_INFANCIA, novoId, transacao } from '../nucleo';
@@ -74,7 +76,8 @@ export { paisDaVida };
 
 /* ============================================================ Inventário */
 
-export type TipoItem = 'dinheiro' | 'aplicacao' | 'imovel' | 'veiculo' | 'negocio';
+/** REWORK 12.4: `peca` — a peça de coleção marcada como de família (passa em espécie; sem dono escolhido, vai a leilão). */
+export type TipoItem = 'dinheiro' | 'aplicacao' | 'imovel' | 'veiculo' | 'negocio' | 'peca';
 
 export interface ItemDoInventario {
   /** `conta`, o id da aplicação, o id do bem, ou `negocio`. */
@@ -100,8 +103,10 @@ export function inventario(v: Vida): ItemDoInventario[] {
   }
   // REWORK 12: a coleção e as participações em empresas entram no inventário pelo que rendem vendidas (o leilão das
   // peças, a parte vendida aos sócios) — o espólio as converte em dinheiro; nada some na morte.
-  const colecao = Math.round((f.colecao ?? []).reduce((s, c) => s + c.valor * (c.certificado ? 0.8 : 0.65), 0));
+  const colecao = Math.round((f.colecao ?? []).filter(c => !c.deFamilia).reduce((s, c) => s + c.valor * (c.certificado ? 0.8 : 0.65), 0));
   if (colecao > 0) itens.push({ id: 'colecao', tipo: 'aplicacao', nome: 'a coleção (vendida no inventário)', valor: colecao });
+  // REWORK 12.4: a peça de família entra inteira, pelo valor estimado — para passar em espécie, com a história dela.
+  for (const c of f.colecao ?? []) if (c.deFamilia) itens.push({ id: `peca:${c.id}`, tipo: 'peca', nome: c.nome, valor: Math.max(0, Math.round(c.valor)) });
   for (const e of f.empresas ?? []) {
     if (e.estado === 'encerrada') continue;
     const valor = Math.round(Math.max(0, e.avaliacao ?? 0) * e.parte * 0.85);
@@ -290,6 +295,18 @@ export function partilhar(v: Vida, d: DecisoesDeHeranca = {}): Partilha {
     const qc = quinhoes.get(conjuge.id);
     if (casa && qc && casa.valor <= qc.valor) atribuicoes[casa.id] = conjuge.id;
   }
+  // REWORK 12.4: as peças de família, sem dono escolhido, ficam com os filhos (do mais velho ao mais novo, enquanto a
+  // parte de cada um couber) — senão, com o cônjuge. Quem decidiu no testamento já disse com quem fica cada uma.
+  if (!d.bens) {
+    const ordem = [...lista].sort((a, b) => (a.papel === 'filho' ? 0 : a.papel === 'conjuge' ? 1 : 2) - (b.papel === 'filho' ? 0 : b.papel === 'conjuge' ? 1 : 2) || (v.pessoas[a.pessoaId]?.tNasc ?? 0) - (v.pessoas[b.pessoaId]?.tNasc ?? 0));
+    const usado = new Map<string, number>(Object.entries(atribuicoes).map(([bem, pid]) => [pid, inv.find(x => x.id === bem)?.valor ?? 0]));
+    for (const item of inv.filter(x => x.tipo === 'peca')) {
+      const quem = ordem.find(x => x.valor - (usado.get(x.pessoaId) ?? 0) >= item.valor);
+      if (!quem) continue;
+      atribuicoes[item.id] = quem.pessoaId;
+      usado.set(quem.pessoaId, (usado.get(quem.pessoaId) ?? 0) + item.valor);
+    }
+  }
   for (const [bemId, pessoaId] of Object.entries(atribuicoes)) {
     const item = inv.find(x => x.id === bemId);
     if (!item || item.tipo === 'dinheiro' || item.tipo === 'aplicacao') continue;
@@ -303,7 +320,7 @@ export function partilhar(v: Vida, d: DecisoesDeHeranca = {}): Partilha {
     x.dinheiro = x.valor - emBens;
   }
   const atribuidos = new Set(lista.flatMap(x => x.bens.map(b => b.id)));
-  const vendidos = inv.filter(x => (x.tipo === 'imovel' || x.tipo === 'veiculo' || x.tipo === 'negocio') && !atribuidos.has(x.id));
+  const vendidos = inv.filter(x => (x.tipo === 'imovel' || x.tipo === 'veiculo' || x.tipo === 'negocio' || x.tipo === 'peca') && !atribuidos.has(x.id));
   // As dívidas são pagas antes de tudo: se o dinheiro do que não foi atribuído não basta, os bens atribuídos não podem sair inteiros.
   const caixaLivre = inv.filter(x => !atribuidos.has(x.id)).reduce((s, x) => s + x.valor, 0);
   const precisaDeCaixa = dividasPagas + custos + (doacao?.valor ?? 0) + vacante + lista.reduce((s, x) => s + Math.max(0, x.dinheiro), 0);
@@ -448,6 +465,29 @@ function bemDoInventario(v: Vida, item: ItemDoInventario): Bem | undefined {
   return v.financas.bens.find(b => b.id === item.id);
 }
 
+function pecaDoInventario(v: Vida, item: ItemDoInventario): Colecionavel | undefined {
+  return item.tipo === 'peca' ? (v.financas.colecao ?? []).find(c => `peca:${c.id}` === item.id) : undefined;
+}
+
+/** A peça que passa de uma geração a outra: a mesma peça, a história dela, e de quem veio. */
+function pecaHerdada(c: Colecionavel, nomeMorto: string, t: number, k = 1): Colecionavel {
+  const x = structuredClone(c);
+  x.valor = c.valor * k;
+  x.local = undefined; x.comodo = undefined; x.exposta = undefined; x.emprestadaA = undefined;
+  x.memoria = { origem: 'heranca', de: nomeMorto, motivo: c.memoria?.motivo, afeto: Math.max(50, c.memoria?.afeto ?? 0) };
+  registrarNoObjeto(x, t, `Herdada de ${nomeMorto}.`);
+  return x;
+}
+
+/** O objeto pessoal que passa a quem continua: o mesmo objeto, com a lembrança de quem era. */
+function objetoHerdado<T extends { memoria?: MemoriaDoObjeto; historia?: EpisodioBem[]; local?: string; emprestadaA?: string }>(o: T, nomeMorto: string, t: number, afeto: number): T {
+  const x = structuredClone(o);
+  x.local = undefined; x.emprestadaA = undefined;
+  x.memoria = { origem: 'heranca', de: nomeMorto, motivo: o.memoria?.motivo, afeto: Math.max(afeto, o.memoria?.afeto ?? 0, 35) };
+  registrarNoObjeto(x, t, `Era de ${nomeMorto}.`);
+  return x;
+}
+
 /** Entrega a cada pessoa o que coube a ela (NPC: nas posses; o protagonista que continua recebe à parte). */
 function entregarAosNpcs(v: Vida, p: Partilha, nomeMorto: string, exceto?: string): void {
   for (const x of p.quinhoes) {
@@ -468,6 +508,11 @@ function entregarAosNpcs(v: Vida, p: Partilha, nomeMorto: string, exceto?: strin
       if (b.tipo === 'negocio') {
         const n = v.caminhos.negocio;
         if (n) pos.negocio = { ...structuredClone(n), passivo: true };
+      } else if (b.tipo === 'peca') {
+        // REWORK 12.4: a peça de família segue com quem a recebeu (e com a história dela) — se essa pessoa um dia
+        // continuar a história, a peça está lá.
+        const peca = pecaDoInventario(v, b);
+        if (peca) (pos.colecao ??= []).push(pecaHerdada(peca, nomeMorto, v.t, k));
       } else {
         const bem = bemDoInventario(v, b);
         if (bem) pos.bens.push({ ...structuredClone(bem), valor: bem.valor * k, dono: 'eu', ...(bem.tipo === 'imovel' ? { herdado: true } : {}), historia: [...(bem.historia ?? []), { t: v.t, texto: `Herdad${bem.tipo === 'imovel' ? 'o' : 'o'} de ${nomeMorto}.` }] } as Bem);
@@ -691,8 +736,11 @@ export function continuarComo(vida: Vida, herdeiroId: string): { vida: Vida; err
     const recebidos: Bem[] = (quinhaoDela?.bens ?? []).filter(b => b.tipo !== 'negocio').map(b => vida.financas.bens.find(x => x.id === b.id)).filter((b): b is Bem => !!b)
       .map(b => ({ ...structuredClone(b), valor: b.valor * kHerdeira, dono: 'eu' as const, ...(b.tipo === 'imovel' ? { herdado: true } : {}), historia: [...(b.historia ?? []), { t: tMorte, texto: `Herdad${b.tipo === 'imovel' ? 'o' : 'o'} de ${nomeMorto}.` }] } as Bem));
     const proprios = h.posses?.bens ?? [];
+    // REWORK 12.4: as peças de família que couberam a ela (e as que ela já tinha recebido de outra herança).
+    const pecas = [...(h.posses?.colecao ?? []).map(c => structuredClone(c)), ...(quinhaoDela?.bens ?? []).map(b => pecaDoInventario(vida, b)).filter((c): c is Colecionavel => !!c).map(c => pecaHerdada(c, nomeMorto, tMorte, kHerdeira))];
     v.financas = {
       conta: 0, investimentos: [], dividas: [], bens: [...proprios.map(b => structuredClone(b)), ...recebidos],
+      ...(pecas.length ? { colecao: pecas } : {}),
       estilo: i < 18 ? 'modesto' : h.renda > 9000 ? 'confortavel' : 'modesto', planoDeSaude: vida.financas.planoDeSaude && (i < 18 || h.renda > 5000),
       negativado: false, razao: [], historico: []
     };
@@ -737,8 +785,15 @@ export function continuarComo(vida: Vida, herdeiroId: string): { vida: Vida; err
     const coisasDoMorto = vida.financas.coisas ?? [];
     const mesmaCasa = moravaJunto && v.moradia.municipioId === antigaMoradia.municipioId && (v.moradia.imovelId === antigaMoradia.imovelId || v.moradia.tipo === antigaMoradia.tipo);
     const pessoais = new Set(['violao', 'violino', 'guitarra', 'teclado', 'bateria', 'piano', 'camera', 'livros', 'tabuleiro', 'jogos_tabuleiro', 'material_arte', 'videogame', 'raquete', 'prancha', 'camping']);
-    const ficam = coisasDoMorto.filter(c => mesmaCasa || pessoais.has(c.coisaId)).map(c => structuredClone(c));
-    if (ficam.length) v.financas.coisas = ficam;
+    // REWORK 12.4: e o que tinha história (o objeto de afeto vai com quem continua, onde quer que more) — com a memória
+    // de quem era; o que estava guardado noutro lugar (depósito, cofre) também é do espólio que passa adiante.
+    const ficam = coisasDoMorto.filter(c => mesmaCasa || pessoais.has(c.coisaId) || afetoDe(vida, c) >= 45).map(c => objetoHerdado(c, nomeMorto, tMorte, afetoDe(vida, c)));
+    const jaDela = (h.posses?.objetos ?? []).map(c => structuredClone(c));
+    if (ficam.length || jaDela.length) v.financas.coisas = [...jaDela, ...ficam];
+    // Os acessórios (o relógio, as joias) de quem morreu ficam com quem continua: objetos pessoais, não bens do inventário.
+    const acessorios = (vida.eu.estilo?.itens ?? []).filter(x => itemEstilo(x.itemId)?.categoria === 'acessorio').map(x => ({ ...objetoHerdado(x, nomeMorto, tMorte, Math.max(40, afetoDe(vida, x))), usando: false }));
+    const deOutraHeranca = h.posses?.estilo ?? [];
+    if (acessorios.length || deOutraHeranca.length) v.eu.estilo = { itens: [...deOutraHeranca.map(x => structuredClone(x)), ...acessorios] };
     v.redes = undefined;
     for (const x of Object.values(novos)) x.digital = undefined;
 

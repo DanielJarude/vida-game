@@ -139,6 +139,10 @@ export interface Posses {
   negocio?: Negocio;
   /** De onde veio (herança de quem, as economias), em poucas linhas. */
   historia: { t: number; texto: string; valor: number }[];
+  /** REWORK 12.4: as peças e os objetos de família que esta pessoa recebeu (na herança): seguem com a história deles. */
+  colecao?: Colecionavel[];
+  objetos?: CoisaTida[];
+  estilo?: ItemDeEstilo[];
 }
 
 /**
@@ -298,6 +302,35 @@ export interface EstiloPessoal {
   tMudanca?: number;
   /** A cor natural do cabelo (guardada na primeira tinta: é para ela que se volta). */
   corNatural?: string;
+  /**
+   * REWORK 12.4: o que se veste em cada ocasião (ids de `ItemDeEstilo`). Ausente: a roupa de todo dia vai para tudo —
+   * ninguém é obrigado a trocar de roupa a cada saída.
+   */
+  looks?: Partial<Record<Ocasiao, string[]>>;
+  /** REWORK 12.4: as fases do estilo (quando o jeito de se vestir mudou de cara), para a história. */
+  fases?: { t: number; estilo: string }[];
+}
+
+/** REWORK 12.4: as ocasiões em que a roupa pode importar (`sistemas/guardaRoupa`). */
+export type Ocasiao = 'dia' | 'trabalho' | 'estudo' | 'festa' | 'evento' | 'esporte' | 'encontro';
+
+/**
+ * REWORK 12.4 — onde um objeto está. Ausente = na casa onde a pessoa mora (vai junto numa mudança, como sempre foi).
+ * `im:<id do imóvel>` (outra propriedade sua), `dep:<município>` (um depósito alugado), `cofre:<município>` (o cofre do
+ * banco: só o que é pequeno). Um objeto tem UM lugar: o campo é único, e mover é trocar o valor (nunca copiar).
+ */
+export type LocalDoObjeto = string;
+
+/** REWORK 12.4 — de onde um objeto veio e o que ele significa (o valor afetivo não é o de mercado). */
+export interface MemoriaDoObjeto {
+  origem: 'compra' | 'presente' | 'heranca' | 'feito' | 'conquista';
+  /** De quem veio (nome, guardado: a pessoa pode morrer, o objeto lembra). */
+  de?: string;
+  deId?: string;
+  /** Por quê importa ("o primeiro violão", "do avô"), quando importa. */
+  motivo?: string;
+  /** O valor afetivo de partida (0..100); o tempo e o uso somam (`sistemas/memoriaDosObjetos`). */
+  afeto?: number;
 }
 
 export interface ItemDeEstilo {
@@ -307,6 +340,10 @@ export interface ItemDeEstilo {
   t: number;
   preco: number;
   usando: boolean;
+  /** REWORK 12.4: onde está guardado (o cofre, para a joia que não se usa). Ausente = com a pessoa. */
+  local?: LocalDoObjeto;
+  memoria?: MemoriaDoObjeto;
+  historia?: EpisodioBem[];
 }
 
 export type Parentesco =
@@ -1119,6 +1156,14 @@ export interface Veiculo {
    * onde ela mora. Numa mudança de país, o carro fica guardado na cidade de antes — não some, não é vendido à força.
    */
   local?: string;
+  /** REWORK 12.4: o que foi feito nele (peça → opção: `dados/personalizacaoVeiculo`). Estético ≠ funcional. */
+  mods?: Record<string, string>;
+  /** REWORK 12.4: um nome próprio. */
+  apelido?: string;
+  /** REWORK 12.4: o papel na garagem (ausente = de uso). O principal continua em `financas.veiculoPrincipal`. */
+  papel?: 'colecao';
+  /** REWORK 12.4: guardado na garagem de outra propriedade sua (o id do imóvel). */
+  garagem?: string;
 }
 
 export interface Imovel {
@@ -1153,6 +1198,23 @@ export interface Imovel {
   calote?: number;
   /** REWORK 12: o quanto o bairro é disputado (o índice da oferta: 1 = um bairro comum). Ausente nos saves antigos. */
   indiceBairro?: number;
+  /** REWORK 12.4: a casa como foi deixada (cômodos, acabamentos). Ausente = como veio. */
+  lar?: LarPersonalizado;
+}
+
+/** REWORK 12.4 — os aspectos de um cômodo que se escolhem (`dados/lar`). */
+export type AspectoDoComodo = 'piso' | 'parede' | 'luz';
+
+/**
+ * REWORK 12.4 — o que a pessoa fez da casa: os cômodos que acrescentou (obra) ou mudou de uso (o quarto que virou
+ * estúdio) e os acabamentos de cada um. O que veio com o imóvel não se guarda (vem do tipo): só a diferença.
+ */
+export interface LarPersonalizado {
+  /** Cômodos novos ou convertidos: o id do cômodo, o tipo (`dados/lar`) e como surgiu. */
+  extras: { id: string; tipo: string; de: 'obra' | 'conversao'; t: number }[];
+  /** Por cômodo, o que foi escolhido (ausente = o acabamento de origem do imóvel). */
+  acabamentos: Record<string, Partial<Record<AspectoDoComodo, string>>>;
+  historia?: EpisodioBem[];
 }
 
 export type Bem = Veiculo | Imovel;
@@ -1216,6 +1278,19 @@ export interface CoisaTida {
   /** REWORK 4: a variante desta coisa (a cor e o acabamento), da compra para sempre. Saves antigos: derivada do id. */
   cor?: string;
   acabamento?: string;
+  /** REWORK 12.4: onde está (ausente = na casa onde mora) e em que cômodo (ausente = onde a casa a põe). */
+  local?: LocalDoObjeto;
+  comodo?: string;
+  /** REWORK 12.4: emprestada a alguém (o id da pessoa): segue sua, mas não está com você. */
+  emprestadaA?: string;
+  /** REWORK 12.4: um nome próprio ("o Bege", "a Rosinha"). */
+  apelido?: string;
+  memoria?: MemoriaDoObjeto;
+  historia?: EpisodioBem[];
+  /** REWORK 12.4: quantas (a coleção de discos cresce de lote em lote). Ausente = 1. */
+  quantidade?: number;
+  /** REWORK 12.4: guardada como lembrança depois de parar de funcionar (não se usa, não se joga fora). */
+  lembranca?: boolean;
 }
 
 export interface Financas {
@@ -1290,6 +1365,13 @@ export interface Colecionavel {
   historia?: EpisodioBem[];
   /** Cedida ao museu de que a pessoa é dona (em exposição, segue sendo dela). */
   emprestadaA?: string;
+  /** REWORK 12.4: onde está (ausente = na casa onde mora), em que cômodo, e se está à vista (na parede, na estante). */
+  local?: LocalDoObjeto;
+  comodo?: string;
+  exposta?: boolean;
+  /** REWORK 12.4: de família — não vai a leilão no inventário: passa em espécie a quem herdar. */
+  deFamilia?: boolean;
+  memoria?: MemoriaDoObjeto;
   /**
    * REWORK 12.2 — o que se sabe da autenticidade: verificada (laudo), presumida (a palavra de quem vendeu) ou
    * duvidosa (sem papel, origem incerta). A verdade (`falsa`, `roubada`) não aparece na tela até alguém verificar.
@@ -1643,6 +1725,8 @@ export interface Moradia {
   /** Aluguel atrasado (meses). */
   atraso?: number;
   atrasoDesde?: number;
+  /** REWORK 12.4: o que se fez da casa alugada (pintura, luz, o quarto que virou escritório) — fica nela ao sair. */
+  lar?: LarPersonalizado;
 }
 
 /**
@@ -3332,6 +3416,8 @@ export interface Personagem {
   procedimentos?: { id: string; t: number; resultado: string; alvo?: string; clinica?: string; revisado?: boolean }[];
   /** O estilo escolhido e o que foi comprado para ele (ausente: nada além do básico). */
   estilo?: EstiloPessoal;
+  /** REWORK 12.4: os gostos (música, arte) — mudam com a vida, nunca pela classe ou pelo bairro (`sistemas/gostos`). */
+  gostos?: Gostos;
   /**
    * Como o texto se refere ao personagem (concordância). Escolha do jogador:
    * uma pessoa não binária pode preferir formas masculinas, femininas ou
@@ -3911,4 +3997,16 @@ export interface Organizacao {
   setor: string;
   municipioId: string;
   porte: 'pequena' | 'media' | 'grande';
+}
+
+/* ------------------------------------------------- REWORK 12.4 · gostos */
+
+/** O quanto se gosta de cada gênero musical e de cada linguagem artística (0..100), e como se descobriu o que se ama. */
+export interface Gostos {
+  musica: Record<string, number>;
+  arte: Record<string, number>;
+  /** As descobertas (o gênero que chegou por alguém, por um show, por uma fase). As últimas 12. */
+  descobertas?: { t: number; oque: string; como: string }[];
+  /** As obras feitas pela pessoa (contagem por linguagem) — as que valem guardar viram peças (`Colecionavel`). */
+  obras?: Record<string, number>;
 }

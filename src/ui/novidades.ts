@@ -26,6 +26,32 @@ export interface NotaDeVersao {
 
 export const NOTAS: NotaDeVersao[] = [
   {
+    versao: '12.4',
+    data: '2026-10-31',
+    titulo: 'Vida personalizada: a casa por dentro, os veículos, os objetos, a roupa e os gostos',
+    novidades: [
+      'A casa por dentro: cada tipo de moradia tem a sua planta (a kitnet é um cômodo só; a mansão tem piscina, jardim, escritório). Os cômodos mostram o que você de fato tem dentro deles.',
+      'Personalize a casa: piso, cor das paredes e iluminação por cômodo; transforme um quarto que sobra em escritório, estúdio, academia, ateliê, biblioteca ou sala de cinema; construa no terreno (piscina, edícula, área de lazer). De aluguel, só o que não é obra.',
+      'O conforto da casa sai do que ela é e do que tem dentro — nunca do saldo da conta — e diz de onde vem. O estúdio com instrumento, a academia com aparelho e a biblioteca com livros ajudam a prática.',
+      'Cada objeto tem um lugar: em casa, noutra propriedade sua, num depósito ou no cofre do banco. Guardar, levar (com frete), emprestar, pedir de volta, dar de presente, dar um nome, repaginar o móvel, expor uma obra na parede.',
+      'Os objetos guardam história: de onde vieram, quem deu, o que aconteceu com eles. O valor afetivo é outro, separado do de mercado; o que tem história vira lembrança quando para de funcionar.',
+      'Veículos personalizáveis por categoria — aparência (pintura, rodas, interior) separada da mecânica (pneus, freios, suspensão, motor), com efeito no desgaste, no custo e na revenda. Barcos, aviões e motos têm peças próprias. Novos: iate e helicóptero.',
+      'Guarda-roupa por peças e por estilo — do casual ao streetwear, do baile ao rock, do regional ao afro-brasileiro, sem amarrar estilo a bairro ou renda — e a roupa de cada ocasião, só se quiser.',
+      'Música e arte: o gosto nasce da casa e muda com as pessoas, a idade e a prática. Monte a playlist do ano, vá a shows, rodas de samba, bailes, forrós, concertos e exposições (sozinho ou com alguém), e produza obras suas.',
+      'Novos objetos: cavaquinho, pandeiro, sanfona, saxofone, controladora de DJ, home studio, toca-discos e discos de vinil, cavalete, torno de cerâmica, mesa de jantar, poltrona, projetor, mesa de sinuca e mais.'
+    ],
+    melhorias: [
+      'Na herança, as peças de coleção marcadas como de família passam em espécie (com a história), em vez de irem a leilão; os objetos pessoais com história e os relógios e joias ficam com quem continua.',
+      'Patrimônio · Objetos tem dois modos: Usar (como antes) e Organizar (busca, filtros por tipo e lugar, ordem por valor de mercado ou afetivo).',
+      'A loja de roupas filtra por estilo; a revisão do veículo entra no histórico de manutenção.',
+      'Na entrevista de empregos formais, a roupa adequada ajuda um pouco e a que destoa atrapalha um pouco; quem não liga para roupa não perde nada.'
+    ],
+    correcoes: [
+      'O que está guardado fora de casa (ou emprestado) não ajuda mais a prática nem conta como conforto.',
+      'Carros além das vagas da casa pagam vaga alugada.'
+    ]
+  },
+  {
     versao: '12.35',
     data: '2026-10-31',
     titulo: 'Submundo vivo: conflitos, operações, poder e a vida em casa',

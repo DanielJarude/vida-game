@@ -11,6 +11,9 @@
  * vêm das causas: sobrecarga pede tirar algo da semana; luto pede gente perto.
  */
 
+import { sobDemanda } from '../util/sobDemanda';
+/** REWORK 12.4: os gostos (música e arte) e o que se faz com eles (pacote sob demanda). */
+const MusicaEArte = sobDemanda(() => import('./Personalizar').then(m => m.MusicaEArte));
 import { TratamentoEmCurso } from './Alcance';
 import { leituraDaFama } from '../../motor/sistemas/fama';
 import { redeDeSaude } from '../../motor/sistemas/saude';
@@ -175,7 +178,7 @@ export function Voce({ vida, agir, irPara, abrirPessoa, parte: parteDeFora, irPa
 
       </div>
 
-      <div className={fora('aparencia')} id="voce-aparencia"><AparenciaEEstilo vida={vida} agir={agir} irPara={irPara} /></div>
+      <div className={fora('aparencia')} id="voce-aparencia"><AparenciaEEstilo vida={vida} agir={agir} irPara={irPara} /><MusicaEArte vida={vida} agir={agir} /></div>
 
       <div className={fora('mundo')}>
       <OSeuNome vida={vida} agir={agir} />

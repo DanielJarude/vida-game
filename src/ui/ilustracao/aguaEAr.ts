@@ -20,10 +20,11 @@ export interface PerfilBarco { cabine?: boolean; longo?: boolean }
 export const MODELOS_BARCO: Record<string, PerfilBarco> = {
   seadoo_spark: {}, yamaha_vx: { longo: true },
   focker_242: {}, schaefer_303: { cabine: true, longo: true },
-  delta_26: {}, fast_310: { cabine: true, longo: true }
+  delta_26: {}, fast_310: { cabine: true, longo: true },
+  azimut_60: {}, schaefer_v66: { longo: true }
 };
 
-export function barco(forma: 'jetski' | 'lancha' | 'veleiro', cor: string, versaoId?: string): Amostra {
+export function barco(forma: 'jetski' | 'lancha' | 'veleiro' | 'iate', cor: string, versaoId?: string): Amostra {
   const m = (versaoId && MODELOS_BARCO[versaoId]) || {};
   const pecas: Peca[] = [];
   if (forma === 'jetski') {
@@ -37,6 +38,18 @@ export function barco(forma: 'jetski' | 'lancha' | 'veleiro', cor: string, versa
       { tipo: 'linha', d: `M${x1 - 56} ${AGUA - 40}l-6 -12h12`, larg: 2.4, marca: 'guidao' },
       { tipo: 'massa', d: suave([[x0 - 30, AGUA - 2], [x0 - 10, AGUA - 10], [x0 + 4, AGUA - 2], [x0 - 12, AGUA + 4]], true, 0.4), cor: '#dfe9ee', semVolume: true, opacidade: 0.9, marca: 'espuma' },
       agua(10, 230)
+    );
+  } else if (forma === 'iate') {
+    // REWORK 12.4 — o iate: o casco alto e comprido, dois conveses (o salão e o flybridge em cima), a fileira de janelas.
+    const x0 = 12, x1 = m.longo ? 232 : 224;
+    pecas.push(
+      { tipo: 'massa', d: cantos([[x0, AGUA - 30, 4], [x1 - 40, AGUA - 32, 10], [x1, AGUA - 40, 6], [x1 - 26, AGUA + 4, 8], [x0 + 8, AGUA + 4, 3]]), cor: BRANCO, marca: 'casco' },
+      { tipo: 'massa', d: cantos([[x0 + 4, AGUA - 10, 2], [x1 - 18, AGUA - 12, 3], [x1 - 24, AGUA - 4, 2], [x0 + 8, AGUA - 3, 2]]), cor, semVolume: true, marca: 'faixa' },
+      { tipo: 'massa', d: cantos([[x0 + 30, AGUA - 30, 3], [x1 - 64, AGUA - 32, 3], [x1 - 44, AGUA - 52, 8], [x0 + 40, AGUA - 54, 6]]), cor: BRANCO, marca: 'salao' },
+      { tipo: 'massa', d: cantos([[x0 + 56, AGUA - 54, 3], [x1 - 90, AGUA - 54, 3], [x1 - 80, AGUA - 70, 6], [x0 + 64, AGUA - 70, 5]]), cor: BRANCO, marca: 'flybridge' },
+      { tipo: 'vidro', d: cantos([[x0 + 44, AGUA - 36, 2], [x1 - 70, AGUA - 37, 2], [x1 - 60, AGUA - 47, 3], [x0 + 48, AGUA - 47, 2]]), marca: 'janelas' },
+      { tipo: 'linha', d: `M${x0 + 70} ${AGUA - 72}v-14`, larg: 1.6, marca: 'antena' },
+      agua(2, 238)
     );
   } else if (forma === 'lancha') {
     const x0 = 24, x1 = m.longo ? 222 : 206;
@@ -90,11 +103,27 @@ export const MODELOS_AVIAO: Record<string, PerfilAviao> = {
   embraer_phenom100: { janelas: 4 }, cessna_citation_m2: { janelas: 6 }
 };
 
-export function aviao(forma: 'ultraleve' | 'monomotor' | 'asa_baixa' | 'bimotor' | 'jato', cor: string, versaoId?: string): Amostra {
+export function aviao(forma: 'ultraleve' | 'monomotor' | 'asa_baixa' | 'bimotor' | 'jato' | 'helicoptero', cor: string, versaoId?: string): Amostra {
   const m = (versaoId && MODELOS_AVIAO[versaoId]) || {};
   const fus = BRANCO;
   const pecas: Peca[] = [];
-  if (forma === 'jato') {
+  if (forma === 'helicoptero') {
+    // REWORK 12.4 — o helicóptero: a cabine em bolha, o cone de cauda fino com o rotor pequeno, o rotor grande em cima,
+    // os esquis no chão (a turbina, no de cinco lugares, faz a cabine mais longa).
+    const longo = versaoId === 'bell_505';
+    const xc = longo ? 150 : 156;
+    pecas.push(
+      { tipo: 'massa', d: suave([[xc - 50, 60], [xc - 10, 44], [xc + 30, 50], [xc + 44, 72], [xc + 30, 90], [xc - 46, 90]], true, 0.45), cor, marca: 'cabine' },
+      { tipo: 'vidro', d: suave([[xc + 4, 50], [xc + 30, 54], [xc + 40, 72], [xc + 10, 74]], true, 0.4), marca: 'parabrisa' },
+      { tipo: 'massa', d: cantos([[xc - 48, 64, 2], [30, 66, 2], [30, 72, 2], [xc - 48, 78, 2]]), cor, marca: 'cauda' },
+      { tipo: 'massa', d: cantos([[24, 50, 2], [34, 50, 2], [36, 74, 2], [26, 74, 2]]), cor, marca: 'deriva' },
+      { tipo: 'massa', d: elipse(30, 62, 3, 12), cor: '#3a3633', semVolume: true, marca: 'rotor-cauda' },
+      { tipo: 'metal', d: ret(xc - 6, 34, 10, 12, 2), cor: '#9c9890', marca: 'mastro' },
+      { tipo: 'massa', d: ret(xc - 92, 30, 176, 4, 2), cor: '#3a3633', semVolume: true, marca: 'rotor' },
+      { tipo: 'linha', d: `M${xc - 30} 90l-4 10M${xc + 16} 90l4 10`, larg: 2 },
+      { tipo: 'metal', d: ret(xc - 52, CHAO_AR - 6, 96, 4, 2), cor: '#8d8983', marca: 'esqui' }
+    );
+  } else if (forma === 'jato') {
     pecas.push(
       // A fuselagem longa, o nariz fino, a cauda em T, o motor colado na cauda, a fileira de janelinhas.
       { tipo: 'massa', d: suave([[20, 74], [40, 62], [180, 60], [222, 70], [228, 78], [200, 86], [40, 86], [22, 80]], true, 0.38), cor: fus, marca: 'fuselagem' },

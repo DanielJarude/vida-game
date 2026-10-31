@@ -9,6 +9,7 @@
  * problema pode piorar até o carro parar.
  */
 
+import { efeitoDasMods } from '../dados/personalizacaoVeiculo';
 import { textoLocal } from '../mundo/locais';
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
@@ -83,11 +84,11 @@ export function valorDeMercadoDoVeiculo(v: Vida, b: Veiculo): number {
   const anos = anosDoVeiculo(v, b);
   const lim = versaoVeiculo(b.versaoId)?.limitada;
   const dep = lim ? Math.max(0.72, depreciacao(m, anos)) * (anos >= 5 ? Math.pow(indiceClassicos(v.economia?.semente ?? 1, anoDe(v.t)), 0.8) : 1) : depreciacao(m, anos);
-  return Math.round(novo * dep * (0.8 + b.estado / 500) / 100) * 100;
+  return Math.round(novo * dep * (0.8 + b.estado / 500) * efeitoDasMods(m.categoria, b.mods).valor / 100) * 100;
 }
 
 /** Combustível e manutenção básica por mês (a versão ajusta a classe). */
-export const usoMensalDoVeiculo = (b: { modeloId: string; versaoId?: string }) => versaoVeiculo(b.versaoId)?.usoMensal ?? modeloVeiculo(b.modeloId).usoMensal;
+export const usoMensalDoVeiculo = (b: { modeloId: string; versaoId?: string; mods?: Record<string, string> }) => (versaoVeiculo(b.versaoId)?.usoMensal ?? modeloVeiculo(b.modeloId).usoMensal) * (b.mods ? efeitoDasMods(modeloVeiculo(b.modeloId).categoria, b.mods).uso : 1);
 
 /** Tem condução própria que funciona (carro ou moto). */
 export const temConducao = (v: Vida) => veiculos(v).some(b => veiculoUtil(b) && categoriaDoVeiculo(b) !== 'bicicleta');
@@ -191,7 +192,8 @@ export function processarVeiculos(v: Vida, r: Rng): void {
       continue;
     }
     if (b.parado) continue;
-    const chance = m.fragilidade * (0.07 + (100 - b.estado) / 260 + anos * 0.006) * (revisado ? 0.55 : 1) * (b.usado ? 1.1 : 1);
+    // REWORK 12.4: o que foi feito nele (o pneu bom, o motor preparado) muda o quanto ele dá problema.
+    const chance = m.fragilidade * efeitoDasMods(m.categoria, b.mods).fragilidade * (0.07 + (100 - b.estado) / 260 + anos * 0.006) * (revisado ? 0.55 : 1) * (b.usado ? 1.1 : 1);
     if (r.chance(Math.min(0.75, chance))) {
       b.problema = sortearProblema(v, r, b);
       const p = b.problema;
@@ -313,6 +315,9 @@ export function executarVeiculo(v: Vida, b: Veiculo, oque: AcaoVeiculo): string 
       v.financas.conta -= custo;
       b.tRevisao = v.t;
       b.estado = clamp(b.estado + 6, 0, b.usado ? 92 : 100);
+      // REWORK 12.4: o histórico de manutenção (as revisões entram na história do veículo; só as últimas importam).
+      (b.historia ??= []).push({ t: v.t, texto: `Revisão (${fmt(custo)}).` });
+      if (b.historia.length > 30) b.historia.splice(0, b.historia.length - 30);
       return `Revisão feita (${fmt(custo)}): óleo, filtros, a checagem de sempre. Menos chance de surpresa este ano.`;
     }
     case 'parar':

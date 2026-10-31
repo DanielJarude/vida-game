@@ -87,7 +87,29 @@ export const COISAS: readonly Coisa[] = [
   { id: 'livros', nome: 'uma estante de livros', artigo: 'a', loja: 'livraria', preco: 1500, vida: 40, idadeMin: 8, descricao: 'Romances, ensaios, poesia: o que ler nos próximos anos.', ajuda: { leitura: 0.25, escrever: 0.1 }, lazer: 0.5 },
   { id: 'livros_estudo', nome: 'livros e apostilas de estudo', artigo: 'os', loja: 'livraria', preco: 900, vida: 5, idadeMin: 12, descricao: 'Os livros de referência, a apostila boa, o caderno de exercícios.', ajuda: { cursinho: 0.12, estudar_concurso: 0.12, olimpiada: 0.1, reforco: 0.08 } },
   { id: 'material_arte', nome: 'material de arte', artigo: 'o', loja: 'livraria', preco: 800, vida: 4, idadeMin: 6, descricao: 'Tinta, papel bom, lápis de verdade.', ajuda: { desenho: 0.2 } },
-  { id: 'jogos_tabuleiro', nome: 'jogos de tabuleiro', artigo: 'os', loja: 'livraria', preco: 600, vida: 15, idadeMin: 6, descricao: 'Para a mesa cheia de domingo.', lazer: 1 }
+  { id: 'jogos_tabuleiro', nome: 'jogos de tabuleiro', artigo: 'os', loja: 'livraria', preco: 600, vida: 15, idadeMin: 6, descricao: 'Para a mesa cheia de domingo.', lazer: 1 },
+
+  // ------------------------------------------------- REWORK 12.4 · a casa, o som, a arte
+  // Móveis que mudam o que se faz em casa (a mesa onde a família senta, a poltrona da leitura, a cama arrumada).
+  { id: 'roupa_de_cama', nome: 'jogo de cama de algodão bom', artigo: 'o', loja: 'casa', preco: 650, vida: 5, idadeMin: 16, descricao: 'Lençol que não pinica, edredom para o frio. Dorme-se melhor.', alivio: 0.5, daCasa: true },
+  { id: 'mesa_jantar', nome: 'mesa de jantar e cadeiras', artigo: 'a', loja: 'casa', preco: 2600, vida: 20, idadeMin: 18, descricao: 'Seis lugares: o almoço de domingo sem prato no colo.', lazer: 0.5, daCasa: true },
+  { id: 'poltrona', nome: 'poltrona de leitura', artigo: 'a', loja: 'casa', preco: 1800, vida: 15, idadeMin: 16, descricao: 'Braço largo, luz do lado: o canto de ler da casa.', ajuda: { leitura: 0.06 }, lazer: 0.5, daCasa: true },
+  { id: 'projetor', nome: 'projetor e tela', artigo: 'o', loja: 'eletronicos', preco: 5500, vida: 7, idadeMin: 16, descricao: 'A parede inteira virando cinema. Pede uma sala escura.', lazer: 2, daCasa: true },
+  { id: 'mesa_sinuca', nome: 'mesa de sinuca', artigo: 'a', loja: 'esportes', preco: 9000, vida: 30, idadeMin: 16, descricao: 'Tecido verde, tacos na parede. Ocupa uma sala inteira.', lazer: 1.5, daCasa: true },
+  { id: 'estacao_musculacao', nome: 'estação de musculação', artigo: 'a', loja: 'esportes', preco: 8000, vida: 15, idadeMin: 16, descricao: 'Polias, banco, barra guiada: a academia inteira num canto.', ajuda: { academia: 0.2, lutas: 0.05 }, daCasa: true },
+  // O som: ouvir música de verdade, guardar discos.
+  { id: 'som_hifi', nome: 'toca-discos e som de verdade', artigo: 'o', loja: 'eletronicos', preco: 4800, vida: 15, idadeMin: 14, descricao: 'Agulha, amplificador, caixas que enchem a sala. Ouvir vira programa.', lazer: 1.5, daCasa: true },
+  { id: 'discos', nome: 'discos de vinil', artigo: 'os', loja: 'instrumentos', preco: 600, vida: 60, idadeMin: 12, descricao: 'Um lote garimpado no sebo. A coleção cresce de lote em lote.', lazer: 0.5 },
+  { id: 'home_studio', nome: 'home studio (interface, microfone e monitores)', artigo: 'o', loja: 'instrumentos', preco: 6500, vida: 8, idadeMin: 14, descricao: 'Gravar em casa o que antes só cabia num estúdio pago.', ajuda: { musica: 0.15, criar_conteudo: 0.15, tocar_na_noite: 0.05 } },
+  { id: 'controladora_dj', nome: 'controladora de DJ', artigo: 'a', loja: 'instrumentos', preco: 3800, vida: 7, idadeMin: 14, descricao: 'Dois pratos, um mixer: o baile, a festa, a mixagem de madrugada.', ajuda: { musica: 0.15, tocar_na_noite: 0.15 } },
+  // Instrumentos que faltavam: a roda de samba, o forró, o jazz.
+  { id: 'cavaquinho', nome: 'cavaquinho', artigo: 'o', loja: 'instrumentos', preco: 700, vida: 20, idadeMin: 8, descricao: 'Quatro cordas e a roda de samba inteira atrás.', ajuda: { musica: 0.25, tocar_na_noite: 0.15 } },
+  { id: 'pandeiro', nome: 'pandeiro', artigo: 'o', loja: 'instrumentos', preco: 350, vida: 15, idadeMin: 6, descricao: 'Couro, platinela e um pulso que aprende devagar.', ajuda: { musica: 0.15, tocar_na_noite: 0.1 } },
+  { id: 'sanfona', nome: 'sanfona', artigo: 'a', loja: 'instrumentos', preco: 6500, vida: 30, idadeMin: 10, descricao: 'O fole, os baixos, o forró que começa quando ela abre.', ajuda: { musica: 0.35, tocar_na_noite: 0.2 } },
+  { id: 'saxofone', nome: 'saxofone', artigo: 'o', loja: 'instrumentos', preco: 5800, vida: 30, idadeMin: 10, descricao: 'Metal dourado, palheta, um som que atravessa a parede.', ajuda: { musica: 0.3, tocar_na_noite: 0.2 } },
+  // A arte com as mãos.
+  { id: 'cavalete', nome: 'cavalete e tintas a óleo', artigo: 'o', loja: 'livraria', preco: 1500, vida: 10, idadeMin: 10, descricao: 'Tela de verdade, tinta que demora a secar, cheiro de terebintina.', ajuda: { desenho: 0.2 } },
+  { id: 'torno_ceramica', nome: 'torno e forno de cerâmica', artigo: 'o', loja: 'livraria', preco: 7000, vida: 20, idadeMin: 14, descricao: 'Barro, água e paciência: a peça que sai do forno nunca é a que se imaginou.', ajuda: { desenho: 0.12 }, lazer: 0.5, daCasa: true }
 ];
 
 const POR_ID = new Map(COISAS.map(c => [c.id, c]));
@@ -97,6 +119,6 @@ export const NOME_LOJA: Record<LojaDeCoisas, string> = {
   eletronicos: 'Loja de eletrônicos', casa: 'Móveis e eletrodomésticos', instrumentos: 'Loja de instrumentos musicais', esportes: 'Artigos esportivos', livraria: 'Livraria e papelaria'
 };
 export const O_QUE_A_LOJA_VENDE: Record<LojaDeCoisas, string> = {
-  eletronicos: 'Celular, notebook, videogame, TV, câmera', casa: 'Máquina de lavar, ar-condicionado, sofá, colchão', instrumentos: 'Violão, teclado, guitarra, bateria, piano',
+  eletronicos: 'Celular, notebook, videogame, TV, câmera', casa: 'Máquina de lavar, ar-condicionado, sofá, colchão', instrumentos: 'Violão, cavaquinho, sanfona, teclado, guitarra, piano, home studio, discos',
   esportes: 'Kit de academia, esteira, chuteira, raquete, camping', livraria: 'Livros, apostilas, material de arte, jogos'
 };
