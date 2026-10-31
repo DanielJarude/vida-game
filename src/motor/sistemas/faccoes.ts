@@ -465,7 +465,7 @@ function anoDaOrg(v: Vida, o: OrgViva): void {
     // REWORK 12.35: a lealdade de cada um anda com a casa (a união, a pressão, o dinheiro); quem já não acredita nela, com a
     // polícia em cima, pode passar a colaborar — ninguém sabe até aparecer.
     x.lealdade = clamp(Math.round(lealdadeDoMembro(x) + (o.coesao - 50) / 12 + (o.prioridade === 'negocios' ? 1 : 0) - (o.pressao >= 60 ? 2 : 0) + (r.next() - 0.5) * 6));
-    if (x.informante === undefined && x.lealdade < 22 && o.pressao >= 45 && r.chance(0.08)) { x.informante = v.t; o.pressao = clamp(o.pressao + 6); }
+    if (x.informante === undefined && x.lealdade < 30 && o.pressao >= 40 && r.chance(0.1)) { x.informante = v.t; o.pressao = clamp(o.pressao + 6); }
   }
   // Quem está preso e já não deve nada à casa pode falar (a delação de dentro).
   for (const x of o.quadro) if (x.estado === 'preso' && x.informante === undefined && lealdadeDoMembro(x) < 40 && r.chance(0.12)) { x.informante = v.t; o.pressao = clamp(o.pressao + 8); }
@@ -701,6 +701,14 @@ function anoDoJogadorNasOrgs(v: Vida): void {
       const dividido = v.fatos['comando_dividido'] !== undefined && v.t - v.fatos['comando_dividido'] < 36 ? 0.75 : 1;
       const parte = seco ? 0 : Math.round(parteDoAno(v, o, n) * longe * dividido * (0.7 + r.next() * 0.6) / 100) * 100;
       if (parte > 0) { movimentoPorFora(v, 'organizacao', parte); e.ganhos += parte; }
+      // REWORK 12.35 · balanço: quem está no alto paga para manter a casa — a gente que trabalha para você, a defesa de quem
+      // cai, o que a guerra custa. Não é catraca: é o que separa o líder que administra do que só recolhe.
+      if (n >= 4 && parte > 0) {
+        const guerra = Object.values(o.relacoes ?? {}).includes('conflito') ? custoDeComando(v, o) : 0;
+        const presos = o.quadro.filter(x => x.estado === 'preso' && v.t - (x.desde ?? 0) < 120).length;
+        const custo = Math.round((parte * (n >= 6 ? 0.4 : 0.3) + guerra + Math.min(3, presos) * custoDeComando(v, o) * 0.3) / 100) * 100;
+        if (custo > 0) pagarPorFora(v, 'custos', Math.min(custo, Math.round(parte * 0.8)));
+      }
       // Quem sobe até o comando passa a delegar: a exposição pessoal cresce até o posto de responsável por uma área e,
       // dali para cima, diminui (outros fazem a rua) — o que pesa é a pressão sobre a organização inteira.
       const pessoal = n <= 3 ? n * 1.5 : Math.max(0, 4.5 - (n - 3) * 1.5);
@@ -727,7 +735,8 @@ function anoDoJogadorNasOrgs(v: Vida): void {
       continue;
     }
     // A promoção que chega (sem pedir) para quem é leal, presente e já tem prática.
-    if (!rel.propria && n < 5 && rel.lealdade >= 55 + n * 4 && (rel.pedidos?.promovido === undefined || v.t - rel.pedidos.promovido >= 24) && r.chance(0.18)) {
+    // REWORK 12.35 · balanço: o chamado pede também a prática do posto (como o pedido) e vem mais devagar.
+    if (!rel.propria && n < 5 && rel.lealdade >= 55 + n * 4 && garantirXp(v) >= [0, 8, 20, 35, 55, 75][n] && (rel.pedidos?.promovido === undefined || v.t - rel.pedidos.promovido >= 24) && r.chance(0.12)) {
       promover(v, o, rel, 'O comando chamou você para subir.');
     }
   }

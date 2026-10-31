@@ -26,6 +26,35 @@ export interface NotaDeVersao {
 
 export const NOTAS: NotaDeVersao[] = [
   {
+    versao: '12.35',
+    data: '2026-10-31',
+    titulo: 'Submundo vivo: conflitos, operações, poder e a vida em casa',
+    novidades: [
+      'A guerra entre organizações vira situação: a disputa por um pedaço, a retaliação, a emboscada, o recado, o aliado que pede ajuda. Quem está embaixo vai, fica de fora, protege os seus ou questiona a ordem; quem manda retalia, intimida, negocia ou recua — e o resultado muda território, gente do quadro, lealdade, o corpo e a família.',
+      'A operação policial contra a sua organização chega a você: o contato que é levado (e pode falar), a investigação, a busca na sua casa — com dinheiro levado e bens bloqueados — e a decisão do que fazer.',
+      'Perseguições depois de um trabalho que deu errado: fugir, pedir ajuda, entregar-se ou enfrentar, cada uma com chance e consequência. Ferimentos sérios são internação, pela rede de saúde do país; a morte é rara, e real.',
+      'Quem manda pode deixar de mandar: o apoio ao comando é medido, alguém ambicioso pode contestar — e sem apoio nenhum o comando cai. Quem responde a você tem lealdade e ambição, e lembra do que você faz (promover, cobrar, pagar a defesa, afastar).',
+      'Traições com motivo (o preso que fala, quem vai para a rival) e boatos que podem ser falsos: a fonte tem credibilidade, e agir sobre um boato errado também custa.',
+      'Cada organização tem um jeito (territorial, de negócios, agressiva, discreta, hierárquica, fragmentada) que muda como briga, paga, negocia e atrai a polícia. E o mundo do crime segue sem você.',
+      'Oportunidades que aparecem e somem (a rival fraca, a procura em alta, um espaço vazio, um cliente fixo), com o que pagam, a chance e o risco ditos antes; a procura de cada cidade muda com o mundo; o seu nome é de um lugar.',
+      'Em casa: o par que não aceita mais pode ir embora; a promessa de sair é cobrada; os filhos lembram de quem não estava. Quem sai tem um recomeço com passos (o trabalho, a família, os contatos de antes).'
+    ],
+    melhorias: [
+      'A Justiça bloqueia e confisca também veículos e imóveis comprados com o que entrou por fora — nunca o que é do casal, herdado ou a casa da família; a absolvição devolve.',
+      'Mais tipos de trabalho em cada ramo, diferentes no que pagam, na chance e no rastro; os de posto só chegam a quem tem o posto. O resumo do ano por fora conta o que de fato marcou o ano.',
+      'Os pedidos por fora mostram o preço, a chance de dar em nada e o risco antes de pedir; dá para cobrar quem sumiu com o dinheiro.',
+      'O painel de comando mostra só o que o seu posto permite agora, e diz o que o próximo posto abre.'
+    ],
+    correcoes: [
+      'O "intermediário" dos pedidos por fora não é mais um parente: é alguém de fora da família, e a tela diz quem é e por que conhece quem faz.',
+      'As provas usam uma escala só: um pedido isolado não pesa mais que uma carreira exposta.',
+      'Contatos tratados pelo gênero deles nos textos.',
+      'Depois de mudar de cidade ou de país, os contatos antigos continuam — mas não trazem trabalho de onde não alcançam.',
+      'Um posto só na organização (antes, o ramo e a organização tinham dois "pedir para subir").',
+      'O "favor que fura a fila" virou infração leve; o golpe descoberto é narrado como tentativa; o texto não promete processo que não vem.'
+    ]
+  },
+  {
     versao: '12.3',
     data: '2026-10-30',
     titulo: 'Submundo profundo, Justiça com rostos e carreiras com gente',

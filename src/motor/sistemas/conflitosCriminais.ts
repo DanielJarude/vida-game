@@ -268,11 +268,13 @@ function riscoPessoal(v: Vida, r: Rng, caso: CasoDoSubmundo, perdeu: boolean, pe
     const x = r.next() - fisico;
     const gr: 1 | 2 | 3 = x < 0.12 * g ? 3 : x < 0.45 ? 2 : 1;
     out.push(...ferir(v, r, gr, 'do confronto'));
-    if (gr === 3 && perdeu && r.chance(0.12 + (idade(v) >= 50 ? 0.05 : 0))) morrer(v, 'violência ligada ao crime');
+    // A morte é rara — e real (calibrada no simulador: com 0,12 nenhuma vida de 30 anos de guerra morria).
+    if (gr === 3 && perdeu && r.chance(0.3 + (idade(v) >= 50 ? 0.1 : 0))) morrer(v, 'violência ligada ao crime');
   }
-  if (perdeu && !v.justica?.processo && r.chance(clamp(0.1 + e.exposicao / 500, 0.05, 0.35) * peso)) {
+  if (perdeu && !v.justica?.processo && r.chance(clamp(0.06 + e.exposicao / 600, 0.04, 0.25) * peso)) {
     abrirProcesso(v, r, 'grupo');
-    if (v.justica?.processo && !v.justica.prisao && r.chance(0.4)) prender(v, v.justica.processo.tJulgamento, 'fechado', 'preventiva');
+    // (A espera presa é para o grave: quem espera preso perde a pena alternativa — calibrado no simulador.)
+    if (v.justica?.processo && !v.justica.prisao && r.chance(0.15)) prender(v, v.justica.processo.tJulgamento, 'fechado', 'preventiva');
     v.fatos['flagrantes'] = (v.fatos['flagrantes'] ?? 0) + 1;
     out.push('A polícia chegou antes de todo mundo sair: você foi pego no meio da confusão.');
   }
@@ -557,7 +559,7 @@ export function resolverOperacao(v: Vida, casoId: string, x: EscolhaDaOperacao):
 /* ---------------------------------------------------------------- a perseguição */
 
 /** Marca que houve um erro grave (o trabalho grande que deu errado): no fim do ano, pode virar perseguição. */
-export function marcarFalhaGrave(v: Vida, g: 1 | 2 | 3): void { if (g >= 2) v.fatos['falha_grave'] = v.t; }
+export function marcarFalhaGrave(v: Vida, g: 1 | 2 | 3): void { if (g >= 3 || (g === 2 && rngDe(v.id, 'falha_grave', v.t).chance(0.4))) v.fatos['falha_grave'] = v.t; }
 
 function perseguicaoPendente(v: Vida, r: Rng): void {
   const t = v.fatos['falha_grave'];
@@ -565,7 +567,7 @@ function perseguicaoPendente(v: Vida, r: Rng): void {
   delete v.fatos['falha_grave'];
   const ult = ultimoCaso(v, 'perseguicao');
   if (ult && v.t - ult.t < 24) return;
-  if (!r.chance(0.35)) return;
+  if (!r.chance(0.25)) return;
   novoCaso(v, 'sub1235_perseguicao', { tipo: 'perseguicao', situacao: 'trabalho', gravidade: 2 });
 }
 
@@ -580,10 +582,10 @@ export function quemAjuda(v: Vida): string | undefined {
   return m && (m.o.influencia[regiaoDaPessoa(v)] ?? 0) >= 20 ? m.o.nome : undefined;
 }
 
-const chanceDeFugir = (v: Vida) => clamp(0.45 + (v.corpo.forma - 50) / 200 - (idade(v) >= 45 ? 0.1 : 0) - (v.corpo.saude < 50 ? 0.1 : 0), 0.15, 0.8);
+const chanceDeFugir = (v: Vida) => clamp(0.55 + (v.corpo.forma - 50) / 200 - (idade(v) >= 45 ? 0.1 : 0) - (v.corpo.saude < 50 ? 0.1 : 0), 0.15, 0.8);
 export function pesoDaPerseguicao(v: Vida, x: EscolhaDaPerseguicao): string {
   switch (x) {
-    case 'fugir': return `Chance de escapar: ~${Math.round(chanceDeFugir(v) * 100)}% (o seu físico pesa). Se escapar, pode ter sido visto; se não, flagrante.`;
+    case 'fugir': return `Chance de escapar: ~${Math.round(chanceDeFugir(v) * 100)}% (o seu físico pesa). Se escapar, pode ter sido visto; se não, quase sempre é processo.`;
     case 'ajuda': return `Com ajuda, ~65%. Depois, você fica devendo.`;
     case 'entregar': return 'Processo certo — e com a confissão pesando a favor na pena. Nenhum risco para o corpo.';
     case 'enfrentar': return 'Quase sempre termina mal: ferimento, um processo mais pesado. Às vezes dá certo.';
@@ -600,7 +602,7 @@ export function resolverPerseguicao(v: Vida, casoId: string, x: EscolhaDaPersegu
     if (!v.justica?.processo) abrirProcesso(v, r, categoria);
     const p = v.justica?.processo;
     if (p && assumiu) p.assumiu = true;
-    if (p && !v.justica?.prisao && r.chance(assumiu ? 0.15 : 0.45)) prender(v, p.tJulgamento, 'fechado', 'preventiva');
+    if (p && !v.justica?.prisao && categoria !== 'patrimonial' && r.chance(assumiu ? 0.05 : 0.2)) prender(v, p.tJulgamento, 'fechado', 'preventiva');
     v.fatos['flagrantes'] = (v.fatos['flagrantes'] ?? 0) + 1;
   };
   const cat = e.categoria === 'grupo' ? 'grupo' : 'patrimonial';
@@ -611,6 +613,10 @@ export function resolverPerseguicao(v: Vida, casoId: string, x: EscolhaDaPersegu
         if (r.chance(0.4)) { e.exposicao = clamp(e.exposicao + 10); res.push('Mas alguém viu o seu rosto: o seu nome entrou nos papéis.'); }
         if (r.chance(0.3)) { const perda = Math.round(Math.max(0, v.financas.conta) * 0.03 / 100) * 100; if (perda >= 300) { pagarPorFora(v, 'perdas', perda); res.push(`No caminho, ficou para trás o que você levava (${dinheiro(perda)}).`); } }
         tom = 'bom';
+      } else if (r.chance(0.35)) {
+        e.exposicao = clamp(e.exposicao + 8);
+        res.push('Você foi alcançad' + flex(ge(v), 'o', 'a', 'e') + ' — e solt' + flex(ge(v), 'o', 'a', 'e') + ' horas depois: não havia o que segurar. Mas agora a polícia sabe quem você é.');
+        tom = 'ruim';
       } else {
         pego(cat);
         res.push('Não deu: você foi alcançad' + flex(ge(v), 'o', 'a', 'e') + ' e levad' + flex(ge(v), 'o', 'a', 'e') + '. Um processo começa.');
@@ -638,7 +644,7 @@ export function resolverPerseguicao(v: Vida, casoId: string, x: EscolhaDaPersegu
       res.push(...ferir(v, r, r.chance(0.35) ? 3 : 2, 'no enfrentamento'));
       if (r.chance(0.35)) { res.push('Você conseguiu sair — machucad' + flex(ge(v), 'o', 'a', 'e') + ', e com mais gente atrás de você.'); e.exposicao = clamp(e.exposicao + 15); }
       else { pego('violencia'); res.push('Terminou como quase sempre termina: com você detid' + flex(ge(v), 'o', 'a', 'e') + ', e um processo mais pesado.'); }
-      if (r.chance(0.04)) morrer(v, 'violência ligada ao crime');
+      if (r.chance(0.06)) morrer(v, 'violência ligada ao crime');
       tom = 'ruim';
       break;
   }

@@ -83,9 +83,10 @@ function aoAbrir(v: Vida, r: Rng): void {
  * anos com 22–30: um pedido isolado pesava mais que uma carreira. Agora as provas saem do que existe contra a pessoa:
  *
  *   o ATO ISOLADO  quem não é do meio (o contratante, o desvio de um cargo): 28 — um fato, o testemunho de quem intermediou
- *   a EXPOSIÇÃO    o que se fez à vista ao longo do caminho, com inclinação de verdade (0,3 por ponto acima de 20)
- *   o GRUPO        o crime organizado deixa rastro de muita gente (+8)
- *   TESTEMUNHAS    contatos que falaram há pouco (+5 cada, até +15) e quem do quadro entregou você à polícia (+12)
+ *   a EXPOSIÇÃO    o que se fez à vista ao longo do caminho, com inclinação de verdade (0,2 por ponto acima de 20;
+ *                  calibrada no simulador: 0,3 levava a prisão de quase todo ramo para perto da metade)
+ *   o GRUPO        o crime organizado deixa rastro de muita gente (+4)
+ *   TESTEMUNHAS    contatos que falaram há pouco (+4 cada, até +10) e quem do quadro entregou você à polícia (+12)
  *   a CAUTELA      quem estava na moita quando o processo abriu deixou menos à vista (−5)
  *
  * O tempo de atividade não entra direto: entra pelo que deixou à vista (a exposição, que cresce e esfria).
@@ -94,9 +95,9 @@ export function provasDoCaminho(v: Vida, categoria: string): number {
   const env = v.caminhos.envolvimento;
   if (!env) return 28;
   const exp = v.fatos['exposicao_na_abertura'] ?? env.exposicao;
-  const testemunhas = Math.min(15, Object.values(env.fichas ?? {}).filter(f => f.traiu !== undefined && v.t - f.traiu <= 36).length * 5);
+  const testemunhas = Math.min(10, Object.values(env.fichas ?? {}).filter(f => f.traiu !== undefined && v.t - f.traiu <= 36).length * 4);
   const delacao = v.fatos['delatado_por_dentro'] !== undefined && v.t - v.fatos['delatado_por_dentro'] <= 36 ? 12 : 0;
-  return 18 + Math.max(0, exp - 20) * 0.3 + (categoria === 'grupo' ? 8 : 0) + testemunhas + delacao - (env.cautela ? 5 : 0);
+  return 16 + Math.max(0, exp - 20) * 0.2 + (categoria === 'grupo' ? 4 : 0) + testemunhas + delacao - (env.cautela ? 5 : 0);
 }
 
 /* ---------------------------------------------------------------- O ano do processo */

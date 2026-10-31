@@ -109,7 +109,7 @@ describe('as correções da auditoria 12.3.1', () => {
     const muito = provasDoCaminho(v, 'grupo');
     expect(isolado).toBe(28);
     expect(muito).toBeGreaterThan(isolado);
-    expect(muito - pouco).toBeGreaterThanOrEqual(15);
+    expect(muito - pouco).toBeGreaterThanOrEqual(10);
     v.fatos['delatado_por_dentro'] = v.t;
     expect(provasDoCaminho(v, 'grupo')).toBe(muito + 12);
   });

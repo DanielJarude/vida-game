@@ -237,7 +237,8 @@ export function fatorDoEstresseProlongado(v: Vida): number {
 export function morreEsteAno(v: Vida, r: Rng): string | null {
   // REWORK 12.35: a morte que o crime trouxe neste ano (um confronto, um enfrentamento) — rara, e decidida lá.
   const noCrime = v.caminhos.envolvimento?.morteNoCrime;
-  if (noCrime && noCrime.t === v.t) return noCrime.causa;
+  // (Decidida numa cena do ano que passou — o ano já virou quando a cena é respondida: vale no fechamento seguinte.)
+  if (noCrime && v.t - noCrime.t >= 0 && v.t - noCrime.t <= 12) return noCrime.causa;
   const i = idade(v);
   const fator = fatorDoEstresseProlongado(v);
   const risco = riscoDeMorte(i, v.corpo.saude, v.eu.genero === 'masculino', v.corpo.condicoes) * fator;

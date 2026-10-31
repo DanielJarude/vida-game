@@ -152,7 +152,7 @@ for (const [nome, extra, sv, area, ...passos] of cenas) {
     p.on('pageerror', e => problemas.push(`${rot}: ${e.message}`));
     p.on('console', m => { if (m.type() === 'error') problemas.push(`${rot}: console: ${m.text()}`); });
     await p.goto(URL);
-    await p.evaluate(([s, t, nv]) => { localStorage.clear(); localStorage.setItem('VIDA_APARENCIA', t); localStorage.setItem('VIDA_NOVIDADES_VISTAS', nv); if (s) localStorage.setItem('VIDA_GAME_SAVE_V1', s); }, [sv ? save(sv) : null, tema, area === 'novidades' ? '12.25' : '12.3']);
+    await p.evaluate(([s, t, nv]) => { localStorage.clear(); localStorage.setItem('VIDA_APARENCIA', t); localStorage.setItem('VIDA_NOVIDADES_VISTAS', nv); if (s) localStorage.setItem('VIDA_GAME_SAVE_V1', s); }, [sv ? save(sv) : null, tema, area === 'novidades' ? '12.3' : '12.35']);
     await p.goto(URL);
     await p.waitForTimeout(300);
     if (area === 'novidades') {

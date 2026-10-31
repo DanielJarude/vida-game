@@ -285,7 +285,8 @@ function boatosDoAno(v: Vida, r: Rng): void {
   const ativos = o.quadro.filter(m => m.estado === 'ativo' && m.nivel < 6);
   const verdadeiros = ativos.filter(m => m.informante !== undefined);
   if (!ativos.length) return;
-  if (!r.chance(verdadeiros.length ? 0.4 : o.coesao < 40 ? 0.12 : 0)) return;
+  // Com informante, o boato costuma aparecer; sem, a desconfiança nasce da casa rachada ou da polícia em cima (paranoia).
+  if (!r.chance(verdadeiros.length ? 0.45 : o.coesao < 40 || o.pressao >= 50 ? 0.15 : 0)) return;
   const fonte = contatosAtivos(v).find(c => c.f.papel === 'informante');
   const acerta = verdadeiros.length > 0 && r.chance(fonte ? 0.5 + fonte.f.confianca / 200 : 0.5);
   const alvo = acerta ? r.pick(verdadeiros) : r.pick(ativos.filter(m => m.informante === undefined).length ? ativos.filter(m => m.informante === undefined) : ativos);

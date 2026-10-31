@@ -243,6 +243,4 @@ export function cobrarGolpe(v: Vida, deixar: boolean): { texto: string; tom?: 'b
   return { texto: `${p.nome} disse que não deve nada — e saiu falando alto. Agora mais gente sabe que você pediu algo por fora.`, tom: 'ruim' };
 }
 
-/** Quem não é do meio, mas foi apresentado (ou tem contato antigo), chega ao mercado por fora (B4). */
-export const acessoAoMercadoPorFora = (v: Vida) => v.caminhos.contratante?.apresentado !== undefined;
 
