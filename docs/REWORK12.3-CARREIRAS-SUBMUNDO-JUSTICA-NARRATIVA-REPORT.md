@@ -1,12 +1,17 @@
 # REWORK 12.3 — Carreiras vivas, Submundo profundo, corrupção, Justiça e narrativa dinâmica · relatório
 
-__ESTADO_PUBLICACAO__
+**PUBLICADO em 2026-10-30** em https://vida-game.pages.dev (commit `3956207`), verificado byte a byte e com smoke na versão no ar (§15).
 
 ## 1. Branch e commits
 
 Branch `claude/rework12.3-carreiras-submundo-justica`, criada a partir de `main` em `3a768d3` (o 12.25 publicado).
 
-__COMMITS__
+Commits `ce229e2` (fase 2: correções críticas), `4a5ac41` (fases 3–4: narrativa do crime, corrupção, dinheiro ilícito),
+`f81f616` (fases 5–8: facções, contratante, equipe, concursos, vida comum, telas, notas), `5a27dbf` (testes), `07f60c8`,
+`17ae25c`, `413f010` (a vida comum isolada do sorteio do ano; testes com pré-condições ditas), `60b143d` (conversas do
+estado; gramática; simulador), `a2d2829` (recalibração das provas), `1542172` (a aplicação em branco no pacote de produção),
+`7e1e35f` (bloqueio na escala nova), `3956207` (UX do comando; auditoria visual; relatório) — publicado — e este, só na
+`main` (registro da publicação).
 
 ## 2. Estado encontrado do 12.25
 
@@ -236,4 +241,12 @@ pontual ficou só para concorrentes e organizações em trégua. **Não testado 
 
 ## 15. Publicação
 
-__PUBLICACAO__
+- `origin/claude/rework12.3-carreiras-submundo-justica` criada em `3956207`.
+- `main`: fast-forward `3a768d3 → 3956207`; produção (`claude/fix-pos-rework3-playtest`): fast-forward `db05778 → 3956207`,
+  um único push, sem force.
+- Cloudflare Pages: check "Deploy successful" (`af28b5fb`) no commit; a produção passou a servir `assets/index-CQLeqKbc.js`
+  às 21:17 (antes, `index-a0cYXNDC.js`, o 12.25). **47 arquivos idênticos byte a byte (sha256)** ao build local de
+  `3956207` (o `/index.html` é o redirecionamento 308 do Cloudflare para `/`, e `/` é idêntico).
+- **Smoke na versão publicada** (Playwright, 390×844): montou, criou uma vida, viveu um ano, notas da versão em "12.3",
+  **0 erros de console**.
+- Este registro foi feito só na `main` (push na `main` não gera deploy); a produção fica em `3956207`.
