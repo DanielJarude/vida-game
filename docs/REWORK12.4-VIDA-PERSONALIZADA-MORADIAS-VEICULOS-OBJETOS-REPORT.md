@@ -335,7 +335,14 @@ objeto (virou o modo "Levar coisas para outro cômodo") e os blocos recolhidos g
 - Pendências herdadas (12.35 e anteriores) seguem as mesmas.
 
 ## 12. Estado da branch, commits e publicação
-ESTADO_FINAL
+- Branch `claude/rework12.4-vida-personalizada`, a partir de `c7990f3`. Commits: `e1738ca` (motor e telas), `6ac77a9`
+  (correção da deriva, testes de tela, simulador, QA), `826804d` (calibração do conforto), `43912bd` (ajustes de
+  hierarquia visual), `aa51195` (relatório) e este fechamento.
+- **Publicado** (autorização do usuário: "Ao acabar pode subir" e, no fim, "Pode subir da maneira que está" — antes
+  de concluir a comparação de duração dos dois testes de tempo fixo): branch enviada; `main` e
+  `claude/fix-pos-rework3-playtest` (produção) avançadas de `c7990f3` para `aa51195`.
+- Produção verificada: `vida-game.pages.dev` serve `index-BohlmQ5O.js`; os 28 pacotes JS idênticos (sha256) à build
+  local de `aa51195`. APK não gerado.
 
 ## 13. Execução com agente único
 Todo o trabalho foi feito pelo agente principal, sequencialmente, nesta branch. **Nenhum subagente, nenhum Agent
