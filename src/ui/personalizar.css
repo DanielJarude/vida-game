@@ -6,7 +6,12 @@
 
 .pz-casa .secao__corpo { display: grid; gap: var(--space-3); }
 .pz-linha { margin: 0; }
-.pz-detalhes summary { cursor: pointer; }
+.pz-detalhes > summary { cursor: pointer; color: var(--text-secondary); font-size: var(--type-body); gap: var(--space-2); list-style: none; }
+.pz-detalhes > summary::-webkit-details-marker { display: none; }
+.pz-detalhes > summary::before { content: '›'; display: inline-block; width: 1ch; font-weight: 600; color: var(--text-faint); transition: transform 120ms ease; }
+.pz-detalhes[open] > summary::before { transform: rotate(90deg); }
+.pz-detalhes > summary:hover { color: var(--text-primary); }
+@media (prefers-reduced-motion: reduce) { .pz-detalhes > summary::before { transition: none; } }
 .pz-partes { list-style: none; margin: var(--space-2) 0; padding: 0; display: grid; gap: 2px; max-width: 520px; }
 .pz-partes li { display: flex; justify-content: space-between; gap: var(--space-3); font-size: var(--type-caption); color: var(--text-secondary); border-bottom: 1px dotted var(--rule); padding: 2px 0; }
 

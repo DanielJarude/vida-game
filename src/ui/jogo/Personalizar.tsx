@@ -90,6 +90,7 @@ export function CasaPorDentro({ vida, agir }: Props) {
 
 function PainelDoComodo({ vida, agir, comodoId, aoFechar }: Props & { comodoId: string; aoFechar: () => void }) {
   const [editar, setEditar] = useState(false);
+  const [reorganizar, setReorganizar] = useState(false);
   const comodos = comodosDaCasa(vida);
   const cm = comodos.find(c => c.id === comodoId);
   if (!cm) return null;
@@ -109,10 +110,15 @@ function PainelDoComodo({ vida, agir, comodoId, aoFechar }: Props & { comodoId: 
       <p className="nota">{m.descricao}{m.pede && !comodoEquipado(vida, cm) ? ` Vazio, é só metro quadrado: falta ${m.pede.slice(0, 3).map(id => coisa(id)?.nome ?? id).join(', ')}…` : ''}</p>
       {coisas.length > 0 ? (
         <ul className="pz-lista">
-          {coisas.map(t => <ItemDoComodo key={t.id} vida={vida} agir={agir} t={t} comodoAtual={cm.id} />)}
+          {coisas.map(t => <ItemDoComodo key={t.id} vida={vida} agir={agir} t={t} comodoAtual={cm.id} reorganizar={reorganizar} />)}
         </ul>
       ) : <p className="nota">Nada seu aqui.</p>}
-      {poder !== 'nada' && idade(vida) >= 18 && !editar && <button type="button" className="botao botao--secundario" onClick={() => setEditar(true)}>Personalizar {cm.nome}</button>}
+      {!editar && (
+        <div className="grupo-acoes grupo-acoes--linha">
+          {poder !== 'nada' && idade(vida) >= 18 && <button type="button" className="botao botao--secundario" onClick={() => setEditar(true)}>Personalizar {cm.nome}</button>}
+          {coisas.length > 0 && comodos.length > 1 && <button type="button" className="botao botao--discreto" aria-pressed={reorganizar} onClick={() => setReorganizar(x => !x)}>{reorganizar ? 'Pronto' : 'Levar coisas para outro cômodo'}</button>}
+        </div>
+      )}
       {editar && (
         <div className="pz-edicao">
           {aspectos.map(a => <Acabamento key={a} vida={vida} agir={agir} comodoId={cm.id} aspecto={a} />)}
@@ -132,14 +138,14 @@ function PainelDoComodo({ vida, agir, comodoId, aoFechar }: Props & { comodoId: 
   );
 }
 
-function ItemDoComodo({ vida, agir, t, comodoAtual }: Props & { t: CoisaTida; comodoAtual: string }) {
+function ItemDoComodo({ vida, agir, t, comodoAtual, reorganizar }: Props & { t: CoisaTida; comodoAtual: string; reorganizar: boolean }) {
   const [mover, setMover] = useState(false);
   const outros = comodosDaCasa(vida).filter(c => c.id !== comodoAtual);
   const nome = coisa(t.coisaId)?.nome ?? t.coisaId;
   return (
     <li className="pz-item">
       <span><strong>{cap(nome)}</strong>{t.apelido ? ` "${t.apelido}"` : ''}{t.acabamento ? <span className="nota"> · {t.acabamento}</span> : null}{t.lembranca ? <span className="nota"> · lembrança</span> : null}</span>
-      {!mover ? <button type="button" className="botao botao--discreto" onClick={() => setMover(true)}>Mudar de cômodo</button> : (
+      {!reorganizar ? null : !mover ? <button type="button" className="botao botao--discreto" onClick={() => setMover(true)}>Para onde?</button> : (
         <span className="pz-mover">
           {outros.map(c => <BotaoAcao key={c.id} vida={vida} agir={agir} acao={agirCom({ o: 'por_no_comodo', coisa: t.id, comodo: c.id })} variante="discreto" aoAgir={() => setMover(false)}>{cap(c.nome)}</BotaoAcao>)}
           <button type="button" className="botao botao--discreto" onClick={() => setMover(false)}>Deixar</button>
@@ -434,7 +440,7 @@ export function GuardaRoupa({ vida, agir }: Props) {
   const meusEstilos = ESTILOS.filter(e => roupas.some(x => itemEstilo(x.itemId)?.estilos?.includes(e.id)));
   const visiveis = estilo ? roupas.filter(x => itemEstilo(x.itemId)?.estilos?.includes(estilo)) : roupas;
   return (
-    <details className="detalhes pz-guarda-roupa">
+    <details className="detalhes pz-detalhes pz-guarda-roupa">
       <summary>Guarda-roupa: estilo e ocasiões{dominante ? ` · ${nomeDoEstilo(dominante).toLowerCase()}` : ''}</summary>
       {fases.length > 1 && <p className="nota">As fases: {fases.map(f => `${nomeDoEstilo(f.estilo).toLowerCase()} (${anoDe(f.t)})`).join(' → ')}.</p>}
       {meusEstilos.length > 1 && (
@@ -494,7 +500,7 @@ export function MusicaEArte({ vida, agir }: Props) {
       <h2 id="pz-gostos-titulo" className="voce-subtitulo">Música e arte</h2>
       <p>{pref.map((x, k) => <span key={x.id}>{k ? ', ' : ''}<strong>{x.nome}</strong> <span className="nota">({NOME_DO_GOSTO(x.valor)})</span></span>)}{artes.length ? <span className="nota"> · na arte: {artes.map(([id]) => LINGUAGENS.find(l => l.id === id)?.nome).join(' e ')}</span> : null}</p>
       {descobertas.length > 0 && (
-        <details className="detalhes"><summary>Como o gosto foi mudando</summary>
+        <details className="detalhes pz-detalhes"><summary>Como o gosto foi mudando</summary>
           <ul className="pz-historia">{descobertas.map((d, k) => <li key={k}><span className="nota">{anoDe(d.t)}</span> {cap(d.oque)}, {d.como}.</li>)}</ul>
         </details>
       )}

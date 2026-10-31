@@ -23,8 +23,8 @@ const TODAS = [
   ['objetos-organizar*', 'r124-rica', 'Vida', 'aba:Patrimônio', 'aba:Objetos', 'clique:.pat-modo .escolha__item:last-child', 'ver:.pz-inventario'],
   ['objetos-ficha*', 'r124-rica', 'Vida', 'aba:Patrimônio', 'aba:Objetos', 'clique:.pat-modo .escolha__item:last-child', 'clique:.pz-linha-obj__botao', 'ver:.pz-ficha'],
   ['garagem-personalizar*', 'r124-rica', 'Vida', 'aba:Patrimônio', 'aba:Garagem', 'clique:.pz-veiculos .botao', 'ver:.pz-painel'],
-  ['voce-gostos*', 'r124-musico', 'Você', 'ver:.pz-gostos'],
-  ['voce-guarda-roupa*', 'r124-inquilina', 'Você', 'clique:.pz-guarda-roupa > summary', 'ver:.pz-guarda-roupa'],
+  ['voce-gostos*', 'r124-musico', 'Você', 'aba:Aparência', 'ver:.pz-gostos'],
+  ['voce-guarda-roupa*', 'r124-inquilina', 'Você', 'aba:Aparência', 'clique:.pz-guarda-roupa > summary', 'ver:.pz-guarda-roupa'],
   ['loja-roupas', 'r124-inquilina', 'Vida', 'aba:Compras'],
   ['novidades', 'r124-rica', 'novidades']
 ].map(([n, ...r]) => [n.replace('*', ''), n.endsWith('*'), ...r]);
