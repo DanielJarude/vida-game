@@ -69,8 +69,12 @@ export function afinidadeMusical(v: Vida, p: Pessoa): string | undefined {
   return preferidosDaPessoa(p.id).find(g => meus.includes(g));
 }
 
-/** Muda um gosto (e registra a descoberta quando um gênero passa a ser dos seus). */
-function mexer(v: Vida, tipo: 'musica' | 'arte', id: string, delta: number, como?: string): void {
+/**
+ * Muda um gosto (e registra a descoberta quando um gênero passa a ser dos seus). A descoberta do correr do ano (o par,
+ * a fase) fica só nos gostos — a tela conta; a que veio de uma escolha (o show, a obra) vai também para a Linha da Vida.
+ * (Escrever todo ano na biografia de toda vida mexeria nos ids e no acaso derivado de vidas que nunca tocaram nisto.)
+ */
+function mexer(v: Vida, tipo: 'musica' | 'arte', id: string, delta: number, como?: string, naBiografia = false): void {
   const g = gostosDe(v);
   const antes = g[tipo][id] ?? 20;
   const depois = clamp(Math.round(antes + delta), 0, 100);
@@ -80,7 +84,7 @@ function mexer(v: Vida, tipo: 'musica' | 'arte', id: string, delta: number, como
     (g.descobertas ??= []).push({ t: v.t, oque: nome, como });
     if (g.descobertas.length > 12) g.descobertas.splice(0, g.descobertas.length - 12);
     const oque = tipo === 'musica' ? (nome.startsWith('música') ? `a ${nome}` : `o ${nome}`) : `${linguagemArte(id)?.artigo ?? 'a'} ${nome}`;
-    escrever(v, { texto: `Descobriu ${oque} ${como}.`, relevancia: 'cotidiano', tema: 'lazer' });
+    if (naBiografia) escrever(v, { texto: `Descobriu ${oque} ${como}.`, relevancia: 'cotidiano', tema: 'lazer' });
   }
 }
 
@@ -171,8 +175,8 @@ export function fazerCultural(v: Vida, oque: AtividadeCultural, genero?: string,
   const preco = precoDoPrograma(v, oque) * (pessoaId ? 2 : 1);
   if (preco) pagar(v, preco);
   const gen = oque === 'show' ? genero ?? generosPreferidos(v, 1)[0].id : p.generos[Math.floor(r.next() * Math.max(1, p.generos.length))];
-  if (gen) mexer(v, 'musica', gen, 6, `${oque === 'show' ? 'num show' : `em ${p.nome}`}`);
-  for (const a of p.artes ?? []) mexer(v, 'arte', a, 4, `em ${p.nome}`);
+  if (gen) mexer(v, 'musica', gen, 6, `${oque === 'show' ? 'num show' : `em ${p.nome}`}`, true);
+  for (const a of p.artes ?? []) mexer(v, 'arte', a, 4, `em ${p.nome}`, true);
   v.mente.felicidade = clamp(v.mente.felicidade + 3);
   v.mente.estresse = clamp(v.mente.estresse - 2);
   aplicarPersonalidade(v, `acao:cultural_${oque}`, { sociabilidade: 1 });
@@ -187,7 +191,7 @@ export function fazerCultural(v: Vida, oque: AtividadeCultural, genero?: string,
     lembrarCom(v, pe.id, `${nomeProg.charAt(0).toUpperCase()}${nomeProg.slice(1)}, juntos, em ${anoDe(v.t)}.`, 'ritual', junto ? 2 : 1);
     // E o gosto dela pode virar seu.
     const dela = preferidosDaPessoa(pe.id)[0];
-    if (dela !== gen) mexer(v, 'musica', dela, 3, `com ${pe.nome}`);
+    if (dela !== gen) mexer(v, 'musica', dela, 3, `com ${pe.nome}`, true);
     return `Foi a ${nomeProg} com ${pe.nome}${preco ? ` (${fmt(preco)} os dois)` : ''}. ${junto ? `${pe.nome} sabia todas as letras.` : `${pe.nome} foi por você — e saiu falando de uma música.`}`;
   }
   return `Foi a ${nomeProg}${preco ? ` (${fmt(preco)})` : ''}. ${['Voltou para casa cantando.', 'Saiu com o ouvido zumbindo e a semana leve.', 'Conheceu gente no meio da multidão.'][Math.floor(r.next() * 3)]}`;
@@ -223,7 +227,7 @@ export function produzirObra(v: Vida, id: string): string {
   const material = precoDoMaterial(v, l);
   pagar(v, material);
   praticar(v, r, l.frente, 0.4, 1.1);
-  mexer(v, 'arte', l.id, 5, 'produzindo');
+  mexer(v, 'arte', l.id, 5, 'produzindo', true);
   const g = gostosDe(v);
   const n = ((g.obras ??= {})[l.id] = (g.obras[l.id] ?? 0) + 1);
   const h = habilidade(v, l.frente);

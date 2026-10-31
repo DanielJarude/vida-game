@@ -380,7 +380,7 @@ export function personalizar(v: Vida, op: OpPersonalizar): string {
       o.local = op.para ?? undefined;
       o.comodo = undefined;
       if ('exposta' in o) o.exposta = undefined;
-      registrarNoObjeto(o, v.t, `Levad${'o'} de ${nomeDoLocal(v, de).replace(/^(em|no|na|num) /, '')} para ${nomeDoLocal(v, o.local).replace(/^(em|no|na|num) /, '')}${frete ? ` (${fmt(frete)} de frete)` : ''}.`.replace('para casa', 'para casa'));
+      registrarNoObjeto(o, v.t, `Agora ${nomeDoLocal(v, o.local)} (antes, ${nomeDoLocal(v, de)})${frete ? `; ${fmt(frete)} de frete` : ''}.`);
       return `${cap(nomeDoObjeto(v, op.ref))}: agora ${nomeDoLocal(v, o.local)}${frete ? `. ${fmt(frete)} de frete` : ''}.`;
     }
     case 'emprestar': {
