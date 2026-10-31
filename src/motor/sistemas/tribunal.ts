@@ -171,14 +171,14 @@ export function confiscar(v: Vida, fracao: number, oque: string, provas = 60): n
 
 /**
  * REWORK 12.3 · C8: o bloqueio de valores no começo de um processo grave (fraude, comércio ilegal, grupo, corrupção), quando
- * as provas são consideráveis: uma parte do que a Justiça conhece sai da conta até o fim. Na absolvição, volta; na
+ * as provas não são fracas (30 ou mais, na escala recalibrada do 12.3): uma parte do que a Justiça conhece sai da conta até o fim. Na absolvição, volta; na
  * condenação, paga o confisco primeiro. Não é perda: é dinheiro parado (e por isso não conta no patrimônio enquanto dura).
  */
 const BLOQUEIA = new Set(['fraude', 'mercado', 'grupo', 'corrupcao']);
 function bloquear(v: Vida, provas: number, categoria: string): void {
   const env = v.caminhos.envolvimento;
   const j = v.justica!;
-  if (!env || !BLOQUEIA.has(categoria) || provas < 50 || j.bloqueado) return;
+  if (!env || !BLOQUEIA.has(categoria) || provas < 30 || j.bloqueado) return;
   const conhecido = Math.max(0, env.ganhos - (env.regularizado ?? 0) * 0.6) * clamp(0.35 + provas / 150, 0.35, 0.95) - (v.fatos['confiscado_total'] ?? 0);
   const valor = Math.round(Math.min(Math.max(0, v.financas.conta), conhecido * 0.35) / 100) * 100;
   if (valor < 1000) return;
