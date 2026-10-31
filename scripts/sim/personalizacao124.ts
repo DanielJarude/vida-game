@@ -128,14 +128,15 @@ console.log(linhas.join('\n'));
 
 // Gosto × classe de origem: o gênero preferido não pode depender da classe.
 const classes = new Map<string, Map<string, number>>();
-for (let s = 0; s < 600; s++) {
+const NASC = Number(process.env.NASC ?? 600);
+for (let s = 0; s < NASC; s++) {
   const v = nova({ semente: 50000 + s, genero: s % 2 ? 'feminino' : 'masculino', municipioId: s % 3 ? 'sao-paulo-sp' : 'salvador-ba' });
   const fav = generosPreferidos(v, 1)[0].id;
   const m = classes.get(v.origem.classe) ?? new Map<string, number>();
   m.set(fav, (m.get(fav) ?? 0) + 1); classes.set(v.origem.classe, m);
   void gostosDe;
 }
-console.log('\nGênero preferido por classe de origem (600 nascimentos; % de cada classe):');
+console.log(`\nGênero preferido por classe de origem (${NASC} nascimentos; % de cada classe):`);
 const generos = ['funk', 'samba', 'sertanejo', 'rock', 'mpb', 'classica', 'jazz', 'rap'];
 console.log('classe'.padEnd(14) + generos.map(g => g.padStart(9)).join(''));
 for (const [c, m] of classes) { const tot = [...m.values()].reduce((a, b) => a + b, 0); console.log(`${c.padEnd(14)}${generos.map(g => `${Math.round(100 * (m.get(g) ?? 0) / tot)}%`.padStart(9)).join('')}  (n=${tot})`); }

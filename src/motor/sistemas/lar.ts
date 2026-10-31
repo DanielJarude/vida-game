@@ -131,7 +131,9 @@ export function comodoEquipado(v: Vida, c: ComodoDaCasa, porComodo = coisasPorCo
 
 /** O que os cômodos equipados somam à prática de uma atividade (lido por `coisas.bonusDaAtividade`, com o teto de lá). */
 export function bonusDosComodos(v: Vida, rotinaId: string): number {
-  const comodos = comodosDaCasa(v);
+  // Sai cedo (o caso comum): a casa não tem cômodo que ajude esta atividade — nem se olha o que há dentro.
+  if (!v.financas.coisas?.length) return 0;
+  const comodos = comodosDaCasa(v).filter(c => modeloComodo(c.tipo)?.ajuda?.[rotinaId]);
   if (!comodos.length) return 0;
   const porComodo = coisasPorComodo(v);
   let soma = 0;
@@ -164,7 +166,8 @@ export interface LeituraDoConforto { valor: number; palavra: string; partes: { r
 export function confortoDaCasa(v: Vida): LeituraDoConforto {
   const partes: { rotulo: string; valor: number }[] = [];
   const padrao = v.moradia.padrao;
-  partes.push({ rotulo: 'O padrão do imóvel', valor: padrao * 9 + 5 });
+  // A base é a casa como ela é, com os móveis de sempre (que não se compram um a um): o padrão médio é "razoável".
+  partes.push({ rotulo: 'O padrão do imóvel', valor: 20 + padrao * 10 });
   const comodos = comodosDaCasa(v);
   const lar = donoDoLar(v)?.lar;
   if (comodos.length && lar && Object.keys(lar.acabamentos).length) {
@@ -178,21 +181,23 @@ export function confortoDaCasa(v: Vida): LeituraDoConforto {
     if (x) partes.push({ rotulo: 'Os acabamentos que você escolheu', valor: x });
   }
   const im = imovelDaMoradia(v);
-  if (im) { const x = Math.round((im.estado - 70) / 3); if (x) partes.push({ rotulo: im.estado < 60 ? 'A casa pedindo reparo' : 'A conservação', valor: x }); }
+  if (im) { const x = Math.max(-12, Math.round((im.estado - 70) / 4)); if (x) partes.push({ rotulo: im.estado < 60 ? 'A casa pedindo reparo' : 'A conservação', valor: x }); }
   const aqui = (v.financas.coisas ?? []).filter(t => naCasaAtual(t) && t.estado > 0 && !t.lembranca);
   const tem = (id: string) => aqui.some(t => t.coisaId === id);
   const dentro = casaDaFamilia(v) ? 0 : ESSENCIAIS.reduce((s, [id, x]) => s + (tem(id) ? x : 0), 0);
-  if (dentro) partes.push({ rotulo: 'O que tem dentro (cama, sofá, mesa…)', valor: dentro });
+  if (dentro) partes.push({ rotulo: 'O que você pôs dentro (cama boa, sofá, mesa…)', valor: dentro });
+  const vista = casaDaFamilia(v) ? 0 : (v.financas.colecao ?? []).filter(c => c.exposta && !c.local).length;
+  if (vista) partes.push({ rotulo: 'Arte e coleção à vista', valor: Math.min(5, vista) });
   if (comodos.length) {
     const porComodo = coisasPorComodo(v);
     const equipados = comodos.filter(c => modeloComodo(c.tipo)?.lazer && comodoEquipado(v, c, porComodo)).length;
     if (equipados) partes.push({ rotulo: 'Cômodos de lazer em uso', valor: Math.min(8, equipados * 2) });
     const quartos = comodos.filter(c => c.tipo === 'quarto' || c.tipo === 'quarto_extra').length;
     const sobra = quartos * 2 - moradores(v);
-    if (sobra < 0) partes.push({ rotulo: 'Gente demais para os quartos', valor: Math.max(-20, sobra * 6) });
+    if (sobra < 0) partes.push({ rotulo: 'Gente demais para os quartos', valor: Math.max(-15, sobra * 5) });
   }
   const valor = clamp(Math.round(partes.reduce((s, p) => s + p.valor, 0)), 5, 100);
-  const palavra = valor >= 80 ? 'muito confortável' : valor >= 62 ? 'confortável' : valor >= 45 ? 'razoável' : valor >= 30 ? 'apertada' : 'difícil';
+  const palavra = valor >= 80 ? 'muito confortável' : valor >= 65 ? 'confortável' : valor >= 45 ? 'razoável' : valor >= 30 ? 'apertada' : 'difícil';
   return { valor, palavra, partes };
 }
 
@@ -202,8 +207,11 @@ export function confortoDaCasa(v: Vida): LeituraDoConforto {
  */
 export function efeitoDoAnoEmCasa(v: Vida): { felicidade: number; estresse: number } {
   if (casaDaFamilia(v)) return { felicidade: 0, estresse: 0 };
+  // Faixa neutra: a casa comum (razoável) não mexe no humor; a muito boa descansa um pouco; a difícil cansa um pouco.
   const c = confortoDaCasa(v).valor;
-  return { felicidade: clamp((c - 50) / 20, -2, 2), estresse: -clamp((c - 50) / 25, -1.5, 1.5) };
+  if (c >= 65) return { felicidade: Math.min(2, (c - 60) / 12), estresse: -Math.min(1.5, (c - 60) / 15) };
+  if (c < 30) return { felicidade: -Math.min(2, (30 - c) / 10), estresse: Math.min(1.5, (30 - c) / 12) };
+  return { felicidade: 0, estresse: 0 };
 }
 
 /* ------------------------------------------------------------- custos */
