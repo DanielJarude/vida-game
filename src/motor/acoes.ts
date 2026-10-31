@@ -546,6 +546,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
       const b = v.financas.bens.find(x => x.id === a.bemId);
       if (!b) return bloqueio('impossivel', 'Bem não encontrado.');
       if (i < maioridade(v)) return bloqueio('ilegal', 'Exige maioridade.');
+      if (b.bloqueio) return bloqueio('ilegal', 'Bloqueado pela Justiça enquanto o processo corre: não se vende.');
       const d = v.financas.dividas.find(x => x.bemId === b.id);
       const vale = b.tipo === 'veiculo' ? valorDeVenda(b, v) : valorDeVendaImovel(b);
       if (d && d.saldo > vale + disponivel(v)) return bloqueio('requisito', `A venda (${fmt(vale)}) não cobre o que falta do financiamento (${fmt(d.saldo)}).`);

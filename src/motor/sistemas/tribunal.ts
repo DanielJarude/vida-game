@@ -38,6 +38,7 @@ import { pagarJustica, pagarPorFora } from './porFora';
 import { lancar } from './extrato';
 import { ajusteDoJuiz, ator, designar, lembrarAtor, quemE } from './atoresJudiciais';
 import { registrarDesfechoComInfluencia } from './corrupcaoJudicial';
+import { bloquearBens, confiscarBens, liberarBens } from './bensDoCrime';
 
 export const perfilDaVida = (v: Vida): PerfilPenal => perfilPenal(paisDaVida(v));
 const preco = (v: Vida, x: number) => Math.round(x * economiaLocal(v.moradia.municipioId).custo / 100) * 100;
@@ -65,13 +66,7 @@ function aoAbrir(v: Vida, r: Rng): void {
   const j = v.justica!;
   const p = j.processo;
   if (!p) return;
-  const env = v.caminhos.envolvimento;
-  const base = p.categoria === 'violencia'
-    ? 40 + (v.fatos['denuncia_agressao'] === v.t ? 15 : 0)
-    // REWORK 12.3: a exposição de antes do processo pesa nas provas (antes, era zerada antes de ser lida: toda prova saía
-    // fraca) — com inclinação suave, para não desfazer o equilíbrio medido no 12.25 (o simulador: quem é de dentro de uma
-    // organização não pode ser condenado quase sempre).
-    : (env ? 22 + Math.max(0, (v.fatos['exposicao_na_abertura'] ?? env.exposicao) - 25) * 0.1 : 45) + (p.categoria === 'grupo' ? 10 : 0);
+  const base = p.categoria === 'violencia' ? 40 + (v.fatos['denuncia_agressao'] === v.t ? 15 : 0) : provasDoCaminho(v, p.categoria);
   p.provas = clamp(Math.round(base + (r.next() - 0.5) * 20), 10, 95);
   bloquear(v, p.provas, p.categoria);
   // A defesa é escolha: a pergunta abre (o jogo não paga o advogado sozinho).
@@ -81,6 +76,27 @@ function aoAbrir(v: Vida, r: Rng): void {
     p.fianca = Math.max(preco(v, 3000), Math.round(salarioMinimoDoPais(paisDaVida(v)) * (p.categoria === 'mercado' || p.categoria === 'corrupcao' ? 20 : 8) / 100) * 100);
     v.fatos['jus_fianca'] = v.t;
   }
+}
+
+/**
+ * REWORK 12.35 · D3 — UMA ESCALA SÓ PARA AS PROVAS. Antes, quem não era do meio começava com 45 e o integrante de trinta
+ * anos com 22–30: um pedido isolado pesava mais que uma carreira. Agora as provas saem do que existe contra a pessoa:
+ *
+ *   o ATO ISOLADO  quem não é do meio (o contratante, o desvio de um cargo): 28 — um fato, o testemunho de quem intermediou
+ *   a EXPOSIÇÃO    o que se fez à vista ao longo do caminho, com inclinação de verdade (0,3 por ponto acima de 20)
+ *   o GRUPO        o crime organizado deixa rastro de muita gente (+8)
+ *   TESTEMUNHAS    contatos que falaram há pouco (+5 cada, até +15) e quem do quadro entregou você à polícia (+12)
+ *   a CAUTELA      quem estava na moita quando o processo abriu deixou menos à vista (−5)
+ *
+ * O tempo de atividade não entra direto: entra pelo que deixou à vista (a exposição, que cresce e esfria).
+ */
+export function provasDoCaminho(v: Vida, categoria: string): number {
+  const env = v.caminhos.envolvimento;
+  if (!env) return 28;
+  const exp = v.fatos['exposicao_na_abertura'] ?? env.exposicao;
+  const testemunhas = Math.min(15, Object.values(env.fichas ?? {}).filter(f => f.traiu !== undefined && v.t - f.traiu <= 36).length * 5);
+  const delacao = v.fatos['delatado_por_dentro'] !== undefined && v.t - v.fatos['delatado_por_dentro'] <= 36 ? 12 : 0;
+  return 18 + Math.max(0, exp - 20) * 0.3 + (categoria === 'grupo' ? 8 : 0) + testemunhas + delacao - (env.cautela ? 5 : 0);
 }
 
 /* ---------------------------------------------------------------- O ano do processo */
@@ -152,20 +168,22 @@ export function confiscar(v: Vida, fracao: number, oque: string, provas = 60): n
   const conhecido = (env.ganhos - regularizado) * conhecida + regularizado * conhecida * 0.4;
   const devido = Math.round(Math.max(0, conhecido - jaDevolvido) * fracao / 100) * 100;
   if (devido <= 0) { liberarBloqueio(v); return 0; }
-  // O que estava bloqueado paga primeiro; o resto, da conta; o que faltar, em parcelas.
+  // O que estava bloqueado paga primeiro; depois, os bens comprados com isso (REWORK 12.35); o resto, da conta; o que
+  // faltar, em parcelas.
   const doBloqueio = Math.min(j?.bloqueado?.valor ?? 0, devido);
   if (j?.bloqueado) { j.bloqueado.valor -= doBloqueio; }
+  const emBens = Math.min(devido - doBloqueio, confiscarBens(v, devido - doBloqueio));
   const tem = Math.max(0, disponivel(v));
-  const paga = Math.min(tem, devido - doBloqueio);
+  const paga = Math.min(tem, devido - doBloqueio - emBens);
   if (paga > 0) pagarPorFora(v, 'perdas', paga);
-  const falta = devido - doBloqueio - paga;
+  const falta = devido - doBloqueio - emBens - paga;
   if (falta > 0) {
     const prazo = 60;
     v.financas.dividas.push({ id: `confisco${v.seq++}`, tipo: 'acordo', saldo: falta, jurosMes: 0.004, parcela: Math.ceil(falta / prazo), descricao: oque, tInicio: v.t, prazo });
   }
   v.fatos['confiscado_total'] = jaDevolvido + devido;
   liberarBloqueio(v);
-  escrever(v, { texto: `${oque}: ${dinheiro(devido)}${doBloqueio > 0 ? ` (${dinheiro(doBloqueio)} do que estava bloqueado)` : ''}${falta > 0 ? ` — ${dinheiro(paga)} na hora e o resto em parcelas` : ''}.`, relevancia: 'biografia', tema: 'dinheiro', tom: 'ruim' });
+  escrever(v, { texto: `${oque}: ${dinheiro(devido)}${doBloqueio > 0 ? ` (${dinheiro(doBloqueio)} do que estava bloqueado)` : ''}${emBens > 0 ? ` (${dinheiro(emBens)} em bens)` : ''}${falta > 0 ? ` — ${dinheiro(paga)} na hora e o resto em parcelas` : ''}.`, relevancia: 'biografia', tema: 'dinheiro', tom: 'ruim' });
   return devido;
 }
 
@@ -179,6 +197,9 @@ function bloquear(v: Vida, provas: number, categoria: string): void {
   const env = v.caminhos.envolvimento;
   const j = v.justica!;
   if (!env || !BLOQUEIA.has(categoria) || provas < 30 || j.bloqueado) return;
+  // REWORK 12.35: com provas fortes, os bens que podem ter vindo do crime também ficam parados (não se vendem).
+  const bens = provas >= 45 ? bloquearBens(v, 'processo') : [];
+  if (bens.length) escrever(v, { texto: `A Justiça bloqueou também ${bens.join(', ')} enquanto o processo corre: não dá para vender.`, relevancia: 'biografia', tema: 'dinheiro', tom: 'ruim' });
   const conhecido = Math.max(0, env.ganhos - (env.regularizado ?? 0) * 0.6) * clamp(0.35 + provas / 150, 0.35, 0.95) - (v.fatos['confiscado_total'] ?? 0);
   const valor = Math.round(Math.min(Math.max(0, v.financas.conta), conhecido * 0.35) / 100) * 100;
   if (valor < 1000) return;
@@ -189,6 +210,7 @@ function bloquear(v: Vida, provas: number, categoria: string): void {
 }
 /** O que sobrou bloqueado volta para a conta (o processo acabou). */
 export function liberarBloqueio(v: Vida): void {
+  liberarBens(v);
   const j = v.justica;
   if (!j?.bloqueado) return;
   const x = Math.round(j.bloqueado.valor);

@@ -11,7 +11,7 @@ const frentes = (v: Vida) => Object.values(env(v)?.especializacoes ?? {}).filter
 export function nivelNaOrganizacao(v: Vida): number {
   const os = env(v)?.organizacoes ?? [];
   let n = -1;
-  for (const o of os) if (o.relacao === 'membro' && o.saiu === undefined && o.expulso === undefined) n = Math.max(n, o.propria ? 6 : Math.max(o.nivel ?? 0, o.especialidade === 'organizado' ? Math.max(0, (env(v)?.especializacoes?.organizado?.posto ?? 1) - 1) : 0));
+  for (const o of os) if (o.relacao === 'membro' && o.saiu === undefined && o.expulso === undefined) n = Math.max(n, o.propria ? 6 : o.nivel ?? 0); // REWORK 12.35 · D6: o posto é um só (`rel.nivel`)
   return n;
 }
 export const temOrganizacaoPropria = (v: Vida) => !!env(v)?.organizacoes?.some(o => o.propria && o.saiu === undefined);

@@ -17,7 +17,7 @@
  */
 import { rngDe } from '../rng';
 import type { EncomendaCriminal, OrgViva, Pessoa, Vida } from '../tipos';
-import { dinheiroCurto } from '../texto';
+import { dinheiroCurto, flex } from '../texto';
 import { lider, nivelDe, nomeDoNivel, orgViva } from './faccoes';
 import { orgPorId } from './submundo';
 import { patamarAtual } from './carreiraCriminal';
@@ -143,7 +143,7 @@ export function reacaoAoFracasso(v: Vida, pessoaId: string): string {
   const k = vozDe(v, pessoaId);
   const n = p.nome;
   const T: Record<Voz, string[]> = {
-    leal: [`${n} assumiu a parte dele no erro. "Acontece."`, `${n} não pôs a culpa em ninguém.`],
+    leal: [`${n} assumiu a parte ${flex(p.genero, 'dele', 'dela', 'delu')} no erro. "Acontece."`, `${n} não pôs a culpa em ninguém.`],
     desconfiado: [`${n} saiu dizendo que foi você quem errou.`, `${n} não disse nada — e isso disse muito.`],
     pragmatico: [`${n} fez as contas do prejuízo e foi embora sem drama.`, `${n} só quis saber quanto se perdeu.`],
     esquentado: [`${n} perdeu a cabeça e gritou com todo mundo.`, `${n} bateu a porta do carro e sumiu por uma semana.`],
@@ -243,13 +243,29 @@ export function resumoDoAno(v: Vida, recorrente: number, seco: boolean, perda: n
   for (const x of feitas) { const k = x.pessoaId ? v.pessoas[x.pessoaId]?.nome : x.orgId ? orgViva(v, x.orgId)?.nome : undefined; if (k) porQuem.set(k, (porQuem.get(k) ?? 0) + 1); }
   const top = [...porQuem.entries()].sort((a, b) => b[1] - a[1])[0];
   const partes: string[] = [];
-  if (seco) partes.push(perda ? `o de sempre não rendeu nada — e deixou ${dinheiroCurto(perda)} a acertar com quem estava junto` : 'o de sempre não rendeu nada');
-  else if (recorrente > 0) partes.push(`o de sempre rendeu ${dinheiroCurto(recorrente)}`);
+  // REWORK 12.35 · 18.4: o ano tem cara — a guerra, a operação, a perseguição, a contestação, a traição, o ano quieto — e o
+  // resumo começa por ela (o que de fato aconteceu, dos casos fechados no ano), com variação de forma.
+  const casos = (e.casos ?? []).filter(c => c.t >= v.t - 12 && c.t < v.t && c.escolha !== undefined);
+  const caso = (tipo: string) => casos.find(c => c.tipo === tipo);
+  const guerra = caso('confronto'), busca = caso('operacao'), fuga = caso('perseguicao'), golpe = caso('contestacao'), traicao = caso('traicao');
+  if (seco) partes.push(perda ? `o de sempre não rendeu nada — e deixou ${dinheiroCurto(perda)} a acertar com quem estava junto` : variante(v, 'res_seco', ['o de sempre não rendeu nada', 'a rotina por fora secou', 'nada entrou do que costumava entrar']));
+  else if (recorrente > 0) partes.push(variante(v, 'res_rotina', [`o de sempre rendeu ${dinheiroCurto(recorrente)}`, `a rotina por fora deixou ${dinheiroCurto(recorrente)}`, `entraram ${dinheiroCurto(recorrente)} do que já é costume`, `o que corre sem você pensar pagou ${dinheiroCurto(recorrente)}`]));
+  const abre = guerra ? variante(v, 'res_guerra', [`um ano de guerra (${guerra.tom === 'bom' ? 'e vocês levaram a melhor' : guerra.tom === 'ruim' ? 'e vocês perderam terreno' : 'sem vencedor'})`, `a guerra marcou o ano: ${guerra.tom === 'bom' ? 'saíram por cima' : guerra.tom === 'ruim' ? 'saíram menores' : 'ninguém ganhou'}`])
+    : busca ? 'o ano em que a polícia bateu na sua porta'
+      : fuga ? `o ano da perseguição (${fuga.tom === 'bom' ? 'você escapou' : 'terminou mal'})`
+        : golpe ? `o ano em que contestaram o seu comando (${golpe.tom === 'bom' ? 'e você segurou' : 'e custou caro'})`
+          : traicao ? 'o ano de uma traição de dentro'
+            : undefined;
+  if (abre) partes.unshift(abre);
   if (feitas.length) partes.push(`${extenso(feitas.length)} ${feitas.length === 1 ? 'trabalho aceito' : 'trabalhos aceitos'}${feitas.length > 1 ? ` (${deram === feitas.length ? 'todos deram certo' : deram === 0 ? 'nenhum deu certo' : `${extenso(deram)} ${deram === 1 ? 'deu' : 'deram'} certo`})` : deram ? ', que deu certo' : ', que deu errado'}${top && top[1] >= 2 ? `, quase todos com ${top[0]}` : top ? `, com ${top[0]}` : ''}`);
   if (delegadas.length) partes.push(`${extenso(delegadas.length)} ${delegadas.length === 1 ? 'encomenda feita' : 'encomendas feitas'} a outras pessoas`);
   if (!partes.length) return undefined;
   const frase = partes.length === 1 ? partes[0] : `${partes.slice(0, -1).join('; ')}; e ${partes[partes.length - 1]}`;
-  return `Por fora, em ${anoDe(v.t) - 1}: ${frase}.`;
+  const ano = anoDe(v.t) - 1;
+  const quieto = !abre && !feitas.length && !delegadas.length;
+  return variante(v, quieto ? 'res_quieto' : 'res_abre', quieto
+    ? [`Por fora, em ${ano}: ${frase}. Um ano quieto.`, `${ano} foi um ano sem barulho por fora: ${frase}.`, `Em ${ano}, por fora, só a rotina: ${frase}.`]
+    : [`Por fora, em ${ano}: ${frase}.`, `O ano de ${ano}, por fora: ${frase}.`, `Em ${ano}, no que você faz por fora: ${frase}.`]);
 }
 
 /**

@@ -27,7 +27,11 @@ import { contrair } from '../../motor/texto';
 import { idade } from '../../motor/nucleo';
 import { capacidadeDoAno, contasPorFora, estadoNoSubmundo, feitosNoAno, garantirCarreira, leituraDaFamilia, nomeDaCondicao, NOME_DO_ESTADO, NOME_DO_PATAMAR, patamarAtual, tempoDoCaminho, type FonteDoCrime } from '../../motor/sistemas/carreiraCriminal';
 import { leituraDasEncomendas, TIPOS, custoDeDelegar, limiteDeDelegadas } from '../../motor/sistemas/encomendas';
-import { acoesComContato, rotuloDaAcaoComContato } from '../../motor/sistemas/redeCriminal';
+import { acoesComContato, rotuloDaAcaoComContato, valorDeFavor } from '../../motor/sistemas/redeCriminal';
+import { leituraDosSubordinados, ROTULO_DO_SUBORDINADO, type OqueSubordinado } from '../../motor/sistemas/poderInterno';
+import { leituraDasOportunidades, leituraDoMercado, reputacaoAqui } from '../../motor/sistemas/mercadoCriminal';
+import { alcanceDoContato, NOME_DO_ALCANCE_DO_CONTATO } from '../../motor/sistemas/submundo';
+import { municipio } from '../../motor/dados/lugares';
 import { leituraDasOrganizacoes, nomeDaRegiao, regiaoDaPessoa, type OqueOrg } from '../../motor/sistemas/faccoes';
 import { etapaAtual, leituraDoProcurado, linhaDaJustica, regrasDoPais, type OqueDefesa } from '../../motor/sistemas/defesa';
 import { ROTULO_DO_RUMO, type AcaoDoCrime, type OqueRumo } from '../../motor/sistemas/acoesDoCrime';
@@ -40,7 +44,7 @@ import { carimboDoCaminho, FrentesDoCaminho, NegociosPorFora } from './Submundo'
 import { PainelDaPena } from './Trabalho';
 import type { Ramo } from '../../motor/tipos';
 import { canais, leituraDaCorrupcao, naoRegularizado, valorDaProposta, type CanalDeCorrupcao } from '../../motor/sistemas/corrupcaoJudicial';
-import { alvosPossiveis, intermediario, SERVICOS, type TipoDeServico } from '../../motor/sistemas/servicosPorFora';
+import { alvosPossiveis, condicoesDoServico, intermediario, quemEoIntermediario, SERVICOS, type TipoDeServico } from '../../motor/sistemas/servicosPorFora';
 import { mercadosClandestinos } from '../../motor/sistemas/paralelos';
 import { MercadoParaleloDaCidade } from './material/LugaresDoLuxo';
 
@@ -141,7 +145,8 @@ function Situacao({ vida, ir }: { vida: Vida; ir: (p: Parte) => void }) {
   const atencao: { texto: string; parte: Parte }[] = [
     ...(enc && enc.abertas.length ? [{ texto: `${enc.abertas.length === 1 ? 'Uma proposta espera' : `${enc.abertas.length} propostas esperam`} resposta`, parte: 'atividades' as Parte }] : []),
     ...(etapa && etapa.etapa !== 'suspeita' ? [{ texto: etapa.frase, parte: 'justica' as Parte }] : []),
-    ...(disputa ? [{ texto: `${cap(disputa.nome)}: a liderança está em disputa`, parte: 'organizacoes' as Parte }] : [])
+    ...(disputa ? [{ texto: `${cap(disputa.nome)}: a liderança está em disputa`, parte: 'organizacoes' as Parte }] : []),
+    ...(e && leituraDasOportunidades(vida).length ? [{ texto: leituraDasOportunidades(vida).length === 1 ? 'Uma oportunidade aberta (some em um ano)' : `${leituraDasOportunidades(vida).length} oportunidades abertas`, parte: 'atividades' as Parte }] : [])
   ];
   return (
     <section className="svivo-situacao" aria-labelledby="titulo-svivo">
@@ -298,8 +303,34 @@ function Atividades({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) 
   const ramo: Ramo = (e.fichas?.[quem]?.especialidade ?? 'furtos');
   const [tipo, setTipo] = useState<string>(TIPOS[ramo][0].id);
   const tipoValido = TIPOS[ramo].some(x => x.id === tipo) ? tipo : TIPOS[ramo][0].id;
+  const ops = leituraDasOportunidades(vida);
+  const mercado = leituraDoMercado(vida);
   return (
     <>
+      <section className="svivo-bloco" aria-labelledby="titulo-svivo-momento">
+        <h3 id="titulo-svivo-momento" className="svivo-bloco__titulo">O momento, aqui</h3>
+        <p className="svivo-nota">{contrair(`Em ${municipio(vida.moradia.municipioId).nome}, a procura ${mercado.map(m => `em ${NOME_DO_RAMO[m.ramo].toLowerCase()} está ${m.nome}`).join('; ')}. O seu nome aqui: ${reputacaoAqui(vida) >= 60 ? 'conhecido e respeitado' : reputacaoAqui(vida) >= 30 ? 'conhecido' : reputacaoAqui(vida) >= 10 ? 'pouco conhecido' : 'quase ninguém sabe quem você é'}.`)}</p>
+        {ops.length > 0 && (
+          <ul className="svivo-cartoes">
+            {ops.map(o => (
+              <li key={o.id} className="svivo-cartao">
+                <p className="svivo-cartao__titulo">{o.texto}</p>
+                <dl className="svivo-contas">
+                  <div><dt>Paga</dt><dd>{dinheiroCurto(o.valor)}</dd></div>
+                  <div><dt>Chance de dar certo</dt><dd>{pct(o.chance)}</dd></div>
+                  <div><dt>Se der errado</dt><dd>exposição +{o.risco}</dd></div>
+                  <div><dt>Vale até</dt><dd>{anoDe(o.prazo)}</dd></div>
+                </dl>
+                <div className="grupo-acoes">
+                  <BotaoAcao vida={vida} acao={crime({ area: 'oportunidade', id: o.id, oque: 'aceitar' })} agir={agir} variante="secundario" semAviso>Aceitar</BotaoAcao>
+                  <BotaoAcao vida={vida} acao={crime({ area: 'oportunidade', id: o.id, oque: 'recusar' })} agir={agir} variante="discreto">Deixar passar</BotaoAcao>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+        {!ops.length && <p className="svivo-nota">Nenhuma oportunidade fora do comum agora. Elas aparecem com o mundo: uma rival que enfraquece, a procura que sobe, um espaço que fica vazio.</p>}
+      </section>
       <section className="svivo-bloco" aria-labelledby="titulo-svivo-propostas">
         <h3 id="titulo-svivo-propostas" className="svivo-bloco__titulo">Propostas que chegaram</h3>
         {!l.abertas.length && <p className="svivo-nota">Nenhuma agora. As propostas chegam pelos contatos de confiança, pela organização e pelo nome que você tem no meio — conversar com as pessoas ajuda.</p>}
@@ -366,7 +397,7 @@ function Contatos({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
         return (
           <li key={id} className={`svivo-cartao${ativo ? '' : ' svivo-cartao--fora'}`}>
             <p className="svivo-cartao__titulo">{p.nome}</p>
-            <p className="svivo-nota">{NOME_DO_PAPEL[f.papel]} · {NOME_DO_RAMO[f.especialidade].toLowerCase()}{org ? ` · ${org}` : ''}{!p.vivo ? ' · morreu' : f.traiu !== undefined ? ' · falou demais' : f.afastado !== undefined ? ' · afastou-se' : ''}</p>
+            <p className="svivo-nota">{NOME_DO_PAPEL[f.papel]} · {NOME_DO_RAMO[f.especialidade].toLowerCase()}{org ? ` · ${org}` : ''}{!p.vivo ? ' · morreu' : f.traiu !== undefined ? ' · falou demais' : f.afastado !== undefined ? ' · afastou-se' : ''}{p.vivo && p.municipioId !== vida.moradia.municipioId ? ` · em ${municipio(p.municipioId).nome} (${NOME_DO_ALCANCE_DO_CONTATO[alcanceDoContato(vida, id)]})` : ''}</p>
             {ativo && (
               <div className="svivo-duas">
                 <div className="svivo-duas__lado"><span className="svivo-rotulo">Confiança</span><Medidor valor={f.confianca} rotulo={`Confiança de ${p.nome}`} tom="progresso" /></div>
@@ -379,7 +410,7 @@ function Contatos({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
               {f.interesse ? `Hoje, ${INTERESSE[f.interesse]}.` : ''}
             </p>
             <div className="grupo-acoes">
-              {acoesComContato(vida, id).map(oque => <BotaoAcao key={oque} vida={vida} acao={crime({ area: 'contato', oque, pessoaId: id })} agir={agir} variante="discreto" ocultarImpossivel semAviso>{rotuloDaAcaoComContato(oque, f.papel, p.nome)}</BotaoAcao>)}
+              {acoesComContato(vida, id).map(oque => <BotaoAcao key={oque} vida={vida} acao={crime({ area: 'contato', oque, pessoaId: id })} agir={agir} variante="discreto" ocultarImpossivel semAviso>{`${rotuloDaAcaoComContato(oque, f.papel, p.nome, p.genero)}${oque === 'fazer_favor' ? ` (uns ${dinheiroCurto(valorDeFavor(vida))})` : oque === 'acertar' ? ` (uns ${dinheiroCurto(valorDeFavor(vida) * -(f.favores ?? 0))})` : ''}`}</BotaoAcao>)}
               {f.quebradas > f.cumpridas && ativo && <BotaoAcao vida={vida} acao={{ tipo: 'submundo', oque: 'cumprir_combinado', pessoaId: id }} agir={agir} variante="discreto" ocultarImpossivel>{`Cumprir o combinado com ${p.nome}`}</BotaoAcao>}
             </div>
             {(f.historia?.length ?? 0) > 0 && <details className="svivo-detalhes"><summary>Entre vocês</summary><ol className="sub-diario">{f.historia!.slice().reverse().map((h, k) => <li key={k} className={h.tom ? `sub-diario--${h.tom}` : undefined}><span className="margem__ano">{anoDe(h.t)}</span> {h.texto}</li>)}</ol></details>}
@@ -407,6 +438,13 @@ function Organizacoes({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }
             <li key={o.id} className={`svivo-cartao svivo-cartao--org${dentro ? ' svivo-cartao--dentro' : ''}`}>
               <p className="svivo-cartao__titulo">{cap(o.nome)}</p>
               <p className="svivo-nota">{o.estilo} · {o.ramo.toLowerCase()}{o.daqui ? '' : ` · ${o.cidade}`} · <strong>{o.nomeVinculo}</strong>{o.estado !== 'ativa' ? ` · ${o.estado === 'extinta' ? 'deixou de existir' : 'enfraquecida'}` : ''}</p>
+              <p className="svivo-nota">Jeito: <strong>{o.perfil}</strong> — {o.perfilFrase}.</p>
+              {(dentro || o.conhecida) && o.esteAno.length > 0 && (
+                <div className="svivo-bloco" role="group" aria-label={contrair(`Este ano em ${o.nome}`)}>
+                  <p className="svivo-cartao__titulo">Este ano em {o.nome}</p>
+                  <ul className="svivo-lista">{o.esteAno.map((t, k) => <li key={k}>{t}</li>)}</ul>
+                </div>
+              )}
               <dl className="svivo-contas">
                 {o.posto && <div><dt>Seu posto</dt><dd>{o.posto}{o.proximoPosto && dentro && !o.propria ? ` (próximo: ${o.proximoPosto})` : ''}</dd></div>}
                 {o.lider && <div><dt>Quem manda</dt><dd>{o.lider}</dd></div>}
@@ -426,7 +464,10 @@ function Organizacoes({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }
                 <div><span className="svivo-rotulo">União</span><Medidor valor={o.coesao} rotulo={`Coesão de ${o.nome}`} /></div>
                 <div><span className="svivo-rotulo">Pressão da Justiça</span><Medidor valor={o.pressao} rotulo={`Pressão sobre ${o.nome}`} tom="risco" /></div>
                 {o.conhecida && <div><span className="svivo-rotulo">Lealdade que leem em você</span><Medidor valor={o.lealdade} rotulo={`Lealdade com ${o.nome}`} tom="progresso" /></div>}
+                {o.apoio !== undefined && <div><span className="svivo-rotulo">Apoio ao seu comando</span><Medidor valor={o.apoio} rotulo={`Apoio ao seu comando em ${o.nome}`} tom="progresso" /></div>}
               </div>
+              {dentro && !o.propria && <p className="svivo-nota">{o.lealdade < 25 ? <strong>A lealdade está baixa: abaixo de 25, podem rebaixar você; abaixo de 12, você é posto para fora.</strong> : 'Abaixo de 25 de lealdade, podem rebaixar você; abaixo de 12, você é posto para fora.'} {o.pressao >= 50 ? 'Com a pressão alta, as operações vêm — e chegam a quem está perto do comando.' : ''}</p>}
+              {o.apoio !== undefined && o.apoio < 48 && <p className="svivo-nota"><strong>O apoio ao seu comando está baixo:</strong> alguém ambicioso pode contestar. Sem apoio nenhum, o comando cai sozinho.</p>}
               {o.disputa && dentro && (
                 <div className="svivo-bloco svivo-bloco--alerta" role="group" aria-label={contrair(`A disputa em ${o.nome}`)}>
                   <p className="svivo-cartao__titulo">A liderança está em disputa</p>
@@ -456,17 +497,19 @@ function Organizacoes({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }
                     <BotaoAcao vida={vida} acao={A('prioridade_consolidar')} agir={agir} variante="discreto" ocultarImpossivel ocultarBloqueado>Prioridade: arrumar a casa</BotaoAcao>
                     <BotaoAcao vida={vida} acao={A('prioridade_negocios')} agir={agir} variante="discreto" ocultarImpossivel ocultarBloqueado>Prioridade: fazer dinheiro</BotaoAcao>
                     <BotaoAcao vida={vida} acao={A('prioridade_discricao')} agir={agir} variante="discreto" ocultarImpossivel ocultarBloqueado>Prioridade: sumir do radar</BotaoAcao>
-                    <BotaoAcao vida={vida} acao={A('mediar')} agir={agir} variante="secundario" ocultarImpossivel>Resolver a briga interna</BotaoAcao>
-                    <BotaoAcao vida={vida} acao={A('recolher')} agir={agir} variante="secundario" ocultarImpossivel>Mandar recolher (a pressão está alta)</BotaoAcao>
-                    <BotaoAcao vida={vida} acao={A('presenca', reg)} agir={agir} variante="discreto" ocultarImpossivel>{contrair(`Fazer-se presente em ${nomeDaRegiao(vida.moradia.municipioId, reg)}`)}</BotaoAcao>
-                    {o.relacoes.filter(r => ['rivalidade', 'conflito', 'ruptura'].includes(r.estado)).map(r => <BotaoAcao key={`t${r.id}`} vida={vida} acao={A('tregua', r.id)} agir={agir} variante="secundario" ocultarImpossivel>{contrair(`Negociar uma trégua com ${r.nome}`)}</BotaoAcao>)}
-                    {o.relacoes.filter(r => ['concorrencia', 'tregua'].includes(r.estado)).map(r => <BotaoAcao key={`c${r.id}`} vida={vida} acao={A('cooperar', r.id)} agir={agir} variante="discreto" ocultarImpossivel>{contrair(`Propor um negócio a ${r.nome}`)}</BotaoAcao>)}
+                    <BotaoAcao vida={vida} acao={A('mediar')} agir={agir} variante="secundario" ocultarImpossivel ocultarBloqueado>Resolver a briga interna</BotaoAcao>
+                    <BotaoAcao vida={vida} acao={A('recolher')} agir={agir} variante="secundario" ocultarImpossivel ocultarBloqueado>Mandar recolher (a pressão está alta)</BotaoAcao>
+                    <BotaoAcao vida={vida} acao={A('presenca', reg)} agir={agir} variante="discreto" ocultarImpossivel ocultarBloqueado>{contrair(`Fazer-se presente em ${nomeDaRegiao(vida.moradia.municipioId, reg)}`)}</BotaoAcao>
+                    {o.relacoes.filter(r => ['rivalidade', 'conflito', 'ruptura'].includes(r.estado)).map(r => <BotaoAcao key={`t${r.id}`} vida={vida} acao={A('tregua', r.id)} agir={agir} variante="secundario" ocultarImpossivel ocultarBloqueado>{contrair(`Negociar uma trégua com ${r.nome}`)}</BotaoAcao>)}
+                    {o.relacoes.filter(r => ['concorrencia', 'tregua'].includes(r.estado)).map(r => <BotaoAcao key={`c${r.id}`} vida={vida} acao={A('cooperar', r.id)} agir={agir} variante="discreto" ocultarImpossivel ocultarBloqueado>{contrair(`Propor um negócio a ${r.nome}`)}</BotaoAcao>)}
                     {os.filter(x => x.id !== o.id && x.daqui && x.estado !== 'extinta').map(x => o.aliadas.includes(x.nome)
-                      ? <BotaoAcao key={x.id} vida={vida} acao={A('romper', x.id)} agir={agir} variante="discreto" ocultarImpossivel>{contrair(`Romper com ${x.nome}`)}</BotaoAcao>
-                      : <BotaoAcao key={x.id} vida={vida} acao={A('alianca', x.id)} agir={agir} variante="discreto" ocultarImpossivel>{contrair(`Propor aliança a ${x.nome}`)}</BotaoAcao>)}
+                      ? <BotaoAcao key={x.id} vida={vida} acao={A('romper', x.id)} agir={agir} variante="discreto" ocultarImpossivel ocultarBloqueado>{contrair(`Romper com ${x.nome}`)}</BotaoAcao>
+                      : <BotaoAcao key={x.id} vida={vida} acao={A('alianca', x.id)} agir={agir} variante="discreto" ocultarImpossivel ocultarBloqueado>{contrair(`Propor aliança a ${x.nome}`)}</BotaoAcao>)}
                   </div>
+                  {o.proximosPoderes.length > 0 && <p className="svivo-nota">No próximo posto ({o.proximoPosto}): {o.proximosPoderes.join('; ')}.</p>}
                 </details>
               )}
+              {(o.nivel >= 3 || o.propria) && dentro && <Subordinados vida={vida} agir={agir} orgId={o.id} />}
               <details className="svivo-detalhes">
                 <summary>A hierarquia, o território e a história</summary>
                 <ol className="svivo-escada svivo-escada--org" aria-label={`A hierarquia de ${o.nome}`}>{o.hierarquia.map((h, k) => <li key={h} className={`svivo-escada__degrau${k === o.nivel ? ' svivo-escada__degrau--atual' : k < o.nivel ? ' svivo-escada__degrau--feito' : ''}`}>{cap(h)}</li>)}</ol>
@@ -485,6 +528,31 @@ function Organizacoes({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }
         })}
       </ul>
     </>
+  );
+}
+
+/* ================================================================ REWORK 12.35: quem responde a você */
+
+function Subordinados({ vida, agir, orgId }: { vida: Vida; agir: (a: Acao) => boolean; orgId: string }) {
+  const xs = leituraDosSubordinados(vida, orgId);
+  if (!xs.length) return null;
+  return (
+    <details className="svivo-detalhes" open={xs.some(x => x.risco || x.preso)}>
+      <summary>Quem responde a você ({xs.length})</summary>
+      <p className="svivo-nota">Cada um tem lealdade, ambição e o que acha de você — e lembra do que você faz. Uma ação por pessoa a cada ano.</p>
+      <ul className="svivo-cartoes">
+        {xs.map(x => (
+          <li key={x.id} className="svivo-cartao">
+            <p className="svivo-cartao__titulo">{x.nome}</p>
+            <p className="svivo-nota">{x.posto}{x.preso ? ' · preso agora' : ''} · ambição: {x.ambicao}{x.comVoce >= 25 ? ' · gosta de você' : x.comVoce <= -25 ? ' · guarda mágoa de você' : ''}{x.risco ? ` · ${x.risco}` : ''}</p>
+            <Medidor valor={x.lealdade} rotulo={`Lealdade de ${x.nome}`} tom="progresso" />
+            <div className="grupo-acoes">
+              {(['promover', 'cobrar', 'proteger', 'afastar'] as OqueSubordinado[]).map(oque => <BotaoAcao key={oque} vida={vida} acao={crime({ area: 'subordinado', orgId, membroId: x.id, oque })} agir={agir} variante="discreto" ocultarImpossivel ocultarBloqueado>{ROTULO_DO_SUBORDINADO[oque]}</BotaoAcao>)}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </details>
   );
 }
 
@@ -561,32 +629,58 @@ function PorForaDosAutos({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolea
 /* ================================================================ REWORK 12.3 · B2: pedidos por fora (de quem não é do meio) */
 
 function PedidosPorFora({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
+  const alvos = alvosPossiveis(vida).slice(0, 6);
+  const [alvo, setAlvo] = useState<string>(alvos[0]?.id ?? '');
   if (idade(vida) < 18 || vida.justica?.prisao) return null;
   const quem = intermediario(vida);
-  const alvos = alvosPossiveis(vida).slice(0, 3);
   const feitos = vida.caminhos.contratante?.servicos ?? [];
+  const golpe = vida.caminhos.contratante?.golpeDe;
+  const alvoValido = alvos.some(a => a.id === alvo) ? alvo : alvos[0]?.id;
   return (
     <section className="divisao__secao svivo-pedidos" aria-labelledby="titulo-pedidos-por-fora">
       <h2 id="titulo-pedidos-por-fora" className="secao-fio">Pedidos por fora</h2>
       <p className="svivo-nota">Quem leva vida legal também pode, numa circunstância, pedir algo por fora — sem virar do meio. É crime, e pode vir à tona. Para quase todo conflito existe saída legal, dita ao lado de cada pedido.</p>
-      {!quem ? <p className="svivo-nota">Não há a quem pedir: ninguém das suas relações vive na beira o bastante para conhecer quem faz isso.</p> : <p className="svivo-nota">Quem conhece alguém: <strong>{quem.nome}</strong>.</p>}
+      {!quem ? <p className="svivo-nota">Não há a quem pedir: ninguém das suas relações (fora da família) vive na beira o bastante para conhecer quem faz isso. Isso muda com amizades, colegas, vizinhos — ou com um contato do meio.</p> : <p className="svivo-nota">Quem conhece alguém: <strong>{quem.nome}</strong>, {quemEoIntermediario(vida, quem)}.</p>}
+      {golpe && vida.pessoas[golpe] && (
+        <div className="svivo-bloco svivo-bloco--alerta" role="group" aria-label="O dinheiro que sumiu">
+          <p className="svivo-nota">{vida.pessoas[golpe].nome} ficou com o dinheiro de um pedido seu.</p>
+          <div className="grupo-acoes">
+            <BotaoAcao vida={vida} acao={crime({ area: 'golpe', oque: 'cobrar' })} agir={agir} variante="secundario" ocultarImpossivel>{`Ir cobrar ${vida.pessoas[golpe].nome}`}</BotaoAcao>
+            <BotaoAcao vida={vida} acao={crime({ area: 'golpe', oque: 'deixar' })} agir={agir} variante="discreto" ocultarImpossivel>Deixar quieto</BotaoAcao>
+          </div>
+        </div>
+      )}
       {quem && (
-        <ul className="svivo-cartoes">
-          {(Object.keys(SERVICOS) as TipoDeServico[]).map(t => {
-            const s = SERVICOS[t];
-            return (
-              <li key={t} className="svivo-cartao">
-                <p className="svivo-cartao__titulo">{s.nome} <span className="svivo-selo-ilegal">ilegal</span></p>
-                {s.legal !== '—' && <p className="svivo-nota">Saída legal: {s.legal}</p>}
-                <div className="grupo-acoes">
-                  {s.contraAlguem
-                    ? (alvos.length ? alvos.map(a => <BotaoAcao key={a.id} vida={vida} acao={crime({ area: 'servico', tipo: t, alvoId: a.id })} agir={agir} variante="discreto" ocultarImpossivel>{`Contra ${a.nome}`}</BotaoAcao>) : <span className="svivo-nota">Só aparece quem está em conflito de verdade com você.</span>)
-                    : <BotaoAcao vida={vida} acao={crime({ area: 'servico', tipo: t })} agir={agir} variante="discreto" ocultarImpossivel>Pedir</BotaoAcao>}
-                </div>
-              </li>
-            );
-          })}
-        </ul>
+        <>
+          {alvos.length > 0 && (
+            <label className="campo"><span className="campo__rotulo">Contra quem (para os pedidos contra alguém)</span>
+              <select value={alvoValido} onChange={ev => setAlvo(ev.target.value)}>{alvos.map(a => <option key={a.id} value={a.id}>{a.nome}</option>)}</select>
+            </label>
+          )}
+          <ul className="svivo-cartoes">
+            {(Object.keys(SERVICOS) as TipoDeServico[]).map(t => {
+              const s = SERVICOS[t];
+              const c = condicoesDoServico(vida, t);
+              return (
+                <li key={t} className="svivo-cartao">
+                  <p className="svivo-cartao__titulo">{s.nome} <span className="svivo-selo-ilegal">ilegal</span></p>
+                  <dl className="svivo-contas">
+                    <div><dt>Custa (adiantado)</dt><dd>{dinheiroCurto(c.preco)}</dd></div>
+                    <div><dt>O dinheiro some</dt><dd>{pct(c.golpe)} das vezes</dd></div>
+                    <div><dt>Não dá certo</dt><dd>{pct(c.falha)} das vezes</dd></div>
+                    <div><dt>Vir à tona</dt><dd>{pct(c.risco)} no 1º ano, caindo depois</dd></div>
+                  </dl>
+                  <p className="svivo-nota">Se vier à tona, pesa: {c.peso}.{s.legal !== '—' ? ` Saída legal: ${s.legal}` : ''}</p>
+                  <div className="grupo-acoes">
+                    {s.contraAlguem
+                      ? (alvoValido ? <BotaoAcao vida={vida} acao={crime({ area: 'servico', tipo: t, alvoId: alvoValido })} agir={agir} variante="discreto" ocultarImpossivel semAviso>{`Pedir, contra ${vida.pessoas[alvoValido].nome}`}</BotaoAcao> : <span className="svivo-nota">Só aparece quem está em conflito de verdade com você (uma briga aberta, uma ruptura, um rival).</span>)
+                      : <BotaoAcao vida={vida} acao={crime({ area: 'servico', tipo: t })} agir={agir} variante="discreto" ocultarImpossivel semAviso>Pedir</BotaoAcao>}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </>
       )}
       {feitos.length > 0 && <ul className="svivo-lista-simples">{feitos.slice().reverse().map((x, k) => <li key={k}>{anoDe(x.t)} · {SERVICOS[x.tipo].nome}{x.alvoId && vida.pessoas[x.alvoId] ? ` (${vida.pessoas[x.alvoId].nome})` : ''} — {x.resultado === 'feito' ? 'feito' : x.resultado === 'falhou' ? 'deu errado' : 'o dinheiro sumiu'}{x.descoberto !== undefined ? `; veio à tona em ${anoDe(x.descoberto)}` : ''}</li>)}</ul>}
     </section>
@@ -612,8 +706,16 @@ function Historico({ vida }: { vida: Vida }) {
   const e = vida.caminhos.envolvimento;
   const RUMO: Record<string, string> = { parar: 'parou', mudar: 'mudou de cidade', moita: 'ficou na moita', seguir: 'seguiu no ritmo', fundo: 'foi mais fundo', sair_aos_poucos: 'decidiu sair aos poucos' };
   const diario = (e?.diario ?? []).slice().reverse();
+  const casos = (e?.casos ?? []).filter(c => c.escolha !== undefined).slice().reverse();
+  const TIPO: Record<string, string> = { confronto: 'Guerra', operacao: 'Operação', perseguicao: 'Perseguição', contestacao: 'Comando contestado', traicao: 'Traição', suspeita: 'Boato', oportunidade: 'Oportunidade', conjuge: 'Em casa', raro: 'Inesperado', recomeco: 'Recomeço' };
   return (
     <>
+      {casos.length > 0 && (
+        <section className="svivo-bloco" aria-labelledby="titulo-svivo-casos">
+          <h3 id="titulo-svivo-casos" className="svivo-bloco__titulo">O que você viveu</h3>
+          <ol className="sub-diario">{casos.slice(0, 15).map(c => <li key={c.id} className={c.tom ? `sub-diario--${c.tom}` : undefined}><span className="margem__ano">{anoDe(c.t)}</span> <strong>{TIPO[c.tipo] ?? c.tipo}.</strong> {(c.resultado ?? []).slice(0, 2).join(' ')}</li>)}</ol>
+        </section>
+      )}
       {e?.rumo?.length ? (
         <section className="svivo-bloco" aria-labelledby="titulo-svivo-rumos">
           <h3 id="titulo-svivo-rumos" className="svivo-bloco__titulo">Os rumos escolhidos</h3>
@@ -626,7 +728,7 @@ function Historico({ vida }: { vida: Vida }) {
           <ol className="sub-diario">{diario.map((d, k) => <li key={k} className={d.tom ? `sub-diario--${d.tom}` : undefined}><span className="margem__ano">{anoDe(d.t)}</span> {d.texto}</li>)}</ol>
         </section>
       )}
-      {!diario.length && !e?.rumo?.length && <p className="svivo-nota">Ainda não há história.</p>}
+      {!diario.length && !e?.rumo?.length && !casos.length && <p className="svivo-nota">Ainda não há história.</p>}
     </>
   );
 }

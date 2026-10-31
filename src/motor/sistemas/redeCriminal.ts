@@ -15,19 +15,19 @@
  * Nada aqui descreve como se faz coisa alguma: são conversas, pedidos e consequências. Sorteios derivados (`rngDe`).
  */
 import { clamp, rngDe } from '../rng';
-import type { FichaDeContato, PapelDoContato, Vida } from '../tipos';
+import type { FichaDeContato, Genero, PapelDoContato, Vida } from '../tipos';
 import { idadePessoa, lembrarCom } from '../nucleo';
 import { bloqueio, PERMITIDO, type Veredito } from '../plausibilidade';
 import { economiaLocal } from '../dados/lugares';
 import { vereditoDePagar } from './dinheiro';
 import { ativo } from './ilicito';
 import { preso } from './justica';
-import { afastar, anotar, contatosAtivos, criarContato, lembrarOrg, orgPorId, NOME_DO_PAPEL } from './submundo';
+import { afastar, alcanceDoContato, anotar, contatosAtivos, criarContato, lembrarOrg, orgPorId, NOME_DO_PAPEL } from './submundo';
 import { NOME_DO_RAMO, ramosAtivos } from './ramos';
 import { escalaDe, movimentoPorFora, nivelNaOrganizacao, pagarPorFora } from './carreiraCriminal';
 import { proporEncomenda, tipoDeEncomenda } from './encomendas';
 import { assuntoDaConversa } from './relatoDoCrime';
-import { dinheiroCurto } from '../texto';
+import { dinheiroCurto, flex } from '../texto';
 
 const env = (v: Vida) => v.caminhos.envolvimento;
 const preco = (v: Vida, x: number) => Math.round(x * economiaLocal(v.moradia.municipioId).custo * escalaDe(v) / 100) * 100;
@@ -75,12 +75,12 @@ export const ACOES_DO_PAPEL: Record<PapelDoContato, OqueContato[]> = {
   informante: ['conversar', 'falar_do_grupo', 'pedir_favor', 'fazer_favor', 'encerrar']
 };
 
-export function rotuloDaAcaoComContato(oque: OqueContato, papel: PapelDoContato, nome: string): string {
+export function rotuloDaAcaoComContato(oque: OqueContato, papel: PapelDoContato, nome: string, genero: Genero = 'masculino'): string {
   switch (oque) {
     case 'conversar': return `Conversar com ${nome}`;
     case 'pedir_favor': return papel === 'fornecedor' ? 'Pedir um lote fiado' : papel === 'informante' ? 'Pedir que fique de olho' : papel === 'chefe' ? 'Pedir proteção' : papel === 'comprador' ? 'Pedir que compre agora' : 'Pedir um favor';
     case 'fazer_favor': return `Fazer um favor a ${nome}`;
-    case 'cobrar': return 'Cobrar o favor que ele deve';
+    case 'cobrar': return `Cobrar o favor que ${flex(genero, 'ele', 'ela', 'elu')} deve`;
     case 'acertar': return 'Acertar o que você deve';
     case 'propor_trabalho': return papel === 'fornecedor' ? 'Perguntar se há trabalho' : 'Propor um trabalho juntos';
     case 'convidar': return 'Chamar para a sua organização';
@@ -126,6 +126,8 @@ export function disponibilidadeContato(v: Vida, id: string, oque: OqueContato): 
   // Fora do caminho, a conversa continua (gente é gente); o trabalho, não.
   const deTrabalho: OqueContato[] = ['propor_trabalho', 'negociar_lote', 'oferecer_bens', 'convidar', 'apresentar'];
   if (deTrabalho.includes(oque) && !ativo(v)) return bloqueio('incompativel', 'Você não está mais nisso.');
+  // REWORK 12.35 · D8: de outro país, a pessoa continua sendo gente (conversa, favor) — trabalho junto, não.
+  if (deTrabalho.includes(oque) && alcanceDoContato(v, id) === 'fora') return bloqueio('incompativel', `${p.nome} ficou longe demais para trabalhar junto. Dá para conversar — o vínculo continua.`);
   switch (oque) {
     case 'fazer_favor': return vereditoDePagar(v, valorDeFavor(v), 'Um favor desses custa uns');
     case 'acertar': return vereditoDePagar(v, valorDeFavor(v) * -(f.favores ?? 0), 'O que você deve vale uns');
@@ -198,7 +200,7 @@ export function executarContato(v: Vida, id: string, oque: OqueContato): { texto
       f.favores = (f.favores ?? 0) + 1;
       f.amizade = clamp((f.amizade ?? 20) + 3);
       mudarConfianca(v, id, 4, true);
-      historiaDoContato(v, id, 'Você fez um favor a ele.', 'bom');
+      historiaDoContato(v, id, `Você fez um favor a ${flex(p.genero, 'ele', 'ela', 'elu')}.`, 'bom');
       return { texto: `Você resolveu um problema de ${nome} (${dinheiroCurto(valorDeFavor(v))} e um pouco de tempo). Agora ${nome} deve uma — e lembra.`, tom: 'bom' };
     }
     case 'cobrar': {
@@ -235,7 +237,7 @@ export function executarContato(v: Vida, id: string, oque: OqueContato): { texto
       if (y > 0.25 + d / 150) {
         x.valor = Math.round(x.valor * 0.8 / 100) * 100;
         x.negociada = true;
-        return { texto: `${nome} topou, com uma condição: a parte dele é maior. A proposta (${dinheiroCurto(x.valor)} para você) está em Encomendas.` };
+        return { texto: `${nome} topou, com uma condição: a parte ${flex(p.genero, 'dele', 'dela', 'delu')} é maior. A proposta (${dinheiroCurto(x.valor)} para você) está em Encomendas.` };
       }
       return { texto: `${nome} topou fazer junto. A proposta está em Encomendas — com alguém de confiança do lado, a chance é melhor.`, tom: 'bom' };
     }
@@ -314,7 +316,7 @@ export function executarContato(v: Vida, id: string, oque: OqueContato): { texto
     case 'reconciliar': {
       const tempo = (v.t - (f.traiu ?? f.afastado ?? v.t)) / 12;
       const chance = clamp(0.2 + (f.amizade ?? 20) / 150 + tempo * 0.05 + (f.traiu !== undefined ? -0.15 : 0), 0.05, 0.85);
-      if (!r.chance(chance)) { historiaDoContato(v, id, 'Você o procurou; ele não quis conversa.'); return { texto: `${nome} não quis conversa. Há coisas que demoram mais.`, tom: 'ruim' }; }
+      if (!r.chance(chance)) { historiaDoContato(v, id, `Você ${flex(p.genero, 'o', 'a', 'e')} procurou; ${flex(p.genero, 'ele', 'ela', 'elu')} não quis conversa.`); return { texto: `${nome} não quis conversa. Há coisas que demoram mais.`, tom: 'ruim' }; }
       delete f.afastado;
       delete f.traiu;
       f.reconciliado = v.t;
@@ -391,8 +393,8 @@ export function processarRede(v: Vida): void {
     if (r.chance(0.025 + e.exposicao / 4000)) {
       f.afastado = v.t;
       historiaDoContato(v, id, 'Foi preso.', 'ruim');
-      anotar(v, `${p.nome} foi preso. Ninguém sabe ainda o que ele vai dizer.`, 'ruim');
-      if (r.chance(0.2 + Math.max(0, 50 - f.confianca) / 200)) { e.exposicao = clamp(e.exposicao + 8); anotar(v, `${p.nome}, preso, falou de você.`, 'ruim'); }
+      anotar(v, `${p.nome} foi pres${flex(p.genero, 'o', 'a', 'e')}. Ninguém sabe ainda o que ${flex(p.genero, 'ele', 'ela', 'elu')} vai dizer.`, 'ruim');
+      if (r.chance(0.2 + Math.max(0, 50 - f.confianca) / 200)) { e.exposicao = clamp(e.exposicao + 8); f.traiu = v.t; anotar(v, `${p.nome}, pres${flex(p.genero, 'o', 'a', 'e')}, falou de você.`, 'ruim'); }
       continue;
     }
     // A mudança de organização (o contato vai para outra — e leva o que sabe).

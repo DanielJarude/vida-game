@@ -1085,6 +1085,8 @@ export interface ProblemaBem {
 export interface Veiculo {
   id: string;
   tipo: 'veiculo';
+  /** REWORK 12.35: bloqueado pela Justiça (não se vende até o fim do processo). */
+  bloqueio?: { t: number; motivo: string };
   /** A classe (compacto, SUV, moto pequena...: `VEICULOS`). */
   modeloId: string;
   /** A versão concreta (marca e modelo: `VERSOES_VEICULO`); saves antigos não têm. */
@@ -1122,6 +1124,8 @@ export interface Veiculo {
 export interface Imovel {
   id: string;
   tipo: 'imovel';
+  /** REWORK 12.35: bloqueado pela Justiça (não se vende até o fim do processo). */
+  bloqueio?: { t: number; motivo: string };
   modeloId: string;
   nome: string;
   valor: number;
@@ -2655,7 +2659,7 @@ export interface Caminhos {
    * REWORK 12.3 · B2: quem leva vida legal e, numa circunstância, encomendou um serviço por fora — SEM virar do meio (não é
    * `envolvimento`). Guarda quem foi o intermediário e o que foi pedido: o risco de vir à tona continua.
    */
-  contratante?: { intermediarioId?: string; servicos: ServicoPorFora[]; /** foi apresentado a quem é do meio (o mercado por fora fica acessível) */ apresentado?: number };
+  contratante?: { intermediarioId?: string; servicos: ServicoPorFora[]; /** foi apresentado a quem é do meio (o mercado por fora fica acessível) */ apresentado?: number; /** REWORK 12.35: quem ficou com o dinheiro de um pedido (dá para cobrar ou deixar quieto) */ golpeDe?: string };
   /** A vida política: da reunião de bairro ao mandato — e à volta para casa. */
   politica?: VidaPolitica;
   /** A obra: projetos lançados e como foram recebidos (carreira artística viva). */
@@ -2890,7 +2894,64 @@ export interface Envolvimento {
   familia?: Record<string, ReacaoDaFamilia>;
   /** REWORK 12.25: as cenas novas deste ano (id da decisão → id da pessoa ou da organização). */
   cenas125?: Record<string, string>;
+  /**
+   * REWORK 12.35: os casos vividos no Submundo — o confronto, a operação, a perseguição, a contestação, a traição, o boato,
+   * a oportunidade —, com quem estava, o que se escolheu e o que de fato mudou (memória de longo prazo; no máximo 40).
+   */
+  casos?: CasoDoSubmundo[];
+  /** REWORK 12.35: o nome que se tem em cada cidade (município → 0..100); a reputação geral é a soma da história. */
+  reputacaoLocal?: Record<string, number>;
+  /** REWORK 12.35: o recomeço depois de sair (desde quando, e os marcos de cada passo: família, trabalho, estudo, contatos). */
+  recomeco?: { t: number; marcos: Record<string, number> };
+  /** REWORK 12.35 · D6: o posto do ramo organizado já foi trazido para o nível da organização (a migração não se repete). */
+  postoUnificado?: boolean;
+  /** REWORK 12.35: a morte por causa do crime (o ano termina com ela: `corpo.morreEsteAno`). */
+  morteNoCrime?: { t: number; causa: string };
 }
+
+/** REWORK 12.35 — um acontecimento vivido no Submundo, com escolha e consequência (abstrato: nunca como se faz). */
+export interface CasoDoSubmundo {
+  id: string;
+  tipo: 'confronto' | 'operacao' | 'perseguicao' | 'contestacao' | 'traicao' | 'suspeita' | 'oportunidade' | 'conjuge' | 'raro' | 'recomeco';
+  /** A variante (o motivo do confronto, o tipo de operação, o que se oferece). */
+  situacao: string;
+  t: number;
+  orgId?: string;
+  outraId?: string;
+  /** A pessoa da vida envolvida (o contato, o cônjuge). */
+  pessoaId?: string;
+  /** O nome do quadro envolvido (`MembroDaOrg.id`). */
+  membroId?: string;
+  gravidade?: 1 | 2 | 3;
+  /** Para o boato: é verdade? (o jogador não sabe — só a credibilidade da fonte). */
+  verdade?: boolean;
+  /** A credibilidade da fonte (0..100). */
+  credibilidade?: number;
+  escolha?: string;
+  /** O que de fato aconteceu (as consequências, em palavras saídas do estado). */
+  resultado?: string[];
+  tom?: 'bom' | 'ruim';
+}
+
+/** REWORK 12.35: uma oportunidade que aparece e some (com o que paga, a chance e o risco ditos antes). */
+export interface OportunidadeCriminal {
+  id: string;
+  tipo: 'rival_fraco' | 'demanda' | 'parceria' | 'vazio' | 'cliente';
+  municipioId: string;
+  ramo: Ramo;
+  orgId?: string;
+  pessoaId?: string;
+  t: number;
+  tFim: number;
+  valor: number;
+  chance: number;
+  risco: number;
+  estado: 'aberta' | 'aceita' | 'recusada' | 'expirou';
+  resultado?: string;
+}
+
+/** REWORK 12.35: o jeito de uma organização (muda como ela briga, negocia, paga, reage à polícia e à traição). */
+export type PerfilDeOrg = 'territorial' | 'economica' | 'agressiva' | 'discreta' | 'hierarquica' | 'fragmentada';
 
 /** REWORK 12.25 — a carreira no Submundo como profissão: a prática geral, os patamares, os marcos. */
 export interface CarreiraCriminal {
@@ -2986,6 +3047,14 @@ export interface OrgViva {
   alcance?: 'local' | 'regional' | 'nacional' | 'internacional';
   /** REWORK 12.3 · A4: nasceu de um racha (de qual organização, e quando). */
   rachaDe?: { id: string; t: number };
+  /** REWORK 12.35: o perfil (ausente: derivado do estilo e do id, estável). */
+  perfil?: PerfilDeOrg;
+  /** REWORK 12.35: a última operação policial (quando e de que tipo). */
+  operacao?: { t: number; tipo: 'integrantes' | 'lideranca' | 'busca' | 'patrimonio' | 'desmantelamento' };
+  /** REWORK 12.35: o apoio que o comando tem dentro (0..100), recalculado no ano (quem lidera lê). */
+  apoio?: number;
+  /** REWORK 12.35: a força do ano anterior (os resultados contam no apoio ao comando). */
+  forcaAntes?: number;
 }
 
 /** REWORK 12.3 · A2: como duas organizações estão uma com a outra. */
@@ -3002,6 +3071,18 @@ export interface MembroDaOrg {
   desde: number;
   estado: 'ativo' | 'preso' | 'morto' | 'saiu';
   pessoaId?: string;
+  /** REWORK 12.35: a lealdade à organização (e a quem manda nela), 0..100 (ausente: derivada, estável). */
+  lealdade?: number;
+  /** REWORK 12.35: a ambição (0..1): quem quer subir — e quem quer o lugar de quem está em cima. */
+  ambicao?: number;
+  /** REWORK 12.35: o que essa pessoa acha de você (−100..100), para quem manda nela ou trabalha junto. */
+  comVoce?: number;
+  /** REWORK 12.35: colabora com a polícia (desde quando) — ninguém sabe até aparecer. */
+  informante?: number;
+  /** REWORK 12.35: o que aconteceu (a guerra, a operação, a saída para a rival). */
+  causa?: string;
+  /** REWORK 12.35: a última ação de quem manda com essa pessoa (uma por ano). */
+  tAcao?: number;
 }
 
 /** REWORK 12.25: o mundo do crime que a vida conhece (as organizações das cidades por onde o caminho passou). */
@@ -3013,7 +3094,13 @@ export interface MundoCriminal {
   comunidade?: Record<string, number>;
   tAtualizado: number;
   /** O que ficou de quem veio antes (sucessão): as organizações que lembram o nome da família, e de quem. Não é cargo. */
-  legado?: { orgs: string[]; nome: number; de: string; t: number };
+  legado?: { orgs: string[]; nome: number; de: string; t: number; /** REWORK 12.35: quem conhecia a família (ids de pessoas). */ contatos?: string[] };
+  /** REWORK 12.35: a procura por cidade e ramo (`municipio:ramo` → −2..2), que oscila com o mundo. */
+  mercados?: Record<string, { demanda: number; t: number }>;
+  /** REWORK 12.35: as oportunidades do momento (aparecem e somem). */
+  oportunidades?: OportunidadeCriminal[];
+  /** REWORK 12.35: o último ano de cada acontecimento raro (para o intervalo). */
+  raros?: Record<string, number>;
 }
 
 /**

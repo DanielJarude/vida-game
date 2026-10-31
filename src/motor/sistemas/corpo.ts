@@ -235,6 +235,9 @@ export function fatorDoEstresseProlongado(v: Vida): number {
 
 /** Sorteia a morte do personagem neste ano. */
 export function morreEsteAno(v: Vida, r: Rng): string | null {
+  // REWORK 12.35: a morte que o crime trouxe neste ano (um confronto, um enfrentamento) — rara, e decidida lá.
+  const noCrime = v.caminhos.envolvimento?.morteNoCrime;
+  if (noCrime && noCrime.t === v.t) return noCrime.causa;
   const i = idade(v);
   const fator = fatorDoEstresseProlongado(v);
   const risco = riscoDeMorte(i, v.corpo.saude, v.eu.genero === 'masculino', v.corpo.condicoes) * fator;

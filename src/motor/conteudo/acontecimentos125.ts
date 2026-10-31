@@ -23,7 +23,7 @@
 import type { Conteudo, Ctx, Papel } from './base';
 import { comContracao } from './base';
 import type { Pessoa, Vida } from '../tipos';
-import { feliz, estresse } from './efeitos';
+import { feliz, estresse, gp } from './efeitos';
 import { clamp } from '../rng';
 import { lembrarCom } from '../nucleo';
 import { dinheiroCurto as fmt } from '../texto';
@@ -37,6 +37,7 @@ import { definirEstado, estadoEntre, executarOrg, lider, NOME_DO_ESTADO_ENTRE, o
 import { abrigoPossivel, custoDaMudanca, executarDefesa } from '../sistemas/defesa';
 import { abalar } from '../sistemas/abalo';
 import { proporEncomenda } from '../sistemas/encomendas';
+import { receberContatosDoLegado } from '../sistemas/vidaDupla';
 import { rngDe } from '../rng';
 
 const deHoje = (c: Ctx, id: string) => c.v.fatos[id] === c.v.t;
@@ -82,15 +83,15 @@ export const ACONTECIMENTOS_125: Conteudo[] = ([
     papeis: { quem: daCena('sub125_pedido') },
     quando: c => deHoje(c, 'sub125_pedido') && !!ficha(c) && !c.v.justica?.prisao,
     titulo: c => `${quem(c).nome} pediu uma coisa`,
-    texto: c => { const f = ficha(c)!; const o = f.interesse === 'familia' ? 'um dinheiro emprestado para a família (alguém doente, uma conta atrasada)' : f.interesse === 'seguranca' ? 'um lugar para guardar umas coisas por um tempo, sem perguntas' : f.interesse === 'vinganca' ? 'que você não se meta quando ele for acertar uma conta antiga' : 'uma ajuda para resolver um problema com gente de fora'; return `${quem(c).nome} pediu ${o}. Quem ajuda fica com um crédito; quem nega, com uma lembrança.`; },
+    texto: c => { const f = ficha(c)!; const o = f.interesse === 'familia' ? 'um dinheiro emprestado para a família (alguém doente, uma conta atrasada)' : f.interesse === 'seguranca' ? 'um lugar para guardar umas coisas por um tempo, sem perguntas' : f.interesse === 'vinganca' ? `que você não se meta quando ${gp(c, 'quem', 'ele', 'ela', 'elu')} for acertar uma conta antiga` : 'uma ajuda para resolver um problema com gente de fora'; return `${quem(c).nome} pediu ${o}. Quem ajuda fica com um crédito; quem nega, com uma lembrança.`; },
     opcoes: [
       { id: 'ajudar', texto: c => `Ajudar (uns ${fmt(valorDeFavor(c.v))})`, disponivel: c => (disponivel(c.v) >= valorDeFavor(c.v) ? true : 'Não há dinheiro para isso agora.'),
-        resolver: c => ({ texto: `${quem(c).nome} não esquece de quem ajudou. Agora ele deve uma a você.`, memoria: null, efeito: () => { pagarPorFora(c.v, 'custos', valorDeFavor(c.v)); const f = ficha(c)!; f.favores = (f.favores ?? 0) + 1; f.amizade = clamp((f.amizade ?? 20) + 6); mudarConfianca(c.v, quem(c).id, 4); historiaDoContato(c.v, quem(c).id, 'Você o ajudou quando ele pediu.', 'bom'); } }) },
+        resolver: c => ({ texto: `${quem(c).nome} não esquece de quem ajudou. Agora ${gp(c, 'quem', 'ele', 'ela', 'elu')} deve uma a você.`, memoria: null, efeito: () => { pagarPorFora(c.v, 'custos', valorDeFavor(c.v)); const f = ficha(c)!; f.favores = (f.favores ?? 0) + 1; f.amizade = clamp((f.amizade ?? 20) + 6); mudarConfianca(c.v, quem(c).id, 4); historiaDoContato(c.v, quem(c).id, `Você ${gp(c, 'quem', 'o', 'a', 'e')} ajudou quando ${gp(c, 'quem', 'ele', 'ela', 'elu')} pediu.`, 'bom'); } }) },
       { id: 'depois', texto: 'Dizer que ajuda mais para a frente',
         consequencia: () => 'Ganha tempo; a promessa fica — e é lembrada.',
-        resolver: c => ({ texto: 'Ele aceitou. "Mais para a frente", repetiu, como quem anota.', memoria: null, efeito: () => { c.v.fatos[`sub_ultima_${quem(c).id}`] = c.v.t; const f = ficha(c)!; f.quebradas++; historiaDoContato(c.v, quem(c).id, 'Você prometeu ajudar depois.'); } }) },
+        resolver: c => ({ texto: `${gp(c, 'quem', 'Ele', 'Ela', 'Elu')} aceitou. "Mais para a frente", repetiu, como quem anota.`, memoria: null, efeito: () => { c.v.fatos[`sub_ultima_${quem(c).id}`] = c.v.t; const f = ficha(c)!; f.quebradas++; historiaDoContato(c.v, quem(c).id, 'Você prometeu ajudar depois.'); } }) },
       { id: 'recusar', texto: 'Recusar', comportamento: { independencia: 1 },
-        resolver: c => ({ texto: 'Você disse que não dava. Ele entendeu — do jeito dele.', memoria: null, efeito: () => { const f = ficha(c)!; f.amizade = clamp((f.amizade ?? 20) - 6); mudarConfianca(c.v, quem(c).id, -3); historiaDoContato(c.v, quem(c).id, 'Você recusou um pedido dele.', 'ruim'); } }) }
+        resolver: c => ({ texto: `Você disse que não dava. ${gp(c, 'quem', 'Ele', 'Ela', 'Elu')} entendeu — do jeito ${gp(c, 'quem', 'dele', 'dela', 'delu')}.`, memoria: null, efeito: () => { const f = ficha(c)!; f.amizade = clamp((f.amizade ?? 20) - 6); mudarConfianca(c.v, quem(c).id, -3); historiaDoContato(c.v, quem(c).id, 'Você recusou um pedido dele.', 'ruim'); } }) }
     ]
   },
   /* ------------------------------------------------------------- a cobrança dos favores */
@@ -99,15 +100,15 @@ export const ACONTECIMENTOS_125: Conteudo[] = ([
     papeis: { quem: daCena('sub125_cobra') },
     quando: c => deHoje(c, 'sub125_cobra') && (ficha(c)?.favores ?? 0) < 0 && ativo(c),
     titulo: c => `${quem(c).nome} veio cobrar os favores`,
-    texto: c => `${quem(c).nome} fez as contas: você deve ${-(ficha(c)!.favores ?? 0)} favores a ele. ${(ficha(c)!.amizade ?? 20) >= 50 ? 'Disse isso rindo — mas disse.' : 'Não estava rindo.'}`,
+    texto: c => `${quem(c).nome} fez as contas: você deve ${-(ficha(c)!.favores ?? 0)} favores a ${gp(c, 'quem', 'ele', 'ela', 'elu')}. ${(ficha(c)!.amizade ?? 20) >= 50 ? 'Disse isso rindo — mas disse.' : 'Não estava rindo.'}`,
     opcoes: [
       { id: 'pagar', texto: c => `Acertar (uns ${fmt(valorDeFavor(c.v) * -(ficha(c)!.favores ?? 0))})`, disponivel: c => (disponivel(c.v) >= valorDeFavor(c.v) * -(ficha(c)!.favores ?? 0) ? true : 'O que você tem não cobre.'),
-        resolver: c => ({ texto: 'Contas zeradas. Ele saiu satisfeito — e com mais vontade de trabalhar com você.', memoria: null, efeito: () => { const f = ficha(c)!; pagarPorFora(c.v, 'custos', valorDeFavor(c.v) * -(f.favores ?? 0)); f.favores = 0; f.cumpridas++; mudarConfianca(c.v, quem(c).id, 6); } }) },
-      { id: 'trabalho', texto: 'Pagar com trabalho: fazer um serviço para ele', disponivel: c => (ativo(c) ? true : false),
-        consequencia: () => 'Sem dinheiro agora; um trabalho dele chega em Encomendas, pagando menos.',
-        resolver: c => ({ texto: 'Fechado: um trabalho para ele, e ficam quites.', memoria: null, efeito: () => { const f = ficha(c)!; f.favores = 0; const x = proporEncomenda(c.v, c.r, f.especialidade, { pessoaId: quem(c).id }, 1); if (x) x.valor = Math.round(x.valor * 0.4 / 100) * 100; } }) },
+        resolver: c => ({ texto: `Contas zeradas. ${gp(c, 'quem', 'Ele', 'Ela', 'Elu')} saiu satisfeit${gp(c, 'quem', 'o', 'a', 'e')} — e com mais vontade de trabalhar com você.`, memoria: null, efeito: () => { const f = ficha(c)!; pagarPorFora(c.v, 'custos', valorDeFavor(c.v) * -(f.favores ?? 0)); f.favores = 0; f.cumpridas++; mudarConfianca(c.v, quem(c).id, 6); } }) },
+      { id: 'trabalho', texto: c => `Pagar com trabalho: fazer um serviço para ${gp(c, 'quem', 'ele', 'ela', 'elu')}`, disponivel: c => (ativo(c) ? true : false),
+        consequencia: c => `Sem dinheiro agora; um trabalho ${gp(c, 'quem', 'dele', 'dela', 'delu')} chega em Encomendas, pagando menos.`,
+        resolver: c => ({ texto: `Fechado: um trabalho para ${gp(c, 'quem', 'ele', 'ela', 'elu')}, e ficam quites.`, memoria: null, efeito: () => { const f = ficha(c)!; f.favores = 0; const x = proporEncomenda(c.v, c.r, f.especialidade, { pessoaId: quem(c).id }, 1); if (x) x.valor = Math.round(x.valor * 0.4 / 100) * 100; } }) },
       { id: 'negar', texto: 'Dizer que não deve nada', comportamento: { impulsividade: 1 },
-        resolver: c => { const fala = c.r.chance(0.4); return { texto: fala ? 'Ele foi embora — e foi falar de você a quem não devia.' : 'Ele foi embora. Não volta mais.', memoria: null, tom: 'ruim', efeito: () => { const f = ficha(c)!; if (fala) { f.traiu = c.v.t; env(c).exposicao = clamp(env(c).exposicao + 10); env(c).traicoes = (env(c).traicoes ?? 0) + 1; anotar(c.v, `${quem(c).nome} falou de você depois da cobrança.`, 'ruim'); } else afastar(c.v, quem(c).id, 'você não reconheceu o que devia'); } }; } }
+        resolver: c => { const fala = c.r.chance(0.4); return { texto: fala ? `${gp(c, 'quem', 'Ele', 'Ela', 'Elu')} foi embora — e foi falar de você a quem não devia.` : `${gp(c, 'quem', 'Ele', 'Ela', 'Elu')} foi embora. Não volta mais.`, memoria: null, tom: 'ruim', efeito: () => { const f = ficha(c)!; if (fala) { f.traiu = c.v.t; env(c).exposicao = clamp(env(c).exposicao + 10); env(c).traicoes = (env(c).traicoes ?? 0) + 1; anotar(c.v, `${quem(c).nome} falou de você depois da cobrança.`, 'ruim'); } else afastar(c.v, quem(c).id, 'você não reconheceu o que devia'); } }; } }
     ]
   },
   /* ------------------------------------------------------------- o contato que mudou de lado */
@@ -122,7 +123,7 @@ export const ACONTECIMENTOS_125: Conteudo[] = ([
         resolver: c => ({ texto: 'Vocês combinaram não falar de trabalho. Sabem que vão falar.', memoria: null, efeito: () => { const m = (env(c).organizacoes ?? []).find(o => o.relacao === 'membro' && o.saiu === undefined); if (m) lembrarOrg(m, c.v.t, 'conflito', -2); } }) },
       { id: 'informar', texto: 'Pedir que conte como é do outro lado',
         consequencia: () => 'O que se sabe vale — e o que se pede, também.',
-        resolver: c => ({ texto: `${quem(c).nome} contou o que pôde. Agora você deve uma a ele.`, memoria: null, efeito: () => { const f = ficha(c)!; f.favores = (f.favores ?? 0) - 1; const m = (env(c).organizacoes ?? []).find(o => o.relacao === 'membro' && o.saiu === undefined); if (m) lembrarOrg(m, c.v.t, 'favor', 4); } }) },
+        resolver: c => ({ texto: `${quem(c).nome} contou o que pôde. Agora você deve uma a ${gp(c, 'quem', 'ele', 'ela', 'elu')}.`, memoria: null, efeito: () => { const f = ficha(c)!; f.favores = (f.favores ?? 0) - 1; const m = (env(c).organizacoes ?? []).find(o => o.relacao === 'membro' && o.saiu === undefined); if (m) lembrarOrg(m, c.v.t, 'favor', 4); } }) },
       { id: 'cortar', texto: 'Cortar o contato', comportamento: { disciplina: 1 },
         resolver: c => ({ texto: 'Você deixou de atender. Cada um do seu lado.', memoria: null, efeito: () => afastar(c.v, quem(c).id, 'foi para outra organização') }) }
     ]
@@ -214,8 +215,8 @@ export const ACONTECIMENTOS_125: Conteudo[] = ([
     opcoes: [
       { id: 'reatar', texto: c => (env(c).parou === undefined ? 'Voltar a trabalhar juntos' : 'Retomar a amizade, longe do resto'),
         resolver: c => ({ texto: env(c).parou === undefined ? 'Como nos velhos tempos — com os riscos de sempre.' : 'Um café, uma conversa longa. Ninguém tocou no passado.', memoria: null, efeito: () => { const f = ficha(c)!; delete f.afastado; f.reconciliado = c.v.t; f.confianca = Math.max(f.confianca, 35); f.amizade = clamp((f.amizade ?? 30) + 8); historiaDoContato(c.v, quem(c).id, 'Reapareceu, e vocês retomaram.', 'bom'); if (env(c).parou !== undefined) f.afastado = c.v.t; } }) },
-      { id: 'ajudar', texto: 'Ajudar no que ele precisa, e só', disponivel: c => (disponivel(c.v) >= valorDeFavor(c.v) ? true : 'Não há dinheiro para isso agora.'),
-        resolver: c => ({ texto: 'Ele precisava de ajuda, não de sócio. Você ajudou.', memoria: null, efeito: () => { pagarPorFora(c.v, 'custos', valorDeFavor(c.v)); const f = ficha(c)!; f.favores = (f.favores ?? 0) + 1; f.amizade = clamp((f.amizade ?? 30) + 6); feliz(c, 2); } }) },
+      { id: 'ajudar', texto: c => `Ajudar no que ${gp(c, 'quem', 'ele', 'ela', 'elu')} precisa, e só`, disponivel: c => (disponivel(c.v) >= valorDeFavor(c.v) ? true : 'Não há dinheiro para isso agora.'),
+        resolver: c => ({ texto: `${gp(c, 'quem', 'Ele', 'Ela', 'Elu')} precisava de ajuda, não de sócio. Você ajudou.`, memoria: null, efeito: () => { pagarPorFora(c.v, 'custos', valorDeFavor(c.v)); const f = ficha(c)!; f.favores = (f.favores ?? 0) + 1; f.amizade = clamp((f.amizade ?? 30) + 6); feliz(c, 2); } }) },
       { id: 'recusar', texto: 'Fechar a porta', comportamento: { disciplina: 1 }, resolver: () => ({ texto: 'Você agradeceu a visita e não convidou para entrar.', memoria: null }) }
     ]
   },
@@ -244,7 +245,7 @@ export const ACONTECIMENTOS_125: Conteudo[] = ([
       { id: 'ouvir', texto: 'Ouvir a história', resolver: c => ({ texto: 'Você ouviu histórias que ninguém da família tinha contado. Algumas fizeram sentido; outras, medo.', memoria: 'Ouviu do pessoal antigo o que a família fazia por fora.', efeito: () => { c.v.fatos['legado_ouviu'] = c.v.t; } }) },
       { id: 'aceitar', texto: 'Aceitar o convite', comportamento: { impulsividade: 1 },
         consequencia: () => 'Entrar no caminho, com um nome que abre portas — e que carrega o que a família deixou.',
-        resolver: c => ({ texto: 'Você aceitou. O nome abriu a porta; o resto vai ser seu.', memoria: 'Entrou no caminho que a família tinha seguido.', relevancia: 'marco', tom: 'ruim', efeito: () => { const l = c.v.mundoCriminal?.legado; const o = l?.orgs.map(x => orgViva(c.v, x)).find(Boolean); entrar(c.v, o?.ramo === 'organizado' ? 'grupo' : o?.ramo === 'fraudes' ? 'fraude' : 'mercado', undefined, c.r); if (o) { const rel = relacaoCom(c.v, o); rel.relacao = 'aliada'; rel.lealdade = 55; } const e = env(c); e.reputacao = clamp((e.reputacao ?? 0) + Math.round((l?.nome ?? 0) / 2)); garantirCarreira(e); } }) }
+        resolver: c => ({ texto: 'Você aceitou. O nome abriu a porta; o resto vai ser seu.', memoria: 'Entrou no caminho que a família tinha seguido.', relevancia: 'marco', tom: 'ruim', efeito: () => { const l = c.v.mundoCriminal?.legado; const o = l?.orgs.map(x => orgViva(c.v, x)).find(Boolean); entrar(c.v, o?.ramo === 'organizado' ? 'grupo' : o?.ramo === 'fraudes' ? 'fraude' : 'mercado', undefined, c.r); if (o) { const rel = relacaoCom(c.v, o); rel.relacao = 'aliada'; rel.lealdade = 55; } const e = env(c); e.reputacao = clamp((e.reputacao ?? 0) + Math.round((l?.nome ?? 0) / 2)); garantirCarreira(e); receberContatosDoLegado(c.v); } }) }
     ]
   },
   /* ------------------------------------------------------------- procurado: o abrigo */

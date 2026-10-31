@@ -44,6 +44,7 @@ import { mesesProcurando, patrimonioPagaAVida } from './intencao';
 import { creditarRamos, exposicaoDosRamos, fatorDosRamos, garantirRamos, NOME_DO_RAMO, novaEspecializacao, RAMO_DA_CATEGORIA, ramosAtivos } from './ramos';
 import { movimentoPorFora, pedirRumo, registrarRumo } from './porFora';
 import { nivelNaOrganizacao } from './tempoDoCrime';
+import { fatorDoLugar } from './submundo';
 
 /** Renda mensal por categoria e nível (reais de hoje): dinheiro rápido, com teto. */
 const RENDA: Record<CategoriaIlicita, [number, number, number]> = {
@@ -268,7 +269,8 @@ function anoEnvolvido(v: Vida, r: Rng, env: Envolvimento): void {
   // REWORK 11.5 · SUB-11: os ramos em que se atua (a prática, o nome, o mercado do contrabando) mudam o ano — um ramo
   // só, com prática média, rende o mesmo de antes.
   garantirRamos(v, env);
-  const bruto = Math.round(renda * 12 * (0.6 + r.next() * 0.8) * (env.cautela ? 0.5 : 1) * fatorContatos * fatorDosRamos(env) / 100) * 100;
+  // REWORK 12.35 · D8: depois de uma mudança, o de sempre segue o alcance dos contatos (de outro país, quase nada chega).
+  const bruto = Math.round(renda * 12 * (0.6 + r.next() * 0.8) * (env.cautela ? 0.5 : 1) * fatorContatos * fatorDosRamos(env) * fatorDoLugar(v) / 100) * 100;
   const ganho = seco ? 0 : bruto;
   // O dinheiro de fora vai como vem: uma parte some no próprio caminho (quem cobra para não ver, o que se perde, o que
   // se gasta para não aparecer). Os ganhos registram o bruto (é o que a Justiça cobra de volta).

@@ -24,6 +24,7 @@ import { interpretar } from '../save';
 import { IDS_DO_SUBMUNDO } from '../conteudo/submundo';
 import { contratar } from '../sistemas/trabalho';
 import { ocupacao } from '../dados/ocupacoes';
+import { garantirOrgViva } from '../sistemas/faccoes';
 
 const envolvido = (cat: Parameters<typeof entrar>[1] = 'patrimonial', semente = 3): Vida => transacao(adulto(28, { semente }), (x, r) => {
   x.momento = null; delete x.fila;
@@ -105,11 +106,13 @@ describe('REWORK 11.5 · Submundo', () => {
       v = fazer(v, { tipo: 'submundo', oque: 'tarefa_do_grupo', ramo: 'organizado' });
       const org = v.caminhos.envolvimento!.organizacoes!.find(o => o.relacao === 'membro')!;
       expect(org.memoria.some(m => m.fato === 'favor' || m.fato === 'conflito')).toBe(true);
-      v = fazer(v, { tipo: 'submundo', oque: 'tentar_sair', ramo: 'organizado' });
+      // REWORK 12.35 · D6: sair do grupo é com a organização (um posto, uma regra); sair do grupo não encerra o caminho inteiro.
+      expect(podeTentar(disponibilidade(v, { tipo: 'submundo', oque: 'tentar_sair', ramo: 'organizado' }))).toBe(false);
+      v = transacao(v, x => { garantirOrgViva(x, x.caminhos.envolvimento!.organizacoes!.find(o => o.id === org.id)!); }).vida;
+      v = fazer(v, { tipo: 'crime', acao: { area: 'org', oque: 'sair', orgId: org.id } });
       const o2 = v.caminhos.envolvimento!.organizacoes!.find(o => o.id === org.id)!;
       expect(o2.saiu).toBe(v.t);
       if (o2.memoria.some(m => m.fato === 'traicao')) { recusa++; expect(v.fatos['pressao_grupo']).toBe(v.t); } else aceita++;
-      expect(v.caminhos.envolvimento!.parou).toBe(v.t);
     }
     expect(aceita).toBeGreaterThan(0);
     expect(recusa).toBeGreaterThan(0);

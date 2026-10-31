@@ -112,7 +112,7 @@ export function ler(s: Armazenamento | null = armazenamentoPadrao()): Leitura {
  */
 export function interpretar(bruto: string): Leitura {
   const r = interpretarSemNormalizar(bruto);
-  if (r.tipo === 'ok') { normalizarRework75(r.vida); normalizarRework97(r.vida); normalizarRework106(r.vida); normalizarRework11Relacoes(r.vida); normalizarRework11Esportes(r.vida); normalizarRework11Artes(r.vida); normalizarRework115(r.vida); normalizarRework12(r.vida); normalizarRework122(r.vida); normalizarRework125(r.vida); normalizarRework123(r.vida); fixarEstatura(r.vida, true); }
+  if (r.tipo === 'ok') { normalizarRework75(r.vida); normalizarRework97(r.vida); normalizarRework106(r.vida); normalizarRework11Relacoes(r.vida); normalizarRework11Esportes(r.vida); normalizarRework11Artes(r.vida); normalizarRework115(r.vida); normalizarRework12(r.vida); normalizarRework122(r.vida); normalizarRework125(r.vida); normalizarRework123(r.vida); normalizarRework1235(r.vida); fixarEstatura(r.vida, true); }
   return r;
 }
 
@@ -1759,6 +1759,22 @@ export function normalizarRework123(v: Vida): void {
     const idadeNaSucessao = Math.floor((ultima.tMorte - v.eu.tNasc) / 12);
     for (const [, chave, desde] of MARCOS_DA_INFANCIA) if (idadeNaSucessao >= desde) (v.eu.marcos ??= {})[chave] ??= ultima.tMorte;
   }
+}
+
+/**
+ * REWORK 12.35 · D6: o posto do ramo organizado (11.5) e o nível da organização (12.25) eram dois; agora o nível é a fonte
+ * única. Num save antigo, quem subiu pelo ramo traz o posto para o nível (uma vez: o maior dos dois). Idempotente.
+ */
+export function normalizarRework1235(v: Vida): void {
+  const e = v.caminhos.envolvimento;
+  const posto = e?.especializacoes?.organizado?.posto;
+  // Uma vez só: depois do 12.35, o posto é espelho do nível (e o espelho é do último nível mexido — não volta a mandar).
+  if (!e || !posto || e.postoUnificado) return;
+  const rels = (e.organizacoes ?? []).filter(o => o.relacao === 'membro' && !o.propria && o.especialidade === 'organizado');
+  const mudam = rels.filter(o => (o.nivel ?? 0) < posto - 1);
+  if (!mudam.length) return;
+  for (const o of mudam) o.nivel = posto - 1;
+  e.postoUnificado = true;
 }
 
 export function normalizarRework122(v: Vida): void {

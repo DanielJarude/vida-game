@@ -203,7 +203,9 @@ function anoDaFamilia(v: Vida): void {
     }
     if (ja.sabe === 1 && r.chance(0.3 + e.exposicao / 300)) { ja.sabe = 2; ja.postura = posturaDe(v, p, gravidade); ja.t = v.t; }
     // Quem saiu do caminho: a família que rejeitou pode voltar (o tempo e o que se fez desde então).
-    if (!ativoAgora && (ja.postura === 'rejeita' || ja.postura === 'pede_para_sair') && v.t - (e.parou ?? v.t) >= 12 && r.chance(0.3)) {
+    // REWORK 12.35: a família não esquece sozinha — a ameaça em casa, a prisão, a busca pesam (mais tempo, menos chance).
+    const marcou = (v.fatos['familia_ameacada'] !== undefined ? 0.1 : 0) + (v.fatos['esteve_preso'] !== undefined ? 0.06 : 0) + (v.fatos['ultima_busca'] !== undefined ? 0.04 : 0);
+    if (!ativoAgora && (ja.postura === 'rejeita' || ja.postura === 'pede_para_sair') && v.t - (e.parou ?? v.t) >= (ja.postura === 'rejeita' ? 24 : 12) && r.chance(Math.max(0.08, 0.26 - marcou))) {
       ja.postura = 'reconciliada';
       ja.t = v.t;
       const vin = v.vinculos[p.id];
@@ -307,13 +309,15 @@ function parar(v: Vida): void {
  * O que fica para quem continua a história: o nome da família no meio (a organização lembra), nunca o cargo. O herdeiro
  * pode ser procurado por ela — e decide. Chamado por `sucessao` (pelo fato que ela grava) e lido aqui.
  */
-export function legadoDoSubmundo(morto: Vida): { orgs: string[]; nome: number } | undefined {
+export function legadoDoSubmundo(morto: Vida): { orgs: string[]; nome: number; contatos?: string[] } | undefined {
   const e = morto.caminhos.envolvimento;
   if (!e) return undefined;
   const orgs = (e.organizacoes ?? []).filter(o => (o.relacao === 'membro' || o.relacao === 'aliada') && o.expulso === undefined && o.lealdade >= 40).map(o => o.id);
   const nome = Math.round(clamp((e.reputacao ?? 0) * 0.5 + (garantirCarreira(e).patamar * 12)));
-  if (!orgs.length && nome < 20) return undefined;
-  return { orgs, nome };
+  // REWORK 12.35 · 15: quem conhecia a família (os contatos de confiança, vivos): contato de partida, não cargo.
+  const contatos = Object.entries(e.fichas ?? {}).filter(([id, f]) => f.afastado === undefined && f.traiu === undefined && f.confianca >= 40 && morto.pessoas[id]?.vivo).map(([id]) => id).slice(0, 4);
+  if (!orgs.length && nome < 20 && !contatos.length) return undefined;
+  return { orgs, nome, ...(contatos.length ? { contatos } : {}) };
 }
 
 /** Cedo ou tarde, para quem cresceu com esse nome: a organização do pai (ou da mãe) aparece. A escolha é de quem herdou. */

@@ -22,42 +22,67 @@ import { bloqueio, PERMITIDO, type Veredito } from '../plausibilidade';
 import { balanco, vereditoDePagar } from './dinheiro';
 import { ativo } from './ilicito';
 import { preso } from './justica';
-import { anotar, contatosAtivos, criarContato, lembrarOrg, orgPorId, rivalDoRamo, valorDaOperacao } from './submundo';
+import { alcanceDoContato, anotar, contatosAtivos, criarContato, lembrarOrg, orgPorId, rivalDoRamo, valorDaOperacao } from './submundo';
 import { NOME_DO_RAMO, PERFIL, ramoPrincipal, ramosAtivos } from './ramos';
 import { escalaDe, ganharPratica, garantirCarreira, marco, movimentoPorFora, nivelNaOrganizacao, pagarPorFora, patamarAtual, temOrganizacaoPropria, temTempo, usarTempo } from './carreiraCriminal';
-import { dinheiroCurto } from '../texto';
+import { dinheiroCurto, flex } from '../texto';
 import { abalar } from './abalo';
 import { historiaDoContato, mudarConfianca } from './redeCriminal';
+import { marcarFalhaGrave } from './conflitosCriminais';
+import { demandaDe, reputacaoAqui } from './mercadoCriminal';
+import { jeitoDe } from './faccoes';
 import { contextoDaEncomenda, reacaoAoFracasso, reacaoAoSucesso, reacaoDaOrg, seuLugar, variante, vozDe } from './relatoDoCrime';
 
 const env = (v: Vida) => v.caminhos.envolvimento;
 
-/** Os trabalhos de cada ramo — nomes, não métodos. */
-export const TIPOS: Record<Ramo, { id: string; nome: string; g: 1 | 2 | 3 }[]> = {
+/**
+ * Os trabalhos de cada ramo — nomes, não métodos. REWORK 12.35 · 18.1: mais de um por gravidade, e diferentes na conta (o
+ * quanto paga, a chance, o rastro) e no posto (o coordenar e o acerto com outra organização são de quem tem posto). Os ids
+ * antigos continuam (saves).
+ */
+export interface TipoDeTrabalho { id: string; nome: string; g: 1 | 2 | 3; /** posto mínimo na organização (só os da organização) */ nivel?: number; valor?: number; chance?: number; risco?: number }
+export const TIPOS: Record<Ramo, TipoDeTrabalho[]> = {
   furtos: [
     { id: 'furtos_pequeno', nome: 'um serviço pequeno para um conhecido', g: 1 },
+    { id: 'furtos_vigiar', nome: 'ficar de olho num lugar, para outro', g: 1, valor: 0.7, chance: 0.06, risco: 0.6 },
     { id: 'furtos_guardar', nome: 'guardar e passar adiante uma mercadoria de origem ruim', g: 2 },
-    { id: 'furtos_grande', nome: 'um serviço grande, com gente de fora', g: 3 }
+    { id: 'furtos_desmonte', nome: 'passar adiante peças de origem ruim', g: 2, valor: 1.1, risco: 1.1 },
+    { id: 'furtos_grande', nome: 'um serviço grande, com gente de fora', g: 3 },
+    { id: 'furtos_carga', nome: 'uma carga desviada, com gente de fora', g: 3, valor: 1.3, chance: -0.06, risco: 1.3 }
   ],
   contrabando: [
     { id: 'contra_cuidar', nome: 'cuidar de uma remessa que é de outro', g: 1 },
+    { id: 'contra_viagem', nome: 'levar uma encomenda de uma cidade a outra', g: 1, valor: 0.9, risco: 0.9 },
     { id: 'contra_intermediar', nome: 'intermediar uma venda grande', g: 2 },
-    { id: 'contra_financiar', nome: 'financiar o lote de uma rede', g: 3 }
+    { id: 'contra_deposito', nome: 'guardar o estoque de outro por uns meses', g: 2, valor: 0.8, chance: 0.05, risco: 1.2 },
+    { id: 'contra_financiar', nome: 'financiar o lote de uma rede', g: 3 },
+    { id: 'contra_rota', nome: 'abrir um caminho novo para uma rede', g: 3, valor: 1.4, chance: -0.08, risco: 1.2 }
   ],
   organizado: [
     { id: 'org_recado', nome: 'um recado da organização', g: 1 },
+    { id: 'org_vigiar', nome: 'ficar de olho num ponto do grupo', g: 1, valor: 0.8, chance: 0.05 },
     { id: 'org_pendencia', nome: 'resolver uma pendência do grupo, sem barulho', g: 2 },
-    { id: 'org_ponto', nome: 'tomar conta de um negócio do grupo por uns meses', g: 3 }
+    { id: 'org_cobrar', nome: 'cobrar de alguém o que deve ao grupo, sem violência', g: 2, valor: 1.1, risco: 1.1 },
+    { id: 'org_acompanhar', nome: 'acompanhar uma entrega do grupo', g: 2, nivel: 1, valor: 1.15, chance: -0.03 },
+    { id: 'org_ponto', nome: 'tomar conta de um negócio do grupo por uns meses', g: 3 },
+    { id: 'org_coordenar', nome: 'coordenar uma equipe num trabalho grande do grupo', g: 3, nivel: 3, valor: 1.4, chance: 0.04, risco: 0.8 },
+    { id: 'org_acerto', nome: 'fechar um acerto com outra organização', g: 3, nivel: 4, valor: 1.6, risco: 0.7 }
   ],
   digital: [
     { id: 'dig_pequeno', nome: 'um trabalho técnico sob encomenda', g: 1 },
+    { id: 'dig_dados', nome: 'organizar dados que alguém não devia ter', g: 1, valor: 0.9 },
     { id: 'dig_cliente', nome: 'um trabalho para um cliente de fora, que paga bem e pergunta pouco', g: 2 },
-    { id: 'dig_estrutura', nome: 'montar a estrutura de um esquema grande de outro', g: 3 }
+    { id: 'dig_manutencao', nome: 'manter funcionando o sistema de um esquema', g: 2, valor: 0.9, chance: 0.06, risco: 1.2 },
+    { id: 'dig_estrutura', nome: 'montar a estrutura de um esquema grande de outro', g: 3 },
+    { id: 'dig_golpe', nome: 'montar um golpe grande pela internet, para outro', g: 3, valor: 1.3, chance: -0.06, risco: 1.3 }
   ],
   fraudes: [
     { id: 'frau_assinatura', nome: 'uma assinatura onde não devia', g: 1 },
+    { id: 'frau_documento', nome: 'um documento que diz o que não é', g: 1, valor: 0.9 },
     { id: 'frau_concorrencia', nome: 'um acerto numa concorrência', g: 2 },
-    { id: 'frau_esquentar', nome: 'fazer o dinheiro de alguém parecer limpo', g: 3 }
+    { id: 'frau_nota', nome: 'notas que esquentam uma venda que não houve', g: 2, valor: 1.1 },
+    { id: 'frau_esquentar', nome: 'fazer o dinheiro de alguém parecer limpo', g: 3 },
+    { id: 'frau_obra', nome: 'um contrato inflado de obra, com gente de cargo', g: 3, valor: 1.5, chance: -0.08, risco: 1.3 }
   ]
 };
 export const tipoDeEncomenda = (id: string) => Object.values(TIPOS).flat().find(t => t.id === id);
@@ -76,7 +101,8 @@ const fatorDeExposicao = (ramo: Ramo) => PERFIL[ramo].exposicao / PERFIL.furtos.
 export function valorDoTrabalho(v: Vida, ramo: Ramo, g: 1 | 2 | 3): number {
   const base = valorDaOperacao(v, ramo, MESES_DA_GRAVIDADE[g]) * escalaDe(v);
   const p = patamarAtual(v);
-  const grande = p >= 3 ? Math.max(0, balanco(v).liquido) * [0, 0.002, 0.006, 0.015][g] : 0;
+  // REWORK 12.35 · balanço: a parte que crescia com o patrimônio (a espiral de quem já é rico) ficou bem menor, e com teto.
+  const grande = p >= 3 ? Math.min(base * 2, Math.max(0, balanco(v).liquido) * [0, 0.0005, 0.0015, 0.004][g]) : 0;
   return Math.round((base + grande) / 100) * 100;
 }
 
@@ -103,13 +129,22 @@ export function proporEncomenda(v: Vida, r: Rng, ramo: Ramo, de: { pessoaId?: st
   const xp = e.especializacoes?.[ramo]?.experiencia ?? 0;
   const p = patamarAtual(v);
   const grav: 1 | 2 | 3 = g ?? (r.chance(clamp(0.15 + xp / 200 + p * 0.1, 0, 0.75)) ? (r.chance(0.25 + p * 0.12) ? 3 : 2) : 1);
-  const opcoes = TIPOS[ramo].filter(t => t.g === grav);
+  // REWORK 12.35: os trabalhos de posto só chegam a quem tem o posto (e, para quem tem, chegam mais).
+  const posto = de.orgId ? nivelNaOrganizacao(v) : -1;
+  const cabem = TIPOS[ramo].filter(t => t.g === grav && (t.nivel === undefined || (de.orgId && posto >= t.nivel)));
+  const deposto = cabem.filter(t => t.nivel !== undefined);
+  const opcoes = deposto.length && r.chance(0.6) ? deposto : cabem;
   const tipo = (opcoes.length ? r.pick(opcoes) : TIPOS[ramo][0]);
   const conf = de.pessoaId ? e.fichas?.[de.pessoaId]?.confianca ?? 40 : 45;
-  const valor = Math.round(valorDoTrabalho(v, ramo, tipo.g) * (0.85 + r.next() * 0.35) / 100) * 100;
+  // REWORK 12.35 · o mercado da cidade (a procura) e o jeito da organização (a discreta paga menos e expõe menos).
+  const d = demandaDe(v, v.moradia.municipioId, ramo);
+  const org = de.orgId ? v.mundoCriminal?.orgs[de.orgId] : undefined;
+  const jeito = org ? jeitoDe(org) : undefined;
+  const valor = Math.round(valorDoTrabalho(v, ramo, tipo.g) * (tipo.valor ?? 1) * (1 + d * 0.1) * (jeito ? Math.sqrt(jeito.paga) : 1) * (0.85 + r.next() * 0.35) / 100) * 100;
   const x: EncomendaCriminal = {
     id: novoId(v, 'enc'), direcao: 'recebida', ramo, tipo: tipo.id, gravidade: tipo.g, ...de,
-    valor, chance: Math.round(chanceDoTrabalho(v, ramo, tipo.g, conf) * 100) / 100, risco: Math.round(EXPOSICAO_DO_ERRO[tipo.g] * fatorDeExposicao(ramo)),
+    valor, chance: Math.round(clamp(chanceDoTrabalho(v, ramo, tipo.g, conf) + (tipo.chance ?? 0), 0.25, 0.95) * 100) / 100,
+    risco: Math.round(EXPOSICAO_DO_ERRO[tipo.g] * fatorDeExposicao(ramo) * (tipo.risco ?? 1) * (jeito ? Math.sqrt(jeito.policia) : 1) * (1 + Math.max(0, d) * 0.05)),
     t: v.t, tPrazo: v.t + 12, estado: 'aberta'
   };
   (e.encomendas ??= []).push(x);
@@ -145,16 +180,19 @@ export function processarEncomendas(v: Vida): void {
     if (jaAbertas + novas >= 3) break;
     if (c.f.confianca < 32 || c.f.papel === 'informante') continue;
     if (!ramosAtivos(e).includes(c.f.especialidade) && c.f.especialidade !== ramoPrincipal(e)) continue;
-    if (r.chance(0.25 + c.f.confianca / 250 + (c.f.favores ?? 0) * 0.04 + (e.cautela ? -0.12 : 0))) { proporEncomenda(v, r, c.f.especialidade, { pessoaId: c.id }); novas++; }
+    // REWORK 12.35 · D8: de longe, menos propostas; de outro país, nenhuma (a não ser o que se faz à distância).
+    const alc = alcanceDoContato(v, c.id);
+    if (alc === 'fora') continue;
+    if (r.chance((0.25 + c.f.confianca / 250 + (c.f.favores ?? 0) * 0.04 + (e.cautela ? -0.12 : 0)) * (alc === 'longe' ? 0.4 : 1))) { proporEncomenda(v, r, c.f.especialidade, { pessoaId: c.id }); novas++; }
   }
   // O meio também procura quem tem nome (ou prática): alguém novo chega com uma proposta — e vira contato.
-  if (jaAbertas + novas < 2 && r.chance(0.35 + (e.reputacao ?? 0) / 250 + garantirCarreira(e).xp / 400 - (e.cautela ? 0.2 : 0))) {
+  if (jaAbertas + novas < 2 && r.chance(0.35 + reputacaoAqui(v) / 250 + garantirCarreira(e).xp / 400 - (e.cautela ? 0.2 : 0))) {
     const ramo = ramoPrincipal(e);
     const id = criarContato(v, ramo, ramo === 'contrabando' ? 'comprador' : 'intermediario', 23);
     proporEncomenda(v, r, ramo, { pessoaId: id });
     novas++;
   }
-  const org = (e.organizacoes ?? []).find(o => (o.relacao === 'membro' || o.relacao === 'aliada') && o.saiu === undefined && o.expulso === undefined && !o.propria);
+  const org = (e.organizacoes ?? []).find(o => (o.relacao === 'membro' || o.relacao === 'aliada') && o.saiu === undefined && o.expulso === undefined && !o.propria && o.distancia !== 'fora');
   if (org && jaAbertas + novas < 4 && r.chance(0.35 + org.lealdade / 250 + (org.relacao === 'membro' ? 0.15 : 0))) proporEncomenda(v, r, org.especialidade, { orgId: org.id });
 }
 
@@ -207,7 +245,7 @@ export function executarEncomenda(v: Vida, oque: OqueEncomenda, id?: string, pes
   const nome = tipoDeEncomenda(x.tipo)?.nome ?? 'um trabalho';
   if (oque === 'recusar') {
     x.estado = 'recusada'; x.tFim = v.t;
-    if (x.pessoaId) { mudarConfianca(v, x.pessoaId, -2); historiaDoContato(v, x.pessoaId, 'Você recusou um trabalho dele.'); }
+    if (x.pessoaId) { mudarConfianca(v, x.pessoaId, -2); historiaDoContato(v, x.pessoaId, `Você recusou um trabalho ${flex(v.pessoas[x.pessoaId]?.genero ?? 'masculino', 'dele', 'dela', 'delu')}.`); }
     if (x.orgId) { const o = orgPorId(v, x.orgId); if (o) o.lealdade = clamp(o.lealdade - (o.relacao === 'membro' ? 4 : 1)); }
     const reac = x.pessoaId ? ({ leal: 'entendeu, e disse que a porta continua aberta', desconfiado: 'anotou a recusa — e vai lembrar', pragmatico: 'levou a proposta para outra pessoa no mesmo dia', esquentado: 'não gostou e deixou isso claro', caloroso: 'disse que não tem problema, e pareceu sincero' } as const)[vozDe(v, x.pessoaId)] : x.orgId ? (orgPorId(v, x.orgId)?.relacao === 'membro' ? 'anotou: de quem é de dentro, recusa pesa' : 'seguiu em frente sem você') : undefined;
     return { texto: `Você recusou ${nome}.${quem && reac ? ` ${cap(quem)} ${reac}.` : ''}` };
@@ -285,6 +323,8 @@ function realizar(v: Vida, r: Rng, x: EncomendaCriminal): { texto: string; tom?:
   }
   x.estado = 'falhou';
   c.falhasSeguidas = (c.falhasSeguidas ?? 0) + 1;
+  // REWORK 12.35: o trabalho grande que dá errado pode terminar numa perseguição (no fim do ano: `conflitosCriminais`).
+  marcarFalhaGrave(v, x.gravidade);
   const out = falhaInteressante(v, r, x);
   x.resultado = out.texto;
   const reacao = ctx.pessoa ? reacaoAoFracasso(v, ctx.pessoa.id) : ctx.org ? reacaoDaOrg(v, ctx.org, false) : '';
@@ -375,7 +415,7 @@ function delegar(v: Vida, r: Rng, pessoaId: string, tipo: string): { texto: stri
   };
   (e.encomendas ??= []).push(x);
   e.exposicao = clamp(e.exposicao + 2);
-  historiaDoContato(v, pessoaId, `Você encomendou a ele ${t.nome}.`);
+  historiaDoContato(v, pessoaId, `Você encomendou a ${flex(v.pessoas[pessoaId].genero, 'ele', 'ela', 'elu')} ${t.nome}.`);
   anotar(v, `Encomendou a ${v.pessoas[pessoaId].nome}: ${t.nome} (${dinheiroCurto(custo)} adiantados).`);
   if (!garantirCarreira(e).marcos.some(m => m.texto.startsWith('A primeira vez que encomendou'))) marco(v, 'A primeira vez que encomendou um trabalho a outra pessoa: o caminho deixou de depender só das suas mãos.', false);
   return { texto: `${v.pessoas[pessoaId].nome} ficou com ${t.nome}. ${dinheiroCurto(custo)} adiantados; o resultado chega em um ano. Você não precisa estar lá — e não controla o que acontece.` };

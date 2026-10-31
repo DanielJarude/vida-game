@@ -100,6 +100,35 @@ export function criarContato(v: Vida, ramo: Ramo, papel?: PapelDoContato, salt =
   return p.id;
 }
 
+/**
+ * REWORK 12.35 · D8 — ATÉ ONDE UM CONTATO CHEGA. Os contatos têm cidade (a da pessoa). Na mesma cidade, o trabalho é do dia
+ * a dia; no mesmo país, à distância (menos propostas, metade do que rende); noutro país, só o que se faz de longe (o ramo
+ * digital, ou o fornecedor e o comprador de muita confiança) — o resto vira conversa, e o vínculo fica guardado.
+ */
+export function alcanceDoContato(v: Vida, id: string): 'perto' | 'longe' | 'fora' {
+  const p = v.pessoas[id];
+  const f = env(v)?.fichas?.[id];
+  if (!p) return 'fora';
+  const aqui = v.moradia.municipioId;
+  if (!p.municipioId || p.municipioId === aqui) return 'perto';
+  let mesmoPais = false;
+  try { mesmoPais = paisDaCidade(p.municipioId) === paisDaCidade(aqui); } catch { mesmoPais = false; }
+  if (mesmoPais) return 'longe';
+  return f && (f.especialidade === 'digital' || ((f.papel === 'fornecedor' || f.papel === 'comprador') && f.confianca >= 60)) ? 'longe' : 'fora';
+}
+export const NOME_DO_ALCANCE_DO_CONTATO = { perto: 'na sua cidade', longe: 'à distância', fora: 'longe demais para trabalhar junto' } as const;
+
+/**
+ * Quanto do "de sempre" ainda chega depois de uma mudança: a média do alcance dos contatos ativos (perto 1, longe 0,5,
+ * fora 0), com piso de um quarto (algo se faz sozinho). Sem contatos, quem trabalha sozinho leva o ofício junto.
+ */
+export function fatorDoLugar(v: Vida): number {
+  const cs = contatosAtivos(v);
+  if (!cs.length) return 1;
+  const m = cs.reduce((s, c) => s + ({ perto: 1, longe: 0.5, fora: 0 } as const)[alcanceDoContato(v, c.id)], 0) / cs.length;
+  return Math.max(0.25, Math.round(m * 100) / 100);
+}
+
 /** O contato perdeu a confiança (ou você o perdeu): não traz mais trabalho. */
 export function afastar(v: Vida, id: string, porque: string): void {
   const f = env(v)?.fichas?.[id];
@@ -277,7 +306,7 @@ function cena(v: Vida, id: string, pessoa?: string, org?: string): void {
   if (org) (e.cenasOrg ??= {})[id] = org;
 }
 
-function cenaDoRamo(v: Vida, e: Envolvimento, ramo: Ramo, xp: number, r: Rng): { id: string; pessoa?: string; org?: string } | undefined {
+function cenaDoRamo(v: Vida, _e: Envolvimento, ramo: Ramo, xp: number, r: Rng): { id: string; pessoa?: string; org?: string } | undefined {
   const quem = (p?: PapelDoContato) => contatosAtivos(v, ramo, p)[0]?.id ?? contatosAtivos(v, ramo)[0]?.id;
   switch (ramo) {
     case 'furtos': {
@@ -288,9 +317,8 @@ function cenaDoRamo(v: Vida, e: Envolvimento, ramo: Ramo, xp: number, r: Rng): {
     case 'contrabando':
       return { id: 'subc_mercado', pessoa: quem('fornecedor') ?? criarContato(v, 'contrabando', 'fornecedor'), org: rivalDoRamo(v, 'contrabando').id };
     case 'organizado': {
-      const s = e.especializacoes!.organizado!;
       const org = organizacaoDoRamo(v, 'organizado');
-      if ((s.posto ?? 1) < 4 && s.experiencia >= 22 * (s.posto ?? 1) && org.lealdade >= 45 && r.chance(0.55)) return { id: 'subo_promocao', pessoa: quem('chefe'), org: org.id };
+      // (REWORK 12.35 · D6: o chamado para subir vem da organização — `faccoes`, com o posto de lá; não daqui.)
       // REWORK 12.25: a disputa interna só quando a organização está rachada de verdade (a sucessão do comando é outra
       // cena: `faccoes`) — antes, ela vinha quase todo ano, igual.
       const viva = v.mundoCriminal?.orgs[org.id];
@@ -357,7 +385,8 @@ export type OqueSubmundo =
 export const ACOES_DO_RAMO: Record<Ramo, OqueSubmundo[]> = {
   furtos: ['servico_pequeno', 'servico_maior'],
   contrabando: ['comprar_lote', 'vender_estoque', 'novo_comprador'],
-  organizado: ['tarefa_do_grupo', 'pedir_para_subir', 'tentar_sair'],
+  // REWORK 12.35 · D6: subir e sair do grupo moram na organização (Organizações): um posto só, uma regra só.
+  organizado: ['tarefa_do_grupo'],
   digital: ['encomenda', 'aprender', 'sumir_da_rede'],
   fraudes: ['esquema_de_influencia', 'recusar_pedido', 'denunciar']
 };
@@ -446,10 +475,8 @@ export function disponibilidadeSubmundo(v: Vida, oque: OqueSubmundo, ramo?: Ramo
       break;
     }
     case 'vender_estoque': if ((s!.estoque ?? 0) <= 0) return bloqueio('incompativel', 'Não há nada guardado.'); break;
-    case 'pedir_para_subir':
-      if ((s!.posto ?? 1) >= 4) return bloqueio('incompativel', 'Acima disso, não há para onde subir.');
-      if (s!.experiencia < 18 * (s!.posto ?? 1)) return bloqueio('requisito', 'Ninguém ali acha que chegou a sua hora.');
-      break;
+    case 'pedir_para_subir': case 'tentar_sair':
+      return bloqueio('impossivel', 'Subir e sair do grupo é com a organização (Organizações).');
     case 'aprender':
       if (!contatosAtivos(v, 'digital', 'tecnico').length) return bloqueio('requisito', 'Falta alguém do meio disposto a ensinar.');
       return vereditoDePagar(v, preco(v, 1500), 'Custa uns');

@@ -22,7 +22,7 @@
  */
 import { clamp, rngDe } from '../rng';
 import type { Rng } from '../rng';
-import type { EstadoEntreOrgs, MembroDaOrg, MundoCriminal, OrgViva, Ramo, RelacaoComOrganizacao, Vida } from '../tipos';
+import type { EstadoEntreOrgs, MembroDaOrg, MundoCriminal, OrgViva, PerfilDeOrg, Ramo, RelacaoComOrganizacao, Vida } from '../tipos';
 import { escrever, idade } from '../nucleo';
 import { bloqueio, PERMITIDO, type Veredito } from '../plausibilidade';
 import { criarPessoa, vincular } from '../pessoas';
@@ -38,6 +38,7 @@ import { NOME_DO_RAMO } from './ramos';
 import { ganharPratica, marco, movimentoPorFora, pagarPorFora, pedirRumo } from './carreiraCriminal';
 import { abalar } from './abalo';
 import { proporEncomenda } from './encomendas';
+import { reputacaoAqui } from './mercadoCriminal';
 
 const env = (v: Vida) => v.caminhos.envolvimento;
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -112,6 +113,45 @@ export function regiaoDaPessoa(v: Vida): string {
   const id = rs[Math.floor(rngDe(v.id, 'regiao', v.moradia.municipioId, v.moradia.tInicio ?? 0).next() * rs.length) % rs.length].id;
   if (m) m.regiao = { municipioId: v.moradia.municipioId, id };
   return id;
+}
+
+/* ================================================================ REWORK 12.35 · o jeito de cada organização */
+
+/**
+ * O PERFIL muda o que a organização FAZ, não só o nome: o quanto a rivalidade vira guerra (`escala`), o quanto aceita
+ * conversar (`negocia`), o que paga a quem é de dentro (`paga`), o quanto atrai a polícia (`policia`), o quanto aceita
+ * gente nova (`recruta`), o quanto o comando é contestado (`contesta`) e como responde a quem trai (`traicao`).
+ */
+export const PERFIS_DE_ORG: Record<PerfilDeOrg, { nome: string; escala: number; negocia: number; paga: number; policia: number; recruta: number; contesta: number; traicao: 'expulsa' | 'cobra' | 'esquece'; frase: string }> = {
+  territorial: { nome: 'territorial', escala: 1.3, negocia: 0, paga: 1, policia: 1.1, recruta: 0.05, contesta: 1, traicao: 'cobra', frase: 'vive do pedaço que ocupa: briga por bairro, cobra presença' },
+  economica: { nome: 'de negócios', escala: 0.7, negocia: 0.15, paga: 1.2, policia: 0.9, recruta: 0, contesta: 0.9, traicao: 'expulsa', frase: 'pensa em dinheiro primeiro: prefere o acordo à guerra, paga melhor' },
+  agressiva: { nome: 'agressiva', escala: 1.6, negocia: -0.15, paga: 1.05, policia: 1.35, recruta: 0.1, contesta: 1.2, traicao: 'cobra', frase: 'responde a tudo com força: cresce rápido, atrai a polícia, não perdoa' },
+  discreta: { nome: 'discreta', escala: 0.6, negocia: 0.1, paga: 0.85, policia: 0.6, recruta: -0.1, contesta: 0.8, traicao: 'expulsa', frase: 'some do radar: ganha menos, aparece menos, desconfia de gente nova' },
+  hierarquica: { nome: 'hierárquica', escala: 1, negocia: 0.05, paga: 1, policia: 1, recruta: -0.05, contesta: 0.6, traicao: 'cobra', frase: 'cada um no seu lugar: o comando pesa, sair da linha custa caro' },
+  fragmentada: { nome: 'fragmentada', escala: 1.1, negocia: 0, paga: 0.95, policia: 1, recruta: 0.15, contesta: 1.6, traicao: 'esquece', frase: 'vários grupos sob um nome: entra-se fácil, o comando vive contestado' }
+};
+const PERFIS_DO_ESTILO: Record<OrgViva['estilo'], PerfilDeOrg[]> = {
+  faccao: ['territorial', 'hierarquica', 'agressiva'], familia: ['hierarquica', 'discreta', 'economica'], rede: ['economica', 'discreta', 'fragmentada'],
+  circulo: ['discreta', 'economica', 'hierarquica'], coletivo: ['fragmentada', 'discreta', 'economica'], turma: ['agressiva', 'fragmentada', 'territorial'],
+  sindicato: ['economica', 'hierarquica', 'territorial']
+};
+/** O perfil (o registrado; nos saves antigos, derivado do estilo e do id — estável). */
+export function perfilDe(o: OrgViva): PerfilDeOrg {
+  if (o.perfil) return o.perfil;
+  const xs = PERFIS_DO_ESTILO[o.estilo];
+  o.perfil = xs[Math.floor(rngDe('perfil_org', o.id).next() * xs.length) % xs.length];
+  return o.perfil;
+}
+export const jeitoDe = (o: OrgViva) => PERFIS_DE_ORG[perfilDe(o)];
+
+/** A lealdade de um nome do quadro (derivada e estável nos saves antigos) e a ambição. */
+export function lealdadeDoMembro(m: MembroDaOrg): number {
+  if (m.lealdade === undefined) m.lealdade = 35 + Math.round(rngDe('membro_leal', m.id).next() * 45);
+  return m.lealdade;
+}
+export function ambicaoDoMembro(m: MembroDaOrg): number {
+  if (m.ambicao === undefined) m.ambicao = Math.round(rngDe('membro_amb', m.id).next() * 100) / 100;
+  return m.ambicao;
 }
 
 /* ================================================================ o mundo */
@@ -215,12 +255,15 @@ export function definirEstado(a: OrgViva, b: OrgViva, e: EstadoEntreOrgs): void 
 function proximoEstado(a: OrgViva, b: OrgViva, e: EstadoEntreOrgs, r: Rng): EstadoEntreOrgs {
   const disputam = Object.keys(a.influencia).some(k => (a.influencia[k] ?? 0) >= 20 && (b.influencia[k] ?? 0) >= 20);
   const fortes = a.forca >= 40 && b.forca >= 40;
+  // REWORK 12.35: o perfil de cada lado pesa (a agressiva esquenta a rivalidade; a discreta e a de negócios esfriam).
+  const escala = Math.sqrt(jeitoDe(a).escala * jeitoDe(b).escala);
+  const conversa = (jeitoDe(a).negocia + jeitoDe(b).negocia) / 2;
   const x = r.next();
+  if (e === 'rivalidade') return x < (disputam && fortes ? 0.12 : 0.04) * escala ? 'conflito' : x > 0.93 - conversa * 0.3 ? 'tregua' : x > 0.9 - conversa * 0.3 ? 'concorrencia' : e;
+  if (e === 'conflito') return x < 0.35 / escala + conversa ? 'tregua' : e;
   switch (e) {
     case 'neutralidade': return a.ramo === b.ramo ? (x < 0.08 ? 'concorrencia' : e) : x < 0.05 ? 'cooperacao' : x < 0.07 ? 'concorrencia' : e;
     case 'concorrencia': return x < (disputam ? 0.12 : 0.06) ? 'rivalidade' : x > 0.95 ? 'neutralidade' : e;
-    case 'rivalidade': return x < (disputam && fortes ? 0.12 : 0.04) ? 'conflito' : x > 0.93 ? 'tregua' : x > 0.9 ? 'concorrencia' : e;
-    case 'conflito': return x < 0.35 ? 'tregua' : e;
     case 'tregua': return x < 0.25 ? 'neutralidade' : x > 0.88 ? 'conflito' : e;
     case 'alianca': return x < 0.04 ? 'ruptura' : x > 0.96 ? 'neutralidade' : e;
     case 'cooperacao': return x < 0.4 ? 'neutralidade' : x > 0.9 ? 'alianca' : e;
@@ -250,6 +293,7 @@ function evoluirRelacoes(v: Vida, municipioId: string): void {
     if (antes === 'conflito') {
       // O conflito (abstrato): os dois lados perdem força e gente presa; a cidade fica mais vigiada.
       for (const o of [a, b]) { o.forca = clamp(o.forca - 5); o.pressao = clamp(o.pressao + 8); o.coesao = clamp(o.coesao - 2); }
+      guerraDoAno(v, a, b, r);
     }
     const depois = proximoEstado(a, b, antes, r);
     if (depois === antes) continue;
@@ -269,7 +313,31 @@ function evoluirRelacoes(v: Vida, municipioId: string): void {
   }
 }
 
-function historia(o: OrgViva, t: number, texto: string): void {
+/**
+ * REWORK 12.35 · o ano de uma guerra, do lado do mundo (com ou sem o jogador): quem ganha terreno na região disputada,
+ * quem perde gente do quadro (preso ou morto, com nome) — e a história de cada uma registra.
+ */
+function guerraDoAno(v: Vida, a: OrgViva, b: OrgViva, r: Rng): void {
+  const peso = (o: OrgViva) => o.forca * (0.85 + jeitoDe(o).escala * 0.15) * (0.8 + o.coesao / 250);
+  const [forte, fraca] = peso(a) + (r.next() - 0.5) * 30 >= peso(b) ? [a, b] : [b, a];
+  const reg = Object.keys(fraca.influencia).sort((x, y) => (forte.influencia[y] ?? 0) - (forte.influencia[x] ?? 0))[0];
+  if (reg) {
+    const ganho = Math.min(fraca.influencia[reg] ?? 0, 6 + r.int(0, 6));
+    fraca.influencia[reg] = clamp((fraca.influencia[reg] ?? 0) - ganho);
+    forte.influencia[reg] = clamp((forte.influencia[reg] ?? 0) + Math.round(ganho * 0.7));
+  }
+  for (const o of [a, b]) {
+    if (!r.chance(o === fraca ? 0.35 : 0.18)) continue;
+    const alvos = o.quadro.filter(x => x.estado === 'ativo' && x.nivel <= 4 && !x.pessoaId);
+    const m = alvos.length ? r.pick(alvos) : undefined;
+    if (!m) continue;
+    const outra = o === a ? b : a;
+    if (r.chance(0.45)) { m.estado = 'morto'; m.causa = `na guerra com ${outra.nome}`; historia(o, v.t, `${m.nome} morreu na guerra com ${outra.nome}.`); }
+    else { m.estado = 'preso'; m.causa = `preso na guerra com ${outra.nome}`; historia(o, v.t, `${m.nome} foi pres${m.genero === 'feminino' ? 'a' : 'o'} no meio da guerra com ${outra.nome}.`); }
+  }
+}
+
+export function historia(o: OrgViva, t: number, texto: string): void {
   o.historia.push({ t, texto: contrair(texto) });
   if (o.historia.length > 20) o.historia.splice(0, o.historia.length - 20);
 }
@@ -302,17 +370,20 @@ export function relacaoCom(v: Vida, o: OrgViva): RelacaoComOrganizacao {
   return rel;
 }
 
-/** O posto (0..6) de quem é de dentro; os saves antigos liam o posto do ramo organizado (1..4). */
-export function nivelDe(v: Vida, rel: RelacaoComOrganizacao): number {
+/**
+ * O posto (0..6) de quem é de dentro. REWORK 12.35 · D6: a fonte única é `rel.nivel` (o posto do ramo organizado do 11.5
+ * virou espelho dele; os saves antigos o trazem para cá uma vez, em `normalizarRework1235`).
+ */
+export function nivelDe(_v: Vida, rel: RelacaoComOrganizacao): number {
   if (rel.propria) return 6;
   if (rel.relacao !== 'membro') return rel.nivel ?? -1;
-  // O posto do ramo organizado (as cenas antigas o sobem) também conta: o nível nunca fica atrás dele.
-  const doPosto = rel.especialidade === 'organizado' ? Math.max(0, (env(v)?.especializacoes?.organizado?.posto ?? 1) - 1) : 0;
-  return Math.max(rel.nivel ?? 0, doPosto);
+  return rel.nivel ?? 0;
 }
 
-function definirNivel(v: Vida, rel: RelacaoComOrganizacao, nivel: number): void {
+export function definirNivel(v: Vida, rel: RelacaoComOrganizacao, nivel: number): void {
   rel.nivel = clamp(Math.round(nivel), 0, 6);
+  const e = env(v);
+  if (e) e.postoUnificado = true;
   const s = env(v)?.especializacoes?.organizado;
   if (s && rel.especialidade === 'organizado') s.posto = Math.min(4, rel.nivel + 1) as 1 | 2 | 3 | 4;
 }
@@ -327,7 +398,9 @@ function definirNivel(v: Vida, rel: RelacaoComOrganizacao, nivel: number): void 
  */
 export function processarFaccoes(v: Vida): void {
   const e = env(v);
-  if (!e) return;
+  // REWORK 12.35 · AUTONOMIA: o mundo do crime continua sem o jogador (quem herdou, quem nunca entrou, quem saiu): as
+  // organizações já conhecidas seguem o ano delas — sem a parte do jogador.
+  if (!e) { if (v.mundoCriminal && Object.keys(v.mundoCriminal.orgs).length) anoDoMundo(v); return; }
   garantirCidade(v);
   const m = garantirMundo(v);
   for (const o of orgsDoMundo(v)) if (o.estado !== 'extinta') anoDaOrg(v, o);
@@ -337,6 +410,15 @@ export function processarFaccoes(v: Vida): void {
   m.tAtualizado = v.t;
   anoDoJogadorNasOrgs(v);
   cenasDoAno(v);
+}
+
+function anoDoMundo(v: Vida): void {
+  const m = v.mundoCriminal!;
+  for (const o of orgsDoMundo(v)) if (o.estado !== 'extinta') anoDaOrg(v, o);
+  for (const cid of new Set(orgsDoMundo(v).map(o => o.municipioId))) evoluirRelacoes(v, cid);
+  renovarCidade(v);
+  anoDaComunidade(v);
+  m.tAtualizado = v.t;
 }
 
 /** As cenas que o mundo traz ao jogador neste ano (uma de cada, com intervalo): a rivalidade no seu pedaço, a aliança oferecida. */
@@ -368,16 +450,11 @@ function anoDaOrg(v: Vida, o: OrgViva): void {
   o.forca = clamp(Math.round(o.forca + (r.next() - 0.5) * 8 + (45 - o.forca) * 0.1 + (pr === 'expandir' ? 4 : pr === 'discricao' ? -2 : 0) - Math.max(0, o.pressao - 30) / 15 + o.aliadas.length * 0.8 - o.rivais.length * 0.6 + (o.coesao < 35 ? -3 : 0)));
   o.pressao = clamp(Math.round(o.pressao * 0.85 + o.forca / 12 + (pr === 'expandir' ? 4 : pr === 'discricao' ? -5 : 0)));
   o.coesao = clamp(Math.round(o.coesao + (58 - o.coesao) * 0.1 + (r.next() - 0.5) * 10 - (o.disputa ? 8 : 0) + (pr === 'consolidar' ? 4 : 0)));
-  // Uma operação da Justiça (o ano em que a pressão vira prisão de alguém do quadro).
-  if (r.chance(o.pressao / 300)) {
-    const alvo = r.pick(o.quadro.filter(x => x.estado === 'ativo') .slice(0, 6));
-    if (alvo) {
-      alvo.estado = 'preso';
-      o.forca = clamp(o.forca - 8);
-      o.pressao = clamp(o.pressao - 15);
-      historia(o, v.t, `Uma operação levou ${alvo.nome} (${nomeDoNivel(o, alvo.nivel)}).`);
-    }
-  }
+  // Uma operação da Justiça (o ano em que a pressão vira ação). REWORK 12.35: de tipos diferentes — a prisão de gente do
+  // quadro, da liderança, a busca num território, o bloqueio do patrimônio, o desmantelamento —, pelo tamanho da pressão
+  // e pelo jeito da organização (a discreta atrai menos; a agressiva, mais; quem tem informante dentro, muito mais).
+  const informantes = o.quadro.filter(x => x.informante !== undefined && (x.estado === 'ativo' || x.estado === 'preso')).length;
+  if (r.chance(o.pressao / 300 * jeitoDe(o).policia * (1 + informantes * 0.6))) operacao(v, o, r, informantes > 0);
   // O quadro: a idade, a saída, a promoção de quem fica; a entrada de gente nova quando a força cresce.
   for (const x of o.quadro) {
     if (x.estado !== 'ativo') continue;
@@ -385,7 +462,13 @@ function anoDaOrg(v: Vida, o: OrgViva): void {
     if (r.chance(i >= 70 ? 0.07 : i >= 55 ? 0.02 : 0.006)) { x.estado = 'morto'; historia(o, v.t, `${x.nome} morreu.`); continue; }
     if (r.chance(i >= 62 ? 0.08 : 0.02)) { x.estado = 'saiu'; historia(o, v.t, `${x.nome} deixou ${o.nome}.`); continue; }
     if (x.nivel < 5 && r.chance(0.06)) x.nivel++;
+    // REWORK 12.35: a lealdade de cada um anda com a casa (a união, a pressão, o dinheiro); quem já não acredita nela, com a
+    // polícia em cima, pode passar a colaborar — ninguém sabe até aparecer.
+    x.lealdade = clamp(Math.round(lealdadeDoMembro(x) + (o.coesao - 50) / 12 + (o.prioridade === 'negocios' ? 1 : 0) - (o.pressao >= 60 ? 2 : 0) + (r.next() - 0.5) * 6));
+    if (x.informante === undefined && x.lealdade < 22 && o.pressao >= 45 && r.chance(0.08)) { x.informante = v.t; o.pressao = clamp(o.pressao + 6); }
   }
+  // Quem está preso e já não deve nada à casa pode falar (a delação de dentro).
+  for (const x of o.quadro) if (x.estado === 'preso' && x.informante === undefined && lealdadeDoMembro(x) < 40 && r.chance(0.12)) { x.informante = v.t; o.pressao = clamp(o.pressao + 8); }
   const ativos = o.quadro.filter(x => x.estado === 'ativo');
   if (ativos.length < 3 + Math.round(o.forca / 25) && r.chance(0.6)) o.quadro.push(novoMembro(v, o, r, r.int(1, 3), o.quadro.length));
   if (o.quadro.length > 12) o.quadro = [...o.quadro.filter(x => x.estado === 'ativo' || x.pessoaId), ...o.quadro.filter(x => x.estado !== 'ativo' && !x.pessoaId).slice(-3)].slice(-12);
@@ -412,6 +495,49 @@ function anoDaOrg(v: Vida, o: OrgViva): void {
     if (o.estado === 'enfraquecida' && r.chance(0.4)) { o.estado = 'extinta'; historia(o, v.t, `${cap(o.nome)} deixou de existir: os que sobraram foram para outros lados.`); }
     else o.estado = 'enfraquecida';
   } else if (o.estado === 'enfraquecida' && o.forca >= 15) o.estado = 'ativa';
+}
+
+function operacao(v: Vida, o: OrgViva, r: Rng, comInformante: boolean): void {
+  const ativos = o.quadro.filter(x => x.estado === 'ativo');
+  const tipo: NonNullable<OrgViva['operacao']>['tipo'] = o.pressao >= 80 && (o.forca < 45 || comInformante) && r.chance(0.35) ? 'desmantelamento'
+    : o.pressao >= 60 && r.chance(0.3) ? 'lideranca' : r.chance(0.25) ? 'busca' : r.chance(0.25) ? 'patrimonio' : 'integrantes';
+  o.operacao = { t: v.t, tipo };
+  const prende = (m: MembroDaOrg | undefined, porque: string) => { if (!m) return; m.estado = 'preso'; m.causa = porque; };
+  switch (tipo) {
+    case 'integrantes': {
+      const alvo = r.pick(ativos.slice(0, 6));
+      prende(alvo, 'preso numa operação');
+      o.forca = clamp(o.forca - 8); o.pressao = clamp(o.pressao - 15);
+      if (alvo) historia(o, v.t, `Uma operação levou ${alvo.nome} (${nomeDoNivel(o, alvo.nivel)}).`);
+      break;
+    }
+    case 'lideranca': {
+      const l = lider(o) ?? ativos.sort((a, b) => b.nivel - a.nivel)[0];
+      prende(l, 'preso numa operação contra o comando');
+      o.forca = clamp(o.forca - 12); o.pressao = clamp(o.pressao - 20); o.coesao = clamp(o.coesao - 8);
+      if (l) historia(o, v.t, `Uma operação contra o comando levou ${l.nome} (${nomeDoNivel(o, l.nivel)}).`);
+      break;
+    }
+    case 'busca': {
+      const reg = Object.keys(o.influencia).sort((a, b) => (o.influencia[b] ?? 0) - (o.influencia[a] ?? 0))[0];
+      if (reg) o.influencia[reg] = clamp((o.influencia[reg] ?? 0) - 15);
+      o.forca = clamp(o.forca - 5); o.pressao = clamp(o.pressao - 10);
+      historia(o, v.t, `Uma operação vasculhou ${reg ? nomeDaRegiao(o.municipioId, reg) : 'a cidade'} atrás de gente de ${o.nome}.`);
+      break;
+    }
+    case 'patrimonio':
+      o.forca = clamp(o.forca - 10); o.pressao = clamp(o.pressao - 12);
+      historia(o, v.t, `Uma operação bloqueou dinheiro e bens ligados a ${o.nome}.`);
+      break;
+    case 'desmantelamento': {
+      const levados = ativos.filter(() => r.chance(0.5)).slice(0, 4);
+      for (const m of levados) prende(m, 'preso no desmantelamento');
+      o.forca = clamp(Math.round(o.forca * 0.4)); o.pressao = clamp(o.pressao - 35); o.coesao = clamp(o.coesao - 15);
+      o.estado = o.forca < 8 ? 'extinta' : 'enfraquecida';
+      historia(o, v.t, o.estado === 'extinta' ? `Uma operação grande desmantelou ${o.nome}: ${levados.length} presos, o resto se espalhou.` : `Uma operação grande quase acabou com ${o.nome}: ${levados.length} presos.`);
+      break;
+    }
+  }
 }
 
 /** O espaço que uma organização extinta deixou não fica vazio por muito tempo: outra nasce (o mundo continua). */
@@ -450,7 +576,7 @@ function anoDaComunidade(v: Vida): void {
 
 /* ================================================================ sucessão */
 
-function abrirDisputa(v: Vida, o: OrgViva, r: Rng, motivo: string): void {
+export function abrirDisputa(v: Vida, o: OrgViva, r: Rng, motivo: string): void {
   const cands = o.quadro.filter(x => x.estado === 'ativo' && x.nivel >= 3).sort((a, b) => b.nivel - a.nivel).slice(0, 2).map(x => x.id);
   if (!cands.length) {
     const novo = novoMembro(v, o, r, 5, o.quadro.length);
@@ -509,7 +635,7 @@ function resolverDisputa(v: Vida, o: OrgViva, r: Rng): void {
 }
 
 /** O racha: o candidato que perdeu leva uma parte do quadro e funda uma organização nova, rival da de origem. */
-function rachar(v: Vida, o: OrgViva, perdedorId: string, apoiouPerdedor: boolean): void {
+export function rachar(v: Vida, o: OrgViva, perdedorId: string, apoiouPerdedor: boolean): void {
   const m = o.quadro.find(x => x.id === perdedorId);
   if (!m) return;
   const id = `racha_${o.id}_${v.t}`;
@@ -541,7 +667,7 @@ export function parteDoAno(_v: Vida, o: OrgViva, nivel: number): number {
   const base = [0.5, 1, 2, 4, 12, 30, 90][clamp(nivel, 0, 6)] * 6000;
   const infl = Object.values(o.influencia).reduce((s, x) => s + x, 0) / Math.max(1, regioesDe(o.municipioId).length);
   const pr = o.prioridade === 'negocios' ? 1.25 : o.prioridade === 'discricao' ? 0.6 : 1;
-  return Math.round(base * (o.forca / 50) * (1 + infl / 150) * pr * economiaLocal(o.municipioId).custo / 100) * 100;
+  return Math.round(base * (o.forca / 50) * (1 + infl / 150) * pr * jeitoDe(o).paga * economiaLocal(o.municipioId).custo / 100) * 100;
 }
 
 function anoDoJogadorNasOrgs(v: Vida): void {
@@ -571,7 +697,9 @@ function anoDoJogadorNasOrgs(v: Vida): void {
     // A parte do ano (a organização própria já paga pelos negócios dela: `clandestinos`).
     if (!rel.propria) {
       const seco = r.chance(o.coesao < 35 ? 0.35 : 0.15);
-      const parte = seco ? 0 : Math.round(parteDoAno(v, o, n) * longe * (0.7 + r.next() * 0.6) / 100) * 100;
+      // REWORK 12.35: quem dividiu o comando (a contestação) leva menos por três anos.
+      const dividido = v.fatos['comando_dividido'] !== undefined && v.t - v.fatos['comando_dividido'] < 36 ? 0.75 : 1;
+      const parte = seco ? 0 : Math.round(parteDoAno(v, o, n) * longe * dividido * (0.7 + r.next() * 0.6) / 100) * 100;
       if (parte > 0) { movimentoPorFora(v, 'organizacao', parte); e.ganhos += parte; }
       // Quem sobe até o comando passa a delegar: a exposição pessoal cresce até o posto de responsável por uma área e,
       // dali para cima, diminui (outros fazem a rua) — o que pesa é a pressão sobre a organização inteira.
@@ -801,11 +929,11 @@ export function disponibilidadeOrg(v: Vida, orgId: string, oque: OqueOrg, alvo?:
       if (vinc === 'rival' || rel?.expulso !== undefined) return bloqueio('incompativel', 'Depois do que houve, essa porta está fechada.');
       if (!rel || rel.lealdade < 50) return bloqueio('requisito', 'Para entrar em segredo, eles precisam confiar muito em você (lealdade 50 ou mais).');
       return { grau: 'irregular', motivo: 'É crime — e um segredo. Cada ano, a desconfiança cresce (mais entre rivais); se vier à tona, as duas cobram.' };
-    case 'reuniao': return dentro && n >= 1 ? PERMITIDO : bloqueio('requisito', 'As reuniões são para quem já tem algum posto (a partir do segundo nível).');
+    case 'reuniao': return dentro && n >= 1 ? PERMITIDO : bloqueio('requisito', `As reuniões são de ${nomeDoNivel(o, 1)} para cima.`);
     case 'tregua': case 'cooperar': {
       const b = alvo ? orgViva(v, alvo) : undefined;
       if (!b || b.id === o.id || b.municipioId !== o.municipioId) return bloqueio('impossivel', 'Com quem?');
-      if (n < 4 && !rel?.propria) return bloqueio('requisito', 'Negociar com outra organização é coisa de quem comanda (posto 5 ou mais).');
+      if (n < 4 && !rel?.propria) return bloqueio('requisito', `Negociar com outra organização é de ${nomeDoNivel(o, 4)} para cima.`);
       const est = estadoEntre(o, b);
       if (oque === 'tregua') return est === 'conflito' || est === 'rivalidade' || est === 'ruptura' ? vereditoDePagar(v, custoDeComando(v, o), 'Sentar à mesa custa uns') : bloqueio('incompativel', `Não há guerra a parar: estão ${NOME_DO_ESTADO_ENTRE[est]}.`);
       return est === 'neutralidade' || est === 'concorrencia' || est === 'tregua' ? PERMITIDO : bloqueio('incompativel', `Agora não: estão ${NOME_DO_ESTADO_ENTRE[est]}.`);
@@ -822,21 +950,21 @@ export function disponibilidadeOrg(v: Vida, orgId: string, oque: OqueOrg, alvo?:
     case 'disputar':
       if (!o.disputa || !dentro) return bloqueio('impossivel', 'Não há disputa aberta.');
       if (o.disputa.candidatos.includes('jogador')) return bloqueio('incompativel', 'Você já está na disputa.');
-      return n >= 4 ? PERMITIDO : bloqueio('requisito', 'Para disputar o comando, é preciso estar perto dele (um posto alto).');
+      return n >= 4 ? PERMITIDO : bloqueio('requisito', `Para disputar o comando, é preciso ser ${nomeDoNivel(o, 4)} ou mais.`);
   }
   // As da liderança.
-  if (n < 3 && !rel?.propria) return bloqueio('requisito', 'Isso é de quem tem posto de comando.');
+  if (n < 3 && !rel?.propria) return bloqueio('requisito', `Isso é de ${nomeDoNivel(o, 3)} para cima.`);
   switch (oque) {
     case 'mediar': return o.coesao >= 55 ? bloqueio('incompativel', 'Não há briga interna para resolver agora.') : vereditoDePagar(v, custoDeComando(v, o), 'Acalmar os ânimos custa uns');
     case 'alianca': case 'romper': {
       const b = alvo ? orgViva(v, alvo) : undefined;
       if (!b || b.id === o.id || b.municipioId !== o.municipioId) return bloqueio('impossivel', 'Com quem?');
-      if (n < 4 && !rel?.propria) return bloqueio('requisito', 'Aliança é coisa de quem manda.');
+      if (n < 4 && !rel?.propria) return bloqueio('requisito', `Alianças são de ${nomeDoNivel(o, 4)} para cima.`);
       if (oque === 'alianca' && o.aliadas.includes(b.id)) return bloqueio('incompativel', 'Já são aliadas.');
       if (oque === 'romper' && !o.aliadas.includes(b.id)) return bloqueio('incompativel', 'Não há aliança a romper.');
       return PERMITIDO;
     }
-    case 'presenca': return n >= 4 || rel?.propria ? vereditoDePagar(v, custoDeComando(v, o) * 2, 'Fazer-se presente custa uns') : bloqueio('requisito', 'Só quem comanda decide onde a organização se faz presente.');
+    case 'presenca': return n >= 4 || rel?.propria ? vereditoDePagar(v, custoDeComando(v, o) * 2, 'Fazer-se presente custa uns') : bloqueio('requisito', `Onde a organização se faz presente é decisão de ${nomeDoNivel(o, 4)} para cima.`);
     case 'recolher': return o.pressao >= 30 ? PERMITIDO : bloqueio('incompativel', 'A pressão não pede isso agora.');
   }
   return PERMITIDO;
@@ -862,7 +990,7 @@ export function executarOrg(v: Vida, orgId: string, oque: OqueOrg, alvo?: string
       return { texto: `${cap(o.nome)} anda ${o.forca >= 60 ? 'forte' : o.forca >= 30 ? 'do mesmo tamanho' : 'enfraquecida'}${o.coesao < 40 ? ', rachada por dentro' : ''}${o.pressao >= 50 ? ', com a Justiça em cima' : ''}. ${l ? `Quem manda é ${l.nome}.` : 'Ninguém manda de verdade agora.'}${ult ? ` O assunto do momento: ${ult.texto.charAt(0).toLowerCase()}${ult.texto.slice(1)}` : ''}` };
     }
     case 'filiar': {
-      const chance = clamp(0.3 + (rel.lealdade - 45) / 80 + (e.reputacao ?? 0) / 300, 0.15, 0.9);
+      const chance = clamp(0.3 + (rel.lealdade - 45) / 80 + reputacaoAqui(v) / 300 + jeitoDe(o).recruta, 0.15, 0.9);
       if (!r.chance(chance)) {
         if (r.chance(0.5) && propor(v, o, 1)) return { texto: `Disseram que ainda não. Antes, querem ver você cumprir uma tarefa (ela chegou em Encomendas).`, tom: undefined };
         lembrarOrg(rel, v.t, 'conflito', -3);
@@ -1014,7 +1142,13 @@ export function leituraDasOrganizacoes(v: Vida) {
       relacoes: orgsDaCidade(v, o.municipioId).filter(x => x.id !== o.id).map(x => ({ id: x.id, nome: x.nome, estado: estadoEntre(o, x), nomeEstado: NOME_DO_ESTADO_ENTRE[estadoEntre(o, x)] })),
       alcance: NOME_DO_ALCANCE[alcanceDe(o)], distancia: rel?.distancia, secreto: !!rel?.secreto, suspeita: rel?.suspeita ?? 0,
       poderes: n >= 0 && (rel?.relacao === 'membro' || rel?.propria) ? PODERES_DO_NIVEL.slice(0, Math.min(6, n) + 1).flat() : [],
-      rachaDe: o.rachaDe ? orgViva(v, o.rachaDe.id)?.nome : undefined
+      rachaDe: o.rachaDe ? orgViva(v, o.rachaDe.id)?.nome : undefined,
+      // REWORK 12.35: o jeito dela, o apoio ao comando (de quem lidera), o que vem no próximo posto, o que aconteceu no ano.
+      perfil: jeitoDe(o).nome, perfilFrase: jeitoDe(o).frase,
+      apoio: rel && (rel.propria || n >= 6) ? o.apoio : undefined,
+      proximosPoderes: n >= 0 && n < 6 && (rel?.relacao === 'membro' || rel?.propria) ? PODERES_DO_NIVEL[n + 1] : [],
+      esteAno: o.historia.filter(h => v.t - h.t < 12).reverse().map(h => h.texto),
+      operacao: o.operacao && v.t - o.operacao.t < 12 ? o.operacao.tipo : undefined
     };
   }).filter((x): x is NonNullable<typeof x> => !!x && (x.conhecida || x.daqui))
     .sort((a, b) => Number(b.vinculo === 'lideranca' || b.vinculo === 'integrante') - Number(a.vinculo === 'lideranca' || a.vinculo === 'integrante') || Number(b.conhecida) - Number(a.conhecida) || b.forca - a.forca);

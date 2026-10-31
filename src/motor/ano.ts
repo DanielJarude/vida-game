@@ -94,6 +94,10 @@ import { processarCarreiraCriminal, processarLegado } from './sistemas/carreiraC
 import { processarEncomendas } from './sistemas/encomendas';
 import { processarRede } from './sistemas/redeCriminal';
 import { processarFaccoes } from './sistemas/faccoes';
+import { processarConflitosCriminais } from './sistemas/conflitosCriminais';
+import { processarPoderInterno } from './sistemas/poderInterno';
+import { processarMercadoCriminal } from './sistemas/mercadoCriminal';
+import { processarVidaDupla } from './sistemas/vidaDupla';
 // REWORK 12.25: a vida de quem é procurado se registra em `justica` ao carregar (como o tribunal).
 import './sistemas/defesa';
 import { processarTrio } from './sistemas/afetosAdultos';
@@ -256,8 +260,15 @@ function viverAno(v: Vida, r: Rng): void {
   // (o patamar, os marcos, a família, a saída aos poucos) e o legado de quem herdou esse nome.
   processarRede(v);
   processarFaccoes(v);
+  // REWORK 12.35: o que o mundo do crime fez no ano chega como situação (o confronto, a operação, a perseguição), a política
+  // de dentro (o comando contestado, a traição, o boato, os raros), o mercado e a reputação por cidade.
+  processarConflitosCriminais(v);
+  processarPoderInterno(v);
+  processarMercadoCriminal(v);
   processarEncomendas(v);
   processarCarreiraCriminal(v);
+  // REWORK 12.35: a vida dupla (o par que decide, os filhos que lembram) e o recomeço de quem saiu.
+  processarVidaDupla(v);
   processarLegado(v);
   processarVeiculos(v, r);
   processarImoveis(v, r, ec);

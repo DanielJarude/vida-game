@@ -10,7 +10,7 @@
 import type { Conteudo, Ctx, Papel } from './base';
 import { comContracao } from './base';
 import type { Pessoa, Vida } from '../tipos';
-import { estresse, feliz } from './efeitos';
+import { estresse, feliz, gp } from './efeitos';
 import { parceiro } from '../nucleo';
 import { clamp } from '../rng';
 import { dinheiroCurto as fmt } from '../texto';
@@ -21,6 +21,7 @@ import { machucarNaBriga } from '../sistemas/lesoes';
 import { abalar } from '../sistemas/abalo';
 import { afastar, anotar, contatosAtivos, criarContato, lembrarOrg, orgPorId, POSTO, promessa, valorDaOperacao } from '../sistemas/submundo';
 import { ramosAtivos } from '../sistemas/ramos';
+import { definirNivel } from '../sistemas/faccoes';
 
 const deHoje = (c: Ctx, id: string) => c.v.fatos[id] === c.v.t;
 const env = (c: Ctx) => c.v.caminhos.envolvimento!;
@@ -42,20 +43,20 @@ export const SUBMUNDO: Conteudo[] = ([
     id: 'subf_parceiro', tipo: 'decisao', idade: [14, 80], tema: 'escolha', prioritario: true, prioridade: 3, repetir: 3,
     papeis: { contato: daCena('subf_parceiro') },
     quando: c => deHoje(c, 'subf_parceiro') && noRamo(c, 'furtos'),
-    titulo: c => (deHoje(c, 'subf_pego') ? `${quem(c).nome} foi pego` : `${quem(c).nome} quer trazer mais gente`),
+    titulo: c => (deHoje(c, 'subf_pego') ? `${quem(c).nome} foi pres${gp(c, 'contato', 'o', 'a', 'e')}` : `${quem(c).nome} quer trazer mais gente`),
     texto: c => deHoje(c, 'subf_pego')
-      ? `Depois do serviço que deu errado, ${quem(c).nome} não conseguiu sair a tempo. Está detido, e sabe o seu nome. O que você faz agora ele vai lembrar.`
+      ? `Depois do serviço que deu errado, ${quem(c).nome} não conseguiu sair a tempo. Está detid${gp(c, 'contato', 'o', 'a', 'e')}, e sabe o seu nome. O que você faz agora ${gp(c, 'contato', 'ele', 'ela', 'elu')} vai lembrar.`
       : `${quem(c).nome}, o seu parceiro, quer trazer um conhecido "de confiança" para os próximos serviços. Mais gente, mais dinheiro — e mais gente sabendo.`,
     opcoes: [
-      { id: 'ajudar', texto: c => (deHoje(c, 'subf_pego') ? 'Pagar a defesa dele' : 'Topar o conhecido'), comportamento: { empatia: 1 },
+      { id: 'ajudar', texto: c => (deHoje(c, 'subf_pego') ? `Pagar a defesa ${gp(c, 'contato', 'dele', 'dela', 'delu')}` : 'Topar o conhecido'), comportamento: { empatia: 1 },
         disponivel: c => (!deHoje(c, 'subf_pego') || disponivel(c.v) >= valorDaOperacao(c.v, 'furtos', 1.5) ? true : 'Não há dinheiro para isso agora.'),
-        consequencia: c => (deHoje(c, 'subf_pego') ? `Uns ${fmt(valorDaOperacao(c.v, 'furtos', 1.5))}; ele vai lembrar de quem não o deixou sozinho.` : 'Mais gente no caminho (e mais gente sabendo).'),
+        consequencia: c => (deHoje(c, 'subf_pego') ? `Uns ${fmt(valorDaOperacao(c.v, 'furtos', 1.5))}; ${gp(c, 'contato', 'ele', 'ela', 'elu')} vai lembrar de quem não ${gp(c, 'contato', 'o', 'a', 'e')} deixou sozinho.` : 'Mais gente no caminho (e mais gente sabendo).'),
         resolver: c => ({ texto: deHoje(c, 'subf_pego') ? `O advogado foi pago. ${quem(c).nome} mandou dizer que não esquece.` : `O conhecido chegou. Os serviços ficaram maiores — e a roda, também.`, memoria: null,
           efeito: () => { promessa(c.v, quem(c).id, true); if (deHoje(c, 'subf_pego')) pagarPorFora(c.v, 'custos', valorDaOperacao(c.v, 'furtos', 1.5)); else { criarContato(c.v, 'furtos', 'parceiro', 1); env(c).exposicao = clamp(env(c).exposicao + 5); } anotar(c.v, deHoje(c, 'subf_pego') ? `Pagou a defesa de ${quem(c).nome}.` : `Topou trazer mais gente para os serviços.`); } }) },
       { id: 'cortar', texto: c => (deHoje(c, 'subf_pego') ? 'Sumir e cortar o contato' : 'Recusar: quanto menos gente, melhor'), comportamento: { disciplina: 1 },
         consequencia: c => (deHoje(c, 'subf_pego') ? 'Menos ligação com o caso — e um parceiro que pode falar.' : 'O parceiro não gosta de ouvir não.'),
-        resolver: c => ({ texto: deHoje(c, 'subf_pego') ? 'Você trocou de número e não apareceu mais. O silêncio do outro lado não dura para sempre.' : 'Você disse que não. Ele ficou de cara fechada.', memoria: null,
-          efeito: () => { const f = env(c).fichas?.[quem(c).id]; if (deHoje(c, 'subf_pego')) { promessa(c.v, quem(c).id, false); afastar(c.v, quem(c).id, 'você sumiu quando ele foi pego'); env(c).exposicao = clamp(env(c).exposicao - 4 + (c.r.chance(0.35) ? 18 : 0)); } else if (f) f.confianca = clamp(f.confianca - 8); } }) },
+        resolver: c => ({ texto: deHoje(c, 'subf_pego') ? 'Você trocou de número e não apareceu mais. O silêncio do outro lado não dura para sempre.' : `Você disse que não. ${gp(c, 'contato', 'Ele', 'Ela', 'Elu')} ficou de cara fechada.`, memoria: null,
+          efeito: () => { const f = env(c).fichas?.[quem(c).id]; if (deHoje(c, 'subf_pego')) { promessa(c.v, quem(c).id, false); afastar(c.v, quem(c).id, `você sumiu quando ${gp(c, 'contato', 'ele', 'ela', 'elu')} foi pres${gp(c, 'contato', 'o', 'a', 'e')}`); env(c).exposicao = clamp(env(c).exposicao - 4 + (c.r.chance(0.35) ? 18 : 0)); } else if (f) f.confianca = clamp(f.confianca - 8); } }) },
       { id: 'parar', texto: 'Largar isso de vez', comportamento: { disciplina: 2 },
         resolver: c => ({ texto: 'Foi o aviso que faltava. Você saiu.', memoria: null, efeito: () => parar(c.v, deHoje(c, 'subf_pego') ? 'o parceiro foi pego' : 'não quis mais gente no caminho') }) }
     ]
@@ -110,16 +111,16 @@ export const SUBMUNDO: Conteudo[] = ([
     papeis: { contato: daCena('subc_apreensao') },
     quando: c => deHoje(c, 'subc_apreensao') && ativo(c) && (env(c).divida ?? 0) > 0,
     titulo: c => `${quem(c).nome} quer o dinheiro do lote`,
-    texto: c => `A mercadoria apreendida tinha sido adiantada por ${quem(c).nome}, o seu fornecedor. Para ele, o prejuízo é seu: ${fmt(env(c).divida!)}.`,
+    texto: c => `A mercadoria apreendida tinha sido adiantada por ${quem(c).nome}, o seu fornecedor. Para ${gp(c, 'contato', 'ele', 'ela', 'elu')}, o prejuízo é seu: ${fmt(env(c).divida!)}.`,
     opcoes: [
       { id: 'pagar', texto: c => `Pagar agora (${fmt(env(c).divida!)})`, disponivel: c => (disponivel(c.v) >= env(c).divida! ? true : 'O que você tem não cobre.'),
         resolver: c => ({ texto: 'Você pagou. O fornecedor não disse obrigado — disse "até a próxima".', memoria: null, efeito: () => { pagarPorFora(c.v, 'custos', env(c).divida!); env(c).divida = 0; promessa(c.v, quem(c).id, true); anotar(c.v, 'Pagou o lote apreendido ao fornecedor.'); } }) },
       { id: 'prazo', texto: 'Pedir prazo e prometer pagar',
-        consequencia: () => 'A dívida fica — e a promessa também (ele vai cobrar).',
-        resolver: c => ({ texto: '"Um ano." Ele aceitou o prazo. A palavra agora é o que você tem.', memoria: null, efeito: () => { const f = env(c).fichas?.[quem(c).id]; if (f) f.espera = 'parte'; anotar(c.v, `Prometeu pagar ${fmt(env(c).divida!)} a ${quem(c).nome}.`); c.v.fatos[`sub_prazo_${quem(c).id}`] = c.v.t; } }) },
+        consequencia: c => `A dívida fica — e a promessa também (${gp(c, 'contato', 'ele', 'ela', 'elu')} vai cobrar).`,
+        resolver: c => ({ texto: `"Um ano." ${gp(c, 'contato', 'Ele', 'Ela', 'Elu')} aceitou o prazo. A palavra agora é o que você tem.`, memoria: null, efeito: () => { const f = env(c).fichas?.[quem(c).id]; if (f) f.espera = 'parte'; anotar(c.v, `Prometeu pagar ${fmt(env(c).divida!)} a ${quem(c).nome}.`); c.v.fatos[`sub_prazo_${quem(c).id}`] = c.v.t; } }) },
       { id: 'culpa', texto: 'Dizer que o comprador avisou a polícia', comportamento: { empatia: -1 },
         consequencia: () => 'Pode livrar você da conta — ou queimar duas pessoas de uma vez.',
-        resolver: c => { const colou = c.r.chance(0.4); return { texto: colou ? 'Ele acreditou. A conta foi para outro — e você sabe que não era dele.' : 'Ele não acreditou. Agora, além da dívida, há a mentira.', memoria: null, tom: 'ruim',
+        resolver: c => { const colou = c.r.chance(0.4); return { texto: colou ? `${gp(c, 'contato', 'Ele', 'Ela', 'Elu')} acreditou. A conta foi para outro — e você sabe que não era ${gp(c, 'contato', 'dele', 'dela', 'delu')}.` : `${gp(c, 'contato', 'Ele', 'Ela', 'Elu')} não acreditou. Agora, além da dívida, há a mentira.`, memoria: null, tom: 'ruim',
           efeito: () => { const comp = contatosAtivos(c.v, 'contrabando', 'comprador')[0]; if (colou) { env(c).divida = 0; if (comp) afastar(c.v, comp.id, 'levou a culpa de uma apreensão'); } else promessa(c.v, quem(c).id, false); } }; } }
     ]
   },
@@ -137,7 +138,7 @@ export const SUBMUNDO: Conteudo[] = ([
       { id: 'mudar', texto: 'Apostar em quem quer o lugar', comportamento: { coragem: 1, impulsividade: 1 },
         consequencia: () => 'Se ganhar, você sobe junto. Se perder, cai junto.',
         resolver: c => { const ganhou = c.r.chance(0.42); return { texto: ganhou ? 'Quem você apoiou ganhou. Você subiu junto.' : 'Quem você apoiou perdeu. Agora há gente que não confia mais em você — de nenhum lado.', memoria: ganhou ? 'Ficou do lado que venceu uma disputa no grupo.' : 'Ficou do lado errado numa disputa do grupo.', relevancia: 'biografia', tom: ganhou ? 'bom' : 'ruim',
-          efeito: () => { const o = org(c, 'subo_disputa')!; const s = esp(c, 'organizado'); if (ganhou) { s.posto = Math.min(4, (s.posto ?? 1) + 1) as 1 | 2 | 3 | 4; lembrarOrg(o, c.v.t, 'alianca', 10); promessa(c.v, quem(c).id, true); } else { lembrarOrg(o, c.v.t, 'traicao', -30); for (const x of contatosAtivos(c.v, 'organizado', 'chefe')) x.f.confianca = clamp(x.f.confianca - 25); estresse(c, 8); } } }; } },
+          efeito: () => { const o = org(c, 'subo_disputa')!; const s = esp(c, 'organizado'); if (ganhou) { void s; if (o.relacao === 'membro') definirNivel(c.v, o, Math.min(5, (o.nivel ?? 0) + 1)); lembrarOrg(o, c.v.t, 'alianca', 10); promessa(c.v, quem(c).id, true); } else { lembrarOrg(o, c.v.t, 'traicao', -30); for (const x of contatosAtivos(c.v, 'organizado', 'chefe')) x.f.confianca = clamp(x.f.confianca - 25); estresse(c, 8); } } }; } },
       { id: 'neutro', texto: 'Não se meter',
         resolver: c => ({ texto: 'Você ficou de fora. Ninguém agradeceu, ninguém cobrou — por enquanto.', memoria: null, efeito: () => lembrarOrg(org(c, 'subo_disputa')!, c.v.t, 'conflito', -4) }) },
       { id: 'sair', texto: 'Aproveitar a confusão para sair', comportamento: { disciplina: 1, coragem: 1 },
@@ -227,11 +228,11 @@ export const SUBMUNDO: Conteudo[] = ([
     opcoes: [
       { id: 'pagar', texto: c => `Pagar pelo silêncio (uns ${fmt(valorDaOperacao(c.v, 'fraudes', 2))})`, disponivel: c => (disponivel(c.v) >= valorDaOperacao(c.v, 'fraudes', 2) ? true : 'Não há dinheiro para isso.'),
         consequencia: () => 'Resolve agora; quem cobra uma vez costuma voltar.',
-        resolver: c => ({ texto: 'Pagou. Ele sorriu do jeito de quem vai voltar.', memoria: null, efeito: () => { pagarPorFora(c.v, 'custos', valorDaOperacao(c.v, 'fraudes', 2)); const f = env(c).fichas?.[quem(c).id]; if (f) { f.espera = 'discricao'; f.quebradas++; } } }) },
-      { id: 'enfrentar', texto: 'Dizer que ele também cai junto', comportamento: { coragem: 1 },
-        resolver: c => { const recua = c.r.chance(0.55); return { texto: recua ? 'Ele fez as contas e recuou.' : 'Ele não recuou. Contou.', memoria: null, tom: recua ? 'bom' : 'ruim', efeito: () => { if (!recua) { e(c).exposicao = clamp(e(c).exposicao + 25); const f = env(c).fichas?.[quem(c).id]; if (f) f.traiu = c.v.t; anotar(c.v, `${quem(c).nome} contou o que sabia.`, 'ruim'); } } }; } },
-      { id: 'antes', texto: 'Contar você mesmo, antes dele', comportamento: { coragem: 2 },
-        resolver: c => ({ texto: 'Você procurou quem investiga e contou primeiro. Ele perdeu a moeda de troca — e você, o esquema.', memoria: 'Contou o esquema às autoridades antes de ser denunciado.', relevancia: 'marco',
+        resolver: c => ({ texto: `Pagou. ${gp(c, 'contato', 'Ele', 'Ela', 'Elu')} sorriu do jeito de quem vai voltar.`, memoria: null, efeito: () => { pagarPorFora(c.v, 'custos', valorDaOperacao(c.v, 'fraudes', 2)); const f = env(c).fichas?.[quem(c).id]; if (f) { f.espera = 'discricao'; f.quebradas++; } } }) },
+      { id: 'enfrentar', texto: c => `Dizer que ${gp(c, 'contato', 'ele', 'ela', 'elu')} também cai junto`, comportamento: { coragem: 1 },
+        resolver: c => { const recua = c.r.chance(0.55); return { texto: recua ? `${gp(c, 'contato', 'Ele', 'Ela', 'Elu')} fez as contas e recuou.` : `${gp(c, 'contato', 'Ele', 'Ela', 'Elu')} não recuou. Contou.`, memoria: null, tom: recua ? 'bom' : 'ruim', efeito: () => { if (!recua) { e(c).exposicao = clamp(e(c).exposicao + 25); const f = env(c).fichas?.[quem(c).id]; if (f) f.traiu = c.v.t; anotar(c.v, `${quem(c).nome} contou o que sabia.`, 'ruim'); } } }; } },
+      { id: 'antes', texto: c => `Contar você mesmo, antes ${gp(c, 'contato', 'dele', 'dela', 'delu')}`, comportamento: { coragem: 2 },
+        resolver: c => ({ texto: `Você procurou quem investiga e contou primeiro. ${gp(c, 'contato', 'Ele', 'Ela', 'Elu')} perdeu a moeda de troca — e você, o esquema.`, memoria: 'Contou o esquema às autoridades antes de ser denunciado.', relevancia: 'marco',
           efeito: () => { esp(c, 'fraudes').largou = c.v.t; e(c).exposicao = clamp(e(c).exposicao - 10); c.v.fatos['denunciou_esquema'] = c.v.t; if (!ramosAtivos(env(c)).length) parar(c.v, 'contou o esquema antes de ser denunciado'); } }) }
     ]
   },
@@ -246,10 +247,10 @@ export const SUBMUNDO: Conteudo[] = ([
       { id: 'acertar', texto: c => `Acertar o que devia (uns ${fmt(valorDaOperacao(c.v, env(c).fichas![quem(c).id].especialidade, 1))})`, disponivel: c => (disponivel(c.v) >= valorDaOperacao(c.v, env(c).fichas![quem(c).id].especialidade, 1) ? true : 'O que você tem não cobre.'),
         resolver: c => ({ texto: 'Você pagou o que devia e pediu desculpas do jeito que se pede ali. A confiança voltou um pouco.', memoria: null, efeito: () => { pagarPorFora(c.v, 'custos', valorDaOperacao(c.v, env(c).fichas![quem(c).id].especialidade, 1)); const f = env(c).fichas![quem(c).id]; f.quebradas = Math.max(0, f.quebradas - 1); promessa(c.v, quem(c).id, true); anotar(c.v, `Acertou o que devia a ${quem(c).nome}.`, 'bom'); } }) },
       { id: 'palavra', texto: 'Dar a palavra de novo',
-        consequencia: () => 'Ganha tempo. Se falhar de novo, ele não vai cobrar — vai contar.',
-        resolver: c => ({ texto: 'Ele aceitou a sua palavra. Uma última vez, foi o que disse.', memoria: null, efeito: () => { const f = env(c).fichas![quem(c).id]; f.confianca = clamp(f.confianca - 5); c.v.fatos[`sub_ultima_${quem(c).id}`] = c.v.t; } }) },
-      { id: 'ignorar', texto: 'Mandar ele procurar outro', comportamento: { impulsividade: 1 },
-        resolver: c => { const fala = c.r.chance(0.45); return { texto: fala ? 'Ele foi embora — e foi contar a quem não devia.' : 'Ele foi embora. Você não sabe se isso é o fim.', memoria: null, tom: 'ruim', efeito: () => { if (fala) { const f = env(c).fichas![quem(c).id]; f.traiu = c.v.t; env(c).exposicao = clamp(env(c).exposicao + 15); env(c).traicoes = (env(c).traicoes ?? 0) + 1; anotar(c.v, `${quem(c).nome} falou o seu nome depois da cobrança.`, 'ruim'); } else afastar(c.v, quem(c).id, 'você não cumpriu o combinado'); } }; } }
+        consequencia: c => `Ganha tempo. Se falhar de novo, ${gp(c, 'contato', 'ele', 'ela', 'elu')} não vai cobrar — vai contar.`,
+        resolver: c => ({ texto: `${gp(c, 'contato', 'Ele', 'Ela', 'Elu')} aceitou a sua palavra. Uma última vez, foi o que disse.`, memoria: null, efeito: () => { const f = env(c).fichas![quem(c).id]; f.confianca = clamp(f.confianca - 5); c.v.fatos[`sub_ultima_${quem(c).id}`] = c.v.t; } }) },
+      { id: 'ignorar', texto: c => `Mandar ${gp(c, 'contato', 'ele', 'ela', 'elu')} procurar outro`, comportamento: { impulsividade: 1 },
+        resolver: c => { const fala = c.r.chance(0.45); return { texto: fala ? `${gp(c, 'contato', 'Ele', 'Ela', 'Elu')} foi embora — e foi contar a quem não devia.` : `${gp(c, 'contato', 'Ele', 'Ela', 'Elu')} foi embora. Você não sabe se isso é o fim.`, memoria: null, tom: 'ruim', efeito: () => { if (fala) { const f = env(c).fichas![quem(c).id]; f.traiu = c.v.t; env(c).exposicao = clamp(env(c).exposicao + 15); env(c).traicoes = (env(c).traicoes ?? 0) + 1; anotar(c.v, `${quem(c).nome} falou o seu nome depois da cobrança.`, 'ruim'); } else afastar(c.v, quem(c).id, 'você não cumpriu o combinado'); } }; } }
     ]
   },
   /* ------------------------------------------------------------- encadeada: a reconciliação */
@@ -276,7 +277,7 @@ export const SUBMUNDO: Conteudo[] = ([
       { id: 'pagar', texto: 'Pagar e fechar a porta', disponivel: c => (disponivel(c.v) >= env(c).divida! ? true : 'O que você tem não cobre.'),
         resolver: c => ({ texto: 'Pagou. Agora sim, não há nada pendente.', memoria: 'Pagou a dívida que tinha ficado do passado.', efeito: () => { pagarPorFora(c.v, 'custos', env(c).divida!); env(c).divida = 0; feliz(c, 2); } }) },
       { id: 'parte', texto: 'Pagar uma parte e prometer o resto',
-        resolver: c => ({ texto: 'Ele levou uma parte. O resto ficou na palavra.', memoria: null, efeito: () => { const x = Math.min(disponivel(c.v), Math.round(env(c).divida! / 2)); pagarPorFora(c.v, 'custos', x); env(c).divida = Math.max(0, env(c).divida! - x); } }) },
+        resolver: c => ({ texto: `${gp(c, 'contato', 'Ele', 'Ela', 'Elu')} levou uma parte. O resto ficou na palavra.`, memoria: null, efeito: () => { const x = Math.min(disponivel(c.v), Math.round(env(c).divida! / 2)); pagarPorFora(c.v, 'custos', x); env(c).divida = Math.max(0, env(c).divida! - x); } }) },
       { id: 'ignorar', texto: 'Ignorar', comportamento: { impulsividade: 1 },
         resolver: c => ({ texto: 'Você fingiu que não ouviu. A pressão voltou.', memoria: null, tom: 'ruim', efeito: () => { c.v.fatos['pressao_grupo'] = c.v.t; abalar(c.v, 'a dívida do passado', -5, 8); } }) }
     ]

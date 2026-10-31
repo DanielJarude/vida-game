@@ -17,7 +17,9 @@ import { anotar } from './submundo';
 import { escrever } from '../nucleo';
 import { contrair } from '../texto';
 import { consequencias, fotografar } from './relatoDoCrime';
-import { disponibilidadeServico, encomendarServico, type TipoDeServico } from './servicosPorFora';
+import { agirComSubordinado, disponibilidadeSubordinado, type OqueSubordinado } from './poderInterno';
+import { agirNaOportunidade, disponibilidadeOportunidade } from './mercadoCriminal';
+import { cobrarGolpe, disponibilidadeCobrarGolpe, disponibilidadeServico, encomendarServico, type TipoDeServico } from './servicosPorFora';
 import { disponibilidadeCorrupcao, disponibilidadeRegularizar, regularizar, tentarCorromper, type CanalDeCorrupcao } from './corrupcaoJudicial';
 
 export type OqueRumo = 'moita' | 'voltar_ritmo' | 'fundo' | 'sair_aos_poucos' | 'desistir_de_sair';
@@ -33,7 +35,13 @@ export type AcaoDoCrime =
   /** REWORK 12.3 · C8: pôr em ordem o dinheiro que entrou por fora (abstrato; não protege por inteiro). */
   | { area: 'dinheiro'; oque: 'regularizar' }
   /** REWORK 12.3 · B2: o serviço por fora de quem não é do meio. */
-  | { area: 'servico'; tipo: TipoDeServico; alvoId?: string };
+  | { area: 'servico'; tipo: TipoDeServico; alvoId?: string }
+  /** REWORK 12.35: o golpe do intermediário — cobrar ou deixar quieto. */
+  | { area: 'golpe'; oque: 'cobrar' | 'deixar' }
+  /** REWORK 12.35: quem está abaixo de você na organização (promover, cobrar, pagar a defesa, afastar). */
+  | { area: 'subordinado'; orgId: string; membroId: string; oque: OqueSubordinado }
+  /** REWORK 12.35: as oportunidades que aparecem e somem (aceitar ou deixar passar). */
+  | { area: 'oportunidade'; id: string; oque: 'aceitar' | 'recusar' };
 
 export const ROTULO_DO_RUMO: Record<OqueRumo, string> = {
   moita: 'Ficar na moita (menos dinheiro, menos exposição)', voltar_ritmo: 'Voltar ao ritmo de antes', fundo: 'Ir mais fundo (mais dinheiro, mais compromisso)',
@@ -79,6 +87,9 @@ export function disponibilidadeCrime(v: Vida, a: AcaoDoCrime): Veredito {
     case 'corrupcao': return disponibilidadeCorrupcao(v, a.canal);
     case 'dinheiro': return disponibilidadeRegularizar(v);
     case 'servico': return disponibilidadeServico(v, a.tipo, a.alvoId);
+    case 'subordinado': return disponibilidadeSubordinado(v, a.orgId, a.membroId, a.oque);
+    case 'oportunidade': return disponibilidadeOportunidade(v, a.id, a.oque);
+    case 'golpe': { const d = disponibilidadeCobrarGolpe(v); return a.oque === 'deixar' && d.grau === 'irregular' ? PERMITIDO : d; }
   }
 }
 
@@ -103,5 +114,8 @@ function executarNaArea(v: Vida, a: AcaoDoCrime): { texto: string; tom?: 'bom' |
     case 'corrupcao': return { ...tentarCorromper(v, a.canal), titulo: 'Por fora dos autos' };
     case 'dinheiro': return { ...regularizar(v), titulo: 'O dinheiro de fora' };
     case 'servico': return { ...encomendarServico(v, a.tipo, a.alvoId), titulo: 'Um pedido por fora' };
+    case 'subordinado': return { ...agirComSubordinado(v, a.orgId, a.membroId, a.oque), titulo: 'Quem responde a você' };
+    case 'oportunidade': return { ...agirNaOportunidade(v, a.id, a.oque), titulo: 'Uma oportunidade' };
+    case 'golpe': return { ...cobrarGolpe(v, a.oque === 'deixar'), titulo: 'O dinheiro que sumiu' };
   }
 }

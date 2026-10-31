@@ -530,7 +530,8 @@ describe('a família reage pela personalidade e pela relação (não um medidor 
     const f = comFilho(v, 15, { casa: true });
     v = em(v, x => { x.caminhos.envolvimento!.familia = { [f.p.id]: { sabe: 2, postura: 'rejeita', t: x.t } }; x.caminhos.envolvimento!.parou = x.t; });
     let voltou = false;
-    for (let a = 0; a < 10 && !voltou; a++) { v = em(v, x => { x.t += 12; processarCarreiraCriminal(x); }); voltou = v.caminhos.envolvimento!.familia![f.p.id].postura === 'reconciliada'; }
+    // REWORK 12.35: quem rejeitou leva pelo menos dois anos (e a família não esquece sozinha): a janela é maior.
+    for (let a = 0; a < 20 && !voltou; a++) { v = em(v, x => { x.t += 12; processarCarreiraCriminal(x); }); voltou = v.caminhos.envolvimento!.familia![f.p.id].postura === 'reconciliada'; }
     expect(voltou).toBe(true);
   });
 });
