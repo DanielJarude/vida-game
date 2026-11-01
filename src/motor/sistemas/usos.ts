@@ -283,6 +283,8 @@ export function executarUsoCasa(v: Vida, r: Rng, oque: UsoCasa): string {
       b.tManutencao = v.t;
       v.moradia.padrao = Math.min(5, v.moradia.padrao + (b.estado >= 90 ? 1 : 0));
       (b.historia ??= []).push({ t: v.t, texto: `Reforma: cozinha, banheiro e pintura (${fmt(custo)}).` });
+      // 12.4.1: a reforma renova o que a casa já tem (a conservação), e os acabamentos escolhidos em "A casa por dentro"
+      // continuam os mesmos — o que se escolheu não se perde; o que nunca se escolheu sobe junto com o padrão.
       escrever(v, { texto: `Reformou ${b.nome.startsWith('casa') ? 'a casa' : 'o apartamento'}: dois meses de pó e barulho, ${fmt(custo)} — e a casa parece outra.`, relevancia: 'biografia', tema: 'casa', tom: 'bom', escolha: true });
       return `${fmt(custo)} e dois meses de obra. Valeu mais quando ficou pronta do que custou em paciência.`;
     }
@@ -290,4 +292,10 @@ export function executarUsoCasa(v: Vida, r: Rng, oque: UsoCasa): string {
 }
 
 export const USOS_VEICULO: UsoVeiculo[] = ['passear', 'viajar', 'app', 'personalizar', 'emprestar'];
-export const USOS_CASA: UsoCasa[] = ['festa', 'familia', 'decorar', 'reformar'];
+/**
+ * 12.4.1: "deixar a casa com a sua cara" saiu da lista — era um botão genérico (+3 de humor) que repetia, sem mostrar
+ * nada, o que a casa por dentro faz de verdade (o piso, a parede, a luz, os móveis de cada cômodo, desenhados). O uso
+ * 'decorar' continua no tipo e no motor só para ações antigas guardadas; a tela não o oferece mais. A reforma fica, com
+ * função própria: conserta e renova o imóvel (o estado, o valor, o padrão) — não escolhe acabamento.
+ */
+export const USOS_CASA: UsoCasa[] = ['festa', 'familia', 'reformar'];

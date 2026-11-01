@@ -78,7 +78,7 @@ import { processarPausa } from './sistemas/pausa';
 import { processarRural } from './sistemas/rural';
 import { processarTransformacao } from './sistemas/carreira';
 import { efetivarMudancaMilitar } from './sistemas/militar';
-import { abrirDecisao, abrirProximaDaFila, aplicarAcontecimento, candidatos, conteudoPorId, montarFila, preparar, sortear, vidaComumDoAno } from './conteudo/motor';
+import { abrirDecisao, abrirProximaDaFila, aplicarAcontecimento, candidatos, conteudoPorId, montarFila, preparar, sortear, vidaComumDoAno, vidaPorFasesDoAno } from './conteudo/motor';
 import { contexto } from './conteudo/base';
 import { CATALOGO } from './conteudo/catalogo';
 import type { Conteudo } from './conteudo/base';
@@ -400,6 +400,7 @@ function faseDeConteudo(v: Vida, r: Rng, linhasSistemicas: number): void {
   montarFila(v);
   abrirProximaDaFila(v);
   vidaComumDoAno(v);
+  vidaPorFasesDoAno(v);
 }
 
 export function totalDeConteudo(): { acontecimentos: number; decisoes: number } {

@@ -45,11 +45,11 @@ describe('UX-13 · as áreas em partes, com a cabeça', () => {
     expect(screen.getByRole('group', { name: 'Ver a história por um fio' })).toBeTruthy();
   });
 
-  it('Você: cinco partes, todas na página; só uma à vista (as outras com a classe de fora)', () => {
+  it('Você: seis partes (12.4.1: os gostos saíram de Aparência), todas na página; só uma à vista (as outras com a classe de fora)', () => {
     render(<main><Voce vida={base()} agir={nada} irPara={() => {}} abrirPessoa={() => {}} /></main>);
     const abas = within(screen.getByRole('navigation', { name: 'Partes do retrato' })).getAllByRole('tab');
-    expect(abas.map(a => a.textContent?.replace(/\d+$/, ''))).toEqual(['Resumo', 'Saúde', 'Habilidades', 'Aparência', 'No mundo']);
-    expect(document.querySelectorAll('.voce__parte').length).toBe(5);
+    expect(abas.map(a => a.textContent?.replace(/\d+$/, ''))).toEqual(['Resumo', 'Saúde', 'Habilidades', 'Aparência', 'Gostos e cultura', 'No mundo']);
+    expect(document.querySelectorAll('.voce__parte').length).toBe(6);
     expect(document.querySelectorAll('.voce__parte:not(.voce__parte--fora)').length).toBe(1);
     fireEvent.click(abas[3]);
     expect(document.querySelector('.voce__parte--aparencia')!.classList.contains('voce__parte--fora')).toBe(false);

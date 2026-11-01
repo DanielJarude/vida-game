@@ -318,6 +318,26 @@ export function vidaComumDoAno(v: Vida): void {
   if (!v.momento && !v.fila?.length && decisoesDoAno(v) === 0) abrirDecisao(v, x.c, x.ctx);
 }
 
+/**
+ * 12.4.1 — o fluxo próprio da vida por fases (`acontecimentos1241`): a infância e a adolescência com um de cada, e a vida
+ * adulta com o seu sorteio — o filho que saiu, os dez anos de casados, a goteira da casa própria, os anos no mesmo
+ * emprego, a cidade nova. Gerador derivado (as vidas de antes continuam as mesmas até um deles acontecer); no máximo
+ * um por ano, numa parte dos anos; a decisão só num ano que ainda não teve nenhuma.
+ */
+const DAS_FASES = /^(inf|ado|adu)1241_/;
+export function vidaPorFasesDoAno(v: Vida): void {
+  if (v.morte) return;
+  const r = rngDe(v.id, 'vida_por_fases_1241', v.t);
+  if (!r.chance(idade(v) >= 18 ? 0.28 : 0.22)) return;
+  const cabeDecisao = !v.momento && !v.fila?.length && decisoesDoAno(v) === 0;
+  const lista: { c: Conteudo; ctx: Ctx }[] = [];
+  for (const c of CATALOGO) { if (!c.manual || !DAS_FASES.test(c.id) || (c.tipo === 'decisao' && !cabeDecisao)) continue; const ctx = preparar(c, v, r); if (ctx) lista.push({ c, ctx }); }
+  const x = r.weighted(lista, y => peso(y.c, y.ctx));
+  if (!x) return;
+  if (x.c.tipo === 'acontecimento') { aplicarAcontecimento(v, x.c, x.ctx); return; }
+  if (cabeDecisao) abrirDecisao(v, x.c, x.ctx);
+}
+
 /** Quantas decisões ainda esperam neste ano (para a tela: "mais uma decisão neste ano"). */
 export const esperandoNoAno = (v: Vida) => (v.fila ?? []).filter(x => x.t === v.t).length;
 

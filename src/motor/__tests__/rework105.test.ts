@@ -101,8 +101,11 @@ describe('EDU-05 · o boletim e o histórico na faculdade', () => {
   });
 
   it('trancar e abandonar ficam no histórico; o save devolve tudo igual', () => {
-    let v = naFaculdade('administracao');
-    v = viver(v, 2);
+    // Uma vida que ainda está no curso dois anos depois (12.4.1: com os acontecimentos por fase, a vida da semente 7
+    // tomou outro rumo aos 19); a cena aqui é trancar e abandonar, com o ano livre de decisão aberta.
+    let v = viver(naFaculdade('administracao'), 2);
+    for (let s = 8; !v.educacao.matricula && s < 30; s++) v = viver(naFaculdade('administracao', s), 2);
+    v.momento = null; v.fila = undefined;
     v = executar(v, { tipo: 'trancar' } as never).vida;
     v = executar(v, { tipo: 'destrancar' } as never).vida;
     v = executar(v, { tipo: 'abandonar_curso' } as never).vida;

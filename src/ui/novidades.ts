@@ -26,6 +26,29 @@ export interface NotaDeVersao {
 
 export const NOTAS: NotaDeVersao[] = [
   {
+    versao: '12.4.1',
+    data: '2026-10-31',
+    titulo: 'Expansão da vida personalizada: o corpo inteiro, as lojas, os cômodos e as fases da vida',
+    novidades: [
+      'Aparência de corpo inteiro: cabeça, tronco, braços, pernas e pés, com o tipo de corpo que vem do seu condicionamento, dos hábitos e do que você pratica (magro, mediano, atlético, musculoso, acima do peso) — e muda com a vida.',
+      'Troque peça por peça: na cabeça, no rosto, a parte de cima, a de baixo, por cima, nos pés, o relógio, a pulseira, o anel, o pescoço e as orelhas. A peça que sai fica guardada. Corrente e brincos vão juntos.',
+      'Roupas que se distinguem pela forma: camisa com colarinho e botões, polo, moletom com capuz, listrado, xadrez, camisa de time, vestidos, saias, short, legging, jaquetas, blazer, sobretudo, e calçados de cada tipo. Novas peças, pulseiras e anéis.',
+      'As lojas foram refeitas: lojas especializadas (roupas, sapataria, ótica, acessórios, relojoaria, joalheria, grifes, eletrônicos, eletrodomésticos, móveis, instrumentos, esportes, livraria), as grandes lojas de departamento de cada país e o comércio online internacional. Marcas reais e fictícias, conforme o país: quem mora na Itália encontra o mercado italiano.',
+      'Cada cômodo da casa tem a sua cena: a cor ou o tijolo da parede, o piso, a luz e os objetos que estão nele.',
+      'Novos acontecimentos por fase: a feira de ciências na infância; o intercâmbio, a banda de garagem e a primeira viagem sem os adultos na adolescência; e um fluxo próprio da vida adulta (a casa que esvazia, os dez anos de casados, o filho que pede ajuda com o apartamento, a goteira, os anos no mesmo emprego, a vizinhança nova).',
+      'Casamento ao ar livre: escolha o lugar (sítio, jardim ou praia) — o resumo diz só o que foi escolhido.'
+    ],
+    melhorias: [
+      'Você: os gostos e a vida cultural saíram de Aparência e ganharam a parte "Gostos e cultura".',
+      'Dinheiro: "Para gastar agora" aparece separado do patrimônio. Ao comprar um imóvel, o resultado diz quanto foi pago e quanto sobrou.',
+      'Na casa, "Deixar a casa com a sua cara" saiu (a personalização é cômodo a cômodo); a reforma ficou, para consertar e renovar o imóvel.'
+    ],
+    correcoes: [
+      'Comprar numa loja não faz mais a lista subir: a posição, a seção e os filtros continuam onde estavam.',
+      'Natação e futebol: o adulto que pratica não desaprende (a idade cobrava a cada treino); a aula de natação conta o tempo que tem; a equipe não custa menos que a aula; a criança do projeto social não paga; a oferta de cada cidade muda de verdade de três em três anos.'
+    ]
+  },
+  {
     versao: '12.4',
     data: '2026-10-31',
     titulo: 'Vida personalizada: a casa por dentro, os veículos, os objetos, a roupa e os gostos',

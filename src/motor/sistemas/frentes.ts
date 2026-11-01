@@ -118,9 +118,16 @@ export function praticar(v: Vida, r: Rng, d: Dominio, peso: number, qualidade = 
   const cansaco = (v.mente.estresse > 70 ? -3 : 0) + (v.mente.felicidade < 35 ? -2 : 0);
   f.interesse = clamp(Math.round(f.interesse + rendeu + cansaco + apt * 2 + (r.next() - 0.5) * 4));
   // O corpo cobra depois de certa idade, mesmo praticando.
-  if (m.declinio && i > m.declinio) {
+  // 12.4.1 (auditoria da natação e do futebol): a cobrança é UMA por ano — antes vinha a cada chamada de `praticar`, e
+  // quem treinava mais (o "bater bola" dos pertences, duas práticas da mesma frente) perdia mais. E quem pratica por
+  // conta própria, adulto, aprende devagar mas não desaprende praticando: a idade come no máximo parte do que o ano deu
+  // (a aula de natação aos 30 ia de 8 a 0 em dez anos). Na base e no profissional, a régua de sempre.
+  const competindo = (v.caminhos.esporte?.fase === 'base' || v.caminhos.esporte?.fase === 'profissional') && v.caminhos.esporte.modalidade === d;
+  if (m.declinio && i > m.declinio && f.tDeclinio !== v.t) {
+    f.tDeclinio = v.t;
     const h0 = f.habilidade;
-    f.habilidade = clamp(Math.round((f.habilidade - (i - m.declinio) * 0.5) * 10) / 10);
+    const cobra = (i - m.declinio) * 0.5;
+    f.habilidade = clamp(Math.round((f.habilidade - (competindo || m.categoria !== 'esporte' ? cobra : Math.min(cobra, ganho * 0.8))) * 10) / 10);
     registrarMudancaDeFrente(v, d, 'idade', f.habilidade - h0);
   }
   return ganho;

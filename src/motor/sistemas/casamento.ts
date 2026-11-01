@@ -25,14 +25,32 @@ import { dinheiro as moeda, flex } from '../texto';
 
 /* ------------------------------------------------------------------ O catálogo do planejamento */
 
-export const LOCAIS: Record<PlanoDeCasamento['local'], { rotulo: string; base: number; max?: number }> = {
-  cartorio: { rotulo: 'Só o registro civil, com um almoço', base: 0, max: 40 },
-  casa: { rotulo: 'Na casa da família', base: 1500, max: 80 },
-  salao: { rotulo: 'Num salão de festas', base: 9000 },
-  religioso: { rotulo: 'Num templo, com recepção depois', base: 12000 },
-  ar_livre: { rotulo: 'Ao ar livre (um sítio, um jardim, a praia)', base: 11000 },
-  destino: { rotulo: 'Num destino longe de casa, para poucos', base: 25000, max: 60 }
+export const LOCAIS: Record<PlanoDeCasamento['local'], { rotulo: string; base: number; max?: number; /** Como o lugar entra na frase ("Casaram-se …"). */ onde: string }> = {
+  cartorio: { rotulo: 'Só o registro civil, com um almoço', base: 0, max: 40, onde: 'no registro civil, com um almoço depois' },
+  casa: { rotulo: 'Na casa da família', base: 1500, max: 80, onde: 'na casa da família' },
+  salao: { rotulo: 'Num salão de festas', base: 9000, onde: 'num salão de festas' },
+  religioso: { rotulo: 'Num templo, com recepção depois', base: 12000, onde: 'num templo, com recepção depois' },
+  // 12.4.1: o rótulo listava as três alternativas ("um sítio, um jardim, a praia") e o resumo final repetia as três. Agora
+  // o lugar é uma escolha (`CENARIOS_AR_LIVRE`) e a frase diz só o escolhido.
+  ar_livre: { rotulo: 'Ao ar livre', base: 11000, onde: 'ao ar livre' },
+  destino: { rotulo: 'Num destino longe de casa, para poucos', base: 25000, max: 60, onde: 'num destino longe de casa' }
 };
+/** 12.4.1: os lugares de um casamento ao ar livre — cada um com o seu custo (a praia pede estrutura; o sítio, transporte). */
+export const CENARIOS_AR_LIVRE: Record<NonNullable<PlanoDeCasamento['cenario']>, { rotulo: string; onde: string; fator: number }> = {
+  sitio: { rotulo: 'Num sítio', onde: 'num sítio', fator: 1 },
+  jardim: { rotulo: 'Num jardim', onde: 'em um jardim', fator: 0.9 },
+  praia: { rotulo: 'Na praia', onde: 'na praia', fator: 1.2 }
+};
+/** O lugar do plano como ele foi escolhido, para o resumo (só o escolhido; nunca a lista de alternativas). */
+export function rotuloDoLocal(plano: Pick<PlanoDeCasamento, 'local' | 'cenario'>): string {
+  const c = plano.local === 'ar_livre' && plano.cenario ? CENARIOS_AR_LIVRE[plano.cenario] : undefined;
+  return c ? `Ao ar livre, ${c.onde}` : LOCAIS[plano.local].rotulo;
+}
+/** "ao ar livre, em um jardim" — o lugar dentro da frase. */
+export function ondeFoi(plano: Pick<PlanoDeCasamento, 'local' | 'cenario'>): string {
+  const c = plano.local === 'ar_livre' && plano.cenario ? CENARIOS_AR_LIVRE[plano.cenario] : undefined;
+  return c ? `ao ar livre, ${c.onde}` : LOCAIS[plano.local].onde;
+}
 export const CERIMONIAS: Record<PlanoDeCasamento['cerimonia'], { rotulo: string; custo: number }> = {
   civil: { rotulo: 'Só a cerimônia civil', custo: 0 },
   religiosa: { rotulo: 'Cerimônia religiosa', custo: 2000 },
@@ -50,9 +68,10 @@ const tamanho = (n: number) => (n <= 30 ? 0 : n <= 120 ? 1 : 2);
 const TAMANHO = ['algo pequeno, só os mais próximos', 'uma festa média, com a família e os amigos', 'uma festa grande, com todo mundo'];
 
 /** O custo do casamento planejado, nos preços de onde se mora (arredondado). */
-export function custoDoCasamento(v: Vida, plano: Pick<PlanoDeCasamento, 'local' | 'cerimonia' | 'convidados' | 'estilo'>): number {
+export function custoDoCasamento(v: Vida, plano: Pick<PlanoDeCasamento, 'local' | 'cerimonia' | 'convidados' | 'estilo' | 'cenario'>): number {
   const l = LOCAIS[plano.local], e = ESTILOS[plano.estilo];
-  const bruto = l.base * e.fator + plano.convidados * e.porConvidado + CERIMONIAS[plano.cerimonia].custo + 400;
+  const cen = plano.local === 'ar_livre' && plano.cenario ? CENARIOS_AR_LIVRE[plano.cenario].fator : 1;
+  const bruto = l.base * cen * e.fator + plano.convidados * e.porConvidado + CERIMONIAS[plano.cerimonia].custo + 400;
   return Math.round(bruto * economiaLocal(v.moradia.municipioId).custo / 100) * 100;
 }
 
@@ -105,6 +124,7 @@ export function disponibilidadeCasamento(v: Vida, pessoaId: string, o: OpCasamen
     const l = LOCAIS[o.plano.local];
     if (!l || !CERIMONIAS[o.plano.cerimonia] || !ESTILOS[o.plano.estilo] || !CONVIDADOS.includes(o.plano.convidados as typeof CONVIDADOS[number])) return bloqueio('impossivel', 'Essa opção não existe.');
     if (l.max !== undefined && o.plano.convidados > l.max) return bloqueio('incompativel', `${l.rotulo} não comporta ${o.plano.convidados} convidados (até ${l.max}).`);
+    if (o.plano.local === 'ar_livre' && (!o.plano.cenario || !CENARIOS_AR_LIVRE[o.plano.cenario])) return bloqueio('requisito', 'Ao ar livre, onde? Falta escolher: o sítio, o jardim ou a praia.');
     return PERMITIDO;
   }
   const plano = vin.romance?.noivado?.plano;
@@ -120,21 +140,26 @@ export function executarCasamento(v: Vida, pessoaId: string, o: OpCasamento): st
   const p = v.pessoas[pessoaId], vin = v.vinculos[pessoaId];
   if (o.op === 'planejar') {
     const discorda = discordaDoPlano(v, p, o.plano);
-    vin.romance!.noivado = { t: vin.romance!.noivado?.t ?? v.fatos[`noivado_${pessoaId}`] ?? v.t, plano: { ...o.plano, t: v.t, ...(discorda ? { discorda: true } : {}) } };
-    const custo = custoDoCasamento(v, o.plano);
-    return `Planejado: ${LOCAIS[o.plano.local].rotulo.toLowerCase()}, ${CERIMONIAS[o.plano.cerimonia].rotulo.toLowerCase()}, ${o.plano.convidados} convidados, estilo ${ESTILOS[o.plano.estilo].rotulo.toLowerCase()} — uns ${moeda(custo)} ao todo.${discorda ? ` ${discorda} Topou, mas disse.` : ` ${p.nome} gostou do plano.`}`;
+    // O cenário só vale ao ar livre (trocar para o salão não deixa "a praia" esquecida no plano).
+    const { cenario, ...resto } = o.plano;
+    const plano = { ...resto, ...(o.plano.local === 'ar_livre' && cenario ? { cenario } : {}) };
+    vin.romance!.noivado = { t: vin.romance!.noivado?.t ?? v.fatos[`noivado_${pessoaId}`] ?? v.t, plano: { ...plano, t: v.t, ...(discorda ? { discorda: true } : {}) } };
+    const custo = custoDoCasamento(v, plano);
+    return `Planejado: ${ondeFoi(plano)}, ${CERIMONIAS[plano.cerimonia].rotulo.toLowerCase()}, ${plano.convidados} convidados, estilo ${ESTILOS[plano.estilo].rotulo.toLowerCase()} — uns ${moeda(custo)} ao todo.${discorda ? ` ${discorda} Topou, mas disse.` : ` ${p.nome} gostou do plano.`}`;
   }
   const plano = vin.romance!.noivado!.plano!;
   const custo = custoDoCasamento(v, plano);
-  const { parcelou, parcela } = casar(v, p, custo, `${LOCAIS[plano.local].rotulo.toLowerCase()}, com ${plano.convidados} convidados`);
+  const { parcelou, parcela } = casar(v, p, custo, `${ondeFoi(plano)}, com ${plano.convidados} convidados`);
   // Sem lua de mel no plano, o sinal não fica (a viagem do ano segue a regra de sempre).
   if (!plano.luaDeMel) delete v.fatos[`lua_de_mel_pendente_${p.id}`];
   if (plano.discorda) {
     vin.tensao = clamp(vin.tensao + 10);
     lembrarCom(v, p.id, `Casaram do seu jeito — não do jeito que ${flex(p.genero, 'ele', 'ela', 'elu')} queria.`, 'conflito', 1);
   }
-  const onde = plano.local === 'cartorio' ? `n${registroCivilDe(v).slice(1)}` : LOCAIS[plano.local].rotulo.charAt(0).toLowerCase() + LOCAIS[plano.local].rotulo.slice(1);
-  return `Casaram-se ${onde}, com ${plano.convidados} convidados.${parcelou ? ` A sua parte que faltou virou ${PRAZO_DA_FESTA} parcelas de ${moeda(parcela)}.` : ''}${plano.discorda ? ` ${p.nome} sorriu nas fotos; a conversa sobre como foi fica para depois.` : ''}${plano.luaDeMel ? ` A lua de mel espera na ficha de ${p.nome}, em Pessoas (uma viagem a dois, dentro de um ano).` : ''}`;
+  // 12.4.1: a frase diz o que foi escolhido — o lugar (só o escolhido) e a cerimônia — e nada das alternativas.
+  const onde = plano.local === 'cartorio' ? `n${registroCivilDe(v).slice(1)}` : ondeFoi(plano);
+  const rito = plano.local === 'cartorio' || plano.cerimonia === 'civil' ? '' : plano.cerimonia === 'religiosa' ? ', numa cerimônia religiosa' : ', numa cerimônia simbólica, com celebrante';
+  return `Casaram-se ${onde}${rito}, com ${plano.convidados} convidados.${parcelou ? ` A sua parte que faltou virou ${PRAZO_DA_FESTA} parcelas de ${moeda(parcela)}.` : ''}${plano.discorda ? ` ${p.nome} sorriu nas fotos; a conversa sobre como foi fica para depois.` : ''}${plano.luaDeMel ? ` A lua de mel espera na ficha de ${p.nome}, em Pessoas (uma viagem a dois, dentro de um ano).` : ''}`;
 }
 
 /* ------------------------------------------------------------------ A cerimônia (também a do conteúdo `rom_casamento`) */

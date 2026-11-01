@@ -13,7 +13,7 @@ import { criarRng } from '../../motor/rng';
 import { adulto } from '../../motor/__tests__/cenarios';
 import { receberCoisa } from '../../motor/sistemas/coisas';
 import type { Imovel, Veiculo, Vida } from '../../motor/tipos';
-import { CasaPorDentro, GuardaRoupa, MusicaEArte, OrganizarObjetos, PersonalizarVeiculos } from '../jogo/Personalizar';
+import { CasaPorDentro, GuardaRoupa, GostosECultura, OrganizarObjetos, PersonalizarVeiculos } from '../jogo/Personalizar';
 import { Patrimonio } from '../jogo/Patrimonio';
 
 beforeEach(() => {
@@ -119,8 +119,9 @@ describe('a garagem, a roupa e os gostos', () => {
     expect(container.querySelector('details')!.hasAttribute('open')).toBe(false);
     expect(container.querySelector('summary')!.textContent).toMatch(/streetwear/i);
     cleanup();
-    render(<MusicaEArte vida={v} agir={() => true} />);
-    expect(screen.getByRole('heading', { name: 'Música e arte' })).toBeTruthy();
+    render(<GostosECultura vida={v} agir={() => true} />);
+    expect(screen.getByRole('heading', { name: 'Gostos e preferências' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Atividades artísticas e culturais' })).toBeTruthy();
     expect(screen.getByRole('button', { name: /playlist do ano/ })).toBeTruthy();
     expect(screen.getByText('Produzir uma obra').closest('details')!.hasAttribute('open')).toBe(false);
   });

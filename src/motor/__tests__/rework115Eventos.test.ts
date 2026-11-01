@@ -69,8 +69,10 @@ describe('REWORK 11.5 · a fila do ano', () => {
   });
 
   it('acima do teto do ano, a não urgente espera o ano seguinte — uma vez; a urgente passa', () => {
+    // Uma vida com decisões que cabem acima do teto (12.4.1: a semente fixa mudou de vida com os acontecimentos por fase).
     let v = adulto(30, { semente: 5 });
-    const ids = decisoesQueCabem(v, 6);
+    let ids = decisoesQueCabem(v, 6);
+    for (let s = 6; ids.length < TETO_DO_ANO + 1 && s < 40; s++) { v = adulto(30, { semente: s }); ids = decisoesQueCabem(v, 6); }
     expect(ids.length).toBeGreaterThanOrEqual(TETO_DO_ANO + 1);
     v = transacao(v, x => {
       x.momento = null;

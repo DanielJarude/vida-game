@@ -13,7 +13,7 @@
 
 import { sobDemanda } from '../util/sobDemanda';
 /** REWORK 12.4: os gostos (música e arte) e o que se faz com eles (pacote sob demanda). */
-const MusicaEArte = sobDemanda(() => import('./Personalizar').then(m => m.MusicaEArte));
+const GostosECultura = sobDemanda(() => import('./Personalizar').then(m => m.GostosECultura));
 import { TratamentoEmCurso } from './Alcance';
 import { leituraDaFama } from '../../motor/sistemas/fama';
 import { redeDeSaude } from '../../motor/sistemas/saude';
@@ -55,7 +55,7 @@ export type Destino = Aba;
  * as Habilidades (e o seu jeito), a Aparência e o Mundo (o nome público, os lugares, o que construiu, a família de antes).
  * O índice de âncoras (que só rolava a página) deu lugar às abas; a parte aberta é guardada pelo Jogo.
  */
-export type ParteVoce = 'resumo' | 'saude' | 'habilidades' | 'aparencia' | 'mundo';
+export type ParteVoce = 'resumo' | 'saude' | 'habilidades' | 'aparencia' | 'gostos' | 'mundo';
 
 interface Props { vida: Vida; agir: (a: Acao) => boolean; irPara: (a: Destino) => void; abrirPessoa: (id: string) => void; parte?: ParteVoce; irParte?: (p: ParteVoce) => void }
 
@@ -92,7 +92,8 @@ export function Voce({ vida, agir, irPara, abrirPessoa, parte: parteDeFora, irPa
         { id: 'resumo', rotulo: 'Resumo', oque: 'Os atributos, a cabeça, a semana e o dinheiro' },
         { id: 'saude', rotulo: 'Saúde', oque: 'O prontuário: o que o corpo sinaliza e o que tem nome', conta: sinais.length + condicoes.length },
         { id: 'habilidades', rotulo: 'Habilidades', oque: 'No que você é bom e o seu jeito' },
-        { id: 'aparencia', rotulo: 'Aparência', oque: 'O visual e o estilo' },
+        { id: 'aparencia', rotulo: 'Aparência', oque: 'O corpo, o rosto, o cabelo, a roupa, os acessórios' },
+        ...(i >= 8 ? [{ id: 'gostos' as ParteVoce, rotulo: 'Gostos e cultura', oque: 'O que você ouve e gosta; shows, exposições, obras' }] : []),
         { id: 'mundo', rotulo: 'No mundo', oque: 'O nome público, os lugares, o que construiu, a família' }
       ]} />
 
@@ -178,7 +179,10 @@ export function Voce({ vida, agir, irPara, abrirPessoa, parte: parteDeFora, irPa
 
       </div>
 
-      <div className={fora('aparencia')} id="voce-aparencia"><AparenciaEEstilo vida={vida} agir={agir} irPara={irPara} /><MusicaEArte vida={vida} agir={agir} /></div>
+      <div className={fora('aparencia')} id="voce-aparencia"><AparenciaEEstilo vida={vida} agir={agir} irPara={irPara} /></div>
+
+      {/* 12.4.1: os gostos e a vida cultural saíram de Aparência — não são o visual. */}
+      <div className={fora('gostos')} id="voce-gostos">{i >= 8 && <GostosECultura vida={vida} agir={agir} />}</div>
 
       <div className={fora('mundo')}>
       <OSeuNome vida={vida} agir={agir} />

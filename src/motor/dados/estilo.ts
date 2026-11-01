@@ -80,7 +80,7 @@ export interface ItemEstilo {
    * pescoço ou nas orelhas. Sem `visual` (o relógio), usar e guardar é posse
    * de verdade — aparece em Você, não no retrato.
    */
-  lugar?: 'pulso' | 'joia' | LugarDoCorpo;
+  lugar?: 'pulso' | 'joia' | 'orelha' | 'pulseira' | 'anel' | LugarDoCorpo;
   /** REWORK 12.4: os estilos a que a peça pertence (`ESTILOS`) — uma peça pode ser de vários. */
   estilos?: string[];
   /** REWORK 12.4: as ocasiões em que a peça cai bem (`adequacaoDaRoupa`). */
@@ -163,8 +163,8 @@ export const ITENS_ESTILO: readonly ItemEstilo[] = [
   { id: 'relogio_digital', nome: 'Relógio digital esportivo', categoria: 'acessorio', lugar: 'pulso', preco: 450, descricao: 'Cronômetro, alarme, à prova d’água. Aguenta treino.' },
   { id: 'smartwatch', nome: 'Relógio inteligente', categoria: 'acessorio', lugar: 'pulso', preco: 1800, descricao: 'Mensagem no pulso, passos contados, o coração medido.' },
   { id: 'corrente_prata', nome: 'Corrente de prata', categoria: 'acessorio', lugar: 'joia', preco: 380, visual: { joia: 'corrente' }, descricao: 'Fina, discreta, no pescoço.' },
-  { id: 'brincos', nome: 'Brincos', categoria: 'acessorio', lugar: 'joia', preco: 240, visual: { joia: 'brincos' }, descricao: 'Argola pequena ou ponto de luz.' },
-  { id: 'brincos_ouro', nome: 'Brincos de ouro', categoria: 'acessorio', lugar: 'joia', preco: 3400, luxo: true, visual: { joia: 'brincos' }, descricao: 'Ouro dezoito, pedra pequena. Um presente que fica.' },
+  { id: 'brincos', nome: 'Brincos', categoria: 'acessorio', lugar: 'orelha', preco: 240, visual: { joia: 'brincos' }, descricao: 'Argola pequena ou ponto de luz.' },
+  { id: 'brincos_ouro', nome: 'Brincos de ouro', categoria: 'acessorio', lugar: 'orelha', preco: 3400, luxo: true, visual: { joia: 'brincos' }, descricao: 'Ouro dezoito, pedra pequena. Um presente que fica.' },
 
   // ---------------------------------------- REWORK 12.4 · o guarda-roupa por peças e por estilo
   // Parte de cima
@@ -216,7 +216,28 @@ export const ITENS_ESTILO: readonly ItemEstilo[] = [
   { id: 'turbante', nome: 'Turbante', categoria: 'chapeu', preco: 80, visual: { chapeu: 'lenco' }, estilos: ['afro', 'alternativo'], ocasioes: ['dia', 'festa', 'evento', 'encontro'], descricao: 'Amarrado alto, tecido de estampa forte.' },
   { id: 'oculos_juliet', nome: 'Óculos espelhado (Juliet)', categoria: 'oculos', preco: 160, visual: { oculos: 'sol' }, estilos: ['baile', 'urbano', 'hiphop'], ocasioes: ['dia', 'festa'], descricao: 'Lente espelhada colorida, armação que abraça o rosto.' },
   { id: 'corrente_grossa', nome: 'Corrente grossa', categoria: 'acessorio', lugar: 'joia', preco: 650, visual: { joia: 'corrente' }, estilos: ['hiphop', 'baile', 'urbano'], ocasioes: ['dia', 'festa'], descricao: 'Elo grosso no peito, por cima da camiseta.' },
-  { id: 'guias', nome: 'Guias e fios de conta', categoria: 'acessorio', lugar: 'joia', preco: 90, visual: { joia: 'corrente' }, estilos: ['afro', 'tradicional'], ocasioes: ['dia', 'evento'], descricao: 'As contas das cores de quem protege.' }
+  { id: 'guias', nome: 'Guias e fios de conta', categoria: 'acessorio', lugar: 'joia', preco: 90, visual: { joia: 'corrente' }, estilos: ['afro', 'tradicional'], ocasioes: ['dia', 'evento'], descricao: 'As contas das cores de quem protege.' },
+  // 12.4.1 — o guarda-roupa que faltava: peças que se distinguem pela silhueta (a gola polo, o listrado de manga longa,
+  // o tricô, a seda, o cropped; o short, a legging, a saia lápis, o vestido longo), os calçados abertos e baixos e, no
+  // pulso e nas mãos, as pulseiras e os anéis (que agora aparecem na figura de corpo inteiro).
+  { id: 'camisa_polo', nome: 'Camisa polo', categoria: 'roupa', lugar: 'tronco', preco: 180, visual: { roupa: 'basica' }, estilos: ['casual', 'tradicional', 'esportivo'], ocasioes: ['dia', 'trabalho', 'encontro'], descricao: 'Piquet, gola com dois botões, manga curta.' },
+  { id: 'camiseta_listrada', nome: 'Camiseta listrada (marinière)', categoria: 'roupa', lugar: 'tronco', preco: 160, visual: { roupa: 'basica' }, estilos: ['vintage', 'minimalista', 'casual'], ocasioes: ['dia', 'estudo', 'encontro'], descricao: 'Listras azul-marinho no branco, gola canoa, manga longa.' },
+  { id: 'sueter_tricot', nome: 'Suéter de tricô', categoria: 'roupa', lugar: 'tronco', preco: 340, visual: { roupa: 'basica' }, estilos: ['minimalista', 'tradicional', 'vintage'], ocasioes: ['dia', 'trabalho', 'estudo'], descricao: 'Ponto grosso, punho e barra canelados.' },
+  { id: 'blusa_seda', nome: 'Blusa de seda', categoria: 'roupa', lugar: 'tronco', preco: 520, visual: { roupa: 'elegante' }, estilos: ['elegante', 'social'], ocasioes: ['trabalho', 'evento', 'encontro'], descricao: 'Decote em V, caimento fluido, brilho discreto.' },
+  { id: 'cropped', nome: 'Blusa cropped', categoria: 'roupa', lugar: 'tronco', preco: 110, visual: { roupa: 'basica' }, estilos: ['urbano', 'baile', 'casual'], ocasioes: ['dia', 'festa'], descricao: 'Curta, acima da cintura.' },
+  { id: 'short_jeans', nome: 'Short jeans', categoria: 'roupa', lugar: 'pernas', preco: 140, estilos: ['casual', 'urbano', 'vintage'], ocasioes: ['dia', 'festa'], descricao: 'Barra desfiada, cintura alta.' },
+  { id: 'legging', nome: 'Legging', categoria: 'roupa', lugar: 'pernas', preco: 130, estilos: ['esportivo', 'casual'], ocasioes: ['esporte', 'dia'], descricao: 'Justa, elástica, para o treino e para o resto.' },
+  { id: 'saia_lapis', nome: 'Saia lápis', categoria: 'roupa', lugar: 'pernas', preco: 230, estilos: ['social', 'elegante'], ocasioes: ['trabalho', 'evento'], descricao: 'Reta, no joelho, com fenda atrás.' },
+  { id: 'vestido_longo', nome: 'Vestido longo de alça', categoria: 'roupa', lugar: 'corpo', preco: 420, visual: { roupa: 'alternativa' }, estilos: ['vintage', 'alternativo', 'casual'], ocasioes: ['dia', 'festa', 'encontro'], descricao: 'Até o tornozelo, tecido leve, alça fina.' },
+  { id: 'sandalia', nome: 'Sandália de tiras', categoria: 'roupa', lugar: 'pes', preco: 190, estilos: ['casual', 'elegante', 'vintage'], ocasioes: ['dia', 'festa', 'encontro'], descricao: 'Tiras de couro, sola baixa.' },
+  { id: 'sapatilha', nome: 'Sapatilha', categoria: 'roupa', lugar: 'pes', preco: 150, estilos: ['casual', 'minimalista', 'social'], ocasioes: ['dia', 'trabalho', 'estudo'], descricao: 'Bico redondo, sem salto, um laço pequeno.' },
+  { id: 'mocassim', nome: 'Mocassim', categoria: 'roupa', lugar: 'pes', preco: 460, estilos: ['social', 'elegante', 'tradicional'], ocasioes: ['trabalho', 'evento', 'encontro'], descricao: 'Couro macio, sem cadarço, a costura em volta do peito do pé.' },
+  { id: 'pulseira_couro', nome: 'Pulseira de couro', categoria: 'acessorio', lugar: 'pulseira', preco: 70, estilos: ['rock', 'casual', 'alternativo'], ocasioes: ['dia', 'festa'], descricao: 'Tira trançada, fecho de pressão.' },
+  { id: 'pulseira_prata', nome: 'Pulseira de prata', categoria: 'acessorio', lugar: 'pulseira', preco: 320, estilos: ['minimalista', 'elegante', 'casual'], ocasioes: ['dia', 'trabalho', 'evento'], descricao: 'Elos finos de prata 925.' },
+  { id: 'pulseira_ouro', nome: 'Pulseira de ouro', categoria: 'acessorio', lugar: 'pulseira', preco: 4200, luxo: true, estilos: ['luxuoso', 'hiphop', 'elegante'], ocasioes: ['evento', 'festa', 'encontro'], descricao: 'Ouro dezoito, elo grumet.' },
+  { id: 'pulseira_contas', nome: 'Pulseira de contas', categoria: 'acessorio', lugar: 'pulseira', preco: 45, estilos: ['afro', 'alternativo', 'regional'], ocasioes: ['dia', 'festa'], descricao: 'Contas coloridas num fio elástico.' },
+  { id: 'anel_prata', nome: 'Anel de prata', categoria: 'acessorio', lugar: 'anel', preco: 180, estilos: ['rock', 'minimalista', 'alternativo'], ocasioes: ['dia', 'festa', 'trabalho'], descricao: 'Aro liso, largo.' },
+  { id: 'anel_ouro', nome: 'Anel de ouro com pedra', categoria: 'acessorio', lugar: 'anel', preco: 3600, luxo: true, estilos: ['luxuoso', 'elegante'], ocasioes: ['evento', 'encontro'], descricao: 'Ouro e uma pedra vermelha cravada.' }
 ];
 
 /**

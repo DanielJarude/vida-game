@@ -8,7 +8,7 @@
 import { useState } from 'react';
 import type { Acao } from '../../motor/acoes';
 import type { Pessoa, PlanoDeCasamento, Vida, Vinculo } from '../../motor/tipos';
-import { CERIMONIAS, CONVIDADOS, custoDoCasamento, discordaDoPlano, ESTILOS, LOCAIS, luaDeMelPendente, pagamentoDoCasamento, preferenciaDoPar, PRAZO_DA_FESTA } from '../../motor/sistemas/casamento';
+import { CENARIOS_AR_LIVRE, CERIMONIAS, CONVIDADOS, rotuloDoLocal, custoDoCasamento, discordaDoPlano, ESTILOS, LOCAIS, luaDeMelPendente, pagamentoDoCasamento, preferenciaDoPar, PRAZO_DA_FESTA } from '../../motor/sistemas/casamento';
 import { estaNoivo } from '../../motor/sistemas/romance';
 import { BotaoAcao, Escolha } from '../comum';
 import { dinheiroCurto } from '../leituraMaterial';
@@ -19,7 +19,7 @@ const PADRAO: Plano = { local: 'salao', cerimonia: 'civil', convidados: 60, esti
 
 export function PlanejarCasamento({ vida, p, vin, agir }: { vida: Vida; p: Pessoa; vin: Vinculo; agir: (a: Acao) => boolean }) {
   const salvo = vin.romance?.noivado?.plano;
-  const [plano, setPlano] = useState<Plano>(salvo ? { local: salvo.local, cerimonia: salvo.cerimonia, convidados: salvo.convidados, estilo: salvo.estilo, luaDeMel: salvo.luaDeMel } : PADRAO);
+  const [plano, setPlano] = useState<Plano>(salvo ? { local: salvo.local, ...(salvo.cenario ? { cenario: salvo.cenario } : {}), cerimonia: salvo.cerimonia, convidados: salvo.convidados, estilo: salvo.estilo, luaDeMel: salvo.luaDeMel } : PADRAO);
   if (!estaNoivo(vida, vin)) return null;
   const mudar = <K extends keyof Plano>(k: K, x: Plano[K]) => setPlano(s => ({ ...s, [k]: x }));
   const maxLocal = LOCAIS[plano.local].max;
@@ -27,7 +27,7 @@ export function PlanejarCasamento({ vida, p, vin, agir }: { vida: Vida; p: Pesso
   const pg = pagamentoDoCasamento(vida, p, custo);
   const pref = preferenciaDoPar(vida, p);
   const discorda = discordaDoPlano(vida, p, plano);
-  const igualAoSalvo = !!salvo && salvo.local === plano.local && salvo.cerimonia === plano.cerimonia && salvo.convidados === plano.convidados && salvo.estilo === plano.estilo && salvo.luaDeMel === plano.luaDeMel;
+  const igualAoSalvo = !!salvo && salvo.local === plano.local && salvo.cenario === plano.cenario && salvo.cerimonia === plano.cerimonia && salvo.convidados === plano.convidados && salvo.estilo === plano.estilo && salvo.luaDeMel === plano.luaDeMel;
   return (
     <section className="casamento" aria-label="O planejamento do casamento">
       <h3 className="ficha__subtitulo">O casamento</h3>
@@ -36,13 +36,20 @@ export function PlanejarCasamento({ vida, p, vin, agir }: { vida: Vida; p: Pesso
         <p className="convite__ornamento" aria-hidden>✦</p>
         <p className="convite__nomes manuscrito">{vida.eu.nome} &amp; {p.nome}</p>
         <p className="convite__linha">Noivos desde {Math.floor((vin.romance?.noivado?.t ?? vida.t) / 12)}{vin.romance?.noivado?.lugar ? ` · o pedido foi ${vin.romance.noivado.lugar === 'casa' ? 'em casa' : vin.romance.noivado.lugar === 'publico' ? 'em público' : 'num jantar'}` : ''}{vin.romance?.noivado?.anel ? ` · ${vin.romance.noivado.anel === 'nenhum' ? 'sem anel' : `anel ${vin.romance.noivado.anel === 'classico' ? 'clássico' : vin.romance.noivado.anel}`}` : ''}</p>
-        <p className="convite__plano">{LOCAIS[plano.local].rotulo} · {CERIMONIAS[plano.cerimonia].rotulo} · {plano.convidados} convidados · {ESTILOS[plano.estilo].rotulo}{plano.luaDeMel ? ' · lua de mel' : ''}</p>
+        <p className="convite__plano">{rotuloDoLocal(plano)} · {CERIMONIAS[plano.cerimonia].rotulo} · {plano.convidados} convidados · {ESTILOS[plano.estilo].rotulo}{plano.luaDeMel ? ' · lua de mel' : ''}</p>
         <p className="convite__linha">{salvo ? (igualAoSalvo ? 'Este é o plano combinado.' : 'Mudanças ainda não combinadas.') : 'Ainda um rascunho: nada combinado.'} Orçamento: {dinheiroCurto(custo)}.</p>
       </div>
       <p className="ficha__porque">{pref.texto}</p>
       <div className="campo"><span className="campo__rotulo">Onde</span>
-        <Escolha rotulo="Onde" opcoes={Object.entries(LOCAIS).map(([id, l]) => ({ id: id as Plano['local'], rotulo: l.rotulo }))} valor={plano.local} aoMudar={x => { mudar('local', x); const m = LOCAIS[x].max; if (m !== undefined && plano.convidados > m) mudar('convidados', [...CONVIDADOS].reverse().find(n => n <= m) ?? 10); }} />
+        <Escolha rotulo="Onde" opcoes={Object.entries(LOCAIS).map(([id, l]) => ({ id: id as Plano['local'], rotulo: l.rotulo }))} valor={plano.local} aoMudar={x => { mudar('local', x); if (x !== 'ar_livre') setPlano(s => { const { cenario: _c, ...r } = s; return r; }); const m = LOCAIS[x].max; if (m !== undefined && plano.convidados > m) mudar('convidados', [...CONVIDADOS].reverse().find(n => n <= m) ?? 10); }} />
       </div>
+      {/* 12.4.1: ao ar livre, o lugar é uma escolha (antes, o rótulo listava os três e o resumo repetia a lista). */}
+      {plano.local === 'ar_livre' && (
+        <div className="campo"><span className="campo__rotulo">Ao ar livre, onde</span>
+          <Escolha rotulo="Ao ar livre, onde" opcoes={Object.entries(CENARIOS_AR_LIVRE).map(([id, c]) => ({ id: id as NonNullable<Plano['cenario']>, rotulo: c.rotulo }))} valor={(plano.cenario ?? '') as NonNullable<Plano['cenario']>} aoMudar={x => mudar('cenario', x)} />
+          {!plano.cenario && <span className="campo__nota">Falta escolher o lugar.</span>}
+        </div>
+      )}
       <div className="campo"><span className="campo__rotulo">A cerimônia</span>
         <Escolha rotulo="A cerimônia" opcoes={Object.entries(CERIMONIAS).map(([id, c]) => ({ id: id as Plano['cerimonia'], rotulo: c.rotulo }))} valor={plano.cerimonia} aoMudar={x => mudar('cerimonia', x)} />
       </div>

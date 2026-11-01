@@ -15,6 +15,11 @@ import type { Especie } from '../../motor/tipos';
 import { animal, palavraDoBicho } from '../../motor/dados/animais';
 import { FiguraCao, FiguraGato, morfologiaCao, morfologiaGato, type Porte } from './caesEGatos';
 import type { Genero, Visual } from '../../motor/tipos';
+import { pecasDoItem, type Peca } from './pecas';
+
+/** A cor da pele e a da sombra (a figura de corpo inteiro pinta o corpo com as mesmas). */
+export const corDaPele = (pele: string): [string, string] => PELE[pele] ?? PELE.p3;
+export const corDoCabelo = (nome: string): string => CABELO[nome] ?? CABELO.castanho;
 
 const PELE: Record<string, [string, string]> = {
   p1: ['#f3d7c2', '#e2b99f'], p2: ['#e9c09d', '#d4a27e'], p3: ['#d49f75', '#bd8559'],
@@ -88,11 +93,13 @@ interface Props {
   expressao?: Expressao;
   /** Pet: o porte (de `pessoa.pet.porte`) — entra na morfologia do cão. */
   porte?: Porte;
+  /** 12.4.1: só a cabeça (sem o busto, o pescoço e o fundo) — a figura de corpo inteiro desenha o resto. */
+  soCabeca?: boolean;
 }
 
 export type Expressao = 'bem' | 'neutro' | 'cansado' | 'abatido' | 'tenso' | 'doente';
 
-export const Retrato = memo(function Retrato({ visual, genero, idade, semente = '', tamanho = 64, rotulo, especie, falecido, expressao = 'neutro', porte }: Props) {
+export const Retrato = memo(function Retrato({ visual, genero, idade, semente = '', tamanho = 64, rotulo, especie, falecido, expressao = 'neutro', porte, soCabeca }: Props) {
   if (especie) return <RetratoPet especie={especie} tamanho={tamanho} rotulo={rotulo} semente={semente} porte={porte} />;
   const v: Visual = visual ?? { pele: 'p3', cabelo: 'curto', corCabelo: 'castanho', olhos: 'castanho' };
   const f = faseDe(idade);
@@ -155,7 +162,10 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
     C ${cx + w / 2} ${cy + hh * 0.3} ${cx + jaw} ${queixo} ${cx} ${queixo}
     C ${cx - jaw} ${queixo} ${cx - w / 2} ${cy + hh * 0.3} ${cx - w / 2} ${cy} Z`;
 
-  const roupa = f === 'bebe' ? ['#c9d6e3', '#e3cdd6', '#d7e0c8', '#e6dcc4'][h % 4] : v.roupa && ROUPA_ESTILO[v.roupa] ? ROUPA_ESTILO[v.roupa][h % ROUPA_ESTILO[v.roupa].length] : ROUPA[h % ROUPA.length];
+  // 12.4.1: a peça de cima em uso (o casaco por cima, o vestido, a blusa), com a cor e a gola dela — antes, cinco
+  // "jeitos de vestir" com a mesma silhueta; camiseta, camisa e moletom saíam quase iguais.
+  const sup = f !== 'bebe' && v.superior ? (() => { const [item, id] = v.superior.split('#'); const c = pecasDoItem(item, id ?? item); return c.casaco ?? c.inteira ?? c.cima; })() : undefined;
+  const roupa = f === 'bebe' ? ['#c9d6e3', '#e3cdd6', '#d7e0c8', '#e6dcc4'][h % 4] : sup && 'cor' in sup ? (sup.cor as string) : v.roupa && ROUPA_ESTILO[v.roupa] ? ROUPA_ESTILO[v.roupa][h % ROUPA_ESTILO[v.roupa].length] : ROUPA[h % ROUPA.length];
   const ombro = 30 * G.corpo * (adultoOuAdol && masc ? 1.12 : 1);
   const pescocoW = f === 'bebe' ? 0 : w * (masc && adultoOuAdol ? 0.36 : 0.3);
   const corpoTopo = queixo + (f === 'bebe' ? -2 : 4);
@@ -183,28 +193,30 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
   return (
     <svg
       className={`retrato retrato--${f}${falecido ? ' retrato--falecido' : ''} retrato--${expressao}`}
-      viewBox="10 8 80 80" width={tamanho} height={tamanho} style={{ background: fundo }}
-      role="img" aria-label={rotulo ?? 'Retrato'}
+      viewBox="10 8 80 80" width={tamanho} height={tamanho} style={soCabeca ? undefined : { background: fundo }}
+      role="img" aria-label={rotulo ?? 'Retrato'} data-so-cabeca={soCabeca || undefined}
     >
       {/* Cabelo de trás */}
       {/* As camadas do cabelo marcadas (a auditoria geométrica dos retratos mede o que é cabelo — playtest/cabelos.mjs). */}
       {cabelo.atras && <g className="retrato__cabelo retrato__cabelo--atras">{cabelo.atras}</g>}
 
+      {!soCabeca && (<>
       {/* Corpo */}
       <path d={`M ${cx - ombro} 101 C ${cx - ombro} ${corpoTopo + 10} ${cx - ombro * 0.55} ${corpoTopo + 3} ${cx} ${corpoTopo + 3}
                C ${cx + ombro * 0.55} ${corpoTopo + 3} ${cx + ombro} ${corpoTopo + 10} ${cx + ombro} 101 Z`} fill={roupa} />
       {pescocoW > 0 && (
         <path d={`M ${cx - pescocoW / 2} ${queixo - 6} L ${cx - pescocoW / 2} ${corpoTopo + 5} Q ${cx} ${corpoTopo + 9} ${cx + pescocoW / 2} ${corpoTopo + 5} L ${cx + pescocoW / 2} ${queixo - 6} Z`} fill={sombra} />
       )}
-      {f !== 'bebe' && (
+      {f !== 'bebe' && !sup && (
         <path d={fem ? `M ${cx - pescocoW * 0.9} ${corpoTopo + 4} Q ${cx} ${corpoTopo + 14} ${cx + pescocoW * 0.9} ${corpoTopo + 4}` : `M ${cx - pescocoW * 0.75} ${corpoTopo + 3.5} L ${cx} ${corpoTopo + 10} L ${cx + pescocoW * 0.75} ${corpoTopo + 3.5}`}
           fill="none" stroke={misturar(roupa, '#000000', 0.25)} strokeWidth={1.4} strokeLinejoin="round" />
       )}
       {/* Gola de camisa (social, elegante) e a faixa do agasalho (esportiva). */}
-      {f !== 'bebe' && (v.roupa === 'social' || v.roupa === 'elegante') && (
+      {f !== 'bebe' && sup && <DetalheDoBusto peca={sup} cx={cx} topo={corpoTopo} ombro={ombro} pescoco={pescocoW} cor={roupa} fem={fem} />}
+      {f !== 'bebe' && !sup && (v.roupa === 'social' || v.roupa === 'elegante') && (
         <path d={`M ${cx - pescocoW * 0.95} ${corpoTopo + 3} L ${cx - 1.5} ${corpoTopo + 11} L ${cx - pescocoW * 0.2} ${corpoTopo + 3} Z M ${cx + pescocoW * 0.95} ${corpoTopo + 3} L ${cx + 1.5} ${corpoTopo + 11} L ${cx + pescocoW * 0.2} ${corpoTopo + 3} Z`} fill="#eeeae2" opacity={0.92} />
       )}
-      {f !== 'bebe' && v.roupa === 'esportiva' && (
+      {f !== 'bebe' && !sup && v.roupa === 'esportiva' && (
         <path d={`M ${cx - ombro * 0.62} ${corpoTopo + 12} L ${cx - ombro * 0.62} 101 M ${cx + ombro * 0.62} ${corpoTopo + 12} L ${cx + ombro * 0.62} 101`} stroke="#f2efe8" strokeWidth={1.6} opacity={0.8} />
       )}
 
@@ -213,6 +225,8 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
         <path className="retrato__joia" d={`M ${cx - pescocoW * 0.72} ${corpoTopo + 3.6} Q ${cx} ${corpoTopo + 11.5} ${cx + pescocoW * 0.72} ${corpoTopo + 3.6}`} fill="none" stroke={v.joia === 'corrente_ouro' ? '#c9a14a' : '#c9ccd1'} strokeWidth={0.9} strokeLinecap="round" />
       )}
 
+      </>)}
+
       {/* Orelhas */}
       <ellipse cx={cx - w / 2 + 0.6 - orelhaFora} cy={olhoY + 3} rx={orelhaRx} ry={4} fill={sombra} transform={orelhaFora > 1 ? `rotate(-12 ${cx - w / 2} ${olhoY + 3})` : undefined} />
       <ellipse cx={cx + w / 2 - 0.6 + orelhaFora} cy={olhoY + 3} rx={orelhaRx} ry={4} fill={sombra} transform={orelhaFora > 1 ? `rotate(12 ${cx + w / 2} ${olhoY + 3})` : undefined} />
@@ -220,7 +234,7 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
       {/* Rosto */}
       <path d={rosto} fill={pele} />
       {/* Brincos: um ponto de luz na ponta da orelha. */}
-      {f !== 'bebe' && v.joia === 'brincos' && (
+      {f !== 'bebe' && (v.joia === 'brincos' || v.brincos) && (
         <g className="retrato__joia" fill="#d8b45a">
           <circle cx={cx - w / 2 + 0.2} cy={olhoY + 7.4} r={1} />
           <circle cx={cx + w / 2 - 0.2} cy={olhoY + 7.4} r={1} />
@@ -338,6 +352,68 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
     </svg>
   );
 });
+
+/**
+ * 12.4.1 — a peça de cima no busto: a gola e o que a distingue (o colarinho e a carcela da camisa, o capuz e o cordão do
+ * moletom, a gola polo, o V, a canoa; as listras, o xadrez, o escudo da camisa de time; o casaco aberto com a lapela).
+ */
+function DetalheDoBusto({ peca, cx, topo, ombro, pescoco, cor, fem }: { peca: Peca; cx: number; topo: number; ombro: number; pescoco: number; cor: string; fem: boolean }) {
+  const escuro = misturar(cor, '#000000', 0.28);
+  const claro = misturar(cor, '#ffffff', 0.55);
+  const c2 = 'cor2' in peca && peca.cor2 ? peca.cor2 : claro;
+  const gola = 'gola' in peca ? peca.gola : undefined;
+  const estampa = 'estampa' in peca ? peca.estampa : undefined;
+  const corpo = `M ${cx - ombro} 101 C ${cx - ombro} ${topo + 10} ${cx - ombro * 0.55} ${topo + 3} ${cx} ${topo + 3} C ${cx + ombro * 0.55} ${topo + 3} ${cx + ombro} ${topo + 10} ${cx + ombro} 101 Z`;
+  const id = `b${Math.round(cx * 7 + topo * 13 + ombro)}${peca.parte}${'forma' in peca ? peca.forma : ''}`;
+  return (
+    <g className="retrato__peca" data-peca={'forma' in peca ? peca.forma : peca.parte}>
+      {(estampa === 'listras' || estampa === 'xadrez') && (
+        <>
+          <clipPath id={id}><path d={corpo} /></clipPath>
+          <g clipPath={`url(#${id})`} stroke={c2} strokeWidth={estampa === 'listras' ? 1.6 : 1.1} opacity={estampa === 'listras' ? 0.9 : 0.55}>
+            {[0, 1, 2, 3, 4, 5, 6, 7].map(k => <line key={k} x1={cx - ombro} x2={cx + ombro} y1={topo + 8 + k * 3.6} y2={topo + 8 + k * 3.6} />)}
+            {estampa === 'xadrez' && [-3, -2, -1, 0, 1, 2, 3].map(k => <line key={`v${k}`} x1={cx + k * 7} x2={cx + k * 7} y1={topo} y2={101} />)}
+          </g>
+        </>
+      )}
+      {estampa === 'time' && <><path d={`M ${cx - ombro * 0.75} ${topo + 9} L ${cx - ombro * 0.75} 101`} stroke={c2} strokeWidth={2.6} opacity={0.85} /><circle cx={cx + ombro * 0.35} cy={topo + 15} r={2.4} fill={c2} stroke={escuro} strokeWidth={0.4} /></>}
+      {estampa === 'banda' && <path d={`M ${cx - 6} ${topo + 14} l 4 -3 l 2 4 l 4 -5 l 2 6 l -6 4 Z`} fill={c2} opacity={0.9} />}
+      {estampa === 'logo' && <rect x={cx - 4} y={topo + 13} width={8} height={2.6} rx={0.6} fill={c2} />}
+      {(estampa === 'wax' || estampa === 'floral' || estampa === 'chita') && [[-10, 14], [6, 12], [-3, 20], [12, 21], [-14, 24]].map(([dx, dy], k) => <circle key={k} cx={cx + dx} cy={topo + dy} r={estampa === 'chita' ? 2.4 : 1.5} fill={c2} opacity={0.85} />)}
+      {peca.parte === 'casaco' ? (
+        <>
+          {/* O casaco aberto: a camisa clara no meio e a lapela. */}
+          <path d={`M ${cx - pescoco * 0.8} ${topo + 3} L ${cx} ${topo + 18} L ${cx + pescoco * 0.8} ${topo + 3} L ${cx + 4} 101 L ${cx - 4} 101 Z`} fill={'cor2' in peca && peca.cor2 ? peca.cor2 : '#efeae0'} />
+          {peca.lapela && <path d={`M ${cx - pescoco * 0.85} ${topo + 3} L ${cx - 5} ${topo + 17} L ${cx - 2} ${topo + 22} M ${cx + pescoco * 0.85} ${topo + 3} L ${cx + 5} ${topo + 17} L ${cx + 2} ${topo + 22}`} fill="none" stroke={escuro} strokeWidth={1.2} strokeLinejoin="round" />}
+          {peca.ziper && <path d={`M ${cx + 4.4} ${topo + 14} L ${cx + 4.4} 101`} stroke={misturar(cor, '#ffffff', 0.4)} strokeWidth={0.6} />}
+        </>
+      ) : gola === 'colarinho' || gola === 'polo' ? (
+        <>
+          <path d={`M ${cx - pescoco * 0.95} ${topo + 3} L ${cx - 1.4} ${topo + 10} L ${cx - pescoco * 0.15} ${topo + 3} Z M ${cx + pescoco * 0.95} ${topo + 3} L ${cx + 1.4} ${topo + 10} L ${cx + pescoco * 0.15} ${topo + 3} Z`} fill={misturar(cor, '#ffffff', 0.12)} stroke={escuro} strokeWidth={0.6} strokeLinejoin="round" />
+          <path d={`M ${cx} ${topo + 9} L ${cx} ${gola === 'polo' ? topo + 16 : 101}`} stroke={escuro} strokeWidth={0.6} />
+          {[0, 1, 2].slice(0, gola === 'polo' ? 2 : 3).map(k => <circle key={k} cx={cx} cy={topo + 12 + k * 5} r={0.55} fill={escuro} />)}
+        </>
+      ) : gola === 'capuz' ? (
+        <>
+          <path d={`M ${cx - pescoco * 1.15} ${topo + 4} Q ${cx} ${topo + 13} ${cx + pescoco * 1.15} ${topo + 4}`} fill="none" stroke={escuro} strokeWidth={2.2} strokeLinecap="round" />
+          <path d={`M ${cx - 2.2} ${topo + 8} l 0 7 M ${cx + 2.2} ${topo + 8} l 0 7`} stroke={claro} strokeWidth={0.6} strokeLinecap="round" />
+        </>
+      ) : gola === 'v' ? (
+        <path d={`M ${cx - pescoco * 0.75} ${topo + 3.5} L ${cx} ${topo + (fem ? 13 : 11)} L ${cx + pescoco * 0.75} ${topo + 3.5}`} fill="none" stroke={escuro} strokeWidth={1.3} strokeLinejoin="round" />
+      ) : gola === 'alta' ? (
+        <>
+          <path d={`M ${cx - pescoco * 0.7} ${topo - 1} L ${cx - pescoco * 0.7} ${topo + 5} L ${cx + pescoco * 0.7} ${topo + 5} L ${cx + pescoco * 0.7} ${topo - 1} Z`} fill={cor} stroke={escuro} strokeWidth={0.6} />
+          <path d={`M ${cx} ${topo + 4} L ${cx} 101`} stroke={claro} strokeWidth={0.6} />
+          {peca.parte === 'cima' && peca.cor2 && <path d={`M ${cx - ombro * 0.62} ${topo + 12} L ${cx - ombro * 0.62} 101 M ${cx + ombro * 0.62} ${topo + 12} L ${cx + ombro * 0.62} 101`} stroke={peca.cor2} strokeWidth={1.6} opacity={0.85} />}
+        </>
+      ) : gola === 'canoa' ? (
+        <path d={`M ${cx - pescoco * 1.1} ${topo + 4.5} Q ${cx} ${topo + 8} ${cx + pescoco * 1.1} ${topo + 4.5}`} fill="none" stroke={escuro} strokeWidth={1.2} strokeLinecap="round" />
+      ) : peca.parte === 'cima' && peca.forma === 'regata' || peca.parte === 'inteira' && peca.manga === 'sem' ? null : (
+        <path d={`M ${cx - pescoco * 0.9} ${topo + 4} Q ${cx} ${topo + (fem ? 12 : 10)} ${cx + pescoco * 0.9} ${topo + 4}`} fill="none" stroke={escuro} strokeWidth={1.3} />
+      )}
+    </g>
+  );
+}
 
 function Oculos({ tipo, cx, olhoY, esp }: { tipo: 'grau' | 'redondo' | 'sol'; cx: number; olhoY: number; esp: number }) {
   const lente = tipo === 'sol' ? '#1e2227' : 'none';

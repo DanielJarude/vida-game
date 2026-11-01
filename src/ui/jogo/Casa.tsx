@@ -305,7 +305,7 @@ function CartaoAplicacao({ a }: { a: Aplicacao }) {
 
 /* ------------------------------------------------------------ Viver a casa */
 
-/** A casa como lugar de vida: receber gente, juntar a família, deixar com a sua cara, reformar. */
+/** A casa como lugar de vida: receber gente, juntar a família, reformar (o jeito de cada cômodo é em "A casa por dentro"). */
 export function ViverACasa({ vida, agir }: Props) {
   const usos = USOS_CASA.filter(u => disponibilidadeUsoCasa(vida, u).ok || (u === 'reformar' && !!vida.moradia.imovelId));
   if (!usos.length) return null;
@@ -314,6 +314,7 @@ export function ViverACasa({ vida, agir }: Props) {
       <div className="grupo-acoes grupo-acoes--linha">
         {usos.map(u => <BotaoAcao key={u} vida={vida} acao={{ tipo: 'usar_casa', oque: u }} agir={agir} variante="secundario">{rotuloUsoCasa(vida, u)}</BotaoAcao>)}
       </div>
+      {usos.includes('reformar') && <p className="nota">A reforma conserta e renova o imóvel (conservação, valor, padrão). Piso, parede, luz e móveis de cada cômodo se escolhem em A casa por dentro.</p>}
     </Secao>
   );
 }

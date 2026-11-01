@@ -9,7 +9,7 @@
  *                        de cada vez abre a ficha (onde está, de onde veio, a história, o valor afetivo) e as ações.
  *   PersonalizarVeiculos um veículo de cada vez; o estético separado do funcional; o nome; coleção; a garagem.
  *   GuardaRoupa          o estilo que as peças dizem, as fases; e o que vestir em cada ocasião (só se quiser).
- *   MusicaEArte          os gostos, as descobertas; ouvir, ir a um programa, produzir uma obra.
+ *   GostosECultura       os gostos, as descobertas (Gostos e preferências); ouvir, sair, produzir uma obra (Atividades culturais).
  *
  * Nada aqui calcula regra: preços, bloqueios e efeitos são os do motor (`sistemas/personalizacao`, `lar`, `gostos`).
  */
@@ -21,7 +21,8 @@ import { idade, idadePessoa } from '../../motor/nucleo';
 import { anoDe } from '../../motor/tempo';
 import { coisa } from '../../motor/dados/coisas';
 import { variantesDaCoisa } from '../../motor/dados/pertences';
-import { COMODOS, type TipoComodo } from '../../motor/dados/lar';
+import { COMODOS, opcaoDeAcabamento, type TipoComodo } from '../../motor/dados/lar';
+import { CenaDoComodo } from '../ilustracao/comodos';
 import { ESTILOS, itemEstilo, lugaresDoItem, NOME_OCASIAO, adequacaoDaRoupa, estiloDominante, nomeDoEstilo } from '../../motor/dados/estilo';
 import { modeloVeiculo } from '../../motor/dados/bens';
 import { economiaLocal } from '../../motor/dados/lugares';
@@ -44,6 +45,12 @@ const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const agirCom = (op: Extract<Acao, { tipo: 'personalizar' }>['op']): Acao => ({ tipo: 'personalizar', op });
 
 /* ===================================================================== a casa */
+
+/** 12.4.1: a cena de um cômodo, com os acabamentos dele e os objetos que estão nele. */
+function Cena({ vida, comodoId, tipo, nome, coisas, largura }: { vida: Vida; comodoId: string; tipo: string; nome: string; coisas: CoisaTida[]; largura: number }) {
+  const asp = (a: AspectoDoComodo) => { const id = acabamentoDoComodo(vida, comodoId, a); return { id, cor: opcaoDeAcabamento(a, id)?.cor }; };
+  return <CenaDoComodo tipo={tipo} parede={asp('parede')} piso={asp('piso')} luz={asp('luz').id} objetos={coisas.map(t => ({ coisaId: t.coisaId, cor: t.cor, id: t.id }))} largura={largura} rotulo={`${cap(nome)}${coisas.length ? `: ${coisas.map(t => coisa(t.coisaId)?.nome).filter(Boolean).join(', ')}` : ', sem nada seu'}`} />;
+}
 
 export function CasaPorDentro({ vida, agir }: Props) {
   const [aberto, setAberto] = useState<string | null>(null);
@@ -74,6 +81,7 @@ export function CasaPorDentro({ vida, agir }: Props) {
             return (
               <li key={c.id}>
                 <button type="button" className={`pz-comodo${aberto === c.id ? ' pz-comodo--aberto' : ''}`} aria-expanded={aberto === c.id} aria-controls="pz-painel-comodo" onClick={() => setAberto(a => (a === c.id ? null : c.id))}>
+                  <span className="pz-comodo__cena" aria-hidden><Cena vida={vida} comodoId={c.id} tipo={c.tipo} nome={c.nome} coisas={porComodo.get(c.id) ?? []} largura={132} /></span>
                   <span>{cap(c.nome)}</span>
                   <span className="pz-comodo__conta">{n ? `${n} ${n === 1 ? 'coisa' : 'coisas'}` : pede ? 'vazio' : ''}{ok ? ' · em uso' : ''}</span>
                 </button>
@@ -107,6 +115,7 @@ function PainelDoComodo({ vida, agir, comodoId, aoFechar }: Props & { comodoId: 
         <h3 className="subtitulo">{cap(cm.nome)}</h3>
         <button type="button" className="botao botao--discreto" onClick={aoFechar}>Fechar</button>
       </div>
+      <div className="pz-painel__cena"><Cena vida={vida} comodoId={cm.id} tipo={cm.tipo} nome={cm.nome} coisas={coisas} largura={320} /></div>
       <p className="nota">{m.descricao}{m.pede && !comodoEquipado(vida, cm) ? ` Vazio, é só metro quadrado: falta ${m.pede.slice(0, 3).map(id => coisa(id)?.nome ?? id).join(', ')}…` : ''}</p>
       {coisas.length > 0 ? (
         <ul className="pz-lista">
@@ -476,29 +485,23 @@ function LookDaOcasiao({ vida, agir, ocasiao }: Props & { ocasiao: Ocasiao }) {
   );
 }
 
-/* ===================================================================== música e arte */
+/* ===================================================================== gostos e cultura */
 
-export function MusicaEArte({ vida, agir }: Props) {
-  const i = idade(vida);
-  const [programa, setPrograma] = useState('');
-  const [genero, setGenero] = useState('');
-  const [com, setCom] = useState('');
-  const [linguagem, setLinguagem] = useState('');
-  if (i < 8) return null;
+/**
+ * 12.4.1 — o que era "Música e arte" (dentro de Aparência, sem relação com ela) virou duas seções da parte "Gostos e
+ * cultura" de Você: os gostos (o que se ouve, as linguagens de que se gosta, como o gosto mudou) e as atividades
+ * artísticas e culturais (a playlist, sair para um show ou exposição, produzir uma obra). As ações são as mesmas.
+ */
+export function GostosEPreferencias({ vida, agir }: Props) {
+  if (idade(vida) < 8) return null;
   const g = gostosDe(vida);
   const pref = generosPreferidos(vida, 3);
   const artes = Object.entries(g.arte).sort((a, b) => b[1] - a[1]).slice(0, 2).filter(([, x]) => x >= 35);
   const descobertas = (g.descobertas ?? []).slice(-4).reverse();
-  const programas = programasPossiveis(vida);
-  const pessoas = pessoasPerto(vida).filter(p => idadePessoa(vida, vida.pessoas[p.id]) >= 14);
-  const oficios = hobbiesQueViramOficio(vida);
-  const prog = programa || programas[0]?.id || '';
-  const generoShow = genero || pref[0]?.id || '';
-  const lingua = linguagem || LINGUAGENS[1].id;
   return (
     <section className="pz-gostos" aria-labelledby="pz-gostos-titulo">
-      <h2 id="pz-gostos-titulo" className="voce-subtitulo">Música e arte</h2>
-      <p>{pref.map((x, k) => <span key={x.id}>{k ? ', ' : ''}<strong>{x.nome}</strong> <span className="nota">({NOME_DO_GOSTO(x.valor)})</span></span>)}{artes.length ? <span className="nota"> · na arte: {artes.map(([id]) => LINGUAGENS.find(l => l.id === id)?.nome).join(' e ')}</span> : null}</p>
+      <h2 id="pz-gostos-titulo" className="voce-subtitulo">Gostos e preferências</h2>
+      <p><span className="nota">Na música: </span>{pref.map((x, k) => <span key={x.id}>{k ? ', ' : ''}<strong>{x.nome}</strong> <span className="nota">({NOME_DO_GOSTO(x.valor)})</span></span>)}{artes.length ? <span className="nota"> · na arte: {artes.map(([id]) => LINGUAGENS.find(l => l.id === id)?.nome).join(' e ')}</span> : null}</p>
       {descobertas.length > 0 && (
         <details className="detalhes pz-detalhes"><summary>Como o gosto foi mudando</summary>
           <ul className="pz-historia">{descobertas.map((d, k) => <li key={k}><span className="nota">{anoDe(d.t)}</span> {cap(d.oque)}, {d.como}.</li>)}</ul>
@@ -507,6 +510,27 @@ export function MusicaEArte({ vida, agir }: Props) {
       <div className="grupo-acoes grupo-acoes--linha">
         <BotaoAcao vida={vida} agir={agir} acao={agirCom({ o: 'cultural', oque: 'ouvir' })} variante="secundario" ocultarImpossivel>Montar a playlist do ano</BotaoAcao>
       </div>
+    </section>
+  );
+}
+
+export function AtividadesCulturais({ vida, agir }: Props) {
+  const i = idade(vida);
+  const [programa, setPrograma] = useState('');
+  const [genero, setGenero] = useState('');
+  const [com, setCom] = useState('');
+  const [linguagem, setLinguagem] = useState('');
+  if (i < 8) return null;
+  const pref = generosPreferidos(vida, 3);
+  const programas = programasPossiveis(vida);
+  const pessoas = pessoasPerto(vida).filter(p => idadePessoa(vida, vida.pessoas[p.id]) >= 14);
+  const oficios = hobbiesQueViramOficio(vida);
+  const prog = programa || programas[0]?.id || '';
+  const generoShow = genero || pref[0]?.id || '';
+  const lingua = linguagem || LINGUAGENS[1].id;
+  return (
+    <section className="pz-gostos pz-cultura" aria-labelledby="pz-cultura-titulo">
+      <h2 id="pz-cultura-titulo" className="voce-subtitulo">Atividades artísticas e culturais</h2>
       {i >= 14 && programas.length > 0 && (
         <details className="detalhes pz-detalhes">
           <summary>Sair: show, roda, baile, exposição</summary>
@@ -528,10 +552,15 @@ export function MusicaEArte({ vida, agir }: Props) {
             <select value={lingua} onChange={e => setLinguagem(e.target.value)}>{LINGUAGENS.map(l => <option key={l.id} value={l.id}>{cap(l.nome)}</option>)}</select></label>
           <BotaoAcao vida={vida} agir={agir} acao={agirCom({ o: 'obra', linguagem: lingua })} variante="principal">Produzir</BotaoAcao>
         </div>
-        <p className="nota">A obra fica sua (Patrimônio · Coleção): dá para expor em casa ou dar de presente. Compor música é na prática da música e no estúdio.</p>
+        <p className="nota">A obra fica sua (Patrimônio · Coleção): dá para expor em casa ou dar de presente.</p>
       </details>
+      <p className="nota">Compor, gravar, fazer shows e expor como carreira: na prática da música ou da arte (Minha Semana) e em Caminhos · Trabalho.</p>
       {oficios.length > 0 && <p className="nota">O hobby já pode virar ofício: {oficios.map(x => ocupacaoOuNula(x.oficio)?.nome[0] ?? x.oficio).join(', ')} — em Caminhos · Trabalho.</p>}
     </section>
   );
 }
 
+/** Os gostos e as atividades culturais juntos (a parte "Gostos e cultura" de Você). */
+export function GostosECultura({ vida, agir }: Props) {
+  return <><GostosEPreferencias vida={vida} agir={agir} /><AtividadesCulturais vida={vida} agir={agir} /></>;
+}

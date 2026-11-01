@@ -4,9 +4,9 @@
  * As lojas (imobiliária, concessionária, banco, óticas) moram em Compras.
  */
 
-import { LOJAS_DE_COISAS, type QualLugar } from './material/Lugares';
-import { NOME_LOJA } from '../../motor/dados/coisas';
-import { temLojaNaCidade } from '../../motor/sistemas/coisas';
+import { type QualLugar } from './material/Lugares';
+import { lojasDaVida } from '../../motor/sistemas/lojas';
+import { fachadaDoLugar } from './Compras';
 import { Fachada } from '../ilustracao/Fachada';
 import { useMemo, useState } from 'react';
 import type { Vida } from '../../motor/tipos';
@@ -54,12 +54,13 @@ export function Cidade({ vida, agir, irCompras, abrir }: Props & { irCompras?: (
       {abrir && i >= 10 && (
         <Secao titulo="Lojas da cidade" recolhivel aberta={false}>
           <ul className="lugares">
-            {LOJAS_DE_COISAS.map(l => (
-              <li key={l}>
-                <button type="button" className="lugar-botao" onClick={() => abrir(l)}>
-                  <Fachada lugar={l} recorte largura={64} className="lugar-botao__fachada" />
-                  <span className="lugar-botao__nome">{NOME_LOJA[l]}</span>
-                  <span className="lugar-botao__oque">{temLojaNaCidade(vida, l) ? `Aqui em ${m.nome}` : `Não há em ${m.nome}: pela internet, com frete`}</span>
+            {/* 12.4.1: as lojas da vida que existem nesta cidade (`dados/lojas`); o resto, pela internet, em Compras. */}
+            {lojasDaVida(vida).filter(e => e.tipo !== 'online').map(e => (
+              <li key={e.id}>
+                <button type="button" className="lugar-botao" onClick={() => abrir(`loja:${e.id}`)}>
+                  <Fachada lugar={fachadaDoLugar(`loja:${e.id}`)} recorte largura={64} className="lugar-botao__fachada" />
+                  <span className="lugar-botao__nome">{e.nome}</span>
+                  <span className="lugar-botao__oque">{e.tipo === 'departamento' ? `Loja de departamento · aqui em ${m.nome}` : `Aqui em ${m.nome}`}</span>
                 </button>
               </li>
             ))}

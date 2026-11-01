@@ -33,6 +33,10 @@ import { moraComFamiliaDeOrigem } from '../../../motor/sistemas/domicilio';
 import { estadoDoVeiculo, custoRevisao, nomeComCor, vecFeminino } from '../../../motor/sistemas/veiculos';
 import type { AnimalDoAbrigo, OfertaImovel, OfertaVeiculo } from '../../../motor/sistemas/mercado';
 import { BotaoAcao, Escolha, Folha } from '../../comum';
+import { sobDemanda } from '../../util/sobDemanda';
+/** 12.4.1: a loja por dentro (com a figura que veste a peça), sob demanda. */
+export const LojaDaVida = sobDemanda(() => import('./Lojas').then(m => m.LojaDaVida));
+import { estabelecimento } from '../../../motor/dados/lojas';
 import { Retrato } from '../../avatar/Retrato';
 import { DesenhoVeiculo, MiniaturaDaCasa } from './Desenhos';
 import { DesenhoObjeto } from './Objetos';
@@ -50,19 +54,22 @@ import { MERCADOS_PARALELOS, type MercadoParalelo } from '../../../motor/sistema
 import { custosAntesDeComprarImovel, custosAntesDeComprarVeiculo } from '../../leituraPatrimonio';
 import { dinheiroCheio, dinheiroCurto, formaDoModelo } from '../../leituraMaterial';
 
-export type QualLugar = 'alugar' | 'comprar' | 'concessionaria' | 'usados' | 'motos' | 'nautica' | 'aeroclube' | 'colecionador' | 'oficina' | 'banco' | 'abrigo' | 'pets' | 'estilo' | 'clinica' | LojaDeCoisas | LojaDeColecao | 'exoticos' | MercadoParalelo;
+export type QualLugar = `loja:${string}` | 'alugar' | 'comprar' | 'concessionaria' | 'usados' | 'motos' | 'nautica' | 'aeroclube' | 'colecionador' | 'oficina' | 'banco' | 'abrigo' | 'pets' | 'estilo' | 'clinica' | LojaDeCoisas | LojaDeColecao | 'exoticos' | MercadoParalelo;
 /** As lojas das coisas da vida (`dados/coisas`). */
 export const LOJAS_DE_COISAS: LojaDeCoisas[] = ['eletronicos', 'casa', 'instrumentos', 'esportes', 'livraria'];
 
 interface Props { vida: Vida; agir: (a: Acao) => boolean; qual: QualLugar; aoFechar: () => void; trocar: (l: QualLugar) => void; /** REWORK 12.2: o atalho depois de uma compra que vira patrimônio. */ verNoPatrimonio?: (p: PartePatrimonio) => void }
 
-const TITULO: Record<QualLugar, string> = {
+const TITULO: Record<Exclude<QualLugar, `loja:${string}`>, string> = {
   alugar: 'Imobiliária', comprar: 'Imobiliária', concessionaria: 'Concessionária', usados: 'Carros usados', motos: 'Motos e bicicletas', nautica: 'Loja náutica', aeroclube: 'Aeroclube e hangar', oficina: 'Oficina', banco: 'Banco', abrigo: 'Abrigo de animais', pets: 'Loja e criadouro de animais', estilo: 'Ótica, roupas e acessórios', clinica: 'Clínica de cirurgia plástica',
   colecionador: 'Garagem de colecionador', exoticos: 'Animais exóticos',
   ...Object.fromEntries(Object.entries(MERCADOS_PARALELOS).map(([k, x]) => [k, x.nome])) as Record<MercadoParalelo, string>,
   ...NOME_LOJA,
   ...Object.fromEntries(Object.entries(LOJAS_DE_COLECAO).map(([k, x]) => [k, x.nome])) as Record<LojaDeColecao, string>
 };
+
+/** 12.4.1: as lojas da vida (`dados/lojas`) têm o nome delas. */
+const tituloDe = (q: QualLugar): string => (q.startsWith('loja:') ? estabelecimento(q.slice(5))?.nome ?? 'Loja' : TITULO[q as Exclude<QualLugar, `loja:${string}`>]);
 
 export function Lugar({ vida, agir, qual, aoFechar, trocar, verNoPatrimonio }: Props) {
   // Depois de uma ação que muda a vida (comprou, alugou), a folha fecha.
@@ -71,7 +78,7 @@ export function Lugar({ vida, agir, qual, aoFechar, trocar, verNoPatrimonio }: P
   const [comprou, setComprou] = useState<PartePatrimonio | null>(null);
   const agirEVer = (parte: PartePatrimonio) => (a: Acao) => { const ok = agir(a); if (ok && (a.tipo === 'comprar_item' || a.tipo === 'colecao_comprar' || a.tipo === 'paralelo')) setComprou(parte); return ok; };
   return (
-    <Folha titulo={TITULO[qual]} rotulo={TITULO[qual]} aoFechar={aoFechar} largura="larga">
+    <Folha titulo={tituloDe(qual)} rotulo={tituloDe(qual)} aoFechar={aoFechar} largura="larga">
       <div className="lugar-folha">
         {(qual === 'alugar' || qual === 'comprar') && (
           <>
@@ -91,6 +98,7 @@ export function Lugar({ vida, agir, qual, aoFechar, trocar, verNoPatrimonio }: P
         {qual === 'estilo' && <LojaDeEstilo vida={vida} agir={agirEVer('objetos')} />}
         {qual === 'clinica' && <ClinicaEstetica vida={vida} agir={agirEFechar} />}
         {(LOJAS_DE_COISAS as string[]).includes(qual) && <LojaDeCoisasDaVida vida={vida} agir={agir} loja={qual as LojaDeCoisas} />}
+        {qual.startsWith('loja:') && <LojaDaVida vida={vida} agir={agirEVer('objetos')} lojaId={qual.slice(5)} />}
       </div>
     </Folha>
   );

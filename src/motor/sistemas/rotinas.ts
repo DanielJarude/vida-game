@@ -18,7 +18,7 @@ import { praticandoPor } from './progressao';
 import { paisCorrente } from '../mundo/moeda';
 import { bonusDaAtividade } from './coisas';
 import type { Rng } from '../rng';
-import { clamp, rngDe } from '../rng';
+import { clamp, hashMisturado, rngDe } from '../rng';
 import { lesaoAtiva, lesionar } from './lesoes';
 import type { Dominio, Rotina, Traco, Vida } from '../tipos';
 import { escrever, filhos, idade, marcarFato, temFato, parceiro, parentes, somarExperiencia } from '../nucleo';
@@ -91,19 +91,16 @@ export interface ModeloRotina {
 
 /* ------------------------------------------------------------ Oferta local */
 
-function hash(s: string): number {
-  let h = 2166136261;
-  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
-  return (h >>> 0) / 4294967295;
-}
-
 /**
  * Janela de oferta: numa janela de três anos, o lugar tem (ou não) aquela
  * atividade. Muda de janela em janela. Estável ao recarregar.
  */
 export function janela(v: Vida, id: string, chance: number): boolean {
   const bloco = Math.floor(idade(v) / 3);
-  return hash(`${v.id}:${v.moradia.municipioId}:${id}:${bloco}`) < chance;
+  // 12.4.1: com a mistura final (`rng.hashMisturado`) — sem ela, o bloco no fim da chave quase não mudava o número e a
+  // janela de três anos ficava a mesma a vida inteira (a natação da cidade pequena, o projeto social: 4,8% de troca
+  // entre blocos, não ~45%).
+  return hashMisturado(`${v.id}:${v.moradia.municipioId}:${id}:${bloco}`) < chance;
 }
 
 const cidade = (v: Vida) => nivelDeOferta(v.moradia.municipioId);
@@ -197,7 +194,8 @@ export const ROTINAS: readonly ModeloRotina[] = [
     oferta: v => cidade(v) >= 1 || janela(v, 'natacao', 0.35),
     niveis: [
       { rotulo: 'Aulas de natação', tempo: 1, custo: 150, qualidade: 1, requer: pago(150, 'natacao') },
-      { rotulo: 'Equipe de natação', tempo: 1.6, custo: 120, qualidade: 1.3, requer: pago(120, 'natacao', v => (habilidade(v, 'natacao') >= 42 ? true : 'A equipe só aceita quem já nada bem.')) },
+      // 12.4.1: a equipe custava menos que a aula (120 × 150) — descer de degrau "aliviava" e saía mais caro.
+      { rotulo: 'Equipe de natação', tempo: 1.6, custo: 190, qualidade: 1.3, requer: pago(190, 'natacao', v => (habilidade(v, 'natacao') >= 42 ? true : 'A equipe só aceita quem já nada bem.')) },
       { rotulo: 'Treino de alto rendimento', tempo: 2, custo: 0, qualidade: 1.45, requer: naBase('natacao') }
     ],
     pratica: { natacao: 1 }, social: { onde: 'na natação', fluxo: 0.6, amplitude: 4 }
@@ -677,7 +675,11 @@ export function custoDaRotina(v: Vida, id: string, nivel: number): number {
   const m = modeloRotina(id);
   if (!m) return 0;
   if (id === 'terapia' && terapiaPublica(v)) return 0;
-  return nivelModelo(m, nivel).custo;
+  const custo = nivelModelo(m, nivel).custo;
+  // 12.4.1: a criança que só pratica porque o projeto social cobre (a casa não pagaria) não paga — o cartão e a conta da
+  // casa mostravam o preço cheio da aula de natação.
+  if (custo > 0 && m.categoria === 'esporte' && !casaPaga(v, custo) && projetoSocial(v, id)) return 0;
+  return custo;
 }
 CUSTO_ROTINA.de = (v, rot) => custoDaRotina(v, rot.id, nivelDa(rot));
 CUSTO_ROTINA.rotulo = rot => { const m = modeloRotina(rot.id); if (!m) return rot.id; return m.niveis.length > 1 ? `${m.nome} (${nivelModelo(m, nivelDa(rot)).rotulo.toLowerCase()})` : m.nome; };
@@ -785,6 +787,13 @@ export function processarRotinas(v: Vida, r: Rng, presenca: Record<string, numbe
     // O nível pedido deixou de ser possível (a base acabou, a banda acabou): volta um degrau, e o jogo conta.
     let n = nivelDa(rot);
     while (n > 1 && typeof nivelModelo(m, n).requer?.(v) === 'string') n -= 1;
+    // 12.4.1: o primeiro degrau também tem requisito (a aula de natação paga): se nem ele cabe mais, a atividade sai —
+    // antes, quem caía da equipe ficava na aula, mais cara e igualmente fora do alcance.
+    if (n === 1 && nivelDa(rot) > 1 && typeof nivelModelo(m, 1).requer?.(v) === 'string') {
+      v.rotinas = v.rotinas.filter(x => x !== rot);
+      escrever(v, { texto: `${m.nome} saiu da semana: ${String(nivelModelo(m, 1).requer?.(v)).replace(/\.$/, '').toLowerCase()}.`, relevancia: 'cotidiano', tema: 'lazer' });
+      continue;
+    }
     if (n !== nivelDa(rot)) {
       rot.nivel = n as 1 | 2 | 3;
       escrever(v, { texto: `${m.nome}: ${nivelModelo(m, n).rotulo.toLowerCase()}, agora.`, relevancia: 'tecnico', tema: 'lazer' });
@@ -792,7 +801,10 @@ export function processarRotinas(v: Vida, r: Rng, presenca: Record<string, numbe
     const nm = nivelModelo(m, n);
     // REWORK 9: a agenda — as vezes que não têm horário (ou que outro compromisso atravessa) não acontecem.
     const vezes = presenca[rot.id] ?? 1;
-    const peso = (n === 1 ? 0.5 : n === 2 ? 1 : 1.6) * vezes;
+    // 12.4.1: no esporte, o peso acompanha o tempo de verdade — a aula de natação (1 h, paga) contava como a pelada de
+    // meia hora; a equipe (1,6 h) como a escolinha de 1 h. Nunca menos do que a régua de antes.
+    const pesoDoNivel = n === 1 ? 0.5 : n === 2 ? 1 : 1.6;
+    const peso = (m.categoria === 'esporte' ? Math.max(pesoDoNivel, Math.min(1.6, nm.tempo)) : pesoDoNivel) * vezes;
     // REWORK 9.7 · BAL-01: o esporte amador também machuca (antes, só a base e o profissional se lesionavam: treinar a
     // sério na infância não tinha custo nenhum). Pouco, e quase sempre leve: ~1–3% ao ano por atividade, a metade na
     // criança; a lesão é a de sempre (a decisão de cuidado, a recuperação). Sorteio derivado: não mexe na vida.

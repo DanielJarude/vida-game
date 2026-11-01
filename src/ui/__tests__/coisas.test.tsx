@@ -48,8 +48,9 @@ describe('as lojas das coisas da vida', () => {
     const abrir = vi.fn();
     render(<Cidade vida={v} agir={() => true} abrir={abrir} />);
     fireEvent.click(screen.getByRole('button', { name: /^Lojas da cidade/ }));
-    fireEvent.click(screen.getByRole('button', { name: /Livraria e papelaria/ }));
-    expect(abrir).toHaveBeenCalledWith('livraria');
+    // 12.4.1: as lojas da vida (`dados/lojas`); a de eletrônicos existe em qualquer cidade.
+    fireEvent.click(screen.getByRole('button', { name: /^Eletrônicos/ }));
+    expect(abrir).toHaveBeenCalledWith('loja:eletronicos');
   });
 
   it('REWORK 4: o que é seu aparece em Pertences — primeiro o que dá para fazer, a venda por último', () => {

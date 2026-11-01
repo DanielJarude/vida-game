@@ -84,12 +84,14 @@ export function ODinheiro({ vida, agir, irParaCasa }: { vida: Vida; agir: (a: Ac
       <p className="mes__frase">{m.frase}</p>
       <dl className="dados dados--dinheiro">
         {/* A conta como ela está: no vermelho aparece no vermelho (antes, um saldo negativo virava "R$ 0" na tela). */}
+        {/* 12.4.1: o que dá para gastar, o patrimônio e a situação são três coisas — comprar uma casa tira daqui e põe lá. */}
+        <Dado rotulo="Para gastar agora">{dinheiroCurto(Math.max(0, f.conta) + aplicado)}{aplicado > 0 ? <small> (conta + aplicado)</small> : null}</Dado>
         <Dado rotulo="Na conta">{dinheiroCurto(f.conta)}{f.conta < -0.5 ? <small> (no vermelho)</small> : null}</Dado>
         {aplicado > 0 && <Dado rotulo="Aplicado">{dinheiroCurto(aplicado)}<small> (dá para tirar)</small></Dado>}
         <Dado rotulo="Seu, por mês">{proprio > 0 ? dinheiroCurto(proprio) : 'nada ainda'}</Dado>
         {emCasa > 0 && <Dado rotulo="Casa e família">{dinheiroCurto(emCasa)}/mês</Dado>}
         <Dado rotulo="Deve">{b.obrigacoes > 0 ? dinheiroCurto(b.obrigacoes) : 'nada'}{atrasadas ? <small> · {atrasadas} em atraso</small> : null}</Dado>
-        <Dado rotulo="Patrimônio">{dinheiroCurto(b.liquido)}{t && <small> {t.seta} {t.palavra}</small>}</Dado>
+        <Dado rotulo="Patrimônio">{dinheiroCurto(b.liquido)}<small> tudo o que é seu, com imóveis e bens, menos as dívidas{t ? ` · ${t.seta} ${t.palavra}` : ''}</small></Dado>
       </dl>
       {aplicado > 0 && <p className="nota">{rendeuTexto(vida)}</p>}
       {/* REWORK 12.25 · FIN-12.25-01: o que entra (e sai) por fora não é salário — aparece aqui pelo ano, e no extrato numa linha própria. */}

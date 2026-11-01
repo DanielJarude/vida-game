@@ -83,14 +83,21 @@ export function Secao({ titulo, children, recolhivel, aberta: abertaInicial = tr
 }
 
 /** Folha modal: prende o foco, fecha com Esc (quando permitido). */
+let abertas = 0;
+
 export function Folha({ titulo, rotulo, children, aoFechar, fechavel = true, largura = 'media', papel }: { titulo?: ReactNode; rotulo: string; children: ReactNode; aoFechar?: () => void; fechavel?: boolean; largura?: 'media' | 'larga'; papel?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
+  // 12.4.1: o fechar vive numa ref. Quem abre a folha passa `aoFechar={() => …}` (uma função nova a cada render); com ela
+  // nas dependências, toda compra (que muda a vida e re-renderiza) refazia o efeito — o foco voltava ao primeiro botão e a
+  // lista subia até o topo. Agora o efeito roda ao abrir e ao fechar, e só.
+  const fechar = useRef(aoFechar);
+  fechar.current = aoFechar;
   useEffect(() => {
     const anterior = document.activeElement as HTMLElement | null;
     const primeiro = ref.current?.querySelector<HTMLElement>('button:not([disabled]), [href], input, select');
-    primeiro?.focus();
+    primeiro?.focus({ preventScroll: true });
     const tecla = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && fechavel) aoFechar?.();
+      if (e.key === 'Escape' && fechavel) fechar.current?.();
       if (e.key === 'Tab' && ref.current) {
         const foco = [...ref.current.querySelectorAll<HTMLElement>('button:not([disabled]), [href], input, select, textarea')];
         if (foco.length === 0) return;
@@ -100,13 +107,15 @@ export function Folha({ titulo, rotulo, children, aoFechar, fechavel = true, lar
       }
     };
     document.addEventListener('keydown', tecla);
+    // Folhas empilhadas (o resultado da compra por cima da loja): a página só destrava quando a última fecha.
+    abertas++;
     document.body.classList.add('com-folha');
     return () => {
       document.removeEventListener('keydown', tecla);
-      document.body.classList.remove('com-folha');
-      anterior?.focus?.();
+      if (--abertas <= 0) { abertas = 0; document.body.classList.remove('com-folha'); }
+      anterior?.focus?.({ preventScroll: true });
     };
-  }, [aoFechar, fechavel]);
+  }, [fechavel]);
   return (
     <div className="veu" onClick={e => { if (e.target === e.currentTarget && fechavel) aoFechar?.(); }}>
       <div className={`folha folha--${largura}${papel ? ' folha--papel' : ''}`} role="dialog" aria-modal="true" aria-label={rotulo} ref={ref}>

@@ -277,12 +277,12 @@ export type Acao =
   /** Mudar o visual: corte, cor, barba, óculos, chapéu, roupa (`estilo`). */
   | { tipo: 'aparencia'; mudanca: MudancaVisual }
   /** Comprar um item de estilo (óculos, chapéu, roupa, acessório). */
-  | { tipo: 'comprar_item'; itemId: string }
+  | { tipo: 'comprar_item'; itemId: string; /** 12.4.1: a marca e a loja (ausentes: o preço de referência). */ marca?: string; loja?: string }
   | { tipo: 'estetica'; id: string; clinica: Clinica; alvo?: string; revisao?: boolean }
   /** Usar ou guardar um item que é seu. */
   | { tipo: 'usar_item'; itemId: string; usar: boolean }
   /** As coisas da vida: comprar numa loja da cidade; vender a usada (`sistemas/coisas`). */
-  | { tipo: 'comprar_coisa'; coisaId: string }
+  | { tipo: 'comprar_coisa'; coisaId: string; marca?: string; loja?: string }
   /** REWORK 12.4: a casa, os objetos, os veículos, a roupa e o tempo livre do jeito da pessoa (`sistemas/personalizacao`). */
   | { tipo: 'personalizar'; op: OpPersonalizar }
   | { tipo: 'vender_coisa'; coisaTidaId: string }
@@ -750,10 +750,10 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     }
     case 'aparencia': return disponibilidadeAparencia(v, a.mudanca);
     case 'visibilidade': return disponibilidadeVisibilidade(v, a.oque);
-    case 'comprar_item': return disponibilidadeComprarItem(v, a.itemId);
+    case 'comprar_item': return disponibilidadeComprarItem(v, a.itemId, a.marca, a.loja);
     case 'estetica': return disponibilidadeProcedimento(v, a.id, a.clinica, a.alvo, a.revisao);
     case 'usar_item': return disponibilidadeUsarItem(v, a.itemId, a.usar);
-    case 'comprar_coisa': return disponibilidadeComprarCoisa(v, a.coisaId);
+    case 'comprar_coisa': return disponibilidadeComprarCoisa(v, a.coisaId, a.marca, a.loja);
     case 'personalizar': return disponibilidadePersonalizar(v, a.op);
     case 'vender_coisa': return disponibilidadeVenderCoisa(v, a.coisaTidaId);
     case 'usar_coisa': return disponibilidadeUsarCoisa(v, a.coisaTidaId, a.uso, a.pessoaId);
@@ -1371,7 +1371,9 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       if (a.morar) morarNoImovel(v, id);
       const artigoM = m.nome.startsWith('casa') || m.nome.startsWith('kitnet') ? 'a' : 'o';
       escrever(v, { texto: `${primeira ? `Comprou ${m.nome.startsWith('casa') ? 'a primeira casa' : 'o primeiro imóvel'}: ` : 'Comprou '}${artigoM === 'a' ? 'uma' : 'um'} ${m.nome} ${o.bairro}${financiou ? `, financiad${artigoM} em ${Math.round(cond.meses / 12)} anos${cond.social ? ' por um programa habitacional' : ''}` : ' à vista'}${a.morar ? '' : ', para alugar'}.`, relevancia: primeira || a.morar ? 'marco' : 'biografia', tema: 'casa', tom: 'bom', escolha: true });
-      return ok(a.morar ? 'A chave é sua.' : `Imóvel comprado. Alugado, deve render ${fmt(alugadoPor ?? 0)} por mês.`, 'bom');
+      // 12.4.1: o resultado diz o que saiu do dinheiro e o que sobrou para gastar — o imóvel passa a ser patrimônio, não saldo.
+      const pago = `Pagou ${fmt((financiou ? cond.entrada : o.preco) + cond.custos)}${financiou ? ' de entrada e escritura' : ' com a escritura'}; para gastar ficaram ${fmt(disponivel(v))}. O imóvel (${fmt(o.preco)}) entra no patrimônio.`;
+      return ok(a.morar ? `A chave é sua. ${pago}` : `Imóvel comprado. Alugado, deve render ${fmt(alugadoPor ?? 0)} por mês. ${pago}`, 'bom');
     }
     case 'vender_bem': {
       const b = v.financas.bens.find(x => x.id === a.bemId)!;
@@ -1547,10 +1549,10 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       if (res.decisao) { const d = conteudoPorId(res.decisao); if (d && d.tipo === 'decisao') abrirDecisao(v, d, contexto(v, r)); return {}; }
       return ok(res.texto, res.tom);
     }
-    case 'comprar_item': return ok(comprarItem(v, a.itemId), 'bom');
+    case 'comprar_item': return ok(comprarItem(v, a.itemId, false, a.marca, a.loja), 'bom');
     case 'estetica': { const x = fazerProcedimento(v, r, a.id as IdProcedimento, a.clinica, a.alvo, a.revisao); return { resultado: x.texto, titulo: x.titulo }; }
     case 'usar_item': return ok(usarItem(v, a.itemId, a.usar));
-    case 'comprar_coisa': return ok(comprarCoisa(v, a.coisaId), 'bom');
+    case 'comprar_coisa': return ok(comprarCoisa(v, a.coisaId, a.marca, a.loja), 'bom');
     case 'personalizar': return ok(personalizar(v, a.op), 'bom');
     case 'vender_coisa': return ok(venderCoisa(v, a.coisaTidaId));
     case 'usar_coisa': return ok(usarCoisa(v, a.coisaTidaId, a.uso, a.pessoaId), 'bom');

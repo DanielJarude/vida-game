@@ -16,7 +16,9 @@ import { AUTONOMIA, faseDeAutonomia } from '../../motor/sistemas/autonomia';
 import { itensDaPessoa, podeTerBarba, precisaDeOculos, texturaNatural, type MudancaVisual } from '../../motor/sistemas/estilo';
 import { BARBAS, BARBAS_COM_BIGODE, CORES_NATURAIS, CORES_TINTA, CORTES, NOME_COR, TIPOS_DE_CABELO, itemEstilo } from '../../motor/dados/estilo';
 import { texturaDe } from '../avatar/cabelos';
-import { Retrato } from '../avatar/Retrato';
+import { FiguraSobDemanda as Figura } from '../avatar/figuraSobDemanda';
+import { NOME_DO_CORPO, tipoDeCorpo } from '../../motor/sistemas/silhueta';
+import { lugaresDoItem } from '../../motor/dados/estilo';
 import { BotaoAcao } from '../comum';
 import type { Aba } from '../navegacao';
 
@@ -49,8 +51,9 @@ export function AparenciaEEstilo({ vida, agir, irPara }: Props) {
       {fase === 'familia_decide' ? <p className="nota">{AUTONOMIA.aparencia_basica.antes}</p> : (
         <div className="aparencia__corpo">
           <div className="aparencia__previa">
-            <Retrato visual={previa} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? "eu"} tamanho={96} rotulo={mudou ? 'Como ficaria' : 'Como você está'} />
-            <span className="nota">{mudou ? 'Como ficaria' : 'Hoje'}</span>
+            {/* 12.4.1: o corpo inteiro (o tipo de corpo vem do condicionamento, dos hábitos e do que se pratica). */}
+            <Figura visual={previa} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} corpo={tipoDeCorpo(vida)} pecas={itens.filter(x => x.usando)} largura={150} rotulo={mudou ? 'Como ficaria' : 'Como você está'} />
+            <span className="nota">{mudou ? 'Como ficaria' : 'Hoje'} · corpo {NOME_DO_CORPO[tipoDeCorpo(vida)]}</span>
           </div>
           <div className="aparencia__escolhas">
             <label className="campo">
@@ -94,29 +97,52 @@ export function AparenciaEEstilo({ vida, agir, irPara }: Props) {
           </div>
         </div>
       )}
-      {itens.length > 0 && (
-        <div className="aparencia__itens">
-          <h3 className="subtitulo">O que é seu</h3>
-          <ul className="itens-estilo">
-            {itens.map(x => {
-              const it = itemEstilo(x.itemId);
-              if (!it) return null;
-              // Tudo que é seu se usa ou se guarda (o relógio também: não aparece no retrato, mas está no pulso).
-              const usavel = !!it.visual || !!it.lugar;
-              return (
-                <li key={x.id} className={`item-estilo${x.usando ? ' item-estilo--usando' : ''}`}>
-                  <span><strong>{it.nome}</strong>{usavel ? <span className="nota"> · {x.usando ? (it.lugar === 'pulso' ? 'no pulso' : 'em uso') : 'guardado'}</span> : null}</span>
-                  {usavel && <BotaoAcao vida={vida} acao={{ tipo: 'usar_item', itemId: x.itemId, usar: !x.usando }} agir={agir} variante="discreto">{x.usando ? 'Tirar' : 'Usar'}</BotaoAcao>}
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      )}
+      {i >= 3 && <OQueVeste vida={vida} agir={agir} />}
       <GuardaRoupa vida={vida} agir={agir} />
       {i >= AUTONOMIA.compra_pessoal.idade && (
         <p className="nota">{precisaDeOculos(vida) && !itens.some(x => x.itemId === 'oculos_grau') ? 'A vista anda pedindo óculos de grau. ' : ''}Óculos, chapéus, roupas: <button type="button" className="link" onClick={() => irPara('compras')}>Vida · Compras →</button></p>
       )}
     </section>
+  );
+}
+
+/**
+ * 12.4.1 — o que se veste, parte por parte: a cabeça, o rosto, a parte de cima, a de baixo (ou a peça inteira), o que vai
+ * por cima, os pés, o pulso, a pulseira, a mão, o pescoço e as orelhas. Cada parte mostra o que está em uso e deixa trocar
+ * por outra peça sua (ou tirar) — a peça que sai continua sua, guardada. É o mesmo inventário de sempre (`usar_item`).
+ */
+const PARTES: { id: string; nome: string; lugares: string[] }[] = [
+  { id: 'cabeca', nome: 'Na cabeça', lugares: ['cabeca'] }, { id: 'rosto', nome: 'No rosto', lugares: ['rosto'] },
+  { id: 'tronco', nome: 'Parte de cima', lugares: ['tronco'] }, { id: 'pernas', nome: 'Parte de baixo', lugares: ['pernas'] },
+  { id: 'casaco', nome: 'Por cima', lugares: ['casaco'] }, { id: 'pes', nome: 'Nos pés', lugares: ['pes'] },
+  { id: 'pulso', nome: 'Relógio', lugares: ['pulso'] }, { id: 'pulseira', nome: 'Pulseira', lugares: ['pulseira'] },
+  { id: 'anel', nome: 'Anel', lugares: ['anel'] }, { id: 'joia', nome: 'No pescoço', lugares: ['joia'] }, { id: 'orelha', nome: 'Nas orelhas', lugares: ['orelha'] }
+];
+
+function OQueVeste({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
+  const itens = itensDaPessoa(vida);
+  if (!itens.length) return null;
+  const daParte = (l: string[]) => itens.filter(x => { const it = itemEstilo(x.itemId); return !!it && lugaresDoItem(it).some(y => l.includes(y)) && (it.lugar === 'casaco') === l.includes('casaco'); });
+  const partes = PARTES.map(p => ({ ...p, itens: daParte(p.lugares) })).filter(p => p.itens.length);
+  return (
+    <div className="aparencia__itens">
+      <h3 className="subtitulo">O que você está usando</h3>
+      <ul className="vestir">
+        {partes.map(p => {
+          const atual = p.itens.find(x => x.usando);
+          return (
+            <li key={p.id} className="vestir__parte" data-parte={p.id}>
+              <span className="vestir__nome">{p.nome}</span>
+              <span className="vestir__atual">{atual ? itemEstilo(atual.itemId)!.nome : <span className="nota">nada</span>}</span>
+              <span className="vestir__trocar">
+                {p.itens.filter(x => !x.usando).map(x => <BotaoAcao key={x.id} vida={vida} acao={{ tipo: 'usar_item', itemId: x.itemId, usar: true }} agir={agir} variante="discreto">{itemEstilo(x.itemId)!.nome}</BotaoAcao>)}
+                {atual && <BotaoAcao vida={vida} acao={{ tipo: 'usar_item', itemId: atual.itemId, usar: false }} agir={agir} variante="discreto">Tirar</BotaoAcao>}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+      <p className="nota">A peça que sai fica guardada: é sua, dá para voltar a usar quando quiser.</p>
+    </div>
   );
 }

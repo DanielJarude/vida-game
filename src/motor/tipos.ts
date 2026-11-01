@@ -250,6 +250,10 @@ export interface Visual {
   roupa?: EstiloRoupa;
   /** A joia em uso, quando aparece no retrato (a corrente no pescoço, os brincos). O relógio não aparece: fica no pulso, fora do quadro. */
   joia?: 'corrente' | 'corrente_ouro' | 'brincos';
+  /** 12.4.1: brincos em uso (as orelhas são um lugar à parte do pescoço: a corrente e os brincos vão juntos). */
+  brincos?: boolean;
+  /** 12.4.1: a peça de cima que aparece no retrato ("itemId#id": o casaco por cima, o vestido ou a blusa). Ausente: a de sempre. */
+  superior?: string;
   /**
    * REWORK 4 — traços modulares herdáveis (`sistemas/identidade`): a textura do cabelo (o penteado é escolha; a
    * textura é da família), a forma dos olhos, o nariz, a boca, o rosto, a sobrancelha. Ausentes em saves antigos (o
@@ -340,6 +344,9 @@ export interface ItemDeEstilo {
   t: number;
   preco: number;
   usando: boolean;
+  /** 12.4.1: a marca e a loja onde foi comprado. Ausentes em saves antigos. */
+  marca?: string;
+  loja?: string;
   /** REWORK 12.4: onde está guardado (o cofre, para a joia que não se usa). Ausente = com a pessoa. */
   local?: LocalDoObjeto;
   memoria?: MemoriaDoObjeto;
@@ -421,6 +428,8 @@ export interface Romance {
 /** REWORK 11 · REL-16: o casamento planejado (`sistemas/casamento`). Os custos saem dos preços locais na hora. */
 export interface PlanoDeCasamento {
   local: 'cartorio' | 'casa' | 'salao' | 'religioso' | 'ar_livre' | 'destino';
+  /** 12.4.1: ao ar livre, o lugar escolhido (o sítio, o jardim, a praia). Ausente em planos antigos: "ao ar livre". */
+  cenario?: 'sitio' | 'jardim' | 'praia';
   cerimonia: 'civil' | 'religiosa' | 'simbolica';
   convidados: number;
   estilo: 'simples' | 'classico' | 'luxo';
@@ -1277,6 +1286,9 @@ export interface CoisaTida {
   id: string; coisaId: string; t: number; preco: number; estado: number;
   /** REWORK 4: a variante desta coisa (a cor e o acabamento), da compra para sempre. Saves antigos: derivada do id. */
   cor?: string;
+  /** 12.4.1: a marca e a loja onde foi comprada (`dados/lojas`). Ausentes em saves antigos e no que foi dado. */
+  marca?: string;
+  loja?: string;
   acabamento?: string;
   /** REWORK 12.4: onde está (ausente = na casa onde mora) e em que cômodo (ausente = onde a casa a põe). */
   local?: LocalDoObjeto;
@@ -1947,6 +1959,8 @@ export interface Frente {
   retomadas: number;
   /** Maior habilidade já alcançada (para "já tocou bem, um dia"). */
   auge: number;
+  /** 12.4.1: quando o corpo cobrou a idade pela última vez (uma vez por ano, não a cada treino). Ausente em saves antigos. */
+  tDeclinio?: number;
 }
 
 export type TipoMarcaCaminho =

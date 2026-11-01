@@ -11,11 +11,13 @@ import { AvisoAtualizacao } from './pwa/AvisoAtualizacao';
 const Criacao = sobDemanda(() => import('./telas/Criacao').then(m => m.Criacao));
 const Jogo = sobDemanda(() => import('./telas/Jogo').then(m => m.Jogo));
 const Vidas = sobDemanda(() => import('./telas/Vidas').then(m => m.Vidas));
+import { FiguraSobDemanda } from './avatar/figuraSobDemanda';
 
 
 /** Busca tudo o que a vida vai pedir (o motor e as telas) — logo depois da primeira tela. */
 export function precarregar(): Promise<unknown> {
-  return Promise.all([carregarMotor(), Criacao.precarregar(), Jogo.precarregar(), Vidas.precarregar()]);
+  // 12.4.1: a figura de corpo inteiro (Você · Aparência, as lojas de roupa) também, para não piscar "Carregando…".
+  return Promise.all([carregarMotor(), Criacao.precarregar(), Jogo.precarregar(), Vidas.precarregar(), FiguraSobDemanda.precarregar()]);
 }
 
 export function App() {

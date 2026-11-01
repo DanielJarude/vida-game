@@ -22,8 +22,9 @@ import { disponibilidade, type Acao } from '../../motor/acoes';
 import { podeTentar } from '../../motor/plausibilidade';
 import { idade, idadePessoa } from '../../motor/nucleo';
 import { AUTONOMIA } from '../../motor/sistemas/autonomia';
-import { coisasDaVida, coisasDaLoja, precoDaCoisa, temLojaNaCidade } from '../../motor/sistemas/coisas';
-import { coisa, COISAS, NOME_LOJA, type LojaDeCoisas } from '../../motor/dados/coisas';
+import { coisasDaVida, precoDaCoisa } from '../../motor/sistemas/coisas';
+import { coisa, COISAS } from '../../motor/dados/coisas';
+import { itemEstilo } from '../../motor/dados/estilo';
 import { animaisDoAbrigo, lojaNaCidade, ofertasDeImoveis, ofertasDeVeiculos, type LojaDeVeiculo } from '../../motor/sistemas/mercado';
 import { disponivel, seguranca } from '../../motor/sistemas/dinheiro';
 import { formaDaVersao, modeloVeiculo, versaoVeiculo } from '../../motor/dados/bens';
@@ -39,7 +40,9 @@ import { PORTA_DA_FACHADA, type LugarDaCidade } from '../ilustracao/lugares';
 import { corDoVeiculo } from '../../motor/dados/pertences';
 import { DesenhoObjeto } from './material/Objetos';
 import { Retrato } from '../avatar/Retrato';
-import { LOJAS_DE_COISAS, type QualLugar } from './material/Lugares';
+import { type QualLugar } from './material/Lugares';
+import { categoriaDaCoisa, categoriaDoItem, lojasDaVida, ofertasDaLoja } from '../../motor/sistemas/lojas';
+import { estabelecimento, type CategoriaDeProduto, type Estabelecimento } from '../../motor/dados/lojas';
 import { LOJAS_DE_COLECAO, type LojaDeColecao } from '../../motor/dados/colecionaveis';
 import { lojaDeColecaoNaCidade, ofertasDeColecao } from '../../motor/sistemas/colecao';
 import { lojaDeExoticosNaCidade } from '../../motor/sistemas/exoticos';
@@ -87,21 +90,29 @@ function vitrines(v: Vida): { grupo: string; id: string; lugares: Vitrine[] }[] 
   const temVeiculo = v.financas.bens.some(b => b.tipo === 'veiculo');
   const din = disponivel(v);
 
-  const daLoja = (l: LojaDeCoisas): Vitrine => {
-    const itens = coisasDaLoja(l);
-    const tem = meus.filter(t => coisa(t.coisaId)?.loja === l);
-    const util = itens.filter(c => Object.keys(c.ajuda ?? {}).some(r => praticas.has(r)) && !tem.some(t => t.coisaId === c.id));
-    const mostrar = [...util, ...itens.filter(c => !util.includes(c))].slice(0, 3);
-    const rende = util[0] ? `${cap(util[0].nome)} rende em "${modeloRotina(Object.keys(util[0].ajuda!).find(r => praticas.has(r))!)?.nome.toLowerCase()}"` : undefined;
+  const lojas = lojasDaVida(v);
+  const VESTIR: CategoriaDeProduto[] = ['vestuario', 'calcados', 'acessorios', 'otica', 'relogios', 'joias'];
+  const daEstabelecimento = (e: Estabelecimento): Vitrine => {
+    const ofertas = ofertasDaLoja(v, e.id);
+    const objetos = [...new Set(ofertas.filter(o => o.produto.tipo === 'coisa').map(o => o.produto.id))];
+    const util = objetos.filter(id => Object.keys(coisa(id)?.ajuda ?? {}).some(r => praticas.has(r)) && !meus.some(t => t.coisaId === id));
+    const mostrar = [...util, ...objetos.filter(id => !util.includes(id))].slice(0, 3);
+    // O que já é seu do que esta loja vende (o teclado na de instrumentos, o tênis na sapataria).
+    const seus = [
+      ...meus.filter(t => { const c = coisa(t.coisaId); return !!c && e.categorias.includes(categoriaDaCoisa(c)); }).map(t => coisa(t.coisaId)!.nome),
+      ...(v.eu.estilo?.itens ?? []).filter(x => { const it = itemEstilo(x.itemId); return !!it && e.categorias.includes(categoriaDoItem(it)); }).map(x => itemEstilo(x.itemId)!.nome.toLowerCase())
+    ];
+    const soVestir = e.categorias.every(c => VESTIR.includes(c));
     return {
-      id: l, nome: NOME_LOJA[l], oque: O_QUE[l], idadeMin: 10, porque: 'Com essa idade, quem compra são os adultos da casa.',
-      vitrine: mostrar.map(c => <DesenhoObjeto key={c.id} coisaId={c.id} tamanho={52} rotulo={c.nome} />),
-      preco: `a partir de ${dinheiroCurto(Math.min(...itens.map(c => precoDaCoisa(v, c.id))))}`,
-      seu: tem.length ? `Seu: ${tem.slice(0, 2).map(t => coisa(t.coisaId)!.nome).join(', ')}${tem.length > 2 ? ` e mais ${tem.length - 2}` : ''}` : undefined,
-      rende, online: !temLojaNaCidade(v, l)
+      id: `loja:${e.id}` as QualLugar, nome: e.nome, oque: e.frase, idadeMin: soVestir ? AUTONOMIA.compra_pessoal.idade : 10,
+      porque: soVestir ? AUTONOMIA.compra_pessoal.antes : 'Com essa idade, quem compra são os adultos da casa.',
+      vitrine: mostrar.map(id => <DesenhoObjeto key={id} coisaId={id} tamanho={52} rotulo={coisa(id)!.nome} />),
+      preco: ofertas.length ? `a partir de ${dinheiroCurto(Math.min(...ofertas.map(o => o.preco)))}` : undefined,
+      seu: seus.length ? `Seu: ${seus.slice(0, 2).join(', ')}${seus.length > 2 ? ` e mais ${seus.length - 2}` : ''}` : undefined,
+      rende: util[0] ? `${cap(coisa(util[0])!.nome)} rende em "${modeloRotina(Object.keys(coisa(util[0])!.ajuda!).find(r => praticas.has(r))!)?.nome.toLowerCase()}"` : undefined,
+      online: e.tipo === 'online'
     };
   };
-
   const casas = i >= 16 ? ofertasDeImoveis(v, 'aluguel').slice(0, 3) : [];
   const conc = vitrineDeVeiculos(v, 'concessionaria');
   const usad = vitrineDeVeiculos(v, 'usados');
@@ -128,9 +139,12 @@ function vitrines(v: Vida): { grupo: string; id: string; lugares: Vitrine[] }[] 
       ...(colecionador ? [{ id: 'colecionador' as QualLugar, nome: 'Garagem de colecionador', oque: 'Superesportivos, altíssimo luxo e clássicos com história', idadeMin: 18, porque: 'A partir dos 18.', vitrine: vitrineDeVeiculos(v, 'colecionador').desenho, preco: `a partir de ${dinheiroCurto(vitrineDeVeiculos(v, 'colecionador').preco ?? 0)}` }] : []),
       ...(temVeiculo ? [{ id: 'oficina' as QualLugar, nome: 'Oficina', oque: 'Revisão e conserto do que é seu', idadeMin: 0, vitrine: veiculosSeus.slice(0, 1).map(b => b.tipo === 'veiculo' ? <DesenhoVeiculo key={b.id} forma={formaDaVersao(versaoVeiculo(b.versaoId), b.modeloId)} versaoId={b.versaoId} cor={corDoVeiculo(b, modeloVeiculo(b.modeloId).categoria).cor} estado={b.estado} largura={88} /> : null), seu: veiculosSeus.some(b => b.tipo === 'veiculo' && b.problema) ? 'Há um conserto esperando' : undefined }] : [])
     ] },
-    { grupo: 'As coisas do dia a dia', id: 'objetos', lugares: LOJAS_DE_COISAS.map(daLoja) },
-    { grupo: 'O que se usa no corpo', id: 'aparencia', lugares: [
-      { id: 'estilo', nome: 'Ótica, roupas e acessórios', oque: 'Óculos, chapéus, roupas, um relógio — o que aparece no retrato', idadeMin: AUTONOMIA.compra_pessoal.idade, porque: AUTONOMIA.compra_pessoal.antes, vitrine: null },
+    // 12.4.1: as lojas da vida — especializadas, grandes lojas de departamento do país e o comércio online internacional
+    // (`dados/lojas`). Antes: um balcão só de "ótica, roupas e acessórios" e cinco lojas de objetos sem marca.
+    { grupo: 'Lojas especializadas', id: 'especializadas', lugares: lojas.filter(e => e.tipo === 'especializada').map(daEstabelecimento) },
+    ...(lojas.some(e => e.tipo === 'departamento') ? [{ grupo: 'Grandes lojas e lojas de departamento', id: 'departamento', lugares: lojas.filter(e => e.tipo === 'departamento').map(daEstabelecimento) }] : []),
+    { grupo: 'Pela internet', id: 'online', lugares: lojas.filter(e => e.tipo === 'online').map(daEstabelecimento) },
+    { grupo: 'Estética', id: 'aparencia', lugares: [
       { id: 'clinica', nome: 'Clínica de cirurgia plástica', oque: 'Nariz, orelhas, pálpebras, lifting, cabelo, lábios', idadeMin: 16, porque: 'Cirurgia estética, só depois dos 16 (a maior parte, dos 18).', vitrine: null }
     ] },
     // REWORK 12: luxo e coleção — relógios, joias, arte, antiguidades, memorabilia, o leilão. Só o que existe na cidade.
@@ -153,17 +167,26 @@ function vitrines(v: Vida): { grupo: string; id: string; lugares: Vitrine[] }[] 
   ];
 }
 
-const O_QUE: Record<LojaDeCoisas, string> = {
-  eletronicos: 'Celular, notebook, câmera, videogame', casa: 'Máquina de lavar, ar-condicionado, cama, cozinha', instrumentos: 'Violão, teclado, guitarra, bateria, violino',
-  esportes: 'Chuteira, raquete, kit de academia, esteira', livraria: 'Livros, apostilas, material de arte, jogos'
-};
 
 /** A vitrine tem objetos de verdade na frente (senão, a fachada mostra o interior da loja). */
 const temObjetos = (v: ReactNode) => (Array.isArray(v) ? v.some(Boolean) : Boolean(v));
 
 /** REWORK 12.2: cada casa de luxo e coleção tem a sua fachada (a relojoaria não é mais a ótica; a galeria não é a livraria). */
 const FACHADA_DE: Partial<Record<QualLugar, LugarDaCidade>> = { comprar: 'alugar', colecionador: 'concessionaria' };
-const fachadaDoLugar = (id: QualLugar): LugarDaCidade => FACHADA_DE[id] ?? (id as LugarDaCidade);
+/** 12.4.1: a fachada de cada loja da vida (a de roupas e a sapataria usam a vitrine de moda; a de móveis, a da casa…). */
+const FACHADA_DA_LOJA: Record<string, LugarDaCidade> = {
+  roupas: 'estilo', sapataria: 'estilo', otica: 'estilo', acessorios: 'estilo', grifes: 'joalheria', relojoaria: 'relojoaria', joalheria: 'joalheria',
+  eletronicos: 'eletronicos', eletrodomesticos: 'casa', moveis: 'casa', instrumentos: 'instrumentos', esportes: 'esportes', livraria: 'livraria'
+};
+export const fachadaDoLugar = (id: QualLugar): LugarDaCidade => {
+  if (id.startsWith('loja:')) {
+    const e = estabelecimento(id.slice(5));
+    if (!e) return 'casa';
+    if (FACHADA_DA_LOJA[e.id]) return FACHADA_DA_LOJA[e.id];
+    return e.categorias.includes('vestuario') ? 'estilo' : e.categorias.includes('eletronicos') ? 'eletronicos' : 'casa';
+  }
+  return FACHADA_DE[id] ?? (id as LugarDaCidade);
+};
 
 function CartaoVitrine({ x, i, abrir }: { x: Vitrine; i: number; abrir: (l: QualLugar) => void }) {
   const cedo = i < x.idadeMin;

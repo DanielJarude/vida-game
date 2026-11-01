@@ -27,6 +27,8 @@ import { economiaLocal, municipio, nivelDeOferta, paisDaCidade, pertoDaAgua } fr
 import { pagar, vereditoDePagar } from './dinheiro';
 import { autonomia } from './autonomia';
 import { moraComFamiliaDeOrigem } from './domicilio';
+import { ofertaValida, precoNaLoja } from './lojas';
+import { estabelecimento } from '../dados/lojas';
 import { lancar } from './extrato';
 import { dinheiro as fmt } from '../texto';
 import { bonusDosComodos, naCasaAtual } from './lar';
@@ -74,7 +76,7 @@ export function fazCalor(municipioId: string): boolean {
 
 /* ------------------------------------------------------------- Comprar */
 
-export function disponibilidadeComprarCoisa(v: Vida, id: string): Veredito {
+export function disponibilidadeComprarCoisa(v: Vida, id: string, marca?: string, loja?: string): Veredito {
   const c = coisa(id);
   if (!c) return bloqueio('impossivel', 'Isso não existe na loja.');
   const i = idade(v);
@@ -90,12 +92,13 @@ export function disponibilidadeComprarCoisa(v: Vida, id: string): Veredito {
   if (id === 'prancha' && !pertoDaAgua(v.moradia.municipioId)) return bloqueio('impossivel', 'Longe do mar, a prancha vira enfeite de parede.');
   // REWORK 12.4: os discos se compram de lote em lote (a coleção cresce); o resto, um de cada.
   if (temCoisa(v, id) && id !== 'discos') return bloqueio('incompativel', `Você já tem ${c.artigo} ${c.nome}.`);
-  return vereditoDePagar(v, precoDaCoisa(v, id));
+  if ((marca || loja) && !ofertaValida(v, { tipo: 'coisa', id }, marca, loja)) return bloqueio('impossivel', 'Essa loja não vende isso.');
+  return vereditoDePagar(v, loja ? precoNaLoja(v, { tipo: 'coisa', id }, marca, loja) : precoDaCoisa(v, id));
 }
 
-export function comprarCoisa(v: Vida, id: string): string {
+export function comprarCoisa(v: Vida, id: string, marca?: string, loja?: string): string {
   const c = coisa(id)!;
-  const preco = precoDaCoisa(v, id);
+  const preco = loja ? precoNaLoja(v, { tipo: 'coisa', id }, marca, loja) : precoDaCoisa(v, id);
   pagar(v, preco);
   const lote = id === 'discos' ? coisasDaVida(v).find(x => x.coisaId === 'discos') : undefined;
   if (lote) {
@@ -104,8 +107,10 @@ export function comprarCoisa(v: Vida, id: string): string {
     registrarNoObjeto(lote, v.t, `Mais um lote de discos (${fmt(preco)}).`);
     return `Mais um lote no sebo: a coleção passa de ${lote.quantidade * 25} discos.`;
   }
-  receberCoisa(v, id, preco);
-  const online = temLojaNaCidade(v, c.loja) ? '' : ' Veio pela internet: na cidade não há loja disso.';
+  const nova = receberCoisa(v, id, preco);
+  if (marca) nova.marca = marca;
+  if (loja) nova.loja = loja;
+  const online = loja ? (estabelecimento(loja)?.tipo === 'online' ? ` Veio pela internet (${estabelecimento(loja)!.nome}).` : '') : temLojaNaCidade(v, c.loja) ? '' : ' Veio pela internet: na cidade não há loja disso.';
   // REWORK 7: a concordância da frase ("A estante de livros é sua", "Os livros são seus") — e o nome que já traz o
   // artigo ("uma estante de livros") não ganha outro na frente ("A uma estante…").
   const nome = /^(um|uma) /.test(c.nome) ? c.nome.replace(/^um /, 'o ').replace(/^uma /, 'a ') : `${c.artigo} ${c.nome}`;

@@ -17,6 +17,7 @@ import { rngDe } from '../rng';
 import { escrever, idade, marcarFato, novoId, temFato } from '../nucleo';
 import { bloqueio, PERMITIDO, type Veredito } from '../plausibilidade';
 import { AUTONOMIA, autonomia } from './autonomia';
+import { nomeDaMarca, ofertaValida, precoNaLoja } from './lojas';
 import { BARBAS, CORES_NATURAIS, CORES_TINTA, CORTES, ITENS_ESTILO, itemEstilo, lugaresDoItem, ROUPAS, sinalDoEstilo, TIPOS_DE_CABELO } from '../dados/estilo';
 import { geneticaDe, guardarGenes } from './identidade';
 import { economiaLocal } from '../dados/lugares';
@@ -137,7 +138,7 @@ export function mudarAparencia(v: Vida, m: MudancaVisual): string {
 
 /* ------------------------------------------------------------- Comprar */
 
-export function disponibilidadeComprarItem(v: Vida, itemId: string): Veredito {
+export function disponibilidadeComprarItem(v: Vida, itemId: string, marca?: string, loja?: string): Veredito {
   const it = itemEstilo(itemId);
   if (!it) return bloqueio('impossivel', 'Esse item não existe.');
   const a = autonomia(v, 'compra_pessoal');
@@ -145,23 +146,26 @@ export function disponibilidadeComprarItem(v: Vida, itemId: string): Veredito {
   if (temItem(v, itemId)) return bloqueio('incompativel', 'Você já tem.');
   if (it.receita && !precisaDeOculos(v)) return bloqueio('requisito', 'Óculos de grau pedem receita: a sua vista não pediu (ainda).');
   if (v.justica?.prisao) return bloqueio('incompativel', 'Na prisão, não.');
-  return vereditoDePagar(v, precoDoItem(v, itemId));
+  if ((marca || loja) && !ofertaValida(v, { tipo: 'item', id: itemId }, marca, loja)) return bloqueio('impossivel', 'Essa loja não vende isso.');
+  return vereditoDePagar(v, loja ? precoNaLoja(v, { tipo: 'item', id: itemId }, marca, loja) : precoDoItem(v, itemId));
 }
 
-export function comprarItem(v: Vida, itemId: string, pagoPelaFamilia = false): string {
+export function comprarItem(v: Vida, itemId: string, pagoPelaFamilia = false, marca?: string, loja?: string): string {
   const it = itemEstilo(itemId)!;
-  const preco = precoDoItem(v, itemId);
+  const preco = loja ? precoNaLoja(v, { tipo: 'item', id: itemId }, marca, loja) : precoDoItem(v, itemId);
   if (!pagoPelaFamilia) pagar(v, preco);
   v.eu.estilo ??= { itens: [] };
-  const item: ItemDeEstilo = { id: novoId(v, 'est'), itemId, t: v.t, preco, usando: true };
+  const item: ItemDeEstilo = { id: novoId(v, 'est'), itemId, t: v.t, preco, usando: true, ...(marca ? { marca } : {}), ...(loja ? { loja } : {}) };
   v.eu.estilo.itens.push(item);
   // Passa a usar (o que ocupa o mesmo lugar sai: a mesma categoria que aparece no retrato, o mesmo pulso, o mesmo pescoço).
   let saiuRoupa = false;
   for (const x of v.eu.estilo.itens) if (x !== item && x.usando && mesmoLugar(it, itemEstilo(x.itemId))) { x.usando = false; saiuRoupa ||= !!itemEstilo(x.itemId)?.visual?.roupa; }
   if (saiuRoupa && !it.visual?.roupa) v.eu.visual.roupa = 'basica';
   if (it.visual) Object.assign(v.eu.visual, it.visual);
+  sincronizarVisual(v);
   v.eu.estilo.tMudanca = v.t;
-  return it.luxo ? `Comprou ${it.nome.toLowerCase()} por ${fmt(preco)}. ${efeitoDoLuxo(v)}` : `Comprou ${it.nome.toLowerCase()}${pagoPelaFamilia ? '' : ` por ${fmt(preco)}`}.`;
+  const deMarca = marca ? ` (${nomeDaMarca(marca)})` : '';
+  return it.luxo ? `Comprou ${it.nome.toLowerCase()}${deMarca} por ${fmt(preco)}. ${efeitoDoLuxo(v)}` : `Comprou ${it.nome.toLowerCase()}${deMarca}${pagoPelaFamilia ? '' : ` por ${fmt(preco)}`}.`;
 }
 
 /**
@@ -202,7 +206,26 @@ export function usarItem(v: Vida, itemId: string, usar: boolean): string {
     if (it.visual.joia) v.eu.visual.joia = usar ? it.visual.joia : undefined;
   }
   x.usando = usar;
+  sincronizarVisual(v);
   return usar ? `Passou a usar: ${it.nome.toLowerCase()}.` : `Guardou: ${it.nome.toLowerCase()}.`;
+}
+
+/**
+ * 12.4.1 — o que o retrato mostra sai do que está em uso: a peça de cima visível (o casaco por cima; senão o vestido ou o
+ * conjunto; senão a blusa), a joia do pescoço e os brincos (lugares diferentes: dá para usar os dois). A figura de corpo
+ * inteiro lê as peças direto; o retrato (só o busto) lê estes campos.
+ */
+export function sincronizarVisual(v: Vida): void {
+  const vis = v.eu.visual;
+  const usando = itensDaPessoa(v).filter(x => x.usando);
+  const em = (l: string) => usando.find(x => { const it = itemEstilo(x.itemId); return !!it && lugaresDoItem(it).includes(l) && (l !== 'tronco' || it.lugar !== 'casaco'); });
+  const casaco = usando.find(x => itemEstilo(x.itemId)?.lugar === 'casaco');
+  const cima = casaco ?? em('tronco');
+  if (cima) vis.superior = `${cima.itemId}#${cima.id}`; else delete vis.superior;
+  const pescoco = usando.find(x => itemEstilo(x.itemId)?.lugar === 'joia');
+  const joia = pescoco ? itemEstilo(pescoco.itemId)?.visual?.joia : undefined;
+  if (joia) vis.joia = joia; else delete vis.joia;
+  if (usando.some(x => itemEstilo(x.itemId)?.lugar === 'orelha')) vis.brincos = true; else delete vis.brincos;
 }
 
 export function disponibilidadeUsarItem(v: Vida, itemId: string, usar: boolean): Veredito {

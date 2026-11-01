@@ -124,6 +124,8 @@ describe('K3 · o convite com prazo', () => {
       p.nome = 'Francisco';
       vincular(x, p, { origem: 'escola', proximidade: 60 });
       quem = p.id;
+      // Só este convite aberto (12.4.1: a vida sorteada desta semente passou a ter outra porta aos 15).
+      x.caminhos.oportunidades = [];
       novaOportunidade(x, { tipo: 'iniciacao', meses: 12, chave: 'k3', titulo: 'Francisco chamou para um projeto', texto: 'Um projeto de ciências depois da aula.', pessoaId: p.id, atividade: 'projeto_escola' });
     });
     abrirJogo(v);
