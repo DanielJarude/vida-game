@@ -56,3 +56,5 @@
   .retro__linha::before { left: 0.82rem; }
   .retro-memoria__marca { left: -1.95rem; }
 }
+/* VIDA 12.6 — a foto da memória (quem estava, com a idade daquele dia, no cenário da categoria). */
+.retro-foto__cena { display: block; width: 100%; height: 100%; }

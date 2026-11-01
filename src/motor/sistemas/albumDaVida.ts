@@ -110,7 +110,13 @@ export function lerEntrada(v: Vida, e: Entrada): Leitura | undefined {
       case 'm_aposentadoria': return { categoria: 'carreira', tipo: 'aposentadoria', titulo: 'A aposentadoria', destaque: 1 };
       case 'm_fama': return { categoria: 'conquistas', tipo: 'fama', titulo: 'O reconhecimento', destaque: Number(d.faixa) >= 3 ? 2 : 1 };
       case 'm_premio': return { categoria: 'conquistas', tipo: 'premio', titulo: d.venceu ? `Prêmio: ${d.nome}` : `Indicação: ${d.nome}`, destaque: d.venceu ? 2 : 1 };
-      case 'm_tatuagem': return d.primeira ? { categoria: 'momentos', tipo: 'tatuagem', titulo: 'A primeira tatuagem', destaque: 0 } : undefined;
+      // VIDA 12.6: além da primeira, as tatuagens com significado, as coberturas e os projetos inteiros entram no álbum.
+      case 'm_tatuagem': return d.primeira ? { categoria: 'momentos', tipo: 'tatuagem', titulo: 'A primeira tatuagem', destaque: 0 }
+        : d.composicao ? { categoria: 'momentos', tipo: 'tatuagem', titulo: 'Um projeto de tatuagem inteiro', destaque: 0 }
+        : d.significado ? { categoria: 'momentos', tipo: 'tatuagem', titulo: 'Uma tatuagem com história', destaque: 0 }
+        : d.cobertura ? { categoria: 'momentos', tipo: 'tatuagem', titulo: 'Uma tatuagem coberta por outra', destaque: 0 } : undefined;
+      case 'm_hobby': return { categoria: 'momentos', tipo: 'hobby', titulo: ({ jardinagem: 'A horta que deu certo', pintura: 'A primeira exposição', artesanato: 'A banca na feira', colecionar: 'Dez anos de coleção' } as Record<string, string>)[String(d.hobby)] ?? 'Um hobby de verdade', destaque: 0 };
+      case 'm_marco': return d.marco === 'primeira_viagem_sozinho' ? { categoria: 'viagens', tipo: 'viagem', titulo: `Primeira viagem ${v.eu.genero === 'feminino' ? 'sozinha' : 'sozinho'}: ${d.destino}`, destaque: 1 } : undefined;
       case 'm_pet': return { categoria: 'familia', tipo: 'pet', titulo: `${nomeDe(v, String(d.quem)) ?? 'Um bicho'} chegou`, destaque: 0, pessoaId: String(d.quem) };
     }
   }

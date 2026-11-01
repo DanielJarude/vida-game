@@ -9,6 +9,7 @@
  * Os lugares da cidade (concessionária, banco, abrigo) moram em Cidade.
  */
 
+import { Estrela } from './Atalhos';
 import { FAZERES_EM_CASA, rotuloFazerEmCasa } from '../../motor/sistemas/casaNoDia';
 import { disponibilidade } from '../../motor/acoes';
 import { daMoedaLocal, emMoedaLocal, moedaDoPais, simboloDaMoeda } from '../../motor/mundo/moeda';
@@ -321,7 +322,7 @@ export function ViverACasa({ vida, agir }: Props) {
       {dia.length > 0 && <>
         <h4 className="casa-dia__titulo">No dia a dia</h4>
         <div className="grupo-acoes grupo-acoes--linha casa-dia">
-          {dia.map(op => <BotaoAcao key={op} vida={vida} acao={{ tipo: 'em_casa', oque: op }} agir={agir} variante="discreto">{rotuloFazerEmCasa(vida, op)}</BotaoAcao>)}
+          {dia.map(op => <span key={op} className="com-estrela"><BotaoAcao vida={vida} acao={{ tipo: 'em_casa', oque: op }} agir={agir} variante="discreto">{rotuloFazerEmCasa(vida, op)}</BotaoAcao><Estrela vida={vida} acao={{ tipo: 'em_casa', oque: op }} rotulo={rotuloFazerEmCasa(vida, op)} /></span>)}
         </div>
       </>}
       {usos.includes('reformar') && <p className="nota">A reforma conserta e renova o imóvel (conservação, valor, padrão). Piso, parede, luz e móveis de cada cômodo se escolhem em A casa por dentro.</p>}

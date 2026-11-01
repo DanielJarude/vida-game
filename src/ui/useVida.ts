@@ -11,6 +11,9 @@
  * inicial espera a leitura junto com o motor.
  */
 
+import { guardarAviso } from './atalhos';
+import { idade } from '../motor/nucleo';
+import { anoDe } from '../motor/tempo';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { DecisoesDeHeranca, Vida } from '../motor/tipos';
 import type { Armazenamento, Estatisticas } from '../motor/save';
@@ -191,6 +194,9 @@ export function useVida() {
     const deQuem = alvo ? { pessoaId: alvo.id, quem: alvo.nome } : undefined;
     // O que a ação mudou na vida (as consequências, como ficaram na Linha da Vida).
     const mudancas = (r.mudancas ?? []).filter(m => m !== r.resultado);
+    // VIDA 12.6: o que aconteceu fica nos "Últimos avisos" (neste navegador).
+    const textoDoAviso = r.resultado ?? r.aviso?.texto;
+    if (textoDoAviso) guardarAviso(r.vida.id, { texto: textoDoAviso, titulo: r.titulo, ano: anoDe(r.vida.t), idade: idade(r.vida) });
     if (r.resultado) {
       // Resultado de decisão aparece dentro do próprio momento (o modal decide);
       // resultado de ação que não abriu decisão vira aviso — a não ser que tenha mudado coisas na vida.

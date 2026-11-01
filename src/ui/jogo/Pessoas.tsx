@@ -13,6 +13,7 @@
  * do mais relevante para o menos.
  */
 
+import { Estrela } from './Atalhos';
 import { textoLocal } from '../../motor/mundo/locais';
 import { useState } from 'react';
 import { custoDaConsulta, custoDoTratamento, estadoDoPet, infoPet } from '../../motor/sistemas/pets';
@@ -536,9 +537,12 @@ function FichaPessoa({ vida, p, vin, agir, aoFechar }: { vida: Vida; p: Pessoa; 
   }).filter(g => g.existe > 0);
   const [parte, setParte] = useState<'agora' | 'voces' | 'quem'>('agora');
   const botao = (x: { id: string; variante?: 'principal' | 'secundario' | 'discreto' | 'perigo'; chance?: boolean }, destaque = false) => (
-    <BotaoAcao key={x.id} vida={vida} acao={{ tipo: 'pessoa', pessoaId: p.id, interacao: x.id }} agir={agir} variante={destaque ? 'principal' : x.variante === 'principal' ? 'secundario' : x.variante} mostrarChance={x.chance}>
-      {rotuloInteracao(vida, p.id, x.id)}
-    </BotaoAcao>
+    <span key={x.id} className="com-estrela">
+      <BotaoAcao vida={vida} acao={{ tipo: 'pessoa', pessoaId: p.id, interacao: x.id }} agir={agir} variante={destaque ? 'principal' : x.variante === 'principal' ? 'secundario' : x.variante} mostrarChance={x.chance}>
+        {rotuloInteracao(vida, p.id, x.id)}
+      </BotaoAcao>
+      {x.variante !== 'perigo' && <Estrela vida={vida} acao={{ tipo: 'pessoa', pessoaId: p.id, interacao: x.id }} rotulo={rotuloInteracao(vida, p.id, x.id)} />}
+    </span>
   );
   const passos = narrada.map((h, k) => ({ chave: `${h.t}:${k}`, quando: anoDe(h.t), texto: h.texto, peso: ((h.peso ?? 1) >= 3 ? 3 : (h.peso ?? 1) >= 2 ? 2 : 1) as 1 | 2 | 3 })).reverse();
   // Os momentos importantes (o que pesou: o começo, o casamento, a briga séria, a reconciliação, a separação).

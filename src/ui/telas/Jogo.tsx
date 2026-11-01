@@ -14,6 +14,8 @@
  * "Agora" (desktop) diz o que pede atenção, sem repetir as áreas.
  */
 
+import type { Acao } from '../../motor/acoes';
+import { SeusAtalhos, UltimosAvisos } from '../jogo/Atalhos';
 import { noticiasDoAno, type Noticia } from '../../motor/sistemas/mundoVivo';
 import { BaixarApp } from './BaixarApp';
 import { SeletorTema } from '../SeletorTema';
@@ -164,7 +166,7 @@ export function Jogo({ c }: { c: ControleVida }) {
         <main className={`conteudo pagina pagina--${area}${area === 'vida' ? ` pagina--vida-${secao}` : ''}`} ref={conteudo}>
           {area === 'linha' && <Historia vida={vida} marca={c.marcaAno} parte={parteHistoria} irParte={setParteHistoria} irPara={ir} abrirPessoa={abrirPessoa}
             anoQuePassou={c.marcaAno > 0 ? <AnoQuePassou vida={vida} desde={c.marcaAno} abrirPessoa={abrirPessoa} /> : undefined}
-            pedeVoce={estreito ? <Agora vida={vida} area={area} irPara={ir} abrirPessoa={abrirPessoa} abrirConvite={setConvite} /> : undefined} />}
+            pedeVoce={estreito ? <Agora vida={vida} area={area} irPara={ir} abrirPessoa={abrirPessoa} abrirConvite={setConvite} agir={c.agir} /> : undefined} />}
           {area === 'voce' && <Voce vida={vida} agir={c.agir} irPara={ir} abrirPessoa={abrirPessoa} parte={parteVoce} irParte={setParteVoce} />}
           {area === 'pessoas' && <Pessoas vida={vida} agir={c.agir} aberta={pessoaAberta} abrir={focar} parte={partePessoas} irParte={setPartePessoas} />}
           {area === 'caminhos' && <PaginaCaminhos vida={vida} agir={c.agir} irPara={ir} abrirPessoa={abrirPessoa} divisao={divisao} irDivisao={(d, p) => irLugar({ area: 'caminhos', divisao: d, parte: p })} parte={parte} irParte={p => irLugar({ area: 'caminhos', divisao, parte: p })} explorar={explorar} aoExplorar={setExplorar} />}
@@ -181,7 +183,7 @@ export function Jogo({ c }: { c: ControleVida }) {
         </main>
 
         <aside className="agora" aria-label="Agora">
-          <Agora vida={vida} area={area} irPara={ir} abrirPessoa={abrirPessoa} abrirConvite={setConvite} />
+          <Agora vida={vida} area={area} irPara={ir} abrirPessoa={abrirPessoa} abrirConvite={setConvite} agir={c.agir} />
         </aside>
       </div>
 
@@ -293,7 +295,7 @@ export function FechamentoDoAno({ vida }: { vida: Vida }) {
  * com você, quem precisa de você, as portas abertas (levando para a área
  * certa), o que está em andamento; o dinheiro só quando aperta.
  */
-function Agora({ vida, area, irPara, abrirPessoa, abrirConvite }: { vida: Vida; area: Area; irPara: (a: Aba) => void; abrirPessoa: (id: string) => void; abrirConvite?: (id: string) => void }) {
+function Agora({ vida, area, irPara, abrirPessoa, abrirConvite, agir }: { vida: Vida; area: Area; irPara: (a: Aba) => void; abrirPessoa: (id: string) => void; abrirConvite?: (id: string) => void; agir?: (a: Acao) => boolean }) {
   const casa = emCasa(vida);
   const pessoal = sinalPessoal(vida);
   // Só o urgente atravessa as áreas; a vida social normal mora em Pessoas (FIX pós-REWORK 2).
@@ -310,6 +312,7 @@ function Agora({ vida, area, irPara, abrirPessoa, abrirConvite }: { vida: Vida; 
   const portas = oportunidadesAbertas(vida);
   return (
     <div className="painel-agora">
+      {agir && <SeusAtalhos vida={vida} agir={agir} />}
       {pessoal && area !== 'voce' && (
         <button type="button" className="agora-voce" onClick={() => irPara(sinalDeSaude(vida) ? 'prontuario' : 'voce')}>
           <Retrato visual={vida.eu.visual} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? "eu"} tamanho={34} rotulo="Você" expressao={expressaoDe(vida)} />
@@ -379,13 +382,16 @@ function Agora({ vida, area, irPara, abrirPessoa, abrirConvite }: { vida: Vida; 
 
 function Menu({ c, aoFechar, ir }: { c: ControleVida; aoFechar: () => void; ir: (l: Lugar) => void }) {
   const [notas, setNotas] = useState(false);
+  const [avisos, setAvisos] = useState(false);
   if (notas) return <Novidades aoFechar={() => setNotas(false)} historico />;
+  if (avisos && c.vida) return <UltimosAvisos vida={c.vida} aoFechar={() => setAvisos(false)} />;
   return (
     // REWORK 6.5: a folha comum (prende o foco, fecha com Esc, devolve o foco a quem abriu) — antes, uma cópia sem teclado.
     <Folha titulo="VIDA" rotulo="Menu" aoFechar={aoFechar}>
         <div className="menu">
           <SeletorTema />
           <button type="button" className="botao botao--secundario" onClick={() => setNotas(true)}>Novidades da atualização</button>
+          {c.vida && <button type="button" className="botao botao--secundario" onClick={() => setAvisos(true)}>Últimos avisos</button>}
           <p className="nota">Sua vida é salva a cada passo, neste navegador. Para continuar em outro aparelho, exporte a vida num arquivo e importe lá.</p>
           <button type="button" className="botao botao--secundario" onClick={() => c.exportar()}>Exportar esta vida (arquivo)</button>
           <BaixarApp compacto />

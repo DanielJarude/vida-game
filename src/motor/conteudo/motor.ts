@@ -324,7 +324,7 @@ export function vidaComumDoAno(v: Vida): void {
  * emprego, a cidade nova. Gerador derivado (as vidas de antes continuam as mesmas até um deles acontecer); no máximo
  * um por ano, numa parte dos anos; a decisão só num ano que ainda não teve nenhuma.
  */
-const DAS_FASES = /^(inf|ado|adu)1241_/;
+const DAS_FASES = /^((inf|ado|adu)1241|v126)_/;
 export function vidaPorFasesDoAno(v: Vida): void {
   if (v.morte) return;
   const r = rngDe(v.id, 'vida_por_fases_1241', v.t);

@@ -10,6 +10,7 @@ import { CATEGORIAS_DA_MEMORIA, memoriasDaVida, momentosMarcantes, quandoFoi, ty
 import { idade } from '../../motor/nucleo';
 import '../retrospectiva.css';
 import { IconeDaMemoria } from './IconeDaMemoria';
+import { FotoDaMemoria } from './FotoDaMemoria';
 
 const FASES: { ate: number; nome: string }[] = [
   { ate: 11, nome: 'Infância' }, { ate: 17, nome: 'Adolescência' }, { ate: 29, nome: 'Juventude' }, { ate: 59, nome: 'Vida adulta' }, { ate: 200, nome: 'Maturidade' }
@@ -48,7 +49,7 @@ export function Retrospectiva({ vida, abrirPessoa }: { vida: Vida; abrirPessoa?:
           <ol className="retro__fotos">
             {marcantes.slice(-12).map((m, k) => (
               <li key={m.id} className={`retro-foto retro--${m.categoria}`} style={{ ['--giro' as string]: `${(k % 3) - 1}deg` }}>
-                <div className="retro-foto__imagem"><IconeDaMemoria categoria={m.categoria} tamanho={34} /></div>
+                <div className="retro-foto__imagem"><FotoDaMemoria vida={vida} m={m} /></div>
                 <p className="retro-foto__titulo">{m.titulo}</p>
                 <p className="retro-foto__quando">{quandoFoi(m)}</p>
               </li>

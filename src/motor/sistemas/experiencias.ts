@@ -29,6 +29,7 @@
  * virar notícia local — e isso é imagem, não fama.
  */
 
+import { viagem126 } from './viagens126';
 import { temCoisa } from './coisas';
 import { educacaoDaVida, paisDaVida } from '../mundo/vida';
 import { ORDEM_REGIOES, PAIS_PADRAO, ROTULO_REGIAO, doPais, existePais, paisDoCatalogo, paisesVivenciaveis, perfilDoPais } from '../mundo/registro';
@@ -462,7 +463,9 @@ export function viverExperiencia(v: Vida, r: Rng, id: TipoExperiencia, escolha?:
       const texto = par ? `Lua de mel em ${dest.nome} (${dur.nome}) com ${par.nome}.` : `Viajou para ${dest.nome} (${dur.nome})${com.length ? `, com ${nomes}` : flex(v.eu.genero, ', sozinho', ', sozinha', ', sozinhe')}.`;
       escrever(v, { texto, relevancia: par ? 'marco' : 'biografia', tema: par ? 'amor' : 'lazer', tom: 'bom', escolha: true, pessoas: com.map(p => p.id), fato: { tipo: 'm_viagem', dados: { destino: dest.nome, ...(par ? { lua: 1 } : {}) } } });
       if (par) viverLuaDeMel(v, par, dest.nome);
-      const extra = acontecimentoDeViagem(v, r, dest.nome, com, fora, fator);
+      const historia = acontecimentoDeViagem(v, r, dest.nome, com, fora, fator);
+      // VIDA 12.6: o que o bolso, a idade e a companhia fazem acontecer; e o marco da primeira viagem sozinho.
+      const extra = [historia, viagem126(v, dest.nome, com, fora, !!historia)].filter(Boolean).join(' ') || undefined;
       return `${fmt(custo)} entre passagem, hospedagem e o resto. ${com.length ? 'Voltaram com fotos demais e uma história que vão repetir por anos.' : 'Voltou outra pessoa — um pouco.'}${efeitos.length ? ` ${cap(efeitos.join('; '))}.` : ''}${extra ? ` ${extra}` : ''}`;
     }
     case 'curso_caro': {

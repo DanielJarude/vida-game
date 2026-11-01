@@ -131,7 +131,9 @@ export function processarOportunidades(v: Vida, r: Rng): void {
     const sp = situacaoProfissional(v);
     const especial = carreiraEspecialAtiva(sp);
     // Quem está sem trabalho ou no informal é quem mais recebe indicação (e quem mais precisa).
-    const chance = clamp(0.1 + conhecidos.length * 0.05, 0, 0.55) * (semTrabalho(v) ? 1 : v.trabalho.atual?.contrato === 'informal' ? 0.8 : 0.5) * (especial ? 0.3 : 1);
+    // VIDA 12.6: a reputação profissional (quem tem bom nome é lembrado) e o favor devolvido de alguém que você ajudou.
+    const favor = v.fatos['indicacao_favor'] !== undefined && v.t - v.fatos['indicacao_favor'] <= 12 ? 1.6 : 1;
+    const chance = clamp(0.1 + conhecidos.length * 0.05, 0, 0.55) * (semTrabalho(v) ? 1 : v.trabalho.atual?.contrato === 'informal' ? 0.8 : 0.5) * (especial ? 0.3 : 1) * (0.8 + (v.trabalho.reputacao ?? 50) / 250) * favor;
     if (conhecidos.length && r.chance(chance)) {
       // (O sorteio do conhecido continua no gerador principal — a sequência de números não muda; ele ganha um peso.)
       const sorteado = r.pick(conhecidos);
