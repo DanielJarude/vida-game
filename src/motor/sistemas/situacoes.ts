@@ -64,6 +64,7 @@ import { economiaLocal } from '../dados/lugares';
 import { MODELOS_ARTE_11 } from './situacoesArte';
 import { modelosComMemoria } from './situacoesMemoria';
 import { MODELOS_125 } from './situacoes125';
+import { MODELOS_126, TRILHAS_SEM_ESCRITORIO } from './situacoes126';
 
 export type Trajetoria = 'futebol' | 'basquete' | 'tenis' | 'atleta' | 'tecnico' | 'medicina' | 'academia' | 'cena' | 'negocio' | 'autonomo' | 'emprego' | 'militar' | 'politica' | 'rural' | 'universidade';
 export type Desfecho = RegistroDeSituacao['desfecho'];
@@ -296,6 +297,8 @@ function intensidade(v: Vida, tr: Trajetoria): number {
   if (tr === 'futebol' || tr === 'basquete' || tr === 'atleta') return t && (t.colocacao <= 2 || t.colocacao >= 16) ? 1.3 : 1;
   if (tr === 'tecnico') { const p = passagemAtual(v); return p?.decisao ? 1.6 : p && (p.pressao >= 60 || p.vestiario <= 40) ? 1.35 : 1; }
   if (tr === 'politica') { const m = v.caminhos.politica?.mandato; return m && m.tFim - v.t <= 12 ? 1.25 : 1; }
+  // VIDA 12.6: o tênis (pendência da 12.5): o jovem profissional, na estrada dos torneios pequenos, vive mais coisa.
+  if (tr === 'tenis') return es?.fase === 'profissional' && (es.nivel ?? 1) <= 2 ? 1.3 : 1.1;
   return 1;
 }
 
@@ -873,27 +876,27 @@ const MODELOS_PROFISSOES: ModeloSituacao[] = [
       { id: 'estudar', texto: 'Ler com calma e trabalhar no que ela aponta', dica: 'Dói. Às vezes ensina.', risco: 0.25, fatores: v => [disciplina(v), F('técnica', (habilidade(v, 'teatro') - 60) / 40)], desfechos: D('No trabalho seguinte, o mesmo crítico escreveu que você tinha crescido.', 'Algo mudou no próximo trabalho.', 'Não encontrou o que mudar.', 'A crítica entrou na cabeça e ficou.', { otimo: { nome: 3 }, pessimo: { estresse: 6 } }, { otimo: 'Ouviu uma crítica dura — e, no trabalho seguinte, o mesmo crítico escreveu que você tinha crescido.' }) },
       { id: 'ignorar', texto: 'Não ler mais nada', dica: 'Protege a cabeça. A frase circula do mesmo jeito.', risco: 0.15, fatores: v => [cabeca(v)], desfechos: D('Uma semana depois, ninguém lembrava.', 'Passou.', 'Os amigos insistiam em mandar.', 'A frase virou apelido nos bastidores.', { ruim: { estresse: 2 }, pessimo: { estresse: 4 } }) }
     ] },
-  { id: 'emp_problema', trajetoria: 'emprego', cabe: () => true,
+  { id: 'emp_problema', trajetoria: 'emprego', cabe: v => deEscritorio126(v),
     titulo: 'Um problema no trabalho', texto: v => `Um problema urgente estourou ${v.trabalho.atual?.empregador ? `no trabalho` : ''} — e a chefia está fora. Alguém precisa decidir.`.replace('  ', ' '),
     intencoes: [
       { id: 'assumir', texto: 'Assumir e resolver', dica: 'Se der certo, todo mundo vê. Se der errado, também.', risco: 0.5, fatores: v => [competencia(v), coragem(v), cabeca(v)], desfechos: D('Resolveu antes de a chefia voltar. Seu nome apareceu na reunião seguinte.', 'Resolveu; o problema não voltou.', 'Resolveu pela metade.', 'A solução piorou o problema, e foi seu nome que ficou nele.', { otimo: { clima: 6, feito: 1 }, pessimo: { clima: -8 } }, { otimo: 'Resolveu sozinho um problema grande no trabalho — e isso pesou na próxima promoção.' }) },
       { id: 'escalar', texto: 'Ligar para a chefia e esperar orientação', dica: 'Seguro. Demora.', risco: 0.15, fatores: v => [clima(v), disciplina(v)], desfechos: D('A chefia agradeceu o aviso e confiou a solução a você.', 'A chefia resolveu por telefone.', 'Demorou, e o problema cresceu.', 'Quando a orientação veio, já era tarde.', { otimo: { clima: 4 } }) },
       { id: 'esperar', texto: 'Esperar alguém resolver', dica: 'Não é com você — até ser.', risco: 0.35, fatores: v => [F('sorte', 0), clima(v)], desfechos: D('Outro resolveu, e ninguém cobrou nada de ninguém.', 'Resolveram.', 'Perguntaram por que ninguém fez nada.', 'Sobrou para você explicar por que não fez nada.', { otimo: { nome: 0 }, bom: { nome: 0 }, pessimo: { clima: -6 } }) }
     ] },
-  { id: 'emp_credito', trajetoria: 'emprego', cabe: v => idade(v) >= 18,
+  { id: 'emp_credito', trajetoria: 'emprego', cabe: v => idade(v) >= 18 && deEscritorio126(v),
     titulo: 'O crédito', texto: () => 'Na apresentação para a diretoria, um colega mostrou como dele o trabalho que você fez.',
     intencoes: [
       { id: 'confrontar', texto: 'Confrontar ali mesmo', dica: 'A verdade em público tem preço.', risco: 0.6, fatores: v => [coragem(v), social(v), competencia(v)], desfechos: D('Com dois detalhes que só quem fez sabia, a sala entendeu.', 'O constrangimento resolveu.', 'Pareceu ciúme.', 'A diretoria achou a cena feia — e lembrou de você por ela.', { otimo: { clima: 4 }, pessimo: { clima: -8 } }) },
       { id: 'chefia', texto: 'Falar com a chefia depois, com provas', dica: 'Mais lento; mais seguro.', risco: 0.3, fatores: v => [clima(v), disciplina(v)], desfechos: D('A chefia corrigiu na reunião seguinte, publicamente.', 'A chefia ouviu e passou a prestar atenção.', 'A chefia disse que "isso acontece".', 'A chefia ficou do lado do colega.', { otimo: { clima: 6 }, pessimo: { clima: -6 } }) },
       { id: 'deixar', texto: 'Deixar passar', dica: 'Paz agora; e depois?', risco: 0.15, fatores: () => [], desfechos: D('O colega, sem graça, passou a citar você.', 'Ficou por isso mesmo.', 'Aconteceu de novo.', 'Na reunião seguinte, o projeto já tinha o nome dele — e o mérito também.', { otimo: { nome: 1 }, bom: { nome: 0, estresse: 3 }, ruim: { estresse: 4 }, pessimo: { nome: -2, estresse: 6 } }) }
     ] },
-  { id: 'emp_erro', trajetoria: 'emprego', cabe: () => true,
+  { id: 'emp_erro', trajetoria: 'emprego', cabe: v => deEscritorio126(v),
     titulo: 'Um erro seu', texto: () => 'Você percebe um erro seu num relatório que já foi para o cliente. Ninguém notou — ainda.',
     intencoes: [
       { id: 'admitir', texto: 'Avisar a chefia e corrigir', dica: 'Honesto. Pode custar um pouco.', risco: 0.2, fatores: v => [clima(v), competencia(v)], desfechos: D('A chefia elogiou a honestidade; o cliente nem se importou.', 'Corrigido, sem drama.', 'Uma bronca, e a correção.', 'O cliente cobrou caro, e a culpa ficou registrada.', { otimo: { clima: 5 }, pessimo: { clima: -5 } }) },
       { id: 'quieto', texto: 'Corrigir em silêncio', dica: 'Se ninguém notar, ótimo. Se notarem...', risco: 0.55, fatores: v => [leitura(v), F('sorte', 0)], desfechos: D('Corrigido sem ninguém saber.', 'Ninguém notou.', 'O cliente notou primeiro; deu trabalho explicar.', 'Descobriram — e o problema virou a omissão, não o erro.', { otimo: { nome: 0 }, bom: { nome: 0 }, pessimo: { clima: -10 } }) }
     ] },
-  { id: 'emp_projeto', trajetoria: 'emprego', cabe: v => (v.trabalho.atual?.desempenho ?? 0) >= 55,
+  { id: 'emp_projeto', trajetoria: 'emprego', cabe: v => (v.trabalho.atual?.desempenho ?? 0) >= 55 && deEscritorio126(v),
     titulo: 'Um projeto novo', texto: () => 'A chefia oferece um projeto novo e arriscado: mais visibilidade, mais horas, nenhuma garantia.',
     intencoes: [
       { id: 'pegar', texto: 'Pegar o projeto', dica: 'Mais horas na semana. Se der certo, abre portas.', risco: 0.5, fatores: v => [competencia(v), disciplina(v), cabeca(v)], desfechos: D('O projeto deu certo e virou referência. A promoção ficou mais perto.', 'Entregue, no prazo.', 'Entregue, com atraso e cansaço.', 'O projeto foi cancelado no meio — e as horas não voltam.', { otimo: { clima: 6, estresse: 4, feito: 1 }, bom: { estresse: 4 }, ruim: { estresse: 7 }, pessimo: { estresse: 8 } }, { otimo: 'Tocou um projeto arriscado no trabalho que virou referência.' }) },
@@ -1509,8 +1512,10 @@ const SEGURANCA = ['pm', 'pm_oficial', 'policia_civil', 'bombeiro', 'guarda', 'p
 const BALCAO = ['comercio', 'atendimento', 'administrativo', 'logistica', 'vendas', 'financas', 'contabil', 'alimentacao', 'beleza'];
 const OBRA = ['construcao', 'eletrica', 'hidraulica', 'mecanica', 'marcenaria', 'manutencao', 'predial', 'reparos', 'industria'];
 const ESCRITA = ['literatura', 'comunicacao', 'conteudo'];
+/** VIDA 12.6: as cenas genéricas de escritório (o relatório, a diretoria) só para quem trabalha num. */
+const deEscritorio126 = (v: Vida) => !naTrilha(...TRILHAS_SEM_ESCRITORIO)(v);
 /** As famílias que têm cenas próprias (a cadência do emprego sobe um pouco para elas: o ofício produz história). */
-export const TRILHAS_COM_OFICIO = new Set([...DIREITO, ...DOCENCIA, ...TECNOLOGIA, ...SAUDE, ...SEGURANCA, ...BALCAO, ...OBRA, ...ESCRITA]);
+export const TRILHAS_COM_OFICIO = new Set([...DIREITO, ...DOCENCIA, ...TECNOLOGIA, ...SAUDE, ...SEGURANCA, ...BALCAO, ...OBRA, ...ESCRITA, 'limpeza', 'domestico', 'cuidado', 'transporte', 'estrada', 'posto', 'costura', 'confeitaria', 'reciclagem', 'publico', 'fiscal', 'veterinaria', 'educacao_fisica', 'pesquisa', 'seguranca_trabalho']);
 const anosNoEmprego = (v: Vida) => { const e = v.trabalho.atual; return e ? (v.t - e.tInicio) / 12 : 0; };
 const area = (v: Vida) => v.trabalho.atual?.especialidade;
 const PESO_OFICIO = () => 1.8;
@@ -1609,7 +1614,7 @@ const MODELOS_OFICIO: ModeloSituacao[] = [
       { id: 'calar', texto: 'Ficar calado', dica: 'A paz do turno. E a sua cabeça?', risco: 0.25, fatores: () => [], desfechos: D('Nada aconteceu.', 'Nada aconteceu — por fora.', 'Você pensa nisso mais do que gostaria.', 'Aconteceu de novo, pior, e você sabia.', { otimo: { nome: 0 }, bom: { estresse: 3 }, ruim: { estresse: 6 }, pessimo: { estresse: 10, humor: -6 } }) }
     ] },
   /* --------------------------------------------- Balcão, escritório, comércio */
-  { id: 'bal_cliente', trajetoria: 'emprego', tema: 'bal_publico', peso: PESO_OFICIO, cabe: naTrilha(...BALCAO),
+  { id: 'bal_cliente', trajetoria: 'emprego', tema: 'bal_publico', peso: PESO_OFICIO, cabe: naTrilha(...BALCAO.filter(t => !['financas', 'contabil', 'administrativo'].includes(t))),
     titulo: 'O cliente furioso', texto: () => 'Um cliente começa a gritar no meio de todo mundo: o problema é real, mas não foi você quem causou.',
     intencoes: [
       { id: 'resolver', texto: 'Resolver no seu limite, ali mesmo', dica: 'Você pode passar da sua alçada.', risco: 0.4, fatores: v => [social(v), cabeca(v), competencia(v)], desfechos: D('O cliente saiu agradecendo — e escreveu um elogio com o seu nome.', 'Resolvido.', 'Resolveu, mas a gerência não gostou do desconto.', 'Prometeu o que não podia, e a conta voltou para você.', { otimo: { feito: 1, clima: 4 }, ruim: { clima: -3 }, pessimo: { clima: -6 } }) },
@@ -1797,7 +1802,7 @@ const MODELOS_ARTE: ModeloSituacao[] = [
 /** REWORK 11 · CAR-11.9: as cenas que lembram (o ex-clube, o título, o atrito, a dispensa superada, o banco que volta). */
 const MODELOS_COM_MEMORIA = modelosComMemoria({ F, D, DT, trajetoria: trajetoriaDeSituacao, coragem, social, disciplina, leitura, cabeca, tecnica: v => (v.caminhos.esporte?.modalidade === 'futebol' ? tecnicaFut(v) : F('técnica', (habilidade(v, v.caminhos.esporte?.modalidade ?? 'futebol') - barraDaDivisao(v.caminhos.esporte?.modalidade ?? 'futebol', v.caminhos.esporte?.nivel ?? 1)) / 12)), nomeNoElenco: nomeFut, nomeTec, vestiario: v => (passagemAtual(v) ? vestiarioF(v) : F('vestiário', 0)) });
 
-export const MODELOS: ModeloSituacao[] = [...MODELOS_FUTEBOL, ...MODELOS_FUTEBOL_MAIS, ...MODELOS_COM_MEMORIA, ...MODELOS_PROFISSOES, ...MODELOS_ESPORTES, ...MODELOS_MILITAR, ...MODELOS_POLITICA, ...MODELOS_POLITICA_BASE, ...MODELOS_RURAL, ...MODELOS_UNIVERSIDADE, ...MODELOS_MEDICINA_MAIS, ...MODELOS_TECNICO, ...MODELOS_OFICIO, ...MODELOS_OFICIO_AUTONOMO, ...MODELOS_ARTE, ...MODELOS_ARTE_11, ...MODELOS_125];
+export const MODELOS: ModeloSituacao[] = [...MODELOS_FUTEBOL, ...MODELOS_FUTEBOL_MAIS, ...MODELOS_COM_MEMORIA, ...MODELOS_PROFISSOES, ...MODELOS_ESPORTES, ...MODELOS_MILITAR, ...MODELOS_POLITICA, ...MODELOS_POLITICA_BASE, ...MODELOS_RURAL, ...MODELOS_UNIVERSIDADE, ...MODELOS_MEDICINA_MAIS, ...MODELOS_TECNICO, ...MODELOS_OFICIO, ...MODELOS_OFICIO_AUTONOMO, ...MODELOS_ARTE, ...MODELOS_ARTE_11, ...MODELOS_125, ...MODELOS_126];
 
 /** As situações vividas, para a tela (as mais recentes primeiro). */
 export function momentosDaCarreira(v: Vida, n = 8): { ano: number; texto: string; desfecho: Desfecho; intencao: string }[] {

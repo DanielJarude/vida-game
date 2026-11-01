@@ -34,7 +34,8 @@
 
 import { textoLocal } from '../mundo/locais';
 import type { Rng } from '../rng';
-import { clamp } from '../rng';
+import { clamp, rngDe } from '../rng';
+import { nivelDeOferta } from '../dados/lugares';
 import type { EstrategiaNegocio, Funcionario, Negocio, Vida } from '../tipos';
 import { escrever, idade, lembrarCom, marcarFato, parceiro, temFato } from '../nucleo';
 import { ocupacao, type Ocupacao } from '../dados/ocupacoes';
@@ -401,7 +402,17 @@ export function processarNegocio(v: Vida, r?: Rng): boolean {
     const horas = n.passivo || equipe >= 2 || socioVivo(v, n) ? -0.5 : presencaDe(n) === 'online' || n.emCasa ? -1 : -2.5;
     base += (hab - 50) / 14 + Math.min(3, exp / 4) + v.personalidade.tracos.sociabilidade / 60 - Math.max(0, n.clientela - 70) / 6 + 0.5 + horas;
   }
-  const nova = Math.round(clamp(base + extra + (r ? r.normal() * 2 : 0), 0, tetoDoMovimento(n, v)));
+  let nova = Math.round(clamp(base + extra + (r ? r.normal() * 2 : 0), 0, tetoDoMovimento(n, v)));
+  // VIDA 12.6: a concorrência que abre perto (sorteio derivado: não mexe na sequência das vidas) e a freguesia fiel, que
+  // segura parte da queda — o negócio com boa fama aguenta o ano ruim; o sem fama, não.
+  const rv = rngDe(v.id, 'negocio126', n.tInicio, v.t);
+  if (nivelDeOferta(v.moradia.municipioId) >= 2 && v.t - n.tInicio >= 12 && (n.concorrente === undefined || v.t - n.concorrente >= 60) && rv.chance(0.08)) {
+    n.concorrente = v.t;
+    nova = Math.max(0, nova - Math.round(7 * (1 - (n.fieis ?? 0) / 100)));
+    escrever(v, { texto: `Abriu ${presencaDe(n) === 'online' ? 'uma loja parecida na internet, com preço menor' : 'um concorrente na mesma rua'}. ${(n.fieis ?? 0) >= 20 ? 'A freguesia de sempre continuou vindo.' : 'O movimento sentiu na hora.'}`, relevancia: 'cotidiano', tema: 'trabalho', tom: (n.fieis ?? 0) >= 20 ? 'neutro' : 'ruim' });
+  }
+  const queda = n.clientela - nova;
+  if (queda > 0 && (n.fieis ?? 0) > 0) nova = Math.round(nova + queda * Math.min(0.5, (n.fieis ?? 0) / 120));
   n.clientela = nova;
   const conta = contaDoAno(v, n, integral);
   if (integral) {
@@ -440,8 +451,15 @@ export function processarNegocio(v: Vida, r?: Rng): boolean {
   // Reputação: o que se fala dele.
   n.reputacao = Math.round(clamp(n.reputacao + (n.clientela >= 45 ? 2 : n.clientela < 20 ? -2 : 0) + est.reputacao + (tem(n, 'especialidade') ? 1 : 0) + (resultado < 0 && emCrise(v) ? -2 : 0) - (n.reputacao - 50) / 25, 0, 100));
 
-  if (n.clientela < 20 || resultado < -n.capital * 0.15) { n.anosNoVermelho += 1; n.estado = 'apertado'; }
-  else { n.anosNoVermelho = 0; n.estado = n.clientela >= 45 && resultado >= 0 ? 'firme' : 'comecando'; }
+  // VIDA 12.6: a freguesia fiel cresce com a boa fama e o movimento; some com a má fama.
+  const fieisAntes = n.fieis ?? 0;
+  n.fieis = Math.round(clamp(fieisAntes + (n.reputacao >= 55 && n.clientela >= 30 ? 4 : n.reputacao < 40 ? -4 : 0), 0, 60));
+  if (fieisAntes < 20 && n.fieis >= 20) escrever(v, { texto: `${n.nome} já tem ${presencaDe(n) === 'online' ? 'cliente que compra todo mês' : presencaDe(n) === 'atendimento' ? 'cliente que marca o próximo horário antes de ir embora' : 'freguês que chega e nem precisa pedir'}.`, relevancia: 'cotidiano', tema: 'trabalho', tom: 'bom' });
+  // VIDA 12.6 (pendência da 12.5): o ano só conta "no vermelho" quando o negócio PERDE dinheiro ou fica quase vazio. Antes,
+  // qualquer ano com menos de 20 de clientela contava — mesmo dando lucro — e a lanchonete que começava pequena era
+  // empurrada para "fechar?" no segundo ano. O pequeno que se paga agora segue apertado, mas aberto; o inviável fecha.
+  if (resultado < -n.capital * 0.15 || n.clientela < 12) { n.anosNoVermelho += 1; n.estado = 'apertado'; }
+  else { n.anosNoVermelho = 0; n.estado = n.clientela >= 45 && resultado >= 0 ? 'firme' : n.clientela < 20 ? 'apertado' : 'comecando'; }
 
   if (n.estado === 'firme' && !v.caminhos.marcas.some(m => m.tipo === 'conquista' && m.ocupacaoId === n.ocupacaoId)) {
     const texto = `${n.nome} firmou: ${presencaDe(n) === 'online' ? 'cliente que volta a comprar' : presencaDe(n) === 'atendimento' ? 'agenda certa' : presencaDe(n) === 'obra' ? 'obra que não para' : 'freguesia certa'}, contas em dia.`;

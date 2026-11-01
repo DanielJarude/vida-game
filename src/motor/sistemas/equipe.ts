@@ -11,6 +11,7 @@
  *               levar ao RH, pedir transferência, procurar o sindicato ou um advogado, sair — nunca um serviço por fora
  *   SANÇÕES     advertência e suspensão são administrativas (no emprego), diferentes de processo (na Justiça)
  */
+import { EFEITO_DO_CHEFE, perfilDoChefe } from './jeito';
 import { clamp, rngDe } from '../rng';
 import type { Emprego, Pessoa, Vida } from '../tipos';
 import { escrever, idadePessoa, lembrarCom } from '../nucleo';
@@ -33,7 +34,8 @@ function novoColega(v: Vida, e: Emprego, r: ReturnType<typeof rngDe>, papel: 'ch
   const p = criarPessoa(v, r, { idade, municipioId: e.municipioId });
   p.ocupacao = papel === 'chefe' ? (p.genero === 'feminino' ? 'gestora' : 'gestor') : oc ? (p.genero === 'feminino' ? oc.nome[1] : oc.nome[0]) : p.ocupacao;
   // VIDA 12.5 (CAR-11.8): o colega é da profissão (antes, sem ocupacaoId: a rede profissional nunca indicava ninguém).
-  if (papel === 'colega' && oc) p.ocupacaoId = oc.id;
+  // VIDA 12.6: e a chefia e quem você coordena também (a rede de quem já trabalhou com você indica).
+  if (oc) p.ocupacaoId = oc.id;
   p.renda = Math.round(e.salario * (papel === 'chefe' ? 1.7 : papel === 'subordinado' ? 0.7 : 1));
   const vin = vincular(v, p, { origem: 'trabalho', proximidade: papel === 'chefe' ? 20 : 28, convivio: ['trabalho'], estagio: 'colega' });
   vin.ambiente = ambiente(e);
@@ -91,7 +93,7 @@ export function processarEquipe(v: Vida): void {
   const chefe = eq.chefeId ? v.pessoas[eq.chefeId] : undefined;
   if (!chefe?.vivo || r.chance(idadePessoa(v, chefe) >= 62 ? 0.3 : 0.08)) {
     const saiu = chefe?.vivo ? chefe : undefined;
-    if (saiu && v.vinculos[saiu.id]) v.vinculos[saiu.id].convivio = v.vinculos[saiu.id].convivio.filter(c => c !== 'trabalho');
+    if (saiu && v.vinculos[saiu.id]) { v.vinculos[saiu.id].convivio = v.vinculos[saiu.id].convivio.filter(c => c !== 'trabalho'); v.vinculos[saiu.id].ambiente = undefined; }
     const novo = novoColega(v, e, r, 'chefe');
     eq.chefeId = novo.id;
     escrever(v, { texto: `${saiu ? `${saiu.nome} deixou a chefia; ` : ''}quem assumiu foi ${novo.nome}.${saiu && e.desempenho >= 70 ? ' Houve quem achasse que a vaga seria sua.' : ''}`, relevancia: 'cotidiano', tema: 'trabalho', pessoas: [novo.id] });
@@ -116,7 +118,13 @@ export function processarEquipe(v: Vida): void {
   const alvo = [eq.chefeId, eq.rivalId, ...eq.colegas].filter((x): x is string => !!x && vivo(v, x)).find(id => v.vinculos[id].tensao >= 55);
   if (alvo && !(v.fatos['trab123_conflito'] !== undefined && v.t - v.fatos['trab123_conflito'] < 24)) { v.fatos['trab123_conflito'] = v.t; v.fatos['trab123_conflito_quem'] = Number(alvo.replace(/\D/g, '')) || 0; eq.conflito = alvo; }
   // Sanções administrativas (no emprego, não na Justiça): o desempenho muito baixo, com o clima ruim.
-  if (e.desempenho < 25 && (e.clima ?? 50) < 40 && r.chance(0.5)) {
+  // VIDA 12.6: o jeito de quem chefia pesa no ano (o exigente puxa o desempenho e aperta o clima; o injusto azeda; o
+  // incentivador puxa os dois; o compreensivo segura as advertências).
+  const chefeAgora = eq.chefeId ? v.pessoas[eq.chefeId] : undefined;
+  const ef = chefeAgora?.vivo ? EFEITO_DO_CHEFE[perfilDoChefe(chefeAgora)] : EFEITO_DO_CHEFE.neutro;
+  e.desempenho = clamp(e.desempenho + ef.desempenho);
+  e.clima = clamp((e.clima ?? 50) + ef.clima);
+  if (e.desempenho < 25 && (e.clima ?? 50) < 40 && r.chance(Math.min(0.9, 0.5 * ef.sancao))) {
     const recentes = (e.sancoes ?? []).filter(s => v.t - s.t < 24);
     const tipo = recentes.length ? 'suspensao' : 'advertencia';
     (e.sancoes ??= []).push({ t: v.t, tipo, motivo: 'desempenho' });
@@ -136,4 +144,34 @@ export function leituraDaEquipe(v: Vida): { papel: string; nome: string; id: str
     ...eq.colegas.filter(id => id !== eq.mentorId && id !== eq.rivalId).flatMap(id => linha(id, eq.reencontro === id ? 'colega (reencontro)' : 'colega')),
     ...(eq.subordinados ?? []).flatMap(id => linha(id, 'responde a você'))
   ];
+}
+
+/**
+ * VIDA 12.6 — A REPUTAÇÃO PROFISSIONAL, uma vez por ano: puxa devagar (20%) para o que o ano mostrou — o desempenho de
+ * quem trabalha, os feitos, as advertências recentes, a demissão de agora. Sem emprego, esfria para o meio bem devagar.
+ */
+export function atualizarReputacao(v: Vida): void {
+  const t = v.trabalho, e = t.atual;
+  const atual = t.reputacao ?? 50;
+  if (!e) { if (t.reputacao !== undefined) t.reputacao = Math.round(atual + (50 - atual) * 0.05); return; }
+  const sancoes = (e.sancoes ?? []).filter(s => v.t - s.t < 24).length;
+  const feitos = Math.min(6, e.feitos ?? 0);
+  const demitido = t.historico.some(h => v.t - h.tFim < 12 && /demiss|justa causa/i.test(h.motivo));
+  const alvo = clamp(50 + (e.desempenho - 50) * 0.6 + feitos * 3 - sancoes * 10 - (demitido ? 10 : 0));
+  t.reputacao = Math.round(atual + (alvo - atual) * 0.2);
+}
+/** O peso da reputação (1 = neutra): na contratação, na promoção, na demissão. */
+export const pesoDaReputacao = (v: Vida) => {
+  const rep = v.trabalho.reputacao ?? 50;
+  return { contratar: 0.85 + rep / 333, promover: 0.8 + rep / 250, demitir: 1.25 - rep / 200 };
+};
+/** A reputação em palavras (para a tela e para as indicações). */
+export function leituraDaReputacao(v: Vida): string {
+  const rep = v.trabalho.reputacao;
+  if (rep === undefined) return 'Ainda sem fama na área.';
+  if (rep >= 78) return 'Bem falado na área: o seu nome abre portas.';
+  if (rep >= 62) return 'Tem bom nome: quem trabalhou com você indica.';
+  if (rep >= 42) return 'Nem bem nem mal falado.';
+  if (rep >= 28) return 'O seu nome anda arranhado na área.';
+  return 'Má fama na área: as portas custam a abrir.';
 }

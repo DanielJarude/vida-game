@@ -130,3 +130,6 @@
   .estudio-tatuagem__referencia { grid-auto-flow: column; }
   .estudio-tatuagem__catalogo { grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); max-height: 240px; }
 }
+/* VIDA 12.6 — a casa no dia a dia. */
+.casa-dia__titulo { margin: var(--space-3) 0 var(--space-1); font-size: var(--type-caption); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); }
+.equipe-trabalho__reputacao { margin: var(--space-1) 0; }

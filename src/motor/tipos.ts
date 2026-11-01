@@ -1000,6 +1000,12 @@ export interface Candidatura {
 
 export interface Trabalho {
   atual?: Emprego;
+  /**
+   * VIDA 12.6 — a REPUTAÇÃO PROFISSIONAL (0..100; 50 = ninguém fala bem nem mal): o que o mercado sabe de você — o
+   * desempenho de cada ano, os feitos, as advertências, as demissões. Anda devagar e acompanha você de um emprego para o
+   * outro: pesa na contratação, na promoção, no risco de demissão e nas indicações. Ausente: ainda não formada (50).
+   */
+  reputacao?: number;
   historico: (Emprego & { tFim: number; motivo: string })[];
   /** Meses de experiência por trilha profissional. Só se soma por `somarExperiencia` (no máximo 12 por ano de calendário). */
   experiencia: Record<string, number>;
@@ -2647,6 +2653,13 @@ export interface Negocio {
   passivo?: boolean;
   /** Ficou numa cidade de onde o dono se mudou: de longe, só dá para receber o que sobra (tocar de novo, só voltando para lá). */
   ficouEm?: string;
+  /**
+   * VIDA 12.6 — a FREGUESIA FIEL (0..60, % da clientela que volta sempre): cresce com a boa fama, segura o movimento
+   * nos anos ruins; esfria com a má fama. Ausente: 0.
+   */
+  fieis?: number;
+  /** VIDA 12.6 — quando abriu um concorrente perto (o movimento sente; a boa fama segura). */
+  concorrente?: number;
 }
 
 export type EstrategiaNegocio = 'bairro' | 'qualidade' | 'preco' | 'online' | 'escala' | 'marca';

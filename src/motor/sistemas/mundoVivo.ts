@@ -122,13 +122,15 @@ function anoNoTrabalho(v: Vida, r: Rng, pode: () => boolean, conta: () => void):
   // A chefia trocada: quem chefia sai; quem chega não conhece você — o clima recomeça perto do meio.
   if (pode() && temChefia(v) && r.chance(0.08)) {
     const antigo = chefiaAtual(v);
-    if (antigo) { v.vinculos[antigo.id].ambiente = undefined; antigo.ocupacao = flexo(antigo, 'gestor em outra empresa', 'gestora em outra empresa'); }
+    if (antigo) { v.vinculos[antigo.id].ambiente = undefined; v.vinculos[antigo.id].convivio = v.vinculos[antigo.id].convivio.filter(c => c !== 'trabalho'); antigo.ocupacao = flexo(antigo, 'gestor em outra empresa', 'gestora em outra empresa'); }
     const novo = criarPessoa(v, r, { idade: r.int(32, 56), municipioId: v.moradia.municipioId, ocupacao: '' });
     novo.ocupacao = flexo(novo, 'gestor', 'gestora');
     // REWORK 9.7 · NPC-02: quem chefia ganha o que um gestor ganha (antes, renda 0 para sempre).
     novo.renda = liquido(salarioLocal(ocupacao('coordenador_adm'), novo.municipioId), 'clt', paisDaCidade(novo.municipioId));
     const vin = vincular(v, novo, { origem: 'trabalho', proximidade: 22, confianca: 25, estagio: 'colega', convivio: ['trabalho'] });
     vin.ambiente = chave;
+    // VIDA 12.6: a equipe passa a saber quem chefia (antes, a chefia nova não entrava na equipe e a antiga continuava lá).
+    if (e.equipe) { e.equipe.chefeId = novo.id; novo.ocupacaoId ??= e.ocupacaoId; }
     const exigente = novo.temperamento.afabilidade < 0;
     const antes = e.clima ?? 50;
     e.clima = Math.round(clamp(50 + (antes - 50) * 0.3 + (exigente ? -8 : 6)));

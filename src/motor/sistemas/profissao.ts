@@ -237,6 +237,9 @@ export function mexerNoClima(v: Vida, delta: number): void {
 export function chefiaAtual(v: Vida): Pessoa | undefined {
   const e = v.trabalho.atual;
   if (!e) return undefined;
+  // VIDA 12.6: a chefia da equipe manda (antes, um gestor antigo com o mesmo ambiente podia responder no lugar do novo).
+  const id = e.equipe?.chefeId;
+  if (id && v.pessoas[id]?.vivo && v.vinculos[id]) return v.pessoas[id];
   const chave = `trabalho:${e.empregador}:${e.tInicio}`;
   return vinculosVivos(v).find(x => x.vin.ambiente === chave && (x.p.ocupacao === 'gestor' || x.p.ocupacao === 'gestora'))?.p;
 }

@@ -44,7 +44,8 @@ import { rotuloEstrategia } from '../../motor/dados/negocios';
 import { leituraPolitica, naPolitica, nomeDaBandeira } from '../../motor/sistemas/politica';
 import { escadaMilitar, perspectivasMilitares } from '../../motor/sistemas/militar';
 import { editaisAbertos, editalDe, FOCO_DO_CARGO, lerPreparo, NOME_DA_ESFERA, NOME_FOCO } from '../../motor/sistemas/concurso';
-import { leituraDaEquipe } from '../../motor/sistemas/equipe';
+import { leituraDaEquipe, leituraDaReputacao } from '../../motor/sistemas/equipe';
+import { NOME_PERFIL_CHEFE, perfilDoChefe } from '../../motor/sistemas/jeito';
 import { caminhosPossiveis, emConstrucao, type CaminhoPossivel } from '../../motor/sistemas/caminhosDeVida';
 import { perfilParaVaga, type PerfilVaga } from '../../motor/sistemas/empregabilidade';
 import { BlocoDeVagas, CaminhosPossiveis, EmConstrucao, PerfilDaVaga, ProximoPassoPainel } from './Caminhos';
@@ -823,12 +824,14 @@ function Clima({ vida }: { vida: Vida }) {
 function EquipeDoTrabalho({ vida }: { vida: Vida }) {
   const eq = leituraDaEquipe(vida);
   const sancoes = vida.trabalho.atual?.sancoes ?? [];
-  if (!eq.length && !sancoes.length) return null;
+  const rep = vida.trabalho.reputacao !== undefined ? leituraDaReputacao(vida) : undefined;
+  if (!eq.length && !sancoes.length && !rep) return null;
   return (
     <details className="equipe-trabalho">
-      <summary>A equipe ({eq.length} {eq.length === 1 ? 'pessoa' : 'pessoas'})</summary>
+      <summary>A equipe ({eq.length} {eq.length === 1 ? 'pessoa' : 'pessoas'}){rep ? ' e o seu nome na área' : ''}</summary>
+      {rep && <p className="equipe-trabalho__reputacao" data-reputacao={vida.trabalho.reputacao}><strong>Reputação:</strong> {rep}</p>}
       <ul className="equipe-trabalho__lista">
-        {eq.map(x => <li key={x.id}><strong>{x.nome}</strong> · {x.papel}{x.tensao >= 55 ? ' · clima pesado' : x.proximidade >= 55 ? ' · se dão bem' : ''}</li>)}
+        {eq.map(x => <li key={x.id}><strong>{x.nome}</strong> · {x.papel}{x.papel === 'chefia' && vida.pessoas[x.id] ? ` (${NOME_PERFIL_CHEFE[perfilDoChefe(vida.pessoas[x.id])]})` : ''}{x.tensao >= 55 ? ' · clima pesado' : x.proximidade >= 55 ? ' · se dão bem' : ''}</li>)}
       </ul>
       {sancoes.length > 0 && <p className="nota">Na ficha deste emprego (administrativo, não é a Justiça): {sancoes.map(x => `${x.tipo === 'advertencia' ? 'advertência' : 'suspensão'} em ${anoDe(x.t)}`).join('; ')}.</p>}
     </details>

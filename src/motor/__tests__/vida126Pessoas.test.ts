@@ -81,7 +81,7 @@ describe('VIDA 12.6 · o jeito das pessoas', () => {
       p.genitores = [pai.id, mae.id];
       const saida = executar(v, { tipo: 'pessoa', pessoaId: p.id, interacao: 'conhecer_familia' as never });
       v = saida.vida;
-      expect(v.biografia.at(-1)!.texto).toMatch(/família/);
+      expect(v.biografia.slice(-1)[0].texto).toMatch(/família/);
       const res = saida.resultado ?? '';
       if (k % 3 === 0) { expect(res).toMatch(/não tem mais/); expect(res).not.toMatch(new RegExp(`casa de ${pai.nome}`)); }
       textos.add(res);

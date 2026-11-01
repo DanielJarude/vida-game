@@ -9,6 +9,8 @@
  * Os lugares da cidade (concessionária, banco, abrigo) moram em Cidade.
  */
 
+import { FAZERES_EM_CASA, rotuloFazerEmCasa } from '../../motor/sistemas/casaNoDia';
+import { disponibilidade } from '../../motor/acoes';
 import { daMoedaLocal, emMoedaLocal, moedaDoPais, simboloDaMoeda } from '../../motor/mundo/moeda';
 import { useState } from 'react';
 import { disponibilidadeUsoCasa, disponibilidadeUsoVeiculo, rotuloUsoCasa, rotuloUsoVeiculo, USOS_CASA, USOS_VEICULO } from '../../motor/sistemas/usos';
@@ -308,12 +310,20 @@ function CartaoAplicacao({ a }: { a: Aplicacao }) {
 /** A casa como lugar de vida: receber gente, juntar a família, reformar (o jeito de cada cômodo é em "A casa por dentro"). */
 export function ViverACasa({ vida, agir }: Props) {
   const usos = USOS_CASA.filter(u => disponibilidadeUsoCasa(vida, u).ok || (u === 'reformar' && !!vida.moradia.imovelId));
-  if (!usos.length) return null;
+  // VIDA 12.6: o dia a dia da casa (uma vez por ano cada; o que não cabe na idade nem aparece).
+  const dia = FAZERES_EM_CASA.filter(op => disponibilidade(vida, { tipo: 'em_casa', oque: op }).grau !== 'impossivel');
+  if (!usos.length && !dia.length) return null;
   return (
     <Secao titulo="A vida dentro de casa">
-      <div className="grupo-acoes grupo-acoes--linha">
+      {usos.length > 0 && <div className="grupo-acoes grupo-acoes--linha">
         {usos.map(u => <BotaoAcao key={u} vida={vida} acao={{ tipo: 'usar_casa', oque: u }} agir={agir} variante="secundario">{rotuloUsoCasa(vida, u)}</BotaoAcao>)}
-      </div>
+      </div>}
+      {dia.length > 0 && <>
+        <h4 className="casa-dia__titulo">No dia a dia</h4>
+        <div className="grupo-acoes grupo-acoes--linha casa-dia">
+          {dia.map(op => <BotaoAcao key={op} vida={vida} acao={{ tipo: 'em_casa', oque: op }} agir={agir} variante="discreto">{rotuloFazerEmCasa(vida, op)}</BotaoAcao>)}
+        </div>
+      </>}
       {usos.includes('reformar') && <p className="nota">A reforma conserta e renova o imóvel (conservação, valor, padrão). Piso, parede, luz e móveis de cada cômodo se escolhem em A casa por dentro.</p>}
     </Secao>
   );

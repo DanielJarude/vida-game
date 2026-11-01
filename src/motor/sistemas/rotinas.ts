@@ -15,6 +15,7 @@
  */
 
 import { praticandoPor } from './progressao';
+import { ROTINAS_126 } from './hobbies126';
 import { paisCorrente } from '../mundo/moeda';
 import { bonusDaAtividade } from './coisas';
 import type { Rng } from '../rng';
@@ -642,7 +643,9 @@ export const ROTINAS: readonly ModeloRotina[] = [
         escrever(v, { texto: `${textoLocal(v, 'conselho_tutelar')} Alguém tinha denunciado criança trabalhando na rua; a família levou uma advertência.`, relevancia: 'biografia', tema: 'familia', tom: 'ruim' });
       }
     }
-  }
+  },
+  // VIDA 12.6: jardinagem, pintura, artesanato, colecionar, clube do livro e o hábito de arrumar a casa (`hobbies126`).
+  ...ROTINAS_126
 ];
 
 const POR_ID = new Map(ROTINAS.map(r => [r.id, r]));

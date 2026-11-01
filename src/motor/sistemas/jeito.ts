@@ -212,3 +212,34 @@ export function riscoDoRastro(v: Vida, id: string): number {
   if (t === undefined || v.t - t > 12) return 0;
   return Math.min(0.12, (v.fatos[`caso_rastro_peso:${id}`] ?? 0) * 0.04);
 }
+
+/* ------------------------------------------------------------------ o chefe */
+
+export type PerfilDeChefe = 'exigente' | 'compreensivo' | 'injusto' | 'incentivador' | 'autoritario' | 'desorganizado' | 'neutro';
+export const NOME_PERFIL_CHEFE: Record<PerfilDeChefe, string> = {
+  exigente: 'exigente', compreensivo: 'compreensivo', injusto: 'injusto', incentivador: 'incentivador', autoritario: 'autoritário', desorganizado: 'desorganizado', neutro: 'sem grandes manias'
+};
+/** O jeito de chefiar de alguém (do temperamento, estável): o que mais aparece, se aparece. */
+export function perfilDoChefe(p: Pick<Pessoa, 'id' | 'temperamento'>): PerfilDeChefe {
+  const t = p.temperamento;
+  const pesos: [PerfilDeChefe, number][] = [
+    ['desorganizado', -t.responsabilidade - 0.35],
+    ['injusto', -t.afabilidade * 0.7 - t.estabilidade * 0.3 - 0.35],
+    ['autoritario', t.extroversao * 0.4 - t.afabilidade * 0.6 - 0.3],
+    ['exigente', t.responsabilidade * 0.7 - t.afabilidade * 0.2 - 0.3],
+    ['incentivador', t.afabilidade * 0.5 + t.abertura * 0.5 - 0.3],
+    ['compreensivo', t.afabilidade * 0.6 + t.estabilidade * 0.4 - 0.32]
+  ];
+  const [melhor, f] = pesos.sort((a, b) => b[1] - a[1])[0];
+  return f > 0 ? melhor : 'neutro';
+}
+/** O que o jeito do chefe faz no ano (o desempenho e o clima puxam um pouco; a chance da promoção e da advertência). */
+export const EFEITO_DO_CHEFE: Record<PerfilDeChefe, { desempenho: number; clima: number; promocao: number; sancao: number }> = {
+  exigente: { desempenho: 2, clima: -1, promocao: 1.05, sancao: 1.3 },
+  compreensivo: { desempenho: 0, clima: 2, promocao: 1, sancao: 0.6 },
+  injusto: { desempenho: -1, clima: -3, promocao: 0.75, sancao: 1.5 },
+  incentivador: { desempenho: 2, clima: 2, promocao: 1.25, sancao: 0.8 },
+  autoritario: { desempenho: 1, clima: -2, promocao: 0.95, sancao: 1.4 },
+  desorganizado: { desempenho: -1, clima: -1, promocao: 0.9, sancao: 1 },
+  neutro: { desempenho: 0, clima: 0, promocao: 1, sancao: 1 }
+};

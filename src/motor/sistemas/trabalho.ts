@@ -17,6 +17,7 @@
  * mudar de cargo. Não existe escada infinita.
  */
 
+import { EFEITO_DO_CHEFE, perfilDoChefe } from './jeito';
 import { nomeDoRegistro } from '../mundo/locais';
 import { regrasDaVida } from '../mundo/regras';
 import { paisDaVida, penaDeChegada, perfilDaVida } from '../mundo/vida';
@@ -370,6 +371,8 @@ function chanceBase(v: Vida, oc: Ocupacao, bonus: number): number {
   if (oc.contrato === 'clt') c *= 1 + (0.38 - perfilDaVida(v).economia.informalidade) * 0.5;
   c -= penaDeChegada(v);
   if (i > 50 && oc.nivel < 4) c -= (i - 50) / 60; // etarismo real no mercado
+  // VIDA 12.6: a reputação profissional (o que o mercado sabe de você) pesa em quem contrata.
+  c *= 0.85 + (v.trabalho.reputacao ?? 50) / 333;
   // Antecedentes pesam em quem contrata com carteira (o autônomo não passa por isso).
   if (oc.contrato === 'clt' || oc.contrato === 'estagio' || oc.contrato === 'aprendiz') c -= penaDeAntecedentes(v);
   // O que se viveu na formação (o projeto técnico, a iniciação, a empresa júnior) pesa — a mesma conta que a tela diz (`formacao`).
@@ -853,7 +856,8 @@ function demissao(v: Vida, r: Rng, e: Emprego, oc: Ocupacao): boolean {
   const base = e.contrato === 'servidor' ? 0.002 : e.contrato === 'militar' ? 0.003 : e.desempenho < 35 ? 0.3 : e.contrato === 'clt' ? 0.045 : 0.03;
   const clima = climaDe(e) < 30 ? 1.7 : climaDe(e) > 70 ? 0.8 : 1;
   const risco = (base + (e.contrato === 'clt' ? epoca * 0.12 + riscoDaEpoca(oc, anoDe(v.t)) : 0)) * (e.contrato !== 'servidor' && e.contrato !== 'militar' ? fatorDemissao(v) * clima : 1) * (i >= 55 && e.contrato === 'clt' ? 1.3 : 1);
-  if (!r.chance(risco)) return false;
+  // VIDA 12.6: o bom nome protege um pouco; a má fama expõe.
+  if (!r.chance(risco * (1.25 - (v.trabalho.reputacao ?? 50) / 200))) return false;
   const anos = Math.max(1, Math.floor((v.t - e.tInicio) / 12));
   const noPosto = Math.max(1, Math.floor((v.t - (e.tPosto ?? e.tInicio)) / 12));
   const nome = nomeOcupacao(v, oc);
@@ -987,6 +991,8 @@ function promover(v: Vida, r: Rng, e: Emprego, oc: Ocupacao, tPosto: number): vo
     if (v.fatos['promocao_pedida'] !== undefined && v.t - v.fatos['promocao_pedida'] <= 24) chance *= 1.5;
     if (proximo.nivel >= 4 && nivelDeOferta(e.municipioId) === 0) chance *= 0.6;
     if (emRecessao(v)) chance *= 0.4;
+    // VIDA 12.6: o bom nome e o chefe que aposta em você ajudam; o chefe injusto atrapalha.
+    chance *= (0.8 + (v.trabalho.reputacao ?? 50) / 250) * multiplicadorDoChefe(v);
   }
   if (!r.chance(chance)) return;
   subirDeCargo(v, e, oc, proximo, anosNoPosto);
@@ -1286,3 +1292,10 @@ export function descricaoEmprego(v: Vida): string {
 export const salarioLiquidoAtual = (v: Vida) => (v.trabalho.atual ? liquido(v.trabalho.atual.salario, v.trabalho.atual.contrato, paisDaCidade(v.trabalho.atual.municipioId)) : 0);
 
 export { nomeLugar, economiaLocal, nivelEsc };
+
+/** VIDA 12.6: o jeito do chefe na promoção (o incentivador indica; o injusto segura). */
+function multiplicadorDoChefe(v: Vida): number {
+  const id = v.trabalho.atual?.equipe?.chefeId;
+  const p = id ? v.pessoas[id] : undefined;
+  return p?.vivo ? EFEITO_DO_CHEFE[perfilDoChefe(p)].promocao : 1;
+}

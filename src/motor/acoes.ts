@@ -16,6 +16,7 @@ import { disponibilidadeGesto, fazerGesto, type GestoDeMemoria } from './sistema
 import { disponibilidadeProcedimento, fazerProcedimento, type Clinica, type IdProcedimento } from './sistemas/estetica';
 import { comporTatuagens, disponibilidadeCompor, disponibilidadePedido, disponibilidadeRemover, disponibilidadeRetocar, removerTatuagem, retocarTatuagem, tatuarPedido, type PedidoDeTatuagem } from './sistemas/tatuagens';
 import type { Lado } from './dados/tatuagens';
+import { disponibilidadeFazerEmCasa, fazerEmCasa, type FazerEmCasa } from './sistemas/casaNoDia';
 import { comprarCoisa, disponibilidadeComprarCoisa, disponibilidadeVenderCoisa, venderCoisa } from './sistemas/coisas';
 import { educacaoDaVida } from './mundo/vida';
 import { noPais } from './mundo/registro';
@@ -287,6 +288,8 @@ export type Acao =
   | { tipo: 'remover_tatuagem'; id: string }
   | { tipo: 'retocar_tatuagem'; id: string }
   | { tipo: 'compor_tatuagens'; modelo: string; lado?: Lado }
+  /** VIDA 12.6: a casa no dia a dia (faxina, organizar, descansar, série, plantas, conserto, visita, a comida da semana). */
+  | { tipo: 'em_casa'; oque: FazerEmCasa }
   /** Usar ou guardar um item que é seu. */
   | { tipo: 'usar_item'; itemId: string; usar: boolean }
   /** As coisas da vida: comprar numa loja da cidade; vender a usada (`sistemas/coisas`). */
@@ -764,6 +767,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'remover_tatuagem': return disponibilidadeRemover(v, a.id);
     case 'retocar_tatuagem': return disponibilidadeRetocar(v, a.id);
     case 'compor_tatuagens': return disponibilidadeCompor(v, a.modelo, a.lado);
+    case 'em_casa': return disponibilidadeFazerEmCasa(v, a.oque);
     case 'usar_item': return disponibilidadeUsarItem(v, a.itemId, a.usar);
     case 'comprar_coisa': return disponibilidadeComprarCoisa(v, a.coisaId, a.marca, a.loja);
     case 'personalizar': return disponibilidadePersonalizar(v, a.op);
@@ -1567,6 +1571,7 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
     case 'remover_tatuagem': return ok(removerTatuagem(v, a.id), 'neutro');
     case 'retocar_tatuagem': return ok(retocarTatuagem(v, a.id), 'bom');
     case 'compor_tatuagens': return ok(comporTatuagens(v, a.modelo, a.lado), 'bom');
+    case 'em_casa': return ok(fazerEmCasa(v, a.oque), 'bom');
     case 'usar_item': return ok(usarItem(v, a.itemId, a.usar));
     case 'comprar_coisa': return ok(comprarCoisa(v, a.coisaId, a.marca, a.loja), 'bom');
     case 'personalizar': return ok(personalizar(v, a.op), 'bom');
