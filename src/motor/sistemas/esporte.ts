@@ -52,6 +52,7 @@ import { copaContinental, copaNacional, copasDeQuadra, idDaLiga, nomeDaCompetica
 import { desvio, efeitoNaNota, envelhecerAtributos, perfilDeAtributos, type AtributoId } from './atributosEsportivos';
 import { avancarLicenca } from './oficioDoTecnico';
 import { processarSelecao } from './selecao';
+import { premiosDoMundo } from './premiosDoFutebol';
 import { nomePor } from './notoriedade';
 import { daPorta, individualComEquipe, perfilDe, portaAmadora, semVinculo } from './perfisEsportivos';
 import { formatarMarca, jogarLutas, jogarProvas, jogarTemporadaVolei, NOME_FUNCAO_VOLEI, numeroDaFuncao, podiosDe, type FuncaoVolei } from './provas';
@@ -621,7 +622,7 @@ export function fecharTemporada(v: Vida, r: Rng, e: CarreiraEsportiva): Temporad
   // jogadas fase a fase com a mesma força do clube na liga e a mesma contribuição de quem joga.
   if (futebol) {
     const copas = [copaNacional(v, pais, ano, e.clube, e.nivel, ajuste), copaContinental(v, pais, ano, e.clube, ajuste)].filter(c => !!c);
-    if (copas.length) t.copas = copas.map(c => ({ id: c!.id, fase: c!.fase, jogos: Math.round(c!.jogos * (e.espaco === 'titular' ? disp : 0.3 * disp)), ...(c!.final ? { final: `contra ${c!.final.adversario.startsWith('um') ? c!.final.adversario : oClube(c!.final.adversario)}, ${c!.final.placar}` } : {}) }));
+    if (copas.length) t.copas = copas.map(c => ({ id: c!.id, fase: c!.fase, jogos: Math.round(c!.jogos * (e.espaco === 'titular' ? disp : 0.3 * disp)), ...(c!.final ? { final: `contra ${c!.final.adversario.startsWith('um') ? c!.final.adversario : oClube(c!.final.adversario)}, ${c!.final.placar}` } : {}), ...(c!.fase === 'vice' && c!.final && !c!.final.adversario.startsWith('um') ? { campeao: c!.final.adversario } : {}) }));
   }
   // REWORK 11.5 · ESP-02: as copas de quadra (basquete e vôlei), com o formato delas: só a elite, pela colocação do ano
   // anterior nela.
@@ -1182,6 +1183,9 @@ function anoProfissional(v: Vida, r: Rng, e: CarreiraEsportiva): void {
   registrarTemporada(v, r, e, t);
   capitaniaDoClube(v, e, t);
   processarSelecao(v, r, e, t);
+  // HOTFIX 11.5.1: os prêmios individuais do mundo (Bola de Ouro, The Best, Chuteira de Ouro, Golden Boy), depois da
+  // seleção — o título dela no ano conta.
+  if (e.modalidade === 'futebol') premiosDoMundo(v, e, t);
   // O empréstimo: no fim do prazo, a volta ao clube detentor — ou o clube de agora quer ficar com você (a resposta é sua).
   if (e.emprestimo) {
     const naMesa = propostaNaMesa(v);

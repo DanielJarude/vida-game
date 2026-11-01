@@ -160,3 +160,15 @@
 .sub-negocios { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); }
 .sub-negocio { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-2); border: 1px solid var(--dossie-fio); border-radius: var(--radius-sm); min-width: 0; }
 .sub-negocio--encerrado, .sub-negocio--desmantelado, .sub-negocio--tomado { opacity: 0.8; border-style: dashed; }
+
+/* HOTFIX 11.5.1 — o campeonato por dentro (a tabela, os campeões, os prêmios do mundo). */
+.campeonato__tabela td:first-child, .campeonato__tabela th:first-child { width: 1.8rem; text-align: right; padding-right: var(--space-2); }
+.campeonato__clube { white-space: nowrap; }
+.campeonato__tabela tr.campeonato__zona--cima td:first-child { box-shadow: inset 3px 0 0 var(--bom); }
+.campeonato__tabela tr.campeonato__zona--queda td:first-child { box-shadow: inset 3px 0 0 var(--ruim); }
+.campeonato__seu, .campeonato__tabela tr.campeonato__seu td { background: color-mix(in oklab, var(--p-trabalho) 16%, transparent); font-weight: 600; }
+.campeonato__vencedor { display: block; }
+.campeonato__meta { display: block; color: var(--tinta-2); font-size: 0.92em; }
+.campeonato__voce { color: var(--p-trabalho); }
+.campeonato__premios td { min-width: 7.5rem; vertical-align: top; }
+.campeonato__legenda { margin-top: var(--space-1); }

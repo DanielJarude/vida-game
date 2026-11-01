@@ -2337,13 +2337,15 @@ export interface Temporada {
   pais?: string;
   competicaoId?: string;
   /** REWORK 11 · ESP-11.3: as copas do ano (copa nacional, continental de clubes): o id e a fase alcançada. */
-  copas?: { id: string; fase: FaseDeCopa; jogos: number; final?: string }[];
+  copas?: { id: string; fase: FaseDeCopa; jogos: number; final?: string; /** HOTFIX 11.5.1: quem ganhou a final que o clube perdeu. */ campeao?: string }[];
   /** REWORK 11 · ESP-11.6: foi capitão do clube nesta temporada. */
   capitao?: boolean;
   /** A nota da temporada, 0..10 (o que o clube e o mercado leram). */
   nota: number;
   /** Onde o time terminou (1 = campeão). */
   colocacao: number;
+  /** HOTFIX 11.5.1 (futebol, divisões nacionais): a linha do clube na tabela — J, V, E, D, GP, GC. */
+  campanha?: [number, number, number, number, number, number];
   /** Meses fora por lesão. */
   mesesFora: number;
   /** REWORK 5 (futebol): os minutos em campo na temporada (titular joga quase o jogo todo; quem entra, o fim). */
@@ -2711,12 +2713,50 @@ export interface Devolutiva {
 }
 
 /** REWORK 9 · FUT-01: a tabela de um país no universo da vida — em que divisão cada clube está (`sistemas/ligas`). */
+/** HOTFIX 11.5.1 — uma estrela do futebol do mundo (fictícia): a qualidade de pico (`base`), a idade, o clube. */
+export interface EstrelaDoFutebol {
+  id: string;
+  nome: string;
+  /** Nacionalidade (código do país). */
+  nac: string;
+  clube: string;
+  /** O país da liga do clube. */
+  liga: string;
+  grupo: 'goleiro' | 'defensor' | 'meio' | 'atacante';
+  nasc: number;
+  base: number;
+}
+export type PremioDoFutebolId = 'bola_de_ouro' | 'the_best' | 'chuteira_de_ouro' | 'golden_boy';
+/** O resultado de um prêmio num ano: o vencedor, o pódio e onde a vida ficou (se entrou na lista). */
+export interface PremioDoFutebol {
+  ano: number;
+  premio: PremioDoFutebolId;
+  vencedor: { nome: string; clube: string; nac: string; gols: number; voce?: boolean };
+  podio: string[];
+  /** A colocação da vida na votação (só quando entrou entre os 30). */
+  voce?: number;
+}
+export interface FutebolDoMundo { ano: number; feminino: boolean; estrelas: EstrelaDoFutebol[]; premios: PremioDoFutebol[] }
+
 export interface LigaDoPais {
   /** A última temporada já jogada (a divisão guardada vale para a seguinte). */
   ano: number;
   div: Record<string, 1 | 2 | 3 | 4>;
   /** `classificados` (REWORK 11 · ESP-11.3): os clubes da elite que terminaram nas vagas da copa continental do ano seguinte. */
-  ultima?: { ano: number; campeoes: Partial<Record<1 | 2 | 3 | 4, string>>; subiram: string[]; cairam: string[]; classificados?: string[] };
+  ultima?: {
+    ano: number; campeoes: Partial<Record<1 | 2 | 3 | 4, string>>; subiram: string[]; cairam: string[]; classificados?: string[];
+    /**
+     * HOTFIX 11.5.1: a tabela de classificação da temporada em cada divisão nacional (`tabelaDaLiga`): [clube, J, V, E,
+     * D, GP, GC], já na ordem dos critérios. Um clube fora do catálogo leva `~` na frente do nome.
+     */
+    tabelas?: Partial<Record<2 | 3 | 4, [string, number, number, number, number, number, number][]>>;
+  };
+  /**
+   * HOTFIX 11.5.1: os campeões de cada temporada (a elite; a copa nacional e a continental quando o clube da vida
+   * decidiu ou caiu — `fora`: os clubes da vida que não foram campeões dela, para o campeão do mundo nunca ser um deles).
+   * Até 30 temporadas.
+   */
+  historico?: { ano: number; liga?: string; copa?: string; cont?: string; fora?: string[] }[];
   /**
    * REWORK 11.5 · ESP-01: a FORMA de cada clube (−0,8..0,8, em degraus de força): o que as últimas temporadas deixaram
    * (a boa fase que se sustenta um tempo, a má que pesa). Nasce dos resultados, nunca do nome. Ausente: 0.
@@ -2732,6 +2772,11 @@ export interface Caminhos {
   licencaDeTreinador?: { nivel: number; t: number; emCurso?: { nivel: 1 | 2 | 3 | 4; ate: number } };
   /** REWORK 9: as ligas de futebol dos países onde a vida jogou ou dirigiu (opcional; nasce quando se precisa). */
   ligas?: Record<string, LigaDoPais>;
+  /**
+   * HOTFIX 11.5.1: o futebol do mundo que disputa os prêmios individuais com a vida (`premiosDoFutebol`): as estrelas
+   * (jogadores fictícios, que envelhecem, trocam de clube e se aposentam) e o resultado de cada prêmio, ano a ano.
+   */
+  futebolMundo?: FutebolDoMundo;
   /** REWORK 9 · PROG-01: o que cada frente andou, por fonte, desde o último fechamento de ano (zera na fotografia). */
   praticaDoPeriodo?: Partial<Record<Dominio, Record<string, number>>>;
   /** Processo seletivo em andamento (a decisão aberta é uma etapa dele). */

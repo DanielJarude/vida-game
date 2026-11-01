@@ -16,6 +16,7 @@
  */
 
 import { GaleriaDeConquistas } from './Galeria';
+import { CampeoesDoPais, PremiosDoMundo, TabelaDoCampeonato } from './Campeonato';
 import { CampoDoAtleta, ClaqueteDoAtor, PalcoDoMusico, PlenarioDoPolitico, PranchetaDoTecnico } from './CarreirasEspeciais';
 import { habilitacaoDaVida } from '../../motor/sistemas/autoescola';
 import { regrasDaVida } from '../../motor/mundo/regras';
@@ -624,6 +625,7 @@ export function PainelAtleta({ vida }: { vida: Vida }) {
         <div className="temporada" aria-label="A última temporada">
           <p className="temporada__titulo">Temporada {t.ano} — {t.clube}</p>
           <p className="temporada__linha">{linhaDaTemporada(vida, t)}</p>
+          {t.campanha && <p className="nota temporada__tabela">Na tabela: {t.colocacao}º, {t.campanha[1] * 3 + t.campanha[2]} pontos em {t.campanha[0]} jogos ({t.campanha[1]} vitórias, {t.campanha[2]} empates, {t.campanha[3]} derrotas) · {t.campanha[4]} gols marcados, {t.campanha[5]} sofridos.</p>}
           <p className="nota">{palavraDaNota(t.nota).charAt(0).toUpperCase() + palavraDaNota(t.nota).slice(1)}. {tenis ? (t.premio !== undefined ? `Bruto ${dinheiroCurto(t.premio)} − custos do circuito ${dinheiroCurto(t.custos ?? 0)} = ${(t.premio - (t.custos ?? 0)) >= 0 ? '' : '−'}${dinheiroCurto(Math.abs(t.premio - (t.custos ?? 0)))} no ano.` : '') : individual ? (es.espaco === 'titular' ? 'O próximo ano começa nas provas principais da equipe.' : 'O próximo ano começa fora das provas principais da equipe.') : es.espaco === 'titular' ? 'O próximo ano começa como titular.' : 'O próximo ano começa no banco.'}</p>
         </div>
       )}
@@ -1390,6 +1392,17 @@ export function CarreiraNoEsporte({ vida, aberta }: { vida: Vida; aberta: boolea
       {p.finais.length > 0 && <div className="palmares__grupo"><h4>Finais</h4><ul className="marcos-caminho marcos-caminho--glifos">{p.finais.slice().reverse().slice(0, 10).map((x, k) => <li key={k}><GlifoDaLinha palmares={pal} linha={x} padrao="final" /><span>{x}</span></li>)}</ul></div>}
       {p.premios.length > 0 && <div className="palmares__grupo"><h4>Prêmios individuais</h4><ul className="marcos-caminho marcos-caminho--glifos">{p.premios.slice().reverse().map((x, k) => <li key={k}><GlifoDaLinha palmares={pal} linha={x} padrao="premio" /><span>{x}</span></li>)}</ul></div>}
       {p.selecao && <div className="palmares__grupo"><h4>Pelo país</h4><p className="palmares__com-glifo"><GlifoConquista glifo="bandeira" />{p.selecao}</p></div>}
+      {/* HOTFIX 11.5.1: a tabela da última temporada, os campeões do país e os prêmios do mundo. */}
+      {(() => {
+        const tf = carreiras.find(c => c.modalidade === 'futebol')?.temporadas?.slice(-1)[0];
+        if (!tf) return null;
+        const paisT = tf.pais ?? paisDaCidade(carreiras.find(c => c.modalidade === 'futebol')!.municipioId);
+        return <>
+          {tf.nivel >= 2 && <TabelaDoCampeonato vida={vida} paisId={paisT} nivel={tf.nivel} destaque={tf.clube} />}
+          <CampeoesDoPais vida={vida} paisId={paisT} />
+          <PremiosDoMundo vida={vida} />
+        </>;
+      })()}
       {p.marcos.length > 0 && <div className="palmares__grupo"><h4>Marcos</h4><ul className="marcos-caminho marcos-caminho--glifos">{p.marcos.slice(-8).reverse().map((x, k) => <li key={k}><GlifoDaLinha palmares={pal} linha={x} padrao="marco" /><span>{x}</span></li>)}</ul></div>}
       {carreiras.map((c, k) => {
         const h = historicoDaCarreira(c);
@@ -1456,6 +1469,14 @@ export function CarreiraComoTecnico({ vida }: { vida: Vida }) {
           </table>
         </div>
       </div>
+      {/* HOTFIX 11.5.1: a tabela da divisão em que o clube jogou a última temporada, e os campeões do país. */}
+      {(() => {
+        const ult = [...c.passagens].reverse().find(p => !p.selecao && p.temporadas.length);
+        if (!ult) return null;
+        const paisT = paisDaCidade(ult.municipioId);
+        const tn = ult.temporadas[ult.temporadas.length - 1];
+        return <>{tn.nivel >= 2 && <TabelaDoCampeonato vida={vida} paisId={paisT} nivel={tn.nivel} destaque={ult.clube} />}<CampeoesDoPais vida={vida} paisId={paisT} /></>;
+      })()}
       <p className="nota">{CLUBES_REAIS}</p>
     </Secao>
     </div>

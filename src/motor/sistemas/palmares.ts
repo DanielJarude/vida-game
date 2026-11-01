@@ -30,9 +30,9 @@ import { marcar } from './marcas';
 import { abalar } from './abalo';
 import { divisaoDoNivel, doClube, noClube, oClube } from '../dados/clubes';
 import { paisDaCidade } from '../dados/lugares';
-import { fecharTemporadaDaLiga } from './ligas';
+import { fecharTemporadaDaLiga, tabelaDaUltimaTemporada } from './ligas';
 import { ASSIST, carreirasEsportivas, DEFESA, desarmesDe, divisaoDe, GOL, jogosDaTemporada, linhaDaTemporada, NOME_MOD, nomePosicao, semSofrerGolDe } from './esporte';
-import { aCompeticaoId, daCompeticaoId, faseDoClubeEmPalavras, idDaLiga, nomeDaCompeticao, trofeuIdDe } from './competicoes';
+import { aCompeticaoId, anotarCopaNoHistorico, daCompeticaoId, faseDoClubeEmPalavras, fixarCampeoesDoAno, idDaLiga, nomeDaCompeticao, trofeuIdDe } from './competicoes';
 import { aCompeticao, avaliarPelaModalidade, daCompeticao, individualComEquipe, lideresDaTemporada, perfilDe } from './perfisEsportivos';
 import { formatarMarca, naProva, podiosDe } from './provas';
 
@@ -165,7 +165,7 @@ export function registrarTemporada(v: Vida, r: Rng, e: CarreiraEsportiva, t: Tem
   // e os outros clubes do catálogo jogando a mesma temporada. Nos outros esportes de clube, a regra de sempre.
   if (perfilDe(e.modalidade).estrutura === 'clube') {
     const mov = futebol
-      ? fecharTemporadaDaLiga(v, paisT, t.ano, t.clube, t.nivel, t.colocacao)
+      ? fecharTemporadaDaLiga(v, paisT, t.ano, t.clube, t.nivel, t.colocacao, marcaNaLiga(t))
       : t.nivel < 4 && t.colocacao <= (t.nivel === 1 ? 2 : 4) ? 1 : t.nivel >= 2 && t.colocacao >= 17 ? -1 : 0;
     if (mov === 1 && e.nivel === t.nivel) {
       e.nivel = (t.nivel + 1) as 1 | 2 | 3 | 4;
@@ -183,8 +183,22 @@ export function registrarTemporada(v: Vida, r: Rng, e: CarreiraEsportiva, t: Tem
     }
   }
 
+  // HOTFIX 11.5.1: a linha do clube na tabela da temporada (a mesma que a tela mostra inteira).
+  if (futebol && t.nivel >= 2) {
+    const linha = tabelaDaUltimaTemporada(v, paisT, t.nivel);
+    const l = linha?.ano === t.ano ? linha.linhas.find(x => x[0] === t.clube) : undefined;
+    if (l) t.campanha = [l[1], l[2], l[3], l[4], l[5], l[6]];
+  }
+
   registrarCopas(v, e, t);
   premiosDaTemporada(v, r, e, t, ava);
+}
+
+/** O que a tabela precisa respeitar do próprio clube: os gols do atleta na liga e os sofridos pelo goleiro (a maior parte do ano é a liga). */
+function marcaNaLiga(t: Temporada): { gp?: number; gc?: number } | undefined {
+  if (t.nivel < 2) return undefined;
+  const gp = Math.round(t.gols * 0.7), gc = Math.round((t.golsSofridos ?? 0) * 0.7);
+  return gp || gc ? { ...(gp ? { gp } : {}), ...(gc ? { gc } : {}) } : undefined;
 }
 
 /**
@@ -194,6 +208,12 @@ export function registrarTemporada(v: Vida, r: Rng, e: CarreiraEsportiva, t: Tem
  */
 function registrarCopas(v: Vida, e: CarreiraEsportiva, t: Temporada): void {
   const g = ge(v);
+  // HOTFIX 11.5.1: os campeões do ano no histórico do país (o clube da vida, o adversário da final, ou o do mundo).
+  if (e.modalidade === 'futebol') {
+    const pais = t.pais ?? paisDaCidade(e.municipioId);
+    for (const c of t.copas ?? []) anotarCopaNoHistorico(v, pais, t.ano, c.id, t.clube, c.fase, c.campeao);
+    fixarCampeoesDoAno(v, pais, t.ano);
+  }
   for (const c of t.copas ?? []) {
     const nome = nomeDaCompeticao(c.id);
     const continental = c.id.startsWith('cont:');

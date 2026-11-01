@@ -24,6 +24,8 @@ import type { Dominio, FaseDeCopa, Vida } from '../tipos';
 import { clubesDoPais, divisaoDoNivel } from '../dados/clubes';
 import { paisDoCatalogo, temPerfil, perfilDoPais } from '../mundo/registro';
 import { forcaNaLiga, ligaDe } from './ligas';
+import { nomeSemCatalogo, SEM_CATALOGO } from './tabelaDaLiga';
+import { cidadesDoPais } from '../dados/lugares';
 
 export type CompeticaoId = string;
 export type Confederacao = 'CONMEBOL' | 'UEFA' | 'CONCACAF' | 'CAF' | 'AFC' | 'OFC';
@@ -305,3 +307,66 @@ export function idPeloNome(pais: string, nome: string): CompeticaoId | undefined
   return undefined;
 }
 
+
+/* ------------------------------------------------------------ HOTFIX 11.5.1: os campeões do mundo da vida */
+
+/**
+ * Anota no histórico do país quem ganhou uma copa do ano em que o clube da vida a disputou: o próprio clube (campeão), o
+ * adversário da final (vice), ou — eliminado antes — o clube fica em `fora` (o campeão sorteado nunca é ele).
+ */
+export function anotarCopaNoHistorico(v: Vida, pais: string, ano: number, id: CompeticaoId, clube: string, fase: FaseDeCopa, campeao?: string): void {
+  const tipo = id.startsWith('cont:') ? 'cont' : id.startsWith('copa:') && id.split(':').length === 2 ? 'copa' : undefined;
+  if (!tipo) return;
+  const liga = ligaDe(v, pais);
+  const h = (liga.historico ??= []);
+  let x = h.find(y => y.ano === ano);
+  if (!x) { x = { ano }; h.push(x); h.sort((a, b) => a.ano - b.ano); if (h.length > 30) h.splice(0, h.length - 30); }
+  if (fase === 'campeão') x[tipo] = clube;
+  else {
+    if (campeao) x[tipo] = campeao;
+    if (!(x.fora ??= []).includes(clube)) x.fora.push(clube);
+  }
+}
+
+/** Um sorteio pesado pela força (o grande ganha mais; o tradicional às vezes; a zebra, raramente). */
+function pelaForca(r: Rng, lista: { nome: string; forca: number }[]): string | undefined {
+  if (!lista.length) return undefined;
+  const pesos = lista.map(x => Math.exp(x.forca * 1.5));
+  let u = r.next() * pesos.reduce((s, p) => s + p, 0);
+  for (let i = 0; i < lista.length; i++) { u -= pesos[i]; if (u <= 0) return lista[i].nome; }
+  return lista[lista.length - 1].nome;
+}
+
+/** O campeão da copa nacional do país no ano (o anotado; senão, o sorteio estável do mundo, sem os clubes da vida que caíram). */
+export function campeaoDaCopaNoAno(v: Vida, pais: string, ano: number): string | undefined {
+  const x = v.caminhos.ligas?.[pais]?.historico?.find(y => y.ano === ano);
+  if (x?.copa) return x.copa;
+  if (!clubesDoPais(pais).length) return undefined;
+  const r = rngDe(v.id, 'copa-campeao', pais, ano);
+  if (r.chance(0.06)) return SEM_CATALOGO + nomeSemCatalogo(pais, cidadesDoPais(pais).map(m => m.nome), 2, ano * 20 + 19, new Set(clubesDoPais(pais).map(c => c.nome)));
+  return pelaForca(r, clubesDoPais(pais).filter(c => !x?.fora?.includes(c.nome)).map(c => ({ nome: c.nome, forca: forcaNaLiga(c.nome, pais) })));
+}
+
+/** O campeão continental de clubes da confederação do país no ano (o anotado; senão, o sorteio estável da confederação). */
+export function campeaoContinentalNoAno(v: Vida, pais: string, ano: number): string | undefined {
+  const x = v.caminhos.ligas?.[pais]?.historico?.find(y => y.ano === ano);
+  if (x?.cont) return x.cont;
+  const conf = confederacaoDe(pais);
+  const lista = clubesDoContinente(conf, '').filter(c => !x?.fora?.includes(c.nome));
+  return pelaForca(rngDe(v.id, 'cont-campeao', conf, ano), lista);
+}
+
+/** O histórico de campeões do país (as temporadas que a vida viu), do mais recente ao mais antigo. */
+export function campeoesDoPais(v: Vida, pais: string): { ano: number; liga?: string; copa?: string; cont?: string }[] {
+  return [...(v.caminhos.ligas?.[pais]?.historico ?? [])].reverse().map(x => ({ ano: x.ano, liga: x.liga, copa: campeaoDaCopaNoAno(v, pais, x.ano), cont: campeaoContinentalNoAno(v, pais, x.ano) }));
+}
+
+/** Grava os campeões do ano (copa e continental) quando a vida o viveu: a leitura depois não depende do que está carregado. */
+export function fixarCampeoesDoAno(v: Vida, pais: string, ano: number): void {
+  const x = ligaDe(v, pais).historico?.find(y => y.ano === ano);
+  if (!x) return;
+  x.copa ??= campeaoDaCopaNoAno(v, pais, ano);
+  x.cont ??= campeaoContinentalNoAno(v, pais, ano);
+  if (!x.copa) delete x.copa;
+  if (!x.cont) delete x.cont;
+}

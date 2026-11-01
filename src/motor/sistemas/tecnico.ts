@@ -47,7 +47,7 @@ import { mudarAgora } from './processos';
 import { marcar } from './marcas';
 import { abalar } from './abalo';
 import { clubesNaDivisao, divisaoDoClube, fecharTemporadaDaLiga, forcaDoClube, forcaNaLiga, formaNaLiga, ultimaTemporadaDoPais } from './ligas';
-import { aCompeticaoId, campanhaDaSelecao, partidaDeCopa, daCompeticaoId, faseDaSelecaoEmPalavras, idDaCopa, nomeDaCompeticao, placarDe, sortearAdversarioDeCopa, torneioDeSelecoes } from './competicoes';
+import { aCompeticaoId, campanhaDaSelecao, partidaDeCopa, daCompeticaoId, faseDaSelecaoEmPalavras, idDaCopa, nomeDaCompeticao, placarDe, sortearAdversarioDeCopa, torneioDeSelecoes, anotarCopaNoHistorico } from './competicoes';
 import { pesoDaLicenca, vestiarioDeExAtleta } from './oficioDoTecnico';
 import { rngDe } from '../rng';
 import { bloqueio, PERMITIDO, type Veredito } from '../plausibilidade';
@@ -505,7 +505,7 @@ function copaDoTecnico(v: Vida, r: Rng, c: CarreiraDeTecnico, p: PassagemDeTecni
     const res = partidaDeCopa(r, (minha - a.forca * 3 + 0.5) / 3);
     conta(res);
     const passou = res === 'v' || (res === 'e' && r.chance(Math.min(0.65, Math.max(0.35, 0.5 + (minha - a.forca * 3) * 0.02))));
-    if (!passou) { t.copa.fase = fases[k]; break; }
+    if (!passou) { t.copa.fase = fases[k]; anotarCopaNoHistorico(v, pais, t.ano, id, p.clube, fases[k]); break; }
     if (k === 3) {
       const fin = sortearAdversarioDeCopa(r, lista.map(x => ({ nome: x.nome, forca: x.forca / 3 })), 4, ja, () => ({ nome: '', forca: 1.5 + r.next() }));
       t.copa.fase = 'vice';
@@ -720,6 +720,8 @@ export function decidirFinal(v: Vida, r: Rng, como: 'otimo' | 'bom' | 'ruim' | '
   if (t) for (const k of jogos) { t.jogos++; t[k]++; }
   p.decisao = undefined;
   const tc = torneioCurto(p.municipioId);
+  // HOTFIX 11.5.1: a copa nacional decidida entra no histórico de campeões do país.
+  if (t?.copa) anotarCopaNoHistorico(v, paisDaCidade(p.municipioId), d.ano, t.copa.id, p.clube, venceu ? 'campeão' : 'vice', venceu || d.adversario.startsWith('um') ? undefined : d.adversario);
   if (venceu) {
     if (t) { if (t.copa) t.copa.fase = 'campeão'; else t.estadual = 'campeão'; (t.titulos ??= []).push(`${flex(g, 'Campeão', 'Campeã')} ${tc.campeao.replace(/^o /, 'do ').replace(/^a /, 'da ')}`); }
     // Uma conquista improvável repercute à altura: quanto mais fraco o time na final, mais o nome cresce.
