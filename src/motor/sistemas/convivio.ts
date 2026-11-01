@@ -24,6 +24,8 @@
  * Nada disso vira número na tela: a ficha lê o laço em palavras e a história dos dois.
  */
 
+import { gostosDaPessoa } from './jeito';
+import { conhecerAFamilia } from './convivio126';
 import { firmarCompromisso } from './afetos';
 import type { Rng } from '../rng';
 import { clamp, hashMisturado, rngDe } from '../rng';
@@ -97,15 +99,8 @@ export function vereditoDeTempo(v: Vida, interacao: string): Veredito {
 
 /* ============================================================ O gosto de cada um (REL-01) */
 
-const GOSTOS = ['desenho', 'futebol', 'música', 'ciências', 'dança', 'leitura', 'xadrez', 'natação', 'cinema', 'cozinha', 'viagem', 'natureza'];
 /** Os dois gostos de uma pessoa: o primeiro é o mesmo de sempre (`interacoes.interesseDe`); o segundo, outro sorteio estável. */
-export function gostosDe(p: Pessoa): [string, string] {
-  let h = 0;
-  for (const ch of p.id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  const a = GOSTOS[h % 8];
-  const lista = GOSTOS.filter(x => x !== a);
-  return [a, lista[Math.floor(hashMisturado(`${p.id}:gosto2`) * lista.length) % lista.length]];
-}
+export function gostosDe(p: Pessoa): [string, string] { return gostosDaPessoa(p); }
 const gosta = (p: Pessoa, g: string) => gostosDe(p).includes(g);
 
 /**
@@ -575,14 +570,8 @@ export const INTERACOES_DE_CONVIVIO: Interacao[] = [
     id: 'conhecer_familia',
     quando: c => humano(c) && (c.papel === 'parceiro' || c.papel === 'saindo') && c.eu >= 16 && !recente(c, 'conheceu_familia', 9999),
     rotulo: c => `Conhecer a família de ${c.p.nome}`,
-    executar: (c, r) => {
-      c.v.fatos[`conheceu_familia_${c.p.id}`] = c.v.t;
-      const deu = r.next() + compatibilidade(c.v, c.p) * 0.3 > 0.35;
-      if (deu) { c.vin.confianca = clamp(c.vin.confianca + 5); if (c.vin.romance) c.vin.romance.envolvimento = clamp(c.vin.romance.envolvimento + 4); lembrarCom(c.v, c.p.id, `Você conheceu a família de ${c.p.nome}.`, 'romance', 2); return { resultado: `Um almoço de domingo que podia dar errado e deu certo. A mãe de ${c.p.nome} mandou comida para você levar.` }; }
-      c.vin.tensao = clamp(c.vin.tensao + 6);
-      lembrarCom(c.v, c.p.id, `O almoço com a família de ${c.p.nome}, que não foi bem.`, 'conflito', 1);
-      return { resultado: `O almoço foi educado e frio. Na volta, ${c.p.nome} disse que a família "é assim mesmo". Ficou um incômodo.` };
-    }
+    // VIDA 12.6: a família de verdade (os pais, o jeito deles, a distância, o tempo de namoro) — `convivio126`.
+    executar: c => conhecerAFamilia(c)
   },
 
   /* ---------------------------------------------------------------- Decisões importantes */

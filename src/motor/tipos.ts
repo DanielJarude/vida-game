@@ -462,7 +462,9 @@ export type TipoMarco =
   | 'inicio' | 'amizade' | 'romance' | 'casamento' | 'filho' | 'casa' | 'escola' | 'trabalho'
   | 'conflito' | 'reconciliacao' | 'apoio' | 'ritual' | 'distancia' | 'traicao' | 'perda' | 'antigo'
   /** Algo que o jogador descobriu sobre a pessoa, convivendo. */
-  | 'descoberta';
+  | 'descoberta'
+  /** VIDA 12.6 — o que a pessoa guarda: o presente, a promessa (cumprida ou não), o abandono. */
+  | 'presente' | 'promessa' | 'promessa_quebrada' | 'abandono';
 
 export interface Vinculo {
   pessoaId: string;

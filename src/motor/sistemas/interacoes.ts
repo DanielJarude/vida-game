@@ -43,6 +43,7 @@ import { contextoDaRelacao, conversarNoApp, encontroDoApp, etapaDoApp, pesoDoCon
 import { executarDesculpas, INTERACOES_DE_CONFLITO } from './conflitos';
 import { INTERACOES_VIVIDAS } from './gestos';
 import { INTERACOES_JUNTOS, registrarGrupo } from './juntos';
+import { GRUPOS_126, INTERACOES_126, jeitoNaInteracao, recusaPelaMemoria } from './convivio126';
 import { GRUPOS_DO_CONVIVIO, INTERACOES_DE_CONVIVIO, marcoAfetivo, naoQuerCasar, recusaAfetiva, vereditoDeTempo, vereditoDoPedido } from './convivio';
 import { cenaDaDescoberta, fraseDoSaber, pendentes, revelar } from './conhecimento';
 import { estadoDaRelacao } from './lacos';
@@ -1087,7 +1088,9 @@ export const INTERACOES: Interacao[] = [
   ...INTERACOES_DE_CONVIVIO,
   // REWORK 10.5 · REL-06: o flerte estando com alguém, o acordo aberto (e voltar a ser só os dois).
   ...INTERACOES_DE_AFETO,
-  ...INTERACOES_ADULTAS
+  ...INTERACOES_ADULTAS,
+  // VIDA 12.6: prometer; o caso (o encontro escondido, o presente, a viagem com desculpa, o futuro, o tempo).
+  ...INTERACOES_126
 ];
 
 /* ------------------------------------------------------- Aproximação */
@@ -1514,6 +1517,7 @@ function ouve(c: CtxI): boolean {
 
 const porId = new Map(INTERACOES.map(x => [x.id, x]));
 for (const [id, g] of Object.entries(GRUPOS_DO_CONVIVIO)) registrarGrupo(id, g);
+for (const [id, g] of Object.entries(GRUPOS_126)) registrarGrupo(id, g);
 for (const [id, g] of Object.entries(GRUPOS_DE_AFETO)) registrarGrupo(id, g);
 for (const [id, g] of Object.entries(GRUPOS_ADULTOS)) registrarGrupo(id, g);
 
@@ -1584,6 +1588,9 @@ export function disponibilidadeInteracao(v: Vida, id: string, interacao: string)
   }
   // REWORK 10 · BAL-03: o tempo do ano com as pessoas (uma conversa sempre cabe; uma viagem, nem sempre).
   if (!REACOES.has(interacao)) { const t = vereditoDeTempo(v, interacao); if (t.grau !== 'permitido') return t; }
+  // VIDA 12.6: quem foi traído não aceita convite enquanto a traição não passou.
+  const recusa = recusaPelaMemoria(c, interacao);
+  if (recusa) return recusa;
   return def.disponivel ? def.disponivel(c) : PERMITIDO;
 }
 
@@ -1597,6 +1604,8 @@ export function executarInteracao(v: Vida, r: Rng, id: string, interacao: string
   v.anoAtual.acoes.push(`pessoa:${interacao}:${id}`);
   c.vin.tUltimoContato = v.t;
   const out = def.executar(c, r);
+  // VIDA 12.6: o jeito e a memória de quem recebe mexem no que rendeu (e às vezes a pessoa diz alguma coisa).
+  if (!reacao && v.vinculos[id]) jeitoNaInteracao({ ...c, vin: v.vinculos[id] }, interacao, antes.prox, out);
   // Retornos decrescentes: só os GANHOS encolhem (o que custa, custa inteiro).
   const vin = v.vinculos[id];
   // REWORK 10.5 · REL-07: o conflito novo vira mágoa (que esfria devagar); a tentativa de reparar fica registrada, com o

@@ -12,6 +12,7 @@
  * mais pesa é estar junto ao longo dos anos.
  */
 
+import { emComum, gostosDoProtagonista } from './jeito';
 import type { Rng } from '../rng';
 import { contatoReal, desgasteSemConvivio, soReacao } from './desgaste';
 import { clamp } from '../rng';
@@ -91,6 +92,16 @@ function hash(s: string): number {
 }
 
 /** −1..1: o quanto o jeito da pessoa combina com o jeito que o jogador vem sendo. */
+/** Os gostos do protagonista, lidos uma vez por instante (a compatibilidade é calculada para muita gente no mesmo ano). */
+const cacheDeGostos = new WeakMap<Vida, { t: number; n: number; g: ReturnType<typeof gostosDoProtagonista> }>();
+function gostosEmCache(v: Vida) {
+  const c = cacheDeGostos.get(v);
+  if (c && c.t === v.t && c.n === v.biografia.length) return c.g;
+  const g = gostosDoProtagonista(v);
+  cacheDeGostos.set(v, { t: v.t, n: v.biografia.length, g });
+  return g;
+}
+
 export function compatibilidade(v: Vida, p: Pessoa): number {
   const t = v.personalidade.tracos;
   const tp = p.temperamento;
@@ -102,7 +113,9 @@ export function compatibilidade(v: Vida, p: Pessoa): number {
   c += parecido(norm(t.disciplina - t.impulsividade), tp.responsabilidade) * 0.2;
   c += tp.afabilidade * 0.1 + tp.estabilidade * 0.05;
   const quimica = hash(v.id + p.id) * 2 - 1; // afinidade que não se explica
-  return Math.max(-1, Math.min(1, c * 0.6 + quimica * 0.55));
+  // VIDA 12.6: o que os dois gostam de fazer (os gostos dela que você pratica) aproxima — um gosto em comum vale um pouco.
+  const comum = idade(v) >= 10 ? emComum(v, p, gostosEmCache(v)).length : 0;
+  return Math.max(-1, Math.min(1, c * 0.6 + quimica * 0.55 + comum * 0.07));
 }
 
 /* ------------------------------------------------------------- Convívio */

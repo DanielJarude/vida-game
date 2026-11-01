@@ -8,6 +8,7 @@
  * Silêncio é permitido: nem todo ano precisa de uma história.
  */
 
+import { processarJeito } from './sistemas/convivio126';
 import { processarPersonalizacao } from './sistemas/personalizacao';
 import { fotografarEvolucao, praticandoPor } from './sistemas/progressao';
 import { cansacoNosEstudos, faixaDaSemana, estudaAgora } from './sistemas/semana';
@@ -229,6 +230,8 @@ function viverAno(v: Vida, r: Rng): void {
   conhecerGente(v, r);
   envelhecerConhecidos(v, r);
   processarSocial(v, r);
+  // VIDA 12.6: as promessas de um ano atrás são conferidas (sem sorteio).
+  processarJeito(v);
   processarRomance(v, r);
   // REWORK 10.5 · REL-06: a parceria também pode sair do combinado (e você pode descobrir); a intimidade esfria sem contato.
   processarAfetos(v);

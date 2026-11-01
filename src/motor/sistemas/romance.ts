@@ -23,6 +23,7 @@
  * descoberto (a reação do jogador é decisão dele; a da outra pessoa, dela).
  */
 
+import { riscoDoRastro, tem } from './jeito';
 import { registroCivilDe } from '../mundo/locais';
 import { comecarVidaEmComum, separarVidaMaterial } from './partilha';
 import { pesoDaAparenciaPara } from './predisposicao';
@@ -467,12 +468,15 @@ function processarCaso(v: Vida, r: Rng, p: Pessoa, vin: Vinculo): void {
   // Descoberta: quanto mais tempo, mais descuido; o mesmo trabalho, mais olhos.
   const risco = 0.15 + Math.min(0.25, (meses / 12) * 0.06)
     + (vin.convivio.includes('trabalho') ? 0.05 : 0)
-    + (v.personalidade.tracos.impulsividade > 30 ? 0.06 : 0);
+    + (v.personalidade.tracos.impulsividade > 30 ? 0.06 : 0)
+    // VIDA 12.6: o rastro que o próprio caso deixou (o presente no cartão, a viagem com desculpa, quem viu).
+    + riscoDoRastro(v, p.id);
   if (!Object.keys(v.fatos).some(k => k.startsWith('caso_descoberto:')) && r.chance(risco)) {
     v.fatos[`caso_descoberto:${p.id}`] = v.t;
     return;
   }
-  if (meses >= 24 && rom.envolvimento >= 62 && v.fatos[`caso_ultimato_${p.id}`] === undefined) v.fatos[`caso_ultimato_${p.id}`] = v.t;
+  // VIDA 12.6: quem é ciumento não espera dois anos para querer mais.
+  if (meses >= (tem(p, 'ciumento') ? 12 : 24) && rom.envolvimento >= 62 && v.fatos[`caso_ultimato_${p.id}`] === undefined) v.fatos[`caso_ultimato_${p.id}`] = v.t;
 }
 
 /**
