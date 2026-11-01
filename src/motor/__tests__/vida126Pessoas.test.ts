@@ -37,7 +37,8 @@ describe('VIDA 12.6 · o jeito das pessoas', () => {
     const { p, vin } = comParceiro(v, { estagio: 'namoro', anos: 3 });
     expect(podeTentar(disponibilidade(v, { tipo: 'pessoa', pessoaId: p.id, interacao: 'jantar_romantico' as never }))).toBe(true);
     lembrarCom(v, p.id, 'Descobriu a traição.', 'traicao', 3);
-    expect(climaDaMemoria(v, vin, p)).toBeLessThan(-0.3);
+    const ferido = climaDaMemoria(v, vin, p);
+    expect(ferido).toBeLessThan(-0.3);
     expect(traicaoQueNaoPassou(v, vin)).toBeTruthy();
     const d = disponibilidade(v, { tipo: 'pessoa', pessoaId: p.id, interacao: 'jantar_romantico' as never });
     expect(d.grau).toBe('incompativel');
@@ -46,7 +47,7 @@ describe('VIDA 12.6 · o jeito das pessoas', () => {
     v.t += 3;
     lembrarCom(v, p.id, 'Fizeram as pazes.', 'reconciliacao', 2);
     expect(traicaoQueNaoPassou(v, vin)).toBeUndefined();
-    expect(climaDaMemoria(v, vin, p)).toBeGreaterThan(-0.5);
+    expect(climaDaMemoria(v, vin, p)).toBeGreaterThan(ferido + 0.2);
     // Com o tempo, a mágoa esfria.
     v = transacao(v, x => { x.t += 12 * 12; }).vida;
     expect(Math.abs(climaDaMemoria(v, v.vinculos[p.id], p))).toBeLessThan(0.3);
