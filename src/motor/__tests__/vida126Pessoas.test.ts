@@ -50,7 +50,7 @@ describe('VIDA 12.6 · o jeito das pessoas', () => {
     expect(climaDaMemoria(v, vin, p)).toBeGreaterThan(ferido + 0.2);
     // Com o tempo, a mágoa esfria.
     v = transacao(v, x => { x.t += 12 * 12; }).vida;
-    expect(Math.abs(climaDaMemoria(v, v.vinculos[p.id], p))).toBeLessThan(0.3);
+    expect(climaDaMemoria(v, v.vinculos[p.id], p)).toBeGreaterThan(-0.1);
   });
 
   it('promessa: um ano depois a pessoa confere — sem contato, vira promessa quebrada', () => {
