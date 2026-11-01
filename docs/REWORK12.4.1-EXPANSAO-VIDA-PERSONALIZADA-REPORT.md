@@ -80,3 +80,8 @@ Alterados: `motor/acoes.ts`, `ano.ts`, `tipos.ts`, `conteudo/catalogo.ts`, `cont
 - A janela de oferta das atividades mudou de sorteio (agora muda de fato a cada 3 anos): vidas antigas podem ver a oferta da cidade mudar no próximo bloco.
 - Dois testes com teto fixo de 60 s (`motor.test` agência, `fechamentoMundo` #4) às vezes estouram sob carga na suíte completa, como na base; isolados levam 45–50 s (base: 37–52 s).
 - Sem teste em aparelho real.
+
+## 6. Publicação (2026-11-01)
+- Commit `8eb249d` na branch; `main` e a branch de produção do Cloudflare Pages (`claude/fix-pos-rework3-playtest`) avançadas por fast-forward (`aa51195`/`bf82394` → `8eb249d`). Check run "Cloudflare Pages": success.
+- https://vida-game.pages.dev/ serve `index-DRI7DTGT.js`; os 31 arquivos JS servidos são idênticos (sha256) aos do build local testado.
+- Validação em produção (Playwright, 390 px, save de 12.4): a janela de novidades da 12.4.1 abre; Você · Aparência mostra a figura de corpo inteiro com as peças em uso; a parte "Gostos e cultura" existe; Compras mostra Lojas especializadas, Grandes lojas e Pela internet; nenhum erro de página.
