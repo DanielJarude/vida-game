@@ -74,3 +74,13 @@
   .pz-acabamento select, .pz-acao-pessoa select, .pz-acao-pessoa input { width: 100%; }
   .pz-acabamento .campo, .pz-acao-pessoa .campo { flex: 1 1 100%; }
 }
+
+/* HOTFIX 11.5.1 — o estúdio de tatuagem (Você · Aparência). */
+.estudio-tatuagem { margin-top: var(--space-4); }
+.estudio-tatuagem__corpo { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: flex-start; }
+.estudio-tatuagem__previa { display: flex; gap: var(--space-2); }
+.estudio-tatuagem__previa figure { margin: 0; text-align: center; }
+.estudio-tatuagem__escolhas { flex: 1 1 16rem; min-width: 0; display: grid; gap: var(--space-2); }
+.estudio-tatuagem__escolhas select { max-width: 100%; }
+.estudio-tatuagem__lista { list-style: none; padding: 0; margin: var(--space-3) 0 0; display: grid; gap: var(--space-2); }
+.estudio-tatuagem__lista li { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; justify-content: space-between; border-top: 1px solid var(--rule); padding-top: var(--space-2); }

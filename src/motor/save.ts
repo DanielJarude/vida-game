@@ -19,6 +19,7 @@
  */
 
 import { normalizarLocais } from './sistemas/personalizacao';
+import { sincronizarVisual } from './sistemas/estilo';
 import { indiceDoBairro } from './sistemas/mercado';
 import { garantirSetor } from './sistemas/setores';
 import { normalizarSubmundo } from './sistemas/submundo';
@@ -113,7 +114,7 @@ export function ler(s: Armazenamento | null = armazenamentoPadrao()): Leitura {
  */
 export function interpretar(bruto: string): Leitura {
   const r = interpretarSemNormalizar(bruto);
-  if (r.tipo === 'ok') { normalizarRework75(r.vida); normalizarRework97(r.vida); normalizarRework106(r.vida); normalizarRework11Relacoes(r.vida); normalizarRework11Esportes(r.vida); normalizarRework11Artes(r.vida); normalizarRework115(r.vida); normalizarRework12(r.vida); normalizarRework122(r.vida); normalizarRework125(r.vida); normalizarRework123(r.vida); normalizarRework1235(r.vida); normalizarRework124(r.vida); fixarEstatura(r.vida, true); }
+  if (r.tipo === 'ok') { normalizarRework75(r.vida); normalizarRework97(r.vida); normalizarRework106(r.vida); normalizarRework11Relacoes(r.vida); normalizarRework11Esportes(r.vida); normalizarRework11Artes(r.vida); normalizarRework115(r.vida); normalizarRework12(r.vida); normalizarRework122(r.vida); normalizarRework125(r.vida); normalizarRework123(r.vida); normalizarRework1235(r.vida); normalizarRework124(r.vida); normalizarHotfix1151(r.vida); fixarEstatura(r.vida, true); }
   return r;
 }
 
@@ -1772,6 +1773,15 @@ export function normalizarRework123(v: Vida): void {
  */
 export function normalizarRework124(v: Vida): void {
   normalizarLocais(v);
+}
+
+/**
+ * HOTFIX 11.5.1 — nada obrigatório (campos novos opcionais: tabelas e histórico das ligas, o futebol do mundo, as
+ * tatuagens, o modelo dos óculos e do chapéu). Na carga, o visual relê o que está em uso: quem já usava o Juliet ou o
+ * chapéu de couro passa a ver o modelo desenhado, sem precisar trocar de peça.
+ */
+export function normalizarHotfix1151(v: Vida): void {
+  if (v.eu.estilo?.itens?.some(x => x.usando)) sincronizarVisual(v);
 }
 
 export function normalizarRework1235(v: Vida): void {

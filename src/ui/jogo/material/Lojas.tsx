@@ -21,6 +21,7 @@ import { BotaoAcao, Escolha } from '../../comum';
 import { dinheiroCurto } from '../../leituraMaterial';
 import { DesenhoObjeto } from './Objetos';
 import { Figura } from '../../avatar/Figura';
+import { tatuagensNaFigura } from '../../../motor/sistemas/tatuagens';
 
 const POR_PAGINA = 18;
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -88,7 +89,7 @@ function ProdutoNaLoja({ vida, agir, linha, lojaId, faixa, crianca }: { vida: Vi
     <li className="oferta oferta--estilo oferta--objeto loja-vida__produto" data-produto={p.id}>
       <span className="oferta__objeto">
         {c && <DesenhoObjeto coisaId={c.id} cor={variantesDaCoisa(c.id)[0].cor} tamanho={64} rotulo={c.nome} />}
-        {vestivel && <Figura visual={vida.eu.visual} genero={vida.eu.genero} idade={idade(vida)} semente={vida.eu.semente ?? 'eu'} corpo={tipoDeCorpo(vida)} pecas={[{ itemId: p.id, id: `${p.id}-vitrine` }]} largura={56} semFundo rotulo={`${nome} em você`} />}
+        {vestivel && <Figura visual={vida.eu.visual} genero={vida.eu.genero} idade={idade(vida)} semente={vida.eu.semente ?? 'eu'} corpo={tipoDeCorpo(vida)} pecas={[{ itemId: p.id, id: `${p.id}-vitrine` }]} tatuagens={tatuagensNaFigura(vida)} largura={56} semFundo rotulo={`${nome} em você`} />}
       </span>
       <span className="oferta__texto">
         <strong>{nome}{it?.luxo ? <span className="etiqueta-luxo">luxo</span> : null}</strong>

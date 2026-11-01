@@ -226,6 +226,11 @@ export function sincronizarVisual(v: Vida): void {
   const joia = pescoco ? itemEstilo(pescoco.itemId)?.visual?.joia : undefined;
   if (joia) vis.joia = joia; else delete vis.joia;
   if (usando.some(x => itemEstilo(x.itemId)?.lugar === 'orelha')) vis.brincos = true; else delete vis.brincos;
+  // HOTFIX 11.5.1: o modelo dos óculos e do chapéu em uso (o Juliet não é o aviador; o chapéu de couro não é o de palha).
+  const oculos = usando.find(x => itemEstilo(x.itemId)?.categoria === 'oculos');
+  if (oculos && vis.oculos) vis.modeloOculos = oculos.itemId; else delete vis.modeloOculos;
+  const chapeu = usando.find(x => itemEstilo(x.itemId)?.categoria === 'chapeu');
+  if (chapeu && vis.chapeu) vis.modeloChapeu = chapeu.itemId; else delete vis.modeloChapeu;
 }
 
 export function disponibilidadeUsarItem(v: Vida, itemId: string, usar: boolean): Veredito {

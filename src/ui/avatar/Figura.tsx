@@ -12,13 +12,17 @@
 import { memo, useId, type ReactNode } from 'react';
 import type { Genero, Visual } from '../../motor/tipos';
 import type { TipoDeCorpo } from '../../motor/sistemas/silhueta';
-import { Retrato, corDaPele, corDoCabelo, fundoDoRetrato } from './Retrato';
+import { Retrato, contrasteEntre, corDaPele, corDoCabelo, fundoDaFigura } from './Retrato';
+import { DesenhoDaTatuagem } from './tatuagens';
+import type { Lado, LocalDeTatuagem } from '../../motor/dados/tatuagens';
 import { misturar } from './cores';
 import { acessorioDoItem, pecasDoItem, type Conjunto, type Peca } from './pecas';
 
 type P<K extends Peca['parte']> = Extract<Peca, { parte: K }>;
 
 export interface PecaEmUso { itemId: string; id: string }
+/** HOTFIX 11.5.1: uma tatuagem na figura (`sistemas/tatuagens.tatuagensNaFigura`). */
+export interface TatuagemNaFigura { id: string; desenho: string; local: LocalDeTatuagem; lado?: Lado; anos: number; clareou: number }
 
 interface Props {
   visual: Visual;
@@ -33,6 +37,12 @@ interface Props {
   rotulo?: string;
   /** Sem fundo (para pôr sobre outra superfície). */
   semFundo?: boolean;
+  /** HOTFIX 11.5.1: as tatuagens (na pele, por baixo da roupa). */
+  tatuagens?: TatuagemNaFigura[];
+  /** De costas (o estúdio de tatuagem mostra as costas). */
+  vista?: 'frente' | 'costas';
+  /** Sem a parte de cima (o estúdio mostra o tronco). */
+  semCima?: boolean;
 }
 
 /* ------------------------------------------------------------------ geometria */
@@ -131,11 +141,12 @@ function perna(g: Geo, s: 1 | -1, folga = 0, ate = g.yTorn, larga = 1, barra?: n
 /* ------------------------------------------------------------------ peças */
 
 function Estampa({ id, tipo, cor, cor2 }: { id: string; tipo: string; cor: string; cor2: string }) {
-  const W = tipo === 'xadrez' ? 7 : tipo === 'listras' ? 4 : tipo === 'chita' ? 14 : 9;
+  const W = tipo === 'xadrez' ? 7 : tipo === 'listras' ? 4 : tipo === 'listrasV' ? 7 : tipo === 'chita' ? 14 : 9;
   return (
     <pattern id={id} patternUnits="userSpaceOnUse" width={W} height={W}>
       <rect width={W} height={W} fill={cor} />
       {tipo === 'listras' && <rect y={0} width={W} height={1.6} fill={cor2} />}
+      {tipo === 'listrasV' && <rect x={0} width={W / 2} height={W} fill={cor2} />}
       {tipo === 'xadrez' && <><rect width={W} height={2.6} fill={cor2} opacity={0.6} /><rect width={2.6} height={W} fill={cor2} opacity={0.6} /><rect x={4.6} width={0.6} height={W} fill="#f1e6cf" opacity={0.75} /><rect y={4.6} width={W} height={0.6} fill="#f1e6cf" opacity={0.75} /></>}
       {tipo === 'floral' && <><circle cx={2.5} cy={2.5} r={1.1} fill={cor2} /><circle cx={7} cy={6.5} r={0.9} fill={misturar(cor2, '#ffffff', 0.4)} /><circle cx={2.5} cy={2.5} r={0.35} fill={cor} /></>}
       {tipo === 'chita' && <><circle cx={4} cy={4} r={2.8} fill={cor2} /><circle cx={4} cy={4} r={1.1} fill="#1d4fa3" /><circle cx={11} cy={11} r={2} fill="#f4f1ea" /><path d="M 9 4 q 2 -2 4 0" stroke="#2f7a3c" strokeWidth={0.9} fill="none" /></>}
@@ -146,9 +157,12 @@ function Estampa({ id, tipo, cor, cor2 }: { id: string; tipo: string; cor: strin
 }
 
 const sombraDe = (c: string, t = 0.24) => misturar(c, '#000000', t);
+/** A camisa de time listrada (vertical) ou lisa com mangas de contraste — pela cor (estável para a mesma peça). */
+const camisaListrada = (cor: string) => parseInt(cor.slice(1, 3), 16) % 2 === 0;
 
 function preenchimento(p: { cor?: unknown; estampa?: string }, idEstampa: string, detalhe: boolean): string {
   const cor = p.cor as string;
+  if (p.estampa === 'time') return camisaListrada(cor) ? `url(#${idEstampa})` : cor;
   return detalhe && p.estampa && ['listras', 'xadrez', 'floral', 'chita', 'wax', 'tachas'].includes(p.estampa) ? `url(#${idEstampa})` : cor;
 }
 
@@ -179,7 +193,22 @@ function Cima({ g, p, ide, detalhe, pele }: { g: Geo; p: P<'cima'>; ide: string;
       {p.bolso && <path d={`M ${g.cx - 9} ${g.yQuad - 14} L ${g.cx + 9} ${g.yQuad - 14} L ${g.cx + 11} ${g.yQuad - 3} L ${g.cx - 11} ${g.yQuad - 3} Z`} fill="none" stroke={esc} strokeWidth={0.7} />}
       {(p.forma === 'moletom' || p.forma === 'sueter' || p.forma === 'agasalho') && <path d={`M ${lado(g, -1, g.quadril + folga)} ${ate - 3} L ${lado(g, 1, g.quadril + folga)} ${ate - 3}`} stroke={esc} strokeWidth={1.2} opacity={0.6} />}
       {p.forma === 'agasalho' && <><path d={`M ${g.cx} ${g.topo + 2} L ${g.cx} ${ate}`} stroke={misturar(cor, '#ffffff', 0.5)} strokeWidth={0.6} />{p.cor2 && ([-1, 1] as const).map(s => <path key={s} d={`M ${lado(g, s, g.ombro + 2.6)} ${g.topo + 6} L ${lado(g, s, g.ombro + 4.6)} 139`} stroke={p.cor2} strokeWidth={1.4} />)}</>}
-      {p.estampa === 'time' && <><path d={`M ${lado(g, -1, g.peito * 0.55)} ${g.topo + 8} L ${lado(g, -1, g.peito * 0.55)} ${ate}`} stroke={p.cor2} strokeWidth={3.2} opacity={0.9} /><path d={`M ${lado(g, 1, g.peito * 0.38)} ${g.topo + 13} l 2.4 0 l 0 3 q -1.2 1.6 -2.4 0 Z`} fill={p.cor2} stroke={esc} strokeWidth={0.4} /></>}
+      {p.estampa === 'time' && (() => {
+        // HOTFIX 11.5.1 — a camisa de jogo de verdade: a gola V com friso, as mangas raglan de contraste (na lisa), os
+        // punhos, o escudo bordado no peito esquerdo, a marca do fabricante no direito, o patrocínio no peito.
+        const c2 = p.cor2 ?? '#f4f4f2';
+        const listrada = camisaListrada(cor);
+        const escudo = lado(g, 1, g.peito * 0.42);
+        return <>
+          {!listrada && ([-1, 1] as const).map(s => <path key={`r${s}`} d={`M ${lado(g, s, g.pesc + 2.2)} ${g.topo - 0.4} L ${lado(g, s, g.ombro + 2)} ${g.topo + 4} L ${lado(g, s, g.ombro + 4.6)} ${g.topo + 28} L ${lado(g, s, g.ombro - 1.6)} ${g.topo + 30} L ${lado(g, s, g.peito - 2.2)} ${g.topo + 15} Z`} fill={c2} opacity={0.95} />)}
+          {p.manga === 'curta' && ([-1, 1] as const).map(s => { const [x, hw] = [g.ombro + 2.4, g.braco + 1.4]; return <path key={`p${s}`} d={`M ${lado(g, s, x - hw)} ${g.topo + 28.5} L ${lado(g, s, x + hw)} ${g.topo + 27} L ${lado(g, s, x + hw + 0.2)} ${g.topo + 30} L ${lado(g, s, x - hw)} ${g.topo + 31.4} Z`} fill={listrada ? cor : c2} />; })}
+          <path d={`M ${lado(g, -1, g.pesc + 1.4)} ${g.topo - 0.6} L ${g.cx} ${g.topo + 10.6} L ${lado(g, 1, g.pesc + 1.4)} ${g.topo - 0.6}`} fill="none" stroke={listrada ? esc : c2} strokeWidth={1.6} strokeLinejoin="round" />
+          {detalhe && <path d={`M ${g.cx - 7} ${g.topo + 23} h 14 v 4.2 h -14 Z`} fill={listrada ? '#f4f4f2' : c2} opacity={0.92} />}
+          <path d={`M ${escudo - 1.8} ${g.topo + 11} h 3.6 v 3 q -1.8 2.6 -3.6 0 Z`} fill={c2} stroke={esc} strokeWidth={0.45} />
+          {detalhe && <path d={`M ${escudo - 0.9} ${g.topo + 12.2} h 1.8`} stroke={esc} strokeWidth={0.5} />}
+          {detalhe && <path d={`M ${lado(g, -1, g.peito * 0.48) - 1.4} ${g.topo + 13.4} q 1.6 1 3 -1.2`} fill="none" stroke={listrada ? esc : c2} strokeWidth={0.7} strokeLinecap="round" />}
+        </>;
+      })()}
       {p.estampa === 'banda' && detalhe && <g transform={`translate(${g.cx - 6} ${g.topo + 18})`}><circle cx={6} cy={5} r={5} fill={p.cor2} /><path d="M 3.6 4 l 1.2 0 M 7.2 4 l 1.2 0 M 4 7.4 q 2 1.4 4 0" stroke={cor} strokeWidth={0.9} strokeLinecap="round" /></g>}
       {p.estampa === 'logo' && <rect x={g.cx - 5} y={g.topo + 16} width={10} height={3} rx={0.8} fill={p.cor2} />}
     </g>
@@ -330,11 +359,94 @@ function Pes({ g, p, pele, detalhe }: { g: Geo; p: P<'pes'>; pele: string; detal
   );
 }
 
+/* ------------------------------------------------------------------ as tatuagens */
+
+/** O centro e a meia-largura do braço numa altura (a mesma geometria de `braco`). */
+function noBraco(g: Geo, y: number): [number, number] {
+  const b = g.braco, a = g.antebraco;
+  const pts: [number, number, number][] = [[g.topo + 5, g.ombro - 1.5 + b * 0.35, b], [108, g.ombro + 2.2, b * 0.86], [140, g.ombro + 2.6, a * 0.85]];
+  for (let k = 1; k < pts.length; k++) {
+    const [y0, x0, w0] = pts[k - 1], [y1, x1, w1] = pts[k];
+    if (y <= y1) { const t = Math.max(0, (y - y0) / (y1 - y0)); return [x0 + (x1 - x0) * t, w0 + (w1 - w0) * t]; }
+  }
+  return [pts[2][1], pts[2][2]];
+}
+/** O centro e a meia-largura da perna numa altura (a mesma geometria de `perna`). */
+function naPerna(g: Geo, y: number): [number, number] {
+  const pts: [number, number, number][] = [[g.yQuad - 2, g.quadril * 0.52, g.quadril * 0.5], [g.yVirilha + 6, g.quadril * 0.5, g.coxa], [g.yJoelho, g.quadril * 0.44, g.panturrilha + 0.8], [g.yTorn, g.quadril * 0.42, g.tornozelo]];
+  for (let k = 1; k < pts.length; k++) {
+    const [y0, x0, w0] = pts[k - 1], [y1, x1, w1] = pts[k];
+    if (y <= y1) { const t = Math.max(0, (y - y0) / (y1 - y0)); return [x0 + (x1 - x0) * t, w0 + (w1 - w0) * t]; }
+  }
+  return [pts[3][1], pts[3][2]];
+}
+
+/** A área de cada parte (centro x, y, largura, altura) — o lugar onde os desenhos daquela parte se repartem. */
+function areaDaParte(g: Geo, local: LocalDeTatuagem, s: 1 | -1, grande: boolean): { x: number; y: number; w: number; h: number; vertical: boolean; clip: string } {
+  switch (local) {
+    case 'braco': { const y0 = g.topo + 10, y1 = 106; const [x, hw] = noBraco(g, (y0 + y1) / 2); return { x: lado(g, s, x), y: (y0 + y1) / 2, w: hw * 1.8, h: y1 - y0, vertical: true, clip: `cb${s}` }; }
+    case 'antebraco': { const y0 = 112, y1 = 138; const [x, hw] = noBraco(g, 125); return { x: lado(g, s, x), y: (y0 + y1) / 2, w: hw * 1.8, h: y1 - y0, vertical: true, clip: `cb${s}` }; }
+    case 'ombro': { const [x] = noBraco(g, g.topo + 8); return { x: lado(g, s, x - 1), y: g.topo + 7, w: 10, h: 9, vertical: false, clip: `cb${s}` }; }
+    case 'mao': return { x: lado(g, s, g.ombro + 2.7), y: 145.5, w: g.antebraco * 1.5, h: 7, vertical: false, clip: `cm${s}` };
+    case 'peito': return grande ? { x: g.cx, y: g.topo + 17, w: g.peito * 1.55, h: 18, vertical: false, clip: 'ct' } : { x: g.cx, y: g.topo + 16, w: g.peito * 1.6, h: 12, vertical: false, clip: 'ct' };
+    case 'costas': return { x: g.cx, y: g.topo + 28, w: g.peito * 1.5, h: 40, vertical: true, clip: 'ct' };
+    case 'abdomen': return { x: g.cx, y: g.yCint - 6, w: (g.cintura + g.barriga * 0.5) * 1.3, h: 22, vertical: true, clip: 'ct' };
+    case 'pescoco': return { x: lado(g, s, g.pesc * 0.5), y: g.topo - 5, w: g.pesc * 0.95, h: 6, vertical: false, clip: 'cn' };
+    case 'coxa': { const y0 = g.yVirilha + 4, y1 = g.yJoelho - 6; const [x, hw] = naPerna(g, (y0 + y1) / 2); return { x: lado(g, s, x), y: (y0 + y1) / 2, w: hw * 1.7, h: y1 - y0, vertical: true, clip: `cp${s}` }; }
+    case 'panturrilha': { const y0 = g.yJoelho + 6, y1 = g.yTorn - 8; const [x, hw] = naPerna(g, (y0 + y1) / 2); return { x: lado(g, s, x), y: (y0 + y1) / 2, w: hw * 1.7, h: y1 - y0, vertical: true, clip: `cp${s}` }; }
+  }
+}
+
+const NA_FRENTE = new Set<LocalDeTatuagem>(['braco', 'antebraco', 'ombro', 'mao', 'peito', 'abdomen', 'pescoco', 'coxa', 'panturrilha']);
+const NAS_COSTAS = new Set<LocalDeTatuagem>(['braco', 'ombro', 'costas', 'panturrilha']);
+
+/**
+ * As tatuagens no corpo: cada parte reparte a área entre os desenhos dela (empilhados ao longo do braço, da perna, das
+ * costas; lado a lado no peito), cada um recortado pela própria parte (nunca flutua fora da pele). A tinta é o preto
+ * azulado de tatuagem já sob a pele (um pouco da pele por cima) — e envelhece: com os anos, clareia e espalha um pouco;
+ * no laser, vai sumindo.
+ */
+function Tatuagens({ g, lista, pele, ide, costas, detalhe }: { g: Geo; lista: TatuagemNaFigura[]; pele: string; ide: (k: string) => string; costas: boolean; detalhe: boolean }) {
+  const vis = lista.filter(t => (costas ? NAS_COSTAS : NA_FRENTE).has(t.local) && !(t.desenho === 'fechamento' && t.local !== 'braco'));
+  // Agrupa por parte e lado (de frente, o lado esquerdo da pessoa fica à direita de quem olha; de costas, o contrário).
+  const grupos = new Map<string, TatuagemNaFigura[]>();
+  for (const t of vis) { const k = `${t.local}:${t.lado ?? ''}`; grupos.set(k, [...(grupos.get(k) ?? []), t]); }
+  const out: ReactNode[] = [];
+  for (const [k, xs] of grupos) {
+    const [local, ladoT] = k.split(':') as [LocalDeTatuagem, string];
+    const s: 1 | -1 = (ladoT === 'e') !== costas ? 1 : -1;
+    xs.forEach((t, i) => {
+      const fech = t.desenho === 'fechamento';
+      const a = fech ? (() => { const [x, hw] = noBraco(g, 100); return { x: lado(g, s, x), y: (g.topo + 8 + 139) / 2, w: hw * 2.1, h: 139 - g.topo - 8, vertical: true, clip: `cb${s}` }; })() : areaDaParte(g, local, s, xs.length === 1 && /mandala|pantera|carpa|tribal_polinesio|dragao|aguia/.test(t.desenho));
+      // A fatia desta tatuagem na área (as outras da mesma parte dividem o resto).
+      const n = xs.length;
+      const fw = a.vertical ? a.w : a.w / n, fh = a.vertical ? a.h / n : a.h;
+      const cx = a.vertical ? a.x : a.x - a.w / 2 + fw * (i + 0.5);
+      const cy = a.vertical ? a.y - a.h / 2 + fh * (i + 0.5) : a.y;
+      // Nos membros, o desenho passa um pouco da largura e é recortado pela pele: ele "dá a volta" no braço, como na pele de verdade.
+      const lado2 = Math.min(fw * (a.vertical && local !== 'costas' && local !== 'abdomen' ? 1.35 : 1), fh) * 0.95;
+      const [w, h] = fech ? [fw, fh] : [lado2, lado2];
+      const desbota = Math.min(0.42, 0.16 + t.anos * 0.007);
+      const tinta = misturar('#1b2733', pele, desbota);
+      const cor = (hex: string) => misturar(hex, pele, Math.min(0.5, 0.18 + t.anos * 0.008));
+      const op = (0.93 - Math.min(0.2, t.anos * 0.004)) * (1 - 0.85 * t.clareou);
+      out.push(
+        <g key={t.id} clipPath={`url(#${ide(a.clip)})`} opacity={op} data-tatuagem={t.desenho} data-local={t.local}>
+          <g transform={`translate(${(cx - w / 2).toFixed(2)} ${(cy - h / 2).toFixed(2)}) scale(${(w / 20).toFixed(3)} ${(h / 20).toFixed(3)})`}>
+            <DesenhoDaTatuagem id={t.desenho} tinta={tinta} cor={cor} traco={(1 + Math.min(0.35, t.anos * 0.01)) * (detalhe ? 1 : 1.4)} />
+          </g>
+        </g>
+      );
+    });
+  }
+  return <g className="figura__tatuagens">{out}</g>;
+}
+
 /* ------------------------------------------------------------------ a figura */
 
 const PADRAO_CIMA = ['#4b5a6b', '#6b4f5a', '#4f6b5a', '#7a6248', '#5a5470', '#3f5f66', '#735a4a', '#556048'];
 
-export const Figura = memo(function Figura({ visual, genero, idade, semente = 'eu', corpo, pecas, largura = 160, rotulo, semFundo }: Props) {
+export const Figura = memo(function Figura({ visual, genero, idade, semente = 'eu', corpo, pecas, largura = 160, rotulo, semFundo, tatuagens = [], vista = 'frente', semCima }: Props) {
   const uid = useId().replace(/:/g, '');
   const g = geometria(genero, corpo, idade);
   const esc = escalaDaIdade(idade);
@@ -357,12 +469,24 @@ export const Figura = memo(function Figura({ visual, genero, idade, semente = 'e
   if (!conj.inteira && !conj.cima) conj.cima = { parte: 'cima', forma: 'camiseta', cor: PADRAO_CIMA[h % PADRAO_CIMA.length], manga: 'curta', gola: 'redonda' };
   if (!conj.inteira && !conj.baixo) conj.baixo = idade < 12 ? { parte: 'baixo', forma: 'bermuda', corte: 'reta', cor: ['#3d5a80', '#5d6b4f', '#7a6248'][h % 3] } : { parte: 'baixo', forma: 'calca', corte: 'reta', cor: ['#3d5a80', '#2b2f36', '#5b6470'][h % 3], bolsos: true, costura: h % 3 === 0 ? '#c99a4a' : undefined };
   if (!conj.pes) conj.pes = { parte: 'pes', forma: idade >= 70 ? 'sapato' : 'tenis', cor: idade >= 70 ? '#3a2a20' : ['#f4f4f2', '#2b2f36', '#7d8590'][h % 3], sola: idade >= 70 ? '#1b1515' : '#f4f4f2' };
+  // O estúdio de tatuagem mostra o tronco: sem a parte de cima (o vestido vira a parte de baixo de sempre).
+  if (semCima) {
+    if (conj.inteira) { delete conj.inteira; conj.baixo = { parte: 'baixo', forma: 'calca', corte: 'reta', cor: '#3d5a80' }; }
+    delete conj.cima; delete conj.casaco;
+  }
 
-  const fundo = semFundo ? undefined : fundoDoRetrato(corDoCabelo(visual.corCabelo), pele, h);
+  // HOTFIX 11.5.1 — contraste: o fundo pesa a pele (a pele clara nunca sobre o fundo claro); sem fundo, um halo de
+  // estúdio atrás do corpo, claro para a pele escura e escuro para a clara; e o contorno de cada parte de pele (o braço
+  // se separa do tronco; a perna, da outra).
+  const fundo = semFundo ? undefined : fundoDaFigura(corDoCabelo(visual.corCabelo), pele, h);
+  const halo = semFundo ? (contrasteEntre(pele, '#f4efe6') < 1.9 ? '#6f7c88' : '#e7dfd2') : undefined;
+  const contorno = misturar(sombraPele, '#2a1810', contrasteEntre(pele, '#ffffff') < 1.6 ? 0.55 : 0.4);
+  const costas = vista === 'costas';
   const estampas: ReactNode[] = [];
   const ide = (k: string) => `${uid}-${k}`;
   for (const k of ['cima', 'baixo', 'inteira'] as const) {
     const p = conj[k] as { estampa?: string; cor?: string; cor2?: string } | undefined;
+    if (p?.estampa === 'time') { if (camisaListrada(p.cor as string)) estampas.push(<Estampa key={k} id={ide(k)} tipo="listrasV" cor={p.cor as string} cor2={p.cor2 ?? '#f4f1ea'} />); continue; }
     if (p?.estampa && detalhe) estampas.push(<Estampa key={k} id={ide(k)} tipo={p.estampa} cor={p.cor as string} cor2={p.cor2 ?? '#f4f1ea'} />);
   }
   const relogio = acess.pulso as P<'pulso'> | undefined, pulseira = acess.pulseira as P<'pulseira'> | undefined, anel = acess.anel as P<'anel'> | undefined, colar = acess.pescoco as P<'pescoco'> | undefined;
@@ -374,26 +498,41 @@ export const Figura = memo(function Figura({ visual, genero, idade, semente = 'e
   const pecasRotulo = [conj.inteira, conj.cima, conj.baixo, conj.casaco, conj.pes].filter(Boolean).map(p => ('forma' in p! ? p!.forma : '')).join(', ');
   return (
     <svg className="figura" viewBox={`0 0 120 ${Math.max(150, Math.ceil(altura + 4))}`} width={largura} height={Math.round(largura * Math.max(150, Math.ceil(altura + 4)) / 120)}
-      role="img" aria-label={rotulo ?? 'Corpo inteiro'} data-corpo={corpo} data-pecas={pecasRotulo} style={fundo ? { background: fundo } : undefined}>
-      <defs>{estampas}</defs>
+      role="img" aria-label={rotulo ?? 'Corpo inteiro'} data-corpo={corpo} data-pecas={pecasRotulo} data-vista={vista} data-tatuagens={tatuagens.length || undefined} style={fundo ? { background: fundo } : undefined}>
+      <defs>
+        {estampas}
+        {tatuagens.length > 0 && <>
+          {([-1, 1] as const).map(s => <clipPath key={`cb${s}`} id={ide(`cb${s}`)}><path d={braco(g, s, 0, 141)} /></clipPath>)}
+          {([-1, 1] as const).map(s => <clipPath key={`cp${s}`} id={ide(`cp${s}`)}><path d={perna(g, s, 0, g.yTorn + 2)} /></clipPath>)}
+          {([-1, 1] as const).map(s => <clipPath key={`cm${s}`} id={ide(`cm${s}`)}><ellipse cx={lado(g, s, g.ombro + 2.7)} cy={145.5} rx={g.antebraco * 0.95} ry={5.2} /></clipPath>)}
+          <clipPath id={ide('ct')}><path d={tronco(g, 0, g.yQuad)} /></clipPath>
+          <clipPath id={ide('cn')}><rect x={g.cx - g.pesc} y={g.topo - 12} width={g.pesc * 2} height={14} /></clipPath>
+        </>}
+      </defs>
+      {halo && <ellipse cx={g.cx} cy={(g.topo + altura) / 2 - 18} rx={36} ry={(altura - g.topo) / 2 + 30} fill={halo} opacity={0.42} />}
       {/* A sombra no chão (direção A+B). */}
-      <ellipse cx={g.cx} cy={altura - 1} rx={20 * Math.max(0.6, esc)} ry={3} fill="#000000" opacity={0.12} />
+      <ellipse cx={g.cx} cy={altura - 1} rx={20 * Math.max(0.6, esc)} ry={3} fill="#000000" opacity={0.16} />
       <g transform={corpoT}>
-        {/* O corpo (a pele aparece onde a roupa não cobre). */}
-        <path d={`M ${g.cx - g.pesc} ${g.topo - 12} L ${g.cx - g.pesc} ${g.topo + 2} L ${g.cx + g.pesc} ${g.topo + 2} L ${g.cx + g.pesc} ${g.topo - 12} Z`} fill={sombraPele} />
-        {([-1, 1] as const).map(s => <path key={`b${s}`} d={braco(g, s, 0, 141)} fill={pele} />)}
-        {([-1, 1] as const).map(s => <ellipse key={`m${s}`} cx={lado(g, s, g.ombro + 2.7)} cy={145.5} rx={g.antebraco * 0.95} ry={5.2} fill={pele} />)}
-        <path d={tronco(g, 0, g.yQuad)} fill={pele} />
-        {([-1, 1] as const).map(s => <path key={`p${s}`} d={perna(g, s, 0, g.yTorn + 2)} fill={pele} />)}
+        {/* O corpo (a pele aparece onde a roupa não cobre), com o contorno de cada parte. */}
+        <path d={`M ${g.cx - g.pesc} ${g.topo - 12} L ${g.cx - g.pesc} ${g.topo + 2} L ${g.cx + g.pesc} ${g.topo + 2} L ${g.cx + g.pesc} ${g.topo - 12} Z`} fill={sombraPele} stroke={contorno} strokeWidth={0.6} />
+        {([-1, 1] as const).map(s => <path key={`b${s}`} d={braco(g, s, 0, 141)} fill={pele} stroke={contorno} strokeWidth={0.7} strokeLinejoin="round" />)}
+        {([-1, 1] as const).map(s => <ellipse key={`m${s}`} cx={lado(g, s, g.ombro + 2.7)} cy={145.5} rx={g.antebraco * 0.95} ry={5.2} fill={pele} stroke={contorno} strokeWidth={0.6} />)}
+        <path d={tronco(g, 0, g.yQuad)} fill={pele} stroke={contorno} strokeWidth={0.7} strokeLinejoin="round" />
+        {/* A sombra da axila e do lado do tronco: o braço não se funde ao corpo. */}
+        {([-1, 1] as const).map(s => <path key={`ax${s}`} d={`M ${lado(g, s, g.peito - 0.6)} ${g.topo + 14} Q ${lado(g, s, g.peito - 1.6)} ${g.yCint - 14} ${lado(g, s, g.cintura + g.barriga * 0.6 - 0.4)} ${g.yCint - 2}`} fill="none" stroke={sombraPele} strokeWidth={1.6} opacity={0.7} />)}
+        {([-1, 1] as const).map(s => <path key={`p${s}`} d={perna(g, s, 0, g.yTorn + 2)} fill={pele} stroke={contorno} strokeWidth={0.7} strokeLinejoin="round" />)}
+        {/* HOTFIX 11.5.1: as tatuagens, na pele (a roupa vem por cima e cobre o que cobre). */}
+        {tatuagens.length > 0 && <Tatuagens g={g} lista={tatuagens.filter(t => t.local !== 'mao')} pele={pele} ide={ide} costas={costas} detalhe={detalhe} />}
         {/* O que se veste, de dentro para fora. */}
         {conj.inteira ? <Inteira g={g} p={conj.inteira as P<'inteira'>} ide={ide('inteira')} detalhe={detalhe} pele={pele} /> : <>
           <Baixo g={g} p={conj.baixo as P<'baixo'>} ide={ide('baixo')} detalhe={detalhe} pele={pele} />
-          <Cima g={g} p={conj.cima as P<'cima'>} ide={ide('cima')} detalhe={detalhe} pele={pele} />
+          {conj.cima && <Cima g={g} p={conj.cima as P<'cima'>} ide={ide('cima')} detalhe={detalhe} pele={pele} />}
         </>}
         <Pes g={g} p={conj.pes as P<'pes'>} pele={pele} detalhe={detalhe} />
         {conj.casaco && <Casaco g={g} p={conj.casaco as P<'casaco'>} detalhe={detalhe} />}
-        {/* As mãos por cima das mangas longas. */}
-        {([-1, 1] as const).map(s => <ellipse key={`mm${s}`} cx={lado(g, s, g.ombro + 2.7)} cy={145.5} rx={g.antebraco * 0.95} ry={5.2} fill={pele} />)}
+        {/* As mãos por cima das mangas longas (com o contorno, e a tatuagem da mão por cima delas). */}
+        {([-1, 1] as const).map(s => <ellipse key={`mm${s}`} cx={lado(g, s, g.ombro + 2.7)} cy={145.5} rx={g.antebraco * 0.95} ry={5.2} fill={pele} stroke={contorno} strokeWidth={0.6} />)}
+        {tatuagens.some(t => t.local === 'mao') && <Tatuagens g={g} lista={tatuagens.filter(t => t.local === 'mao')} pele={pele} ide={ide} costas={costas} detalhe={detalhe} />}
         {colar && (idade >= 8) && <g className="figura__colar" data-acessorio="pescoco">
           <path d={`M ${g.cx - g.pesc - 0.6} ${g.topo - 1} Q ${g.cx} ${g.topo + (colar.grossa ? 11 : 12.5)} ${g.cx + g.pesc + 0.6} ${g.topo - 1}`} fill="none" stroke={colar.cor} strokeWidth={colar.grossa ? 1.6 : 0.8} strokeLinecap="round" />
           {colar.contas && detalhe && [0, 1, 2, 3, 4, 5, 6].map(k => { const t = (k + 1) / 8; const x = g.cx - g.pesc + (2 * g.pesc) * t; const y = g.topo - 1 + Math.sin(Math.PI * t) * 12; return <circle key={k} cx={x} cy={y} r={0.9} fill={colar.contas![k % colar.contas!.length]} />; })}
@@ -413,10 +552,19 @@ export const Figura = memo(function Figura({ visual, genero, idade, semente = 'e
         {anel && <g className="figura__anel" data-acessorio="anel"><circle cx={lado(g, -1, g.ombro + 2.7)} cy={149.5} r={1.2} fill="none" stroke={anel.cor} strokeWidth={0.9} />{anel.pedra && <circle cx={lado(g, -1, g.ombro + 2.7)} cy={148.4} r={0.7} fill={anel.pedra} />}</g>}
       </g>
       {/* A cabeça: o mesmo retrato (rosto, cabelo, barba, óculos, chapéu), sem o busto. */}
-      <g transform="translate(20 0)" className="figura__cabeca">
-        {/* A figura é sempre de gente (o bicho tem o seu retrato): espécie nenhuma. */}
-        <Retrato visual={visual} genero={genero} idade={idade} semente={semente} tamanho={80} soCabeca rotulo="" especie={undefined} />
-      </g>
+      {costas ? (
+        // De costas: a nuca e o cabelo (o rosto não aparece).
+        <g className="figura__cabeca figura__cabeca--costas">
+          <ellipse cx={60} cy={40} rx={16.5} ry={19.5} fill={pele} stroke={contorno} strokeWidth={0.6} />
+          {visual.cabelo !== 'raspado' && <path d={`M 43.5 40 Q 43 20 60 19.5 Q 77 20 76.5 40 Q 76 ${visual.cabelo.startsWith('longo') || visual.cabelo === 'trancas' || visual.cabelo === 'cacheado_longo' ? 70 : 52} 60 ${visual.cabelo.startsWith('longo') || visual.cabelo === 'trancas' || visual.cabelo === 'cacheado_longo' ? 74 : 55} Q 44 ${visual.cabelo.startsWith('longo') ? 70 : 52} 43.5 40 Z`} fill={corDoCabelo(visual.corCabelo)} />}
+          {([-1, 1] as const).map(s => <ellipse key={s} cx={60 + s * 17} cy={42} rx={2.4} ry={4} fill={sombraPele} />)}
+        </g>
+      ) : (
+        <g transform="translate(20 0)" className="figura__cabeca">
+          {/* A figura é sempre de gente (o bicho tem o seu retrato): espécie nenhuma. */}
+          <Retrato visual={visual} genero={genero} idade={idade} semente={semente} tamanho={80} soCabeca rotulo="" especie={undefined} />
+        </g>
+      )}
     </svg>
   );
 });

@@ -1,4 +1,5 @@
 import type { EspecialidadeMedica } from './dados/especialidades';
+import type { Lado, LocalDeTatuagem } from './dados/tatuagens';
 /**
  * O modelo de uma vida.
  *
@@ -246,6 +247,9 @@ export interface Visual {
   oculos?: 'grau' | 'redondo' | 'sol';
   /** O que vai na cabeça, quando vai. */
   chapeu?: 'bone' | 'chapeu' | 'gorro' | 'lenco';
+  /** HOTFIX 11.5.1: o modelo em uso (o id do item: `oculos_juliet`, `chapeu_couro`...) — o retrato desenha o modelo. */
+  modeloOculos?: string;
+  modeloChapeu?: string;
   /** O jeito de vestir (a cor e o corte da roupa no retrato). */
   roupa?: EstiloRoupa;
   /** A joia em uso, quando aparece no retrato (a corrente no pescoço, os brincos). O relógio não aparece: fica no pulso, fora do quadro. */
@@ -3452,6 +3456,17 @@ export interface PromessaPolitica {
 
 /* ---------------------------------------------------------------------- Vida */
 
+/** HOTFIX 11.5.1 — uma tatuagem: o desenho (`dados/tatuagens`), onde, de que lado, quando. */
+export interface Tatuagem {
+  id: string;
+  desenho: string;
+  local: LocalDeTatuagem;
+  lado?: Lado;
+  t: number;
+  /** O laser começou (a tinta clareia ao longo de um ano). */
+  removida?: number;
+}
+
 export interface Personagem {
   nome: string;
   sobrenome: string;
@@ -3473,6 +3488,11 @@ export interface Personagem {
   genes?: Genes;
   /** Os procedimentos estéticos feitos (`sistemas/estetica`, no máximo os 12 últimos): o resultado e a escolha. */
   procedimentos?: { id: string; t: number; resultado: string; alvo?: string; clinica?: string; revisado?: boolean }[];
+  /**
+   * HOTFIX 11.5.1: as tatuagens (`sistemas/tatuagens`): o desenho, a parte do corpo, o lado, quando foi feita — e, se
+   * está saindo no laser, desde quando (a tinta vai clareando por um ano e some). Ausente: nenhuma.
+   */
+  tatuagens?: Tatuagem[];
   /** O estilo escolhido e o que foi comprado para ele (ausente: nada além do básico). */
   estilo?: EstiloPessoal;
   /** REWORK 12.4: os gostos (música, arte) — mudam com a vida, nunca pela classe ou pelo bairro (`sistemas/gostos`). */

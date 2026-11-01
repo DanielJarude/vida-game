@@ -10,7 +10,7 @@
 
 import { misturar } from './cores';
 import { desenharCabelo, estagioDaCalvicie } from './cabelos';
-import { memo, type ReactElement } from 'react';
+import { memo, useId, type ReactElement } from 'react';
 import type { Especie } from '../../motor/tipos';
 import { animal, palavraDoBicho } from '../../motor/dados/animais';
 import { FiguraCao, FiguraGato, morfologiaCao, morfologiaGato, type Porte } from './caesEGatos';
@@ -44,6 +44,22 @@ function luminancia(h: string): number {
   return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
 }
 const contraste = (a: string, b: string) => { const [x, y] = [luminancia(a), luminancia(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
+/**
+ * HOTFIX 11.5.1 — o fundo da FIGURA de corpo inteiro: ali a pele é grande (braços, pernas, rosto), então ela pesa mais
+ * que o cabelo — a pele clara nunca fica sobre o fundo claro (antes, com o critério do retrato, o p1 podia cair num
+ * creme quase igual a ela). Exige contraste mínimo de 1,9 com a pele; entre os que passam, a semente escolhe.
+ */
+export function fundoDaFigura(cabelo: string, pele: string, semente: number): string {
+  const nota = FUNDOS.map(f => ({ f, n: Math.min(contraste(f, pele), contraste(f, cabelo) * 1.6) }));
+  const ok = nota.filter(x => contraste(x.f, pele) >= 1.9);
+  const lista = ok.length ? ok : nota;
+  const melhor = Math.max(...lista.map(x => x.n));
+  const bons = lista.filter(x => x.n >= melhor * 0.85);
+  return bons[semente % bons.length].f;
+}
+/** O contraste entre duas cores (WCAG). */
+export const contrasteEntre = (a: string, b: string) => contraste(a, b);
+
 export function fundoDoRetrato(cabelo: string, pele: string, semente: number): string {
   const nota = FUNDOS.map(f => ({ f, n: Math.min(contraste(f, cabelo) * 1.15, contraste(f, pele)) }));
   const melhor = Math.max(...nota.map(x => x.n));
@@ -100,6 +116,7 @@ interface Props {
 export type Expressao = 'bem' | 'neutro' | 'cansado' | 'abatido' | 'tenso' | 'doente';
 
 export const Retrato = memo(function Retrato({ visual, genero, idade, semente = '', tamanho = 64, rotulo, especie, falecido, expressao = 'neutro', porte, soCabeca }: Props) {
+  const uid = useId().replace(/:/g, '');
   if (especie) return <RetratoPet especie={especie} tamanho={tamanho} rotulo={rotulo} semente={semente} porte={porte} />;
   const v: Visual = visual ?? { pele: 'p3', cabelo: 'curto', corCabelo: 'castanho', olhos: 'castanho' };
   const f = faseDe(idade);
@@ -342,13 +359,13 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
       )}
 
       {/* Óculos: os escolhidos; sem escolha, parte dos idosos usa os de leitura */}
-      {v.oculos ? <Oculos tipo={v.oculos} cx={cx} olhoY={olhoY} esp={esp} /> : f === 'idoso' && h % 2 === 0 && <Oculos tipo="grau" cx={cx} olhoY={olhoY} esp={esp} />}
+      {v.oculos ? <Oculos tipo={v.oculos} modelo={v.modeloOculos} cx={cx} olhoY={olhoY} esp={esp} w={w} uid={uid} /> : f === 'idoso' && h % 2 === 0 && <Oculos tipo="grau" cx={cx} olhoY={olhoY} esp={esp} />}
 
       {/* Cabelo da frente */}
       {cabelo.frente && <g className="retrato__cabelo retrato__cabelo--frente">{cabelo.frente}</g>}
 
       {/* O que vai na cabeça */}
-      {v.chapeu && f !== 'bebe' && <Chapeu tipo={v.chapeu} cx={cx} cy={cy} w={w} hh={hh} semente={h} />}
+      {v.chapeu && f !== 'bebe' && <Chapeu tipo={v.chapeu} modelo={v.modeloChapeu} cx={cx} cy={cy} w={w} hh={hh} semente={h} />}
     </svg>
   );
 });
@@ -415,20 +432,129 @@ function DetalheDoBusto({ peca, cx, topo, ombro, pescoco, cor, fem }: { peca: Pe
   );
 }
 
-function Oculos({ tipo, cx, olhoY, esp }: { tipo: 'grau' | 'redondo' | 'sol'; cx: number; olhoY: number; esp: number }) {
-  const lente = tipo === 'sol' ? '#1e2227' : 'none';
+/**
+ * Os óculos. HOTFIX 11.5.1: cada modelo comprado tem a sua forma (antes, todo óculos escuro era o mesmo retângulo):
+ *   Juliet       a lente que abraça o rosto, de canto externo em ponta, armação de metal em X, lente espelhada
+ *                iridescente (laranja → azul) e a ponte dupla;
+ *   aviador      a gota, armação fina dourada, ponte dupla, a lente degradê;
+ *   grife        grande, de acetato grosso, cantos levantados (gatinho), o detalhe dourado na dobradiça;
+ *   escuro       o clássico de acetato: trapézio, a parte de cima mais grossa;
+ *   grau         metal fino retangular; o de acetato, grosso e tartaruga; o redondo, de aro redondo.
+ */
+function Oculos({ tipo, modelo, cx, olhoY, esp, w = 30, uid = 'r' }: { tipo: 'grau' | 'redondo' | 'sol'; modelo?: string; cx: number; olhoY: number; esp: number; w?: number; uid?: string }) {
+  const m = modelo ?? (tipo === 'sol' ? 'oculos_sol' : tipo === 'redondo' ? 'oculos_redondo' : 'oculos_grau');
+  const lados = [-1, 1] as const;
+  if (m === 'oculos_juliet') {
+    const gid = `${uid}-juliet`;
+    return (
+      <g data-oculos="juliet">
+        <defs><linearGradient id={gid} x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#f08a2c" /><stop offset="0.45" stopColor="#e9c24a" /><stop offset="1" stopColor="#3a6fd1" /></linearGradient></defs>
+        {lados.map(s => { const x = cx + s * esp; const o = s * 5.6, i = -s * 4.2; return (
+          <g key={s}>
+            <path d={`M ${x + i} ${olhoY - 3.4} L ${x + o} ${olhoY - 4.6} Q ${x + o + s * 1.2} ${olhoY - 1} ${x + o - s * 0.6} ${olhoY + 3.6} Q ${x} ${olhoY + 4.8} ${x + i} ${olhoY + 2.6} Z`} fill={`url(#${gid})`} stroke="#7d868f" strokeWidth={1.1} strokeLinejoin="round" />
+            <path d={`M ${x + i + s * 1} ${olhoY - 2.4} L ${x + o - s * 1.2} ${olhoY + 2.4} M ${x + o - s * 1.2} ${olhoY - 3.4} L ${x + i + s * 1.6} ${olhoY + 2}`} stroke="#aab2ba" strokeWidth={0.55} opacity={0.75} />
+            <path d={`M ${x + o} ${olhoY - 4.4} Q ${cx + s * (w / 2 + 1.5)} ${olhoY - 3.8} ${cx + s * (w / 2 + 2)} ${olhoY - 1.6}`} fill="none" stroke="#7d868f" strokeWidth={1.4} />
+          </g>); })}
+        <path d={`M ${cx - esp + 4.2} ${olhoY - 2.6} L ${cx + esp - 4.2} ${olhoY - 2.6} M ${cx - esp + 4.4} ${olhoY - 0.4} Q ${cx} ${olhoY - 1.6} ${cx + esp - 4.4} ${olhoY - 0.4}`} fill="none" stroke="#7d868f" strokeWidth={0.9} />
+      </g>
+    );
+  }
+  if (m === 'oculos_aviador') {
+    const gid = `${uid}-aviador`;
+    return (
+      <g data-oculos="aviador">
+        <defs><linearGradient id={gid} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#2b2a28" stopOpacity="0.95" /><stop offset="1" stopColor="#6f6a5e" stopOpacity="0.7" /></linearGradient></defs>
+        {lados.map(s => { const x = cx + s * esp; return <path key={s} d={`M ${x - s * 4} ${olhoY - 3.2} L ${x + s * 4.6} ${olhoY - 3.2} Q ${x + s * 5.2} ${olhoY + 2.4} ${x + s * 1.6} ${olhoY + 4.6} Q ${x - s * 3.6} ${olhoY + 4.4} ${x - s * 4.2} ${olhoY} Z`} fill={`url(#${gid})`} stroke="#c9a14a" strokeWidth={0.7} />; })}
+        <path d={`M ${cx - esp + 4} ${olhoY - 3.2} L ${cx + esp - 4} ${olhoY - 3.2} M ${cx - esp + 4.1} ${olhoY - 1} Q ${cx} ${olhoY - 2} ${cx + esp - 4.1} ${olhoY - 1}`} fill="none" stroke="#c9a14a" strokeWidth={0.7} />
+      </g>
+    );
+  }
+  if (m === 'oculos_grife') return (
+    <g data-oculos="grife" fill="#141416" fillOpacity={0.88} stroke="#0c0c0d" strokeWidth={2}>
+      {lados.map(s => { const x = cx + s * esp; return <path key={s} d={`M ${x - s * 5} ${olhoY - 3.6} L ${x + s * 5.6} ${olhoY - 5.4} Q ${x + s * 6.2} ${olhoY + 3.6} ${x + s * 2} ${olhoY + 4.8} L ${x - s * 3.6} ${olhoY + 4.6} Q ${x - s * 5.4} ${olhoY + 1} ${x - s * 5} ${olhoY - 3.6} Z`} />; })}
+      <path d={`M ${cx - esp + 5} ${olhoY - 2.2} Q ${cx} ${olhoY - 3.4} ${cx + esp - 5} ${olhoY - 2.2}`} fill="none" />
+      {lados.map(s => <rect key={`d${s}`} x={cx + s * (esp + 5.6) - 0.9} y={olhoY - 5.2} width={1.8} height={1.6} fill="#d8b45a" stroke="none" />)}
+    </g>
+  );
+  if (m === 'oculos_redondo') return (
+    <g data-oculos="redondo" fill="none" stroke="#2a2522" strokeWidth={1.1} opacity={0.95}>
+      <circle cx={cx - esp} cy={olhoY} r={4.4} /><circle cx={cx + esp} cy={olhoY} r={4.4} />
+      <path d={`M ${cx - esp + 4.4} ${olhoY - 0.6} Q ${cx} ${olhoY - 2} ${cx + esp - 4.4} ${olhoY - 0.6}`} />
+    </g>
+  );
+  if (m === 'oculos_grau_acetato') return (
+    <g data-oculos="acetato" fill="none" stroke="#5a3a22" strokeWidth={1.7} opacity={0.97}>
+      {lados.map(s => <rect key={s} x={cx + s * esp - 4.6} y={olhoY - 3.4} width={9.2} height={6.6} rx={1.6} />)}
+      <path d={`M ${cx - esp + 4.6} ${olhoY - 1} Q ${cx} ${olhoY - 2.2} ${cx + esp - 4.6} ${olhoY - 1}`} />
+      {lados.map(s => <path key={`t${s}`} d={`M ${cx + s * (esp + 3.8)} ${olhoY - 2.6} l ${s * 1.2} 0`} stroke="#8a5f3a" strokeWidth={0.8} />)}
+    </g>
+  );
+  if (m === 'oculos_sol') return (
+    <g data-oculos="sol" fill="#1e2227" fillOpacity={0.85} stroke="#151719" strokeWidth={1.1}>
+      {lados.map(s => { const x = cx + s * esp; return <path key={s} d={`M ${x - 4.8} ${olhoY - 3.6} L ${x + 4.8} ${olhoY - 3.6} L ${x + 4} ${olhoY + 3.2} Q ${x} ${olhoY + 4.2} ${x - 4} ${olhoY + 3.2} Z`} />; })}
+      {lados.map(s => <path key={`t${s}`} d={`M ${cx + s * esp - 4.8} ${olhoY - 3.2} L ${cx + s * esp + 4.8} ${olhoY - 3.2}`} strokeWidth={2.1} />)}
+      <path d={`M ${cx - esp + 4.6} ${olhoY - 1.4} Q ${cx} ${olhoY - 2.4} ${cx + esp - 4.6} ${olhoY - 1.4}`} fill="none" />
+    </g>
+  );
+  // O de grau de metal fino (e o padrão dos saves antigos).
   return (
-    <g fill={lente} fillOpacity={tipo === 'sol' ? 0.82 : 0} stroke="#2a2522" strokeWidth={tipo === 'redondo' ? 1.1 : 0.9} opacity={0.95}>
-      {tipo === 'redondo'
-        ? <><circle cx={cx - esp} cy={olhoY} r={4.4} /><circle cx={cx + esp} cy={olhoY} r={4.4} /></>
-        : <><rect x={cx - esp - 4.5} y={olhoY - 3.5} width={9} height={tipo === 'sol' ? 7.2 : 6.6} rx={tipo === 'sol' ? 2.6 : 2} /><rect x={cx + esp - 4.5} y={olhoY - 3.5} width={9} height={tipo === 'sol' ? 7.2 : 6.6} rx={tipo === 'sol' ? 2.6 : 2} /></>}
-      <path d={`M ${cx - esp + 4.4} ${olhoY - 0.6} Q ${cx} ${olhoY - 2} ${cx + esp - 4.4} ${olhoY - 0.6}`} fill="none" />
+    <g data-oculos="grau" fill="none" stroke="#2a2522" strokeWidth={0.9} opacity={0.95}>
+      <rect x={cx - esp - 4.5} y={olhoY - 3.5} width={9} height={6.6} rx={2} /><rect x={cx + esp - 4.5} y={olhoY - 3.5} width={9} height={6.6} rx={2} />
+      <path d={`M ${cx - esp + 4.4} ${olhoY - 0.6} Q ${cx} ${olhoY - 2} ${cx + esp - 4.4} ${olhoY - 0.6}`} />
     </g>
   );
 }
 
-function Chapeu({ tipo, cx, cy, w, hh, semente }: { tipo: 'bone' | 'chapeu' | 'gorro' | 'lenco'; cx: number; cy: number; w: number; hh: number; semente: number }) {
+function Chapeu({ tipo, modelo, cx, cy, w, hh, semente }: { tipo: 'bone' | 'chapeu' | 'gorro' | 'lenco'; modelo?: string; cx: number; cy: number; w: number; hh: number; semente: number }) {
   const topo = cy - hh / 2;
+  // HOTFIX 11.5.1: os modelos que o tipo genérico apagava — o boné de aba reta (coroa alta, aba plana de frente), o
+  // chapéu de palha (aba larga, a trama), o chapéu de couro do vaqueiro (a aba virada para cima na frente, os
+  // pespontos, a estrela), o turbante (alto, em voltas, de estampa forte).
+  if (modelo === 'bone_aba_reta') {
+    const c = ['#1b1b1d', '#c8102e', '#1d4fa3', '#f2f0ea'][semente % 4], e = misturar(c, '#000000', 0.3);
+    return (
+      <g data-chapeu="aba_reta">
+        <path d={`M ${cx - w / 2 - 1.5} ${topo + hh * 0.22} L ${cx - w / 2} ${topo - 5} Q ${cx} ${topo - 9} ${cx + w / 2} ${topo - 5} L ${cx + w / 2 + 1.5} ${topo + hh * 0.22} Z`} fill={c} stroke={e} strokeWidth={0.6} />
+        <path d={`M ${cx - w / 2 - 3} ${topo + hh * 0.2} L ${cx + w / 2 + 3} ${topo + hh * 0.2} L ${cx + w / 2 + 2} ${topo + hh * 0.27} L ${cx - w / 2 - 2} ${topo + hh * 0.27} Z`} fill={e} />
+        <rect x={cx - 4} y={topo - 3} width={8} height={4.4} rx={0.8} fill={misturar(c, '#ffffff', c === '#f2f0ea' ? 0 : 0.75)} stroke={e} strokeWidth={0.4} />
+        <circle cx={cx + w / 2 - 6} cy={topo + hh * 0.235} r={1.3} fill="#d8b45a" />
+      </g>
+    );
+  }
+  if (modelo === 'chapeu_palha') {
+    const c = '#d9bd7a', e = '#a98a47';
+    return (
+      <g data-chapeu="palha">
+        <ellipse cx={cx} cy={topo + hh * 0.14} rx={w / 2 + 15} ry={4} fill={c} stroke={e} strokeWidth={0.6} />
+        <path d={`M ${cx - w / 2 + 2} ${topo + hh * 0.14} C ${cx - w / 2 + 2} ${topo - 10} ${cx + w / 2 - 2} ${topo - 10} ${cx + w / 2 - 2} ${topo + hh * 0.14} Z`} fill={c} stroke={e} strokeWidth={0.6} />
+        {[-6, -2, 2, 6].map(k => <path key={k} d={`M ${cx + k * 2.4} ${topo - 5} L ${cx + k * 2.6} ${topo + hh * 0.12}`} stroke={e} strokeWidth={0.5} opacity={0.7} />)}
+        {[-1, 1].map(s => <path key={s} d={`M ${cx + s * (w / 2 + 4)} ${topo + hh * 0.15} L ${cx + s * (w / 2 + 13)} ${topo + hh * 0.14}`} stroke={e} strokeWidth={0.5} opacity={0.7} />)}
+        <path d={`M ${cx - w / 2 + 2.5} ${topo + hh * 0.06} L ${cx + w / 2 - 2.5} ${topo + hh * 0.06}`} stroke="#7b2d3a" strokeWidth={2.2} />
+      </g>
+    );
+  }
+  if (modelo === 'chapeu_couro') {
+    const c = '#7a4a26', e = '#4a2a14';
+    return (
+      <g data-chapeu="couro">
+        <path d={`M ${cx - w / 2 - 12} ${topo + hh * 0.1} Q ${cx - w / 2 - 6} ${topo + hh * 0.2} ${cx} ${topo + hh * 0.2} Q ${cx + w / 2 + 6} ${topo + hh * 0.2} ${cx + w / 2 + 12} ${topo + hh * 0.1} Q ${cx + w / 2} ${topo - 1} ${cx} ${topo - 3} Q ${cx - w / 2} ${topo - 1} ${cx - w / 2 - 12} ${topo + hh * 0.1} Z`} fill={c} stroke={e} strokeWidth={0.7} />
+        <path d={`M ${cx - w / 2 + 3} ${topo + hh * 0.12} C ${cx - w / 2 + 2} ${topo - 11} ${cx + w / 2 - 2} ${topo - 11} ${cx + w / 2 - 3} ${topo + hh * 0.12} Z`} fill={misturar(c, '#ffffff', 0.08)} stroke={e} strokeWidth={0.7} />
+        <path d={`M ${cx - w / 2 - 9} ${topo + hh * 0.1} Q ${cx} ${topo + hh * 0.05} ${cx + w / 2 + 9} ${topo + hh * 0.1}`} fill="none" stroke="#e6d3b0" strokeWidth={0.5} strokeDasharray="1 1" />
+        <path d={`M ${cx} ${topo - 6.5} l 1 2 l 2.2 0.3 l -1.6 1.5 l 0.4 2.2 l -2 -1.1 l -2 1.1 l 0.4 -2.2 l -1.6 -1.5 l 2.2 -0.3 Z`} fill="#e6d3b0" />
+      </g>
+    );
+  }
+  if (modelo === 'turbante') {
+    const c = ['#c84b31', '#1f5c7a', '#d9a520'][semente % 3], c2 = ['#f2c200', '#e8862b', '#2f6b4f'][semente % 3], e = misturar(c, '#000000', 0.3);
+    return (
+      <g data-chapeu="turbante">
+        <path d={`M ${cx - w / 2 - 2} ${topo + hh * 0.22} Q ${cx - w / 2 - 4} ${topo - 14} ${cx} ${topo - 16} Q ${cx + w / 2 + 4} ${topo - 14} ${cx + w / 2 + 2} ${topo + hh * 0.22} Q ${cx} ${topo + hh * 0.1} ${cx - w / 2 - 2} ${topo + hh * 0.22} Z`} fill={c} stroke={e} strokeWidth={0.6} />
+        <path d={`M ${cx - w / 2} ${topo + 2} Q ${cx} ${topo - 10} ${cx + w / 2} ${topo - 2} M ${cx - w / 2 + 1} ${topo + 8} Q ${cx + 2} ${topo - 3} ${cx + w / 2 - 1} ${topo + 6}`} fill="none" stroke={e} strokeWidth={0.8} />
+        {[0, 1, 2, 3, 4].map(k => <circle key={k} cx={cx - w / 3 + k * (w / 6)} cy={topo - 6 + (k % 2) * 6} r={1.4} fill={c2} />)}
+        <path d={`M ${cx + 2} ${topo - 14} q 6 -4 7 2 q -4 -2 -7 -2 Z`} fill={c} stroke={e} strokeWidth={0.5} />
+      </g>
+    );
+  }
   const cores = { bone: ['#2f4f7a', '#8a2f2f', '#2f6a4a', '#1f1f24'], chapeu: ['#b89a64', '#5a4636', '#2e2a28'], gorro: ['#7a3b3b', '#3b4f7a', '#5d6b3a'], lenco: ['#b0543c', '#3c6e8f', '#8f3c6e'] }[tipo];
   const c = cores[semente % cores.length];
   const escuro = misturar(c, '#000000', 0.25);

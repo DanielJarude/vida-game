@@ -38,7 +38,7 @@ export const PECAS: Record<string, Peca | Conjunto> = {
   // ------------------------------------------------------------ a parte de cima
   camiseta_lisa: { parte: 'cima', forma: 'camiseta', cor: NEUTRAS, manga: 'curta', gola: 'redonda' },
   camiseta_banda: { parte: 'cima', forma: 'camiseta', cor: ['#1b1b1d', '#2a2a2e'], cor2: '#e8e2d4', estampa: 'banda', manga: 'curta', gola: 'redonda' },
-  camisa_time: { parte: 'cima', forma: 'camiseta', cor: ['#c8102e', '#0b5d2a', '#f2c200', '#1d4fa3', '#f4f4f2'], cor2: '#f4f4f2', estampa: 'time', manga: 'curta', gola: 'v' },
+  camisa_time: { parte: 'cima', forma: 'camiseta', cor: ['#c8102e', '#0b5d2a', '#f2c200', '#1d4fa3', '#111214', '#7a1e2b'], cor2: '#f4f4f2', estampa: 'time', manga: 'curta', gola: 'v', folga: 1.03 },
   camisa_social: { parte: 'cima', forma: 'camisa', cor: ['#f4f6f8', '#cfe0f2', '#f3ece3'], manga: 'longa', gola: 'colarinho', botoes: true },
   camisa_linho: { parte: 'cima', forma: 'camisa', cor: ['#ece4d4', '#d9e2dc', '#f6f1e7'], manga: 'longa', gola: 'colarinho', botoes: true, folga: 1.05 },
   moletom_oversized: { parte: 'cima', forma: 'moletom', cor: ['#8d9399', '#3b3f45', '#5d6b4f', '#b65d3a'], manga: 'longa', gola: 'capuz', folga: 1.14, bolso: true },

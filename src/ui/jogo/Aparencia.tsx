@@ -8,6 +8,8 @@
 import { sobDemanda } from '../util/sobDemanda';
 /** REWORK 12.4: o guarda-roupa por estilo e ocasião (pacote sob demanda). */
 const GuardaRoupa = sobDemanda(() => import('./Personalizar').then(m => m.GuardaRoupa));
+/** HOTFIX 11.5.1: o estúdio de tatuagem (pacote sob demanda). */
+const EstudioDeTatuagem = sobDemanda(() => import('./Tatuagens').then(m => m.EstudioDeTatuagem));
 import { useState } from 'react';
 import type { Vida, Visual } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
@@ -20,6 +22,7 @@ import { FiguraSobDemanda as Figura } from '../avatar/figuraSobDemanda';
 import { NOME_DO_CORPO, tipoDeCorpo } from '../../motor/sistemas/silhueta';
 import { lugaresDoItem } from '../../motor/dados/estilo';
 import { BotaoAcao } from '../comum';
+import { tatuagensNaFigura } from '../../motor/sistemas/tatuagens';
 import type { Aba } from '../navegacao';
 
 interface Props { vida: Vida; agir: (a: Acao) => boolean; irPara: (a: Aba) => void }
@@ -52,7 +55,7 @@ export function AparenciaEEstilo({ vida, agir, irPara }: Props) {
         <div className="aparencia__corpo">
           <div className="aparencia__previa">
             {/* 12.4.1: o corpo inteiro (o tipo de corpo vem do condicionamento, dos hábitos e do que se pratica). */}
-            <Figura visual={previa} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} corpo={tipoDeCorpo(vida)} pecas={itens.filter(x => x.usando)} largura={150} rotulo={mudou ? 'Como ficaria' : 'Como você está'} />
+            <Figura visual={previa} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} corpo={tipoDeCorpo(vida)} pecas={itens.filter(x => x.usando)} tatuagens={tatuagensNaFigura(vida)} largura={150} rotulo={mudou ? 'Como ficaria' : 'Como você está'} />
             <span className="nota">{mudou ? 'Como ficaria' : 'Hoje'} · corpo {NOME_DO_CORPO[tipoDeCorpo(vida)]}</span>
           </div>
           <div className="aparencia__escolhas">
@@ -99,6 +102,7 @@ export function AparenciaEEstilo({ vida, agir, irPara }: Props) {
       )}
       {i >= 3 && <OQueVeste vida={vida} agir={agir} />}
       <GuardaRoupa vida={vida} agir={agir} />
+      {(i >= 16 || (vida.eu.tatuagens?.length ?? 0) > 0) && <EstudioDeTatuagem vida={vida} agir={agir} />}
       {i >= AUTONOMIA.compra_pessoal.idade && (
         <p className="nota">{precisaDeOculos(vida) && !itens.some(x => x.itemId === 'oculos_grau') ? 'A vista anda pedindo óculos de grau. ' : ''}Óculos, chapéus, roupas: <button type="button" className="link" onClick={() => irPara('compras')}>Vida · Compras →</button></p>
       )}
