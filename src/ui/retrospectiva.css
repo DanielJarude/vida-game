@@ -2,16 +2,6 @@
 .retro { display: flex; flex-direction: column; gap: 1rem; }
 .retro__resumo { color: var(--tinta-2); font-size: var(--type-caption); margin: 0.25rem 0 0; }
 
-/* As cores por categoria (os tons das áreas, todos legíveis como texto no papel e no escuro). */
-.retro--familia { --retro-tom: var(--p-pessoas); }
-.retro--relacionamentos { --retro-tom: var(--p-linha); }
-.retro--educacao { --retro-tom: var(--p-formacao); }
-.retro--carreira { --retro-tom: var(--p-trabalho); }
-.retro--esportes { --retro-tom: var(--p-saude); }
-.retro--patrimonio { --retro-tom: var(--p-vida); }
-.retro--viagens { --retro-tom: var(--p-tempo); }
-.retro--conquistas { --retro-tom: var(--p-alerta); }
-.retro--momentos { --retro-tom: var(--p-voce); }
 .retro-icone { flex: none; }
 
 /* Os marcantes: fotos de álbum, levemente tortas, numa faixa que rola de lado (só a faixa rola, nunca a página). */

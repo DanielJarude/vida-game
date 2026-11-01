@@ -1,35 +1,38 @@
-// Auditoria visual do REWORK 12.25 — o Submundo numa tela só (a régua do REWORK 12: geometria, contraste, rolagem
-// horizontal, alvos de toque a 390): a visão geral de cada estado (nunca, profissional, líder, processado, procurado, preso,
-// ex), as partes (atividades, contatos, organizações, Justiça, histórico), o dinheiro por fora, a semana e as novidades —
-// nas QUATRO paletas, em 1440 e 390 px (360 e 390×560 nas marcadas com *).
+// VIDA 12.5: a Retrospectiva, as fachadas novas, a lupa do estúdio e as telas principais (§5). (Base: HOTFIX 11.5.1.) A mesma régua (geometria, contraste, rolagem horizontal, alvos de toque) para Compras reorganizada
+// (o começo, os segmentos, a busca e os filtros, a loja por dentro), a Aparência com tatuagens e o estúdio, os cômodos
+// em 2.5D e o campeonato (a tabela, os campeões, os prêmios) — nas paletas claro e escuro, em 1440, 390 e 360 px.
 //   npm run build && npx vite preview --port 4173 &
-//   SP=<pasta com saves/ de gerarRework125.ts> TAG=depois node scripts/playtest/rework125.mjs   (TEMAS=… CENAS=… URL=)
+//   SP=~/vida-trabalho/qa1151 TAG=v125 node scripts/playtest/rework125.mjs   (TEMAS=… CENAS=… URL=)
 import { chromium } from 'playwright';
 import { readFileSync, writeFileSync, appendFileSync, mkdirSync } from 'node:fs';
-const SP = process.env.SP ?? `${process.env.HOME}/vida-trabalho/qa125`;
+const SP = process.env.SP ?? `${process.env.HOME}/vida-trabalho/qa1151`;
 const URL = process.env.URL ?? 'http://localhost:4173/';
-const TAG = process.env.TAG ?? 'depois';
+const TAG = process.env.TAG ?? 'v125';
 const OUT = `${SP}/${TAG}`;
 mkdirSync(OUT, { recursive: true });
-const TEMAS = (process.env.TEMAS ?? 'claro,horizonte,escuro,atlantico').split(',');
+const TEMAS = (process.env.TEMAS ?? 'claro,escuro').split(',');
 const save = n => readFileSync(`${SP}/saves/vida-${n}.json`, 'utf8');
 // [nome, save, área, ...passos]; nome terminado em '*' = também 360 e 390×560.
 const TODAS = [
-  ['sub-nunca', 'r125-nunca', 'Caminhos', 'div:Submundo'],
-  ['sub-geral*', 'r125-profissional', 'Caminhos', 'div:Submundo'],
-  ['sub-carreira', 'r125-profissional', 'Caminhos', 'div:Submundo', 'aba:Carreira'],
-  ['sub-atividades*', 'r125-profissional', 'Caminhos', 'div:Submundo', 'aba:Atividades'],
-  ['sub-contatos*', 'r125-profissional', 'Caminhos', 'div:Submundo', 'aba:Contatos'],
-  ['sub-historico', 'r125-profissional', 'Caminhos', 'div:Submundo', 'aba:Histórico'],
-  ['sub-lider*', 'r125-lider', 'Caminhos', 'div:Submundo'],
-  ['sub-orgs*', 'r125-lider', 'Caminhos', 'div:Submundo', 'aba:Organizações', 'clique:.svivo-cartao--dentro .svivo-detalhes:last-of-type > summary'],
-  ['sub-justica*', 'r125-processado', 'Caminhos', 'div:Submundo', 'aba:Justiça'],
-  ['sub-procurado*', 'r125-procurado', 'Caminhos', 'div:Submundo'],
-  ['sub-preso*', 'r125-preso', 'Caminhos', 'div:Submundo'],
-  ['sub-ex', 'r125-ex', 'Caminhos', 'div:Submundo'],
-  ['dinheiro-porfora*', 'r125-profissional', 'Vida', 'aba:Dinheiro', 'clique:.dinheiro .detalhes:last-of-type > summary'],
-  ['semana-submundo', 'r125-lider', 'Minha Semana'],
-  ['novidades', 'r125-profissional', 'novidades']
+  ['historia-agora*', 'r124-rica', 'História', 'ver:.historia'],
+  ['historia-retrospectiva*', 'r1151-jogador', 'História', 'aba:Retrospectiva', 'ver:.retro'],
+  ['historia-retrospectiva-rica', 'r124-rica', 'História', 'aba:Retrospectiva', 'ver:.retro'],
+  ['historia-retrospectiva-escura', 'r1151-escura', 'História', 'aba:Retrospectiva', 'ver:.retro'],
+  ['compras-inicio*', 'r1151-moda', 'Vida', 'aba:Compras', 'ver:.compras-inicio'],
+  ['compras-moda*', 'r1151-moda', 'Vida', 'aba:Compras', 'botao:Moda e acessórios', 'ver:.compras-segmento'],
+  ['compras-casa', 'r1151-moda', 'Vida', 'aba:Compras', 'botao:Casa', 'ver:.compras-segmento'],
+  ['compras-tecnologia', 'r1151-moda', 'Vida', 'aba:Compras', 'botao:Tecnologia', 'ver:.compras-segmento'],
+  ['compras-veiculos', 'r1151-moda', 'Vida', 'aba:Compras', 'botao:Veículos', 'ver:.compras-segmento'],
+  ['compras-luxo', 'r124-rica', 'Vida', 'aba:Compras', 'botao:Luxo e coleção', 'ver:.compras-segmento'],
+  ['voce-estudio*', 'r1151-moda', 'Você', 'aba:Aparência', 'ver:.estudio-tatuagem'],
+  ['voce-aparencia', 'r1151-moda', 'Você', 'aba:Aparência', 'ver:.aparencia'],
+  ['casa-comodo*', 'r124-rica', 'Vida', 'aba:Casa', 'clique:.pz-comodo', 'ver:.pz-painel'],
+  ['patrimonio', 'r124-rica', 'Vida', 'aba:Patrimônio'],
+  ['dinheiro*', 'r124-rica', 'Vida', 'aba:Dinheiro'],
+  ['pessoas*', 'r124-rica', 'Pessoas'],
+  ['carreira-campeonato*', 'r1151-jogador', 'Caminhos', 'div:Trabalho', 'clique:text=Minha carreira', 'ver:.campeonato'],
+  ['caminhos-trabalho', 'r124-rica', 'Caminhos', 'div:Trabalho'],
+  ['novidades', 'r124-rica', 'novidades']
 ].map(([n, ...r]) => [n.replace('*', ''), n.endsWith('*'), ...r]);
 const so = process.env.CENAS?.split(',');
 const cenas = so ? TODAS.filter(c => so.includes(c[0])) : TODAS;
@@ -150,7 +153,7 @@ for (const [nome, extra, sv, area, ...passos] of cenas) {
     p.on('pageerror', e => problemas.push(`${rot}: ${e.message}`));
     p.on('console', m => { if (m.type() === 'error') problemas.push(`${rot}: console: ${m.text()}`); });
     await p.goto(URL);
-    await p.evaluate(([s, t, nv]) => { localStorage.clear(); localStorage.setItem('VIDA_APARENCIA', t); localStorage.setItem('VIDA_NOVIDADES_VISTAS', nv); if (s) localStorage.setItem('VIDA_GAME_SAVE_V1', s); }, [sv ? save(sv) : null, tema, area === 'novidades' ? '12.2' : '12.25']);
+    await p.evaluate(([s, t, nv]) => { localStorage.clear(); localStorage.setItem('VIDA_APARENCIA', t); localStorage.setItem('VIDA_NOVIDADES_VISTAS', nv); if (s) localStorage.setItem('VIDA_GAME_SAVE_V1', s); }, [sv ? save(sv) : null, tema, area === 'novidades' ? '12.4.2' : '12.5']);
     await p.goto(URL);
     await p.waitForTimeout(300);
     if (area === 'novidades') {
@@ -210,6 +213,10 @@ for (const [nome, extra, sv, area, ...passos] of cenas) {
           const r = p.locator('.ficha__categoria summary', { hasText: passo.slice(4) }).first(); if (await r.count()) { await r.click(); await p.waitForTimeout(250); } else notas.push(`${rot}: sem categoria ${passo}`);
         } else if (passo.startsWith('busca:')) {
           const r = p.locator('.onde-fica__busca input').first(); if (await r.count()) { await r.fill(passo.slice(6)); await p.waitForTimeout(250); } else notas.push(`${rot}: sem busca`);
+        } else if (passo.startsWith('digitar:')) {
+          const r = p.locator('.busca-compras input[type=search]').locator('visible=true').first(); if (await r.count()) { await r.fill(passo.slice(8)); await p.waitForTimeout(400); } else notas.push(`${rot}: sem busca de compras`);
+        } else if (passo.startsWith('select:')) {
+          const [rotulo, valor] = passo.slice(7).split('='); const r = (rotulo.startsWith('.') ? p.locator(rotulo) : p.getByLabel(rotulo, { exact: true })).locator('visible=true').first(); if (await r.count()) { await r.selectOption(valor); await p.waitForTimeout(300); } else notas.push(`${rot}: sem ${passo}`);
         } else if (passo.startsWith('ver:')) {
           const r = p.locator(passo.slice(4)).locator('visible=true').first(); if (await r.count()) { await r.evaluate(x => x.scrollIntoView({ block: 'start' })); await p.waitForTimeout(250); } else notas.push(`${rot}: sem ${passo}`);
         } else if (passo.startsWith('clique:')) {

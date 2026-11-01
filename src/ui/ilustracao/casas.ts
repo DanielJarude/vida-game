@@ -217,8 +217,31 @@ const FORMAS: Record<FormaDaCasa, (c: Ctx) => Peca[]> = {
         { tipo: 'massa', d: [w.x + 64, w.x + 78, w.x + 92, w.x + 104].map(x => ret(x, w.y, 3.5, w.a, 0.5)).join(''), cor: '#ffffff', marca: 'coluna' }
       ]),
       { tipo: 'massa', d: ret(w.x + 76, w.y + 30, 18, 28, 1), cor: '#5a3a24', marca: 'porta' },
-      marcado(undefined, { 'data-detalhe': 'piscina' }, [{ tipo: 'massa', d: ret(252, 121, 44, 7, 2), cor: '#6cb4cf', marca: 'piscina' }]),
-      marcado(undefined, { 'data-detalhe': 'jardim' }, [arbustos(36, 30), arbustos(244, 40)])
+      // VIDA 12.5: a mansão se lê como o topo da escala — a ala lateral, a sacada sobre a entrada, as águas-furtadas, os
+      // postes de luz, o caminho de pedra até a porta, a piscina com deck e a palmeira (antes, parecia menos que a casa grande).
+      marcado(undefined, { 'data-detalhe': 'ala' }, [
+        parede(w.x + w.l, w.y + 22, 26, w.a - 22, escurecer(c.cor, 0.05)),
+        { tipo: 'massa', d: ret(w.x + w.l - 1, w.y + 18, 29, 4, 0.6), cor: '#e9e4da', marca: 'cornija' },
+        ...janelas([[w.x + w.l + 6, w.y + 30, 14, 18]], c.acesas > 3 ? 1 : 0, 14, 18, '#4a4643')
+      ]),
+      marcado(undefined, { 'data-detalhe': 'aguas-furtadas' }, [w.x + 40, w.x + 118].flatMap((x): Peca[] => [
+        { tipo: 'massa', d: `M${x} ${w.y - 2}V${w.y - 10}l7 -6l7 6V${w.y - 2}Z`, cor: '#e9e4da', marca: 'agua-furtada' },
+        { tipo: 'vidro', d: ret(x + 4, w.y - 9, 6, 6, 0.5) }
+      ])),
+      marcado(undefined, { 'data-detalhe': 'sacada' }, [
+        { tipo: 'massa', d: ret(w.x + 66, w.y + 24, 38, 3, 0.5), cor: '#e9e4da' },
+        { tipo: 'linha', d: `M${w.x + 67} ${w.y + 18}h36` + Array.from({ length: 10 }, (_, k) => `M${w.x + 68 + k * 3.8} ${w.y + 18}v6`).join(''), larg: 0.7, cor: '#4a4643' }
+      ]),
+      marcado(undefined, { 'data-detalhe': 'postes' }, [w.x + 54, w.x + 116].flatMap((x): Peca[] => [
+        { tipo: 'metal', d: ret(x - 0.8, C - 22, 1.6, 22, 0.4), cor: '#3d3a36' }, { tipo: 'massa', d: ret(x - 2.5, C - 27, 5, 5, 1), cor: LUZ, marca: 'lampiao' }
+      ])),
+      { tipo: 'massa', d: `M${w.x + 74} ${C}L${w.x + 77} ${w.y + w.a}h16l3 ${C - w.y - w.a}Z`, cor: '#d9d2c4', semVolume: true, marca: 'caminho' },
+      marcado(undefined, { 'data-detalhe': 'piscina' }, [
+        { tipo: 'massa', d: ret(268, 118, 40, 10, 1), cor: '#d8cbb3', semVolume: true, marca: 'deck' },
+        { tipo: 'massa', d: ret(271, 121, 34, 6, 2), cor: '#6cb4cf', marca: 'piscina' }
+      ]),
+      palmeira(300),
+      marcado(undefined, { 'data-detalhe': 'jardim' }, [arbustos(36, 30), arbustos(w.x + 4, 24), arbustos(w.x + w.l - 28, 24)])
     ];
   },
   /** Casa simples de laje: ferro para cima, caixa-d'água, janela com grade, poste com fio. */

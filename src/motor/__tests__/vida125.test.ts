@@ -17,6 +17,8 @@ import { escrever } from '../nucleo';
 import { comFilho, comParceiro } from './cenarios';
 import { memoriasDaVida, lerEntrada } from '../sistemas/albumDaVida';
 import { exportarVida, importarVida } from '../save';
+import { MODELOS } from '../sistemas/situacoes';
+import { MODELOS_125 } from '../sistemas/situacoes125';
 
 const jogador = () => transacao(adulto(23, { semente: 1250 }), x => {
   const r = criarRng(1250);
@@ -147,5 +149,23 @@ describe('VIDA 12.5 · a Retrospectiva da Vida (só o que o save registra)', () 
   it('o noticiário do mundo e as linhas técnicas não entram', () => {
     const v = vivida();
     expect(lerEntrada(v, { id: 'x', t: v.t, idade: 40, texto: 'A inflação passou de 10%.', relevancia: 'marco', tema: 'dinheiro', fato: { tipo: 'mundo', dados: {} } })).toBeUndefined();
+  });
+});
+
+describe('VIDA 12.5 · CAR-11.9: as cenas das carreiras secas', () => {
+  it('estão no catálogo, com ids únicos, ao menos duas respostas e os quatro desfechos escritos', () => {
+    const ids = MODELOS.map(m => m.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    for (const m of MODELOS_125) {
+      expect(ids).toContain(m.id);
+      const its = typeof m.intencoes === 'function' ? [] : m.intencoes;
+      expect(its.length).toBeGreaterThanOrEqual(2);
+      for (const it of its) for (const d of ['otimo', 'bom', 'ruim', 'pessimo'] as const) expect(it.desfechos[d].texto.length).toBeGreaterThan(5);
+    }
+    const por = (t: string) => MODELOS_125.filter(m => m.id.startsWith(t)).length;
+    expect(por('ten125')).toBeGreaterThanOrEqual(6);
+    expect(por('vol125') + por('atl125')).toBeGreaterThanOrEqual(8);
+    expect(por('med125')).toBeGreaterThanOrEqual(6);
+    expect(por('pol125') + por('adm125') + por('obr125')).toBeGreaterThanOrEqual(12);
   });
 });

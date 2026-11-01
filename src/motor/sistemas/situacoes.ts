@@ -63,6 +63,7 @@ import { OCUPACAO_TECNICO, decidirFinal, deixarOClube, demitirDoComando, passage
 import { economiaLocal } from '../dados/lugares';
 import { MODELOS_ARTE_11 } from './situacoesArte';
 import { modelosComMemoria } from './situacoesMemoria';
+import { MODELOS_125 } from './situacoes125';
 
 export type Trajetoria = 'futebol' | 'basquete' | 'tenis' | 'atleta' | 'tecnico' | 'medicina' | 'academia' | 'cena' | 'negocio' | 'autonomo' | 'emprego' | 'militar' | 'politica' | 'rural' | 'universidade';
 export type Desfecho = RegistroDeSituacao['desfecho'];
@@ -307,7 +308,10 @@ export function chanceDeMomento(v: Vida, tr: Trajetoria): number {
   // O expediente comum tem cadência mansa (a vida em volta — a família, a casa — também pede o ano): o silêncio pesa pouco.
   // REWORK 5: quem tem um ofício com cenas próprias (a advogada, o professor, a enfermeira) vive o expediente um pouco mais.
   const oficio = (tr === 'emprego' || tr === 'autonomo') && TRILHAS_COM_OFICIO.has(trilhaAtual(v) ?? '') ? 1.45 : 1;
-  if (COMUNS.has(tr)) return clamp(RITMO[tr] * oficio * (s < 1.5 && !nunca ? 0.6 : s < 3.5 ? 1 : 1.4), 0, 0.95);
+  // VIDA 12.5 · CAR-11.9 (C11): o ofício de dez anos de casa não fica metade dos anos em silêncio (antes, 50–60% dos anos
+  // do policial, do analista e do eletricista veteranos passavam sem nenhuma cena): o silêncio longo pesa mais.
+  const veterano = oficio > 1 && !!v.trabalho.atual && v.t - v.trabalho.atual.tInicio >= 120;
+  if (COMUNS.has(tr)) return clamp(RITMO[tr] * oficio * (s < 1.5 && !nunca ? 0.6 : s < 3.5 ? (veterano ? 1.25 : 1) : veterano ? 1.9 : 1.4), 0, 0.95);
   // REWORK 11 · CAR-11.9: a carreira de atleta é feita de temporadas cheias de jogo — o ano seguinte a um momento não é
   // quase mudo (0,35 → 0,6; ainda menos da metade do ano cheio). Com os anos de renovação e proposta (que agora adiam a
   // cena em vez de apagá-la), a temporada passa a ter um acontecimento profissional quase todo ano, entre a decisão
@@ -1793,7 +1797,7 @@ const MODELOS_ARTE: ModeloSituacao[] = [
 /** REWORK 11 · CAR-11.9: as cenas que lembram (o ex-clube, o título, o atrito, a dispensa superada, o banco que volta). */
 const MODELOS_COM_MEMORIA = modelosComMemoria({ F, D, DT, trajetoria: trajetoriaDeSituacao, coragem, social, disciplina, leitura, cabeca, tecnica: v => (v.caminhos.esporte?.modalidade === 'futebol' ? tecnicaFut(v) : F('técnica', (habilidade(v, v.caminhos.esporte?.modalidade ?? 'futebol') - barraDaDivisao(v.caminhos.esporte?.modalidade ?? 'futebol', v.caminhos.esporte?.nivel ?? 1)) / 12)), nomeNoElenco: nomeFut, nomeTec, vestiario: v => (passagemAtual(v) ? vestiarioF(v) : F('vestiário', 0)) });
 
-export const MODELOS: ModeloSituacao[] = [...MODELOS_FUTEBOL, ...MODELOS_FUTEBOL_MAIS, ...MODELOS_COM_MEMORIA, ...MODELOS_PROFISSOES, ...MODELOS_ESPORTES, ...MODELOS_MILITAR, ...MODELOS_POLITICA, ...MODELOS_POLITICA_BASE, ...MODELOS_RURAL, ...MODELOS_UNIVERSIDADE, ...MODELOS_MEDICINA_MAIS, ...MODELOS_TECNICO, ...MODELOS_OFICIO, ...MODELOS_OFICIO_AUTONOMO, ...MODELOS_ARTE, ...MODELOS_ARTE_11];
+export const MODELOS: ModeloSituacao[] = [...MODELOS_FUTEBOL, ...MODELOS_FUTEBOL_MAIS, ...MODELOS_COM_MEMORIA, ...MODELOS_PROFISSOES, ...MODELOS_ESPORTES, ...MODELOS_MILITAR, ...MODELOS_POLITICA, ...MODELOS_POLITICA_BASE, ...MODELOS_RURAL, ...MODELOS_UNIVERSIDADE, ...MODELOS_MEDICINA_MAIS, ...MODELOS_TECNICO, ...MODELOS_OFICIO, ...MODELOS_OFICIO_AUTONOMO, ...MODELOS_ARTE, ...MODELOS_ARTE_11, ...MODELOS_125];
 
 /** As situações vividas, para a tela (as mais recentes primeiro). */
 export function momentosDaCarreira(v: Vida, n = 8): { ano: number; texto: string; desfecho: Desfecho; intencao: string }[] {

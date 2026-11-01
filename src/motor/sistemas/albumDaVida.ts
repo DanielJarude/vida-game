@@ -68,7 +68,9 @@ const PELO_TEXTO: [RegExp, (e: Entrada, v: Vida) => Leitura][] = [
   [/^Promovid[oae]/, () => ({ categoria: 'carreira', tipo: 'promocao', titulo: 'Promoção', destaque: 1 })],
   [/^Aposentou-se|^Foi para a reserva/, () => ({ categoria: 'carreira', tipo: 'aposentadoria', titulo: 'A aposentadoria', destaque: 1 })],
   [/^Abriu /, () => ({ categoria: 'carreira', tipo: 'negocio', titulo: 'O próprio negócio', destaque: 1 })],
-  [/^Eleit[oae] /, () => ({ categoria: 'conquistas', tipo: 'mandato', titulo: 'Eleição', destaque: 2 })],
+  // "Eleito o melhor jogador do mundo" é prêmio do esporte; "Eleita vereadora" é mandato.
+  [/^Eleit[oae] (o|a) melhor/, () => ({ categoria: 'esportes', tipo: 'premio', titulo: 'Melhor do mundo', destaque: 2 })],
+  [/^(Reeleit|Eleit)[oae] (vereador|prefeit|deputad|senador|governador|president)/i, () => ({ categoria: 'conquistas', tipo: 'mandato', titulo: 'Eleição', destaque: 2 })],
   // Só prêmio de verdade ("Ganhou o prêmio…", "Ganhou: …"); "Ganhou bicicleta de aniversário" não é conquista.
   [/^Ganhou: |^Ganhou (o |um |a )?(prêmio|troféu)/i, () => ({ categoria: 'conquistas', tipo: 'premio', titulo: 'Um prêmio', destaque: 2 })],
   [/^(Passou a ser reconhecid|Ficou famos|Virou um nome)/, () => ({ categoria: 'conquistas', tipo: 'fama', titulo: 'O reconhecimento', destaque: 1 })],
@@ -76,6 +78,8 @@ const PELO_TEXTO: [RegExp, (e: Entrada, v: Vida) => Leitura][] = [
   [/^Comprou (a primeira casa|o primeiro imóvel)/, () => ({ categoria: 'patrimonio', tipo: 'imovel', titulo: 'A primeira casa própria', destaque: 2 })],
   [/^Comprou (o primeiro|a primeira) /, () => ({ categoria: 'patrimonio', tipo: 'veiculo', titulo: 'O primeiro veículo', destaque: 1 })],
   [/^Mudou-se de |(^|e )mudou-se para /, () => ({ categoria: 'momentos', tipo: 'mudanca', titulo: 'Uma mudança', destaque: 1 })],
+  [/^Nasceu (seu irmão|sua irmã|seu meio-irmão|sua meia-irmã),? /, e => ({ categoria: 'familia', tipo: 'irmao', titulo: `Chegou ${/^Nasceu [a-zãâáéíóúç-]+ [a-zãâáéíóúç-]+,? ([^.,]+)/i.exec(e.texto)?.[1] ?? 'um irmão'}`, destaque: 1, pessoaId: e.pessoas?.[0] })],
+  [/^A primeira palavra/, () => ({ categoria: 'familia', tipo: 'primeira_palavra', titulo: 'A primeira palavra', destaque: 0 })],
   [/primeiros passos/i, () => ({ categoria: 'familia', tipo: 'primeiros_passos', titulo: 'Os primeiros passos', destaque: 0 })],
   [/^Saiu da casa d(a família|os pais)/, () => ({ categoria: 'momentos', tipo: 'saiu_de_casa', titulo: 'Saiu de casa', destaque: 1 })],
   [/^A primeira tatuagem/, () => ({ categoria: 'momentos', tipo: 'tatuagem', titulo: 'A primeira tatuagem', destaque: 0 })],

@@ -26,7 +26,9 @@ export type FachadaDeLoja =
   | 'moda' | 'sapataria' | 'otica' | 'acessorios' | 'moveis' | 'grifes'
   | 'dep_cea' | 'dep_corteingles' | 'dep_coin' | 'dep_rinascente' | 'dep_lafayette'
   | 'dep_renner' | 'dep_magalu' | 'dep_casasbahia' | 'dep_falabella' | 'dep_liverpool' | 'dep_macys' | 'dep_target' | 'dep_bestbuy'
-  | 'dep_mediamarkt' | 'dep_marks' | 'dep_johnlewis' | 'dep_isetan' | 'dep_yodobashi' | 'dep_myer' | 'dep_armazens';
+  | 'dep_mediamarkt' | 'dep_marks' | 'dep_johnlewis' | 'dep_isetan' | 'dep_yodobashi' | 'dep_myer' | 'dep_armazens'
+  /** As lojas pela internet: não têm vitrine de rua — o centro de distribuição, com a cor de cada marca. */
+  | 'onl_amazon' | 'onl_mercadolivre' | 'onl_zalando' | 'onl_aliexpress' | 'onl_farfetch';
 
 /* ------------------------------------------------------------------ peças de rua e de vitrine */
 
@@ -444,7 +446,7 @@ function departamento(o: Departamento): Amostra {
   return { vb: [480, 120], pecas };
 }
 
-const MODELOS: Record<Exclude<FachadaDeLoja, keyof typeof ESPECIALIZADAS | keyof typeof PROPRIAS>, Departamento> = {
+const MODELOS: Record<Exclude<FachadaDeLoja, keyof typeof ESPECIALIZADAS | keyof typeof PROPRIAS | `onl_${string}`>, Departamento> = {
   dep_renner: { parede: '#f1eeea', material: 'liso', andares: 1, placa: { cor: '#c8102e', texto: 'RENNER', tinta: BRANCO, onde: 'faixa' }, mostra: ['moda', 'moda', 'moda'], cores: ['#c8102e', '#2b2f36', '#efe7d4'], porta: 'dir' },
   dep_magalu: { parede: '#e9eef3', material: 'painel', andares: 2, placa: { cor: '#0a6fd6', texto: 'MAGAZINE LUIZA', tinta: BRANCO, onde: 'topo', simbolo: 'coracao' }, mostra: ['tecnologia', 'casa', 'tecnologia'], cores: ['#5d7a8a'], porta: 'esq', marquise: '#0a6fd6' },
   dep_casasbahia: { parede: '#f3eedf', material: 'liso', andares: 1, placa: { cor: '#0b3e91', texto: 'CASAS BAHIA', tinta: '#ffd100', onde: 'faixa' }, mostra: ['casa', 'casa', 'tecnologia'], cores: ['#8a6a4a', '#5d7a6a'], porta: 'dir', marquise: '#ffd100' },
@@ -462,7 +464,51 @@ const MODELOS: Record<Exclude<FachadaDeLoja, keyof typeof ESPECIALIZADAS | keyof
   dep_armazens: { parede: '#d9cbb0', material: 'tijolo', andares: 3, placa: { cor: '#5a3a24', texto: 'GRANDES ARMAZÉNS', tinta: '#f1e4c8', onde: 'faixa', fonte: 'serif' }, mostra: ['moda', 'casa', 'tecnologia'], cores: ['#7a4a24', '#5d7a6a'], porta: 'esq', marquise: '#5a3a24', janelas: { cor: '#5b4d3c', arco: true } }
 };
 
+/* ------------------------------------------------------------------ pela internet */
+
+interface Galpao { nome: string; cor: string; tinta: string; parede: string; van: string; fonte?: 'serif' | 'sans' }
+const GALPOES: Record<'onl_amazon' | 'onl_mercadolivre' | 'onl_zalando' | 'onl_aliexpress' | 'onl_farfetch', Galpao> = {
+  onl_amazon: { nome: 'amazon', cor: '#232f3e', tinta: '#ff9900', parede: '#d9d6d0', van: '#2f3a48' },
+  onl_mercadolivre: { nome: 'mercado livre', cor: '#ffe600', tinta: '#2d3277', parede: '#e6e2d6', van: '#ffe600' },
+  onl_zalando: { nome: 'zalando', cor: '#ff6900', tinta: BRANCO, parede: '#e4e0da', van: '#f2efe9' },
+  onl_aliexpress: { nome: 'AliExpress', cor: '#e43225', tinta: BRANCO, parede: '#ddd8d0', van: '#e43225' },
+  onl_farfetch: { nome: 'FARFETCH', cor: '#1b1b1b', tinta: BRANCO, parede: '#ece9e4', van: '#1b1b1b', fonte: 'serif' }
+};
+
+/**
+ * O centro de distribuição de uma loja pela internet: o galpão de telhado em arco, as portas de carga (uma aberta, com
+ * as caixas nas prateleiras lá dentro), a esteira, a pilha de caixas na doca e a van de entrega na frente — o que a
+ * loja É, em vez de uma vitrine que ela não tem.
+ */
+function galpao(o: Galpao): Amostra {
+  const x0 = 128, x1 = 352;
+  const caixa = (x: number, y: number, w = 12, h = 10): Peca[] => [{ tipo: 'massa', d: ret(x, y, w, h, 0.6), cor: '#c79a5e', marca: 'caixa' }, { tipo: 'linha', d: `M${x} ${y + h / 2}h${w}M${x + w / 2} ${y}v${h}`, larg: 0.5, cor: '#8a6538' }];
+  return {
+    vb: [480, 120],
+    pecas: [
+      ...rua(['#c9c3b6', '#bdb5a8']),
+      { tipo: 'massa', d: `M${x0} 40Q240 14 ${x1} 40V${CHAO}H${x0}Z`, cor: o.parede, marca: 'galpao' },
+      { tipo: 'linha', d: Array.from({ length: 13 }, (_, k) => `M${x0 + 8 + k * 17} ${34 - Math.sin(((k + 0.5) / 13) * Math.PI) * 10}V${CHAO - 30}`).join(''), larg: 0.4, cor: escurecer(o.parede, 0.18), so3: true },
+      { tipo: 'massa', d: ret(x0, 44, x1 - x0, 14, 0), cor: o.cor, marca: 'placa' },
+      texto(240, 54.5, o.nome, 10, o.tinta, { fonte: o.fonte, espaco: o.fonte === 'serif' ? 2.4 : 1.2, peso: 800 }),
+      // As portas de carga: duas fechadas (de enrolar) e uma aberta, com as prateleiras de caixas.
+      ...[150, 196].flatMap((x): Peca[] => [{ tipo: 'metal', d: ret(x, 66, 38, CHAO - 66, 0.4), cor: '#a7a39c' }, { tipo: 'linha', d: Array.from({ length: 9 }, (_, k) => `M${x} ${70 + k * 5}h38`).join(''), larg: 0.4, cor: '#7f7b74' }]),
+      { tipo: 'massa', d: ret(242, 66, 40, CHAO - 66, 0.4), cor: '#3a3632', marca: 'doca' },
+      { tipo: 'linha', d: 'M244 78h36M244 92h36', larg: 1, cor: '#8f8a80' },
+      ...caixa(246, 68, 9, 9), ...caixa(257, 68, 9, 9), ...caixa(268, 69, 9, 8), ...caixa(248, 82, 10, 9), ...caixa(262, 82, 12, 9),
+      { tipo: 'massa', d: ret(240, CHAO - 6, 50, 4, 0.5), cor: '#55595f', semVolume: true, marca: 'esteira' },
+      ...caixa(292, CHAO - 12, 12, 10), ...caixa(305, CHAO - 12, 10, 10), ...caixa(297, CHAO - 21, 11, 9),
+      // A van de entrega.
+      { tipo: 'massa', d: `M318 ${CHAO - 2}V${CHAO - 24}h22l8 9v13z`, cor: o.van, marca: 'van' },
+      { tipo: 'vidro', d: `M341 ${CHAO - 22}l6 7h-6z`, claro: true },
+      { tipo: 'massa', d: ret(320, CHAO - 15, 18, 3, 0.4), cor: o.cor === o.van ? o.tinta : o.cor, semVolume: true },
+      { tipo: 'pneu', cx: 325, cy: CHAO - 2, r: 3.2 }, { tipo: 'pneu', cx: 342, cy: CHAO - 2, r: 3.2 }
+    ]
+  };
+}
+
 export const FACHADAS_DE_LOJA: Record<FachadaDeLoja, () => Amostra> = {
+  ...(Object.fromEntries(Object.entries(GALPOES).map(([k, o]) => [k, () => galpao(o)])) as Record<keyof typeof GALPOES, () => Amostra>),
   ...ESPECIALIZADAS,
   ...PROPRIAS,
   ...(Object.fromEntries(Object.entries(MODELOS).map(([k, o]) => [k, () => departamento(o)])) as Record<keyof typeof MODELOS, () => Amostra>)
@@ -472,5 +518,6 @@ export const FACHADAS_DE_LOJA: Record<FachadaDeLoja, () => Amostra> = {
 export const PORTA_DAS_LOJAS: Record<FachadaDeLoja, 'esq' | 'dir'> = {
   moda: 'dir', sapataria: 'dir', otica: 'dir', acessorios: 'esq', moveis: 'dir', grifes: 'dir',
   dep_cea: 'dir', dep_corteingles: 'esq', dep_coin: 'dir', dep_rinascente: 'dir', dep_lafayette: 'esq',
-  ...(Object.fromEntries(Object.entries(MODELOS).map(([k, o]) => [k, o.porta])) as Record<keyof typeof MODELOS, 'esq' | 'dir'>)
+  ...(Object.fromEntries(Object.entries(MODELOS).map(([k, o]) => [k, o.porta])) as Record<keyof typeof MODELOS, 'esq' | 'dir'>),
+  onl_amazon: 'esq', onl_mercadolivre: 'esq', onl_zalando: 'esq', onl_aliexpress: 'esq', onl_farfetch: 'esq'
 };

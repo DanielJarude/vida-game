@@ -118,11 +118,12 @@ describe('as coisas da vida: uma forma própria para cada coisa, na cor do objet
 describe('os lugares como fachadas', () => {
   // REWORK 12.2: + as casas de luxo e coleção (relojoaria, joalheria, galeria, antiquário, memorabilia, leilão), os
   // exóticos e os quatro mercados de procedência incerta — cada um com o seu desenho (nenhuma fachada emprestada).
-  // VIDA 12.5: + 6 lojas por segmento (moda, sapataria, ótica, acessórios, móveis, grifes) e 20 grandes lojas com prédio próprio.
-  it('54 lugares, 54 fachadas diferentes, cada uma com a placa', () => {
-    expect(LUGARES_DA_CIDADE.length).toBe(54);
+  // VIDA 12.5: + 6 lojas por segmento (moda, sapataria, ótica, acessórios, móveis, grifes), 20 grandes lojas com prédio próprio
+  // e 5 centros de distribuição das lojas pela internet.
+  it('59 lugares, 59 fachadas diferentes, cada uma com a placa', () => {
+    expect(LUGARES_DA_CIDADE.length).toBe(59);
     const tracos = LUGARES_DA_CIDADE.map(l => traco(<Fachada lugar={l} vazia largura={300} altura={110} />));
-    expect(new Set(tracos).size).toBe(54);
+    expect(new Set(tracos).size).toBe(59);
   });
 
   it('VIDA 12.5: cada grande loja tem o seu prédio e cada segmento a sua vitrine (nenhuma emprestada da ótica)', () => {
@@ -131,6 +132,8 @@ describe('os lugares como fachadas', () => {
     const fachadas = deps.map(e => fachadaDoLugar(`loja:${e.id}`));
     expect(fachadas.every(f => f.startsWith('dep_'))).toBe(true);
     expect(new Set(fachadas).size).toBe(deps.length);
+    const online = ESTABELECIMENTOS.filter(e => e.tipo === 'online').map(e => fachadaDoLugar(`loja:${e.id}`));
+    expect(online.every(f => f.startsWith('onl_'))).toBe(true);
     const segmentos = ['roupas', 'sapataria', 'otica', 'acessorios', 'moveis'].map(id => fachadaDoLugar(`loja:${id}`));
     expect(new Set(segmentos).size).toBe(5);
     const { container } = render(<Fachada lugar="dep_lafayette" vazia />);

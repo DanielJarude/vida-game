@@ -196,6 +196,7 @@ export const fachadaDoLugar = (id: QualLugar): LugarDaCidade => {
     if (FACHADA_DA_LOJA[e.id]) return FACHADA_DA_LOJA[e.id];
     // VIDA 12.5: cada grande loja tem o seu prédio (El Corte Inglés, Galeries Lafayette, C&A...).
     if (e.tipo === 'departamento' && LUGARES_DA_CIDADE.includes(`dep_${e.id}` as LugarDaCidade)) return `dep_${e.id}` as LugarDaCidade;
+    if (e.tipo === 'online' && LUGARES_DA_CIDADE.includes(`onl_${e.id}` as LugarDaCidade)) return `onl_${e.id}` as LugarDaCidade;
     return e.categorias.includes('vestuario') ? 'estilo' : e.categorias.includes('eletronicos') ? 'eletronicos' : 'casa';
   }
   return FACHADA_DE[id] ?? (id as LugarDaCidade);

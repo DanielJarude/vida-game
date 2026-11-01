@@ -31,6 +31,8 @@ import { seguranca } from '../../motor/sistemas/dinheiro';
 import { leituraDaSeguranca } from '../leituraMaterial';
 import { Retrato } from '../avatar/Retrato';
 import { Historia, type ParteHistoria } from '../jogo/Historia';
+import { memoriasDaVida } from '../../motor/sistemas/albumDaVida';
+import { IconeDaMemoria } from '../jogo/IconeDaMemoria';
 import { Momento, Resultado } from '../jogo/Momento';
 import { Pessoas, type PartePessoas } from '../jogo/Pessoas';
 import { areaDaPorta } from '../jogo/Estudos';
@@ -237,9 +239,22 @@ function AnoQuePassou({ vida, desde, abrirPessoa }: { vida: Vida; desde: number;
   const conquistas = conquistasDoAno(vida);
   // REWORK 9.5: a rotina que o ano teve (a fotografia do ano) — só quando há o que dizer.
   const rotina = rotinaDoAno(vida);
-  if (!temFechamento && !temNoticias && !rotina && !conquistas.length) return null;
+  // VIDA 12.5: o momento marcante do ano (o casamento, o filho, o título, a casa própria…) abre o ano que passou, com uma
+  // entrada curta — só o que a Retrospectiva também chama de marcante, e só deste ano.
+  const marcantes = memoriasDaVida(vida).filter(m => m.destaque === 2 && m.t >= desde && m.tipo !== 'nascimento').slice(-3);
+  if (!temFechamento && !temNoticias && !rotina && !conquistas.length && !marcantes.length) return null;
   return (
     <div className="ano-que-passou" id="ano-que-passou">
+      {marcantes.length > 0 && (
+        <section className="celebracao" aria-label="O que marcou o ano">
+          {marcantes.map(m => (
+            <div key={m.id} className={`celebracao__cartao retro--${m.categoria}`}>
+              <span className="celebracao__icone" aria-hidden="true"><IconeDaMemoria categoria={m.categoria} tamanho={26} /></span>
+              <div><p className="celebracao__titulo">{m.titulo}</p><p className="celebracao__texto">{m.texto}</p></div>
+            </div>
+          ))}
+        </section>
+      )}
       {/* REWORK 10.5 · EVT-06: a conquista do ano vem primeiro (antes, só na Linha da Vida, para quem procurasse). */}
       {conquistas.length > 0 && (
         <section className="fechamento fechamento--conquistas" aria-label="As conquistas do ano">

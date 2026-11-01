@@ -26,6 +26,30 @@ export interface NotaDeVersao {
 
 export const NOTAS: NotaDeVersao[] = [
   {
+    versao: '12.5',
+    data: '2026-11-01',
+    titulo: 'Polimento e imersão: a Retrospectiva da Vida, lojas com cara própria e carreiras mais vivas',
+    novidades: [
+      'Retrospectiva da Vida (História · Retrospectiva): a linha do tempo da vida inteira e um álbum de memórias — o nascimento, a escola, as formaturas, o primeiro emprego, os amores, o casamento, os filhos, as viagens, a casa própria, os títulos, as eleições e o que mais marcou —, cada uma com a idade e o ano. Os momentos marcantes ganham destaque; dá para filtrar por categoria. Tudo vem do que a vida registrou: nada é inventado. Também no fim da vida.',
+      'O estúdio de tatuagem ganhou uma lupa: abre na parte do corpo escolhida (o peito com os ombros, o braço inteiro, as costas, a perna, o pescoço), aproxima e afasta, volta ao corpo inteiro e troca de frente para costas — com as outras tatuagens no lugar.',
+      'As lojas têm prédio próprio: a moda com manequins e arara, a sapataria, a ótica com a parede de armações, a de acessórios, a de móveis com a sala montada, a rua das grifes — e cada grande loja com a sua arquitetura (El Corte Inglés, Galeries Lafayette, Rinascente, Coin, C&A, Renner, Macy\'s, Isetan e as outras).',
+      'Carreiras com mais acontecimentos: cenas novas para tênis, vôlei, atletismo, basquete, medicina, vida acadêmica, música, negócio próprio, polícia, escritório e obra/elétrica.'
+    ],
+    melhorias: [
+      'Indicações de trabalho fazem sentido para quem recebe: nada de vaga muito abaixo da sua carreira; colegas de profissão passam a indicar; quem está empregado também pode ser lembrado para a vaga de cima, ou para uma sociedade com alguém da área; as frases variam e a mesma pessoa não repete a oferta todo ano.',
+      'A temporada do atleta não perde mais a sua cena por causa da renovação de contrato.',
+      'A festa de quinze anos e a solidão na velhice voltaram a acontecer; quem desiste da carteira de motorista espera um ano antes de tentar de novo.'
+    ],
+    correcoes: [
+      'Avós não têm mais 12 anos no nascimento dos tios; o irmão mais velho respeita a idade do pai.',
+      'Não dá mais para vender ou dar a alguém o que está emprestado a outra pessoa.',
+      'O carro vendido, roubado ou retomado deixa de ser o veículo do dia a dia; a venda "como está" não deixa a conta negativa.',
+      'A convocação ao serviço militar entra na Linha da Vida, e o emprego guardado termina na data certa.',
+      'Quem trabalha por conta própria, no clube ou no palco não recebe mais notícias de "reorganização com demissões em outros andares".',
+      'Discos lançados no mesmo ano não saem mais com o mesmo título; a contagem de cidades no fim da vida inclui as mudanças para o exterior.'
+    ]
+  },
+  {
     versao: '12.4.2',
     data: '2026-11-01',
     titulo: 'Futebol mais completo, tatuagens, cômodos com profundidade e uma aba Compras organizada',
