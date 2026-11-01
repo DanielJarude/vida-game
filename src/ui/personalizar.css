@@ -94,3 +94,39 @@
 .estudio-tatuagem__escolhas select { max-width: 100%; }
 .estudio-tatuagem__lista { list-style: none; padding: 0; margin: var(--space-3) 0 0; display: grid; gap: var(--space-2); }
 .estudio-tatuagem__lista li { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; justify-content: space-between; border-top: 1px solid var(--rule); padding-top: var(--space-2); }
+
+/* VIDA 12.6 — o estúdio inteiro: as partes, o mapa do corpo, o catálogo em miniaturas, os ajustes, as suas. */
+.estudio-tatuagem__partes { display: flex; flex-wrap: wrap; gap: var(--space-1); margin: var(--space-2) 0 var(--space-3); border-bottom: 1px solid var(--rule); }
+.estudio-tatuagem__parte { min-height: var(--touch-target); padding: 0 var(--space-3); background: none; border: 0; border-bottom: 2px solid transparent; color: var(--text-muted); font: inherit; cursor: pointer; }
+.estudio-tatuagem__parte--ativa { color: var(--tinta); border-bottom-color: var(--acao, currentColor); font-weight: 600; }
+.estudio-tatuagem__grupo { border: 0; border-top: 1px solid var(--rule); margin: 0; padding: var(--space-2) 0 0; display: grid; gap: var(--space-2); min-width: 0; }
+.estudio-tatuagem__grupo > legend { font-weight: 600; padding: 0 var(--space-1) 0 0; }
+.estudio-tatuagem__estilos { display: flex; flex-wrap: wrap; gap: 6px; }
+.estudio-tatuagem__chip { min-height: 36px; padding: 0 var(--space-2); border-radius: 999px; border: 1px solid var(--rule); background: var(--superficie, transparent); color: var(--tinta); font: inherit; font-size: var(--type-caption); cursor: pointer; }
+.estudio-tatuagem__chip--ativo { background: var(--tinta); color: var(--papel, #fff); border-color: var(--tinta); }
+.estudio-tatuagem__catalogo { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 6px; max-height: 296px; overflow-y: auto; padding: 2px; }
+.estudio-tatuagem__miniatura { display: grid; justify-items: center; gap: 2px; padding: 6px 4px; min-height: var(--touch-target); border: 1px solid var(--rule); border-radius: var(--radius-md); background: #f6f2ea; color: #23201c; font: inherit; font-size: 11px; line-height: 1.2; text-align: center; cursor: pointer; }
+.estudio-tatuagem__miniatura span { overflow-wrap: anywhere; }
+.estudio-tatuagem__miniatura--ativa { outline: 2px solid var(--acao, #c4553a); outline-offset: 1px; background: #fffdf8; }
+.estudio-tatuagem__ajustes { display: grid; gap: var(--space-2); }
+.estudio-tatuagem__faixa { display: grid; gap: 2px; }
+.estudio-tatuagem__faixa input[type='range'] { width: 100%; min-height: 32px; accent-color: var(--acao, currentColor); }
+.estudio-tatuagem__marca { display: flex; gap: var(--space-1); align-items: center; min-height: 32px; }
+.estudio-tatuagem__aviso { margin: 0; padding: var(--space-2); border-radius: var(--radius-md); background: var(--veu-1); }
+.estudio-tatuagem__plano { margin: 0; padding-left: 1.2em; display: grid; gap: 2px; }
+.estudio-tatuagem__projeto-figura { margin: 0; text-align: center; }
+.estudio-tatuagem__projeto-figura svg { max-width: 100%; height: auto; }
+.estudio-tatuagem__item { flex: 1 1 14rem; min-width: 0; }
+.estudio-tatuagem__acoes { display: flex; flex-wrap: wrap; gap: var(--space-1); }
+.estudio-tatuagem__mini { flex: 0 0 auto; color: var(--tinta); }
+.estudio-tatuagem__historico { margin-top: var(--space-3); }
+.estudio-tatuagem__historico ul { margin: var(--space-1) 0 0; padding-left: 1.2em; display: grid; gap: 2px; color: var(--text-muted); }
+.figura__regiao { fill: transparent; stroke: transparent; stroke-width: 0.5; cursor: pointer; vector-effect: non-scaling-stroke; }
+.figura__regiao:hover, .figura__regiao:focus-visible { fill: rgba(196, 85, 58, 0.18); stroke: #c4553a; outline: none; }
+.figura__regiao--ocupada { stroke: rgba(60, 60, 60, 0.35); stroke-dasharray: 1.5 1.5; }
+.figura__regiao--ativa { fill: rgba(196, 85, 58, 0.24); stroke: #c4553a; stroke-width: 1.2; }
+@media (max-width: 520px) {
+  .estudio-tatuagem__previa { flex-wrap: wrap; justify-content: center; }
+  .estudio-tatuagem__referencia { grid-auto-flow: column; }
+  .estudio-tatuagem__catalogo { grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); max-height: 240px; }
+}

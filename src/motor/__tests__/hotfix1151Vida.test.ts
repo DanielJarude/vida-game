@@ -9,9 +9,9 @@ import { executar, disponibilidade } from '../acoes';
 import { podeTentar } from '../plausibilidade';
 import { interpretar } from '../save';
 import { ESTABELECIMENTOS, marca } from '../dados/lojas';
-import { DESENHOS, LOCAIS } from '../dados/tatuagens';
+import { DESENHOS, REGIOES, regioesDoDesenho } from '../dados/tatuagens';
 import { buscarLojas, buscarNasLojas, indiceDeCompras, lojasDaVida, normalizarBusca, ofertasDaLoja, SEGMENTOS, segmentoDaCategoria, segmentosDaLoja } from '../sistemas/lojas';
-import { ocupado, precoDaRemocao, precoDaTatuagem, tatuagensDe, tatuagensNaFigura } from '../sistemas/tatuagens';
+import { precoDaRemocao, precoDaTatuagem, tatuagensDe, tatuagensNaFigura } from '../sistemas/tatuagens';
 import { sincronizarVisual } from '../sistemas/estilo';
 import type { Vida } from '../tipos';
 
@@ -81,7 +81,8 @@ describe('HOTFIX 11.5.1 · tatuagens', () => {
     expect(disponibilidade(v, { tipo: 'tatuar', desenho: 'andorinha', local: 'antebraco' }).grau).toBe('impossivel'); // sem lado
     expect(disponibilidade(v, { tipo: 'tatuar', desenho: 'pantera', local: 'mao', lado: 'd' }).grau).toBe('impossivel'); // não é lugar dela
     expect(disponibilidade(v, { tipo: 'tatuar', desenho: 'dragao_costas', local: 'braco', lado: 'd' }).grau).toBe('impossivel');
-    for (const d of DESENHOS) for (const l of d.locais) expect(LOCAIS[l]).toBeDefined();
+    // VIDA 12.6: todo desenho tem pelo menos uma região onde cabe, em cada tamanho dele.
+    for (const d of DESENHOS) for (const t of d.tamanhos) for (const r of regioesDoDesenho(d, t)) expect(REGIOES[r]).toBeDefined();
   });
 
   it('várias tatuagens até a parte encher; o fechamento pede o braço livre; tirar no laser clareia em um ano e libera o espaço', () => {
@@ -91,14 +92,16 @@ describe('HOTFIX 11.5.1 · tatuagens', () => {
     t('ramo_fino', 'antebraco', 'e'); t('nome_cursivo', 'antebraco', 'e'); t('coracaozinho', 'antebraco', 'e');
     expect(tatuagensDe(v)).toHaveLength(3);
     expect(antes - v.financas.conta).toBe(['ramo_fino', 'nome_cursivo', 'coracaozinho'].reduce((s, d) => s + precoDaTatuagem(v, d), 0));
-    expect(ocupado(v, 'antebraco', 'e')).toBe(3);
+    // VIDA 12.6: as três ficam uma embaixo da outra no antebraço (cada uma no seu lugar, nenhuma por cima da outra).
+    expect(new Set(tatuagensDe(v).map(x => x.ajuste?.y ?? 0)).size).toBe(3);
     // O antebraço esquerdo está cheio; o direito, livre.
-    expect(disponibilidade(v, { tipo: 'tatuar', desenho: 'lua_estrelas', local: 'antebraco', lado: 'e' }).grau).toBe('incompativel');
+    expect(disponibilidade(v, { tipo: 'tatuar', desenho: 'andorinha', regiao: 'antebraco', lado: 'e' }).grau).toBe('incompativel');
     expect(podeTentar(disponibilidade(v, { tipo: 'tatuar', desenho: 'lua_estrelas', local: 'antebraco', lado: 'd' }))).toBe(true);
     // O fechamento do braço esquerdo não cabe (o antebraço já tem tatuagem); o direito, sim — e ele ocupa o braço inteiro.
     expect(disponibilidade(v, { tipo: 'tatuar', desenho: 'fechamento', local: 'braco', lado: 'e' }).grau).toBe('incompativel');
     t('fechamento', 'braco', 'd');
-    expect(ocupado(v, 'antebraco', 'd')).toBe(LOCAIS.antebraco.capacidade);
+    // O fechamento (a peça do braço inteiro) ocupa o antebraço desse lado.
+    expect(disponibilidade(v, { tipo: 'tatuar', desenho: 'lua_estrelas', local: 'antebraco', lado: 'd' }).grau).toBe('incompativel');
     t('dragao_costas', 'costas');
     expect(tatuagensDe(v)).toHaveLength(5);
     // O laser: cobra mais que tatuar; a tinta clareia durante um ano; depois some e o espaço volta.
@@ -107,7 +110,8 @@ describe('HOTFIX 11.5.1 · tatuagens', () => {
     v = executar(v, { tipo: 'remover_tatuagem', id: alvo.id }).vida;
     expect(c0 - v.financas.conta).toBe(precoDaRemocao(v, alvo));
     expect(precoDaRemocao(v, alvo)).toBeGreaterThan(precoDaTatuagem(v, 'nome_cursivo'));
-    expect(ocupado(v, 'antebraco', 'e')).toBe(2);
+    // Enquanto o laser não termina, a tinta ainda ocupa o lugar.
+    expect(disponibilidade(v, { tipo: 'tatuar', desenho: 'andorinha', regiao: 'antebraco', lado: 'e' }).grau).toBe('incompativel');
     v = transacao(v, x => { x.t += 6; }).vida;
     expect(tatuagensNaFigura(v).find(x => x.id === alvo.id)!.clareou).toBeCloseTo(0.5, 1);
     v = transacao(v, x => { x.t += 7; }).vida;

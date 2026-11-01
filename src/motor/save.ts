@@ -31,6 +31,7 @@ import { derivarPredisposicoes } from './sistemas/pessoa';
 import { OCUPACOES_DE_ATLETA, posicaoSugerida } from './sistemas/esporte';
 import { clubePorNome } from './dados/clubes';
 import { fixarEstatura } from './sistemas/modalidades';
+import { normalizarTatuagens } from './sistemas/tatuagens';
 import { alvoDaNotoriedade } from './sistemas/notoriedade';
 import type { Financas,
   Classe, Dominio, Entrada, Escolaridade, EstiloDeVida, Genero, Marco, Parentesco, Pessoa, Relevancia, TabelaEmCurso, Tema, Vida, Vinculo
@@ -114,7 +115,7 @@ export function ler(s: Armazenamento | null = armazenamentoPadrao()): Leitura {
  */
 export function interpretar(bruto: string): Leitura {
   const r = interpretarSemNormalizar(bruto);
-  if (r.tipo === 'ok') { normalizarRework75(r.vida); normalizarRework97(r.vida); normalizarRework106(r.vida); normalizarRework11Relacoes(r.vida); normalizarRework11Esportes(r.vida); normalizarRework11Artes(r.vida); normalizarRework115(r.vida); normalizarRework12(r.vida); normalizarRework122(r.vida); normalizarRework125(r.vida); normalizarRework123(r.vida); normalizarRework1235(r.vida); normalizarRework124(r.vida); normalizarHotfix1151(r.vida); fixarEstatura(r.vida, true); }
+  if (r.tipo === 'ok') { normalizarRework75(r.vida); normalizarRework97(r.vida); normalizarRework106(r.vida); normalizarRework11Relacoes(r.vida); normalizarRework11Esportes(r.vida); normalizarRework11Artes(r.vida); normalizarRework115(r.vida); normalizarRework12(r.vida); normalizarRework122(r.vida); normalizarRework125(r.vida); normalizarRework123(r.vida); normalizarRework1235(r.vida); normalizarRework124(r.vida); normalizarHotfix1151(r.vida); normalizarVida126(r.vida); fixarEstatura(r.vida, true); }
   return r;
 }
 
@@ -1780,6 +1781,14 @@ export function normalizarRework124(v: Vida): void {
  * tatuagens, o modelo dos óculos e do chapéu). Na carga, o visual relê o que está em uso: quem já usava o Juliet ou o
  * chapéu de couro passa a ver o modelo desenhado, sem precisar trocar de peça.
  */
+/**
+ * VIDA 12.6 — as tatuagens antigas (só a parte grande) ganham a região precisa e o lugar dentro dela, sem apagar nada
+ * (`sistemas/tatuagens.normalizarTatuagens`). Idempotente; nenhum campo obrigatório novo.
+ */
+export function normalizarVida126(v: Vida): void {
+  normalizarTatuagens(v);
+}
+
 export function normalizarHotfix1151(v: Vida): void {
   if (v.eu.estilo?.itens?.some(x => x.usando)) sincronizarVisual(v);
 }

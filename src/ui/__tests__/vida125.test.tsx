@@ -9,7 +9,7 @@ import { transacao } from '../../motor/nucleo';
 import type { Vida } from '../../motor/tipos';
 import { EstudioDeTatuagem } from '../jogo/Tatuagens';
 import { focoDaParte } from '../avatar/Figura';
-import { LOCAIS, type LocalDeTatuagem } from '../../motor/dados/tatuagens';
+import { REGIAO_DA_PARTE, REGIOES, type LocalDeTatuagem } from '../../motor/dados/tatuagens';
 import { Retrospectiva } from '../jogo/Retrospectiva';
 import { Historia } from '../jogo/Historia';
 import { memoriasDaVida } from '../../motor/sistemas/albumDaVida';
@@ -36,9 +36,10 @@ describe('VIDA 12.5 · a lupa do estúdio de tatuagem', () => {
   });
 
   it('o foco de cada parte do corpo é finito, menor que o corpo inteiro e encolhe ao aproximar', () => {
-    for (const local of Object.keys(LOCAIS) as LocalDeTatuagem[]) {
-      const vista = LOCAIS[local].frente ? 'frente' : 'costas';
-      const lado = LOCAIS[local].lados ? 'e' : undefined;
+    for (const local of Object.keys(REGIAO_DA_PARTE) as LocalDeTatuagem[]) {
+      const r = REGIOES[REGIAO_DA_PARTE[local][0]];
+      const vista = r.frente ? 'frente' : 'costas';
+      const lado = r.lados ? 'e' : undefined;
       const inteiro = focoDaParte('masculino', 'mediano', 30, 'inteiro', undefined, vista);
       const regiao = focoDaParte('masculino', 'mediano', 30, local, lado, vista, 1);
       const perto = focoDaParte('masculino', 'mediano', 30, local, lado, vista, 2.6);

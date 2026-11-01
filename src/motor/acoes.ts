@@ -14,8 +14,8 @@ import { praticandoPor } from './sistemas/progressao';
 import { disponibilidadeDaAgenda, disponibilidadeDaPostura, executarNaAgenda, limparAgenda, resultadoDaPostura, type OpAgenda } from './sistemas/agenda';
 import { disponibilidadeGesto, fazerGesto, type GestoDeMemoria } from './sistemas/memoria';
 import { disponibilidadeProcedimento, fazerProcedimento, type Clinica, type IdProcedimento } from './sistemas/estetica';
-import { disponibilidadeRemover, disponibilidadeTatuar, removerTatuagem, tatuar } from './sistemas/tatuagens';
-import type { Lado, LocalDeTatuagem } from './dados/tatuagens';
+import { comporTatuagens, disponibilidadeCompor, disponibilidadePedido, disponibilidadeRemover, disponibilidadeRetocar, removerTatuagem, retocarTatuagem, tatuarPedido, type PedidoDeTatuagem } from './sistemas/tatuagens';
+import type { Lado } from './dados/tatuagens';
 import { comprarCoisa, disponibilidadeComprarCoisa, disponibilidadeVenderCoisa, venderCoisa } from './sistemas/coisas';
 import { educacaoDaVida } from './mundo/vida';
 import { noPais } from './mundo/registro';
@@ -282,8 +282,11 @@ export type Acao =
   | { tipo: 'comprar_item'; itemId: string; /** 12.4.1: a marca e a loja (ausentes: o preço de referência). */ marca?: string; loja?: string }
   | { tipo: 'estetica'; id: string; clinica: Clinica; alvo?: string; revisao?: boolean }
   /** HOTFIX 11.5.1: tatuar (o desenho, a parte do corpo, o lado) e tirar no laser. */
-  | { tipo: 'tatuar'; desenho: string; local: LocalDeTatuagem; lado?: Lado }
+  // VIDA 12.6: a região precisa, a posição, a escala, a rotação, a cor, o texto, o significado, a cobertura.
+  | ({ tipo: 'tatuar' } & PedidoDeTatuagem)
   | { tipo: 'remover_tatuagem'; id: string }
+  | { tipo: 'retocar_tatuagem'; id: string }
+  | { tipo: 'compor_tatuagens'; modelo: string; lado?: Lado }
   /** Usar ou guardar um item que é seu. */
   | { tipo: 'usar_item'; itemId: string; usar: boolean }
   /** As coisas da vida: comprar numa loja da cidade; vender a usada (`sistemas/coisas`). */
@@ -757,8 +760,10 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'visibilidade': return disponibilidadeVisibilidade(v, a.oque);
     case 'comprar_item': return disponibilidadeComprarItem(v, a.itemId, a.marca, a.loja);
     case 'estetica': return disponibilidadeProcedimento(v, a.id, a.clinica, a.alvo, a.revisao);
-    case 'tatuar': return disponibilidadeTatuar(v, a.desenho, a.local, a.lado);
+    case 'tatuar': return disponibilidadePedido(v, a);
     case 'remover_tatuagem': return disponibilidadeRemover(v, a.id);
+    case 'retocar_tatuagem': return disponibilidadeRetocar(v, a.id);
+    case 'compor_tatuagens': return disponibilidadeCompor(v, a.modelo, a.lado);
     case 'usar_item': return disponibilidadeUsarItem(v, a.itemId, a.usar);
     case 'comprar_coisa': return disponibilidadeComprarCoisa(v, a.coisaId, a.marca, a.loja);
     case 'personalizar': return disponibilidadePersonalizar(v, a.op);
@@ -1558,8 +1563,10 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
     }
     case 'comprar_item': return ok(comprarItem(v, a.itemId, false, a.marca, a.loja), 'bom');
     case 'estetica': { const x = fazerProcedimento(v, r, a.id as IdProcedimento, a.clinica, a.alvo, a.revisao); return { resultado: x.texto, titulo: x.titulo }; }
-    case 'tatuar': return ok(tatuar(v, a.desenho, a.local, a.lado), 'bom');
+    case 'tatuar': return ok(tatuarPedido(v, a), 'bom');
     case 'remover_tatuagem': return ok(removerTatuagem(v, a.id), 'neutro');
+    case 'retocar_tatuagem': return ok(retocarTatuagem(v, a.id), 'bom');
+    case 'compor_tatuagens': return ok(comporTatuagens(v, a.modelo, a.lado), 'bom');
     case 'usar_item': return ok(usarItem(v, a.itemId, a.usar));
     case 'comprar_coisa': return ok(comprarCoisa(v, a.coisaId, a.marca, a.loja), 'bom');
     case 'personalizar': return ok(personalizar(v, a.op), 'bom');

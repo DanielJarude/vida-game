@@ -22,7 +22,7 @@ import { FiguraSobDemanda as Figura } from '../avatar/figuraSobDemanda';
 import { NOME_DO_CORPO, tipoDeCorpo } from '../../motor/sistemas/silhueta';
 import { lugaresDoItem } from '../../motor/dados/estilo';
 import { BotaoAcao } from '../comum';
-import { tatuagensNaFigura } from '../../motor/sistemas/tatuagens';
+import { composicoesNaFigura, tatuagensNaFigura } from '../../motor/sistemas/tatuagens';
 import type { Aba } from '../navegacao';
 
 interface Props { vida: Vida; agir: (a: Acao) => boolean; irPara: (a: Aba) => void }
@@ -55,7 +55,7 @@ export function AparenciaEEstilo({ vida, agir, irPara }: Props) {
         <div className="aparencia__corpo">
           <div className="aparencia__previa">
             {/* 12.4.1: o corpo inteiro (o tipo de corpo vem do condicionamento, dos hábitos e do que se pratica). */}
-            <Figura visual={previa} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} corpo={tipoDeCorpo(vida)} pecas={itens.filter(x => x.usando)} tatuagens={tatuagensNaFigura(vida)} largura={150} rotulo={mudou ? 'Como ficaria' : 'Como você está'} />
+            <Figura visual={previa} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} corpo={tipoDeCorpo(vida)} pecas={itens.filter(x => x.usando)} tatuagens={tatuagensNaFigura(vida)} composicoes={composicoesNaFigura(vida)} largura={150} rotulo={mudou ? 'Como ficaria' : 'Como você está'} />
             <span className="nota">{mudou ? 'Como ficaria' : 'Hoje'} · corpo {NOME_DO_CORPO[tipoDeCorpo(vida)]}</span>
           </div>
           <div className="aparencia__escolhas">

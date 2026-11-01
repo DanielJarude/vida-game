@@ -128,6 +128,8 @@ describe('HOTFIX 11.5.1 · tatuagens e a figura', () => {
     expect(frente.querySelector('[data-tatuagem="andorinha"]')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: /^Tatuar/ }));
     expect(v.eu.tatuagens).toHaveLength(1);
+    // VIDA 12.6: as que já tem ficam na parte "As suas".
+    fireEvent.click(screen.getByRole('tab', { name: /As suas/ }));
     expect(screen.getByRole('button', { name: /Tirar no laser/ })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: /Tirar no laser/ }));
     expect(v.eu.tatuagens![0].removida).toBe(v.t);
@@ -136,7 +138,9 @@ describe('HOTFIX 11.5.1 · tatuagens e a figura', () => {
 
   it('a figura: cada tatuagem recortada pela própria parte do corpo; a das costas só aparece de costas; a pele tem contorno; sem fundo, o halo', () => {
     const vis = { pele: 'p1', cabelo: 'curto', corCabelo: 'loiro', olhos: 'azul' };
-    const tat = [{ id: 'a', desenho: 'rosa_tradicional', local: 'antebraco' as const, lado: 'd' as const, anos: 2, clareou: 0 }, { id: 'b', desenho: 'dragao_costas', local: 'costas' as const, anos: 1, clareou: 0 }];
+    // VIDA 12.6: a tatuagem na figura tem a região precisa, o ajuste e a tinta.
+    const base = { ajuste: { x: 0, y: 0, escala: 1, rot: 0 }, intensidade: 1, idade: 30 };
+    const tat = [{ ...base, id: 'a', desenho: 'rosa_tradicional', regiao: 'antebraco' as const, local: 'antebraco' as const, lado: 'd' as const, tamanho: 2 as const, cor: 'colorida' as const, anos: 2, clareou: 0 }, { ...base, id: 'b', desenho: 'dragao_costas', regiao: 'costas_inteiras' as const, local: 'costas' as const, tamanho: 4 as const, cor: 'colorida' as const, anos: 1, clareou: 0 }];
     const { container } = render(<><Figura visual={vis} genero="masculino" idade={30} corpo="mediano" pecas={[]} tatuagens={tat} semFundo /><Figura visual={vis} genero="masculino" idade={30} corpo="mediano" pecas={[]} tatuagens={tat} vista="costas" semCima /></>);
     const [f, c] = container.querySelectorAll('svg.figura');
     const rosa = f.querySelector('[data-tatuagem="rosa_tradicional"]')!;

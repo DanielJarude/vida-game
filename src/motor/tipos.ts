@@ -1,5 +1,5 @@
 import type { EspecialidadeMedica } from './dados/especialidades';
-import type { Lado, LocalDeTatuagem } from './dados/tatuagens';
+import type { CorDaTatuagem, FundoDeComposicao, Lado, LocalDeTatuagem, RegiaoDeTatuagem, SignificadoDaTatuagem, TamanhoDeTatuagem, TipoDeComposicao } from './dados/tatuagens';
 /**
  * O modelo de uma vida.
  *
@@ -3460,11 +3460,45 @@ export interface PromessaPolitica {
 export interface Tatuagem {
   id: string;
   desenho: string;
+  /** A parte grande (saves antigos; desde a 12.6, espelho da região). */
   local: LocalDeTatuagem;
   lado?: Lado;
   t: number;
-  /** O laser começou (a tinta clareia ao longo de um ano). */
+  /** O laser começou (a tinta clareia ao longo das sessões). */
   removida?: number;
+  /** VIDA 12.6 — a região precisa (`dados/tatuagens.REGIOES`); saves antigos ganham uma na carga. */
+  regiao?: RegiaoDeTatuagem;
+  /** O tamanho escolhido (sem isso, o do desenho). */
+  tamanho?: TamanhoDeTatuagem;
+  /** Posição dentro da região (-1..1 em cada eixo), escala fina (0.8..1.25), rotação (graus) e espelhamento. */
+  ajuste?: { x: number; y: number; escala: number; rot: number; espelhar?: boolean };
+  cor?: CorDaTatuagem;
+  /** O tom da tinta (traço) ou a paleta (colorida). */
+  tom?: string;
+  /** 0.6..1 (o tatuador carrega mais ou menos a tinta). */
+  intensidade?: number;
+  /** O que está escrito (lettering). */
+  texto?: string;
+  /** Por que foi feita (e por quem). */
+  significado?: { tipo: SignificadoDaTatuagem; pessoaId?: string; nome?: string };
+  /** Os retoques (cada um devolve a tinta). */
+  retoques?: number[];
+  /** Coberta por outra (o id da que veio por cima). */
+  coberta?: { t: number; por: string };
+  /** É a cobertura de outra (o id da antiga). */
+  cobre?: string;
+  /** Faz parte de uma composição (`Personagem.composicoes`). */
+  conjunto?: string;
+}
+
+/** VIDA 12.6 — uma composição: tatuagens independentes unidas por um fundo (a manga fechada, as costas fechadas...). */
+export interface ComposicaoDeTatuagens {
+  id: string;
+  tipo: TipoDeComposicao;
+  lado?: Lado;
+  fundo: FundoDeComposicao;
+  nome: string;
+  t: number;
 }
 
 export interface Personagem {
@@ -3493,6 +3527,8 @@ export interface Personagem {
    * está saindo no laser, desde quando (a tinta vai clareando por um ano e some). Ausente: nenhuma.
    */
   tatuagens?: Tatuagem[];
+  /** VIDA 12.6 — as composições (o fundo que une as tatuagens de uma parte). */
+  composicoes?: ComposicaoDeTatuagens[];
   /** O estilo escolhido e o que foi comprado para ele (ausente: nada além do básico). */
   estilo?: EstiloPessoal;
   /** REWORK 12.4: os gostos (música, arte) — mudam com a vida, nunca pela classe ou pelo bairro (`sistemas/gostos`). */
