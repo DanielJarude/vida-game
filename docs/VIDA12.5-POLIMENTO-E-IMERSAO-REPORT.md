@@ -136,3 +136,10 @@ Save continua na versão 20; nenhum campo novo obrigatório. O `fato` das entrad
 ## 9. Vida Rural
 
 Não foi iniciada nem modificada: nenhum sistema de agricultura, plantio, pecuária, administração ou economia rural foi tocado. (A trajetória `rural` já existente não recebeu cenas novas.)
+
+## 10. Integração e publicação (2026-11-01)
+
+- **Integração**: `claude/rework12.5-polimento-imersao` → `main` por avanço direto (fast-forward) `feb58c5..f1e29b2`, os 4 commits preservados (`c970ca9`, `2db4631`, `77a31d9`, `f1e29b2`); a `main` não tinha nada posterior à base. Enviadas ao GitHub: `main`, a branch da atualização e a de produção (`claude/fix-pos-rework3-playtest`, `dc94272..f1e29b2`), todas em `f1e29b2` no remoto.
+- **Testes antes de publicar** (em `f1e29b2`): tipagem limpa; suíte completa **132 arquivos, 2.206/2.206** (nenhuma falha, nem os tempos esgotados conhecidos); build de produção (maior pacote 788,7 kB); smoke do pacote 21/21; PWA offline 36/36; auditoria visual 112 medições, 0 problemas; retrospectiva em 14 vidas longas, 0 erros.
+- **Deploy**: Cloudflare Pages concluído com sucesso (`e1d12278-ca7f-47a7-9841-fd651bececd3`). https://vida-game.pages.dev/ responde 200 e serve `index-hSglLNjT.js`; o `index.html` e os 43 arquivos JS/CSS são idênticos (sha256) ao build local de `f1e29b2`.
+- **Em produção**: auditoria visual contra a URL pública (112 medições, 0 problemas; numa delas a captura pegou o "Carregando…" da Retrospectiva sob demanda) e `scripts/playtest/producao125.mjs` **24/24**: notas da 12.5 para quem vinha da 12.4.2; três saves antigos (12.4.x) abrem; a Retrospectiva lista 61, 14 e 9 memórias em ordem, sem repetição, e filtra; a lupa do estúdio aproxima e volta ao corpo inteiro (390 px, sem rolagem lateral); Compras mostra as fachadas por segmento, as grandes lojas e os galpões das lojas pela internet; nenhum erro de console.
