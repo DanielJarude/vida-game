@@ -65,7 +65,7 @@ export function tatuar(v: Vida, desenho: string, local: LocalDeTatuagem, lado?: 
   const primeira = !lista.length;
   lista.push({ id: `tat-${v.t}-${lista.length}`, desenho, local, ...(LOCAIS[local].lados ? { lado } : {}), t: v.t });
   const texto = `${primeira ? 'A primeira tatuagem' : 'Mais uma tatuagem'}: ${d.nome.toLowerCase()}, ${noLocal(local, lado)}${d.tamanho >= 3 ? ' — algumas sessões e muitas horas de cadeira' : ''}.`;
-  escrever(v, { texto, relevancia: primeira || d.tamanho >= 3 ? 'biografia' : 'cotidiano', tema: 'escolha', tom: 'bom' });
+  escrever(v, { texto, relevancia: primeira || d.tamanho >= 3 ? 'biografia' : 'cotidiano', tema: 'escolha', tom: 'bom', fato: { tipo: 'm_tatuagem', dados: { primeira: primeira ? 1 : 0, desenho } } });
   return texto;
 }
 

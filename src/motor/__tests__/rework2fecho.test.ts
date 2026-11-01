@@ -160,7 +160,7 @@ describe('2 e 3. sem limite global de interações — e sem farm', () => {
 
 describe('4. "Pede atenção": parentesco não é vínculo', () => {
   it('um pai que nunca esteve presente não pede atenção; a amiga próxima que sumiu, sim', () => {
-    const v = pessoa(30, 320);
+    const v = pessoa(30, 322);
     const pai = criarPessoa(v, criarRng(1), { idade: 58, genero: 'masculino', municipioId: v.moradia.municipioId }); pai.nome = 'Álvaro';
     const vp = vincular(v, pai, { parentesco: 'pai', origem: 'familia', proximidade: 38, convivio: [] });
     vp.tInicio = v.t - 360; vp.tUltimoContato = v.t - 360; vp.historia = [];

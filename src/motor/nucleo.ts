@@ -205,6 +205,15 @@ export function lembrarCom(v: Vida, pessoaId: string, texto: string, tipo?: Tipo
 
 /* ------------------------------------------------------------------- Fatos */
 
+/**
+ * VIDA 12.5 (B4): o bem sai da lista — e, se era o veículo do dia a dia, deixa de ser (antes, oito caminhos tiravam o carro
+ * e deixavam `veiculoPrincipal` apontando para um bem que não existia mais, até o próximo carregamento).
+ */
+export function tirarBem(f: Vida['financas'], id: string | undefined): void {
+  if (!id) return;
+  f.bens = f.bens.filter(x => x.id !== id);
+  if (f.veiculoPrincipal === id) f.veiculoPrincipal = undefined;
+}
 export const fato = (v: Vida, chave: string) => v.fatos[chave];
 export const temFato = (v: Vida, chave: string) => v.fatos[chave] !== undefined;
 

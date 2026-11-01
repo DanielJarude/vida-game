@@ -365,7 +365,8 @@ export function criarVida(o: OpcoesCriacao): Vida {
   const nIrmaos = Math.min(maxIrmaos, Math.max(0, Math.round(r.next() * (maxIrmaos + 0.6) - 0.3)), Math.max(0, Math.floor((idadeMae - 17) / 2)));
   const irmaosCriados: Pessoa[] = [];
   for (let i = 0; i < nIrmaos; i++) {
-    const idadeIrmao = r.int(1, Math.max(1, Math.min(14, idadeMae - 17)));
+    // VIDA 12.5: o irmão mais velho também respeita a idade do pai (antes, pai de 14 anos em ~1% das vidas).
+    const idadeIrmao = r.int(1, Math.max(1, Math.min(14, idadeMae - 17, pai ? idadePai - 17 : 14)));
     const g: Genero = r.chance(0.5) ? 'masculino' : 'feminino';
     const irmao = criarPessoa(v, r, { genero: g, idade: idadeIrmao, municipioId: cidade, sobrenome: sob, visual: visualHerdado(r, g, geneticaDe(mae), geneticaDe(pai), ancFilhos), familia: { ancestralidade: ancFilhos, tradicao: v.eu.tradicao } });
     irmao.ocupacao = idadeIrmao >= 4 ? 'estudante' : undefined;
@@ -381,7 +382,10 @@ export function criarVida(o: OpcoesCriacao): Vida {
   for (let i = 0; i < nTios; i++) {
     const lado = r.chance(0.5) ? mae : pai ?? mae;
     const g: Genero = r.chance(0.5) ? 'masculino' : 'feminino';
-    const tio = criarPessoa(v, r, { genero: g, idade: Math.max(18, (lado === mae ? idadeMae : idadePai) + r.int(-8, 8)), municipioId: r.chance(0.65) ? cidade : r.pick([grandeCentro, outraCapital, cidade]), sobrenome: lado.sobrenome, familia: { ancestralidade: ancestralidadeDe(lado), tradicao: lado.tradicao } });
+    // VIDA 12.5 (B1): o tio nasce quando os avós já tinham 16 anos ou mais (antes: avô 20 anos mais velho que o pai e tio
+    // até 8 anos mais velho ⇒ avó de 12 anos no nascimento do tio, em 6,5% das vidas).
+    const tetoDoTio = Math.min(200, ...(avosDe[lado.id] ?? []).map(a => Math.floor((v.t - a.tNasc) / 12) - 16));
+    const tio = criarPessoa(v, r, { genero: g, idade: Math.max(18, Math.min(tetoDoTio, (lado === mae ? idadeMae : idadePai) + r.int(-8, 8))), municipioId: r.chance(0.65) ? cidade : r.pick([grandeCentro, outraCapital, cidade]), sobrenome: lado.sobrenome, familia: { ancestralidade: ancestralidadeDe(lado), tradicao: lado.tradicao } });
     // O tio é irmão do pai ou da mãe: filho dos mesmos avós (quando eles existem no jogo), parecido sem ser igual.
     { const avs = avosDe[lado.id] ?? []; const ra = rngDe(tio.id, 'tio'); tio.visual = avs.length ? visualDosPais(ra, g, ancestralidadeDe(lado), geneticaDe(avs[0]), geneticaDe(avs[1]) ?? geneticaDe(lado)) : visualDosPais(ra, g, ancestralidadeDe(lado), geneticaDe(lado), visualDeQuemGerou(ra, g, ancestralidadeDe(lado), geneticaDe(lado)!)); }
     empregarPai(v, r, tio, classe, tio.municipioId, false);

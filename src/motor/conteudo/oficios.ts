@@ -116,7 +116,7 @@ export const OFICIOS_CONTEUDO: Conteudo[] = [
           const deu = c.r.chance(chanceDoDesafio(c));
           const g = (s: string) => s.replace('{o}', c.g('o', 'a', 'e'));
           return {
-            texto: g(deu ? d.deu : d.naoDeu), memoria: deu && (emprego(c).feitos ?? 0) === 0 ? `O primeiro grande ${/caso|paciente/.test(d.texto) ? 'caso' : 'trabalho'} de verdade como ${ocupacao(emprego(c).ocupacaoId).nome[0]}: deu certo.` : null, relevancia: deu ? 'biografia' : undefined, tom: deu ? 'bom' : 'ruim',
+            texto: g(deu ? d.deu : d.naoDeu), memoria: deu && (emprego(c).feitos ?? 0) === 0 && anosNaTrilha(c) < 6 ? `O primeiro grande ${/caso|paciente/.test(d.texto) ? 'caso' : 'trabalho'} de verdade como ${ocupacao(emprego(c).ocupacaoId).nome[0]}: deu certo.` : null, relevancia: deu ? 'biografia' : undefined, tom: deu ? 'bom' : 'ruim',
             efeito: () => {
               const e = emprego(c);
               estresse(c, 4);

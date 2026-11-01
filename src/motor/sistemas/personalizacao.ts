@@ -218,6 +218,8 @@ export function disponibilidadePersonalizar(v: Vida, op: OpPersonalizar): Veredi
       if (!p?.vivo || !v.vinculos[op.pessoaId] || p.especie) return bloqueio('impossivel', 'Essa pessoa não está na sua vida.');
       if (i < 12) return bloqueio('impossivel', 'A partir dos 12.');
       if (op.ref.tipo === 'colecao' && (o.emprestadaA || o.emprestadaFora)) return bloqueio('incompativel', 'Está num museu.');
+      // VIDA 12.5 (B3): não se dá a alguém o que está emprestado a outra pessoa (a quem já está com ele, pode).
+      if (o.emprestadaA && o.emprestadaA !== op.pessoaId) return bloqueio('incompativel', 'Está emprestado: primeiro, pedir de volta.');
       if ((o as unknown as { dono?: string }).dono === 'casal') return bloqueio('incompativel', 'Não é só seu.');
       if (op.ref.tipo === 'estilo' && (o as unknown as ItemDeEstilo).usando) return bloqueio('incompativel', 'Você está usando.');
       return PERMITIDO;

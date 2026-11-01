@@ -10,7 +10,7 @@ import { local } from './efeitos';
 import type { Conteudo, Ctx } from './base';
 import type { Especie, Pessoa, Vida } from '../tipos';
 import { clamp } from '../rng';
-import { idade, vinculosVivos } from '../nucleo';
+import { idade, tirarBem, vinculosVivos } from '../nucleo';
 import { animal, OFERTAS_ILEGAIS } from '../dados/animais';
 import { adotarPet, podeTerPet } from '../sistemas/pets';
 import { nomeDePet } from '../sistemas/mercado';
@@ -21,7 +21,7 @@ const seusBichos = (v: Vida): Pessoa[] => vinculosVivos(v).filter(x => x.p.espec
 const ofertaDoAno = (c: Ctx) => OFERTAS_ILEGAIS[Math.floor(c.v.t / 12 + c.v.id.length) % OFERTAS_ILEGAIS.length];
 /** O bem some; o financiamento, não: a parcela continua (sem o bem). */
 function semBem(v: Vida, id: string): void {
-  v.financas.bens = v.financas.bens.filter(x => x.id !== id);
+  tirarBem(v.financas, id);
   v.financas.dividas = v.financas.dividas.map(d => (d.bemId === id ? { ...d, bemId: undefined, descricao: `${d.descricao} (roubada)` } : d));
 }
 const motos = (v: Vida) => v.financas.bens.filter(b => b.tipo === 'veiculo' && categoriaDoVeiculo(b) === 'moto' && !b.parado);

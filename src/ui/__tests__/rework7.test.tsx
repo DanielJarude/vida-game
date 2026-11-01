@@ -209,7 +209,12 @@ describe('compra: adquirir → possuir → usar → efeito → save', () => {
 
 describe('relação: agir → o vínculo muda → a ficha mostra o laço do motor', () => {
   it('o laço em palavras é o do vínculo; depois de agir, muda junto (e a história ganha o passo)', () => {
-    const v = vida(30, x => { x.trabalho.atual = undefined; contratar(x, criarRng(2), ocupacao('assistente_adm')); x.financas.conta = 60000; });
+    // VIDA 12.5: a primeira semente com a mãe viva aos 30 (a sequência das vidas de teste muda com o conteúdo).
+    let v!: Vida;
+    for (let semente = 7; semente < 40; semente++) {
+      v = vida(30, x => { x.trabalho.atual = undefined; contratar(x, criarRng(2), ocupacao('assistente_adm')); x.financas.conta = 60000; }, semente);
+      if (Object.values(v.vinculos).some(x => x.parentesco === 'mae' && v.pessoas[x.pessoaId].vivo)) break;
+    }
     const mae = Object.values(v.vinculos).find(x => x.parentesco === 'mae' && v.pessoas[x.pessoaId].vivo)!;
     mae.proximidade = 30; mae.tensao = 10; mae.confianca = 60;
     render(<Ligado v0={v} tela={(vv, agir) => <Pessoas vida={vv} agir={agir} aberta={mae.pessoaId} abrir={nada} />} />);

@@ -200,7 +200,7 @@ export const ADULTO: Conteudo[] = [
   },
   {
     // Substituído pelo sistema de veículos (problemas com conserto, adiamento, venda): fica para saves antigos.
-    id: 'adu_carro_quebra', tipo: 'acontecimento', idade: [18, 85], tema: 'dinheiro', repetir: 4,
+    id: 'adu_carro_quebra', tipo: 'acontecimento', idade: [18, 85], tema: 'dinheiro', repetir: 4, manual: true,
     quando: () => false,
     narrar: c => {
       const carro = c.v.financas.bens.find(b => b.tipo === 'veiculo' && categoriaDoVeiculo(b) === 'carro')!;
@@ -233,7 +233,7 @@ export const ADULTO: Conteudo[] = [
     }
   },
   {
-    id: 'adu_infiltracao', tipo: 'acontecimento', idade: [20, 90], tema: 'casa', repetir: 7,
+    id: 'adu_infiltracao', tipo: 'acontecimento', idade: [20, 90], tema: 'casa', repetir: 7, manual: true,
     // Substituído pela manutenção espaçada dos imóveis (`sistemas/imoveis`).
     quando: () => false,
     narrar: c => {

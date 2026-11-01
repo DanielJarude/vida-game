@@ -443,6 +443,7 @@ function trabalho(v: Vida, r: Rng, f: Pessoa, _vin: Vinculo, i: number, cota: Co
   if (oc && f.renda > 0 && i >= (f.genero === 'feminino' ? 62 : 65) && r.chance(0.6)) {
     f.renda = Math.max(1620, Math.round(f.renda * 0.7));
     f.ocupacao = flex(f.genero, 'aposentado', 'aposentada', 'aposentade');
+    f.ocupacaoId = undefined; // VIDA 12.5: o aposentado não "indica onde trabalha"
     comunicar(v, f, cota, { texto: `${f.nome} se aposentou.`, tipo: 'trabalho', relevancia: 'cotidiano' });
     return;
   }

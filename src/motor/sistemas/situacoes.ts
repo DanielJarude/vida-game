@@ -1500,7 +1500,7 @@ const naTrilha = (...ts: string[]) => (v: Vida) => { const t = trilhaAtual(v); r
 const DIREITO = ['direito', 'judiciario'];
 const DOCENCIA = ['educacao', 'docencia_superior', 'ensino_tecnico', 'idiomas', 'ensino_musica', 'ensino_danca'];
 const TECNOLOGIA = ['ti', 'dados', 'engenharia', 'eng_industrial', 'arquitetura', 'design', 'tecnico_industrial'];
-const SAUDE = ['enfermagem', 'fisioterapia', 'odontologia', 'psicologia', 'nutricao', 'farmacia', 'radiologia', 'saude_publica', 'cuidado'];
+const SAUDE = ['enfermagem', 'fisioterapia', 'odontologia', 'psicologia', 'nutricao', 'farmacia', 'radiologia', 'saude_publica']; // VIDA 12.5: sem 'cuidado' (a diarista vivia plantão de hospital)
 const SEGURANCA = ['pm', 'pm_oficial', 'policia_civil', 'bombeiro', 'guarda', 'penal', 'federal', 'pericia', 'vigilancia'];
 const BALCAO = ['comercio', 'atendimento', 'administrativo', 'logistica', 'vendas', 'financas', 'contabil', 'alimentacao', 'beleza'];
 const OBRA = ['construcao', 'eletrica', 'hidraulica', 'mecanica', 'marcenaria', 'manutencao', 'predial', 'reparos', 'industria'];

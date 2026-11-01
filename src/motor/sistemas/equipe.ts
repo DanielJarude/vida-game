@@ -32,6 +32,8 @@ function novoColega(v: Vida, e: Emprego, r: ReturnType<typeof rngDe>, papel: 'ch
   const oc = ocupacaoOuNula(e.ocupacaoId);
   const p = criarPessoa(v, r, { idade, municipioId: e.municipioId });
   p.ocupacao = papel === 'chefe' ? (p.genero === 'feminino' ? 'gestora' : 'gestor') : oc ? (p.genero === 'feminino' ? oc.nome[1] : oc.nome[0]) : p.ocupacao;
+  // VIDA 12.5 (CAR-11.8): o colega é da profissão (antes, sem ocupacaoId: a rede profissional nunca indicava ninguém).
+  if (papel === 'colega' && oc) p.ocupacaoId = oc.id;
   p.renda = Math.round(e.salario * (papel === 'chefe' ? 1.7 : papel === 'subordinado' ? 0.7 : 1));
   const vin = vincular(v, p, { origem: 'trabalho', proximidade: papel === 'chefe' ? 20 : 28, convivio: ['trabalho'], estagio: 'colega' });
   vin.ambiente = ambiente(e);
@@ -103,7 +105,7 @@ export function processarEquipe(v: Vida): void {
       v.vinculos[id].convivio = v.vinculos[id].convivio.filter(c => c !== 'trabalho');
       if (eq.rivalId === id) delete eq.rivalId;
       if (eq.mentorId === id) delete eq.mentorId;
-      escrever(v, { texto: `${p.nome} saiu para outra empresa. ${v.vinculos[id].proximidade >= 45 ? 'Prometeram manter contato.' : 'A mesa dele ficou vazia por um mês.'}`, relevancia: 'cotidiano', tema: 'trabalho', pessoas: [id] });
+      escrever(v, { texto: `${p.nome} saiu para outra empresa. ${v.vinculos[id].proximidade >= 45 ? 'Prometeram manter contato.' : `A mesa ${p.genero === 'feminino' ? 'dela' : 'dele'} ficou vazia por um mês.`}`, relevancia: 'cotidiano', tema: 'trabalho', pessoas: [id] });
     }
   }
   if (eq.colegas.length < 2) eq.colegas.push(novoColega(v, e, r, 'colega').id);

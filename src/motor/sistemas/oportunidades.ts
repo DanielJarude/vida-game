@@ -22,7 +22,7 @@ import { OCUPACOES_DE_ATLETA } from './esporte';
 import { conviteDaEspecialidade } from './medicina';
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
-import type { Dominio, NaturezaDaOportunidade, Oportunidade, TipoOportunidade, Vida } from '../tipos';
+import type { Dominio, NaturezaDaOportunidade, Oportunidade, Pessoa, TipoOportunidade, Vida, Vinculo } from '../tipos';
 import { escrever, idade, idadePessoa, lembrarCom, marcarFato, novoId, parentes, temFato, vinculosVivos, somarExperiencia } from '../nucleo';
 import { ocupacao, ocupacaoOuNula, type Ocupacao } from '../dados/ocupacoes';
 import { cursoOuNulo } from '../dados/cursos';
@@ -43,7 +43,7 @@ import { flex, ge } from '../texto';
 import { apresentarNoFestival, viveDoOficio } from './cena';
 import { mercadoDoTrabalho, oportunidadeCoerente } from './mercados';
 import { carreiraEspecialAtiva, situacaoProfissional } from './situacaoProfissional';
-import { distanciaDaCarreira, LIMIAR_MUDANCA, naturezaDaOportunidade, pontuarIndicacao } from './indicacoes';
+import { distanciaDaCarreira, indicacaoPlausivel, LIMIAR_MUDANCA, naturezaDaOportunidade, ocupacaoDeReferencia, pontuarIndicacao } from './indicacoes';
 
 export const LIMITE_OPORTUNIDADES = 4;
 
@@ -83,7 +83,8 @@ export function processarOportunidades(v: Vida, r: Rng): void {
   // Portas que expiraram (ou deixaram de fazer sentido).
   // (Também as que deixaram de caber na trajetória — inclusive as que um save antigo trouxe: `mercados.oportunidadeCoerente`.)
   // REWORK 10.6 · D3: o convite de alguém que passou sem resposta fica dito (uma linha) — e sai das portas abertas.
-  for (const o of v.caminhos.oportunidades) if (o.tFim <= v.t && o.pessoaId && v.pessoas[o.pessoaId]?.vivo) escrever(v, { texto: `O convite de ${v.pessoas[o.pessoaId].nome} passou sem resposta (${o.titulo.charAt(0).toLowerCase()}${o.titulo.slice(1)}).`, relevancia: 'cotidiano', tema: 'trabalho', pessoas: [o.pessoaId] });
+  for (const o of v.caminhos.oportunidades) if (o.tFim <= v.t && o.pessoaId && v.pessoas[o.pessoaId]?.vivo) escrever(v, { texto: `O convite de ${v.pessoas[o.pessoaId].nome} passou sem resposta (${o.titulo.charAt(0).toLowerCase()}${o.titulo.slice(1)}).`, relevancia: (v.vinculos[o.pessoaId]?.proximidade ?? 0) >= 60 ? 'cotidiano' : 'tecnico', // VIDA 12.5: era a linha de trabalho mais frequente da biografia
+ tema: 'trabalho', pessoas: [o.pessoaId] });
   v.caminhos.oportunidades = v.caminhos.oportunidades.filter(o => o.tFim > v.t && (!o.pessoaId || v.pessoas[o.pessoaId]?.vivo) && oportunidadeCoerente(v, o) === true && !conviteObsoleto(v, o));
   if (v.morte) return;
   const b = v.educacao.basica;
@@ -123,7 +124,10 @@ export function processarOportunidades(v: Vida, r: Rng): void {
   // trilha de um conhecido sorteado. Quem tem carreira especial viva (o atleta, o técnico, mesmo sem clube) recebe
   // raramente, e de preferência da própria área; a de fora continua possível, dita como mudança de carreira.
   if (i >= 17 && i <= 64 && (semTrabalho(v) || trabalhoFraco(v)) && !v.trabalho.aposentadoria && podeGerar(v, 'indicacao', 1)) {
-    const conhecidos = vinculosVivos(v).filter(x => x.p.ocupacaoId && x.p.renda > 0 && x.p.municipioId === v.moradia.municipioId && idadePessoa(v, x.p) >= 18 && x.vin.proximidade >= 40 && !x.p.especie);
+    // VIDA 12.5 (CAR-11.8): o aposentado não "indica onde trabalha"; o colega de trabalho (do emprego de agora ou de um
+    // antigo) conta com menos intimidade — é a rede profissional, que antes nunca indicava.
+    const conhecidos = vinculosVivos(v).filter(x => x.p.ocupacaoId && x.p.renda > 0 && !x.p.ocupacao?.startsWith('aposentad') && x.p.municipioId === v.moradia.municipioId && idadePessoa(v, x.p) >= 18
+      && (x.vin.proximidade >= 40 || (x.vin.origem === 'trabalho' && x.vin.proximidade >= 25)) && !x.p.especie);
     const sp = situacaoProfissional(v);
     const especial = carreiraEspecialAtiva(sp);
     // Quem está sem trabalho ou no informal é quem mais recebe indicação (e quem mais precisa).
@@ -132,22 +136,27 @@ export function processarOportunidades(v: Vida, r: Rng): void {
       // (O sorteio do conhecido continua no gerador principal — a sequência de números não muda; ele ganha um peso.)
       const sorteado = r.pick(conhecidos);
       const rr = rngDe(v.id, 'indicacao', v.t);
-      const opcoes = conhecidos.flatMap(x => {
+      // VIDA 12.5: quem indicou nos últimos 3 anos não repete a oferta (antes, o mesmo porteiro oferecia a mesma vaga a cada ano).
+      const opcoes = conhecidos.filter(x => !(v.t - (v.fatos[`indicou_${x.p.id}`] ?? -999) < 36)).flatMap(x => {
         const oc = entradaPelaPessoa(v, x.p.ocupacaoId!);
-        return oc ? [{ quem: x.p, oc, nota: pontuarIndicacao(v, oc) + (x === sorteado ? 0.6 : 0) + x.vin.proximidade / 100 + rr.next() * 0.4 }] : [];
+        return oc ? [{ quem: x.p, vin: x.vin, oc, nota: pontuarIndicacao(v, oc) + (x === sorteado ? 0.6 : 0) + x.vin.proximidade / 100 + rr.next() * 0.4 }] : [];
       });
       const daArea = opcoes.filter(c => distanciaDaCarreira(v, c.oc) < LIMIAR_MUDANCA);
+      // VIDA 12.5 (CAR-11.8): o piso — nada de "diarista" para a médica; sem nada plausível na rede, quase sempre não há
+      // indicação (às vezes, 1 em 10, a de fora vem — dita como mudança de carreira).
+      const plausiveis = opcoes.filter(c => indicacaoPlausivel(v, c.oc));
+      const comuns = plausiveis.length ? plausiveis : rr.chance(0.1) ? opcoes : [];
       // A frequência de antes fica: só há indicação quando o conhecido sorteado tem o que indicar (a pontuação escolhe QUAL).
-      const lista = !opcoes.some(c => c.quem === sorteado.p) ? [] : !especial ? opcoes : daArea.length ? daArea : rr.chance(0.35) ? opcoes : [];
+      const lista = !opcoes.some(c => c.quem === sorteado.p) ? [] : !especial ? comuns : daArea.length ? daArea : rr.chance(0.35) ? opcoes : [];
       const melhor = lista.sort((a, b) => b.nota - a.nota)[0];
       if (melhor) {
-        const { quem, oc } = melhor;
+        const { quem, vin, oc } = melhor;
         const pc = porContaPropria(oc);
         const natureza = naturezaDaOportunidade(v, { tipo: 'indicacao', ocupacaoId: oc.id });
-        const onde = pc ? 'passar serviço para você' : 'indicar você onde trabalha';
         const outra = natureza !== 'mudanca_carreira' ? '' : especial && sp.profissao ? ` Seria outra carreira: antes do sim, a vida pergunta o que fazer com a de ${sp.profissao}.` : ' Seria mudar de área.';
-        novaOportunidade(v, { tipo: 'indicacao', ocupacaoId: oc.id, pessoaId: quem.id, meses: 12, chave: 'indicacao', bonus: 0.28, natureza, titulo: `Indicação de ${quem.nome}`,
-          texto: `${quem.nome}, que trabalha como ${quem.ocupacao}, disse que pode ${onde}: ${nomeOcupacao(v, oc)}${pc ? ' — por conta própria (clientes seus, preço seu, sem patrão nem salário fixo; sem entrevista)' : ' — vaga de emprego, com entrevista'}.${outra}` });
+        const op = novaOportunidade(v, { tipo: 'indicacao', ocupacaoId: oc.id, pessoaId: quem.id, meses: 12, chave: 'indicacao', bonus: vin.origem === 'trabalho' ? 0.32 : 0.28, natureza, titulo: `Indicação de ${quem.nome}`,
+          texto: `${fraseDaIndicacao(v, quem, vin, oc, pc, rr)}${pc ? ' Por conta própria: clientes seus, preço seu, sem patrão nem salário fixo (sem entrevista).' : ' É vaga de emprego, com entrevista.'}${outra}` });
+        if (op) v.fatos[`indicou_${quem.id}`] = v.t;
       }
     }
   }
@@ -198,7 +207,47 @@ export function processarOportunidades(v: Vida, r: Rng): void {
     const oc = ocupacao(e.ocupacaoId);
     if (experienciaNaTrilha(v, oc.trilha) >= 36 && r.chance(0.15)) {
       const melhor = OCUPACOES_POR_TRILHA(oc.trilha).filter(x => x.nivel === oc.nivel + 1 && x.modalidade === oc.modalidade && !x.concurso && !x.entrada && elegibilidade(v, x).grau === 'permitido')[0] ?? oc;
-      novaOportunidade(v, { tipo: 'proposta', ocupacaoId: melhor.id, meses: 12, chave: 'proposta', bonus: 0.18, titulo: 'Uma proposta', texto: `Uma concorrente${melhor.id !== oc.id ? ` quer você como ${nomeOcupacao(v, melhor)}` : ' quer você para a mesma função'}, com salário melhor. Seria recomeçar num lugar novo, sem os anos de casa.` });
+      // VIDA 12.5 (CAR-11.8): a proposta do concorrente tinha um texto só (19 vezes iguais).
+      const cargo = melhor.id !== oc.id ? `como ${nomeOcupacao(v, melhor)}` : 'para a mesma função';
+      const texto = rngDe(v.id, 'proposta_texto', v.t).pick([
+        `Uma concorrente quer você ${cargo}, com salário melhor. Seria recomeçar num lugar novo, sem os anos de casa.`,
+        `Um headhunter ligou: uma empresa do mesmo ramo procura alguém ${cargo} — e o seu nome apareceu em mais de uma conversa.`,
+        `Quem já foi seu chefe agora está em outro lugar e quer levar você junto, ${cargo}. O salário é maior; o risco também.`,
+        `Do outro lado da rua, a concorrência faz as contas: oferece ${melhor.id !== oc.id ? `o cargo de ${nomeOcupacao(v, melhor)}` : 'a mesma função'} e um salário que a sua empresa não cobriria.`,
+        `Um cliente que conhece o seu trabalho contou que a empresa dele está contratando ${cargo}. Ele mesmo marcou a conversa.`
+      ]);
+      novaOportunidade(v, { tipo: 'proposta', ocupacaoId: melhor.id, meses: 12, chave: 'proposta', bonus: 0.18, titulo: 'Uma proposta', texto });
+    }
+  }
+
+  // VIDA 12.5 (CAR-11.8): quem está empregado também ouve da rede — o contato da mesma área, um degrau acima, lembra de
+  // você para a vaga de cima; ou, entre quem já tem estrada, a proposta de sociedade (abrir o escritório, a clínica
+  // juntos). Sorteio derivado (a sequência principal não muda).
+  if (e && !e.posAposentadoria && e.contrato !== 'eletivo' && e.contrato !== 'militar' && i >= 24 && i <= 60 && podeGerar(v, 'indicacao_acima', 4)) {
+    const ra = rngDe(v.id, 'indicacao_acima', v.t);
+    const atual = ocupacaoOuNula(e.ocupacaoId);
+    if (atual && atual.trilha !== 'atleta' && atual.trilha !== 'politica' && !carreiraEspecialAtiva(situacaoProfissional(v)) && ra.chance(0.2)) {
+      const contatos = vinculosVivos(v).filter(x => {
+        const dele = x.p.ocupacaoId ? ocupacaoOuNula(x.p.ocupacaoId) : undefined;
+        return !!dele && dele.trilha === atual.trilha && dele.nivel >= atual.nivel && x.p.renda > 0 && !x.p.ocupacao?.startsWith('aposentad') && !x.p.especie
+          && x.p.municipioId === v.moradia.municipioId && x.vin.proximidade >= 30 && !(v.t - (v.fatos[`indicou_${x.p.id}`] ?? -999) < 36);
+      });
+      const quem = contatos.length ? ra.pick(contatos) : undefined;
+      const pode = (x: Ocupacao) => x.id !== e.ocupacaoId && !x.concurso && !x.entrada && x.contrato !== 'estagio' && x.contrato !== 'aprendiz' && elegibilidade(v, x).grau === 'permitido';
+      const socio = quem && atual.nivel >= 3 && experienciaNaTrilha(v, atual.trilha) >= 60 && ra.chance(0.35)
+        ? OCUPACOES_POR_TRILHA(atual.trilha).filter(x => porContaPropria(x) && x.nivel >= atual.nivel && pode(x)).sort((a, b) => a.nivel - b.nivel)[0] : undefined;
+      const acima = quem && !socio ? OCUPACOES_POR_TRILHA(atual.trilha).filter(x => x.nivel === atual.nivel + 1 && !porContaPropria(x) && pode(x))[0] : undefined;
+      const oc = socio ?? acima;
+      if (quem && oc) {
+        const ela = quem.p.genero === 'feminino';
+        const deOnde = quem.vin.origem === 'trabalho' ? `que trabalhou com você` : quem.vin.parentesco ? 'da família' : `${ela ? 'amiga' : 'amigo'} da área`;
+        const op = novaOportunidade(v, socio
+          ? { tipo: 'indicacao', ocupacaoId: oc.id, pessoaId: quem.p.id, meses: 12, chave: 'indicacao_acima', natureza: 'sociedade', titulo: `Sociedade com ${quem.p.nome}`,
+            texto: `${quem.p.nome} (${quem.p.ocupacao}, ${deOnde}) quer abrir o próprio negócio e procura ${ela ? 'uma sócia' : 'um sócio'} de confiança: ${nomeOcupacao(v, oc)}, por conta própria. Sem chefe e sem salário fixo — o que entrar é dos dois.` }
+          : { tipo: 'indicacao', ocupacaoId: oc.id, pessoaId: quem.p.id, meses: 12, chave: 'indicacao_acima', bonus: 0.3, natureza: 'emprego', titulo: `Indicação de ${quem.p.nome}`,
+            texto: `${quem.p.nome} (${quem.p.ocupacao}, ${deOnde}) contou que onde ${ela ? 'ela' : 'ele'} está vão contratar ${nomeOcupacao(v, oc)} — um degrau acima do seu — e quer levar o seu nome. É vaga de emprego, com entrevista.` });
+        if (op) v.fatos[`indicou_${quem.p.id}`] = v.t;
+      }
     }
   }
 
@@ -277,12 +326,15 @@ function portasDaFormacao(v: Vida): void {
   // REWORK 11 · Fase B: a carreira especial viva (mesmo sem clube) recebe pouco — e o que vier é dito pelo que é.
   if (i >= 21 && i <= 50 && (semTrabalho(v) || trabalhoFraco(v)) && !v.trabalho.aposentadoria && podeGerar(v, 'indicacao_formacao', 4) && (!carreiraEspecialAtiva(situacaoProfissional(v)) || r.chance(0.3))) {
     const areas = [...new Set(v.educacao.concluidos.filter(c => c.nivel !== 'livre').map(c => c.area))];
+    const alvoDaTurma = Math.max(1, ocupacaoDeReferencia(v)?.nivel ?? 2);
     for (const area of areas) {
-      const quem = exColegasDaArea(v, area).find(p => p.municipioId === v.moradia.municipioId);
+      // VIDA 12.5: quem indica trabalha na área (antes, qualquer ex-colega, até o que mudou de ramo).
+      const quem = exColegasDaArea(v, area).find(p => p.municipioId === v.moradia.municipioId && !p.ocupacao?.startsWith('aposentad') && (!p.ocupacaoId || !!ocupacaoOuNula(p.ocupacaoId)?.area?.includes(area as never)));
       if (!quem || !r.chance(0.3)) continue;
       const oc = OCUPACOES.filter(o => o.area?.includes(area as never) && !o.concurso && !o.entrada && o.contrato !== 'estagio' && o.contrato !== 'aprendiz' && v.trabalho.atual?.ocupacaoId !== o.id)
         .filter(o => { const d = elegibilidade(v, o); return d.grau === 'permitido' || d.grau === 'improvavel'; })
-        .sort((a, b) => a.nivel - b.nivel)[0];
+        // VIDA 12.5: o degrau mais perto do de referência (antes, sempre o mais baixo: cargo júnior para quem é sênior).
+        .sort((a, b) => Math.abs(a.nivel - alvoDaTurma) - Math.abs(b.nivel - alvoDaTurma) || b.nivel - a.nivel)[0];
       if (!oc) continue;
       const vin = v.vinculos[quem.id];
       const anos = vin?.formacao?.tFim !== undefined ? Math.max(1, Math.floor((v.t - vin.formacao.tFim) / 12)) : 0;
@@ -317,6 +369,33 @@ import { OCUPACOES } from '../dados/ocupacoes';
 const OCUPACOES_POR_TRILHA = (trilha: string): Ocupacao[] => OCUPACOES.filter(x => x.trilha === trilha);
 
 /** O que um conhecido pode indicar: a entrada da trilha dele que cabe em você, até o nível dele (a regra de antes). */
+/**
+ * VIDA 12.5 (CAR-11.8): a frase da indicação pelo laço (a mãe, o irmão, o colega de trabalho, o amigo) — antes, um
+ * modelo só: "X, que trabalha como Y, disse que pode indicar você onde trabalha: Z".
+ */
+function fraseDaIndicacao(v: Vida, quem: Pessoa, vin: Vinculo, oc: Ocupacao, pc: boolean, rr: Rng): string {
+  const n = quem.nome, ela = quem.genero === 'feminino', ele = ela ? 'ela' : 'ele', vaga = nomeOcupacao(v, oc), dele = quem.ocupacao;
+  const par = vin.parentesco;
+  if (pc) return rr.pick([
+    `${n}, que trabalha como ${dele}, disse que pode passar serviço para você: ${vaga}.`,
+    `${n} anda com mais clientes do que dá conta e quer dividir: serviço de ${vaga}.`,
+    `${n} conhece gente precisando de ${vaga} e deu o seu telefone.`
+  ]);
+  if (vin.origem === 'trabalho') return rr.pick([
+    `${n}, que trabalhou com você, mandou mensagem: onde ${ele} está agora precisam de ${vaga}. "Lembrei de você na hora."`,
+    `${n}, colega dos tempos de trabalho, avisou que vai abrir uma vaga de ${vaga} onde ${ele} trabalha — e que fala de você para quem decide.`
+  ]);
+  if (par === 'mae' || par === 'pai') return rr.pick([
+    `${par === 'mae' ? 'Sua mãe' : 'Seu pai'} conversou com o pessoal de onde trabalha (${dele}): estão precisando de ${vaga}, e o seu nome já foi dito.`,
+    `${par === 'mae' ? 'Sua mãe' : 'Seu pai'} chegou em casa com a notícia: no trabalho ${ela ? 'dela' : 'dele'} procuram ${vaga}.`
+  ]);
+  return rr.pick([
+    `${n}, que trabalha como ${dele}, disse que pode indicar você onde trabalha: ${vaga}.`,
+    `Onde ${n} trabalha (${dele}) abriu uma vaga de ${vaga}, e ${ele} prometeu levar o seu nome.`,
+    `${n} ouviu que estão contratando ${vaga} lá onde ${ele} trabalha — e já falou de você.`
+  ]);
+}
+
 function entradaPelaPessoa(v: Vida, ocupacaoId: string): Ocupacao | undefined {
   const dele = ocupacaoOuNula(ocupacaoId);
   if (!dele) return undefined;

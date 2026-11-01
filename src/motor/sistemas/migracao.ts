@@ -271,7 +271,7 @@ export function migrar(v: Vida, r: Rng, destinoId: string, motivo: MotivoMigraca
   marcarFato(v, 'migrou');
 
   // 6. A história, em palavras de gente.
-  escrever(v, { texto: textoDaMigracao(v, origemId, destinoId, motivo), relevancia: 'marco', tema: 'lugar', escolha: true });
+  escrever(v, { texto: textoDaMigracao(v, origemId, destinoId, motivo), relevancia: 'marco', tema: 'lugar', escolha: true, fato: { tipo: 'm_migracao', dados: { para: municipio(destinoId).nome } } });
   marcar(v, 'mudanca_cidade', `${paisNatal(v) === pais ? 'Voltou' : 'Mudou-se'} ${paraPais(pais)}, aos ${idade(v)}.`, 3);
   // REWORK 11 · ROT-11.3: mudanças em sequência não se empilham inteiras (a segunda em dois anos já encontra a vida
   // na mala), e a transferência de clube ou empresa chega com a vida arrumada por quem chamou.

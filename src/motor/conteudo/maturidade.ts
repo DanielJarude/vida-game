@@ -80,7 +80,8 @@ export const MATURIDADE: Conteudo[] = [
     narrar: c => ({ texto: 'Um tombo no banheiro terminou em fratura no quadril e cirurgia. A recuperação foi lenta.', relevancia: 'biografia', tom: 'ruim', efeito: () => { saude(c, -12); dinheiro(c, c.v.financas.planoDeSaude ? 0 : -3000); } })
   },
   {
-    id: 'mat_solidao', tipo: 'decisao', idade: [65, 100], tema: 'amizade', repetir: 6,
+    // VIDA 12.5: sem amigos nem cônjuge, a solidão é o assunto do ano (antes, elegível em 72 anos e nunca sorteada).
+    id: 'mat_solidao', tipo: 'decisao', idade: [65, 100], tema: 'amizade', repetir: 6, peso: 4,
     quando: c => amigos(c.v).length === 0 && !P.conjuge(c.v).length,
     titulo: 'A casa quieta',
     texto: () => 'A casa anda quieta demais. Tem dias em que a única conversa é com o moço da padaria.',

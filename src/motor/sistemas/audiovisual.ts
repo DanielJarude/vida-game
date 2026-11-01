@@ -251,7 +251,7 @@ export function concluirProducao(v: Vida, c: ContratoAV, r: Rng | undefined): vo
   }
   if (premio) {
     const texto = premio.venceu ? `Ganhou: ${textoDoPremio(premio)}.` : `Indicação: ${textoDoPremio(premio)}.`;
-    escrever(v, { texto, relevancia: premio.venceu ? 'marco' : 'biografia', tema: 'trabalho', tom: 'bom' });
+    escrever(v, { texto, relevancia: premio.venceu ? 'marco' : 'biografia', tema: 'trabalho', tom: 'bom', fato: { tipo: 'm_premio', dados: { nome: premio.nome, venceu: premio.venceu ? 1 : 0 } } });
     marcar(v, 'conquista', texto, premio.venceu ? 3 : 2, { dominio: 'teatro' });
     // REWORK 10.5 · FAM-03: o prêmio põe o nome na frente do público na medida do alcance dele (o da cidade não é o
     // internacional) — e vale também para quem ainda não tinha nome (antes, só somava a quem já tinha notoriedade).

@@ -141,6 +141,8 @@ export function receberCoisa(v: Vida, id: string, preco: number, dada = false): 
 export function disponibilidadeVenderCoisa(v: Vida, coisaTidaId: string): Veredito {
   const t = coisasDaVida(v).find(x => x.id === coisaTidaId);
   if (!t) return bloqueio('impossivel', 'Isso não é mais seu.');
+  // VIDA 12.5 (B2): o que está emprestado está na casa de outra pessoa.
+  if (t.emprestadaA) return bloqueio('incompativel', 'Está emprestado: primeiro, pedir de volta.');
   return PERMITIDO;
 }
 

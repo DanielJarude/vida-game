@@ -7,7 +7,7 @@
 import { unidadeDeConta } from './local';
 import type { Conteudo, Ctx, Resultado } from './base';
 import type { Veiculo } from '../tipos';
-import { vinculosVivos, idadePessoa, lembrarCom } from '../nucleo';
+import { vinculosVivos, idadePessoa, lembrarCom, tirarBem } from '../nucleo';
 import { dinheiro as fmt, flex } from '../texto';
 import { estresse, custa } from './efeitos';
 import { podeRenegociarFinanciamento, renegociarFinanciamento } from '../sistemas/obrigacoes';
@@ -50,7 +50,7 @@ export const MATERIAL: Conteudo[] = [
           const b = c.v.financas.bens.find(x => x.id === d.bemId);
           const bruto = b ? (b.tipo === 'veiculo' ? valorDeVenda(b) : valorDeVendaImovel(b)) : 0;
           const liquido = bruto - d.saldo;
-          c.v.financas.bens = c.v.financas.bens.filter(x => x.id !== d.bemId);
+          tirarBem(c.v.financas, d.bemId);
           c.v.financas.dividas = c.v.financas.dividas.filter(x => x.id !== d.id);
           c.v.financas.conta += liquido;
           const morava = c.v.moradia.imovelId === d.bemId;
@@ -80,10 +80,12 @@ export const MATERIAL: Conteudo[] = [
         resolver: com(carroParado, (c, b) => { const p = b.problema!; pagar(c.v, p.custo); b.problema = undefined; b.estado = Math.min(b.usado ? 92 : 100, b.estado + 30); (b.historia ??= []).push({ t: c.v.t, texto: `Consertou ${p.texto} (${fmt(p.custo)}).` }); return { texto: 'Duas semanas depois, voltou a rodar.', memoria: null }; }) },
       { id: 'vender', texto: 'Vender como está', resolver: com(carroParado, (c, b) => {
         const d = c.v.financas.dividas.find(x => x.bemId === b.id);
-        const liquido = valorDeVenda(b) - (d?.saldo ?? 0);
-        c.v.financas.bens = c.v.financas.bens.filter(x => x.id !== b.id);
-        c.v.financas.dividas = c.v.financas.dividas.filter(x => x.bemId !== b.id);
-        c.v.financas.conta += liquido;
+        const venda = Math.max(0, valorDeVenda(b));
+        tirarBem(c.v.financas, b.id);
+        // VIDA 12.5: a venda quita o que der do financiamento; o que sobrar da dívida continua (antes, a conta ficava
+        // negativa sem aviso quando o financiamento passava do valor do carro).
+        if (d && d.saldo > venda) c.v.financas.dividas = c.v.financas.dividas.map(x => (x === d ? { ...x, saldo: x.saldo - venda, bemId: undefined, descricao: `${x.descricao} (o carro foi vendido)` } : x));
+        else { c.v.financas.dividas = c.v.financas.dividas.filter(x => x.bemId !== b.id); c.v.financas.conta += venda - (d?.saldo ?? 0); }
         return { texto: `Vendeu para um mecânico por ${fmt(Math.max(0, valorDeVenda(b)))}.`, memoria: `Vendeu ${textoVeiculo(b)} ${gv(b, 'quebrado', 'quebrada')}, depois de ${Math.max(1, Math.round((c.v.t - b.tCompra) / 12))} anos.`, relevancia: 'cotidiano' };
       }) },
       { id: 'parar', texto: 'Deixar parado por enquanto', resolver: com(carroParado, (_c, b) => { b.parado = true; return { texto: 'Ficou na garagem. Sem conserto, sem condução — e sem gastar com ele, por ora.', memoria: null }; }) }

@@ -223,7 +223,11 @@ export function lancarObra(v: Vida, r: Rng): Obra {
   const qp = publico / 100 * 0.3 + habilidade(v, d) / 100 * 0.12 + nomePor(v, 'arte') / 600 + rp.normal() * 0.17;
   const comercial: Obra['recepcao'] = qp >= 0.6 ? 3 : qp >= 0.45 ? 2 : qp >= 0.28 ? 1 : 0;
   const lista = TITULOS[d] ?? TITULOS.musica!;
-  const titulo = lista[((v.caminhos.obras?.length ?? 0) + Math.floor(v.t / 12)) % lista.length];
+  // VIDA 12.5: a contagem das obras não para em 20 (a lista guarda só as últimas 20; antes, a partir daí, dois
+  // lançamentos no mesmo ano saíam com o mesmo título).
+  const feitas = v.fatos['obras_lancadas'] ?? v.caminhos.obras?.length ?? 0;
+  v.fatos['obras_lancadas'] = feitas + 1;
+  const titulo = lista[(feitas + Math.floor(v.t / 12)) % lista.length];
   const renda = Math.round([0, 1500, 6000, 22000][comercial] * Math.max(0.4, publico / 50) / 100) * 100;
   // A obra que marcou pode ser indicada (fictício, do universo desta vida): um prêmio da música independente, um prêmio literário.
   const nomePremio = d === 'musica' ? 'o prêmio da música independente' : d === 'escrita' ? 'um prêmio literário nacional' : d === 'teatro' ? 'o prêmio de teatro da cidade' : d === 'danca' ? 'o prêmio de dança da cidade' : 'o salão de artes da região';
@@ -251,7 +255,7 @@ export function lancarObra(v: Vida, r: Rng): Obra {
   if (melhor >= 2) marcar(v, 'conquista', texto, melhor >= 3 ? 3 : 2, { dominio: d });
   if (premio) {
     const tp = premio.venceu ? `Ganhou ${premio.nome} com ${oque}.` : `${oque.charAt(0).toUpperCase()}${oque.slice(1)} foi ${d === 'escrita' ? 'finalista de' : 'indicado a'} ${premio.nome.replace(/^o /, '')}.`;
-    escrever(v, { texto: tp, relevancia: premio.venceu ? 'marco' : 'biografia', tema: 'trabalho', tom: 'bom' });
+    escrever(v, { texto: tp, relevancia: premio.venceu ? 'marco' : 'biografia', tema: 'trabalho', tom: 'bom', fato: { tipo: 'm_premio', dados: { nome: premio.nome, venceu: premio.venceu ? 1 : 0 } } });
     marcar(v, 'conquista', tp, premio.venceu ? 3 : 2, { dominio: d });
   }
   // Quem repercute é chamado: um festival, um edital, uma casa maior (a porta abre; entrar é escolha).

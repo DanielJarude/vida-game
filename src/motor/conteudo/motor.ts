@@ -364,7 +364,10 @@ export function montarFila(v: Vida): void {
     incluir({ id: x.c.id, t: v.t, papeis: Object.fromEntries(Object.entries(x.ctx.p).map(([k, p]) => [k, p.id])), prioridade: x.pr, ...(x.pr >= 4 ? { urgente: true } : {}) });
   }
   const orcamento = orcamentoDeDecisoes(v);
-  let espaco = orcamento - (aberta ? 1 : 0) - out.filter(x => !x.urgente).length;
+  // VIDA 12.5 (CAR-11.9): a decisão de contrato aberta (renovação, proposta: urgentes) não gasta o espaço do ano — antes,
+  // o atleta de uma frente só perdia a cena da temporada para o contrato, ano após ano.
+  const custoDaAberta = aberta && (conteudoPorId(aberta)?.prioridade ?? 0) < 4 ? 1 : 0;
+  let espaco = orcamento - custoDaAberta - out.filter(x => !x.urgente).length;
   // A vida cheia, às vezes, tem uma segunda decisão sorteada no ano — de outro assunto que a primeira.
   if (espaco > 0 && orcamento >= 2) {
     const tema = aberta ? conteudoPorId(aberta)?.tema : undefined;
@@ -377,7 +380,7 @@ export function montarFila(v: Vida): void {
   // O que não cabe neste ano espera o seguinte (uma vez); o urgente fica.
   const ordenada = out.sort((a, b) => Number(!!b.urgente) - Number(!!a.urgente) || b.prioridade - a.prioridade);
   const fica: DecisaoNaFila[] = [];
-  let livres = orcamento - (aberta ? 1 : 0);
+  let livres = orcamento - custoDaAberta;
   for (const x of ordenada) {
     if (x.urgente) { fica.push(x); continue; }
     if (livres > 0) { fica.push(x); livres--; continue; }

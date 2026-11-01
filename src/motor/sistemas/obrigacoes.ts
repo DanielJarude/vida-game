@@ -14,7 +14,7 @@
  */
 
 import type { Divida, Vida } from '../tipos';
-import { escrever, idade, lembrarCom, vinculosVivos } from '../nucleo';
+import { escrever, idade, lembrarCom, tirarBem, vinculosVivos } from '../nucleo';
 import { dinheiro as fmt } from '../texto';
 import { abalar } from './abalo';
 import { voltarParaCasaDosPais } from './moradia';
@@ -129,7 +129,7 @@ function fimDoFavor(v: Vida, motivo = 'O favor tinha prazo. Depois de três anos
 function buscaEApreensao(v: Vida, d: Divida): void {
   const f = v.financas;
   const b = f.bens.find(x => x.id === d.bemId);
-  f.bens = f.bens.filter(x => x.id !== d.bemId);
+  tirarBem(f, d.bemId);
   const leilao = b && b.tipo === 'veiculo' ? Math.round(valorDeVenda(b) * 0.7) : 0;
   const resto = Math.max(0, d.saldo - leilao);
   f.dividas = f.dividas.filter(x => x.id !== d.id);
@@ -143,7 +143,7 @@ function retomada(v: Vida, d: Divida): void {
   const b = f.bens.find(x => x.id === d.bemId);
   const leilao = b && b.tipo === 'imovel' ? Math.round(valorDeVendaImovel(b) * 0.78) : 0;
   const sobra = leilao - d.saldo;
-  f.bens = f.bens.filter(x => x.id !== d.bemId);
+  tirarBem(f, d.bemId);
   f.dividas = f.dividas.filter(x => x.id !== d.id);
   if (sobra > 0) f.conta += sobra;
   else if (sobra < 0) f.dividas.push({ id: `d${v.seq++}`, tipo: 'emprestimo', saldo: -sobra, jurosMes: 0.012, parcela: Math.max(250, Math.round(-sobra / 48)), descricao: 'O que o leilão da casa não cobriu', tInicio: v.t, prazo: 48 });

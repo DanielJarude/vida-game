@@ -10,6 +10,7 @@ import type { Empresa, Imovel, Veiculo, Vida } from '../tipos';
 import { clamp, rngDe } from '../rng';
 import { dinheiro as fmt } from '../texto';
 import { anoDe } from '../tempo';
+import { tirarBem } from '../nucleo';
 import { municipio } from '../dados/lugares';
 import { modeloVeiculo } from '../dados/bens';
 import { empresasAtivas, decidirEmpresa, disponibilidadeEmpresa, valorDaParte } from '../sistemas/empresas';
@@ -144,7 +145,7 @@ export const ACONTECIMENTOS_12: Conteudo[] = [
           const d = c.v.financas.dividas.find(x => x.bemId === b.id);
           const liquido = valorDeVenda(b, c.v) - (d?.saldo ?? 0);
           c.v.financas.conta += liquido;
-          c.v.financas.bens = c.v.financas.bens.filter(x => x.id !== b.id);
+          tirarBem(c.v.financas, b.id);
           c.v.financas.dividas = c.v.financas.dividas.filter(x => x.bemId !== b.id);
           return { texto: `Vendid${textoVeiculo(b).startsWith('a ') ? 'a' : 'o'} por procuração: ${fmt(liquido)} livres.`, memoria: `Vendeu de longe ${textoVeiculo(b)} que tinha ficado em ${municipio(b.local!).nome}.`, relevancia: 'cotidiano' };
         } },
@@ -159,7 +160,7 @@ export const ACONTECIMENTOS_12: Conteudo[] = [
     texto: c => { const b = classicoCobicado(c.v)!; return `Um colecionador viu ${textoVeiculo(b)} num encontro de carros antigos e não esqueceu: oferece ${fmt(ofertaPeloClassico(c.v, b))}. É acima do que o mercado paga hoje — e é o seu carro.`; },
     opcoes: [
       { id: 'vender', texto: 'Vender', disponivel: c => !c.v.financas.dividas.some(d => d.bemId === classicoCobicado(c.v)!.id) || 'Ainda está financiado.',
-        resolver: c => { const b = classicoCobicado(c.v)!; const valor = ofertaPeloClassico(c.v, b); c.v.financas.conta += valor; c.v.financas.bens = c.v.financas.bens.filter(x => x.id !== b.id); return { texto: `Apertaram a mão. ${fmt(valor)} — e ${textoVeiculo(b)} foi embora num caminhão fechado.`, memoria: `Vendeu ${textoVeiculo(b)} para um colecionador.`, relevancia: 'biografia', tom: 'bom' }; } },
+        resolver: c => { const b = classicoCobicado(c.v)!; const valor = ofertaPeloClassico(c.v, b); c.v.financas.conta += valor; tirarBem(c.v.financas, b.id); return { texto: `Apertaram a mão. ${fmt(valor)} — e ${textoVeiculo(b)} foi embora num caminhão fechado.`, memoria: `Vendeu ${textoVeiculo(b)} para um colecionador.`, relevancia: 'biografia', tom: 'bom' }; } },
       { id: 'recusar', texto: 'Não está à venda', resolver: c => { c.v.mente.felicidade = clamp(c.v.mente.felicidade + 1); return { texto: 'Não está à venda. Ele deixou o cartão — "se mudar de ideia".', memoria: null }; } }
     ]
   },

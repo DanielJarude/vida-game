@@ -155,7 +155,7 @@ export function concluirMudanca(v: Vida, p: Extract<Processo, { tipo: 'mudanca' 
   if (opcoes.internacional) return;
   escrever(v, {
     texto: `Mudou-se de ${municipio(origem).nome} para ${destino.nome}${p.motivo ? `, ${p.motivo}` : ''}.`,
-    relevancia: 'marco', tema: 'lugar'
+    relevancia: 'marco', tema: 'lugar', fato: { tipo: 'm_mudanca', dados: { para: destino.nome } }
   });
   abalar(v, `a mudança para ${destino.nome}`, 0, 8);
 }

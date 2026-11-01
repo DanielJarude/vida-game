@@ -11,7 +11,7 @@ import { disponivel as guardado } from '../sistemas/dinheiro';
 import type { Conteudo, Ctx } from './base';
 import * as P from './papeis';
 import { dinheiro, estresse, fato, feliz, gp, prox, tensao, custa, local } from './efeitos';
-import { emRecessao, idadePessoa, temFato } from '../nucleo';
+import { emRecessao, idadePessoa, temFato, tirarBem } from '../nucleo';
 import { entrouEmCrise, saiuDaCrise } from '../sistemas/economia';
 import { municipio } from '../dados/lugares';
 import { paisDaVida } from '../mundo/vida';
@@ -231,7 +231,8 @@ export const MUNDO: Conteudo[] = [
     })
   },
   {
-    id: 'ado_quinze', tipo: 'decisao', idade: [14, 15], tema: 'familia', biografica: true,
+    // VIDA 12.5: a festa de quinze anos perdia o sorteio (0 em 27 vidas de meninas): agora a família pergunta.
+    id: 'ado_quinze', tipo: 'decisao', idade: [14, 15], tema: 'familia', biografica: true, prioritario: true, prioridade: 2,
     papeis: { adulto: P.genitorEmCasa },
     quando: c => c.v.eu.genero === 'feminino' || c.v.eu.tratamento === 'feminino',
     titulo: 'Quinze anos',
@@ -330,7 +331,7 @@ export const MUNDO: Conteudo[] = [
       return {
         texto: seguro ? `Roubaram ${textoVeiculo(vei as Veiculo)} na porta de casa, de madrugada. O seguro pagou, depois de três meses de papelada.` : `Levaram ${textoVeiculo(vei as Veiculo)} estacionada na rua. Moto sem seguro: prejuízo inteiro.`,
         relevancia: 'biografia', tom: 'ruim',
-        efeito: () => { c.v.financas.bens = c.v.financas.bens.filter(b => b.id !== vei.id); if (seguro) dinheiro(c, Math.round(vei.valor * 0.9)); estresse(c, 8); c.v.financas.dividas = c.v.financas.dividas.filter(d => d.bemId !== vei.id || !seguro); }
+        efeito: () => { tirarBem(c.v.financas, vei.id); if (seguro) dinheiro(c, Math.round(vei.valor * 0.9)); estresse(c, 8); c.v.financas.dividas = c.v.financas.dividas.filter(d => d.bemId !== vei.id || !seguro); }
       };
     }
   },

@@ -460,7 +460,7 @@ export function viverExperiencia(v: Vida, r: Rng, id: TipoExperiencia, escolha?:
       if (dur.dias >= 14) for (const p of com) { const vin = v.vinculos[p.id]; if (vin && vin.tensao >= 40) { vin.tensao = clamp(vin.tensao + 8); efeitos.push(`duas semanas juntos não resolveram o que anda entre você e ${p.nome}`); } }
       if (temCoisa(v, 'camera')) { praticar(v, r, 'fotografia', 0.3 * fator, 1.2); efeitos.push('a câmera voltou com um álbum inteiro'); }
       const texto = par ? `Lua de mel em ${dest.nome} (${dur.nome}) com ${par.nome}.` : `Viajou para ${dest.nome} (${dur.nome})${com.length ? `, com ${nomes}` : flex(v.eu.genero, ', sozinho', ', sozinha', ', sozinhe')}.`;
-      escrever(v, { texto, relevancia: par ? 'marco' : 'biografia', tema: par ? 'amor' : 'lazer', tom: 'bom', escolha: true, pessoas: com.map(p => p.id) });
+      escrever(v, { texto, relevancia: par ? 'marco' : 'biografia', tema: par ? 'amor' : 'lazer', tom: 'bom', escolha: true, pessoas: com.map(p => p.id), fato: { tipo: 'm_viagem', dados: { destino: dest.nome, ...(par ? { lua: 1 } : {}) } } });
       if (par) viverLuaDeMel(v, par, dest.nome);
       const extra = acontecimentoDeViagem(v, r, dest.nome, com, fora, fator);
       return `${fmt(custo)} entre passagem, hospedagem e o resto. ${com.length ? 'Voltaram com fotos demais e uma história que vão repetir por anos.' : 'Voltou outra pessoa — um pouco.'}${efeitos.length ? ` ${cap(efeitos.join('; '))}.` : ''}${extra ? ` ${extra}` : ''}`;

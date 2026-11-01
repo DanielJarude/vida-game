@@ -110,7 +110,7 @@ export function retrospectiva(v: Vida): string[] {
   // A casa própria e as mudanças.
   const casa = v.biografia.find(e => e.tema === 'casa' && /Comprou (a|o|uma|um) /.test(e.texto) && !/carro|moto|bicicleta/.test(e.texto));
   if (casa) out.push({ peso: 45, texto: `Comprou a casa própria em ${anoDe(casa.t)}.` });
-  const mudancas = v.biografia.filter(e => e.tema === 'lugar' && /^Mudou-se/.test(e.texto)).length;
+  const mudancas = v.biografia.filter(e => e.tema === 'lugar' && /^Mudou-se|mudou-se para/.test(e.texto)).length;
   if (mudancas >= 2) out.push({ peso: 30, texto: `Mudou de cidade ${mudancas} vezes; o fim foi em ${nomeLugar(v.moradia.municipioId)}.` });
 
   // As quedas.

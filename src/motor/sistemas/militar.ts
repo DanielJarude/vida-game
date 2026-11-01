@@ -380,6 +380,8 @@ export function incorporarAoServico(v: Vida, r: Rng): void {
   const m = v.caminhos.militar;
   if (m && guardado) m.empregoGuardado = guardado;
   marcar(v, 'ingresso', `Serviço militar: ${nomeOcupacao(v, oc)}.`, 2, { trilha: oc.trilha });
+  // VIDA 12.5 (B6): a convocação entra na Linha da Vida (antes, só nas marcas da carreira).
+  escrever(v, { texto: `Incorporou ao serviço militar como ${nomeOcupacao(v, oc)}.`, relevancia: 'marco', tema: 'trabalho' });
   if (guardado) escrever(v, { texto: `O trabalho de ${nomeGuardado} ficou guardado durante o serviço: a lei garante a volta depois da baixa.`, relevancia: 'cotidiano', tema: 'trabalho' });
 }
 
@@ -401,7 +403,8 @@ export function perderEmpregoGuardado(v: Vida): void {
   const g = m?.empregoGuardado;
   if (!m || !g) return;
   m.empregoGuardado = undefined;
-  v.trabalho.historico.push({ ...g, tFim: v.t, motivo: 'engajou no serviço militar' });
+  // VIDA 12.5 (B5): o emprego terminou de fato na incorporação (antes, ficava no histórico até o engajamento).
+  v.trabalho.historico.push({ ...g, tFim: Math.max(g.tInicio, Math.min(v.t, m.tIngresso ?? v.t)), motivo: 'engajou no serviço militar' });
   escrever(v, { texto: `Ao engajar, deixou para trás o trabalho de ${nomeOcupacao(v, ocupacao(g.ocupacaoId))}, que estava guardado.`, relevancia: 'cotidiano', tema: 'trabalho', escolha: true });
 }
 

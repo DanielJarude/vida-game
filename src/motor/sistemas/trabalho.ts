@@ -1008,7 +1008,7 @@ export function subirDeCargo(v: Vida, e: Emprego, oc: Ocupacao, proximo: Ocupaca
     ? `${flex(ge(v), 'Promovido', 'Promovida')} a ${nomeOcupacao(v, proximo)}, depois de ${Math.round(anosNoPosto)} anos como ${anterior}.`
     : `${flex(ge(v), 'Promovido', 'Promovida')} de ${anterior} a ${nomeOcupacao(v, proximo)}${/^por /.test(e.empregador) ? '' : ` ${em(e.empregador)}`}.`;
   // Promoção é conquista: entra como marco da vida, com o degrau nomeado (nunca uma troca silenciosa de título).
-  escrever(v, { texto, relevancia: 'marco', tema: 'trabalho', tom: 'bom' });
+  escrever(v, { texto, relevancia: 'marco', tema: 'trabalho', tom: 'bom', fato: { tipo: 'm_promocao', dados: { para: nomeOcupacao(v, proximo), nivel: proximo.nivel } } });
   marcar(v, proximo.nivel >= 5 ? 'lideranca' : 'promocao', texto, proximo.nivel >= 4 ? 3 : 2, { trilha: proximo.trilha, ocupacaoId: proximo.id });
   v.fatos['promocoes'] = (v.fatos['promocoes'] ?? 0) + 1;
   abalar(v, 'a promoção', 6, 0);
@@ -1235,7 +1235,7 @@ export function aposentar(v: Vida): void {
   const texto = militar
     ? `Foi para a reserva depois de ${anosDeServicoMilitar(v)} anos de serviço, como ${nomeOcupacao(v, oc)}.`
     : `Aposentou-se depois de ${Math.floor(v.trabalho.contribuicao / 12)} anos de contribuição${vida}, com um benefício de ${moeda(beneficio)} por mês.`;
-  escrever(v, { texto, relevancia: 'marco', tema: 'trabalho', tom: 'bom', escolha: true });
+  escrever(v, { texto, relevancia: 'marco', tema: 'trabalho', tom: 'bom', escolha: true, fato: { tipo: 'm_aposentadoria', dados: {} } });
   marcar(v, militar ? 'reserva' : 'aposentadoria', texto, 3, { trilha });
   if (militar && oc && eDasForcas(oc)) v.fatos['mil_reserva'] = v.t;
   if (v.moradia.funcional) v.fatos['sair_funcional'] = v.t;

@@ -1358,7 +1358,7 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       const primeiro = nVeiculos === 1 || !v.biografia.some(e => e.texto.includes(tipo));
       const verbo = anterior.length ? `Comprou também ${fem ? 'uma' : 'um'} ${tipo}` : nVeiculos === 1 || primeiro && m.categoria === 'carro' ? `Comprou ${fem ? 'a primeira' : 'o primeiro'} ${tipo}` : `Comprou ${fem ? 'uma' : 'um'} ${tipo}`;
       const qual = versao ? `: ${artigoNome === 'a' ? 'uma' : 'um'} ${nome}` : '';
-      escrever(v, { texto: `${verbo}${qual}${o.usado ? `, usad${artigoNome} de ${o.anoFabricacao}` : ', zero quilômetro'}${financiou ? `, financiad${artigoNome} em ${cond.meses} vezes` : ''}.`, relevancia: m.categoria === 'carro' && (primeiro || o.preco > 60000) ? 'biografia' : 'cotidiano', tema: 'dinheiro', escolha: true });
+      escrever(v, { texto: `${verbo}${qual}${o.usado ? `, usad${artigoNome} de ${o.anoFabricacao}` : ', zero quilômetro'}${financiou ? `, financiad${artigoNome} em ${cond.meses} vezes` : ''}.`, relevancia: m.categoria === 'carro' && (primeiro || o.preco > 60000) ? 'biografia' : 'cotidiano', tema: 'dinheiro', escolha: true , fato: { tipo: 'm_veiculo', dados: { primeiro: nVeiculos === 1 ? 1 : 0, categoria: m.categoria } } });
       return ok(`${nome.charAt(0).toUpperCase() + nome.slice(1)} ${o.usado ? `de ${o.anoFabricacao}` : 'zero'} na garagem.`, 'bom');
     }
     case 'comprar_imovel': {
@@ -1377,7 +1377,7 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       marcarFato(v, 'comprou_imovel');
       if (a.morar) morarNoImovel(v, id);
       const artigoM = m.nome.startsWith('casa') || m.nome.startsWith('kitnet') ? 'a' : 'o';
-      escrever(v, { texto: `${primeira ? `Comprou ${m.nome.startsWith('casa') ? 'a primeira casa' : 'o primeiro imóvel'}: ` : 'Comprou '}${artigoM === 'a' ? 'uma' : 'um'} ${m.nome} ${o.bairro}${financiou ? `, financiad${artigoM} em ${Math.round(cond.meses / 12)} anos${cond.social ? ' por um programa habitacional' : ''}` : ' à vista'}${a.morar ? '' : ', para alugar'}.`, relevancia: primeira || a.morar ? 'marco' : 'biografia', tema: 'casa', tom: 'bom', escolha: true });
+      escrever(v, { texto: `${primeira ? `Comprou ${m.nome.startsWith('casa') ? 'a primeira casa' : 'o primeiro imóvel'}: ` : 'Comprou '}${artigoM === 'a' ? 'uma' : 'um'} ${m.nome} ${o.bairro}${financiou ? `, financiad${artigoM} em ${Math.round(cond.meses / 12)} anos${cond.social ? ' por um programa habitacional' : ''}` : ' à vista'}${a.morar ? '' : ', para alugar'}.`, relevancia: primeira || a.morar ? 'marco' : 'biografia', tema: 'casa', tom: 'bom', escolha: true , fato: { tipo: 'm_imovel', dados: { primeiro: primeira ? 1 : 0 } } });
       // 12.4.1: o resultado diz o que saiu do dinheiro e o que sobrou para gastar — o imóvel passa a ser patrimônio, não saldo.
       const pago = `Pagou ${fmt((financiou ? cond.entrada : o.preco) + cond.custos)}${financiou ? ' de entrada e escritura' : ' com a escritura'}; para gastar ficaram ${fmt(disponivel(v))}. O imóvel (${fmt(o.preco)}) entra no patrimônio.`;
       return ok(a.morar ? `A chave é sua. ${pago}` : `Imóvel comprado. Alugado, deve render ${fmt(alugadoPor ?? 0)} por mês. ${pago}`, 'bom');

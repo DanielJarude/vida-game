@@ -51,6 +51,9 @@ export function habilitacaoDaVida(v: Vida) {
 export function podeComecarCnh(v: Vida): Veredito {
   const h = habilitacaoDaVida(v);
   if (idade(v) < h.comeca) return bloqueio('ilegal', h.frase);
+  // VIDA 12.5 (M2): quem desistiu espera um ano para tentar de novo (antes, uma vida reprovava 45 vezes em sequência).
+  const desistiu = v.fatos['cnh_desistiu'];
+  if (desistiu !== undefined && v.t - desistiu < 12) return bloqueio('incompativel', 'Desistiu há pouco: a carteira fica para o ano que vem.');
   return PERMITIDO;
 }
 
@@ -127,7 +130,7 @@ export function responderPerguntaCnh(v: Vida, r: Rng, k: number): { continua: tr
     pagar(v, 250);
     const texto = `Prova teórica: ${total} acertos de ${TOTAL_DA_PROVA} (${prova.acertos} das ${PERGUNTAS_DO_JOGADOR} que você respondeu). Precisava de ${MINIMO}. Nova prova em alguns meses — estudar a apostila e fazer simulados é o que mais ajuda.`;
     // FIX pós-REWORK 4: a reprovação é desta vida (quão perto, a tentativa, o nervoso, quem esperava).
-    escrever(v, { texto: fraseDaReprovacaoTeorica(v, { total, minimo: MINIMO, deTotal: TOTAL_DA_PROVA, tentativa: p.tentativas, preparo: p.preparo ?? 0, nomeDaProva: doTransito(v), chave: p.id }), relevancia: 'cotidiano', tema: 'lugar', tom: 'ruim' });
+    escrever(v, { texto: fraseDaReprovacaoTeorica(v, { total, minimo: MINIMO, deTotal: TOTAL_DA_PROVA, tentativa: p.tentativas, preparo: p.preparo ?? 0, nomeDaProva: doTransito(v), chave: p.id }), relevancia: relevanciaDaReprovacao(v), tema: 'lugar', tom: 'ruim' });
     if (p.tentativas >= 3) desistir(v, p);
     return { continua: false, texto, tom: 'ruim' };
   }
@@ -181,20 +184,25 @@ function provaPratica(v: Vida, r: Rng, p: ProcessoCnh): { passou: boolean; texto
   pagar(v, 450);
   const erro = rngDe(v.id, 'cnh_erro', p.id, p.tentativasPratica).pick(['a baliza não entrou', 'o carro morreu na subida', 'faltou olhar o retrovisor na conversão', 'o nervosismo apertou no cruzamento']);
   const texto = `Na prática, ${erro}: reprovad${v.eu.genero === 'feminino' ? 'a' : 'o'}. A teórica continua valendo; a nova prática é em alguns meses — aulas extras ajudam.`;
-  escrever(v, { texto: `Reprovou na prova prática ${doTransito(v)}: ${erro}.`, relevancia: 'cotidiano', tema: 'lugar', tom: 'ruim' });
+  escrever(v, { texto: `Reprovou na prova prática ${doTransito(v)}: ${erro}.`, relevancia: relevanciaDaReprovacao(v), tema: 'lugar', tom: 'ruim' });
   if (p.tentativasPratica >= 3) desistir(v, p);
   return { passou: false, texto };
 }
 
+/** Depois da segunda desistência, as reprovações já não contam a vida (ficam no registro técnico). */
+const relevanciaDaReprovacao = (v: Vida) => ((v.fatos['cnh_desistencias'] ?? 0) >= 2 ? 'tecnico' as const : 'cotidiano' as const);
+
 function desistir(v: Vida, p: ProcessoCnh): void {
   v.processos = v.processos.filter(x => x.id !== p.id);
+  v.fatos['cnh_desistiu'] = v.t;
+  v.fatos['cnh_desistencias'] = (v.fatos['cnh_desistencias'] ?? 0) + 1;
   const t = perfilDaVida(v).cotidiano?.transito;
   // FIX pós-REWORK 4: desistir também é desta vida (onde emperrou, o que fica no lugar, quanto custou).
   const r = rngDe(v.id, 'cnh_desistiu', p.id);
   const onde = p.teoricaOk ? r.pick(['na prova prática', 'na baliza', 'no exame de rua']) : r.pick(['na teórica', 'nas perguntas da teórica']);
   const depois = r.pick(['O ônibus continuou sendo o jeito de ir', 'A bicicleta ganhou importância', 'Carona virou um assunto delicado', 'A carteira virou um "um dia eu tiro"', 'O dinheiro das taxas doeu mais do que a reprovação']);
   const carteira = habilitacaoDaVida(v).a.replace(/^a /, 'da ');
-  escrever(v, { texto: t ? `Três reprovações ${no(t)}, ${onde}: desistiu da carteira por um tempo. ${depois}.` : `Três reprovações ${onde}: desistiu ${carteira} por um tempo. ${depois}.`, relevancia: 'cotidiano', tema: 'lugar', tom: 'ruim' });
+  escrever(v, { texto: t ? `Três reprovações ${no(t)}, ${onde}: desistiu da carteira por um tempo. ${depois}.` : `Três reprovações ${onde}: desistiu ${carteira} por um tempo. ${depois}.`, relevancia: relevanciaDaReprovacao(v), tema: 'lugar', tom: 'ruim' });
 }
 
 /* ------------------------------------------------------------- Preparação */

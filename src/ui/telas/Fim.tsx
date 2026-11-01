@@ -19,15 +19,21 @@ import { retrospectiva } from '../../motor/sistemas/retrospectiva';
 import { trajetoriasDaVida } from '../../motor/sistemas/legado';
 import { oQueFicou } from '../../motor/sistemas/sucessao';
 import { ContinuarFamilia, PartilhaDoLegado } from './Legado';
+import { useState } from 'react';
+import { sobDemanda } from '../util/sobDemanda';
+
+/** VIDA 12.5: a Retrospectiva (o álbum da vida) também no fim, sob demanda. */
+const Retrospectiva = sobDemanda(() => import('../jogo/Retrospectiva').then(m => m.Retrospectiva));
 
 export function Fim({ vida, c }: { vida: Vida; c: ControleVida }) {
   entrarNaVida(vida);
+  const [verRetro, setVerRetro] = useState(false);
   const i = idade(vida);
   const g = vida.eu.tratamento ?? vida.eu.genero;
   const nFilhos = Object.values(vida.vinculos).filter(v => v.parentesco === 'filho').length;
   const empregos = [...vida.trabalho.historico.map(h => h.ocupacaoId), ...(vida.trabalho.atual ? [vida.trabalho.atual.ocupacaoId] : [])];
   const principal = empregos.length ? nomeOcupacaoId(vida, empregos.sort((a, b) => empregos.filter(x => x === b).length - empregos.filter(x => x === a).length)[0]) : null;
-  const cidades = new Set(vida.biografia.filter(e => e.tema === 'lugar' && /Mudou-se/.test(e.texto)).map(e => e.texto));
+  const cidades = new Set(vida.biografia.filter(e => e.tema === 'lugar' && /mudou-se/i.test(e.texto)).map(e => e.texto));
   // Quem mais pesava na vida (papel, afeto, casa, anos, história), não só quem era parente.
   const perto = vinculosVivos(vida).filter(x => !x.p.especie && x.p.nome && importancia(vida, x.p, x.vin) >= 20).sort((a, b) => importancia(vida, b.p, b.vin) - importancia(vida, a.p, a.vin)).slice(0, 8);
   const netos = Object.values(vida.vinculos).filter(v => v.parentesco === 'neto').length;
@@ -86,6 +92,10 @@ export function Fim({ vida, c }: { vida: Vida; c: ControleVida }) {
             </ul>
           </>
         )}
+      </section>
+      <section className="fim__retrospectiva" aria-labelledby="fim-retro">
+        <h2 id="fim-retro">Retrospectiva</h2>
+        {verRetro ? <Retrospectiva vida={vida} /> : <button type="button" className="botao" onClick={() => setVerRetro(true)}>Abrir o álbum da vida</button>}
       </section>
       <section className="fim__biografia">
         <h2>Uma vida</h2>

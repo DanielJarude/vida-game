@@ -17,11 +17,16 @@ import { faseDaVida } from '../apresentar';
 import type { Aba } from '../navegacao';
 import { RetratoDaVida } from './RetratoDaVida';
 import { LinhaDaVida } from './LinhaDaVida';
+import { sobDemanda } from '../util/sobDemanda';
 
-export type ParteHistoria = 'agora' | 'biografia';
+/** VIDA 12.5: a Retrospectiva (o álbum e a linha do tempo) vem sob demanda. */
+const Retrospectiva = sobDemanda(() => import('./Retrospectiva').then(m => m.Retrospectiva));
+
+export type ParteHistoria = 'agora' | 'biografia' | 'retrospectiva';
 export const PARTES_HISTORIA: { id: ParteHistoria; rotulo: string; oque: string }[] = [
   { id: 'agora', rotulo: 'Agora', oque: 'Onde a vida está, o ano que passou e o que pede você' },
-  { id: 'biografia', rotulo: 'Biografia', oque: 'A Linha da Vida inteira, por fios e conquistas' }
+  { id: 'biografia', rotulo: 'Biografia', oque: 'A Linha da Vida inteira, por fios e conquistas' },
+  { id: 'retrospectiva', rotulo: 'Retrospectiva', oque: 'O álbum da vida: a linha do tempo e os momentos marcantes' }
 ];
 
 /** Quantos anos o "Agora" mostra da Linha da Vida. */
@@ -38,9 +43,9 @@ export function Historia({ vida, marca, parte, irParte, irPara, abrirPessoa, ano
   return (
     <div className={`historia historia--${parte}`}>
       {parte === 'agora' && <RetratoDaVida vida={vida} irPara={irPara} abrirPessoa={abrirPessoa} />}
-      {parte === 'biografia' && (
+      {parte !== 'agora' && (
         <header className="folio">
-          <p className="folio__kicker"><span className="folio__area">História</span> · Biografia · {i} {i === 1 ? 'ano' : 'anos'} · {faseDaVida(i)}</p>
+          <p className="folio__kicker"><span className="folio__area">História</span> · {parte === 'biografia' ? 'Biografia' : 'Retrospectiva'} · {i} {i === 1 ? 'ano' : 'anos'} · {faseDaVida(i)}</p>
           <h1 className="folio__titulo">{vida.eu.nome} {vida.eu.sobrenome}</h1>
         </header>
       )}
@@ -55,6 +60,7 @@ export function Historia({ vida, marca, parte, irParte, irPara, abrirPessoa, ano
           </>
         )}
         {parte === 'biografia' && <LinhaDaVida vida={vida} marca={marca} abrirPessoa={abrirPessoa} />}
+        {parte === 'retrospectiva' && <Retrospectiva vida={vida} abrirPessoa={abrirPessoa} />}
       </div>
     </div>
   );

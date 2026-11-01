@@ -38,9 +38,39 @@ function rendaDeReferencia(v: Vida): number {
  * 1 é outra vida (a carreira especial — esporte, técnico, arte, farda, mandato — trocada por um ofício de outro setor).
  * A queda grande de nível e de renda afasta mais.
  */
+/**
+ * VIDA 12.5 (CAR-11.8): a ocupação de referência — a de agora ou, para quem perdeu o trabalho há pouco (até 5 anos), a
+ * última. Antes, o desempregado (justo quando a indicação nasce) não tinha carreira para comparar: a médica demitida
+ * recebia "diarista" como se fosse uma porta qualquer.
+ */
+export function ocupacaoDeReferencia(v: Vida): Ocupacao | undefined {
+  const sp = situacaoProfissional(v);
+  if (sp.ocupacaoId) return ocupacaoOuNula(sp.ocupacaoId);
+  const ultimo = v.trabalho.historico[v.trabalho.historico.length - 1];
+  return ultimo && (ultimo.tFim === undefined || v.t - ultimo.tFim <= 60) ? ocupacaoOuNula(ultimo.ocupacaoId) : undefined;
+}
+
+/**
+ * VIDA 12.5 (CAR-11.8): o piso de relevância — a indicação tem de ser plausível para a vida de quem recebe. Não desce
+ * mais de um degrau da carreira de referência nem paga menos da metade; quem tem diploma superior e nenhuma carreira
+ * ainda só recebe o que conversa com a formação ou com a estrada.
+ */
+export function indicacaoPlausivel(v: Vida, oc: Ocupacao): boolean {
+  const ref = ocupacaoDeReferencia(v);
+  const renda = rendaDeReferencia(v);
+  if (ref) {
+    if (oc.nivel < ref.nivel - 1) return false;
+    if (renda > 0 && oc.salario < renda * 0.5) return false;
+    return true;
+  }
+  const superior = v.educacao.concluidos.filter(c => c.nivel !== 'livre' && c.nivel !== 'tecnico');
+  if (!superior.length) return true;
+  return experienciaNaTrilha(v, oc.trilha) >= 12 || (!!oc.area && superior.some(c => oc.area!.includes(c.area as never))) || oc.nivel >= 3;
+}
+
 export function distanciaDaCarreira(v: Vida, oc: Ocupacao): number {
   const sp = situacaoProfissional(v);
-  const atual = sp.ocupacaoId ? ocupacaoOuNula(sp.ocupacaoId) : undefined;
+  const atual = ocupacaoDeReferencia(v);
   let d: number;
   if (!atual) d = experienciaNaTrilha(v, oc.trilha) >= 12 ? 0.2 : 0.4;
   else if (atual.trilha === oc.trilha) d = 0;

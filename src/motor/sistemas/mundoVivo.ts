@@ -37,7 +37,8 @@ import { chefiaAtual, temChefia } from './profissao';
 import { emRecessao } from '../nucleo';
 import { economiaLocal } from '../dados/lugares';
 import { dinheiro } from '../texto';
-import { ocupacao } from '../dados/ocupacoes';
+import { ocupacao, ocupacaoOuNula } from '../dados/ocupacoes';
+import { TRILHAS_ARTISTICAS } from './trabalho';
 import { liquido, salarioLocal } from './renda';
 
 /** O que marca, na Linha da Vida, que foi o mundo (e não o jogador) quem fez acontecer. */
@@ -111,6 +112,12 @@ function anoNoTrabalho(v: Vida, r: Rng, pode: () => boolean, conta: () => void):
   const e = v.trabalho.atual;
   if (!e || e.contrato === 'informal' || v.t - e.tInicio < 12) return;
   const chave = `trabalho:${e.empregador}:${e.tInicio}`;
+  // VIDA 12.5 (CAR-11.9): onde não há escritório (por conta própria, o negócio próprio, o clube, o palco, a banda), não
+  // há "reorganização com gente demitida em outros andares"; o colega que sai é negociado, ou deixa a banda.
+  const trilha = ocupacaoOuNula(e.ocupacaoId)?.trilha;
+  const esporte = trilha === 'atleta' || trilha === 'tecnico';
+  const palco = !!trilha && TRILHAS_ARTISTICAS.has(trilha);
+  const semEscritorio = e.contrato === 'autonomo' || /^por conta/i.test(e.empregador) || !!v.caminhos.negocio && v.caminhos.negocio.estado !== 'fechado' && e.contrato !== 'clt' || esporte || palco;
   const colegas = vinculosVivos(v).filter(x => x.vin.ambiente === chave && !x.p.especie && x.p.ocupacao !== 'gestor' && x.p.ocupacao !== 'gestora');
   // A chefia trocada: quem chefia sai; quem chega não conhece você — o clima recomeça perto do meio.
   if (pode() && temChefia(v) && r.chance(0.08)) {
@@ -131,6 +138,7 @@ function anoNoTrabalho(v: Vida, r: Rng, pode: () => boolean, conta: () => void):
   }
   // A reorganização: o setor muda, o clima pesa um ano.
   if (pode() && r.chance(0.04)) {
+    if (semEscritorio) return;
     e.clima = Math.round(clamp((e.clima ?? 50) - 10));
     v.mente.estresse = clamp(v.mente.estresse + 4);
     noticia(v, 'trabalho', `${e.empregador.replace(/^./, c => c.toUpperCase())} anunciou uma reorganização: setores juntados, metas novas, gente demitida em outros andares. Ninguém dormiu bem naquela semana.`, { tom: 'ruim', relevancia: 'biografia' });
@@ -145,9 +153,12 @@ function anoNoTrabalho(v: Vida, r: Rng, pode: () => boolean, conta: () => void):
     if (sai) {
       c.vin.ambiente = undefined;
       c.vin.convivio = c.vin.convivio.filter(x => x !== 'trabalho');
-      garantirVida(c.p).trajetoria.push({ t: v.t, texto: 'Saiu para outra empresa.', tipo: 'trabalho' });
-      noticia(v, 'trabalho', `${c.p.nome} pediu as contas: foi para outra empresa${c.vin.proximidade >= 45 ? '. A despedida foi no bar da esquina, e prometeram não sumir' : ''}.`, { pessoas: [c.p.id] });
-      if (c.vin.proximidade >= 45) lembrarCom(v, c.p.id, 'Trabalharam juntos até a saída para outra empresa.', 'trabalho', 1);
+      const paraOnde = esporte ? 'outro clube' : palco ? 'outro trabalho, longe do grupo' : 'outra empresa';
+      garantirVida(c.p).trajetoria.push({ t: v.t, texto: esporte ? 'Foi negociado com outro clube.'.replace('negociado', flexo(c.p, 'negociado', 'negociada')) : `Saiu para ${paraOnde}.`, tipo: 'trabalho' });
+      noticia(v, 'trabalho', esporte ? `${c.p.nome} foi ${flexo(c.p, 'negociado', 'negociada')} com outro clube${c.vin.proximidade >= 45 ? '. A despedida foi no vestiário, com a camisa autografada por todo mundo' : ''}.`
+        : palco ? `${c.p.nome} deixou o grupo${c.vin.proximidade >= 45 ? '. A última noite juntos terminou num bar, com promessa de voltar a tocar um dia' : ''}.`
+          : `${c.p.nome} pediu as contas: foi para outra empresa${c.vin.proximidade >= 45 ? '. A despedida foi no bar da esquina, e prometeram não sumir' : ''}.`, { pessoas: [c.p.id] });
+      if (c.vin.proximidade >= 45) lembrarCom(v, c.p.id, `Trabalharam juntos até a saída para ${paraOnde}.`, 'trabalho', 1);
     } else {
       c.p.renda = Math.round(c.p.renda * 1.18);
       garantirVida(c.p).trajetoria.push({ t: v.t, texto: 'Foi promovido.'.replace('promovido', flexo(c.p, 'promovido', 'promovida')), tipo: 'promocao' });

@@ -212,7 +212,7 @@ export function processarNotoriedade(v: Vida, _r?: Rng): void {
     const texto = fd >= 4 ? `Virou ${flex(ge(v), 'um nome', 'um nome', 'um nome')} que o país inteiro reconhece, ${de}.`
       : fd === 3 ? `Ficou ${flex(ge(v), 'famoso', 'famosa', 'famose')} ${de}: gente que você nunca viu sabe o seu nome.`
         : `Passou a ser ${flex(ge(v), 'reconhecido', 'reconhecida', 'reconhecide')} na rua ${de}.`;
-    escrever(v, { texto, relevancia: fd >= 3 ? 'marco' : 'biografia', tema: 'trabalho', tom: 'bom' });
+    escrever(v, { texto, relevancia: fd >= 3 ? 'marco' : 'biografia', tema: 'trabalho', tom: 'bom', fato: { tipo: 'm_fama', dados: { faixa: fd } } });
   }
   // O nome esfriou de vez (depois de ter sido famoso).
   if (fa >= 3 && fd <= 1 && v.fatos['noto_esqueceu'] === undefined) {

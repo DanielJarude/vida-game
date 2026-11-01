@@ -180,12 +180,13 @@ export function processarFamiliaDeOrigem(v: Vida, r: Rng): void {
     }
     if (v.vinculos[p.id].parentesco === 'avo') {
       // REWORK 9.7 · NPC-02: os avós também se aposentam (antes, o `continue` vinha antes: avó de 84 bancária).
-      if (p.ocupacao && p.renda > 0 && !p.ocupacao.startsWith('aposentad') && ip >= (p.genero === 'feminino' ? 62 : 65)) { p.ocupacao = flex(p.genero, 'aposentado', 'aposentada'); p.renda = Math.max(1620, Math.round(p.renda * 0.7)); }
+      if (p.ocupacao && p.renda > 0 && !p.ocupacao.startsWith('aposentad') && ip >= (p.genero === 'feminino' ? 62 : 65)) { p.ocupacao = flex(p.genero, 'aposentado', 'aposentada'); p.ocupacaoId = undefined; p.renda = Math.max(1620, Math.round(p.renda * 0.7)); }
       continue;
     }
     // Aposentadoria dos pais
     if (p.ocupacao && !p.ocupacao.startsWith('aposentad') && ip >= (p.genero === 'feminino' ? 62 : 65) && r.chance(0.6)) {
       p.ocupacao = flex(p.genero, 'aposentado', 'aposentada');
+      p.ocupacaoId = undefined; // VIDA 12.5: o aposentado não "indica onde trabalha"
       p.renda = Math.max(1620, Math.round(p.renda * 0.7));
       // Em qualquer idade do jogador: a aposentadoria dos pais é um marco da vida deles (e o começo da velhice que vem).
       escrever(v, { texto: `${capital(seuSua(p, v.vinculos[p.id].parentesco === 'mae' ? 'mãe' : 'pai'))} se aposentou.`, relevancia: v.vinculos[p.id].proximidade >= 55 && i >= 30 ? 'biografia' : 'cotidiano', tema: 'familia', pessoas: [p.id] });

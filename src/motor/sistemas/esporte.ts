@@ -1263,7 +1263,7 @@ function anoDeCircuito(v: Vida, r: Rng, e: CarreiraEsportiva, t: Temporada): voi
   // fora do orçamento: a tela dizia "sobram R$ 14 mil por mês" e o fechamento tirava das aplicações sem dizer por quê.)
   emp.salario = Math.round(premio / 12 / 10) * 10;
   const liquido = premio - custos;
-  const texto = `O ano no ${CIRCUITO_TENIS[e.nivel]}: ${t.vitorias} vitórias${t.titulos ? `, ${t.titulos} ${t.titulos === 1 ? 'título' : 'títulos'}` : ''}, ranking ${t.ranking}º. Prêmios de ${dinheiro(premio)}; treinador e viagens custaram ${dinheiro(custos)} — ${liquido >= 0 ? `sobraram ${dinheiro(liquido)}` : `faltaram ${dinheiro(-liquido)}`}.`;
+  const texto = `O ano ${e.nivel === 1 ? 'nos' : 'no'} ${CIRCUITO_TENIS[e.nivel]}: ${t.vitorias} vitórias${t.titulos ? `, ${t.titulos} ${t.titulos === 1 ? 'título' : 'títulos'}` : ''}, ranking ${t.ranking}º. Prêmios de ${dinheiro(premio)}; treinador e viagens custaram ${dinheiro(custos)} — ${liquido >= 0 ? `sobraram ${dinheiro(liquido)}` : `faltaram ${dinheiro(-liquido)}`}.`;
   escrever(v, { texto, relevancia: t.titulos ? 'biografia' : 'cotidiano', tema: 'trabalho', tom: liquido >= 0 ? 'bom' : t.titulos ? undefined : 'ruim' });
   registrarCircuito(v, e, t);
   // O ranking decide onde se joga: subir (a porta do circuito maior) ou descer (os pontos do ano não sustentaram).
