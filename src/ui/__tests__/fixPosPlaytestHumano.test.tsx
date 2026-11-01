@@ -93,8 +93,10 @@ describe('Pessoas: a ficha entende quem é a pessoa', () => {
     render(<Ligado v0={v} tela={(vv, agir) => <Pessoas vida={vv} agir={agir} aberta={id} abrir={() => {}} />} />);
     const ficha = screen.getByRole('dialog');
     const agora = within(ficha).getByText('O que faz sentido agora').closest('.ficha__agora') as HTMLElement;
-    expect(within(agora).getAllByRole('button').length).toBeGreaterThan(0);
-    expect(within(agora).getAllByRole('button').length).toBeLessThanOrEqual(3);
+    // VIDA 12.6: a estrela dos atalhos ao lado de cada ação não é uma ação (não entra na conta).
+    const acoes = within(agora).getAllByRole('button').filter(b => !b.classList.contains('estrela-atalho'));
+    expect(acoes.length).toBeGreaterThan(0);
+    expect(acoes.length).toBeLessThanOrEqual(3);
     const gavetas = [...ficha.querySelectorAll<HTMLDetailsElement>('details.ficha__categoria')];
     expect(gavetas.length).toBeGreaterThanOrEqual(3);
     // Recolhidas: com o "agora" à vista, nenhuma abre sozinha.

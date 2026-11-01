@@ -324,7 +324,7 @@ export function vidaComumDoAno(v: Vida): void {
  * emprego, a cidade nova. Gerador derivado (as vidas de antes continuam as mesmas até um deles acontecer); no máximo
  * um por ano, numa parte dos anos; a decisão só num ano que ainda não teve nenhuma.
  */
-const DAS_FASES = /^((inf|ado|adu)1241|v126)_/;
+const DAS_FASES = /^(inf|ado|adu)1241_/;
 export function vidaPorFasesDoAno(v: Vida): void {
   if (v.morte) return;
   const r = rngDe(v.id, 'vida_por_fases_1241', v.t);
@@ -332,6 +332,23 @@ export function vidaPorFasesDoAno(v: Vida): void {
   const cabeDecisao = !v.momento && !v.fila?.length && decisoesDoAno(v) === 0;
   const lista: { c: Conteudo; ctx: Ctx }[] = [];
   for (const c of CATALOGO) { if (!c.manual || !DAS_FASES.test(c.id) || (c.tipo === 'decisao' && !cabeDecisao)) continue; const ctx = preparar(c, v, r); if (ctx) lista.push({ c, ctx }); }
+  const x = r.weighted(lista, y => peso(y.c, y.ctx));
+  if (!x) return;
+  if (x.c.tipo === 'acontecimento') { aplicarAcontecimento(v, x.c, x.ctx); return; }
+  if (cabeDecisao) abrirDecisao(v, x.c, x.ctx);
+}
+
+/**
+ * VIDA 12.6 — o que a vida devolve (`acontecimentos126`): um sorteio derivado próprio, separado do das fases (assim, as
+ * vidas que não vivem nenhum deles seguem exatamente iguais — a lista do 12.4.1 não muda de tamanho).
+ */
+export function vidaQueDevolveDoAno(v: Vida): void {
+  if (v.morte) return;
+  const r = rngDe(v.id, 'vida_que_devolve_126', v.t);
+  if (!r.chance(idade(v) >= 18 ? 0.24 : 0.12)) return;
+  const cabeDecisao = !v.momento && !v.fila?.length && decisoesDoAno(v) === 0;
+  const lista: { c: Conteudo; ctx: Ctx }[] = [];
+  for (const c of CATALOGO) { if (!c.manual || !c.id.startsWith('v126_') || (c.tipo === 'decisao' && !cabeDecisao)) continue; const ctx = preparar(c, v, r); if (ctx) lista.push({ c, ctx }); }
   const x = r.weighted(lista, y => peso(y.c, y.ctx));
   if (!x) return;
   if (x.c.tipo === 'acontecimento') { aplicarAcontecimento(v, x.c, x.ctx); return; }

@@ -112,7 +112,7 @@ export function recusaPelaMemoria(c: CtxI, interacao: string): Veredito | null {
 
 /* ------------------------------------------------------------------ promessas */
 
-const PROMETE = (c: CtxI) => !c.p.especie && c.eu >= 14 && c.p.vivo && (c.papel === 'filho' || c.papel === 'parceiro' || c.papel === 'amigo_proximo' || ((c.papel === 'genitor' || c.papel === 'avo') && c.ip >= 55));
+const PROMETE = (c: CtxI) => !c.p.especie && c.eu >= 14 && c.p.vivo && ((c.papel === 'filho' && c.ip >= 5) || c.papel === 'parceiro' || c.papel === 'amigo_proximo' || ((c.papel === 'genitor' || c.papel === 'avo') && c.ip >= 55));
 
 /** Uma vez por ano: as promessas de mais de um ano são conferidas pela pessoa. Sem sorteio. */
 export function conferirPromessas(v: Vida): void {

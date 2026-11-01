@@ -48,7 +48,7 @@ export function FotoDaMemoria({ vida, m }: { vida: Vida; m: Memoria }) {
       {tatu ? (() => { const [w, h] = caixaNativa(tatu); const k = 70 / Math.max(w, h); return <g transform={`translate(${80 - (w * k) / 2} ${60 - (h * k) / 2}) scale(${k})`}><DesenhoDaTatuagem id={tatu.id} tinta="#22262b" cor={c => c} /></g>; })() : (
         <>
           <g transform={`translate(${mostrarOutra ? 14 : 44} 30)`}><Retrato visual={vida.eu.visual} genero={vida.eu.genero} idade={eu} semente={vida.eu.semente ?? 'eu'} tamanho={72} rotulo="" /></g>
-          {mostrarOutra && <g transform={`translate(${idadeOutra <= 2 ? 86 : 74} ${idadeOutra <= 2 ? 56 : 30})`}><Retrato visual={outra!.visual} genero={outra!.genero} idade={idadeOutra} semente={outra!.id} tamanho={idadeOutra <= 2 ? 50 : 72} rotulo="" /></g>}
+          {mostrarOutra && <g transform={`translate(${idadeOutra <= 2 ? 86 : 74} ${idadeOutra <= 2 ? 56 : 30})`}><Retrato visual={outra!.visual} genero={outra!.genero} idade={idadeOutra} semente={outra!.id} especie={outra!.especie} tamanho={idadeOutra <= 2 ? 50 : 72} rotulo="" /></g>}
         </>
       )}
       <g transform="translate(130 92)" className="retro-foto__selo"><circle cx={12} cy={12} r={13} fill="#fffaf0" opacity={0.92} /><g transform="translate(2 2)"><IconeDaMemoria categoria={m.categoria} tamanho={20} /></g></g>

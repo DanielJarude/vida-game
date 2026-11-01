@@ -24,7 +24,7 @@ import { lesaoAtiva, lesionar } from './lesoes';
 import type { Dominio, Rotina, Traco, Vida } from '../tipos';
 import { escrever, filhos, idade, marcarFato, temFato, parceiro, parentes, somarExperiencia } from '../nucleo';
 import { bloqueio, type Veredito } from '../plausibilidade';
-import { ROTINAS_SOCIAIS } from './social';
+import { ROTINAS_SOCIAIS } from './rotinasSociais';
 import { CUSTO_ROTINA } from './dinheiro';
 import { aplicarPersonalidade } from '../personalidade';
 import { moraComFamiliaDeOrigem, rendaPerCapita } from './domicilio';

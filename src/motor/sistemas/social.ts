@@ -12,6 +12,7 @@
  * mais pesa é estar junto ao longo dos anos.
  */
 
+import { ROTINAS_SOCIAIS } from './rotinasSociais';
 import { emComum, gostosDoProtagonista } from './jeito';
 import type { Rng } from '../rng';
 import { contatoReal, desgasteSemConvivio, soReacao } from './desgaste';
@@ -81,7 +82,7 @@ export function ambientesAtuais(v: Vida): Ambiente[] {
 }
 
 /** Rotinas que colocam o jogador em contato com gente (preenchido por `rotinas`). */
-export const ROTINAS_SOCIAIS: Record<string, { onde: string; fluxo: number; amplitude: number }> = {};
+export { ROTINAS_SOCIAIS };
 
 /* ---------------------------------------------------------- Compatibilidade */
 

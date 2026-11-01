@@ -26,6 +26,33 @@ export interface NotaDeVersao {
 
 export const NOTAS: NotaDeVersao[] = [
   {
+    versao: '12.6',
+    data: '2026-11-01',
+    titulo: 'Profundidade, personalização e imersão: o estúdio de tatuagem inteiro, pessoas com jeito e memória, trabalho e casa com história',
+    novidades: [
+      'Estúdio de tatuagem novo (Você · Aparência): escolha o lugar tocando no próprio corpo — ombro, bíceps, tríceps, antebraço por dentro e por fora, pulso, mão, dedos, peitoral, centro do peito, costela, abdômen, as costas em três partes, coxa, joelho, canela, panturrilha, tornozelo, pé, pescoço, nuca —, de frente e de costas, lado esquerdo ou direito. Várias tatuagens no mesmo braço, cada uma no seu lugar.',
+      'Mais de 80 desenhos em 13 estilos (realista, old school, blackwork, tribal, geométrico, oriental, minimalista, fine line, lettering com o seu texto, ornamental, floral, simbólico, abstrato) e peças inteiras. Ajuste o tamanho, a posição, a rotação, o espelhamento, a cor (só preto, preto e cinza ou colorida, com tons e paletas) e a intensidade, com a prévia na lupa antes de confirmar.',
+      'Projetos: manga fechada, meia manga, peito, costas e perna fechados, com vários desenhos unidos por um fundo — o que você já tem na parte entra no conjunto. A tinta desbota devagar com os anos; dá para retocar, cobrir uma tatuagem antiga com outra e tirar no laser. Cada tatuagem guarda a data, o lugar e o significado (por quem, por quê).',
+      'As pessoas têm jeito e memória: tímidas, carinhosas, ciumentas, de pavio curto, pacientes, rancorosas... — e isso muda o que dá certo com elas. Elas lembram da ajuda, do presente, da briga, da promessa e da traição; quem foi traído não aceita convite antes de uma conversa. Os gostos em comum aproximam.',
+      'Conhecer a família de quem você namora depende de quem é a família (os pais vivos ou não, o jeito deles, a distância, o tempo de namoro). O caso escondido ganhou encontros, presentes, viagens com desculpa, a conversa sobre o futuro e o tempo — e tudo deixa rastro.',
+      'Trabalho: profissões que só viviam cenas de escritório ganharam as suas (limpeza, cuidado, motorista, posto, costura, confeitaria, reciclagem, serviço público, fiscalização, veterinária, educação física, pesquisa, salão). O chefe tem um jeito (exigente, compreensivo, injusto, incentivador, autoritário, desorganizado), há disputa de vaga com um colega e uma reputação profissional que acompanha você de emprego em emprego.',
+      'Hobbies novos com caminho: cuidar de plantas, pintar, artesanato (que pode virar uma banca na feira), colecionar e clube do livro. Em casa: faxina, organizar, descansar, maratonar uma série, cuidar das plantas, consertar o que quebrou, receber visita, cozinhar a comida da semana — e o hábito de arrumar a casa.',
+      'A vida devolve: a reunião da família inteira, os 80 anos de um dos pais, ensinar um neto, o favor devolvido por quem você ajudou, o reencontro depois de anos, a tatuagem com o nome de um ex, a promessa cobrada — e acontecimentos raros que só chegam a quem tem o perfil. Viagens com história própria e o marco da primeira viagem sozinho.'
+    ],
+    melhorias: [
+      'O álbum da Retrospectiva mostra quem estava em cada momento, com a idade que tinha naquele dia.',
+      'No celular, o cabeçalho das áreas ocupa bem menos espaço antes do conteúdo.',
+      'Atalhos: a estrela guarda as ações que você faz sempre (com as pessoas e em casa) no painel de agora. No Menu, os últimos avisos.',
+      'O pequeno negócio que dá lucro não é mais empurrado para fechar só por ter pouca clientela; a freguesia fiel segura os anos ruins; concorrentes aparecem.',
+      'O tênis profissional de quem está começando tem mais acontecimentos.'
+    ],
+    correcoes: [
+      'A chefia nova passa a valer na equipe (antes, a antiga podia continuar aparecendo como chefe).',
+      'Cenas de escritório (relatório, diretoria) não aparecem mais para quem não trabalha em escritório; o cliente furioso no balcão não aparece mais para quem trabalha nos bastidores.',
+      'As tatuagens de antes continuam no corpo, cada uma numa região precisa, sem ficarem umas por cima das outras.'
+    ]
+  },
+  {
     versao: '12.5',
     data: '2026-11-01',
     titulo: 'Polimento e imersão: a Retrospectiva da Vida, lojas com cara própria e carreiras mais vivas',

@@ -18,7 +18,7 @@ export function Estrela({ vida, acao, rotulo }: { vida: Vida; acao: Acao; rotulo
   useAtalhos(vida.id);
   const marcado = ehAtalho(vida.id, acao);
   return (
-    <button type="button" className={`estrela-atalho${marcado ? ' estrela-atalho--marcada' : ''}`} aria-pressed={marcado} aria-label={marcado ? `Tirar dos atalhos: ${rotulo}` : `Guardar nos atalhos: ${rotulo}`} title={marcado ? 'Tirar dos atalhos' : 'Guardar nos atalhos'}
+    <button type="button" className={`estrela-atalho${marcado ? ' estrela-atalho--marcada' : ''}`} aria-pressed={marcado} aria-label={marcado ? 'Tirar dos atalhos' : 'Guardar nos atalhos'} title={`${marcado ? 'Tirar dos atalhos' : 'Guardar nos atalhos'}: ${rotulo}`}
       onClick={() => alternarAtalho(vida.id, acao, rotulo)}>{marcado ? '★' : '☆'}</button>
   );
 }

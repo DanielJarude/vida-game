@@ -82,7 +82,8 @@ describe('UX-14 / UX-15 · a ficha da pessoa', () => {
   function conferirCategorias(): void {
     for (const cat of [...document.querySelectorAll('.ficha__categoria')]) {
       const conta = cat.querySelector('.ficha__categoria-conta')!.textContent!;
-      const ativos = [...cat.querySelectorAll('.grupo-acoes button')].filter(b => !(b as HTMLButtonElement).disabled).length;
+      // VIDA 12.6: a estrela dos atalhos não é uma ação (não entra na conta).
+      const ativos = [...cat.querySelectorAll('.grupo-acoes button:not(.estrela-atalho)')].filter(b => !(b as HTMLButtonElement).disabled).length;
       expect(conta === '—' ? 0 : Number(conta), cat.querySelector('summary')!.textContent!).toBe(ativos);
       // Nenhuma categoria abre vazia: ou tem botão, ou diz por quê.
       expect(cat.querySelectorAll('.grupo-acoes > *').length + cat.querySelectorAll('.ficha__categoria-vazia, .ficha__categoria-feitas').length).toBeGreaterThan(0);
@@ -104,7 +105,7 @@ describe('UX-14 / UX-15 · a ficha da pessoa', () => {
   it('interagir não faz as listas crescerem: o feito fica como feito, e o "agora" não se reabastece', () => {
     let id = '';
     let v = em(adulto(30, { semente: 42 }), x => { const p = pessoaNova(x, 31, 'feminino'); vincular(x, p, { origem: 'trabalho', proximidade: 55, estagio: 'amigo' }); id = p.id; });
-    const contar = () => ({ agora: document.querySelectorAll('.ficha__agora button').length, botoes: document.querySelectorAll('.ficha__categoria .grupo-acoes button').length });
+    const contar = () => ({ agora: document.querySelectorAll('.ficha__agora button:not(.estrela-atalho)').length, botoes: document.querySelectorAll('.ficha__categoria .grupo-acoes button:not(.estrela-atalho)').length });
     const { rerender } = render(<Pessoas vida={v} agir={nada} aberta={id} abrir={() => {}} />);
     const antes = contar();
     conferirCategorias();
