@@ -112,3 +112,10 @@ Ferramentas: `scripts/sim/futebol1151.ts`, `scripts/sim/lojas1151.ts`, `scripts/
 | 6 Cômodos 2.5D | implementado; conferido em capturas |
 | 7 Compras | reorganizada, busca e filtros funcionais, catálogo preservado, desktop e celular auditados |
 | 8.5 Regressão | 2187/2188; a única falha é o timeout conhecido, que passa isolado |
+
+## 11. Integração e publicação (versão 12.4.2 · 2026-11-01)
+- **Integração:** `main` (3a26954) avançada por *fast-forward* até dc94272 — os quatro commits 1f4d8b6, 7f970f9, 09958c8, dc94272 entram intactos, sem merge commit e sem squash. Antes: `origin/main` = base do HOTFIX, sem commits novos; nenhuma alteração local pendente (só `.claude/`, fora do repositório). Diff 3a26954..dc94272: 50 arquivos, +3485/−191.
+- **Validação na árvore integrada** (`git archive dc94272`, cópia em disco Linux): `tsc && vite build` ok, maior pacote `motor-textos` 788,5 kB, Jogo 649,8 kB (limite 800 kB); smoke de produção 21/21; suíte 2187/2188 (a única falha é o timeout de 20 s do `fix31` sob carga; isolado 25/25); testes novos 24/24; saves das 12.4 e 11.5.1 interpretados (`normalizarHotfix1151`) e avançados três anos sem erro (7/7).
+- **Push:** `claude/hotfix11.5.1-esportes-visual-compras` (nova, preview), `main` 3a26954→dc94272, `claude/fix-pos-rework3-playtest` (branch de produção do Cloudflare Pages) 8eb249d→dc94272. Nada de force-push.
+- **Deploy:** check-run Cloudflare Pages de dc94272 `success`. https://vida-game.pages.dev/ serve `index-CjHtbeS4.js`; a raiz, os 37 JS, os CSS, `sw.js` e o manifesto são sha256-idênticos ao build local de dc94272.
+- **Verificação em produção** (Playwright, contextos novos e isolados — nenhum save real tocado): notas abrem sozinhas para quem jogava a 12.4.1 e mostram a 12.4.2; fechar grava 12.4.2 como vista; save gerado na 12.4 continua e avança; vida nova nasce e avança 6 anos; 0 erros de página/console. A auditoria `rework1151.mjs` com `URL=` de produção: 13 cenas, claro/escuro, 1440/390/360/390×560, 152 capturas — 0 problemas; a mesma nota já conhecida (`.busca-compras__loja` < 32 px).
