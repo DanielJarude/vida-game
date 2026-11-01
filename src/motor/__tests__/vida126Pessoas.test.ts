@@ -47,10 +47,11 @@ describe('VIDA 12.6 · o jeito das pessoas', () => {
     v.t += 3;
     lembrarCom(v, p.id, 'Fizeram as pazes.', 'reconciliacao', 2);
     expect(traicaoQueNaoPassou(v, vin)).toBeUndefined();
-    expect(climaDaMemoria(v, vin, p)).toBeGreaterThan(ferido + 0.2);
-    // Com o tempo, a mágoa esfria.
+    const depois = climaDaMemoria(v, vin, p);
+    expect(depois).toBeGreaterThan(ferido + 0.2);
+    // Com o tempo, a mágoa esfria (mas uma traição demora: não volta a zero em poucos anos).
     v = transacao(v, x => { x.t += 12 * 12; }).vida;
-    expect(climaDaMemoria(v, v.vinculos[p.id], p)).toBeGreaterThan(-0.1);
+    expect(climaDaMemoria(v, v.vinculos[p.id], p)).toBeGreaterThan(depois);
   });
 
   it('promessa: um ano depois a pessoa confere — sem contato, vira promessa quebrada', () => {
