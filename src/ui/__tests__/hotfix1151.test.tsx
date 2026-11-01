@@ -3,19 +3,22 @@
  * HOTFIX 11.5.1 — a interface: Compras (segmentos, busca, filtros, ordem, comprar sem perder o lugar, a memória da
  * aba e da loja), o estúdio de tatuagem, a figura (contraste, tatuagens na pele, de costas), a tabela do campeonato.
  */
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { adulto } from '../../motor/__tests__/cenarios';
 import { transacao } from '../../motor/nucleo';
 import { executar, type Acao } from '../../motor/acoes';
 import type { Vida } from '../../motor/tipos';
-import { Compras } from '../jogo/Compras';
+import { Compras, precarregarCompras } from '../jogo/Compras';
 import { LojaDaVida } from '../jogo/material/Lojas';
 import { BuscaDeCompras } from '../jogo/material/BuscaDeCompras';
 import { EstudioDeTatuagem } from '../jogo/Tatuagens';
 import { Figura } from '../avatar/Figura';
 import { TabelaDoCampeonato, CampeoesDoPais } from '../jogo/Campeonato';
 import { estadoDeCompras, guardarCompras, limparCompras, memoriaDasLojas } from '../jogo/memoriaDeCompras';
+
+// HOTFIX 11.5.1: a busca e os segmentos de Compras chegam sob demanda.
+beforeAll(async () => { await precarregarCompras(); });
 import { ligaDe } from '../../motor/sistemas/ligas';
 
 const rica = (): Vida => transacao(adulto(30, { semente: 11511, municipioId: 'sao-paulo-sp' }), x => { x.financas.conta = 900_000; x.momento = null; }).vida;

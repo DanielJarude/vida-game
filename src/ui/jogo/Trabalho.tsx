@@ -16,7 +16,11 @@
  */
 
 import { GaleriaDeConquistas } from './Galeria';
-import { CampeoesDoPais, PremiosDoMundo, TabelaDoCampeonato } from './Campeonato';
+import { sobDemanda as sobDemandaCampeonato } from '../util/sobDemanda';
+/** HOTFIX 11.5.1: o campeonato por dentro (a tabela, os campeões, os prêmios do mundo) — pacote sob demanda. */
+const TabelaDoCampeonato = sobDemandaCampeonato(() => import('./Campeonato').then(m => m.TabelaDoCampeonato));
+const CampeoesDoPais = sobDemandaCampeonato(() => import('./Campeonato').then(m => m.CampeoesDoPais));
+const PremiosDoMundo = sobDemandaCampeonato(() => import('./Campeonato').then(m => m.PremiosDoMundo));
 import { CampoDoAtleta, ClaqueteDoAtor, PalcoDoMusico, PlenarioDoPolitico, PranchetaDoTecnico } from './CarreirasEspeciais';
 import { habilitacaoDaVida } from '../../motor/sistemas/autoescola';
 import { regrasDaVida } from '../../motor/mundo/regras';

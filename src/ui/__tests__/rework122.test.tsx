@@ -6,7 +6,7 @@
  * procedência incerta; o dossiê com o estágio e os negócios por fora; as fachadas próprias das casas de luxo.
  */
 import { limparCompras } from '../jogo/memoriaDeCompras';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { criarRng } from '../../motor/rng';
 import { adulto } from '../../motor/__tests__/cenarios';
@@ -18,7 +18,10 @@ import { criarContato } from '../../motor/sistemas/submundo';
 import type { Vida } from '../../motor/tipos';
 import { Patrimonio } from '../jogo/Patrimonio';
 import { Lugar } from '../jogo/material/Lugares';
-import { Compras } from '../jogo/Compras';
+import { Compras, precarregarCompras } from '../jogo/Compras';
+
+// HOTFIX 11.5.1: a busca e os segmentos de Compras chegam sob demanda.
+beforeAll(async () => { await precarregarCompras(); });
 import { PainelDoSubmundo } from '../jogo/Submundo';
 
 beforeEach(() => {

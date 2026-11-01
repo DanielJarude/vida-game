@@ -120,7 +120,10 @@ export function nomeSemCatalogo(pais: string, cidades: readonly string[], nivel:
   let h = 2166136261;
   for (const ch of `${pais}:${nivel}:${k}`) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); }
   h >>>= 0;
-  const lista = cidades.length ? cidades : ['Vila Nova', 'Porto Alto', 'Santa Rita', 'São Jorge'];
+  // A cidade de um clube que já existe não empresta o nome (nada de um "Atlético Madri" ao lado do Atlético de Madrid).
+  const sem = (c: string) => { const n = c.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().slice(0, 5); return ![...ocupados].some(o => !o.startsWith(SEM_CATALOGO) && o.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().includes(n)); };
+  const livres = cidades.filter(sem);
+  const lista = livres.length ? livres : cidades.length ? cidades : ['Vila Nova', 'Porto Alto', 'Santa Rita', 'São Jorge'];
   for (let t = 0; t < 12; t++) {
     const nome = pad[(h + t * 7) % pad.length].replace('{c}', lista[(h + t * 13) % lista.length]);
     if (!ocupados.has(nome)) { ocupados.add(nome); return nome; }

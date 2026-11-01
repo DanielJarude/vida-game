@@ -26,6 +26,28 @@ export interface NotaDeVersao {
 
 export const NOTAS: NotaDeVersao[] = [
   {
+    versao: '12.4.2',
+    data: '2026-11-01',
+    titulo: 'Futebol mais completo, tatuagens, cômodos com profundidade e uma aba Compras organizada',
+    novidades: [
+      'Futebol: a tabela de classificação de verdade — pontos, jogos, vitórias, empates, derrotas, gols marcados e sofridos, saldo — com os critérios de desempate, as vagas continentais e a zona de queda. A sua temporada mostra a linha do seu clube.',
+      'Os campeões de cada ano: a liga, a copa nacional e a continental, temporada por temporada.',
+      'Prêmios individuais do futebol: Bola de Ouro, The Best FIFA, Chuteira de Ouro e Golden Boy (Golden Girl no futebol feminino), disputados com jogadores do mundo do jogo que envelhecem, trocam de clube e se aposentam. O pódio e a sua colocação ficam registrados, ano a ano, e cada prêmio tem o seu troféu na galeria.',
+      'Tatuagens: escolha o desenho (tradicional, fine line, geométrica, tribal, floral, escrita, desenho artístico ou composições grandes), a parte do corpo e o lado; veja como fica de frente e de costas; faça várias; tire no laser. Elas aparecem no corpo, sob a roupa, e envelhecem com você.',
+      'Compras: uma busca por produto, marca ou loja em todas as lojas de uma vez, com filtros de categoria, marca e preço e a ordem por relevância, menor ou maior preço — comparando as ofertas antes de comprar. A aba agora começa pelos segmentos: moda, tecnologia, casa, cultura e lazer, veículos, luxo e coleção, onde morar, serviços.'
+    ],
+    melhorias: [
+      'O corpo inteiro ficou mais legível: contorno na pele e nos membros, e um fundo que sempre contrasta com a pele (a pele clara não some mais no fundo claro).',
+      'Cada modelo se reconhece: os óculos Juliet (lente espelhada que abraça o rosto), o aviador, o de grife, o escuro clássico e os de grau; o boné de aba reta, o chapéu de palha, o chapéu de couro e o turbante; a camisa de time com gola, escudo, patrocínio e as listras ou as mangas de contraste.',
+      'Os cômodos ganharam profundidade: paredes laterais, teto e piso em perspectiva, rodapé, a luz da janela no chão, sombras — e os móveis grandes encostados na parede do fundo.',
+      'Dentro de cada loja: busca, filtro de marca e de preço, e a ordem. A aba Compras e cada loja lembram onde você estava (o segmento, a busca, os filtros) ao comprar, fechar e voltar.',
+      'A relojoaria e a joalheria de coleção agora se chamam "Relojoaria de coleção" e "Alta joalheria", para não se confundirem com as lojas do dia a dia.'
+    ],
+    correcoes: [
+      'Os títulos pela seleção (Copa do Mundo, Copa América, Eurocopa…) agora aparecem na galeria de conquistas.'
+    ]
+  },
+  {
     versao: '12.4.1',
     data: '2026-10-31',
     titulo: 'Expansão da vida personalizada: o corpo inteiro, as lojas, os cômodos e as fases da vida',
