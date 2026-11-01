@@ -55,6 +55,8 @@ export interface Lugar {
   voce?: 'resumo' | 'saude' | 'habilidades' | 'aparencia' | 'mundo';
   /** REWORK 10: na História, a parte (o Agora ou a Biografia). */
   historia?: 'agora' | 'biografia';
+  /** HOTFIX 11.5.1: em Vida · Compras, o segmento (Veículos, Serviços…). */
+  segmento?: string;
 }
 
 const DE_TEMPO = new Set<string>(['semana', 'corpo', 'atividades', 'gente', 'redes']);
@@ -205,7 +207,7 @@ export const MAPA_DE_INTENCOES: Intencao[] = [
   { id: 'sair', quero: 'Sair, ver gente, fazer algo com alguém', lugar: { area: 'tempo', aba: 'gente' }, la: 'o que fazer com quem — e as atividades com gente' },
   { id: 'estresse', quero: 'Entender (e diminuir) o meu estresse', lugar: { area: 'tempo', aba: 'semana' }, la: '"Estresse": o que pesa, o que ajuda, o que dá para fazer' },
   { id: 'viajar', quero: 'Viajar (sozinho ou com a família)', lugar: { area: 'vida', secao: 'viagens' }, la: 'o destino, quanto tempo, com quem' },
-  { id: 'carro', quero: 'Comprar carro, moto ou bicicleta', lugar: { area: 'vida', secao: 'compras' }, la: 'concessionária, usados, motos e bicicletas' },
+  { id: 'carro', quero: 'Comprar carro, moto ou bicicleta', lugar: { area: 'vida', secao: 'compras', segmento: 'veiculos' }, la: 'concessionária, usados, motos e bicicletas' },
   { id: 'casa', quero: 'Procurar casa, sair da casa dos pais', lugar: { area: 'vida', secao: 'casa' }, la: '"Procurar um lugar para morar"' },
   { id: 'onde_moro', quero: 'Saber onde moro e com quem', lugar: { area: 'vida', secao: 'casa' }, la: 'a casa, no alto' },
   { id: 'mudar_cidade', quero: 'Mudar de cidade', lugar: { area: 'vida', secao: 'cidade' }, la: '"Mudar de cidade"' },
@@ -218,7 +220,7 @@ export const MAPA_DE_INTENCOES: Intencao[] = [
   { id: 'dinheiro', quero: 'Ver meu dinheiro, pedir ajuda à família', lugar: { area: 'vida', secao: 'dinheiro' }, la: 'o mês, o que é seu, a família' },
   { id: 'apostar', quero: 'Jogar na loteria, no cassino', lugar: { area: 'vida', secao: 'apostas' }, la: 'Vida · Apostas: loteria, blackjack, roleta, caça-níquel' },
   { id: 'cabelo', quero: 'Mudar o cabelo, a barba, pôr óculos', lugar: { area: 'voce', voce: 'aparencia' }, la: 'Você · "Aparência e estilo"' },
-  { id: 'cirurgia', quero: 'Fazer uma cirurgia plástica (nariz, orelhas, cabelo, lifting)', lugar: { area: 'vida', secao: 'compras' }, la: '"Você": a clínica de cirurgia plástica' },
+  { id: 'cirurgia', quero: 'Fazer uma cirurgia plástica (nariz, orelhas, cabelo, lifting)', lugar: { area: 'vida', secao: 'compras', segmento: 'servicos' }, la: '"Você": a clínica de cirurgia plástica' },
   // REWORK 10.5 · SAU-02 / UX-20: "saúde" e "cuidar" levam ao atendimento (o prontuário, com o médico), não aos atributos.
   { id: 'saude', quero: 'Ir ao médico (consulta, exames), cuidar da saúde', lugar: { area: 'voce', voce: 'saude' }, la: 'Você · Saúde: o prontuário, os sinais do corpo e "Procurar atendimento médico" (criança: pedir aos responsáveis)', chaves: 'medico consulta sintoma sinal doenca exame hospital posto pediatra remedio dor diagnostico check-up cuidar atendimento', tipo: 'fazer' },
   { id: 'tratamento', quero: 'Acompanhar um tratamento, uma condição de saúde', lugar: { area: 'voce', voce: 'saude' }, la: 'Você · Saúde: o que tem nome, o tratamento, a fila — parar (com o risco dito antes) ou retomar', chaves: 'tratamento condicao cancer pressao diabetes fila remedio acompanhamento parar retomar abandonar', tipo: 'acompanhar' },

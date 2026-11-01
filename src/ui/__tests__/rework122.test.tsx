@@ -5,6 +5,7 @@
  * a loja de peças com filtros e a venda sob consulta; a loja de exóticos com o que a lei proíbe; os mercados de
  * procedência incerta; o dossiê com o estágio e os negócios por fora; as fachadas próprias das casas de luxo.
  */
+import { limparCompras } from '../jogo/memoriaDeCompras';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { criarRng } from '../../motor/rng';
@@ -90,7 +91,10 @@ describe('o painel do ramo', () => {
 describe('lojas', () => {
   it('a relojoaria tem fachada própria em Compras (não é mais a ótica) e a loja filtra por preço, categoria e raridade', () => {
     const v = rica();
+    limparCompras();
     const { container } = render(<Compras vida={v} agir={() => true} abrir={() => {}} />);
+    // HOTFIX 11.5.1: o luxo e a coleção têm o segmento deles.
+    fireEvent.click(within(container.querySelector('.compras__segmentos') as HTMLElement).getByRole('button', { name: 'Luxo e coleção' }));
     expect(container.querySelector('[data-lugar="relojoaria"]')).toBeTruthy();
     expect(container.querySelector('[data-lugar="galeria"]')).toBeTruthy();
     expect(container.querySelector('[data-lugar="antiquario"]')).toBeTruthy();

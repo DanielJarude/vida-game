@@ -11,7 +11,8 @@ import { idade } from '../../../motor/nucleo';
 import { coisa } from '../../../motor/dados/coisas';
 import { itemEstilo } from '../../../motor/dados/estilo';
 import { estabelecimento, marca as marcaPorId, NOME_CATEGORIA, NOME_FAIXA, type CategoriaDeProduto, type Faixa } from '../../../motor/dados/lojas';
-import { categoriaDoProduto, ofertasDaLoja, type Oferta } from '../../../motor/sistemas/lojas';
+import { categoriaDoProduto, FAIXAS_DE_PRECO, nomeDoProduto, normalizarBusca, ofertasDaLoja, type Oferta, type OrdemDeCompras } from '../../../motor/sistemas/lojas';
+import { memoriaDasLojas, type EstadoDaLoja } from '../memoriaDeCompras';
 import { temCoisa } from '../../../motor/sistemas/coisas';
 import { temItem } from '../../../motor/sistemas/estilo';
 import { tipoDeCorpo } from '../../../motor/sistemas/silhueta';
@@ -30,9 +31,12 @@ interface Linha { chave: string; produto: Oferta['produto']; ofertas: Oferta[]; 
 
 export function LojaDaVida({ vida, agir, lojaId }: { vida: Vida; agir: (a: Acao) => boolean; lojaId: string }) {
   const e = estabelecimento(lojaId)!;
-  const [cat, setCat] = useState<CategoriaDeProduto | ''>('');
-  const [faixa, setFaixa] = useState<string>('');
-  const [quantos, setQuantos] = useState(POR_PAGINA);
+  // HOTFIX 11.5.1: a busca, os filtros (seção, faixa da marca, marca, preço), a ordem e a página moram na memória da
+  // loja — fechar e abrir de novo, ou comprar, deixa tudo onde estava.
+  const [m, setM] = useState<EstadoDaLoja>(() => memoriaDasLojas.get(lojaId) ?? { texto: '', cat: '', faixa: '', marca: '', preco: '', ordem: 'relevancia', quantos: POR_PAGINA });
+  const mudar = (x: Partial<EstadoDaLoja>) => setM(o => { const n = { ...o, ...x }; memoriaDasLojas.set(lojaId, n); return n; });
+  const cat = m.cat as CategoriaDeProduto | '', faixa = m.faixa, quantos = m.quantos;
+  const setQuantos = (f: (q: number) => number) => mudar({ quantos: f(m.quantos) });
   // As ofertas dependem da cidade e do mercado (não do saldo): calculadas uma vez por cidade — a compra não as recria.
   const linhas = useMemo<Linha[]>(() => {
     const por = new Map<string, Linha>();
@@ -48,7 +52,13 @@ export function LojaDaVida({ vida, agir, lojaId }: { vida: Vida; agir: (a: Acao)
   }, [lojaId, vida.moradia.municipioId]);
   const cats = [...new Set(linhas.map(l => l.categoria))];
   const faixas = [...new Set(linhas.flatMap(l => l.ofertas.map(o => (o.marca ? marcaPorId(o.marca)!.faixa : 1))))].sort() as Faixa[];
-  const visiveis = linhas.filter(l => (!cat || l.categoria === cat) && (!faixa || l.ofertas.some(o => String(o.marca ? marcaPorId(o.marca)!.faixa : 1) === faixa)));
+  const marcas = [...new Set(linhas.filter(l => !cat || l.categoria === cat).flatMap(l => l.ofertas.map(o => o.marca)).filter((x): x is string => !!x))].sort((a, b) => marcaPorId(a)!.nome.localeCompare(marcaPorId(b)!.nome));
+  const preco = FAIXAS_DE_PRECO.find(f => f.id === m.preco);
+  const q = normalizarBusca(m.texto);
+  const passa = (o: Oferta) => (!faixa || String(o.marca ? marcaPorId(o.marca)!.faixa : 1) === faixa) && (!m.marca || o.marca === m.marca) && (preco?.min === undefined || o.preco >= preco.min) && (preco?.max === undefined || o.preco <= preco.max);
+  const visiveis = linhas
+    .filter(l => (!cat || l.categoria === cat) && l.ofertas.some(passa) && (!q || q.split(/\s+/).every(t => normalizarBusca(nomeDoProduto(l.produto)).includes(t) || l.ofertas.some(o => o.marca && normalizarBusca(marcaPorId(o.marca)!.nome).includes(t)))))
+    .sort((a, b) => m.ordem === 'menor' ? Math.min(...a.ofertas.filter(passa).map(o => o.preco)) - Math.min(...b.ofertas.filter(passa).map(o => o.preco)) : m.ordem === 'maior' ? Math.max(...b.ofertas.filter(passa).map(o => o.preco)) - Math.max(...a.ofertas.filter(passa).map(o => o.preco)) : 0);
   const i = idade(vida);
   return (
     <div className="loja-estilo loja-vida" data-loja={lojaId}>
@@ -58,10 +68,28 @@ export function LojaDaVida({ vida, agir, lojaId }: { vida: Vida; agir: (a: Acao)
             : 'O que se compra aqui fica com você: dá para usar, guardar e (o objeto) vender usado.'}
         {' '}O preço muda com a marca: escolha a marca no próprio produto.
       </p>
-      {cats.length > 1 && <Escolha rotulo="Seção" valor={cat} aoMudar={x => { setCat(x); setQuantos(POR_PAGINA); }} opcoes={[{ id: '' as const, rotulo: 'Tudo' }, ...cats.map(c => ({ id: c, rotulo: NOME_CATEGORIA[c] }))]} />}
-      {faixas.length > 1 && <Escolha rotulo="Faixa de preço" valor={faixa} aoMudar={x => { setFaixa(x); setQuantos(POR_PAGINA); }} opcoes={[{ id: '', rotulo: 'Todas' }, ...faixas.map(f => ({ id: String(f), rotulo: cap(NOME_FAIXA[f]) }))]} />}
+      <label className="busca-compras__campo loja-vida__busca">
+        <span className="busca-compras__rotulo">Buscar nesta loja</span>
+        <input type="search" value={m.texto} onChange={ev => mudar({ texto: ev.target.value, quantos: POR_PAGINA })} placeholder="Produto ou marca" autoComplete="off" />
+      </label>
+      {cats.length > 1 && <Escolha rotulo="Seção" valor={cat} aoMudar={x => { mudar({ cat: x, marca: '', quantos: POR_PAGINA }); }} opcoes={[{ id: '' as const, rotulo: 'Tudo' }, ...cats.map(c => ({ id: c, rotulo: NOME_CATEGORIA[c] }))]} />}
+      {faixas.length > 1 && <Escolha rotulo="Faixa da marca" valor={faixa} aoMudar={x => { mudar({ faixa: x, quantos: POR_PAGINA }); }} opcoes={[{ id: '', rotulo: 'Todas' }, ...faixas.map(f => ({ id: String(f), rotulo: cap(NOME_FAIXA[f]) }))]} />}
+      <div className="busca-compras__filtros">
+        {marcas.length > 1 && (
+          <label className="campo campo--compacto"><span className="campo__rotulo">Marca</span>
+            <select value={m.marca} onChange={ev => mudar({ marca: ev.target.value, quantos: POR_PAGINA })}><option value="">Todas</option>{marcas.map(x => <option key={x} value={x}>{marcaPorId(x)!.nome}</option>)}</select>
+          </label>
+        )}
+        <label className="campo campo--compacto"><span className="campo__rotulo">Preço</span>
+          <select value={m.preco} onChange={ev => mudar({ preco: ev.target.value, quantos: POR_PAGINA })}>{FAIXAS_DE_PRECO.map(f => <option key={f.id} value={f.id}>{f.rotulo}</option>)}</select>
+        </label>
+        <label className="campo campo--compacto"><span className="campo__rotulo">Ordenar</span>
+          <select value={m.ordem} onChange={ev => mudar({ ordem: ev.target.value as OrdemDeCompras })}><option value="relevancia">Como na loja</option><option value="menor">Menor preço</option><option value="maior">Maior preço</option></select>
+        </label>
+      </div>
+      <p className="nota">{visiveis.length} {visiveis.length === 1 ? 'produto' : 'produtos'}{m.texto || m.marca || m.preco || cat || faixa ? ' com esses filtros' : ''}.</p>
       <ul className="ofertas">
-        {visiveis.slice(0, quantos).map(l => <ProdutoNaLoja key={l.chave} vida={vida} agir={agir} linha={l} lojaId={lojaId} faixa={faixa} crianca={i < 12} />)}
+        {visiveis.slice(0, quantos).map(l => <ProdutoNaLoja key={l.chave} vida={vida} agir={agir} linha={l} lojaId={lojaId} faixa={faixa} marca={m.marca} preco={preco} crianca={i < 12} />)}
       </ul>
       {visiveis.length > quantos && <button type="button" className="botao botao--discreto" onClick={() => setQuantos(q => q + POR_PAGINA)}>Ver mais ({visiveis.length - quantos})</button>}
       {!visiveis.length && <p className="nota">Nada nesta seção.</p>}
@@ -69,8 +97,8 @@ export function LojaDaVida({ vida, agir, lojaId }: { vida: Vida; agir: (a: Acao)
   );
 }
 
-function ProdutoNaLoja({ vida, agir, linha, lojaId, faixa, crianca }: { vida: Vida; agir: (a: Acao) => boolean; linha: Linha; lojaId: string; faixa: string; crianca: boolean }) {
-  const opcoes = faixa ? linha.ofertas.filter(o => String(o.marca ? marcaPorId(o.marca)!.faixa : 1) === faixa) : linha.ofertas;
+function ProdutoNaLoja({ vida, agir, linha, lojaId, faixa, marca, preco, crianca }: { vida: Vida; agir: (a: Acao) => boolean; linha: Linha; lojaId: string; faixa: string; marca?: string; preco?: { min?: number; max?: number }; crianca: boolean }) {
+  const opcoes = linha.ofertas.filter(o => (!faixa || String(o.marca ? marcaPorId(o.marca)!.faixa : 1) === faixa) && (!marca || o.marca === marca) && (preco?.min === undefined || o.preco >= preco.min) && (preco?.max === undefined || o.preco <= preco.max));
   const [escolhida, setEscolhida] = useState(opcoes[0]?.marca ?? '');
   const o = opcoes.find(x => (x.marca ?? '') === escolhida) ?? opcoes[0];
   if (!o) return null;

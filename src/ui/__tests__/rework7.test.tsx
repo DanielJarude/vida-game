@@ -13,6 +13,7 @@
  *   gerações    morrer → o herdeiro continua → o violão ficou → aparece em Pertences e na biografia, com o rosto
  *   navegação   cada intenção nova chega a um lugar que mostra o que promete
  */
+import { limparCompras } from '../jogo/memoriaDeCompras';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useState, type ReactNode } from 'react';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
@@ -172,21 +173,34 @@ describe('compra: adquirir → possuir → usar → efeito → save', () => {
 
   it('Compras mostra a vitrine de verdade: os veículos à venda neste ano, com o preço mínimo do motor', () => {
     const v = vida(30, x => { x.trabalho.atual = undefined; contratar(x, criarRng(2), ocupacao('assistente_adm')); x.financas.conta = 90000; });
+    limparCompras();
     const { container } = render(<main><VidaConcreta vida={v} agir={() => true} secao="compras" irSecao={nada} irPara={nada} abrirPessoa={nada} /></main>);
+    // HOTFIX 11.5.1: a aba começa pelos segmentos (moda, tecnologia, casa, cultura e lazer, veículos, luxo, onde morar,
+    // serviços); os veículos estão no segmento deles.
+    const segmentos = [...container.querySelectorAll('.compras-inicio__nome')].map(x => x.textContent);
+    expect(segmentos).toEqual(['Moda e acessórios', 'Tecnologia', 'Casa', 'Cultura, esporte e lazer', 'Veículos', 'Luxo e coleção', 'Onde morar', 'Serviços e bichos']);
+    fireEvent.click(within(container.querySelector('.compras__segmentos') as HTMLElement).getByRole('button', { name: 'Veículos' }));
     const conc = screen.getByRole('button', { name: /Concessionária/ });
     expect(conc.querySelectorAll('.desenho-veiculo').length).toBeGreaterThan(0);
     const min = Math.min(...ofertasDeVeiculos(v, 'concessionaria').map(o => o.preco));
     expect(within(conc).getByText(`a partir de ${dinheiroCurto(min)}`)).toBeTruthy();
-    // Os grupos seguem a vida: morar, ir e vir, as lojas (12.4.1: especializadas, de departamento quando a cidade tem,
-    // pela internet), a estética, o luxo, os serviços, os bichos.
+    // Num segmento de lojas, elas vêm pelo tipo: as especializadas, as de departamento (quando a cidade tem), a internet.
+    fireEvent.click(within(container.querySelector('.compras__segmentos') as HTMLElement).getByRole('button', { name: 'Moda e acessórios' }));
     const titulos = [...container.querySelectorAll('.vitrines__titulo')].map(h => h.textContent);
-    expect(titulos.slice(0, 3)).toEqual(['Onde morar', 'Ir e vir', 'Lojas especializadas']);
-    expect(titulos.filter(t => t !== 'Grandes lojas e lojas de departamento').slice(3)).toEqual(['Pela internet', 'Estética', 'Luxo e coleção', 'Serviços', 'Os bichos', 'Segunda mão e antiguidades (legais)']);
+    expect(titulos.filter(t => t !== 'Grandes lojas e lojas de departamento')).toEqual(['Lojas especializadas', 'Pela internet']);
+    // E os outros segmentos têm os lugares de sempre (a estética e os bichos em serviços; o luxo e a segunda mão em luxo).
+    fireEvent.click(within(container.querySelector('.compras__segmentos') as HTMLElement).getByRole('button', { name: 'Serviços e bichos' }));
+    expect([...container.querySelectorAll('.vitrines__titulo')].map(h => h.textContent)).toEqual(['Estética', 'Serviços', 'Os bichos']);
+    fireEvent.click(within(container.querySelector('.compras__segmentos') as HTMLElement).getByRole('button', { name: 'Luxo e coleção' }));
+    expect([...container.querySelectorAll('.vitrines__titulo')].map(h => h.textContent).filter(t => t !== 'Lojas especializadas')).toEqual(['Luxo e coleção', 'Segunda mão e antiguidades (legais)']);
+    limparCompras();
   });
 
   it('a loja de instrumentos diz o que rende no que você pratica — e o que já é seu dali', () => {
     const v = vida(25, x => { x.financas.conta = 30000; x.rotinas.push({ id: 'musica', tInicio: x.t - 12, nivel: 1 }); x.financas.coisas = [{ id: 'c1', coisaId: 'teclado', t: x.t - 12, preco: 2000, estado: 90 }]; });
-    render(<main><VidaConcreta vida={v} agir={() => true} secao="compras" irSecao={nada} irPara={nada} abrirPessoa={nada} /></main>);
+    limparCompras();
+    const { container } = render(<main><VidaConcreta vida={v} agir={() => true} secao="compras" irSecao={nada} irPara={nada} abrirPessoa={nada} /></main>);
+    fireEvent.click(within(container.querySelector('.compras__segmentos') as HTMLElement).getByRole('button', { name: 'Cultura, esporte e lazer' }));
     const loja = screen.getByRole('button', { name: /Instrumentos musicais|Loja de instrumentos/ });
     expect(within(loja).getByText(/^Seu: teclado/)).toBeTruthy();
     expect(within(loja).getByText(/rende em "tocar um instrumento"/)).toBeTruthy();

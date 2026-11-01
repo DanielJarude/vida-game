@@ -16,7 +16,7 @@
  */
 
 import { PedidoDeCompra } from './Alcance';
-import { useMemo, type ReactNode } from 'react';
+import { useEffect, useMemo, type ReactNode } from 'react';
 import type { Vida } from '../../motor/tipos';
 import { disponibilidade, type Acao } from '../../motor/acoes';
 import { podeTentar } from '../../motor/plausibilidade';
@@ -32,7 +32,7 @@ import { habilitacaoDaVida, leituraDaAutoescola } from '../../motor/sistemas/aut
 import { leituraDaOrigem, responsaveis } from '../../motor/sistemas/origem';
 import { modeloRotina } from '../../motor/sistemas/rotinas';
 import { varianteDe } from '../../motor/sistemas/pertences';
-import { BotaoAcao, Secao } from '../comum';
+import { BotaoAcao, Escolha, Secao } from '../comum';
 import { dinheiroCurto, formaDoModelo, leituraDaSeguranca } from '../leituraMaterial';
 import { DesenhoVeiculo, MiniaturaDaCasa } from './material/Desenhos';
 import { Fachada } from '../ilustracao/Fachada';
@@ -41,7 +41,12 @@ import { corDoVeiculo } from '../../motor/dados/pertences';
 import { DesenhoObjeto } from './material/Objetos';
 import { Retrato } from '../avatar/Retrato';
 import { type QualLugar } from './material/Lugares';
-import { categoriaDaCoisa, categoriaDoItem, lojasDaVida, ofertasDaLoja } from '../../motor/sistemas/lojas';
+import { categoriaDaCoisa, categoriaDoItem, lojasDaVida, ofertasDaLoja, SEGMENTOS, segmentosDaLoja, type SegmentoDeCompras } from '../../motor/sistemas/lojas';
+import { NOME_CATEGORIA } from '../../motor/dados/lojas';
+import { rolagemDeCompras, useEstadoDeCompras } from './memoriaDeCompras';
+import { sobDemanda } from '../util/sobDemanda';
+/** HOTFIX 11.5.1: a busca nas lojas (pacote sob demanda: o do jogo não cresce). */
+const BuscaDeCompras = sobDemanda(() => import('./material/BuscaDeCompras').then(m => m.BuscaDeCompras));
 import { estabelecimento, type CategoriaDeProduto, type Estabelecimento } from '../../motor/dados/lojas';
 import { LOJAS_DE_COLECAO, type LojaDeColecao } from '../../motor/dados/colecionaveis';
 import { lojaDeColecaoNaCidade, ofertasDeColecao } from '../../motor/sistemas/colecao';
@@ -67,6 +72,11 @@ interface Vitrine {
   rende?: string;
   /** Pela internet: na cidade não há loja disso. */
   online?: boolean;
+  /** HOTFIX 11.5.1: os segmentos da aba em que o lugar aparece, o tipo de loja e o que ela vende. */
+  segmentos?: SegmentoDeCompras[];
+  tipoLoja?: Estabelecimento['tipo'];
+  categorias?: CategoriaDeProduto[];
+  precoMin?: number;
 }
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -110,7 +120,8 @@ function vitrines(v: Vida): { grupo: string; id: string; lugares: Vitrine[] }[] 
       preco: ofertas.length ? `a partir de ${dinheiroCurto(Math.min(...ofertas.map(o => o.preco)))}` : undefined,
       seu: seus.length ? `Seu: ${seus.slice(0, 2).join(', ')}${seus.length > 2 ? ` e mais ${seus.length - 2}` : ''}` : undefined,
       rende: util[0] ? `${cap(coisa(util[0])!.nome)} rende em "${modeloRotina(Object.keys(coisa(util[0])!.ajuda!).find(r => praticas.has(r))!)?.nome.toLowerCase()}"` : undefined,
-      online: e.tipo === 'online'
+      online: e.tipo === 'online',
+      segmentos: segmentosDaLoja(e), tipoLoja: e.tipo, categorias: e.categorias, precoMin: ofertas.length ? Math.min(...ofertas.map(o => o.preco)) : undefined
     };
   };
   const casas = i >= 16 ? ofertasDeImoveis(v, 'aluguel').slice(0, 3) : [];
@@ -212,45 +223,141 @@ function CartaoVitrine({ x, i, abrir }: { x: Vitrine; i: number; abrir: (l: Qual
   );
 }
 
+/** HOTFIX 11.5.1: o segmento de cada lugar que não é loja (as lojas dizem o delas pelo que vendem). */
+const SEGMENTO_DO_GRUPO: Record<string, SegmentoDeCompras> = { moradia: 'moradia', veiculos: 'veiculos', aparencia: 'servicos', colecao: 'luxo', servicos: 'servicos', animais: 'servicos', paralelos: 'luxo' };
+const TITULO_DO_TIPO: Record<Estabelecimento['tipo'], string> = { especializada: 'Lojas especializadas', departamento: 'Grandes lojas e lojas de departamento', online: 'Pela internet' };
+
+interface LugarNoSegmento { x: Vitrine; grupo: string; grupoId: string; segmentos: SegmentoDeCompras[] }
+
+/**
+ * HOTFIX 11.5.1 — COMPRAS REORGANIZADA. Antes, uma lista só de ~25 vitrines grandes (onde morar, ir e vir, as lojas
+ * especializadas, as de departamento, as da internet, a estética, o luxo, os serviços, os bichos), sem busca. Agora a
+ * aba tem uma hierarquia: a BUSCA (produto, marca ou loja, em todas as lojas, com filtros de categoria, marca e preço,
+ * e a ordem) no alto; os SEGMENTOS (moda, tecnologia, casa, cultura e lazer, veículos, luxo, onde morar, serviços)
+ * como primeira escolha; dentro do segmento, as lojas pelo tipo (especializadas, grandes lojas, internet) — uma loja
+ * de departamento aparece em cada segmento que atende — e, na moda, o filtro pela categoria (roupas, calçados,
+ * óculos...). O segmento, a busca, os filtros e a posição da página ficam na memória da aba: comprar, abrir uma loja,
+ * sair e voltar não levam ao começo. Nenhuma loja nem produto saiu: só mudou o caminho até eles.
+ */
 export function Compras({ vida, agir, abrir }: Props) {
   const i = idade(vida);
   const grupos = useMemo(() => vitrines(vida), [vida]);
+  const [estado, mudar] = useEstadoDeCompras(vida.id);
+  const seg = estado.segmento;
+  // O pedido de fora (o mapa "Comprar carro") vale uma vez.
+  useEffect(() => { if (estado.deFora) mudar({ deFora: false }); }, [estado.deFora, mudar]);
+  // A posição da página em cada segmento: guardada enquanto se rola, devolvida ao voltar.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const y = rolagemDeCompras[seg];
+    if (y) requestAnimationFrame(() => window.scrollTo(0, y));
+    const guardar = () => { rolagemDeCompras[seg] = window.scrollY; };
+    window.addEventListener('scroll', guardar, { passive: true });
+    return () => { window.removeEventListener('scroll', guardar); };
+  }, [seg]);
   if (i < 10) return <ComprasDaCrianca vida={vida} grupos={grupos} agir={agir} />;
-  const seg = seguranca(vida);
-  const hab = habilitacaoDaVida(vida);
+  const sg = seguranca(vida);
+  const lugares: LugarNoSegmento[] = grupos.flatMap(g => g.lugares.map(x => ({ x, grupo: g.grupo, grupoId: g.id, segmentos: x.segmentos ?? [SEGMENTO_DO_GRUPO[g.id] ?? 'servicos'] })));
+  const doSegmento = (s: SegmentoDeCompras) => lugares.filter(l => l.segmentos.includes(s));
+  const segmentos = SEGMENTOS.filter(s => doSegmento(s.id).length);
+  const atual = segmentos.find(s => s.id === seg);
+  const buscando = !!(estado.texto.trim() || estado.categoria || estado.marca || estado.faixa);
   return (
     <div className="compras">
       <header className="folio folio--compras">
         <p className="folio__kicker"><span className="folio__area">Vida · Compras</span>{i >= 8 ? <> · {i < 12 ? 'no cofrinho' : 'na conta'}: <strong>{dinheiroCurto(Math.max(0, vida.financas.conta))}</strong>{i >= 18 ? ` · ${leituraDaSeguranca(vida).palavra.toLowerCase()}` : ''}</> : null}</p>
-        <h1 className="folio__titulo">{i < 12 ? 'Quase tudo ainda vem dos adultos da casa' : i < 18 ? 'O que dá para comprar com o seu dinheiro' : seg.nivel === 'no_vermelho' || seg.nivel === 'apertado' ? 'O dinheiro está curto: olhe antes de comprar' : 'O que esta cidade tem para a sua vida'}</h1>
+        <h1 className="folio__titulo">{i < 12 ? 'Quase tudo ainda vem dos adultos da casa' : i < 18 ? 'O que dá para comprar com o seu dinheiro' : sg.nivel === 'no_vermelho' || sg.nivel === 'apertado' ? 'O dinheiro está curto: olhe antes de comprar' : 'O que esta cidade tem para a sua vida'}</h1>
       </header>
-      {grupos.map(g => {
-        const abertos = g.lugares.filter(x => i >= x.idadeMin);
-        const cedo = g.lugares.filter(x => i < x.idadeMin);
-        if (!abertos.length && !cedo.length) return null;
+      {i >= AUTONOMIA.compra_pessoal.idade && <BuscaDeCompras vida={vida} agir={agir} abrir={abrir} estado={estado} mudar={mudar} />}
+      <nav className="compras__segmentos" aria-label="Seções de compras">
+        <button type="button" className={`compras__segmento${!atual ? ' compras__segmento--ativo' : ''}`} aria-current={!atual ? 'page' : undefined} onClick={() => mudar({ segmento: 'inicio', categoriaDasLojas: '' })}>Início</button>
+        {segmentos.map(s => <button key={s.id} type="button" className={`compras__segmento${atual?.id === s.id ? ' compras__segmento--ativo' : ''}`} aria-current={atual?.id === s.id ? 'page' : undefined} onClick={() => mudar({ segmento: s.id, categoriaDasLojas: '' })}>{s.nome}</button>)}
+      </nav>
+      {!buscando && (atual
+        ? <SegmentoDeCompras vida={vida} agir={agir} abrir={abrir} segmento={atual} lugares={doSegmento(atual.id)} categoria={estado.categoriaDasLojas} mudarCategoria={c => mudar({ categoriaDasLojas: c })} />
+        : <InicioDeCompras vida={vida} segmentos={segmentos.map(s => ({ s, lugares: doSegmento(s.id) }))} escolher={id => mudar({ segmento: id, categoriaDasLojas: '' })} />)}
+    </div>
+  );
+}
+
+/** O começo da aba: um cartão por segmento (quantos lugares, a partir de quanto, o que já é seu dali). */
+function InicioDeCompras({ vida, segmentos, escolher }: { vida: Vida; segmentos: { s: (typeof SEGMENTOS)[number]; lugares: LugarNoSegmento[] }[]; escolher: (id: SegmentoDeCompras) => void }) {
+  const i = idade(vida);
+  return (
+    <section className="compras-inicio" aria-label="Os segmentos">
+      <ul className="compras-inicio__lista">
+        {segmentos.map(({ s, lugares }) => {
+          const abertos = lugares.filter(l => i >= l.x.idadeMin);
+          const lojas = abertos.filter(l => l.x.tipoLoja);
+          const seus = abertos.filter(l => l.x.seu).length;
+          const precos = abertos.map(l => l.x.precoMin).filter((p): p is number => p !== undefined);
+          return (
+            <li key={s.id}>
+              <button type="button" className={`compras-inicio__cartao compras-inicio__cartao--${s.id}`} onClick={() => escolher(s.id)} disabled={!abertos.length}>
+                <span className="compras-inicio__nome">{s.nome}</span>
+                <span className="compras-inicio__frase">{s.frase}</span>
+                <span className="compras-inicio__meta">{abertos.length ? `${abertos.length} ${abertos.length === 1 ? 'lugar' : 'lugares'}${lojas.length ? ` · ${lojas.filter(l => l.x.tipoLoja !== 'online').length} na cidade, ${lojas.filter(l => l.x.tipoLoja === 'online').length} pela internet` : ''}` : `mais tarde (aos ${Math.min(...lugares.map(l => l.x.idadeMin))})`}{seus ? ` · você já tem coisas de ${seus}` : ''}</span>
+                {precos.length > 0 && <span className="compras-inicio__preco">{`a partir de ${dinheiroCurto(Math.min(...precos))}`}</span>}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
+/** Um segmento por dentro: o filtro pela categoria (quando há mais de uma), e as lojas pelo tipo — ou os lugares do grupo. */
+function SegmentoDeCompras({ vida, agir, abrir, segmento, lugares, categoria, mudarCategoria }: { vida: Vida; agir: (a: Acao) => boolean; abrir: (l: QualLugar) => void; segmento: (typeof SEGMENTOS)[number]; lugares: LugarNoSegmento[]; categoria: string; mudarCategoria: (c: string) => void }) {
+  const i = idade(vida);
+  const hab = habilitacaoDaVida(vida);
+  const cats = segmento.categorias.filter(c => lugares.some(l => l.x.categorias?.includes(c)));
+  const cat = cats.includes(categoria as CategoriaDeProduto) ? categoria as CategoriaDeProduto : '';
+  const visiveis = lugares.filter(l => !cat || !l.x.categorias || l.x.categorias.includes(cat));
+  // Os blocos: as lojas pelo tipo (na ordem: especializadas, grandes lojas, internet); o resto, pelo grupo de sempre.
+  const blocos: { id: string; titulo: string; xs: LugarNoSegmento[] }[] = [];
+  for (const l of visiveis) {
+    const id = l.x.tipoLoja ?? l.grupoId;
+    const titulo = l.x.tipoLoja ? TITULO_DO_TIPO[l.x.tipoLoja] : l.grupo;
+    let b = blocos.find(y => y.id === id);
+    if (!b) { b = { id, titulo, xs: [] }; blocos.push(b); }
+    b.xs.push(l);
+  }
+  const ordem = ['especializada', 'departamento', 'online'];
+  blocos.sort((a, b) => (ordem.indexOf(a.id) + 1 || 9) - (ordem.indexOf(b.id) + 1 || 9));
+  return (
+    <section className={`compras-segmento compras-segmento--${segmento.id}`} aria-labelledby={`segmento-${segmento.id}`}>
+      <h2 id={`segmento-${segmento.id}`} className="compras-segmento__titulo">{segmento.nome}</h2>
+      <p className="nota">{segmento.frase}.</p>
+      {cats.length > 1 && (
+        <div className="compras-segmento__categorias">
+          <Escolha rotulo="Categoria" valor={cat} aoMudar={c => mudarCategoria(c)} opcoes={[{ id: '' as const, rotulo: 'Tudo' }, ...cats.map(c => ({ id: c, rotulo: NOME_CATEGORIA[c] }))]} />
+        </div>
+      )}
+      {blocos.map(b => {
+        const abertos = b.xs.filter(l => i >= l.x.idadeMin);
+        const cedo = b.xs.filter(l => i < l.x.idadeMin);
         return (
-          <section key={g.id} className={`vitrines vitrines--${g.id}`} aria-labelledby={`vitrines-${g.id}`}>
-            <h2 id={`vitrines-${g.id}`} className="vitrines__titulo">{g.grupo}</h2>
-            {abertos.length > 0 && <ul className="vitrines__lista">{abertos.map(x => <CartaoVitrine key={x.id} x={x} i={i} abrir={abrir} />)}</ul>}
-            {cedo.length > 0 && (
-              <p className="vitrines__depois">{abertos.length ? 'Mais tarde: ' : ''}{cedo.map((x, k) => <span key={x.id}>{k ? ' · ' : ''}{x.nome.toLowerCase()} <span className="nota">(aos {x.idadeMin})</span></span>)}</p>
-            )}
-            {g.id === 'veiculos' && i >= hab.comeca - 1 && <BotaoAcao vida={vida} acao={{ tipo: 'cnh' }} agir={agir} variante="discreto" ocultarImpossivel>{`Tirar ${hab.a} (${hab.escola})`}</BotaoAcao>}
-            {g.id === 'veiculos' && i >= hab.comeca - 2 && !vida.trabalho.licencas.includes('cnh') && <p className="nota">{hab.frase}</p>}
-            {g.id === 'veiculos' && leituraDaAutoescola(vida) && (
-              <div className="autoescola">
-                <p className="nota">{leituraDaAutoescola(vida)}</p>
-                <div className="grupo-acoes grupo-acoes--linha">
-                  <BotaoAcao vida={vida} acao={{ tipo: 'cnh_prova' }} agir={agir} variante="secundario" ocultarBloqueado ocultarImpossivel>Fazer a prova teórica</BotaoAcao>
-                  <BotaoAcao vida={vida} acao={{ tipo: 'cnh_preparar', como: 'teoria' }} agir={agir} variante="discreto" ocultarImpossivel>Estudar o manual e fazer simulados</BotaoAcao>
-                  <BotaoAcao vida={vida} acao={{ tipo: 'cnh_preparar', como: 'pratica' }} agir={agir} variante="discreto" ocultarImpossivel>Fazer aulas extras de direção</BotaoAcao>
-                </div>
-              </div>
-            )}
+          <section key={b.id} className={`vitrines vitrines--${b.id}`} aria-labelledby={`vitrines-${segmento.id}-${b.id}`}>
+            <h3 id={`vitrines-${segmento.id}-${b.id}`} className="vitrines__titulo">{b.titulo}</h3>
+            {abertos.length > 0 && <ul className="vitrines__lista">{abertos.map(l => <CartaoVitrine key={l.x.id} x={l.x} i={i} abrir={abrir} />)}</ul>}
+            {cedo.length > 0 && <p className="vitrines__depois">{abertos.length ? 'Mais tarde: ' : ''}{cedo.map((x, k) => <span key={x.x.id}>{k ? ' · ' : ''}{x.x.nome.toLowerCase()} <span className="nota">(aos {x.x.idadeMin})</span></span>)}</p>}
           </section>
         );
       })}
-    </div>
+      {segmento.id === 'veiculos' && i >= hab.comeca - 1 && <BotaoAcao vida={vida} acao={{ tipo: 'cnh' }} agir={agir} variante="discreto" ocultarImpossivel>{`Tirar ${hab.a} (${hab.escola})`}</BotaoAcao>}
+      {segmento.id === 'veiculos' && i >= hab.comeca - 2 && !vida.trabalho.licencas.includes('cnh') && <p className="nota">{hab.frase}</p>}
+      {segmento.id === 'veiculos' && leituraDaAutoescola(vida) && (
+        <div className="autoescola">
+          <p className="nota">{leituraDaAutoescola(vida)}</p>
+          <div className="grupo-acoes grupo-acoes--linha">
+            <BotaoAcao vida={vida} acao={{ tipo: 'cnh_prova' }} agir={agir} variante="secundario" ocultarBloqueado ocultarImpossivel>Fazer a prova teórica</BotaoAcao>
+            <BotaoAcao vida={vida} acao={{ tipo: 'cnh_preparar', como: 'teoria' }} agir={agir} variante="discreto" ocultarImpossivel>Estudar o manual e fazer simulados</BotaoAcao>
+            <BotaoAcao vida={vida} acao={{ tipo: 'cnh_preparar', como: 'pratica' }} agir={agir} variante="discreto" ocultarImpossivel>Fazer aulas extras de direção</BotaoAcao>
+          </div>
+        </div>
+      )}
+    </section>
   );
 }
 

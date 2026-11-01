@@ -4,6 +4,7 @@
  * fazer X, onde começo?". Cada intenção do mapa (`ui/navegacao`) é seguida
  * por cliques de verdade, e o destino precisa mostrar o que promete.
  */
+import { SEGMENTOS } from '../../motor/sistemas/lojas';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { App, precarregar } from '../App';
@@ -48,6 +49,8 @@ function ir(l: Lugar): void {
   const a = AREAS.find(x => x.id === l.area)!;
   fireEvent.click(screen.getAllByRole('button', { name: a.rotulo })[0]);
   if (l.secao) fireEvent.click(screen.getByRole('tab', { name: SECOES_VIDA.find(s => s.id === l.secao)!.rotulo }));
+  // HOTFIX 11.5.1: Compras tem segmentos — o destino que pede um (Veículos, Serviços) é o clique no segmento.
+  if (l.segmento) fireEvent.click(within(document.querySelector('.compras__segmentos') as HTMLElement).getByRole('button', { name: SEGMENTOS.find(s => s.id === l.segmento)!.nome }));
   // FIX pós-REWORK 4: as abas de Tempo livre (REWORK 9: Minha Semana).
   if (l.aba) fireEvent.click(screen.getByRole('tab', { name: SECOES_TEMPO.find(s => s.id === l.aba)!.rotulo }));
   // REWORK 9.6: Caminhos → a divisão → a parte (Estudos e Trabalho têm partes; Vida pública e Outros caminhos, não).

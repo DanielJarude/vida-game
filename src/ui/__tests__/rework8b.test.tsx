@@ -5,8 +5,9 @@
  * o objeto escuro segura a silhueta; o nível de detalhe acompanha o tamanho; o mesmo dado dá sempre o mesmo desenho; e
  * a reação a um presente sai do contexto, sem inventar lembranças.
  */
+import { limparCompras } from '../jogo/memoriaDeCompras';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { cleanup, render } from '@testing-library/react';
+import { cleanup, fireEvent, render } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { precarregar } from '../App';
 import { DesenhoVeiculo, CenaDaCasa } from '../jogo/material/Desenhos';
@@ -134,8 +135,11 @@ describe('os lugares como fachadas', () => {
   it('em Compras, cada vitrine tem a fachada do seu lugar — sem ícone de traço', () => {
     const v = adulto(30, { semente: 17 });
     v.financas.conta = 400000;
+    limparCompras();
     render(<Compras vida={v} agir={() => true} abrir={() => {}} />);
-    const fachadas = [...document.querySelectorAll('.vitrine__fachada')];
+    // HOTFIX 11.5.1: as vitrines estão nos segmentos — percorre todos.
+    const fachadas: Element[] = [];
+    for (const b of [...document.querySelectorAll('.compras__segmento')].slice(1)) { fireEvent.click(b); fachadas.push(...document.querySelectorAll('.vitrine__fachada')); }
     expect(fachadas.length).toBeGreaterThanOrEqual(10);
     const lugares = fachadas.map(f => f.getAttribute('data-lugar'));
     for (const l of ['alugar', 'concessionaria', 'usados', 'banco', 'clinica', 'estilo', 'eletronicos', 'livraria']) expect(lugares).toContain(l);

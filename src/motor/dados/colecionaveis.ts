@@ -66,8 +66,8 @@ export const NOME_CATEGORIA_COLECAO: Record<CategoriaColecao, { um: string; vari
 export const NOME_RARIDADE: Record<RaridadeColecao, string> = { comum: 'de série', incomum: 'pouco comum', rara: 'rara', unica: 'peça única' };
 
 export const LOJAS_DE_COLECAO: Record<LojaDeColecao, { nome: string; frase: string; cidadeGrande: boolean }> = {
-  relojoaria: { nome: 'Relojoaria', frase: 'Vitrine de vidro, luz baixa, um vendedor de luvas. Os de série saem hoje; os de fila, só para cliente antigo.', cidadeGrande: false },
-  joalheria: { nome: 'Joalheria', frase: 'Ouro, pedra, a caixinha de veludo. Quanto mais pedra, menos se recupera na revenda.', cidadeGrande: false },
+  relojoaria: { nome: 'Relojoaria de coleção', frase: 'Vitrine de vidro, luz baixa, um vendedor de luvas. Os de série saem hoje; os de fila, só para cliente antigo.', cidadeGrande: false },
+  joalheria: { nome: 'Alta joalheria', frase: 'Ouro, pedra, a caixinha de veludo. Quanto mais pedra, menos se recupera na revenda.', cidadeGrande: false },
   galeria: { nome: 'Galeria de arte', frase: 'Paredes brancas, uma obra por parede, preço só perguntando. O artista novo é aposta; o consagrado, patrimônio.', cidadeGrande: true },
   antiquario: { nome: 'Antiquário', frase: 'Cheiro de madeira velha, cada peça com uma história — algumas verdadeiras.', cidadeGrande: false },
   memorabilia: { nome: 'Loja de memorabilia', frase: 'Camisas emolduradas, bolas autografadas, ingressos de finais. A carta do clube é o que separa a relíquia da réplica.', cidadeGrande: true },

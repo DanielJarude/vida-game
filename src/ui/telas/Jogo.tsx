@@ -95,6 +95,8 @@ export function Jogo({ c }: { c: ControleVida }) {
     if (l.area === 'caminhos' || l.explorar) setExplorar(l.explorar);
     if (l.voce) setParteVoce(l.voce);
     if (l.historia) setParteHistoria(l.historia);
+    // HOTFIX 11.5.1: o destino que pede um segmento de Compras (Veículos, Serviços) abre nele.
+    if (l.segmento) guardarCompras({ segmento: l.segmento, texto: '', deFora: true });
     foco.current = l.foco;
     setLugar(l);
   };
@@ -420,6 +422,7 @@ import { Novidades } from '../janelaDeNovidades';
 import { Tempo } from '../jogo/Tempo';
 import { oportunidadesAbertas } from '../../motor/sistemas/mercados';
 import { DetalheDaOportunidade } from '../jogo/Alcance';
+import { guardarCompras } from '../jogo/memoriaDeCompras';
 import { agendaDaSemana } from '../../motor/sistemas/agenda';
 
 /** Um conflito entre compromissos obrigatórios (o trabalho em cima da aula), não uma atividade que perde uma vez. */
