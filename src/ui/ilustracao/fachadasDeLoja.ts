@@ -491,8 +491,9 @@ function galpao(o: Galpao): Amostra {
       { tipo: 'linha', d: Array.from({ length: 13 }, (_, k) => `M${x0 + 8 + k * 17} ${34 - Math.sin(((k + 0.5) / 13) * Math.PI) * 10}V${CHAO - 30}`).join(''), larg: 0.4, cor: escurecer(o.parede, 0.18), so3: true },
       { tipo: 'massa', d: ret(x0, 44, x1 - x0, 14, 0), cor: o.cor, marca: 'placa' },
       texto(240, 54.5, o.nome, 10, o.tinta, { fonte: o.fonte, espaco: o.fonte === 'serif' ? 2.4 : 1.2, peso: 800 }),
-      // As portas de carga: duas fechadas (de enrolar) e uma aberta, com as prateleiras de caixas.
-      ...[150, 196].flatMap((x): Peca[] => [{ tipo: 'metal', d: ret(x, 66, 38, CHAO - 66, 0.4), cor: '#a7a39c' }, { tipo: 'linha', d: Array.from({ length: 9 }, (_, k) => `M${x} ${70 + k * 5}h38`).join(''), larg: 0.4, cor: '#7f7b74' }]),
+      // A porta de pedestres (o escritório do galpão), à esquerda; as portas de carga: duas fechadas e uma aberta.
+      ...porta(132, 78, 14, '#55595f'),
+      ...[152, 197].flatMap((x): Peca[] => [{ tipo: 'metal', d: ret(x, 66, 38, CHAO - 66, 0.4), cor: '#a7a39c' }, { tipo: 'linha', d: Array.from({ length: 9 }, (_, k) => `M${x} ${70 + k * 5}h38`).join(''), larg: 0.4, cor: '#7f7b74' }]),
       { tipo: 'massa', d: ret(242, 66, 40, CHAO - 66, 0.4), cor: '#3a3632', marca: 'doca' },
       { tipo: 'linha', d: 'M244 78h36M244 92h36', larg: 1, cor: '#8f8a80' },
       ...caixa(246, 68, 9, 9), ...caixa(257, 68, 9, 9), ...caixa(268, 69, 9, 8), ...caixa(248, 82, 10, 9), ...caixa(262, 82, 12, 9),

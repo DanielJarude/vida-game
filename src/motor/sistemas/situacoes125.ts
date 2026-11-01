@@ -312,31 +312,31 @@ const BASE_125: ModeloSituacao[] = [
     titulo: 'A fiscalização',
     texto: () => 'A fiscalização apareceu sem aviso: alvará, extintores, nota fiscal, carteira dos funcionários. Uma coisa está fora do lugar.',
     intencoes: [
-      { id: 'regularizar', texto: 'Mostrar tudo e regularizar o que faltar', dica: 'Custa agora; protege depois.', risco: 0.2, fatores: v => [disciplina(v)], desfechos: D('Saiu com um elogio do fiscal.', 'Prazo para ajustar, sem multa.', 'Uma multa pequena.', 'Uma multa grande.', { otimo: { dinheiro: -500 }, bom: { dinheiro: -1500 }, ruim: { dinheiro: -4000 }, pessimo: { dinheiro: -12000 } }) },
-      { id: 'jeitinho', texto: 'Tentar resolver "por fora"', dica: 'Pode sair barato. Pode sair muito caro.', risco: 0.7, fatores: v => [social(v), coragem(v)], desfechos: D('O fiscal fingiu que não viu.', 'Resolveu, desconfortável.', 'O fiscal recusou e aplicou a multa cheia.', 'O fiscal registrou a tentativa: processo e interdição.', { otimo: { dinheiro: -1000 }, bom: { dinheiro: -2000 }, ruim: { dinheiro: -8000 }, pessimo: { dinheiro: -20000, imagem: 'polemica' } }) }
+      { id: 'regularizar', texto: 'Mostrar tudo e regularizar o que faltar', dica: 'Custa agora; protege depois.', risco: 0.2, fatores: v => [disciplina(v)], desfechos: D('Saiu com um elogio do fiscal.', 'Prazo para ajustar, sem multa.', 'Uma multa pequena.', 'Uma multa grande.', { otimo: { dinheiro: -300 }, bom: { dinheiro: -800 }, ruim: { dinheiro: -2000 }, pessimo: { dinheiro: -5000 } }) },
+      { id: 'jeitinho', texto: 'Tentar resolver "por fora"', dica: 'Pode sair barato. Pode sair muito caro.', risco: 0.7, fatores: v => [social(v), coragem(v)], desfechos: D('O fiscal fingiu que não viu.', 'Resolveu, desconfortável.', 'O fiscal recusou e aplicou a multa cheia.', 'O fiscal registrou a tentativa: processo e interdição.', { otimo: { dinheiro: -600 }, bom: { dinheiro: -1200 }, ruim: { dinheiro: -4000 }, pessimo: { dinheiro: -9000, imagem: 'polemica' } }) }
     ] },
   { id: 'neg125_concorrente', trajetoria: 'negocio', tema: 'neg_mercado', recarga: 5, cabe: () => true,
     titulo: 'O vizinho novo',
     texto: () => 'Uma rede grande abriu do mesmo ramo, na mesma rua, com preço de inauguração.',
     intencoes: [
-      { id: 'preco', texto: 'Baixar o preço', dica: 'Guerra de preço: quem tem mais caixa ganha.', risco: 0.55, fatores: v => [caixa(v, 20000)], desfechos: D('Segurou a clientela; a rede subiu o preço depois.', 'Segurou a maioria.', 'A margem sumiu.', 'O caixa secou antes da rede.', { ruim: { dinheiro: -5000 }, pessimo: { dinheiro: -15000 } }) },
-      { id: 'diferenciar', texto: 'Apostar no que a rede não tem', dica: 'Atendimento, especialidade, nome.', risco: 0.35, fatores: v => [social(v), leitura(v)], desfechos: D('A clientela fiel virou propaganda.', 'Perdeu pouco movimento.', 'Perdeu movimento por um ano.', 'O movimento caiu pela metade.', { pessimo: { dinheiro: -8000 } }) }
+      { id: 'preco', texto: 'Baixar o preço', dica: 'Guerra de preço: quem tem mais caixa ganha.', risco: 0.55, fatores: v => [caixa(v, 20000)], desfechos: D('Segurou a clientela; a rede subiu o preço depois.', 'Segurou a maioria.', 'A margem sumiu.', 'O caixa secou antes da rede.', { ruim: { dinheiro: -2500 }, pessimo: { dinheiro: -6000 } }) },
+      { id: 'diferenciar', texto: 'Apostar no que a rede não tem', dica: 'Atendimento, especialidade, nome.', risco: 0.35, fatores: v => [social(v), leitura(v)], desfechos: D('A clientela fiel virou propaganda.', 'Perdeu pouco movimento.', 'Perdeu movimento por um ano.', 'O movimento caiu pela metade.', { pessimo: { dinheiro: -3500 } }) }
     ] },
   { id: 'neg125_caixa', trajetoria: 'negocio', tema: 'neg_equipe', recarga: 7, peso: () => 0.7, cabe: () => true,
     titulo: 'O caixa que não fecha',
     texto: () => 'Há três meses o caixa fecha com uma diferença pequena, sempre no turno do mesmo funcionário — o mais antigo da casa.',
     intencoes: [
-      { id: 'confrontar', texto: 'Conversar com ele, com os números na mão', dica: 'Ou há explicação, ou há confissão.', risco: 0.4, fatores: v => [social(v), coragem(v)], desfechos: D('Era um erro de sistema. Ele agradeceu a confiança.', 'Ele confessou, devolveu e saiu.', 'Ele negou e saiu ofendido.', 'Ele saiu e levou clientes junto.', { pessimo: { dinheiro: -5000 } }) },
-      { id: 'camera', texto: 'Instalar câmera sem dizer nada', dica: 'A prova primeiro.', risco: 0.3, fatores: v => [disciplina(v), leitura(v)], desfechos: D('A câmera mostrou outra pessoa. O antigo estava certo.', 'A prova veio; a demissão foi limpa.', 'A equipe descobriu a câmera e se sentiu vigiada.', 'Um processo trabalhista por uso da imagem.', { otimo: { dinheiro: -800 }, bom: { dinheiro: -800 }, pessimo: { dinheiro: -9000 } }) }
+      { id: 'confrontar', texto: 'Conversar com ele, com os números na mão', dica: 'Ou há explicação, ou há confissão.', risco: 0.4, fatores: v => [social(v), coragem(v)], desfechos: D('Era um erro de sistema. Ele agradeceu a confiança.', 'Ele confessou, devolveu e saiu.', 'Ele negou e saiu ofendido.', 'Ele saiu e levou clientes junto.', { pessimo: { dinheiro: -2500 } }) },
+      { id: 'camera', texto: 'Instalar câmera sem dizer nada', dica: 'A prova primeiro.', risco: 0.3, fatores: v => [disciplina(v), leitura(v)], desfechos: D('A câmera mostrou outra pessoa. O antigo estava certo.', 'A prova veio; a demissão foi limpa.', 'A equipe descobriu a câmera e se sentiu vigiada.', 'Um processo trabalhista por uso da imagem.', { otimo: { dinheiro: -800 }, bom: { dinheiro: -800 }, pessimo: { dinheiro: -4000 } }) }
     ] },
   { id: 'neg125_fornecedor', trajetoria: 'negocio', tema: 'neg_fornecedor', recarga: 5, cabe: () => true,
     titulo: 'O fornecedor que sumiu',
     texto: () => 'O fornecedor principal parou de entregar sem aviso, com o pedido pago. O estoque dura duas semanas.',
     intencoes: [
-      { id: 'outro', texto: 'Fechar com outro fornecedor, mais caro', dica: 'A porta não pode fechar.', risco: 0.2, fatores: v => [leitura(v)], desfechos: D('O fornecedor novo era melhor que o antigo.', 'Seguiu aberto, com margem menor.', 'A margem apertou o ano todo.', 'O novo também falhou.', { bom: { dinheiro: -2000 }, ruim: { dinheiro: -5000 }, pessimo: { dinheiro: -9000 } }) },
-      { id: 'cobrar', texto: 'Ir atrás do dinheiro pago', dica: 'O certo. O lento.', risco: 0.45, fatores: v => [disciplina(v), coragem(v)], desfechos: D('Recuperou o dinheiro e achou um fornecedor melhor.', 'Recuperou parte.', 'Nada voltou.', 'Ficou sem dinheiro e sem estoque por um mês.', { pessimo: { dinheiro: -10000 } }) }
+      { id: 'outro', texto: 'Fechar com outro fornecedor, mais caro', dica: 'A porta não pode fechar.', risco: 0.2, fatores: v => [leitura(v)], desfechos: D('O fornecedor novo era melhor que o antigo.', 'Seguiu aberto, com margem menor.', 'A margem apertou o ano todo.', 'O novo também falhou.', { bom: { dinheiro: -1000 }, ruim: { dinheiro: -2500 }, pessimo: { dinheiro: -4000 } }) },
+      { id: 'cobrar', texto: 'Ir atrás do dinheiro pago', dica: 'O certo. O lento.', risco: 0.45, fatores: v => [disciplina(v), coragem(v)], desfechos: D('Recuperou o dinheiro e achou um fornecedor melhor.', 'Recuperou parte.', 'Nada voltou.', 'Ficou sem dinheiro e sem estoque por um mês.', { pessimo: { dinheiro: -4000 } }) }
     ] },
-  { id: 'neg125_reforma', trajetoria: 'negocio', tema: 'neg_crescer', recarga: 6, cabe: v => v.financas.conta >= 15000,
+  { id: 'neg125_reforma', trajetoria: 'negocio', tema: 'neg_crescer', recarga: 6, cabe: v => (v.caminhos.negocio?.caixa ?? 0) >= 30000,
     titulo: 'A reforma',
     texto: () => 'O ponto ao lado vagou. Daria para dobrar o espaço — e o aluguel.',
     intencoes: [
@@ -347,8 +347,8 @@ const BASE_125: ModeloSituacao[] = [
     titulo: 'O aplicativo',
     texto: () => 'O aplicativo de entregas por onde sai metade das vendas aumentou a taxa de novo.',
     intencoes: [
-      { id: 'proprio', texto: 'Montar a entrega própria', dica: 'Motoboy, telefone, trabalho.', risco: 0.45, fatores: v => [disciplina(v), social(v)], desfechos: D('A entrega própria virou o canal principal.', 'Metade dos clientes migrou.', 'Pouca gente migrou.', 'Os pedidos caíram pela metade.', { otimo: { dinheiro: 6000 }, pessimo: { dinheiro: -6000 } }) },
-      { id: 'repassar', texto: 'Repassar a taxa no preço', dica: 'Quem compra decide.', risco: 0.3, fatores: v => [leitura(v)], desfechos: D('Ninguém reclamou.', 'Alguns reclamaram; a margem voltou.', 'As vendas caíram um pouco.', 'As vendas caíram muito.', { ruim: { dinheiro: -2000 }, pessimo: { dinheiro: -6000 } }) }
+      { id: 'proprio', texto: 'Montar a entrega própria', dica: 'Motoboy, telefone, trabalho.', risco: 0.45, fatores: v => [disciplina(v), social(v)], desfechos: D('A entrega própria virou o canal principal.', 'Metade dos clientes migrou.', 'Pouca gente migrou.', 'Os pedidos caíram pela metade.', { otimo: { dinheiro: 6000 }, pessimo: { dinheiro: -3000 } }) },
+      { id: 'repassar', texto: 'Repassar a taxa no preço', dica: 'Quem compra decide.', risco: 0.3, fatores: v => [leitura(v)], desfechos: D('Ninguém reclamou.', 'Alguns reclamaram; a margem voltou.', 'As vendas caíram um pouco.', 'As vendas caíram muito.', { ruim: { dinheiro: -1000 }, pessimo: { dinheiro: -3000 } }) }
     ] },
 
   /* ---------------------------------------------------------------- Polícia */

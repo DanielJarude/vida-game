@@ -330,7 +330,7 @@ describe('estado pessoal: causas como fonte única', () => {
     expect(alvoCom).toBeGreaterThan(alvoCabeca(leve) + 20);
     v.mente.estresse = 25;
     const serie: number[] = [];
-    for (let k = 0; k < 5; k++) { v = avancarAno(v).vida; if (v.momento) v = responder(v); v.caminhos.processo = undefined; v = transacao(v, carga).vida; v = executar(v, { tipo: 'horas_extras' }).vida; serie.push(v.mente.estresse); }
+    for (let k = 0; k < 5; k++) { v = avancarAno(v).vida; for (let n = 0; n < 6 && v.momento; n++) v = responder(v); v.caminhos.processo = undefined; v = transacao(v, carga).vida; v = executar(v, { tipo: 'horas_extras' }).vida; serie.push(v.mente.estresse); }
     // Piora aos poucos (não num salto), até perto do alvo.
     expect(serie[0]).toBeLessThan(alvoCom - 5);
     // (um acontecimento pode aliviar num ano — férias, por exemplo —; a tendência é piorar)

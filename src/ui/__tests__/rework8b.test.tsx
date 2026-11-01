@@ -160,7 +160,7 @@ describe('os lugares como fachadas', () => {
     for (const b of [...document.querySelectorAll('.compras__segmento')].slice(1)) { fireEvent.click(b); fachadas.push(...document.querySelectorAll('.vitrine__fachada')); }
     expect(fachadas.length).toBeGreaterThanOrEqual(10);
     const lugares = fachadas.map(f => f.getAttribute('data-lugar'));
-    for (const l of ['alugar', 'concessionaria', 'usados', 'banco', 'clinica', 'estilo', 'eletronicos', 'livraria']) expect(lugares).toContain(l);
+    for (const l of ['alugar', 'concessionaria', 'usados', 'banco', 'clinica', 'moda', 'eletronicos', 'livraria']) expect(lugares).toContain(l);
     expect(document.querySelector('.vitrine .icone-bem')).toBeNull();
   });
 });

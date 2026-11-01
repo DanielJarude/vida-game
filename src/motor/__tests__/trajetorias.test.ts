@@ -236,7 +236,8 @@ describe('envolvimento ilegal: oportunidade, decisão, risco, consequência', ()
   it('a proposta é uma decisão com recusa; fraude só aparece para quem tem acesso', () => {
     const d = conteudoPorId('ilic_proposta')!;
     expect(d.tipo === 'decisao' && d.opcoes.map(o => o.id)).toEqual(['recusar_proposta', 'afastar_proposta', 'aceitar_proposta']);
-    const v = adulto(30, 19);
+    // VIDA 12.5: a vida-base sem acesso declarado (a sequência das vidas de teste pode levá-la a um emprego de escritório).
+    const v = emTransacao(adulto(30, 19), x => { x.trabalho.atual = undefined; x.caminhos.negocio = undefined; }).vida;
     const r = criarRng(3);
     const sem = new Set(Array.from({ length: 40 }, () => categoriaPara(v, r)));
     expect(sem.has('fraude')).toBe(false);

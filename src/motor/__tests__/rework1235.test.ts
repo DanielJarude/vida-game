@@ -210,8 +210,9 @@ describe('o confronto entre organizações é uma situação com escolha', () =>
   });
 
   it('negociar pode acabar com a guerra (trégua de verdade no estado das duas)', () => {
+    // VIDA 12.5: 40 sementes (com 20, as cidades sorteadas podiam trazer só facções que não negociam — chance de 8%).
     let tregua = 0;
-    for (let s = 1; s <= 20; s++) {
+    for (let s = 1; s <= 40; s++) {
       let v = noCaminho('grupo', 200 + s);
       let ids: [string, string, string] = ['', '', ''];
       v = em(v, y => { const o = deDentro(y, 4); const b = emGuerra(y, o); const c: CasoDoSubmundo = { id: `caso${y.seq++}`, t: y.t, tipo: 'confronto', situacao: 'territorio', orgId: o.id, outraId: b.id, gravidade: 2 }; (y.caminhos.envolvimento!.casos ??= []).push(c); ids = [c.id, o.id, b.id]; });
@@ -219,7 +220,7 @@ describe('o confronto entre organizações é uma situação com escolha', () =>
       if (orgViva(v, ids[1])!.relacoes![ids[2]] === 'tregua') tregua++;
     }
     expect(tregua).toBeGreaterThan(0);
-    expect(tregua).toBeLessThan(20);
+    expect(tregua).toBeLessThan(40);
   });
 
   it('o ferimento usa o sistema de lesões (a decisão de cuidado) e o sério é internação com o custo do país', () => {
