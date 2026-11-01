@@ -12,12 +12,15 @@
  * laterais conforme a largura do cartão (`preserveAspectRatio="xMidYMax slice"`).
  */
 import { cantos, circulo, elipse, lembrar, escurecer, membro, ret, suave, type Amostra, type Peca } from './nucleo';
+import { FACHADAS_DE_LOJA, PORTA_DAS_LOJAS, type FachadaDeLoja } from './fachadasDeLoja';
 
 export type LugarDaCidade =
   | 'alugar' | 'concessionaria' | 'usados' | 'motos' | 'nautica' | 'aeroclube' | 'oficina' | 'banco' | 'abrigo' | 'pets'
   | 'estilo' | 'clinica' | 'eletronicos' | 'casa' | 'instrumentos' | 'esportes' | 'livraria'
   /** REWORK 12.2: as casas de luxo e coleção, os exóticos e os mercados de procedência duvidosa, cada um com a sua cara. */
-  | 'relojoaria' | 'joalheria' | 'galeria' | 'antiquario' | 'memorabilia' | 'leilao' | 'exoticos' | 'feira' | 'antiquario_vago' | 'privada_incerta' | 'por_fora';
+  | 'relojoaria' | 'joalheria' | 'galeria' | 'antiquario' | 'memorabilia' | 'leilao' | 'exoticos' | 'feira' | 'antiquario_vago' | 'privada_incerta' | 'por_fora'
+  /** VIDA 12.5: as lojas por segmento e as grandes lojas, cada uma com o seu prédio (`fachadasDeLoja`). */
+  | FachadaDeLoja;
 
 const CHAO = 112, X0 = 140, X1 = 340;
 const VIDRO_LOJA = '#efe7d4', ESCURO = '#2b2826', METAL = '#b8b4ad', BRANCO = '#f2efe9';
@@ -154,6 +157,7 @@ const bandeirinhas = (x0: number, x1: number, y: number, cores: string[]): Peca[
 };
 
 const LOJAS: Record<LugarDaCidade, () => Amostra> = {
+  ...FACHADAS_DE_LOJA,
   alugar: () => loja({
     parede: '#e3d6bd', placa: { cor: '#2f5d4a', texto: 'IMÓVEIS', simbolo: simCasa(BRANCO) }, porta: 'esq',
     interior: [
@@ -510,7 +514,8 @@ const FACHADAS = lembrar<Amostra>(64);
  */
 export const PORTA_DA_FACHADA: Partial<Record<LugarDaCidade, 'esq' | 'dir'>> = {
   alugar: 'esq', nautica: 'esq', motos: 'dir', oficina: 'dir', pets: 'dir', estilo: 'dir', clinica: 'dir', eletronicos: 'dir', casa: 'dir', instrumentos: 'dir', esportes: 'dir', livraria: 'dir',
-  relojoaria: 'dir', joalheria: 'dir', antiquario: 'esq', memorabilia: 'dir', exoticos: 'dir', antiquario_vago: 'esq'
+  relojoaria: 'dir', joalheria: 'dir', antiquario: 'esq', memorabilia: 'dir', exoticos: 'dir', antiquario_vago: 'esq',
+  ...PORTA_DAS_LOJAS
 };
 
 export function amostraDaFachada(lugar: LugarDaCidade): Amostra {

@@ -43,7 +43,14 @@ interface Props {
   vista?: 'frente' | 'costas';
   /** Sem a parte de cima (o estúdio mostra o tronco). */
   semCima?: boolean;
+  /** VIDA 12.5: o recorte (em unidades da figura) — a lupa do estúdio de tatuagem aproxima a parte do corpo escolhida. */
+  foco?: Foco;
+  /** VIDA 12.5: um retângulo tracejado por cima (na figura inteira, onde a lupa está olhando). */
+  destaque?: Foco;
 }
+
+/** VIDA 12.5: um recorte da figura (x, y, largura, altura), nas unidades do viewBox (a figura tem 120 de largura). */
+export interface Foco { x: number; y: number; w: number; h: number }
 
 /* ------------------------------------------------------------------ geometria */
 
@@ -84,6 +91,56 @@ function escalaDaIdade(i: number): number {
 }
 
 const lado = (g: Geo, s: 1 | -1, dx: number) => g.cx + s * dx;
+
+/** A altura da figura inteira (o viewBox), pela idade. */
+function alturaDaFigura(g: Geo, idade: number): number {
+  return Math.max(150, Math.ceil(g.topo + (g.yChao + 4 - g.topo) * escalaDaIdade(idade) + 4));
+}
+
+/**
+ * VIDA 12.5 — A LUPA DO ESTÚDIO: o recorte que mostra a parte do corpo escolhida com o entorno que dá a referência (o
+ * peito com os ombros; o braço inteiro, do ombro ao pulso; a perna, da virilha ao tornozelo; as costas inteiras; o
+ * pescoço com a cabeça). É a MESMA geometria das tatuagens (`areaDaParte`): a lupa só muda o viewBox, então a
+ * anatomia, a escala e o lugar de cada desenho são os de verdade. `perto` aproxima mais (1 = a região; 2 = o dobro),
+ * sempre em torno da área tatuável da parte. O recorte tem sempre a proporção 3 : 4, para a moldura não pular.
+ */
+export function focoDaParte(genero: Genero, corpo: TipoDeCorpo, idade: number, local: LocalDeTatuagem | 'inteiro', ladoT: Lado | undefined, vista: 'frente' | 'costas', perto = 1): Foco {
+  const g = geometria(genero, corpo, idade);
+  const H = alturaDaFigura(g, idade);
+  // O corpo inteiro na mesma moldura 3 : 4 (a lupa não muda de tamanho ao afastar).
+  if (local === 'inteiro') { const w = Math.max(120, H * 0.75); return { x: +((120 - w) / 2).toFixed(2), y: 0, w: +w.toFixed(2), h: +(w / 0.75).toFixed(2) }; }
+  const s: 1 | -1 = (ladoT === 'e') !== (vista === 'costas') ? 1 : -1;
+  const caixa = (cx: number, y0: number, y1: number, w: number) => ({ cx, cy: (y0 + y1) / 2, w, h: y1 - y0 });
+  const r = (() => {
+    switch (local) {
+      case 'braco': return caixa(lado(g, s, g.ombro + 1), g.topo - 4, 150, 34);
+      case 'antebraco': return caixa(lado(g, s, g.ombro + 2.4), 100, 154, 30);
+      case 'ombro': return caixa(lado(g, s, g.ombro - 3), g.topo - 12, g.topo + 30, 40);
+      case 'mao': return caixa(lado(g, s, g.ombro + 2.7), 128, 158, 26);
+      case 'peito': return caixa(g.cx, g.topo - 10, g.topo + 34, (g.ombro + 9) * 2);
+      case 'abdomen': return caixa(g.cx, g.topo + 12, g.yQuad + 6, (Math.max(g.peito, g.quadril) + 10) * 2);
+      case 'costas': return caixa(g.cx, g.topo - 8, g.yQuad + 4, (g.ombro + 9) * 2);
+      case 'pescoco': return caixa(g.cx, 14, g.topo + 14, 52);
+      case 'coxa': return caixa(lado(g, s, g.quadril * 0.5), g.yQuad - 8, g.yJoelho + 10, 40);
+      case 'panturrilha': return caixa(lado(g, s, g.quadril * 0.44), g.yJoelho - 14, g.yTorn + 10, 34);
+    }
+  })();
+  // Os membros e o tronco vivem no corpo escalado pela idade (a partir da base do pescoço); a cabeça, não.
+  const esc = escalaDaIdade(idade);
+  const ty = (y: number) => local === 'pescoco' ? y : g.topo + (y - g.topo) * esc;
+  const cy = ty(r.cy);
+  let h = r.h * (local === 'pescoco' ? 1 : esc), w = r.w * (local === 'pescoco' ? 1 : esc);
+  const cx = local === 'pescoco' ? r.cx : g.cx + (r.cx - g.cx) * esc;
+  // A proporção fixa (3 : 4) e o quanto aproximar.
+  if (w / h < 0.75) w = h * 0.75; else h = w / 0.75;
+  const z = Math.max(1, perto);
+  w /= z; h /= z;
+  // Nunca olhar para fora da figura (desliza o recorte para dentro, quando cabe).
+  let x = cx - w / 2, y = cy - h / 2;
+  if (w <= 120) x = Math.min(Math.max(0, x), 120 - w);
+  if (h <= H) y = Math.min(Math.max(0, y), H - h);
+  return { x: +x.toFixed(2), y: +y.toFixed(2), w: +w.toFixed(2), h: +h.toFixed(2) };
+}
 
 /** O tronco (do pescoço ao quadril), com folga para a roupa. */
 function tronco(g: Geo, folga = 0, ate = g.yQuad, alarga = 1): string {
@@ -446,7 +503,7 @@ function Tatuagens({ g, lista, pele, ide, costas, detalhe }: { g: Geo; lista: Ta
 
 const PADRAO_CIMA = ['#4b5a6b', '#6b4f5a', '#4f6b5a', '#7a6248', '#5a5470', '#3f5f66', '#735a4a', '#556048'];
 
-export const Figura = memo(function Figura({ visual, genero, idade, semente = 'eu', corpo, pecas, largura = 160, rotulo, semFundo, tatuagens = [], vista = 'frente', semCima }: Props) {
+export const Figura = memo(function Figura({ visual, genero, idade, semente = 'eu', corpo, pecas, largura = 160, rotulo, semFundo, tatuagens = [], vista = 'frente', semCima, foco, destaque }: Props) {
   const uid = useId().replace(/:/g, '');
   const g = geometria(genero, corpo, idade);
   const esc = escalaDaIdade(idade);
@@ -470,9 +527,11 @@ export const Figura = memo(function Figura({ visual, genero, idade, semente = 'e
   if (!conj.inteira && !conj.baixo) conj.baixo = idade < 12 ? { parte: 'baixo', forma: 'bermuda', corte: 'reta', cor: ['#3d5a80', '#5d6b4f', '#7a6248'][h % 3] } : { parte: 'baixo', forma: 'calca', corte: 'reta', cor: ['#3d5a80', '#2b2f36', '#5b6470'][h % 3], bolsos: true, costura: h % 3 === 0 ? '#c99a4a' : undefined };
   if (!conj.pes) conj.pes = { parte: 'pes', forma: idade >= 70 ? 'sapato' : 'tenis', cor: idade >= 70 ? '#3a2a20' : ['#f4f4f2', '#2b2f36', '#7d8590'][h % 3], sola: idade >= 70 ? '#1b1515' : '#f4f4f2' };
   // O estúdio de tatuagem mostra o tronco: sem a parte de cima (o vestido vira a parte de baixo de sempre).
+  // VIDA 12.5: e um short curto (na cor da peça de baixo), para a coxa e a panturrilha aparecerem na prévia.
   if (semCima) {
-    if (conj.inteira) { delete conj.inteira; conj.baixo = { parte: 'baixo', forma: 'calca', corte: 'reta', cor: '#3d5a80' }; }
-    delete conj.cima; delete conj.casaco;
+    const corDeBaixo = conj.inteira ? '#3d5a80' : ((conj.baixo as { cor?: string } | undefined)?.cor ?? '#3d5a80');
+    delete conj.inteira; delete conj.cima; delete conj.casaco;
+    conj.baixo = { parte: 'baixo', forma: 'short', corte: 'curta', cor: corDeBaixo };
   }
 
   // HOTFIX 11.5.1 — contraste: o fundo pesa a pele (a pele clara nunca sobre o fundo claro); sem fundo, um halo de
@@ -497,8 +556,8 @@ export const Figura = memo(function Figura({ visual, genero, idade, semente = 'e
   const altura = (g.topo + (g.yChao + 4 - g.topo) * esc);
   const pecasRotulo = [conj.inteira, conj.cima, conj.baixo, conj.casaco, conj.pes].filter(Boolean).map(p => ('forma' in p! ? p!.forma : '')).join(', ');
   return (
-    <svg className="figura" viewBox={`0 0 120 ${Math.max(150, Math.ceil(altura + 4))}`} width={largura} height={Math.round(largura * Math.max(150, Math.ceil(altura + 4)) / 120)}
-      role="img" aria-label={rotulo ?? 'Corpo inteiro'} data-corpo={corpo} data-pecas={pecasRotulo} data-vista={vista} data-tatuagens={tatuagens.length || undefined} style={fundo ? { background: fundo } : undefined}>
+    <svg className="figura" viewBox={foco ? `${foco.x} ${foco.y} ${foco.w} ${foco.h}` : `0 0 120 ${Math.max(150, Math.ceil(altura + 4))}`} width={largura} height={Math.round(largura * (foco ? foco.h / foco.w : Math.max(150, Math.ceil(altura + 4)) / 120))}
+      role="img" aria-label={rotulo ?? 'Corpo inteiro'} data-corpo={corpo} data-pecas={pecasRotulo} data-vista={vista} data-foco={foco ? 'sim' : undefined} data-tatuagens={tatuagens.length || undefined} style={fundo ? { background: fundo } : undefined}>
       <defs>
         {estampas}
         {tatuagens.length > 0 && <>
@@ -565,6 +624,7 @@ export const Figura = memo(function Figura({ visual, genero, idade, semente = 'e
           <Retrato visual={visual} genero={genero} idade={idade} semente={semente} tamanho={80} soCabeca rotulo="" especie={undefined} />
         </g>
       )}
+      {destaque && <rect className="figura__destaque" x={destaque.x} y={destaque.y} width={destaque.w} height={destaque.h} rx={2} fill="none" stroke="currentColor" strokeWidth={1.4} strokeDasharray="3 2" vectorEffect="non-scaling-stroke" />}
     </svg>
   );
 });

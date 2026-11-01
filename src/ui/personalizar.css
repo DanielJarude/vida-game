@@ -78,8 +78,18 @@
 /* HOTFIX 11.5.1 — o estúdio de tatuagem (Você · Aparência). */
 .estudio-tatuagem { margin-top: var(--space-4); }
 .estudio-tatuagem__corpo { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: flex-start; }
-.estudio-tatuagem__previa { display: flex; gap: var(--space-2); }
+.estudio-tatuagem__previa { display: flex; gap: var(--space-3); align-items: flex-start; flex: 0 1 auto; min-width: 0; max-width: 100%; }
 .estudio-tatuagem__previa figure { margin: 0; text-align: center; }
+/* VIDA 12.5 — a lupa do estúdio: a parte do corpo de perto (moldura 3 : 4) e o corpo inteiro como referência. */
+.estudio-tatuagem__lupa { width: min(300px, 62vw); display: grid; gap: var(--space-1); }
+.estudio-tatuagem__lupa svg { display: block; width: 100%; height: auto; aspect-ratio: 3 / 4; border-radius: var(--radius-md); background: radial-gradient(ellipse at 50% 40%, var(--superficie-topo), var(--veu-2)); border: 1px solid var(--rule); }
+.estudio-tatuagem__lupa-controles { display: flex; flex-wrap: wrap; gap: var(--space-1); align-items: center; justify-content: center; }
+.estudio-tatuagem__lupa-controles .botao { min-height: var(--touch-target); min-width: var(--touch-target); }
+.estudio-tatuagem__nivel { min-width: 6.5em; font-size: var(--type-caption); color: var(--text-muted); }
+.estudio-tatuagem__referencia { display: grid; gap: var(--space-2); }
+.estudio-tatuagem__lado { display: grid; justify-items: center; gap: 2px; padding: var(--space-1); background: none; border: 1px solid transparent; border-radius: var(--radius-md); color: var(--tinta); cursor: pointer; font: inherit; }
+.estudio-tatuagem__lado--ativo { border-color: var(--rule); background: var(--veu-1); }
+.estudio-tatuagem__lado .nota { max-width: 6.5em; color: var(--text-muted); }
 .estudio-tatuagem__escolhas { flex: 1 1 16rem; min-width: 0; display: grid; gap: var(--space-2); }
 .estudio-tatuagem__escolhas select { max-width: 100%; }
 .estudio-tatuagem__lista { list-style: none; padding: 0; margin: var(--space-3) 0 0; display: grid; gap: var(--space-2); }

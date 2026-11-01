@@ -34,7 +34,7 @@ import { varianteDe } from '../../motor/sistemas/pertences';
 import { BotaoAcao, Secao } from '../comum';
 import { dinheiroCurto, formaDoModelo, leituraDaSeguranca } from '../leituraMaterial';
 import { DesenhoVeiculo, MiniaturaDaCasa } from './material/Desenhos';
-import { type LugarDaCidade } from '../ilustracao/lugares';
+import { LUGARES_DA_CIDADE, type LugarDaCidade } from '../ilustracao/lugares';
 import { corDoVeiculo } from '../../motor/dados/pertences';
 import { DesenhoObjeto } from './material/Objetos';
 import { Retrato } from '../avatar/Retrato';
@@ -186,14 +186,16 @@ function vitrines(v: Vida): { grupo: string; id: string; lugares: Vitrine[] }[] 
 const FACHADA_DE: Partial<Record<QualLugar, LugarDaCidade>> = { comprar: 'alugar', colecionador: 'concessionaria' };
 /** 12.4.1: a fachada de cada loja da vida (a de roupas e a sapataria usam a vitrine de moda; a de móveis, a da casa…). */
 const FACHADA_DA_LOJA: Record<string, LugarDaCidade> = {
-  roupas: 'estilo', sapataria: 'estilo', otica: 'estilo', acessorios: 'estilo', grifes: 'joalheria', relojoaria: 'relojoaria', joalheria: 'joalheria',
-  eletronicos: 'eletronicos', eletrodomesticos: 'casa', moveis: 'casa', instrumentos: 'instrumentos', esportes: 'esportes', livraria: 'livraria'
+  roupas: 'moda', sapataria: 'sapataria', otica: 'otica', acessorios: 'acessorios', grifes: 'grifes', relojoaria: 'relojoaria', joalheria: 'joalheria',
+  eletronicos: 'eletronicos', eletrodomesticos: 'casa', moveis: 'moveis', instrumentos: 'instrumentos', esportes: 'esportes', livraria: 'livraria'
 };
 export const fachadaDoLugar = (id: QualLugar): LugarDaCidade => {
   if (id.startsWith('loja:')) {
     const e = estabelecimento(id.slice(5));
     if (!e) return 'casa';
     if (FACHADA_DA_LOJA[e.id]) return FACHADA_DA_LOJA[e.id];
+    // VIDA 12.5: cada grande loja tem o seu prédio (El Corte Inglés, Galeries Lafayette, C&A...).
+    if (e.tipo === 'departamento' && LUGARES_DA_CIDADE.includes(`dep_${e.id}` as LugarDaCidade)) return `dep_${e.id}` as LugarDaCidade;
     return e.categorias.includes('vestuario') ? 'estilo' : e.categorias.includes('eletronicos') ? 'eletronicos' : 'casa';
   }
   return FACHADA_DE[id] ?? (id as LugarDaCidade);

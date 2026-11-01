@@ -128,7 +128,7 @@ export type Peca = Comum & (
   | { tipo: 'linha'; d: string; larg?: number; cor?: string }
   | { tipo: 'pneu'; cx: number; cy: number; r: number; aro?: 'raios' | 'liga' | 'bicicleta' | 'cravos' | 'calota'; raios?: number }
   | { tipo: 'luz'; d: string; cor: string }
-  | { tipo: 'texto'; x: number; y: number; texto: string; tam: number; cor: string }
+  | { tipo: 'texto'; x: number; y: number; texto: string; tam: number; cor: string; /** VIDA 12.5: a letra da placa (serifa, peso, espaçamento). */ fonte?: 'serif' | 'sans'; peso?: number; espaco?: number }
   | { tipo: 'grupo'; t: string; pecas: Peca[] }
 );
 
@@ -223,7 +223,7 @@ export function Ilustracao({ a, largura, rotulo, className, dados, semChao, styl
       case 'luz':
         return <path key={i} {...m} d={p.d} fill={p.cor} stroke={contorno(p.cor)} strokeOpacity={0.7} strokeWidth={fio * 0.6} vectorEffect="non-scaling-stroke" />;
       case 'texto':
-        return <text key={i} {...m} x={p.x} y={p.y} fontSize={p.tam} fill={p.cor} textAnchor="middle" fontFamily="Inter, system-ui, sans-serif" fontWeight={700} letterSpacing={p.tam * 0.16}>{p.texto}</text>;
+        return <text key={i} {...m} x={p.x} y={p.y} fontSize={p.tam} fill={p.cor} textAnchor="middle" fontFamily={p.fonte === 'serif' ? 'Georgia, "Times New Roman", serif' : 'Inter, system-ui, sans-serif'} fontWeight={p.peso ?? 700} letterSpacing={p.espaco ?? p.tam * 0.16}>{p.texto}</text>;
       case 'grupo':
         return <g key={i} {...m} transform={p.t}>{desenhar(p.pecas)}</g>;
       case 'pneu': {

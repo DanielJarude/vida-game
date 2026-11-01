@@ -118,9 +118,12 @@ describe('HOTFIX 11.5.1 · tatuagens e a figura', () => {
     let v = rica();
     const agir = (a: Acao) => { v = executar(v, a).vida; rerender(<EstudioDeTatuagem vida={v} agir={agir} />); return true; };
     const { rerender, container } = render(<EstudioDeTatuagem vida={v} agir={agir} />);
-    const [frente, costas] = container.querySelectorAll('svg.figura');
+    // VIDA 12.5: a lupa (a região escolhida, de perto) e as duas figuras inteiras de referência (frente e costas).
+    const [lupa, frente, costas] = container.querySelectorAll('svg.figura');
+    expect(lupa.getAttribute('data-vista')).toBe('frente');
     expect(frente.getAttribute('data-vista')).toBe('frente');
     expect(costas.getAttribute('data-vista')).toBe('costas');
+    expect(lupa.querySelector('[data-tatuagem="andorinha"]')).toBeTruthy();
     // A prévia (a primeira do catálogo: a andorinha, no braço) já aparece na pele.
     expect(frente.querySelector('[data-tatuagem="andorinha"]')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: /^Tatuar/ }));
