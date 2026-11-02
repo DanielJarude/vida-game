@@ -101,7 +101,7 @@ describe('HOTFIX 11.5.1 · Compras', () => {
     const v = rica();
     const { container, unmount } = render(<LojaDaVida vida={v} agir={() => true} lojaId="sapataria" />);
     fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'tênis' } });
-    const nomes = () => [...container.querySelectorAll('.loja-vida__produto strong')].map(x => x.textContent ?? '');
+    const nomes = () => [...container.querySelectorAll('.catalogo-loja__nome')].map(x => x.textContent ?? '');
     expect(nomes().length).toBeGreaterThan(0);
     expect(nomes().every(n => /tênis/i.test(n))).toBe(true);
     fireEvent.change(screen.getByLabelText('Ordenar'), { target: { value: 'maior' } });

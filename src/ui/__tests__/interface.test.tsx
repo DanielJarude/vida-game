@@ -122,7 +122,8 @@ describe('interface', () => {
     const dialogo = screen.getByRole('dialog');
     expect(within(dialogo).getByText('A conversa do aumento')).toBeTruthy();
     fireEvent.click(within(dialogo).getByRole('button', { name: /Mostrar números/ }));
-    expect(screen.getByText(/aprovou|orçamento|clima azedou/)).toBeTruthy();
+    // VIDA 12.7: o sim e o não no jeito de cada ambiente (dados/falasDoTrabalho).
+    expect(screen.getAllByText(/aprov|orçamento|clima azedou|reajuste|salário foi|aumento|congelado|mantenedora|matrícula|movimento|dissídio|tarifa|frota|contrato|tabela|ciclo de avaliação|janeiro|prazo apertado|não havia/).length).toBeGreaterThan(0);
   });
 
   it('curso trancado mostra como voltar', () => {

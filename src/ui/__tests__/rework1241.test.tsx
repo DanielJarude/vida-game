@@ -62,9 +62,10 @@ describe('a aparência', () => {
     expect(fig.querySelector('[data-acessorio="pulso"]')).toBeTruthy();
     const baixo = document.querySelector('[data-parte="pernas"]') as HTMLElement;
     expect(within(baixo).getByText('Bermuda de sarja')).toBeTruthy();
-    fireEvent.click(within(baixo).getByRole('button', { name: 'Calça jeans' }));
+    // VIDA 12.7: a troca é pelo cartão da parte (com uma peça só para trocar, o botão diz qual).
+    fireEvent.click(within(baixo).getByRole('button', { name: 'Vestir calça jeans' }));
     expect(document.querySelector('svg.figura')!.getAttribute('data-pecas')).toMatch(/calca/);
-    expect(within(document.querySelector('[data-parte="pernas"]') as HTMLElement).getByRole('button', { name: 'Bermuda de sarja' })).toBeTruthy();
+    expect(within(document.querySelector('[data-parte="pernas"]') as HTMLElement).getByRole('button', { name: 'Vestir bermuda de sarja' })).toBeTruthy();
   });
 });
 

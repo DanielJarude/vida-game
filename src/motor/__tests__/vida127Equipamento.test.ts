@@ -74,7 +74,7 @@ describe('12.7 · o produto escolhido é o vestido', () => {
   it('vestido, camisa e casaco: a peça escolhida vai para o retrato; a de baixo fica', () => {
     let v = comTudo();
     v = fazer(v, { tipo: 'usar_item', itemId: 'vestido_festa', id: meu(v, 'vestido_festa').id, usar: true });
-    for (const id of ['blazer', 'casaco_la', 'sobretudo_grife', 'jaqueta_couro']) if (meu(v, id).usando) v = fazer(v, { tipo: 'usar_item', itemId: id, id: meu(v, id).id, usar: false });
+    for (const x of [...v.eu.estilo!.itens]) if (x.usando && itemEstilo(x.itemId)!.lugar === 'casaco') v = fazer(v, { tipo: 'usar_item', itemId: x.itemId, id: x.id, usar: false });
     expect(v.eu.visual.superior).toBe(`vestido_festa#${meu(v, 'vestido_festa').id}`);
     expect(emUso(v).filter(x => ['tronco', 'pernas'].some(l => lugaresDoItem(itemEstilo(x.itemId)!).includes(l))).map(x => x.itemId)).toEqual(['vestido_festa']);
     v = fazer(v, { tipo: 'usar_item', itemId: 'blusa_seda', id: meu(v, 'blusa_seda').id, usar: true });
@@ -139,7 +139,7 @@ describe('12.7 · o produto escolhido é o vestido', () => {
     let v = comTudo();
     v = vestir(v, 'oculos_grife');
     v = vestir(v, 'camisa_linho');
-    for (const id of ['blazer', 'casaco_la', 'sobretudo_grife', 'jaqueta_couro', 'jaqueta_jeans', 'corta_vento']) if (meu(v, id).usando) v = fazer(v, { tipo: 'usar_item', itemId: id, id: meu(v, id).id, usar: false });
+    for (const x of [...v.eu.estilo!.itens]) if (x.usando && itemEstilo(x.itemId)!.lugar === 'casaco') v = fazer(v, { tipo: 'usar_item', itemId: x.itemId, id: x.id, usar: false });
     // Como o defeito deixava: todos os escuros e todas as "elegantes" marcados.
     for (const x of v.eu.estilo!.itens) if (['oculos_sol', 'oculos_aviador', 'oculos_juliet', 'blusa_seda', 'roupa_elegante', 'vestido_festa'].includes(x.itemId)) x.usando = true;
     const r = interpretar(JSON.stringify(v));
