@@ -8,6 +8,7 @@
  * Quadro de 120 × 120, chão em y = 110 (o que fica no chão tem sombra de contato; o que fica na parede, não).
  */
 import { cantos, circulo, clarear, elipse, escurecer, lembrar, luminancia, membro, num as f, ret, suave, type Amostra, type Peca } from './nucleo';
+import { OBJETOS_DA_CASA } from './objetosDaCasa';
 
 const CHAO = 110;
 const TELA = '#26303a', PRETO = '#2b2826', METAL = '#b8b4ad', BRANCO = '#ece9e4', MADEIRA = '#b9773f';
@@ -619,7 +620,9 @@ export const OBJETOS: Record<string, (cor: string) => Amostra> = {
   livros: estante, livros_estudo: livrosEstudo, material_arte: arte, jogos_tabuleiro: jogos,
   roupa_de_cama: roupaDeCama, mesa_jantar: mesaJantar, poltrona, projetor, mesa_sinuca: sinuca, estacao_musculacao: estacao,
   som_hifi: somHifi, discos, home_studio: homeStudio, controladora_dj: controladora, cavaquinho, pandeiro, sanfona, saxofone,
-  cavalete, torno_ceramica: tornoCeramica
+  cavalete, torno_ceramica: tornoCeramica,
+  // VIDA 12.7 — a casa inteira (objetosDaCasa.ts)
+  ...OBJETOS_DA_CASA
 };
 
 /** O desenho de uma coisa (quem não está no catálogo cai numa caixa genérica, com o nome no rótulo). */

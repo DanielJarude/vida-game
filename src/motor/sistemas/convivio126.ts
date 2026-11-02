@@ -36,6 +36,34 @@ const ele = (p: Pessoa) => flex(p.genero, 'ele', 'ela', 'elu');
 const Ele = (p: Pessoa) => flex(p.genero, 'Ele', 'Ela', 'Elu');
 const preco = (v: Vida, x: number) => Math.round(x * economiaLocal(v.moradia.municipioId).custo / 10) * 10;
 const um = <T,>(r: Rng, xs: T[]): T => xs[Math.floor(r.next() * xs.length) % xs.length];
+/**
+ * VIDA 12.7 — uma frase da lista que não repete a da vez anterior com a mesma pessoa: o ponto de partida é sorteado (de
+ * cada relação, estável), e cada vez anda uma casa. Duas vezes seguidas, duas frases diferentes.
+ */
+export function semRepetir<T>(c: CtxI, chave: string, r: Rng, xs: T[]): T {
+  const h = c.vin.habitos ?? (c.vin.habitos = {});
+  const n = (h[`frase:${chave}`] = (h[`frase:${chave}`] ?? 0) + 1);
+  const base = Math.floor(rngDe(c.v.id, 'frase', chave, c.p.id).next() * xs.length);
+  void r;
+  return xs[(base + n) % xs.length];
+}
+
+/**
+ * VIDA 12.7 — o fim de um caso não é sempre "não insistiu": depende de quanto durou, do jeito de quem fica, de se era
+ * combinado (o paralelo consentido) e de quanto a coisa já estava por um fio.
+ */
+export function fimDoCaso(c: CtxI): string {
+  const rom = c.vin.romance;
+  const meses = c.v.t - (rom?.tInicio ?? c.v.t);
+  const r = rngDe(c.v.id, 'fim_caso', c.p.id, c.v.t);
+  const n = c.p.nome, E = ele(c.p).replace(/^./, x => x.toUpperCase()), o = flex(c.p.genero, 'o', 'a', 'e');
+  if (rom?.paralelo) return um(r, [`Terminaram com o cuidado que tinham combinado no começo: uma conversa franca, um abraço, e ${n} desejou sorte.`, `${n} já sentia que vinha. "Foi bom porque foi honesto", disse — e foi embora leve.`]);
+  if (tem(c.p, 'temperamental') || tem(c.p, 'ciumento')) return um(r, [`${n} não aceitou: mensagens de madrugada por uma semana, uma ligação que você não atendeu, depois silêncio.`, `"Você vai se arrepender", ${n} disse, batendo a porta do carro. Você passou dias olhando o celular.`, `${n} chorou, gritou e, no fim, pediu só para você não sumir de vez. Você sumiu.`]);
+  if (meses < 6) return um(r, [`Foi rápido e terminou rápido: uma mensagem, um "entendo" de ${n}, e nenhum dos dois tocou mais no assunto.`, `Você disse a ${n} que não dava mais. ${E} deu de ombros: "era para ser leve mesmo".`, `${n} respondeu com um emoji e, uma hora depois, com um "se cuida".`]);
+  if (meses >= 24) return um(r, [`Anos de encontros escondidos terminaram numa conversa de dez minutos num carro parado. ${n} chorou — e você também.`, `${n} já sabia antes de você abrir a boca. "Eu esperei você escolher. Você escolheu."`, `${E} devolveu a chave do apartamento emprestado sem dizer nada. Foi o que mais doeu.`]);
+  if (tem(c.p, 'carinhoso') || tem(c.p, 'paciente')) return um(r, [`${n} segurou sua mão e disse que foi bom enquanto durou. Saiu primeiro, sem olhar para trás.`, `"Eu sabia onde estava me metendo", ${n} disse, calm${o}. Desejou que você ficasse bem.`]);
+  return um(r, [`Você disse a ${n} que acabou. ${E} não insistiu.`, `${n} ouviu tudo em silêncio, pagou a conta e foi embora antes de você.`, `Uma última conversa num lugar onde ninguém conhecia vocês. ${n} disse que ia apagar seu número — e apagou.`]);
+}
 
 /* ------------------------------------------------------------------ o jeito em cada interação */
 
@@ -124,7 +152,7 @@ export function conferirPromessas(v: Vida): void {
     const p = v.pessoas[id], vin = v.vinculos[id];
     if (!p?.vivo || !vin) continue;
     // Cumpriu: esteve com a pessoa de verdade (contato no último ano e algumas vezes ao longo dele).
-    const vezes = vin.habitos ? Object.values(vin.habitos).reduce((s, n) => s + n, 0) : 0;
+    const vezes = vin.habitos ? Object.entries(vin.habitos).reduce((s, [k, n]) => s + (k.startsWith('frase:') ? 0 : n), 0) : 0;
     const cumpriu = vin.tUltimoContato >= t + 6 && vezes >= 2;
     if (cumpriu) {
       vin.confianca = clamp(vin.confianca + 6);
@@ -277,13 +305,25 @@ export const INTERACOES_126: Interacao[] = [
     executar: c => {
       const rom = c.vin.romance!;
       const quer = rom.envolvimento >= 60 || tem(c.p, 'ciumento');
+      const r = rngDe(c.v.id, 'caso', c.p.id, c.v.t, 'futuro');
+      const eu = flex(c.v.eu.genero, 'o', 'a', 'e');
       if (quer) {
         c.v.fatos[`caso_ultimato_${c.p.id}`] ??= c.v.t;
         c.vin.tensao = clamp(c.vin.tensao + 6);
-        return { resultado: `${c.p.nome} foi direto ao ponto: não quer mais ser segredo. "Ou você conta, ou a gente para." A decisão vai ter que vir.` };
+        // VIDA 12.7: a mesma decisão, dita de jeitos diferentes (e nunca a mesma frase duas vezes seguidas).
+        return { resultado: semRepetir(c, 'caso_futuro_quer', r, [
+          `${c.p.nome} foi direto ao ponto: não quer mais ser segredo. "Ou você conta, ou a gente para." A decisão vai ter que vir.`,
+          `${c.p.nome} chorou no meio da frase: está cansad${flex(c.p.genero, 'o', 'a', 'e')} de ser a pessoa do horário vago. Quer um nome, um endereço, um domingo.`,
+          `"Eu não vou passar mais um Natal sozinh${flex(c.p.genero, 'o', 'a', 'e')} esperando mensagem." ${c.p.nome} quer uma resposta até o fim do mês.`,
+          `${c.p.nome} falou em ir embora com você — outra cidade, começar do zero. Disse que não pergunta de novo.`
+        ]) };
       }
       rom.envolvimento = clamp(rom.envolvimento - 4);
-      return { resultado: `${c.p.nome} disse que está bem assim, sem planos — e você não soube se ficou aliviad${flex(c.v.eu.genero, 'o', 'a', 'e')} ou decepcionad${flex(c.v.eu.genero, 'o', 'a', 'e')}.` };
+      return { resultado: semRepetir(c, 'caso_futuro_leve', r, [
+        `${c.p.nome} disse que está bem assim, sem planos — e você não soube se ficou aliviad${eu} ou decepcionad${eu}.`,
+        `${c.p.nome} riu: "a gente não é nada, e é ótimo". Mudou de assunto antes que você respondesse.`,
+        `${c.p.nome} disse que tem a vida dele${c.p.genero === 'feminino' ? 'a' : ''} e não quer trocar. Vocês combinaram não combinar nada.`
+      ]) };
     }
   },
   {

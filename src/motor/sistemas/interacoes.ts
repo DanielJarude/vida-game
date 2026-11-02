@@ -43,7 +43,7 @@ import { contextoDaRelacao, conversarNoApp, encontroDoApp, etapaDoApp, pesoDoCon
 import { executarDesculpas, INTERACOES_DE_CONFLITO } from './conflitos';
 import { INTERACOES_VIVIDAS } from './gestos';
 import { INTERACOES_JUNTOS, registrarGrupo } from './juntos';
-import { GRUPOS_126, INTERACOES_126, jeitoNaInteracao, recusaPelaMemoria } from './convivio126';
+import { fimDoCaso, GRUPOS_126, INTERACOES_126, jeitoNaInteracao, recusaPelaMemoria } from './convivio126';
 import { GRUPOS_DO_CONVIVIO, INTERACOES_DE_CONVIVIO, marcoAfetivo, naoQuerCasar, recusaAfetiva, vereditoDeTempo, vereditoDoPedido } from './convivio';
 import { cenaDaDescoberta, fraseDoSaber, pendentes, revelar } from './conhecimento';
 import { estadoDaRelacao } from './lacos';
@@ -751,9 +751,11 @@ export const INTERACOES: Interacao[] = [
     quando: c => c.papel === 'caso',
     rotulo: c => (c.vin.romance?.paralelo ? `Terminar com ${c.p.nome}` : 'Terminar o caso'),
     executar: c => {
+      // VIDA 12.7: a frase lê o caso como era (quanto durou, se era combinado) — antes de ele acabar.
+      const resultado = fimDoCaso(c);
       encerrarCaso(c.v, c.p, c.vin);
       aplicarPersonalidade(c.v, 'acao:encerrar_caso', { familia: 1 });
-      return { resultado: `Você disse a ${c.p.nome} que acabou. ${capital(ele(c.p))} não insistiu.` };
+      return { resultado };
     }
   },
 

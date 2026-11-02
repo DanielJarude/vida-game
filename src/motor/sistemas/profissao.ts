@@ -70,6 +70,7 @@ import { disponibilidadeAcademia, executarAcademia, linhaDePesquisa, OCUPACOES_A
 import { linguagemEmCena, trabalhaComArte } from './cena';
 import { TRILHAS_ARTISTICAS } from './paralelas';
 import { disponibilidadePapelMusica, mudarPapelMusica, NOME_DO_PAPEL, PAPEIS_DA_MUSICA, papelNaMusica, PORQUE_DO_PAPEL, type PapelMusica } from './musica';
+import { ambienteDoSetor, COMO_VAI, frasePor } from '../dados/falasDoTrabalho';
 
 
 /* ================================================================== Modo */
@@ -448,10 +449,9 @@ function comoVai(v: Vida, e: Emprego, oc: Ocupacao): string[] {
   const f = familiaDaTrilha(oc.trilha);
   if (e.clientela === undefined && !e.formacaoAte) {
     // Os mesmos limiares da promoção (62) e do corte (40): a leitura não contradiz o horizonte.
-    if (d >= 76) out.push('O trabalho vai muito bem: é de você que lembram quando aparece algo difícil.');
-    else if (d >= 62) out.push('O trabalho vai bem.');
-    else if (d >= 40) out.push('O trabalho vai, sem destaque.');
-    else out.push('O trabalho vem indo mal, e todo mundo percebe.');
+    // VIDA 12.7: a leitura no jeito do ambiente (o salão, o plantão, a sala de aula, o canteiro, a estrada).
+    const falas = COMO_VAI[ambienteDoSetor(oc.setor)][d >= 76 ? 0 : d >= 62 ? 1 : d >= 40 ? 2 : 3];
+    out.push(frasePor(`${anoDe(v.t)}|${e.empregador}|${oc.id}`, falas));
   }
   const sentido = (f.sentido ?? []).some(x => (v.caminhos.frentes[x]?.interesse ?? 0) >= 55);
   if (sentido) out.push('É um trabalho que tem a ver com o que você gosta de fazer.');

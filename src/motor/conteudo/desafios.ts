@@ -26,6 +26,7 @@ import { climaDe, fatorJornada } from '../sistemas/ritmo';
 import { podeTentar } from '../plausibilidade';
 import { escrever } from '../nucleo';
 import { clamp } from '../rng';
+import { ABERTURA_DO_AUMENTO, ambienteDoSetor, AUMENTO_NAO, AUMENTO_SIM, frasePor } from '../dados/falasDoTrabalho';
 
 /** Como a pessoa chegou à entrevista (guardado como índice num fato). */
 export const VIAS = ['curriculo', 'indicacao', 'estagio', 'aprendiz', 'proposta', 'vaga'];
@@ -163,6 +164,8 @@ function concluirEntrevista(c: Ctx): Resultado {
   return { texto, memoria: `Fez entrevista para ${nome} e não passou: ${motivo}.`, tom: 'ruim', relevancia: primeira ? 'cotidiano' : 'tecnico' };
 }
 
+const ambienteDe = (c: Ctx) => ambienteDoSetor(c.v.trabalho.atual ? ocupacaoOuNula(c.v.trabalho.atual.ocupacaoId)?.setor : undefined);
+
 function resolverNegociacao(c: Ctx, bonus: number, arriscado: boolean): { texto: string; memoria: string | null; tom: 'bom' | 'ruim' } {
   const e = c.v.trabalho.atual;
   if (!e) return { texto: 'Não havia mais o que negociar.', memoria: null, tom: 'ruim' };
@@ -183,7 +186,7 @@ function resolverNegociacao(c: Ctx, bonus: number, arriscado: boolean): { texto:
     const n = (c.v.fatos['aumentos'] ?? 0) + 1;
     c.v.fatos['aumentos'] = n;
     c.v.fatos['ultimo_aumento'] = c.v.t;
-    return { texto: `A chefia pensou dois dias e aprovou: o salário foi para ${moeda(e.salario)}.`, memoria: n === 1 ? `Negociou um aumento e conseguiu: ${moeda(e.salario)}.` : null, tom: 'bom' };
+    return { texto: frasePor(`${c.v.id}|${anoDeT(c.v.t)}|sim`, AUMENTO_SIM[ambienteDe(c)])(moeda(e.salario)), memoria: n === 1 ? `Negociou um aumento e conseguiu: ${moeda(e.salario)}.` : null, tom: 'bom' };
   }
   if (arriscado && c.r.chance(0.35)) {
     e.desempenho = clamp(e.desempenho - 10);
@@ -192,14 +195,15 @@ function resolverNegociacao(c: Ctx, bonus: number, arriscado: boolean): { texto:
   }
   e.desempenho = clamp(e.desempenho - 2);
   e.clima = clamp(climaDe(e) - 1);
-  return { texto: 'Disseram que não havia orçamento este ano. Talvez no próximo.', memoria: null, tom: 'ruim' };
+  return { texto: frasePor(`${c.v.id}|${anoDeT(c.v.t)}|nao`, AUMENTO_NAO[ambienteDe(c)]), memoria: null, tom: 'ruim' };
 }
 
 export const DESAFIOS: Conteudo[] = [
   {
     id: 'trab_negociacao', tipo: 'decisao', idade: [16, 80], tema: 'trabalho', manual: true, repetir: 0,
     titulo: 'A conversa do aumento',
-    texto: c => `Você marcou quinze minutos com a chefia${c.v.trabalho.atual ? ` ${naCasa(c.v.trabalho.atual.empregador)}` : ''}. Sala fechada, café frio. É a sua vez de falar.`,
+    // VIDA 12.7: o cenário é o do trabalho (o salão depois de fechar, o posto do plantão, a garagem, o canteiro).
+    texto: c => { const amb = ambienteDe(c); const f = frasePor(`${c.v.id}|${anoDeT(c.v.t)}|abre`, ABERTURA_DO_AUMENTO[amb]); return amb === 'escritorio' && c.v.trabalho.atual ? f.replace('com a chefia.', `com a chefia ${naCasa(c.v.trabalho.atual.empregador)}.`) : f; },
     opcoes: [
       { id: 'resultados', texto: 'Mostrar números: o que você entregou este ano', comportamento: { disciplina: 1 },
         resolver: c => ({ ...resolverNegociacao(c, 0.05 + Math.max(0, c.v.personalidade.tracos.disciplina) / 300, false), relevancia: 'biografia' }) },
