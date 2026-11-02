@@ -123,8 +123,8 @@ function sofaDesigner(cor: string): Amostra {
     M(ret(4, 70, 56, 16, 8), clarear(cor, 0.08), 'assento'), M(ret(60, 70, 56, 16, 8), clarear(cor, 0.08)),
     L('M12 56q20 4 40 0M68 56q20 4 40 0', 0.8, escurecer(cor, 0.2), { fino: true }),
     M(cantos([[14, 46, 5], [34, 50, 5], [32, 68, 5], [12, 64, 5]]), '#d8cdb8', 'almofada'),
-    M(cantos([[84, 48, 2], [110, 48, 4], [114, 74, 2], [108, 92, 2], [96, 92, 2], [92, 72, 2]]), '#e7dfd0', 'manta'),
-    L('M100 50l4 40M94 52l2 30', 0.6, '#c9bca3', { fino: true }),
+    M(cantos([[84, 48, 2], [110, 48, 4], [114, 74, 2], [108, 92, 2], [96, 92, 2], [92, 72, 2]]), '#9a6a4a', 'manta'),
+    L('M100 50l4 40M94 52l2 30', 0.6, '#7a4a30', { fino: true }),
     Mt(ret(2, 92, 116, 2.4, 1), LATAO, 'friso'),
     Mt(cantos([[12, 94, 0.5], [18, 94, 0.5], [16, 108, 0.5], [14, 108, 0.5]]) + cantos([[102, 94, 0.5], [108, 94, 0.5], [106, 108, 0.5], [104, 108, 0.5]]), LATAO, 'pe-latao')
   ], 58);
@@ -406,7 +406,7 @@ function fogao(cor: string): Amostra {
     V(ret(34, 64, 52, 26, 2), false, 'visor'),
     P(ret(24, 102, 72, 4, 1), escurecer(cor, 0.35)),
     // A panela de pressão de domingo.
-    Mt(ret(30, 16, 22, 15, 4), METAL, 'panela'), P(ret(46, 12, 16, 3, 1.5) + ret(38, 12, 4, 4, 1), PRETO)
+    Mt(ret(28, 20, 22, 15, 4), METAL, 'panela'), P(ret(44, 17, 16, 3, 1.5) + ret(36, 16, 4, 4, 1), PRETO)
   ], 42);
 }
 
@@ -923,14 +923,15 @@ function ombrelone(cor: string): Amostra {
 }
 
 function mesaExterna(cor: string): Amostra {
-  const cadeira = (x: number, lado: 1 | -1) => [
-    Mt(membro([[x, 70], [x, 108]], [2, 2]) + membro([[x + lado * 16, 78], [x + lado * 18, 108]], [2, 2]), cor),
-    M(cantos([[x, 76, 1], [x + lado * 20, 76, 1], [x + lado * 20, 80, 1], [x, 80, 1]]), cor, 'cadeira'),
-    M([0, 1, 2].map(k => ret(Math.min(x, x - lado * 1) - (lado < 0 ? 2 : 0), 46 + k * 8, 4, 5, 1)).join(''), clarear(cor, 0.2))
+  const cadeira = (x: number) => [
+    Mt(membro([[x + 2, 76], [x + 1, 108]], [2, 2]) + membro([[x + 22, 76], [x + 23, 108]], [2, 2]), escurecer(cor, 0.15)),
+    M(ret(x, 46, 24, 4, 1.5) + ret(x, 54, 24, 4, 1.5) + ret(x, 62, 24, 4, 1.5), cor, 'encosto'),
+    Mt(ret(x, 44, 2.4, 34, 1) + ret(x + 21.6, 44, 2.4, 34, 1), escurecer(cor, 0.15)),
+    M(cantos([[x + 1, 74, 1.5], [x + 23, 74, 1.5], [x + 25, 80, 1.5], [x - 1, 80, 1.5]]), clarear(cor, 0.1), 'cadeira')
   ];
   return noChao([
     // A mesa redonda de alumínio com o furo do guarda-sol e as cadeiras de encosto ripado dos lados.
-    ...cadeira(10, 1), ...cadeira(110, -1),
+    ...cadeira(2), ...cadeira(94),
     Mt(membro([[40, 72], [34, 108]], [2.6, 2]) + membro([[80, 72], [86, 108]], [2.6, 2]) + membro([[60, 74], [60, 106]], [2.6, 2]), cor),
     M('M24 66a36 7 0 0 0 72 0v4a36 7 0 0 1-72 0z', escurecer(cor, 0.1)),
     M(elipse(60, 66, 36, 7), clarear(cor, 0.12), 'tampo'),
@@ -1163,7 +1164,7 @@ function fonte(cor: string): Amostra {
 function esculturaJardim(cor: string): Amostra {
   // A forma vazada (o furo é o caminho contrário ao contorno de fora).
   const fora = suave([[46, 86], [36, 64], [38, 38], [52, 18], [70, 20], [82, 40], [80, 66], [72, 86]], true, 0.5);
-  const furo = 'M54 52a8 12 0 1 1 16 0a8 12 0 1 1 -16 0z';
+  const furo = 'M54 52a8 12 0 1 0 16 0a8 12 0 1 0 -16 0z';
   return noChao([
     // A escultura de bronze abstrata, vazada, com a pátina verde escorrendo, sobre o pedestal de pedra com a placa.
     M(ret(34, 86, 52, 22, 1), '#cfc8bc', 'pedestal'),
@@ -1197,14 +1198,18 @@ function vasosGrandes(cor: string): Amostra {
     M(ret(x - w * 0.46, 108 - h - 3, w * 0.92, 5, 2), escurecer(cor, 0.12)),
     L(`M${x - w * 0.2} ${108 - h + 3}v${h * 0.3}M${x + w * 0.12} ${108 - h + 3}v${h * 0.22}`, 1, clarear(cor, 0.35), { fino: true, marca: 'esmalte' })
   ];
-  const oliveira = (x: number, base: number, h: number) => [
-    M(membro([[x, base], [x - 3, base - h * 0.4], [x + 2, base - h * 0.7]], [4, 3, 2]), '#6b5a48', 'tronco'),
-    M([[-12, -0.8], [0, -1], [12, -0.85], [-6, -1.2], [7, -1.15], [-14, -0.62], [14, -0.66]].map(([dx, k]) => elipse(x + dx, base + h * k, 9, 6)).join(''), '#8a9a6a', 'copa'),
-    P([[-8, -0.95], [6, -1.05], [-2, -1.18]].map(([dx, k]) => elipse(x + dx, base + h * k, 5, 3)).join(''), '#a9b88a', undefined, { fino: true })
-  ];
+  const oliveira = (x: number, base: number, h: number) => {
+    const cy = base - h * 0.78;
+    const folhas: Pt[] = [[-12, 4], [-5, -3], [4, -5], [12, 2], [-8, 9], [2, 7], [10, 10], [-14, 12], [16, 12]];
+    return [
+      M(membro([[x, base], [x - 3, base - h * 0.35], [x + 2, base - h * 0.6], [x - 1, cy + 4]], [4, 3.4, 2.6, 2]), '#6b5a48', 'tronco'),
+      M(folhas.map(([dx, dy]) => elipse(x + dx, cy + dy, 8, 5)).join(''), '#8a9a6a', 'copa'),
+      P(folhas.slice(0, 5).map(([dx, dy]) => elipse(x + dx - 1, cy + dy - 1.6, 4.6, 2)).join(''), '#b4c29a', undefined, { fino: true })
+    ];
+  };
   return noChao([
     // Dois vasos grandes de barro esmaltado (o brilho do esmalte) com as oliveiras de folha prateada.
-    ...oliveira(34, 62, 52), ...oliveira(88, 74, 40),
+    ...oliveira(34, 62, 50), ...oliveira(88, 74, 40),
     ...vaso(34, 48, 40), ...vaso(88, 36, 34)
   ], 54);
 }
@@ -1212,10 +1217,10 @@ function vasosGrandes(cor: string): Amostra {
 function luzJardim(cor: string): Amostra {
   return noChao([
     // A árvore acesa de baixo (o facho subindo do espeto), os balizadores acesos no caminho de pedra.
-    P('M30 106L10 30h44z', '#fff3c4', 'facho', { opacidade: 0.35 }),
+    P('M31 104L16 48h30z', '#fff3c4', 'facho', { opacidade: 0.4 }),
     M(membro([[32, 106], [30, 70], [34, 46]], [6, 5, 3]), '#6b5a48', 'arvore'),
-    M([[18, 34], [32, 24], [46, 34], [24, 44], [42, 44], [32, 36]].map(([x, y]) => circulo(x, y, 11)).join(''), '#5f9a52', 'copa'),
-    P([[22, 44], [34, 48], [42, 44]].map(([x, y]) => circulo(x, y, 6)).join(''), '#a9cf7a'),
+    M(suave([[12, 40], [10, 26], [20, 14], [32, 10], [46, 16], [54, 30], [50, 44], [38, 50], [24, 50]], true, 0.5), '#5f9a52', 'copa'),
+    P(suave([[18, 44], [30, 38], [44, 42], [40, 49], [24, 49]], true, 0.5), '#b9dc86', 'copa-acesa'),
     Mt(ret(26, 104, 10, 4, 1.5), cor), Lz(ret(28, 102, 6, 2, 1), '#fff3c4'),
     P(elipse(70, 106, 7, 2) + elipse(88, 102, 6, 1.8) + elipse(104, 98, 5, 1.6), '#b9b2a6', 'caminho'),
     ...[[64, 0], [84, -6], [102, -12]].flatMap(([x, dy]) => [

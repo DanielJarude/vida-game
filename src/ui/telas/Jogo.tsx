@@ -235,7 +235,7 @@ function EnquantoIsso({ vida, desde, abrirPessoa }: { vida: Vida; desde: number;
  * REWORK 6 — o ano que passou, junto: o fechamento das carreiras especiais e o que o mundo fez (`EnquantoIsso`). Ano
  * tranquilo, sem nada disso, não ganha caixa vazia — a biografia logo abaixo já marca "este ano".
  */
-function AnoQuePassou({ vida, desde, abrirPessoa }: { vida: Vida; desde: number; abrirPessoa: (id: string) => void }) {
+export function AnoQuePassou({ vida, desde, abrirPessoa }: { vida: Vida; desde: number; abrirPessoa: (id: string) => void }) {
   const temFechamento = fechamentoDoAno(vida).length > 0;
   const temNoticias = noticiasDoAno(vida, desde).length > 0;
   const conquistas = conquistasDoAno(vida);

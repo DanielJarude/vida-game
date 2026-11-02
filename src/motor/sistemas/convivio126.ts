@@ -18,7 +18,7 @@ import { clamp, rngDe } from '../rng';
 import type { Pessoa, Vida } from '../tipos';
 import type { CtxI, Interacao, Saida } from './interacoes';
 import { escrever, lembrarCom, parceiro } from '../nucleo';
-import { bloqueio, type Veredito } from '../plausibilidade';
+import { bloqueio, PERMITIDO, type Veredito } from '../plausibilidade';
 import { compatibilidade } from './social';
 import { flex } from '../texto';
 import { pagar, vereditoDePagar } from './dinheiro';
@@ -299,6 +299,30 @@ export const INTERACOES_126: Interacao[] = [
     }
   },
   {
+    // VIDA 12.7: a demonstração de afeto do dia a dia de um caso — a mensagem, a foto, o áudio. De graça, e com rastro.
+    id: 'caso_carinho',
+    quando: caso,
+    disponivel: c => (c.v.fatos[`caso_carinho_${c.p.id}`] !== undefined && c.v.t - c.v.fatos[`caso_carinho_${c.p.id}`] < 2 ? bloqueio('incompativel', 'Você mandou faz pouco: mensagem demais deixa rastro demais.') : PERMITIDO),
+    rotulo: c => `Mandar um carinho para ${c.p.nome}`,
+    executar: c => {
+      c.v.fatos[`caso_carinho_${c.p.id}`] = c.v.t;
+      const r = rngDe(c.v.id, 'caso', c.p.id, c.v.t, 'carinho');
+      const rom = c.vin.romance!;
+      rom.envolvimento = clamp(rom.envolvimento + 3);
+      c.vin.tUltimoContato = c.v.t;
+      const apagou = r.next() < 0.8;
+      if (!apagou) rastro(c.v, c.p.id, 1);
+      const msg = semRepetir(c, 'caso_carinho', r, [
+        `Um áudio de vinte segundos para ${c.p.nome}, gravado no carro.`,
+        `Uma foto do pôr do sol com "lembrei de você" para ${c.p.nome}.`,
+        `Uma mensagem às duas da manhã: "não consigo parar de pensar".`,
+        `Um bilhete escondido no bolso do casaco de ${c.p.nome}.`
+      ]);
+      const volta = tem(c.p, 'carinhoso') ? ` ${c.p.nome} respondeu na hora, com três corações.` : tem(c.p, 'ciumento') ? ` ${c.p.nome} respondeu perguntando onde você estava.` : ` ${c.p.nome} respondeu horas depois, curto e quente.`;
+      return { resultado: `${msg}${volta}${apagou ? ' Você apagou a conversa.' : ' Você esqueceu de apagar a conversa.'}` };
+    }
+  },
+  {
     id: 'caso_futuro',
     quando: c => caso(c) && c.v.t - (c.vin.romance?.tInicio ?? c.v.t) >= 6,
     rotulo: c => `Conversar com ${c.p.nome} sobre o que vocês são`,
@@ -341,7 +365,7 @@ export const INTERACOES_126: Interacao[] = [
   }
 ];
 
-export const GRUPOS_126 = { prometer: 'planos', caso_encontro: 'romance', caso_presente: 'romance', caso_viagem: 'romance', caso_futuro: 'romance', caso_tempo: 'romance' } as const;
+export const GRUPOS_126 = { prometer: 'planos', caso_carinho: 'romance', caso_encontro: 'romance', caso_presente: 'romance', caso_viagem: 'romance', caso_futuro: 'romance', caso_tempo: 'romance' } as const;
 
 /** Para quem vem do ano: as promessas. (Os demais efeitos do jeito acontecem na hora de cada interação.) */
 export function processarJeito(v: Vida): void {

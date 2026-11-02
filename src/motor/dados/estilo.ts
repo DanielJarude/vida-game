@@ -288,7 +288,7 @@ export function tipoDePeca(it: ItemEstilo): TipoDePeca {
   if (it.lugar === 'casaco') return 'casacos';
   const e = it.estilos ?? [];
   if (it.id === 'terno' || it.id === 'terno_vicunha' || it.id === 'roupa_social' || it.id === 'roupa_elegante' || it.id === 'camisa_social' || it.id === 'calca_alfaiataria' || it.id === 'calca_alfaiataria_grife') return 'sociais';
-  if (it.id === 'roupa_esportiva' || it.id === 'conjunto_baile' || (e.includes('esportivo') && !e.includes('casual') && !e.includes('tradicional'))) return 'esportivas';
+  if (it.id === 'roupa_esportiva' || it.id === 'conjunto_baile' || e[0] === 'esportivo') return 'esportivas';
   if (it.lugar === 'corpo') return 'vestidos';
   if (it.lugar === 'pernas') return it.id.startsWith('saia') ? 'saias' : it.id.startsWith('short') || it.id.startsWith('bermuda') ? 'shorts' : 'calcas';
   return 'blusas';

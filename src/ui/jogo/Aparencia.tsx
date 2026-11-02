@@ -126,7 +126,7 @@ const PARTES: { id: string; nome: string; lugares: string[] }[] = [
   { id: 'anel', nome: 'Anel', lugares: ['anel'] }, { id: 'joia', nome: 'No pescoço', lugares: ['joia'] }, { id: 'orelha', nome: 'Nas orelhas', lugares: ['orelha'] }
 ];
 
-function OQueVeste({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
+export function OQueVeste({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
   const itens = itensDaPessoa(vida);
   if (!itens.length) return null;
   const daParte = (l: string[]) => itens.filter(x => { const it = itemEstilo(x.itemId); return !!it && lugaresDoItem(it).some(y => l.includes(y)) && (it.lugar === 'casaco') === l.includes('casaco'); });

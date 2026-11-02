@@ -44,12 +44,34 @@ const LARGURA: Record<string, number> = {
   computador: 46, notebook: 30, projetor: 28, som_hifi: 44, caixa_som: 26, videogame: 30, camera: 22, tablet: 22, celular_simples: 12, celular_bom: 12, celular_topo: 12,
   violao: 26, guitarra: 26, teclado: 70, violino: 18, cavaquinho: 18, pandeiro: 18, sanfona: 30, saxofone: 18, controladora_dj: 40, discos: 30,
   livros: 50, livros_estudo: 36, material_arte: 30, jogos_tabuleiro: 26, cavalete: 40, torno_ceramica: 46, raquete: 20, prancha: 22, camping: 46, tabuleiro: 24, chuteira_bola: 24,
-  aspirador_robo: 22, roupa_de_cama: 40
+  aspirador_robo: 22, roupa_de_cama: 40,
+  // VIDA 12.7 · a casa inteira
+  sofa_retratil: 124, sofa_couro: 120, sofa_designer: 136, poltrona_designer: 66, mesa_centro: 60, mesa_centro_marmore: 62, mesa_lateral: 26,
+  estante_sala: 120, aparador: 70, tv_oled: 100, home_theater: 100, tapete: 120, tapete_persa: 130, quadros: 60, objetos_decor: 34, lareira: 80,
+  geladeira: 46, geladeira_inox: 60, freezer: 64, adega: 32, fogao: 40, cooktop_forno: 60, fogao_profissional: 76, microondas: 34, cafeteira: 30,
+  louca_talheres: 30, ilha_cozinha: 110, armarios_planejados: 150,
+  cama_box: 100, cama_king: 128, colchao_hotel: 100, guarda_roupa: 110, closet: 140, penteadeira: 66, criado_mudo: 90, espelho_chao: 30, comoda: 64,
+  cama_solteiro: 96, sofa_cama: 110, beliche: 100,
+  banheira: 104, banheira_pedra: 110, ducha: 60, gabinete: 56, bancada_marmore: 110, espelho_led: 40, toalheiro: 34, toalhas: 40, sauna: 110,
+  espreguicadeira: 110, espreguicadeira_teca: 120, guarda_sol: 90, ombrelone: 110, mesa_externa: 100, sofa_externo: 130, boias: 56, luz_piscina: 60,
+  aquecedor_piscina: 90, capa_piscina: 150, cascata: 100, kit_piscina: 56,
+  churrasqueira: 90, espaco_gourmet: 150, forno_pizza: 80, pergolado: 160, gazebo: 150, fonte: 70, escultura_jardim: 44, plantas: 60, vasos_grandes: 60,
+  luz_jardim: 70, playground: 130, cama_elastica: 130,
+  bilhar_profissional: 150, pebolim: 76, pingue_pongue: 130, mesa_jogos: 110, fliperama: 44, poltronas_cinema: 130, bicicleta_ergometrica: 56, remo_seco: 120, saco_pancada: 40,
+  ferramentas: 44, bancada_ferramentas: 110, armario_garagem: 110, organizadores: 70, carregador_ev: 36, lavadora_pressao: 60,
+  mesa_executiva: 110, cadeira_ergonomica: 44, monitores: 70, impressora: 34, estante_escritorio: 70
 };
 const PADRAO = 34;
 const EXTERNOS = new Set(['jardim', 'piscina', 'lazer', 'garagem']);
 /** O que se encosta na parede do fundo (os móveis grandes, a TV, o que fica de pé): o resto vem para a frente. */
-const ENCOSTA = new Set(['sofa', 'cama', 'colchao', 'escrivaninha', 'piano', 'tv', 'estacao_musculacao', 'som_hifi', 'home_studio', 'livros', 'livros_estudo', 'maquina_lavar', 'lava_loucas', 'cozinha_equipada', 'ar_condicionado', 'teclado', 'computador', 'mesa_jantar', 'cavalete']);
+const ENCOSTA = new Set(['sofa', 'cama', 'colchao', 'escrivaninha', 'piano', 'tv', 'estacao_musculacao', 'som_hifi', 'home_studio', 'livros', 'livros_estudo', 'maquina_lavar', 'lava_loucas', 'cozinha_equipada', 'ar_condicionado', 'teclado', 'computador', 'mesa_jantar', 'cavalete',
+  // VIDA 12.7 · a casa inteira: os móveis grandes, o que fica de pé e o que vai na parede
+  'sofa_retratil', 'sofa_couro', 'sofa_designer', 'estante_sala', 'aparador', 'tv_oled', 'home_theater', 'lareira', 'quadros',
+  'geladeira', 'geladeira_inox', 'freezer', 'adega', 'fogao', 'cooktop_forno', 'fogao_profissional', 'armarios_planejados',
+  'cama_box', 'cama_king', 'colchao_hotel', 'guarda_roupa', 'closet', 'penteadeira', 'criado_mudo', 'espelho_chao', 'comoda', 'cama_solteiro', 'sofa_cama', 'beliche',
+  'ducha', 'gabinete', 'bancada_marmore', 'espelho_led', 'toalheiro', 'sauna',
+  'churrasqueira', 'espaco_gourmet', 'forno_pizza', 'pergolado', 'gazebo', 'fliperama',
+  'armario_garagem', 'bancada_ferramentas', 'organizadores', 'carregador_ev', 'mesa_executiva', 'estante_escritorio']);
 
 /* A geometria da perspectiva (a cena tem 320 × 180). */
 const W = 320, H = 180;

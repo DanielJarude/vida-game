@@ -51,6 +51,80 @@ const VEICULO: Variante[] = [
 ];
 const BICICLETA: Variante[] = [...ESPORTE, { nome: 'branca', cor: '#ebe8e2' }, { nome: 'azul-celeste', cor: '#6aa8d8' }];
 
+const v = (nome: string, cor: string): Variante => ({ nome, cor });
+const COURO = [v('caramelo', '#9a5a2e'), v('conhaque', '#6e3a1f'), v('preto', '#2b2523'), v('verde-inglês', '#2f4a3a')];
+const VELUDO = [v('verde-esmeralda', '#2f6b55'), v('azul-marinho', '#2c3e66'), v('rosa-antigo', '#b98682'), v('mostarda', '#c9962f')];
+const MARMORE = [v('carrara', '#ece8e0'), v('travertino', '#d8c8a8'), v('nero marquina', '#3a3734'), v('verde guatemala', '#3f5a4a')];
+const NOGUEIRA = [v('nogueira', '#6e4a2e'), v('carvalho', '#b9773f'), v('freijó', '#c89a62'), v('laca branca', '#ece9e4')];
+const ROUPA_CAMA = [v('cinza', '#a7a39c'), v('azul-claro', '#9db9d6'), v('terracota', '#c58b6a'), v('verde-sálvia', '#9aab8f')];
+const METAIS = [v('cromado', '#c3c6c9'), v('preto fosco', '#2b2826'), v('dourado escovado', '#c9a23a')];
+/** VIDA 12.7 — os materiais das 93 coisas novas da casa (madeira, couro, veludo, mármore, inox, esmalte, tecido). */
+const MATERIAL_DA_CASA: Record<string, Variante[]> = {
+  // Sala
+  sofa_retratil: [ESTOFADO[2], ESTOFADO[5], ESTOFADO[4], ESTOFADO[0]], sofa_couro: COURO,
+  sofa_designer: [v('bouclé off-white', '#e3dccf'), v('cinza-pérola', '#b9b4ab'), ESTOFADO[3], v('verde-musgo', '#5d6b45')],
+  poltrona_designer: [COURO[2], COURO[1], COURO[0]], mesa_centro: MADEIRA.slice(0, 3), mesa_centro_marmore: MARMORE, mesa_lateral: MADEIRA.slice(0, 3),
+  estante_sala: [MADEIRA[1], MADEIRA[2], v('laca branca', '#ece9e4')],
+  aparador: [v('laca verde', '#2f5a4a'), v('laca vinho', '#6b2230'), v('laca preta', '#2b2523'), v('laca off-white', '#e8e2d6'), v('laca azul', '#2c4f86')],
+  tv_oled: [v('preta', '#1f1f22')], home_theater: [v('preto', '#26252a'), v('nogueira', '#6e3f22'), v('branco', '#ece8e1')],
+  tapete: [v('bege', '#cdb898'), v('cinza', '#a9a39b'), v('terracota', '#b5573a'), v('azul', '#3a5a7a')],
+  tapete_persa: [v('vermelho-rubi', '#8a2a2a'), v('terracota', '#a8572a'), v('verde', '#2f4a3a')],
+  quadros: [v('moldura preta', '#2b2826'), v('moldura de madeira', '#b9773f'), v('moldura dourada', '#c9a23a'), v('moldura branca', '#ece9e4')],
+  objetos_decor: [v('terracota', '#b5704a'), v('verde-água', '#7aa59a'), v('azul-cobalto', '#2f4f8a'), v('preto', '#2b2826')],
+  lareira: [v('concreto', '#a9a49c'), v('pedra clara', '#d8d0c0'), v('mármore preto', '#3a3734')],
+  // Cozinha
+  geladeira: ELETRODOMESTICO, geladeira_inox: [v('inox', '#a7adb3'), v('inox preto', '#4d5157')], freezer: [ELETRODOMESTICO[0]],
+  adega: [v('preta', '#2b2826'), v('inox', '#a7adb3')], fogao: ELETRODOMESTICO, microondas: ELETRODOMESTICO,
+  cooktop_forno: [v('armário branco', '#ece9e4'), v('armário de madeira', '#b9773f'), v('armário grafite', '#4d5157')],
+  fogao_profissional: [v('bordô', '#6b2230'), v('marfim', '#e8dcc2'), v('azul-ardósia', '#2f4a6b'), v('preto', '#2b2826'), v('verde-inglês', '#2f4a3a')],
+  cafeteira: [v('inox', '#a7adb3'), v('vermelha', '#a8281f'), v('preta', '#2b2826'), v('creme', '#e8dcc2')],
+  louca_talheres: [v('filete azul', '#2f5d93'), v('filete dourado', '#c9a23a'), v('filete verde', '#3f6b45'), v('filete preto', '#2b2826')],
+  ilha_cozinha: [MADEIRA[1], v('verde-sálvia', '#7d907a'), v('laca branca', '#ece9e4'), MADEIRA[2]],
+  armarios_planejados: [v('branco', '#ece9e4'), MADEIRA[1], v('verde-sálvia', '#8fa08a'), v('grafite', '#4d5157')],
+  // Quartos
+  cama_box: ROUPA_CAMA, cama_king: VELUDO, colchao_hotel: [v('marfim', '#efe9dc')], guarda_roupa: [v('branco', '#ece9e4'), MADEIRA[1], MADEIRA[0]],
+  closet: NOGUEIRA, penteadeira: [v('branca', '#ece9e4'), MADEIRA[0], v('rosa', '#d9b3ad')], criado_mudo: MADEIRA.slice(0, 3),
+  espelho_chao: [v('moldura preta', '#2b2826'), v('moldura dourada', '#c9a23a'), v('moldura de madeira', '#d9a86a')], comoda: MADEIRA.slice(0, 3),
+  cama_solteiro: [v('azul', '#6f93ad'), v('verde', '#7a9a6a'), v('rosa', '#d9a3a0')], sofa_cama: ESTOFADO, beliche: [MADEIRA[0], v('branco', '#ece9e4'), MADEIRA[1]],
+  // Banheiro
+  banheira: [v('branca', '#f2f0ec'), v('preta fosca', '#2b2826')], banheira_pedra: [MARMORE[0], MARMORE[1], v('pedra cinza', '#8f8a84')],
+  ducha: METAIS, gabinete: [v('branco', '#ece9e4'), MADEIRA[1], v('verde', '#5f7a6a')], bancada_marmore: MARMORE,
+  espelho_led: [v('sem moldura', '#d8dde2'), v('moldura preta', '#2b2826'), v('moldura dourada', '#c9a23a')], toalheiro: METAIS,
+  toalhas: [v('branco', '#ece8e1'), v('cinza', '#a7a39c'), v('azul', '#7a9ab8'), v('verde-sálvia', '#9aab8f')], sauna: [v('pinho', '#d9a86a'), v('cedro', '#a8743f')],
+  // Piscina
+  espreguicadeira: [v('tela azul', '#2f6db3'), v('tela branca', '#ece9e4'), v('tela cinza', '#8d8a85')],
+  espreguicadeira_teca: [v('teca', '#b07a45'), v('teca envelhecida', '#a9a49c')], guarda_sol: [ESPORTE[0], ESPORTE[1], ESPORTE[2], ESPORTE[3]],
+  ombrelone: [v('areia', '#d8c8a8'), v('grafite', '#4d5157'), v('terracota', '#b5573a')], mesa_externa: [v('branca', '#ece9e4'), v('grafite', '#4d5157')],
+  sofa_externo: [v('areia', '#e3dccf'), v('cinza', '#a9a39b'), v('verde-oliva', '#6f7a3c')], boias: [v('rosa', '#e88aa8'), v('branco', '#f4f1ea')],
+  luz_piscina: [v('azul', '#7cc0d6'), v('verde-água', '#7cd6c0'), v('branca', '#d8ecff')], aquecedor_piscina: [v('preto', '#2b2826')],
+  capa_piscina: [v('azul', '#2c5c9e'), v('verde', '#3b6b3f'), v('cinza', '#6a6f77')], cascata: [v('pedra', '#9a9184'), v('arenito', '#c4a882'), v('ardósia', '#5d5a56')],
+  kit_piscina: [v('azul', '#2f6db3'), v('bege', '#d8c8a8')],
+  // Jardim
+  churrasqueira: [v('tijolo', '#b5573a'), v('tijolo claro', '#c98a5a')], espaco_gourmet: [v('granito preto', '#3d3a37'), v('quartzo branco', '#e6e2da')],
+  forno_pizza: [v('tijolo', '#b5573a'), v('refratário', '#c9a27a')], pergolado: MADEIRA.slice(0, 3), gazebo: MADEIRA.slice(0, 3),
+  fonte: [v('pedra', '#cfc8bc'), v('cimento', '#a9a49c')], escultura_jardim: [v('bronze', '#7a5a34'), v('bronze escuro', '#4a3a28')],
+  plantas: [v('terracota', '#b5704a'), v('cimento', '#a9a49c'), v('branco', '#ece9e4')],
+  vasos_grandes: [v('azul', '#2f5d8a'), v('verde', '#4f7a6a'), v('terracota', '#b5704a'), v('preto', '#2b2826')],
+  luz_jardim: [v('grafite', '#3b3a38'), v('aço corten', '#8a4a2a')], playground: [MADEIRA[1]], cama_elastica: [ESPORTE[1], ESPORTE[3], ESPORTE[0]],
+  // Lazer
+  bilhar_profissional: [v('feltro verde', '#2f6b45'), v('feltro azul', '#2c4f86'), v('feltro vinho', '#6b2230'), v('feltro cinza', '#6a6a6a')],
+  pebolim: [MADEIRA[1], v('preto', '#26252a'), v('vermelho', '#a8281f')], pingue_pongue: [v('azul', '#2c4f86'), v('verde', '#2f6b45')],
+  mesa_jogos: [v('feltro verde', '#2f6b45'), v('feltro azul', '#2c4f86'), v('feltro vinho', '#6b2230')],
+  fliperama: [v('preto', '#26252a'), v('vermelho', '#a8281f'), v('azul', '#2c4f86'), MADEIRA[1]],
+  poltronas_cinema: [v('couro preto', '#2b2523'), v('couro vinho', '#6b2230'), v('couro cinza', '#5d5a56')],
+  bicicleta_ergometrica: [ESPORTE[5], ESPORTE[0], v('branca', '#ece9e4')], remo_seco: [v('freixo', '#d9b98a'), v('cerejeira', '#a8572a'), v('nogueira', '#6e4a2e')],
+  saco_pancada: [v('vermelho', '#a8281f'), v('preto', '#26252a'), v('azul', '#2c4f86')],
+  // Garagem
+  ferramentas: [v('vermelha', '#c8372d'), v('azul', '#2f6db3'), v('preta', '#2b2826')], bancada_ferramentas: MADEIRA.slice(0, 2),
+  armario_garagem: [v('cinza', '#8d9198'), v('vermelho', '#a8281f'), v('azul', '#2c4f86'), v('preto', '#2b2826')],
+  organizadores: [v('azul', '#2f6db3'), v('cinza', '#8d8a85'), v('verde', '#3f9a52')], carregador_ev: [v('branco', '#ece9e4'), v('preto', '#2b2826')],
+  lavadora_pressao: [v('amarela', '#e2b72d'), v('azul', '#2f6db3'), v('verde', '#3f9a52')],
+  // Escritório
+  mesa_executiva: [v('nogueira', '#6e4a2e'), v('mogno', '#6a2e1e'), v('carvalho escuro', '#4a3020')],
+  cadeira_ergonomica: [v('tela cinza', '#6a6a6a'), v('tela preta', '#2b2826'), v('tela azul', '#2c4f86')],
+  monitores: [v('preto', '#26252a'), v('prata', '#b9bec6'), v('branco', '#ece8e1')], impressora: [v('branca', '#ece9e4'), v('preta', '#2b2826')],
+  estante_escritorio: MADEIRA.slice(0, 3)
+};
 const MATERIAL: Record<string, Variante[]> = {
   violao: MADEIRA, violino: MADEIRA, piano: [MADEIRA[2], MADEIRA[4], { nome: 'branco laqueado', cor: '#eeebe5' }], teclado: [ELETRONICO[0], ELETRONICO[2]],
   guitarra: [{ nome: 'vermelha', cor: '#a8281f' }, { nome: 'sunburst', cor: '#8a4a1c' }, { nome: 'preta', cor: '#232022' }, { nome: 'azul-metálico', cor: '#2f5d93' }, { nome: 'creme', cor: '#e8dcc2' }],
@@ -70,7 +144,9 @@ const MATERIAL: Record<string, Variante[]> = {
   home_studio: [ELETRONICO[0], ELETRONICO[2]], controladora_dj: [{ nome: 'preta', cor: '#26252a' }, { nome: 'branca', cor: '#ecebe8' }],
   cavaquinho: MADEIRA, pandeiro: MADEIRA.slice(0, 3), sanfona: [{ nome: 'vermelha', cor: '#a8281f' }, { nome: 'preta', cor: '#232022' }, { nome: 'madrepérola', cor: '#e5ddd0' }, { nome: 'azul', cor: '#2f5d93' }],
   saxofone: [{ nome: 'dourado', cor: '#caa24a' }, { nome: 'prateado', cor: '#b9bec6' }, { nome: 'preto', cor: '#2b2826' }],
-  cavalete: MADEIRA.slice(0, 2), torno_ceramica: [{ nome: 'cinza', cor: '#8d8983' }, { nome: 'azul', cor: '#3a6496' }]
+  cavalete: MADEIRA.slice(0, 2), torno_ceramica: [{ nome: 'cinza', cor: '#8d8983' }, { nome: 'azul', cor: '#3a6496' }],
+  // VIDA 12.7 · a casa inteira: o material de cada coisa nova (o primeiro é o que vem quando não se escolhe)
+  ...MATERIAL_DA_CASA
 };
 
 export const variantesDaCoisa = (coisaId: string): Variante[] => MATERIAL[coisaId] ?? ELETRONICO;
