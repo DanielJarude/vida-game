@@ -362,6 +362,30 @@ export function retocarTatuagem(v: Vida, id: string): string {
   return texto;
 }
 
+/**
+ * VIDA 12.7 — o significado muda com a vida (a tatuagem do ex vira "um recomeço"; a da viagem vira a da filha que
+ * nasceu lá). A tinta não muda — o desenho, o lugar e o tamanho ficam; para mudar o desenho, só cobrindo. O histórico
+ * guarda o que era e o que passou a ser.
+ */
+export function disponibilidadeRessignificar(v: Vida, id: string, significado: { tipo: SignificadoDaTatuagem; pessoaId?: string }): Veredito {
+  const x = tatuagensDe(v).find(y => y.id === id);
+  if (!x) return bloqueio('impossivel', 'Essa tatuagem não existe.');
+  if (x.removida !== undefined || x.coberta) return bloqueio('incompativel', 'Essa já está saindo da pele.');
+  if (!NOME_SIGNIFICADO[significado.tipo]) return bloqueio('impossivel', 'Esse significado não existe.');
+  if (significado.pessoaId && !v.pessoas[significado.pessoaId]) return bloqueio('impossivel', 'Essa pessoa não existe.');
+  if (x.significado?.tipo === significado.tipo && (x.significado?.pessoaId ?? '') === (significado.pessoaId ?? '')) return bloqueio('incompativel', 'Já significa isso.');
+  return PERMITIDO;
+}
+
+export function ressignificarTatuagem(v: Vida, id: string, significado: { tipo: SignificadoDaTatuagem; pessoaId?: string }): string {
+  const x = tatuagensDe(v).find(y => y.id === id)!;
+  const de = x.significado ? NOME_SIGNIFICADO[x.significado.tipo] : undefined;
+  const p = significado.pessoaId ? v.pessoas[significado.pessoaId] : undefined;
+  x.significado = { tipo: significado.tipo, ...(p ? { pessoaId: p.id, nome: p.nome } : {}) };
+  (x.alteracoes ??= []).push({ t: v.t, oque: 'significado', ...(de ? { de } : {}), para: NOME_SIGNIFICADO[significado.tipo] });
+  return `A ${nomeDaTatuagem(x).toLowerCase()} ${ondeEsta(regiaoDe(x), x.lado)} é a mesma tinta — mas, para você, agora é ${NOME_SIGNIFICADO[significado.tipo].toLowerCase()}${p ? ` (${p.nome})` : ''}.`;
+}
+
 export function disponibilidadeRemover(v: Vida, id: string): Veredito {
   const x = tatuagensDe(v).find(y => y.id === id);
   if (!x) return bloqueio('impossivel', 'Essa tatuagem não existe.');

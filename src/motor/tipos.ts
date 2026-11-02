@@ -3506,6 +3506,8 @@ export interface Tatuagem {
   cobre?: string;
   /** Faz parte de uma composição (`Personagem.composicoes`). */
   conjunto?: string;
+  /** VIDA 12.7 — o que mudou depois de feita (o significado que a vida mudou), com a data. */
+  alteracoes?: { t: number; oque: 'significado'; de?: string; para: string }[];
 }
 
 /** VIDA 12.6 — uma composição: tatuagens independentes unidas por um fundo (a manga fechada, as costas fechadas...). */

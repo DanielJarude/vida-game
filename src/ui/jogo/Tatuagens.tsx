@@ -173,6 +173,8 @@ function NovaTatuagem({ vida, agir, cobrindo, aoCancelarCobertura }: { vida: Vid
             {!d.faixa && <Faixa rotulo="Rotação" min={-90} max={90} passo={5} valor={aj.rot} aoMudar={rot => setAj(a => ({ ...a, rot }))} leitura={`${aj.rot}°`} />}
             {!d.faixa && <label className="estudio-tatuagem__marca"><input type="checkbox" checked={aj.espelhar} onChange={e => setAj(a => ({ ...a, espelhar: e.target.checked }))} /> Espelhar o desenho</label>}
           </div>
+          {/* VIDA 12.7: voltar ao que o tatuador propôs (no meio da região, tamanho natural, sem girar). */}
+          {(aj.x !== 0 || aj.y !== 0 || aj.escala !== 1 || aj.rot !== 0 || aj.espelhar) && <button type="button" className="botao botao--discreto" onClick={() => setAj({ x: 0, y: 0, escala: 1, rot: 0, espelhar: false })}>Restaurar posição, tamanho e rotação</button>}
         </fieldset>
         <fieldset className="estudio-tatuagem__grupo">
           <legend>Cor</legend>
@@ -386,6 +388,7 @@ function AsSuas({ vida, agir, historico, aoCobrir, podeTatuar }: { vida: Vida; a
                 {tamanhoDe(t) < 4 && <button type="button" className="botao botao--discreto" onClick={() => aoCobrir(t.id)}>Cobrir com outra</button>}
                 <BotaoAcao vida={vida} acao={{ tipo: 'remover_tatuagem', id: t.id }} agir={agir} variante="discreto">{`Tirar no laser (${dinheiroCurto(precoDaRemocao(vida, t))})`}</BotaoAcao>
               </span>}
+              <HistoriaDaTatuagem vida={vida} agir={agir} t={t} nasc={nasc} />
             </li>
           );
         })}
@@ -399,6 +402,33 @@ function AsSuas({ vida, agir, historico, aoCobrir, podeTatuar }: { vida: Vida; a
         </details>
       )}
     </div>
+  );
+}
+
+/**
+ * VIDA 12.7 — a história de uma tatuagem: quando foi feita (e com que idade), o porquê, cada retoque com a data, o que
+ * mudou de significado, o laser. O significado pode mudar (a tinta, não).
+ */
+function HistoriaDaTatuagem({ vida, agir, t, nasc }: { vida: Vida; agir: (a: Acao) => boolean; t: Tatuagem; nasc: number }) {
+  const [novo, setNovo] = useState<SignificadoDaTatuagem>(t.significado?.tipo ?? 'estetica');
+  const idadeEm = (x: number) => Math.floor((x - nasc) / 12);
+  const linhas: string[] = [`${anoDe(t.t)} · feita, aos ${idadeEm(t.t)} anos${t.significado ? ` — ${NOME_SIGNIFICADO[t.significado.tipo].toLowerCase()}${t.significado.nome ? ` (${t.significado.nome})` : ''}` : ''}${t.cobre ? ', cobrindo uma antiga' : ''}`];
+  for (const r of t.retoques ?? []) linhas.push(`${anoDe(r)} · retocada, aos ${idadeEm(r)} anos`);
+  for (const a of t.alteracoes ?? []) linhas.push(`${anoDe(a.t)} · o significado mudou${a.de ? `: de "${a.de.toLowerCase()}"` : ''} para "${a.para.toLowerCase()}"`);
+  if (t.removida !== undefined) linhas.push(`${anoDe(t.removida)} · começou a sair no laser`);
+  const ordenadas = linhas.sort();
+  return (
+    <details className="estudio-tatuagem__historia">
+      <summary>História desta tatuagem ({ordenadas.length})</summary>
+      <ol>{ordenadas.map((l, k) => <li key={k}>{l}</li>)}</ol>
+      {t.removida === undefined && !t.coberta && (
+        <div className="estudio-tatuagem__ressignificar">
+          <label className="campo campo--compacto"><span className="campo__rotulo">O que ela significa hoje</span>
+            <select value={novo} onChange={e => setNovo(e.target.value as SignificadoDaTatuagem)}>{(Object.keys(NOME_SIGNIFICADO) as SignificadoDaTatuagem[]).map(k => <option key={k} value={k}>{NOME_SIGNIFICADO[k]}</option>)}</select></label>
+          <BotaoAcao vida={vida} acao={{ tipo: 'ressignificar_tatuagem', id: t.id, significado: { tipo: novo, ...(t.significado?.pessoaId && novo === t.significado.tipo ? { pessoaId: t.significado.pessoaId } : {}) } }} agir={agir} variante="discreto" ocultarImpossivel>Mudar o significado</BotaoAcao>
+        </div>
+      )}
+    </details>
   );
 }
 

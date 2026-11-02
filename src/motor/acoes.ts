@@ -14,7 +14,7 @@ import { praticandoPor } from './sistemas/progressao';
 import { disponibilidadeDaAgenda, disponibilidadeDaPostura, executarNaAgenda, limparAgenda, resultadoDaPostura, type OpAgenda } from './sistemas/agenda';
 import { disponibilidadeGesto, fazerGesto, type GestoDeMemoria } from './sistemas/memoria';
 import { disponibilidadeProcedimento, fazerProcedimento, type Clinica, type IdProcedimento } from './sistemas/estetica';
-import { comporTatuagens, disponibilidadeCompor, disponibilidadePedido, disponibilidadeRemover, disponibilidadeRetocar, removerTatuagem, retocarTatuagem, tatuarPedido, type PedidoDeTatuagem } from './sistemas/tatuagens';
+import { comporTatuagens, disponibilidadeCompor, disponibilidadePedido, disponibilidadeRemover, disponibilidadeRessignificar, disponibilidadeRetocar, removerTatuagem, ressignificarTatuagem, retocarTatuagem, tatuarPedido, type PedidoDeTatuagem } from './sistemas/tatuagens';
 import type { Lado } from './dados/tatuagens';
 import { disponibilidadeFazerEmCasa, fazerEmCasa, type FazerEmCasa } from './sistemas/casaNoDia';
 import { comprarCoisa, disponibilidadeComprarCoisa, disponibilidadeVenderCoisa, venderCoisa } from './sistemas/coisas';
@@ -119,6 +119,7 @@ import { legalidade, comprarExotico, comprarInstalacao, definirCuidador, disponi
 import { disponibilidadeAnimalPorFora, disponibilidadeParalelo, executarAnimalPorFora, executarParalelo, type OqueAnimalPorFora, type OqueParalelo } from './sistemas/paralelos';
 import { decidirClandestino, disponibilidadeClandestino, type OqueClandestino } from './sistemas/clandestinos';
 import type { TipoEmpresa } from './tipos';
+import type { SignificadoDaTatuagem } from './dados/tatuagens';
 
 /** Id de uma interação do catálogo (`sistemas/interacoes`). O que existe depende da pessoa e do momento. */
 export type InteracaoPessoa = string;
@@ -287,6 +288,8 @@ export type Acao =
   | ({ tipo: 'tatuar' } & PedidoDeTatuagem)
   | { tipo: 'remover_tatuagem'; id: string }
   | { tipo: 'retocar_tatuagem'; id: string }
+  /** VIDA 12.7: o significado que a vida mudou (a tinta fica). */
+  | { tipo: 'ressignificar_tatuagem'; id: string; significado: { tipo: SignificadoDaTatuagem; pessoaId?: string } }
   | { tipo: 'compor_tatuagens'; modelo: string; lado?: Lado }
   /** VIDA 12.6: a casa no dia a dia (faxina, organizar, descansar, série, plantas, conserto, visita, a comida da semana). */
   | { tipo: 'em_casa'; oque: FazerEmCasa }
@@ -766,6 +769,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'tatuar': return disponibilidadePedido(v, a);
     case 'remover_tatuagem': return disponibilidadeRemover(v, a.id);
     case 'retocar_tatuagem': return disponibilidadeRetocar(v, a.id);
+    case 'ressignificar_tatuagem': return disponibilidadeRessignificar(v, a.id, a.significado);
     case 'compor_tatuagens': return disponibilidadeCompor(v, a.modelo, a.lado);
     case 'em_casa': return disponibilidadeFazerEmCasa(v, a.oque);
     case 'usar_item': return disponibilidadeUsarItem(v, a.itemId, a.usar, a.id);
@@ -1570,6 +1574,7 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
     case 'tatuar': return ok(tatuarPedido(v, a), 'bom');
     case 'remover_tatuagem': return ok(removerTatuagem(v, a.id), 'neutro');
     case 'retocar_tatuagem': return ok(retocarTatuagem(v, a.id), 'bom');
+    case 'ressignificar_tatuagem': return ok(ressignificarTatuagem(v, a.id, a.significado), 'neutro');
     case 'compor_tatuagens': return ok(comporTatuagens(v, a.modelo, a.lado), 'bom');
     case 'em_casa': return ok(fazerEmCasa(v, a.oque), 'bom');
     case 'usar_item': return ok(usarItem(v, a.itemId, a.usar, a.id));
