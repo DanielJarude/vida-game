@@ -26,6 +26,30 @@ export interface NotaDeVersao {
 
 export const NOTAS: NotaDeVersao[] = [
   {
+    versao: '12.7',
+    data: '2026-11-01',
+    titulo: 'Imersão e personalização: a roupa escolhida é a vestida, a casa com prévia e catálogo inteiro, moda de luxo de verdade',
+    novidades: [
+      'A casa por dentro: reforme com prévia — escolha piso, paredes, luz, rodapé e cortina, veja o cômodo mudar na hora, compare com como está, volte ao que estava ou ao acabamento original do imóvel, e só pague ao confirmar (o custo de cada item e o total aparecem antes). A luz regulável tem temperatura (quente, neutra, fria) e intensidade.',
+      'Muito mais acabamentos, do básico ao exclusivo: 20 pisos (taco em espinha de peixe, carvalho de tábua larga, ladrilho hidráulico, travertino, granito, carpete de lã, mármore Nero Marquina e Calacatta, parquet Versailles…), 35 paredes (tintas, papéis listrado, geométrico e damasco, azulejo metrô, ripado, lambri, pedra, cimento queimado, boiserie, tecido, folha de ouro), 14 luzes (pendentes, trilho, fita de LED, arandelas, lustre, lustre de cristal, projeto luminotécnico), rodapés e molduras, cortinas e persianas.',
+      'Uma loja para cada cômodo: mais de 90 objetos novos — sala, cozinha (geladeiras, fogões, adega, cafeteira, ilha, armários), quartos e quarto de hóspedes, banheiro (banheiras, ducha, bancada de mármore, sauna), piscina (espreguiçadeiras, ombrelone, luz subaquática, aquecimento, cascata), jardim (churrasqueira, espaço gourmet, forno de pizza, pergolado, gazebo, fonte), lazer (bilhar, pebolim, fliperama, cinema), garagem (ferramentas, carregador de carro elétrico) e escritório — cada um com o seu desenho, do básico ao exclusivo.',
+      'Lojas de roupa em catálogo: cada peça com o desenho dela em você, a marca, o preço, o segmento (básico, intermediário, premium, luxo, alto luxo, exclusivo), a coleção e a edição; experimente no provador antes de comprar. A roupa se procura pelo tipo de peça: casacos, blusas, vestidos, calças, saias, shorts, sociais, esportivas, calçados e acessórios.',
+      'Moda de luxo de verdade: alta-costura sob medida, terno de vicunha, jaqueta e casaco de grife, sapato bespoke, tênis de série numerada, óculos de titânio e ouro, Panamá superfino, relógio de alta relojoaria e alta joalheria — de dezenas a centenas de milhares.',
+      'Tatuagens: a história de cada uma (feita, cada retoque com a data, o laser, a cobertura) e o significado que muda com a vida — a tinta fica. No estúdio, um botão para voltar a posição, o tamanho e a rotação ao que o tatuador propôs.'
+    ],
+    melhorias: [
+      '"O que você está usando" virou um guarda-roupa em cartões: a peça desenhada, a parte do corpo, a marca, trocar por outra sua e tirar.',
+      'O "Agora" se renova: o destaque do ano é só do que aconteceu neste ano, e os últimos anos são anos de calendário — o título de dois anos atrás vai para a Biografia e a Retrospectiva.',
+      'Os acontecimentos de dinheiro leem a sua situação de verdade: o milionário não recebe mais "o dinheiro do mês acabou"; quem tem patrimônio preso em bens tem um aperto próprio.',
+      'O trabalho fala a língua de cada lugar: a conversa do aumento acontece no salão, no plantão, na escola, no canteiro, na garagem; o sim, o não e o "como vai o trabalho" mudam com a profissão.',
+      'O caso escondido: terminar depende do que ele foi (rápido, de anos, combinado, com quem não aceita), a conversa sobre o futuro não repete a mesma frase e dá para mandar um carinho (que pode deixar rastro).'
+    ],
+    correcoes: [
+      'Escolher uma peça (óculos, camisa, vestido, casaco…) às vezes vestia outra do mesmo tipo — e cortar o cabelo podia trocar a roupa. Agora a peça escolhida é a vestida, uma por lugar do corpo; saves antigos são corrigidos ao abrir.',
+      'Brincos aparecem no retrato, cada modelo com a sua forma.'
+    ]
+  },
+  {
     versao: '12.6',
     data: '2026-11-01',
     titulo: 'Profundidade, personalização e imersão: o estúdio de tatuagem inteiro, pessoas com jeito e memória, trabalho e casa com história',

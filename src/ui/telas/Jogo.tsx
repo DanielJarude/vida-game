@@ -238,7 +238,7 @@ function EnquantoIsso({ vida, desde, abrirPessoa }: { vida: Vida; desde: number;
 export function AnoQuePassou({ vida, desde, abrirPessoa }: { vida: Vida; desde: number; abrirPessoa: (id: string) => void }) {
   const temFechamento = fechamentoDoAno(vida).length > 0;
   const temNoticias = noticiasDoAno(vida, desde).length > 0;
-  const conquistas = conquistasDoAno(vida);
+  const conquistasTodas = conquistasDoAno(vida);
   // REWORK 9.5: a rotina que o ano teve (a fotografia do ano) — só quando há o que dizer.
   const rotina = rotinaDoAno(vida);
   // VIDA 12.5: o momento marcante do ano (o casamento, o filho, o título, a casa própria…) abre o ano que passou, com uma
@@ -248,6 +248,9 @@ export function AnoQuePassou({ vida, desde, abrirPessoa }: { vida: Vida; desde: 
   const vistos = new Set<string>();
   const marcantes = memoriasDaVida(vida).filter(m => m.destaque === 2 && m.t > vida.t - 12 && m.tipo !== 'nascimento')
     .filter(m => (vistos.has(m.titulo) ? false : (vistos.add(m.titulo), true))).slice(-3).reverse();
+  // 12.7: o que já abre o ano num cartão não se repete na lista das conquistas (o mesmo título, duas vezes).
+  const nosCartoes = marcantes.map(m => (m.titulo.split(': ')[1] ?? m.titulo).toLowerCase());
+  const conquistas = conquistasTodas.filter(l => !nosCartoes.some(t => t.length > 3 && l.toLowerCase().includes(t)));
   if (!temFechamento && !temNoticias && !rotina && !conquistas.length && !marcantes.length) return null;
   return (
     <div className="ano-que-passou" id="ano-que-passou">

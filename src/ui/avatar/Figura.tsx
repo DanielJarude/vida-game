@@ -124,7 +124,7 @@ export function focoDaPeca(genero: Genero, corpo: TipoDeCorpo, idade: number, lu
   const ty = (y: number) => g.topo + (y - g.topo) * esc;
   const caixa: Record<string, [number, number, number, number]> = {
     tronco: [g.cx, g.topo - 14, g.yQuad + 8, (g.ombro + 14) * 2], casaco: [g.cx, g.topo - 14, g.yQuad + 26, (g.ombro + 16) * 2],
-    pernas: [g.cx, g.yCint - 6, g.yTorn + 4, (g.quadril + 14) * 2], corpo: [g.cx, g.topo - 14, g.yTorn + 6, (g.ombro + 16) * 2],
+    pernas: [g.cx, g.yCint - 6, g.yTorn + 4, (g.quadril + 14) * 2], corpo: [g.cx, 4, g.yChao + 2, (g.ombro + 16) * 2],
     // O relógio no pulso esquerdo da pessoa (à direita de quem olha); a pulseira e o anel, no outro.
     pes: [g.cx, g.yTorn - 4, g.yChao + 4, 38], pulso: [g.cx + g.ombro + 2.6, 124, 150, 24], pulseira: [g.cx - g.ombro - 2.6, 124, 150, 24],
     anel: [g.cx - g.ombro - 2.7, 132, 158, 22], joia: [g.cx, g.topo - 8, g.topo + 30, 54]

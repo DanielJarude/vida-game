@@ -127,7 +127,8 @@ function PainelDoComodo({ vida, agir, comodoId, aoFechar }: Props & { comodoId: 
       <div className="pz-painel__cena"><Cena vida={vida} comodoId={cm.id} tipo={cm.tipo} nome={cm.nome} coisas={coisas} largura={320} rascunho={editar && !verAtual ? rascunho : undefined} />
         {editar && <p className="pz-painel__legenda nota" aria-live="polite">{verAtual ? 'Como está hoje' : 'Prévia: como fica (nada foi cobrado)'}</p>}</div>
       <p className="nota">{m.descricao}{m.pede && !comodoEquipado(vida, cm) ? ` Vazio, é só metro quadrado: falta ${m.pede.slice(0, 3).map(id => coisa(id)?.nome ?? id).join(', ')}…` : ''}</p>
-      {coisas.length > 0 ? (
+      {/* 12.7: na reforma, a prévia fica colada nas escolhas (a lista do que há no cômodo volta ao terminar). */}
+      {editar ? null : coisas.length > 0 ? (
         <ul className="pz-lista">
           {coisas.map(t => <ItemDoComodo key={t.id} vida={vida} agir={agir} t={t} comodoAtual={cm.id} reorganizar={reorganizar} />)}
         </ul>

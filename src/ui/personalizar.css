@@ -39,6 +39,7 @@
 .pz-conta { border-top: 1px dotted var(--rule); padding-top: var(--space-2); }
 .pz-conta .pz-linha { display: flex; justify-content: space-between; max-width: 520px; }
 .pz-painel__legenda { margin: var(--space-1) 0 0; }
+@media (min-width: 900px) { .pz-painel:has(.pz-reforma) .pz-painel__cena { position: sticky; top: var(--space-2); z-index: 1; background: var(--bg-inset, transparent); } }
 
 .pz-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-1); }
 .pz-item { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--space-2); padding: var(--space-1) 0; border-bottom: 1px solid var(--rule); min-width: 0; }

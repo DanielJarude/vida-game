@@ -167,7 +167,7 @@ function ProdutoNaLoja({ vida, agir, linha, lojaId, faixa, marca, preco, crianca
       {linha.ofertas.length > 1 && !tem && (
         <label className="campo campo--compacto catalogo-loja__marca"><span className="campo__rotulo">Marca</span>
           <select value={o.marca ?? ''} onChange={ev => setEscolhida(ev.target.value)}>
-            {opcoes.map(x => <option key={x.marca ?? '-'} value={x.marca ?? ''}>{x.marca ? marcaPorId(x.marca)!.nome : 'Sem marca'} — {dinheiroCurto(x.preco)} ({x.marca ? NOME_FAIXA[marcaPorId(x.marca)!.faixa] : 'popular'}{x.importado ? ', importado' : ''})</option>)}
+            {opcoes.map(x => <option key={x.marca ?? '-'} value={x.marca ?? ''} title={x.marca ? NOME_FAIXA[marcaPorId(x.marca)!.faixa] : 'popular'}>{x.marca ? marcaPorId(x.marca)!.nome : 'Sem marca'} · {dinheiroCurto(x.preco)}{x.importado ? ' (importado)' : ''}</option>)}
           </select>
         </label>
       )}
