@@ -33,6 +33,12 @@
 .pz-acabamento { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-2); }
 .pz-amostra { display: inline-block; width: 28px; height: 28px; border-radius: var(--radius-sm); box-shadow: inset 0 0 0 1px var(--rule-strong); }
 .pz-amostra--mini { width: 14px; height: 14px; vertical-align: -2px; }
+.pz-reforma { display: grid; gap: var(--space-3); }
+.pz-luz { border: 1px solid var(--rule); border-radius: var(--radius-sm); padding: var(--space-2) var(--space-3); display: grid; gap: var(--space-2); }
+.pz-luz input[type="range"] { width: 100%; max-width: 320px; }
+.pz-conta { border-top: 1px dotted var(--rule); padding-top: var(--space-2); }
+.pz-conta .pz-linha { display: flex; justify-content: space-between; max-width: 520px; }
+.pz-painel__legenda { margin: var(--space-1) 0 0; }
 
 .pz-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-1); }
 .pz-item { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--space-2); padding: var(--space-1) 0; border-bottom: 1px solid var(--rule); min-width: 0; }

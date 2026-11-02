@@ -35,7 +35,7 @@ export function categoriaDoItem(it: ItemEstilo): CategoriaDeProduto {
 }
 export function categoriaDaCoisa(c: Coisa): CategoriaDeProduto {
   if (c.loja === 'eletronicos') return 'eletronicos';
-  if (c.loja === 'casa') return ELETRO.has(c.id) ? 'eletrodomesticos' : 'moveis';
+  if (c.loja === 'casa') return ELETRO.has(c.id) || c.eletro ? 'eletrodomesticos' : 'moveis';
   if (c.loja === 'instrumentos') return 'instrumentos';
   if (c.loja === 'esportes') return 'esportes';
   return 'livros';
@@ -53,7 +53,8 @@ export function produtosDaCategoria(cat: CategoriaDeProduto): Produto[] {
   ];
 }
 
-const luxoDo = (p: Produto) => p.tipo === 'item' && !!itemEstilo(p.id)?.luxo;
+/** 12.7: o móvel de luxo (segmento 4 em diante) também: só marca premium ou de luxo, e a grife soma menos sobre ele. */
+const luxoDo = (p: Produto) => (p.tipo === 'item' ? !!itemEstilo(p.id)?.luxo : (coisa(p.id)?.nivel ?? 0) >= 4);
 const precoBase = (p: Produto) => (p.tipo === 'item' ? itemEstilo(p.id)?.preco : coisa(p.id)?.preco) ?? 0;
 
 /** A marca faz este produto, nesta faixa de loja? (o luxo só sai das marcas premium e de luxo; a grife não faz o básico barato) */

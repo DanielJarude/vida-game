@@ -137,7 +137,10 @@ export const MARCAS: readonly Marca[] = [
   { id: 'tokstok', nome: 'Tok&Stok', real: true, faixa: 2, categorias: ['moveis'], mercados: ['BR'] },
   { id: 'westwing', nome: 'Westwing', real: true, faixa: 2, categorias: ['moveis'], mercados: ['BR', 'EU'] },
   { id: 'aurora', nome: 'Marcenaria Aurora', faixa: 3, categorias: ['moveis'] },
-  { id: 'natuzzi', nome: 'Natuzzi', real: true, faixa: 4, categorias: ['moveis'], so: ['sofa', 'poltrona', 'mesa_jantar'] },
+  { id: 'natuzzi', nome: 'Natuzzi', real: true, faixa: 4, categorias: ['moveis'], so: ['sofa', 'poltrona', 'mesa_jantar', 'sofa_couro', 'sofa_designer', 'poltrona_designer', 'cama_king'] },
+  // 12.7 — o alto padrão da casa (fictícias): o ateliê de móveis e a cozinha profissional.
+  { id: 'atelier_ardent', nome: 'Atelier Ardent', faixa: 4, categorias: ['moveis'] },
+  { id: 'fornaro', nome: 'Fornaro', faixa: 4, categorias: ['eletrodomesticos'] },
   // ------------------------------------------------------------ instrumentos
   { id: 'giannini', nome: 'Giannini', real: true, faixa: 1, categorias: ['instrumentos'], mercados: ['BR', 'LATAM'], so: ['violao', 'guitarra', 'cavaquinho'] },
   { id: 'tagima', nome: 'Tagima', real: true, faixa: 1, categorias: ['instrumentos'], mercados: ['BR'], so: ['guitarra', 'violao'] },

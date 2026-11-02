@@ -35,7 +35,8 @@ import { pagar, PATRIMONIO_NO_MES, vereditoDePagar } from './dinheiro';
 import { coisasDaVida } from './coisas';
 import { colecao } from './colecao';
 import { precoNovoLocal, textoVeiculo, veiculos } from './veiculos';
-import { ACABAMENTOS, areaDoComodo, casaDaFamilia, comodosDaCasa, comodosDe, custoMensalDoLar, donoDoLar, efeitoDoAnoEmCasa, imovelDaMoradia, naCasaAtual, plantaDaCasa, poderSobreACasa, precoDoAcabamento, terrenoLivre } from './lar';
+import { opcaoDeAcabamento as opcaoAcab } from '../dados/lar';
+import { ACABAMENTOS, acabamentoDoComodo, areaDoComodo, casaDaFamilia, comodosDaCasa, comodosDe, custoMensalDoLar, donoDoLar, efeitoDoAnoEmCasa, imovelDaMoradia, naCasaAtual, plantaDaCasa, poderSobreACasa, precoDoAcabamento, terrenoLivre } from './lar';
 import { afetoDe, registrarNoObjeto } from './memoriaDosObjetos';
 import { disponibilidadeCultural, disponibilidadeObra, fazerCultural, processarGostos, produzirObra } from './gostos';
 import { dinheiro as fmt } from '../texto';
@@ -44,6 +45,8 @@ export type RefObjeto = { tipo: 'coisa' | 'colecao' | 'estilo'; id: string };
 
 export type OpPersonalizar =
   | { o: 'acabamento'; comodo: string; aspecto: AspectoDoComodo; opcao: string }
+  /** 12.7: a reforma vista antes na prévia — vários aspectos de um cômodo de uma vez, uma conta só, e a luz regulada. */
+  | { o: 'reforma'; comodo: string; mudancas: Partial<Record<AspectoDoComodo, string>>; luz?: { temperatura?: 'quente' | 'neutra' | 'fria'; intensidade?: number } }
   | { o: 'converter'; comodo: string; tipo: TipoComodo }
   | { o: 'construir'; tipo: TipoComodo }
   | { o: 'por_no_comodo'; coisa: string; comodo: string }
@@ -145,11 +148,27 @@ export function disponibilidadePersonalizar(v: Vida, op: OpPersonalizar): Veredi
       if (poder === 'superficie' && op.aspecto === 'piso') return bloqueio('incompativel', 'Trocar o piso é obra: na casa alugada, só com o dono (e quem paga é ele).');
       const cm = comodosDaCasa(v).find(x => x.id === op.comodo);
       if (!cm) return bloqueio('impossivel', 'Esse cômodo não existe nesta casa.');
-      if (['jardim', 'piscina', 'garagem', 'lazer'].includes(cm.tipo) && op.aspecto !== 'luz') return bloqueio('impossivel', 'Não se aplica a esse espaço.');
+      if (!aspectoCabe(cm.tipo, op.aspecto)) return bloqueio('impossivel', 'Não se aplica a esse espaço.');
       const opc = ACABAMENTOS[op.aspecto].opcoes.find(x => x.id === op.opcao);
       if (!opc) return bloqueio('impossivel', 'Essa opção não existe.');
       if ((donoDoLar(v)?.lar?.acabamentos[op.comodo]?.[op.aspecto] ?? '') === op.opcao) return bloqueio('incompativel', 'Já está assim.');
       return vereditoDePagar(v, precoDoAcabamento(v.moradia.modeloId, cm, op.aspecto, op.opcao, c(v)));
+    }
+    case 'reforma': {
+      const poder = poderSobreACasa(v);
+      if (poder === 'nada') return bloqueio('impossivel', 'A casa da família é decisão dos adultos dela.');
+      if (i < 18) return bloqueio('impossivel', 'A partir dos 18.');
+      const cm = comodosDaCasa(v).find(x => x.id === op.comodo);
+      if (!cm) return bloqueio('impossivel', 'Esse cômodo não existe nesta casa.');
+      const r = reformaDoComodo(v, op.comodo, op.mudancas, op.luz);
+      for (const x of r.itens) {
+        if (!aspectoCabe(cm.tipo, x.aspecto)) return bloqueio('impossivel', `${ACABAMENTOS[x.aspecto].nome}: não se aplica a esse espaço.`);
+        if (poder === 'superficie' && x.aspecto === 'piso') return bloqueio('incompativel', 'Trocar o piso é obra: na casa alugada, só com o dono (e quem paga é ele).');
+        if (!ACABAMENTOS[x.aspecto].opcoes.some(o => o.id === x.opcao)) return bloqueio('impossivel', 'Essa opção não existe.');
+      }
+      if (op.luz && !r.regulavel) return bloqueio('requisito', 'Essa luz não regula: troque por uma com dimmer.');
+      if (!r.itens.length && !r.luzMuda) return bloqueio('incompativel', 'Nada mudou na prévia.');
+      return r.total ? vereditoDePagar(v, r.total) : PERMITIDO;
     }
     case 'converter': {
       const poder = poderSobreACasa(v);
@@ -324,6 +343,39 @@ function larParaMexer(v: Vida) {
   return (dono.lar ??= { extras: [], acabamentos: {} });
 }
 
+/** 12.7 — que aspecto cabe em que espaço: lá fora, só a luz; sem janela (banheiro, cinema), sem cortina. */
+export function aspectoCabe(tipo: string, a: AspectoDoComodo): boolean {
+  if (['jardim', 'piscina', 'garagem', 'lazer'].includes(tipo)) return a === 'luz';
+  if (a === 'cortina' && (tipo === 'banheiro' || tipo === 'cinema')) return false;
+  return true;
+}
+
+export interface ItemDaReforma { aspecto: AspectoDoComodo; opcao: string; nome: string; antes: string; preco: number }
+
+/**
+ * 12.7 — a conta da prévia: o que muda de fato (o que já está assim não entra nem custa), o preço de cada item e o total,
+ * e se a luz que fica aceita regulagem. A tela e a ação leem a mesma conta — o que a prévia mostra é o que se paga.
+ */
+export function reformaDoComodo(v: Vida, comodo: string, mudancas: Partial<Record<AspectoDoComodo, string>>, luz?: { temperatura?: string; intensidade?: number }): { itens: ItemDaReforma[]; total: number; regulavel: boolean; luzMuda: boolean } {
+  const cm = comodosDaCasa(v).find(x => x.id === comodo);
+  if (!cm) return { itens: [], total: 0, regulavel: false, luzMuda: false };
+  const lar = donoDoLar(v)?.lar;
+  const itens: ItemDaReforma[] = [];
+  for (const a of Object.keys(mudancas) as AspectoDoComodo[]) {
+    const opcao = mudancas[a];
+    if (!opcao) continue;
+    const antes = acabamentoDoComodo(v, comodo, a, lar);
+    if (antes === opcao) continue;
+    const o = opcaoAcab(a, opcao);
+    itens.push({ aspecto: a, opcao, nome: o?.nome ?? opcao, antes: opcaoAcab(a, antes)?.nome ?? antes, preco: o ? precoDoAcabamento(v.moradia.modeloId, cm, a, opcao, c(v)) : 0 });
+  }
+  const luzFinal = mudancas.luz ?? acabamentoDoComodo(v, comodo, 'luz', lar);
+  const regulavel = !!opcaoAcab('luz', luzFinal)?.regulavel;
+  const atual = lar?.luzes?.[comodo] ?? {};
+  const luzMuda = !!luz && ((luz.temperatura !== undefined && luz.temperatura !== atual.temperatura) || (luz.intensidade !== undefined && luz.intensidade !== atual.intensidade));
+  return { itens, total: itens.reduce((s, x) => s + x.preco, 0), regulavel, luzMuda };
+}
+
 export function personalizar(v: Vida, op: OpPersonalizar): string {
   switch (op.o) {
     case 'acabamento': {
@@ -338,8 +390,30 @@ export function personalizar(v: Vida, op: OpPersonalizar): string {
       const im = imovelDaMoradia(v);
       if (im && op.aspecto === 'piso' && o.nivel >= 3) im.valor = Math.round((im.valor + preco * 0.4) / 1000) * 1000;
       v.mente.felicidade = clamp(v.mente.felicidade + 1);
-      const frase = op.aspecto === 'parede' ? `${cap(cm.nome)} pintad${COMODOS[cm.tipo].artigo === 'a' ? 'a' : 'o'} de ${o.nome}` : op.aspecto === 'piso' ? `Piso novo n${COMODOS[cm.tipo].artigo} ${cm.nome}: ${o.nome}` : `Luz nova n${COMODOS[cm.tipo].artigo} ${cm.nome}: ${o.nome}`;
+      const frase = op.aspecto === 'parede' ? `${cap(cm.nome)} pintad${COMODOS[cm.tipo].artigo === 'a' ? 'a' : 'o'} de ${o.nome}` : op.aspecto === 'piso' ? `Piso novo n${COMODOS[cm.tipo].artigo} ${cm.nome}: ${o.nome}` : op.aspecto === 'luz' ? `Luz nova n${COMODOS[cm.tipo].artigo} ${cm.nome}: ${o.nome}` : `${ACABAMENTOS[op.aspecto].nome} n${COMODOS[cm.tipo].artigo} ${cm.nome}: ${o.nome}`;
       return `${frase}. ${fmt(preco)}, entre material e mão de obra.${op.aspecto === 'piso' ? ' Uma semana de pó.' : ''}`;
+    }
+    case 'reforma': {
+      const cm = comodosDaCasa(v).find(x => x.id === op.comodo)!;
+      const r = reformaDoComodo(v, op.comodo, op.mudancas, op.luz);
+      if (r.total) pagar(v, r.total);
+      const lar = larParaMexer(v);
+      const ac = (lar.acabamentos[op.comodo] ??= {});
+      for (const x of r.itens) ac[x.aspecto] = x.opcao;
+      if (r.luzMuda && op.luz) {
+        const atual = { ...(lar.luzes?.[op.comodo] ?? {}), ...op.luz };
+        (lar.luzes ??= {})[op.comodo] = atual;
+      }
+      const partes = r.itens.map(x => `${ACABAMENTOS[x.aspecto].nome.toLowerCase()}: ${x.nome}`);
+      if (r.luzMuda) partes.push('luz regulada');
+      registrarNoObjeto(lar, v.t, `${cap(cm.nome)}: ${partes.join('; ')}${r.total ? ` (${fmt(r.total)})` : ''}.`);
+      const im = imovelDaMoradia(v);
+      const piso = r.itens.find(x => x.aspecto === 'piso');
+      if (im && piso && (opcaoAcab('piso', piso.opcao)?.nivel ?? 0) >= 3) im.valor = Math.round((im.valor + piso.preco * 0.4) / 1000) * 1000;
+      if (r.itens.length) v.mente.felicidade = clamp(v.mente.felicidade + 1);
+      const obra = r.itens.some(x => x.aspecto === 'piso') ? ' Uma semana de pó.' : '';
+      if (!r.itens.length) return `A luz ${COMODOS[cm.tipo].artigo === 'a' ? 'da' : 'do'} ${cm.nome} ficou do jeito que você queria.`;
+      return `${cap(cm.nome)} reformad${COMODOS[cm.tipo].artigo === 'a' ? 'a' : 'o'}: ${partes.join('; ')}.${r.total ? ` ${fmt(r.total)}, entre material e mão de obra.` : ''}${obra}`;
     }
     case 'converter': {
       const cm = comodosDaCasa(v).find(x => x.id === op.comodo)!;

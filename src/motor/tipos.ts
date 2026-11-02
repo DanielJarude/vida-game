@@ -1224,7 +1224,7 @@ export interface Imovel {
 }
 
 /** REWORK 12.4 — os aspectos de um cômodo que se escolhem (`dados/lar`). */
-export type AspectoDoComodo = 'piso' | 'parede' | 'luz';
+export type AspectoDoComodo = 'piso' | 'parede' | 'luz' | 'rodape' | 'cortina';
 
 /**
  * REWORK 12.4 — o que a pessoa fez da casa: os cômodos que acrescentou (obra) ou mudou de uso (o quarto que virou
@@ -1235,6 +1235,8 @@ export interface LarPersonalizado {
   extras: { id: string; tipo: string; de: 'obra' | 'conversao'; t: number }[];
   /** Por cômodo, o que foi escolhido (ausente = o acabamento de origem do imóvel). */
   acabamentos: Record<string, Partial<Record<AspectoDoComodo, string>>>;
+  /** 12.7: a luz regulada de cada cômodo (temperatura e intensidade 40–100%); ausente = a de fábrica. */
+  luzes?: Record<string, { temperatura?: 'quente' | 'neutra' | 'fria'; intensidade?: number }>;
   historia?: EpisodioBem[];
 }
 

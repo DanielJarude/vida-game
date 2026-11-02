@@ -18,6 +18,7 @@ import { Ilustracao, valida } from './nucleo';
 import { amostraDoObjeto } from './objetos';
 import { variantesDaCoisa } from '../../motor/dados/pertences';
 import { misturar } from '../avatar/cores';
+import { opcaoDeAcabamento } from '../../motor/dados/lar';
 
 export interface ObjetoNaCena { coisaId: string; cor?: string; id: string }
 
@@ -26,6 +27,11 @@ interface Props {
   parede?: { id: string; cor?: string };
   piso?: { id: string; cor?: string };
   luz?: string;
+  /** 12.7: o rodapé (e a moldura do teto) e a cortina da janela. */
+  rodape?: string;
+  cortina?: string;
+  /** 12.7: a luz regulada (temperatura e intensidade 40–100%). */
+  luzRegulada?: { temperatura?: 'quente' | 'neutra' | 'fria'; intensidade?: number };
   objetos: ObjetoNaCena[];
   largura?: number;
   rotulo: string;
@@ -57,20 +63,35 @@ const TETO_E = naBorda(FX0, FY0, 0), TETO_D = naBorda(FX1, FY0, W), CHAO_E = naB
 /** A escala de um objeto apoiado no chão na altura `y` (1 na frente da cena, menor no fundo). */
 const escalaNo = (y: number) => (y - PF.y) / (H - 14 - PF.y);
 
-export const CenaDoComodo = memo(function CenaDoComodo({ tipo, parede, piso, luz = 'simples', objetos, largura = 320, rotulo }: Props) {
+/** 12.7: o desenho de cada luz (as antigas pelo id; as novas pelo catálogo). */
+const TOM_DA_LUZ = { quente: ['#ffd9a0', '#ffb86b'], neutra: ['#fff3d6', '#ffe9c2'], fria: ['#e3f1ff', '#cfe6ff'] } as const;
+
+export const CenaDoComodo = memo(function CenaDoComodo({ tipo, parede, piso, luz = 'simples', rodape: rodapeId, cortina: cortinaId, luzRegulada, objetos, largura = 320, rotulo }: Props) {
   const uid = useId().replace(/:/g, '');
   const id = (k: string) => `${uid}-${k}`;
   const externo = EXTERNOS.has(tipo);
   const corParede = parede?.cor ?? (externo ? '#bcd7e6' : '#e9e3d8');
   const corPiso = piso?.cor ?? (tipo === 'banheiro' || tipo === 'cozinha' ? '#cfc6b6' : '#b9a68a');
   const detalhe = largura >= 200;
-  const quente = luz === 'quente' || luz === 'planejada' || luz === 'automacao';
+  // 12.7: o desenho de cada acabamento vem do catálogo; a miniatura desenha o mesmo padrão (mais simples), não outro.
+  const dParede = opcaoDeAcabamento('parede', parede?.id)?.desenho ?? (parede?.id === 'tijolo' ? 'tijolo' : parede?.id === 'papel' ? 'papel_floral' : parede?.id === 'boiserie' ? 'boiserie' : 'liso');
+  const cor2Parede = opcaoDeAcabamento('parede', parede?.id)?.cor2;
+  const dPiso = opcaoDeAcabamento('piso', piso?.id)?.desenho ?? (!piso && (tipo === 'banheiro' || tipo === 'cozinha') ? 'rejunte' : piso ? 'tabua' : 'liso');
+  const cor2Piso = opcaoDeAcabamento('piso', piso?.id)?.cor2;
+  const dLuz = opcaoDeAcabamento('luz', luz)?.desenho ?? 'teto';
+  const temperatura = luzRegulada?.temperatura ?? (dLuz === 'teto' || dLuz === 'plafon' ? 'neutra' : 'quente');
+  const intensidade = Math.max(40, Math.min(100, luzRegulada?.intensidade ?? 100)) / 100;
+  const quente = temperatura === 'quente' && dLuz !== 'teto';
+  const [tom1, tom2] = TOM_DA_LUZ[temperatura];
+  const oRodape = opcaoDeAcabamento('rodape', rodapeId);
+  const oCortina = opcaoDeAcabamento('cortina', cortinaId);
   const janela = !externo && tipo !== 'cinema' && tipo !== 'banheiro';
   // As paredes: a do fundo na cor escolhida; a lateral esquerda (a da janela) um pouco mais escura; a direita, mais.
   const pEsq = misturar(corParede, '#000000', 0.09), pDir = misturar(corParede, '#000000', 0.17), teto = misturar(corParede, '#ffffff', 0.32);
   const pisoFundo = misturar(corPiso, '#000000', 0.16);
-  const rodape = misturar(corParede, '#000000', 0.22);
-  const preenchida = parede?.id === 'tijolo' ? `url(#${id('tij')})` : parede?.id === 'papel' && detalhe ? `url(#${id('pap')})` : corParede;
+  const rodape = oRodape?.cor ?? misturar(corParede, '#000000', 0.22);
+  const comPadrao = dParede !== 'liso' && dParede !== 'boiserie';
+  const preenchida = comPadrao ? `url(#${id('par')})` : corParede;
   const chaoExterno = tipo === 'garagem' ? '#a8a49d' : '#86a86f';
 
   /* Os objetos: os que encostam vão para a parede do fundo (até caber); os outros, para a fileira da frente. */
@@ -114,11 +135,11 @@ export const CenaDoComodo = memo(function CenaDoComodo({ tipo, parede, piso, luz
   const fileiras = [1, 2, 3, 4, 5].map(k => FY1 + (H - FY1) * (k / 5.4) ** 1.5);
 
   return (
-    <svg className="cena-comodo cena-comodo--25d" viewBox={`0 0 ${W} ${H}`} width={largura} height={Math.round(largura * H / W)} role="img" aria-label={rotulo} data-comodo={tipo} data-parede={parede?.id} data-piso={piso?.id} data-luz={luz}>
+    <svg className="cena-comodo cena-comodo--25d" viewBox={`0 0 ${W} ${H}`} width={largura} height={Math.round(largura * H / W)} role="img" aria-label={rotulo} data-comodo={tipo} data-parede={parede?.id} data-piso={piso?.id} data-luz={luz} data-cortina={cortinaId} data-rodape={rodapeId} data-temperatura={temperatura} data-intensidade={Math.round(intensidade * 100)}>
       <defs>
         <linearGradient id={id('luz')} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor={quente ? '#ffd9a0' : '#ffffff'} stopOpacity={quente ? 0.26 : 0.08} />
-          <stop offset="1" stopColor={quente ? '#ffb86b' : '#ffffff'} stopOpacity={0} />
+          <stop offset="0" stopColor={tom1} stopOpacity={(temperatura === 'neutra' ? 0.1 : 0.24) * intensidade} />
+          <stop offset="1" stopColor={tom2} stopOpacity={0} />
         </linearGradient>
         <radialGradient id={id('vinheta')} cx="0.5" cy="0.45" r="0.75">
           <stop offset="0.6" stopColor="#000000" stopOpacity={0} />
@@ -133,11 +154,11 @@ export const CenaDoComodo = memo(function CenaDoComodo({ tipo, parede, piso, luz
           <stop offset="1" stopColor={externo ? chaoExterno : corPiso} />
         </linearGradient>
         <radialGradient id={id('lampada')} cx="0.5" cy="0" r="0.9">
-          <stop offset="0" stopColor={quente ? '#ffe2a6' : '#fff8e6'} stopOpacity={0.22} />
+          <stop offset="0" stopColor={tom1} stopOpacity={0.24 * intensidade} />
           <stop offset="1" stopColor="#ffffff" stopOpacity={0} />
         </radialGradient>
-        {parede?.id === 'tijolo' && <pattern id={id('tij')} width="20" height="8" patternUnits="userSpaceOnUse"><rect width="20" height="8" fill={corParede} /><path d="M0 7.6 H20 M10 0 V4 M0 4 H20 M5 4 V8 M15 4 V8" stroke={misturar(corParede, '#ffffff', 0.35)} strokeWidth="0.8" /></pattern>}
-        {parede?.id === 'papel' && <pattern id={id('pap')} width="16" height="16" patternUnits="userSpaceOnUse"><rect width="16" height="16" fill={corParede} /><path d="M8 2.5 q2.6 2.6 0 5.2 q-2.6 -2.6 0 -5.2 M0 11 q2.6 2.6 0 5.2 M16 11 q-2.6 2.6 0 5.2" fill={misturar(corParede, '#5b4a2a', 0.35)} /></pattern>}
+        {comPadrao && <PadraoDaParede id={id('par')} desenho={dParede} cor={corParede} cor2={cor2Parede} />}
+        {PADRAO_DE_PISO.has(dPiso) && <PadraoDoPiso id={id('pis')} desenho={dPiso} cor={corPiso} cor2={cor2Piso} />}
       </defs>
 
       {externo ? (
@@ -155,14 +176,15 @@ export const CenaDoComodo = memo(function CenaDoComodo({ tipo, parede, piso, luz
           <polygon points={`0,${TETO_E} 0,0 ${W},0 ${W},${TETO_D} ${FX1},${FY0} ${FX0},${FY0}`} fill={teto} />
           <polygon points={`0,${TETO_E} ${FX0},${FY0} ${FX0},${FY1} 0,${CHAO_E}`} fill={pEsq} />
           <polygon points={`${W},${TETO_D} ${FX1},${FY0} ${FX1},${FY1} ${W},${CHAO_D}`} fill={pDir} />
-          {parede?.id === 'tijolo' || (parede?.id === 'papel' && detalhe) ? <>
+          {comPadrao ? <>
             <polygon points={`0,${TETO_E} ${FX0},${FY0} ${FX0},${FY1} 0,${CHAO_E}`} fill={preenchida} />
             <polygon points={`0,${TETO_E} ${FX0},${FY0} ${FX0},${FY1} 0,${CHAO_E}`} fill="#000000" opacity={0.09} />
             <polygon points={`${W},${TETO_D} ${FX1},${FY0} ${FX1},${FY1} ${W},${CHAO_D}`} fill={preenchida} />
             <polygon points={`${W},${TETO_D} ${FX1},${FY0} ${FX1},${FY1} ${W},${CHAO_D}`} fill="#000000" opacity={0.17} />
           </> : null}
           <rect x={FX0} y={FY0} width={FX1 - FX0} height={FY1 - FY0} fill={preenchida} />
-          {parede?.id === 'boiserie' && detalhe && [0, 1, 2].map(k => <rect key={k} x={FX0 + 10 + k * 66} y={FY0 + 30} width={56} height={56} rx={2} fill="none" stroke={misturar(corParede, '#000000', 0.12)} strokeWidth={1.2} />)}
+          {dParede === 'boiserie' && [0, 1, 2].map(k => <g key={k}><rect x={FX0 + 10 + k * 74} y={FY0 + 14} width={62} height={38} rx={2} fill="none" stroke={cor2Parede ?? misturar(corParede, '#000000', 0.14)} strokeWidth={detalhe ? 1.2 : 1.8} /><rect x={FX0 + 10 + k * 74} y={FY0 + 60} width={62} height={32} rx={2} fill="none" stroke={cor2Parede ?? misturar(corParede, '#000000', 0.14)} strokeWidth={detalhe ? 1.2 : 1.8} /></g>)}
+          {dParede === 'boiserie' && <path d={`M${FX0} ${FY0 + 56} H${FX1}`} stroke={cor2Parede ?? misturar(corParede, '#000000', 0.16)} strokeWidth={1.4} />}
           {/* Os cantos (onde a luz não chega) e as arestas do teto. */}
           <path d={`M${FX0} ${FY0} V${FY1} M${FX1} ${FY0} V${FY1}`} stroke={misturar(corParede, '#000000', 0.25)} strokeWidth={1} />
           <path d={`M0 ${TETO_E} L${FX0} ${FY0} H${FX1} L${W} ${TETO_D}`} stroke={misturar(corParede, '#000000', 0.15)} strokeWidth={0.8} fill="none" />
@@ -188,28 +210,25 @@ export const CenaDoComodo = memo(function CenaDoComodo({ tipo, parede, piso, luz
           })()}
         </g>
       )}
+      {janela && oCortina && oCortina.desenho !== 'nenhuma' && <Cortina desenho={oCortina.desenho ?? 'tecido'} cor={oCortina.cor ?? '#efe7d6'} detalhe={detalhe} />}
       {tipo === 'cinema' && <g data-peca="tela"><rect x={FX0 + 26} y={FY0 + 8} width={FX1 - FX0 - 52} height={60} fill="#1d2430" stroke="#0f141b" strokeWidth={2.4} /><rect x={FX0 + 30} y={FY0 + 12} width={FX1 - FX0 - 60} height={52} fill="#2b3a52" opacity={0.6} /></g>}
 
       {/* O piso: o trapézio em perspectiva, as tábuas ou os rejuntes convergindo para o fundo. */}
       {!externo && <polygon points={pisoPoly} fill={`url(#${id('pisoProf')})`} />}
-      {!externo && detalhe && (piso?.id === 'madeira' || piso?.id === 'vinilico') && tabuas.map((x, i) => <path key={i} d={`M${x.toFixed(1)} ${FY1} L${projetar(x, FY1, H).toFixed(1)} ${H}`} stroke={misturar(corPiso, '#000000', 0.2)} strokeWidth={0.7} />)}
-      {!externo && detalhe && (piso?.id === 'porcelanato' || piso?.id === 'ceramica' || piso?.id === 'cimento' || (!piso && (tipo === 'banheiro' || tipo === 'cozinha'))) && <>
-        {tabuas.filter((_, i) => i % 2 === 0).map((x, i) => <path key={`v${i}`} d={`M${x.toFixed(1)} ${FY1} L${projetar(x, FY1, H).toFixed(1)} ${H}`} stroke={misturar(corPiso, '#000000', 0.12)} strokeWidth={0.7} />)}
-        {fileiras.map((y, k) => <path key={`h${k}`} d={`M${projetar(FX0, FY1, y).toFixed(1)} ${y.toFixed(1)} H${projetar(FX1, FY1, y).toFixed(1)}`} stroke={misturar(corPiso, '#000000', 0.12)} strokeWidth={0.7} />)}
-      </>}
-      {!externo && detalhe && piso?.id === 'marmore' && <path d={`M40 ${H - 18} q 50 -10 100 2 t 110 -6 M150 ${FY1 + 18} q 30 8 70 2`} stroke="#b9b3a8" strokeWidth={0.8} fill="none" />}
+      {!externo && <PisoDesenhado desenho={dPiso} cor={corPiso} cor2={cor2Piso} detalhe={detalhe} padrao={PADRAO_DE_PISO.has(dPiso) ? `url(#${id('pis')})` : undefined} tabuas={tabuas} fileiras={fileiras} />}
       {/* O rodapé, nas três paredes. */}
-      {!externo && <path d={`M0 ${CHAO_E} L${FX0} ${FY1} H${FX1} L${W} ${CHAO_D}`} stroke={rodape} strokeWidth={2.6} fill="none" strokeLinejoin="round" />}
+      {!externo && <path data-peca="rodape" data-rodape={rodapeId ?? 'simples'} d={`M0 ${CHAO_E} L${FX0} ${FY1} H${FX1} L${W} ${CHAO_D}`} stroke={rodape} strokeWidth={oRodape?.desenho === 'alto' || oRodape?.desenho === 'moldura' ? 5 : oRodape?.desenho === 'madeira' ? 3.4 : oRodape?.desenho === 'led' ? 1.6 : 2.6} fill="none" strokeLinejoin="round" />}
+      {!externo && oRodape?.desenho === 'led' && <path d={`M0 ${CHAO_E - 2} L${FX0} ${FY1 - 1.5} H${FX1} L${W} ${CHAO_D - 2}`} stroke={tom1} strokeWidth={2.2} opacity={0.55 * intensidade} fill="none" />}
+      {!externo && oRodape?.desenho === 'moldura' && <path d={`M0 ${TETO_E + 3} L${FX0} ${FY0 + 2.5} H${FX1} L${W} ${TETO_D + 3}`} stroke={misturar(corParede, '#ffffff', 0.6)} strokeWidth={3.2} fill="none" strokeLinejoin="round" />}
 
       {/* O que todo cômodo desse tipo tem, na parede do fundo (na escala de lá). */}
       {FIXOS[tipo] && <g transform={`translate(${FX0 + 4} ${FY1 + 2}) scale(${sF.toFixed(3)}) translate(-10 -${CHAO_FIXO})`}>{FIXOS[tipo].desenho(CHAO_FIXO, corParede)}</g>}
       {tipo === 'piscina' && <g data-peca="piscina"><polygon points={`70,${FY1 + 14} 250,${FY1 + 14} 296,${H - 10} 24,${H - 10}`} fill="#5fb6d6" stroke="#e8e4dc" strokeWidth={4} strokeLinejoin="round" /><path d={`M80 ${FY1 + 34} q 24 -6 48 0 t 48 0 M150 ${FY1 + 48} q 24 -6 48 0`} stroke="#bfe6f2" strokeWidth={1.4} fill="none" /></g>}
 
       {/* A luz. */}
-      {!externo && luz === 'simples' && <g data-peca="luz"><path d={`M160 0 V12`} stroke="#5a5550" strokeWidth={1} /><circle cx={160} cy={15} r={3.4} fill="#fff6d8" /><path d={`M156 17 L${FX0 + 30} ${FY1} H${FX1 - 30} L164 17 Z`} fill={`url(#${id('lampada')})`} /></g>}
-      {!externo && luz === 'quente' && <g data-peca="luz"><path d={`M${W - 34} ${H - 20} V 82`} stroke="#3a3530" strokeWidth={1.4} /><path d={`M${W - 44} 84 l 10 -12 h 0 l 10 12 Z`} fill="#e6b873" /><circle cx={W - 34} cy={88} r={22} fill="#ffcf7a" opacity={0.22} /></g>}
-      {!externo && (luz === 'planejada' || luz === 'automacao') && <g data-peca="luz"><path d={`M${FX0} ${FY0 + 1} H${FX1}`} stroke="#ffcf7a" strokeWidth={2} opacity={0.85} /><path d={`M${FX0} ${FY0 + 3} H${FX1}`} stroke="#ffcf7a" strokeWidth={6} opacity={0.18} />{[120, 160, 200].map(px => <g key={px}><path d={`M${px} 0 V22`} stroke="#3a3530" strokeWidth={0.8} /><path d={`M${px - 6} 27 l 6 -5 l 6 5 Z`} fill="#2e2b28" /><circle cx={px} cy={28} r={2.2} fill="#ffe2a6" /><path d={`M${px - 5} 29 L${px - 18} ${FY1 - 6} H${px + 18} L${px + 5} 29 Z`} fill="#ffe2a6" opacity={0.07} /></g>)}</g>}
-      {!externo && luz === 'automacao' && <rect x={FX1 + 10} y={70} width={8} height={12} rx={2} fill="#22262b" stroke="#6fd3ff" strokeWidth={0.8} />}
+      {!externo && <LuzDoComodo desenho={dLuz} tom={tom1} intensidade={intensidade} lampada={id('lampada')} automacao={luz === 'automacao' || luz === 'luminotecnico'} />}
+      {/* 12.7: a intensidade baixa escurece a cena (o dimmer), a alta não mexe. */}
+      {intensidade < 1 && <rect width={W} height={H} fill="#0d0b14" opacity={(1 - intensidade) * 0.32} pointerEvents="none" />}
 
       {/* Os objetos: o fundo primeiro (mais longe), depois a frente — cada um com a sombra de contato no piso. */}
       {[...postosFundo, ...postosFrente].map(o => (
@@ -259,3 +278,114 @@ const FIXOS: Record<string, { largura: number; desenho: (chao: number, parede: s
   garagem: { largura: 0, desenho: chao => (
     <g data-peca="portao"><rect x={40} y={chao - 104} width={240} height={106} fill="#c9c4bb" stroke="#8f8a82" strokeWidth={2} />{[0, 1, 2, 3, 4, 5, 6, 7].map(i => <path key={i} d={`M40 ${chao - 92 + i * 12} H280`} stroke="#a9a49b" strokeWidth={1} />)}</g>) }
 };
+
+/* ============================================================ 12.7 · os acabamentos desenhados */
+
+/** O padrão da parede (o mesmo nas três paredes; nas laterais, escurecido pela sombra). */
+function PadraoDaParede({ id, desenho, cor, cor2 }: { id: string; desenho: string; cor: string; cor2?: string }) {
+  const escuro = misturar(cor, '#000000', 0.18), claro = misturar(cor, '#ffffff', 0.35), c2 = cor2 ?? escuro;
+  const p = (w: number, h: number, filhos: ReactElement) => <pattern id={id} width={w} height={h} patternUnits="userSpaceOnUse"><rect width={w} height={h} fill={cor} />{filhos}</pattern>;
+  switch (desenho) {
+    case 'tijolo': { const junta = misturar(cor, cor === '#ebe6dd' ? '#000000' : '#ffffff', cor === '#ebe6dd' ? 0.12 : 0.35); return p(20, 8, <path d="M0 7.6 H20 M10 0 V4 M0 4 H20 M5 4 V8 M15 4 V8" stroke={junta} strokeWidth="0.8" />); }
+    case 'papel_floral': return p(16, 16, <path d="M8 2.5 q2.6 2.6 0 5.2 q-2.6 -2.6 0 -5.2 M0 11 q2.6 2.6 0 5.2 M16 11 q-2.6 2.6 0 5.2" fill={misturar(cor, '#5b4a2a', 0.35)} />);
+    case 'papel_listras': return p(12, 12, <rect x={0} width={4} height={12} fill={c2} opacity={0.75} />);
+    case 'papel_geometrico': return p(14, 14, <path d="M7 0 L14 7 L7 14 L0 7 Z" fill="none" stroke={c2} strokeWidth={0.9} />);
+    case 'papel_damasco': return p(18, 22, <path d="M9 3 q4 4 0 8 q-4 -4 0 -8 M9 11 q5 3 0 8 q-5 -5 0 -8 M0 0 q2 3 0 5 M18 0 q-2 3 0 5" fill={c2} opacity={0.8} />);
+    case 'azulejo': return p(14, 7, <path d="M0 6.6 H14 M0 3.3 H14 M7 0 V3.3 M3.5 3.3 V6.6 M10.5 3.3 V6.6" stroke={misturar(cor, '#000000', 0.12)} strokeWidth={0.6} />);
+    case 'lambri': return p(10, 6, <path d="M0 5.6 H10" stroke={escuro} strokeWidth={0.8} />);
+    case 'ripado': return p(6, 10, <rect x={4.6} width={1.4} height={10} fill={misturar(cor, '#000000', 0.42)} />);
+    case 'pedra': return p(24, 14, <path d="M0 5 l7 -1 l5 2 l6 -2 l6 1 M0 11 l4 -1 l6 2 l7 -2 l7 1 M7 4 v8 M18 4 v8" stroke={misturar(cor, '#000000', 0.25)} strokeWidth={0.7} fill="none" />);
+    case 'cimento': return p(30, 20, <><circle cx={8} cy={6} r={5} fill={claro} opacity={0.25} /><circle cx={22} cy={14} r={6} fill={escuro} opacity={0.12} /></>);
+    case 'tecido': return p(4, 4, <path d="M0 0 L4 4 M4 0 L0 4" stroke={escuro} strokeWidth={0.3} opacity={0.5} />);
+    case 'marmore': return p(48, 36, <path d="M0 10 q12 -6 22 4 t26 -2 M6 30 q10 -10 20 -2 t22 -8" stroke={c2} strokeWidth={0.7} fill="none" opacity={0.85} />);
+    default: return p(8, 8, <></>);
+  }
+}
+
+/** Os pisos que são padrão contínuo (em perspectiva, as tábuas e os rejuntes são desenhados à parte). */
+const PADRAO_DE_PISO = new Set(['marmore', 'granito', 'carpete', 'cimento', 'espinha', 'versailles', 'ladrilho']);
+
+function PadraoDoPiso({ id, desenho, cor, cor2 }: { id: string; desenho: string; cor: string; cor2?: string }) {
+  const escuro = misturar(cor, '#000000', 0.2), c2 = cor2 ?? escuro;
+  const p = (w: number, h: number, filhos: ReactElement) => <pattern id={id} width={w} height={h} patternUnits="userSpaceOnUse"><rect width={w} height={h} fill={cor} />{filhos}</pattern>;
+  switch (desenho) {
+    case 'marmore': return p(80, 40, <path d="M0 14 q20 -10 40 2 t40 -4 M10 34 q14 -8 30 0 t34 -6" stroke={c2} strokeWidth={0.8} fill="none" opacity={0.9} />);
+    case 'granito': return p(10, 10, <><circle cx={2} cy={3} r={0.8} fill={c2} /><circle cx={7} cy={7} r={0.6} fill={c2} /><circle cx={6} cy={2} r={0.5} fill="#ffffff" opacity={0.6} /></>);
+    case 'carpete': return p(6, 6, <circle cx={3} cy={3} r={0.6} fill={escuro} opacity={0.35} />);
+    case 'cimento': return p(40, 24, <><circle cx={10} cy={8} r={7} fill="#ffffff" opacity={0.12} /><circle cx={30} cy={18} r={8} fill="#000000" opacity={0.07} /></>);
+    case 'espinha': return p(16, 8, <path d="M0 8 L8 0 M8 8 L16 0 M0 0 L8 8 M8 0 L16 8" stroke={escuro} strokeWidth={0.7} />);
+    case 'versailles': return p(24, 24, <><rect width={24} height={24} fill="none" stroke={c2} strokeWidth={1} /><path d="M0 12 H24 M12 0 V24 M0 0 L24 24 M24 0 L0 24" stroke={c2} strokeWidth={0.6} /></>);
+    case 'ladrilho': return p(14, 14, <><rect width={14} height={14} fill="none" stroke={escuro} strokeWidth={0.5} /><path d="M7 2 L12 7 L7 12 L2 7 Z" fill={c2} opacity={0.8} /><circle cx={7} cy={7} r={1.4} fill={cor} /></>);
+    default: return p(8, 8, <></>);
+  }
+}
+
+/** O piso em perspectiva: o padrão (mármore, carpete, espinha…) ou as tábuas e os rejuntes convergindo para o fundo. */
+function PisoDesenhado({ desenho, cor, cor2, detalhe, padrao, tabuas, fileiras }: { desenho: string; cor: string; cor2?: string; detalhe: boolean; padrao?: string; tabuas: number[]; fileiras: number[] }) {
+  const pisoPoly = `${FX0},${FY1} ${FX1},${FY1} ${W},${CHAO_D} ${W},${H} 0,${H} 0,${CHAO_E}`;
+  const linha = misturar(cor, '#000000', 0.2);
+  const radial = (lista: number[]) => lista.map((x, i) => <path key={`v${i}`} d={`M${x.toFixed(1)} ${FY1} L${projetar(x, FY1, H).toFixed(1)} ${H}`} stroke={linha} strokeWidth={detalhe ? 0.7 : 1} opacity={0.8} />);
+  const juntas = (lista: number[]) => lista.map((y, k) => <path key={`h${k}`} d={`M${projetar(FX0, FY1, y).toFixed(1)} ${y.toFixed(1)} H${projetar(FX1, FY1, y).toFixed(1)}`} stroke={misturar(cor, '#000000', 0.12)} strokeWidth={detalhe ? 0.7 : 1} />);
+  return (
+    <g data-peca="piso" data-desenho={desenho}>
+      {padrao && <polygon points={pisoPoly} fill={padrao} opacity={0.85} />}
+      {desenho === 'tabua' && radial(tabuas)}
+      {desenho === 'tabua_larga' && radial(tabuas.filter((_, i) => i % 2 === 0))}
+      {(desenho === 'rejunte' || desenho === 'ladrilho') && <>{radial(tabuas.filter((_, i) => i % 2 === 0))}{juntas(fileiras)}</>}
+      {desenho === 'grande_formato' && <>{radial(tabuas.filter((_, i) => i % 4 === 0))}{juntas(fileiras.filter((_, k) => k % 2 === 1))}</>}
+      {desenho === 'versailles' && radial(tabuas.filter((_, i) => i % 3 === 0))}
+      {desenho === 'marmore' && cor2 && <path d={`M40 ${H - 18} q 50 -10 100 2 t 110 -6 M150 ${FY1 + 18} q 30 8 70 2`} stroke={cor2} strokeWidth={0.9} fill="none" />}
+      {/* O brilho do piso polido. */}
+      {(desenho === 'marmore' || desenho === 'grande_formato' || desenho === 'granito') && <polygon points={`${FX0 + 40},${FY1 + 4} ${FX1 - 40},${FY1 + 4} ${W - 70},${H} 70,${H}`} fill="#ffffff" opacity={0.06} />}
+    </g>
+  );
+}
+
+/** A cortina (ou a persiana) na janela da parede lateral esquerda — na perspectiva da janela. */
+function Cortina({ desenho, cor, detalhe }: { desenho: string; cor: string; detalhe: boolean }) {
+  const yAt = (x: number, yFundo: number) => PF.y + (yFundo - PF.y) * ((x - PF.x) / (FX0 - PF.x));
+  const a = 10, b = 36;
+  const dobra = misturar(cor, '#000000', 0.18);
+  if (desenho === 'tecido') {
+    // Dois panos, um de cada lado da janela, do teto ao chão.
+    const pano = (x0: number, x1: number) => <polygon points={`${x0},${yAt(x0, 24).toFixed(1)} ${x1},${yAt(x1, 24).toFixed(1)} ${x1},${yAt(x1, FY1).toFixed(1)} ${x0},${yAt(x0, FY1).toFixed(1)}`} fill={cor} stroke={dobra} strokeWidth={0.6} />;
+    return <g data-peca="cortina" data-desenho={desenho}>{pano(a - 7, a + 3)}{pano(b - 3, b + 6)}{detalhe && [a - 4, a, b, b + 3].map(x => <path key={x} d={`M${x} ${yAt(x, 26).toFixed(1)} V${yAt(x, FY1 - 2).toFixed(1)}`} stroke={dobra} strokeWidth={0.6} />)}<path d={`M${a - 8} ${yAt(a - 8, 23).toFixed(1)} L${b + 7} ${yAt(b + 7, 23).toFixed(1)}`} stroke="#5a5550" strokeWidth={1} /></g>;
+  }
+  const alto = desenho === 'rolo' ? 46 : desenho === 'romana' ? 52 : 60;
+  return (
+    <g data-peca="cortina" data-desenho={desenho}>
+      <polygon points={`${a},${yAt(a, 34).toFixed(1)} ${b},${yAt(b, 34).toFixed(1)} ${b},${yAt(b, alto).toFixed(1)} ${a},${yAt(a, alto).toFixed(1)}`} fill={cor} opacity={desenho === 'persiana' ? 0.9 : 1} />
+      {desenho === 'persiana' && [38, 42, 46, 50, 54, 58].map(y => <path key={y} d={`M${a} ${yAt(a, y).toFixed(1)} L${b} ${yAt(b, y).toFixed(1)}`} stroke={dobra} strokeWidth={0.6} />)}
+      {desenho === 'romana' && [42, 48].map(y => <path key={y} d={`M${a} ${yAt(a, y).toFixed(1)} L${b} ${yAt(b, y).toFixed(1)}`} stroke={dobra} strokeWidth={1.1} />)}
+    </g>
+  );
+}
+
+/** A luminária: cada tipo de luz com o seu desenho e o seu facho, na cor da temperatura escolhida. */
+function LuzDoComodo({ desenho, tom, intensidade, lampada, automacao }: { desenho: string; tom: string; intensidade: number; lampada: string; automacao: boolean }) {
+  const k = intensidade;
+  const pendente = (px: number, len = 22) => <g key={px}><path d={`M${px} 0 V${len}`} stroke="#3a3530" strokeWidth={0.8} /><path d={`M${px - 6} ${len + 5} l 6 -5 l 6 5 Z`} fill="#2e2b28" /><circle cx={px} cy={len + 6} r={2.2} fill={tom} /><path d={`M${px - 5} ${len + 7} L${px - 18} ${FY1 - 6} H${px + 18} L${px + 5} ${len + 7} Z`} fill={tom} opacity={0.08 * k} /></g>;
+  return (
+    <g data-peca="luz" data-desenho={desenho}>
+      {desenho === 'teto' && <><path d="M160 0 V12" stroke="#5a5550" strokeWidth={1} /><circle cx={160} cy={15} r={3.4} fill={tom} /><path d={`M156 17 L${FX0 + 30} ${FY1} H${FX1 - 30} L164 17 Z`} fill={`url(#${lampada})`} /></>}
+      {desenho === 'plafon' && <><ellipse cx={160} cy={6} rx={16} ry={3.6} fill="#f4f2ec" stroke="#cfcac0" strokeWidth={0.6} /><path d={`M146 8 L${FX0 + 20} ${FY1} H${FX1 - 20} L174 8 Z`} fill={`url(#${lampada})`} /></>}
+      {desenho === 'abajur' && <><path d={`M${W - 34} ${H - 20} V 82`} stroke="#3a3530" strokeWidth={1.4} /><path d={`M${W - 44} 84 l 10 -12 h 0 l 10 12 Z`} fill="#e6b873" /><circle cx={W - 34} cy={88} r={22} fill={tom} opacity={0.22 * k} /></>}
+      {desenho === 'arandelas' && [FX0 + 34, FX1 - 34].map(x => <g key={x}><rect x={x - 3} y={44} width={6} height={9} rx={1.5} fill="#c9a76a" /><path d={`M${x - 3} 44 L${x - 9} 24 H${x + 9} L${x + 3} 44 Z M${x - 3} 53 L${x - 8} 72 H${x + 8} L${x + 3} 53 Z`} fill={tom} opacity={0.3 * k} /></g>)}
+      {desenho === 'pendentes' && [130, 160, 190].map(px => pendente(px, 30))}
+      {desenho === 'trilho' && <><path d={`M${FX0 + 30} 4 H${FX1 - 30}`} stroke="#2e2b28" strokeWidth={1.6} />{[100, 140, 180, 220].map(px => <g key={px}><rect x={px - 2.5} y={4} width={5} height={6} fill="#2e2b28" /><path d={`M${px - 2} 10 L${px - 14} ${FY1 - 10} H${px + 10} L${px + 2} 10 Z`} fill={tom} opacity={0.09 * k} /></g>)}</>}
+      {(desenho === 'fita' || desenho === 'sanca') && <><path d={`M${FX0} ${FY0 + 1} H${FX1}`} stroke={tom} strokeWidth={2} opacity={0.85 * k} /><path d={`M${FX0} ${FY0 + 3} H${FX1}`} stroke={tom} strokeWidth={6} opacity={0.18 * k} /><path d={`M0 ${TETO_E + 1} L${FX0} ${FY0 + 1} M${FX1} ${FY0 + 1} L${W} ${TETO_D + 1}`} stroke={tom} strokeWidth={2} opacity={0.6 * k} /></>}
+      {desenho === 'sanca' && [120, 160, 200].map(px => pendente(px))}
+      {desenho === 'destaque' && [FX0 + 50, 160, FX1 - 50].map(x => <g key={x}><circle cx={x} cy={FY0 + 3} r={2} fill="#2e2b28" /><ellipse cx={x} cy={FY0 + 40} rx={20} ry={26} fill={tom} opacity={0.16 * k} /></g>)}
+      {(desenho === 'lustre' || desenho === 'lustre_cristal') && (
+        <g>
+          <path d="M160 0 V14" stroke="#7a6a48" strokeWidth={1} />
+          <path d={desenho === 'lustre' ? 'M144 22 Q160 12 176 22' : 'M138 24 Q160 8 182 24'} stroke="#b4935a" strokeWidth={1.6} fill="none" />
+          {(desenho === 'lustre' ? [146, 160, 174] : [140, 150, 160, 170, 180]).map(x => <g key={x}><circle cx={x} cy={desenho === 'lustre' ? 22 : 24} r={2.2} fill={tom} />{desenho === 'lustre_cristal' && <path d={`M${x} ${26} v6 M${x - 2} 29 h4`} stroke="#e8f2ff" strokeWidth={0.8} />}</g>)}
+          {desenho === 'lustre_cristal' && <path d="M150 30 l10 12 l10 -12" stroke="#e8f2ff" strokeWidth={0.8} fill="none" />}
+          <circle cx={160} cy={26} r={desenho === 'lustre' ? 34 : 46} fill={tom} opacity={0.12 * k} />
+        </g>
+      )}
+      {automacao && <rect x={FX1 + 10} y={70} width={8} height={12} rx={2} fill="#22262b" stroke="#6fd3ff" strokeWidth={0.8} />}
+    </g>
+  );
+}

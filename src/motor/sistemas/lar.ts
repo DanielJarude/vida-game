@@ -177,7 +177,9 @@ export function confortoDaCasa(v: Vida): LeituraDoConforto {
     const origem = (a: AspectoDoComodo) => opcaoDeAcabamento(a, acabamentoDeOrigem(a, padrao))?.nivel ?? 1;
     const delta = internos.reduce((s, c) => s + (nivel('piso', c) - origem('piso')) + (nivel('luz', c) - origem('luz')) * 0.8, 0) / Math.max(1, internos.length);
     const pintou = internos.filter(c => lar.acabamentos[c.id]?.parede).length / Math.max(1, internos.length);
-    const x = Math.round(delta * 5 + pintou * 3);
+    // 12.7: o rodapé, a moldura e a cortina escolhidos contam um pouco (só onde se escolheu; o resto não muda).
+    const arremate = internos.filter(c => (opcaoDeAcabamento('rodape', lar.acabamentos[c.id]?.rodape)?.nivel ?? 1) >= 3 || (opcaoDeAcabamento('cortina', lar.acabamentos[c.id]?.cortina)?.nivel ?? 1) >= 2).length / Math.max(1, internos.length);
+    const x = Math.round(delta * 5 + pintou * 3 + arremate * 2);
     if (x) partes.push({ rotulo: 'Os acabamentos que você escolheu', valor: x });
   }
   const im = imovelDaMoradia(v);
@@ -227,6 +229,7 @@ export function custoMensalDoLar(modeloId: string | undefined, lar: LarPersonali
     const piso = opcaoDeAcabamento('piso', a.piso);
     if (piso?.manutencao) soma += piso.manutencao * areaDoComodo(modeloId, cm);
     soma += opcaoDeAcabamento('luz', a.luz)?.manutencao ?? 0;
+    soma += opcaoDeAcabamento('cortina', a.cortina)?.manutencao ?? 0;
   }
   return Math.round(soma * c);
 }
@@ -236,8 +239,8 @@ export function precoDoAcabamento(modeloId: string | undefined, cm: ComodoDaCasa
   const o = opcaoDeAcabamento(a, id);
   if (!o) return 0;
   const area = areaDoComodo(modeloId, cm);
-  // Parede: a área das paredes (~2,6× o piso de um cômodo comum).
-  const m2 = a === 'parede' ? area * 2.6 : area;
+  // Parede: a área das paredes (~2,6× o piso de um cômodo comum); rodapé e moldura: o contorno (~1,3× por metro).
+  const m2 = a === 'parede' ? area * 2.6 : a === 'rodape' ? area * 1.3 : area;
   const base = o.porM2 ? o.preco * m2 + (a === 'piso' ? 40 * m2 : 0) : o.preco;
   return Math.round(base * custoLocal / 10) * 10;
 }

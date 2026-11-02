@@ -21,7 +21,7 @@ import { idade, idadePessoa } from '../../motor/nucleo';
 import { anoDe } from '../../motor/tempo';
 import { coisa } from '../../motor/dados/coisas';
 import { variantesDaCoisa } from '../../motor/dados/pertences';
-import { COMODOS, opcaoDeAcabamento, type TipoComodo } from '../../motor/dados/lar';
+import { acabamentoDeOrigem, ASPECTOS_DO_COMODO, COMODOS, opcaoDeAcabamento, SEGMENTOS_DE_LUXO, segmentoDoNivel, TEMPERATURAS_DA_LUZ, type TemperaturaDaLuz, type TipoComodo } from '../../motor/dados/lar';
 import { CenaDoComodo } from '../ilustracao/comodos';
 import { ESTILOS, itemEstilo, lugaresDoItem, NOME_OCASIAO, adequacaoDaRoupa, estiloDominante, nomeDoEstilo } from '../../motor/dados/estilo';
 import { modeloVeiculo } from '../../motor/dados/bens';
@@ -29,8 +29,8 @@ import { economiaLocal } from '../../motor/dados/lugares';
 import { pecasDaCategoria, opcaoDaPeca } from '../../motor/dados/personalizacaoVeiculo';
 import { GENEROS, LINGUAGENS } from '../../motor/dados/gostos';
 import { ocupacaoOuNula } from '../../motor/dados/ocupacoes';
-import { ACABAMENTOS, ASPECTOS, acabamentoDoComodo, coisasPorComodo, comodoEquipado, comodosDaCasa, confortoDaCasa, donoDoLar, poderSobreACasa, precoDoAcabamento, terrenoLivre, plantaDaCasa } from '../../motor/sistemas/lar';
-import { custoDaPeca, custoDeConstruir, custoDeConverter, custoDeRepaginar, leituraDaPlanta, locaisPara, nomeDoLocal, type RefObjeto } from '../../motor/sistemas/personalizacao';
+import { ACABAMENTOS, acabamentoDoComodo, coisasPorComodo, comodoEquipado, comodosDaCasa, confortoDaCasa, donoDoLar, poderSobreACasa, terrenoLivre, plantaDaCasa } from '../../motor/sistemas/lar';
+import { aspectoCabe, custoDaPeca, custoDeConstruir, custoDeConverter, custoDeRepaginar, leituraDaPlanta, locaisPara, nomeDoLocal, reformaDoComodo, type RefObjeto } from '../../motor/sistemas/personalizacao';
 import { afetoDe, origemEmPalavras, palavraDoAfeto } from '../../motor/sistemas/memoriaDosObjetos';
 import { valorDeRevenda } from '../../motor/sistemas/coisas';
 import { colecao } from '../../motor/sistemas/colecao';
@@ -46,10 +46,17 @@ const agirCom = (op: Extract<Acao, { tipo: 'personalizar' }>['op']): Acao => ({ 
 
 /* ===================================================================== a casa */
 
-/** 12.4.1: a cena de um cômodo, com os acabamentos dele e os objetos que estão nele. */
-function Cena({ vida, comodoId, tipo, nome, coisas, largura }: { vida: Vida; comodoId: string; tipo: string; nome: string; coisas: CoisaTida[]; largura: number }) {
-  const asp = (a: AspectoDoComodo) => { const id = acabamentoDoComodo(vida, comodoId, a); return { id, cor: opcaoDeAcabamento(a, id)?.cor }; };
-  return <CenaDoComodo tipo={tipo} parede={asp('parede')} piso={asp('piso')} luz={asp('luz').id} objetos={coisas.map(t => ({ coisaId: t.coisaId, cor: t.cor, id: t.id }))} largura={largura} rotulo={`${cap(nome)}${coisas.length ? `: ${coisas.map(t => coisa(t.coisaId)?.nome).filter(Boolean).join(', ')}` : ', sem nada seu'}`} />;
+/** 12.7: o que a prévia de uma reforma mexe (o cômodo com estes acabamentos, sem cobrar nada). */
+interface Rascunho { acab: Partial<Record<AspectoDoComodo, string>>; luz: { temperatura?: TemperaturaDaLuz; intensidade?: number } }
+
+/**
+ * 12.4.1: a cena de um cômodo, com os acabamentos dele e os objetos que estão nele. 12.7: com `rascunho`, a mesma cena
+ * com o que se está escolhendo — a miniatura, a cena grande e a prévia são o mesmo desenho, com os mesmos dados.
+ */
+function Cena({ vida, comodoId, tipo, nome, coisas, largura, rascunho }: { vida: Vida; comodoId: string; tipo: string; nome: string; coisas: CoisaTida[]; largura: number; rascunho?: Rascunho }) {
+  const asp = (a: AspectoDoComodo) => { const id = rascunho?.acab[a] ?? acabamentoDoComodo(vida, comodoId, a); return { id, cor: opcaoDeAcabamento(a, id)?.cor }; };
+  const regulada = { ...(donoDoLar(vida)?.lar?.luzes?.[comodoId] ?? {}), ...(rascunho?.luz ?? {}) };
+  return <CenaDoComodo tipo={tipo} parede={asp('parede')} piso={asp('piso')} luz={asp('luz').id} rodape={asp('rodape').id} cortina={asp('cortina').id} luzRegulada={regulada} objetos={coisas.map(t => ({ coisaId: t.coisaId, cor: t.cor, id: t.id }))} largura={largura} rotulo={`${cap(nome)}${coisas.length ? `: ${coisas.map(t => coisa(t.coisaId)?.nome).filter(Boolean).join(', ')}` : ', sem nada seu'}`} />;
 }
 
 export function CasaPorDentro({ vida, agir }: Props) {
@@ -98,6 +105,8 @@ export function CasaPorDentro({ vida, agir }: Props) {
 
 function PainelDoComodo({ vida, agir, comodoId, aoFechar }: Props & { comodoId: string; aoFechar: () => void }) {
   const [editar, setEditar] = useState(false);
+  const [rascunho, setRascunho] = useState<Rascunho>({ acab: {}, luz: {} });
+  const [verAtual, setVerAtual] = useState(false);
   const [reorganizar, setReorganizar] = useState(false);
   const comodos = comodosDaCasa(vida);
   const cm = comodos.find(c => c.id === comodoId);
@@ -106,7 +115,7 @@ function PainelDoComodo({ vida, agir, comodoId, aoFechar }: Props & { comodoId: 
   const coisas = coisasPorComodo(vida).get(cm.id) ?? [];
   const poder = poderSobreACasa(vida);
   const c = economiaLocal(vida.moradia.municipioId).custo;
-  const aspectos = ASPECTOS.filter(a => !['jardim', 'piscina', 'garagem', 'lazer'].includes(cm.tipo) || a === 'luz');
+  const aspectos = ASPECTOS_DO_COMODO.filter(a => aspectoCabe(cm.tipo, a));
   const conversivel = cm.tipo === 'quarto_extra' || cm.de === 'conversao' || (cm.de === 'obra' && !!m.conversao);
   const destinos = (Object.values(COMODOS) as { tipo: TipoComodo; nome: string; conversao?: number }[]).filter(x => x.conversao && x.tipo !== cm.tipo && x.tipo !== 'quarto_extra');
   return (
@@ -115,7 +124,8 @@ function PainelDoComodo({ vida, agir, comodoId, aoFechar }: Props & { comodoId: 
         <h3 className="subtitulo">{cap(cm.nome)}</h3>
         <button type="button" className="botao botao--discreto" onClick={aoFechar}>Fechar</button>
       </div>
-      <div className="pz-painel__cena"><Cena vida={vida} comodoId={cm.id} tipo={cm.tipo} nome={cm.nome} coisas={coisas} largura={320} /></div>
+      <div className="pz-painel__cena"><Cena vida={vida} comodoId={cm.id} tipo={cm.tipo} nome={cm.nome} coisas={coisas} largura={320} rascunho={editar && !verAtual ? rascunho : undefined} />
+        {editar && <p className="pz-painel__legenda nota" aria-live="polite">{verAtual ? 'Como está hoje' : 'Prévia: como fica (nada foi cobrado)'}</p>}</div>
       <p className="nota">{m.descricao}{m.pede && !comodoEquipado(vida, cm) ? ` Vazio, é só metro quadrado: falta ${m.pede.slice(0, 3).map(id => coisa(id)?.nome ?? id).join(', ')}…` : ''}</p>
       {coisas.length > 0 ? (
         <ul className="pz-lista">
@@ -130,7 +140,7 @@ function PainelDoComodo({ vida, agir, comodoId, aoFechar }: Props & { comodoId: 
       )}
       {editar && (
         <div className="pz-edicao">
-          {aspectos.map(a => <Acabamento key={a} vida={vida} agir={agir} comodoId={cm.id} aspecto={a} />)}
+          <Reforma vida={vida} agir={agir} comodoId={cm.id} aspectos={aspectos} rascunho={rascunho} setRascunho={setRascunho} verAtual={verAtual} setVerAtual={setVerAtual} aoTerminar={() => { setRascunho({ acab: {}, luz: {} }); setVerAtual(false); setEditar(false); }} />
           {conversivel && (
             <details className="detalhes">
               <summary>Mudar o uso deste quarto</summary>
@@ -140,7 +150,6 @@ function PainelDoComodo({ vida, agir, comodoId, aoFechar }: Props & { comodoId: 
               </div>
             </details>
           )}
-          <button type="button" className="botao botao--discreto" onClick={() => setEditar(false)}>Pronto</button>
         </div>
       )}
     </div>
@@ -164,24 +173,75 @@ function ItemDoComodo({ vida, agir, t, comodoAtual, reorganizar }: Props & { t: 
   );
 }
 
-function Acabamento({ vida, agir, comodoId, aspecto }: Props & { comodoId: string; aspecto: AspectoDoComodo }) {
-  const atual = acabamentoDoComodo(vida, comodoId, aspecto);
-  const [escolha, setEscolha] = useState(atual);
-  const cm = comodosDaCasa(vida).find(c => c.id === comodoId)!;
-  const c = economiaLocal(vida.moradia.municipioId).custo;
-  const opcoes = ACABAMENTOS[aspecto].opcoes;
-  const nomeAtual = opcoes.find(o => o.id === atual)?.nome ?? atual;
-  const preco = escolha !== atual ? precoDoAcabamento(vida.moradia.modeloId, cm, aspecto, escolha, c) : 0;
+/**
+ * 12.7 — a reforma com prévia: escolhe-se piso, parede, luz (e a temperatura e a intensidade dela), rodapé e cortina; a
+ * cena muda na hora; dá para comparar com como está, voltar ao que está ou ao acabamento original do imóvel. O custo de
+ * cada item e o total aparecem antes, e nada é cobrado até confirmar (uma ação só: `reforma`, a mesma conta da prévia).
+ */
+function Reforma({ vida, agir, comodoId, aspectos, rascunho, setRascunho, verAtual, setVerAtual, aoTerminar }: Props & {
+  comodoId: string; aspectos: AspectoDoComodo[]; rascunho: Rascunho; setRascunho: (r: Rascunho) => void; verAtual: boolean; setVerAtual: (x: boolean) => void; aoTerminar: () => void;
+}) {
+  const poder = poderSobreACasa(vida);
+  const atual = (a: AspectoDoComodo) => acabamentoDoComodo(vida, comodoId, a);
+  const escolhido = (a: AspectoDoComodo) => rascunho.acab[a] ?? atual(a);
+  const mudar = (a: AspectoDoComodo, id: string) => setRascunho({ ...rascunho, acab: { ...rascunho.acab, [a]: id } });
+  const luzOp = opcaoDeAcabamento('luz', escolhido('luz'));
+  const regulada = { ...(donoDoLar(vida)?.lar?.luzes?.[comodoId] ?? {}), ...rascunho.luz };
+  const conta = reformaDoComodo(vida, comodoId, rascunho.acab, Object.keys(rascunho.luz).length ? rascunho.luz : undefined);
+  const nada = !conta.itens.length && !conta.luzMuda;
+  const origem = () => setRascunho({ acab: Object.fromEntries(aspectos.filter(a => !(poder === 'superficie' && a === 'piso')).map(a => [a, acabamentoDeOrigem(a, vida.moradia.padrao)])), luz: {} });
+  const op = { o: 'reforma' as const, comodo: comodoId, mudancas: Object.fromEntries(conta.itens.map(x => [x.aspecto, x.opcao])), ...(conta.luzMuda ? { luz: rascunho.luz } : {}) };
   return (
-    <div className="pz-acabamento">
-      <label className="campo">
-        <span className="campo__rotulo">{ACABAMENTOS[aspecto].nome} · hoje: {nomeAtual}</span>
-        <select value={escolha} onChange={e => setEscolha(e.target.value)}>
-          {opcoes.map(o => <option key={o.id} value={o.id}>{cap(o.nome)}</option>)}
-        </select>
-      </label>
-      {aspecto === 'parede' && <span className="pz-amostra" style={{ background: opcoes.find(o => o.id === escolha)?.cor }} aria-hidden />}
-      {escolha !== atual && <BotaoAcao vida={vida} agir={agir} acao={agirCom({ o: 'acabamento', comodo: comodoId, aspecto, opcao: escolha })} variante="principal">Fazer ({dinheiroCurto(preco)})</BotaoAcao>}
+    <div className="pz-reforma">
+      {aspectos.map(a => {
+        const travado = poder === 'superficie' && a === 'piso';
+        const opcoes = ACABAMENTOS[a].opcoes;
+        const e = escolhido(a);
+        const o = opcoes.find(x => x.id === e);
+        return (
+          <div key={a} className="pz-acabamento">
+            <label className="campo">
+              <span className="campo__rotulo">{ACABAMENTOS[a].nome} · hoje: {opcoes.find(x => x.id === atual(a))?.nome ?? atual(a)}</span>
+              <select value={e} disabled={travado} onChange={ev => mudar(a, ev.target.value)}>
+                {SEGMENTOS_DE_LUXO.map((seg, k) => {
+                  const doSeg = opcoes.filter(x => x.nivel === k + 1);
+                  return doSeg.length ? <optgroup key={seg} label={cap(seg)}>{doSeg.map(x => <option key={x.id} value={x.id}>{cap(x.nome)}</option>)}</optgroup> : null;
+                })}
+              </select>
+            </label>
+            {o?.cor && <span className="pz-amostra" style={{ background: o.cor2 ? `linear-gradient(135deg, ${o.cor} 60%, ${o.cor2} 60%)` : o.cor }} aria-hidden />}
+            {travado && <span className="nota">Casa alugada: piso é com o dono.</span>}
+          </div>
+        );
+      })}
+      {luzOp?.regulavel && (
+        <fieldset className="pz-luz">
+          <legend className="campo__rotulo">A luz: temperatura e intensidade</legend>
+          <div className="grupo-acoes grupo-acoes--linha" role="group" aria-label="Temperatura da luz">
+            {TEMPERATURAS_DA_LUZ.map(t => <button key={t.id} type="button" className="chip" aria-pressed={(regulada.temperatura ?? 'quente') === t.id} onClick={() => setRascunho({ ...rascunho, luz: { ...rascunho.luz, temperatura: t.id } })}><span className="pz-amostra pz-amostra--mini" style={{ background: t.cor }} aria-hidden /> {cap(t.nome)}</button>)}
+          </div>
+          <label className="campo"><span className="campo__rotulo">Intensidade: {regulada.intensidade ?? 100}%</span>
+            <input type="range" min={40} max={100} step={10} value={regulada.intensidade ?? 100} onChange={ev => setRascunho({ ...rascunho, luz: { ...rascunho.luz, intensidade: Number(ev.target.value) } })} /></label>
+        </fieldset>
+      )}
+      <div className="pz-conta" aria-live="polite">
+        {nada ? <p className="nota">Nada mudou ainda: escolha acima e veja na cena.</p> : (
+          <>
+            <ul className="pz-partes">
+              {conta.itens.map(x => <li key={x.aspecto}><span>{ACABAMENTOS[x.aspecto].nome}: {x.antes} → <strong>{x.nome}</strong> <span className="nota">({segmentoDoNivel(opcaoDeAcabamento(x.aspecto, x.opcao)?.nivel ?? 1)})</span></span><strong>{dinheiroCurto(x.preco)}</strong></li>)}
+              {conta.luzMuda && <li><span>Luz regulada</span><strong>sem custo</strong></li>}
+            </ul>
+            <p className="pz-linha"><span>Total</span> <strong>{dinheiroCurto(conta.total)}</strong></p>
+          </>
+        )}
+      </div>
+      <div className="grupo-acoes grupo-acoes--linha">
+        {!nada && <BotaoAcao vida={vida} agir={agir} acao={agirCom(op)} variante="principal" aoAgir={aoTerminar}>Confirmar{conta.total ? ` e pagar ${dinheiroCurto(conta.total)}` : ''}</BotaoAcao>}
+        {!nada && <button type="button" className="botao botao--discreto" aria-pressed={verAtual} onClick={() => setVerAtual(!verAtual)}>{verAtual ? 'Ver a prévia' : 'Comparar com como está'}</button>}
+        {!nada && <button type="button" className="botao botao--discreto" onClick={() => { setRascunho({ acab: {}, luz: {} }); setVerAtual(false); }}>Voltar ao que está</button>}
+        <button type="button" className="botao botao--discreto" onClick={origem}>Acabamento original do imóvel</button>
+        <button type="button" className="botao botao--discreto" onClick={aoTerminar}>{nada ? 'Pronto' : 'Cancelar'}</button>
+      </div>
     </div>
   );
 }
