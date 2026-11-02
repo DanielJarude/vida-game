@@ -251,12 +251,16 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
       {/* Rosto */}
       <path d={rosto} fill={pele} />
       {/* Brincos: um ponto de luz na ponta da orelha. */}
-      {f !== 'bebe' && (v.joia === 'brincos' || v.brincos) && (
-        <g className="retrato__joia" fill="#d8b45a">
-          <circle cx={cx - w / 2 + 0.2} cy={olhoY + 7.4} r={1} />
-          <circle cx={cx + w / 2 - 0.2} cy={olhoY + 7.4} r={1} />
-        </g>
-      )}
+      {/* VIDA 12.7: no lóbulo de verdade (na ponta da orelha, fora do rosto), e cada modelo com a sua forma. */}
+      {f !== 'bebe' && (v.joia === 'brincos' || v.brincos) && [-1, 1].map(s => {
+        const x = cx + s * (w / 2 - 0.4 + orelhaFora), y = olhoY + 7.6;
+        const m = v.modeloBrincos;
+        return m === 'brincos_diamante'
+          ? <g key={s} className="retrato__joia" data-brinco="diamante"><circle cx={x} cy={y} r={2.6} fill="#dff3ff" opacity={0.45} /><path d={`M ${x} ${y - 1.9} L ${x + 1.4} ${y} L ${x} ${y + 1.9} L ${x - 1.4} ${y} Z`} fill="#f4fbff" stroke="#5f8aa8" strokeWidth={0.45} /></g>
+          : m === 'brincos_ouro'
+            ? <circle key={s} className="retrato__joia" data-brinco="ouro" cx={x} cy={y + 1.2} r={1.8} fill="none" stroke="#d8b45a" strokeWidth={0.8} />
+            : <circle key={s} className="retrato__joia" data-brinco="simples" cx={x} cy={y + 0.8} r={1.4} fill="none" stroke="#8d939b" strokeWidth={0.8} />;
+      })}
       {(f === 'bebe' || f === 'crianca') && (
         <>
           <ellipse cx={cx - esp - 2} cy={olhoY + 7} rx={4} ry={2.6} fill="#e8889a" opacity={0.22} />

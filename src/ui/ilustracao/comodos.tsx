@@ -317,7 +317,7 @@ function PadraoDaParede({ id, desenho, cor, cor2 }: { id: string; desenho: strin
     case 'lambri': return p(10, 6, <path d="M0 5.6 H10" stroke={escuro} strokeWidth={0.8} />);
     case 'ripado': return p(6, 10, <rect x={4.6} width={1.4} height={10} fill={misturar(cor, '#000000', 0.42)} />);
     case 'pedra': return p(24, 14, <path d="M0 5 l7 -1 l5 2 l6 -2 l6 1 M0 11 l4 -1 l6 2 l7 -2 l7 1 M7 4 v8 M18 4 v8" stroke={misturar(cor, '#000000', 0.25)} strokeWidth={0.7} fill="none" />);
-    case 'cimento': return p(30, 20, <><circle cx={8} cy={6} r={5} fill={claro} opacity={0.25} /><circle cx={22} cy={14} r={6} fill={escuro} opacity={0.12} /></>);
+    case 'cimento': return p(54, 30, <><ellipse cx={14} cy={8} rx={14} ry={6} fill={claro} opacity={0.12} /><ellipse cx={40} cy={22} rx={15} ry={6} fill={escuro} opacity={0.06} /></>);
     case 'tecido': return p(4, 4, <path d="M0 0 L4 4 M4 0 L0 4" stroke={escuro} strokeWidth={0.3} opacity={0.5} />);
     case 'marmore': return p(48, 36, <path d="M0 10 q12 -6 22 4 t26 -2 M6 30 q10 -10 20 -2 t22 -8" stroke={c2} strokeWidth={0.7} fill="none" opacity={0.85} />);
     default: return p(8, 8, <></>);
@@ -334,7 +334,7 @@ function PadraoDoPiso({ id, desenho, cor, cor2 }: { id: string; desenho: string;
     case 'marmore': return p(80, 40, <path d="M0 14 q20 -10 40 2 t40 -4 M10 34 q14 -8 30 0 t34 -6" stroke={c2} strokeWidth={0.8} fill="none" opacity={0.9} />);
     case 'granito': return p(10, 10, <><circle cx={2} cy={3} r={0.8} fill={c2} /><circle cx={7} cy={7} r={0.6} fill={c2} /><circle cx={6} cy={2} r={0.5} fill="#ffffff" opacity={0.6} /></>);
     case 'carpete': return p(6, 6, <circle cx={3} cy={3} r={0.6} fill={escuro} opacity={0.35} />);
-    case 'cimento': return p(40, 24, <><circle cx={10} cy={8} r={7} fill="#ffffff" opacity={0.12} /><circle cx={30} cy={18} r={8} fill="#000000" opacity={0.07} /></>);
+    case 'cimento': return p(70, 34, <><ellipse cx={18} cy={10} rx={20} ry={7} fill="#ffffff" opacity={0.05} /><ellipse cx={52} cy={25} rx={18} ry={6} fill="#000000" opacity={0.035} /><path d="M4 30 q18 -4 30 1" stroke="#000000" strokeWidth={0.3} opacity={0.12} fill="none" /></>);
     case 'espinha': return p(16, 8, <path d="M0 8 L8 0 M8 8 L16 0 M0 0 L8 8 M8 0 L16 8" stroke={escuro} strokeWidth={0.7} />);
     case 'versailles': return p(24, 24, <><rect width={24} height={24} fill="none" stroke={c2} strokeWidth={1} /><path d="M0 12 H24 M12 0 V24 M0 0 L24 24 M24 0 L0 24" stroke={c2} strokeWidth={0.6} /></>);
     case 'ladrilho': return p(14, 14, <><rect width={14} height={14} fill="none" stroke={escuro} strokeWidth={0.5} /><path d="M7 2 L12 7 L7 12 L2 7 Z" fill={c2} opacity={0.8} /><circle cx={7} cy={7} r={1.4} fill={cor} /></>);

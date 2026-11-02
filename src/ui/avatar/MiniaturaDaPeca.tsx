@@ -16,10 +16,12 @@ import '../catalogo.css';
 export function visualComPecaDoRosto(base: Visual, itemId: string): Visual {
   const it = itemEstilo(itemId)!;
   const v: Visual = { ...base };
-  delete v.oculos; delete v.chapeu; delete v.modeloOculos; delete v.modeloChapeu; delete v.brincos; delete v.joia;
+  delete v.oculos; delete v.chapeu; delete v.modeloOculos; delete v.modeloChapeu; delete v.brincos; delete v.modeloBrincos; delete v.joia;
   if (it.categoria === 'oculos' && it.visual?.oculos) { v.oculos = it.visual.oculos; v.modeloOculos = it.id; }
   if (it.categoria === 'chapeu' && it.visual?.chapeu) { v.chapeu = it.visual.chapeu; v.modeloChapeu = it.id; }
-  if (it.lugar === 'orelha') v.brincos = true;
+  // Os brincos: o cabelo comprido cobre a orelha — na vitrine, o cabelo vai para trás (só na miniatura).
+  if (it.lugar === 'orelha') { v.brincos = true; v.modeloBrincos = it.id; if (!['raspado', 'curto', 'curto_lado', 'topete', 'pixie', 'crespo_curto'].includes(v.cabelo)) v.cabelo = 'pixie'; }
+  if (it.lugar === 'joia' && it.visual?.joia) { v.joia = it.visual.joia; delete v.superior; }
   return v;
 }
 
@@ -28,8 +30,9 @@ export function MiniaturaDaPeca({ vida, itemId, id, largura = 84, rotulo }: { vi
   if (!it) return null;
   const i = idade(vida);
   const nome = rotulo ?? it.nome;
-  if (it.categoria === 'oculos' || it.categoria === 'chapeu' || it.lugar === 'orelha') {
-    return <span className="miniatura-peca miniatura-peca--rosto" data-item={itemId}><Retrato visual={visualComPecaDoRosto(vida.eu.visual, itemId)} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} tamanho={largura} rotulo={nome} soCabeca /></span>;
+  if (it.categoria === 'oculos' || it.categoria === 'chapeu' || it.lugar === 'orelha' || (it.lugar === 'joia' && it.visual?.joia)) {
+    // O colar se vê no busto (com o pescoço); óculos, chapéu e brincos, no rosto.
+    return <span className="miniatura-peca miniatura-peca--rosto" data-item={itemId}><Retrato visual={visualComPecaDoRosto(vida.eu.visual, itemId)} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} tamanho={largura} rotulo={nome} soCabeca={it.lugar !== 'joia'} /></span>;
   }
   const corpo = tipoDeCorpo(vida);
   const lugar = it.lugar === 'corpo' || (!it.lugar && it.categoria === 'roupa') ? 'corpo' : it.lugar ?? lugaresDoItem(it)[0];

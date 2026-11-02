@@ -250,6 +250,8 @@ export interface Visual {
   /** HOTFIX 11.5.1: o modelo em uso (o id do item: `oculos_juliet`, `chapeu_couro`...) — o retrato desenha o modelo. */
   modeloOculos?: string;
   modeloChapeu?: string;
+  /** VIDA 12.7: o modelo dos brincos em uso (a argola simples, a de ouro, o diamante). */
+  modeloBrincos?: string;
   /** O jeito de vestir (a cor e o corte da roupa no retrato). */
   roupa?: EstiloRoupa;
   /** A joia em uso, quando aparece no retrato (a corrente no pescoço, os brincos). O relógio não aparece: fica no pulso, fora do quadro. */
