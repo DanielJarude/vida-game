@@ -139,8 +139,8 @@ function OQueVeste({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
               <span className="vestir__nome">{p.nome}</span>
               <span className="vestir__atual">{atual ? itemEstilo(atual.itemId)!.nome : <span className="nota">nada</span>}</span>
               <span className="vestir__trocar">
-                {p.itens.filter(x => !x.usando).map(x => <BotaoAcao key={x.id} vida={vida} acao={{ tipo: 'usar_item', itemId: x.itemId, usar: true }} agir={agir} variante="discreto">{itemEstilo(x.itemId)!.nome}</BotaoAcao>)}
-                {atual && <BotaoAcao vida={vida} acao={{ tipo: 'usar_item', itemId: atual.itemId, usar: false }} agir={agir} variante="discreto">Tirar</BotaoAcao>}
+                {p.itens.filter(x => !x.usando).map(x => <BotaoAcao key={x.id} vida={vida} acao={{ tipo: 'usar_item', itemId: x.itemId, id: x.id, usar: true }} agir={agir} variante="discreto">{itemEstilo(x.itemId)!.nome}</BotaoAcao>)}
+                {atual && <BotaoAcao vida={vida} acao={{ tipo: 'usar_item', itemId: atual.itemId, id: atual.id, usar: false }} agir={agir} variante="discreto">Tirar</BotaoAcao>}
               </span>
             </li>
           );

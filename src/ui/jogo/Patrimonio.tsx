@@ -163,7 +163,7 @@ function Objetos({ vida, agir, abrir, irColecao }: Props & { irColecao: () => vo
               return (
                 <li key={x.id} className="pat-usado">
                   <span><strong>{it.nome}</strong>{it.luxo ? <span className="etiqueta-luxo">luxo</span> : null}<span className="nota"> · {x.usando ? 'em uso' : 'guardado'} · desde {anoDe(x.t)} · pagou {dinheiroCurto(x.preco)}</span></span>
-                  <BotaoAcao vida={vida} acao={{ tipo: 'usar_item', itemId: x.itemId, usar: !x.usando }} agir={agir} variante="discreto">{x.usando ? 'Guardar' : 'Usar'}</BotaoAcao>
+                  <BotaoAcao vida={vida} acao={{ tipo: 'usar_item', itemId: x.itemId, id: x.id, usar: !x.usando }} agir={agir} variante="discreto">{x.usando ? 'Guardar' : 'Usar'}</BotaoAcao>
                 </li>
               );
             })}

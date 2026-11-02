@@ -105,7 +105,7 @@ function marcante(antes: Visual, m: MudancaVisual): boolean {
 }
 
 /** Muda o visual. Não entra na Linha da Vida (cortar o cabelo não é biografia) — a não ser que o público repare. */
-export function mudarAparencia(v: Vida, m: MudancaVisual): string {
+export function mudarAparencia(v: Vida, m: MudancaVisual, alvo?: ItemDeEstilo): string {
   const vis = v.eu.visual;
   const antes = { ...vis };
   v.eu.estilo ??= { itens: [] };
@@ -118,14 +118,8 @@ export function mudarAparencia(v: Vida, m: MudancaVisual): string {
     else if (x === undefined || (k === 'roupa' && x === 'basica')) delete (vis as unknown as Record<string, unknown>)[k];
     else (vis as unknown as Record<string, unknown>)[k] = x;
   }
-  // Tirar ou pôr um item muda o "em uso" dele.
-  for (const it of v.eu.estilo.itens) {
-    const d = itemEstilo(it.itemId)?.visual;
-    if (!d) continue;
-    if (d.oculos) it.usando = vis.oculos === d.oculos;
-    if (d.chapeu) it.usando = vis.chapeu === d.chapeu;
-    if (d.roupa) it.usando = vis.roupa === d.roupa;
-  }
+  // Tirar ou pôr um item muda o "em uso" dele — e só dele (12.7: antes, todos os itens do mesmo desenho viravam "em uso").
+  alinharItens(v, m, alvo);
   v.eu.estilo.tMudanca = v.t;
   const conhecida = (v.notoriedade?.valor ?? 0) >= 30;
   if (conhecida && marcante(antes, m) && rngDe(v.id, 'visual', v.t, v.seq).chance(0.6)) {
@@ -134,6 +128,71 @@ export function mudarAparencia(v: Vida, m: MudancaVisual): string {
     return 'O visual novo apareceu nas fotos — e virou assunto.';
   }
   return 'Visual novo. No espelho, a mesma pessoa — de outro jeito.';
+}
+
+/**
+ * 12.7 — o visual mudou num campo que vem de um item (óculos, chapéu, a roupa do retrato): só os itens desse campo mudam de
+ * "em uso", e no máximo um por lugar. O item escolhido (`alvo`) é o que entra; sem alvo, fica o que já estava em uso com
+ * esse desenho, senão o primeiro seu com ele. Cortar o cabelo não mexe em roupa nenhuma.
+ */
+function alinharItens(v: Vida, m: MudancaVisual, alvo?: ItemDeEstilo): void {
+  const itens = itensDaPessoa(v);
+  const vis = v.eu.visual;
+  for (const k of ['oculos', 'chapeu'] as const) {
+    if (!(k in m)) continue;
+    const valor = vis[k];
+    const doCampo = itens.filter(x => !!itemEstilo(x.itemId)?.visual?.[k]);
+    const comValor = (x: ItemDeEstilo) => itemEstilo(x.itemId)?.visual?.[k] === valor;
+    const escolhido = valor === undefined ? undefined : (alvo && comValor(alvo) ? alvo : doCampo.find(x => x.usando && comValor(x)) ?? doCampo.find(comValor));
+    for (const x of doCampo) x.usando = x === escolhido;
+  }
+  // A roupa do retrato: quando veio de uma peça (`alvo`), a peça já resolveu os lugares do corpo.
+  if ('roupa' in m && !alvo) {
+    const valor = vis.roupa;
+    const doCampo = itens.filter(x => !!itemEstilo(x.itemId)?.visual?.roupa);
+    if (valor === undefined) { for (const x of doCampo) if (x.usando && itemEstilo(x.itemId)?.visual?.roupa !== 'basica') x.usando = false; }
+    else if (!doCampo.some(x => x.usando && itemEstilo(x.itemId)?.visual?.roupa === valor)) {
+      const e = doCampo.find(x => itemEstilo(x.itemId)?.visual?.roupa === valor);
+      if (e) { for (const y of itens) if (y !== e && y.usando && mesmoLugar(itemEstilo(e.itemId), itemEstilo(y.itemId))) y.usando = false; e.usando = true; }
+    }
+  }
+}
+
+/** 12.7 — a roupa que o retrato mostra com o que ficou em uso (a de cima ou a peça inteira; senão a de sempre). */
+function roupaQueFica(v: Vida): string {
+  const usando = itensDaPessoa(v).filter(x => x.usando);
+  const de = (x: ItemDeEstilo) => itemEstilo(x.itemId)?.visual?.roupa;
+  const cima = usando.find(x => !!de(x) && lugaresDoItem(itemEstilo(x.itemId)!).includes('tronco')) ?? usando.find(x => !!de(x));
+  return (cima && de(cima)) ?? 'basica';
+}
+
+/**
+ * 12.7 — qual dos seus itens é o escolhido: a peça pelo id dela (o que a tela mostrou); sem id (ações antigas), a peça
+ * desse produto que está no estado contrário (a que se quer pôr ou tirar), senão a primeira.
+ */
+export function instanciaDoItem(v: Vida, itemId: string, usar: boolean, id?: string): ItemDeEstilo | undefined {
+  const itens = itensDaPessoa(v);
+  if (id) return itens.find(y => y.id === id && y.itemId === itemId);
+  return itens.find(y => y.itemId === itemId && y.usando !== usar) ?? itens.find(y => y.itemId === itemId);
+}
+
+/**
+ * 12.7 — nunca duas peças no mesmo lugar do corpo (saves de antes da correção podiam ter várias "em uso"): fica a que o
+ * retrato já mostrava (a de cima, o modelo dos óculos e do chapéu); senão a mais recente.
+ */
+export function umPorLugar(v: Vida): void {
+  const vis = v.eu.visual;
+  const preferida = (x: ItemDeEstilo) => vis.superior === `${x.itemId}#${x.id}` || vis.modeloOculos === x.itemId || vis.modeloChapeu === x.itemId;
+  const usando = itensDaPessoa(v).map((x, i) => ({ x, i })).filter(({ x }) => x.usando)
+    .sort((a, b) => Number(preferida(b.x)) - Number(preferida(a.x)) || b.x.t - a.x.t || b.i - a.i);
+  const ocupado = new Set<string>();
+  for (const { x } of usando) {
+    const it = itemEstilo(x.itemId);
+    if (!it) continue;
+    const ls = lugaresDoItem(it);
+    if (ls.some(l => ocupado.has(l))) { x.usando = false; continue; }
+    for (const l of ls) ocupado.add(l);
+  }
 }
 
 /* ------------------------------------------------------------- Comprar */
@@ -160,7 +219,7 @@ export function comprarItem(v: Vida, itemId: string, pagoPelaFamilia = false, ma
   // Passa a usar (o que ocupa o mesmo lugar sai: a mesma categoria que aparece no retrato, o mesmo pulso, o mesmo pescoço).
   let saiuRoupa = false;
   for (const x of v.eu.estilo.itens) if (x !== item && x.usando && mesmoLugar(it, itemEstilo(x.itemId))) { x.usando = false; saiuRoupa ||= !!itemEstilo(x.itemId)?.visual?.roupa; }
-  if (saiuRoupa && !it.visual?.roupa) v.eu.visual.roupa = 'basica';
+  if (saiuRoupa && !it.visual?.roupa) { const r = roupaQueFica(v); if (r === 'basica') delete v.eu.visual.roupa; else v.eu.visual.roupa = r as Visual['roupa']; }
   if (it.visual) Object.assign(v.eu.visual, it.visual);
   sincronizarVisual(v);
   v.eu.estilo.tMudanca = v.t;
@@ -190,21 +249,20 @@ function mesmoLugar(a: ReturnType<typeof itemEstilo>, b: ReturnType<typeof itemE
   return lugaresDoItem(b).some(x => la.includes(x));
 }
 
-export function usarItem(v: Vida, itemId: string, usar: boolean): string {
+export function usarItem(v: Vida, itemId: string, usar: boolean, id?: string): string {
   const it = itemEstilo(itemId)!;
-  const x = itensDaPessoa(v).find(y => y.itemId === itemId)!;
+  const x = instanciaDoItem(v, itemId, usar, id)!;
   let saiuRoupa = false;
   if (usar) for (const y of itensDaPessoa(v)) if (y !== x && y.usando && mesmoLugar(it, itemEstilo(y.itemId))) { y.usando = false; saiuRoupa ||= !!itemEstilo(y.itemId)?.visual?.roupa; }
+  x.usando = usar;
   // REWORK 12.4: a calça nova tira o vestido — e o retrato volta à roupa de todo dia na parte de cima.
-  if (saiuRoupa && !it.visual?.roupa) v.eu.visual.roupa = 'basica';
-  if (it.visual) {
-    const m: MudancaVisual = {};
-    if (it.visual.oculos) m.oculos = usar ? it.visual.oculos : undefined;
-    if (it.visual.chapeu) m.chapeu = usar ? it.visual.chapeu : undefined;
-    if (it.visual.roupa) m.roupa = usar ? it.visual.roupa : 'basica';
-    mudarAparencia(v, m);
-    if (it.visual.joia) v.eu.visual.joia = usar ? it.visual.joia : undefined;
-  }
+  const m: MudancaVisual = {};
+  if (it.visual?.oculos) m.oculos = usar ? it.visual.oculos : undefined;
+  if (it.visual?.chapeu) m.chapeu = usar ? it.visual.chapeu : undefined;
+  if (it.visual?.roupa) m.roupa = usar ? it.visual.roupa : roupaQueFica(v) as MudancaVisual['roupa'];
+  else if (saiuRoupa) m.roupa = roupaQueFica(v) as MudancaVisual['roupa'];
+  if (Object.keys(m).length) mudarAparencia(v, m, x);
+  if (it.visual?.joia) v.eu.visual.joia = usar ? it.visual.joia : undefined;
   x.usando = usar;
   sincronizarVisual(v);
   return usar ? `Passou a usar: ${it.nome.toLowerCase()}.` : `Guardou: ${it.nome.toLowerCase()}.`;
@@ -217,6 +275,7 @@ export function usarItem(v: Vida, itemId: string, usar: boolean): string {
  */
 export function sincronizarVisual(v: Vida): void {
   const vis = v.eu.visual;
+  umPorLugar(v);
   const usando = itensDaPessoa(v).filter(x => x.usando);
   const em = (l: string) => usando.find(x => { const it = itemEstilo(x.itemId); return !!it && lugaresDoItem(it).includes(l) && (l !== 'tronco' || it.lugar !== 'casaco'); });
   const casaco = usando.find(x => itemEstilo(x.itemId)?.lugar === 'casaco');
@@ -227,14 +286,14 @@ export function sincronizarVisual(v: Vida): void {
   if (joia) vis.joia = joia; else delete vis.joia;
   if (usando.some(x => itemEstilo(x.itemId)?.lugar === 'orelha')) vis.brincos = true; else delete vis.brincos;
   // HOTFIX 11.5.1: o modelo dos óculos e do chapéu em uso (o Juliet não é o aviador; o chapéu de couro não é o de palha).
-  const oculos = usando.find(x => itemEstilo(x.itemId)?.categoria === 'oculos');
+  const oculos = usando.find(x => itemEstilo(x.itemId)?.categoria === 'oculos' && itemEstilo(x.itemId)?.visual?.oculos === vis.oculos) ?? usando.find(x => itemEstilo(x.itemId)?.categoria === 'oculos');
   if (oculos && vis.oculos) vis.modeloOculos = oculos.itemId; else delete vis.modeloOculos;
-  const chapeu = usando.find(x => itemEstilo(x.itemId)?.categoria === 'chapeu');
+  const chapeu = usando.find(x => itemEstilo(x.itemId)?.categoria === 'chapeu' && itemEstilo(x.itemId)?.visual?.chapeu === vis.chapeu) ?? usando.find(x => itemEstilo(x.itemId)?.categoria === 'chapeu');
   if (chapeu && vis.chapeu) vis.modeloChapeu = chapeu.itemId; else delete vis.modeloChapeu;
 }
 
-export function disponibilidadeUsarItem(v: Vida, itemId: string, usar: boolean): Veredito {
-  const x = itensDaPessoa(v).find(y => y.itemId === itemId);
+export function disponibilidadeUsarItem(v: Vida, itemId: string, usar: boolean, id?: string): Veredito {
+  const x = instanciaDoItem(v, itemId, usar, id);
   if (!x) return bloqueio('impossivel', 'Você não tem isso.');
   if (x.usando === usar) return bloqueio('incompativel', usar ? 'Já está usando.' : 'Já está guardado.');
   return PERMITIDO;

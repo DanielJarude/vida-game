@@ -291,7 +291,7 @@ export type Acao =
   /** VIDA 12.6: a casa no dia a dia (faxina, organizar, descansar, série, plantas, conserto, visita, a comida da semana). */
   | { tipo: 'em_casa'; oque: FazerEmCasa }
   /** Usar ou guardar um item que é seu. */
-  | { tipo: 'usar_item'; itemId: string; usar: boolean }
+  | { tipo: 'usar_item'; itemId: string; usar: boolean; /** 12.7: a peça escolhida (o id dela no inventário); sem ele, a do produto. */ id?: string }
   /** As coisas da vida: comprar numa loja da cidade; vender a usada (`sistemas/coisas`). */
   | { tipo: 'comprar_coisa'; coisaId: string; marca?: string; loja?: string }
   /** REWORK 12.4: a casa, os objetos, os veículos, a roupa e o tempo livre do jeito da pessoa (`sistemas/personalizacao`). */
@@ -768,7 +768,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'retocar_tatuagem': return disponibilidadeRetocar(v, a.id);
     case 'compor_tatuagens': return disponibilidadeCompor(v, a.modelo, a.lado);
     case 'em_casa': return disponibilidadeFazerEmCasa(v, a.oque);
-    case 'usar_item': return disponibilidadeUsarItem(v, a.itemId, a.usar);
+    case 'usar_item': return disponibilidadeUsarItem(v, a.itemId, a.usar, a.id);
     case 'comprar_coisa': return disponibilidadeComprarCoisa(v, a.coisaId, a.marca, a.loja);
     case 'personalizar': return disponibilidadePersonalizar(v, a.op);
     case 'vender_coisa': return disponibilidadeVenderCoisa(v, a.coisaTidaId);
@@ -1572,7 +1572,7 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
     case 'retocar_tatuagem': return ok(retocarTatuagem(v, a.id), 'bom');
     case 'compor_tatuagens': return ok(comporTatuagens(v, a.modelo, a.lado), 'bom');
     case 'em_casa': return ok(fazerEmCasa(v, a.oque), 'bom');
-    case 'usar_item': return ok(usarItem(v, a.itemId, a.usar));
+    case 'usar_item': return ok(usarItem(v, a.itemId, a.usar, a.id));
     case 'comprar_coisa': return ok(comprarCoisa(v, a.coisaId, a.marca, a.loja), 'bom');
     case 'personalizar': return ok(personalizar(v, a.op), 'bom');
     case 'vender_coisa': return ok(venderCoisa(v, a.coisaTidaId));

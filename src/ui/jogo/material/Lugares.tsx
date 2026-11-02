@@ -267,7 +267,7 @@ function LojaDeEstilo({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }
                     <span>{x.descricao}</span>
                   </span>
                   <span className="oferta__preco">{dinheiroCurto(precoDoItem(vida, x.id))}</span>
-                  {tem ? (() => { const meu = vida.eu.estilo?.itens.find(y => y.itemId === x.id); return <span className="loja-estilo__seu"><span className="nota">É seu{meu?.usando ? ' · em uso' : ' · guardado'}.</span><BotaoAcao vida={vida} acao={{ tipo: 'usar_item', itemId: x.id, usar: !meu?.usando }} agir={agir} variante="discreto">{meu?.usando ? 'Guardar' : 'Usar'}</BotaoAcao></span>; })() : <BotaoAcao vida={vida} acao={{ tipo: 'comprar_item', itemId: x.id }} agir={agir} variante="secundario">Comprar</BotaoAcao>}
+                  {tem ? (() => { const meu = vida.eu.estilo?.itens.find(y => y.itemId === x.id); return <span className="loja-estilo__seu"><span className="nota">É seu{meu?.usando ? ' · em uso' : ' · guardado'}.</span><BotaoAcao vida={vida} acao={{ tipo: 'usar_item', itemId: x.id, ...(meu ? { id: meu.id } : {}), usar: !meu?.usando }} agir={agir} variante="discreto">{meu?.usando ? 'Guardar' : 'Usar'}</BotaoAcao></span>; })() : <BotaoAcao vida={vida} acao={{ tipo: 'comprar_item', itemId: x.id }} agir={agir} variante="secundario">Comprar</BotaoAcao>}
                 </li>
               );
             })}
