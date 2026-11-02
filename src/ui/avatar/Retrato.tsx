@@ -476,6 +476,18 @@ function Oculos({ tipo, modelo, cx, olhoY, esp, w = 30, uid = 'r' }: { tipo: 'gr
       {lados.map(s => <rect key={`d${s}`} x={cx + s * (esp + 5.6) - 0.9} y={olhoY - 5.2} width={1.8} height={1.6} fill="#d8b45a" stroke="none" />)}
     </g>
   );
+  // 12.7: titânio e ouro — armação finíssima dourada, lente degradê (do escuro em cima ao claro embaixo), ponte dupla.
+  if (m === 'oculos_ouro') {
+    const gid = `${uid}-ouro`;
+    return (
+      <g data-oculos="ouro">
+        <defs><linearGradient id={gid} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#3a2a1e" stopOpacity="0.9" /><stop offset="1" stopColor="#c9a46a" stopOpacity="0.35" /></linearGradient></defs>
+        {lados.map(s => <path key={s} d={`M ${cx + s * esp - 4.8} ${olhoY - 3} Q ${cx + s * esp} ${olhoY - 4.2} ${cx + s * esp + 4.8} ${olhoY - 3} Q ${cx + s * esp + 5} ${olhoY + 3.4} ${cx + s * esp} ${olhoY + 4} Q ${cx + s * esp - 5} ${olhoY + 3.4} ${cx + s * esp - 4.8} ${olhoY - 3} Z`} fill={`url(#${gid})`} stroke="#d8b45a" strokeWidth={0.6} />)}
+        <path d={`M ${cx - esp + 4.6} ${olhoY - 2.6} L ${cx + esp - 4.6} ${olhoY - 2.6} M ${cx - esp + 4.8} ${olhoY - 0.8} Q ${cx} ${olhoY - 2} ${cx + esp - 4.8} ${olhoY - 0.8}`} fill="none" stroke="#d8b45a" strokeWidth={0.6} />
+        {lados.map(s => <circle key={`p${s}`} cx={cx + s * (esp + 4.8)} cy={olhoY - 3} r={0.7} fill="#f2dc8a" />)}
+      </g>
+    );
+  }
   if (m === 'oculos_redondo') return (
     <g data-oculos="redondo" fill="none" stroke="#2a2522" strokeWidth={1.1} opacity={0.95}>
       <circle cx={cx - esp} cy={olhoY} r={4.4} /><circle cx={cx + esp} cy={olhoY} r={4.4} />
@@ -530,6 +542,18 @@ function Chapeu({ tipo, modelo, cx, cy, w, hh, semente }: { tipo: 'bone' | 'chap
         {[-6, -2, 2, 6].map(k => <path key={k} d={`M ${cx + k * 2.4} ${topo - 5} L ${cx + k * 2.6} ${topo + hh * 0.12}`} stroke={e} strokeWidth={0.5} opacity={0.7} />)}
         {[-1, 1].map(s => <path key={s} d={`M ${cx + s * (w / 2 + 4)} ${topo + hh * 0.15} L ${cx + s * (w / 2 + 13)} ${topo + hh * 0.14}`} stroke={e} strokeWidth={0.5} opacity={0.7} />)}
         <path d={`M ${cx - w / 2 + 2.5} ${topo + hh * 0.06} L ${cx + w / 2 - 2.5} ${topo + hh * 0.06}`} stroke="#7b2d3a" strokeWidth={2.2} />
+      </g>
+    );
+  }
+  // 12.7: o Panamá superfino — palha clara e lisa (a trama é tão fina que quase não se vê), copa com vinco, fita preta.
+  if (modelo === 'chapeu_panama') {
+    const c = '#efe3c2', e = '#c9b47e';
+    return (
+      <g data-chapeu="panama">
+        <ellipse cx={cx} cy={topo + hh * 0.14} rx={w / 2 + 10} ry={3.2} fill={c} stroke={e} strokeWidth={0.5} />
+        <path d={`M ${cx - w / 2 + 3} ${topo + hh * 0.14} C ${cx - w / 2 + 2} ${topo - 9} ${cx + w / 2 - 2} ${topo - 9} ${cx + w / 2 - 3} ${topo + hh * 0.14} Z`} fill={c} stroke={e} strokeWidth={0.5} />
+        <path d={`M ${cx - 5} ${topo - 6} Q ${cx} ${topo - 3} ${cx + 5} ${topo - 6}`} fill="none" stroke={e} strokeWidth={0.6} />
+        <path d={`M ${cx - w / 2 + 3} ${topo + hh * 0.07} L ${cx + w / 2 - 3} ${topo + hh * 0.07}`} stroke="#1b1b1d" strokeWidth={2} />
       </g>
     );
   }

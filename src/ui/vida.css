@@ -1100,6 +1100,15 @@ button.agora-sinal:hover { color: var(--text-primary); }
 .vestir__atual { font-weight: 600; color: var(--text-primary); }
 .vestir__trocar { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: var(--space-1); }
 .vestir__trocar:empty { display: none; }
+/* 12.7: o guarda-roupa em cartões — a miniatura da peça, a parte do corpo, o nome e a marca, trocar e tirar. */
+.vestir--cartoes { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: var(--space-2); }
+.vestir--cartoes .vestir__cartao { grid-template-columns: 64px minmax(0, 1fr); border: 1px solid var(--rule); border-radius: var(--radius-md); padding: var(--space-2); }
+.vestir__miniatura { width: 64px; min-height: 64px; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-sm); background: var(--bg-inset); overflow: hidden; }
+.vestir__vazio { color: var(--text-faint); }
+.vestir__info { display: flex; flex-direction: column; min-width: 0; gap: 2px; overflow-wrap: anywhere; }
+.vestir__marca { margin: 0; }
+.vestir__trocar .campo { flex: 1 1 100%; }
+.vestir__trocar select { width: 100%; }
 .aparencia__escolhas { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: var(--space-3); align-items: end; }
 .aparencia__escolhas .grupo-acoes, .aparencia__escolhas .nota, .aparencia__escolhas .marcar { grid-column: 1 / -1; }
 .aparencia__itens { margin-top: var(--space-4); }

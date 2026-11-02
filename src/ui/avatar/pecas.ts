@@ -113,6 +113,27 @@ export const PECAS: Record<string, Peca | Conjunto> = {
   corrente_grossa: { parte: 'pescoco', cor: '#d8b45a', grossa: true },
   guias: { parte: 'pescoco', cor: '#f4f1ea', contas: ['#f4f1ea', '#c8102e', '#1d4fa3', '#f2c200'] },
 
+  // ------------------------------------------------------------ 12.7 · esporte, grife, alta-costura e alta joalheria
+  top_esportivo: { parte: 'cima', forma: 'regata', cor: ['#1b1b1d', '#5a4a6b', '#2b5d8a', '#c84b31'], manga: 'sem', gola: 'redonda', folga: 0.94 },
+  short_corrida: { parte: 'baixo', forma: 'short', corte: 'curta', cor: ['#1b1b1d', '#2b5d8a', '#3a3f45'], listra: '#e8f04a' },
+  camisa_seda_grife: { parte: 'cima', forma: 'camisa', cor: ['#f3e7dc', '#14213d'], cor2: '#c9a14a', estampa: 'floral', manga: 'longa', gola: 'colarinho', botoes: true, folga: 1.04 },
+  moletom_grife: { parte: 'cima', forma: 'moletom', cor: ['#111214', '#f4f2ee', '#6b6a4e'], cor2: '#c9a14a', estampa: 'logo', manga: 'longa', gola: 'capuz', folga: 1.12, bolso: true },
+  calca_alfaiataria_grife: { parte: 'baixo', forma: 'calca', corte: 'reta', cor: ['#1d1f24', '#3a3036', '#c2b7a3'], vinco: true, costura: '#c9a14a' },
+  saia_couro_grife: { parte: 'baixo', forma: 'saia', corte: 'lapis', cor: ['#151313', '#4a1e24'], costura: '#c9a14a' },
+  vestido_grife: { parte: 'inteira', forma: 'vestido', comprimento: 'longo', cor: ['#7b1e2b', '#0f1a2e', '#f2ece2'], manga: 'sem', gola: 'canoa', cinto: '#d8b45a' },
+  vestido_alta_costura: { parte: 'inteira', forma: 'vestido', comprimento: 'longo', cor: ['#e9dcc4', '#1a1630', '#5a1630'], cor2: '#e8d48a', estampa: 'floral', manga: 'sem', gola: 'v', cinto: '#e8d48a' },
+  terno_vicunha: { parte: 'inteira', forma: 'terno', comprimento: 'calca', cor: ['#8a6e4e', '#3a3530', '#1c2230'], cor2: '#f6f1e7', manga: 'longa', gola: 'colarinho' },
+  blazer_grife: { parte: 'casaco', forma: 'blazer', comprimento: 'quadril', cor: ['#14213d', '#f2ece2', '#1b1b1d'], cor2: '#c9a14a', lapela: true },
+  jaqueta_couro_grife: { parte: 'casaco', forma: 'jaqueta', comprimento: 'cintura', cor: ['#5a3a24', '#151313'], cor2: '#c9a14a', ziper: true, lapela: true },
+  casaco_cashmere_bordado: { parte: 'casaco', forma: 'sobretudo', comprimento: 'joelho', cor: ['#2a1f3a', '#efe6d6', '#1f2b26'], cor2: '#d8b45a', lapela: true, gola: 'pelo' },
+  sapato_bespoke: { parte: 'pes', forma: 'sapato', cor: ['#5a2f1c', '#2a1a14'], sola: '#141010', detalhe: '#c9a14a' },
+  salto_grife: { parte: 'pes', forma: 'salto', cor: ['#1b1b1d', '#c9a46a', '#f2ece2'], sola: '#c8102e' },
+  tenis_colab_raro: { parte: 'pes', forma: 'tenis_cano', cor: '#f2ece2', sola: '#e0c36a', detalhe: '#3a6fd1' },
+  relogio_ouro: { parte: 'pulso', forma: 'analogico', pulseira: '#d8b45a', caixa: '#e4c56a', mostrador: '#f4ecd8' },
+  relogio_complicacao: { parte: 'pulso', forma: 'analogico', pulseira: '#2a1a14', caixa: '#e5e4e2', mostrador: '#0f1a30' },
+  colar_diamantes: { parte: 'pescoco', cor: '#e5e4e2', grossa: true, pingente: '#dff3ff' },
+  anel_diamante: { parte: 'anel', cor: '#e5e4e2', pedra: '#dff3ff' },
+
   // ------------------------------------------------------------ os conjuntos de antes (cima + baixo)
   roupa_basica_boa: { cima: { parte: 'cima', forma: 'camiseta', cor: NEUTRAS, manga: 'curta', gola: 'redonda' }, baixo: { parte: 'baixo', forma: 'calca', corte: 'reta', cor: JEANS, bolsos: true, costura: '#c99a4a' }, pes: { parte: 'pes', forma: 'tenis', cor: '#f4f4f2', sola: '#f4f4f2' } },
   roupa_esportiva: { cima: { parte: 'cima', forma: 'agasalho', cor: ['#2f6f8f', '#b0493c', '#3f7a52'], cor2: '#f2efe8', manga: 'longa', gola: 'alta' }, baixo: { parte: 'baixo', forma: 'calca', corte: 'reta', cor: ['#2b2f36', '#2f6f8f'], listra: '#f2efe8' }, pes: { parte: 'pes', forma: 'tenis_corrida', cor: '#3a3f45', sola: '#f4f4f2', detalhe: '#e8f04a' } },

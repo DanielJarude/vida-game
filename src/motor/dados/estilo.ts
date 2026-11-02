@@ -87,6 +87,12 @@ export interface ItemEstilo {
   ocasioes?: Ocasiao[];
   /** Peça de luxo: status social em certos contextos — nunca fama. */
   luxo?: boolean;
+  /** 12.7 — o segmento (1 básico · 2 intermediário · 3 premium · 4 luxo · 5 alto luxo · 6 exclusivo); ausente: pelo preço. */
+  nivel?: number;
+  /** 12.7 — a coleção a que a peça pertence (a de alta-costura, a cápsula de inverno). */
+  colecao?: string;
+  /** 12.7 — a tiragem: peça única, série numerada, sob medida. */
+  edicao?: string;
   descricao: string;
   /** Óculos de grau pedem receita (o corpo precisa ter pedido). */
   receita?: boolean;
@@ -237,8 +243,59 @@ export const ITENS_ESTILO: readonly ItemEstilo[] = [
   { id: 'pulseira_ouro', nome: 'Pulseira de ouro', categoria: 'acessorio', lugar: 'pulseira', preco: 4200, luxo: true, estilos: ['luxuoso', 'hiphop', 'elegante'], ocasioes: ['evento', 'festa', 'encontro'], descricao: 'Ouro dezoito, elo grumet.' },
   { id: 'pulseira_contas', nome: 'Pulseira de contas', categoria: 'acessorio', lugar: 'pulseira', preco: 45, estilos: ['afro', 'alternativo', 'regional'], ocasioes: ['dia', 'festa'], descricao: 'Contas coloridas num fio elástico.' },
   { id: 'anel_prata', nome: 'Anel de prata', categoria: 'acessorio', lugar: 'anel', preco: 180, estilos: ['rock', 'minimalista', 'alternativo'], ocasioes: ['dia', 'festa', 'trabalho'], descricao: 'Aro liso, largo.' },
-  { id: 'anel_ouro', nome: 'Anel de ouro com pedra', categoria: 'acessorio', lugar: 'anel', preco: 3600, luxo: true, estilos: ['luxuoso', 'elegante'], ocasioes: ['evento', 'encontro'], descricao: 'Ouro e uma pedra vermelha cravada.' }
+  { id: 'anel_ouro', nome: 'Anel de ouro com pedra', categoria: 'acessorio', lugar: 'anel', preco: 3600, luxo: true, estilos: ['luxuoso', 'elegante'], ocasioes: ['evento', 'encontro'], descricao: 'Ouro e uma pedra vermelha cravada.' },
+
+  // 12.7 — o esporte que faltava e a moda que acompanha quem tem muito dinheiro: alta-costura, sob medida, edições
+  // numeradas e joalheria de verdade. Os preços de referência já são de luxo; a grife soma menos sobre eles.
+  { id: 'top_esportivo', nome: 'Top esportivo', categoria: 'roupa', lugar: 'tronco', preco: 120, visual: { roupa: 'esportiva' }, estilos: ['esportivo'], ocasioes: ['esporte'], descricao: 'Sustentação de treino, tecido que seca no corpo.' },
+  { id: 'short_corrida', nome: 'Short de corrida', categoria: 'roupa', lugar: 'pernas', preco: 110, estilos: ['esportivo'], ocasioes: ['esporte'], descricao: 'Leve, com bermuda de compressão por dentro.' },
+  { id: 'camisa_seda_grife', nome: 'Camisa de seda de grife', categoria: 'roupa', lugar: 'tronco', preco: 7800, luxo: true, nivel: 4, colecao: 'Coleção de verão', visual: { roupa: 'elegante' }, estilos: ['luxuoso', 'elegante'], ocasioes: ['evento', 'encontro', 'festa'], descricao: 'Seda pura estampada à mão, botões de madrepérola.' },
+  { id: 'moletom_grife', nome: 'Moletom de grife', categoria: 'roupa', lugar: 'tronco', preco: 4200, luxo: true, nivel: 4, colecao: 'Cápsula streetwear', visual: { roupa: 'esportiva' }, estilos: ['streetwear', 'luxuoso', 'hiphop'], ocasioes: ['dia', 'festa'], descricao: 'Algodão japonês, logo bordado no peito, fila na porta da loja.' },
+  { id: 'calca_alfaiataria_grife', nome: 'Calça de alfaiataria de grife', categoria: 'roupa', lugar: 'pernas', preco: 6900, luxo: true, nivel: 4, estilos: ['luxuoso', 'social', 'elegante'], ocasioes: ['trabalho', 'evento', 'encontro'], descricao: 'Lã fria italiana, barra feita na hora.' },
+  { id: 'saia_couro_grife', nome: 'Saia de couro de grife', categoria: 'roupa', lugar: 'pernas', preco: 11000, luxo: true, nivel: 4, colecao: 'Coleção de inverno', estilos: ['luxuoso', 'rock', 'elegante'], ocasioes: ['festa', 'encontro', 'evento'], descricao: 'Couro de cordeiro, corte lápis, forro de seda.' },
+  { id: 'vestido_grife', nome: 'Vestido de passarela', categoria: 'roupa', lugar: 'corpo', preco: 26000, luxo: true, nivel: 5, colecao: 'Desfile de outono', visual: { roupa: 'elegante' }, estilos: ['luxuoso', 'elegante'], ocasioes: ['evento', 'festa', 'encontro'], descricao: 'O vestido que abriu o desfile: crepe de seda, costas abertas.' },
+  { id: 'vestido_alta_costura', nome: 'Vestido de alta-costura', categoria: 'roupa', lugar: 'corpo', preco: 180000, luxo: true, nivel: 6, colecao: 'Alta-costura', edicao: 'peça única, sob medida (três provas no ateliê)', visual: { roupa: 'elegante' }, estilos: ['luxuoso', 'elegante'], ocasioes: ['evento', 'festa'], descricao: 'Bordado à mão por seiscentas horas, cristais costurados um a um.' },
+  { id: 'terno_vicunha', nome: 'Terno de lã de vicunha', categoria: 'roupa', lugar: 'corpo', preco: 95000, luxo: true, nivel: 5, edicao: 'sob medida, numa alfaiataria de Milão', visual: { roupa: 'social' }, estilos: ['luxuoso', 'social', 'elegante'], ocasioes: ['trabalho', 'evento', 'encontro'], descricao: 'A lã mais rara do mundo, cortada para o seu corpo.' },
+  { id: 'blazer_grife', nome: 'Blazer de grife', categoria: 'roupa', lugar: 'casaco', preco: 14500, luxo: true, nivel: 4, estilos: ['luxuoso', 'elegante', 'social'], ocasioes: ['trabalho', 'evento', 'encontro'], descricao: 'Ombro estruturado, forro de seda estampado.' },
+  { id: 'jaqueta_couro_grife', nome: 'Jaqueta de couro de grife', categoria: 'roupa', lugar: 'casaco', preco: 32000, luxo: true, nivel: 5, colecao: 'Coleção de inverno', estilos: ['luxuoso', 'rock'], ocasioes: ['dia', 'festa', 'encontro'], descricao: 'Couro de bezerro envelhecido à mão, ferragens de latão.' },
+  { id: 'casaco_cashmere_bordado', nome: 'Casaco de cashmere bordado', categoria: 'roupa', lugar: 'casaco', preco: 48000, luxo: true, nivel: 5, colecao: 'Alta-costura', estilos: ['luxuoso', 'elegante'], ocasioes: ['evento', 'encontro'], descricao: 'Cashmere duplo, bordado de fio de ouro na gola.' },
+  { id: 'sapato_bespoke', nome: 'Sapato bespoke', categoria: 'roupa', lugar: 'pes', preco: 22000, luxo: true, nivel: 5, edicao: 'forma feita do seu pé', estilos: ['luxuoso', 'social', 'elegante'], ocasioes: ['trabalho', 'evento'], descricao: 'Couro de bezerro patinado à mão, sola costurada.' },
+  { id: 'salto_grife', nome: 'Sapato de salto de grife', categoria: 'roupa', lugar: 'pes', preco: 7400, luxo: true, nivel: 4, estilos: ['luxuoso', 'elegante'], ocasioes: ['evento', 'festa', 'encontro'], descricao: 'A sola vermelha que se reconhece de longe.' },
+  { id: 'tenis_colab_raro', nome: 'Tênis de colaboração, série numerada', categoria: 'roupa', lugar: 'pes', preco: 85000, luxo: true, nivel: 6, colecao: 'Colaboração de artista', edicao: 'par numerado de uma série de 500', estilos: ['streetwear', 'hiphop', 'luxuoso'], ocasioes: ['dia', 'festa'], descricao: 'Pintado à mão pelo artista; o certificado vem na caixa.' },
+  { id: 'oculos_ouro', nome: 'Óculos de titânio e ouro', categoria: 'oculos', preco: 28000, luxo: true, nivel: 5, edicao: 'armação feita à mão no Japão', visual: { oculos: 'sol' }, estilos: ['luxuoso', 'elegante'], ocasioes: ['dia', 'evento', 'encontro'], descricao: 'Armação finíssima banhada a ouro, lente degradê.' },
+  { id: 'chapeu_panama', nome: 'Panamá Montecristi superfino', categoria: 'chapeu', preco: 18000, luxo: true, nivel: 4, edicao: 'trançado à mão em quatro meses', visual: { chapeu: 'chapeu' }, estilos: ['luxuoso', 'elegante', 'tradicional'], ocasioes: ['dia', 'evento'], descricao: 'Palha toquilla tão fina que dobra sem marcar.' },
+  { id: 'relogio_ouro', nome: 'Relógio de ouro', categoria: 'acessorio', lugar: 'pulso', preco: 120000, luxo: true, nivel: 5, estilos: ['luxuoso', 'elegante'], ocasioes: ['evento', 'trabalho', 'encontro'], descricao: 'Caixa e pulseira de ouro maciço, calendário perpétuo.' },
+  { id: 'relogio_complicacao', nome: 'Relógio de alta relojoaria (turbilhão)', categoria: 'acessorio', lugar: 'pulso', preco: 480000, luxo: true, nivel: 6, edicao: 'série limitada a 50 peças', estilos: ['luxuoso'], ocasioes: ['evento', 'encontro'], descricao: 'Turbilhão visível no mostrador, montado por um só relojoeiro.' },
+  { id: 'colar_diamantes', nome: 'Colar de diamantes', categoria: 'acessorio', lugar: 'joia', preco: 350000, luxo: true, nivel: 6, colecao: 'Alta joalheria', edicao: 'peça única, com certificado', visual: { joia: 'corrente_ouro' }, estilos: ['luxuoso', 'elegante'], ocasioes: ['evento', 'festa'], descricao: 'Platina e quarenta diamantes lapidados à mão.' },
+  { id: 'brincos_diamante', nome: 'Brincos de diamante', categoria: 'acessorio', lugar: 'orelha', preco: 85000, luxo: true, nivel: 5, colecao: 'Alta joalheria', visual: { joia: 'brincos' }, estilos: ['luxuoso', 'elegante'], ocasioes: ['evento', 'festa', 'encontro'], descricao: 'Dois pontos de luz de um quilate cada.' },
+  { id: 'anel_diamante', nome: 'Anel solitário de diamante', categoria: 'acessorio', lugar: 'anel', preco: 140000, luxo: true, nivel: 5, colecao: 'Alta joalheria', estilos: ['luxuoso', 'elegante'], ocasioes: ['evento', 'encontro'], descricao: 'Platina e um diamante de dois quilates.' }
 ];
+
+/**
+ * 12.7 — as categorias principais da loja de roupas (uma por peça, sem subcategoria): o que se procura quando se
+ * entra numa loja. A ordem é a da vitrine.
+ */
+export const TIPOS_DE_PECA = [
+  { id: 'casacos', nome: 'Casacos e jaquetas' }, { id: 'blusas', nome: 'Blusas e camisetas' }, { id: 'vestidos', nome: 'Vestidos e macacões' },
+  { id: 'calcas', nome: 'Calças' }, { id: 'saias', nome: 'Saias' }, { id: 'shorts', nome: 'Shorts e bermudas' }, { id: 'sociais', nome: 'Roupas sociais' },
+  { id: 'esportivas', nome: 'Roupas esportivas' }, { id: 'calcados', nome: 'Calçados' }, { id: 'acessorios', nome: 'Acessórios' }
+] as const;
+export type TipoDePeca = (typeof TIPOS_DE_PECA)[number]['id'];
+
+export function tipoDePeca(it: ItemEstilo): TipoDePeca {
+  if (it.categoria !== 'roupa') return 'acessorios';
+  if (it.lugar === 'pes') return 'calcados';
+  if (it.lugar === 'casaco') return 'casacos';
+  const e = it.estilos ?? [];
+  if (it.id === 'terno' || it.id === 'terno_vicunha' || it.id === 'roupa_social' || it.id === 'roupa_elegante' || it.id === 'camisa_social' || it.id === 'calca_alfaiataria' || it.id === 'calca_alfaiataria_grife') return 'sociais';
+  if (it.id === 'roupa_esportiva' || it.id === 'conjunto_baile' || (e.includes('esportivo') && !e.includes('casual') && !e.includes('tradicional'))) return 'esportivas';
+  if (it.lugar === 'corpo') return 'vestidos';
+  if (it.lugar === 'pernas') return it.id.startsWith('saia') ? 'saias' : it.id.startsWith('short') || it.id.startsWith('bermuda') ? 'shorts' : 'calcas';
+  return 'blusas';
+}
+
+/** 12.7 — o segmento de uma peça (o declarado; senão, pelo preço de referência e pelo luxo). */
+export const nivelDoItem = (it: ItemEstilo): number => it.nivel ?? (it.luxo ? (it.preco >= 20000 ? 5 : 4) : it.preco >= 600 ? 3 : it.preco >= 200 ? 2 : 1);
 
 /**
  * REWORK 12.4 — a roupa cabe na ocasião? `adequada` (a peça é de lá), `destoa` (a peça grita o contrário: o chinelo no

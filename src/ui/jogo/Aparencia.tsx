@@ -9,6 +9,8 @@ import { sobDemanda } from '../util/sobDemanda';
 /** REWORK 12.4: o guarda-roupa por estilo e ocasião (pacote sob demanda). */
 const GuardaRoupa = sobDemanda(() => import('./Personalizar').then(m => m.GuardaRoupa));
 /** HOTFIX 11.5.1: o estúdio de tatuagem (pacote sob demanda). */
+/** 12.7: a miniatura de cada peça (a figura recortada) vem sob demanda, como a figura inteira. */
+const Miniatura = sobDemanda(() => import('../avatar/MiniaturaDaPeca').then(m => m.MiniaturaDaPeca));
 const EstudioDeTatuagem = sobDemanda(() => import('./Tatuagens').then(m => m.EstudioDeTatuagem));
 import { useState } from 'react';
 import type { Vida, Visual } from '../../motor/tipos';
@@ -22,6 +24,7 @@ import { FiguraSobDemanda as Figura } from '../avatar/figuraSobDemanda';
 import { NOME_DO_CORPO, tipoDeCorpo } from '../../motor/sistemas/silhueta';
 import { lugaresDoItem } from '../../motor/dados/estilo';
 import { BotaoAcao } from '../comum';
+import { nomeDaMarca } from '../../motor/sistemas/lojas';
 import { composicoesNaFigura, tatuagensNaFigura } from '../../motor/sistemas/tatuagens';
 import type { Aba } from '../navegacao';
 
@@ -131,22 +134,39 @@ function OQueVeste({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
   return (
     <div className="aparencia__itens">
       <h3 className="subtitulo">O que você está usando</h3>
-      <ul className="vestir">
-        {partes.map(p => {
-          const atual = p.itens.find(x => x.usando);
-          return (
-            <li key={p.id} className="vestir__parte" data-parte={p.id}>
-              <span className="vestir__nome">{p.nome}</span>
-              <span className="vestir__atual">{atual ? itemEstilo(atual.itemId)!.nome : <span className="nota">nada</span>}</span>
-              <span className="vestir__trocar">
-                {p.itens.filter(x => !x.usando).map(x => <BotaoAcao key={x.id} vida={vida} acao={{ tipo: 'usar_item', itemId: x.itemId, id: x.id, usar: true }} agir={agir} variante="discreto">{itemEstilo(x.itemId)!.nome}</BotaoAcao>)}
-                {atual && <BotaoAcao vida={vida} acao={{ tipo: 'usar_item', itemId: atual.itemId, id: atual.id, usar: false }} agir={agir} variante="discreto">Tirar</BotaoAcao>}
-              </span>
-            </li>
-          );
-        })}
+      {/* 12.7: um cartão por parte do corpo — a peça (o desenho dela), a marca, trocar por outra sua ou tirar. */}
+      <ul className="vestir vestir--cartoes">
+        {partes.map(p => <ParteDoCorpo key={p.id} vida={vida} agir={agir} parte={p} />)}
       </ul>
       <p className="nota">A peça que sai fica guardada: é sua, dá para voltar a usar quando quiser.</p>
     </div>
+  );
+}
+
+function ParteDoCorpo({ vida, agir, parte }: { vida: Vida; agir: (a: Acao) => boolean; parte: { id: string; nome: string; itens: ReturnType<typeof itensDaPessoa> } }) {
+  const atual = parte.itens.find(x => x.usando);
+  const outras = parte.itens.filter(x => !x.usando);
+  const [escolhida, setEscolhida] = useState(outras[0]?.id ?? '');
+  const alvo = outras.find(x => x.id === escolhida) ?? outras[0];
+  const it = atual ? itemEstilo(atual.itemId)! : undefined;
+  const inteira = !!it && it.lugar === 'corpo' && parte.id === 'pernas';
+  return (
+    <li className="vestir__parte vestir__cartao" data-parte={parte.id}>
+      <span className="vestir__miniatura" aria-hidden={!atual}>{atual ? <Miniatura vida={vida} itemId={atual.itemId} id={atual.id} largura={64} /> : <span className="vestir__vazio">—</span>}</span>
+      <span className="vestir__info">
+        <span className="vestir__nome">{parte.nome}</span>
+        <span className="vestir__atual">{it ? it.nome : <span className="nota">nada</span>}{inteira ? <span className="nota"> (a peça inteira)</span> : null}</span>
+        {atual?.marca && <span className="nota vestir__marca">{nomeDaMarca(atual.marca) ?? atual.marca}</span>}
+      </span>
+      <span className="vestir__trocar">
+        {outras.length > 1 && (
+          <label className="campo campo--compacto"><span className="campo__rotulo">Trocar por</span>
+            <select value={alvo?.id ?? ''} onChange={e => setEscolhida(e.target.value)}>{outras.map(x => <option key={x.id} value={x.id}>{itemEstilo(x.itemId)!.nome}{x.marca ? ` (${nomeDaMarca(x.marca) ?? x.marca})` : ''}</option>)}</select>
+          </label>
+        )}
+        {alvo && <BotaoAcao vida={vida} acao={{ tipo: 'usar_item', itemId: alvo.itemId, id: alvo.id, usar: true }} agir={agir} variante="discreto">{outras.length > 1 ? 'Vestir' : `Vestir ${itemEstilo(alvo.itemId)!.nome.toLowerCase()}`}</BotaoAcao>}
+        {atual && <BotaoAcao vida={vida} acao={{ tipo: 'usar_item', itemId: atual.itemId, id: atual.id, usar: false }} agir={agir} variante="discreto">Tirar</BotaoAcao>}
+      </span>
+    </li>
   );
 }

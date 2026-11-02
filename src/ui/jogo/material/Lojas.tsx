@@ -9,7 +9,9 @@ import type { Vida } from '../../../motor/tipos';
 import type { Acao } from '../../../motor/acoes';
 import { idade } from '../../../motor/nucleo';
 import { coisa } from '../../../motor/dados/coisas';
-import { itemEstilo } from '../../../motor/dados/estilo';
+import { itemEstilo, lugaresDoItem, nivelDoItem, TIPOS_DE_PECA, tipoDePeca } from '../../../motor/dados/estilo';
+import { segmentoDoNivel } from '../../../motor/dados/lar';
+import { MiniaturaDaPeca, visualComPecaDoRosto } from '../../avatar/MiniaturaDaPeca';
 import { estabelecimento, marca as marcaPorId, NOME_CATEGORIA, NOME_FAIXA, type CategoriaDeProduto, type Faixa } from '../../../motor/dados/lojas';
 import { categoriaDoProduto, FAIXAS_DE_PRECO, nomeDoProduto, normalizarBusca, ofertasDaLoja, type Oferta, type OrdemDeCompras } from '../../../motor/sistemas/lojas';
 import { memoriaDasLojas, type EstadoDaLoja } from '../memoriaDeCompras';
@@ -23,6 +25,7 @@ import { dinheiroCurto } from '../../leituraMaterial';
 import { DesenhoObjeto } from './Objetos';
 import { Figura } from '../../avatar/Figura';
 import { tatuagensNaFigura } from '../../../motor/sistemas/tatuagens';
+import '../../catalogo.css';
 
 const POR_PAGINA = 18;
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -35,7 +38,8 @@ export function LojaDaVida({ vida, agir, lojaId }: { vida: Vida; agir: (a: Acao)
   // loja — fechar e abrir de novo, ou comprar, deixa tudo onde estava.
   const [m, setM] = useState<EstadoDaLoja>(() => memoriaDasLojas.get(lojaId) ?? { texto: '', cat: '', faixa: '', marca: '', preco: '', ordem: 'relevancia', quantos: POR_PAGINA });
   const mudar = (x: Partial<EstadoDaLoja>) => setM(o => { const n = { ...o, ...x }; memoriaDasLojas.set(lojaId, n); return n; });
-  const cat = m.cat as CategoriaDeProduto | '', faixa = m.faixa, quantos = m.quantos;
+  const cat = m.cat as CategoriaDeProduto | '', faixa = m.faixa, quantos = m.quantos, tipo = m.tipo ?? '';
+  const [provando, setProvando] = useState<string | null>(null);
   const setQuantos = (f: (q: number) => number) => mudar({ quantos: f(m.quantos) });
   // As ofertas dependem da cidade e do mercado (não do saldo): calculadas uma vez por cidade — a compra não as recria.
   const linhas = useMemo<Linha[]>(() => {
@@ -56,8 +60,11 @@ export function LojaDaVida({ vida, agir, lojaId }: { vida: Vida; agir: (a: Acao)
   const preco = FAIXAS_DE_PRECO.find(f => f.id === m.preco);
   const q = normalizarBusca(m.texto);
   const passa = (o: Oferta) => (!faixa || String(o.marca ? marcaPorId(o.marca)!.faixa : 1) === faixa) && (!m.marca || o.marca === m.marca) && (preco?.min === undefined || o.preco >= preco.min) && (preco?.max === undefined || o.preco <= preco.max);
+  // 12.7: o tipo de peça (só nas lojas que vendem roupa): uma escolha, sem subcategoria.
+  const tipoDe = (l: Linha) => (l.produto.tipo === 'item' ? tipoDePeca(itemEstilo(l.produto.id)!) : undefined);
+  const tipos = TIPOS_DE_PECA.filter(t => linhas.some(l => tipoDe(l) === t.id));
   const visiveis = linhas
-    .filter(l => (!cat || l.categoria === cat) && l.ofertas.some(passa) && (!q || q.split(/\s+/).every(t => normalizarBusca(nomeDoProduto(l.produto)).includes(t) || l.ofertas.some(o => o.marca && normalizarBusca(marcaPorId(o.marca)!.nome).includes(t)))))
+    .filter(l => (!tipo || tipoDe(l) === tipo) && (!cat || l.categoria === cat) && l.ofertas.some(passa) && (!q || q.split(/\s+/).every(t => normalizarBusca(nomeDoProduto(l.produto)).includes(t) || l.ofertas.some(o => o.marca && normalizarBusca(marcaPorId(o.marca)!.nome).includes(t)))))
     .sort((a, b) => m.ordem === 'menor' ? Math.min(...a.ofertas.filter(passa).map(o => o.preco)) - Math.min(...b.ofertas.filter(passa).map(o => o.preco)) : m.ordem === 'maior' ? Math.max(...b.ofertas.filter(passa).map(o => o.preco)) - Math.max(...a.ofertas.filter(passa).map(o => o.preco)) : 0);
   const i = idade(vida);
   return (
@@ -72,7 +79,8 @@ export function LojaDaVida({ vida, agir, lojaId }: { vida: Vida; agir: (a: Acao)
         <span className="busca-compras__rotulo">Buscar nesta loja</span>
         <input type="search" value={m.texto} onChange={ev => mudar({ texto: ev.target.value, quantos: POR_PAGINA })} placeholder="Produto ou marca" autoComplete="off" />
       </label>
-      {cats.length > 1 && <Escolha rotulo="Seção" valor={cat} aoMudar={x => { mudar({ cat: x, marca: '', quantos: POR_PAGINA }); }} opcoes={[{ id: '' as const, rotulo: 'Tudo' }, ...cats.map(c => ({ id: c, rotulo: NOME_CATEGORIA[c] }))]} />}
+      {tipos.length > 1 && <Escolha rotulo="Tipo de peça" valor={tipo} aoMudar={x => { mudar({ tipo: x, cat: '', marca: '', quantos: POR_PAGINA }); }} opcoes={[{ id: '', rotulo: 'Tudo' }, ...tipos.map(t => ({ id: t.id as string, rotulo: t.nome }))]} />}
+      {cats.length > 1 && !tipo && <Escolha rotulo="Seção" valor={cat} aoMudar={x => { mudar({ cat: x, marca: '', quantos: POR_PAGINA }); }} opcoes={[{ id: '' as const, rotulo: 'Tudo' }, ...cats.map(c => ({ id: c, rotulo: NOME_CATEGORIA[c] }))]} />}
       {faixas.length > 1 && <Escolha rotulo="Faixa da marca" valor={faixa} aoMudar={x => { mudar({ faixa: x, quantos: POR_PAGINA }); }} opcoes={[{ id: '', rotulo: 'Todas' }, ...faixas.map(f => ({ id: String(f), rotulo: cap(NOME_FAIXA[f]) }))]} />}
       <div className="busca-compras__filtros">
         {marcas.length > 1 && (
@@ -88,8 +96,9 @@ export function LojaDaVida({ vida, agir, lojaId }: { vida: Vida; agir: (a: Acao)
         </label>
       </div>
       <p className="nota">{visiveis.length} {visiveis.length === 1 ? 'produto' : 'produtos'}{m.texto || m.marca || m.preco || cat || faixa ? ' com esses filtros' : ''}.</p>
-      <ul className="ofertas">
-        {visiveis.slice(0, quantos).map(l => <ProdutoNaLoja key={l.chave} vida={vida} agir={agir} linha={l} lojaId={lojaId} faixa={faixa} marca={m.marca} preco={preco} crianca={i < 12} />)}
+      {provando && <Provador vida={vida} itemId={provando} aoFechar={() => setProvando(null)} />}
+      <ul className="catalogo-loja">
+        {visiveis.slice(0, quantos).map(l => <ProdutoNaLoja key={l.chave} vida={vida} agir={agir} linha={l} lojaId={lojaId} faixa={faixa} marca={m.marca} preco={preco} crianca={i < 12} provando={provando === l.produto.id} provar={() => setProvando(p => (p === l.produto.id ? null : l.produto.id))} />)}
       </ul>
       {visiveis.length > quantos && <button type="button" className="botao botao--discreto" onClick={() => setQuantos(q => q + POR_PAGINA)}>Ver mais ({visiveis.length - quantos})</button>}
       {!visiveis.length && <p className="nota">Nada nesta seção.</p>}
@@ -97,7 +106,29 @@ export function LojaDaVida({ vida, agir, lojaId }: { vida: Vida; agir: (a: Acao)
   );
 }
 
-function ProdutoNaLoja({ vida, agir, linha, lojaId, faixa, marca, preco, crianca }: { vida: Vida; agir: (a: Acao) => boolean; linha: Linha; lojaId: string; faixa: string; marca?: string; preco?: { min?: number; max?: number }; crianca: boolean }) {
+/**
+ * 12.7 — o provador: você, com o que está usando, e a peça escolhida no lugar da que ocupa o mesmo lugar do corpo. Nada é
+ * comprado nem trocado: é só ver.
+ */
+function Provador({ vida, itemId, aoFechar }: { vida: Vida; itemId: string; aoFechar: () => void }) {
+  const it = itemEstilo(itemId)!;
+  const la = lugaresDoItem(it);
+  const usando = (vida.eu.estilo?.itens ?? []).filter(x => x.usando && !lugaresDoItem(itemEstilo(x.itemId)!).some(l => la.includes(l)));
+  const rosto = it.categoria === 'oculos' || it.categoria === 'chapeu' || it.lugar === 'orelha';
+  const visual = rosto ? { ...visualComPecaDoRosto(vida.eu.visual, itemId), ...(it.categoria !== 'oculos' && vida.eu.visual.oculos ? { oculos: vida.eu.visual.oculos, modeloOculos: vida.eu.visual.modeloOculos } : {}), ...(it.categoria !== 'chapeu' && vida.eu.visual.chapeu ? { chapeu: vida.eu.visual.chapeu, modeloChapeu: vida.eu.visual.modeloChapeu } : {}) } : vida.eu.visual;
+  return (
+    <section className="provador" aria-label={`Provador: ${it.nome}`}>
+      <Figura visual={visual} genero={vida.eu.genero} idade={idade(vida)} semente={vida.eu.semente ?? 'eu'} corpo={tipoDeCorpo(vida)} pecas={[...usando.map(x => ({ itemId: x.itemId, id: x.id })), ...(rosto ? [] : [{ itemId, id: `${itemId}-provador` }])]} tatuagens={tatuagensNaFigura(vida)} largura={150} semFundo rotulo={`Você com ${it.nome.toLowerCase()}`} />
+      <div className="provador__texto">
+        <p className="provador__titulo">No provador: {it.nome.toLowerCase()}</p>
+        <p className="nota">Com o que você está usando. Nada foi comprado — e a peça que sairia do lugar continua sua.</p>
+        <button type="button" className="botao botao--discreto" onClick={aoFechar}>Sair do provador</button>
+      </div>
+    </section>
+  );
+}
+
+function ProdutoNaLoja({ vida, agir, linha, lojaId, faixa, marca, preco, crianca, provando, provar }: { vida: Vida; agir: (a: Acao) => boolean; linha: Linha; lojaId: string; faixa: string; marca?: string; preco?: { min?: number; max?: number }; crianca: boolean; provando: boolean; provar: () => void }) {
   const opcoes = linha.ofertas.filter(o => (!faixa || String(o.marca ? marcaPorId(o.marca)!.faixa : 1) === faixa) && (!marca || o.marca === marca) && (preco?.min === undefined || o.preco >= preco.min) && (preco?.max === undefined || o.preco <= preco.max));
   const [escolhida, setEscolhida] = useState(opcoes[0]?.marca ?? '');
   const o = opcoes.find(x => (x.marca ?? '') === escolhida) ?? opcoes[0];
@@ -112,32 +143,42 @@ function ProdutoNaLoja({ vida, agir, linha, lojaId, faixa, marca, preco, crianca
   const meuCoisa = p.tipo === 'coisa' ? vida.financas.coisas?.find(y => y.coisaId === p.id) : undefined;
   const marcaDoMeu = meu?.marca ?? meuCoisa?.marca;
   const acao: Acao = p.tipo === 'item' ? { tipo: 'comprar_item', itemId: p.id, loja: lojaId, ...(o.marca ? { marca: o.marca } : {}) } : { tipo: 'comprar_coisa', coisaId: p.id, loja: lojaId, ...(o.marca ? { marca: o.marca } : {}) };
-  const vestivel = !!it && (it.categoria === 'roupa' || it.categoria === 'acessorio');
+  const nivel = it ? nivelDoItem(it) : c?.nivel ?? (c && c.preco >= 20000 ? 4 : c && c.preco >= 5000 ? 3 : 2);
+  const segmento = segmentoDoNivel(nivel);
+  const colecao = it?.colecao;
+  const edicao = it?.edicao ?? c?.edicao;
+  const categoria = it ? TIPOS_DE_PECA.find(t => t.id === tipoDePeca(it))!.nome : NOME_CATEGORIA[linha.categoria];
   return (
-    <li className="oferta oferta--estilo oferta--objeto loja-vida__produto" data-produto={p.id}>
-      <span className="oferta__objeto">
-        {c && <DesenhoObjeto coisaId={c.id} cor={variantesDaCoisa(c.id)[0].cor} tamanho={64} rotulo={c.nome} />}
-        {vestivel && <Figura visual={vida.eu.visual} genero={vida.eu.genero} idade={idade(vida)} semente={vida.eu.semente ?? 'eu'} corpo={tipoDeCorpo(vida)} pecas={[{ itemId: p.id, id: `${p.id}-vitrine` }]} tatuagens={tatuagensNaFigura(vida)} largura={56} semFundo rotulo={`${nome} em você`} />}
+    <li className={`catalogo-loja__cartao${nivel >= 4 ? ' catalogo-loja__cartao--luxo' : ''}${nivel >= 6 ? ' catalogo-loja__cartao--exclusivo' : ''}`} data-produto={p.id} data-nivel={nivel}>
+      <span className="catalogo-loja__imagem">
+        {c && <DesenhoObjeto coisaId={c.id} cor={variantesDaCoisa(c.id)[0].cor} tamanho={96} rotulo={c.nome} />}
+        {it && <MiniaturaDaPeca vida={vida} itemId={p.id} largura={96} rotulo={`${nome}, como fica em você`} />}
       </span>
-      <span className="oferta__texto">
-        <strong>{nome}{it?.luxo ? <span className="etiqueta-luxo">luxo</span> : null}</strong>
-        <span>{descricao}</span>
-        {linha.ofertas.length > 1 && !tem && (
-          <label className="campo campo--compacto"><span className="campo__rotulo">Marca</span>
-            <select value={o.marca ?? ''} onChange={ev => setEscolhida(ev.target.value)}>
-              {opcoes.map(x => <option key={x.marca ?? '-'} value={x.marca ?? ''}>{x.marca ? marcaPorId(x.marca)!.nome : 'Sem marca'} — {dinheiroCurto(x.preco)} ({x.marca ? NOME_FAIXA[marcaPorId(x.marca)!.faixa] : 'popular'}{x.importado ? ', importado' : ''})</option>)}
-            </select>
-          </label>
-        )}
-        {linha.ofertas.length === 1 && o.marca && <span className="nota">{marcaPorId(o.marca)!.nome}{o.importado ? ' · importado' : ''}</span>}
+      <span className="catalogo-loja__selos">
+        <span className={`catalogo-loja__selo catalogo-loja__selo--nivel-${nivel}`}>{cap(segmento)}</span>
+        {colecao && <span className="catalogo-loja__selo">{colecao}</span>}
+        {edicao && <span className="catalogo-loja__selo catalogo-loja__selo--edicao" title={edicao}>{nivel >= 6 ? 'Exclusivo' : 'Edição especial'}</span>}
       </span>
-      <span className="oferta__preco">{dinheiroCurto(o.preco)}</span>
-      {tem ? (
-        <span className="loja-estilo__seu">
-          <span className="nota">É seu{marcaDoMeu ? ` (${marcaPorId(marcaDoMeu)?.nome ?? marcaDoMeu})` : ''}{meu ? (meu.usando ? ' · em uso' : ' · guardado') : ''}.</span>
-          {meu && <BotaoAcao vida={vida} acao={{ tipo: 'usar_item', itemId: p.id, id: meu.id, usar: !meu.usando }} agir={agir} variante="discreto">{meu.usando ? 'Guardar' : 'Usar'}</BotaoAcao>}
-        </span>
-      ) : <BotaoAcao vida={vida} acao={acao} agir={agir} variante="secundario" ocultarImpossivel={crianca}>Comprar</BotaoAcao>}
+      <strong className="catalogo-loja__nome">{nome}</strong>
+      <span className="catalogo-loja__categoria nota">{categoria}{o.marca ? ` · ${marcaPorId(o.marca)!.nome}` : ''}{o.importado ? ' · importado' : ''}</span>
+      <span className="catalogo-loja__descricao">{descricao}{edicao ? ` (${edicao}.)` : ''}</span>
+      {linha.ofertas.length > 1 && !tem && (
+        <label className="campo campo--compacto catalogo-loja__marca"><span className="campo__rotulo">Marca</span>
+          <select value={o.marca ?? ''} onChange={ev => setEscolhida(ev.target.value)}>
+            {opcoes.map(x => <option key={x.marca ?? '-'} value={x.marca ?? ''}>{x.marca ? marcaPorId(x.marca)!.nome : 'Sem marca'} — {dinheiroCurto(x.preco)} ({x.marca ? NOME_FAIXA[marcaPorId(x.marca)!.faixa] : 'popular'}{x.importado ? ', importado' : ''})</option>)}
+          </select>
+        </label>
+      )}
+      <span className="catalogo-loja__preco">{dinheiroCurto(o.preco)}</span>
+      <span className="catalogo-loja__acoes">
+        {it && !crianca && <button type="button" className="botao botao--discreto" aria-pressed={provando} onClick={provar}>{provando ? 'No provador' : 'Experimentar'}</button>}
+        {tem ? (
+          <span className="loja-estilo__seu">
+            <span className="nota">É seu{marcaDoMeu ? ` (${marcaPorId(marcaDoMeu)?.nome ?? marcaDoMeu})` : ''}{meu ? (meu.usando ? ' · em uso' : ' · guardado') : ''}.</span>
+            {meu && <BotaoAcao vida={vida} acao={{ tipo: 'usar_item', itemId: p.id, id: meu.id, usar: !meu.usando }} agir={agir} variante="discreto">{meu.usando ? 'Guardar' : 'Usar'}</BotaoAcao>}
+          </span>
+        ) : <BotaoAcao vida={vida} acao={acao} agir={agir} variante="secundario" ocultarImpossivel={crianca}>Comprar</BotaoAcao>}
+      </span>
     </li>
   );
 }

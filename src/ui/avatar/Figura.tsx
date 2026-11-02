@@ -112,6 +112,33 @@ function alturaDaFigura(g: Geo, idade: number): number {
  * anatomia, a escala e o lugar de cada desenho são os de verdade. `perto` aproxima mais (1 = a região; 2 = o dobro),
  * sempre em torno da área tatuável da parte. O recorte tem sempre a proporção 3 : 4, para a moldura não pular.
  */
+/**
+ * 12.7 — o recorte que mostra uma PEÇA (a vitrine e o guarda-roupa): a parte de cima, a de baixo, o corpo inteiro (o
+ * vestido, o terno), os pés, o pulso e a mão, o pescoço. A mesma geometria da figura: a miniatura é a peça de verdade
+ * no corpo de quem vai usar, só mais perto.
+ */
+export function focoDaPeca(genero: Genero, corpo: TipoDeCorpo, idade: number, lugar: string): Foco {
+  const g = geometria(genero, corpo, idade);
+  const H = alturaDaFigura(g, idade);
+  const esc = escalaDaIdade(idade);
+  const ty = (y: number) => g.topo + (y - g.topo) * esc;
+  const caixa: Record<string, [number, number, number, number]> = {
+    tronco: [g.cx, g.topo - 14, g.yQuad + 8, (g.ombro + 14) * 2], casaco: [g.cx, g.topo - 14, g.yQuad + 26, (g.ombro + 16) * 2],
+    pernas: [g.cx, g.yCint - 6, g.yTorn + 4, (g.quadril + 14) * 2], corpo: [g.cx, g.topo - 14, g.yTorn + 6, (g.ombro + 16) * 2],
+    pes: [g.cx, g.yTorn - 14, g.yChao + 6, (g.quadril + 8) * 2], pulso: [g.cx - g.ombro - 3, 112, 160, 34], pulseira: [g.cx - g.ombro - 3, 112, 160, 34],
+    anel: [g.cx - g.ombro - 3, 124, 162, 30], joia: [g.cx, g.topo - 8, g.topo + 30, 54]
+  };
+  const r = caixa[lugar] ?? caixa.corpo;
+  const cy = ty((r[1] + r[2]) / 2);
+  let h = (r[2] - r[1]) * esc, w = r[3] * esc;
+  const cx = g.cx + (r[0] - g.cx) * esc;
+  if (w / h < 0.75) w = h * 0.75; else h = w / 0.75;
+  let x = cx - w / 2, y = cy - h / 2;
+  if (w <= 120) x = Math.min(Math.max(0, x), 120 - w);
+  if (h <= H) y = Math.min(Math.max(0, y), H - h);
+  return { x: +x.toFixed(2), y: +y.toFixed(2), w: +w.toFixed(2), h: +h.toFixed(2) };
+}
+
 export function focoDaParte(genero: Genero, corpo: TipoDeCorpo, idade: number, local: LocalDeTatuagem | 'inteiro', ladoT: Lado | undefined, vista: 'frente' | 'costas', perto = 1): Foco {
   const g = geometria(genero, corpo, idade);
   const H = alturaDaFigura(g, idade);
