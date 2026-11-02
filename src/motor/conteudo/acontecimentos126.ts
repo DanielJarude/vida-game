@@ -22,12 +22,13 @@ import { podeTentar } from '../plausibilidade';
 import { anoDe } from '../tempo';
 import { nivelDeOferta } from '../dados/lugares';
 import { flex } from '../texto';
+import { semCaixa } from '../sistemas/dinheiro';
 
 const o = (p: Pessoa) => flex(p.genero, 'o', 'a', 'e');
 const ele = (p: Pessoa) => flex(p.genero, 'ele', 'ela', 'elu');
 const vivos = (v: Vida, ...ps: string[]) => vinculosVivos(v).filter(x => x.vin.parentesco && ps.includes(x.vin.parentesco)).map(x => x.p);
 const hab = (v: Vida, d: string) => (v.caminhos.frentes as Record<string, { habilidade: number } | undefined>)[d]?.habilidade ?? 0;
-const emApuro = (v: Vida) => (!v.trabalho.atual && idade(v) >= 20 && idade(v) < 65) || v.corpo.saude < 45 || v.financas.conta < 0;
+const emApuro = (v: Vida) => (!v.trabalho.atual && idade(v) >= 20 && idade(v) < 65) || v.corpo.saude < 45 || semCaixa(v);
 
 /** Quem guarda gratidão de verdade por você (uma ajuda de anos atrás) e está vivo e por perto. */
 const quemDeve = (v: Vida) => vinculosVivos(v).filter(x => !x.p.especie && x.vin.tensao < 40 && (() => { const g = gratidao(v, x.vin, x.p); return !!g && v.t - g.t >= 24; })()).map(x => x.p);

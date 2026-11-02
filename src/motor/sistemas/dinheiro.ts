@@ -499,6 +499,61 @@ export function seguranca(v: Vida): Seguranca {
   return { nivel: 'equilibrado', meses, texto: `Uma reserva de uns ${Math.floor(meses)} meses. Dá para atravessar um imprevisto.` };
 }
 
+/* ======================================================= 12.7 · A condição econômica de verdade */
+
+/**
+ * VIDA 12.7 — a faixa econômica que os acontecimentos devem ler (o milionário recebia "a mensalidade vence dia 10 e o
+ * dinheiro acabou dia 3" porque a cena olhava só o fluxo do mês). Patrimônio ≠ dinheiro disponível: quem tem milhões em
+ * imóveis e pouco na conta é `iliquida` — o aperto existe, mas é outro (vender, reorganizar), não "falta para a passagem".
+ * As faixas são em reais de hoje, ajustadas ao custo da cidade.
+ */
+export type FaixaEconomica = 'sem_dinheiro' | 'apertada' | 'media' | 'confortavel' | 'rica' | 'milionaria' | 'bilionaria';
+
+export interface CondicaoEconomica {
+  faixa: FaixaEconomica;
+  /** Patrimônio alto preso em bens: o dinheiro de mexer não acompanha. */
+  iliquida: boolean;
+  /** O que dá para mobilizar em semanas: conta, aplicações, o caixa do negócio. */
+  liquidez: number;
+  patrimonio: number;
+  /** A despesa do mês (para comparar com um custo). */
+  despesa: number;
+}
+
+export function condicaoEconomica(v: Vida): CondicaoEconomica {
+  const b = balanco(v);
+  const o = orcamento(v);
+  const custo = Math.max(0.5, economiaLocal(v.moradia.municipioId).custo);
+  const liquidez = Math.max(0, b.conta) + b.aplicacoes + b.negocio;
+  const pat = b.liquido;
+  const despesa = Math.max(1, o.despesa);
+  const nivel = seguranca(v).nivel;
+  const iliquida = pat >= 1_000_000 * custo && liquidez < Math.max(despesa * 6, 30_000 * custo);
+  const faixa: FaixaEconomica = pat >= 1e9 * custo ? 'bilionaria'
+    : pat >= 1_000_000 * custo ? 'milionaria'
+      : pat >= 300_000 * custo || liquidez >= 150_000 * custo ? 'rica'
+        : nivel === 'folgado' || nivel === 'seguro' || pat >= 80_000 * custo ? 'confortavel'
+          : nivel === 'no_vermelho' || (nivel === 'apertado' && liquidez < despesa) ? 'sem_dinheiro'
+            : nivel === 'apertado' || nivel === 'no_limite' ? 'apertada' : 'media';
+  return { faixa, iliquida, liquidez: Math.round(liquidez), patrimonio: pat, despesa };
+}
+
+/**
+ * 12.7 — um custo (mensal) aperta de verdade? Para quem é rico e tem dinheiro à mão, despesa comum não aperta; para quem
+ * tem guardado que cobre um ano dela com folga, também não. O resto lê a segurança (o mês e a reserva).
+ */
+export function apertoDeVerdade(v: Vida, custoMensal = 0): boolean {
+  const c = condicaoEconomica(v);
+  if ((c.faixa === 'rica' || c.faixa === 'milionaria' || c.faixa === 'bilionaria') && !c.iliquida) return false;
+  if (c.liquidez >= custoMensal * 12 + c.despesa * 3) return false;
+  const nivel = seguranca(v).nivel;
+  return nivel === 'no_vermelho' || nivel === 'apertado' || (nivel === 'no_limite' && c.liquidez < custoMensal * 6 + c.despesa);
+}
+
+/** 12.7 — a conta no negativo é falta de dinheiro (e não um saque antes de resgatar a aplicação)? */
+export const semCaixa = (v: Vida) => v.financas.conta < 0 && Math.max(0, totalAplicadoDe(v)) + v.financas.conta < 0;
+const totalAplicadoDe = (v: Vida) => v.financas.investimentos.reduce((t, a) => t + a.valor, 0);
+
 /* ================================================================ Crédito */
 
 /** Limite de crédito rotativo (cartão, cheque especial): pela renda PRÓPRIA. */

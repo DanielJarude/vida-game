@@ -6,7 +6,7 @@
 import { abrirProcesso } from '../sistemas/justica';
 import { entrar } from '../sistemas/ilicito';
 import { dinheiro as moeda, dinheiroCurto as moedaCurta } from '../texto';
-import { disponivel as guardado } from '../sistemas/dinheiro';
+import { apertoDeVerdade, disponivel as guardado } from '../sistemas/dinheiro';
 import type { Conteudo } from './base';
 import * as P from './papeis';
 import { lembrarCom } from '../nucleo';
@@ -253,7 +253,7 @@ export const ESCOLHAS: Conteudo[] = [
   },
   {
     id: 'mat_bico_aposentado', tipo: 'decisao', idade: [62, 78], tema: 'trabalho', repetir: 10,
-    quando: c => !!c.v.trabalho.aposentadoria && !c.v.trabalho.atual && c.v.trabalho.aposentadoria.beneficio < 3000,
+    quando: c => !!c.v.trabalho.aposentadoria && !c.v.trabalho.atual && c.v.trabalho.aposentadoria.beneficio < 3000 && apertoDeVerdade(c.v),
     titulo: 'Um trabalho',
     texto: () => 'A aposentadoria não fecha o mês. Um conhecido tem uma banca na feira e precisa de alguém de confiança nas manhãs de sábado e domingo.',
     opcoes: [

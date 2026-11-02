@@ -52,7 +52,8 @@ import { descricaoOrigem } from '../sistemas/social';
 import { ROTINAS } from '../sistemas/rotinas';
 import { economiaLocal, existeMunicipio, municipio, paisDaCidade } from '../dados/lugares';
 import { curso } from '../dados/cursos';
-import { saldoMensal } from '../sistemas/dinheiro';
+import { apertoDeVerdade, condicaoEconomica, saldoMensal } from '../sistemas/dinheiro';
+import { recursosDaFamilia } from '../sistemas/origem';
 import { custoDoEstudo, regimeDaMatricula } from '../sistemas/custoDoEstudo';
 import { moraComFamiliaDeOrigem } from '../sistemas/domicilio';
 import { totalAplicado } from '../sistemas/investimentos';
@@ -97,7 +98,8 @@ function motivoDeAperto(c: Ctx): 'dinheiro' | 'custos' | 'trabalho' | 'bebe' | '
   // REWORK 4: o REGIME da matrícula decide o que pode apertar. Mensalidade só existe se o estudante paga uma
   // (`custoDoEstudo`); na pública gratuita, na bolsa e no crédito, o que aperta é o resto (passagem, comida, material).
   const ce = custoDoEstudo(c.v, m);
-  if (s.renda - s.despesa < 0) {
+  // 12.7: o fluxo negativo do mês só aperta quem não tem de onde tirar (o milionário não fica sem a mensalidade no dia 3).
+  if (s.renda - s.despesa < 0 && apertoDeVerdade(c.v, ce?.doEstudante ?? 0)) {
     if (ce && ce.doEstudante > 0) return 'dinheiro';
     if (ce && ce.regime !== 'paga' && m.modalidade === 'presencial' && !moraComFamiliaDeOrigem(c.v)) return 'custos';
   }
@@ -362,7 +364,7 @@ export const SISTEMICOS: Conteudo[] = [
   },
   {
     id: 'esc_largar', tipo: 'decisao', idade: [15, 17], tema: 'escola', repetir: 1, prioritario: true,
-    quando: c => !!c.v.educacao.basica && c.v.educacao.basica.etapa !== 'fundamental1' && (c.v.educacao.basica.reprovacoes >= 2 || (['vulneravel', 'trabalhadora'].includes(c.v.origem.classe) && c.v.educacao.basica.desempenho < 42) || (!!c.v.trabalho.atual && c.v.trabalho.atual.carga === 'integral')),
+    quando: c => !!c.v.educacao.basica && c.v.educacao.basica.etapa !== 'fundamental1' && (c.v.educacao.basica.reprovacoes >= 2 || (['vulneravel', 'trabalhadora'].includes(c.v.origem.classe) && recursosDaFamilia(c.v).folga <= 1 && c.v.educacao.basica.desempenho < 42) || (!!c.v.trabalho.atual && c.v.trabalho.atual.carga === 'integral')),
     titulo: 'A escola ou o resto',
     texto: c => c.v.trabalho.atual
       ? 'O trabalho ocupa o dia; a escola, a noite. Você chega na aula dormindo, e a matéria não entra.'
@@ -384,7 +386,9 @@ export const SISTEMICOS: Conteudo[] = [
     quando: c => !!motivoDeAperto(c),
     titulo: 'O curso pesa',
     texto: c => ({
-      dinheiro: `A mensalidade de ${nomeCurso(c)} vence todo dia 10, e o dinheiro do mês já acabou no dia 3.`,
+      dinheiro: condicaoEconomica(c.v).iliquida
+        ? `O patrimônio está quase todo em bens, e o dinheiro de mexer acabou: a mensalidade de ${nomeCurso(c)} vence dia 10, e pagar vai pedir vender ou reorganizar alguma coisa.`
+        : `A mensalidade de ${nomeCurso(c)} vence todo dia 10, e o dinheiro do mês já acabou no dia 3.`,
       custos: `${regimeDaMatricula(c.v.educacao.matricula!) === 'gratuita' ? `${nomeCurso(c)} não cobra nada` : regimeDaMatricula(c.v.educacao.matricula!) === 'credito' ? `A mensalidade de ${nomeCurso(c)} vai para o crédito, para pagar depois` : `A bolsa cobre ${nomeCurso(c)} inteiro`} — mas o aluguel do quarto, a passagem, as cópias e o almoço não. O mês acabou antes.`,
       trabalho: `O expediente termina às seis; a aula começa às sete. ${deslocamento(c.v)?.modo === 'publico' ? 'Você dorme no ônibus e acorda na prova.' : 'Você janta no caminho e chega à prova com a cabeça no trabalho.'}`,
       bebe: 'O bebê acorda de duas em duas horas. O trabalho de grupo é para sexta.',

@@ -26,7 +26,7 @@
 import { MARCAS_DE_CONQUISTA } from '../../motor/sistemas/fechamento';
 import { useMemo, useState } from 'react';
 import type { Entrada, Vida } from '../../motor/tipos';
-import { idadePessoa } from '../../motor/nucleo';
+import { idade, idadePessoa } from '../../motor/nucleo';
 import { anosDaBiografia, faseDaVida, fiosDoAno, naturezaDe, TEMA_ROTULO } from '../apresentar';
 import { Retrato } from '../avatar/Retrato';
 import { anoDe } from '../../motor/tempo';
@@ -64,7 +64,10 @@ export function LinhaDaVida({ vida, marca, abrirPessoa, compacta }: { vida: Vida
   }, [vida, discreto, fio]);
   const idNovas = useMemo(() => new Set(vida.biografia.slice(marca).map(e => e.id)), [vida, marca]);
   const porId = useMemo(() => new Map(vida.biografia.map(e => [e.id, e])), [vida]);
-  const ordem = doComeco ? anos : [...anos].reverse();
+  // 12.7: no "Agora", só os últimos anos DE CALENDÁRIO (antes: os últimos três anos que tiveram algo — num período
+  // tranquilo, o título de anos atrás continuava ali). Ano tranquilo fica tranquilo; a biografia guarda tudo.
+  const idadeAgora = idade(vida);
+  const ordem = (doComeco ? anos : [...anos].reverse()).filter(a => !compacta || a.idade > idadeAgora - compacta.anos);
   const visiveis = ordem.slice(0, limite);
   const faltam = ordem.length - visiveis.length;
   // REWORK 7: o rosto de quem estava na história vale para as primeiras histórias de gente na ordem de leitura; as de
@@ -119,9 +122,10 @@ export function LinhaDaVida({ vida, marca, abrirPessoa, compacta }: { vida: Vida
           );
         })}
       </ol>
-      {compacta && faltam > 0 && (
+      {compacta && !visiveis.length && anos.length > 0 && <p className="nota linha-da-vida__tranquilo">Anos tranquilos: nada que tenha marcado desde {anos[anos.length - 1].ano}.</p>}
+      {compacta && anos.length > visiveis.length && (
         <button type="button" className="botao botao--secundario linha-da-vida__mais" onClick={compacta.aoVerTudo}>
-          Ler a biografia inteira <span className="linha-da-vida__faltam">({ordem.length} {ordem.length === 1 ? 'ano' : 'anos'} com história)</span>
+          Ler a biografia inteira <span className="linha-da-vida__faltam">({anos.length} {anos.length === 1 ? 'ano' : 'anos'} com história)</span>
         </button>
       )}
       {!compacta && faltam > 0 && fio !== 'conquistas' && (

@@ -41,6 +41,7 @@ import { ficouSabendo, registrarSegredo } from './exposicao';
 import { semOcupacao } from './trabalho';
 import { registrarFase } from './relacoes';
 import { mesesProcurando } from './intencao';
+import { semCaixa } from './dinheiro';
 
 const ESTAGIOS_ATIVOS: EstagioRomance[] = ['saindo', 'namoro', 'morando_junto', 'casamento'];
 
@@ -309,7 +310,7 @@ function crise(v: Vida, r: Rng, p: Pessoa, vin: Vinculo, pequenos: number): void
   const causas: { texto: string; curto: string; fase?: boolean }[] = [];
   if (p.renda > 0) causas.push({ texto: `O trabalho de ${p.nome} apertou: chegava tarde, dormia mal, respondia seco. A casa sentiu.`, curto: 'o trabalho apertou' });
   if (pequenos > 0) causas.push({ texto: `O cansaço dos primeiros anos das crianças: você e ${p.nome} viraram dois turnos de uma mesma casa.`, curto: 'o cansaço das crianças pequenas' });
-  if (v.financas.negativado || v.financas.conta < 0) causas.push({ texto: `O dinheiro curto virou assunto de toda noite entre você e ${p.nome}.`, curto: 'o dinheiro curto' });
+  if (v.financas.negativado || semCaixa(v)) causas.push({ texto: `O dinheiro curto virou assunto de toda noite entre você e ${p.nome}.`, curto: 'o dinheiro curto' });
   // As causas da meia-idade: o que a casa atravessa depois dos filhos pequenos (FIX #7).
   const casa = vinculosVivos(v).filter(x => x.vin.convivio.includes('casa'));
   const adolescente = casa.find(x => (x.vin.parentesco === 'filho' || x.vin.parentesco === 'enteado') && idadePessoa(v, x.p) >= 13 && idadePessoa(v, x.p) <= 17);

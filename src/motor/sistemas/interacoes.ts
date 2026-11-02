@@ -36,7 +36,7 @@ import { faiscaRecente } from './microcenas';
 import { flex, ge } from '../texto';
 import { ehDescendente, faseDeIdade, filhosEmComum, mesmaCidade, moraJunto, papelDe, type Fase, type Papel } from './vinculos';
 import { lacoCom, oLaco } from './rede';
-import { vereditoDePagar, disponivel } from './dinheiro';
+import { vereditoDePagar, disponivel, semCaixa } from './dinheiro';
 import { responderChamado, rotulosDoChamado } from './iniciativas';
 import { ativo as envolvimentoAtivo, proporPorFora, sabeQueAndaNisso } from './ilicito';
 import { contextoDaRelacao, conversarNoApp, encontroDoApp, etapaDoApp, pesoDoContexto, registrarFase } from './relacoes';
@@ -886,7 +886,7 @@ export const INTERACOES: Interacao[] = [
   },
   {
     id: 'dinheiro_casal',
-    quando: c => parceriaAtiva(c) && c.casa && c.eu >= 18 && (c.v.financas.negativado || c.v.financas.conta < 0 || (c.v.fatos['aperto_desde'] !== undefined && c.v.t - (c.v.fatos['aperto_desde'] ?? 0) <= 12)),
+    quando: c => parceriaAtiva(c) && c.casa && c.eu >= 18 && (c.v.financas.negativado || semCaixa(c.v) || (c.v.fatos['aperto_desde'] !== undefined && c.v.t - (c.v.fatos['aperto_desde'] ?? 0) <= 12)),
     prioridade: () => 1.5,
     rotulo: c => `Sentar com ${c.p.nome} para falar de dinheiro`,
     destaque: true,

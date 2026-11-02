@@ -10,6 +10,7 @@ import { escrever, idade, lembrarCom, registrarMarco } from '../nucleo';
 import { clamp, rngDe, type Rng } from '../rng';
 import { emComum } from './jeito';
 import { aplicarPersonalidade } from '../personalidade';
+import { condicaoEconomica } from './dinheiro';
 
 const um = <T,>(r: Rng, xs: T[]): T => xs[Math.floor(r.next() * xs.length) % xs.length];
 
@@ -25,7 +26,8 @@ export function viagem126(v: Vida, onde: string, com: Pessoa[], fora: boolean, j
     if (!jaTeveHistoria) return 'Na volta, ficou a sensação de que dá para ir a qualquer lugar.';
   }
   if (jaTeveHistoria || r.next() > 0.6) return undefined;
-  const conta = v.financas.conta;
+  // 12.7: o dinheiro de mexer (conta e aplicações), não só a conta corrente.
+  const conta = condicaoEconomica(v).liquidez;
   const apertado = conta < 4000, folgado = conta > 150000;
   const amigo = com.find(p => { const vin = v.vinculos[p.id]; return vin && !vin.romance && !vin.parentesco; });
   const opcoes: (() => string)[] = [];

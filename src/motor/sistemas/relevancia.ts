@@ -28,7 +28,7 @@ import { degrausAcima, elegibilidade, experienciaNaTrilha, porContaPropria } fro
 import { cursoOuNulo, type Curso } from '../dados/cursos';
 import { areaDaPos, nomeDaFormacao, notaParaCurso, opcoesDeCurso, temCota, type OpcaoCurso } from './escola';
 import { animaisDoAbrigo, ofertasDeImoveis, ofertasDeVeiculos, type AnimalDoAbrigo, type OfertaImovel, type OfertaVeiculo } from './mercado';
-import { disponivel, patrimonio, rendaPropriaMensal, seguranca } from './dinheiro';
+import { disponivel, patrimonio, rendaPropriaMensal, seguranca, semCaixa } from './dinheiro';
 import { quartosNecessarios } from './imoveis';
 import { podeTerPet, seusPets } from './pets';
 import { modeloMoradia, modeloVeiculo, versaoVeiculo } from '../dados/bens';
@@ -68,7 +68,7 @@ export function atividadesParaVoce(v: Vida): { para: Relevante<ModeloRotina>[]; 
   const cabeca = v.mente.estresse;
   const humor = v.mente.felicidade;
   const solidao = fatoresHumor(v).some(f => f.id === 'solidao');
-  const aperto = v.financas.negativado || v.financas.conta < 0;
+  const aperto = v.financas.negativado || semCaixa(v);
   const lista = possiveis.map(m => {
     let pontos = 0;
     let motivo = '';

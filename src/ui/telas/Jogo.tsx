@@ -243,16 +243,20 @@ function AnoQuePassou({ vida, desde, abrirPessoa }: { vida: Vida; desde: number;
   const rotina = rotinaDoAno(vida);
   // VIDA 12.5: o momento marcante do ano (o casamento, o filho, o título, a casa própria…) abre o ano que passou, com uma
   // entrada curta — só o que a Retrospectiva também chama de marcante, e só deste ano.
-  const marcantes = memoriasDaVida(vida).filter(m => m.destaque === 2 && m.t >= desde && m.tipo !== 'nascimento').slice(-3);
+  // 12.7: `desde` é uma posição na biografia, não um mês — a conta antiga (m.t >= desde) deixava passar a vida inteira, e
+  // o título de dois anos atrás continuava abrindo o ano. Agora: só o que aconteceu nos últimos 12 meses, sem repetir.
+  const vistos = new Set<string>();
+  const marcantes = memoriasDaVida(vida).filter(m => m.destaque === 2 && m.t > vida.t - 12 && m.tipo !== 'nascimento')
+    .filter(m => (vistos.has(m.titulo) ? false : (vistos.add(m.titulo), true))).slice(-3).reverse();
   if (!temFechamento && !temNoticias && !rotina && !conquistas.length && !marcantes.length) return null;
   return (
     <div className="ano-que-passou" id="ano-que-passou">
       {marcantes.length > 0 && (
         <section className="celebracao" aria-label="O que marcou o ano">
-          {marcantes.map(m => (
-            <div key={m.id} className={`celebracao__cartao retro--${m.categoria}`}>
-              <span className="celebracao__icone" aria-hidden="true"><IconeDaMemoria categoria={m.categoria} tamanho={26} /></span>
-              <div><p className="celebracao__titulo">{m.titulo}</p><p className="celebracao__texto">{m.texto}</p></div>
+          {marcantes.map((m, k) => (
+            <div key={m.id} className={`celebracao__cartao retro--${m.categoria}${k === 0 && marcantes.length > 1 ? ' celebracao__cartao--destaque' : ''}`}>
+              <span className="celebracao__icone" aria-hidden="true"><IconeDaMemoria categoria={m.categoria} tamanho={k === 0 && marcantes.length > 1 ? 32 : 26} /></span>
+              <div>{k === 0 && marcantes.length > 1 && <p className="celebracao__kicker">O destaque do ano</p>}<p className="celebracao__titulo">{m.titulo}</p><p className="celebracao__texto">{m.texto}</p></div>
             </div>
           ))}
         </section>
