@@ -133,10 +133,10 @@ A auditoria leu o código atual, as notas da 12.6 e os relatórios anteriores. T
 - **Suíte completa:**
   - Antes das correções: 2273 testes, 12 falharam.
   - Depois: os 5 testes antigos que esperavam a interface antiga foram ajustados; veja abaixo. Os dois testes novos de equipamento foram corrigidos (a lista fixa de casacos passou a ser genérica).
-  - Rodada final: veja a nota no fim desta seção.
-  - Não são desta atualização:
+  - **Rodada final: 2269 aprovados e 4 reprovados, de 2273.**
+  - Os 4 reprovados não são desta atualização:
     - `rework122` "negócio por fora…" e `rework11Esportes` "Sassuolo na Serie C" **falham também no commit base 1d30b41**.
-    - `fix31` (2), `motor.test` "linguagem de escolha" e `fechamentoMundo` "a mesma discussão" **só estouram o timeout** fixo de 20–60 s com carga. `motor.test` passa sozinho com o tempo aumentado, então o conteúdo está correto.
+    - `motor.test` "linguagem de escolha" (62 s) e `fix31` "o irmão que ganha um salário mínimo" (20 s) **só estouram o timeout** fixo com carga. `motor.test` passa sozinho com o tempo aumentado, então o conteúdo está correto. `fix31` e `fechamentoMundo` passaram na rodada isolada.
 - **Testes novos:** 38 no total.
   - `vida127Equipamento` (9): **cada um dos 88+ produtos** é escolhido depois de comprar todos, na ordem do catálogo e na inversa, nos dois gêneros. Cobre os parecidos (grife/aviador/Juliet/comum e os chapéus), vestido + blusa + saia + casaco, tirar não veste outra, o corte de cabelo, a compra na loja, duas peças do mesmo produto (pelo id), salvar e carregar, save antigo com o defeito e a ação antiga sem id. **Os 9 falham no código antigo.**
   - `vida127Economia` (4).
