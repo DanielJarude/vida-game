@@ -176,4 +176,13 @@ A auditoria leu o código atual, as notas da 12.6 e os relatórios anteriores. T
 
 ## F. Publicação
 
-Preenchida depois do deploy, no commit de documentação.
+- **Commit publicado:** `2e2707d` (código idêntico ao de `f528166`; depois dele só entraram scripts e o relatório). `main`, `claude/fix-pos-rework3-playtest` (produção) e `claude/vida12.7-imersao-personalizacao` foram avançados de `1d30b41` para `2e2707d` por fast-forward. Este registro de publicação é um commit de documentação posterior, só em `main` e na branch.
+- **Deploy:** Cloudflare Pages, check-run "Cloudflare Pages" `completed/success` no SHA 2e2707d (deploy `56cf669e-5da5-403b-bf93-aad99ccc9f4c`). O site passou a servir o build novo cerca de 4 minutos depois do push.
+- **URL pública:** https://vida-game.pages.dev/ responde **HTTP 200** e serve `index-C2j3EZBu.js`.
+- **Correspondência com o build local:** **46/46 arquivos JS/CSS** e o `index.html` servido em `/` são **SHA-256 idênticos** ao `dist/` testado localmente.
+- **Verificação funcional em produção:** `URL=https://vida-game.pages.dev/ node scripts/playtest/rework127.mjs`, com contextos Playwright novos e saves de QA injetados só no navegador de teste.
+  - Cenas: loja de roupas, tipo de peça, provador, loja da casa, guarda-roupa, cômodos, reforma com prévia, Agora (atleta e rica), tatuagens, notas da versão.
+  - Variações: claro e escuro × 1440, 390 e 360 px, com 136 capturas.
+  - **0 problemas**: 0 erros de console, 0 `pageerror`, 0 sobreposições, contraste e rolagem ok, e todos os passos encontrados.
+- **Saves:** a carga dos saves antigos foi conferida com o mesmo código (59/59, seção D). Em produção, os saves de QA de 12.4, 11.5.1 e 12.6 abriram e navegaram sem erro.
+- **Rollback**, se preciso: `git push origin 1d30b41:claude/fix-pos-rework3-playtest --force-with-lease` (e `main`). O Pages volta ao build da 12.6 (`index-DEVGb3PN.js`).
