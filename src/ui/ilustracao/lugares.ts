@@ -19,6 +19,8 @@ export type LugarDaCidade =
   | 'estilo' | 'clinica' | 'eletronicos' | 'casa' | 'instrumentos' | 'esportes' | 'livraria'
   /** REWORK 12.2: as casas de luxo e coleção, os exóticos e os mercados de procedência duvidosa, cada um com a sua cara. */
   | 'relojoaria' | 'joalheria' | 'galeria' | 'antiquario' | 'memorabilia' | 'leilao' | 'exoticos' | 'feira' | 'antiquario_vago' | 'privada_incerta' | 'por_fora'
+  /** 12.8.1: a importadora de vinhos (antes emprestava a fachada do antiquário). */
+  | 'vinhos'
   /** VIDA 12.5: as lojas por segmento e as grandes lojas, cada uma com o seu prédio (`fachadasDeLoja`). */
   | FachadaDeLoja;
 
@@ -116,6 +118,7 @@ const simVaso = (cor: string, x = 196, y = 23): Peca[] => [{ tipo: 'massa', d: `
 const simTaca = (cor: string, x = 196, y = 23): Peca[] => [{ tipo: 'massa', d: `M${x - 7} ${y - 8}h14c0 7-3 10-6 11v3h3v2h-8v-2h3v-3c-3-1-6-4-6-11z`, cor, semVolume: true, marca: 'simbolo' }, { tipo: 'linha', d: `M${x - 7} ${y - 6}c-4 0-4 6 1 6M${x + 7} ${y - 6}c4 0 4 6-1 6`, larg: 1.2, cor }];
 const simMartelo = (cor: string, x = 196, y = 23): Peca[] => [{ tipo: 'massa', d: ret(x - 8, y - 8, 10, 6, 1.5) + membro([[x - 3, y - 4], [x + 6, y + 6]], [2, 2]), cor, semVolume: true, marca: 'simbolo' }, { tipo: 'massa', d: ret(x - 9, y + 6, 10, 2.5, 1), cor, semVolume: true }];
 const simFolha = (cor: string, x = 196, y = 23): Peca[] => [{ tipo: 'massa', d: `M${x - 8} ${y + 7}C${x - 8} ${y - 4} ${x} ${y - 9} ${x + 8} ${y - 8}C${x + 8} ${y + 2} ${x + 2} ${y + 7} ${x - 8} ${y + 7}z`, cor, semVolume: true, marca: 'simbolo' }, { tipo: 'linha', d: `M${x - 8} ${y + 7}L${x + 5} ${y - 5}`, larg: 0.8, cor: ESCURO }];
+const simGarrafa = (cor: string, x = 196, y = 23): Peca[] => [{ tipo: 'massa', d: `M${x - 6} ${y + 8}V${y - 1}q0-3 2-4V${y - 9}h2v4q2 1 2 4V${y + 8}z`, cor, semVolume: true, marca: 'simbolo' }, { tipo: 'linha', d: `M${x + 3} ${y - 6}h7q0 6-3.5 7V${y + 7}M${x + 4} ${y + 7}h5`, larg: 1.1, cor }];
 const simQuadro = (cor: string, x = 196, y = 23): Peca[] => [{ tipo: 'linha', d: ret(x - 9, y - 7, 18, 14, 0.5), larg: 1.6, cor, marca: 'simbolo' }, { tipo: 'massa', d: `M${x - 6} ${y + 4}l5-6 3 3 3-4 2 7z`, cor, semVolume: true }];
 
 /** Uma joia/relógio pousado numa almofada de vitrine. */
@@ -401,6 +404,22 @@ relojoaria: () => loja({
       { tipo: 'linha', d: 'M250 50v8M240 62q10 6 20 0M240 62v4M250 62v4M260 62v4', larg: 1, cor: '#c9a23a', marca: 'lustre' }
     ]
   }),
+  vinhos: () => loja({
+    // 12.8.1 · A importadora: tijolo de adega, placa verde-garrafa com a taça e a garrafa, o toldo bordô; dentro, as
+    // estantes de madeira com as garrafas deitadas (os fundos aparecendo), o barril, o balcão de prova com as taças.
+    parede: '#5a2a2e', textura: 'tijolo', placa: { cor: '#1f3324', texto: 'VINHOS', tinta: '#e8d9a8', simbolo: simGarrafa('#e8d9a8') }, porta: 'esq', toldo: { cor: '#6b1f2a' }, luz: '#efd9ae',
+    interior: [
+      { tipo: 'massa', d: ret(202, 50, 58, 52, 1), cor: '#7a5534', marca: 'estante' },
+      { tipo: 'massa', d: Array.from({ length: 4 }, (_, k) => [0, 1, 2, 3, 4, 5].map(i => circulo(208 + i * 9.2, 57 + k * 12.5, 3.4)).join('')).join(''), cor: '#2a3a28', semVolume: true, marca: 'garrafas' },
+      { tipo: 'massa', d: [[1, 0], [4, 1], [2, 2], [5, 3], [0, 3]].map(([i, k]) => circulo(208 + i * 9.2, 57 + k * 12.5, 1.6)).join(''), cor: '#c9a23a', semVolume: true },
+      { tipo: 'linha', d: 'M202 63H260M202 75.5H260M202 88H260', larg: 0.8, cor: '#4f3420' },
+      { tipo: 'massa', d: suave([[268, 108], [266, 92], [268, 78], [290, 78], [292, 92], [290, 108]], true, 0.4), cor: '#9a6a3e', marca: 'barril' },
+      { tipo: 'linha', d: 'M267 84H291M266.4 101H291.6', larg: 1.4, cor: '#4a4744' },
+      { tipo: 'massa', d: ret(300, 92, 30, 16, 1), cor: '#4f3420', marca: 'balcao' },
+      { tipo: 'linha', d: 'M306 92v-6M304 80q2 6 4 0M318 92v-6M316 80q2 6 4 0', larg: 0.9, cor: '#e8e4dc', marca: 'tacas' },
+      { tipo: 'massa', d: 'M304.6 83q1.4 2.4 2.8 0z M316.6 83q1.4 2.4 2.8 0z', cor: '#7a1f2a', semVolume: true }
+    ]
+  }),
   memorabilia: () => loja({
     // Verde de gramado, placa com a taça; dentro, a camisa emoldurada, a taça, a bola autografada e as flâmulas.
     parede: '#1f4d36', placa: { cor: '#f2efe9', texto: 'MEMORABILIA', tinta: '#1f4d36', simbolo: simTaca('#1f4d36') }, porta: 'dir', toldo: { cor: '#f2efe9', listra: '#1f4d36' }, luz: '#f1eee6',
@@ -514,7 +533,7 @@ const FACHADAS = lembrar<Amostra>(64);
  */
 export const PORTA_DA_FACHADA: Partial<Record<LugarDaCidade, 'esq' | 'dir'>> = {
   alugar: 'esq', nautica: 'esq', motos: 'dir', oficina: 'dir', pets: 'dir', estilo: 'dir', clinica: 'dir', eletronicos: 'dir', casa: 'dir', instrumentos: 'dir', esportes: 'dir', livraria: 'dir',
-  relojoaria: 'dir', joalheria: 'dir', antiquario: 'esq', memorabilia: 'dir', exoticos: 'dir', antiquario_vago: 'esq',
+  relojoaria: 'dir', joalheria: 'dir', antiquario: 'esq', vinhos: 'esq', memorabilia: 'dir', exoticos: 'dir', antiquario_vago: 'esq',
   ...PORTA_DAS_LOJAS
 };
 

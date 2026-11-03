@@ -14,7 +14,8 @@
  * a linguagem do VIDA (formas chapadas, um tom de sombra): nada de textura fotográfica.
  */
 import { memo, useId, useMemo, type ReactElement } from 'react';
-import { Ilustracao, valida, type Amostra } from './nucleo';
+import { hash, Ilustracao, valida, type Amostra } from './nucleo';
+import { VARIANTES_DE_DESENHO } from './objetosDaCasa';
 import { caixaDaAmostra } from './caixa';
 import { comEstiloDaMarca } from './estiloDeMarca';
 import { estiloDaMarca } from '../../motor/sistemas/perfilDaMarca';
@@ -60,7 +61,7 @@ export const CenaDoComodo = memo(function CenaDoComodo({ tipo, parede, piso, luz
   const id = (k: string) => `${uid}-${k}`;
   const chaveObjetos = objetos.map(o => `${o.id}:${o.coisaId}:${o.cor ?? ''}:${o.marca ?? ''}`).join('|');
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const disp = useMemo(() => disporComodo(tipo, area, objetos), [tipo, area, chaveObjetos]);
+  const disp = useMemo(() => disporComodo(tipo, area, objetos, luz), [tipo, area, luz, chaveObjetos]);
   const g = disp.g;
   const { W, H } = g;
   const externo = g.externo;
@@ -190,7 +191,7 @@ export const CenaDoComodo = memo(function CenaDoComodo({ tipo, parede, piso, luz
       {!externo && <LuzDoComodo desenho={dLuz} tom={tom1} intensidade={intensidade} lampada={id('lampada')} automacao={luz === 'automacao' || luz === 'luminotecnico'} g={g} TETO_E={TETO_E} TETO_D={TETO_D} />}
 
       {/* Os objetos, cada um no seu lugar: o tapete, a parede, o chão de trás para a frente. */}
-      {ordem.map(p => <ObjetoPosto key={p.id} p={p} g={g} postoDe={idp => disp.postos.find(x => x.id === idp)} />)}
+      {ordem.map(p => <ObjetoPosto key={p.id} p={p.coisaId === '_abajur' ? { ...p, cor: tom1 } : p} g={g} postoDe={idp => disp.postos.find(x => x.id === idp)} />)}
 
       {intensidade < 1 && <rect width={W} height={H} fill="#0d0b14" opacity={(1 - intensidade) * 0.32} pointerEvents="none" />}
       <rect width={W} height={H} fill={`url(#${id('luz')})`} pointerEvents="none" />
@@ -203,7 +204,10 @@ export const CenaDoComodo = memo(function CenaDoComodo({ tipo, parede, piso, luz
 function ObjetoPosto({ p, g, postoDe }: { p: Posto; g: Geometria; postoDe: (id: string) => Posto | undefined }) {
   const cor = valida(p.cor, valida(variantesDaCoisa(p.coisaId)[0]?.cor, '#a49a8c'));
   if (p.montagem === 'tapete') return <Tapete p={p} g={g} cor={cor} />;
-  const base = comEstiloDaMarca(amostraDoObjeto(p.coisaId === 'camping' && !g.externo ? 'camping_guardado' : p.coisaId, cor), p.marca ? estiloDaMarca(p.marca) : undefined, `${p.coisaId}|${cor}`);
+  // 12.8.1: as plantas variam pela semente do objeto (cada conjunto, as suas espécies).
+  const nv = VARIANTES_DE_DESENHO[p.coisaId];
+  const desenho = p.coisaId === 'camping' && !g.externo ? 'camping_guardado' : nv ? `${p.coisaId}#${hash(p.id) % nv}` : p.coisaId;
+  const base = comEstiloDaMarca(amostraDoObjeto(desenho, cor), p.marca ? estiloDaMarca(p.marca) : undefined, `${desenho}|${cor}`);
   // O par (as mesas de cabeceira): cada posto é uma metade do desenho.
   const a: Amostra = p.metade ? metadeDe(base, p.metade) : base;
   const comum = { 'data-coisa': p.coisaId, 'data-montagem': p.montagem, ...(p.parede ? { 'data-parede': p.parede } : {}), ...(p.fixo ? { 'data-fixo': 'sim' } : {}) };
@@ -350,7 +354,7 @@ function LuzDoComodo({ desenho, tom, intensidade, lampada, automacao, g, TETO_E,
     <g data-peca="luz" data-desenho={desenho}>
       {desenho === 'teto' && <><path d="M160 0 V12" stroke="#5a5550" strokeWidth={1} /><circle cx={160} cy={15} r={3.4} fill={tom} /><path d={`M156 17 L${FX0 + 30} ${FY1} H${FX1 - 30} L164 17 Z`} fill={`url(#${lampada})`} /></>}
       {desenho === 'plafon' && <><ellipse cx={160} cy={6} rx={16} ry={3.6} fill="#f4f2ec" stroke="#cfcac0" strokeWidth={0.6} /><path d={`M146 8 L${FX0 + 20} ${FY1} H${FX1 - 20} L174 8 Z`} fill={`url(#${lampada})`} /></>}
-      {desenho === 'abajur' && <><path d={`M${W - 34} ${H - 20} V 82`} stroke="#3a3530" strokeWidth={1.4} /><path d={`M${W - 44} 84 l 10 -12 h 0 l 10 12 Z`} fill="#e6b873" /><circle cx={W - 34} cy={88} r={22} fill={tom} opacity={0.22 * k} /></>}
+      {/* 12.8.1: o abajur é a luminária de pé, um objeto do chão posto pela disposição (`_abajur`). */}
       {desenho === 'arandelas' && [FX0 + 34, FX1 - 34].map(x => <g key={x}><rect x={x - 3} y={44} width={6} height={9} rx={1.5} fill="#c9a76a" /><path d={`M${x - 3} 44 L${x - 9} 24 H${x + 9} L${x + 3} 44 Z M${x - 3} 53 L${x - 8} 72 H${x + 8} L${x + 3} 53 Z`} fill={tom} opacity={0.3 * k} /></g>)}
       {desenho === 'pendentes' && [130, 160, 190].map(px => pendente(px, 30))}
       {desenho === 'trilho' && <><path d={`M${FX0 + 30} 4 H${FX1 - 30}`} stroke="#2e2b28" strokeWidth={1.6} />{[100, 140, 180, 220].map(px => <g key={px}><rect x={px - 2.5} y={4} width={5} height={6} fill="#2e2b28" /><path d={`M${px - 2} 10 L${px - 14} ${FY1 - 10} H${px + 10} L${px + 2} 10 Z`} fill={tom} opacity={0.09 * k} /></g>)}</>}

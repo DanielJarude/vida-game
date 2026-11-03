@@ -54,7 +54,10 @@ export interface PecaDeColecao {
   unica?: boolean;
   /** Só sob consulta (venda privada) ou no leilão especial da temporada. */
   canal?: 'privada' | 'especial';
+  /** 12.8.1 · o vinho: o estilo (a seção da importadora e o desenho da garrafa). */
+  estilo?: EstiloDeVinho;
 }
+export type EstiloDeVinho = 'tinto' | 'branco' | 'rose' | 'espumante' | 'fortificado';
 
 export const NOME_CATEGORIA_COLECAO: Record<CategoriaColecao, { um: string; varios: string }> = {
   arte: { um: 'obra de arte', varios: 'Arte' },

@@ -1175,42 +1175,88 @@ function esculturaJardim(cor: string): Amostra {
   ], 34);
 }
 
-function plantas(cor: string): Amostra {
-  const vaso = (x: number, w: number, h: number) => M(cantos([[x - w / 2, 108 - h, 1.5], [x + w / 2, 108 - h, 1.5], [x + w / 2 - 4, 108, 1.5], [x - w / 2 + 4, 108, 1.5]]), cor, 'vaso');
-  const folha = (cx: number, cy: number, r: number, ang: number) => G(`rotate(${ang} ${cx} ${cy})`, [M(suave([[cx, cy + r], [cx - r * 0.9, cy], [cx - r * 0.4, cy - r * 0.8], [cx, cy - r * 0.5], [cx + r * 0.4, cy - r * 0.8], [cx + r * 0.9, cy]], true, 0.5), '#3f7a3f', 'costela'), L(`M${cx} ${cy + r}V${cy - r * 0.4}M${cx - r * 0.6} ${cy - 2}l${r * 0.3} 1M${cx + r * 0.6} ${cy - 2}l${-r * 0.3} 1`, 0.8, '#d4e8c4', { fino: true })]);
+/* ---------------------------------------------------------------- 12.8.1 · as plantas, cada uma a sua
+ * As espécies desenhadas a partir da boca do vaso (x, t): cada conjunto de plantas e cada par de vasos grandes escolhe as
+ * suas pela semente do objeto — a samambaia da sala não é a mesma da varanda, e os dois vasos do jardim não repetem a
+ * mesma árvore. */
+type Especie = (x: number, t: number) => Peca[];
+const folhaRecortada = (cx: number, cy: number, r: number, ang: number) => G(`rotate(${ang} ${cx} ${cy})`, [M(suave([[cx, cy + r], [cx - r * 0.9, cy], [cx - r * 0.4, cy - r * 0.8], [cx, cy - r * 0.5], [cx + r * 0.4, cy - r * 0.8], [cx + r * 0.9, cy]], true, 0.5), '#3f7a3f', 'costela'), L(`M${cx} ${cy + r}V${cy - r * 0.4}M${cx - r * 0.6} ${cy - 2}l${r * 0.3} 1M${cx + r * 0.6} ${cy - 2}l${-r * 0.3} 1`, 0.8, '#d4e8c4', { fino: true })]);
+/** As pequenas (o conjunto "plantas e vasos"). */
+const PEQUENAS: Especie[] = [
+  // A costela-de-adão: as folhas recortadas.
+  (x, t) => [L(`M${x} ${t}c-4-10-10-18-14-26M${x} ${t}c2-14 6-26 14-32M${x} ${t}c0-10-2-20-2-34`, 1.4, '#3f6b33'), folhaRecortada(x - 12, t - 30, 12, -30), folhaRecortada(x + 14, t - 36, 13, 24), folhaRecortada(x - 2, t - 42, 11, 0)],
+  // A espada-de-são-jorge: as lâminas em pé, a borda amarela.
+  (x, t) => [M(membro([[x - 3, t + 2], [x - 5, t - 36], [x - 7, t - 56]], [6, 5, 0.6]) + membro([[x + 3, t + 2], [x + 5, t - 32], [x + 9, t - 52]], [6, 5, 0.6]) + membro([[x, t + 2], [x, t - 44], [x, t - 68]], [6, 5, 0.6]), '#4f7a3a', 'espada'), L(`M${x - 5} ${t - 2}c-1-14-2-30-2-48M${x + 5} ${t - 2}c1-12 2-26 4-44`, 0.6, '#d6c45a', { fino: true })],
+  // A samambaia: as frondes caindo para os lados.
+  (x, t) => [L(`M${x} ${t - 4}c-8-4-16 0-20 10M${x} ${t - 4}c-6-10-14-14-22-14M${x} ${t - 4}c2-12 0-20-6-28M${x} ${t - 4}c8-10 16-12 22-10M${x} ${t - 4}c10-2 16 4 20 14M${x} ${t - 4}c4-14 10-22 18-26`, 1.6, '#5f9a52', { marca: 'samambaia' }), L(`M${x - 16} ${t + 4}l2-3M${x - 18} ${t - 12}l3-2M${x - 4} ${t - 26}l2-2M${x + 16} ${t - 12}l-2-2M${x + 18} ${t + 6}l-3-2`, 1, '#5f9a52', { fino: true })],
+  // A zamioculca: as hastes em pé com os folíolos brilhantes aos pares.
+  (x, t) => [L(`M${x} ${t}c-2-14-8-26-12-38M${x} ${t}c0-16 2-30 2-46M${x} ${t}c4-12 10-22 14-32`, 1.2, '#2f5a2c'), M([[-12, 38], [-10, 30], [-7, 22], [2, 44], [2, 34], [1, 24], [14, 32], [11, 24], [8, 16]].flatMap(([dx, dy]) => [elipse(x + dx - 3.4, t - dy, 3.6, 2), elipse(x + dx + 3.4, t - dy, 3.6, 2)]).join(''), '#2f6b34', 'zamioculca'), P([[-12, 38], [2, 44], [14, 32]].map(([dx, dy]) => elipse(x + dx, t - dy - 3, 2.4, 2.4)).join(''), '#3c7f41')],
+  // O cacto: a coluna com dois braços, as estrias e os espinhos.
+  (x, t) => [M(`M${x - 6} ${t}V${t - 40}q0-7 6-7q6 0 6 7V${t}Z` + `M${x - 6} ${t - 16}h-6q-4 0-4-4V${t - 30}q0-4 3-4q3 0 3 4V${t - 22}h4Z` + `M${x + 6} ${t - 22}h6q4 0 4-4V${t - 36}q0-4-3-4q-3 0-3 4V${t - 28}h-4Z`, '#5b8f4a', 'cacto'), L(`M${x - 2} ${t - 2}V${t - 42}M${x + 2} ${t - 2}V${t - 42}`, 0.6, '#3e6b33', { fino: true }), P(`${circulo(x, t - 46, 2.6)}`, '#e96b8a')],
+  // O lírio-da-paz: as folhas largas e as flores brancas.
+  (x, t) => [M(suave([[x - 2, t], [x - 18, t - 14], [x - 14, t - 28], [x - 4, t - 16]], true, 0.4) + suave([[x + 2, t], [x + 18, t - 16], [x + 12, t - 30], [x + 3, t - 18]], true, 0.4) + suave([[x, t], [x - 6, t - 22], [x, t - 36], [x + 6, t - 22]], true, 0.4), '#356e3a', 'lirio'), L(`M${x - 6} ${t - 4}l-4-30M${x + 7} ${t - 4}l5-34`, 0.8, '#4f7a3a'), P(suave([[x - 10, t - 34], [x - 15, t - 42], [x - 10, t - 50], [x - 6, t - 42]], true, 0.5) + suave([[x + 12, t - 38], [x + 8, t - 46], [x + 13, t - 54], [x + 17, t - 46]], true, 0.5), '#f6f4ee')],
+  // A orquídea: a haste curva com as flores, as folhas grossas embaixo.
+  (x, t) => [M(suave([[x, t], [x - 16, t - 6], [x - 6, t - 9]], true, 0.4) + suave([[x, t], [x + 16, t - 5], [x + 6, t - 9]], true, 0.4), '#2f6b34', 'orquidea'), L(`M${x} ${t - 4}c0-20 4-34 14-40`, 0.9, '#5b6b3a'), P([[2, 26], [6, 34], [11, 40], [16, 43]].map(([dx, dy]) => circulo(x + dx, t - dy, 4.2)).join(''), '#d98ac2'), P([[2, 26], [6, 34], [11, 40], [16, 43]].map(([dx, dy]) => circulo(x + dx, t - dy, 1.4)).join(''), '#f3d35a')]
+];
+/** As grandes (o par de vasos grandes): cada uma com a altura `h` acima da boca do vaso. */
+type EspecieGrande = (x: number, t: number, h: number) => Peca[];
+const GRANDES: EspecieGrande[] = [
+  // A oliveira de folha prateada.
+  (x, t, h) => {
+    const cy = t - h * 0.78;
+    const folhas: Pt[] = [[-12, 4], [-5, -3], [4, -5], [12, 2], [-8, 9], [2, 7], [10, 10], [-14, 12], [16, 12]];
+    return [M(membro([[x, t + 4], [x - 3, t - h * 0.35], [x + 2, t - h * 0.6], [x - 1, cy + 4]], [4, 3.4, 2.6, 2]), '#6b5a48', 'tronco'),
+      M(folhas.map(([dx, dy]) => elipse(x + dx, cy + dy, 8, 5)).join(''), '#8a9a6a', 'copa'),
+      P(folhas.slice(0, 5).map(([dx, dy]) => elipse(x + dx - 1, cy + dy - 1.6, 4.6, 2)).join(''), '#b4c29a', undefined, { fino: true })];
+  },
+  // A figueira-lira: o tronco fino e as folhas grandes em forma de violino.
+  (x, t, h) => {
+    const fs: [number, number, number][] = [[-9, 0.95, -25], [8, 0.9, 20], [-12, 0.7, -40], [11, 0.66, 35], [-3, 0.55, -10], [6, 0.42, 25], [-8, 0.36, -30]];
+    return [M(membro([[x, t + 4], [x + 1, t - h * 0.5], [x - 1, t - h * 0.85]], [3, 2.4, 1.6]), '#7a5a3a', 'tronco'),
+      ...fs.map(([dx, k, ang]) => G(`rotate(${ang} ${x + dx} ${t - h * k})`, [M(suave([[x + dx, t - h * k + 9], [x + dx - 7, t - h * k + 2], [x + dx - 6, t - h * k - 8], [x + dx, t - h * k - 11], [x + dx + 6, t - h * k - 8], [x + dx + 7, t - h * k + 2]], true, 0.5), '#3b6e34', 'folha'), L(`M${x + dx} ${t - h * k + 8}V${t - h * k - 9}`, 0.6, '#7ea86a', { fino: true })]))];
+  },
+  // A palmeira-areca: as hastes em leque e os folíolos.
+  (x, t, h) => {
+    const hastes: [number, number][] = [[-26, 0.55], [-16, 0.85], [-4, 1], [8, 0.95], [20, 0.75], [28, 0.5]];
+    return [L(hastes.map(([dx, k]) => `M${x} ${t}Q${x + dx * 0.3} ${t - h * k * 0.8} ${x + dx} ${t - h * k}`).join(''), 1.2, '#7a8a3a', { marca: 'hastes' }),
+      L(hastes.flatMap(([dx, k]) => [0.45, 0.65, 0.85].map(f => { const px = x + dx * f * f, py = t - h * k * f; return `M${px} ${py}l-6 3M${px} ${py}l6 3`; })).join(''), 1.4, '#5f9a3a', { marca: 'foliolos' })];
+  },
+  // A ave-do-paraíso: as folhas em remo nas hastes longas e a flor laranja e azul.
+  (x, t, h) => {
+    const fs: [number, number, number][] = [[-14, 0.8, -18], [2, 1, 4], [14, 0.85, 20], [-6, 0.6, -8]];
+    return [L(fs.map(([dx, k]) => `M${x} ${t}L${x + dx * 0.6} ${t - h * k + 12}`).join(''), 1, '#4f6b3a'),
+      ...fs.map(([dx, k, ang]) => G(`rotate(${ang} ${x + dx * 0.6} ${t - h * k})`, [M(elipse(x + dx * 0.6, t - h * k, 5.5, 13), '#3f7a46', 'folha'), L(`M${x + dx * 0.6} ${t - h * k + 12}V${t - h * k - 12}`, 0.6, '#9cc28a', { fino: true })])),
+      L(`M${x + 4} ${t}L${x + 8} ${t - h * 0.55}`, 1, '#4f6b3a'), P(`M${x + 8} ${t - h * 0.55}l14-3l-12 6z`, '#3f6f9a'), P(`M${x + 9} ${t - h * 0.57}l4-10l3 8l4-9l2 9z`, '#f08a2a')];
+  }
+];
+/** Quantas combinações cada desenho variável tem (a semente do objeto escolhe uma). */
+export const VARIANTES_DE_DESENHO: Record<string, number> = { plantas: PEQUENAS.length * 5, vasos_grandes: GRANDES.length * 3 };
+const POTES = ['#b5704a', '#d9d2c4', '#5b6770', '#c8a77a', '#7a8c6a', '#e8e2d6'];
+
+function plantas(cor: string, v = 0): Amostra {
+  // Três espécies diferentes: a primeira pela semente, as outras duas saltando pelo catálogo (nunca repete no conjunto).
+  const n = PEQUENAS.length, i = v % n, salto = 1 + (Math.floor(v / n) % (n - 2));
+  const esp = [PEQUENAS[i], PEQUENAS[(i + salto) % n], PEQUENAS[(i + 2 * salto) % n === i ? (i + salto + 1) % n : (i + 2 * salto) % n]];
+  const vaso = (x: number, w: number, h: number, c: string) => M(cantos([[x - w / 2, 108 - h, 1.5], [x + w / 2, 108 - h, 1.5], [x + w / 2 - 4, 108, 1.5], [x - w / 2 + 4, 108, 1.5]]), c, 'vaso');
+  const c2 = v ? POTES[v % POTES.length] : cor;
   return noChao([
-    // A costela-de-adão (as folhas recortadas), a espada-de-são-jorge (as lâminas em pé, a borda amarela) e a samambaia.
-    L('M24 80c-4-10-10-18-14-26M24 80c2-14 6-26 14-32M24 80c0-10-2-20-2-34', 1.4, '#3f6b33'),
-    folha(12, 50, 12, -30), folha(38, 44, 13, 24), folha(22, 38, 11, 0),
-    vaso(24, 30, 28),
-    M(membro([[58, 84], [56, 46], [54, 26]], [6, 5, 0.6]) + membro([[64, 84], [66, 50], [70, 30]], [6, 5, 0.6]) + membro([[61, 84], [61, 40], [61, 16]], [6, 5, 0.6]), '#4f7a3a', 'espada'),
-    L('M56 80c-1-14-2-30-2-48M66 80c1-12 2-26 4-44', 0.6, '#d6c45a', { fino: true }),
-    vaso(61, 22, 22),
-    L('M96 82c-8-4-16 0-20 10M96 82c-6-10-14-14-22-14M96 82c2-12 0-20-6-28M96 82c8-10 16-12 22-10M96 82c10-2 16 4 20 14M96 82c4-14 10-22 18-26', 1.6, '#5f9a52', { marca: 'samambaia' }),
-    L('M80 90l2-3M78 74l3-2M92 60l2-2M112 74l-2-2M114 92l-3-2', 1, '#5f9a52', { fino: true }),
-    vaso(96, 26, 22)
+    ...esp[0](24, 80), vaso(24, 30, 28, cor),
+    ...esp[1](61, 86), vaso(61, 22, 22, c2),
+    ...esp[2](96, 86), vaso(96, 26, 22, cor)
   ], 54);
 }
 
-function vasosGrandes(cor: string): Amostra {
-  const vaso = (x: number, h: number, w: number) => [
-    M(suave([[x - w * 0.42, 108 - h], [x + w * 0.42, 108 - h], [x + w * 0.5, 108 - h * 0.6], [x + w * 0.3, 108], [x - w * 0.3, 108], [x - w * 0.5, 108 - h * 0.6]], true, 0.35), cor, 'vaso'),
-    M(ret(x - w * 0.46, 108 - h - 3, w * 0.92, 5, 2), escurecer(cor, 0.12)),
-    L(`M${x - w * 0.2} ${108 - h + 3}v${h * 0.3}M${x + w * 0.12} ${108 - h + 3}v${h * 0.22}`, 1, clarear(cor, 0.35), { fino: true, marca: 'esmalte' })
+function vasosGrandes(cor: string, v = 0): Amostra {
+  const vaso = (x: number, h: number, w: number, c: string, bojudo: boolean) => [
+    M(bojudo ? suave([[x - w * 0.42, 108 - h], [x + w * 0.42, 108 - h], [x + w * 0.5, 108 - h * 0.6], [x + w * 0.3, 108], [x - w * 0.3, 108], [x - w * 0.5, 108 - h * 0.6]], true, 0.35) : cantos([[x - w * 0.4, 108 - h, 2], [x + w * 0.4, 108 - h, 2], [x + w * 0.34, 108, 2], [x - w * 0.34, 108, 2]]), c, 'vaso'),
+    M(ret(x - w * 0.46, 108 - h - 3, w * 0.92, 5, 2), escurecer(c, 0.12)),
+    L(`M${x - w * 0.2} ${108 - h + 3}v${h * 0.3}M${x + w * 0.12} ${108 - h + 3}v${h * 0.22}`, 1, clarear(c, 0.35), { fino: true, marca: 'esmalte' })
   ];
-  const oliveira = (x: number, base: number, h: number) => {
-    const cy = base - h * 0.78;
-    const folhas: Pt[] = [[-12, 4], [-5, -3], [4, -5], [12, 2], [-8, 9], [2, 7], [10, 10], [-14, 12], [16, 12]];
-    return [
-      M(membro([[x, base], [x - 3, base - h * 0.35], [x + 2, base - h * 0.6], [x - 1, cy + 4]], [4, 3.4, 2.6, 2]), '#6b5a48', 'tronco'),
-      M(folhas.map(([dx, dy]) => elipse(x + dx, cy + dy, 8, 5)).join(''), '#8a9a6a', 'copa'),
-      P(folhas.slice(0, 5).map(([dx, dy]) => elipse(x + dx - 1, cy + dy - 1.6, 4.6, 2)).join(''), '#b4c29a', undefined, { fino: true })
-    ];
-  };
+  // Duas árvores diferentes (a segunda nunca é a primeira), o segundo vaso de outro feitio.
+  const n = GRANDES.length, i = v % n, j = (i + 1 + (Math.floor(v / n) % (n - 1))) % n;
   return noChao([
-    // Dois vasos grandes de barro esmaltado (o brilho do esmalte) com as oliveiras de folha prateada.
-    ...oliveira(34, 62, 50), ...oliveira(88, 74, 40),
-    ...vaso(34, 48, 40), ...vaso(88, 36, 34)
+    ...GRANDES[i](34, 60, 50), ...GRANDES[j](88, 72, 40),
+    ...vaso(34, 48, 40, cor, true), ...vaso(88, 36, 34, v ? escurecer(cor, 0.15) : cor, v % 2 === 1)
   ], 54);
 }
 
@@ -1624,7 +1670,7 @@ function estanteEscritorio(cor: string): Amostra {
 }
 
 /** As coisas da casa (VIDA 12.7), cada uma com o seu desenho. */
-export const OBJETOS_DA_CASA: Record<string, (cor: string) => Amostra> = {
+export const OBJETOS_DA_CASA: Record<string, (cor: string, variante?: number) => Amostra> = {
   // Sala
   sofa_retratil: sofaRetratil, sofa_couro: sofaCouro, sofa_designer: sofaDesigner, poltrona_designer: poltronaDesigner,
   mesa_centro: mesaCentro, mesa_centro_marmore: mesaCentroMarmore, mesa_lateral: mesaLateral, estante_sala: estanteSala, aparador,

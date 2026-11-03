@@ -611,7 +611,7 @@ function tornoCeramica(cor: string): Amostra {
   ], 46);
 }
 
-export const OBJETOS: Record<string, (cor: string) => Amostra> = {
+export const OBJETOS: Record<string, (cor: string, variante?: number) => Amostra> = {
   celular_simples: c => celular(c, 1, 0), celular_bom: c => celular(c, 2, 1), celular_topo: c => celular(c, 3, 2),
   notebook, computador, tablet, videogame, tv, camera, caixa_som: som,
   maquina_lavar: maquinaLavar, lava_loucas: lavaLoucas, aspirador_robo: aspirador, ar_condicionado: arCondicionado,
@@ -634,6 +634,8 @@ export function amostraDoObjeto(coisaId: string, cor: string): Amostra {
   return DESENHADOS(`${coisaId}|${cor}`, () => desenharObjeto(coisaId, cor));
 }
 function desenharObjeto(coisaId: string, cor: string): Amostra {
-  const f = OBJETOS[coisaId];
-  return f ? f(cor) : noChao([{ tipo: 'massa', d: ret(24, 40, 72, 66, 4), cor, marca: 'caixa' }, { tipo: 'linha', d: 'M24 56H96', larg: 1 }], 40);
+  // 12.8.1: `plantas#3` — o desenho variável (as espécies das plantas) na variante escolhida pela semente do objeto.
+  const [id, v] = coisaId.split('#');
+  const f = OBJETOS[id];
+  return f ? f(cor, v ? Number(v) : undefined) : noChao([{ tipo: 'massa', d: ret(24, 40, 72, 66, 4), cor, marca: 'caixa' }, { tipo: 'linha', d: 'M24 56H96', larg: 1 }], 40);
 }

@@ -37,6 +37,7 @@ import { evolucaoPatrimonial, painelPatrimonial } from '../leituraPatrimonio';
 import { BensDoTipo, OQueTem } from './Casa';
 import { Pertences } from './Pertences';
 import { Evolucao } from './material/Desenhos';
+import { ImportadoraDeVinhos } from './material/Vinhos';
 import type { QualLugar } from './material/Lugares';
 import '../patrimonio.css';
 import { sobDemanda } from '../util/sobDemanda';
@@ -394,6 +395,8 @@ export function LojaDeColecaoDaCidade({ vida, agir, loja, aoComprar }: { vida: V
   const especiais = todas.filter(o => o.canal === 'especial').filter(filtra);
   const altas = (loja === 'relojoaria' || loja === 'joalheria' || loja === 'galeria' || loja === 'antiquario') && !todas.some(o => o.canal === 'privada');
   const agirEVer = (a: Acao) => { const ok = agir(a); if (ok) aoComprar?.(); return ok; };
+  // 12.8.1: a importadora de vinhos tem a organização das outras lojas (estilos em botões, busca, preço, ordem).
+  if (loja === 'vinhos' && todas.length) return <div className="loja-estilo pat-loja"><p className="nota">{l.frase}</p><ImportadoraDeVinhos vida={vida} agir={agirEVer} ofertas={todas.filter(o => o.canal !== 'especial')} /></div>;
   return (
     <div className="loja-estilo pat-loja">
       <p className="nota">{l.frase}</p>

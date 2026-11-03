@@ -23,6 +23,7 @@
  * Puro (sem React): os testes medem sobreposição, escala e montagem; a cena (`comodos.tsx`) só desenha.
  */
 import { EXTERNOS, medidaDe, type Medida, type Zona } from './medidas';
+import { opcaoDeAcabamento } from '../../motor/dados/lar';
 
 /* ================================================================ a geometria */
 
@@ -151,17 +152,25 @@ const TOPO_FIXO: Record<string, number> = { _bancada: 0.92, _pia: 0.85, _pratele
  * Dispõe os objetos de um cômodo. Determinística: os mesmos objetos dão a mesma cena (a ordem vem do tamanho e do id,
  * não do acaso). `area` em m² (a do cômodo; lá fora, a da área).
  */
-export function disporComodo(tipo: string, area: number | undefined, objetos: ObjetoParaDispor[]): Disposicao {
+export function disporComodo(tipo: string, area: number | undefined, objetos: ObjetoParaDispor[], luz?: string): Disposicao {
+  // 12.8.1: a luminária de pé (a luz "abajur") é um objeto do chão como os outros — ao lado do sofá, da cama ou da
+  // poltrona, na perspectiva do cômodo —, não um desenho solto na frente da cena.
+  if (!EXTERNOS.has(tipo) && tipo !== 'banheiro' && tipo !== 'lavabo' && opcaoDeAcabamento('luz', luz)?.desenho === 'abajur') objetos = [...objetos, { id: '_abajur', coisaId: '_abajur' }];
   // A âncora no meio é a primeira tentativa; se algo fica de fora, a âncora vai para um lado (como a cama encostada
   // num canto do quarto pequeno) — fica a disposição que deixa menos coisa de fora.
-  let melhor: Disposicao | undefined;
+  // 12.8.1: e, sem nada de fora, a que não deixa um móvel alto solto no meio do cômodo (o closet longe da parede).
+  let melhor: Disposicao | undefined, nota = Infinity;
   for (const lado of ['meio', 'direita', 'esquerda'] as const) {
     const d = dispor(tipo, area, objetos, lado);
-    if (!melhor || d.fora.length < melhor.fora.length) melhor = d;
-    if (!melhor.fora.length) break;
+    const n = d.fora.length * 10 + soltos(d);
+    if (n < nota) { melhor = d; nota = n; }
+    if (!nota) break;
   }
   return melhor!;
 }
+
+/** Os móveis altos (armário, vitrine, estante) que ficaram longe da parede do fundo. */
+const soltos = (d: Disposicao) => d.g.externo ? 0 : d.postos.filter(p => p.montagem === 'chao' && !p.fixo && p.h > 1.4 && p.z0 > 0.8).length;
 
 function dispor(tipo: string, area: number | undefined, objetos: ObjetoParaDispor[], lado: 'meio' | 'direita' | 'esquerda'): Disposicao {
   const g = geometria(tipo, area);
@@ -204,12 +213,32 @@ function dispor(tipo: string, area: number | undefined, objetos: ObjetoParaDispo
     return undefined;
   };
 
+  let rigor = true;
+  /** Na tela, um tapa o outro? (a mesma faixa de x, um na frente do outro a menos de 1,6 m, e o de trás se vê por cima) */
+  function escondeOuSome(r: Retangulo, h: number, vaoMax: number): boolean {
+    if (g.externo) return false;
+    return postos.some(q => {
+      if (q.montagem !== 'chao') return false;
+      const sobre = Math.min(r.x1, q.x1) - Math.max(r.x0, q.x0);
+      if (sobre < 0.25 * Math.min(r.x1 - r.x0, q.x1 - q.x0)) return false;
+      const [tras, hT, frente, hF] = q.z1 <= r.z0 + 0.02 ? [q, q.h, r, h] : r.z1 <= q.z0 + 0.02 ? [r, h, q, q.h] : [undefined, 0, undefined, 0];
+      if (!tras || !frente || frente.z0 - tras.z1 > vaoMax) return false;
+      return hT > 1.3 || hF >= hT * 0.6;
+    });
+  }
+
   /** Tenta pôr no chão, pelas zonas, na ordem. */
   function noChao(o: ObjetoParaDispor, m: Medida): Posto | Posto[] | undefined {
     const w = Math.min(m.w, g.Wm - 0.04), d = Math.min(m.d, g.Dv - 0.04);
-    const tenta = (x0: number, z0: number, ignorar?: Retangulo): Posto | undefined => {
+    const tenta = (x0: number, z0: number, ignorar?: Retangulo, encostado = false): Posto | undefined => {
       const r = { x0, x1: x0 + w, z0, z1: z0 + d };
       if (!livre(r, ignorar)) return undefined;
+      // 12.8.1: o móvel encostado (no fundo, no canto, na lateral) não fica na frente de outro que se veja por trás dele
+      // (o aparador tapando a vitrine, a penteadeira na frente do closet), nem atrás de um mais alto que o esconda.
+      if (rigor && escondeOuSome(r, m.h, encostado || o.coisaId === '_abajur' ? 1.6 : 0.7)) return undefined;
+      // E inteiro à vista: o que fica perto de quem olha não sai pela borda da cena.
+      const zd = z0 + Math.min(d, 0.6);
+      if (!g.externo && (xEm(g, x0 + w * 0.3, zd) < 1 || xEm(g, x0 + w * 0.7, zd) > g.W - 1 || chaoEm(g, zd) > g.H - 1)) return undefined;
       return { id: o.id, coisaId: o.coisaId, cor: o.cor, marca: o.marca, ...r, base: 0, h: m.h, montagem: 'chao' };
     };
     const pis = piscina;
@@ -237,16 +266,16 @@ function dispor(tipo: string, area: number | undefined, objetos: ObjetoParaDispo
       }
       if (zona === 'fundo') {
         const centro = !m.ancora || lado === 'meio' ? g.Wm / 2 - w / 2 : lado === 'direita' ? g.Wm - w - 0.6 : 0.6;
-        for (const x0 of passos(0.02, g.Wm - w - 0.02, centro)) { const p = tenta(x0, 0.02); if (p) return p; }
+        for (const x0 of passos(0.02, g.Wm - w - 0.02, centro)) { const p = tenta(x0, 0.02, undefined, true); if (p) return p; }
         continue;
       }
       if (zona === 'canto') {
-        for (const [x0, z0] of [[0.02, 0.02], [g.Wm - w - 0.02, 0.02], [g.Wm - w - 0.02, g.Dv - d - 0.1], [0.02, g.Dv - d - 0.1]]) { const p = tenta(x0, z0); if (p) return p; }
+        for (const [x0, z0] of [[0.02, 0.02], [g.Wm - w - 0.02, 0.02], [g.Wm - w - 0.02, g.Dv - d - 0.1], [0.02, g.Dv - d - 0.1]]) { const p = tenta(x0, z0, undefined, true); if (p) return p; }
         continue;
       }
       if (zona === 'lado') {
         for (const z0 of passos(0.02, g.Dv - d - 0.1, m.h > 1.5 ? 0.02 : g.Dv * 0.3, 0.1)) {
-          const p = tenta(g.Wm - w - 0.02, z0) ?? tenta(0.02, z0);
+          const p = tenta(g.Wm - w - 0.02, z0, undefined, true) ?? tenta(0.02, z0, undefined, true);
           if (p) return p;
         }
         continue;
@@ -276,7 +305,7 @@ function dispor(tipo: string, area: number | undefined, objetos: ObjetoParaDispo
       && !paredeFundo.some(q => x0 < q.x1 + 0.08 && q.x0 < x0 + m.w + 0.08 && b0 < q.b1 + 0.05 && q.b0 < b1 + 0.05)
       && !altosNoFundo.some(p => x0 < p.x1 && p.x0 < x0 + m.w);
     const zMax = Math.max(1.6, Math.min(g.Dv * 0.6, g.Dv - 0.2));
-    const livreDir = (z0: number) => z0 >= 0.15 && z0 + m.w <= zMax
+    const livreDir = (z0: number) => z0 >= 0.15 && z0 + m.w <= zMax && xEm(g, g.Wm, z0 + m.w) <= g.W - 3
       && !paredeDir.some(q => z0 < q.z1 + 0.08 && q.z0 < z0 + m.w + 0.08 && b0 < q.b1 && q.b0 < b1)
       && !postos.some(p => p.montagem === 'chao' && p.x1 > g.Wm - 0.5 && p.h > b0 + 0.1 && z0 < p.z1 && p.z0 < z0 + m.w);
     const acima = postos.find(p => p.montagem === 'chao' && p.z0 < 0.35 && (p.coisaId.startsWith('sofa') || CAMAS_SET.has(p.coisaId) || p.coisaId === 'aparador' || p.coisaId === 'gabinete' || p.coisaId === 'bancada_marmore' || p.coisaId === '_pia' || p.coisaId === 'lareira') && p.h < b0);
@@ -319,14 +348,20 @@ function dispor(tipo: string, area: number | undefined, objetos: ObjetoParaDispo
   // parede, o que fica em cima, o tapete por último (vai sob o que já está), a água.
   const peso = (o: ObjetoParaDispor) => {
     const m = medida(o);
-    if (m.m === 'chao') return (m.ancora ? 0 : m.z?.[0] === 'junto' || m.z?.[0] === 'diante' ? 1 : 2) * 1000 - m.w * m.d * 10;
+    if (o.coisaId === '_abajur') return 2999; // a luminária por último no chão: no lugar que sobrar ao lado de quem senta
+    // 12.8.1: entre os do chão sem lugar marcado, primeiro o que mais se vê de frente (o armário alto, a vitrine) — o
+    // pequeno se ajeita depois no que sobra, em vez de tomar a parede do móvel grande.
+    if (m.m === 'chao') return (m.ancora ? 0 : m.z?.[0] === 'junto' || m.z?.[0] === 'diante' ? 1 : 2) * 1000 - (g.externo || m.ancora || m.z?.[0] === 'junto' || m.z?.[0] === 'diante' ? m.w * m.d : m.w * m.h) * 10;
     return m.m === 'parede' ? 3000 - (m.paredeLado ? 500 : 0) - m.w * m.h * 10 : m.m === 'superficie' ? 4000 : m.m === 'tapete' ? 5000 : 6000;
   };
   const ordem = [...objetos].sort((a, b) => peso(a) - peso(b) || a.coisaId.localeCompare(b.coisaId) || a.id.localeCompare(b.id));
   for (const o of ordem) {
     const m = medida(o);
     if (m.m === 'chao') {
-      const p = noChao(o, m);
+      // Sem lugar que não tape nada, o cômodo pequeno aceita um na frente do outro (melhor que ficar de fora).
+      rigor = true;
+      let p = noChao(o, m);
+      if (!p && o.coisaId !== '_abajur') { rigor = false; p = noChao(o, m); }
       if (!p) { fora.push(o.id); continue; }
       for (const x of Array.isArray(p) ? p : [p]) {
         postos.push(x); chao.push(x);
@@ -367,7 +402,8 @@ function dispor(tipo: string, area: number | undefined, objetos: ObjetoParaDispo
     return { id: o.id, coisaId: o.coisaId, cor: o.cor, marca: o.marca, ...r, base: 0, h: 0.01, montagem: 'tapete' };
   }
 
-  return { g, postos, fora, piscina };
+  for (const p of postos) if (p.coisaId === '_abajur') p.fixo = true;
+  return { g, postos, fora: fora.filter(id => id !== '_abajur'), piscina };
 }
 
 const CAMAS_SET = new Set(['cama_king', 'colchao_hotel', 'colchao', 'cama_box', 'cama_solteiro', 'beliche', 'sofa_cama']);

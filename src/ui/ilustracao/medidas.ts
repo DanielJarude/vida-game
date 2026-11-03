@@ -67,8 +67,8 @@ export const MEDIDAS: Record<string, Medida> = {
   som_hifi: chao(0.9, 0.42, 0.6, ['fundo', 'lado'], { topo: 0.6 }),
   discos: chao(0.65, 0.38, 0.55, ['junto', 'lado', 'canto'], { de: ['som_hifi', 'estante_sala', 'aparador'] }),
   aspirador_robo: chao(0.35, 0.35, 0.1, ['frente', 'canto']),
-  plantas: chao(0.55, 0.55, 1.2, ['canto', 'lado']),
-  vasos_grandes: chao(0.65, 0.65, 1.0, ['canto', 'lado', 'deck_lado']),
+  plantas: chao(0.95, 0.5, 1.1, ['canto', 'lado']),
+  vasos_grandes: chao(1.2, 0.65, 1.7, ['canto', 'lado', 'deck_lado']),
   vitrine_colecao: chao(1.0, 0.45, 1.9, ['lado', 'fundo'], { topo: 1.05 }),
   estante_trofeus: chao(1.2, 0.38, 1.8, ['lado', 'fundo'], { topo: 1.1 }),
   projetor: sobre(0.32, 0.3, 0.14),
@@ -104,7 +104,7 @@ export const MEDIDAS: Record<string, Medida> = {
   closet: chao(2.4, 0.62, 2.4, ['lado', 'fundo']),
   penteadeira: chao(1.0, 0.45, 1.45, ['lado', 'fundo'], { topo: 0.78 }),
   criado_mudo: chao(0.48, 0.4, 0.55, ['junto'], { de: CAMAS, par: true, topo: 0.55 }),
-  espelho_chao: chao(0.6, 0.06, 1.7, ['canto', 'lado']),
+  espelho_chao: parede(0.6, 1.7, 0.04, { paredeLado: true }), // 12.8.1: encostado numa parede (a lateral, de preferência), não solto no chão
   comoda: chao(1.2, 0.5, 0.9, ['lado', 'fundo'], { topo: 0.9 }),
   ar_condicionado: parede(0.9, 0.3, 2.1),
   expositor_relogios: sobre(0.5, 0.35, 0.22),
@@ -206,7 +206,9 @@ export const MEDIDAS: Record<string, Medida> = {
   _obra: parede(0.9, 0.7, 1.4),
   _camisa: parede(0.75, 0.9, 1.35),
   _peca: sobre(0.3, 0.25, 0.3),
-  _antiguidade: sobre(0.32, 0.32, 0.45)
+  _antiguidade: sobre(0.32, 0.32, 0.45),
+  // 12.8.1 · a luminária de pé (a luz "abajur"), ao lado de onde se senta ou se deita
+  _abajur: chao(0.4, 0.4, 1.6, ['junto', 'lado'], { de: [...SOFAS, 'poltrona', 'poltrona_designer', ...CAMAS, 'sofa_cama', 'escrivaninha', 'mesa_executiva', 'home_studio'] })
 };
 
 /** O que não está na tabela: uma caixa de 50 cm, no chão, num canto (o desenho genérico). */

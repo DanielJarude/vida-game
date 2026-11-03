@@ -21,7 +21,7 @@ export interface EstadoDeCompras {
   /** O segmento foi pedido de fora (o mapa "Comprar carro" leva a Veículos): vale mesmo numa vida nova. */
   deFora?: boolean;
 }
-export interface EstadoDaLoja { texto: string; cat: string; faixa: string; marca: string; preco: string; ordem: OrdemDeCompras; quantos: number; /** 12.7: o tipo de peça (casacos, vestidos, calçados…). */ tipo?: string; /** 12.8: o cômodo (na loja da casa). */ ambiente?: string }
+export interface EstadoDaLoja { texto: string; cat: string; faixa: string; marca: string; preco: string; ordem: OrdemDeCompras; quantos: number; /** 12.7: o tipo de peça (casacos, vestidos, calçados…). */ tipo?: string; /** 12.8.1: a categoria da loja da casa (sala e estar, quarto, cozinha e jantar…). */ ambiente?: string }
 
 const CHAVE = 'vida-compras-1151';
 const PADRAO: EstadoDeCompras = { segmento: 'inicio', texto: '', categoria: '', marca: '', faixa: '', ordem: 'relevancia', categoriaDasLojas: '' };

@@ -149,7 +149,7 @@ export default defineConfig({
           // VIDA 12.8: os catálogos novos da casa, das marcas, das coleções e dos bichos (puros: só tipos) num pacote próprio,
           // EMBAIXO dos catálogos de sempre (que os importam) — o pacote dos catálogos estava a 8 kB do limite. Não importam nada
           // em tempo de execução: sem ciclo.
-          if (/[\\/]src[\\/]motor[\\/]dados[\\/](casa128|perfisDeMarca|colecao128|animais128)\.ts/.test(id)) return 'motor-casa';
+          if (/[\\/]src[\\/]motor[\\/]dados[\\/](casa128|perfisDeMarca|colecao128|animais128|categoriasDaCasa)\.ts/.test(id)) return 'motor-casa';
           if (/[\\/]src[\\/]motor[\\/]dados[\\/]/.test(id)) return 'motor-dados';
           // Pacote pré-América do Sul: a CAMADA DE BASE — os sistemas-folha que só importam os catálogos e uns aos outros
           // (núcleo, texto, tempo, mercado, origem, rede, notoriedade, economia...) — vai com os catálogos, embaixo de

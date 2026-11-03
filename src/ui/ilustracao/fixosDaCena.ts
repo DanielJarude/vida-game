@@ -67,6 +67,9 @@ export const FIXOS_DA_CENA: Record<string, (cor: string) => Amostra> = {
   adega_parede: cor => noChao([M(ret(24, 2, 72, 108, 2), cor, 'adega'), V(ret(30, 10, 60, 94, 1)),
     ...Array.from({ length: 7 }, (_, k) => P([0, 1, 2, 3].map(i => elipse(38 + i * 14, 18 + k * 12.5, 5, 3.2)).join(''), k % 3 === 2 ? '#e8d9a8' : '#5b2333')),
     ({ tipo: 'luz', d: ret(52, 4, 16, 4, 1), cor: '#9fe0ff' } as Peca)], 38),
+  /** 12.8.1 · a luminária de pé: a base redonda, a haste, a cúpula de tecido e o facho na cor da luz escolhida. */
+  _abajur: cor => noChao([({ tipo: 'luz', d: circulo(60, 26, 30), cor: cor || '#ffd59a' } as Peca), M(elipse(60, 107, 14, 3.4), '#3a3530', 'base'), Mt('M58.6 106V36h2.8v70z', '#5a5550'),
+    M('M44 38L50 12H70L76 38Z', '#efe2c4', 'cupula'), P(ret(44, 36, 32, 3, 1), '#d8c8a4'), P(elipse(60, 40, 9, 2.2), cor || '#ffe6a8')], 16),
   /** A barraca guardada (dentro de casa, a barraca não fica armada): a bolsa enrolada e a mochila. */
   camping_guardado: cor => noChao([M(ret(14, 70, 54, 40, 14), cor || '#4f7a3a', 'bolsa'), L('M24 72V108M58 72V108', 1, escurecer(cor || '#4f7a3a', 0.3)), M(ret(66, 52, 40, 58, 8), '#c9893f', 'mochila'), P(ret(72, 64, 28, 14, 3), escurecer('#c9893f', 0.15))], 48)
 };

@@ -10,7 +10,8 @@ import type { Acao } from '../../../motor/acoes';
 import { idade } from '../../../motor/nucleo';
 import { coisa } from '../../../motor/dados/coisas';
 import { itemEstilo, lugaresDoItem, nivelDoItem, TIPOS_DE_PECA, tipoDePeca } from '../../../motor/dados/estilo';
-import { segmentoDoNivel, COMODO_DA_COISA } from '../../../motor/dados/lar';
+import { segmentoDoNivel } from '../../../motor/dados/lar';
+import { CATEGORIAS_DA_CASA, categoriaDaCasa, nomeDaCategoriaDaCasa } from '../../../motor/dados/categoriasDaCasa';
 import { leituraDaMarca, segmentoDaMarca } from '../../../motor/sistemas/perfilDaMarca';
 import { NOME_SEGMENTO_DE_MARCA, NOME_QUALIDADE, type SegmentoDeMarca } from '../../../motor/dados/perfisDeMarca';
 import { MiniaturaDaPeca, visualComPecaDoRosto } from '../../avatar/MiniaturaDaPeca';
@@ -69,12 +70,14 @@ export function LojaDaVida({ vida, agir, lojaId }: { vida: Vida; agir: (a: Acao)
   // 12.7: o tipo de peça (só nas lojas que vendem roupa): uma escolha, sem subcategoria.
   const tipoDe = (l: Linha) => (l.produto.tipo === 'item' ? tipoDePeca(itemEstilo(l.produto.id)!) : undefined);
   const tipos = TIPOS_DE_PECA.filter(t => linhas.some(l => tipoDe(l) === t.id));
-  // 12.8: na loja da casa, o cômodo para onde a coisa vai (só os que têm produto nesta loja; nenhum vazio).
-  const ambienteDe = (l: Linha) => (l.produto.tipo === 'coisa' && (l.categoria === 'moveis' || l.categoria === 'eletrodomesticos') ? AMBIENTE_DO_COMODO[COMODO_DA_COISA[l.produto.id]?.[0] ?? ''] ?? 'Casa toda' : undefined);
-  const ambientes = AMBIENTES.filter(a => linhas.some(l => ambienteDe(l) === a));
-  const ambiente = m.ambiente ?? '';
-  // A roupa se escolhe pelo tipo de peça; a seção fica para o resto (a loja de departamento: eletrônicos, casa…).
-  const secoes = tipos.length > 1 ? cats.filter(c => !['vestuario', 'calcados', 'acessorios', 'otica', 'relogios', 'joias'].includes(c)) : cats;
+  // 12.8.1: na loja da casa, a categoria do móvel (sala e estar, quarto, cozinha e jantar… — como o tipo de peça da
+  // roupa): só as que têm produto nesta loja, nenhuma vazia, nenhum produto sem.
+  const ambienteDe = (l: Linha) => (l.produto.tipo === 'coisa' && (l.categoria === 'moveis' || l.categoria === 'eletrodomesticos') ? categoriaDaCasa(l.produto.id, l.categoria === 'eletrodomesticos') as string : undefined);
+  const ambientes = CATEGORIAS_DA_CASA.filter(a => linhas.some(l => ambienteDe(l) === a.id));
+  const ambiente = ambientes.some(a => a.id === m.ambiente) ? m.ambiente! : '';
+  // A roupa se escolhe pelo tipo de peça e a casa pela categoria; a seção fica para o resto (a loja de departamento:
+  // eletrônicos, esporte…).
+  const secoes = cats.filter(c => !(tipos.length > 1 && ['vestuario', 'calcados', 'acessorios', 'otica', 'relogios', 'joias'].includes(c)) && !(ambientes.length > 1 && (c === 'moveis' || c === 'eletrodomesticos')));
   const visiveis = linhas
     .filter(l => (!tipo || tipoDe(l) === tipo) && (!ambiente || ambienteDe(l) === ambiente) && (!cat || l.categoria === cat) && l.ofertas.some(passa) && (!q || q.split(/\s+/).every(t => normalizarBusca(nomeDoProduto(l.produto)).includes(t) || l.ofertas.some(o => o.marca && normalizarBusca(marcaPorId(o.marca)!.nome).includes(t)))))
     .sort((a, b) => m.ordem === 'menor' ? Math.min(...a.ofertas.filter(passa).map(o => o.preco)) - Math.min(...b.ofertas.filter(passa).map(o => o.preco)) : m.ordem === 'maior' ? Math.max(...b.ofertas.filter(passa).map(o => o.preco)) - Math.max(...a.ofertas.filter(passa).map(o => o.preco)) : 0);
@@ -92,8 +95,8 @@ export function LojaDaVida({ vida, agir, lojaId }: { vida: Vida; agir: (a: Acao)
         <input type="search" value={m.texto} onChange={ev => mudar({ texto: ev.target.value, quantos: POR_PAGINA })} placeholder="Produto ou marca" autoComplete="off" />
       </label>
       {tipos.length > 1 && <Escolha rotulo="Tipo de peça" valor={tipo} aoMudar={x => { mudar({ tipo: x, cat: '', marca: '', quantos: POR_PAGINA }); }} opcoes={[{ id: '', rotulo: 'Tudo' }, ...tipos.map(t => ({ id: t.id as string, rotulo: t.nome }))]} />}
-      {secoes.length > 1 && !tipo && <Escolha rotulo="Seção" valor={cat} aoMudar={x => { mudar({ cat: x, marca: '', quantos: POR_PAGINA }); }} opcoes={[{ id: '' as const, rotulo: 'Tudo' }, ...secoes.map(c => ({ id: c, rotulo: NOME_CATEGORIA[c] }))]} />}
-      {ambientes.length > 1 && <Escolha rotulo="Cômodo" valor={ambiente} aoMudar={x => { mudar({ ambiente: x, quantos: POR_PAGINA }); }} opcoes={[{ id: '', rotulo: 'Tudo' }, ...ambientes.map(a => ({ id: a, rotulo: a }))]} />}
+      {ambientes.length > 1 && !tipo && (!cat || cat === 'moveis' || cat === 'eletrodomesticos') && <Escolha rotulo="Tipo de móvel" valor={ambiente} aoMudar={x => { mudar({ ambiente: x, cat: '', marca: '', quantos: POR_PAGINA }); }} opcoes={[{ id: '', rotulo: 'Tudo' }, ...ambientes.map(a => ({ id: a.id as string, rotulo: a.nome }))]} />}
+      {secoes.length > 1 && !tipo && !ambiente && <Escolha rotulo="Seção" valor={cat} aoMudar={x => { mudar({ cat: x, marca: '', quantos: POR_PAGINA }); }} opcoes={[{ id: '' as const, rotulo: 'Tudo' }, ...secoes.map(c => ({ id: c, rotulo: NOME_CATEGORIA[c] }))]} />}
       {faixas.length > 1 && <Escolha rotulo="Segmento da marca" valor={faixa} aoMudar={x => { mudar({ faixa: x, quantos: POR_PAGINA }); }} opcoes={[{ id: '', rotulo: 'Todos' }, ...faixas.map(f => ({ id: String(f), rotulo: cap(NOME_SEGMENTO_DE_MARCA[f]) }))]} />}
       <div className="busca-compras__filtros">
         {marcas.length > 1 && (
@@ -108,7 +111,7 @@ export function LojaDaVida({ vida, agir, lojaId }: { vida: Vida; agir: (a: Acao)
           <select value={m.ordem} onChange={ev => mudar({ ordem: ev.target.value as OrdemDeCompras })}><option value="relevancia">Como na loja</option><option value="menor">Menor preço</option><option value="maior">Maior preço</option></select>
         </label>
       </div>
-      <p className="nota">{visiveis.length} {visiveis.length === 1 ? 'produto' : 'produtos'}{m.texto || m.marca || m.preco || cat || faixa ? ' com esses filtros' : ''}.</p>
+      <p className="nota">{visiveis.length} {visiveis.length === 1 ? 'produto' : 'produtos'}{m.texto || m.marca || m.preco || cat || faixa || tipo || ambiente ? ' com esses filtros' : ''}.</p>
       {provando && <Provador vida={vida} itemId={provando} aoFechar={() => setProvando(null)} />}
       <ul className="catalogo-loja">
         {visiveis.slice(0, quantos).map(l => <ProdutoNaLoja key={l.chave} vida={vida} agir={agir} linha={l} lojaId={lojaId} faixa={faixa} marca={m.marca} preco={preco} crianca={i < 12} provando={provando === l.produto.id} provar={() => setProvando(p => (p === l.produto.id ? null : l.produto.id))} />)}
@@ -162,7 +165,7 @@ function ProdutoNaLoja({ vida, agir, linha, lojaId, faixa, marca, preco, crianca
   const segmento = segmentoDoNivel(nivel);
   const colecao = it?.colecao;
   const edicao = it?.edicao ?? c?.edicao;
-  const categoria = it ? TIPOS_DE_PECA.find(t => t.id === tipoDePeca(it))!.nome : NOME_CATEGORIA[linha.categoria];
+  const categoria = it ? TIPOS_DE_PECA.find(t => t.id === tipoDePeca(it))!.nome : c && (linha.categoria === 'moveis' || linha.categoria === 'eletrodomesticos') ? nomeDaCategoriaDaCasa(categoriaDaCasa(c.id, linha.categoria === 'eletrodomesticos')) : NOME_CATEGORIA[linha.categoria];
   return (
     <li className={`catalogo-loja__cartao${nivel >= 4 ? ' catalogo-loja__cartao--luxo' : ''}${nivel >= 6 ? ' catalogo-loja__cartao--exclusivo' : ''}`} data-produto={p.id} data-nivel={nivel}>
       <span className="catalogo-loja__imagem">
@@ -199,12 +202,6 @@ function ProdutoNaLoja({ vida, agir, linha, lojaId, faixa, marca, preco, crianca
   );
 }
 
-/** 12.8 — os cômodos da loja da casa (o primeiro cômodo onde a coisa costuma ficar). */
-const AMBIENTE_DO_COMODO: Record<string, string> = {
-  sala: 'Sala', cozinha: 'Cozinha', quarto: 'Quarto', quarto_extra: 'Quarto', banheiro: 'Banheiro', escritorio: 'Escritório', biblioteca: 'Sala', jogos: 'Lazer e jogos', cinema: 'Lazer e jogos',
-  academia: 'Academia', estudio: 'Quarto', atelie: 'Escritório', garagem: 'Garagem', piscina: 'Piscina e área externa', jardim: 'Piscina e área externa', lazer: 'Piscina e área externa', adega: 'Cozinha'
-};
-const AMBIENTES = ['Sala', 'Cozinha', 'Quarto', 'Banheiro', 'Escritório', 'Lazer e jogos', 'Academia', 'Piscina e área externa', 'Garagem', 'Casa toda'];
 /** O que a marca muda de fato nesta coisa (só o que o jogo aplica: o desgaste, o usado, o conforto). */
 const CONFORTO_CONTA = new Set(['colchao', 'cama_box', 'cama_king', 'colchao_hotel', 'sofa', 'sofa_retratil', 'sofa_couro', 'sofa_designer']);
 function efeitoDaMarca(n: Record<string, number>, coisa: string | undefined): string {

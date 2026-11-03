@@ -62,16 +62,22 @@ function Cena({ vida, comodoId, tipo, nome, coisas, largura, rascunho }: { vida:
   const asp = (a: AspectoDoComodo) => { const id = rascunho?.acab[a] ?? acabamentoDoComodo(vida, comodoId, a); return { id, cor: opcaoDeAcabamento(a, id)?.cor }; };
   const regulada = { ...(donoDoLar(vida)?.lar?.luzes?.[comodoId] ?? {}), ...(rascunho?.luz ?? {}) };
   // 12.8: o tamanho do cômodo (a escala da cena) e as peças de coleção expostas nele (na parede, no tampo, na vitrine).
-  const cm = comodosDaCasa(vida).find(c => c.id === comodoId);
-  const area = cm ? areaDoComodo(vida.moradia.modeloId, cm) * (['jardim', 'piscina', 'lazer', 'quadra'].includes(tipo) ? 1.6 : 1) : undefined;
-  const expostas = pecasExpostasNoComodo(vida, comodoId);
-  const objetos = [...coisas.map(t => ({ coisaId: t.coisaId, cor: t.cor, id: t.id, marca: t.marca })), ...expostas.map(c => ({ coisaId: DESENHO_DA_PECA[c.categoria] ?? '_peca', cor: c.categoria === 'arte' ? c.id : undefined, id: c.id }))];
+  const { area, expostas, objetos } = objetosDaCena(vida, comodoId, tipo, coisas);
   const nomes = [...coisas.map(t => coisa(t.coisaId)?.nome), ...expostas.map(c => c.nome)].filter(Boolean);
   const cena = <CenaDoComodo tipo={tipo} parede={asp('parede')} piso={asp('piso')} luz={asp('luz').id} rodape={asp('rodape').id} cortina={asp('cortina').id} luzRegulada={regulada} objetos={objetos} area={area} largura={largura} rotulo={`${cap(nome)}${nomes.length ? `: ${nomes.join(', ')}` : ', sem nada seu'}`} />;
   if (largura < 300) return cena;
   // O que não coube à vista não é espremido: a tela diz o quê (continua no cômodo, na lista abaixo).
-  const fora = disporComodo(tipo, area, objetos).fora.map(id => coisas.find(t => t.id === id)?.coisaId ?? expostas.find(c => c.id === id)?.nome).filter(Boolean).map(x => coisa(x!)?.nome ?? x);
+  const fora = disporComodo(tipo, area, objetos, asp('luz').id).fora.map(id => coisas.find(t => t.id === id)?.coisaId ?? expostas.find(c => c.id === id)?.nome).filter(Boolean).map(x => coisa(x!)?.nome ?? x);
   return <>{cena}{fora.length > 0 && <p className="nota pz-fora-da-cena">Não cabe à vista: {fora.join(', ')}.</p>}</>;
+}
+
+/** 12.8 — o tamanho do cômodo (a escala da cena) e o que se vê nele: as coisas e as peças de coleção expostas. */
+export function objetosDaCena(vida: Vida, comodoId: string, tipo: string, coisas: CoisaTida[]) {
+  const cm = comodosDaCasa(vida).find(c => c.id === comodoId);
+  const area = cm ? areaDoComodo(vida.moradia.modeloId, cm) * (['jardim', 'piscina', 'lazer', 'quadra'].includes(tipo) ? 1.6 : 1) : undefined;
+  const expostas = pecasExpostasNoComodo(vida, comodoId);
+  const objetos = [...coisas.map(t => ({ coisaId: t.coisaId, cor: t.cor, id: t.id, marca: t.marca })), ...expostas.map(c => ({ coisaId: DESENHO_DA_PECA[c.categoria] ?? '_peca', cor: c.categoria === 'arte' ? c.id : undefined, id: c.id }))];
+  return { area, expostas, objetos };
 }
 
 /** 12.8 — o desenho de cada categoria de peça exposta (a tela na parede, a camisa no quadro, a peça na redoma, o vaso). */
