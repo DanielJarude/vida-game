@@ -63,7 +63,7 @@ export const MEDIDAS: Record<string, Medida> = {
   quadros: parede(1.3, 0.6, 1.45),
   objetos_decor: sobre(0.45, 0.25, 0.35),
   lareira: chao(1.4, 0.45, 1.1, ['fundo', 'lado'], { topo: 1.1 }),
-  mesa_jantar: chao(1.8, 0.95, 0.76, ['centro', 'frente'], { topo: 0.76 }),
+  mesa_jantar: chao(1.8, 0.95, 0.76, ['lado', 'centro', 'frente'], { topo: 0.76 }),
   som_hifi: chao(0.9, 0.42, 0.6, ['fundo', 'lado'], { topo: 0.6 }),
   discos: chao(0.65, 0.38, 0.55, ['junto', 'lado', 'canto'], { de: ['som_hifi', 'estante_sala', 'aparador'] }),
   aspirador_robo: chao(0.35, 0.35, 0.1, ['frente', 'canto']),

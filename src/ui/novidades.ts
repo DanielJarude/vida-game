@@ -26,6 +26,28 @@ export interface NotaDeVersao {
 
 export const NOTAS: NotaDeVersao[] = [
   {
+    versao: '12.8',
+    data: '2026-11-02',
+    titulo: 'Casas de verdade: cômodos montados, banheiros na conta certa, o lado de fora, marcas com identidade, coleções e mais exóticos',
+    novidades: [
+      'Os cômodos agora são cenas montadas: cada coisa no tamanho dela e no lugar dela — a cama encostada na parede com as mesas de cabeceira dos dois lados, a mesa de centro na frente do sofá sobre o tapete, a TV na parede, o ar-condicionado no alto, os quadros acima do sofá, o celular e o notebook num tampo, as espreguiçadeiras no deck, as boias na água. O lavabo é estreito e a sala da mansão é larga: a cena tem o tamanho do cômodo.',
+      'Banheiros proporcionais à casa: suítes com banheiro próprio, lavabo na área social e banheiro social — a kitnet tem um, a mansão tem as seis suítes, o social e o lavabo. Na casa própria dá para construir um banheiro a mais.',
+      'O lado de fora: fachada (pintura, tijolinho, madeira, pedra, porcelanato, travertino, projeto de arquiteto), jardim (do gramado ao paisagismo assinado, conforme o terreno), caminho, iluminação externa e portão — com prévia no desenho da casa antes de pagar. Novas obras: quadra, varanda e adega.',
+      'Os cômodos servem: sessão de cinema para a família, treino na academia de casa (sem mensalidade e sem trânsito), nado, festa e tarde na piscina, leitura e estudo na biblioteca, noite de jogos, dia de trabalho em casa no escritório (para quem trabalha com isso), ensaio e gravação no estúdio, a garrafa aberta na adega, o jogo na quadra.',
+      'Marcas com identidade: cada uma tem posicionamento (econômico, intermediário, premium, luxo, ultraluxo) e aquilo pelo que é conhecida. A durabilidade muda o desgaste, o valor de revenda muda o usado, o conforto da cama e do sofá conta na casa — e o desenho muda com a marca. Chegaram Hermès, Patek Philippe, Minotti, Fendi Casa, Gaggenau e Fazioli.',
+      'Coleções: suas coleções organizadas (relógios, arte, joias, antiguidades, vinhos, memorabilia, carros de coleção, peças numeradas, discos e troféus), com o valor estimado, o que está à vista e a raridade em seis graus — comum, incomum, rara, muito rara, edição limitada e peça única — tirada dos dados da peça, não do preço. Vinhos de guarda na importadora (sem adega, envelhecem mal) e móveis de expor: vitrine, expositor de relógios, estante de troféus, adega de parede.',
+      'Mais exóticos, cada um com jeito, comida, tempo de vida e o que pede de casa: cacatua, tucano-toco, jiboia, raposa-do-deserto e, onde a lei permite com licença, o macaco-prego e o sagui. Onde não permite (no Brasil, os primatas), a loja diz por quê.'
+    ],
+    melhorias: [
+      'A loja de móveis e eletrodomésticos se filtra pelo cômodo (sala, cozinha, quarto, banheiro, escritório, lazer, academia, piscina e área externa, garagem) e pelo segmento da marca; o cartão diz o que a marca muda de fato.',
+      'A peça de coleção exposta aparece no cômodo: a tela na parede, a camisa no quadro, a peça na redoma; na vitrine, gasta menos.'
+    ],
+    correcoes: [
+      'Comprar na feira o "filhote de macaco-prego" (ou o sagui) registrava um papagaio: o texto, o resumo do ano, a casa e o desenho agora falam do mesmo bicho.',
+      'Os objetos não ficam mais enfileirados no chão nem flutuando: o que é de parede vai para a parede, e o que não cabe à vista não é espremido.'
+    ]
+  },
+  {
     versao: '12.7',
     data: '2026-11-01',
     titulo: 'Imersão e personalização: a roupa escolhida é a vestida, a casa com prévia e catálogo inteiro, moda de luxo de verdade',

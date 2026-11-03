@@ -54,6 +54,19 @@ export const FIXOS_DA_CENA: Record<string, (cor: string) => Amostra> = {
   _peca: () => noChao([P(ret(30, 96, 60, 14, 2), '#3a2a22'), V(cantos3(36, 40, 48, 56)), Mt(circulo(60, 76, 10), '#c9a23a'), P(circulo(60, 76, 7), '#f4f1ea'), L('M60 76v-5M60 76l4 2', 0.8, '#2b2826')], 30),
   /** O vaso antigo (a porcelana, a prataria). */
   _antiguidade: () => noChao([M(suave([[48, 110], [36, 92], [34, 66], [44, 48], [46, 36], [40, 28], [80, 28], [74, 36], [76, 48], [86, 66], [84, 92], [72, 110]]), '#eef0f4', 'vaso'), L('M40 70q20 8 40 0M42 86q18 6 36 0', 1.4, '#2f5d9a')], 24),
+  /** VIDA 12.8 · a vitrine de vidro iluminada: moldura, prateleiras de vidro, a luz de cima e três peças. */
+  vitrine_colecao: cor => noChao([M(ret(28, 6, 64, 104, 1.5), cor, 'vitrine'), V(ret(32, 10, 56, 96, 1)), ({ tipo: 'luz', d: ret(34, 11, 52, 3, 1), cor: '#fff1c8' } as Peca),
+    L('M32 40H88M32 70H88', 1, clarear(cor, 0.4)), Mt(circulo(46, 34, 4), '#c9a23a'), P(ret(62, 26, 10, 14, 1), '#eef0f4'), P(cantos3(44, 56, 12, 14), '#2f5d9a'), Mt(circulo(70, 64, 3.5), '#c3c6c9'), P(ret(28, 106, 64, 4, 1), escurecer(cor, 0.3))], 34),
+  /** O expositor de relógios: a caixa de madeira com tampa de vidro e os giradores. */
+  expositor_relogios: cor => noChao([M(ret(10, 74, 100, 36, 3), cor, 'caixa'), V(ret(14, 60, 92, 18, 2)), ...[26, 48, 70, 92].map(x => Mt(circulo(x, 88, 8), '#3a2a22')), ...[26, 48, 70, 92].map((x, k) => Mt(circulo(x, 88, 5), ['#c9a23a', '#c3c6c9', '#c9a23a', '#c3c6c9'][k])), L('M10 80H110', 0.8, escurecer(cor, 0.3))], 50),
+  /** A estante de troféus: nichos iluminados, as taças, a medalha, a bola. */
+  estante_trofeus: cor => noChao([M(ret(14, 6, 92, 104, 1), cor, 'estante'), P(ret(18, 10, 84, 96, 0), escurecer(cor, 0.35)), L('M18 40H102M18 72H102', 2, cor),
+    Mt('M30 36v-6h-4v-4q0-8 8-8q8 0 8 8v4h-4v6z', '#c9a23a'), Mt('M62 36v-4h-3v-10h14v10h-3v4z', '#c3c6c9'), P(circulo(88, 28, 6), '#f4f1ea'), L('M84 24l8 8M92 24l-8 8', 0.6, '#2b2826'),
+    Mt(circulo(38, 60, 6), '#c9a23a'), L('M38 54l-4 -10M38 54l4 -10', 1, '#3d5d8f'), Mt('M66 68v-5h-4v-6q0-6 6-6q6 0 6 6v6h-4v5z', '#b87333'), P(ret(80, 92, 16, 12, 1), '#efe9df')], 46),
+  /** A adega de parede: porta de vidro do chão ao teto, as garrafas deitadas em fileiras, o painel de temperatura. */
+  adega_parede: cor => noChao([M(ret(24, 2, 72, 108, 2), cor, 'adega'), V(ret(30, 10, 60, 94, 1)),
+    ...Array.from({ length: 7 }, (_, k) => P([0, 1, 2, 3].map(i => elipse(38 + i * 14, 18 + k * 12.5, 5, 3.2)).join(''), k % 3 === 2 ? '#e8d9a8' : '#5b2333')),
+    ({ tipo: 'luz', d: ret(52, 4, 16, 4, 1), cor: '#9fe0ff' } as Peca)], 38),
   /** A barraca guardada (dentro de casa, a barraca não fica armada): a bolsa enrolada e a mochila. */
   camping_guardado: cor => noChao([M(ret(14, 70, 54, 40, 14), cor || '#4f7a3a', 'bolsa'), L('M24 72V108M58 72V108', 1, escurecer(cor || '#4f7a3a', 0.3)), M(ret(66, 52, 40, 58, 8), '#c9893f', 'mochila'), P(ret(72, 64, 28, 14, 3), escurecer('#c9893f', 0.15))], 48)
 };

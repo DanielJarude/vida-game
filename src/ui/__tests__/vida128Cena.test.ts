@@ -79,7 +79,7 @@ describe('a disposição dos cômodos', () => {
   });
   it('a geometria segue a área: o lavabo é estreito, a sala da mansão é larga; a perspectiva aumenta para a frente', () => {
     const lav = geometria('lavabo', 2.5), sala = geometria('sala', 60);
-    expect(lav.Wm).toBeLessThan(2.2); expect(sala.Wm).toBeGreaterThan(8);
+    expect(lav.Wm).toBeLessThan(2.2); expect(sala.Wm).toBeGreaterThan(6.5);
     expect(lav.fx1 - lav.fx0).toBeLessThan(sala.fx1 - sala.fx0);
     expect(escalaEm(sala, sala.Dv)).toBeGreaterThan(escalaEm(sala, 0));
   });

@@ -47,14 +47,16 @@ export function geometria(tipo: string, area = AREA_PADRAO): Geometria {
   const W = 320, H = 180;
   const externo = EXTERNOS.has(tipo);
   const a = Math.max(2, area);
-  const Wm = externo ? Math.min(16, Math.max(4.5, Math.sqrt(a * 1.6))) : Math.min(12, Math.max(1.6, Math.sqrt(a * 1.35)));
+  // A câmera enquadra no máximo ~7 m de largura num cômodo (12 m lá fora): a sala da mansão é larga, mas a cena mostra
+  // a parte mobiliada, não uma maquete miúda.
+  const Wm = externo ? Math.min(12, Math.max(4.5, Math.sqrt(a * 1.6))) : Math.min(7.2, Math.max(1.6, Math.sqrt(a * 1.35)));
   const k = Math.min(40, 236 / Wm);
   const fy1 = 116;
   const fy0 = fy1 - ALTURA_PAREDE * k;
   const pf = { x: W / 2, y: fy1 - OLHO * k };
   const sH = (H - pf.y) / (fy1 - pf.y);
   const Dm = a / Wm;
-  const Dv = Math.min(externo ? 12 : 9, Math.max(1.6, Dm * (externo ? 0.95 : 0.8)));
+  const Dv = Math.min(externo ? 10 : 5.5, Math.max(1.6, Dm * (externo ? 0.95 : 0.8)));
   const dist = Dv / (1 - 1 / sH);
   return { W, H, fx0: W / 2 - Wm * k / 2, fx1: W / 2 + Wm * k / 2, fy0, fy1, pf, k, Wm, Dv, dist, externo };
 }
@@ -243,7 +245,7 @@ function dispor(tipo: string, area: number | undefined, objetos: ObjetoParaDispo
         continue;
       }
       if (zona === 'lado') {
-        for (const z0 of passos(0.02, g.Dv - d - 0.1, g.Dv * 0.35, 0.1)) {
+        for (const z0 of passos(0.02, g.Dv - d - 0.1, m.h > 1.5 ? 0.02 : g.Dv * 0.3, 0.1)) {
           const p = tenta(g.Wm - w - 0.02, z0) ?? tenta(0.02, z0);
           if (p) return p;
         }
@@ -273,7 +275,7 @@ function dispor(tipo: string, area: number | undefined, objetos: ObjetoParaDispo
     const livreFundo = (x0: number) => x0 >= 0.05 && x0 + m.w <= g.Wm - 0.05
       && !paredeFundo.some(q => x0 < q.x1 + 0.08 && q.x0 < x0 + m.w + 0.08 && b0 < q.b1 + 0.05 && q.b0 < b1 + 0.05)
       && !altosNoFundo.some(p => x0 < p.x1 && p.x0 < x0 + m.w);
-    const zMax = Math.min(g.Dv * 0.95, g.Dv - 0.2);
+    const zMax = Math.max(1.6, Math.min(g.Dv * 0.6, g.Dv - 0.2));
     const livreDir = (z0: number) => z0 >= 0.15 && z0 + m.w <= zMax
       && !paredeDir.some(q => z0 < q.z1 + 0.08 && q.z0 < z0 + m.w + 0.08 && b0 < q.b1 && q.b0 < b1)
       && !postos.some(p => p.montagem === 'chao' && p.x1 > g.Wm - 0.5 && p.h > b0 + 0.1 && z0 < p.z1 && p.z0 < z0 + m.w);

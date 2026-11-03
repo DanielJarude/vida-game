@@ -8,7 +8,7 @@ import { CenaDoComodo } from '../../src/ui/ilustracao/comodos';
 
 const CENAS: [string, number, string[]][] = [
   ['sala', 20, ['sofa_couro', 'mesa_centro_marmore', 'tv_oled', 'tapete_persa', 'poltrona_designer', 'mesa_lateral', 'quadros', 'plantas', 'objetos_decor', 'aparador']],
-  ['sala', 48, ['sofa_designer', 'mesa_centro', 'estante_sala', 'tapete', 'home_theater', 'tv', 'lareira', 'poltrona', 'videogame', 'mesa_jantar', 'vitrine_colecao', '_obra', 'som_hifi', 'discos']],
+  ['sala', 90, ['sofa_designer', 'mesa_centro', 'estante_sala', 'tapete', 'home_theater', 'tv', 'lareira', 'poltrona', 'videogame', 'mesa_jantar', 'vitrine_colecao', '_obra', 'som_hifi', 'discos']],
   ['cozinha', 10, ['geladeira', 'fogao', 'microondas', 'cafeteira', 'louca_talheres', 'maquina_lavar']],
   ['cozinha', 22, ['geladeira_inox', 'fogao_profissional', 'ilha_cozinha', 'adega', 'cafeteira', 'armarios_planejados', 'microondas']],
   ['quarto', 12, ['cama_box', 'criado_mudo', 'guarda_roupa', 'ar_condicionado', 'notebook', 'celular_bom', 'chuteira_bola', 'camping', 'violao']],

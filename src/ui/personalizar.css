@@ -163,3 +163,7 @@
 .pz-fora__cena svg { max-width: 100%; height: auto; }
 .pz-fora__escolhas { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: var(--space-2); }
 .pz-fora__escolhas select { width: 100%; }
+.pz-usos .pz-lista { display: flex; flex-direction: column; align-items: stretch; gap: var(--space-1); }
+.pz-usos .pz-lista > li.pz-uso { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: var(--space-1) var(--space-3); text-align: left; padding: 0; border: 0; }
+.pz-usos .grupo-acoes { justify-content: flex-start; align-items: center; }
+.pz-painel__cena .pz-fora-da-cena { line-height: 1.4; margin: var(--space-1) 0 0; }

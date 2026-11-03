@@ -23,6 +23,7 @@ import { coisa } from '../../motor/dados/coisas';
 import { variantesDaCoisa } from '../../motor/dados/pertences';
 import { acabamentoDeOrigem, ASPECTOS_DO_COMODO, COMODOS, opcaoDeAcabamento, SEGMENTOS_DE_LUXO, segmentoDoNivel, TEMPERATURAS_DA_LUZ, type TemperaturaDaLuz, type TipoComodo } from '../../motor/dados/lar';
 import { CenaDoComodo } from '../ilustracao/comodos';
+import { disporComodo } from '../ilustracao/disposicao';
 import { ESTILOS, itemEstilo, lugaresDoItem, NOME_OCASIAO, adequacaoDaRoupa, estiloDominante, nomeDoEstilo } from '../../motor/dados/estilo';
 import { modeloVeiculo } from '../../motor/dados/bens';
 import { economiaLocal } from '../../motor/dados/lugares';
@@ -66,7 +67,11 @@ function Cena({ vida, comodoId, tipo, nome, coisas, largura, rascunho }: { vida:
   const expostas = pecasExpostasNoComodo(vida, comodoId);
   const objetos = [...coisas.map(t => ({ coisaId: t.coisaId, cor: t.cor, id: t.id, marca: t.marca })), ...expostas.map(c => ({ coisaId: DESENHO_DA_PECA[c.categoria] ?? '_peca', cor: c.categoria === 'arte' ? c.id : undefined, id: c.id }))];
   const nomes = [...coisas.map(t => coisa(t.coisaId)?.nome), ...expostas.map(c => c.nome)].filter(Boolean);
-  return <CenaDoComodo tipo={tipo} parede={asp('parede')} piso={asp('piso')} luz={asp('luz').id} rodape={asp('rodape').id} cortina={asp('cortina').id} luzRegulada={regulada} objetos={objetos} area={area} largura={largura} rotulo={`${cap(nome)}${nomes.length ? `: ${nomes.join(', ')}` : ', sem nada seu'}`} />;
+  const cena = <CenaDoComodo tipo={tipo} parede={asp('parede')} piso={asp('piso')} luz={asp('luz').id} rodape={asp('rodape').id} cortina={asp('cortina').id} luzRegulada={regulada} objetos={objetos} area={area} largura={largura} rotulo={`${cap(nome)}${nomes.length ? `: ${nomes.join(', ')}` : ', sem nada seu'}`} />;
+  if (largura < 300) return cena;
+  // O que não coube à vista não é espremido: a tela diz o quê (continua no cômodo, na lista abaixo).
+  const fora = disporComodo(tipo, area, objetos).fora.map(id => coisas.find(t => t.id === id)?.coisaId ?? expostas.find(c => c.id === id)?.nome).filter(Boolean).map(x => coisa(x!)?.nome ?? x);
+  return <>{cena}{fora.length > 0 && <p className="nota pz-fora-da-cena">Não cabe à vista: {fora.join(', ')}.</p>}</>;
 }
 
 /** 12.8 — o desenho de cada categoria de peça exposta (a tela na parede, a camisa no quadro, a peça na redoma, o vaso). */
