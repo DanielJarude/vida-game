@@ -92,9 +92,8 @@ const GARRAFA: Record<EstiloDeVinho, { vidro: string; capsula: string; rotulo: s
 };
 export function GarrafaDeVinho({ estilo, caixa, rotulo }: { estilo: EstiloDeVinho; caixa?: boolean; rotulo: string }) {
   const g = GARRAFA[estilo];
-  return (
-    <svg className="desenho-objeto garrafa-vinho" viewBox="0 0 60 120" width={96} height={96} role="img" aria-label={rotulo} data-estilo={estilo}>
-      <ellipse cx={30} cy={114} rx={caixa ? 26 : 12} ry={3} fill="#000000" opacity={0.15} />
+  const garrafa = (dx: number) => (
+    <g transform={`translate(${dx} 0)`}>
       <path d={g.corpo} fill={g.vidro} stroke="#1b1a18" strokeWidth={0.8} strokeOpacity={0.5} />
       {g.liquido && <path d="M25 70h10v38q0 2-2 2h-6q-2 0-2-2z" fill={g.liquido} opacity={0.75} />}
       <path d="M27.4 5h5.2v14h-5.2z" fill={g.capsula} />
@@ -103,7 +102,12 @@ export function GarrafaDeVinho({ estilo, caixa, rotulo }: { estilo: EstiloDeVinh
       <rect x={24.5} y={68} width={11} height={22} rx={1} fill={g.rotulo} />
       <path d="M26.5 74h7M26.5 78h7M27.5 84h5" stroke={g.capsula} strokeWidth={1} />
       <path d="M27 40v22" stroke="#ffffff" strokeWidth={1.4} opacity={0.25} strokeLinecap="round" />
-      {caixa && <><rect x={4} y={92} width={52} height={20} rx={1.5} fill="#b98a5a" stroke="#7a5534" strokeWidth={0.8} /><path d="M4 99h52M4 106h52M17 92v20M43 92v20" stroke="#8f6640" strokeWidth={0.7} /></>}
+    </g>
+  );
+  return (
+    <svg className="garrafa-vinho" viewBox="0 0 90 120" width={84} height={112} role="img" aria-label={rotulo} data-estilo={estilo}>
+      <ellipse cx={45} cy={114} rx={caixa ? 38 : 13} ry={3} fill="#000000" opacity={0.15} />
+      {caixa ? <>{garrafa(-3)}{garrafa(15)}{garrafa(33)}<rect x={10} y={84} width={70} height={28} rx={1.5} fill="#b98a5a" stroke="#7a5534" strokeWidth={0.8} /><path d="M10 93h70M10 102h70M33 84v28M57 84v28" stroke="#8f6640" strokeWidth={0.7} /></> : garrafa(15)}
     </svg>
   );
 }
