@@ -22,6 +22,7 @@ import { escrever, idade, idadePessoa, lembrarCom, vinculosVivos, foraDaParceria
 import { criarPessoa, vincular } from '../pessoas';
 import { cidadesDoPais, municipio, paisDaCidade } from '../dados/lugares';
 import { moraComFamiliaDeOrigem } from './domicilio';
+import { academiaEmCasa } from './lar';
 import { flex } from '../texto';
 import { rngDe } from '../rng';
 import { carreiraDeAdulto, empregarAdulto } from './filhos';
@@ -71,6 +72,8 @@ export function ambientesAtuais(v: Vida): Ambiente[] {
   for (const rot of v.rotinas) {
     const social = ROTINAS_SOCIAIS[rot.id];
     if (!social) continue;
+    // VIDA 12.8: quem treina na academia de casa não conhece ninguém na academia.
+    if (rot.id === 'academia' && academiaEmCasa(v)) continue;
     // Criança faz amizade com criança: na igreja há adultos, mas o amigo de uma criança de 6 anos tem 6 anos.
     const amplitude = i < 14 ? Math.min(2, social.amplitude) : i < 18 ? Math.min(4, social.amplitude) : social.amplitude;
     out.push({ chave: `rotina:${rot.id}:${cidade}`, tipo: 'rotina', idade: [Math.max(i < 18 ? 3 : 16, i - amplitude), i + amplitude], fluxo: social.fluxo, descricao: social.onde });

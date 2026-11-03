@@ -18,6 +18,8 @@
 
 export type LojaDeCoisas = 'eletronicos' | 'casa' | 'instrumentos' | 'esportes' | 'livraria';
 
+import { COISAS_DE_EXPOR } from './colecao128';
+
 export interface Coisa {
   id: string;
   nome: string;
@@ -210,7 +212,9 @@ export const COISAS: readonly Coisa[] = [
   { id: 'cadeira_ergonomica', nome: 'cadeira ergonômica', artigo: 'a', loja: 'casa', preco: 5200, vida: 12, idadeMin: 18, nivel: 3, descricao: 'Apoio lombar, braço regulável: oito horas sem dor nas costas.', ajuda: { programacao: 0.04, freelas: 0.04, escrever: 0.03 }, alivio: 0.5, daCasa: true },
   { id: 'monitores', nome: 'dois monitores e suporte articulado', artigo: 'os', loja: 'eletronicos', preco: 4800, vida: 8, idadeMin: 14, nivel: 3, descricao: 'Duas telas: o código numa, a documentação na outra.', ajuda: { programacao: 0.1, freelas: 0.08 }, daCasa: true },
   { id: 'impressora', nome: 'impressora multifuncional', artigo: 'a', loja: 'eletronicos', preco: 900, vida: 6, idadeMin: 14, nivel: 1, descricao: 'Imprime, copia, digitaliza — e trava no dia da entrega.', daCasa: true },
-  { id: 'estante_escritorio', nome: 'estante de escritório', artigo: 'a', loja: 'casa', preco: 1600, vida: 20, idadeMin: 18, nivel: 2, descricao: 'Pastas, livros de consulta, o diploma emoldurado.', daCasa: true }
+  { id: 'estante_escritorio', nome: 'estante de escritório', artigo: 'a', loja: 'casa', preco: 1600, vida: 20, idadeMin: 18, nivel: 2, descricao: 'Pastas, livros de consulta, o diploma emoldurado.', daCasa: true },
+  // VIDA 12.8 — os móveis de expor a coleção (`dados/colecao128`).
+  ...COISAS_DE_EXPOR
 ];
 
 const POR_ID = new Map(COISAS.map(c => [c.id, c]));

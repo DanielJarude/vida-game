@@ -15,8 +15,9 @@
  */
 
 import type { CategoriaColecao, RaridadeColecao } from '../tipos';
+import { VINHOS } from './colecao128';
 
-export type LojaDeColecao = 'relojoaria' | 'joalheria' | 'galeria' | 'antiquario' | 'memorabilia' | 'leilao';
+export type LojaDeColecao = 'relojoaria' | 'joalheria' | 'galeria' | 'antiquario' | 'memorabilia' | 'leilao' | 'vinhos';
 
 export interface PecaDeColecao {
   id: string;
@@ -60,7 +61,8 @@ export const NOME_CATEGORIA_COLECAO: Record<CategoriaColecao, { um: string; vari
   relogio: { um: 'relógio', varios: 'Relógios' },
   joia: { um: 'joia', varios: 'Joias' },
   antiguidade: { um: 'antiguidade', varios: 'Antiguidades' },
-  memorabilia: { um: 'peça de memorabilia', varios: 'Memorabilia esportiva' }
+  memorabilia: { um: 'peça de memorabilia', varios: 'Memorabilia esportiva' },
+  vinho: { um: 'vinho', varios: 'Vinhos' }
 };
 
 export const NOME_RARIDADE: Record<RaridadeColecao, string> = { comum: 'de série', incomum: 'pouco comum', rara: 'rara', unica: 'peça única' };
@@ -71,6 +73,7 @@ export const LOJAS_DE_COLECAO: Record<LojaDeColecao, { nome: string; frase: stri
   galeria: { nome: 'Galeria de arte', frase: 'Paredes brancas, uma obra por parede, preço só perguntando. O artista novo é aposta; o consagrado, patrimônio.', cidadeGrande: true },
   antiquario: { nome: 'Antiquário', frase: 'Cheiro de madeira velha, cada peça com uma história — algumas verdadeiras.', cidadeGrande: false },
   memorabilia: { nome: 'Loja de memorabilia', frase: 'Camisas emolduradas, bolas autografadas, ingressos de finais. A carta do clube é o que separa a relíquia da réplica.', cidadeGrande: true },
+  vinhos: { nome: 'Importadora de vinhos', frase: 'Caixas de madeira, a sala fria, o sommelier que pergunta o que você vai guardar. Sem adega em casa, o vinho de guarda não aguenta.', cidadeGrande: true },
   leilao: { nome: 'Casa de leilões', frase: 'Catálogo do ano, lance a lance. Sobre o martelo, a comissão da casa (20%). As peças únicas aparecem aqui.', cidadeGrande: true }
 };
 
@@ -132,7 +135,9 @@ export const PECAS_DE_COLECAO: readonly PecaDeColecao[] = [
   { id: 'ant_manuscrito', nome: 'manuscrito iluminado medieval', artigo: 'o', categoria: 'antiguidade', raridade: 'rara', loja: 'antiquario', preco: 2_600_000, retencao: 0.75, tendencia: 0.012, oscila: 0.07, patrimonioMin: 20_000_000, canal: 'privada', fabricante: 'scriptorium monástico', periodo: 'século XV', material: 'pergaminho, ouro e pigmentos', faixa: 4, liquidez: 'baixa', descricao: 'Livro de horas completo, com a encadernação original. Pede clima controlado.' },
   { id: 'ant_diario_expedicao', nome: 'diário de bordo de uma expedição científica de 1838', artigo: 'o', categoria: 'antiguidade', raridade: 'unica', loja: 'leilao', preco: 9_000_000, retencao: 0.85, tendencia: 0.012, oscila: 0.08, patrimonioMin: 80_000_000, canal: 'especial', unica: true, fabricante: 'o capitão da expedição', periodo: '1838', material: 'papel, couro e tinta ferrogálica', faixa: 5, liquidez: 'baixa', descricao: 'Desenhos de espécies que ninguém tinha descrito. Três universidades já pediram para estudar.' },
   { id: 'mem_camisa_copa', nome: 'camisa de jogo de uma final de Copa do Mundo', artigo: 'a', categoria: 'memorabilia', raridade: 'rara', loja: 'memorabilia', preco: 680000, retencao: 0.78, tendencia: 0.02, oscila: 0.14, patrimonioMin: 5_000_000, material: 'algodão', faixa: 3, liquidez: 'media', descricao: 'Com a carta da federação e a foto do jogo. Do tipo que só aparece uma vez por década.' },
-  { id: 'mem_taca_original', nome: 'taça original de um campeonato dos anos 1930', artigo: 'a', categoria: 'memorabilia', raridade: 'unica', loja: 'leilao', preco: 7_500_000, retencao: 0.85, tendencia: 0.015, oscila: 0.1, patrimonioMin: 60_000_000, canal: 'especial', unica: true, fabricante: 'ourivesaria italiana', periodo: '1934', material: 'prata dourada', faixa: 5, liquidez: 'baixa', descricao: 'A taça que o campeão levou para casa antes de existirem réplicas. Sumiu por quarenta anos.' }
+  { id: 'mem_taca_original', nome: 'taça original de um campeonato dos anos 1930', artigo: 'a', categoria: 'memorabilia', raridade: 'unica', loja: 'leilao', preco: 7_500_000, retencao: 0.85, tendencia: 0.015, oscila: 0.1, patrimonioMin: 60_000_000, canal: 'especial', unica: true, fabricante: 'ourivesaria italiana', periodo: '1934', material: 'prata dourada', faixa: 5, liquidez: 'baixa', descricao: 'A taça que o campeão levou para casa antes de existirem réplicas. Sumiu por quarenta anos.' },
+  // VIDA 12.8 — os vinhos de guarda (`dados/colecao128`).
+  ...VINHOS
 ];
 
 export const pecaDeColecao = (id: string) => PECAS_DE_COLECAO.find(p => p.id === id);

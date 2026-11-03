@@ -32,6 +32,7 @@ import { estabelecimento } from '../dados/lojas';
 import { lancar } from './extrato';
 import { dinheiro as fmt } from '../texto';
 import { bonusDosComodos, naCasaAtual } from './lar';
+import { fatorDeDesgaste, fatorDeRevenda } from './perfilDaMarca';
 import { afetoDe, registrarNoObjeto } from './memoriaDosObjetos';
 
 export const coisasDaVida = (v: Vida): CoisaTida[] => v.financas.coisas ?? [];
@@ -60,8 +61,9 @@ export function valorDeRevenda(v: Vida, t: CoisaTida): number {
   const c = coisa(t.coisaId);
   if (!c) return 0;
   const anos = (v.t - t.t) / 12;
-  const resta = clamp(1 - anos / c.vida, 0.1, 1);
-  return Math.round(t.preco * resta * (t.estado / 100) * 0.5 / 10) * 10;
+  // VIDA 12.8: a marca que dura vive mais anos; a que tem mercado de usados paga mais que a metade (sem marca: como sempre).
+  const resta = clamp(1 - anos / (c.vida / fatorDeDesgaste(t.marca)), 0.1, 1);
+  return Math.round(t.preco * resta * (t.estado / 100) * fatorDeRevenda(t.marca) / 10) * 10;
 }
 
 /** O calor de verdade, que faz do ar-condicionado outra coisa: no Brasil, fora do Sul; no mundo, os países e estados quentes. */
@@ -196,7 +198,8 @@ export function processarCoisas(v: Vida): void {
     const r = rngDe(v.id, 'coisa', t.id, v.t);
     // REWORK 12.4: o que está guardado (depósito, outra casa) quase não se gasta; emprestado, gasta como em uso.
     const guardada = !!t.local && !t.emprestadaA ? 0.25 : 1;
-    t.estado = clamp(Math.round(t.estado - (100 / c.vida) * (0.75 + r.next() * 0.5) * guardada), 0, 100);
+    // VIDA 12.8: a durabilidade da marca muda o desgaste (sem marca: o de sempre).
+    t.estado = clamp(Math.round(t.estado - (100 / c.vida) * (0.75 + r.next() * 0.5) * guardada * fatorDeDesgaste(t.marca)), 0, 100);
     if (t.estado <= 0) quebradas.push(t);
   }
   const guardadas: CoisaTida[] = [];

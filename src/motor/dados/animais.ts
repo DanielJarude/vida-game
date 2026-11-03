@@ -24,8 +24,9 @@
  */
 
 import type { Especie } from '../tipos';
+import { ANIMAIS_128 } from './animais128';
 
-export type GrupoAnimal = 'cao' | 'gato' | 'ave' | 'roedor' | 'coelho' | 'peixe' | 'reptil' | 'mamifero';
+export type GrupoAnimal = 'cao' | 'gato' | 'ave' | 'roedor' | 'coelho' | 'peixe' | 'reptil' | 'mamifero' | 'primata';
 export type OrigemCompra = 'abrigo' | 'loja' | 'criadouro';
 
 export interface Animal {
@@ -270,7 +271,9 @@ export const ANIMAIS: readonly Animal[] = [
     interacao: { rotulo: 'Cuidar do aquário de', textos: ['Salinidade, filtro, luz; {nome} entrou e saiu da anêmona, à vontade.'] },
     cotidiano: ['{nome} adotou a anêmona nova no primeiro dia.'],
     morteCedo: ['uma falha do filtro numa noite de calor', 'uma doença de pele de peixe marinho']
-  }
+  },
+  // VIDA 12.8 — a cacatua, o tucano, a jiboia, a raposa-do-deserto, o macaco-prego e o sagui (`dados/animais128`).
+  ...ANIMAIS_128
 ];
 
 export const animal = (id: Especie | undefined): Animal => ANIMAIS.find(a => a.id === id) ?? ANIMAIS[0];
@@ -296,7 +299,9 @@ export function umBicho(esp: Especie | undefined, genero: string): string {
 /** Ofertas que a vida pode apresentar FORA da lei (tráfico de animais silvestres). */
 export const OFERTAS_ILEGAIS: { bicho: string; especie: Especie; cites: boolean; texto: string }[] = [
   { bicho: 'um filhote de papagaio', especie: 'papagaio', cites: true, texto: 'tirado do ninho, sem anilha, sem nota' },
-  { bicho: 'um filhote de macaco-prego', especie: 'papagaio', cites: true, texto: 'que "já vem mansinho" — nenhum criadouro no país vende macaco legalmente' },
+  // VIDA 12.8: o macaco-prego e o sagui eram registrados como 'papagaio' (não havia espécie de primata): o texto dizia
+  // macaco e a casa recebia um papagaio. Cada oferta tem agora a espécie que o texto nomeia (teste em vida128Animais).
+  { bicho: 'um filhote de macaco-prego', especie: 'macaco_prego', cites: true, texto: 'que "já vem mansinho" — nenhum criadouro no país vende macaco legalmente' },
   { bicho: 'um filhote de jabuti', especie: 'jabuti', cites: true, texto: 'pego no mato, "mais barato que em loja"' },
-  { bicho: 'um sagui', especie: 'papagaio', cites: true, texto: 'dentro de uma caixa de sapato' }
+  { bicho: 'um sagui', especie: 'sagui', cites: true, texto: 'dentro de uma caixa de sapato' }
 ];

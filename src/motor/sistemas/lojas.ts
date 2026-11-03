@@ -9,7 +9,8 @@ import { economiaLocal, municipio, nivelDeOferta } from '../dados/lugares';
 import { paisDoCatalogo, existePais } from '../mundo/registro';
 import { COISAS, coisa, type Coisa } from '../dados/coisas';
 import { ITENS_ESTILO, itemEstilo, type ItemEstilo } from '../dados/estilo';
-import { ESTABELECIMENTOS, FATOR_FAIXA, FATOR_FAIXA_LUXO, MARCAS, estabelecimento, marca as marcaPorId, type CategoriaDeProduto, type Estabelecimento, type Marca, type Mercado } from '../dados/lojas';
+import { segmentoDaMarca } from './perfilDaMarca';
+import { ESTABELECIMENTOS, FATOR_FAIXA, FATOR_FAIXA_LUXO, FATOR_ULTRALUXO, MARCAS, estabelecimento, marca as marcaPorId, type CategoriaDeProduto, type Estabelecimento, type Marca, type Mercado } from '../dados/lojas';
 
 export type Produto = { tipo: 'item' | 'coisa'; id: string };
 
@@ -79,7 +80,9 @@ export function precoNaLoja(v: Vida, p: Produto, marcaId?: string, lojaId?: stri
   const base = precoBase(p) * economiaLocal(v.moradia.municipioId).custo;
   const m = marcaId ? marcaPorId(marcaId) : undefined;
   const e = lojaId ? estabelecimento(lojaId) : undefined;
-  let x = base * (m ? (luxoDo(p) ? FATOR_FAIXA_LUXO : FATOR_FAIXA)[m.faixa] : 1);
+  // VIDA 12.8: o ultraluxo (Hermès, Patek Philippe, Fendi Casa, Gaggenau, Fazioli) cobra acima do luxo.
+  const ultra = m && segmentoDaMarca(m.id) === 5;
+  let x = base * (m ? (ultra ? (luxoDo(p) ? FATOR_ULTRALUXO.luxo : FATOR_ULTRALUXO.comum) : (luxoDo(p) ? FATOR_FAIXA_LUXO : FATOR_FAIXA)[m.faixa]) : 1);
   if (e?.tipo === 'online') {
     x *= e.frete ?? 1.08;
     // A marca que não tem loja neste mercado vem de fora: a importação pesa.

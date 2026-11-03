@@ -24,6 +24,7 @@ import { atividadeExiste, modeloRotina, nivelDa, nivelModelo, ROTINAS } from './
 import { pesoDoRitmoNaSemana, ritmoDe } from './ritmo';
 import { semanaDaPolitica } from './politica';
 import { tempoDoCaminho } from './tempoDoCrime';
+import { academiaEmCasa } from './lar';
 
 
 export interface Compromisso {
@@ -81,14 +82,15 @@ const LOGISTICA = 0.1;
  * e a agenda e a exigência leem a mesma duração (antes, a agenda punha 90 minutos e a exigência ignorava a duração).
  */
 export const aulaCurtaDaCrianca = (id: string, nivel: number, idadeDe?: number) => idadeDe !== undefined && idadeDe < 12 && nivel <= 2 && modeloRotina(id)?.categoria === 'esporte';
-export function cargaDaAtividade(id: string, nivel: number, idadeDe?: number): { carga: number; mental: number; tempo: number } {
+export function cargaDaAtividade(id: string, nivel: number, idadeDe?: number, emCasa = false): { carga: number; mental: number; tempo: number } {
   const mo = modeloRotina(id);
   if (!mo) return { carga: 0, mental: 0, tempo: 0 };
   const tempo = nivelModelo(mo, nivel).tempo;
   const k = INTENSIDADE_DE[id] ?? INTENSIDADE[mo.categoria] ?? { carga: 0.8, mental: 0.5 };
   // O nível a sério (a base, a equipe de competição, o ensaio de verdade) cobra mais por vez, além de ser mais vezes.
   const serio = nivel >= 3 ? 1.1 : 1;
-  const fora = EM_CASA.has(id) ? 0 : LOGISTICA;
+  // VIDA 12.8: o que se faz no cômodo da própria casa (a academia equipada) não tem ida e volta.
+  const fora = EM_CASA.has(id) || emCasa ? 0 : LOGISTICA;
   const duracao = aulaCurtaDaCrianca(id, nivel, idadeDe) ? 2 / 3 : 1;
   return { carga: Math.round(tempo * (k.carga * serio * duracao + fora) * 100) / 100, mental: k.mental, tempo };
 }
@@ -208,7 +210,7 @@ export function semana(v: Vida): Semana {
   const rotinas: Compromisso[] = v.rotinas.map(r => {
     const mo = modeloRotina(r.id);
     const n = mo ? nivelModelo(mo, nivelDa(r)) : undefined;
-    const c = cargaDaAtividade(r.id, nivelDa(r), i);
+    const c = cargaDaAtividade(r.id, nivelDa(r), i, r.id === 'academia' && academiaEmCasa(v));
     return { id: r.id, rotulo: mo ? (mo.niveis.length > 1 ? `${mo.nome} — ${n!.rotulo.toLowerCase()}` : mo.nome) : r.id, peso: c.carga, tempo: c.tempo, mental: c.mental, tipo: 'rotina' as const };
   });
   const ocupado = rotinas.reduce((s, x) => s + x.peso, 0);

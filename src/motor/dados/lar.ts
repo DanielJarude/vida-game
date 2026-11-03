@@ -16,7 +16,9 @@ import type { AspectoDoComodo } from '../tipos';
 export type TipoComodo =
   | 'sala' | 'cozinha' | 'quarto' | 'quarto_extra' | 'banheiro'
   | 'escritorio' | 'jogos' | 'academia' | 'garagem' | 'jardim' | 'piscina' | 'lazer'
-  | 'estudio' | 'atelie' | 'biblioteca' | 'cinema';
+  | 'estudio' | 'atelie' | 'biblioteca' | 'cinema'
+  /** VIDA 12.8: o lavabo (a pia e o vaso da área social), a adega, a quadra e a varanda. */
+  | 'lavabo' | 'adega' | 'quadra' | 'varanda';
 
 export interface ModeloComodo {
   tipo: TipoComodo;
@@ -49,7 +51,8 @@ export const COMODOS: Record<TipoComodo, ModeloComodo> = {
   cozinha: { tipo: 'cozinha', nome: 'cozinha', artigo: 'a', area: 10, descricao: 'Fogão, pia, a mesa do café.' },
   quarto: { tipo: 'quarto', nome: 'quarto', artigo: 'o', area: 12, descricao: 'O seu quarto: a cama, o armário, a janela.' },
   quarto_extra: { tipo: 'quarto_extra', nome: 'quarto', artigo: 'o', area: 9, conversao: 1500, obra: { preco: 90000, terreno: 15 }, descricao: 'Um quarto para filho, hóspede — ou para virar outra coisa.' },
-  banheiro: { tipo: 'banheiro', nome: 'banheiro', artigo: 'o', area: 5, descricao: 'Chuveiro, pia, espelho.' },
+  banheiro: { tipo: 'banheiro', nome: 'banheiro', artigo: 'o', area: 5, obra: { preco: 38000, terreno: 6 }, descricao: 'Chuveiro, pia, espelho.' },
+  lavabo: { tipo: 'lavabo', nome: 'lavabo', artigo: 'o', area: 2.5, descricao: 'A pia e o vaso perto da sala: a visita não atravessa a casa.' },
   escritorio: { tipo: 'escritorio', nome: 'escritório', artigo: 'o', area: 9, conversao: 2500, obra: { preco: 60000, terreno: 15 }, pede: ['escrivaninha', 'computador', 'notebook', 'mesa_executiva', 'monitores', 'cadeira_ergonomica'], ajuda: { programacao: 0.05, estudar_concurso: 0.06, freelas: 0.06, escrever: 0.04, cursinho: 0.05 }, descricao: 'Uma porta que fecha e uma mesa que é só de trabalho.' },
   jogos: { tipo: 'jogos', nome: 'sala de jogos', artigo: 'a', area: 16, conversao: 3000, obra: { preco: 80000, terreno: 30 }, pede: ['videogame', 'mesa_sinuca', 'jogos_tabuleiro', 'pebolim', 'pingue_pongue', 'bilhar_profissional', 'fliperama', 'mesa_jogos'], lazer: 1.5, ajuda: { videogame: 0.05, xadrez: 0.03 }, descricao: 'A mesa, o console, os amigos até tarde.' },
   academia: { tipo: 'academia', nome: 'academia', artigo: 'a', area: 12, conversao: 4000, obra: { preco: 70000, terreno: 25 }, pede: ['kit_academia', 'esteira', 'estacao_musculacao', 'bicicleta_ergometrica', 'remo_seco', 'saco_pancada'], ajuda: { academia: 0.1, corrida: 0.04, lutas: 0.03 }, descricao: 'Piso de borracha, espelho, o treino sem trânsito.' },
@@ -60,6 +63,9 @@ export const COMODOS: Record<TipoComodo, ModeloComodo> = {
   estudio: { tipo: 'estudio', nome: 'estúdio musical', artigo: 'o', area: 10, conversao: 18000, obra: { preco: 120000, terreno: 25 }, pede: INSTRUMENTOS, ajuda: { musica: 0.12, tocar_na_noite: 0.05, criar_conteudo: 0.05 }, descricao: 'Tratamento acústico, porta pesada: tocar às onze da noite sem o vizinho saber.' },
   atelie: { tipo: 'atelie', nome: 'ateliê', artigo: 'o', area: 12, conversao: 3000, obra: { preco: 60000, terreno: 25 }, pede: ['material_arte', 'cavalete', 'torno_ceramica', 'tablet', 'camera'], ajuda: { desenho: 0.12, fotografia: 0.06 }, descricao: 'Luz do dia, chão que pode sujar, a obra secando na parede.' },
   biblioteca: { tipo: 'biblioteca', nome: 'biblioteca', artigo: 'a', area: 12, conversao: 6000, obra: { preco: 80000, terreno: 25 }, pede: ['livros', 'livros_estudo', 'poltrona'], ajuda: { leitura: 0.1, escrever: 0.06, estudar_concurso: 0.03 }, lazer: 0.5, descricao: 'Estante do chão ao teto e uma poltrona boa.' },
+  adega: { tipo: 'adega', nome: 'adega', artigo: 'a', area: 8, conversao: 22000, obra: { preco: 85000, terreno: 15 }, pede: ['adega', 'adega_parede'], lazer: 0.5, manutencao: 40, descricao: 'Temperatura e umidade certas, prateleiras de madeira: o vinho guardado envelhece, não estraga.' },
+  quadra: { tipo: 'quadra', nome: 'quadra', artigo: 'a', area: 260, obra: { preco: 140000, terreno: 260 }, lazer: 1.5, manutencao: 180, ajuda: { tenis: 0.06, basquete: 0.05, volei: 0.04, futebol: 0.04 }, descricao: 'Piso de quadra, alambrado, iluminação: o jogo de sábado sem reservar horário.' },
+  varanda: { tipo: 'varanda', nome: 'varanda', artigo: 'a', area: 10, obra: { preco: 32000, terreno: 18 }, lazer: 0.5, descricao: 'Coberta e aberta: a rede, a cadeira, o café da tarde vendo a rua.' },
   cinema: { tipo: 'cinema', nome: 'sala de cinema', artigo: 'a', area: 18, conversao: 25000, obra: { preco: 150000, terreno: 30 }, pede: ['projetor', 'tv', 'poltronas_cinema', 'home_theater', 'tv_oled'], lazer: 2, manutencao: 60, descricao: 'Blackout, som envolvente, poltronas: o filme de sábado com a família.' }
 };
 
@@ -81,22 +87,27 @@ export interface Planta {
   vagas: number;
   /** O que o prédio deixa fazer num apartamento (a cobertura tem terraço; os outros, só o que é por dentro). */
   obrasPermitidas?: TipoComodo[];
+  /**
+   * VIDA 12.8 — os banheiros: quantas suítes (o banheiro de um quarto, a começar pelo principal), quantos banheiros
+   * sociais e se há lavabo. Ausente: um banheiro social (a casa pequena). Proporcional ao tamanho e ao padrão.
+   */
+  banheiros?: { suites: number; sociais: number; lavabo?: boolean };
 }
 
 export const PLANTAS: Record<string, Planta> = {
   republica: { integrado: true, extras: [], terreno: 0, vagas: 0 },
   kitnet: { integrado: true, extras: [], terreno: 0, vagas: 0 },
   apto_1q: { extras: [], terreno: 0, vagas: 1 },
-  apto_2q: { extras: [], terreno: 0, vagas: 1 },
-  apto_3q: { extras: [], terreno: 0, vagas: 2 },
-  alto_padrao: { extras: [], terreno: 0, vagas: 2 },
-  cobertura: { extras: ['piscina', 'lazer'], terreno: 70, vagas: 3, obrasPermitidas: ['jardim', 'academia', 'jogos', 'cinema'] },
+  apto_2q: { extras: [], terreno: 0, vagas: 1, banheiros: { suites: 1, sociais: 1 } },
+  apto_3q: { extras: ['varanda'], terreno: 0, vagas: 2, banheiros: { suites: 1, sociais: 1 } },
+  alto_padrao: { extras: ['varanda'], terreno: 0, vagas: 2, banheiros: { suites: 3, sociais: 1, lavabo: true } },
+  cobertura: { extras: ['piscina', 'lazer'], terreno: 70, vagas: 3, obrasPermitidas: ['jardim', 'academia', 'jogos', 'cinema'], banheiros: { suites: 4, sociais: 1, lavabo: true } },
   casa_simples: { extras: [], terreno: 25, vagas: 1 },
   casa_2q: { extras: ['garagem'], terreno: 40, vagas: 1 },
-  casa_3q: { extras: ['garagem', 'jardim'], terreno: 90, vagas: 2 },
-  casa_grande: { extras: ['garagem', 'jardim', 'lazer'], terreno: 260, vagas: 3 },
-  mansao: { extras: ['garagem', 'jardim', 'lazer', 'piscina', 'escritorio'], terreno: 700, vagas: 6 },
-  sitio: { extras: ['garagem', 'jardim', 'lazer'], terreno: 3000, vagas: 4 }
+  casa_3q: { extras: ['garagem', 'jardim'], terreno: 90, vagas: 2, banheiros: { suites: 1, sociais: 1 } },
+  casa_grande: { extras: ['garagem', 'jardim', 'lazer', 'varanda'], terreno: 260, vagas: 3, banheiros: { suites: 2, sociais: 1, lavabo: true } },
+  mansao: { extras: ['garagem', 'jardim', 'lazer', 'piscina', 'escritorio', 'varanda'], terreno: 700, vagas: 6, banheiros: { suites: 6, sociais: 1, lavabo: true } },
+  sitio: { extras: ['garagem', 'jardim', 'lazer', 'varanda'], terreno: 3000, vagas: 4, banheiros: { suites: 1, sociais: 1 } }
 };
 export const plantaDe = (modeloId: string | undefined): Planta => PLANTAS[modeloId ?? ''] ?? PLANTAS.apto_2q;
 
@@ -277,11 +288,12 @@ Object.assign(COMODO_DA_COISA, {
   bilhar_profissional: ['jogos', 'sala'], pebolim: ['jogos', 'garagem'], pingue_pongue: ['jogos', 'garagem'], mesa_jogos: ['jogos', 'sala'], fliperama: ['jogos', 'sala'], poltronas_cinema: ['cinema', 'sala'],
   bicicleta_ergometrica: ['academia', 'quarto'], remo_seco: ['academia', 'sala'], saco_pancada: ['academia', 'garagem'],
   ferramentas: ['garagem', 'cozinha'], bancada_ferramentas: ['garagem'], armario_garagem: ['garagem'], organizadores: ['garagem', 'quarto_extra'], carregador_ev: ['garagem'], lavadora_pressao: ['garagem'],
+  vitrine_colecao: ['sala', 'escritorio', 'biblioteca'], expositor_relogios: ['quarto', 'escritorio'], estante_trofeus: ['sala', 'escritorio', 'jogos'], adega_parede: ['adega', 'sala', 'cozinha'],
   mesa_executiva: ['escritorio', 'sala'], cadeira_ergonomica: ['escritorio', 'quarto'], monitores: ['escritorio', 'quarto'], impressora: ['escritorio', 'quarto'], estante_escritorio: ['escritorio', 'sala']
 } satisfies Record<string, TipoComodo[]>);
 
 /** Coisas grandes (pesam numa mudança, no frete entre casas, no depósito); as pequenas vão na mala. */
-export const COISAS_GRANDES = new Set(['sofa_retratil', 'sofa_couro', 'sofa_designer', 'poltrona_designer', 'estante_sala', 'aparador', 'tv_oled', 'geladeira', 'geladeira_inox', 'freezer', 'adega', 'fogao', 'cooktop_forno', 'fogao_profissional', 'ilha_cozinha', 'cama_box', 'cama_king', 'colchao_hotel', 'guarda_roupa', 'comoda', 'cama_solteiro', 'sofa_cama', 'beliche', 'espreguicadeira_teca', 'sofa_externo', 'mesa_externa', 'bilhar_profissional', 'pebolim', 'pingue_pongue', 'mesa_jogos', 'fliperama', 'poltronas_cinema', 'bicicleta_ergometrica', 'remo_seco', 'bancada_ferramentas', 'armario_garagem', 'mesa_executiva', 'penteadeira', 'tv', 'sofa', 'mesa_jantar', 'maquina_lavar', 'lava_loucas', 'colchao', 'esteira', 'piano', 'bateria', 'mesa_sinuca', 'estacao_musculacao', 'torno_ceramica', 'escrivaninha', 'ar_condicionado', 'cozinha_equipada', 'poltrona', 'projetor', 'som_hifi']);
+export const COISAS_GRANDES = new Set(['vitrine_colecao', 'estante_trofeus', 'adega_parede', 'sofa_retratil', 'sofa_couro', 'sofa_designer', 'poltrona_designer', 'estante_sala', 'aparador', 'tv_oled', 'geladeira', 'geladeira_inox', 'freezer', 'adega', 'fogao', 'cooktop_forno', 'fogao_profissional', 'ilha_cozinha', 'cama_box', 'cama_king', 'colchao_hotel', 'guarda_roupa', 'comoda', 'cama_solteiro', 'sofa_cama', 'beliche', 'espreguicadeira_teca', 'sofa_externo', 'mesa_externa', 'bilhar_profissional', 'pebolim', 'pingue_pongue', 'mesa_jogos', 'fliperama', 'poltronas_cinema', 'bicicleta_ergometrica', 'remo_seco', 'bancada_ferramentas', 'armario_garagem', 'mesa_executiva', 'penteadeira', 'tv', 'sofa', 'mesa_jantar', 'maquina_lavar', 'lava_loucas', 'colchao', 'esteira', 'piano', 'bateria', 'mesa_sinuca', 'estacao_musculacao', 'torno_ceramica', 'escrivaninha', 'ar_condicionado', 'cozinha_equipada', 'poltrona', 'projetor', 'som_hifi']);
 
 /** O depósito alugado (self storage), por mês, na cidade de custo 1,0: o boxe pequeno e o espaço por coisa grande. */
 export const DEPOSITO = { base: 180, porGrande: 45 };

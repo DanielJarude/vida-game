@@ -14,6 +14,9 @@ import type { AspectoDoComodo, CoisaTida, Imovel, LarPersonalizado, Vida } from 
 import { clamp } from '../rng';
 import { modeloMoradia, AREA_MORADIA } from '../dados/bens';
 import { ACABAMENTOS, acabamentoDeOrigem, COMODO_DA_COISA, COMODOS, comodo as modeloComodo, opcaoDeAcabamento, plantaDe, type Planta, type TipoComodo } from '../dados/lar';
+import { coisa as coisaDoCatalogo } from '../dados/coisas';
+import { OPCOES_EXTERNAS, ASPECTOS_EXTERNOS } from '../dados/casa128';
+import { notaDaMarca, segmentoDaMarca } from './perfilDaMarca';
 
 export interface ComodoDaCasa {
   /** O id estável do cômodo nesta casa ("sala", "quarto2", "piscina", "estudio_412"). */
@@ -22,6 +25,8 @@ export interface ComodoDaCasa {
   nome: string;
   /** Veio com o imóvel, foi construído ou é um quarto que mudou de uso. */
   de: 'origem' | 'obra' | 'conversao';
+  /** VIDA 12.8: o banheiro de uma suíte (o id do quarto dela). */
+  suiteDe?: string;
 }
 
 /** A casa da família (dos pais, de um parente) é decisão dos adultos dela: não se personaliza. */
@@ -56,16 +61,27 @@ export function comodosDe(modeloId: string | undefined, lar: LarPersonalizado | 
     return out;
   }
   const m = modeloMoradia(modeloId ?? 'apto_2q');
-  const out: ComodoDaCasa[] = [
-    { id: 'sala', tipo: 'sala', nome: 'sala', de: 'origem' }, { id: 'cozinha', tipo: 'cozinha', nome: 'cozinha', de: 'origem' },
-    { id: 'quarto', tipo: 'quarto', nome: 'quarto principal', de: 'origem' }
-  ];
-  for (let k = 2; k <= Math.max(1, m.quartos); k++) {
+  // VIDA 12.8: os banheiros pela planta — as suítes ficam ao lado do quarto delas, o lavabo junto da sala, os sociais
+  // depois dos quartos. O banheiro social de sempre mantém o id 'banheiro' (o que já estava nele continua lá).
+  const b = p.banheiros ?? { suites: 0, sociais: 1 };
+  const quartos = Math.max(1, m.quartos);
+  const suites = Math.min(b.suites, quartos);
+  // Sempre há o banheiro social de id 'banheiro' (o de antes da 12.8: os acabamentos e as coisas dele continuam).
+  const sociais = Math.max(1, b.sociais);
+  const out: ComodoDaCasa[] = [{ id: 'sala', tipo: 'sala', nome: 'sala', de: 'origem' }];
+  if (b.lavabo) out.push({ id: 'lavabo', tipo: 'lavabo', nome: 'lavabo', de: 'origem' });
+  out.push({ id: 'cozinha', tipo: 'cozinha', nome: 'cozinha', de: 'origem' }, { id: 'quarto', tipo: 'quarto', nome: suites ? 'suíte principal' : 'quarto principal', de: 'origem' });
+  const suiteDe = (k: number) => out.push({ id: k === 1 ? 'banheiro_suite' : `banheiro_suite${k}`, tipo: 'banheiro', nome: k === 1 ? 'banheiro da suíte' : `banheiro da suíte ${k}`, de: 'origem', suiteDe: k === 1 ? 'quarto' : `quarto${k}` });
+  if (suites >= 1) suiteDe(1);
+  for (let k = 2; k <= quartos; k++) {
     const id = `quarto${k}`;
     const conv = extras.find(x => x.id === id && x.de === 'conversao');
-    out.push(conv ? { id, tipo: conv.tipo as TipoComodo, nome: COMODOS[conv.tipo as TipoComodo]?.nome ?? 'quarto', de: 'conversao' } : { id, tipo: 'quarto_extra', nome: `quarto ${k}`, de: 'origem' });
+    out.push(conv ? { id, tipo: conv.tipo as TipoComodo, nome: COMODOS[conv.tipo as TipoComodo]?.nome ?? 'quarto', de: 'conversao' } : { id, tipo: 'quarto_extra', nome: k <= suites ? `suíte ${k}` : `quarto ${k}`, de: 'origem' });
+    if (k <= suites) suiteDe(k);
   }
-  out.push({ id: 'banheiro', tipo: 'banheiro', nome: 'banheiro', de: 'origem' });
+  // Um banheiro social, sempre com o id antigo; o segundo, 'banheiro2'.
+  out.push({ id: 'banheiro', tipo: 'banheiro', nome: suites || sociais > 1 ? 'banheiro social' : 'banheiro', de: 'origem' });
+  for (let k = 2; k <= sociais; k++) out.push({ id: `banheiro${k}`, tipo: 'banheiro', nome: `banheiro social ${k}`, de: 'origem' });
   for (const t of p.extras) out.push({ id: t, tipo: t, nome: COMODOS[t].nome, de: 'origem' });
   for (const x of extras) if (x.de === 'obra') {
     // O quarto construído que depois mudou de uso tem a sua conversão registrada pelo mesmo id.
@@ -107,7 +123,8 @@ export function comodoDaCoisa(v: Vida, t: CoisaTida, comodos = comodosDaCasa(v))
   if (!comodos.length || !naCasaAtual(t)) return undefined;
   const escolhido = t.comodo ? comodos.find(c => c.id === t.comodo) : undefined;
   if (escolhido) return escolhido;
-  for (const tipo of COMODO_DA_COISA[t.coisaId] ?? []) { const c = comodos.find(x => x.tipo === tipo); if (c) return c; }
+  // O cômodo de id igual ao tipo primeiro (o banheiro de sempre, não o da suíte que a planta 12.8 acrescentou).
+  for (const tipo of COMODO_DA_COISA[t.coisaId] ?? []) { const c = comodos.find(x => x.id === tipo) ?? comodos.find(x => x.tipo === tipo); if (c) return c; }
   return comodos.find(c => c.tipo === 'quarto') ?? comodos[0];
 }
 
@@ -127,6 +144,27 @@ export function comodoEquipado(v: Vida, c: ComodoDaCasa, porComodo = coisasPorCo
   const pede = modeloComodo(c.tipo)?.pede;
   if (!pede) return true;
   return (porComodo.get(c.id) ?? []).some(t => pede.includes(t.coisaId) && t.estado > 0 && !t.lembranca);
+}
+
+/**
+ * VIDA 12.8 — o segmento de uma coisa sua (1 básico … 6 exclusivo): o do produto (ou o do preço, quando o catálogo não
+ * diz) e a marca por cima — o sofá de marca econômica perde meio degrau, o de ultraluxo ganha um e meio.
+ */
+export function nivelDaCoisa(t: CoisaTida): number {
+  const c = coisaDoCatalogo(t.coisaId);
+  const base = c?.nivel ?? (c && c.preco >= 20000 ? 4 : c && c.preco >= 5000 ? 3 : 2);
+  const s = segmentoDaMarca(t.marca);
+  const ajuste = s === undefined ? 0 : [-0.5, 0, 0.5, 1, 1.5][s - 1];
+  return clamp(base + ajuste, 1, 6);
+}
+
+/** VIDA 12.8 — a academia de casa equipada: a atividade 'academia' se faz em casa (sem mensalidade, sem ida e volta). */
+export function academiaEmCasa(v: Vida): boolean {
+  if (!v.financas.coisas?.length || casaDaFamilia(v)) return false;
+  const cs = comodosDaCasa(v).filter(c => c.tipo === 'academia');
+  if (!cs.length) return false;
+  const pc = coisasPorComodo(v);
+  return cs.some(c => comodoEquipado(v, c, pc));
 }
 
 /** O que os cômodos equipados somam à prática de uma atividade (lido por `coisas.bonusDaAtividade`, com o teto de lá). */
@@ -172,7 +210,7 @@ export function confortoDaCasa(v: Vida): LeituraDoConforto {
   const lar = donoDoLar(v)?.lar;
   if (comodos.length && lar && Object.keys(lar.acabamentos).length) {
     // Só os cômodos de dentro (onde há piso e luz): a média do que se escolheu contra a do padrão de origem.
-    const internos = comodos.filter(c => !['jardim', 'piscina', 'garagem', 'lazer'].includes(c.tipo));
+    const internos = comodos.filter(c => !['jardim', 'piscina', 'garagem', 'lazer', 'quadra', 'varanda'].includes(c.tipo));
     const nivel = (a: AspectoDoComodo, c: ComodoDaCasa) => opcaoDeAcabamento(a, acabamentoDoComodo(v, c.id, a, lar))?.nivel ?? 1;
     const origem = (a: AspectoDoComodo) => opcaoDeAcabamento(a, acabamentoDeOrigem(a, padrao))?.nivel ?? 1;
     const delta = internos.reduce((s, c) => s + (nivel('piso', c) - origem('piso')) + (nivel('luz', c) - origem('luz')) * 0.8, 0) / Math.max(1, internos.length);
@@ -188,6 +226,18 @@ export function confortoDaCasa(v: Vida): LeituraDoConforto {
   const tem = (id: string) => aqui.some(t => t.coisaId === id);
   const dentro = casaDaFamilia(v) ? 0 : ESSENCIAIS.reduce((s, [id, x]) => s + (tem(id) ? x : 0), 0);
   if (dentro) partes.push({ rotulo: 'O que você pôs dentro (cama boa, sofá, mesa…)', valor: dentro });
+  // VIDA 12.8: a cama e o sofá de marca que é conhecida pelo conforto (ou a que economizou nele) — só com marca.
+  if (!casaDaFamilia(v)) {
+    const confortaveis = aqui.filter(t => t.marca && ['colchao', 'cama_box', 'cama_king', 'colchao_hotel', 'sofa', 'sofa_retratil', 'sofa_couro', 'sofa_designer'].includes(t.coisaId));
+    const x = Math.round(Math.max(-3, Math.min(4, confortaveis.reduce((s, t) => s + (notaDaMarca(t.marca, 'conforto') - 3), 0))));
+    if (x) partes.push({ rotulo: x > 0 ? 'A cama e o sofá de marca confortável' : 'A cama e o sofá baratos', valor: x });
+    const ext = donoDoLar(v)?.lar?.externo;
+    if (ext) {
+      const niveis = ASPECTOS_EXTERNOS.map(a => OPCOES_EXTERNAS[a].find(o => o.id === ext[a])?.nivel ?? 1).filter(n => n > 1);
+      const y = Math.min(4, Math.round(niveis.reduce((s, n) => s + (n - 1), 0) / 2));
+      if (y) partes.push({ rotulo: 'O lado de fora bem cuidado', valor: y });
+    }
+  }
   const vista = casaDaFamilia(v) ? 0 : (v.financas.colecao ?? []).filter(c => c.exposta && !c.local).length;
   if (vista) partes.push({ rotulo: 'Arte e coleção à vista', valor: Math.min(5, vista) });
   if (comodos.length) {

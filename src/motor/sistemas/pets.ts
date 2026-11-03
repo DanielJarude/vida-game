@@ -129,6 +129,13 @@ const DOENCAS_GRUPO: Partial<Record<GrupoAnimal, Doenca[]>> = {
     { nome: 'uma infecção respiratória', gravidade: 2, tratavel: true, custo: [400, 1200] },
     { nome: 'uma doença dos ossos, de falta de luz', gravidade: 2, tratavel: true, custo: [500, 1500] },
     { nome: 'um problema no casco ou na pele', gravidade: 1, tratavel: true, custo: [200, 600] }
+  ],
+  // VIDA 12.8: os primatas (o veterinário de primatas é raro e caro; a doença da gente passa para eles).
+  primata: [
+    { nome: 'uma infecção intestinal', gravidade: 2, tratavel: true, custo: [900, 2500] },
+    { nome: 'uma doença dos ossos, de falta de luz ultravioleta', gravidade: 2, tratavel: true, custo: [1200, 3200] },
+    { nome: 'uma tristeza que não passa (vive sem outro da espécie)', gravidade: 1, tratavel: true, custo: [600, 1500] },
+    { nome: 'uma doença passada por gente', gravidade: 3, tratavel: false, custo: [3000, 8000] }
   ]
 };
 const DOENCAS: Doenca[] = [

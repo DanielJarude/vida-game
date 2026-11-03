@@ -159,7 +159,9 @@ export type Especie =
   | 'peixe' | 'betta'
   | 'jabuti' | 'iguana'
   /** REWORK 12.2: os exóticos (a loja especializada, conforme a lei de cada país). */
-  | 'arara' | 'furao' | 'ourico' | 'gecko' | 'dragao_barbudo' | 'piton_bola' | 'acara_disco' | 'peixe_palhaco';
+  | 'arara' | 'furao' | 'ourico' | 'gecko' | 'dragao_barbudo' | 'piton_bola' | 'acara_disco' | 'peixe_palhaco'
+  /** VIDA 12.8: mais exóticos (`dados/animais128`); os primatas, só onde a lei permite (no Brasil, só como oferta ilegal). */
+  | 'cacatua' | 'tucano' | 'jiboia' | 'raposa_do_deserto' | 'macaco_prego' | 'sagui';
 
 /** Um animal da casa. Não é patrimônio: é alguém que mora junto e depende de cuidado. */
 export interface InfoPet {
@@ -1239,6 +1241,8 @@ export interface LarPersonalizado {
   acabamentos: Record<string, Partial<Record<AspectoDoComodo, string>>>;
   /** 12.7: a luz regulada de cada cômodo (temperatura e intensidade 40–100%); ausente = a de fábrica. */
   luzes?: Record<string, { temperatura?: 'quente' | 'neutra' | 'fria'; intensidade?: number }>;
+  /** VIDA 12.8: o lado de fora escolhido (fachada, paisagismo, caminho, luz externa, portão — `dados/casa128`). Ausente = como veio. */
+  externo?: Partial<Record<'fachada' | 'paisagismo' | 'caminho' | 'luz_externa' | 'portao', string>>;
   historia?: EpisodioBem[];
 }
 
@@ -1362,7 +1366,7 @@ export interface InstalacaoAnimal {
 
 /* ---------------------------------------------------- REWORK 12 · coleção */
 
-export type CategoriaColecao = 'arte' | 'relogio' | 'joia' | 'antiguidade' | 'memorabilia';
+export type CategoriaColecao = 'arte' | 'relogio' | 'joia' | 'antiguidade' | 'memorabilia' | 'vinho';
 export type RaridadeColecao = 'comum' | 'incomum' | 'rara' | 'unica';
 /**
  * De onde a peça veio — é a procedência que sustenta o valor. Peça sem procedência vale como peça sem

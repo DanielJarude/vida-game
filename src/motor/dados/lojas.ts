@@ -32,6 +32,8 @@ export const NOME_FAIXA: Record<Faixa, string> = { 1: 'popular', 2: 'preço méd
 /** O preço da marca sobre o de referência (o produto de luxo já é caro: a grife soma menos sobre ele). */
 export const FATOR_FAIXA: Record<Faixa, number> = { 1: 0.72, 2: 1, 3: 1.65, 4: 4.2 };
 export const FATOR_FAIXA_LUXO: Record<Faixa, number> = { 1: 0.8, 2: 0.9, 3: 1, 4: 1.45 };
+/** VIDA 12.8: o ultraluxo (o posicionamento acima do luxo, `dados/perfisDeMarca`): sobre o produto comum e sobre o de luxo. */
+export const FATOR_ULTRALUXO = { comum: 7.5, luxo: 2.4 };
 
 export interface Marca {
   id: string;
@@ -69,6 +71,8 @@ export const MARCAS: readonly Marca[] = [
   { id: 'gucci', nome: 'Gucci', real: true, faixa: 4, categorias: ['vestuario', 'calcados', 'otica', 'acessorios'] },
   { id: 'prada', nome: 'Prada', real: true, faixa: 4, categorias: ['vestuario', 'calcados', 'otica'] },
   { id: 'valentim', nome: 'Casa Valentim', faixa: 4, categorias: ['vestuario', 'joias'] },
+  // VIDA 12.8 — o ultraluxo (posicionamento em `dados/perfisDeMarca`): poucas casas, só nas cidades grandes.
+  { id: 'hermes', nome: 'Hermès', real: true, faixa: 4, categorias: ['vestuario', 'calcados', 'acessorios'], mercados: ['EU', 'UK', 'NA', 'ASIA', 'BR', 'OCE'] },
   // ------------------------------------------------------------ calçados e esporte
   { id: 'havaianas', nome: 'Havaianas', real: true, faixa: 1, categorias: ['calcados'], so: ['chinelo_slide', 'sandalia'] },
   { id: 'olympikus', nome: 'Olympikus', real: true, faixa: 1, categorias: ['calcados', 'esportes'], mercados: ['BR'], so: ['tenis_casual', 'tenis_corrida', 'chinelo_slide', 'kit_academia'] },
@@ -105,6 +109,7 @@ export const MARCAS: readonly Marca[] = [
   { id: 'tissot', nome: 'Tissot', real: true, faixa: 3, categorias: ['relogios'], so: ['relogio', 'relogio_luxo'] },
   { id: 'rolex', nome: 'Rolex', real: true, faixa: 4, categorias: ['relogios'], so: ['relogio_luxo'] },
   { id: 'omega', nome: 'Omega', real: true, faixa: 4, categorias: ['relogios'], so: ['relogio_luxo'] },
+  { id: 'patek', nome: 'Patek Philippe', real: true, faixa: 4, categorias: ['relogios'], so: ['relogio_luxo'], mercados: ['EU', 'UK', 'NA', 'ASIA', 'BR'] },
   { id: 'prata_fina', nome: 'Prata Fina', faixa: 1, categorias: ['joias', 'acessorios'] },
   { id: 'pandora', nome: 'Pandora', real: true, faixa: 2, categorias: ['joias'], so: ['pulseira_prata', 'pulseira_couro', 'brincos', 'anel_prata', 'corrente_prata', 'pulseira_ouro', 'brincos_ouro'] },
   { id: 'vivara', nome: 'Vivara', real: true, faixa: 3, categorias: ['joias', 'relogios'], mercados: ['BR'] },
@@ -130,6 +135,7 @@ export const MARCAS: readonly Marca[] = [
   { id: 'bosch', nome: 'Bosch', real: true, faixa: 3, categorias: ['eletrodomesticos'], mercados: ['EU', 'UK', 'NA', 'BR', 'ASIA'] },
   { id: 'smeg', nome: 'Smeg', real: true, faixa: 3, categorias: ['eletrodomesticos'], mercados: ['EU', 'UK', 'OCE'] },
   { id: 'miele', nome: 'Miele', real: true, faixa: 4, categorias: ['eletrodomesticos'], mercados: ['EU', 'UK', 'NA', 'OCE'] },
+  { id: 'gaggenau', nome: 'Gaggenau', real: true, faixa: 4, categorias: ['eletrodomesticos'], mercados: ['EU', 'UK', 'NA', 'ASIA', 'OCE'] },
   // ------------------------------------------------------------ móveis e casa
   { id: 'casa_pratica', nome: 'Casa Prática', faixa: 1, categorias: ['moveis'] },
   { id: 'ikea', nome: 'IKEA', real: true, faixa: 1, categorias: ['moveis'], mercados: ['EU', 'UK', 'NA', 'ASIA', 'OCE', 'LATAM'] },
@@ -138,6 +144,8 @@ export const MARCAS: readonly Marca[] = [
   { id: 'westwing', nome: 'Westwing', real: true, faixa: 2, categorias: ['moveis'], mercados: ['BR', 'EU'] },
   { id: 'aurora', nome: 'Marcenaria Aurora', faixa: 3, categorias: ['moveis'] },
   { id: 'natuzzi', nome: 'Natuzzi', real: true, faixa: 4, categorias: ['moveis'], so: ['sofa', 'poltrona', 'mesa_jantar', 'sofa_couro', 'sofa_designer', 'poltrona_designer', 'cama_king'] },
+  { id: 'minotti', nome: 'Minotti', real: true, faixa: 4, categorias: ['moveis'], mercados: ['EU', 'UK', 'NA', 'ASIA', 'BR'], so: ['sofa', 'sofa_retratil', 'sofa_couro', 'sofa_designer', 'poltrona', 'poltrona_designer', 'mesa_centro', 'mesa_centro_marmore', 'mesa_lateral', 'mesa_jantar', 'aparador', 'cama_king', 'sofa_externo', 'espreguicadeira_teca', 'mesa_externa'] },
+  { id: 'fendi_casa', nome: 'Fendi Casa', real: true, faixa: 4, categorias: ['moveis'], mercados: ['EU', 'UK', 'NA', 'ASIA'], so: ['sofa_couro', 'sofa_designer', 'poltrona_designer', 'mesa_centro_marmore', 'aparador', 'cama_king', 'mesa_jantar', 'tapete_persa'] },
   // 12.7 — o alto padrão da casa (fictícias): o ateliê de móveis e a cozinha profissional.
   { id: 'atelier_ardent', nome: 'Atelier Ardent', faixa: 4, categorias: ['moveis'] },
   { id: 'fornaro', nome: 'Fornaro', faixa: 4, categorias: ['eletrodomesticos'] },
@@ -150,6 +158,7 @@ export const MARCAS: readonly Marca[] = [
   { id: 'fender', nome: 'Fender', real: true, faixa: 3, categorias: ['instrumentos'], so: ['guitarra', 'violao'] },
   { id: 'gibson', nome: 'Gibson', real: true, faixa: 4, categorias: ['instrumentos'], so: ['guitarra'] },
   { id: 'steinway', nome: 'Steinway & Sons', real: true, faixa: 4, categorias: ['instrumentos'], so: ['piano'] },
+  { id: 'fazioli', nome: 'Fazioli', real: true, faixa: 4, categorias: ['instrumentos'], so: ['piano'], mercados: ['EU', 'UK', 'NA', 'ASIA'] },
   // ------------------------------------------------------------ só pela internet (o barato que vem de longe)
   { id: 'genericos', nome: 'Sem marca (importado)', faixa: 1, categorias: ['vestuario', 'calcados', 'acessorios', 'otica', 'relogios', 'joias', 'eletronicos', 'esportes'], online: true }
 ];

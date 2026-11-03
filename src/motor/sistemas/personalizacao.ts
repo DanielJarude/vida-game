@@ -40,6 +40,8 @@ import { ACABAMENTOS, acabamentoDoComodo, areaDoComodo, casaDaFamilia, comodosDa
 import { afetoDe, registrarNoObjeto } from './memoriaDosObjetos';
 import { disponibilidadeCultural, disponibilidadeObra, fazerCultural, processarGostos, produzirObra } from './gostos';
 import { dinheiro as fmt } from '../texto';
+import { disponibilidadeReformaExterna, disponibilidadeUsarComodo, fazerReformaExterna, usarComodo } from './casaViva';
+import type { AspectoExterno } from '../dados/casa128';
 
 export type RefObjeto = { tipo: 'coisa' | 'colecao' | 'estilo'; id: string };
 
@@ -63,7 +65,11 @@ export type OpPersonalizar =
   | { o: 'veiculo_garagem'; bem: string; imovel: string | null }
   | { o: 'look'; ocasiao: Ocasiao; itens: string[] }
   | { o: 'cultural'; oque: string; genero?: string; pessoaId?: string }
-  | { o: 'obra'; linguagem: string };
+  | { o: 'obra'; linguagem: string }
+  /** VIDA 12.8: usar um cômodo (a sessão de cinema, o treino em casa, a festa na piscina) — `casaViva`. */
+  | { o: 'usar_comodo'; comodo: string; uso: string; pessoaId?: string }
+  /** VIDA 12.8: o lado de fora, visto antes na prévia (fachada, jardim, caminho, luz, portão) — uma conta só. */
+  | { o: 'reforma_externa'; mudancas: Partial<Record<AspectoExterno, string>> };
 
 const c = (v: Vida, municipioId = v.moradia.municipioId) => economiaLocal(municipioId).custo;
 const arred = (x: number) => Math.round(x / 10) * 10;
@@ -191,7 +197,9 @@ export function disponibilidadePersonalizar(v: Vida, op: OpPersonalizar): Veredi
       if (p.obrasPermitidas && !p.obrasPermitidas.includes(op.tipo)) return bloqueio('impossivel', 'O prédio não deixa (no terraço, só o que não pesa na laje).');
       const lar = donoDoLar(v)?.lar;
       if (terrenoLivre(v.moradia.modeloId, lar) < m.obra.terreno) return bloqueio('impossivel', `Falta terreno: pede ${m.obra.terreno} m², sobram ${terrenoLivre(v.moradia.modeloId, lar)}.`);
-      if (comodosDaCasa(v).some(x => x.tipo === op.tipo) && op.tipo !== 'quarto_extra') return bloqueio('incompativel', `A casa já tem ${m.artigo} ${m.nome}.`);
+      if (comodosDaCasa(v).some(x => x.tipo === op.tipo) && op.tipo !== 'quarto_extra' && op.tipo !== 'banheiro') return bloqueio('incompativel', `A casa já tem ${m.artigo} ${m.nome}.`);
+      // VIDA 12.8: banheiro a mais, sim — até um por quarto e mais dois (o social e o da área de lazer).
+      if (op.tipo === 'banheiro') { const cs = comodosDaCasa(v); if (cs.filter(x => x.tipo === 'banheiro').length >= cs.filter(x => x.tipo === 'quarto' || x.tipo === 'quarto_extra' || x.de === 'conversao').length + 2) return bloqueio('incompativel', 'A casa já tem banheiro para cada quarto, e mais.'); }
       const im = imovelDaMoradia(v)!;
       if (im.problema) return bloqueio('incompativel', 'Primeiro, o reparo que está pendente.');
       return vereditoDePagar(v, custoDeConstruir(v, op.tipo));
@@ -310,6 +318,8 @@ export function disponibilidadePersonalizar(v: Vida, op: OpPersonalizar): Veredi
     }
     case 'cultural': return disponibilidadeCultural(v, op.oque, op.genero, op.pessoaId);
     case 'obra': return disponibilidadeObra(v, op.linguagem);
+    case 'usar_comodo': return disponibilidadeUsarComodo(v, op.comodo, op.uso, op.pessoaId);
+    case 'reforma_externa': return disponibilidadeReformaExterna(v, op.mudancas);
   }
 }
 
@@ -345,8 +355,10 @@ function larParaMexer(v: Vida) {
 
 /** 12.7 — que aspecto cabe em que espaço: lá fora, só a luz; sem janela (banheiro, cinema), sem cortina. */
 export function aspectoCabe(tipo: string, a: AspectoDoComodo): boolean {
-  if (['jardim', 'piscina', 'garagem', 'lazer'].includes(tipo)) return a === 'luz';
-  if (a === 'cortina' && (tipo === 'banheiro' || tipo === 'cinema')) return false;
+  if (['jardim', 'piscina', 'garagem', 'lazer', 'quadra'].includes(tipo)) return a === 'luz';
+  // VIDA 12.8: a varanda tem piso, parede (a da casa) e luz; o lavabo e a adega, sem janela.
+  if (tipo === 'varanda') return a === 'piso' || a === 'parede' || a === 'luz';
+  if (a === 'cortina' && ['banheiro', 'cinema', 'lavabo', 'adega'].includes(tipo)) return false;
   return true;
 }
 
@@ -556,6 +568,8 @@ export function personalizar(v: Vida, op: OpPersonalizar): string {
     }
     case 'cultural': return fazerCultural(v, op.oque, op.genero, op.pessoaId);
     case 'obra': return produzirObra(v, op.linguagem);
+    case 'usar_comodo': return usarComodo(v, op.comodo, op.uso, op.pessoaId);
+    case 'reforma_externa': return fazerReformaExterna(v, op.mudancas);
   }
 }
 

@@ -18,6 +18,7 @@ import { praticandoPor } from './progressao';
 import { ROTINAS_126 } from './hobbies126';
 import { paisCorrente } from '../mundo/moeda';
 import { bonusDaAtividade } from './coisas';
+import { academiaEmCasa } from './lar';
 import type { Rng } from '../rng';
 import { clamp, hashMisturado, rngDe } from '../rng';
 import { lesaoAtiva, lesionar } from './lesoes';
@@ -678,6 +679,8 @@ export function custoDaRotina(v: Vida, id: string, nivel: number): number {
   const m = modeloRotina(id);
   if (!m) return 0;
   if (id === 'terapia' && terapiaPublica(v)) return 0;
+  // VIDA 12.8: com a academia de casa equipada, o treino é em casa — sem mensalidade.
+  if (id === 'academia' && academiaEmCasa(v)) return 0;
   const custo = nivelModelo(m, nivel).custo;
   // 12.4.1: a criança que só pratica porque o projeto social cobre (a casa não pagaria) não paga — o cartão e a conta da
   // casa mostravam o preço cheio da aula de natação.
@@ -748,7 +751,8 @@ export function podeComecarRotina(v: Vida, id: string, nivel = 1): Veredito {
   // entra com o preço dito; só "além" (não há horas — ou, criança, a semana dela não comporta) bloqueia, com o porquê.
   // REWORK 9.5: o que pesa é a EXIGÊNCIA (`cargaDaAtividade`), não o número de atividades — um livro por mês não cobra
   // o que cobra um treino.
-  const extra = cargaDaAtividade(id, nivel, idade(v)).carga - (atual ? cargaDaAtividade(id, nivelDa(atual), idade(v)).carga : 0);
+  const emCasa = id === 'academia' && academiaEmCasa(v);
+  const extra = cargaDaAtividade(id, nivel, idade(v), emCasa).carga - (atual ? cargaDaAtividade(id, nivelDa(atual), idade(v), emCasa).carga : 0);
   const enc = encaixe(v, extra, id);
   // O horário vem antes: sem dia e hora livres, não há o que pesar (a terapia também precisa de uma hora na semana).
   const hor = horarioDaAtividade?.(v, id, nivel);

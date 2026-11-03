@@ -962,7 +962,7 @@ function linhaDoExtrato(a: Acao): [string, TipoMovimento] {
     case 'comprar_imovel': case 'vender_bem': case 'imovel': case 'comprar_veiculo': case 'veiculo': return ['Imóveis e veículos: compra, venda e reparo', 'escolha'];
     case 'migrar': return ['Mudança de país', 'escolha'];
     case 'comprar_coisa': case 'vender_coisa': return ['Coisas da casa e da vida: compra e venda', 'escolha'];
-    case 'personalizar': return a.op.o === 'cultural' || a.op.o === 'obra' ? ['Música, arte e programas culturais', 'escolha'] : a.op.o.startsWith('veiculo') ? ['Imóveis e veículos: compra, venda e reparo', 'escolha'] : ['A casa e os objetos: reformas, fretes e personalização', 'escolha'];
+    case 'personalizar': return a.op.o === 'cultural' || a.op.o === 'obra' || a.op.o === 'usar_comodo' ? ['Música, arte e programas culturais', 'escolha'] : a.op.o.startsWith('veiculo') ? ['Imóveis e veículos: compra, venda e reparo', 'escolha'] : ['A casa e os objetos: reformas, fretes e personalização', 'escolha'];
     case 'presentear': return ['Presentes', 'escolha'];
     case 'rede': return ['Rede social', 'escolha'];
     case 'oficio': return ['No trabalho', 'escolha'];

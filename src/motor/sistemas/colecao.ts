@@ -22,6 +22,11 @@ import { LOJAS_DE_COLECAO, NOME_CATEGORIA_COLECAO, PECAS_DE_COLECAO, pecaDeColec
 import { fatorDeImportado } from './precos';
 import { okDePagar, patrimonio, PATRIMONIO_NO_MES, rendaPropriaMensal } from './dinheiro';
 import { palmaresDe } from './palmares';
+import { EXPOSITOR_DA_CATEGORIA, grauDaPeca, ORDEM_DO_GRAU, type GrauDeRaridade } from '../dados/colecao128';
+import { coisa } from '../dados/coisas';
+import { itemEstilo } from '../dados/estilo';
+import { modeloVeiculo } from '../dados/bens';
+import { comodoDaCoisa, comodosDaCasa, naCasaAtual } from './lar';
 
 export const colecao = (v: Vida): Colecionavel[] => v.financas.colecao ?? [];
 export const valorDaColecao = (v: Vida) => colecao(v).reduce((s, c) => s + c.valor, 0);
@@ -306,7 +311,7 @@ export function venderColecao(v: Vida, r: Rng, id: string, modo: ModoDeVenda): s
 
 /* ------------------------------------------------------------------- O ano */
 
-const OSCILA_DA_CATEGORIA: Record<CategoriaColecao, number> = { arte: 0.07, relogio: 0.06, joia: 0.05, antiguidade: 0.04, memorabilia: 0.08 };
+const OSCILA_DA_CATEGORIA: Record<CategoriaColecao, number> = { arte: 0.07, relogio: 0.06, joia: 0.05, antiguidade: 0.04, memorabilia: 0.08, vinho: 0.05 };
 
 /** O ano do mercado de uma categoria (o mesmo para todas as peças dela, nesta vida): a média é zero. */
 const choqueDaCategoria = (v: Vida, cat: CategoriaColecao) => rngDe(v.economia?.semente ?? 1, 'mercado-colecao', cat, anoDe(v.t)).normal() * OSCILA_DA_CATEGORIA[cat];
@@ -327,9 +332,14 @@ export function processarColecao(v: Vida, r: Rng): void {
       if (x < 0.06) { muda += 4; (c.historia ??= []).push({ t: v.t, texto: 'O artista aconteceu: retrospectiva, museu, fila de colecionadores.' }); escrever(v, { texto: `O artista da tela que você comprou ${anoDe(c.tCompra)} virou nome de museu. A tela agora vale ${fmt(Math.round(c.valor * (1 + muda)))}.`, relevancia: 'biografia', tema: 'dinheiro', tom: 'bom' }); }
       else if (x < 0.2) { muda -= 0.6; (c.historia ??= []).push({ t: v.t, texto: 'O artista sumiu do mercado.' }); }
     }
+    // VIDA 12.8: o vinho de guarda sem adega (fora da temperatura certa) envelhece mal: perde valor e estado todo ano.
+    const vinhoSemAdega = c.categoria === 'vinho' && !c.local && !temAdega(v);
+    if (vinhoSemAdega) muda -= 0.04;
     c.valor = Math.max(Math.round(c.precoPago * 0.02), Math.round(c.valor * Math.max(0.3, 1 + muda) / 10) * 10);
-    // O tempo pesa na peça: arte e antiguidade pedem conservação; a camisa e o papel amarelam.
-    c.estado = clamp(c.estado - (c.categoria === 'memorabilia' ? 0.6 : c.categoria === 'arte' || c.categoria === 'antiguidade' ? 0.4 : 0.2));
+    // O tempo pesa na peça: arte e antiguidade pedem conservação; a camisa e o papel amarelam. 12.8: na vitrine (ou no
+    // expositor), longe da poeira e da mão, a metade.
+    const protegida = c.exposta && !c.local && emExpositor(v, c);
+    c.estado = clamp(c.estado - (vinhoSemAdega ? 5 : (c.categoria === 'memorabilia' ? 0.6 : c.categoria === 'arte' || c.categoria === 'antiguidade' ? 0.4 : 0.2) * (protegida ? 0.5 : 1)));
   }
   guardarCamisasDaCarreira(v);
 }
@@ -500,3 +510,90 @@ export function responderProposta(v: Vida, id: string, aceitar: boolean): string
   escrever(v, { texto: `Vendeu ${c.nome} a ${p.quem} por ${fmt(p.valor)} — ${ganho >= 0 ? `${fmt(ganho)} acima` : `${fmt(-ganho)} abaixo`} do que tinha pagado.`, relevancia: 'biografia', tema: 'dinheiro', tom: ganho >= 0 ? 'bom' : 'ruim', escolha: true });
   return `Vendida a ${p.quem}: ${fmt(p.valor)}, sem comissão de casa.`;
 }
+
+/* ------------------------------------------------------------- VIDA 12.8 · as coleções organizadas */
+
+/** A adega em casa: o cômodo de adega equipado ou uma adega climatizada (de bancada ou de parede) onde se mora. */
+export function temAdega(v: Vida): boolean {
+  return (v.financas.coisas ?? []).some(t => (t.coisaId === 'adega' || t.coisaId === 'adega_parede') && naCasaAtual(t) && t.estado > 0 && !t.lembranca);
+}
+
+/** A peça exposta está num cômodo com o móvel que a protege (a vitrine, o expositor, a estante de troféus, a adega)? */
+export function emExpositor(v: Vida, c: Colecionavel): boolean {
+  const moveis = EXPOSITOR_DA_CATEGORIA[c.categoria] ?? [];
+  if (!moveis.length) return false;
+  const comodos = comodosDaCasa(v);
+  const onde = c.comodo ?? comodos.find(x => x.tipo === 'sala')?.id;
+  return (v.financas.coisas ?? []).some(t => moveis.includes(t.coisaId) && naCasaAtual(t) && t.estado > 0 && comodoDaCoisa(v, t, comodos)?.id === onde);
+}
+
+export const grauDe = (c: Colecionavel): GrauDeRaridade => { const p = pecaDeColecao(c.pecaId); return grauDaPeca({ raridade: c.raridade, faixa: p?.faixa, nome: p?.nome ?? c.nome, unica: c.unica, canal: p?.canal }); };
+
+export interface ItemDeColecaoLido { id: string; nome: string; grau: GrauDeRaridade; valor: number; onde: string; exposta: boolean; marca?: string; procedencia?: string; detalhe?: string }
+export interface ColecaoLida { id: string; nome: string; itens: ItemDeColecaoLido[]; valor: number; expostas: number; graus: Partial<Record<GrauDeRaridade, number>>; expositor?: string }
+
+const NOME_DO_GRUPO: Record<string, string> = { relogio: 'Relógios', arte: 'Obras de arte', joia: 'Joias', antiguidade: 'Antiguidades', memorabilia: 'Memorabilia e lembranças do esporte', vinho: 'Vinhos', carros: 'Carros de coleção', edicoes: 'Peças numeradas e edições limitadas', discos: 'Discos de vinil', trofeus: 'Troféus e conquistas' };
+
+/**
+ * As coleções da vida, organizadas: as peças de coleção por categoria; os carros marcados como de coleção; as peças
+ * numeradas da casa e do guarda-roupa (as que o catálogo diz que são edição); os discos; e os troféus da carreira (que
+ * não se compram nem se vendem: estão aqui para serem vistos). Valor estimado = o da tela (só a venda diz o real).
+ */
+export function colecoesDaVida(v: Vida, nomeDoLocal: (local?: string, comodo?: string) => string = (l, cm) => (l ? 'guardada fora de casa' : cm ? `em casa (${cm})` : 'em casa')): ColecaoLida[] {
+  const grupos = new Map<string, ColecaoLida>();
+  const grupo = (id: string) => { let g = grupos.get(id); if (!g) { g = { id, nome: NOME_DO_GRUPO[id] ?? id, itens: [], valor: 0, expostas: 0, graus: {} }; grupos.set(id, g); } return g; };
+  const comodos = comodosDaCasa(v);
+  const nomeDoComodo = (id?: string) => comodos.find(x => x.id === id)?.nome;
+  for (const c of colecao(v)) {
+    const g = grupo(c.categoria);
+    const grau = grauDe(c);
+    g.itens.push({ id: c.id, nome: c.nome, grau, valor: c.valor, onde: c.emprestadaA || c.emprestadaFora ? 'emprestada a um museu' : nomeDoLocal(c.local, nomeDoComodo(c.comodo)), exposta: !!c.exposta, procedencia: PROCEDENCIA_EM_PALAVRAS[c.procedencia], detalhe: c.detalhe });
+    g.valor += c.valor; if (c.exposta) g.expostas++; g.graus[grau] = (g.graus[grau] ?? 0) + 1;
+  }
+  // Os carros: os que a pessoa marcou como de coleção (sem grau inventado: o modelo diz o que é, não a raridade).
+  for (const b of v.financas.bens) if (b.tipo === 'veiculo' && b.papel === 'colecao') {
+    const g = grupo('carros');
+    const m = modeloVeiculo(b.modeloId);
+    // O clássico (só existe usado) e o superesportivo são raros pelo segmento do modelo; o resto é um carro guardado.
+    const grau: GrauDeRaridade = m?.segmento === 'classico' || m?.segmento === 'exotico' ? 'rara' : 'comum';
+    g.itens.push({ id: b.id, nome: m?.nome ?? b.modeloId, grau, valor: b.valor, onde: 'na garagem', exposta: true });
+    g.valor += b.valor; g.expostas++; g.graus[grau] = (g.graus[grau] ?? 0) + 1;
+  }
+  for (const t of v.financas.coisas ?? []) {
+    const cat = coisa(t.coisaId);
+    if (cat?.edicao) {
+      const g = grupo('edicoes');
+      const grau: GrauDeRaridade = /única/.test(cat.edicao) ? 'unica' : 'limitada';
+      g.itens.push({ id: t.id, nome: cat.nome, grau, valor: t.preco, onde: nomeDoLocal(t.local, nomeDoComodo(t.comodo)), exposta: !t.local, marca: t.marca, detalhe: cat.edicao });
+      g.valor += t.preco; g.graus[grau] = (g.graus[grau] ?? 0) + 1; if (!t.local) g.expostas++;
+    } else if (t.coisaId === 'discos') {
+      const g = grupo('discos');
+      g.itens.push({ id: t.id, nome: `${t.quantidade ?? 1} ${(t.quantidade ?? 1) === 1 ? 'lote' : 'lotes'} de discos de vinil`, grau: 'comum', valor: t.preco * (t.quantidade ?? 1), onde: nomeDoLocal(t.local, nomeDoComodo(t.comodo)), exposta: !t.local });
+      g.valor += t.preco * (t.quantidade ?? 1); g.graus.comum = (g.graus.comum ?? 0) + 1;
+    }
+  }
+  for (const it of v.eu.estilo?.itens ?? []) {
+    const cat = itemEstilo(it.itemId);
+    if (!cat?.edicao) continue;
+    const g = grupo('edicoes');
+    g.itens.push({ id: it.id, nome: cat.nome, grau: 'limitada', valor: it.preco ?? cat.preco, onde: 'no guarda-roupa', exposta: false, marca: it.marca, detalhe: cat.edicao });
+    g.valor += it.preco ?? cat.preco; g.graus.limitada = (g.graus.limitada ?? 0) + 1;
+  }
+  const titulos = palmaresDe(v).filter(x => x.tipo === 'titulo' || x.tipo === 'premio');
+  if (titulos.length) {
+    const g = grupo('trofeus');
+    for (const x of titulos) g.itens.push({ id: `${x.competicao}-${x.ano}`, nome: `${x.competicao}, ${x.ano}`, grau: 'unica', valor: 0, onde: temNaCasa(v, 'estante_trofeus') ? 'na estante de troféus' : 'em casa', exposta: temNaCasa(v, 'estante_trofeus'), detalhe: x.clube });
+    g.graus.unica = titulos.length;
+    g.expostas = temNaCasa(v, 'estante_trofeus') ? titulos.length : 0;
+  }
+  for (const g of grupos.values()) {
+    const moveis = EXPOSITOR_DA_CATEGORIA[g.id] ?? (g.id === 'trofeus' ? ['estante_trofeus'] : []);
+    const tem = moveis.find(m => temNaCasa(v, m));
+    if (tem) g.expositor = coisa(tem)?.nome;
+    g.itens.sort((a, b) => ORDEM_DO_GRAU.indexOf(b.grau) - ORDEM_DO_GRAU.indexOf(a.grau) || b.valor - a.valor);
+  }
+  const ordem = ['relogio', 'arte', 'joia', 'antiguidade', 'vinho', 'memorabilia', 'carros', 'edicoes', 'discos', 'trofeus'];
+  return [...grupos.values()].sort((a, b) => ordem.indexOf(a.id) - ordem.indexOf(b.id));
+}
+
+const temNaCasa = (v: Vida, coisaId: string) => (v.financas.coisas ?? []).some(t => t.coisaId === coisaId && naCasaAtual(t) && t.estado > 0);

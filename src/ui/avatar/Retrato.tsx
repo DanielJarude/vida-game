@@ -785,7 +785,7 @@ const Bigodes = ({ x, y, lado = 1, comp = 14 }: { x: number; y: number; lado?: 1
 const aroSe = (pelo: string) => (luminancia(pelo) < 0.06 ? misturar(pelo, '#ffffff', 0.45) : undefined);
 const escolha = <T,>(xs: readonly T[], semente: string, sal = 0): T => xs[(hash(semente) >>> sal) % xs.length];
 
-const FUNDO_PET: Record<string, string> = { cao: '#dfe6f0', gato: '#e6e0ea', roedor: '#e9e2d4', mamifero: '#e9e2d4', coelho: '#e3ebe2', ave: '#e8e4d2', peixe: '#cfe3ea', reptil: '#dfe8d4' };
+const FUNDO_PET: Record<string, string> = { cao: '#dfe6f0', gato: '#e6e0ea', roedor: '#e9e2d4', mamifero: '#e9e2d4', coelho: '#e3ebe2', ave: '#e8e4d2', peixe: '#cfe3ea', reptil: '#dfe8d4', primata: '#dfe8d4' };
 
 /**
  * REWORK 4: o fundo do retrato do bicho é escolhido pelo CONTRASTE com a pelagem (o gato branco não some mais num
@@ -804,7 +804,8 @@ export function fundoDoPet(cor: string | undefined, grupo: string, semente: stri
 function RetratoPet({ especie, tamanho, rotulo, semente, porte }: { especie: Especie; tamanho: number; rotulo?: string; semente: string; porte?: Porte }) {
   const a = animal(especie);
   const Desenho = DESENHO_PET[especie] ?? DESENHO_PET[a.grupo === 'gato' ? 'gato' : 'cachorro'];
-  const cor = a.grupo === 'gato' ? morfologiaGato(semente).cor : a.grupo === 'cao' ? morfologiaCao(semente, porte).cor : undefined;
+  // 12.8: a cacatua é branca — o fundo é escolhido pelo contraste com ela (como no gato branco).
+  const cor = a.grupo === 'gato' ? morfologiaGato(semente).cor : a.grupo === 'cao' ? morfologiaCao(semente, porte).cor : especie === 'cacatua' ? '#f2efe8' : undefined;
   const fundo = fundoDoPet(cor, a.grupo, semente);
   const claro = cor ? luminancia(cor) > 0.45 : false;
   return (
@@ -1122,8 +1123,77 @@ const Palhaco: DesenhoBicho = () => (
   </g>
 );
 
+
+/* VIDA 12.8 — a cacatua, o tucano, a jiboia, a raposa-do-deserto e os primatas: cada um com a sua silhueta. */
+const Cacatua: DesenhoBicho = () => (
+  <Ave p={{ corpo: '#f2efe8', cabeca: '#f4f1ea', asa: '#e2ddd2', cauda: 'curta', escala: 1.06, bico: 'gancho' }}
+    enfeite={<circle cx="61" cy="32" r="4" fill="none" stroke="#cfd6dc" strokeWidth="1.4" />}>
+    <g data-peca="crista"><path d="M 50 26 C 42 14 44 4 52 0 C 51 9 54 16 58 23 Z" fill="#f0cc3a" /><path d="M 54 24 C 50 12 54 4 61 1 C 58 10 60 17 63 23 Z" fill="#e8c034" /><path d="M 58 23 C 58 13 63 7 70 6 C 65 12 65 18 66 24 Z" fill="#f0cc3a" /></g>
+  </Ave>
+);
+const Tucano: DesenhoBicho = () => (
+  <g>
+    <path d="M 6 85 H 94" stroke="#7a5a3a" strokeWidth="4.5" strokeLinecap="round" />
+    <path d="M 36 70 L 22 98 L 32 98 L 44 76 Z" fill="#1d1a19" />
+    <ellipse cx="44" cy="60" rx="15" ry="22" fill="#1f1c1b" transform="rotate(16 44 60)" />
+    <path d="M 40 46 C 32 54 32 72 38 80 C 46 74 50 62 48 50 Z" fill="#2b2826" />
+    <ellipse cx="50" cy="44" rx="10" ry="8" fill="#f4f1ea" />
+    <circle cx="50" cy="33" r="11" fill="#1f1c1b" />
+    <path data-peca="bico" d="M 58 27 C 74 24 92 30 96 38 C 86 40 72 42 58 40 Z" fill="#f0902a" />
+    <path d="M 58 40 C 72 42 86 40 96 38 C 92 42 78 46 58 43 Z" fill="#e8742a" />
+    <path d="M 90 32 C 93 34 95 36 96 38 C 93 37 91 35 90 32 Z" fill="#1f1c1b" />
+    <circle cx="54" cy="31" r="4.2" fill="#6fa8d8" />
+    <Olho x={54} y={31} r={2} />
+    <path d="M 44 79 V 86 M 51 78 V 86" stroke="#4a6ac8" strokeWidth="2" strokeLinecap="round" />
+  </g>
+);
+const Jiboia: DesenhoBicho = () => (
+  <g>
+    <Sombra y={88} rx={40} />
+    <path d="M 16 80 C 14 62 42 58 58 66 C 74 74 78 86 60 90 C 42 94 24 90 24 82 C 24 72 40 72 52 76" stroke="#a88a5a" strokeWidth="14" strokeLinecap="round" fill="none" />
+    <path d="M 16 80 C 14 62 42 58 58 66 C 74 74 78 86 60 90 C 42 94 24 90 24 82" stroke="#6e4a2e" strokeWidth="7" strokeDasharray="5 9" strokeLinecap="round" fill="none" />
+    <path d="M 52 76 C 60 72 68 64 74 56 C 80 50 90 50 92 56 C 92 64 82 66 76 64 Z" fill="#a88a5a" />
+    <path d="M 80 52 L 92 56" stroke="#6e4a2e" strokeWidth="1.4" />
+    <Olho x={86} y={55} r={1.8} />
+  </g>
+);
+const RaposaDoDeserto: DesenhoBicho = () => (
+  <g>
+    <Sombra y={88} rx={30} />
+    <path d="M 26 84 C 22 66 34 54 50 54 C 64 54 72 64 72 84 Z" fill="#e3c99a" />
+    <path d="M 70 78 C 86 78 94 70 92 60 C 86 68 78 70 70 70 Z" fill="#e3c99a" />
+    <path d="M 90 60 C 92 58 94 60 92 64 C 91 63 90 62 90 60 Z" fill="#3a2a22" />
+    <path data-peca="orelhas" d="M 34 36 L 22 2 L 46 28 Z M 66 36 L 78 2 L 54 28 Z" fill="#e3c99a" />
+    <path d="M 34 32 L 26 10 L 42 28 Z M 66 32 L 74 10 L 58 28 Z" fill="#f3d9d0" />
+    <ellipse cx="50" cy="42" rx="17" ry="14" fill="#e8d0a2" />
+    <path d="M 40 46 C 44 56 56 56 60 46 C 56 50 44 50 40 46 Z" fill="#f6efe2" />
+    <circle cx="50" cy="51" r="2.2" fill={ESCURO} />
+    <Olho x={43} y={41} r={2.4} /><Olho x={57} y={41} r={2.4} />
+    <path d="M 38 84 v4 M 60 84 v4" stroke="#d9be8c" strokeWidth="5" strokeLinecap="round" />
+  </g>
+);
+const Primata = ({ pelo, rosto, capuz, tufos, cauda }: { pelo: string; rosto: string; capuz?: string; tufos?: boolean; cauda: 'aneis' | 'lisa' }) => (
+  <g>
+    <path d="M 6 86 H 94" stroke="#7a5a3a" strokeWidth="4.5" strokeLinecap="round" />
+    <path d={cauda === 'aneis' ? 'M 62 80 C 84 82 92 66 86 50 C 82 42 74 44 76 52' : 'M 62 80 C 82 84 90 70 86 56'} stroke={pelo} strokeWidth="5" strokeLinecap="round" fill="none" />
+    {cauda === 'aneis' && <path d="M 66 81 l 2 -4 M 74 80 l 2 -4 M 82 74 l 3 -3 M 87 64 l 4 -1 M 86 54 l 4 1" stroke={misturar(pelo, '#000000', 0.4)} strokeWidth="2.4" strokeLinecap="round" />}
+    <ellipse cx="48" cy="68" rx="18" ry="17" fill={pelo} />
+    <path d="M 34 76 C 30 84 34 88 40 86 M 62 76 C 66 84 62 88 56 86" stroke={pelo} strokeWidth="6" strokeLinecap="round" fill="none" />
+    <path d="M 36 60 C 30 66 30 74 36 78 M 60 60 C 66 66 66 74 60 78" stroke={misturar(pelo, '#000000', 0.12)} strokeWidth="5" strokeLinecap="round" fill="none" />
+    <circle cx="48" cy="38" r="17" fill={pelo} />
+    {tufos && <g data-peca="tufos"><path d="M 30 34 C 20 26 18 38 26 44 Z M 66 34 C 76 26 78 38 70 44 Z" fill="#f4f1ea" /></g>}
+    {capuz && <path data-peca="capuz" d="M 33 32 C 36 18 60 18 63 32 C 56 26 40 26 33 32 Z" fill={capuz} />}
+    <ellipse cx="48" cy="42" rx="11" ry="12" fill={rosto} />
+    <Olho x={43.5} y={39} r={2.2} /><Olho x={52.5} y={39} r={2.2} />
+    <path d="M 46 47 q 2 1.6 4 0" stroke={ESCURO} strokeWidth="1" fill="none" />
+  </g>
+);
+const MacacoPrego: DesenhoBicho = () => <Primata pelo="#7a5638" rosto="#d9b48a" capuz="#2f2419" cauda="lisa" />;
+const Sagui: DesenhoBicho = () => <g transform="translate(50 86) scale(0.86) translate(-50 -86)"><Primata pelo="#8b8478" rosto="#d8c6ae" tufos cauda="aneis" /></g>;
+
 const DESENHO_PET: Record<string, DesenhoBicho> = {
   cachorro: Cao, gato: Gato, hamster: Hamster, porquinho: Porquinho, coelho: Coelho, chinchila: Chinchila,
   papagaio: Papagaio, periquito: Periquito, calopsita: Calopsita, canario: Canario, iguana: Iguana, jabuti: Jabuti, peixe: Peixe, betta: Betta,
-  arara: Arara, furao: Furao, ourico: Ourico, gecko: Gecko, dragao_barbudo: DragaoBarbudo, piton_bola: Piton, acara_disco: Disco, peixe_palhaco: Palhaco
+  arara: Arara, furao: Furao, ourico: Ourico, gecko: Gecko, dragao_barbudo: DragaoBarbudo, piton_bola: Piton, acara_disco: Disco, peixe_palhaco: Palhaco,
+  cacatua: Cacatua, tucano: Tucano, jiboia: Jiboia, raposa_do_deserto: RaposaDoDeserto, macaco_prego: MacacoPrego, sagui: Sagui
 };

@@ -201,7 +201,7 @@ const ANIMAIS_POR_FORA: Omit<OfertaDeAnimal, 'id'>[] = [
   { bicho: 'um filhote de papagaio', especie: 'papagaio', zoo: 'papagaio', texto: 'tirado do ninho, sem anilha, numa caixa de sapato' },
   { bicho: 'um filhote de arara-azul', especie: 'outro', zoo: 'arara_azul', texto: 'de uma espécie ameaçada — "é raríssimo, por isso o preço"' },
   { bicho: 'dois jabutis pequenos', especie: 'jabuti', zoo: 'jabuti', texto: 'pegos no mato, "mais baratos que em loja"' },
-  { bicho: 'um sagui', especie: 'outro', texto: 'que "já vem mansinho" — nenhum criadouro vende primata' },
+  { bicho: 'um sagui', especie: 'sagui', texto: 'que "já vem mansinho" — nenhum criadouro vende primata' },
   { bicho: 'uma serpente exótica', especie: 'outro', zoo: 'piton_real', texto: 'que entrou no país escondida, "sem papel, mas saudável"' }
 ];
 
