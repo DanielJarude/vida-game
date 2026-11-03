@@ -120,10 +120,10 @@ describe('os lugares como fachadas', () => {
   // exóticos e os quatro mercados de procedência incerta — cada um com o seu desenho (nenhuma fachada emprestada).
   // VIDA 12.5: + 6 lojas por segmento (moda, sapataria, ótica, acessórios, móveis, grifes), 20 grandes lojas com prédio próprio
   // e 5 centros de distribuição das lojas pela internet.
-  it('59 lugares, 59 fachadas diferentes, cada uma com a placa', () => {
-    expect(LUGARES_DA_CIDADE.length).toBe(59);
+  it('60 lugares (12.8.1: + a importadora de vinhos), 60 fachadas diferentes, cada uma com a placa', () => {
+    expect(LUGARES_DA_CIDADE.length).toBe(60);
     const tracos = LUGARES_DA_CIDADE.map(l => traco(<Fachada lugar={l} vazia largura={300} altura={110} />));
-    expect(new Set(tracos).size).toBe(59);
+    expect(new Set(tracos).size).toBe(60);
   });
 
   it('VIDA 12.5: cada grande loja tem o seu prédio e cada segmento a sua vitrine (nenhuma emprestada da ótica)', () => {
