@@ -13,8 +13,10 @@
  * do fundo (menores: estão mais longe), os outros mais à frente —, cada um com a sombra de contato no piso. Continua
  * a linguagem do VIDA (formas chapadas, um tom de sombra): nada de textura fotográfica.
  */
-import { memo, useId, type ReactElement } from 'react';
-import { Ilustracao, valida } from './nucleo';
+import { memo, useId, useMemo, type ReactElement } from 'react';
+import { Ilustracao, valida, type Amostra } from './nucleo';
+import { caixaDaAmostra } from './caixa';
+import { chaoEm, disporComodo, escalaEm, ordemDeDesenho, tela, xEm, zDoDesenho, type Geometria, type Posto } from './disposicao';
 import { amostraDoObjeto } from './objetos';
 import { variantesDaCoisa } from '../../motor/dados/pertences';
 import { misturar } from '../avatar/cores';
@@ -33,72 +35,39 @@ interface Props {
   /** 12.7: a luz regulada (temperatura e intensidade 40–100%). */
   luzRegulada?: { temperatura?: 'quente' | 'neutra' | 'fria'; intensidade?: number };
   objetos: ObjetoNaCena[];
+  /** VIDA 12.8: a área do cômodo (m²): o tamanho da cena e a escala dos objetos. Ausente: a cena de antes (25 m²). */
+  area?: number;
   largura?: number;
   rotulo: string;
 }
 
-/** A largura aproximada de cada objeto, em unidades da cena (a cena tem 320 de largura ≈ 5 m). */
-const LARGURA: Record<string, number> = {
-  sofa: 120, mesa_jantar: 96, cama: 110, colchao: 100, escrivaninha: 74, poltrona: 52, cozinha_equipada: 90, maquina_lavar: 42, lava_loucas: 40,
-  ar_condicionado: 54, tv: 70, piano: 92, bateria: 64, mesa_sinuca: 120, esteira: 80, estacao_musculacao: 76, kit_academia: 50, home_studio: 64,
-  computador: 46, notebook: 30, projetor: 28, som_hifi: 44, caixa_som: 26, videogame: 30, camera: 22, tablet: 22, celular_simples: 12, celular_bom: 12, celular_topo: 12,
-  violao: 26, guitarra: 26, teclado: 70, violino: 18, cavaquinho: 18, pandeiro: 18, sanfona: 30, saxofone: 18, controladora_dj: 40, discos: 30,
-  livros: 50, livros_estudo: 36, material_arte: 30, jogos_tabuleiro: 26, cavalete: 40, torno_ceramica: 46, raquete: 20, prancha: 22, camping: 46, tabuleiro: 24, chuteira_bola: 24,
-  aspirador_robo: 22, roupa_de_cama: 40,
-  // VIDA 12.7 · a casa inteira
-  sofa_retratil: 124, sofa_couro: 120, sofa_designer: 136, poltrona_designer: 66, mesa_centro: 60, mesa_centro_marmore: 62, mesa_lateral: 26,
-  estante_sala: 120, aparador: 70, tv_oled: 100, home_theater: 100, tapete: 120, tapete_persa: 130, quadros: 60, objetos_decor: 34, lareira: 80,
-  geladeira: 46, geladeira_inox: 60, freezer: 64, adega: 32, fogao: 40, cooktop_forno: 60, fogao_profissional: 76, microondas: 34, cafeteira: 30,
-  louca_talheres: 30, ilha_cozinha: 110, armarios_planejados: 150,
-  cama_box: 100, cama_king: 128, colchao_hotel: 100, guarda_roupa: 110, closet: 140, penteadeira: 66, criado_mudo: 90, espelho_chao: 30, comoda: 64,
-  cama_solteiro: 96, sofa_cama: 110, beliche: 100,
-  banheira: 104, banheira_pedra: 110, ducha: 60, gabinete: 56, bancada_marmore: 110, espelho_led: 40, toalheiro: 34, toalhas: 40, sauna: 110,
-  espreguicadeira: 110, espreguicadeira_teca: 120, guarda_sol: 90, ombrelone: 110, mesa_externa: 100, sofa_externo: 130, boias: 56, luz_piscina: 60,
-  aquecedor_piscina: 90, capa_piscina: 150, cascata: 100, kit_piscina: 56,
-  churrasqueira: 90, espaco_gourmet: 150, forno_pizza: 80, pergolado: 160, gazebo: 150, fonte: 70, escultura_jardim: 44, plantas: 60, vasos_grandes: 60,
-  luz_jardim: 70, playground: 130, cama_elastica: 130,
-  bilhar_profissional: 150, pebolim: 76, pingue_pongue: 130, mesa_jogos: 110, fliperama: 44, poltronas_cinema: 130, bicicleta_ergometrica: 56, remo_seco: 120, saco_pancada: 40,
-  ferramentas: 44, bancada_ferramentas: 110, armario_garagem: 110, organizadores: 70, carregador_ev: 36, lavadora_pressao: 60,
-  mesa_executiva: 110, cadeira_ergonomica: 44, monitores: 70, impressora: 34, estante_escritorio: 70
-};
-const PADRAO = 34;
-const EXTERNOS = new Set(['jardim', 'piscina', 'lazer', 'garagem']);
-/** O que se encosta na parede do fundo (os móveis grandes, a TV, o que fica de pé): o resto vem para a frente. */
-const ENCOSTA = new Set(['sofa', 'cama', 'colchao', 'escrivaninha', 'piano', 'tv', 'estacao_musculacao', 'som_hifi', 'home_studio', 'livros', 'livros_estudo', 'maquina_lavar', 'lava_loucas', 'cozinha_equipada', 'ar_condicionado', 'teclado', 'computador', 'mesa_jantar', 'cavalete',
-  // VIDA 12.7 · a casa inteira: os móveis grandes, o que fica de pé e o que vai na parede
-  'sofa_retratil', 'sofa_couro', 'sofa_designer', 'estante_sala', 'aparador', 'tv_oled', 'home_theater', 'lareira', 'quadros',
-  'geladeira', 'geladeira_inox', 'freezer', 'adega', 'fogao', 'cooktop_forno', 'fogao_profissional', 'armarios_planejados',
-  'cama_box', 'cama_king', 'colchao_hotel', 'guarda_roupa', 'closet', 'penteadeira', 'criado_mudo', 'espelho_chao', 'comoda', 'cama_solteiro', 'sofa_cama', 'beliche',
-  'ducha', 'gabinete', 'bancada_marmore', 'espelho_led', 'toalheiro', 'sauna',
-  'churrasqueira', 'espaco_gourmet', 'forno_pizza', 'pergolado', 'gazebo', 'fliperama',
-  'armario_garagem', 'bancada_ferramentas', 'organizadores', 'carregador_ev', 'mesa_executiva', 'estante_escritorio']);
-
-/* A geometria da perspectiva (a cena tem 320 × 180). */
-const W = 320, H = 180;
-const FX0 = 46, FX1 = 274, FY0 = 10, FY1 = 116; // a parede do fundo
-const PF = { x: 160, y: 50 }; // o ponto de fuga
-/** Onde um ponto do fundo vai parar na altura `y` (a reta do ponto de fuga até ele). */
-const projetar = (xFundo: number, yFundo: number, y: number) => PF.x + (xFundo - PF.x) * ((y - PF.y) / (yFundo - PF.y));
-/** A altura em que a reta do ponto de fuga por um canto do fundo cruza a borda da cena (x = 0 ou x = W). */
-const naBorda = (xFundo: number, yFundo: number, xBorda: number) => PF.y + (yFundo - PF.y) * ((xBorda - PF.x) / (xFundo - PF.x));
-const TETO_E = naBorda(FX0, FY0, 0), TETO_D = naBorda(FX1, FY0, W), CHAO_E = naBorda(FX0, FY1, 0), CHAO_D = naBorda(FX1, FY1, W);
-/** A escala de um objeto apoiado no chão na altura `y` (1 na frente da cena, menor no fundo). */
-const escalaNo = (y: number) => (y - PF.y) / (H - 14 - PF.y);
-
 /** 12.7: o desenho de cada luz (as antigas pelo id; as novas pelo catálogo). */
 const TOM_DA_LUZ = { quente: ['#ffd9a0', '#ffb86b'], neutra: ['#fff3d6', '#ffe9c2'], fria: ['#e3f1ff', '#cfe6ff'] } as const;
 
-export const CenaDoComodo = memo(function CenaDoComodo({ tipo, parede, piso, luz = 'simples', rodape: rodapeId, cortina: cortinaId, luzRegulada, objetos, largura = 320, rotulo }: Props) {
+/** O tamanho de um objeto na tela, pela caixa do desenho (não pelo quadro): a largura real, sem passar da altura real. */
+function enquadrar(a: Amostra, larguraTela: number, alturaMax: number) {
+  const c = caixaDaAmostra(a);
+  const bw = Math.max(1, c.x1 - c.x0), bh = Math.max(1, c.y1 - c.y0);
+  let s = larguraTela / bw;
+  if (bh * s > alturaMax) s = alturaMax / bh;
+  return { s, c, bw, bh };
+}
+
+export const CenaDoComodo = memo(function CenaDoComodo({ tipo, parede, piso, luz = 'simples', rodape: rodapeId, cortina: cortinaId, luzRegulada, objetos, area, largura = 320, rotulo }: Props) {
   const uid = useId().replace(/:/g, '');
   const id = (k: string) => `${uid}-${k}`;
-  const externo = EXTERNOS.has(tipo);
+  const chaveObjetos = objetos.map(o => `${o.id}:${o.coisaId}:${o.cor ?? ''}`).join('|');
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const disp = useMemo(() => disporComodo(tipo, area, objetos), [tipo, area, chaveObjetos]);
+  const g = disp.g;
+  const { W, H } = g;
+  const externo = g.externo;
   const corParede = parede?.cor ?? (externo ? '#bcd7e6' : '#e9e3d8');
-  const corPiso = piso?.cor ?? (tipo === 'banheiro' || tipo === 'cozinha' ? '#cfc6b6' : '#b9a68a');
+  const corPiso = piso?.cor ?? (tipo === 'banheiro' || tipo === 'cozinha' || tipo === 'lavabo' ? '#cfc6b6' : tipo === 'varanda' ? '#b48a5e' : '#b9a68a');
   const detalhe = largura >= 200;
-  // 12.7: o desenho de cada acabamento vem do catálogo; a miniatura desenha o mesmo padrão (mais simples), não outro.
   const dParede = opcaoDeAcabamento('parede', parede?.id)?.desenho ?? (parede?.id === 'tijolo' ? 'tijolo' : parede?.id === 'papel' ? 'papel_floral' : parede?.id === 'boiserie' ? 'boiserie' : 'liso');
   const cor2Parede = opcaoDeAcabamento('parede', parede?.id)?.cor2;
-  const dPiso = opcaoDeAcabamento('piso', piso?.id)?.desenho ?? (!piso && (tipo === 'banheiro' || tipo === 'cozinha') ? 'rejunte' : piso ? 'tabua' : 'liso');
+  const dPiso = opcaoDeAcabamento('piso', piso?.id)?.desenho ?? (!piso && (tipo === 'banheiro' || tipo === 'cozinha' || tipo === 'lavabo') ? 'rejunte' : piso || tipo === 'varanda' ? 'tabua' : 'liso');
   const cor2Piso = opcaoDeAcabamento('piso', piso?.id)?.cor2;
   const dLuz = opcaoDeAcabamento('luz', luz)?.desenho ?? 'teto';
   const temperatura = luzRegulada?.temperatura ?? (dLuz === 'teto' || dLuz === 'plafon' ? 'neutra' : 'quente');
@@ -107,57 +76,26 @@ export const CenaDoComodo = memo(function CenaDoComodo({ tipo, parede, piso, luz
   const [tom1, tom2] = TOM_DA_LUZ[temperatura];
   const oRodape = opcaoDeAcabamento('rodape', rodapeId);
   const oCortina = opcaoDeAcabamento('cortina', cortinaId);
-  const janela = !externo && tipo !== 'cinema' && tipo !== 'banheiro';
-  // As paredes: a do fundo na cor escolhida; a lateral esquerda (a da janela) um pouco mais escura; a direita, mais.
+  const janela = !externo && !['cinema', 'banheiro', 'lavabo', 'adega'].includes(tipo);
   const pEsq = misturar(corParede, '#000000', 0.09), pDir = misturar(corParede, '#000000', 0.17), teto = misturar(corParede, '#ffffff', 0.32);
   const pisoFundo = misturar(corPiso, '#000000', 0.16);
   const rodape = oRodape?.cor ?? misturar(corParede, '#000000', 0.22);
   const comPadrao = dParede !== 'liso' && dParede !== 'boiserie';
   const preenchida = comPadrao ? `url(#${id('par')})` : corParede;
-  const chaoExterno = tipo === 'garagem' ? '#a8a49d' : '#86a86f';
-
-  /* Os objetos: os que encostam vão para a parede do fundo (até caber); os outros, para a fileira da frente. */
-  const fixos = FIXOS[tipo]?.largura ?? 0;
-  const itens = objetos.map(o => ({ ...o, w: LARGURA[o.coisaId] ?? PADRAO })).sort((a, b) => b.w - a.w);
-  const sF = escalaNo(FY1 + 2); // a escala na parede do fundo
-  const livreFundo = (FX1 - FX0 - 12) / sF - fixos;
-  const fundo: typeof itens = [], frente: typeof itens = [];
-  let usado = 0;
-  for (const o of itens) {
-    if (ENCOSTA.has(o.coisaId) && usado + o.w + 8 <= livreFundo) { fundo.push(o); usado += o.w + 8; }
-    else frente.push(o);
-  }
-  const yFrente = H - 22;
-  const sFr = escalaNo(yFrente);
-  const livreFrente = (W - 40) / sFr;
-  const somaFrente = frente.reduce((s, x) => s + x.w + 10, 0);
-  const kFr = somaFrente > livreFrente ? livreFrente / somaFrente : 1;
-  const posicionar = (lista: typeof itens, x0: number, yBase: number, s: number, k: number, gap: number) => {
-    let x = x0;
-    return lista.map(o => {
-      const cor = valida(o.cor, valida(variantesDaCoisa(o.coisaId)[0]?.cor, '#a49a8c'));
-      const a = amostraDoObjeto(o.coisaId, cor);
-      const w = o.w * s * k;
-      const h = w * a.vb[1] / a.vb[0];
-      const chaoA = (a.chao ?? a.vb[1]) / a.vb[1] * h;
-      const pos = { ...o, cor, w, h, x, y: yBase - chaoA, base: yBase };
-      x += w + gap * s * k;
-      return pos;
-    });
-  };
-  const larguraFundo = fundo.reduce((s2, o) => s2 + o.w * sF + 8 * sF, 0);
-  const x0Fundo = FX0 + 6 + fixos * sF + Math.max(0, (FX1 - FX0 - 12 - fixos * sF - larguraFundo) * (janela ? 0.5 : 0.3));
-  const postosFundo = posicionar(fundo, x0Fundo, FY1 + 2, sF, 1, 8);
-  // A fileira da frente fica centrada (o meio da sala), mais para a direita quando há o que é fixo à esquerda.
-  const larguraFr = frente.reduce((s2, o) => s2 + (o.w + 10) * sFr * kFr, 0);
-  const postosFrente = posicionar(frente, Math.max(16, (W - larguraFr) / 2 + (fixos ? 20 : 0)), yFrente, sFr, kFr, 10);
-
+  const chaoExterno = tipo === 'garagem' ? '#a8a49d' : tipo === 'quadra' ? '#5d8a6a' : '#86a86f';
+  const { fx0: FX0, fx1: FX1, fy0: FY0, fy1: FY1, pf: PF } = g;
+  const naBorda = (xFundo: number, yFundo: number, xBorda: number) => PF.y + (yFundo - PF.y) * ((xBorda - PF.x) / (xFundo - PF.x));
+  const TETO_E = naBorda(FX0, FY0, 0), TETO_D = naBorda(FX1, FY0, W), CHAO_E = naBorda(FX0, FY1, 0), CHAO_D = naBorda(FX1, FY1, W);
   const pisoPoly = `${FX0},${FY1} ${FX1},${FY1} ${W},${CHAO_D} ${W},${H} 0,${H} 0,${CHAO_E}`;
   const tabuas = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => FX0 + (FX1 - FX0) * i / 10);
   const fileiras = [1, 2, 3, 4, 5].map(k => FY1 + (H - FY1) * (k / 5.4) ** 1.5);
+  const ponto = (x: number, alt: number, z: number) => tela(g, x, alt, z).map(n => n.toFixed(1)).join(',');
+  const quad = (x0: number, x1: number, z0: number, z1: number, alt = 0) => [ponto(x0, alt, z0), ponto(x1, alt, z0), ponto(x1, alt, z1), ponto(x0, alt, z1)].join(' ');
+  const pis = disp.piscina;
+  const ordem = ordemDeDesenho(disp.postos);
 
   return (
-    <svg className="cena-comodo cena-comodo--25d" viewBox={`0 0 ${W} ${H}`} width={largura} height={Math.round(largura * H / W)} role="img" aria-label={rotulo} data-comodo={tipo} data-parede={parede?.id} data-piso={piso?.id} data-luz={luz} data-cortina={cortinaId} data-rodape={rodapeId} data-temperatura={temperatura} data-intensidade={Math.round(intensidade * 100)}>
+    <svg className="cena-comodo cena-comodo--25d" viewBox={`0 0 ${W} ${H}`} width={largura} height={Math.round(largura * H / W)} role="img" aria-label={rotulo} data-comodo={tipo} data-parede={parede?.id} data-piso={piso?.id} data-luz={luz} data-cortina={cortinaId} data-rodape={rodapeId} data-temperatura={temperatura} data-intensidade={Math.round(intensidade * 100)} data-largura-m={g.Wm.toFixed(1)} data-fora={disp.fora.join(' ') || undefined}>
       <defs>
         <linearGradient id={id('luz')} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor={tom1} stopOpacity={(temperatura === 'neutra' ? 0.1 : 0.24) * intensidade} />
@@ -184,17 +122,20 @@ export const CenaDoComodo = memo(function CenaDoComodo({ tipo, parede, piso, luz
       </defs>
 
       {externo ? (
-        /* Lá fora: o céu, o horizonte, o chão em perspectiva (a grama ou o piso da garagem). */
+        /* Lá fora: o céu, o horizonte, o muro do fundo, o chão em perspectiva (a grama, o piso da garagem, a quadra). */
         <g data-peca="exterior">
           <rect width={W} height={FY1} fill={corParede} />
           <circle cx={262} cy={30} r={13} fill="#f6d77a" opacity={0.9} />
           <path d={`M0 ${FY1 - 22} q 60 -16 120 0 t 120 -4 t 80 2 V ${FY1} H0 Z`} fill="#9fbf8f" opacity={0.6} />
+          {tipo !== 'garagem' && <rect data-peca="muro" x={0} y={FY1 - 1.8 * g.k} width={W} height={1.8 * g.k} fill={tipo === 'quadra' ? '#7a7f76' : '#d8cfbf'} opacity={tipo === 'quadra' ? 0.35 : 0.9} />}
+          {tipo === 'quadra' && <path d={Array.from({ length: 24 }, (_, i) => `M${i * 14} ${FY1 - 1.8 * g.k}V${FY1}`).join('')} stroke="#4a4f48" strokeWidth={0.5} opacity={0.6} />}
           <polygon points={`0,${FY1} ${W},${FY1} ${W},${H} 0,${H}`} fill={`url(#${id('pisoProf')})`} />
-          {detalhe && tipo !== 'garagem' && fileiras.map((y, k) => <path key={k} d={`M0 ${y.toFixed(1)} H${W}`} stroke={misturar(chaoExterno, '#000000', 0.08)} strokeWidth={0.8} />)}
+          {detalhe && tipo !== 'garagem' && tipo !== 'quadra' && fileiras.map((y, k) => <path key={k} d={`M0 ${y.toFixed(1)} H${W}`} stroke={misturar(chaoExterno, '#000000', 0.08)} strokeWidth={0.8} />)}
+          {tipo === 'garagem' && <g data-peca="portao"><rect x={FX0} y={FY0 + (FY1 - FY0) * 0.12} width={FX1 - FX0} height={(FY1 - FY0) * 0.88} fill="#c9c4bb" stroke="#8f8a82" strokeWidth={2} />{[0, 1, 2, 3, 4, 5, 6, 7].map(i => <path key={i} d={`M${FX0} ${FY0 + (FY1 - FY0) * (0.2 + i * 0.1)} H${FX1}`} stroke="#a9a49b" strokeWidth={1} />)}</g>}
+          {tipo === 'quadra' && <g data-peca="quadra"><polygon points={quad(g.Wm * 0.12, g.Wm * 0.88, g.Dv * 0.15, g.Dv * 0.85)} fill="#3f6fa0" /><polygon points={quad(g.Wm * 0.12, g.Wm * 0.88, g.Dv * 0.15, g.Dv * 0.85)} fill="none" stroke="#f4f1ea" strokeWidth={1.4} /><path d={`M${ponto(g.Wm / 2, 0, g.Dv * 0.15)} L${ponto(g.Wm / 2, 0, g.Dv * 0.85)}`} stroke="#f4f1ea" strokeWidth={1} /><path d={`M${ponto(g.Wm * 0.12, 1, g.Dv * 0.5)} L${ponto(g.Wm * 0.88, 1, g.Dv * 0.5)}`} stroke="#2b2826" strokeWidth={1.2} /><path d={`M${ponto(g.Wm * 0.12, 0, g.Dv * 0.5)} L${ponto(g.Wm * 0.12, 1, g.Dv * 0.5)} M${ponto(g.Wm * 0.88, 0, g.Dv * 0.5)} L${ponto(g.Wm * 0.88, 1, g.Dv * 0.5)}`} stroke="#5a5550" strokeWidth={1.2} /></g>}
         </g>
       ) : (
         <g data-peca="paredes">
-          {/* O teto, as paredes laterais, a parede do fundo. */}
           <polygon points={`0,${TETO_E} 0,0 ${W},0 ${W},${TETO_D} ${FX1},${FY0} ${FX0},${FY0}`} fill={teto} />
           <polygon points={`0,${TETO_E} ${FX0},${FY0} ${FX0},${FY1} 0,${CHAO_E}`} fill={pEsq} />
           <polygon points={`${W},${TETO_D} ${FX1},${FY0} ${FX1},${FY1} ${W},${CHAO_D}`} fill={pDir} />
@@ -205,9 +146,8 @@ export const CenaDoComodo = memo(function CenaDoComodo({ tipo, parede, piso, luz
             <polygon points={`${W},${TETO_D} ${FX1},${FY0} ${FX1},${FY1} ${W},${CHAO_D}`} fill="#000000" opacity={0.17} />
           </> : null}
           <rect x={FX0} y={FY0} width={FX1 - FX0} height={FY1 - FY0} fill={preenchida} />
-          {dParede === 'boiserie' && [0, 1, 2].map(k => <g key={k}><rect x={FX0 + 10 + k * 74} y={FY0 + 14} width={62} height={38} rx={2} fill="none" stroke={cor2Parede ?? misturar(corParede, '#000000', 0.14)} strokeWidth={detalhe ? 1.2 : 1.8} /><rect x={FX0 + 10 + k * 74} y={FY0 + 60} width={62} height={32} rx={2} fill="none" stroke={cor2Parede ?? misturar(corParede, '#000000', 0.14)} strokeWidth={detalhe ? 1.2 : 1.8} /></g>)}
-          {dParede === 'boiserie' && <path d={`M${FX0} ${FY0 + 56} H${FX1}`} stroke={cor2Parede ?? misturar(corParede, '#000000', 0.16)} strokeWidth={1.4} />}
-          {/* Os cantos (onde a luz não chega) e as arestas do teto. */}
+          {dParede === 'boiserie' && [0, 1, 2].map(k => { const lw = (FX1 - FX0) / 3; return <g key={k}><rect x={FX0 + 8 + k * lw} y={FY0 + (FY1 - FY0) * 0.13} width={lw - 16} height={(FY1 - FY0) * 0.36} rx={2} fill="none" stroke={cor2Parede ?? misturar(corParede, '#000000', 0.14)} strokeWidth={detalhe ? 1.2 : 1.8} /><rect x={FX0 + 8 + k * lw} y={FY0 + (FY1 - FY0) * 0.57} width={lw - 16} height={(FY1 - FY0) * 0.3} rx={2} fill="none" stroke={cor2Parede ?? misturar(corParede, '#000000', 0.14)} strokeWidth={detalhe ? 1.2 : 1.8} /></g>; })}
+          {dParede === 'boiserie' && <path d={`M${FX0} ${FY0 + (FY1 - FY0) * 0.53} H${FX1}`} stroke={cor2Parede ?? misturar(corParede, '#000000', 0.16)} strokeWidth={1.4} />}
           <path d={`M${FX0} ${FY0} V${FY1} M${FX1} ${FY0} V${FY1}`} stroke={misturar(corParede, '#000000', 0.25)} strokeWidth={1} />
           <path d={`M0 ${TETO_E} L${FX0} ${FY0} H${FX1} L${W} ${TETO_D}`} stroke={misturar(corParede, '#000000', 0.15)} strokeWidth={0.8} fill="none" />
           <rect x={FX0} y={FY1 - 14} width={FX1 - FX0} height={14} fill={`url(#${id('pe')})`} />
@@ -215,91 +155,108 @@ export const CenaDoComodo = memo(function CenaDoComodo({ tipo, parede, piso, luz
       )}
 
       {/* A janela: na parede lateral esquerda (em perspectiva), e o rastro de luz no chão. */}
-      {janela && (
-        <g data-peca="janela">
-          {/* A janela na parede lateral: as alturas seguem a perspectiva da parede (alta perto, baixa no fundo). */}
-          {(() => {
-            const a = 10, b = 36;
-            const yAt = (x: number, yFundo: number) => PF.y + (yFundo - PF.y) * ((x - PF.x) / (FX0 - PF.x));
-            const [t1, t2, b1, b2] = [yAt(a, 34), yAt(b, 34), yAt(a, 84), yAt(b, 84)];
-            const m = (a + b) / 2;
-            return <>
-              <polygon points={`${a},${t1.toFixed(1)} ${b},${t2.toFixed(1)} ${b},${b2.toFixed(1)} ${a},${b1.toFixed(1)}`} fill="#cfe3ee" stroke={misturar(pEsq, '#000000', 0.3)} strokeWidth={2.2} strokeLinejoin="round" />
-              <path d={`M${m} ${yAt(m, 34).toFixed(1)} V${yAt(m, 84).toFixed(1)}`} stroke={misturar(pEsq, '#000000', 0.3)} strokeWidth={1.4} />
-              {detalhe && <path d={`M${a + 2} ${(b1 - 4).toFixed(1)} l 8 -14 l 5 6 l 7 -10 l 4 5 V ${(b2 - 2).toFixed(1)} Z`} fill="#a9c6a0" opacity={0.7} />}
-              <polygon points={`${FX0 - 2},${FY1 + 3} ${FX0 + 60},${FY1 + 5} 200,${H} 20,${H}`} fill="#fffbe8" opacity={quente ? 0.07 : 0.12} />
-            </>;
-          })()}
-        </g>
-      )}
-      {janela && oCortina && oCortina.desenho !== 'nenhuma' && <Cortina desenho={oCortina.desenho ?? 'tecido'} cor={oCortina.cor ?? '#efe7d6'} detalhe={detalhe} />}
-      {tipo === 'cinema' && <g data-peca="tela"><rect x={FX0 + 26} y={FY0 + 8} width={FX1 - FX0 - 52} height={60} fill="#1d2430" stroke="#0f141b" strokeWidth={2.4} /><rect x={FX0 + 30} y={FY0 + 12} width={FX1 - FX0 - 60} height={52} fill="#2b3a52" opacity={0.6} /></g>}
+      {janela && (() => {
+        const zA = Math.min(g.Dv * 0.75, 1.1 + g.Dv * 0.25), zB = Math.max(0.3, zA - 1.2);
+        const [a, t1] = tela(g, 0, 2.15, zA), [b, t2] = tela(g, 0, 2.15, zB);
+        const [, b1] = tela(g, 0, 0.95, zA), [, b2] = tela(g, 0, 0.95, zB);
+        const m = (a + b) / 2;
+        const ym = (x: number, y1: number, y2: number) => y1 + (y2 - y1) * ((x - a) / ((b - a) || 1));
+        return (
+          <g data-peca="janela">
+            <polygon points={`${a.toFixed(1)},${t1.toFixed(1)} ${b.toFixed(1)},${t2.toFixed(1)} ${b.toFixed(1)},${b2.toFixed(1)} ${a.toFixed(1)},${b1.toFixed(1)}`} fill="#cfe3ee" stroke={misturar(pEsq, '#000000', 0.3)} strokeWidth={2.2} strokeLinejoin="round" />
+            <path d={`M${m.toFixed(1)} ${ym(m, t1, t2).toFixed(1)} V${ym(m, b1, b2).toFixed(1)}`} stroke={misturar(pEsq, '#000000', 0.3)} strokeWidth={1.4} />
+            {detalhe && <path d={`M${(a + 2).toFixed(1)} ${(b1 - 4).toFixed(1)} l 8 -14 l 5 6 l 7 -10 l 4 5 V ${(b2 - 2).toFixed(1)} Z`} fill="#a9c6a0" opacity={0.7} />}
+            <polygon points={`${ponto(0.05, 0, zB)} ${ponto(1.4, 0, zB)} ${ponto(2.6, 0, Math.min(g.Dv, zA + 1.6))} ${ponto(0.05, 0, Math.min(g.Dv, zA + 1.6))}`} fill="#fffbe8" opacity={quente ? 0.07 : 0.12} />
+            {oCortina && oCortina.desenho !== 'nenhuma' && <Cortina desenho={oCortina.desenho ?? 'tecido'} cor={oCortina.cor ?? '#efe7d6'} detalhe={detalhe} a={a} b={b} y={(x, alt) => { const t = (x - a) / ((b - a) || 1); const z = zA + (zB - zA) * t; return tela(g, 0, alt, z)[1]; }} />}
+          </g>
+        );
+      })()}
+      {tipo === 'cinema' && (() => { const [x0, y0] = tela(g, g.Wm * 0.15, 2.5, 0), [x1, y1] = tela(g, g.Wm * 0.85, 0.6, 0); return <g data-peca="tela"><rect x={x0} y={y0} width={x1 - x0} height={y1 - y0} fill="#1d2430" stroke="#0f141b" strokeWidth={2.4} /><rect x={x0 + 4} y={y0 + 4} width={x1 - x0 - 8} height={y1 - y0 - 8} fill="#2b3a52" opacity={0.6} /></g>; })()}
 
       {/* O piso: o trapézio em perspectiva, as tábuas ou os rejuntes convergindo para o fundo. */}
       {!externo && <polygon points={pisoPoly} fill={`url(#${id('pisoProf')})`} />}
-      {!externo && <PisoDesenhado desenho={dPiso} cor={corPiso} cor2={cor2Piso} detalhe={detalhe} padrao={PADRAO_DE_PISO.has(dPiso) ? `url(#${id('pis')})` : undefined} tabuas={tabuas} fileiras={fileiras} />}
-      {/* O rodapé, nas três paredes. */}
+      {!externo && <PisoDesenhado desenho={dPiso} cor={corPiso} cor2={cor2Piso} detalhe={detalhe} padrao={PADRAO_DE_PISO.has(dPiso) ? `url(#${id('pis')})` : undefined} tabuas={tabuas} fileiras={fileiras} g={g} pisoPoly={pisoPoly} />}
       {!externo && <path data-peca="rodape" data-rodape={rodapeId ?? 'simples'} d={`M0 ${CHAO_E} L${FX0} ${FY1} H${FX1} L${W} ${CHAO_D}`} stroke={rodape} strokeWidth={oRodape?.desenho === 'alto' || oRodape?.desenho === 'moldura' ? 5 : oRodape?.desenho === 'madeira' ? 3.4 : oRodape?.desenho === 'led' ? 1.6 : 2.6} fill="none" strokeLinejoin="round" />}
       {!externo && oRodape?.desenho === 'led' && <path d={`M0 ${CHAO_E - 2} L${FX0} ${FY1 - 1.5} H${FX1} L${W} ${CHAO_D - 2}`} stroke={tom1} strokeWidth={2.2} opacity={0.55 * intensidade} fill="none" />}
       {!externo && oRodape?.desenho === 'moldura' && <path d={`M0 ${TETO_E + 3} L${FX0} ${FY0 + 2.5} H${FX1} L${W} ${TETO_D + 3}`} stroke={misturar(corParede, '#ffffff', 0.6)} strokeWidth={3.2} fill="none" strokeLinejoin="round" />}
+      {tipo === 'varanda' && <path data-peca="guarda-corpo" d={`M0 ${(H - 30).toFixed(1)} H${W} M0 ${(H - 8).toFixed(1)} H${W}${Array.from({ length: 17 }, (_, i) => ` M${i * 20} ${H - 30} V${H - 8}`).join('')}`} stroke="#3a3a3c" strokeWidth={1.6} opacity={0.75} />}
 
-      {/* O que todo cômodo desse tipo tem, na parede do fundo (na escala de lá). */}
-      {FIXOS[tipo] && <g transform={`translate(${FX0 + 4} ${FY1 + 2}) scale(${sF.toFixed(3)}) translate(-10 -${CHAO_FIXO})`}>{FIXOS[tipo].desenho(CHAO_FIXO, corParede)}</g>}
-      {tipo === 'piscina' && <g data-peca="piscina"><polygon points={`70,${FY1 + 14} 250,${FY1 + 14} 296,${H - 10} 24,${H - 10}`} fill="#5fb6d6" stroke="#e8e4dc" strokeWidth={4} strokeLinejoin="round" /><path d={`M80 ${FY1 + 34} q 24 -6 48 0 t 48 0 M150 ${FY1 + 48} q 24 -6 48 0`} stroke="#bfe6f2" strokeWidth={1.4} fill="none" /></g>}
+      {/* A piscina: a água em perspectiva, a borda de pedra, o reflexo. */}
+      {pis && <g data-peca="piscina"><polygon points={quad(pis.x0 - 0.2, pis.x1 + 0.2, pis.z0 - 0.2, pis.z1 + 0.2)} fill="#e8e4dc" /><polygon points={quad(pis.x0, pis.x1, pis.z0, pis.z1)} fill="#5fb6d6" /><path d={`M${ponto(pis.x0 + 0.5, 0, pis.z0 + 0.6)} q 18 -4 36 0 t 36 0 M${ponto(pis.x0 + 1.4, 0, (pis.z0 + pis.z1) / 2)} q 18 -4 36 0`} stroke="#bfe6f2" strokeWidth={1.4} fill="none" /></g>}
 
       {/* A luz. */}
-      {!externo && <LuzDoComodo desenho={dLuz} tom={tom1} intensidade={intensidade} lampada={id('lampada')} automacao={luz === 'automacao' || luz === 'luminotecnico'} />}
-      {/* 12.7: a intensidade baixa escurece a cena (o dimmer), a alta não mexe. */}
-      {intensidade < 1 && <rect width={W} height={H} fill="#0d0b14" opacity={(1 - intensidade) * 0.32} pointerEvents="none" />}
+      {!externo && <LuzDoComodo desenho={dLuz} tom={tom1} intensidade={intensidade} lampada={id('lampada')} automacao={luz === 'automacao' || luz === 'luminotecnico'} g={g} TETO_E={TETO_E} TETO_D={TETO_D} />}
 
-      {/* Os objetos: o fundo primeiro (mais longe), depois a frente — cada um com a sombra de contato no piso. */}
-      {[...postosFundo, ...postosFrente].map(o => (
-        <g key={o.id} data-fileira={postosFundo.includes(o) ? 'fundo' : 'frente'}>
-          <ellipse cx={(o.x + o.w / 2).toFixed(1)} cy={(o.base + 0.5).toFixed(1)} rx={(o.w * 0.5).toFixed(1)} ry={(2.6 * escalaNo(o.base)).toFixed(1)} fill="#000000" opacity={0.16} />
-          <g transform={`translate(${o.x.toFixed(1)} ${o.y.toFixed(1)})`}>
-            <Ilustracao a={amostraDoObjeto(o.coisaId, o.cor)} largura={o.w} rotulo="" className="cena-comodo__objeto" dados={{ 'data-coisa': o.coisaId }} />
-          </g>
-        </g>
-      ))}
+      {/* Os objetos, cada um no seu lugar: o tapete, a parede, o chão de trás para a frente. */}
+      {ordem.map(p => <ObjetoPosto key={p.id} p={p} g={g} postoDe={idp => disp.postos.find(x => x.id === idp)} />)}
+
+      {intensidade < 1 && <rect width={W} height={H} fill="#0d0b14" opacity={(1 - intensidade) * 0.32} pointerEvents="none" />}
       <rect width={W} height={H} fill={`url(#${id('luz')})`} pointerEvents="none" />
       <rect width={W} height={H} fill={`url(#${id('vinheta')})`} pointerEvents="none" />
     </svg>
   );
 });
 
-/** A linha do chão em que os fixos são desenhados (eles vão para a parede do fundo pela escala de lá). */
-const CHAO_FIXO = 132;
+/** Um objeto no lugar dele: no chão (com a sombra de contato), na parede (do fundo ou da lateral), num tampo, no piso, na água. */
+function ObjetoPosto({ p, g, postoDe }: { p: Posto; g: Geometria; postoDe: (id: string) => Posto | undefined }) {
+  const cor = valida(p.cor, valida(variantesDaCoisa(p.coisaId)[0]?.cor, '#a49a8c'));
+  if (p.montagem === 'tapete') return <Tapete p={p} g={g} cor={cor} />;
+  const base = amostraDoObjeto(p.coisaId === 'camping' && !g.externo ? 'camping_guardado' : p.coisaId, cor);
+  // O par (as mesas de cabeceira): cada posto é uma metade do desenho.
+  const a: Amostra = p.metade ? metadeDe(base, p.metade) : base;
+  const comum = { 'data-coisa': p.coisaId, 'data-montagem': p.montagem, ...(p.parede ? { 'data-parede': p.parede } : {}), ...(p.fixo ? { 'data-fixo': 'sim' } : {}) };
+  if (p.montagem === 'parede' && p.parede === 'dir') {
+    // Na parede lateral direita: o desenho vai para o plano da parede (um paralelogramo que acompanha a perspectiva).
+    const c = caixaDaAmostra(a);
+    const [ax, ay] = tela(g, g.Wm, p.base + p.h, p.z0), [bx, by] = tela(g, g.Wm, p.base + p.h, p.z1), [, cy] = tela(g, g.Wm, p.base, p.z0);
+    const sx = (bx - ax) / (c.x1 - c.x0), skew = (by - ay) / (c.x1 - c.x0), sy = (cy - ay) / (c.y1 - c.y0);
+    const m = [sx, skew, 0, sy, ax - c.x0 * sx, ay - c.x0 * skew - c.y0 * sy].map(n => n.toFixed(4)).join(' ');
+    return <g data-posto={p.id} {...comum} transform={`matrix(${m})`}><Ilustracao a={a} largura={a.vb[0]} rotulo="" className="cena-comodo__objeto" /></g>;
+  }
+  // Sobre um tampo: na profundidade do tampo (o desenho do móvel de baixo); no chão, o fundo do objeto.
+  const zc = p.sobre ? zDoDesenho(postoDe(p.sobre) ?? p) - 0.02 : zDoDesenho(p);
+  const s = escalaEm(g, zc);
+  const larguraTela = (p.x1 - p.x0) * g.k * s;
+  const alturaMax = p.h * g.k * s * 1.3 + 2;
+  const { s: esc, c, bw } = enquadrar(a, larguraTela, alturaMax);
+  const xEsq = xEm(g, p.x0, zc) + (larguraTela - bw * esc) / 2;
+  const yBase = p.montagem === 'parede' ? chaoEm(g, 0) - p.base * g.k : chaoEm(g, zc) - p.base * g.k * s;
+  const tx = xEsq - c.x0 * esc, ty = yBase - c.y1 * esc;
+  return (
+    <g data-posto={p.id} {...comum}>
+      {(p.montagem === 'chao') && <ellipse cx={(xEsq + bw * esc / 2).toFixed(1)} cy={(yBase + 0.5).toFixed(1)} rx={(bw * esc * 0.5).toFixed(1)} ry={(Math.max(1.2, 0.08 * g.k * s)).toFixed(1)} fill="#000000" opacity={0.16} />}
+      <g transform={`translate(${tx.toFixed(1)} ${ty.toFixed(1)}) scale(${esc.toFixed(4)})`}>
+        <Ilustracao a={a} largura={a.vb[0]} rotulo="" className="cena-comodo__objeto" />
+      </g>
+    </g>
+  );
+}
 
-/** O que vem com o cômodo (desenhado, não comprado) e quanto do chão ocupa à esquerda. */
-const FIXOS: Record<string, { largura: number; desenho: (chao: number, parede: string) => ReactElement }> = {
-  cozinha: { largura: 118, desenho: chao => (
-    <g data-peca="bancada">
-      <rect x={10} y={chao - 44} width={110} height={46} fill="#e9e4da" stroke="#9c958a" strokeWidth={1} />
-      <rect x={10} y={chao - 48} width={110} height={5} fill="#8a8178" />
-      <rect x={18} y={chao - 36} width={32} height={30} fill="#d8d1c4" stroke="#9c958a" strokeWidth={0.8} /><circle cx={34} cy={chao - 21} r={1.4} fill="#6a635a" />
-      <rect x={58} y={chao - 52} width={30} height={5} fill="#3b3835" />{[64, 82].map(cx => <circle key={cx} cx={cx} cy={chao - 50} r={2.4} fill="#1f1d1b" />)}
-      <rect x={58} y={chao - 40} width={30} height={34} fill="#4a4743" /><rect x={62} y={chao - 34} width={22} height={14} fill="#2b2927" />
-      <path d={`M100 ${chao - 48} v-10 q6 -4 8 2`} stroke="#9aa0a6" strokeWidth={1.6} fill="none" />
-      <rect x={14} y={chao - 104} width={100} height={30} fill="#e2dccf" stroke="#9c958a" strokeWidth={0.8} />
-      <rect x={10} y={chao + 1} width={110} height={3} fill="#000000" opacity={0.12} />
-    </g>) },
-  banheiro: { largura: 140, desenho: chao => (
-    <g data-peca="banheiro">
-      <rect x={10} y={chao - 112} width={56} height={114} fill="#d9e8ee" opacity={0.55} stroke="#9fb3bb" strokeWidth={1.4} />
-      <path d={`M24 ${chao - 112} v 10 q 0 6 8 6`} stroke="#8d969c" strokeWidth={2} fill="none" /><circle cx={34} cy={chao - 94} r={5} fill="#8d969c" />
-      <rect x={80} y={chao - 46} width={34} height={8} rx={3} fill="#f4f4f2" stroke="#b7b3aa" strokeWidth={0.8} /><rect x={92} y={chao - 38} width={10} height={40} fill="#ecebe7" />
-      <rect x={82} y={chao - 92} width={30} height={36} rx={3} fill="#cfdfe6" stroke="#9fb3bb" strokeWidth={1} />
-      <path d={`M122 ${chao} v-22 h22 q6 0 6 8 q0 14 -14 14 Z`} fill="#f4f4f2" stroke="#b7b3aa" strokeWidth={0.8} /><rect x={120} y={chao - 40} width={14} height={20} rx={2} fill="#f4f4f2" stroke="#b7b3aa" strokeWidth={0.8} />
-    </g>) },
-  quarto: { largura: 0, desenho: () => <></> },
-  jardim: { largura: 60, desenho: chao => (
-    <g data-peca="arvore"><rect x={30} y={chao - 60} width={8} height={62} fill="#7a5a3a" /><circle cx={34} cy={chao - 70} r={26} fill="#5f8f4e" /><circle cx={20} cy={chao - 60} r={16} fill="#6f9f5c" /><ellipse cx={34} cy={chao + 1} rx={20} ry={3} fill="#000000" opacity={0.15} /></g>) },
-  piscina: { largura: 0, desenho: () => <></> },
-  lazer: { largura: 90, desenho: chao => (
-    <g data-peca="churrasqueira"><rect x={14} y={chao - 70} width={70} height={72} fill="#b0654a" /><rect x={26} y={chao - 52} width={46} height={26} fill="#2b2522" /><rect x={34} y={chao - 104} width={30} height={36} fill="#9a5640" /><rect x={14} y={chao + 1} width={70} height={3} fill="#000000" opacity={0.15} /></g>) },
-  garagem: { largura: 0, desenho: chao => (
-    <g data-peca="portao"><rect x={40} y={chao - 104} width={240} height={106} fill="#c9c4bb" stroke="#8f8a82" strokeWidth={2} />{[0, 1, 2, 3, 4, 5, 6, 7].map(i => <path key={i} d={`M40 ${chao - 92 + i * 12} H280`} stroke="#a9a49b" strokeWidth={1} />)}</g>) }
-};
+const METADES = new WeakMap<Amostra, { esq: Amostra; dir: Amostra }>();
+function metadeDe(a: Amostra, lado: 'esq' | 'dir'): Amostra {
+  let m = METADES.get(a);
+  if (!m) {
+    const meio = a.vb[0] / 2;
+    m = { esq: { ...a, vb: [meio, a.vb[1]], sombra: undefined }, dir: { ...a, vb: [meio, a.vb[1]], sombra: undefined, pecas: [{ tipo: 'grupo', t: `translate(${-meio} 0)`, pecas: a.pecas }] } };
+    METADES.set(a, m);
+  }
+  return m[lado];
+}
+
+/** O tapete: deitado no piso, em perspectiva, com a borda (o persa, com a barra e o medalhão). */
+function Tapete({ p, g, cor }: { p: Posto; g: Geometria; cor: string }) {
+  const pt = (x: number, z: number) => tela(g, x, 0, z).map(n => n.toFixed(1)).join(',');
+  const q = (i: number) => `${pt(p.x0 + i, p.z0 + i)} ${pt(p.x1 - i, p.z0 + i)} ${pt(p.x1 - i, p.z1 - i)} ${pt(p.x0 + i, p.z1 - i)}`;
+  const persa = p.coisaId === 'tapete_persa';
+  const [cx, cy] = tela(g, (p.x0 + p.x1) / 2, 0, (p.z0 + p.z1) / 2);
+  return (
+    <g data-posto={p.id} data-coisa={p.coisaId} data-montagem="tapete">
+      <polygon points={q(0)} fill={cor} />
+      <polygon points={q(0.12)} fill="none" stroke={misturar(cor, persa ? '#f1e6cf' : '#000000', persa ? 0.55 : 0.18)} strokeWidth={persa ? 2 : 1} />
+      {persa && <><polygon points={q(0.24)} fill="none" stroke={misturar(cor, '#000000', 0.3)} strokeWidth={1} /><ellipse cx={cx} cy={cy} rx={((p.x1 - p.x0) * g.k * escalaEm(g, (p.z0 + p.z1) / 2) * 0.16).toFixed(1)} ry={((tela(g, 0, 0, p.z1)[1] - tela(g, 0, 0, p.z0)[1]) * 0.22).toFixed(1)} fill={misturar(cor, '#f1e6cf', 0.45)} /></>}
+    </g>
+  );
+}
 
 /* ============================================================ 12.7 · os acabamentos desenhados */
 
@@ -343,8 +300,9 @@ function PadraoDoPiso({ id, desenho, cor, cor2 }: { id: string; desenho: string;
 }
 
 /** O piso em perspectiva: o padrão (mármore, carpete, espinha…) ou as tábuas e os rejuntes convergindo para o fundo. */
-function PisoDesenhado({ desenho, cor, cor2, detalhe, padrao, tabuas, fileiras }: { desenho: string; cor: string; cor2?: string; detalhe: boolean; padrao?: string; tabuas: number[]; fileiras: number[] }) {
-  const pisoPoly = `${FX0},${FY1} ${FX1},${FY1} ${W},${CHAO_D} ${W},${H} 0,${H} 0,${CHAO_E}`;
+function PisoDesenhado({ desenho, cor, cor2, detalhe, padrao, tabuas, fileiras, g, pisoPoly }: { desenho: string; cor: string; cor2?: string; detalhe: boolean; padrao?: string; tabuas: number[]; fileiras: number[]; g: Geometria; pisoPoly: string }) {
+  const { fx0: FX0, fx1: FX1, fy1: FY1, pf: PF, W, H } = g;
+  const projetar = (xFundo: number, yFundo: number, y: number) => PF.x + (xFundo - PF.x) * ((y - PF.y) / (yFundo - PF.y));
   const linha = misturar(cor, '#000000', 0.2);
   const radial = (lista: number[]) => lista.map((x, i) => <path key={`v${i}`} d={`M${x.toFixed(1)} ${FY1} L${projetar(x, FY1, H).toFixed(1)} ${H}`} stroke={linha} strokeWidth={detalhe ? 0.7 : 1} opacity={0.8} />);
   const juntas = (lista: number[]) => lista.map((y, k) => <path key={`h${k}`} d={`M${projetar(FX0, FY1, y).toFixed(1)} ${y.toFixed(1)} H${projetar(FX1, FY1, y).toFixed(1)}`} stroke={misturar(cor, '#000000', 0.12)} strokeWidth={detalhe ? 0.7 : 1} />);
@@ -357,35 +315,34 @@ function PisoDesenhado({ desenho, cor, cor2, detalhe, padrao, tabuas, fileiras }
       {desenho === 'grande_formato' && <>{radial(tabuas.filter((_, i) => i % 4 === 0))}{juntas(fileiras.filter((_, k) => k % 2 === 1))}</>}
       {desenho === 'versailles' && radial(tabuas.filter((_, i) => i % 3 === 0))}
       {desenho === 'marmore' && cor2 && <path d={`M40 ${H - 18} q 50 -10 100 2 t 110 -6 M150 ${FY1 + 18} q 30 8 70 2`} stroke={cor2} strokeWidth={0.9} fill="none" />}
-      {/* O brilho do piso polido. */}
       {(desenho === 'marmore' || desenho === 'grande_formato' || desenho === 'granito') && <polygon points={`${FX0 + 40},${FY1 + 4} ${FX1 - 40},${FY1 + 4} ${W - 70},${H} 70,${H}`} fill="#ffffff" opacity={0.06} />}
     </g>
   );
 }
 
-/** A cortina (ou a persiana) na janela da parede lateral esquerda — na perspectiva da janela. */
-function Cortina({ desenho, cor, detalhe }: { desenho: string; cor: string; detalhe: boolean }) {
-  const yAt = (x: number, yFundo: number) => PF.y + (yFundo - PF.y) * ((x - PF.x) / (FX0 - PF.x));
-  const a = 10, b = 36;
+/** A cortina (ou a persiana) na janela da parede lateral esquerda — na perspectiva da janela (`y(x, altura)`). */
+function Cortina({ desenho, cor, detalhe, a, b, y }: { desenho: string; cor: string; detalhe: boolean; a: number; b: number; y: (x: number, alt: number) => number }) {
   const dobra = misturar(cor, '#000000', 0.18);
+  const lw = Math.max(4, (b - a) * 0.28);
   if (desenho === 'tecido') {
-    // Dois panos, um de cada lado da janela, do teto ao chão.
-    const pano = (x0: number, x1: number) => <polygon points={`${x0},${yAt(x0, 24).toFixed(1)} ${x1},${yAt(x1, 24).toFixed(1)} ${x1},${yAt(x1, FY1).toFixed(1)} ${x0},${yAt(x0, FY1).toFixed(1)}`} fill={cor} stroke={dobra} strokeWidth={0.6} />;
-    return <g data-peca="cortina" data-desenho={desenho}>{pano(a - 7, a + 3)}{pano(b - 3, b + 6)}{detalhe && [a - 4, a, b, b + 3].map(x => <path key={x} d={`M${x} ${yAt(x, 26).toFixed(1)} V${yAt(x, FY1 - 2).toFixed(1)}`} stroke={dobra} strokeWidth={0.6} />)}<path d={`M${a - 8} ${yAt(a - 8, 23).toFixed(1)} L${b + 7} ${yAt(b + 7, 23).toFixed(1)}`} stroke="#5a5550" strokeWidth={1} /></g>;
+    const pano = (x0: number, x1: number) => <polygon points={`${x0.toFixed(1)},${y(x0, 2.45).toFixed(1)} ${x1.toFixed(1)},${y(x1, 2.45).toFixed(1)} ${x1.toFixed(1)},${y(x1, 0.02).toFixed(1)} ${x0.toFixed(1)},${y(x0, 0.02).toFixed(1)}`} fill={cor} stroke={dobra} strokeWidth={0.6} />;
+    return <g data-peca="cortina" data-desenho={desenho}>{pano(a - lw * 0.7, a + lw * 0.3)}{pano(b - lw * 0.3, b + lw * 0.6)}{detalhe && [a - lw * 0.4, a, b, b + lw * 0.3].map(x => <path key={x} d={`M${x.toFixed(1)} ${y(x, 2.4).toFixed(1)} V${y(x, 0.05).toFixed(1)}`} stroke={dobra} strokeWidth={0.6} />)}<path d={`M${(a - lw * 0.8).toFixed(1)} ${y(a - lw * 0.8, 2.48).toFixed(1)} L${(b + lw * 0.7).toFixed(1)} ${y(b + lw * 0.7, 2.48).toFixed(1)}`} stroke="#5a5550" strokeWidth={1} /></g>;
   }
-  const alto = desenho === 'rolo' ? 46 : desenho === 'romana' ? 52 : 60;
+  const ate = desenho === 'rolo' ? 1.7 : desenho === 'romana' ? 1.55 : 1.35;
   return (
     <g data-peca="cortina" data-desenho={desenho}>
-      <polygon points={`${a},${yAt(a, 34).toFixed(1)} ${b},${yAt(b, 34).toFixed(1)} ${b},${yAt(b, alto).toFixed(1)} ${a},${yAt(a, alto).toFixed(1)}`} fill={cor} opacity={desenho === 'persiana' ? 0.9 : 1} />
-      {desenho === 'persiana' && [38, 42, 46, 50, 54, 58].map(y => <path key={y} d={`M${a} ${yAt(a, y).toFixed(1)} L${b} ${yAt(b, y).toFixed(1)}`} stroke={dobra} strokeWidth={0.6} />)}
-      {desenho === 'romana' && [42, 48].map(y => <path key={y} d={`M${a} ${yAt(a, y).toFixed(1)} L${b} ${yAt(b, y).toFixed(1)}`} stroke={dobra} strokeWidth={1.1} />)}
+      <polygon points={`${a.toFixed(1)},${y(a, 2.15).toFixed(1)} ${b.toFixed(1)},${y(b, 2.15).toFixed(1)} ${b.toFixed(1)},${y(b, ate).toFixed(1)} ${a.toFixed(1)},${y(a, ate).toFixed(1)}`} fill={cor} opacity={desenho === 'persiana' ? 0.9 : 1} />
+      {desenho === 'persiana' && [2.05, 1.92, 1.79, 1.66, 1.53, 1.4].map(h => <path key={h} d={`M${a.toFixed(1)} ${y(a, h).toFixed(1)} L${b.toFixed(1)} ${y(b, h).toFixed(1)}`} stroke={dobra} strokeWidth={0.6} />)}
+      {desenho === 'romana' && [1.95, 1.75].map(h => <path key={h} d={`M${a.toFixed(1)} ${y(a, h).toFixed(1)} L${b.toFixed(1)} ${y(b, h).toFixed(1)}`} stroke={dobra} strokeWidth={1.1} />)}
     </g>
   );
 }
 
 /** A luminária: cada tipo de luz com o seu desenho e o seu facho, na cor da temperatura escolhida. */
-function LuzDoComodo({ desenho, tom, intensidade, lampada, automacao }: { desenho: string; tom: string; intensidade: number; lampada: string; automacao: boolean }) {
+function LuzDoComodo({ desenho, tom, intensidade, lampada, automacao, g, TETO_E, TETO_D }: { desenho: string; tom: string; intensidade: number; lampada: string; automacao: boolean; g: Geometria; TETO_E: number; TETO_D: number }) {
   const k = intensidade;
+  const { fx0: FX0, fx1: FX1, fy0: FY0, fy1: FY1, W, H } = g;
+  void H;
   const pendente = (px: number, len = 22) => <g key={px}><path d={`M${px} 0 V${len}`} stroke="#3a3530" strokeWidth={0.8} /><path d={`M${px - 6} ${len + 5} l 6 -5 l 6 5 Z`} fill="#2e2b28" /><circle cx={px} cy={len + 6} r={2.2} fill={tom} /><path d={`M${px - 5} ${len + 7} L${px - 18} ${FY1 - 6} H${px + 18} L${px + 5} ${len + 7} Z`} fill={tom} opacity={0.08 * k} /></g>;
   return (
     <g data-peca="luz" data-desenho={desenho}>

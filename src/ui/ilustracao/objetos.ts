@@ -9,6 +9,7 @@
  */
 import { cantos, circulo, clarear, elipse, escurecer, lembrar, luminancia, membro, num as f, ret, suave, type Amostra, type Peca } from './nucleo';
 import { OBJETOS_DA_CASA } from './objetosDaCasa';
+import { FIXOS_DA_CENA } from './fixosDaCena';
 
 const CHAO = 110;
 const TELA = '#26303a', PRETO = '#2b2826', METAL = '#b8b4ad', BRANCO = '#ece9e4', MADEIRA = '#b9773f';
@@ -622,7 +623,9 @@ export const OBJETOS: Record<string, (cor: string) => Amostra> = {
   som_hifi: somHifi, discos, home_studio: homeStudio, controladora_dj: controladora, cavaquinho, pandeiro, sanfona, saxofone,
   cavalete, torno_ceramica: tornoCeramica,
   // VIDA 12.7 — a casa inteira (objetosDaCasa.ts)
-  ...OBJETOS_DA_CASA
+  ...OBJETOS_DA_CASA,
+  // VIDA 12.8 — o que vem com o cômodo e as peças de coleção à vista (fixosDaCena.ts)
+  ...FIXOS_DA_CENA
 };
 
 /** O desenho de uma coisa (quem não está no catálogo cai numa caixa genérica, com o nome no rótulo). */

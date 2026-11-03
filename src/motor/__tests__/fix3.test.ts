@@ -7,6 +7,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
+import { legalidade } from '../sistemas/exoticos';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { nova, responderTudo, viverAte } from './ajuda';
@@ -380,7 +381,12 @@ describe('pets por espécie, pela lei', () => {
     for (const o of ofertas) if (animal(o.especie).silvestre) { expect(o.origem).toBe('criador'); expect(o.documentos).toBeTruthy(); }
     // Nenhum bicho proibido de ter em casa está no catálogo legal (macaco, serpente, onça...).
     const ids = ANIMAIS.map(a => a.id as string);
-    for (const proibido of ['macaco', 'mico', 'sagui', 'serpente', 'cobra', 'onca', 'tucano']) expect(ids).not.toContain(proibido);
+    for (const proibido of ['macaco', 'mico', 'serpente', 'cobra', 'onca']) expect(ids).not.toContain(proibido);
+    // VIDA 12.8 (pedido do usuário: mais exóticos): o sagui, o macaco-prego e o tucano entraram no catálogo, mas com a lei
+    // de cada lugar — no Brasil, primata não se vende (só aparece como oferta ilegal); o tucano, só de criadouro autorizado.
+    expect(legalidade('sagui', v.moradia.municipioId)).toBe('proibido');
+    expect(legalidade('macaco_prego', v.moradia.municipioId)).toBe('proibido');
+    expect(animal('tucano').silvestre && legalidade('tucano', v.moradia.municipioId)).toBe('licenca');
   });
 
   it('19. restrição: chinchila no calor do Nordeste é improvável; papagaio em apartamento idem', () => {

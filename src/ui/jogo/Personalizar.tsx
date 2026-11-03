@@ -30,7 +30,7 @@ import { pecasDaCategoria, opcaoDaPeca } from '../../motor/dados/personalizacaoV
 import { GENEROS, LINGUAGENS } from '../../motor/dados/gostos';
 import { ocupacaoOuNula } from '../../motor/dados/ocupacoes';
 import { ACABAMENTOS, acabamentoDoComodo, coisasPorComodo, comodoEquipado, comodosDaCasa, confortoDaCasa, donoDoLar, poderSobreACasa, terrenoLivre, plantaDaCasa } from '../../motor/sistemas/lar';
-import { aspectoCabe, custoDaPeca, custoDeConstruir, custoDeConverter, custoDeRepaginar, leituraDaPlanta, locaisPara, nomeDoLocal, reformaDoComodo, type RefObjeto } from '../../motor/sistemas/personalizacao';
+import { areaDoComodo, aspectoCabe, custoDaPeca, custoDeConstruir, custoDeConverter, custoDeRepaginar, leituraDaPlanta, locaisPara, nomeDoLocal, reformaDoComodo, type RefObjeto } from '../../motor/sistemas/personalizacao';
 import { afetoDe, origemEmPalavras, palavraDoAfeto } from '../../motor/sistemas/memoriaDosObjetos';
 import { valorDeRevenda } from '../../motor/sistemas/coisas';
 import { colecao } from '../../motor/sistemas/colecao';
@@ -56,7 +56,21 @@ interface Rascunho { acab: Partial<Record<AspectoDoComodo, string>>; luz: { temp
 function Cena({ vida, comodoId, tipo, nome, coisas, largura, rascunho }: { vida: Vida; comodoId: string; tipo: string; nome: string; coisas: CoisaTida[]; largura: number; rascunho?: Rascunho }) {
   const asp = (a: AspectoDoComodo) => { const id = rascunho?.acab[a] ?? acabamentoDoComodo(vida, comodoId, a); return { id, cor: opcaoDeAcabamento(a, id)?.cor }; };
   const regulada = { ...(donoDoLar(vida)?.lar?.luzes?.[comodoId] ?? {}), ...(rascunho?.luz ?? {}) };
-  return <CenaDoComodo tipo={tipo} parede={asp('parede')} piso={asp('piso')} luz={asp('luz').id} rodape={asp('rodape').id} cortina={asp('cortina').id} luzRegulada={regulada} objetos={coisas.map(t => ({ coisaId: t.coisaId, cor: t.cor, id: t.id }))} largura={largura} rotulo={`${cap(nome)}${coisas.length ? `: ${coisas.map(t => coisa(t.coisaId)?.nome).filter(Boolean).join(', ')}` : ', sem nada seu'}`} />;
+  // 12.8: o tamanho do cômodo (a escala da cena) e as peças de coleção expostas nele (na parede, no tampo, na vitrine).
+  const cm = comodosDaCasa(vida).find(c => c.id === comodoId);
+  const area = cm ? areaDoComodo(vida.moradia.modeloId, cm) * (['jardim', 'piscina', 'lazer', 'quadra'].includes(tipo) ? 1.6 : 1) : undefined;
+  const expostas = pecasExpostasNoComodo(vida, comodoId);
+  const objetos = [...coisas.map(t => ({ coisaId: t.coisaId, cor: t.cor, id: t.id })), ...expostas.map(c => ({ coisaId: DESENHO_DA_PECA[c.categoria] ?? '_peca', cor: c.categoria === 'arte' ? c.id : undefined, id: c.id }))];
+  const nomes = [...coisas.map(t => coisa(t.coisaId)?.nome), ...expostas.map(c => c.nome)].filter(Boolean);
+  return <CenaDoComodo tipo={tipo} parede={asp('parede')} piso={asp('piso')} luz={asp('luz').id} rodape={asp('rodape').id} cortina={asp('cortina').id} luzRegulada={regulada} objetos={objetos} area={area} largura={largura} rotulo={`${cap(nome)}${nomes.length ? `: ${nomes.join(', ')}` : ', sem nada seu'}`} />;
+}
+
+/** 12.8 — o desenho de cada categoria de peça exposta (a tela na parede, a camisa no quadro, a peça na redoma, o vaso). */
+const DESENHO_DA_PECA: Record<string, string> = { arte: '_obra', memorabilia: '_camisa', relogio: '_peca', joia: '_peca', antiguidade: '_antiguidade' };
+/** As peças de coleção expostas num cômodo (as sem cômodo escolhido ficam na sala). */
+function pecasExpostasNoComodo(vida: Vida, comodoId: string): Colecionavel[] {
+  const sala = comodosDaCasa(vida).find(c => c.tipo === 'sala')?.id;
+  return colecao(vida).filter(c => c.exposta && !c.local && !c.emprestadaFora && c.categoria !== 'vinho' && (c.comodo ?? sala) === comodoId);
 }
 
 export function CasaPorDentro({ vida, agir }: Props) {
