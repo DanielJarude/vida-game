@@ -92,3 +92,11 @@
 - A importadora de vinhos usa a fachada do antiquário.
 - Um produto por id de catálogo, qualquer que seja a marca (herdado da 12.4.1).
 - Os pacotes `motor-dados` (797 kB) e `motor` (796,5 kB) seguem perto do limite; o conteúdo novo foi para `motor-casa` (35 kB) e `motor-patrimonio`.
+
+## G. Publicação
+
+- **Commit publicado:** `a7daff7`. `main`, `claude/fix-pos-rework3-playtest` (produção) e `claude/vida12.8-casa-marcas-colecoes-exoticos` avançados de `ce8735c`/`2e2707d` para `a7daff7` por fast-forward. Este registro é um commit de documentação posterior, só em `main` e na branch.
+- **Deploy:** Cloudflare Pages, check-run `completed/success` no SHA `a7daff7`.
+- **URL:** https://vida-game.pages.dev/ serve `index-BTGd1JFM.js`; **48/48** arquivos (index, JS e CSS) **SHA-256 idênticos** ao `dist/` testado.
+- **Verificação em produção:** `URL=https://vida-game.pages.dev/ node scripts/playtest/vida128.mjs` (contextos novos, saves de QA só no navegador de teste): 124 capturas, claro e escuro × 1440/390/360 px, **0 problemas**, 0 erros de console.
+- **Rollback**, se preciso: `git push origin 2e2707d:claude/fix-pos-rework3-playtest --force-with-lease` (e `main` para `ce8735c`).
