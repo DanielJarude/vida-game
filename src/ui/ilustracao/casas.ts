@@ -420,6 +420,52 @@ export interface CenaEntrada {
   nivel: 'boa' | 'gasta' | 'ruim' | 'problema' | string; reforma: boolean;
   veiculo?: { tipo: 'carro' | 'moto' | 'bicicleta'; forma: FormaVeiculo; cor?: string; versaoId?: string; estado?: number };
   bichos: { id: string; especie: string }[];
+  /** VIDA 12.8: o lado de fora escolhido (o desenho da fachada, o jardim, o caminho, a luz, o portão). */
+  externo?: LadoDeFora;
+}
+
+export interface LadoDeFora { fachada?: string; corFachada?: string; cor2Fachada?: string; paisagismo?: string; caminho?: string; corCaminho?: string; luz?: string; portao?: string }
+
+/** VIDA 12.8 — o que a pessoa escolheu para o lado de fora, desenhado sobre a casa (a parede, o chão da frente). */
+function ladoDeFora(forma: FormaDaCasa, x: LadoDeFora): Peca[] {
+  const w = PLANTAS[forma].parede;
+  const out: Peca[] = [];
+  const cor = x.corFachada ?? PLANTAS[forma].cor;
+  const veio = escurecer(cor, 0.22);
+  // A fachada: o material por cima da parede principal (a cor já vem pela fachada).
+  if (x.fachada === 'tijolo') out.push(tijolos(w.x, w.y, w.l, w.a, cor));
+  else if (x.fachada === 'ripado') out.push({ tipo: 'linha', d: Array.from({ length: Math.floor(w.l / 4) }, (_, k) => `M${w.x + 2 + k * 4} ${w.y + 2}v${w.a - 4}`).join(''), larg: 0.8, cor: veio, marca: 'ripado' });
+  else if (x.fachada === 'pedra') out.push({ tipo: 'linha', d: Array.from({ length: Math.floor(w.a / 5) }, (_, k) => `M${w.x + 1} ${w.y + 4 + k * 5}h${w.l - 2}`).join('') + Array.from({ length: Math.floor(w.l / 9) * Math.floor(w.a / 5) }, (_, k) => `M${w.x + 4 + (k % Math.floor(w.l / 9)) * 9 + ((Math.floor(k / Math.floor(w.l / 9)) % 2) * 4)} ${w.y + 4 + Math.floor(k / Math.floor(w.l / 9)) * 5}v-5`).join(''), larg: 0.6, cor: veio, marca: 'pedra' });
+  else if (x.fachada === 'placas') out.push({ tipo: 'linha', d: Array.from({ length: Math.floor(w.l / 16) }, (_, k) => `M${w.x + 16 + k * 16} ${w.y + 1}v${w.a - 2}`).join('') + Array.from({ length: Math.floor(w.a / 16) }, (_, k) => `M${w.x + 1} ${w.y + 16 + k * 16}h${w.l - 2}`).join(''), larg: 0.6, cor: veio, marca: 'placas' });
+  else if (x.fachada === 'textura') out.push({ tipo: 'linha', d: Array.from({ length: 24 }, (_, k) => `M${w.x + 4 + (k * 37) % (w.l - 8)} ${w.y + 4 + (k * 23) % (w.a - 8)}l3 1`).join(''), larg: 0.5, cor: veio, marca: 'textura' });
+  else if (x.fachada === 'assinada') out.push({ tipo: 'massa', d: Array.from({ length: Math.floor(w.l / 10) }, (_, k) => ret(w.x + 3 + k * 10, w.y + 2, 3, w.a * 0.55, 0.4)).join(''), cor: x.cor2Fachada ?? '#2e2b28', semVolume: true, marca: 'brise' });
+  // O caminho: da porta (o meio da parede) até a calçada.
+  const cx = w.x + w.l / 2;
+  if (x.caminho && x.caminho !== 'terra') out.push({ tipo: 'massa', d: `M${cx - 6} ${C}L${cx + 6} ${C}L${cx + 11} 140L${cx - 11} 140Z`, cor: x.corCaminho ?? (x.caminho === 'pedra_portuguesa' ? '#e9e4da' : x.caminho === 'deck' ? '#9a6a40' : '#b9b3a8'), semVolume: true, marca: 'caminho' });
+  if (x.caminho === 'pedra_portuguesa') out.push({ tipo: 'linha', d: `M${cx - 7} ${C + 4}q7 4 14 0M${cx - 9} ${C + 9}q9 4 18 0`, larg: 1, cor: '#2b2826', marca: 'mosaico' });
+  // O jardim: do gramado ao jardim botânico (as plantas ao pé da parede, dos dois lados da porta).
+  const p = x.paisagismo;
+  if (p && p !== 'nenhum') out.push({ tipo: 'massa', d: ret(0, C, 312, 3, 0), cor: '#7fa65f', semVolume: true, marca: 'grama' });
+  if (p === 'canteiros' || p === 'assinado' || p === 'botanico') { out.push(arbustos(w.x + 2, Math.min(30, w.l / 3)), arbustos(w.x + w.l - Math.min(30, w.l / 3) - 2, Math.min(30, w.l / 3))); out.push({ tipo: 'massa', d: [w.x + 8, w.x + 16, w.x + w.l - 12].map(x0 => circulo(x0, C - 9, 1.6)).join(''), cor: '#e05a6a', semVolume: true, marca: 'flores' }); }
+  if (p === 'tropical' || p === 'botanico') out.push(palmeira(w.x - 12), palmeira(w.x + w.l + 10));
+  if (p === 'pomar') out.push(arvore(w.x - 14, 10, 12, '#5f8f4e'), { tipo: 'massa', d: [0, 1, 2].map(k => circulo(w.x - 18 + k * 4, C - 30 + k, 1.5)).join(''), cor: '#e8952a', semVolume: true, marca: 'fruta' });
+  if (p === 'zen') out.push({ tipo: 'massa', d: [0, 1, 2, 3].map(k => elipse(w.x + 6 + k * 7, C - 1.5, 3, 1.6)).join('') + [0, 1, 2].map(k => elipse(w.x + w.l - 8 - k * 7, C - 1.5, 3, 1.6)).join(''), cor: '#cfc8bb', marca: 'seixos' });
+  if (p === 'assinado' || p === 'botanico') out.push(arvore(w.x - 16, 14, 18, '#4f7f42'));
+  if (p === 'botanico') out.push({ tipo: 'vidro', d: ret(w.x + w.l + 22, C - 22, 28, 22, 2), claro: true, marca: 'estufa' });
+  // A luz de fora.
+  if (x.luz === 'arandelas' || x.luz === 'projeto') out.push({ tipo: 'luz', d: circulo(cx - 11, w.y + w.a - 26, 2) + circulo(cx + 11, w.y + w.a - 26, 2), cor: LUZ, marca: 'arandela' });
+  if (x.luz === 'balizadores' || x.luz === 'projeto') out.push({ tipo: 'luz', d: [-16, -8, 8, 16].map(dx => ret(cx + dx - 1, C - 6, 2, 6, 0.5)).join(''), cor: LUZ, marca: 'balizador' });
+  if (x.luz === 'espetos' || x.luz === 'projeto') out.push({ tipo: 'massa', d: elipse(w.x - 14, C - 18, 14, 18) + elipse(w.x + w.l + 12, C - 18, 12, 16), cor: LUZ, opacidade: 0.18, semVolume: true, marca: 'facho' });
+  if (x.luz === 'projeto') out.push({ tipo: 'massa', d: ret(w.x, w.y, w.l, w.a, 0), cor: LUZ, opacidade: 0.08, semVolume: true, marca: 'banho-de-luz' });
+  // O portão (na divisa, à direita).
+  const pt = x.portao;
+  if (pt && pt !== 'simples') {
+    const gx = Math.min(286, w.x + w.l + 26), gc = pt === 'madeira' ? '#8a5d38' : pt === 'corten' ? '#9a4f2a' : pt === 'automatico' ? '#55585c' : '#8f8a82';
+    out.push({ tipo: 'massa', d: ret(gx, C - 24, 24, 24, 0.5), cor: gc, marca: 'portao' });
+    if (pt === 'madeira') out.push({ tipo: 'linha', d: Array.from({ length: 5 }, (_, k) => `M${gx + 3 + k * 4.5} ${C - 23}v22`).join(''), larg: 0.7, cor: escurecer(gc, 0.3) });
+    if (pt === 'automatico') out.push({ tipo: 'luz', d: circulo(gx + 21, C - 26, 1.4), cor: '#f2a23a' });
+  }
+  return out;
 }
 
 /** A cena inteira de uma casa (a casa, o estado, o veículo na porta, os bichos na frente). */
@@ -432,6 +478,7 @@ export function amostraDaCasa(e: CenaEntrada): Amostra {
     ...(e.nivel === 'ruim' || e.nivel === 'problema' ? [rachadura(w.x + w.l * 0.74, w.y, w.a)] : []),
     ...(e.nivel === 'problema' ? [andaime(w.x + 4, Math.max(w.y - 2, 20))] : []),
     ...(e.reforma && e.nivel !== 'problema' ? [tintaNova(w.x + w.l - 36)] : []),
+    ...(e.externo ? ladoDeFora(e.forma, e.externo) : []),
     ...(e.veiculo ? [veiculoNaPorta(pl.vaga + (e.veiculo.tipo === 'carro' ? 0 : 8), e.veiculo.tipo, e.veiculo.forma, e.veiculo.cor, e.veiculo.versaoId, e.veiculo.estado)] : []),
     ...e.bichos.slice(0, 2).map((b, k) => (b.especie === 'gato' ? gato(pl.bichos + k * 24, b.id) : cachorro(pl.bichos + k * 24, b.id)))
   ];

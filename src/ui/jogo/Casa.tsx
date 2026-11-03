@@ -23,7 +23,8 @@ import { moraComFamiliaDeOrigem } from '../../motor/sistemas/domicilio';
 import { produto, PALAVRA_RISCO } from '../../motor/dados/investimentos';
 import { resultado } from '../../motor/sistemas/investimentos';
 import { BotaoAcao, Secao } from '../comum';
-import { CenaDaCasa, DesenhoVeiculo, Evolucao, Icone, MiniaturaDaCasa } from './material/Desenhos';
+import { CenaDaCasa, DesenhoVeiculo, Evolucao, Icone, ladoDeForaDe, MiniaturaDaCasa } from './material/Desenhos';
+import { donoDoLar } from '../../motor/sistemas/lar';
 import { NOME_FORMA } from '../../motor/dados/bens';
 import { Lugar, type QualLugar } from './material/Lugares';
 import { dinheiroCheio, dinheiroCurto, formaDoModelo, leituraDaSeguranca, leituraDoLar, leituraDosBens, type LeituraBem } from '../leituraMaterial';
@@ -52,7 +53,7 @@ export function Lar({ vida, agir, abrir }: Props & { abrir: (l: QualLugar) => vo
   const i = idade(vida);
   return (
     <section className="lar" aria-label="Onde você mora">
-      <CenaDaCasa l={l} />
+      <CenaDaCasa l={l} externo={ladoDeForaDe(donoDoLar(vida)?.lar?.externo)} />
       <div className="lar__texto">
         <p className="folio__kicker"><span className="folio__area">Vida · Casa</span> · {l.onde}</p>
         <h1 className="lar__frase">{l.frase}</h1>

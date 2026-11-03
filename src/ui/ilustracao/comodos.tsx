@@ -16,13 +16,15 @@
 import { memo, useId, useMemo, type ReactElement } from 'react';
 import { Ilustracao, valida, type Amostra } from './nucleo';
 import { caixaDaAmostra } from './caixa';
+import { comEstiloDaMarca } from './estiloDeMarca';
+import { estiloDaMarca } from '../../motor/sistemas/perfilDaMarca';
 import { chaoEm, disporComodo, escalaEm, ordemDeDesenho, tela, xEm, zDoDesenho, type Geometria, type Posto } from './disposicao';
 import { amostraDoObjeto } from './objetos';
 import { variantesDaCoisa } from '../../motor/dados/pertences';
 import { misturar } from '../avatar/cores';
 import { opcaoDeAcabamento } from '../../motor/dados/lar';
 
-export interface ObjetoNaCena { coisaId: string; cor?: string; id: string }
+export interface ObjetoNaCena { coisaId: string; cor?: string; id: string; marca?: string }
 
 interface Props {
   tipo: string;
@@ -56,7 +58,7 @@ function enquadrar(a: Amostra, larguraTela: number, alturaMax: number) {
 export const CenaDoComodo = memo(function CenaDoComodo({ tipo, parede, piso, luz = 'simples', rodape: rodapeId, cortina: cortinaId, luzRegulada, objetos, area, largura = 320, rotulo }: Props) {
   const uid = useId().replace(/:/g, '');
   const id = (k: string) => `${uid}-${k}`;
-  const chaveObjetos = objetos.map(o => `${o.id}:${o.coisaId}:${o.cor ?? ''}`).join('|');
+  const chaveObjetos = objetos.map(o => `${o.id}:${o.coisaId}:${o.cor ?? ''}:${o.marca ?? ''}`).join('|');
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const disp = useMemo(() => disporComodo(tipo, area, objetos), [tipo, area, chaveObjetos]);
   const g = disp.g;
@@ -201,7 +203,7 @@ export const CenaDoComodo = memo(function CenaDoComodo({ tipo, parede, piso, luz
 function ObjetoPosto({ p, g, postoDe }: { p: Posto; g: Geometria; postoDe: (id: string) => Posto | undefined }) {
   const cor = valida(p.cor, valida(variantesDaCoisa(p.coisaId)[0]?.cor, '#a49a8c'));
   if (p.montagem === 'tapete') return <Tapete p={p} g={g} cor={cor} />;
-  const base = amostraDoObjeto(p.coisaId === 'camping' && !g.externo ? 'camping_guardado' : p.coisaId, cor);
+  const base = comEstiloDaMarca(amostraDoObjeto(p.coisaId === 'camping' && !g.externo ? 'camping_guardado' : p.coisaId, cor), p.marca ? estiloDaMarca(p.marca) : undefined, `${p.coisaId}|${cor}`);
   // O par (as mesas de cabeceira): cada posto é uma metade do desenho.
   const a: Amostra = p.metade ? metadeDe(base, p.metade) : base;
   const comum = { 'data-coisa': p.coisaId, 'data-montagem': p.montagem, ...(p.parede ? { 'data-parede': p.parede } : {}), ...(p.fixo ? { 'data-fixo': 'sim' } : {}) };

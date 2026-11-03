@@ -183,7 +183,7 @@ function vitrines(v: Vida): { grupo: string; id: string; lugares: Vitrine[] }[] 
 
 
 /** REWORK 12.2: cada casa de luxo e coleção tem a sua fachada (a relojoaria não é mais a ótica; a galeria não é a livraria). */
-const FACHADA_DE: Partial<Record<QualLugar, LugarDaCidade>> = { comprar: 'alugar', colecionador: 'concessionaria' };
+const FACHADA_DE: Partial<Record<QualLugar, LugarDaCidade>> = { comprar: 'alugar', colecionador: 'concessionaria', vinhos: 'antiquario' };
 /** 12.4.1: a fachada de cada loja da vida (a de roupas e a sapataria usam a vitrine de moda; a de móveis, a da casa…). */
 const FACHADA_DA_LOJA: Record<string, LugarDaCidade> = {
   roupas: 'moda', sapataria: 'sapataria', otica: 'otica', acessorios: 'acessorios', grifes: 'grifes', relojoaria: 'relojoaria', joalheria: 'joalheria',

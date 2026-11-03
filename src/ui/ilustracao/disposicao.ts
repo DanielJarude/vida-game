@@ -70,11 +70,12 @@ export const tela = (g: Geometria, x: number, alt: number, z: number): [number, 
 
 /* ================================================================ os postos */
 
-export interface ObjetoParaDispor { id: string; coisaId: string; cor?: string }
+export interface ObjetoParaDispor { id: string; coisaId: string; cor?: string; marca?: string }
 export interface Posto {
   id: string;
   coisaId: string;
   cor?: string;
+  marca?: string;
   /** No chão (m): x0..x1 (da parede esquerda), z0..z1 (da parede do fundo). */
   x0: number; x1: number; z0: number; z1: number;
   /** Altura do pé (m): a da parede, a do tampo onde está, 0 no chão. */
@@ -207,7 +208,7 @@ function dispor(tipo: string, area: number | undefined, objetos: ObjetoParaDispo
     const tenta = (x0: number, z0: number, ignorar?: Retangulo): Posto | undefined => {
       const r = { x0, x1: x0 + w, z0, z1: z0 + d };
       if (!livre(r, ignorar)) return undefined;
-      return { id: o.id, coisaId: o.coisaId, cor: o.cor, ...r, base: 0, h: m.h, montagem: 'chao' };
+      return { id: o.id, coisaId: o.coisaId, cor: o.cor, marca: o.marca, ...r, base: 0, h: m.h, montagem: 'chao' };
     };
     const pis = piscina;
     for (const zona of (m.z ?? ['canto', 'lado']) as Zona[]) {
@@ -277,8 +278,8 @@ function dispor(tipo: string, area: number | undefined, objetos: ObjetoParaDispo
       && !paredeDir.some(q => z0 < q.z1 + 0.08 && q.z0 < z0 + m.w + 0.08 && b0 < q.b1 && q.b0 < b1)
       && !postos.some(p => p.montagem === 'chao' && p.x1 > g.Wm - 0.5 && p.h > b0 + 0.1 && z0 < p.z1 && p.z0 < z0 + m.w);
     const acima = postos.find(p => p.montagem === 'chao' && p.z0 < 0.35 && (p.coisaId.startsWith('sofa') || CAMAS_SET.has(p.coisaId) || p.coisaId === 'aparador' || p.coisaId === 'gabinete' || p.coisaId === 'bancada_marmore' || p.coisaId === '_pia' || p.coisaId === 'lareira') && p.h < b0);
-    const ponFundo = (x0: number): Posto => { paredeFundo.push({ x0, x1: x0 + m.w, b0, b1 }); return { id: o.id, coisaId: o.coisaId, cor: o.cor, x0, x1: x0 + m.w, z0: 0, z1: 0.06, base: alt, h: m.h, montagem: 'parede', parede: 'fundo' }; };
-    const ponDir = (z0: number): Posto => { paredeDir.push({ z0, z1: z0 + m.w, b0, b1 }); return { id: o.id, coisaId: o.coisaId, cor: o.cor, x0: g.Wm - 0.06, x1: g.Wm, z0, z1: z0 + m.w, base: alt, h: m.h, montagem: 'parede', parede: 'dir' }; };
+    const ponFundo = (x0: number): Posto => { paredeFundo.push({ x0, x1: x0 + m.w, b0, b1 }); return { id: o.id, coisaId: o.coisaId, cor: o.cor, marca: o.marca, x0, x1: x0 + m.w, z0: 0, z1: 0.06, base: alt, h: m.h, montagem: 'parede', parede: 'fundo' }; };
+    const ponDir = (z0: number): Posto => { paredeDir.push({ z0, z1: z0 + m.w, b0, b1 }); return { id: o.id, coisaId: o.coisaId, cor: o.cor, marca: o.marca, x0: g.Wm - 0.06, x1: g.Wm, z0, z1: z0 + m.w, base: alt, h: m.h, montagem: 'parede', parede: 'dir' }; };
     const ladoPrimeiro = m.paredeLado && (postos.some(p => p.z0 < 0.35 && p.coisaId.startsWith('sofa')) || postos.some(p => CAMAS_SET.has(p.coisaId)) || tipo === 'cinema');
     const tentaDir = () => { if (g.externo) return undefined; for (const z0 of passos(0.15, zMax - m.w, g.Dv * 0.3, 0.1)) if (livreDir(z0)) return ponDir(z0); return undefined; };
     if (ladoPrimeiro) { const p = tentaDir(); if (p) return p; }
@@ -309,7 +310,7 @@ function dispor(tipo: string, area: number | undefined, objetos: ObjetoParaDispo
     t.livre.splice(i, 1, ...[[a, x0 - 0.03], [x0 + m.w + 0.03, b]].filter(([p, q]) => q - p > 0.08) as [number, number][]);
     const base = t.posto.montagem === 'parede' ? t.posto.base + t.posto.h : t.topo;
     const z0 = t.posto.montagem === 'parede' ? 0.02 : t.posto.z0 + 0.05;
-    return { id: o.id, coisaId: o.coisaId, cor: o.cor, x0, x1: x0 + m.w, z0, z1: z0 + Math.min(m.d, Math.max(0.05, t.posto.z1 - t.posto.z0 - 0.05)), base, h: m.h, montagem: 'superficie', sobre: t.posto.id };
+    return { id: o.id, coisaId: o.coisaId, cor: o.cor, marca: o.marca, x0, x1: x0 + m.w, z0, z1: z0 + Math.min(m.d, Math.max(0.05, t.posto.z1 - t.posto.z0 - 0.05)), base, h: m.h, montagem: 'superficie', sobre: t.posto.id };
   }
 
   // A ordem: âncoras (pelo tamanho), depois o que tem lugar marcado (junto/diante), o resto do chão pelo tamanho, a
@@ -346,7 +347,7 @@ function dispor(tipo: string, area: number | undefined, objetos: ObjetoParaDispo
       const w = capa ? pw : Math.min(m.w, pw * 0.3), d = capa ? pd : Math.min(m.d, pd * 0.4);
       const x0 = capa ? piscina.x0 : piscina.x0 + pw * [0.62, 0.18, 0.42][ja % 3];
       const z0 = capa ? piscina.z0 : piscina.z0 + pd * [0.25, 0.5, 0.15][ja % 3];
-      postos.push({ id: o.id, coisaId: o.coisaId, cor: o.cor, x0, x1: x0 + w, z0, z1: z0 + d, base: 0, h: m.h, montagem: 'agua' });
+      postos.push({ id: o.id, coisaId: o.coisaId, cor: o.cor, marca: o.marca, x0, x1: x0 + w, z0, z1: z0 + d, base: 0, h: m.h, montagem: 'agua' });
     }
   }
 
@@ -361,7 +362,7 @@ function dispor(tipo: string, area: number | undefined, objetos: ObjetoParaDispo
     else r = { x0: g.Wm / 2 - m.w / 2, x1: g.Wm / 2 + m.w / 2, z0: g.Dv * 0.45 - m.d / 2, z1: g.Dv * 0.45 + m.d / 2 };
     r = { x0: Math.max(0.1, r.x0), x1: Math.min(g.Wm - 0.1, r.x1), z0: Math.max(0.1, r.z0), z1: Math.min(g.Dv - 0.1, r.z1) };
     if (r.x1 - r.x0 < 0.8 || r.z1 - r.z0 < 0.6) return undefined;
-    return { id: o.id, coisaId: o.coisaId, cor: o.cor, ...r, base: 0, h: 0.01, montagem: 'tapete' };
+    return { id: o.id, coisaId: o.coisaId, cor: o.cor, marca: o.marca, ...r, base: 0, h: 0.01, montagem: 'tapete' };
   }
 
   return { g, postos, fora, piscina };

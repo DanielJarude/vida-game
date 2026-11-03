@@ -22,7 +22,8 @@ import { modeloVeiculo } from '../../motor/dados/bens';
 import { economiaLocal, municipio } from '../../motor/dados/lugares';
 import { custosDeVeiculo, guardadoLonge, nomeComCor, ondeEsta, custoDeTrazer } from '../../motor/sistemas/veiculos';
 import { aluguelDeMercado } from '../../motor/sistemas/imoveis';
-import { colecao, custoDoServico, estimativaDeVenda, lojaDeColecaoNaCidade, ofertasDeColecao, PROCEDENCIA_EM_PALAVRAS, propostasDeColecionadores, ROTULO_SERVICO, valorDaColecao, custoDaColecao, type OfertaDeColecao, type ServicoDeColecao } from '../../motor/sistemas/colecao';
+import { colecoesDaVida, temAdega, colecao, custoDoServico, estimativaDeVenda, lojaDeColecaoNaCidade, ofertasDeColecao, PROCEDENCIA_EM_PALAVRAS, propostasDeColecionadores, ROTULO_SERVICO, valorDaColecao, custoDaColecao, type OfertaDeColecao, type ServicoDeColecao } from '../../motor/sistemas/colecao';
+import { NOME_GRAU, ORDEM_DO_GRAU } from '../../motor/dados/colecao128';
 import { LOJAS_DE_COLECAO, NOME_CATEGORIA_COLECAO, NOME_RARIDADE, pecaDeColecao, type LojaDeColecao } from '../../motor/dados/colecionaveis';
 import type { CategoriaColecao } from '../../motor/tipos';
 import { itemEstilo } from '../../motor/dados/estilo';
@@ -269,6 +270,35 @@ function Garagem({ vida, agir, abrir }: Props) {
 
 const NOME_DA_LOJA = (l: LojaDeColecao) => LOJAS_DE_COLECAO[l].nome;
 
+/**
+ * 12.8 — as coleções organizadas: cada grupo (relógios, arte, vinhos, carros de coleção, peças numeradas, discos,
+ * troféus) com a quantidade, o valor estimado, quantas estão à vista e onde, os graus de raridade (dos dados da peça) e o
+ * móvel que as expõe. Os troféus não se compram nem se vendem: aparecem aqui como parte do que se guarda.
+ */
+function SuasColecoes({ vida }: { vida: Vida }) {
+  const cs = colecoesDaVida(vida);
+  if (!cs.length) return null;
+  return (
+    <div className="pat-colecoes" aria-label="Suas coleções">
+      <p className="rotulo-pequeno">Suas coleções</p>
+      <ul className="pat-colecoes__lista">
+        {cs.map(c => (
+          <li key={c.id} className="pat-colecoes__grupo" data-colecao={c.id}>
+            <details className="detalhes">
+              <summary><strong>{c.nome}</strong> <span className="nota">· {c.itens.length} {c.itens.length === 1 ? 'peça' : 'peças'}{c.valor ? ` · uns ${dinheiroCurto(c.valor)}` : ''}{c.expostas ? ` · ${c.expostas} à vista` : ''}{c.expositor ? ` · ${c.expositor}` : ''}</span></summary>
+              <p className="nota">{ORDEM_DO_GRAU.filter(g => c.graus[g]).reverse().map(g => `${NOME_GRAU[g]}: ${c.graus[g]}`).join(' · ')}</p>
+              <ul className="pat-colecoes__itens">
+                {c.itens.slice(0, 30).map(x => <li key={x.id}><span className={`pat-grau pat-grau--${x.grau}`}>{NOME_GRAU[x.grau]}</span> {cap(x.nome)}{x.valor ? ` — ${dinheiroCurto(x.valor)}` : ''} <span className="nota">({x.onde}{x.procedencia ? `; ${x.procedencia}` : ''})</span></li>)}
+              </ul>
+              {c.id === 'vinho' && !temAdega(vida) && <p className="nota">Sem adega em casa, o vinho de guarda envelhece mal: perde valor todo ano.</p>}
+            </details>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function Colecao({ vida, agir, abrir }: Props) {
   const lista = colecao(vida);
   const total = valorDaColecao(vida);
@@ -280,7 +310,8 @@ function Colecao({ vida, agir, abrir }: Props) {
     <Secao titulo="Coleção">
       {lista.length ? (
         <p className="nota">{lista.length} {lista.length === 1 ? 'peça' : 'peças'}, uns <strong>{dinheiroCurto(total)}</strong> no mercado hoje (pagou {dinheiroCurto(pago)}). O valor é estimado: só a venda diz o número de verdade.{seguro ? ` Seguro e guarda: ${dinheiroCurto(seguro)}/mês.` : ''}</p>
-      ) : <p className="nota">Nenhuma peça. Relógio, joia, arte, antiguidade, memorabilia: a margem da loja fica na compra, e a revenda depende de quem quiser.</p>}
+      ) : <p className="nota">Nenhuma peça. Relógio, joia, arte, antiguidade, memorabilia, vinho: a margem da loja fica na compra, e a revenda depende de quem quiser.</p>}
+      <SuasColecoes vida={vida} />
       {propostasDeColecionadores(vida).length > 0 && (
         <div className="pat-propostas">
           <p className="rotulo-pequeno">Propostas de compra deste ano</p>

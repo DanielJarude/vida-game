@@ -33,6 +33,10 @@ import { ACABAMENTOS, acabamentoDoComodo, coisasPorComodo, comodoEquipado, comod
 import { areaDoComodo, aspectoCabe, custoDaPeca, custoDeConstruir, custoDeConverter, custoDeRepaginar, leituraDaPlanta, locaisPara, nomeDoLocal, reformaDoComodo, type RefObjeto } from '../../motor/sistemas/personalizacao';
 import { afetoDe, origemEmPalavras, palavraDoAfeto } from '../../motor/sistemas/memoriaDosObjetos';
 import { valorDeRevenda } from '../../motor/sistemas/coisas';
+import { externoAtual, externoDisponivel, opcoesExternasPara, precoExterno, reformaExterna, usosDoComodo } from '../../motor/sistemas/casaViva';
+import { ASPECTOS_EXTERNOS, NOME_DO_ASPECTO_EXTERNO, type AspectoExterno } from '../../motor/dados/casa128';
+import { CenaDaCasa, ladoDeForaDe } from './material/Desenhos';
+import { leituraDoLar } from '../leituraMaterial';
 import { colecao } from '../../motor/sistemas/colecao';
 import { textoVeiculo } from '../../motor/sistemas/veiculos';
 import { generosPreferidos, gostosDe, hobbiesQueViramOficio, NOME_DO_GOSTO, precoDoPrograma, programasPossiveis } from '../../motor/sistemas/gostos';
@@ -60,7 +64,7 @@ function Cena({ vida, comodoId, tipo, nome, coisas, largura, rascunho }: { vida:
   const cm = comodosDaCasa(vida).find(c => c.id === comodoId);
   const area = cm ? areaDoComodo(vida.moradia.modeloId, cm) * (['jardim', 'piscina', 'lazer', 'quadra'].includes(tipo) ? 1.6 : 1) : undefined;
   const expostas = pecasExpostasNoComodo(vida, comodoId);
-  const objetos = [...coisas.map(t => ({ coisaId: t.coisaId, cor: t.cor, id: t.id })), ...expostas.map(c => ({ coisaId: DESENHO_DA_PECA[c.categoria] ?? '_peca', cor: c.categoria === 'arte' ? c.id : undefined, id: c.id }))];
+  const objetos = [...coisas.map(t => ({ coisaId: t.coisaId, cor: t.cor, id: t.id, marca: t.marca })), ...expostas.map(c => ({ coisaId: DESENHO_DA_PECA[c.categoria] ?? '_peca', cor: c.categoria === 'arte' ? c.id : undefined, id: c.id }))];
   const nomes = [...coisas.map(t => coisa(t.coisaId)?.nome), ...expostas.map(c => c.nome)].filter(Boolean);
   return <CenaDoComodo tipo={tipo} parede={asp('parede')} piso={asp('piso')} luz={asp('luz').id} rodape={asp('rodape').id} cortina={asp('cortina').id} luzRegulada={regulada} objetos={objetos} area={area} largura={largura} rotulo={`${cap(nome)}${nomes.length ? `: ${nomes.join(', ')}` : ', sem nada seu'}`} />;
 }
@@ -71,6 +75,33 @@ const DESENHO_DA_PECA: Record<string, string> = { arte: '_obra', memorabilia: '_
 function pecasExpostasNoComodo(vida: Vida, comodoId: string): Colecionavel[] {
   const sala = comodosDaCasa(vida).find(c => c.tipo === 'sala')?.id;
   return colecao(vida).filter(c => c.exposta && !c.local && !c.emprestadaFora && c.categoria !== 'vinho' && (c.comodo ?? sala) === comodoId);
+}
+
+/**
+ * 12.8 — o que dá para fazer num cômodo (a sessão de cinema, o treino, a festa na piscina): os usos de `casaViva`, com o
+ * motivo quando não dá (vazio, já feito este ano, ninguém por perto) e, nos usos com alguém, os mais próximos para chamar.
+ */
+function UsosDoComodo({ vida, agir, comodoId }: Props & { comodoId: string }) {
+  const usos = usosDoComodo(vida, comodoId);
+  if (!usos.length || idade(vida) < 6) return null;
+  return (
+    <div className="pz-usos" aria-label="O que dá para fazer aqui">
+      <h4 className="pz-usos__titulo">O que dá para fazer aqui</h4>
+      <ul className="pz-lista">
+        {usos.map(({ uso, companhias }) => (
+          <li key={uso.id} className="pz-uso">
+            {uso.com === 'perto' || uso.com === 'casa' ? (
+              <span className="grupo-acoes grupo-acoes--linha">
+                <span className="pz-uso__rotulo">{uso.rotulo}:</span>
+                {companhias.slice(0, 3).map(p => <BotaoAcao key={p.id} vida={vida} acao={agirCom({ o: 'usar_comodo', comodo: comodoId, uso: uso.id, pessoaId: p.id })} agir={agir} variante="discreto">{p.nome}</BotaoAcao>)}
+                {!companhias.length && <BotaoAcao vida={vida} acao={agirCom({ o: 'usar_comodo', comodo: comodoId, uso: uso.id })} agir={agir} variante="discreto">Chamar alguém</BotaoAcao>}
+              </span>
+            ) : <BotaoAcao vida={vida} acao={agirCom({ o: 'usar_comodo', comodo: comodoId, uso: uso.id })} agir={agir} variante="discreto">{uso.rotulo}{uso.custo ? ` (${dinheiroCurto(Math.round(uso.custo * economiaLocal(vida.moradia.municipioId).custo / 10) * 10)})` : ''}</BotaoAcao>}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
 export function CasaPorDentro({ vida, agir }: Props) {
@@ -112,6 +143,7 @@ export function CasaPorDentro({ vida, agir }: Props) {
         </ul>
         {atual && <PainelDoComodo key={atual.id} vida={vida} agir={agir} comodoId={atual.id} aoFechar={() => setAberto(null)} />}
         {poder === 'tudo' && planta.terreno > 0 && <AmpliarACasa vida={vida} agir={agir} />}
+        {externoDisponivel(vida).ok && idade(vida) >= 18 && <LadoDeForaDaCasa vida={vida} agir={agir} />}
       </div>
     </section>
   );
@@ -141,6 +173,7 @@ function PainelDoComodo({ vida, agir, comodoId, aoFechar }: Props & { comodoId: 
       <div className="pz-painel__cena"><Cena vida={vida} comodoId={cm.id} tipo={cm.tipo} nome={cm.nome} coisas={coisas} largura={320} rascunho={editar && !verAtual ? rascunho : undefined} />
         {editar && <p className="pz-painel__legenda nota" aria-live="polite">{verAtual ? 'Como está hoje' : 'Prévia: como fica (nada foi cobrado)'}</p>}</div>
       <p className="nota">{m.descricao}{m.pede && !comodoEquipado(vida, cm) ? ` Vazio, é só metro quadrado: falta ${m.pede.slice(0, 3).map(id => coisa(id)?.nome ?? id).join(', ')}…` : ''}</p>
+      {!editar && <UsosDoComodo vida={vida} agir={agir} comodoId={cm.id} />}
       {/* 12.7: na reforma, a prévia fica colada nas escolhas (a lista do que há no cômodo volta ao terminar). */}
       {editar ? null : coisas.length > 0 ? (
         <ul className="pz-lista">
@@ -258,6 +291,46 @@ function Reforma({ vida, agir, comodoId, aspectos, rascunho, setRascunho, verAtu
         <button type="button" className="botao botao--discreto" onClick={aoTerminar}>{nada ? 'Pronto' : 'Cancelar'}</button>
       </div>
     </div>
+  );
+}
+
+/**
+ * 12.8 — o lado de fora (só casa própria): a fachada, o jardim, o caminho, a luz e o portão. A prévia é o próprio desenho da
+ * casa com o que se está escolhendo (nada é cobrado); "Fazer a obra" paga tudo de uma vez — a conta que a prévia mostra.
+ */
+function LadoDeForaDaCasa({ vida, agir }: Props) {
+  const [aberto, setAberto] = useState(false);
+  const [rascunho, setRascunho] = useState<Partial<Record<AspectoExterno, string>>>({});
+  const atual = donoDoLar(vida)?.lar?.externo ?? {};
+  const r = reformaExterna(vida, rascunho);
+  const l = leituraDoLar(vida);
+  return (
+    <details className="detalhes pz-detalhes pz-fora" open={aberto} onToggle={e => setAberto((e.target as HTMLDetailsElement).open)}>
+      <summary>O lado de fora: fachada, jardim, caminho, luz e portão</summary>
+      {aberto && <>
+        <div className="pz-fora__cena"><CenaDaCasa l={l} externo={ladoDeForaDe({ ...atual, ...rascunho })} /></div>
+        <p className="pz-painel__legenda nota" aria-live="polite">{r.itens.length ? 'Prévia: como fica (nada foi cobrado)' : 'Como está hoje'}</p>
+        <div className="pz-fora__escolhas">
+          {ASPECTOS_EXTERNOS.map(a => {
+            const ops = opcoesExternasPara(vida, a);
+            const valor = rascunho[a] ?? externoAtual(vida, a);
+            return (
+              <label key={a} className="campo campo--compacto"><span className="campo__rotulo">{NOME_DO_ASPECTO_EXTERNO[a]}</span>
+                <select value={valor} onChange={ev => setRascunho(x => ({ ...x, [a]: ev.target.value }))}>
+                  {ops.map(o => <option key={o.id} value={o.id}>{cap(o.nome)} · {cap(segmentoDoNivel(o.nivel))}{o.id === externoAtual(vida, a) ? ' (atual)' : ` · ${dinheiroCurto(precoExterno(vida, a, o.id))}`}</option>)}
+                </select>
+              </label>
+            );
+          })}
+        </div>
+        {r.itens.length > 0 && <ul className="pz-partes">{r.itens.map(x => <li key={x.aspecto}><span>{NOME_DO_ASPECTO_EXTERNO[x.aspecto]}: {x.nome}</span><strong>{dinheiroCurto(x.preco)}</strong></li>)}<li><span>Total</span><strong>{dinheiroCurto(r.total)}</strong></li></ul>}
+        <div className="grupo-acoes grupo-acoes--linha">
+          <BotaoAcao vida={vida} acao={agirCom({ o: 'reforma_externa', mudancas: rascunho })} agir={a => { const ok = agir(a); if (ok) setRascunho({}); return ok; }} variante="secundario">Fazer a obra{r.total ? ` (${dinheiroCurto(r.total)})` : ''}</BotaoAcao>
+          {r.itens.length > 0 && <button type="button" className="botao botao--discreto" onClick={() => setRascunho({})}>Desfazer a prévia</button>}
+        </div>
+        <p className="nota">A obra de fora valoriza a casa pela metade do que custa; o jardim de paisagista e a luz pedem manutenção todo mês.</p>
+      </>}
+    </details>
   );
 }
 

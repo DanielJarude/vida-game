@@ -10,6 +10,8 @@
  */
 
 import type { FormaDaCasa, LeituraLar } from '../../leituraMaterial';
+import { OPCOES_EXTERNAS, type AspectoExterno } from '../../../motor/dados/casa128';
+import type { LadoDeFora } from '../../ilustracao/casas';
 import { IlustracaoVeiculo } from '../../ilustracao/veiculos';
 import { Ilustracao } from '../../ilustracao/nucleo';
 import { amostraDaCasa, amostraDaMiniatura, PLANTAS } from '../../ilustracao/casas';
@@ -48,14 +50,23 @@ export function descricaoDaCasa(l: LeituraLar): string {
   return partes.join(', ');
 }
 
-export function CenaDaCasa({ l }: { l: LeituraLar }) {
+/** VIDA 12.8 — o lado de fora escolhido (os ids de `dados/casa128`) em desenho: o material e a cor da fachada, o jardim, o caminho, a luz, o portão. */
+export function ladoDeForaDe(ext: Partial<Record<AspectoExterno, string>> | undefined): LadoDeFora | undefined {
+  if (!ext || !Object.keys(ext).length) return undefined;
+  const op = (a: AspectoExterno) => OPCOES_EXTERNAS[a].find(o => o.id === ext[a]);
+  const f = op('fachada'), c = op('caminho');
+  return { fachada: f?.desenho, corFachada: f?.cor, cor2Fachada: f?.cor2, paisagismo: op('paisagismo')?.desenho, caminho: c?.desenho, corCaminho: c?.cor, luz: op('luz_externa')?.desenho, portao: op('portao')?.desenho };
+}
+
+export function CenaDaCasa({ l, externo }: { l: LeituraLar; externo?: LadoDeFora }) {
   const acesas = Math.max(1, l.janelasAcesas);
   const c = l.condicao;
   const tijolo = PLANTAS[l.forma].tijolo && l.padrao <= 1 && !(c.reformaRecente && c.nivel !== 'problema');
   const formaV = formaNaPorta(l);
   const rotulo = `Desenho: ${descricaoDaCasa(l)}; ${acesas} ${acesas === 1 ? 'janela acesa' : 'janelas acesas'}${l.bichos.length ? `, ${l.bichos.map(b => b.nome).join(' e ')} na frente` : ''}${l.veiculo ? `, ${l.veiculo === 'carro' ? 'um carro' : l.veiculo === 'moto' ? 'uma moto' : 'uma bicicleta'} (${NOME_FORMA[formaV!]}) na porta` : ''}.`;
   const a = amostraDaCasa({
-    forma: l.forma, acesas, tijolo, fachada: l.fachada?.cor, nivel: c.nivel, reforma: !!c.reformaRecente,
+    externo,
+    forma: l.forma, acesas, tijolo: tijolo && !externo?.fachada, fachada: externo?.corFachada ?? l.fachada?.cor, nivel: c.nivel, reforma: !!c.reformaRecente,
     veiculo: l.veiculo && formaV ? { tipo: l.veiculo, forma: formaV, cor: l.corVeiculo, versaoId: l.versaoVeiculo, estado: l.estadoVeiculo } : undefined,
     bichos: l.bichos.filter(b => b.especie === 'gato' || b.especie === 'cachorro')
   });

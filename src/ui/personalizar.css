@@ -154,3 +154,12 @@
 .seus-atalhos__lista li > .acao { flex: 1 1 auto; min-width: 0; }
 .ultimos-avisos { margin: 0; padding-left: 1.2em; display: grid; gap: var(--space-2); }
 .ultimos-avisos__quando { font-size: var(--type-caption); color: var(--text-muted); margin-right: 4px; }
+
+/* VIDA 12.8 — o que dá para fazer num cômodo. */
+.pz-usos { margin: var(--space-2) 0; }
+.pz-usos__titulo { margin: 0 0 var(--space-1); font-size: var(--type-body); }
+.pz-uso__rotulo { color: var(--text-secondary); }
+.pz-fora__cena { display: flex; justify-content: center; overflow: hidden; }
+.pz-fora__cena svg { max-width: 100%; height: auto; }
+.pz-fora__escolhas { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: var(--space-2); }
+.pz-fora__escolhas select { width: 100%; }

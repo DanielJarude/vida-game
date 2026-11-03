@@ -9,8 +9,13 @@ import { memo } from 'react';
 import { variantesDaCoisa } from '../../../motor/dados/pertences';
 import { Ilustracao, valida } from '../../ilustracao/nucleo';
 import { amostraDoObjeto } from '../../ilustracao/objetos';
+import { comEstiloDaMarca } from '../../ilustracao/estiloDeMarca';
+import { estiloDaMarca } from '../../../motor/sistemas/perfilDaMarca';
 
-export const DesenhoObjeto = memo(function DesenhoObjeto({ coisaId, cor, tamanho = 48, rotulo }: { coisaId: string; cor?: string; tamanho?: number; rotulo?: string }) {
+/** 12.8: com `marca`, o desenho leva o acabamento dela (o metal, o volume, o filete) — o mesmo produto, outra marca. */
+export const DesenhoObjeto = memo(function DesenhoObjeto({ coisaId, cor, tamanho = 48, rotulo, marca }: { coisaId: string; cor?: string; tamanho?: number; rotulo?: string; marca?: string }) {
   const c = valida(cor, valida(variantesDaCoisa(coisaId)[0]?.cor, '#a49a8c'));
-  return <Ilustracao a={amostraDoObjeto(coisaId, c)} largura={tamanho} rotulo={rotulo ?? coisaId} className="desenho-objeto" dados={{ 'data-coisa': coisaId }} />;
+  const estilo = marca ? estiloDaMarca(marca) : undefined;
+  const a = comEstiloDaMarca(amostraDoObjeto(coisaId, c), estilo, `${coisaId}|${c}`);
+  return <Ilustracao a={a} largura={tamanho} rotulo={rotulo ?? coisaId} className="desenho-objeto" dados={{ 'data-coisa': coisaId, ...(estilo ? { 'data-estilo-marca': estilo } : {}) }} />;
 });

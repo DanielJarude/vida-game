@@ -20,3 +20,6 @@
 .provador__titulo { margin: 0 0 var(--space-1); font-weight: 600; }
 .miniatura-peca { display: inline-flex; align-items: center; justify-content: center; }
 .miniatura-peca svg { display: block; max-width: 100%; height: auto; }
+
+/* VIDA 12.8 — o posicionamento da marca no cartão (econômico a ultraluxo, aquilo pelo que é conhecida). */
+.catalogo-loja__marca-perfil { font-size: var(--type-caption); color: var(--text-secondary); line-height: 1.35; }
