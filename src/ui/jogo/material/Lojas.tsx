@@ -18,6 +18,8 @@ import { estabelecimento, marca as marcaPorId, NOME_CATEGORIA, type CategoriaDeP
 import { categoriaDoProduto, FAIXAS_DE_PRECO, nomeDoProduto, normalizarBusca, ofertasDaLoja, type Oferta, type OrdemDeCompras } from '../../../motor/sistemas/lojas';
 import { memoriaDasLojas, type EstadoDaLoja } from '../memoriaDeCompras';
 import { temCoisa } from '../../../motor/sistemas/coisas';
+import { nivelDaCoisa } from '../../../motor/sistemas/lar';
+import type { CoisaTida } from '../../../motor/tipos';
 import { temItem } from '../../../motor/sistemas/estilo';
 import { tipoDeCorpo } from '../../../motor/sistemas/silhueta';
 import { variantesDaCoisa } from '../../../motor/dados/pertences';
@@ -155,7 +157,8 @@ function ProdutoNaLoja({ vida, agir, linha, lojaId, faixa, marca, preco, crianca
   const marcaDoMeu = meu?.marca ?? meuCoisa?.marca;
   const acao: Acao = p.tipo === 'item' ? { tipo: 'comprar_item', itemId: p.id, loja: lojaId, ...(o.marca ? { marca: o.marca } : {}) } : { tipo: 'comprar_coisa', coisaId: p.id, loja: lojaId, ...(o.marca ? { marca: o.marca } : {}) };
   const lm = o.marca ? leituraDaMarca(o.marca) : undefined;
-  const nivel = it ? nivelDoItem(it) : c?.nivel ?? (c && c.preco >= 20000 ? 4 : c && c.preco >= 5000 ? 3 : 2);
+  // 12.8: o segmento do que se leva — o do produto com a marca por cima (o mesmo cálculo do motor, `lar.nivelDaCoisa`).
+  const nivel = it ? nivelDoItem(it) : c ? Math.round(nivelDaCoisa({ coisaId: c.id, marca: o.marca } as CoisaTida)) : 2;
   const segmento = segmentoDoNivel(nivel);
   const colecao = it?.colecao;
   const edicao = it?.edicao ?? c?.edicao;

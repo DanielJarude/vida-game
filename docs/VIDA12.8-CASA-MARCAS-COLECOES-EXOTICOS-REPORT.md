@@ -69,11 +69,20 @@
 
 ## D. Testes e validação
 
-(preenchido na seção E)
+- **Testes novos:** `src/motor/__tests__/vida128.test.ts` (25: planta, usos dos cômodos, academia de casa, lado de fora, marcas, coleções, vinho e adega, exóticos e a oferta do macaco-prego de ponta a ponta, save de ida e volta) e `src/ui/__tests__/vida128Cena.test.ts` (6: nenhuma sobreposição no chão em 8 cômodos, montagem na parede/tampo/piso/água, cabeceiras dos dois lados da cama, mesa de centro diante do sofá, tapete sob o sofá, escala barraca × chuteira > 5×, geometria pela área, toda coisa da casa com medida e desenho com caixa real).
+- **Teste antigo ajustado (pedido do usuário):** `fix3.test.ts` #18 exigia que "sagui" e "tucano" não existissem no catálogo. Agora existem por pedido explícito; o teste passou a exigir a lei: no Brasil, primata proibido e tucano só com licença de criadouro.
+- **Suíte completa** (Node 22, `--maxWorkers=3`): **2.299 de 2.304** passaram. As 5 falhas:
+  - `rework8b` "cada coisa tem um desenho só dela": os quatro móveis de expor novos caíam no desenho genérico — **corrigido** (desenhos próprios); o arquivo passa.
+  - `motor.test` "regra de agência" e `fechamentoMundo` #4: **timeout fixo de 60 s sob carga** (76 s e 63 s); isolados, passam (72/72 nos quatro arquivos).
+  - `rework122` "negócio por fora" e `rework11Esportes` "Sassuolo": **falham também na base** (registrado no relatório da 12.7).
+- **Saves antigos:** `scripts/sim/saves127.ts` sobre 98 saves (fixtures desde a versão 13 do save e os saves de QA de 11 a 12.8): **98/98** abrem, normalizam e vivem mais três anos sem erro. Os banheiros novos aparecem nas casas antigas; o banheiro de antes mantém o id, os acabamentos e os objetos.
+- **Build:** todos os pacotes abaixo de 800 kB (motor-dados 797,0; motor 796,5; motor-textos 791,8; motor-carreira 746,7; Jogo 658,8; `motor-casa` novo, 35,5; Personalizar 76,5). **Smoke** do build de produção: 22/22.
+- **Auditoria visual:** `scripts/playtest/vida128.mjs` (saves de `scripts/playtest/gerar128.ts`): cômodos da mansão e do apartamento, sala, quarto, piscina, cinema com usos, lado de fora com prévia, loja da casa, coleções e notas — claro e escuro × 1440, 390 e 360 px, **124 capturas, 0 problemas** (sobreposição de texto, contraste, rolagem horizontal, alvos de toque). Galeria das cenas: `scripts/playtest/galeria128.tsx`.
 
-## E. Resultados
+## E. Resultados (o que mudou para quem joga)
 
-(ver abaixo)
+- O quarto pequeno põe a cama num lado para caber o guarda-roupa; a mansão mostra a parte mobiliada em escala; o ar-condicionado fica a 2,1 m; o celular fica numa prateleira; o que não cabe à vista é listado abaixo da cena.
+- A loja da casa mostra o segmento do que se leva (produto + marca), o perfil da marca e o que ela muda de fato.
 
 ## F. Pendências e limitações
 
