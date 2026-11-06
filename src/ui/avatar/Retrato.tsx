@@ -8,6 +8,7 @@
  * sobrancelha, cílios, lábios e o repertório de cabelo, sem caricatura.
  */
 
+import { PiercingsDoRosto } from './piercings';
 import { misturar } from './cores';
 import { desenharCabelo, estagioDaCalvicie } from './cabelos';
 import { memo, useId, type ReactElement } from 'react';
@@ -361,6 +362,9 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
           cor={f === 'idoso' ? misturar(cor, '#e6e2dc', 0.3) : misturar(cor, '#000000', 0.05)}
           g={{ cx, cy, hh, w, jaw, queixo, olhoY, boca: { larg: larg * lb, cantos, curva, cheia: v.boca === 'cheia' } }} />
       )}
+
+      {/* VIDA 12.9: os piercings, cada um no seu furo (depois da barba: o labret fica por cima). */}
+      {f !== 'bebe' && f !== 'crianca' && <PiercingsDoRosto ids={v.piercings} g={{ cx, olhoY, esp, w, orelhaFora, orelhaRx, boca: larg * lb, cantos }} />}
 
       {/* Óculos: os escolhidos; sem escolha, parte dos idosos usa os de leitura */}
       {v.oculos ? <Oculos tipo={v.oculos} modelo={v.modeloOculos} cx={cx} olhoY={olhoY} esp={esp} w={w} uid={uid} /> : f === 'idoso' && h % 2 === 0 && <Oculos tipo="grau" cx={cx} olhoY={olhoY} esp={esp} />}

@@ -19,6 +19,7 @@ import { bloqueio, PERMITIDO, type Veredito } from '../plausibilidade';
 import { AUTONOMIA, autonomia } from './autonomia';
 import { nomeDaMarca, ofertaValida, precoNaLoja } from './lojas';
 import { BARBAS, CORES_NATURAIS, CORES_TINTA, CORTES, ITENS_ESTILO, itemEstilo, lugaresDoItem, ROUPAS, sinalDoEstilo, TIPOS_DE_CABELO } from '../dados/estilo';
+import { IDADE_MINIMA_PIERCING } from '../dados/piercings129';
 import { geneticaDe, guardarGenes } from './identidade';
 import { economiaLocal } from '../dados/lugares';
 import { vereditoDePagar, pagar } from './dinheiro';
@@ -204,6 +205,8 @@ export function disponibilidadeComprarItem(v: Vida, itemId: string, marca?: stri
   if (a.grau !== 'permitido') return a;
   if (temItem(v, itemId)) return bloqueio('incompativel', 'Você já tem.');
   if (it.receita && !precisaDeOculos(v)) return bloqueio('requisito', 'Óculos de grau pedem receita: a sua vista não pediu (ainda).');
+  // 12.9: o piercing — o estúdio não fura menor de 16 (e, até os 18, só com a autorização dos responsáveis).
+  if (it.piercing && idade(v) < IDADE_MINIMA_PIERCING) return bloqueio('impossivel', 'O estúdio não fura quem tem menos de 16 anos.');
   if (v.justica?.prisao) return bloqueio('incompativel', 'Na prisão, não.');
   if ((marca || loja) && !ofertaValida(v, { tipo: 'item', id: itemId }, marca, loja)) return bloqueio('impossivel', 'Essa loja não vende isso.');
   return vereditoDePagar(v, loja ? precoNaLoja(v, { tipo: 'item', id: itemId }, marca, loja) : precoDoItem(v, itemId));
@@ -289,6 +292,9 @@ export function sincronizarVisual(v: Vida): void {
   const pescoco = usando.find(x => itemEstilo(x.itemId)?.lugar === 'joia');
   const joia = pescoco ? itemEstilo(pescoco.itemId)?.visual?.joia : undefined;
   if (joia) vis.joia = joia; else delete vis.joia;
+  // 12.9: os piercings em uso (o retrato e a figura desenham cada um no seu furo).
+  const furos = usando.filter(x => !!itemEstilo(x.itemId)?.piercing).map(x => x.itemId).sort();
+  if (furos.length) vis.piercings = furos; else delete vis.piercings;
   const orelha = usando.find(x => itemEstilo(x.itemId)?.lugar === 'orelha');
   if (orelha) { vis.brincos = true; vis.modeloBrincos = orelha.itemId; } else { delete vis.brincos; delete vis.modeloBrincos; }
   // HOTFIX 11.5.1: o modelo dos óculos e do chapéu em uso (o Juliet não é o aviador; o chapéu de couro não é o de palha).

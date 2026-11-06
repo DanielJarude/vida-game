@@ -17,6 +17,8 @@ export function visualComPecaDoRosto(base: Visual, itemId: string): Visual {
   const it = itemEstilo(itemId)!;
   const v: Visual = { ...base };
   delete v.oculos; delete v.chapeu; delete v.modeloOculos; delete v.modeloChapeu; delete v.brincos; delete v.modeloBrincos; delete v.joia;
+  // 12.9: o piercing do produto no lugar dele (os outros furos ficam como estão; o mesmo furo troca de joia).
+  if (it.piercing) { v.piercings = [...(base.piercings ?? []).filter(id => itemEstilo(id)?.lugar !== it.lugar), it.id]; if (it.lugar === 'helix' || it.lugar === 'tragus') { if (!['raspado', 'curto', 'curto_lado', 'topete', 'pixie', 'crespo_curto'].includes(v.cabelo)) v.cabelo = 'pixie'; } }
   if (it.categoria === 'oculos' && it.visual?.oculos) { v.oculos = it.visual.oculos; v.modeloOculos = it.id; }
   if (it.categoria === 'chapeu' && it.visual?.chapeu) { v.chapeu = it.visual.chapeu; v.modeloChapeu = it.id; }
   // Os brincos: o cabelo comprido cobre a orelha — na vitrine, o cabelo vai para trás (só na miniatura).
@@ -30,7 +32,13 @@ export function MiniaturaDaPeca({ vida, itemId, id, largura = 84, rotulo }: { vi
   if (!it) return null;
   const i = idade(vida);
   const nome = rotulo ?? it.nome;
-  if (it.categoria === 'oculos' || it.categoria === 'chapeu' || it.lugar === 'orelha' || (it.lugar === 'joia' && it.visual?.joia)) {
+  if (it.piercing?.regiao === 'umbigo') {
+    // 12.9: o umbigo — a figura com o tronco à mostra, recortada na barriga.
+    const visual: Visual = { ...vida.eu.visual, piercings: [...(vida.eu.visual.piercings ?? []).filter(x => x !== itemId && itemEstilo(x)?.lugar !== 'umbigo'), itemId] };
+    const corpo = tipoDeCorpo(vida);
+    return <span className="miniatura-peca" data-item={itemId}><Figura visual={visual} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} corpo={corpo} pecas={[]} semCima largura={largura} semFundo foco={focoDaPeca(vida.eu.genero, corpo, i, 'umbigo')} rotulo={nome} /></span>;
+  }
+  if (it.categoria === 'oculos' || it.categoria === 'chapeu' || it.lugar === 'orelha' || it.piercing || (it.lugar === 'joia' && it.visual?.joia)) {
     // O colar se vê no busto (com o pescoço); óculos, chapéu e brincos, no rosto.
     return <span className="miniatura-peca miniatura-peca--rosto" data-item={itemId}><Retrato visual={visualComPecaDoRosto(vida.eu.visual, itemId)} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} tamanho={largura} rotulo={nome} soCabeca={it.lugar !== 'joia'} /></span>;
   }

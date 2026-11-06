@@ -31,6 +31,8 @@ const ACESSORIO_SIMPLES = new Set(['pulseira_couro', 'pulseira_contas']);
 export function categoriaDoItem(it: ItemEstilo): CategoriaDeProduto {
   if (it.categoria === 'oculos') return 'otica';
   if (it.categoria === 'chapeu') return 'acessorios';
+  // 12.9: o piercing de ouro e de pedra é joalheria; o de aço, titânio, prata e preto, a loja de acessórios.
+  if (it.piercing) return it.piercing.metal === 'ouro' || it.piercing.metal === 'ouro_rose' ? 'joias' : 'acessorios';
   if (it.categoria === 'acessorio') return it.lugar === 'pulso' ? 'relogios' : ACESSORIO_SIMPLES.has(it.id) ? 'acessorios' : 'joias';
   return it.lugar === 'pes' ? 'calcados' : 'vestuario';
 }

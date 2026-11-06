@@ -132,11 +132,13 @@ function Provador({ vida, itemId, variante, aoFechar }: { vida: Vida; itemId: st
   const it = itemEstilo(itemId)!;
   const la = lugaresDoItem(it);
   const usando = (vida.eu.estilo?.itens ?? []).filter(x => x.usando && !lugaresDoItem(itemEstilo(x.itemId)!).some(l => la.includes(l)));
-  const rosto = it.categoria === 'oculos' || it.categoria === 'chapeu' || it.lugar === 'orelha';
-  const visual = rosto ? { ...visualComPecaDoRosto(vida.eu.visual, itemId), ...(it.categoria !== 'oculos' && vida.eu.visual.oculos ? { oculos: vida.eu.visual.oculos, modeloOculos: vida.eu.visual.modeloOculos } : {}), ...(it.categoria !== 'chapeu' && vida.eu.visual.chapeu ? { chapeu: vida.eu.visual.chapeu, modeloChapeu: vida.eu.visual.modeloChapeu } : {}) } : vida.eu.visual;
+  const umbigo = it.piercing?.regiao === 'umbigo';
+  const rosto = it.categoria === 'oculos' || it.categoria === 'chapeu' || it.lugar === 'orelha' || (!!it.piercing && !umbigo);
+  const comFuro = umbigo ? { ...vida.eu.visual, piercings: [...(vida.eu.visual.piercings ?? []).filter(x => itemEstilo(x)?.lugar !== 'umbigo'), itemId] } : vida.eu.visual;
+  const visual = rosto ? { ...visualComPecaDoRosto(vida.eu.visual, itemId), ...(it.categoria !== 'oculos' && vida.eu.visual.oculos ? { oculos: vida.eu.visual.oculos, modeloOculos: vida.eu.visual.modeloOculos } : {}), ...(it.categoria !== 'chapeu' && vida.eu.visual.chapeu ? { chapeu: vida.eu.visual.chapeu, modeloChapeu: vida.eu.visual.modeloChapeu } : {}) } : comFuro;
   return (
     <section className="provador" aria-label={`Provador: ${it.nome}`}>
-      <Figura visual={visual} genero={vida.eu.genero} idade={idade(vida)} semente={vida.eu.semente ?? 'eu'} corpo={tipoDeCorpo(vida)} pecas={[...usando.map(x => ({ itemId: x.itemId, id: x.id, variante: x.variante })), ...(rosto ? [] : [{ itemId, id: variante }])]} tatuagens={tatuagensNaFigura(vida)} largura={150} semFundo rotulo={`Você com ${it.nome.toLowerCase()}`} />
+      <Figura visual={visual} genero={vida.eu.genero} idade={idade(vida)} semente={vida.eu.semente ?? 'eu'} corpo={tipoDeCorpo(vida)} pecas={umbigo ? [] : [...usando.map(x => ({ itemId: x.itemId, id: x.id, variante: x.variante })), ...(rosto ? [] : [{ itemId, id: variante }])]} semCima={umbigo} tatuagens={tatuagensNaFigura(vida)} largura={150} semFundo rotulo={`Você com ${it.nome.toLowerCase()}`} />
       <div className="provador__texto">
         <p className="provador__titulo">No provador: {it.nome.toLowerCase()}</p>
         <p className="nota">Com o que você está usando. Nada foi comprado — e a peça que sairia do lugar continua sua.</p>

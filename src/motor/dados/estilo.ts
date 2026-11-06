@@ -7,6 +7,7 @@
  */
 
 import type { EstiloRoupa, Ocasiao, Vida, Visual } from '../tipos';
+import { PIERCINGS, type Piercing, type RegiaoDePiercing } from './piercings129';
 
 /** Cortes de cabelo (o retrato desenha todos). Nenhum é de um gênero só. */
 export const CORTES: { id: string; nome: string; curto?: boolean }[] = [
@@ -80,7 +81,9 @@ export interface ItemEstilo {
    * pescoço ou nas orelhas. Sem `visual` (o relógio), usar e guardar é posse
    * de verdade — aparece em Você, não no retrato.
    */
-  lugar?: 'pulso' | 'joia' | 'orelha' | 'pulseira' | 'anel' | LugarDoCorpo;
+  lugar?: 'pulso' | 'joia' | 'orelha' | 'pulseira' | 'anel' | LugarDoCorpo | RegiaoDePiercing;
+  /** VIDA 12.9: a joia de um piercing (o lugar é a região do furo). */
+  piercing?: Piercing;
   /** REWORK 12.4: os estilos a que a peça pertence (`ESTILOS`) — uma peça pode ser de vários. */
   estilos?: string[];
   /** REWORK 12.4: as ocasiões em que a peça cai bem (`adequacaoDaRoupa`). */
@@ -268,7 +271,9 @@ export const ITENS_ESTILO: readonly ItemEstilo[] = [
   { id: 'relogio_complicacao', nome: 'Relógio de alta relojoaria (turbilhão)', categoria: 'acessorio', lugar: 'pulso', preco: 480000, luxo: true, nivel: 6, edicao: 'série limitada a 50 peças', estilos: ['luxuoso'], ocasioes: ['evento', 'encontro'], descricao: 'Turbilhão visível no mostrador, montado por um só relojoeiro.' },
   { id: 'colar_diamantes', nome: 'Colar de diamantes', categoria: 'acessorio', lugar: 'joia', preco: 350000, luxo: true, nivel: 6, colecao: 'Alta joalheria', edicao: 'peça única, com certificado', visual: { joia: 'corrente_ouro' }, estilos: ['luxuoso', 'elegante'], ocasioes: ['evento', 'festa'], descricao: 'Platina e quarenta diamantes lapidados à mão.' },
   { id: 'brincos_diamante', nome: 'Brincos de diamante', categoria: 'acessorio', lugar: 'orelha', preco: 85000, luxo: true, nivel: 5, colecao: 'Alta joalheria', visual: { joia: 'brincos' }, estilos: ['luxuoso', 'elegante'], ocasioes: ['evento', 'festa', 'encontro'], descricao: 'Dois pontos de luz de um quilate cada.' },
-  { id: 'anel_diamante', nome: 'Anel solitário de diamante', categoria: 'acessorio', lugar: 'anel', preco: 140000, luxo: true, nivel: 5, colecao: 'Alta joalheria', estilos: ['luxuoso', 'elegante'], ocasioes: ['evento', 'encontro'], descricao: 'Platina e um diamante de dois quilates.' }
+  { id: 'anel_diamante', nome: 'Anel solitário de diamante', categoria: 'acessorio', lugar: 'anel', preco: 140000, luxo: true, nivel: 5, colecao: 'Alta joalheria', estilos: ['luxuoso', 'elegante'], ocasioes: ['evento', 'encontro'], descricao: 'Platina e um diamante de dois quilates.' },
+  // VIDA 12.9: as joias dos piercings (catálogo próprio, `dados/piercings129`).
+  ...PIERCINGS
 ];
 
 /**

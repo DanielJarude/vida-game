@@ -9,6 +9,7 @@
  * só silhueta e cor, que é o que se lê numa miniatura.
  */
 
+import { PiercingDoUmbigo } from './piercings';
 import { memo, useId, type ReactNode } from 'react';
 import type { Genero, Visual } from '../../motor/tipos';
 import type { TipoDeCorpo } from '../../motor/sistemas/silhueta';
@@ -128,7 +129,9 @@ export function focoDaPeca(genero: Genero, corpo: TipoDeCorpo, idade: number, lu
     pernas: [g.cx, g.yCint - 6, g.yTorn + 4, (g.quadril + 14) * 2], corpo: [g.cx, 4, g.yChao + 2, (g.ombro + 16) * 2],
     // O relógio no pulso esquerdo da pessoa (à direita de quem olha); a pulseira e o anel, no outro.
     pes: [g.cx, g.yTorn - 4, g.yChao + 4, 38], pulso: [g.cx + g.ombro + 2.6, 124, 150, 24], pulseira: [g.cx - g.ombro - 2.6, 124, 150, 24],
-    anel: [g.cx - g.ombro - 2.7, 132, 158, 22], joia: [g.cx, g.topo - 8, g.topo + 30, 54]
+    anel: [g.cx - g.ombro - 2.7, 132, 158, 22], joia: [g.cx, g.topo - 8, g.topo + 30, 54],
+    // 12.9: o umbigo (o piercing), a barriga em volta.
+    umbigo: [g.cx, g.yCint - 10, g.yCint + 14, 34]
   };
   const r = caixa[lugar] ?? caixa.corpo;
   const cy = ty((r[1] + r[2]) / 2);
@@ -581,6 +584,8 @@ export const Figura = memo(function Figura({ visual, genero, idade, semente = 'e
         {([-1, 1] as const).map(s => <path key={`p${s}`} d={perna(g, s, 0, g.yTorn + 2)} fill={pele} stroke={contorno} strokeWidth={0.7} strokeLinejoin="round" />)}
         {/* HOTFIX 11.5.1: as tatuagens, na pele (a roupa vem por cima e cobre o que cobre). */}
         {tatuagens.length > 0 && <Tatuagens g={g} lista={tatuagens.filter(t => !NA_MAO.has(t.regiao) && t.regiao !== 'pe')} comps={composicoes} pele={pele} ide={ide} costas={costas} detalhe={detalhe} idade={idade} />}
+        {/* VIDA 12.9: o piercing do umbigo (só com o tronco à mostra; a roupa de cima cobre). */}
+        {!costas && !conj.cima && !conj.inteira && idade >= 16 && <PiercingDoUmbigo ids={visual.piercings} x={g.cx} y={g.yCint - 3} />}
         {/* O que se veste, de dentro para fora. */}
         {conj.inteira ? <Inteira g={g} p={conj.inteira as P<'inteira'>} ide={ide('inteira')} detalhe={detalhe} pele={pele} /> : <>
           <Baixo g={g} p={conj.baixo as P<'baixo'>} ide={ide('baixo')} detalhe={detalhe} pele={pele} />

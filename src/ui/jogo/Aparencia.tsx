@@ -123,7 +123,12 @@ const PARTES: { id: string; nome: string; lugares: string[] }[] = [
   { id: 'tronco', nome: 'Parte de cima', lugares: ['tronco'] }, { id: 'pernas', nome: 'Parte de baixo', lugares: ['pernas'] },
   { id: 'casaco', nome: 'Por cima', lugares: ['casaco'] }, { id: 'pes', nome: 'Nos pés', lugares: ['pes'] },
   { id: 'pulso', nome: 'Relógio', lugares: ['pulso'] }, { id: 'pulseira', nome: 'Pulseira', lugares: ['pulseira'] },
-  { id: 'anel', nome: 'Anel', lugares: ['anel'] }, { id: 'joia', nome: 'No pescoço', lugares: ['joia'] }, { id: 'orelha', nome: 'Nas orelhas', lugares: ['orelha'] }
+  { id: 'anel', nome: 'Anel', lugares: ['anel'] }, { id: 'joia', nome: 'No pescoço', lugares: ['joia'] }, { id: 'orelha', nome: 'Nas orelhas', lugares: ['orelha'] },
+  // VIDA 12.9: os piercings — um cartão por furo (trocar a joia, tirar).
+  { id: 'helix', nome: 'Piercing no helix', lugares: ['helix'] }, { id: 'tragus', nome: 'Piercing no tragus', lugares: ['tragus'] },
+  { id: 'nariz', nome: 'Piercing no nariz', lugares: ['nariz'] }, { id: 'septo', nome: 'Piercing no septo', lugares: ['septo'] },
+  { id: 'sobrancelha', nome: 'Piercing na sobrancelha', lugares: ['sobrancelha'] }, { id: 'labio', nome: 'Piercing no lábio', lugares: ['labio'] },
+  { id: 'umbigo', nome: 'Piercing no umbigo', lugares: ['umbigo'] }
 ];
 
 export function OQueVeste({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
