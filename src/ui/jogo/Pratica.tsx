@@ -10,6 +10,7 @@
  * Tudo vem de `leituraDaPratica` (o estado que o motor guarda); os botões são as ações do motor de sempre.
  */
 
+import { HobbyNaFicha } from './Hobbies129';
 import { useState } from 'react';
 import type { Vida } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
@@ -127,6 +128,7 @@ export function FichaPratica({ vida, l, agir, aoFechar, irPara, abrirPessoa }: P
                 <p className="nota">{l.pessoal.d === 'condicionamento' ? 'O condicionamento é o corpo inteiro: esta prática conta junto com o resto do que você faz (e com a idade, o sono, a saúde).' : 'O aprendizado sobe devagar, com os anos — e a cabeça cheia o derruba.'}</p>
               </section>
             )}
+            <HobbyNaFicha vida={vida} agir={agir} id={l.id} />
             {l.arco && <p className="ficha-pratica__arco"><span className="rotulo-pequeno">Agora</span> {cap(l.arco)}.</p>}
             {l.relacionadas.length > 0 && (
               <section className="ficha-pratica__bloco" aria-label="O que mais isso exercita">
