@@ -13,6 +13,7 @@
  */
 import type { ReactNode } from 'react';
 import { desenhoDeTatuagem, type DesenhoDeTatuagem } from '../../motor/dados/tatuagens';
+import { desenho129 } from './tatuagens129';
 
 type Cor = (hex: string) => string;
 
@@ -327,5 +328,8 @@ function desenho(id: string, tinta: string, cor: Cor, traco: number, W: number, 
       {[[0.2, 5.2, 1], [0.82, 4, -1], [0.18, 10.4, 1], [0.84, 14.8, -1], [0.2, 18.8, 1]].map(([x, y, k], j) => <path key={`f${j}`} d={`M${W * (x as number)} ${y} q${(k as number) * 1.4} -0.5 ${(k as number) * 1.9} -1.8 q${(k as number) * -1.4} 0.1 ${(k as number) * -1.9} 1.8 Z`} fill={cor(VERDE)} />)}
     </g>;
   }
+  // VIDA 12.9: os desenhos novos têm a arte em `tatuagens129`.
+  const novo = desenho129(id, { tinta, cor, traco, W, H, texto, espelhado });
+  if (novo !== undefined) return novo;
   return <circle cx={W / 2} cy={H / 2} r={Math.min(W, H) * 0.2} fill="none" stroke={tinta} strokeWidth={s(0.8)} />;
 }

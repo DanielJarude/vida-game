@@ -21,6 +21,7 @@ import {
   regioesDoDesenho, SIGNIFICADO_COM_PESSOA, TONS_DO_TRACO, COMPOSICAO_TEM_LADO, modeloDeComposicao, type CorDaTatuagem, type EstiloDeTatuagem, type GrupoDoCorpo, type Lado,
   type RegiaoDeTatuagem, type SignificadoDaTatuagem, type TamanhoDeTatuagem, type TipoDeComposicao
 } from '../../motor/dados/tatuagens';
+import { NOME_TEMA, REFERENCIAS_129, temaDoDesenho, type TemaDeTatuagem } from '../../motor/dados/tatuagens129';
 import {
   composicoesNaFigura, desgasteDaTinta, estadoDaTatuagem, fraseDoSignificado, historicoDeTatuagens, IDADE_PARA_TATUAR, nomeDaTatuagem, ondeEsta, precoDaRemocao, precoDoPedido,
   precoDoRetoque, previaDaComposicao, previaDoPedido, regiaoDe, tatuagensDe, tatuagensNaFigura, tamanhoDe, type PedidoDeTatuagem, type TatuagemParaFigura
@@ -38,6 +39,14 @@ const NIVEIS = ['Corpo inteiro', 'Região', 'Perto', 'Bem perto'] as const;
 const PERTO = [1, 1, 1.8, 2.8];
 const ESTILOS = (Object.keys(NOME_ESTILO) as EstiloDeTatuagem[]);
 const maiuscula = (t: string) => t.replace(/^./, c => c.toUpperCase());
+/** VIDA 12.9: a busca ignora acento e maiúscula. */
+const semAcento = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+/** O que o filtro do estúdio procura num desenho: o nome, a descrição, o estilo e a obra (cultura pop). */
+export function desenhosDoFiltro(f: { estilo?: EstiloDeTatuagem | ''; tema?: TemaDeTatuagem | ''; referencia?: string; busca?: string }) {
+  const q = semAcento(f.busca?.trim() ?? '');
+  return DESENHOS.filter(x => x.tamanho !== 4 && (!f.estilo || x.estilo === f.estilo) && (!f.tema || temaDoDesenho(x) === f.tema) && (!f.referencia || x.referencia === f.referencia)
+    && (!q || semAcento(`${x.nome} ${x.descricao} ${NOME_ESTILO[x.estilo]} ${x.referencia ?? ''}`).includes(q)));
+}
 
 type Parte = 'nova' | 'projetos' | 'minhas';
 
@@ -79,6 +88,9 @@ function NovaTatuagem({ vida, agir, cobrindo, aoCancelarCobertura }: { vida: Vid
   const regiao = alvo ? regiaoDe(alvo) : regiaoLivre;
   const ladoR: Lado | undefined = REGIOES[regiao].lados ? (alvo ? alvo.lado : ladoLivre) : undefined;
   const [estilo, setEstilo] = useState<EstiloDeTatuagem | ''>('');
+  const [tema, setTema] = useState<TemaDeTatuagem | ''>('');
+  const [referencia, setReferencia] = useState('');
+  const [busca, setBusca] = useState('');
   const [desenho, setDesenho] = useState('andorinha');
   const d = desenhoDeTatuagem(desenho)!;
   const cabe = (t: TamanhoDeTatuagem) => regioesDoDesenho(d, t).includes(regiao);
@@ -111,7 +123,7 @@ function NovaTatuagem({ vida, agir, cobrindo, aoCancelarCobertura }: { vida: Vid
   const acao: Acao = { tipo: 'tatuar', ...pedido };
   const preco = precoDoPedido(vida, pedido);
   const fig = useMemo<Fig>(() => ({ visual: vida.eu.visual, genero: vida.eu.genero, idade: i, semente: vida.eu.semente ?? 'eu', corpo: tipoDeCorpo(vida) }), [vida, i]);
-  const desenhos = DESENHOS.filter(x => (!estilo || x.estilo === estilo) && x.tamanho !== 4);
+  const desenhos = desenhosDoFiltro({ estilo, tema, referencia: estilo === 'cultura_pop' ? referencia : '', busca });
   const pecas = desenhos.filter(x => x.tamanhos.some(t => regioesDoDesenho(x, t).includes(regiao)));
   const fora = desenhos.filter(x => !pecas.includes(x));
   const escolherDesenho = (id: string) => { setDesenho(id); const n = desenhoDeTatuagem(id)!; setTamanho(n.tamanho); setTexto(''); if (!n.colorida && cor === 'colorida') setCor(''); };
@@ -147,11 +159,35 @@ function NovaTatuagem({ vida, agir, cobrindo, aoCancelarCobertura }: { vida: Vid
               <button key={e || 'todos'} type="button" role="radio" aria-checked={estilo === e} className={`estudio-tatuagem__chip${estilo === e ? ' estudio-tatuagem__chip--ativo' : ''}`} onClick={() => setEstilo(e)}>{e ? NOME_ESTILO[e] : 'Todos'}</button>
             ))}
           </div>
+          {/* VIDA 12.9: o catálogo cresceu — o tema (bichos, natureza), a obra da cultura pop e a busca por nome. */}
+          <div className="estudio-tatuagem__filtros">
+            <label className="campo">
+              <span className="campo__rotulo">Tema</span>
+              <select value={tema} onChange={e => setTema(e.target.value as TemaDeTatuagem | '')}>
+                <option value="">Todos os temas</option>
+                {(Object.keys(NOME_TEMA) as TemaDeTatuagem[]).map(t => <option key={t} value={t}>{NOME_TEMA[t]}</option>)}
+              </select>
+            </label>
+            {estilo === 'cultura_pop' && (
+              <label className="campo">
+                <span className="campo__rotulo">Obra</span>
+                <select value={referencia} onChange={e => setReferencia(e.target.value)}>
+                  <option value="">Todas as obras</option>
+                  {[...REFERENCIAS_129].sort((a, b) => a.localeCompare(b, 'pt-BR')).map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
+              </label>
+            )}
+            <label className="campo">
+              <span className="campo__rotulo">Buscar</span>
+              <input type="search" value={busca} placeholder="lobo, lua, chapéu…" onChange={e => setBusca(e.target.value)} />
+            </label>
+          </div>
           <div className="estudio-tatuagem__catalogo" role="radiogroup" aria-label="Desenhos">
             {pecas.map(x => <Miniatura key={x.id} id={x.id} ativo={x.id === desenho} aoEscolher={() => escolherDesenho(x.id)} />)}
           </div>
-          {fora.length > 0 && <p className="nota">{fora.length} desenho{fora.length > 1 ? 's' : ''} desse estilo não cabe{fora.length > 1 ? 'm' : ''} {ondeEsta(regiao, ladoR)} ({fora.slice(0, 3).map(x => x.nome.toLowerCase()).join(', ')}{fora.length > 3 ? '…' : ''}).</p>}
-          <p className="campo__nota"><strong>{d.nome}</strong> · {NOME_ESTILO[d.estilo]}: {d.descricao}</p>
+          {desenhos.length === 0 && <p className="nota">Nenhum desenho com esse filtro.</p>}
+          {fora.length > 0 && <p className="nota">{fora.length} desenho{fora.length > 1 ? 's' : ''} desse filtro não cabe{fora.length > 1 ? 'm' : ''} {ondeEsta(regiao, ladoR)} ({fora.slice(0, 3).map(x => x.nome.toLowerCase()).join(', ')}{fora.length > 3 ? '…' : ''}).</p>}
+          <p className="campo__nota"><strong>{d.nome}</strong> · {NOME_ESTILO[d.estilo]}{d.referencia ? ` (inspirado em ${d.referencia})` : ''}: {d.descricao}</p>
           {tamanhosAqui.length > 1 && <Escolha rotulo="Tamanho" valor={String(tamanho) as '1'} aoMudar={t => setTamanho(Number(t) as TamanhoDeTatuagem)} opcoes={tamanhosAqui.map(t => ({ id: String(t) as '1', rotulo: maiuscula(NOME_TAMANHO[t]) }))} />}
           {tamanhosAqui.length === 1 && <p className="nota">Tamanho: {NOME_TAMANHO[tamanho]}.</p>}
           {d.texto && (
@@ -226,7 +262,7 @@ function Miniatura({ id, ativo, aoEscolher }: { id: string; ativo: boolean; aoEs
   const d = desenhoDeTatuagem(id)!;
   const [w, h] = caixaNativa(d);
   return (
-    <button type="button" role="radio" aria-checked={ativo} className={`estudio-tatuagem__miniatura${ativo ? ' estudio-tatuagem__miniatura--ativa' : ''}`} onClick={aoEscolher} data-desenho={id} title={`${d.nome} — ${d.descricao}`}>
+    <button type="button" role="radio" aria-checked={ativo} className={`estudio-tatuagem__miniatura${ativo ? ' estudio-tatuagem__miniatura--ativa' : ''}`} onClick={aoEscolher} data-desenho={id} title={`${d.nome}${d.referencia ? ` (${d.referencia})` : ''} — ${d.descricao}`}>
       <svg viewBox={`-1 -1 ${w + 2} ${h + 2}`} width={44} height={44} aria-hidden="true" preserveAspectRatio="xMidYMid meet">
         <DesenhoDaTatuagem id={id} tinta="#1f2328" cor={c => c} traco={1.1} />
       </svg>

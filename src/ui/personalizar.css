@@ -109,6 +109,9 @@
 .estudio-tatuagem__grupo { border: 0; border-top: 1px solid var(--rule); margin: 0; padding: var(--space-2) 0 0; display: grid; gap: var(--space-2); min-width: 0; }
 .estudio-tatuagem__grupo > legend { font-weight: 600; padding: 0 var(--space-1) 0 0; }
 .estudio-tatuagem__estilos { display: flex; flex-wrap: wrap; gap: 6px; }
+/* VIDA 12.9 — tema, obra (cultura pop) e busca no catálogo. */
+.estudio-tatuagem__filtros { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--space-2); margin-top: var(--space-2); }
+.estudio-tatuagem__filtros input, .estudio-tatuagem__filtros select { width: 100%; min-width: 0; }
 .estudio-tatuagem__chip { min-height: 36px; padding: 0 var(--space-2); border-radius: 999px; border: 1px solid var(--rule); background: var(--superficie, transparent); color: var(--tinta); font: inherit; font-size: var(--type-caption); cursor: pointer; }
 .estudio-tatuagem__chip--ativo { background: var(--tinta); color: var(--papel, #fff); border-color: var(--tinta); }
 .estudio-tatuagem__catalogo { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 6px; max-height: 296px; overflow-y: auto; padding: 2px; }

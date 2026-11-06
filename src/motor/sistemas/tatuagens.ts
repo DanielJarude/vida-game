@@ -35,7 +35,7 @@ export const MESES_DE_LASER = 12;
 /** Antes disso a tinta ainda está viva: o tatuador não retoca. */
 export const ANOS_PARA_RETOQUE = 4;
 /** Os estilos que cobrem bem uma tatuagem antiga (preto carregado, desenho fechado). */
-const COBREM = new Set(['realista', 'tradicional', 'blackwork', 'tribal', 'oriental', 'ornamental', 'floral', 'geometrica', 'abstrata', 'composicao']);
+const COBREM = new Set(['realista', 'tradicional', 'blackwork', 'tribal', 'oriental', 'ornamental', 'floral', 'geometrica', 'abstrata', 'composicao', 'neotradicional', 'surrealista']);
 
 export type AjusteDaTatuagem = { x: number; y: number; escala: number; rot: number; espelhar?: boolean };
 

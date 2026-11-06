@@ -19,8 +19,10 @@
  * a renda e o pingente do ornamental, a mancha da aquarela no abstrato.
  */
 
+import { DESENHOS_129, NOME_ESTILO_129, type EstiloDeTatuagem129, type TemaDeTatuagem } from './tatuagens129';
+
 export type EstiloDeTatuagem =
-  | 'realista' | 'tradicional' | 'blackwork' | 'tribal' | 'geometrica' | 'oriental' | 'minimalista' | 'fine_line'
+  | EstiloDeTatuagem129 | 'realista' | 'tradicional' | 'blackwork' | 'tribal' | 'geometrica' | 'oriental' | 'minimalista' | 'fine_line'
   | 'lettering' | 'ornamental' | 'floral' | 'simbolica' | 'abstrata' | 'composicao';
 /** A parte grande do corpo (a lupa do estúdio enquadra por ela; os saves antigos guardavam só ela). */
 export type LocalDeTatuagem = 'braco' | 'antebraco' | 'ombro' | 'mao' | 'peito' | 'costas' | 'abdomen' | 'pescoco' | 'coxa' | 'panturrilha';
@@ -37,7 +39,7 @@ export type RegiaoDeTatuagem =
 export const NOME_ESTILO: Record<EstiloDeTatuagem, string> = {
   realista: 'Realista', tradicional: 'Old school', blackwork: 'Blackwork', tribal: 'Tribal', geometrica: 'Geométrica',
   oriental: 'Oriental', minimalista: 'Minimalista', fine_line: 'Fine line', lettering: 'Lettering', ornamental: 'Ornamental',
-  floral: 'Floral', simbolica: 'Simbólica', abstrata: 'Abstrata', composicao: 'Peças inteiras'
+  floral: 'Floral', simbolica: 'Simbólica', abstrata: 'Abstrata', ...NOME_ESTILO_129, composicao: 'Peças inteiras'
 };
 
 /** 1 pequena · 2 média · 3 grande · 4 a peça que fecha a superfície. */
@@ -135,6 +137,9 @@ export interface DesenhoDeTatuagem {
   /** O texto que o jogador escreve. */
   texto?: TextoDaTatuagem;
   descricao: string;
+  /** VIDA 12.9: a obra de ficção que o desenho lembra (cultura pop) e o tema (bichos, natureza). */
+  referencia?: string;
+  tema?: TemaDeTatuagem;
 }
 
 const FAIXA: RegiaoDeTatuagem[] = ['biceps', 'antebraco', 'coxa', 'panturrilha', 'canela', 'pulso', 'tornozelo'];
@@ -242,7 +247,8 @@ export const DESENHOS: readonly DesenhoDeTatuagem[] = [
   { id: 'dragao_costas', nome: 'Dragão nas costas', estilo: 'composicao', tamanho: 4, tamanhos: T(4), colorida: true, regioes: ['costas_inteiras'], descricao: 'O dragão ocupando as costas inteiras.' },
   { id: 'fenix_costas', nome: 'Fênix nas costas', estilo: 'composicao', tamanho: 4, tamanhos: T(4), colorida: true, regioes: ['costas_inteiras'], descricao: 'A fênix subindo, as asas de ombro a ombro.' },
   { id: 'aguia_peito', nome: 'Águia no peito', estilo: 'composicao', tamanho: 4, tamanhos: T(4), regioes: ['peito_inteiro'], descricao: 'As asas abertas de um ombro ao outro.' },
-  { id: 'perna_floral', nome: 'Perna florida', estilo: 'composicao', tamanho: 4, tamanhos: T(4), colorida: true, proporcao: 0.3, regioes: ['perna_inteira'], descricao: 'Rosas e folhas subindo do tornozelo à coxa.' }
+  { id: 'perna_floral', nome: 'Perna florida', estilo: 'composicao', tamanho: 4, tamanhos: T(4), colorida: true, proporcao: 0.3, regioes: ['perna_inteira'], descricao: 'Rosas e folhas subindo do tornozelo à coxa.' },
+  ...DESENHOS_129
 ];
 const POR_ID = new Map(DESENHOS.map(d => [d.id, d]));
 export const desenhoDeTatuagem = (id: string) => POR_ID.get(id);
