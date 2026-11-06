@@ -276,6 +276,17 @@ export function usarItem(v: Vida, itemId: string, usar: boolean, id?: string): s
   return usar ? `Passou a usar: ${it.nome.toLowerCase()}.` : `Guardou: ${it.nome.toLowerCase()}.`;
 }
 
+/** VIDA 12.9: veste um look guardado — cada peça dele (a que ocupa o mesmo lugar sai); o que o look não tem fica. */
+export function vestirLook(v: Vida, lookId: string): string {
+  const e = v.eu.estilo!;
+  const look = e.looksSalvos!.find(l => l.id === lookId)!;
+  const meus = new Map(e.itens.map(x => [x.id, x]));
+  let n = 0;
+  for (const id of look.itens) { const x = meus.get(id); if (x && !x.local) { usarItem(v, x.itemId, true, x.id); n++; } }
+  const faltam = look.itens.length - n;
+  return `Vestiu “${look.nome}”.${faltam ? ` ${faltam === 1 ? 'Uma peça não estava' : `${faltam} peças não estavam`} à mão.` : ''}`;
+}
+
 /**
  * 12.4.1 — o que o retrato mostra sai do que está em uso: a peça de cima visível (o casaco por cima; senão o vestido ou o
  * conjunto; senão a blusa), a joia do pescoço e os brincos (lugares diferentes: dá para usar os dois). A figura de corpo

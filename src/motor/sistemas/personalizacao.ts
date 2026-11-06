@@ -27,7 +27,6 @@ import { bloqueio, PERMITIDO, type Veredito } from '../plausibilidade';
 import { coisa } from '../dados/coisas';
 import { variantesDaCoisa } from '../dados/pertences';
 import { itemEstilo, estiloDominante, nomeDoEstilo } from '../dados/estilo';
-import { usarItem } from './estilo';
 import { COFRE_ANUAL, COISAS_GRANDES, COMODOS, comodo as modeloComodo, DEPOSITO, plantaDe, VAGA_MENSAL, type TipoComodo } from '../dados/lar';
 import { formaDaVersao, modeloMoradia, modeloVeiculo, versaoVeiculo } from '../dados/bens';
 import { opcaoServe } from '../dados/veiculos129';
@@ -715,15 +714,8 @@ function aplicarLookSalvo(v: Vida, op: Extract<OpPersonalizar, { o: `look_${stri
       salvos.push({ id: novoId(v, 'look'), nome, itens, t: v.t });
       return `Guardou o look “${nome}” (${itens.length} ${itens.length === 1 ? 'peça' : 'peças'}).`;
     }
-    case 'look_vestir': {
-      const look = salvos.find(l => l.id === op.id)!;
-      const meus = new Map(e.itens.map(x => [x.id, x]));
-      // Veste cada peça do look (a que ocupa o mesmo lugar sai); o que o look não tem continua como está.
-      let n = 0;
-      for (const id of look.itens) { const x = meus.get(id); if (x && !x.local) { usarItem(v, x.itemId, true, x.id); n++; } }
-      const faltam = look.itens.length - n;
-      return `Vestiu “${look.nome}”.${faltam ? ` ${faltam === 1 ? 'Uma peça não estava' : `${faltam} peças não estavam`} à mão.` : ''}`;
-    }
+    // Vestir um look é das ações (`acoes` chama `estilo.vestirLook`): o guarda-roupa mora num pacote de cima.
+    case 'look_vestir': return '';
     case 'look_renomear': { const look = salvos.find(l => l.id === op.id)!; const antes = look.nome; look.nome = nomeLimpo(op.nome); return `“${antes}” agora se chama “${look.nome}”.`; }
     case 'look_excluir': { const i = salvos.findIndex(l => l.id === op.id); const [l] = salvos.splice(i, 1); if (!salvos.length) delete e.looksSalvos; return `Apagou o look “${l.nome}”. As peças continuam suas.`; }
   }
