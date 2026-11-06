@@ -83,22 +83,22 @@ describe('Escolher instituição, curso e campus; processos diferentes', () => {
   it('cada processo tem fases próprias: Fuvest (1ª e 2ª fase), SISU (a nota do ENEM), particular (prova e redação)', () => {
     let v = candidata('sao-paulo-sp', 95);
     v = executar(v, { tipo: 'estudos129', oque: 'candidatar', chave: 'inst:usp:sao-paulo:direito:fuvest' }).vida;
-    const f = v.educacao.processos129!.at(-1)!;
+    const f = v.educacao.processos129!.slice(-1)[0]!;
     expect(f.nome).toBe('Fuvest');
     expect(f.fases[0].nome).toMatch(/1ª fase/);
     expect(f.fases[0].max).toBe(90);
     let w = em(candidata('sao-paulo-sp', 95), x => { x.educacao.aprovacao = undefined; });
     w = executar(w, { tipo: 'estudos129', oque: 'candidatar', chave: 'inst:ufrj:rio-de-janeiro:direito:sisu' }).vida;
-    expect(w.educacao.processos129!.at(-1)!.fases[0].nome).toMatch(/ENEM/);
+    expect(w.educacao.processos129!.slice(-1)[0]!.fases[0].nome).toMatch(/ENEM/);
     let p = candidata('sao-paulo-sp', 70);
     p = executar(p, { tipo: 'estudos129', oque: 'candidatar', chave: 'inst:pucsp:monte-alegre:direito:vestibular_privada' }).vida;
-    expect(p.educacao.processos129!.at(-1)!.fases.map(x => x.nome)).toEqual(['Prova objetiva', 'Redação']);
+    expect(p.educacao.processos129!.slice(-1)[0]!.fases.map((x: { nome: string }) => x.nome)).toEqual(['Prova objetiva', 'Redação']);
   });
 
   it('aprovação e reprovação seguem o preparo; aprovada, a vaga espera; confirmada, a matrícula leva a instituição real', () => {
     let forte = candidata('sao-paulo-sp', 95);
     forte = executar(forte, { tipo: 'estudos129', oque: 'candidatar', chave: 'inst:pucsp:monte-alegre:administracao:vestibular_privada', turno: 'noite' }).vida;
-    expect(forte.educacao.processos129!.at(-1)!.aprovado).toBe(true);
+    expect(forte.educacao.processos129!.slice(-1)[0]!.aprovado).toBe(true);
     expect(forte.educacao.aprovacao?.novo.inst129?.id).toBe('pucsp');
     // Tentar de novo no mesmo ano: bloqueado (uma vez por ano por processo).
     const fraca = candidata('sao-paulo-sp', 5);
@@ -106,7 +106,7 @@ describe('Escolher instituição, curso e campus; processos diferentes', () => {
     const fuv = ops.find(o => o.chave === 'inst:usp:sao-paulo:medicina:fuvest')!;
     expect(fuv.veredito.chance!).toBeLessThan(0.05);
     const depois = executar(fraca, { tipo: 'estudos129', oque: 'candidatar', chave: fuv.chave }).vida;
-    expect(depois.educacao.processos129!.at(-1)!.aprovado).toBe(false);
+    expect(depois.educacao.processos129!.slice(-1)[0]!.aprovado).toBe(false);
     expect(depois.educacao.aprovacao).toBeUndefined();
     expect(podeTentar(opcoes129(depois, 'medicina').find(o => o.chave === fuv.chave)!.veredito)).toBe(false);
     // Confirmar: a matrícula tem a instituição, o campus e o turno.
@@ -163,8 +163,8 @@ describe('Semestres, recuperação e jubilamento', () => {
     const lim = limiteDeReprovacoes129(cursoOuNulo('direito')!);
     const v = em(candidata('recife-pe', 60), x => { matricula(x, { cursoId: 'direito', reprovacoes: lim }); depoisDoCurso129(x); });
     expect(v.educacao.matricula).toBeUndefined();
-    expect(v.educacao.historicoAcademico!.at(-1)!.situacao).toBe('cancelado');
-    expect(v.biografia.at(-1)!.texto).toMatch(/cancelada/);
+    expect(v.educacao.historicoAcademico!.slice(-1)[0]!.situacao).toBe('cancelado');
+    expect(v.biografia.slice(-1)[0]!.texto).toMatch(/cancelada/);
   });
 
   it('a dependência nas férias: refaz as reprovadas e, passando, devolve o semestre', () => {
@@ -173,7 +173,7 @@ describe('Semestres, recuperação e jubilamento', () => {
     v = executar(v, { tipo: 'estudos129', oque: 'dependencia' }).vida;
     expect(v.educacao.matricula!.dependencia129).toBe(v.t);
     expect([antes, antes - 6]).toContain(v.educacao.matricula!.mesesRestantes);
-    expect(v.educacao.historicoAcademico!.at(-1)!.rotulo).toMatch(/Dependência nas férias/);
+    expect(v.educacao.historicoAcademico!.slice(-1)[0]!.rotulo).toMatch(/Dependência nas férias/);
   });
 });
 
@@ -247,6 +247,6 @@ describe('Saves antigos', () => {
     expect(v.educacao.matricula?.inst129).toBeUndefined();
     expect(semestres129(v).atual).toBe(3);
     const d = avancarAno(v).vida;
-    expect(d.educacao.matricula?.cursoId ?? d.educacao.concluidos.at(-1)?.cursoId).toBe('administracao');
+    expect(d.educacao.matricula?.cursoId ?? d.educacao.concluidos.slice(-1)[0]?.cursoId).toBe('administracao');
   });
 });
