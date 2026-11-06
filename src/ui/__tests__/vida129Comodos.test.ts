@@ -54,6 +54,7 @@ describe('12.9 · cômodos: orientação e oclusão', () => {
       const chao = d.postos.filter(p => p.montagem === 'chao');
       for (const a of chao) for (const b of chao) {
         if (a === b || pequeno(a) || pequeno(b)) continue;
+        if ((medidaDe(a.coisaId).vao ?? 0) < 0 || (medidaDe(b.coisaId).vao ?? 0) < 0) continue; // a cadeira encaixada na mesa
         const sx = Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0), sz = Math.min(a.z1, b.z1) - Math.max(a.z0, b.z0);
         expect(sx > 0.01 && sz > 0.01, `${tipo} ${area}: ${a.coisaId} × ${b.coisaId}`).toBe(false);
       }
