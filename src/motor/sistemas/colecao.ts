@@ -25,7 +25,8 @@ import { palmaresDe } from './palmares';
 import { EXPOSITOR_DA_CATEGORIA, grauDaPeca, ORDEM_DO_GRAU, type GrauDeRaridade } from '../dados/colecao128';
 import { coisa } from '../dados/coisas';
 import { itemEstilo } from '../dados/estilo';
-import { modeloVeiculo } from '../dados/bens';
+import { modeloVeiculo, versaoVeiculo } from '../dados/bens';
+import { fundamentoDaRaridade, grauDoVeiculo, nomeDoVeiculoDeColecao } from '../dados/veiculos129';
 import { comodoDaCoisa, comodosDaCasa, naCasaAtual } from './lar';
 
 export const colecao = (v: Vida): Colecionavel[] => v.financas.colecao ?? [];
@@ -554,9 +555,11 @@ export function colecoesDaVida(v: Vida, nomeDoLocal: (local?: string, comodo?: s
   for (const b of v.financas.bens) if (b.tipo === 'veiculo' && b.papel === 'colecao') {
     const g = grupo('carros');
     const m = modeloVeiculo(b.modeloId);
-    // O clássico (só existe usado) e o superesportivo são raros pelo segmento do modelo; o resto é um carro guardado.
-    const grau: GrauDeRaridade = m?.segmento === 'classico' || m?.segmento === 'exotico' ? 'rara' : 'comum';
-    g.itens.push({ id: b.id, nome: m?.nome ?? b.modeloId, grau, valor: b.valor, onde: 'na garagem', exposta: true });
+    // VIDA 12.9: o grau vem do produto (a tiragem numerada, quantos se fizeram, a classe) — não do preço nem só da classe;
+    // o nome é marca, modelo e ano ("Jaguar E-Type Série 1, 1963"), não "carro clássico".
+    const x = versaoVeiculo(b.versaoId);
+    const grau: GrauDeRaridade = grauDoVeiculo(x, m?.segmento);
+    g.itens.push({ id: b.id, nome: nomeDoVeiculoDeColecao(x, b.anoFabricacao, b.nome, m?.nome ?? b.modeloId), grau, valor: b.valor, onde: b.garagem ? 'em outra garagem sua' : 'na garagem', exposta: true, marca: x?.marca, detalhe: fundamentoDaRaridade(x, m?.segmento) });
     g.valor += b.valor; g.expostas++; g.graus[grau] = (g.graus[grau] ?? 0) + 1;
   }
   for (const t of v.financas.coisas ?? []) {

@@ -8,6 +8,7 @@
 
 import type { Veiculo, Vida } from '../tipos';
 import { modeloVeiculo, nomeDaVersao, versaoVeiculo, versoesDaClasse, type VersaoVeiculo } from '../dados/bens';
+import { ehVersao129 } from '../dados/veiculos129';
 
 function hash(s: string): number {
   let h = 0x811c9dc5;
@@ -18,7 +19,8 @@ function hash(s: string): number {
 /** A versão que um veículo antigo passa a ter (pura: não altera nada). */
 export function versaoParaVeiculoAntigo(b: Pick<Veiculo, 'id' | 'modeloId'>): VersaoVeiculo | undefined {
   const classe = modeloVeiculo(b.modeloId).id;
-  const lista = versoesDaClasse(classe);
+  // VIDA 12.9: só as versões de antes (o carro de um save velho não muda de modelo porque o catálogo cresceu).
+  const lista = versoesDaClasse(classe).filter(x => !ehVersao129(x.id));
   if (!lista.length) return undefined;
   const total = lista.reduce((s, x) => s + x.pesoUsado, 0);
   let alvo = (hash(`${b.id}:${classe}`) / 0x100000000) * total;

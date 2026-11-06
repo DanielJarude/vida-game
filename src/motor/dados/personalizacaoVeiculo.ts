@@ -14,6 +14,7 @@
  */
 
 import type { CategoriaVeiculo } from './bens';
+import { ACABAMENTO_129, DETALHES_CARRO_129, PINTURAS_129, RODAS_CARRO_129, RODAS_MOTO_129 } from './veiculos129';
 
 export interface OpcaoDePeca {
   id: string;
@@ -46,6 +47,8 @@ const PINTURA: PecaDeVeiculo = {
     { id: 'verde_ingles', nome: 'verde-inglês', frac: 0.05, piso: 3500, valor: 0.97, cor: '#2f4a3a' },
     { id: 'preto_fosco', nome: 'preto fosco', frac: 0.06, piso: 4000, valor: 0.96, cor: '#2a2a2c' },
     { id: 'amarelo', nome: 'amarelo', frac: 0.05, piso: 3500, valor: 0.95, cor: '#e0b12d' },
+    // VIDA 12.9: mais cores (o acabamento — metálico, perolizado, acetinado, fosco — é uma peça à parte).
+    ...PINTURAS_129,
     { id: 'envelopado', nome: 'envelopamento (sai sem estragar)', frac: 0.03, piso: 2500, valor: 1, cor: '#5d6b45' }
   ]
 };
@@ -53,7 +56,9 @@ const PINTURA: PecaDeVeiculo = {
 export const PECAS_POR_CATEGORIA: Record<CategoriaVeiculo, PecaDeVeiculo[]> = {
   carro: [
     PINTURA,
-    { id: 'rodas', nome: 'Rodas', tipo: 'estetica', opcoes: [ORIGINAL('as rodas de série'), { id: 'liga', nome: 'liga leve, aro maior', frac: 0.035, piso: 3200, valor: 1.005 }, { id: 'esportivas', nome: 'esportivas, aro grande', frac: 0.06, piso: 6000, valor: 0.99, uso: 1.03 }] },
+    ACABAMENTO_129,
+    { id: 'rodas', nome: 'Rodas', tipo: 'estetica', opcoes: [ORIGINAL('as rodas de série'), { id: 'liga', nome: 'liga leve, aro maior', frac: 0.035, piso: 3200, valor: 1.005 }, { id: 'esportivas', nome: 'esportivas, aro grande', frac: 0.06, piso: 6000, valor: 0.99, uso: 1.03 }, ...RODAS_CARRO_129] },
+    ...DETALHES_CARRO_129,
     { id: 'interior', nome: 'Interior e estofamento', tipo: 'estetica', opcoes: [ORIGINAL('o tecido de série'), { id: 'couro', nome: 'bancos de couro', frac: 0.04, piso: 4500, valor: 1.01 }, { id: 'artesanal', nome: 'couro costurado à mão, cor escolhida', frac: 0.08, piso: 12000, valor: 1 }] },
     { id: 'acessorios', nome: 'Acessórios', tipo: 'estetica', opcoes: [ORIGINAL('sem nada a mais'), { id: 'multimidia', nome: 'central multimídia e câmera de ré', frac: 0.025, piso: 2400, valor: 1.005 }, { id: 'som', nome: 'som potente no porta-malas', frac: 0.035, piso: 4000, valor: 0.97 }, { id: 'pelicula', nome: 'película e engate', frac: 0.012, piso: 900, valor: 1 }] },
     { id: 'pneus', nome: 'Pneus', tipo: 'funcional', opcoes: [ORIGINAL('pneus comuns'), { id: 'bons', nome: 'pneus de marca boa', frac: 0.018, piso: 1800, fragilidade: 0.93 }] },
@@ -63,6 +68,8 @@ export const PECAS_POR_CATEGORIA: Record<CategoriaVeiculo, PecaDeVeiculo[]> = {
   ],
   moto: [
     PINTURA,
+    ACABAMENTO_129,
+    RODAS_MOTO_129,
     { id: 'banco', nome: 'Banco', tipo: 'estetica', opcoes: [ORIGINAL('o banco de série'), { id: 'conforto', nome: 'banco de viagem, com gel', frac: 0.03, piso: 900, valor: 1 }] },
     { id: 'bagageiro', nome: 'Baú e alforjes', tipo: 'estetica', opcoes: [ORIGINAL('sem bagageiro'), { id: 'bau', nome: 'baú traseiro', frac: 0.02, piso: 600, valor: 1 }, { id: 'alforjes', nome: 'alforjes de couro', frac: 0.04, piso: 1500, valor: 1 }] },
     { id: 'pneus', nome: 'Pneus', tipo: 'funcional', opcoes: [ORIGINAL('pneus comuns'), { id: 'bons', nome: 'pneus de marca boa', frac: 0.03, piso: 700, fragilidade: 0.92 }] },

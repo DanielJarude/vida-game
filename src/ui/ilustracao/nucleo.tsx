@@ -126,7 +126,7 @@ export type Peca = Comum & (
   | { tipo: 'vidro'; d: string; claro?: boolean }
   | { tipo: 'metal'; d: string; cor?: string }
   | { tipo: 'linha'; d: string; larg?: number; cor?: string }
-  | { tipo: 'pneu'; cx: number; cy: number; r: number; aro?: 'raios' | 'liga' | 'bicicleta' | 'cravos' | 'calota'; raios?: number }
+  | { tipo: 'pneu'; cx: number; cy: number; r: number; aro?: 'raios' | 'liga' | 'bicicleta' | 'cravos' | 'calota'; raios?: number; /** VIDA 12.9: a cor do aro (roda preta, dourada, cromada) e o aro maior (pneu mais fino). */ corAro?: string; aroMaior?: boolean }
   | { tipo: 'luz'; d: string; cor: string }
   | { tipo: 'texto'; x: number; y: number; texto: string; tam: number; cor: string; /** VIDA 12.5: a letra da placa (serifa, peso, espaçamento). */ fonte?: 'serif' | 'sans'; peso?: number; espaco?: number }
   | { tipo: 'grupo'; t: string; pecas: Peca[] }
@@ -240,19 +240,23 @@ export function Ilustracao({ a, largura, rotulo, className, dados, semChao, styl
             </g>
           );
         }
-        const aroCor = '#cdc8bf';
+        // VIDA 12.9: a cor do aro (a roda preta ganha raios claros, senão some) e o aro maior.
+        const aroCor = p.corAro ?? '#cdc8bf';
+        const escura = !!p.corAro && luminancia(aroCor) < 0.08;
+        const tom = (k: number) => (escura ? clarear(aroCor, k * 0.9) : escurecer(aroCor, k));
+        const ka = p.aroMaior ? 0.72 : 0.6;
         usaLuz = usaLuz || nivel > 1;
         const n = p.raios ?? (aro === 'liga' ? 5 : 6);
         const desenhoAro = nivel === 1 ? null
-          : aro === 'liga' ? <path d={Array.from({ length: n }, (_, j) => { const g = (j / n) * Math.PI * 2 - Math.PI / 2; return `M${f(cx)} ${f(cy)}L${f(cx + Math.cos(g) * r * 0.56)} ${f(cy + Math.sin(g) * r * 0.56)}`; }).join('')} stroke={escurecer(aroCor, 0.4)} strokeWidth={r * 0.13} strokeLinecap="round" />
-            : aro === 'raios' ? <path d={Array.from({ length: 16 }, (_, j) => { const g = (j / 16) * Math.PI * 2; return `M${f(cx)} ${f(cy)}L${f(cx + Math.cos(g) * r * 0.62)} ${f(cy + Math.sin(g) * r * 0.62)}`; }).join('')} stroke={escurecer(aroCor, 0.3)} strokeWidth={0.4} />
-              : <circle cx={cx} cy={cy} r={r * 0.42} fill="none" stroke={escurecer(aroCor, 0.25)} strokeWidth={0.6} />;
+          : aro === 'liga' ? <path d={Array.from({ length: n }, (_, j) => { const g = (j / n) * Math.PI * 2 - Math.PI / 2; return `M${f(cx)} ${f(cy)}L${f(cx + Math.cos(g) * r * (ka - 0.04))} ${f(cy + Math.sin(g) * r * (ka - 0.04))}`; }).join('')} stroke={tom(0.4)} strokeWidth={r * (n > 8 && p.aroMaior ? 0.09 : 0.13)} strokeLinecap="round" />
+            : aro === 'raios' ? <path d={Array.from({ length: 16 }, (_, j) => { const g = (j / 16) * Math.PI * 2; return `M${f(cx)} ${f(cy)}L${f(cx + Math.cos(g) * r * 0.62)} ${f(cy + Math.sin(g) * r * 0.62)}`; }).join('')} stroke={tom(0.3)} strokeWidth={0.4} />
+              : <circle cx={cx} cy={cy} r={r * 0.42} fill="none" stroke={tom(0.25)} strokeWidth={0.6} />;
         return (
           <g key={i} {...m}>
             <circle cx={cx} cy={cy} r={r} fill="#26231f" stroke="#857e75" strokeOpacity={0.55} strokeWidth={fio * 0.7} vectorEffect="non-scaling-stroke" />
             {aro === 'cravos' && nivel > 1 && <circle cx={cx} cy={cy} r={r - 0.8} fill="none" stroke="#45403a" strokeWidth={r * 0.14} strokeDasharray={`${f(r * 0.22)} ${f(r * 0.16)}`} />}
-            <circle cx={cx} cy={cy} r={r * (aro === 'raios' ? 0.66 : 0.6)} fill={aroCor} stroke={escurecer(aroCor, 0.45)} strokeWidth={fio * 0.6} vectorEffect="non-scaling-stroke" />
-            {nivel > 1 && <circle cx={cx} cy={cy} r={r * 0.6} fill={`url(#${luz})`} />}
+            <circle cx={cx} cy={cy} r={r * (aro === 'raios' ? 0.66 : ka)} fill={aroCor} stroke={escurecer(aroCor, 0.45)} strokeWidth={fio * 0.6} vectorEffect="non-scaling-stroke" />
+            {nivel > 1 && <circle cx={cx} cy={cy} r={r * ka} fill={`url(#${luz})`} />}
             {desenhoAro}
             <circle cx={cx} cy={cy} r={r * 0.15} fill="#6b6660" />
           </g>

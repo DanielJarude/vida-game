@@ -9,6 +9,8 @@ import { Ilustracao, lembrar, valida, type Amostra } from './nucleo';
 import { carro, perfilDoCarro, FAMILIAS } from './carros';
 import { bicicleta, moto } from './duasRodas';
 import { aviao, barco } from './aguaEAr';
+import { chaveDoVisual, visualDasMods, type VisualVeiculo } from '../../motor/dados/veiculos129';
+import { pecasDaCategoria } from '../../motor/dados/personalizacaoVeiculo';
 
 const MOTOS = new Set(['cub', 'scooter', 'street', 'esportiva', 'cruiser', 'trail']);
 const BIKES = new Set(['urbana', 'estrada', 'mtb', 'eletrica']);
@@ -21,24 +23,29 @@ const PRATA = '#a9adb2';
 const DESENHADOS = lembrar<Amostra>();
 /** O desgaste só muda o desenho por faixa (zero com brilho, usado, cansado): a faixa entra na chave, não o número. */
 const faixa = (e?: number) => (e === undefined ? '' : e >= 90 ? 'z' : e >= 60 ? 'b' : e >= 40 ? 'u' : 'c');
-export function amostraDoVeiculo(forma: FormaVeiculo, cor?: string, versaoId?: string, semente?: string, estado?: number): Amostra {
-  return DESENHADOS(`${forma}|${cor}|${versaoId}|${semente}|${faixa(estado)}`, () => desenharVeiculo(forma, cor, versaoId, semente, estado));
+export function amostraDoVeiculo(forma: FormaVeiculo, cor?: string, versaoId?: string, semente?: string, estado?: number, visual?: VisualVeiculo): Amostra {
+  return DESENHADOS(`${forma}|${cor}|${versaoId}|${semente}|${faixa(estado)}|${chaveDoVisual(visual)}`, () => desenharVeiculo(forma, cor, versaoId, semente, estado, visual));
 }
-function desenharVeiculo(forma: FormaVeiculo, cor?: string, versaoId?: string, semente?: string, estado?: number): Amostra {
+/** VIDA 12.9: o que as peças feitas num veículo (`mods` do bem) mudam no desenho dele (carro e moto). */
+export function visualDoVeiculo(forma: FormaVeiculo, mods?: Readonly<Record<string, string>>): VisualVeiculo | undefined {
+  const cat = forma in FAMILIAS ? 'carro' : MOTOS.has(forma) ? 'moto' : undefined;
+  return cat && mods ? visualDasMods(cat, mods, pecasDaCategoria(cat)) : undefined;
+}
+function desenharVeiculo(forma: FormaVeiculo, cor?: string, versaoId?: string, semente?: string, estado?: number, visual?: VisualVeiculo): Amostra {
   const c = valida(cor, PRATA);
-  if (forma in FAMILIAS) return carro(perfilDoCarro(forma as keyof typeof FAMILIAS, versaoId, semente ?? versaoId), c, estado);
-  if (MOTOS.has(forma)) return moto(forma as Parameters<typeof moto>[0], c, versaoId);
+  if (forma in FAMILIAS) return carro(perfilDoCarro(forma as keyof typeof FAMILIAS, versaoId, semente ?? versaoId), c, estado, visual);
+  if (MOTOS.has(forma)) return moto(forma as Parameters<typeof moto>[0], c, versaoId, visual);
   if (BIKES.has(forma)) return bicicleta(forma as Parameters<typeof bicicleta>[0], c, versaoId);
   if (BARCOS.has(forma)) return barco(forma as Parameters<typeof barco>[0], c, versaoId);
   if (AVIOES.has(forma)) return aviao(forma as Parameters<typeof aviao>[0], c, versaoId);
   return carro(perfilDoCarro('hatch', undefined, semente), c, estado);
 }
 
-export interface PropsVeiculo { forma: FormaVeiculo; rotulo?: string; largura?: number; semente?: string; versaoId?: string; cor?: string; estado?: number; className?: string; style?: Record<string, string | number> }
+export interface PropsVeiculo { forma: FormaVeiculo; rotulo?: string; largura?: number; semente?: string; versaoId?: string; cor?: string; estado?: number; className?: string; style?: Record<string, string | number>; /** VIDA 12.9: as peças feitas (`mods` do bem). */ mods?: Readonly<Record<string, string>> }
 
-export function IlustracaoVeiculo({ forma, rotulo, largura = 48, semente, versaoId, cor, estado, className, style }: PropsVeiculo): ReactElement {
+export function IlustracaoVeiculo({ forma, rotulo, largura = 48, semente, versaoId, cor, estado, className, style, mods }: PropsVeiculo): ReactElement {
   return (
-    <Ilustracao a={amostraDoVeiculo(forma, cor, versaoId, semente, estado)} largura={largura} rotulo={rotulo} className={className} style={style}
+    <Ilustracao a={amostraDoVeiculo(forma, cor, versaoId, semente, estado, visualDoVeiculo(forma, mods))} largura={largura} rotulo={rotulo} className={className} style={style}
       dados={{ 'data-forma': forma, ...(versaoId ? { 'data-modelo': versaoId } : {}), ...(estado !== undefined && estado < 60 ? { 'data-desgaste': estado < 40 ? 'cansado' : 'usado' } : {}) }} />
   );
 }

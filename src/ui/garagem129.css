@@ -1,0 +1,35 @@
+/* VIDA 12.9 — a garagem à vista: a cena (os veículos lado a lado no chão), os cartões com desenho, a prévia da peça. */
+.gar129 { display: grid; gap: var(--space-3); min-width: 0; }
+.gar129__resumo { margin: 0; }
+.gar129__cena {
+  display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: center; gap: var(--space-2);
+  padding: var(--space-3) var(--space-2) var(--space-2); border-radius: var(--radius-sm); line-height: 0;
+  background: linear-gradient(to bottom, var(--bg-inset) 0 72%, color-mix(in oklab, var(--rule-strong) 45%, var(--bg-inset)) 72% 100%);
+  box-shadow: inset 0 0 0 1px var(--rule);
+}
+.gar129__vaga { display: inline-block; max-width: 100%; }
+.gar129__vaga svg { max-width: 100%; height: auto; }
+.gar129__vaga--colecao { filter: drop-shadow(0 0 6px color-mix(in oklab, #b8964a 45%, transparent)); }
+.gar129__organizar { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--space-2); }
+.gar129__ordem { min-width: 9rem; }
+.gar129__cartoes { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr)); }
+.gar129__cartao { display: grid; gap: var(--space-2); align-content: start; padding: var(--space-3); border-radius: var(--radius-sm); background: var(--surface); box-shadow: inset 0 0 0 1px var(--rule-strong); min-width: 0; }
+.gar129__cartao--colecao { box-shadow: inset 0 0 0 1px color-mix(in oklab, #b8964a 60%, var(--rule-strong)); }
+.gar129__desenho { line-height: 0; text-align: center; background: var(--bg-inset); border-radius: var(--radius-sm); padding: var(--space-2); }
+.gar129__desenho svg { max-width: 100%; height: auto; }
+.gar129__corpo { display: grid; gap: var(--space-1); min-width: 0; }
+.gar129__nome { margin: 0; overflow-wrap: anywhere; }
+.gar129__selos { margin: 0; display: flex; flex-wrap: wrap; gap: var(--space-1); }
+.gar129__selos .pat-selo { margin-left: 0; }
+.gar129__dados { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-1) var(--space-3); }
+.gar129__dados div { min-width: 0; }
+.gar129__dados dt { font-size: var(--type-caption); color: var(--text-secondary); }
+.gar129__dados dd { margin: 0; overflow-wrap: anywhere; }
+.gar129__mais { color: var(--success); }
+.gar129__menos { color: var(--text-secondary); }
+.gar129__raridade, .gar129__pecas { margin: 0; overflow-wrap: anywhere; }
+.gar129__historia ol { margin: var(--space-1) 0 0; padding-left: var(--space-4); }
+.gar129__cartao > .gar129__corpo > .botao { justify-self: start; }
+.pz-veiculo-desenho { line-height: 0; text-align: center; }
+.pz-veiculo-desenho svg, .pz-veiculo-previa svg { max-width: 100%; height: auto; }
+.pz-veiculo-previa { line-height: 0; flex-basis: 100%; }

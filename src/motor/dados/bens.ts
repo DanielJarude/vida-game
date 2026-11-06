@@ -11,6 +11,7 @@
  * 2026, coerentes com a economia do jogo (não acompanham a tabela do mês).
  * Cidade de custo 1,0.
  */
+import { VERSOES_VEICULO_129 } from './veiculos129';
 
 export type CategoriaVeiculo = 'bicicleta' | 'moto' | 'carro' | 'embarcacao' | 'aeronave';
 
@@ -163,9 +164,11 @@ export interface VersaoVeiculo {
   ano?: number;
   /** REWORK 12: edição limitada — quantas unidades existem (a raridade sustenta o valor; não o garante). */
   limitada?: number;
+  /** VIDA 12.9: quantos se fabricaram (só quando o número é conhecido): a raridade vem daqui, não do preço. */
+  producao?: number;
 }
 
-export const VERSOES_VEICULO: readonly VersaoVeiculo[] = [
+const VERSOES_DE_ANTES: readonly VersaoVeiculo[] = [
   // Bicicletas
   { id: 'caloi_andes', classe: 'bike', marca: 'Caloi', modelo: 'Andes', acabamento: 'aro 26, 21 marchas', dica: 'bicicleta urbana', faixa: 'economica', preco: 950, artigo: 'a', pesoUsado: 3, mercados: ['BR'] },
   { id: 'caloi_vulcan', classe: 'bike', marca: 'Caloi', modelo: 'Vulcan', acabamento: 'aro 29', dica: 'bicicleta de trilha', faixa: 'economica', preco: 1450, artigo: 'a', pesoUsado: 2, mercados: ['BR'] },
@@ -297,6 +300,8 @@ export const VERSOES_VEICULO: readonly VersaoVeiculo[] = [
   { id: 'porsche_911_1973', classe: 'classico', marca: 'Porsche', modelo: '911 T', dica: 'clássico de 1973', faixa: 'alta', preco: 1500000, artigo: 'o', pesoUsado: 0.6, ano: 1973, forma: 'esportivo' },
   { id: 'jaguar_etype', classe: 'classico', marca: 'Jaguar', modelo: 'E-Type Série 1', dica: 'clássico de 1963', faixa: 'alta', preco: 2400000, artigo: 'o', pesoUsado: 0.3, ano: 1963, forma: 'esportivo', lugares: 2 }
 ];
+/** VIDA 12.9: as versões novas (motos, esportivos, luxo, edições limitadas, clássicos) vêm do catálogo `veiculos129`. */
+export const VERSOES_VEICULO: readonly VersaoVeiculo[] = [...VERSOES_DE_ANTES, ...VERSOES_VEICULO_129];
 
 /** A forma de uma versão (o desenho que a representa). */
 export function formaDaVersao(x: VersaoVeiculo | undefined, classe?: string): FormaVeiculo {

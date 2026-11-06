@@ -13,11 +13,16 @@
  * O modelo muda o que muda de verdade entre eles (o farol, as rodas, a carenagem, o tamanho do tanque).
  */
 import { cantos, circulo, escurecer, membro, ret, suave, type Amostra, type Peca } from './nucleo';
+import type { VisualVeiculo } from '../../motor/dados/veiculos129';
+import { MODELOS_MOTO_129, visualNaMoto } from './veiculos129';
 
 const CHAO = 122;
 const PRETO = '#2b2826', PRATA = '#b8b4ad', CROMO = '#d9d6d0', BORRACHA = '#3a3633', COURO = '#2f2a27';
 
-export interface PerfilMoto { farol?: 'redondo' | 'anguloso'; aro?: 'liga' | 'raios' | 'cravos'; carenagem?: boolean; grande?: boolean; parabrisa?: boolean; bau?: boolean;
+export interface PerfilMoto { farol?: 'redondo' | 'anguloso' | 'duplo';
+  /** VIDA 12.9: a scooter grande (encosto, para-brisa alto), a Vespa (a carroceria redonda), a naked robusta (as abas do
+   *  tanque), o escape duplo, a custom de rodas fechadas, a custom baixa, as asas da esportiva. */
+  maxi?: boolean; vespa?: boolean; robusta?: boolean; escapeDuplo?: boolean; custom?: boolean; baixa?: boolean; asas?: boolean; aro?: 'liga' | 'raios' | 'cravos'; carenagem?: boolean; grande?: boolean; parabrisa?: boolean; bau?: boolean;
   /** A moto de trabalho com o bagageiro atrás (a CG da entrega); a naked com o escapamento curto sob o motor (a MT-03). */
   bagageiro?: boolean; escapeCurto?: boolean }
 export const MODELOS_MOTO: Record<string, PerfilMoto> = {
@@ -33,7 +38,7 @@ export const MODELOS_MOTO: Record<string, PerfilMoto> = {
   bmw_r1300gs: { parabrisa: true, grande: true, bau: true }
 };
 
-const roda = (cx: number, r: number, aro: 'liga' | 'raios' | 'cravos' = 'liga'): Peca => ({ tipo: 'pneu', cx, cy: CHAO - r, r, aro, raios: aro === 'liga' ? 6 : undefined, marca: 'roda' });
+const roda = (cx: number, r: number, aro: 'liga' | 'raios' | 'cravos' | 'calota' = 'liga'): Peca => ({ tipo: 'pneu', cx, cy: CHAO - r, r, aro, raios: aro === 'liga' ? 6 : undefined, marca: 'roda' });
 
 function motoneta(cor: string, m: PerfilMoto): Peca[] {
   const eT = 62, eD = 178, r = 22;
@@ -56,9 +61,32 @@ function motoneta(cor: string, m: PerfilMoto): Peca[] {
   ];
 }
 
-function scooter(cor: string): Peca[] {
-  const eT = 70, eD = 176, r = 17;
+/** VIDA 12.9: a Vespa — a carroceria de aço arredondada atrás (as "bochechas"), o escudo alto, o farol no guidão. */
+function vespa(cor: string): Peca[] {
+  const eT = 66, eD = 176, r = 15;
   return [
+    roda(eT, r, 'calota'), roda(eD, r, 'calota'),
+    { tipo: 'metal', d: membro([[168, 44], [eD, CHAO - r]], [5, 4.5]), cor: PRATA, marca: 'garfo' },
+    { tipo: 'massa', d: suave([[38, 80], [50, 58], [78, 54], [104, 64], [110, 92], [96, 106], [52, 106], [36, 96]], true, 0.5), cor, marca: 'carroceria' },
+    { tipo: 'massa', d: ret(98, 94, 50, 8, 3), cor: escurecer(cor, 0.2), marca: 'assoalho' },
+    { tipo: 'massa', d: suave([[142, 102], [150, 66], [160, 42], [172, 40], [170, 70], [164, 102]], true, 0.45), cor, marca: 'escudo' },
+    { tipo: 'massa', d: `M${eD - r - 3} ${CHAO - r + 1}A${r + 4} ${r + 4} 0 0 1 ${eD + r + 3} ${CHAO - r + 1}h-3A${r + 1} ${r + 1} 0 0 0 ${eD - r} ${CHAO - r + 1}Z`, cor, semVolume: true, marca: 'paralama' },
+    { tipo: 'massa', d: suave([[50, 54], [66, 48], [104, 50], [106, 58], [78, 60], [52, 60]], true, 0.35), cor: COURO, marca: 'banco' },
+    { tipo: 'massa', d: circulo(170, 30, 6.5), cor, marca: 'farol-no-guidao' },
+    { tipo: 'luz', d: circulo(171, 30, 4), cor: '#f2ead2', marca: 'farol' },
+    { tipo: 'linha', d: 'M158 30h22', larg: 2 },
+    { tipo: 'luz', d: ret(36, 72, 5, 5, 1.4), cor: '#c8372d' }
+  ];
+}
+
+function scooter(cor: string, m: PerfilMoto = {}): Peca[] {
+  const eT = 70, eD = 176, r = 17;
+  if (m.vespa) return vespa(cor);
+  const extra: Peca[] = m.maxi ? [
+    { tipo: 'massa', d: suave([[40, 50], [50, 40], [58, 42], [56, 54]], true, 0.4), cor: COURO, marca: 'encosto' },
+    { tipo: 'vidro', d: suave([[170, 34], [176, 4], [188, 6], [182, 34]], true, 0.4), claro: true, marca: 'parabrisa-alto' }
+  ] : [];
+  return [...extra,
     roda(eT, r), roda(eD, r),
     { tipo: 'metal', d: membro([[166, 46], [eD, CHAO - r]], [5, 4.5]), cor: PRATA, marca: 'garfo' },
     // A carroceria que esconde o motor (a traseira larga), o assoalho plano, o avental da frente, o para-brisa.
@@ -96,14 +124,20 @@ function deRua(cor: string, m: PerfilMoto): Peca[] {
     ...(m.carenagem ? [{ tipo: 'massa' as const, d: suave([[150, 30], [172, 26], [176, 46], [156, 52]], true, 0.4), cor, marca: 'carenagem' }] : []),
     m.farol === 'anguloso'
       ? { tipo: 'luz', d: cantos([[160, 40, 1], [176, 36, 1], [174, 50, 1], [162, 50, 1]]), cor: '#f2ead2', marca: 'farol' }
+      : m.farol === 'duplo' ? { tipo: 'massa', d: cantos([[158, 36, 3], [176, 34, 3], [176, 52, 3], [160, 52, 3]]), cor: '#3a3633', marca: 'farol' }
       : { tipo: 'massa', d: circulo(166, 44, 8), cor: '#4a4743', marca: 'farol' },
-    ...(m.farol !== 'anguloso' ? [{ tipo: 'luz' as const, d: circulo(167, 44, 5), cor: '#f2ead2' }] : []),
+    ...(m.farol === 'duplo' ? [{ tipo: 'luz' as const, d: circulo(166, 40, 3.2) + circulo(168, 47, 3.2), cor: '#f2ead2', marca: 'farol-duplo' }] : m.farol !== 'anguloso' ? [{ tipo: 'luz' as const, d: circulo(167, 44, 5), cor: '#f2ead2' }] : []),
+    ...(m.robusta ? [{ tipo: 'massa' as const, d: suave([[132, 48], [154, 40], [160, 56], [140, 66]], true, 0.4), cor: escurecer(cor, 0.25), semVolume: true, marca: 'aba-do-tanque' }] : []),
     { tipo: 'linha', d: 'M150 34l8-6h12M154 30l-2-8h6', larg: 2 }
   ];
 }
 
-function esportiva(cor: string): Peca[] {
+function esportiva(cor: string, m: PerfilMoto = {}): Peca[] {
   const eT = 62, eD = 184, r = 23;
+  const extra: Peca[] = [
+    ...(m.asas ? [{ tipo: 'massa' as const, d: 'M164 60l14 -2l-4 7z', cor: escurecer(cor, 0.35), semVolume: true, marca: 'asa' }] : []),
+    ...(m.farol === 'anguloso' ? [{ tipo: 'luz' as const, d: cantos([[168, 46, 1], [180, 48, 1], [178, 51, 1], [167, 49, 1]]), cor: '#f2ead2', marca: 'farol-fino' }] : [])
+  ];
   return [
     roda(eT, r), roda(eD, r),
     { tipo: 'metal', d: membro([[eT, CHAO - r], [118, 90]], [6, 7]), cor: PRETO },
@@ -117,14 +151,21 @@ function esportiva(cor: string): Peca[] {
     { tipo: 'massa', d: suave([[66, 50], [96, 54], [110, 60], [80, 60]], true, 0.4), cor: COURO, marca: 'banco' },
     { tipo: 'luz', d: cantos([[176, 52, 1], [188, 54, 1], [184, 60, 1], [174, 58, 1]]), cor: '#f2ead2', marca: 'farol' },
     { tipo: 'luz', d: ret(38, 40, 6, 4, 1), cor: '#c8372d' },
-    { tipo: 'linha', d: 'M130 64l30 -10', larg: 1, fino: true }
+    { tipo: 'linha', d: 'M130 64l30 -10', larg: 1, fino: true },
+    ...extra
   ];
 }
 
 function classica(cor: string, m: PerfilMoto): Peca[] {
   const eT = 60, eD = 182, r = 23;
+  // VIDA 12.9: a custom grande (rodas fechadas, para-lamas cheios), a custom baixa (o banco rente), o escape duplo.
+  const extra: Peca[] = [
+    ...(m.custom ? [{ tipo: 'massa' as const, d: `M${eD - r - 4} ${CHAO - r + 2}A${r + 5} ${r + 5} 0 0 1 ${eD + r + 4} ${CHAO - r + 2}h-3A${r + 2} ${r + 2} 0 0 0 ${eD - r - 1} ${CHAO - r + 2}Z`, cor, semVolume: true, marca: 'paralama-cheio' }, { tipo: 'massa' as const, d: ret(44, 48, 22, 10, 4), cor: COURO, marca: 'banco-garupa' }] : []),
+    ...(m.baixa ? [{ tipo: 'massa' as const, d: ret(62, 62, 46, 8, 4), cor: COURO, marca: 'banco-baixo' }] : []),
+    ...(m.escapeDuplo ? [{ tipo: 'metal' as const, d: membro([[120, 92], [80, 96], [38, 90]], [5, 5.5, 6]), cor: CROMO, marca: 'escapamento-duplo' }] : [])
+  ];
   return [
-    roda(eT, r, m.aro ?? 'raios'), roda(eD, r, m.aro ?? 'raios'),
+    roda(eT, r, m.custom ? 'calota' : m.aro ?? 'raios'), roda(eD, r, m.custom ? 'calota' : m.aro ?? 'raios'),
     { tipo: 'metal', d: membro([[eT, CHAO - r], [118, 90]], [5.5, 6.5]), cor: PRETO },
     { tipo: 'metal', d: membro([[156, 40], [eD, CHAO - r]], [5, 4.5]), cor: CROMO, marca: 'garfo' },
     // O motor clássico (aletas grandes), o escapamento cromado comprido.
@@ -137,14 +178,20 @@ function classica(cor: string, m: PerfilMoto): Peca[] {
     { tipo: 'massa', d: `M${eT - r - 4} ${CHAO - r - 4}A${r + 5} ${r + 5} 0 0 1 ${eT + r * 0.4} ${CHAO - r * 1.95}l1 3A${r + 2} ${r + 2} 0 0 0 ${eT - r - 1} ${CHAO - r - 3}Z`, cor, semVolume: true },
     { tipo: 'massa', d: circulo(166, 40, 8.5), cor: CROMO, marca: 'farol' },
     { tipo: 'luz', d: circulo(167, 40, 5.5), cor: '#f2ead2' },
-    { tipo: 'linha', d: 'M146 30l10 -2h12', larg: 2 }
+    { tipo: 'linha', d: 'M146 30l10 -2h12', larg: 2 },
+    ...extra
   ];
 }
 
 function trilha(cor: string, m: PerfilMoto): Peca[] {
   const eT = 60, eD = 186, rT = 23, rD = 25;
+  const extra: Peca[] = [
+    ...(m.bagageiro ? [{ tipo: 'metal' as const, d: ret(28, 32, 30, 3.4, 1), cor: '#4a4743', marca: 'bagageiro' }] : []),
+    ...(m.carenagem ? [{ tipo: 'massa' as const, d: suave([[140, 30], [160, 22], [166, 44], [146, 54]], true, 0.4), cor, marca: 'carenagem' }] : []),
+    ...(m.farol === 'redondo' ? [{ tipo: 'massa' as const, d: circulo(166, 28, 7.5), cor: '#4a4743', marca: 'farol-redondo' }, { tipo: 'luz' as const, d: circulo(167, 28, 4.6), cor: '#f2ead2' }] : [])
+  ];
   return [
-    roda(eT, rT, 'cravos'), roda(eD, rD, 'cravos'),
+    roda(eT, rT, m.aro ?? 'cravos'), roda(eD, rD, m.aro ?? 'cravos'),
     { tipo: 'metal', d: membro([[eT, CHAO - rT], [118, 80]], [6, 7]), cor: PRETO },
     // A suspensão alta e longa na frente (o que é a trilha).
     { tipo: 'metal', d: membro([[160, 26], [eD, CHAO - rD]], [5.5, 5]), cor: '#c9a23a', marca: 'garfo' },
@@ -162,14 +209,16 @@ function trilha(cor: string, m: PerfilMoto): Peca[] {
     { tipo: 'linha', d: 'M150 22l10 -6h14', larg: 2 },
     { tipo: 'luz', d: ret(34, 38, 5, 4, 1), cor: '#c8372d' },
     // REWORK 12: a big trail de viagem leva as malas laterais de alumínio.
-    ...(m.bau ? [{ tipo: 'metal' as const, d: ret(40, 54, 34, 20, 3), cor: '#8d8f92', marca: 'mala' }] : [])
+    ...(m.bau ? [{ tipo: 'metal' as const, d: ret(40, 54, 34, 20, 3), cor: '#8d8f92', marca: 'mala' }] : []),
+    ...extra
   ];
 }
 
-export function moto(forma: 'cub' | 'scooter' | 'street' | 'esportiva' | 'cruiser' | 'trail', cor: string, versaoId?: string): Amostra {
-  const m = (versaoId && MODELOS_MOTO[versaoId]) || {};
-  const pecas = forma === 'cub' ? motoneta(cor, m) : forma === 'scooter' ? scooter(cor) : forma === 'esportiva' ? esportiva(cor) : forma === 'cruiser' ? classica(cor, m) : forma === 'trail' ? trilha(cor, m) : deRua(cor, m);
-  return { vb: [240, 132], chao: CHAO, sombra: [122, 76], pecas };
+export function moto(forma: 'cub' | 'scooter' | 'street' | 'esportiva' | 'cruiser' | 'trail', cor: string, versaoId?: string, visual?: VisualVeiculo): Amostra {
+  const m = (versaoId && (MODELOS_MOTO[versaoId] ?? MODELOS_MOTO_129[versaoId])) || {};
+  const pecas = forma === 'cub' ? motoneta(cor, m) : forma === 'scooter' ? scooter(cor, m) : forma === 'esportiva' ? esportiva(cor, m) : forma === 'cruiser' ? classica(cor, m) : forma === 'trail' ? trilha(cor, m) : deRua(cor, m);
+  // VIDA 12.9: o acabamento e as rodas escolhidas aparecem no desenho.
+  return { vb: [240, 132], chao: CHAO, sombra: [122, 76], pecas: visualNaMoto(pecas, forma, cor, visual) };
 }
 
 /* ------------------------------------------------------------ Bicicletas */

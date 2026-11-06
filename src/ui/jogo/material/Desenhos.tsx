@@ -97,9 +97,9 @@ export function estiloDaLataria(cor: string): Record<string, string | number> {
  * MODELO (`versaoId`), a cor do anúncio ou do bem e o estado. `semente` continua valendo para o que não tem modelo (a
  * pequena variação). As classes e as variáveis de estilo de antes ficam (o CSS e os testes leem a cor do anúncio aqui).
  */
-export function DesenhoVeiculo({ forma, rotulo, largura = 48, semente, versaoId, cor, estado }: { forma: FormaVeiculo; rotulo?: string; largura?: number; semente?: string; versaoId?: string; cor?: string; estado?: number }) {
+export function DesenhoVeiculo({ forma, rotulo, largura = 48, semente, versaoId, cor, estado, mods }: { forma: FormaVeiculo; rotulo?: string; largura?: number; semente?: string; versaoId?: string; cor?: string; estado?: number; /** VIDA 12.9: as peças feitas no bem (aparecem no desenho). */ mods?: Readonly<Record<string, string>> }) {
   return (
-    <IlustracaoVeiculo forma={forma} rotulo={rotulo} largura={largura} semente={semente} versaoId={versaoId ?? semente} cor={cor} estado={estado}
+    <IlustracaoVeiculo forma={forma} rotulo={rotulo} largura={largura} semente={semente} versaoId={versaoId ?? semente} cor={cor} estado={estado} mods={mods}
       className={`desenho-veiculo desenho-veiculo--${forma}${cor ? ' desenho-veiculo--colorido' : ''}`} style={cor ? estiloDaLataria(cor) : undefined} />
   );
 }

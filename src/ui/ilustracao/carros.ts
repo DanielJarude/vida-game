@@ -7,6 +7,8 @@
  * variação da semente — o desenho nunca falta.
  */
 import { cantos, entreX, escurecer, misturar, num as f, poligono, ret, variacao, type Amostra, type Peca, type Pt } from './nucleo';
+import type { VisualVeiculo } from '../../motor/dados/veiculos129';
+import { brilhoDoAcabamento, corComAcabamento, extrasDoCarro, MODELOS_CARRO_129, peliculaSobre, type Extras129 } from './veiculos129';
 
 export type Traseira = 'hatch' | 'tres' | 'fastback' | 'cacamba' | 'caixa';
 
@@ -20,13 +22,15 @@ export interface PerfilCarro {
   tT: number; tD: number; pb: number; vol?: number;
   colunas: number[];
   farol?: 'fino' | 'redondo' | 'alto' | 'paralama';
-  rodas?: 'calota' | 'liga' | 'cravos';
+  rodas?: 'calota' | 'liga' | 'cravos' | 'raios';
   raios?: number;
   rack?: boolean; estribo?: boolean; cava?: boolean; santoAntonio?: boolean; tomada?: boolean;
   /** o teto de outra cor (o C3, o Nivus) */
   tetoCor?: string;
   /** o ombro largo sobre a roda de trás (o 911) */
   ombro?: number;
+  /** VIDA 12.9: o que é do modelo e não cabe nos números (aletas, asa, cromados, tomadas, estepe, faixas). */
+  extras?: Extras129;
 }
 
 const CHAO = 122;
@@ -85,14 +89,17 @@ export const MODELOS: Record<string, Partial<PerfilCarro>> = {
 /** O perfil de um carro: o da família, os números do modelo (se houver) e, sem modelo, a pequena variação da semente. */
 export function perfilDoCarro(familia: keyof typeof FAMILIAS, versaoId?: string, semente?: string): PerfilCarro {
   const base = FAMILIAS[familia];
-  const doModelo = versaoId ? MODELOS[versaoId] : undefined;
+  const doModelo = versaoId ? MODELOS[versaoId] ?? MODELOS_CARRO_129[versaoId] : undefined;
   if (doModelo) return { ...base, ...doModelo };
   const [a, b, d, e] = variacao(semente);
   return { ...base, teto: base.teto + 1.6 * a, tD: base.tD + 3 * b, pb: base.pb + 2.4 * b, capo: base.capo + 1.2 * d, r: base.r + 0.5 * e, x1: base.x1 + 1.6 * d, eD: base.eD + 1.2 * d };
 }
 
 /** O carro, em peças: a lataria na cor do carro, os vidros, as portas, as luzes, as rodas — e o que é da família. */
-export function carro(p: PerfilCarro, cor: string, estado?: number): Amostra {
+export function carro(p: PerfilCarro, corBase: string, estado?: number, visual?: VisualVeiculo): Amostra {
+  // VIDA 12.9: o acabamento muda a lataria (o fosco apaga o brilho); o teto de outra cor pode ser escolha da pessoa.
+  const cor = corComAcabamento(corBase, visual);
+  if (visual?.tetoCor) p = { ...p, tetoCor: visual.tetoCor };
   const { x0, x1, r, eT, eD, solo, cint, teto, tras, capo, tT, tD, pb } = p;
   const v = p.vol ?? 0;
   const ombro = p.ombro ?? 0;
@@ -117,7 +124,7 @@ export function carro(p: PerfilCarro, cor: string, estado?: number): Amostra {
   const portas = p.colunas.map(c => xa + (xb - xa) * c);
   const yLanterna = p.traseira === 'cacamba' ? cint : tras;
   const pecas: Peca[] = [
-    { tipo: 'massa', d: corpo, cor: pintura, marca: 'lataria' },
+    { tipo: 'massa', d: corpo, cor: pintura, marca: 'lataria', ...(visual?.acabamento ? { semVolume: visual.acabamento === 'fosco' || visual.acabamento === 'acetinado', attrs: { 'data-acabamento': visual.acabamento } } : {}) },
     // A caixa de roda escura (sem ela, o papel aparecia em volta do pneu, como num desenho infantil).
     ...[eT, eD].map(x => ({ tipo: 'massa' as const, d: `M${f(x - R + 0.6)} ${solo}A${R - 0.6} ${R - 0.6} 0 0 1 ${f(x + R - 0.6)} ${solo}Z`, cor: '#1f1d1b', semVolume: true, marca: 'caixa-de-roda' })),
     // O teto de outra cor.
@@ -133,9 +140,11 @@ export function carro(p: PerfilCarro, cor: string, estado?: number): Amostra {
         : p.farol === 'alto' ? { tipo: 'luz', d: ret(x1 - 11, capo + 4, 10, 5, 1.6), cor: '#f2ead2', marca: 'farol' }
           : { tipo: 'luz', d: cantos([[x1 - 12, capo + 5, 1.5], [x1 - 1, capo + 6.5, 1.5], [x1 - 1, capo + 10, 1.5], [x1 - 10, capo + 9, 1.5]]), cor: '#f2ead2', marca: 'farol' },
     { tipo: 'luz', d: ret(x0 + 0.6, yLanterna + 3, 4.6, 7, 1), cor: '#c8372d', marca: 'lanterna' },
-    { tipo: 'pneu', cx: eT, cy: CHAO - r, r, aro: p.rodas ?? 'liga', raios: p.raios },
-    { tipo: 'pneu', cx: eD, cy: CHAO - r, r, aro: p.rodas ?? 'liga', raios: p.raios }
+    ...[eT, eD].map((cx): Peca => (visual?.roda ? { tipo: 'pneu', cx, cy: CHAO - r, r, aro: visual.roda.estilo, raios: visual.roda.raios, corAro: visual.roda.cor, aroMaior: visual.roda.aroMaior, marca: 'roda' } : { tipo: 'pneu', cx, cy: CHAO - r, r, aro: p.rodas ?? 'liga', raios: p.raios }))
   ];
+  // VIDA 12.9: o reflexo do acabamento, a película, o que é do modelo e o que a pessoa pôs (antes das rodas, por baixo delas).
+  const vidrosDoCarro = pecas.filter(x => x.tipo === 'vidro');
+  pecas.splice(pecas.length - 2, 0, ...brilhoDoAcabamento(p, pintura, visual, corpo), ...(visual?.pelicula ? peliculaSobre(vidrosDoCarro) : []), ...extrasDoCarro(p, pintura, visual));
   // O que é da família: o rack no teto, o plástico dos para-lamas, o estribo, a caçamba e o santo-antônio, a tomada.
   if (p.rack) pecas.splice(1, 0, { tipo: 'metal', d: ret(gxTopo + 2, teto - 4, Math.max(10, tD - gxTopo - 10), 3, 1), cor: '#4a4643', marca: 'rack' });
   if (p.cava) for (const x of [eT, eD]) pecas.splice(pecas.length - 2, 0, { tipo: 'massa', d: `M${f(x - R - 2)} ${solo + 0.6}A${R + 2} ${R + 2} 0 0 1 ${f(x + R + 2)} ${solo + 0.6}h-3A${R - 1} ${R - 1} 0 0 0 ${f(x - R + 1)} ${solo + 0.6}Z`, cor: '#3a3633', semVolume: true, marca: 'cava' });

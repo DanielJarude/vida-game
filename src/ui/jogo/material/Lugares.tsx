@@ -575,7 +575,7 @@ function Oficina({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
       {lista.map(b => b.tipo === 'veiculo' && (
         <li key={b.id} className="oficina">
           <div className="oferta oferta--estatica">
-            <DesenhoVeiculo forma={formaDaVersao(versaoVeiculo(b.versaoId), b.modeloId)} semente={b.id} versaoId={b.versaoId} cor={corDoVeiculo(b, modeloVeiculo(b.modeloId).categoria).cor} estado={b.estado} largura={64} />
+            <DesenhoVeiculo forma={formaDaVersao(versaoVeiculo(b.versaoId), b.modeloId)} semente={b.id} versaoId={b.versaoId} cor={corDoVeiculo(b, modeloVeiculo(b.modeloId).categoria).cor} estado={b.estado} mods={b.mods} largura={64} />
             <span className="oferta__texto"><strong>{capitalizar(nomeComCor(b))} {b.anoFabricacao ?? ''}</strong><span>{estadoDoVeiculo(b)}{b.problema ? ` — ${dinheiroCheio(b.problema.custo)}` : ''}</span></span>
           </div>
           <div className="grupo-acoes grupo-acoes--linha">

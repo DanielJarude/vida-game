@@ -4,7 +4,7 @@
  *   Resumo     o que é disponível, investido, preso (imóveis, veículos, coleção, empresas), o que se deve, o líquido —
  *              e a diferença entre TER e PODER PAGAR AGORA; o que o patrimônio rende e custa por mês; a evolução.
  *   Imóveis    cada imóvel com o que vale, o que rende, quem administra, o que custa.
- *   Garagem    os veículos lado a lado (onde estão, quanto valem, quanto custam), o principal, os guardados longe.
+ *   Garagem    os veículos expostos (12.9: cartões com o desenho, a cena, filtros e ordem, raridade e história), os guardados longe.
  *   Coleção    as peças (raridade, procedência, o valor estimado), vender rápido ou em leilão, ceder ao museu.
  *   Empresas   as empresas suas (os números do último ano, quem toca, as decisões), abrir uma, comprar uma parte.
  *   Objetos    as coisas da vida (os usos).
@@ -18,9 +18,8 @@ import type { Acao } from '../../motor/acoes';
 import type { Colecionavel, Empresa, TipoEmpresa, Veiculo, Vida } from '../../motor/tipos';
 import { idade } from '../../motor/nucleo';
 import { anoDe } from '../../motor/tempo';
-import { modeloVeiculo } from '../../motor/dados/bens';
-import { economiaLocal, municipio } from '../../motor/dados/lugares';
-import { custosDeVeiculo, guardadoLonge, nomeComCor, ondeEsta, custoDeTrazer } from '../../motor/sistemas/veiculos';
+import { municipio } from '../../motor/dados/lugares';
+import { guardadoLonge, nomeComCor, ondeEsta, custoDeTrazer } from '../../motor/sistemas/veiculos';
 import { aluguelDeMercado } from '../../motor/sistemas/imoveis';
 import { colecoesDaVida, temAdega, colecao, custoDoServico, estimativaDeVenda, lojaDeColecaoNaCidade, ofertasDeColecao, PROCEDENCIA_EM_PALAVRAS, propostasDeColecionadores, ROTULO_SERVICO, valorDaColecao, custoDaColecao, type OfertaDeColecao, type ServicoDeColecao } from '../../motor/sistemas/colecao';
 import { NOME_GRAU, ORDEM_DO_GRAU } from '../../motor/dados/colecao128';
@@ -44,7 +43,8 @@ import { sobDemanda } from '../util/sobDemanda';
 
 /** REWORK 12.4: a personalização mora num pacote à parte (carrega quando a tela aparece). */
 const OrganizarObjetos = sobDemanda(() => import('./Personalizar').then(m => m.OrganizarObjetos));
-const PersonalizarVeiculos = sobDemanda(() => import('./Personalizar').then(m => m.PersonalizarVeiculos));
+// VIDA 12.9: a garagem à vista (os cartões com desenho, a cena, a organização) — sob demanda, como a personalização.
+const GaragemVisual = sobDemanda(() => import('./Garagem129').then(m => m.GaragemVisual));
 
 export type PartePatrimonio = 'resumo' | 'imoveis' | 'garagem' | 'colecao' | 'empresas' | 'objetos';
 
@@ -216,35 +216,12 @@ function Imoveis({ vida, agir, abrir }: Props) {
 
 function Garagem({ vida, agir, abrir }: Props) {
   const lista = vida.financas.bens.filter((b): b is Veiculo => b.tipo === 'veiculo');
-  const c = economiaLocal(vida.moradia.municipioId).custo;
   const lojas = (['concessionaria', 'usados', 'motos', 'colecionador', 'nautica', 'aeroclube'] as const).filter(l => lojaNaCidade(vida.moradia.municipioId, l));
   const nomeLoja = { concessionaria: 'Concessionária', usados: 'Usados', motos: 'Motos e bicicletas', colecionador: 'Garagem de colecionador', nautica: 'Náutica', aeroclube: 'Aeroclube' } as const;
   return (
     <Secao titulo="Garagem">
       {!lista.length && <p className="nota">Nenhum veículo. Carro dá mobilidade — e imposto, seguro, combustível e oficina.</p>}
-      {lista.length > 0 && (
-        <div className="pat-rolagem" data-rola-x>
-          <table className="pat-tabela pat-tabela--garagem">
-            <caption className="sr-only">Os seus veículos, lado a lado</caption>
-            <thead><tr><th scope="col">Veículo</th><th scope="col">Onde está</th><th scope="col">Vale</th><th scope="col">Custa/mês</th><th scope="col">Estado</th></tr></thead>
-            <tbody>
-              {lista.map(b => {
-                const custo = custosDeVeiculo(vida, b, c, vida.financas.veiculoPrincipal === b.id ? 1 : 0.7).reduce((s, x) => s + x.valor, 0);
-                return (
-                  <tr key={b.id}>
-                    <th scope="row">{cap(nomeComCor(b))}{b.anoFabricacao ? ` ${b.anoFabricacao}` : ''}{vida.financas.veiculoPrincipal === b.id ? <span className="pat-selo">principal</span> : null}{modeloVeiculo(b.modeloId).segmento === 'classico' ? <span className="pat-selo">clássico</span> : null}</th>
-                    <td>{guardadoLonge(vida, b) ? `guardado em ${municipio(ondeEsta(vida, b)).nome}` : 'com você'}</td>
-                    <td>{dinheiroCurto(b.valor)}</td>
-                    <td>{dinheiroCurto(custo)}</td>
-                    <td>{b.estado >= 80 ? 'inteiro' : b.estado >= 60 ? 'bom' : b.estado >= 40 ? 'gasto' : 'cansado'}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-      {lista.length > 0 && <PersonalizarVeiculos vida={vida} agir={agir} />}
+      {lista.length > 0 && <GaragemVisual vida={vida} agir={agir} />}
       {lista.filter(b => guardadoLonge(vida, b)).map(b => {
         const t = custoDeTrazer(vida, b);
         return (
@@ -289,7 +266,7 @@ function SuasColecoes({ vida }: { vida: Vida }) {
               <summary><strong>{c.nome}</strong> <span className="nota">· {c.itens.length} {c.itens.length === 1 ? 'peça' : 'peças'}{c.valor ? ` · uns ${dinheiroCurto(c.valor)}` : ''}{c.expostas ? ` · ${c.expostas} à vista` : ''}{c.expositor ? ` · ${c.expositor}` : ''}</span></summary>
               <p className="nota">{ORDEM_DO_GRAU.filter(g => c.graus[g]).reverse().map(g => `${NOME_GRAU[g]}: ${c.graus[g]}`).join(' · ')}</p>
               <ul className="pat-colecoes__itens">
-                {c.itens.slice(0, 30).map(x => <li key={x.id}><span className={`pat-grau pat-grau--${x.grau}`}>{NOME_GRAU[x.grau]}</span> {cap(x.nome)}{x.valor ? ` — ${dinheiroCurto(x.valor)}` : ''} <span className="nota">({x.onde}{x.procedencia ? `; ${x.procedencia}` : ''})</span></li>)}
+                {c.itens.slice(0, 30).map(x => <li key={x.id}><span className={`pat-grau pat-grau--${x.grau}`}>{NOME_GRAU[x.grau]}</span> {cap(x.nome)}{x.valor ? ` — ${dinheiroCurto(x.valor)}` : ''} <span className="nota">({x.onde}{x.procedencia ? `; ${x.procedencia}` : ''}{c.id === 'carros' && x.detalhe ? `; ${x.detalhe}` : ''})</span></li>)}
               </ul>
               {c.id === 'vinho' && !temAdega(vida) && <p className="nota">Sem adega em casa, o vinho de guarda envelhece mal: perde valor todo ano.</p>}
             </details>

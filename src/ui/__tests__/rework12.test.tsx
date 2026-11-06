@@ -75,10 +75,12 @@ describe('Vida · Patrimônio em partes', () => {
     expect(document.activeElement?.textContent).toMatch(/^Imóveis/);
   });
 
-  it('garagem lado a lado; coleção com venda confirmada; empresa com os números e as decisões', () => {
+  it('garagem à vista; coleção com venda confirmada; empresa com os números e as decisões', async () => {
     abrirPatrimonio(comTudo());
     fireEvent.click(screen.getByRole('tab', { name: /^Garagem/ }));
-    expect(screen.getByRole('table', { name: /veículos, lado a lado/ })).toBeTruthy();
+    // VIDA 12.9: a tabela lado a lado virou a garagem à vista (cartões com o desenho, o valor, o custo, o estado).
+    const garagem = await screen.findByRole('region', { name: /veículos, expostos/ });
+    expect(garagem.querySelectorAll('.gar129__cartao svg').length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole('tab', { name: /^Coleção/ }));
     const vender = screen.getAllByRole('button', { name: 'Vender…' });
     fireEvent.click(vender[vender.length - 1]);

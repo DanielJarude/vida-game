@@ -25,7 +25,9 @@ import { acabamentoDeOrigem, ASPECTOS_DO_COMODO, COMODOS, opcaoDeAcabamento, SEG
 import { CenaDoComodo } from '../ilustracao/comodos';
 import { disporComodo } from '../ilustracao/disposicao';
 import { ESTILOS, itemEstilo, lugaresDoItem, NOME_OCASIAO, adequacaoDaRoupa, estiloDominante, nomeDoEstilo } from '../../motor/dados/estilo';
-import { modeloVeiculo } from '../../motor/dados/bens';
+import { formaDaVersao, modeloVeiculo, versaoVeiculo } from '../../motor/dados/bens';
+import { opcaoServe, pecaServe } from '../../motor/dados/veiculos129';
+import { corDoVeiculo } from '../../motor/dados/pertences';
 import { economiaLocal } from '../../motor/dados/lugares';
 import { pecasDaCategoria, opcaoDaPeca } from '../../motor/dados/personalizacaoVeiculo';
 import { GENEROS, LINGUAGENS } from '../../motor/dados/gostos';
@@ -36,7 +38,7 @@ import { afetoDe, origemEmPalavras, palavraDoAfeto } from '../../motor/sistemas/
 import { valorDeRevenda } from '../../motor/sistemas/coisas';
 import { externoAtual, externoDisponivel, opcoesExternasPara, precoExterno, reformaExterna, usosDoComodo } from '../../motor/sistemas/casaViva';
 import { ASPECTOS_EXTERNOS, NOME_DO_ASPECTO_EXTERNO, type AspectoExterno } from '../../motor/dados/casa128';
-import { CenaDaCasa, ladoDeForaDe } from './material/Desenhos';
+import { CenaDaCasa, DesenhoVeiculo, ladoDeForaDe } from './material/Desenhos';
 import { leituraDoLar } from '../leituraMaterial';
 import { colecao } from '../../motor/sistemas/colecao';
 import { textoVeiculo } from '../../motor/sistemas/veiculos';
@@ -44,6 +46,7 @@ import { generosPreferidos, gostosDe, hobbiesQueViramOficio, NOME_DO_GOSTO, prec
 import { BotaoAcao } from '../comum';
 import { dinheiroCurto } from '../leituraMaterial';
 import '../personalizar.css';
+import '../garagem129.css';
 
 interface Props { vida: Vida; agir: (a: Acao) => boolean }
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -519,9 +522,9 @@ function FichaDoObjeto({ vida, agir, refObj }: Props & { refObj: RefObjeto }) {
 
 /* ===================================================================== os veículos */
 
-export function PersonalizarVeiculos({ vida, agir }: Props) {
+export function PersonalizarVeiculos({ vida, agir, inicial, aoFechar }: Props & { /** VIDA 12.9: abrir já num veículo (o cartão da garagem). */ inicial?: string; aoFechar?: () => void }) {
   const lista = vida.financas.bens.filter((b): b is Veiculo => b.tipo === 'veiculo');
-  const [qual, setQual] = useState<string | null>(null);
+  const [qual, setQual] = useState<string | null>(inicial ?? null);
   if (!lista.length || idade(vida) < 18) return null;
   const b = lista.find(x => x.id === qual);
   return (
@@ -531,14 +534,16 @@ export function PersonalizarVeiculos({ vida, agir }: Props) {
           <span className="rotulo-pequeno">Personalizar</span>
           {lista.map(x => <button key={x.id} type="button" className="botao botao--discreto" onClick={() => setQual(x.id)}>{cap(textoVeiculo(x))}{x.apelido ? ` "${x.apelido}"` : ''}</button>)}
         </div>
-      ) : b ? <PainelDoVeiculo vida={vida} agir={agir} b={b} aoFechar={() => setQual(null)} /> : null}
+      ) : b ? <PainelDoVeiculo vida={vida} agir={agir} b={b} aoFechar={() => { setQual(null); aoFechar?.(); }} /> : null}
     </div>
   );
 }
 
 function PainelDoVeiculo({ vida, agir, b, aoFechar }: Props & { b: Veiculo; aoFechar: () => void }) {
   const cat = modeloVeiculo(b.modeloId).categoria;
-  const pecas = pecasDaCategoria(cat);
+  // VIDA 12.9: só as peças que servem nesta forma (o aerofólio não vai numa picape) — e o desenho mostra o que já foi feito.
+  const forma = formaDaVersao(versaoVeiculo(b.versaoId), b.modeloId);
+  const pecas = pecasDaCategoria(cat).filter(p => pecaServe(p, forma) || b.mods?.[p.id]);
   const [grupo, setGrupo] = useState<'estetica' | 'funcional' | 'mais'>('estetica');
   const [nome, setNome] = useState(b.apelido ?? '');
   const garagens = vida.financas.bens.filter(x => x.tipo === 'imovel' && x.id !== vida.moradia.imovelId && !x.alugadoPor);
@@ -549,6 +554,7 @@ function PainelDoVeiculo({ vida, agir, b, aoFechar }: Props & { b: Veiculo; aoFe
         <h3 className="subtitulo">{cap(textoVeiculo(b))}{b.apelido ? ` "${b.apelido}"` : ''}</h3>
         <button type="button" className="botao botao--discreto" onClick={aoFechar}>Fechar</button>
       </div>
+      <div className="pz-veiculo-desenho"><DesenhoVeiculo forma={forma} semente={b.id} versaoId={b.versaoId} cor={corDoVeiculo(b, cat).cor} estado={b.estado} mods={b.mods} largura={220} rotulo={`Como está: ${textoVeiculo(b)}`} /></div>
       <div className="escolha" role="radiogroup" aria-label="O que mexer">
         {([['estetica', 'Aparência'], ['funcional', 'Mecânica'], ['mais', 'Nome, garagem e história']] as const).map(([id, r]) => <button key={id} type="button" role="radio" aria-checked={grupo === id} className={`escolha__item${grupo === id ? ' escolha__item--ativo' : ''}`} onClick={() => setGrupo(id)}>{r}</button>)}
       </div>
@@ -581,13 +587,16 @@ function PecaDoVeiculo({ vida, agir, b, pecaId }: Props & { b: Veiculo; pecaId: 
   const atual = b.mods?.[pecaId] ?? 'original';
   const [escolha, setEscolha] = useState(atual);
   const o = opcaoDaPeca(cat, pecaId, escolha);
+  const forma = formaDaVersao(versaoVeiculo(b.versaoId), b.modeloId);
+  const opcoes = p.opcoes.filter(x => x.id === atual || opcaoServe(x, forma));
   const efeito = o && escolha !== atual ? [(o.fragilidade ?? 1) > 1 ? 'mais oficina' : (o.fragilidade ?? 1) < 1 ? 'menos problema' : '', (o.uso ?? 1) > 1 ? 'gasta mais' : '', (o.valor ?? 1) < 1 ? 'vale menos na revenda' : (o.valor ?? 1) > 1 ? 'segura um pouco de valor' : ''].filter(Boolean).join(', ') : '';
   return (
     <li className="pz-item pz-item--peca">
       <label className="campo">
         <span className="campo__rotulo">{p.nome} · hoje: {opcaoDaPeca(cat, pecaId, atual)?.nome}</span>
-        <select value={escolha} onChange={e => setEscolha(e.target.value)}>{p.opcoes.map(x => <option key={x.id} value={x.id}>{cap(x.nome)}</option>)}</select>
+        <select value={escolha} onChange={e => setEscolha(e.target.value)}>{opcoes.map(x => <option key={x.id} value={x.id}>{cap(x.nome)}</option>)}</select>
       </label>
+      {escolha !== atual && p.tipo === 'estetica' && (cat === 'carro' || cat === 'moto') && <span className="pz-veiculo-previa"><DesenhoVeiculo forma={forma} semente={b.id} versaoId={b.versaoId} cor={o?.cor ?? (pecaId === 'pintura' && escolha === 'original' && b.mods?._fabrica ? b.mods._fabrica.split('|')[0] || undefined : undefined) ?? corDoVeiculo(b, cat).cor} estado={b.estado} mods={{ ...b.mods, [pecaId]: escolha }} largura={150} rotulo={`Como ficaria: ${o?.nome ?? ''}`} /></span>}
       {escolha !== atual && <><span className="nota">{efeito}</span><BotaoAcao vida={vida} agir={agir} acao={agirCom({ o: 'veiculo_peca', bem: b.id, peca: pecaId, opcao: escolha })} variante="principal">Fazer ({dinheiroCurto(custoDaPeca(vida, b, pecaId, escolha))})</BotaoAcao></>}
     </li>
   );
