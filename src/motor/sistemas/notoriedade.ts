@@ -43,7 +43,7 @@ export function palavraDaNotoriedade(v: Vida, x = v.notoriedade?.valor ?? 0): st
   return [flex(g, 'anônimo', 'anônima', 'anônime'), flex(g, 'conhecido', 'conhecida', 'conhecide') + ' localmente', flex(g, 'reconhecido', 'reconhecida', 'reconhecide'), flex(g, 'famoso', 'famosa', 'famose'), flex(g, 'muito famoso', 'muito famosa', 'muito famose')][k] ?? PALAVRAS[k];
 }
 
-const ESCOPO_CARGO: Record<string, number> = { vereador: 0.45, prefeito: 0.7, deputado_estadual: 0.6, deputado_federal: 0.8, senador: 0.9, governador: 0.95 };
+const ESCOPO_CARGO: Record<string, number> = { vereador: 0.45, prefeito: 0.7, deputado_estadual: 0.6, deputado_federal: 0.8, senador: 0.9, governador: 0.95, presidente: 1 };
 const PESO_DIVISAO = [0, 0.12, 0.28, 0.55, 0.85];
 
 /**

@@ -64,6 +64,26 @@ import type { AcaoProfissional } from './profissao';
 import { registrarQuemApareceu } from './rede';
 import { leituraDoNome, porOrigem } from './notoriedade';
 import { ACOES_DO_CARGO, disponibilidadeDoCargo, executarDoCargo, rotuloDoCargo } from './mandato';
+import { caiNoCiclo, cargoPresidencial, ciclosDoCargo129, crisesDoCargo129, ehCrise129 } from '../dados/presidencia129';
+
+/**
+ * VIDA 12.9 · A PRESIDÊNCIA mora num pacote acima (`presidencia129`): a corrida (adversários, debate, segundo turno), o
+ * governo do país e o fim do mandato. Ela registra estes ganchos ao carregar; aqui, só a chamada no lugar certo.
+ */
+export interface GanchosPresidencia {
+  elegivel?: (v: Vida, tEleicao: number) => Veredito | undefined;
+  forca?: (v: Vida, tEleicao: number) => Veredito;
+  registrar?: (v: Vida) => void;
+  apurar?: (v: Vida, conta: { fatores: FatorEleitoral[]; chance: number }) => { ganhou: boolean; chance: number } | 'adiar';
+  posse?: (v: Vida, reeleicao: boolean) => void;
+  fim?: (v: Vida, como: 'concluiu' | 'renunciou') => void;
+  ano?: (v: Vida) => void;
+  horizonte?: (v: Vida) => string | undefined;
+  acoes?: (v: Vida) => AcaoProfissional[];
+  disp?: (v: Vida, valor?: string) => Veredito;
+  exec?: (v: Vida, r: Rng, valor?: string) => SaidaPolitica;
+}
+export const PRESIDENCIA: GanchosPresidencia = {};
 
 /* ================================================================ Catálogo */
 
@@ -114,16 +134,17 @@ const ENTREGAS: Record<Prioridade, string[]> = {
   cultura: ['a quadra do bairro coberta', 'o festival de música da cidade', 'a biblioteca reaberta', 'aulas de esporte para crianças no contraturno']
 };
 
-interface ModeloCargo { tipo: 'municipal' | 'geral'; anos: 4 | 8; executivo: boolean; idade: number; escopo: 'municipio' | 'estado' }
+interface ModeloCargo { tipo: 'municipal' | 'geral'; anos: 4 | 8; executivo: boolean; idade: number; escopo: 'municipio' | 'estado' | 'pais' }
 export const CARGOS: Record<CargoEletivo, ModeloCargo> = {
   vereador: { tipo: 'municipal', anos: 4, executivo: false, idade: 18, escopo: 'municipio' },
   prefeito: { tipo: 'municipal', anos: 4, executivo: true, idade: 21, escopo: 'municipio' },
   deputado_estadual: { tipo: 'geral', anos: 4, executivo: false, idade: 21, escopo: 'estado' },
   deputado_federal: { tipo: 'geral', anos: 4, executivo: false, idade: 21, escopo: 'estado' },
   senador: { tipo: 'geral', anos: 8, executivo: false, idade: 35, escopo: 'estado' },
-  governador: { tipo: 'geral', anos: 4, executivo: true, idade: 30, escopo: 'estado' }
+  governador: { tipo: 'geral', anos: 4, executivo: true, idade: 30, escopo: 'estado' },
+  presidente: { tipo: 'geral', anos: 4, executivo: true, idade: 35, escopo: 'pais' }
 };
-export const ORDEM_CARGOS: CargoEletivo[] = ['vereador', 'prefeito', 'deputado_estadual', 'deputado_federal', 'senador', 'governador'];
+export const ORDEM_CARGOS: CargoEletivo[] = ['vereador', 'prefeito', 'deputado_estadual', 'deputado_federal', 'senador', 'governador', 'presidente'];
 
 /*
  * MUNDO: a escada acima é a do jogo (local → regional → nacional); cada país
@@ -134,7 +155,26 @@ export const ORDEM_CARGOS: CargoEletivo[] = ['vereador', 'prefeito', 'deputado_e
  * como disputá-lo. As funções que não recebem a vida leem o país corrente
  * (`mundo/moeda.paisCorrente`, posto por quem entra no motor).
  */
-const politicaDo = (pais: string) => perfilDoPais(temPerfil(pais) ? pais : PAIS_PADRAO).politica;
+const COM_PRESIDENCIA = new WeakMap<object, ReturnType<typeof perfilDoPais>['politica']>();
+/** O perfil político do país — com a Presidência onde ela é eleita pelo voto direto (`dados/presidencia129`). */
+const politicaDo = (pais: string) => {
+  const id = temPerfil(pais) ? pais : PAIS_PADRAO;
+  const base = perfilDoPais(id).politica;
+  let x = COM_PRESIDENCIA.get(base);
+  if (!x) { const pres = cargoPresidencial(id); x = pres ? { ...base, cargos: { ...base.cargos, presidente: pres } } : base; COM_PRESIDENCIA.set(base, x); }
+  return x;
+};
+
+/**
+ * VIDA 12.9 · o calendário do CARGO no lugar, quando ele não segue o do país: a Presidência no ciclo dela (EUA: de
+ * quatro em quatro anos, nunca no meio do mandato), o Senado dos EUA pela classe das cadeiras do estado, o Distrito de
+ * Colúmbia sem senador nem governador. Um cargo sem regra própria cai em toda eleição do tipo dele.
+ */
+export function cargoNoCiclo(cargo: CargoEletivo, ano: number, pais = paisCorrente(), uf = ''): boolean {
+  const c = ciclosDoCargo129(pais, cargo, uf);
+  return !c || caiNoCiclo(ano, c);
+}
+const ufDaVida = (v: Vida) => municipio(v.moradia.municipioId).uf;
 
 /** O modelo do cargo no país (o brasileiro, com os números do país). */
 export function cargoNoPais(c: CargoEletivo, pais = paisCorrente()): ModeloCargo {
@@ -360,6 +400,8 @@ function horizonteDoMandato(v: Vida): string {
   const cal = calendarioDoMandato(v, m)!;
   // O fim à vista: o último ano, ou a eleição que encerra o mandato já na janela (o aniversário pode cair antes de janeiro).
   const fim = cal.ultimoAno ? 'Último ano' : cal.naJanela?.encerra ? `O mandato vai até o fim de ${cal.anoFinal}` : undefined;
+  const pres = m.cargo === 'presidente' ? PRESIDENCIA.horizonte?.(v) : undefined;
+  if (pres) return pres;
   if (c.executivo && p.consecutivos >= 2) return fim ? `${fim}: reeleição, só depois de um mandato de intervalo. Outro cargo, ou a vida fora.` : 'Segundo mandato: não há terceiro seguido.';
   if (fim) return `${fim}: reeleição, outro cargo ou voltar para a vida de antes.`;
   if (cal.naJanela) return `O mandato vai até ${cal.anoFinal}; a eleição ${cal.naJanela.tipo === 'municipal' ? 'municipal' : 'geral'} de ${cal.naJanela.ano} é para outros cargos${c.executivo ? ' (disputar é renunciar seis meses antes)' : ' (dá para disputar sem largar a cadeira)'}.`;
@@ -391,6 +433,7 @@ export function podeConcorrer(v: Vida, cargo: CargoEletivo, tEleicao: number): V
   const p = v.caminhos.politica;
   if (!existeCargo(cargo, paisDaVida(v))) return bloqueio('impossivel', `${cap(noPais(paisDaVida(v)))} não há esse cargo eletivo.`);
   if (!tiposDeEleicao(ano).includes(c.tipo)) return bloqueio('impossivel', c.tipo === 'municipal' ? 'Esse cargo é da eleição municipal.' : 'Esse cargo é da eleição geral.');
+  if (!cargoNoCiclo(cargo, ano, paisDaVida(v), ufDaVida(v))) return bloqueio('impossivel', cargo === 'presidente' ? 'A eleição presidencial não cai neste ano.' : 'Nesta eleição, esse cargo não está em disputa aqui.');
   const quando = cargo === 'vereador' ? ano * 12 + 7 : tDaPosse(ano);
   if (idadeEm(v.eu.tNasc, quando) < c.idade) return bloqueio('ilegal', `A Constituição exige ${c.idade} anos para ${nomeCargo(v, cargo)} (${cargo === 'vereador' ? 'no registro' : 'na posse'}).`);
   if (v.justica?.prisao) return bloqueio('ilegal', 'Preso não se candidata.');
@@ -400,19 +443,21 @@ export function podeConcorrer(v: Vida, cargo: CargoEletivo, tEleicao: number): V
   if (inel && inel > tEleicao) return bloqueio('ilegal', `Inelegível até ${anoDe(inel)}${politicaDo(paisDaVida(v)).partidosReais ? ' (Lei da Ficha Limpa)' : ', pela condenação'}.`);
   const m = v.caminhos.militar;
   if (m && v.trabalho.atual?.contrato === 'militar' && m.quadro === 'temporario' && v.t - m.tIngresso < 12) return bloqueio('ilegal', 'Durante o serviço militar obrigatório, conscrito não se candidata.');
+  if (cargo === 'presidente') { const x = PRESIDENCIA.elegivel?.(v, tEleicao); if (x) return x; }
   // Militar da ativa: elegível sem filiação — a escolha em convenção supre (TSE, Res. 21.608/2004, art. 14, §1º).
   const naAtiva = militarDaAtiva(v);
   if (p?.partido && p.indicacaoMilitar && !naAtiva) return bloqueio('requisito', 'Fora da ativa, a indicação de militar não vale mais: para disputar, é preciso filiar-se, seis meses antes da eleição.');
   if (!p?.partido || (p.tFiliacao === undefined && !p.indicacaoMilitar)) return bloqueio('requisito', naAtiva ? 'Militar da ativa não se filia, mas pode ser candidato: é preciso que um partido escolha você em convenção.' : `Sem filiação a um partido, não há candidatura ${noPais(paisDaVida(v))}.`);
   if (!p.indicacaoMilitar && tEleicao - (p.tFiliacao ?? tEleicao) < 6) return bloqueio('requisito', 'A filiação precisa ter pelo menos seis meses antes da eleição.');
   const chegou = v.fatos['chegou_cidade'];
-  if (chegou !== undefined && tEleicao - chegou < 6 && (c.escopo === 'municipio' || v.fatos['chegou_uf'] === chegou)) return bloqueio('requisito', 'O domicílio eleitoral precisa ter pelo menos seis meses na circunscrição.');
+  if (chegou !== undefined && tEleicao - chegou < 6 && c.escopo !== 'pais' && (c.escopo === 'municipio' || v.fatos['chegou_uf'] === chegou)) return bloqueio('requisito', 'O domicílio eleitoral precisa ter pelo menos seis meses na circunscrição.');
   const mand = p.mandato;
   if (mand && p.fase === 'mandato') {
     if (mand.cargo === cargo && c.executivo && p.consecutivos >= 2) return bloqueio('ilegal', 'Para prefeito e governador, só uma reeleição seguida.');
     if (!mandatoAcabaNaEleicao(mand, ano) && mand.cargo === cargo) return bloqueio('impossivel', 'O mandato atual ainda não termina nessa eleição.');
     if (cargoNoPais(mand.cargo).executivo && mand.cargo !== cargo) return { grau: 'irregular', motivo: `Para disputar outro cargo, é preciso renunciar ao mandato de ${nomeCargo(v, mand.cargo)} seis meses antes.` };
   }
+  if (cargo === 'presidente') return PRESIDENCIA.forca?.(v, tEleicao) ?? PERMITIDO;
   if (cargo === 'prefeito' && p.apoio < (v.fatos['pol_partido_porte'] === 2 ? 10 : 18)) return { grau: 'improvavel', chance: 0.1, motivo: 'Para prefeito, sem base nenhuma, o partido nem lança o nome.' };
   if ((cargo === 'governador' || cargo === 'senador') && Math.max(p.reputacao, nomePublico(v)) < 40) return { grau: 'improvavel', chance: 0.05, motivo: 'Para um cargo do estado inteiro, é preciso ser conhecido no estado inteiro.' };
   // A cabeça de chapa é escolha do partido: quem chegou ontem raramente é escolhido — por mais famoso que seja.
@@ -425,7 +470,7 @@ export function cargosDaEleicao(v: Vida): { cargo: CargoEletivo; veredito: Vered
   const e = eleicaoNaJanela(v);
   if (!e) return [];
   const tipos = tiposDeEleicao(e.ano);
-  return cargosDoPais(paisDaVida(v)).filter(c => tipos.includes(cargoNoPais(c).tipo)).map(cargo => ({ cargo, veredito: podeConcorrer(v, cargo, e.t) }));
+  return cargosDoPais(paisDaVida(v)).filter(c => tipos.includes(cargoNoPais(c).tipo) && cargoNoCiclo(c, e.ano, paisDaVida(v), ufDaVida(v))).map(cargo => ({ cargo, veredito: podeConcorrer(v, cargo, e.t) }));
 }
 
 /* ==================================================================== Portas */
@@ -591,7 +636,7 @@ export function trocarDePartido(v: Vida, r: Rng, nova: string | undefined, porte
 
 /** Quanto custa uma campanha que se paga do bolso, por cargo (reais de hoje). */
 export function custoDeCampanha(v: Vida, cargo: CargoEletivo): number {
-  const base = { vereador: 8000, prefeito: 45000, deputado_estadual: 60000, deputado_federal: 110000, senador: 180000, governador: 220000 }[cargo];
+  const base = { vereador: 8000, prefeito: 45000, deputado_estadual: 60000, deputado_federal: 110000, senador: 180000, governador: 220000, presidente: 900000 }[cargo];
   const porte = municipio(v.moradia.municipioId).perfil;
   const f = cargo === 'vereador' || cargo === 'prefeito' ? (porte === 'metropole' ? 2.2 : porte === 'capital' ? 1.6 : porte === 'metropolitana' ? 1.2 : 0.7) : 1;
   return Math.round(base * f / 1000) * 1000;
@@ -618,6 +663,7 @@ export function registrarCandidatura(v: Vida, cargo: CargoEletivo, tEleicao: num
   p.campanha = { cargo, tEleicao, gasto: 0, nota: 0, etapa: 1 };
   escrever(v, { texto: `Registrou candidatura a ${nomeCargo(v, cargo)} ${peloPartido(p.partido)}, para a eleição de ${anoDe(tEleicao)}.`, relevancia: p.historico.length ? 'biografia' : 'marco', tema: 'trabalho', escolha: true });
   marcar(v, 'candidatura', `${cap(flex(ge(v), 'candidato', 'candidata', 'candidate'))} a ${nomeCargo(v, cargo)}, aos ${idade(v)}.`, 2);
+  if (cargo === 'presidente') PRESIDENCIA.registrar?.(v);
 }
 
 /**
@@ -687,7 +733,7 @@ export function dificuldade(v: Vida, cargo: CargoEletivo): number {
   // REWORK 11 · POL-04: os cargos de cima são disputados por quem já tem nome e máquina (incumbentes, ex-prefeitos de
   // capital, a coligação do governo): o político de carreira ganhava 89% das vezes para deputado federal e 82% para
   // governador. Agora derrota é comum — e a força da trajetória ainda decide quem tem chance.
-  return { vereador: 38 + tam * 6, prefeito: 50 + tam * 8, deputado_estadual: 53, deputado_federal: 70, senador: 77, governador: 76 }[cargo];
+  return { vereador: 38 + tam * 6, prefeito: 50 + tam * 8, deputado_estadual: 53, deputado_federal: 70, senador: 77, governador: 76, presidente: 79 }[cargo];
 }
 
 /** Um número do ano e do partido (a força do partido naquela eleição): o mundo, não o jogador. */
@@ -717,7 +763,7 @@ export const palavraDaChance = (x: number, g: Genero = 'masculino') => (x >= 0.7
 /** Cada fator em palavras, pelo lado em que pesou. */
 function palavraDoFator(v: Vida, id: IdFator, valor: number, cargo: CargoEletivo): string {
   const porte = municipio(v.moradia.municipioId).perfil;
-  const lugar = cargoNoPais(cargo).escopo === 'estado' ? 'no estado' : porte === 'metropole' ? 'numa metrópole' : porte === 'capital' ? 'numa capital' : porte === 'pequena' ? 'numa cidade pequena' : 'na cidade';
+  const lugar = cargoNoPais(cargo).escopo === 'pais' ? 'no país' : cargoNoPais(cargo).escopo === 'estado' ? 'no estado' : porte === 'metropole' ? 'numa metrópole' : porte === 'capital' ? 'numa capital' : porte === 'pequena' ? 'numa cidade pequena' : 'na cidade';
   const p = v.caminhos.politica!;
   switch (id) {
     case 'base': return valor < 0 ? `uma base pequena para ${cargo === 'vereador' ? 'a disputa' : `disputar ${nomeCargo(v, cargo)}`} ${lugar}` : valor >= 36 ? 'uma base grande' : 'a base que você construiu';
@@ -771,16 +817,18 @@ export function explicarEleicao(v: Vida, h: { cargo: CargoEletivo; resultado: st
   return partes.join(' ');
 }
 
-/** A apuração. */
-function apurar(v: Vida, r: Rng): void {
+/** A apuração (VIDA 12.9: a da Presidência conta os votos de cada adversário e pode esperar o segundo turno). */
+export function apurar(v: Vida, r: Rng): void {
   const p = v.caminhos.politica!;
   const c = p.campanha!;
   const cargo = c.cargo;
   const conta = fatoresDaEleicao(v, cargo, c.tEleicao);
-  const ganhou = r.chance(conta.chance);
+  const pres = cargo === 'presidente' ? PRESIDENCIA.apurar?.(v, conta) : undefined;
+  if (pres === 'adiar') return;
+  const ganhou = pres ? pres.ganhou : r.chance(conta.chance);
   const nome = nomeCargo(v, cargo);
   const par = parceiro(v);
-  const h = { t: c.tEleicao, cargo, resultado: (ganhou ? 'eleito' : 'derrotado') as 'eleito' | 'derrotado', fatores: conta.fatores, chance: Math.round(conta.chance * 100) / 100, partido: p.partido };
+  const h = { t: c.tEleicao, cargo, resultado: (ganhou ? 'eleito' : 'derrotado') as 'eleito' | 'derrotado', fatores: conta.fatores, chance: Math.round((pres?.chance ?? conta.chance) * 100) / 100, partido: p.partido };
   p.historico.push(h);
   const porque = explicarEleicao(v, h);
   p.campanha = undefined;
@@ -855,6 +903,8 @@ function tomarPosse(v: Vida, r: Rng): void {
   const c = cargoNoPais(cargo);
   // Governar o estado é morar na capital.
   if (cargo === 'governador') { const aqui = municipio(v.moradia.municipioId); const cap = cidadesDoPais(aqui.pais).find(m => m.uf === aqui.uf && m.capital); if (cap && cap.id !== v.moradia.municipioId) mudarAgora(v, cap.id, 'para governar o estado'); }
+  // Governar o país é morar na capital do país.
+  if (cargo === 'presidente') { const cap = capitalDoPais(paisDaVida(v)); if (cap && cap.id !== v.moradia.municipioId) mudarAgora(v, cap.id, 'para governar o país'); }
   const inicio = tPosse;
   const emprego: Emprego = { ocupacaoId: cargo, empregador: orgaoDe(v, cargo), contrato: 'eletivo', salario: subsidio(v, cargo), tInicio: inicio, tPosto: inicio, desempenho: 60, municipioId: v.moradia.municipioId, carga: 'integral', via: 'eleicao' };
   v.trabalho.atual = emprego;
@@ -876,12 +926,14 @@ function tomarPosse(v: Vida, r: Rng): void {
     escrever(v, { texto: `Tomou posse como ${nomeCargo(v, cargo)}. ${assessor.nome} assumiu a chefia de gabinete.${plateia ? ` ${plateia}` : ''}`, relevancia: 'marco', tema: 'trabalho', tom: 'bom', pessoas: [assessor.id] });
     marcar(v, 'politica', `Posse: ${nomeCargo(v, cargo)}.`, 3, { ocupacaoId: cargo });
   } else escrever(v, { texto: `Começou o segundo mandato como ${nomeCargo(v, cargo)}.`, relevancia: 'biografia', tema: 'trabalho' });
+  if (cargo === 'presidente') PRESIDENCIA.posse?.(v, reeleicao);
 }
 
 /** O mandato acaba (sem reeleição): de volta para a vida de antes — ou para outra. */
 function concluirMandato(v: Vida): void {
   const p = v.caminhos.politica!;
   const m = p.mandato!;
+  if (m.cargo === 'presidente') PRESIDENCIA.fim?.(v, 'concluiu');
   p.historico.push({ t: v.t, cargo: m.cargo, resultado: 'concluiu', ...resumoDoMandato(p) });
   p.mandato = undefined;
   p.consecutivos = cargoNoPais(m.cargo).executivo ? 0 : p.consecutivos;
@@ -897,6 +949,7 @@ export function renunciar(v: Vida, motivo: string): void {
   const p = v.caminhos.politica!;
   const m = p.mandato;
   if (!m) return;
+  if (m.cargo === 'presidente') PRESIDENCIA.fim?.(v, 'renunciou');
   p.historico.push({ t: v.t, cargo: m.cargo, resultado: 'renunciou', ...resumoDoMandato(p) });
   p.mandato = undefined;
   p.consecutivos = 0;
@@ -1043,7 +1096,7 @@ export function processarPolitica(v: Vida, r: Rng): void {
     m.feito = Math.max(0, m.feito - 1);
     // A base acompanha a avaliação do mandato — mas quem já tinha base não a perde inteira em um ano (a de antes pesa metade).
     p.apoio = Math.round(clamp(p.apoio + ((p.apoio + m.aprovacao) / 2 - p.apoio) * 0.25));
-    p.reputacao = clamp(p.reputacao + (c.escopo === 'estado' ? 1.5 : 0.5));
+    p.reputacao = clamp(p.reputacao + (c.escopo === 'pais' ? 3 : c.escopo === 'estado' ? 1.5 : 0.5));
     // O cargo desgasta; entregar algo concreto desgasta menos.
     desgastar(p, (c.executivo ? 3 : 2.5) - (m.feito > 0 ? 1.5 : 0), 'mandato');
     // O mandato cobra do bolso: contribuição ao partido, a base que se mantém, as viagens, os pedidos de ajuda que chegam à porta.
@@ -1055,7 +1108,7 @@ export function processarPolitica(v: Vida, r: Rng): void {
       escrever(v, { texto: `O mandato também tem conta: contribuição ao partido, a base, as viagens, gente pedindo ajuda na porta. Foram ${dinheiro(custo)} no ano.`, relevancia: 'cotidiano', tema: 'trabalho' });
     }
     // Crises: acontecem (o jogador responde).
-    if (!m.crise && r.chance(c.executivo ? 0.32 : 0.2)) m.crise = { t: v.t, tipo: r.pick(c.executivo ? ['chuva', 'greve', 'verba', 'obra', 'aliado'] : ['aliado', 'votacao', 'pedido']) };
+    if (!m.crise && r.chance(c.executivo ? 0.32 : 0.2)) m.crise = { t: v.t, tipo: r.pick(crisesDoCargo129(m.cargo) ?? (c.executivo ? ['chuva', 'greve', 'verba', 'obra', 'aliado'] : ['aliado', 'votacao', 'pedido'])) };
     // Brasília durante a semana: a casa sente.
     if (ocupacao(m.cargo).jornada === 'fora') {
       const par = parceiro(v);
@@ -1079,6 +1132,7 @@ export function processarPolitica(v: Vida, r: Rng): void {
   }
   // Conflito de interesses: dono de negócio com mandato (abstrato).
   if (p.fase === 'mandato' && v.caminhos.negocio?.passivo && !temFato(v, `pol_conflito_${p.mandato?.tInicio}`) && r.chance(0.25)) { v.fatos[`pol_conflito_${p.mandato?.tInicio}`] = v.t; v.fatos['pol_conflito'] = v.t; }
+  PRESIDENCIA.ano?.(v);
 }
 
 /** Sair da vida pública (a reputação fica; a vida segue). */
@@ -1163,7 +1217,9 @@ export type OquePolitica = 'aproximar' | 'filiar' | 'indicacao' | 'comunidade' |
   // REWORK 10.5 · POL-04: as respostas ao desgaste.
   | 'bases' | 'recolher' | 'propostas' | 'paz_partido' | 'afastar' | 'responder'
   // REWORK 11 · POL-02: as ações do cargo (`mandato`), com o id no `valor`.
-  | 'cargo';
+  | 'cargo'
+  // VIDA 12.9: as do governo do estado e do país (`presidencia129`), com o id no `valor`.
+  | 'governo129';
 export type AcaoPoliticaCmd = { tipo: 'politica'; oque: OquePolitica; valor?: string };
 
 export function disponibilidadePolitica(v: Vida, a: AcaoPoliticaCmd): Veredito {
@@ -1222,6 +1278,7 @@ export function disponibilidadePolitica(v: Vida, a: AcaoPoliticaCmd): Veredito {
     }
     case 'crise': return p?.mandato?.crise ? PERMITIDO : bloqueio('impossivel', 'Não há crise aberta.');
     case 'cargo': return disponibilidadeDoCargo(v, a.valor);
+    case 'governo129': return PRESIDENCIA.disp?.(v, a.valor) ?? bloqueio('impossivel', 'Não se aplica.');
     case 'deixar': return naPolitica(v) && fase !== 'candidato' ? PERMITIDO : bloqueio('impossivel', fase === 'candidato' ? 'A campanha está na rua: é esperar a apuração.' : 'Não se aplica.');
     case 'bases': case 'recolher': case 'propostas': case 'paz_partido': case 'afastar': case 'responder': {
       if (!p || !naPolitica(v)) return bloqueio('impossivel', 'Não se aplica.');
@@ -1285,8 +1342,9 @@ export function executarPolitica(v: Vida, r: Rng, a: AcaoPoliticaCmd): SaidaPoli
       if (v.fatos['pol_quer_ano'] !== alvo) { v.fatos['pol_quer_ano'] = alvo; escrever(v, { texto: `Avisou no partido que vai querer disputar a eleição de ${alvo}.`, relevancia: 'cotidiano', tema: 'trabalho', escolha: true }); }
       return { texto: `Pré-candidatura na rua. A eleição de ${proximaEleicao(v.t).ano} é o horizonte.` };
     }
-    case 'crise': return { decisao: 'pol_crise' };
+    case 'crise': { const m = p?.mandato; return { decisao: ehCrise129(m?.crise?.tipo) ? (m!.cargo === 'presidente' ? 'presg_crise' : 'govg_crise') : 'pol_crise' }; }
     case 'cargo': return executarDoCargo(v, r, a.valor ?? '');
+    case 'governo129': return PRESIDENCIA.exec?.(v, r, a.valor) ?? {};
     case 'deixar': return { decisao: 'pol_deixar' };
     case 'trocar_partido': return { decisao: 'pol_troca_partido' };
     case 'bases': case 'recolher': case 'propostas': case 'paz_partido': case 'afastar': case 'responder': return recuperar(v, r, p!, a.oque);
@@ -1387,16 +1445,19 @@ export function acoesPoliticas(v: Vida, disp: (v: Vida, a: Acao) => Veredito): A
   const m = p.mandato;
   const e = eleicaoNaJanela(v);
   if (m?.crise) add({ id: 'pol_crise', rotulo: 'Responder à crise', porque: 'Todo mundo espera uma palavra sua.', acao: A('crise'), peso: 10 });
-  if (m && p.prioridade) add({ id: 'pol_prioridade', rotulo: `Trabalhar a prioridade: ${NOME_PRIORIDADE[p.prioridade]}`, porque: m.feito === 0 ? 'Sem nada para mostrar, a aprovação cai.' : undefined, acao: A('prioridade'), peso: m.feito === 0 ? 8 : 5 });
-  if (m && !p.prioridade) add({ id: 'pol_bandeira', rotulo: 'Escolher a prioridade do mandato', porque: 'Sem prioridade, o mandato não tem o que mostrar.', acao: A('bandeira'), peso: 9 });
+  // VIDA 12.9: o presidente governa o país com os verbos dele (`presidencia129`) — não o posto do bairro nem a rua do vereador.
+  const pres = m?.cargo === 'presidente';
+  for (const x of PRESIDENCIA.acoes?.(v) ?? []) add(x);
+  if (m && p.prioridade && !pres) add({ id: 'pol_prioridade', rotulo: `Trabalhar a prioridade: ${NOME_PRIORIDADE[p.prioridade]}`, porque: m.feito === 0 ? 'Sem nada para mostrar, a aprovação cai.' : undefined, acao: A('prioridade'), peso: m.feito === 0 ? 8 : 5 });
+  if (m && !p.prioridade && !pres) add({ id: 'pol_bandeira', rotulo: 'Escolher a prioridade do mandato', porque: 'Sem prioridade, o mandato não tem o que mostrar.', acao: A('bandeira'), peso: 9 });
   // REWORK 11 · POL-02: o que este cargo faz (o vereador legisla e fiscaliza; o prefeito monta o governo e executa).
   if (m) for (const id of ACOES_DO_CARGO[m.cargo] ?? []) { const t = rotuloDoCargo(v, id); add({ id: `pol_cargo_${id}`, rotulo: t.rotulo, porque: t.porque, acao: A('cargo', id), peso: id === 'projeto_lei' || id === 'orcamento' ? 5 : 3 }); }
-  add({ id: 'pol_comunidade', rotulo: 'Conversar com a comunidade', porque: m && m.aprovacao < 45 ? 'A rua anda reclamando.' : p.apoio < 30 ? 'A base ainda é pequena.' : undefined, acao: A('comunidade'), peso: m ? (m.aprovacao < 45 ? 7 : 4) : 6 });
+  if (!pres) add({ id: 'pol_comunidade', rotulo: 'Conversar com a comunidade', porque: m && m.aprovacao < 45 ? 'A rua anda reclamando.' : p.apoio < 30 ? 'A base ainda é pequena.' : undefined, acao: A('comunidade'), peso: m ? (m.aprovacao < 45 ? 7 : 4) : 6 });
   if (!p.partido || p.indicacaoMilitar) add({ id: 'pol_filiar', rotulo: 'Filiar-se a um partido', porque: 'Sem partido, não há candidatura.', acao: A('filiar'), peso: p.apoio >= 20 ? 7 : 4 });
   // Farda: não se filia, mas um partido pode escolher em convenção (TSE) — o requisito vem com a ação que o cumpre.
   if (!p.partido) add({ id: 'pol_indicacao', rotulo: 'Conversar com partidos sobre uma indicação', porque: 'Militar da ativa não se filia; um partido pode escolher você em convenção.', acao: A('indicacao'), peso: p.apoio >= 20 ? 7 : 4 });
   if (!m && !p.prioridade) add({ id: 'pol_bandeira', rotulo: 'Escolher uma bandeira', porque: 'Gente conhece melhor quem defende uma coisa só.', acao: A('bandeira'), peso: 3 });
-  if (p.prioridade) add({ id: 'pol_trocar_bandeira', rotulo: m ? 'Mudar a prioridade do mandato' : 'Trocar de bandeira', acao: A('bandeira'), peso: 0 });
+  if (p.prioridade && !pres) add({ id: 'pol_trocar_bandeira', rotulo: m ? 'Mudar a prioridade do mandato' : 'Trocar de bandeira', acao: A('bandeira'), peso: 0 });
   if (p.partido) add({ id: 'pol_negociar', rotulo: 'Negociar apoio', porque: e ? 'A eleição está perto.' : undefined, acao: A('negociar'), peso: e ? 6 : 2 });
   if (p.partido && !p.campanha && !p.posse) add({ id: 'pol_candidatura', rotulo: e ? (m ? 'Decidir sobre a eleição' : 'Registrar candidatura') : 'Lançar a pré-candidatura', porque: e ? `Eleição em outubro de ${e.ano}.` : undefined, acao: A('candidatura'), peso: e ? 9 : 2 });
   // Trocar de partido: possibilidade real, com o que a lei diz dito antes. Mais visível quando o partido anda atrapalhando.

@@ -31,7 +31,9 @@ const LEGISLATIVO: AcaoDoCargo[] = ['projeto_lei', 'fiscalizar', 'emenda', 'vota
 const EXECUTIVO: AcaoDoCargo[] = ['secretariado_tecnico', 'secretariado_aliados', 'orcamento', 'sancionar', 'vetar', 'obra'];
 export const ACOES_DO_CARGO: Record<CargoEletivo, AcaoDoCargo[]> = {
   vereador: LEGISLATIVO, deputado_estadual: LEGISLATIVO, deputado_federal: LEGISLATIVO, senador: [...LEGISLATIVO, 'sabatina'],
-  prefeito: EXECUTIVO, governador: EXECUTIVO
+  prefeito: EXECUTIVO, governador: EXECUTIVO,
+  // VIDA 12.9: o presidente tem verbos próprios (`presidencia129`): reformas, base no Congresso, economia, o mundo.
+  presidente: []
 };
 const POR_ANO = 2;
 const feita = (v: Vida, a: AcaoDoCargo) => v.anoAtual.acoes.includes(`pol_cargo:${a}`);

@@ -21,13 +21,14 @@ import { abalar } from '../sistemas/abalo';
 import { marcar } from '../sistemas/marcas';
 import { valorDoNegocio } from '../sistemas/negocio';
 import {
-  calendarioDoMandato, tiposDeEleicao, criarAliado, custoDeCampanha, definirBandeira, eleicaoNaJanela, encerrarVidaPolitica, entrarNaPolitica, NOME_PRIORIDADE, nomeCargo, ORDEM_CARGOS, ORIGENS, partidosDoPais, existeCargo, cargoNoPais,
+  calendarioDoMandato, cargoNoCiclo, tiposDeEleicao, criarAliado, custoDeCampanha, definirBandeira, eleicaoNaJanela, encerrarVidaPolitica, entrarNaPolitica, NOME_PRIORIDADE, nomeCargo, ORDEM_CARGOS, ORIGENS, partidosDoPais, existeCargo, cargoNoPais,
   podeConcorrer, PRIORIDADES, registrarCandidatura, registrarNoMandato, renunciar, voltarAoTrabalho, perspectiva, regraDaTroca, trocarDePartido } from '../sistemas/politica';
 import { anoDe } from '../tempo';
 import { registrarMomento } from '../sistemas/situacoes';
 import { habilidade } from '../sistemas/frentes';
 import { dinheiro as fmt } from '../texto';
 import { aoPartido, nomeCompletoPartido, oPartido, partidoDe, peloPartido } from '../dados/partidos';
+import { ehCrise129 } from '../dados/presidencia129';
 
 const doPartido = (s: string | undefined) => { const p = partidoDe(s); return p ? `${p.artigo === 'a' ? 'da' : 'do'} ${p.chamado}` : 'do partido'; };
 
@@ -147,7 +148,7 @@ function cargoOpcao(cargo: CargoEletivo) {
       if (etapa(c) !== 0) return false;
       const e = eleicaoNaJanela(c.v);
       // Um degrau que o país não tem (ou que não cai nesta eleição) não aparece.
-      if (!e || !existeCargo(cargo, paisDaVida(c.v)) || !tiposDeEleicao(e.ano).includes(cargoNoPais(cargo).tipo)) return false;
+      if (!e || !existeCargo(cargo, paisDaVida(c.v)) || !tiposDeEleicao(e.ano).includes(cargoNoPais(cargo).tipo) || !cargoNoCiclo(cargo, e.ano, paisDaVida(c.v), municipio(c.v.moradia.municipioId).uf)) return false;
       const d = podeConcorrer(c.v, cargo, e.t);
       return d.grau === 'permitido' || d.grau === 'improvavel' || d.grau === 'irregular' ? true : (d.motivo ?? 'Não é possível.');
     },
@@ -156,7 +157,8 @@ function cargoOpcao(cargo: CargoEletivo) {
     resolver: (c: Ctx): Resultado => {
       const e = eleicaoNaJanela(c.v)!;
       const d = podeConcorrer(c.v, cargo, e.t);
-      return { texto: `${d.motivo && d.grau === 'irregular' ? `${d.motivo} ` : ''}A candidatura está registrada. Agora, a campanha.`, memoria: null, reabrir: true, efeito: () => registrarCandidatura(c.v, cargo, e.t) };
+      // VIDA 12.9: a corrida presidencial tem a campanha dela (`presc_campanha`: a indicação, a chapa, o debate...).
+      return { texto: `${d.motivo && d.grau === 'irregular' ? `${d.motivo} ` : ''}A candidatura está registrada. Agora, a campanha.`, memoria: null, ...(cargo === 'presidente' ? { abrir: { id: 'presc_campanha' } } : { reabrir: true }), efeito: () => registrarCandidatura(c.v, cargo, e.t) };
     }
   };
 }
@@ -352,7 +354,7 @@ export const POLITICA: Conteudo[] = [
   },
   {
     id: 'pol_crise', tipo: 'decisao', idade: [18, 95], tema: 'escolha', prioritario: true, prioridade: 3, repetir: 0,
-    quando: c => !!c.v.caminhos.politica?.mandato?.crise && c.v.caminhos.politica.mandato.crise.t === c.v.t,
+    quando: c => !!c.v.caminhos.politica?.mandato?.crise && c.v.caminhos.politica.mandato.crise.t === c.v.t && !ehCrise129(c.v.caminhos.politica.mandato.crise.tipo),
     titulo: c => ({ chuva: 'A chuva', greve: 'A greve', verba: 'O dinheiro que não fecha', obra: 'A obra parada', aliado: 'O aliado no noticiário', votacao: 'A votação', pedido: 'O pedido' } as Record<string, string>)[crise(c)] ?? 'Uma crise',
     texto: c => (({
       chuva: 'Uma chuva de uma noite derrubou uma barreira e alagou três bairros. Tem gente dormindo na escola.',

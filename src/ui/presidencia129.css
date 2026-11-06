@@ -1,0 +1,72 @@
+/*
+ * VIDA 12.9 · Presidência — a corrida, o governo do país e a história, dentro do painel político.
+ * Só tokens do tema (claro/escuro); nada de cor fixa. Cabe em 390 px sem rolagem horizontal.
+ */
+.pres129 { display: grid; gap: var(--space-4); margin: var(--space-4) 0; min-width: 0; }
+.pres129__fora { margin-top: var(--space-3); }
+.pres129__bloco {
+  padding: var(--space-4);
+  background: var(--superficie);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 0 0 1px var(--fio), var(--shadow-sm);
+  border-top: 4px solid var(--tom-voce, var(--tom));
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.pres129__kicker { margin: 0; font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-secondary); overflow-wrap: anywhere; }
+.pres129__regra { margin: 0; font-family: var(--font-serif); color: var(--text-primary); line-height: var(--leading-snug); }
+
+/* As etapas da campanha */
+.pres129__etapas { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-2); margin: 0; padding: 0; list-style: none; counter-reset: etapa; }
+.pres129__etapas li {
+  counter-increment: etapa; font-size: var(--type-caption); padding: 2px var(--space-2); border-radius: var(--radius-pill);
+  color: var(--text-muted); box-shadow: inset 0 0 0 1px var(--fio);
+}
+.pres129__etapas li::before { content: counter(etapa) ' · '; }
+.pres129__etapas li.feita { color: var(--text-secondary); background: var(--tom-wash, var(--surface)); }
+.pres129__etapas li.agora { color: var(--tom-sobre, var(--text-primary)); background: var(--tom-voce, var(--tom)); box-shadow: none; }
+
+/* A pesquisa */
+.pres129__pesquisa { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.pres129__pesquisa li { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) auto; gap: var(--space-2); align-items: center; }
+.pres129__nome { min-width: 0; font-weight: var(--weight-medium); overflow-wrap: anywhere; }
+.pres129__nome small { display: block; font-weight: var(--weight-regular); font-size: var(--type-caption); color: var(--text-muted); }
+.pres129__trilho, .pres129__barra-trilho { display: block; height: 8px; border-radius: var(--radius-pill); background: var(--bg-inset, var(--surface)); overflow: hidden; }
+.pres129__trilho span, .pres129__barra-trilho span { display: block; height: 100%; border-radius: inherit; background: var(--text-faint); }
+.pres129__voce .pres129__trilho span { background: var(--tom-voce, var(--tom)); }
+.pres129__voce .pres129__nome { color: var(--tom-voce, var(--text-primary)); }
+.pres129__pct { font-variant-numeric: tabular-nums; font-size: var(--type-meta); color: var(--text-secondary); }
+
+/* O governo */
+.pres129__indicadores { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); }
+.pres129__ind { display: grid; gap: 2px; padding: var(--space-2); border-radius: var(--radius-md); box-shadow: inset 0 0 0 1px var(--fio); min-width: 0; }
+.pres129__ind-rotulo { font-size: var(--type-caption); color: var(--text-muted); }
+.pres129__ind-valor { font-family: var(--font-display); font-size: var(--type-subheading); font-weight: var(--weight-bold); font-variant-numeric: tabular-nums; }
+.pres129__ind-delta { font-size: var(--type-caption); color: var(--text-secondary); }
+.pres129__ind--bom .pres129__ind-delta { color: var(--bom); }
+.pres129__ind--ruim .pres129__ind-delta { color: var(--ruim); }
+.pres129__barra { display: grid; grid-template-columns: 9rem minmax(0, 1fr) auto; gap: var(--space-2); align-items: center; }
+.pres129__barra-rotulo { font-size: var(--type-meta); color: var(--text-secondary); }
+.pres129__barra-trilho span { background: var(--tom-voce, var(--tom)); }
+.pres129__barra-palavra { font-size: var(--type-caption); color: var(--text-muted); text-align: right; }
+.pres129__anos { display: flex; align-items: flex-end; gap: var(--space-1); height: 64px; padding-top: var(--space-2); border-bottom: 1px solid var(--rule); }
+.pres129__anos span { position: relative; flex: 1; min-width: 0; background: color-mix(in oklab, var(--tom-voce, var(--tom)) 55%, transparent); border-radius: var(--radius-xs) var(--radius-xs) 0 0; }
+.pres129__anos small { position: absolute; bottom: -1.3em; left: 0; right: 0; text-align: center; font-size: 0.65rem; color: var(--text-muted); }
+
+/* Requisitos e história */
+.pres129__requisitos { display: grid; gap: var(--space-1); margin: 0; padding: 0; list-style: none; font-size: var(--type-meta); }
+.pres129__requisitos li.ok { color: var(--text-primary); }
+.pres129__requisitos li.ok span { color: var(--bom); }
+.pres129__requisitos li.falta { color: var(--text-muted); }
+.pres129__legado { margin: 0; font-family: var(--font-serif); color: var(--text-secondary); }
+
+@media (max-width: 480px) {
+  .pres129__bloco { padding: var(--space-3); }
+  .pres129__indicadores { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .pres129__ind-valor { font-size: var(--type-body); }
+  .pres129__barra { grid-template-columns: minmax(0, 1fr) auto; }
+  .pres129__barra-trilho { grid-column: 1 / -1; grid-row: 2; }
+  .pres129__pesquisa li { grid-template-columns: minmax(0, 1fr) auto; }
+  .pres129__trilho { grid-column: 1 / -1; grid-row: 2; }
+}

@@ -210,7 +210,7 @@ export interface PerfilEducacional {
 }
 
 /** Os cargos eletivos do jogo, na estrutura de cada país. */
-export type NivelPolitico = 'vereador' | 'prefeito' | 'deputado_estadual' | 'deputado_federal' | 'senador' | 'governador';
+export type NivelPolitico = 'vereador' | 'prefeito' | 'deputado_estadual' | 'deputado_federal' | 'senador' | 'governador' | 'presidente';
 
 export interface CargoDoPais {
   /** Título real do cargo, em português ou na forma local quando não há tradução corrente: [masc, fem]. */

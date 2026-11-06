@@ -21,6 +21,8 @@ import { sobDemanda as sobDemandaCampeonato } from '../util/sobDemanda';
 const TabelaDoCampeonato = sobDemandaCampeonato(() => import('./Campeonato').then(m => m.TabelaDoCampeonato));
 const CampeoesDoPais = sobDemandaCampeonato(() => import('./Campeonato').then(m => m.CampeoesDoPais));
 const PremiosDoMundo = sobDemandaCampeonato(() => import('./Campeonato').then(m => m.PremiosDoMundo));
+/** VIDA 12.9: a Presidência no painel político (a corrida, o governo do país, a história) — sob demanda. */
+const PainelPresidencial = sobDemandaCampeonato(() => import('./Presidencia129').then(m => m.PainelPresidencial));
 import { CampoDoAtleta, ClaqueteDoAtor, PalcoDoMusico, PlenarioDoPolitico, PranchetaDoTecnico } from './CarreirasEspeciais';
 import { habilitacaoDaVida } from '../../motor/sistemas/autoescola';
 import { regrasDaVida } from '../../motor/mundo/regras';
@@ -852,11 +854,12 @@ export function PainelPolitico({ vida, principal }: { vida: Vida; principal: boo
         <Dado rotulo="Como político">{l.reputacao}</Dado>
         <Dado rotulo="Base de apoio">{l.apoio}</Dado>
         {l.noPartido && <Dado rotulo="No partido">{l.noPartido}</Dado>}
-        <Dado rotulo={m ? 'Prioridade do mandato' : 'Bandeira'}>{nomeDaBandeira(p?.prioridade)}</Dado>
+        {m?.cargo !== 'presidente' && <Dado rotulo={m ? 'Prioridade do mandato' : 'Bandeira'}>{nomeDaBandeira(p?.prioridade)}</Dado>}
         {l.estrutura && <Dado rotulo="O partido aqui">{l.estrutura}</Dado>}
         {l.desgaste && <Dado rotulo="Desgaste">{l.desgaste}</Dado>}
       </dl>
       {l.horizonte && <p className="painel__frase">{l.horizonte}</p>}
+      {(principal || m?.cargo === 'presidente' || p?.campanha?.cargo === 'presidente') && <PainelPresidencial vida={vida} />}
       {l.perspectiva && <p className="nota"><strong>Se fosse hoje.</strong> {l.perspectiva}</p>}
       {l.ultimaEleicao && <p className="nota"><strong>A última eleição.</strong> {l.ultimaEleicao}</p>}
       {l.escandalo && <p className="nota nota--atencao">{l.escandalo}</p>}
