@@ -169,6 +169,62 @@ export function pecasDoItem(itemId: string, semente: string): Conjunto {
   return out;
 }
 
+/**
+ * VIDA 12.9 — AS CORES À VENDA de uma peça: as opções da parte principal (a de cima, o vestido, a calça, o casaco, o
+ * calçado — a primeira que tem mais de uma cor). Vazio: a peça tem uma cor só.
+ */
+const PARTES_PRINCIPAIS = ['cima', 'inteira', 'baixo', 'casaco', 'pes'] as const;
+function partePrincipal(itemId: string): Peca | undefined {
+  const x = PECAS[itemId];
+  if (!x) return undefined;
+  if (ehPeca(x)) return x;
+  for (const k of PARTES_PRINCIPAIS) { const p = x[k]; if (p && 'cor' in p && Array.isArray(p.cor) && p.cor.length > 1) return p; }
+  return undefined;
+}
+export function coresDoItem(itemId: string): string[] {
+  const p = partePrincipal(itemId);
+  return p && 'cor' in p && Array.isArray(p.cor) && p.cor.length > 1 ? [...p.cor] : [];
+}
+/** A cor principal que a semente dá (a mesma conta de `pecasDoItem`). */
+export function corPrincipalDa(itemId: string, semente: string): string | undefined {
+  const p = partePrincipal(itemId);
+  return p && 'cor' in p ? corDe(p.cor as Cor, semente + p.parte) : undefined;
+}
+/** O nome de uma cor (para o leitor de tela e a dica): pelo tom, pela claridade e pela saturação. */
+export function nomeDaCor(hex: string): string {
+  const n = parseInt(hex.slice(1), 16), r = (n >> 16) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, d = mx - mn;
+  const sat = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
+  if (sat < 0.15 || d < 0.08) return l > 0.85 ? 'branco' : l > 0.6 ? 'cinza-claro' : l > 0.3 ? 'cinza' : l > 0.12 ? 'grafite' : 'preto';
+  let h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  h = (h * 60 + 360) % 360;
+  if (h >= 15 && h < 55 && sat < 0.5 && l > 0.45) return l > 0.8 ? 'creme' : 'bege';
+  const base = h < 15 || h >= 345 ? 'vermelho' : h < 40 ? (l < 0.35 ? 'marrom' : 'laranja') : h < 65 ? (l < 0.35 ? 'oliva' : 'amarelo') : h < 165 ? 'verde' : h < 200 ? 'azul-petróleo' : h < 255 ? 'azul' : h < 290 ? 'roxo' : 'rosa';
+  return l < 0.33 && base !== 'marrom' ? `${base} escuro` : l > 0.75 ? `${base} claro` : base;
+}
+
+/** Os nomes das cores de uma peça, sem repetir: duas do mesmo tom se distinguem pela claridade. */
+export function nomesDasCores(cores: string[]): string[] {
+  const nomes = cores.map(nomeDaCor);
+  const luz = (hex: string) => { const n = parseInt(hex.slice(1), 16); return 0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255); };
+  for (const nome of new Set(nomes)) {
+    const idx = nomes.map((x, i) => (x === nome ? i : -1)).filter(i => i >= 0);
+    if (idx.length < 2) continue;
+    const ord = [...idx].sort((a, b) => luz(cores[b]) - luz(cores[a]));
+    const rot = ord.length === 2 ? ['tom claro', 'tom escuro'] : ord.map((_, k) => (k === 0 ? 'tom claro' : k === ord.length - 1 ? 'tom escuro' : `tom médio${ord.length > 3 ? ` ${k}` : ''}`));
+    ord.forEach((i, k) => { nomes[i] = `${nome}, ${rot[k]}`; });
+  }
+  return nomes;
+}
+
+/** A variante da vitrine (a de sempre) e a de cada cor: uma semente estável que dá exatamente aquela cor. */
+export const varianteDaVitrine = (itemId: string) => `${itemId}-vitrine`;
+export function varianteDaCor(itemId: string, cor: string): string {
+  if (corPrincipalDa(itemId, varianteDaVitrine(itemId)) === cor) return varianteDaVitrine(itemId);
+  for (let n = 0; n < 400; n++) { const s = `${itemId}~${n}`; if (corPrincipalDa(itemId, s) === cor) return s; }
+  return varianteDaVitrine(itemId);
+}
+
 /** O acessório (pulso, pulseira, anel, pescoço) de um item. */
 export function acessorioDoItem(itemId: string): Extract<Peca, { parte: 'pulso' | 'pulseira' | 'anel' | 'pescoco' }> | undefined {
   const x = PECAS[itemId];

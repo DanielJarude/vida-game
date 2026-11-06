@@ -21,7 +21,8 @@ import { memoriaDasLojas, type EstadoDaLoja } from '../memoriaDeCompras';
 import { temCoisa } from '../../../motor/sistemas/coisas';
 import { nivelDaCoisa } from '../../../motor/sistemas/lar';
 import type { CoisaTida } from '../../../motor/tipos';
-import { temItem } from '../../../motor/sistemas/estilo';
+import { sementeDaPeca, temItem } from '../../../motor/sistemas/estilo';
+import { coresDoItem, corPrincipalDa, nomesDasCores, varianteDaCor, varianteDaVitrine } from '../../avatar/pecas';
 import { tipoDeCorpo } from '../../../motor/sistemas/silhueta';
 import { variantesDaCoisa } from '../../../motor/dados/pertences';
 import { municipio } from '../../../motor/dados/lugares';
@@ -44,7 +45,8 @@ export function LojaDaVida({ vida, agir, lojaId }: { vida: Vida; agir: (a: Acao)
   const [m, setM] = useState<EstadoDaLoja>(() => memoriaDasLojas.get(lojaId) ?? { texto: '', cat: '', faixa: '', marca: '', preco: '', ordem: 'relevancia', quantos: POR_PAGINA });
   const mudar = (x: Partial<EstadoDaLoja>) => setM(o => { const n = { ...o, ...x }; memoriaDasLojas.set(lojaId, n); return n; });
   const cat = m.cat as CategoriaDeProduto | '', faixa = m.faixa, quantos = m.quantos, tipo = m.tipo ?? '';
-  const [provando, setProvando] = useState<string | null>(null);
+  // 12.9: o provador mostra a MESMA variante (a cor) escolhida no cartão — `${itemId}|${variante}`.
+  const [provando, setProvando] = useState<{ itemId: string; variante: string } | null>(null);
   const setQuantos = (f: (q: number) => number) => mudar({ quantos: f(m.quantos) });
   // As ofertas dependem da cidade e do mercado (não do saldo): calculadas uma vez por cidade — a compra não as recria.
   const linhas = useMemo<Linha[]>(() => {
@@ -112,9 +114,9 @@ export function LojaDaVida({ vida, agir, lojaId }: { vida: Vida; agir: (a: Acao)
         </label>
       </div>
       <p className="nota">{visiveis.length} {visiveis.length === 1 ? 'produto' : 'produtos'}{m.texto || m.marca || m.preco || cat || faixa || tipo || ambiente ? ' com esses filtros' : ''}.</p>
-      {provando && <Provador vida={vida} itemId={provando} aoFechar={() => setProvando(null)} />}
+      {provando && <Provador vida={vida} itemId={provando.itemId} variante={provando.variante} aoFechar={() => setProvando(null)} />}
       <ul className="catalogo-loja">
-        {visiveis.slice(0, quantos).map(l => <ProdutoNaLoja key={l.chave} vida={vida} agir={agir} linha={l} lojaId={lojaId} faixa={faixa} marca={m.marca} preco={preco} crianca={i < 12} provando={provando === l.produto.id} provar={() => setProvando(p => (p === l.produto.id ? null : l.produto.id))} />)}
+        {visiveis.slice(0, quantos).map(l => <ProdutoNaLoja key={l.chave} vida={vida} agir={agir} linha={l} lojaId={lojaId} faixa={faixa} marca={m.marca} preco={preco} crianca={i < 12} provando={provando?.itemId === l.produto.id ? provando.variante : undefined} provar={(variante: string) => setProvando(p => (p?.itemId === l.produto.id && p.variante === variante ? null : { itemId: l.produto.id, variante }))} />)}
       </ul>
       {visiveis.length > quantos && <button type="button" className="botao botao--discreto" onClick={() => setQuantos(q => q + POR_PAGINA)}>Ver mais ({visiveis.length - quantos})</button>}
       {!visiveis.length && <p className="nota">Nada nesta seção.</p>}
@@ -126,7 +128,7 @@ export function LojaDaVida({ vida, agir, lojaId }: { vida: Vida; agir: (a: Acao)
  * 12.7 — o provador: você, com o que está usando, e a peça escolhida no lugar da que ocupa o mesmo lugar do corpo. Nada é
  * comprado nem trocado: é só ver.
  */
-function Provador({ vida, itemId, aoFechar }: { vida: Vida; itemId: string; aoFechar: () => void }) {
+function Provador({ vida, itemId, variante, aoFechar }: { vida: Vida; itemId: string; variante: string; aoFechar: () => void }) {
   const it = itemEstilo(itemId)!;
   const la = lugaresDoItem(it);
   const usando = (vida.eu.estilo?.itens ?? []).filter(x => x.usando && !lugaresDoItem(itemEstilo(x.itemId)!).some(l => la.includes(l)));
@@ -134,7 +136,7 @@ function Provador({ vida, itemId, aoFechar }: { vida: Vida; itemId: string; aoFe
   const visual = rosto ? { ...visualComPecaDoRosto(vida.eu.visual, itemId), ...(it.categoria !== 'oculos' && vida.eu.visual.oculos ? { oculos: vida.eu.visual.oculos, modeloOculos: vida.eu.visual.modeloOculos } : {}), ...(it.categoria !== 'chapeu' && vida.eu.visual.chapeu ? { chapeu: vida.eu.visual.chapeu, modeloChapeu: vida.eu.visual.modeloChapeu } : {}) } : vida.eu.visual;
   return (
     <section className="provador" aria-label={`Provador: ${it.nome}`}>
-      <Figura visual={visual} genero={vida.eu.genero} idade={idade(vida)} semente={vida.eu.semente ?? 'eu'} corpo={tipoDeCorpo(vida)} pecas={[...usando.map(x => ({ itemId: x.itemId, id: x.id })), ...(rosto ? [] : [{ itemId, id: `${itemId}-provador` }])]} tatuagens={tatuagensNaFigura(vida)} largura={150} semFundo rotulo={`Você com ${it.nome.toLowerCase()}`} />
+      <Figura visual={visual} genero={vida.eu.genero} idade={idade(vida)} semente={vida.eu.semente ?? 'eu'} corpo={tipoDeCorpo(vida)} pecas={[...usando.map(x => ({ itemId: x.itemId, id: x.id, variante: x.variante })), ...(rosto ? [] : [{ itemId, id: variante }])]} tatuagens={tatuagensNaFigura(vida)} largura={150} semFundo rotulo={`Você com ${it.nome.toLowerCase()}`} />
       <div className="provador__texto">
         <p className="provador__titulo">No provador: {it.nome.toLowerCase()}</p>
         <p className="nota">Com o que você está usando. Nada foi comprado — e a peça que sairia do lugar continua sua.</p>
@@ -144,9 +146,11 @@ function Provador({ vida, itemId, aoFechar }: { vida: Vida; itemId: string; aoFe
   );
 }
 
-function ProdutoNaLoja({ vida, agir, linha, lojaId, faixa, marca, preco, crianca, provando, provar }: { vida: Vida; agir: (a: Acao) => boolean; linha: Linha; lojaId: string; faixa: string; marca?: string; preco?: { min?: number; max?: number }; crianca: boolean; provando: boolean; provar: () => void }) {
+function ProdutoNaLoja({ vida, agir, linha, lojaId, faixa, marca, preco, crianca, provando, provar }: { vida: Vida; agir: (a: Acao) => boolean; linha: Linha; lojaId: string; faixa: string; marca?: string; preco?: { min?: number; max?: number }; crianca: boolean; provando?: string; provar: (variante: string) => void }) {
   const opcoes = linha.ofertas.filter(o => (!faixa || String(o.marca ? segmentoDaMarca(o.marca) ?? 1 : 1) === faixa) && (!marca || o.marca === marca) && (preco?.min === undefined || o.preco >= preco.min) && (preco?.max === undefined || o.preco <= preco.max));
   const [escolhida, setEscolhida] = useState(opcoes[0]?.marca ?? '');
+  // 12.9: a cor escolhida (a variante) — a vitrine, o provador e a compra usam a mesma.
+  const [corEscolhida, setCorEscolhida] = useState<string | undefined>(undefined);
   const o = opcoes.find(x => (x.marca ?? '') === escolhida) ?? opcoes[0];
   if (!o) return null;
   const p = linha.produto;
@@ -158,7 +162,11 @@ function ProdutoNaLoja({ vida, agir, linha, lojaId, faixa, marca, preco, crianca
   const meu = p.tipo === 'item' ? vida.eu.estilo?.itens.find(y => y.itemId === p.id) : undefined;
   const meuCoisa = p.tipo === 'coisa' ? vida.financas.coisas?.find(y => y.coisaId === p.id) : undefined;
   const marcaDoMeu = meu?.marca ?? meuCoisa?.marca;
-  const acao: Acao = p.tipo === 'item' ? { tipo: 'comprar_item', itemId: p.id, loja: lojaId, ...(o.marca ? { marca: o.marca } : {}) } : { tipo: 'comprar_coisa', coisaId: p.id, loja: lojaId, ...(o.marca ? { marca: o.marca } : {}) };
+  const cores = it ? coresDoItem(p.id) : [];
+  // O que se vê no cartão: a peça que você tem (a cor dela), ou a variante escolhida para comprar.
+  const variante = meu ? sementeDaPeca(meu) : corEscolhida ? varianteDaCor(p.id, corEscolhida) : varianteDaVitrine(p.id);
+  const corDoCartao = it ? corPrincipalDa(p.id, variante) : undefined;
+  const acao: Acao = p.tipo === 'item' ? { tipo: 'comprar_item', itemId: p.id, loja: lojaId, ...(o.marca ? { marca: o.marca } : {}), variante } : { tipo: 'comprar_coisa', coisaId: p.id, loja: lojaId, ...(o.marca ? { marca: o.marca } : {}) };
   const lm = o.marca ? leituraDaMarca(o.marca) : undefined;
   // 12.8: o segmento do que se leva — o do produto com a marca por cima (o mesmo cálculo do motor, `lar.nivelDaCoisa`).
   const nivel = it ? nivelDoItem(it) : c ? Math.round(nivelDaCoisa({ coisaId: c.id, marca: o.marca } as CoisaTida)) : 2;
@@ -170,7 +178,7 @@ function ProdutoNaLoja({ vida, agir, linha, lojaId, faixa, marca, preco, crianca
     <li className={`catalogo-loja__cartao${nivel >= 4 ? ' catalogo-loja__cartao--luxo' : ''}${nivel >= 6 ? ' catalogo-loja__cartao--exclusivo' : ''}`} data-produto={p.id} data-nivel={nivel}>
       <span className="catalogo-loja__imagem">
         {c && <DesenhoObjeto coisaId={c.id} cor={variantesDaCoisa(c.id)[0].cor} tamanho={96} rotulo={c.nome} marca={o.marca} />}
-        {it && <MiniaturaDaPeca vida={vida} itemId={p.id} largura={96} rotulo={`${nome}, como fica em você`} />}
+        {it && <MiniaturaDaPeca vida={vida} itemId={p.id} id={variante} largura={96} rotulo={`${nome}, como fica em você`} />}
       </span>
       <span className="catalogo-loja__selos">
         <span className={`catalogo-loja__selo catalogo-loja__selo--nivel-${nivel}`}>{cap(segmento)}</span>
@@ -188,9 +196,17 @@ function ProdutoNaLoja({ vida, agir, linha, lojaId, faixa, marca, preco, crianca
           </select>
         </label>
       )}
+      {cores.length > 1 && !tem && (
+        <span className="catalogo-loja__cores" role="radiogroup" aria-label="Cor">
+          {cores.map((cor, k) => (
+            <button key={cor} type="button" role="radio" aria-checked={cor === corDoCartao} className="catalogo-loja__cor" style={{ background: cor }} title={nomesDasCores(cores)[k]} aria-label={nomesDasCores(cores)[k]}
+              onClick={() => { setCorEscolhida(cor); if (provando) provar(varianteDaCor(p.id, cor)); }} />
+          ))}
+        </span>
+      )}
       <span className="catalogo-loja__preco">{dinheiroCurto(o.preco)}</span>
       <span className="catalogo-loja__acoes">
-        {it && !crianca && <button type="button" className="botao botao--discreto" aria-pressed={provando} onClick={provar}>{provando ? 'No provador' : 'Experimentar'}</button>}
+        {it && !crianca && <button type="button" className="botao botao--discreto" aria-pressed={provando === variante} onClick={() => provar(variante)}>{provando === variante ? 'No provador' : 'Experimentar'}</button>}
         {tem ? (
           <span className="loja-estilo__seu">
             <span className="nota">É seu{marcaDoMeu ? ` (${marcaPorId(marcaDoMeu)?.nome ?? marcaDoMeu})` : ''}{meu ? (meu.usando ? ' · em uso' : ' · guardado') : ''}.</span>

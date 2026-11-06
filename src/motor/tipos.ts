@@ -355,6 +355,9 @@ export interface ItemDeEstilo {
   /** 12.4.1: a marca e a loja onde foi comprado. Ausentes em saves antigos. */
   marca?: string;
   loja?: string;
+  /** VIDA 12.9: a variante (a cor) escolhida na loja — a mesma semente da vitrine e do provador. Ausente (saves antigos):
+   *  a semente é o `id`, como antes. Ler sempre por `sementeDaPeca`. */
+  variante?: string;
   /** REWORK 12.4: onde está guardado (o cofre, para a joia que não se usa). Ausente = com a pessoa. */
   local?: LocalDoObjeto;
   memoria?: MemoriaDoObjeto;
@@ -2110,7 +2113,11 @@ export interface CarreiraEsportiva {
    * REWORK 11 · ESP-11.6: os lances que os momentos do ano somaram (o gol da virada, a defesa no fim) — entram na
    * temporada EM CURSO, antes do palmarés e dos prêmios dela (`fecharTemporada`), nunca na que já fechou.
    */
-  lances?: { gols?: number; assistencias?: number; semSofrerGol?: number; podios?: number; ouro?: number };
+  lances?: { gols?: number; assistencias?: number; semSofrerGol?: number; podios?: number; ouro?: number;
+    /** VIDA 12.9: o lugar na final nacional da prova (1–3 pódio; 4+ fora dele) que a simulação deu ao momento — só depois da classificação (`esportes129`). */
+    finalNacional?: number;
+    /** VIDA 12.9: tênis — a fase a que um momento do ano levou num torneio, em rodadas que faltavam para o título (1 = final, 2 = semifinal, 3 = quartas). */
+    faseTenis?: number };
   /**
    * REWORK 11 · sem clube: a marca EXPLÍCITA de "sem clube" (o contrato acabou e ninguém renovou) e o último clube.
    * Presente = sem clube agora: `clube`/`municipioId`/`nivel` continuam guardando o último vínculo (de onde o mercado

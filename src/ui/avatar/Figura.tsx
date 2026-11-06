@@ -21,7 +21,8 @@ import { acessorioDoItem, pecasDoItem, type Conjunto, type Peca } from './pecas'
 
 type P<K extends Peca['parte']> = Extract<Peca, { parte: K }>;
 
-export interface PecaEmUso { itemId: string; id: string }
+/** A peça em uso: `variante` (12.9) é a semente das cores escolhida na loja; sem ela, o id. */
+export interface PecaEmUso { itemId: string; id: string; variante?: string }
 /** HOTFIX 11.5.1 / VIDA 12.6: uma tatuagem na figura (`sistemas/tatuagens.tatuagensNaFigura`). */
 export type TatuagemNaFigura = TatuagemParaFigura;
 
@@ -510,7 +511,7 @@ export const Figura = memo(function Figura({ visual, genero, idade, semente = 'e
   const conj: Conjunto = {};
   const acess: Record<string, ReturnType<typeof acessorioDoItem>> = {};
   for (const x of pecas) {
-    const c = pecasDoItem(x.itemId, x.id);
+    const c = pecasDoItem(x.itemId, x.variante ?? x.id);
     for (const k of ['cima', 'baixo', 'inteira', 'casaco', 'pes'] as const) if (c[k]) conj[k] = c[k];
     if (c.inteira) { delete conj.cima; delete conj.baixo; }
     if ((c.cima || c.baixo) && !c.inteira) delete conj.inteira;

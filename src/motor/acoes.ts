@@ -281,7 +281,7 @@ export type Acao =
   /** Mudar o visual: corte, cor, barba, óculos, chapéu, roupa (`estilo`). */
   | { tipo: 'aparencia'; mudanca: MudancaVisual }
   /** Comprar um item de estilo (óculos, chapéu, roupa, acessório). */
-  | { tipo: 'comprar_item'; itemId: string; /** 12.4.1: a marca e a loja (ausentes: o preço de referência). */ marca?: string; loja?: string }
+  | { tipo: 'comprar_item'; itemId: string; /** 12.4.1: a marca e a loja (ausentes: o preço de referência). */ marca?: string; loja?: string; /** 12.9: a variante vista na vitrine e no provador. */ variante?: string }
   | { tipo: 'estetica'; id: string; clinica: Clinica; alvo?: string; revisao?: boolean }
   /** HOTFIX 11.5.1: tatuar (o desenho, a parte do corpo, o lado) e tirar no laser. */
   // VIDA 12.6: a região precisa, a posição, a escala, a rotação, a cor, o texto, o significado, a cobertura.
@@ -1569,7 +1569,7 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       if (res.decisao) { const d = conteudoPorId(res.decisao); if (d && d.tipo === 'decisao') abrirDecisao(v, d, contexto(v, r)); return {}; }
       return ok(res.texto, res.tom);
     }
-    case 'comprar_item': return ok(comprarItem(v, a.itemId, false, a.marca, a.loja), 'bom');
+    case 'comprar_item': return ok(comprarItem(v, a.itemId, false, a.marca, a.loja, a.variante), 'bom');
     case 'estetica': { const x = fazerProcedimento(v, r, a.id as IdProcedimento, a.clinica, a.alvo, a.revisao); return { resultado: x.texto, titulo: x.titulo }; }
     case 'tatuar': return ok(tatuarPedido(v, a), 'bom');
     case 'remover_tatuagem': return ok(removerTatuagem(v, a.id), 'neutro');

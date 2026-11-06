@@ -17,7 +17,7 @@ import type { Vida, Visual } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
 import { idade } from '../../motor/nucleo';
 import { AUTONOMIA, faseDeAutonomia } from '../../motor/sistemas/autonomia';
-import { itensDaPessoa, podeTerBarba, precisaDeOculos, texturaNatural, type MudancaVisual } from '../../motor/sistemas/estilo';
+import { itensDaPessoa, sementeDaPeca, podeTerBarba, precisaDeOculos, texturaNatural, type MudancaVisual } from '../../motor/sistemas/estilo';
 import { BARBAS, BARBAS_COM_BIGODE, CORES_NATURAIS, CORES_TINTA, CORTES, NOME_COR, TIPOS_DE_CABELO, itemEstilo } from '../../motor/dados/estilo';
 import { texturaDe } from '../avatar/cabelos';
 import { FiguraSobDemanda as Figura } from '../avatar/figuraSobDemanda';
@@ -152,7 +152,7 @@ function ParteDoCorpo({ vida, agir, parte }: { vida: Vida; agir: (a: Acao) => bo
   const inteira = !!it && it.lugar === 'corpo' && parte.id === 'pernas';
   return (
     <li className="vestir__parte vestir__cartao" data-parte={parte.id}>
-      <span className="vestir__miniatura" aria-hidden={!atual}>{atual ? <Miniatura vida={vida} itemId={atual.itemId} id={atual.id} largura={64} /> : <span className="vestir__vazio">—</span>}</span>
+      <span className="vestir__miniatura" aria-hidden={!atual}>{atual ? <Miniatura vida={vida} itemId={atual.itemId} id={sementeDaPeca(atual)} largura={64} /> : <span className="vestir__vazio">—</span>}</span>
       <span className="vestir__info">
         <span className="vestir__nome">{parte.nome}</span>
         <span className="vestir__atual">{it ? it.nome : <span className="nota">nada</span>}{inteira ? <span className="nota"> (a peça inteira)</span> : null}</span>

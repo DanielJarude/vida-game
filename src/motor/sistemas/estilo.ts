@@ -182,7 +182,7 @@ export function instanciaDoItem(v: Vida, itemId: string, usar: boolean, id?: str
  */
 export function umPorLugar(v: Vida): void {
   const vis = v.eu.visual;
-  const preferida = (x: ItemDeEstilo) => vis.superior === `${x.itemId}#${x.id}` || vis.modeloOculos === x.itemId || vis.modeloChapeu === x.itemId;
+  const preferida = (x: ItemDeEstilo) => vis.superior === `${x.itemId}#${sementeDaPeca(x)}` || vis.superior === `${x.itemId}#${x.id}` || vis.modeloOculos === x.itemId || vis.modeloChapeu === x.itemId;
   const usando = itensDaPessoa(v).map((x, i) => ({ x, i })).filter(({ x }) => x.usando)
     .sort((a, b) => Number(preferida(b.x)) - Number(preferida(a.x)) || b.x.t - a.x.t || b.i - a.i);
   const ocupado = new Set<string>();
@@ -209,12 +209,17 @@ export function disponibilidadeComprarItem(v: Vida, itemId: string, marca?: stri
   return vereditoDePagar(v, loja ? precoNaLoja(v, { tipo: 'item', id: itemId }, marca, loja) : precoDoItem(v, itemId));
 }
 
-export function comprarItem(v: Vida, itemId: string, pagoPelaFamilia = false, marca?: string, loja?: string): string {
+/** 12.9: a semente das cores de uma peça — a variante escolhida na loja ou, nos saves antigos, o id da peça. */
+export const sementeDaPeca = (x: { id: string; variante?: string }) => x.variante ?? x.id;
+
+export function comprarItem(v: Vida, itemId: string, pagoPelaFamilia = false, marca?: string, loja?: string, variante?: string): string {
   const it = itemEstilo(itemId)!;
   const preco = loja ? precoNaLoja(v, { tipo: 'item', id: itemId }, marca, loja) : precoDoItem(v, itemId);
   if (!pagoPelaFamilia) pagar(v, preco);
   v.eu.estilo ??= { itens: [] };
-  const item: ItemDeEstilo = { id: novoId(v, 'est'), itemId, t: v.t, preco, usando: true, ...(marca ? { marca } : {}), ...(loja ? { loja } : {}) };
+  // 12.9: leva a variante que se viu na vitrine e no provador (a mesma cor) — antes cada tela sorteava a sua.
+  const vari = typeof variante === 'string' && variante.length > 0 && variante.length <= 60 ? variante : undefined;
+  const item: ItemDeEstilo = { id: novoId(v, 'est'), itemId, t: v.t, preco, usando: true, ...(marca ? { marca } : {}), ...(loja ? { loja } : {}), ...(vari ? { variante: vari } : {}) };
   v.eu.estilo.itens.push(item);
   // Passa a usar (o que ocupa o mesmo lugar sai: a mesma categoria que aparece no retrato, o mesmo pulso, o mesmo pescoço).
   let saiuRoupa = false;
@@ -280,7 +285,7 @@ export function sincronizarVisual(v: Vida): void {
   const em = (l: string) => usando.find(x => { const it = itemEstilo(x.itemId); return !!it && lugaresDoItem(it).includes(l) && (l !== 'tronco' || it.lugar !== 'casaco'); });
   const casaco = usando.find(x => itemEstilo(x.itemId)?.lugar === 'casaco');
   const cima = casaco ?? em('tronco');
-  if (cima) vis.superior = `${cima.itemId}#${cima.id}`; else delete vis.superior;
+  if (cima) vis.superior = `${cima.itemId}#${sementeDaPeca(cima)}`; else delete vis.superior;
   const pescoco = usando.find(x => itemEstilo(x.itemId)?.lugar === 'joia');
   const joia = pescoco ? itemEstilo(pescoco.itemId)?.visual?.joia : undefined;
   if (joia) vis.joia = joia; else delete vis.joia;

@@ -13,6 +13,10 @@
 .catalogo-loja__categoria { margin: 0; }
 .catalogo-loja__descricao { font-size: var(--type-caption); color: var(--text-secondary); display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .catalogo-loja__marca select { width: 100%; }
+.catalogo-loja__cores { display: flex; flex-wrap: wrap; gap: 6px; }
+/* 12.9: a cor da peça — a mesma na vitrine, no provador e na compra. */
+.catalogo-loja__cor { width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--fio-forte); padding: 0; cursor: pointer; box-shadow: inset 0 0 0 2px var(--surface-strong, #fff); }
+.catalogo-loja__cor[aria-checked='true'] { outline: 2px solid var(--accent, #2d6cdf); outline-offset: 2px; }
 .catalogo-loja__preco { font-weight: 600; font-size: var(--type-subheading, 1.05rem); margin-top: auto; }
 .catalogo-loja__acoes { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; }
 .provador { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; padding: var(--space-3); margin: var(--space-2) 0; border-radius: var(--radius-md); background: var(--bg-inset); }
