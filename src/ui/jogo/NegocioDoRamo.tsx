@@ -17,6 +17,7 @@ import { custoDaObra } from '../../motor/sistemas/setores';
 import { especieDeZoo, habitat } from '../../motor/dados/setores';
 import { empresasAtivas } from '../../motor/sistemas/empresas';
 import { tipoDeEmpresa } from '../../motor/dados/empresas';
+import { setorGrande } from '../../motor/dados/empresas129';
 import { BotaoAcao } from '../comum';
 import { dinheiroCurto } from '../leituraMaterial';
 
@@ -185,7 +186,7 @@ export function VisaoGeralDasEmpresas({ vida }: { vida: Vida }) {
             const al = alertasDaEmpresa(vida, e);
             return (
               <tr key={e.id}>
-                <th scope="row">{e.nome}<br /><small className="nota">{tipoDeEmpresa(e.tipo).rotulo}</small></th>
+                <th scope="row">{e.nome}<br /><small className="nota">{setorGrande(e.tipo)?.rotulo ?? tipoDeEmpresa(e.tipo).rotulo}</small></th>
                 <td className={(e.ultimo?.resultado ?? 0) < 0 ? 'perda' : 'ganho'}>{e.ultimo ? `${e.ultimo.resultado < 0 ? '− ' : ''}${dinheiroCurto(Math.abs(e.ultimo.resultado))}` : '—'}</td>
                 <td>{e.papel === 'investidor' ? 'os sócios' : e.gestao.quem === 'propria' ? 'você' : decideOGestor(e) ? 'o gestor' : 'você (o gestor executa)'}</td>
                 <td>{al.length ? al.join(' · ') : 'nada'}</td>

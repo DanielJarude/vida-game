@@ -29,6 +29,7 @@ import { itemEstilo } from '../../motor/dados/estilo';
 import { PainelDoRamo, VisaoGeralDasEmpresas } from './NegocioDoRamo';
 import { custoDaDecisao, empresasAtivas, leituraDoGestor, ofertasDeParticipacao, planoDeAbertura, quemToca, valorDaParte, valorDeVendaDaParte, type DecisaoEmpresa } from '../../motor/sistemas/empresas';
 import { NOME_PRECO_EMPRESA, TIPOS_DE_EMPRESA, tipoDeEmpresa } from '../../motor/dados/empresas';
+import { setorGrande } from '../../motor/dados/empresas129';
 import { lojaNaCidade } from '../../motor/sistemas/mercado';
 import { BotaoAcao, Secao, Subnav, type ItemDeSubnav } from '../comum';
 import { dinheiroCheio, dinheiroCurto } from '../leituraMaterial';
@@ -45,6 +46,10 @@ import { sobDemanda } from '../util/sobDemanda';
 const OrganizarObjetos = sobDemanda(() => import('./Personalizar').then(m => m.OrganizarObjetos));
 // VIDA 12.9: a garagem à vista (os cartões com desenho, a cena, a organização) — sob demanda, como a personalização.
 const GaragemVisual = sobDemanda(() => import('./Garagem129').then(m => m.GaragemVisual));
+/** VIDA 12.9: a gestão ativa, o fundar/comprar das grandes e o raio-x financeiro (pacote à parte). */
+const PainelDaEmpresa129 = sobDemanda(() => import('./Empresas129').then(m => m.PainelDaEmpresa129));
+const FundarOuAdquirir129 = sobDemanda(() => import('./Empresas129').then(m => m.FundarOuAdquirir129));
+const RaioX129 = sobDemanda(() => import('./Empresas129').then(m => m.RaioX129));
 
 export type PartePatrimonio = 'resumo' | 'imoveis' | 'garagem' | 'colecao' | 'empresas' | 'objetos';
 
@@ -102,6 +107,7 @@ function PainelDoPatrimonio({ vida }: { vida: Vida }) {
         <div className="pat-numeros__item pat-numeros__item--deve"><dt>Dívidas</dt><dd>{p.dividas > 0 ? `− ${dinheiroCurto(p.dividas)}` : 'nenhuma'}</dd></div>
         <div className="pat-numeros__item pat-numeros__item--liquido"><dt>Patrimônio líquido</dt><dd>{dinheiroCheio(p.liquido)}</dd></div>
       </dl>
+      <RaioX129 vida={vida} />
       <div className="pat-liquidez">
         <p className="rotulo-pequeno">Ter não é poder pagar agora</p>
         <p><strong>{dinheiroCurto(p.liquidez)}</strong> dá para usar em semanas (conta, reserva, renda fixa). {p.frase}</p>
@@ -432,6 +438,7 @@ function ListaDePecas({ vida, agir, lista, leilao }: { vida: Vida; agir: (a: Aca
 function Empresas({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
   const lista = empresasAtivas(vida);
   const [abrindo, setAbrindo] = useState(false);
+  const [grande, setGrande] = useState(false);
   const ofertas = ofertasDeParticipacao(vida);
   return (
     <Secao titulo="Empresas">
@@ -442,6 +449,8 @@ function Empresas({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
         <div className="pat-abrir">
           <button type="button" className="botao botao--secundario" aria-expanded={abrindo} onClick={() => setAbrindo(x => !x)}>{abrindo ? 'Fechar' : 'Abrir uma empresa'}</button>
           {abrindo && <AbrirEmpresa vida={vida} agir={agir} />}
+          <button type="button" className="botao botao--secundario" aria-expanded={grande} onClick={() => setGrande(x => !x)}>{grande ? 'Fechar' : 'Fundar ou comprar uma empresa grande'}</button>
+          {grande && <FundarOuAdquirir129 vida={vida} agir={agir} />}
         </div>
       )}
       {ofertas.length > 0 && (
@@ -470,8 +479,11 @@ const ESTADO_EMPRESA: Record<Empresa['estado'], string> = { abrindo: 'em obra', 
 
 function CartaoEmpresa({ vida, agir, e }: { vida: Vida; agir: (a: Acao) => boolean; e: Empresa }) {
   const t = tipoDeEmpresa(e.tipo);
+  // VIDA 12.9: as empresas grandes (`e.corp`) mostram o painel de gestão no lugar dos números de balcão.
+  const g = setorGrande(e.tipo);
   const u = e.ultimo;
   const [saida, setSaida] = useState(false);
+  const [painel, setPainel] = useState(false);
   const decidir = (d: DecisaoEmpresa, rotulo: string, variante: 'secundario' | 'discreto' = 'discreto') => <BotaoAcao key={d} vida={vida} acao={{ tipo: 'empresa', empresaId: e.id, decisao: d }} agir={agir} variante={variante} ocultarBloqueado>{rotulo}</BotaoAcao>;
   const custo = (d: DecisaoEmpresa) => dinheiroCurto(custoDaDecisao(vida, e, d));
   return (
@@ -479,28 +491,35 @@ function CartaoEmpresa({ vida, agir, e }: { vida: Vida; agir: (a: Acao) => boole
       <header className="pat-empresa__cabeca">
         <div>
           <h3>{e.nome}</h3>
-          <p className="nota">{t.rotulo} em {municipio(e.municipioId).nome} · {e.papel === 'dono' ? 'sua' : e.papel === 'socio' ? `${Math.round(e.parte * 100)}% seus, com ${e.socio}` : `${Math.round(e.parte * 100)}% seus (investidor${vida.eu.genero === 'feminino' ? 'a' : ''})`} · {e.unidades > 1 ? `${e.unidades} unidades · ` : ''}{ESTADO_EMPRESA[e.estado]}</p>
+          <p className="nota">{g?.rotulo ?? t.rotulo} em {municipio(e.municipioId).nome} · {e.papel === 'dono' ? 'sua' : e.papel === 'socio' ? `${Math.round(e.parte * 100)}% seus, com ${e.socio}` : `${Math.round(e.parte * 100)}% seus (investidor${vida.eu.genero === 'feminino' ? 'a' : ''})`} · {e.unidades > 1 ? `${e.unidades} unidades · ` : ''}{ESTADO_EMPRESA[e.estado]}</p>
         </div>
         <span className={`pat-empresa__estado pat-empresa__estado--${e.estado}`}>{ESTADO_EMPRESA[e.estado]}</span>
       </header>
-      <dl className="objeto__numeros">
+      {!g && <dl className="objeto__numeros">
         <div><dt>A sua parte vale</dt><dd>{dinheiroCurto(valorDaParte(e))}</dd></div>
         <div><dt>Você pôs</dt><dd>{dinheiroCurto(e.investido)}</dd></div>
         <div><dt>Caixa da empresa</dt><dd className={e.caixa < 0 ? 'perda' : undefined}>{e.caixa < 0 ? '− ' : ''}{dinheiroCurto(Math.abs(e.caixa))}</dd></div>
-        {u && <div><dt>{cap(t.publicoNome[1])} no ano</dt><dd>{u.publico.toLocaleString('pt-BR')}</dd></div>}
+        {u && !g && <div><dt>{cap(t.publicoNome[1])} no ano</dt><dd>{u.publico.toLocaleString('pt-BR')}</dd></div>}
         {u && <div><dt>Receita</dt><dd>{dinheiroCurto(u.receita)}</dd></div>}
         {u && <div><dt>Custos</dt><dd>{dinheiroCurto(u.custos)}</dd></div>}
         {u?.apoio ? <div><dt>Patrocínio e apoio</dt><dd>{dinheiroCurto(u.apoio)}</dd></div> : null}
         {u && <div><dt>Resultado</dt><dd className={u.resultado >= 0 ? 'ganho' : 'perda'}>{u.resultado < 0 ? '− ' : ''}{dinheiroCurto(Math.abs(u.resultado))}</dd></div>}
         {u && u.distribuido > 0 && <div><dt>Para você</dt><dd>{dinheiroCurto(Math.round(u.distribuido * e.parte))}</dd></div>}
-      </dl>
-      {!u && <p className="nota">{e.estado === 'abrindo' ? 'Em obra: o primeiro ano é de custo, sem público.' : 'O primeiro ano ainda não fechou.'}</p>}
-      <p className="nota">Quem toca: {quemToca(e)}{e.papel !== 'investidor' && e.gestao.quem === 'contratada' ? ` — a gestão, até aqui: ${leituraDoGestor(vida, e)}` : ''}. Qualidade {e.qualidade >= 70 ? 'alta' : e.qualidade >= 50 ? 'boa' : e.qualidade >= 35 ? 'caindo' : 'baixa'}; reputação {e.reputacao >= 70 ? 'ótima' : e.reputacao >= 50 ? 'boa' : e.reputacao >= 35 ? 'mediana' : 'fraca'}. Preço {NOME_PRECO_EMPRESA[e.preco]}.{e.distribuir ? '' : ' O lucro fica na empresa.'}</p>
-      {e.setor && <PainelDoRamo vida={vida} agir={agir} e={e} />}
+      </dl>}
+      {!u && <p className="nota">{e.estado === 'abrindo' ? (g ? 'Em construção: até o primeiro projeto ficar pronto, a empresa só gasta.' : 'Em obra: o primeiro ano é de custo, sem público.') : 'O primeiro ano ainda não fechou.'}</p>}
+      {!g && <p className="nota">Quem toca: {quemToca(e)}{e.papel !== 'investidor' && e.gestao.quem === 'contratada' ? ` — a gestão, até aqui: ${leituraDoGestor(vida, e)}` : ''}. Qualidade {e.qualidade >= 70 ? 'alta' : e.qualidade >= 50 ? 'boa' : e.qualidade >= 35 ? 'caindo' : 'baixa'}; reputação {e.reputacao >= 70 ? 'ótima' : e.reputacao >= 50 ? 'boa' : e.reputacao >= 35 ? 'mediana' : 'fraca'}. Preço {NOME_PRECO_EMPRESA[e.preco]}.{e.distribuir ? '' : ' O lucro fica na empresa.'}</p>}
+      {g ? <PainelDaEmpresa129 vida={vida} agir={agir} e={e} /> : (
+        <div className="pat-painel129">
+          <button type="button" className="botao botao--discreto" aria-expanded={painel} onClick={() => setPainel(x => !x)}>{painel ? 'Fechar o painel de gestão' : 'Painel de gestão: números, causas, estratégia, diretoria'}</button>
+          {painel && <PainelDaEmpresa129 vida={vida} agir={agir} e={e} />}
+        </div>
+      )}
+      {e.setor && !g && <PainelDoRamo vida={vida} agir={agir} e={e} />}
       {e.acervo && !e.setor?.museu && <p className="nota">Acervo: {e.acervo.pecas} peças, uns {dinheiroCurto(e.acervo.valor)}; conservação {e.acervo.conservacao >= 70 ? 'em dia' : e.acervo.conservacao >= 45 ? 'atrasada' : 'em risco'}{e.acervo.exposicao && vida.t - (e.acervo.tExposicao ?? 0) < 12 ? '; exposição temporária em cartaz' : ''}.</p>}
       {e.zoo && !e.setor?.zoo && <p className="nota">{e.zoo.recintos} recintos, {e.zoo.especies} espécies. Bem-estar animal {e.zoo.bemEstar >= 75 ? 'bom' : e.zoo.bemEstar >= 55 ? 'aceitável' : 'abaixo do exigido'}; licença {e.zoo.licenca ? 'em dia' : 'suspensa'}{e.zoo.conservacao ? '; no programa de conservação' : ''}.</p>}
       {u?.nota && <p className="nota">{u.nota}</p>}
-      {e.papel !== 'investidor' && e.estado !== 'encerrada' && (
+      {e.papel !== 'investidor' && e.estado !== 'encerrada' && g && e.gestao.quem === 'contratada' && <div className="grupo-acoes">{decidir('assumir', `Assumir a presidência você mesm${vida.eu.genero === 'feminino' ? 'a' : 'o'}`)}</div>}
+      {e.papel !== 'investidor' && e.estado !== 'encerrada' && !g && (
         <details className="objeto__fazer">
           <summary className="objeto__fazer-titulo">Decidir sobre {e.nome}</summary>
           <div className="pat-decisoes">
@@ -517,7 +536,7 @@ function CartaoEmpresa({ vida, agir, e }: { vida: Vida; agir: (a: Acao) => boole
             <p className="nota">Não se desfaz. Vender a sua parte: uns {dinheiroCurto(valorDeVendaDaParte(e))} (um comprador negocia para baixo).{e.papel !== 'investidor' ? ` Fechar: rescisões e contas${e.zoo ? ', e os animais transferidos para outras instituições' : ''}; o que sobrar das instalações volta.` : ''}</p>
             {decidir('vender_parte', 'Vender um quarto a um investidor (seguir no comando)', 'secundario')}
             {decidir('vender', 'Vender a minha parte', 'secundario')}
-            {e.papel !== 'investidor' && decidir('encerrar', 'Fechar as portas', 'secundario')}
+            {e.papel !== 'investidor' && !g && decidir('encerrar', 'Fechar as portas', 'secundario')}
             <button type="button" className="botao botao--discreto" onClick={() => setSaida(false)}>Deixar como está</button>
           </div>
         )}

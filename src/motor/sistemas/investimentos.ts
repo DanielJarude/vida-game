@@ -24,8 +24,28 @@ export const aplicacao = (v: Vida, p: Produto) => v.financas.investimentos.find(
 /** Valor somado de todas as aplicações. */
 export const totalAplicado = (v: Vida) => v.financas.investimentos.reduce((s, a) => s + a.valor, 0);
 
+/**
+ * VIDA 12.9 — A LIQUIDEZ, uma fonte só (antes eram três contas diferentes: a da tela, a da condição econômica e a do
+ * "posso pagar"). Duas camadas, com nome:
+ *   `imediata`    — em dias, sem risco de perder: a conta, a reserva e o pós-fixado;
+ *   `mobilizavel` — em semanas: tudo o que está aplicado, pelo preço do dia (vender a bolsa na baixa realiza a perda).
+ * Imóveis, veículos, coleção e empresas NÃO são liquidez (vendê-los é outra decisão, com prazo e desconto). A herança de
+ * menor em tutela não entra em nenhuma das duas: ninguém a move antes da maioridade.
+ */
+export function liquidez(v: Vida): { imediata: number; mobilizavel: number } {
+  const conta = Math.max(0, v.financas.conta);
+  let imediata = conta;
+  let mobilizavel = conta;
+  for (const a of v.financas.investimentos) {
+    if (emTutela(v, a)) continue;
+    mobilizavel += a.valor;
+    if (a.produto === 'reserva' || a.produto === 'pos_fixado') imediata += a.valor;
+  }
+  return { imediata, mobilizavel };
+}
+
 /** O que dá para usar numa emergência em poucos dias, sem risco de perder. */
-export const liquidezImediata = (v: Vida) => Math.max(0, v.financas.conta) + (aplicacao(v, 'reserva')?.valor ?? 0) + (aplicacao(v, 'pos_fixado')?.valor ?? 0);
+export const liquidezImediata = (v: Vida) => liquidez(v).imediata;
 
 /** Guardado em reserva + renda fixa (para frases como "a reserva segura X meses"). */
 export const reservaSegura = (v: Vida) => (aplicacao(v, 'reserva')?.valor ?? 0) + (aplicacao(v, 'pos_fixado')?.valor ?? 0);

@@ -56,7 +56,17 @@ export const proibido = (v: Vida) => PROIBIDO.has(paisDaVida(v));
 export const precoDoBilhete = (v: Vida) => Math.max(1, Math.round(5 * economiaLocal(v.moradia.municipioId).custo));
 /** Um valor "redondo" (1, 2, 2,5, 5 × uma potência de 10): ficha de cassino não vale 55 nem 275. */
 const redondo = (x: number) => { const m = 10 ** Math.floor(Math.log10(Math.max(1, x))); return [1, 2, 2.5, 5, 10].map(k => k * m).reduce((a, b) => (Math.abs(b - x) < Math.abs(a - x) ? b : a)); };
-export const valoresDeAposta = (v: Vida) => [...new Set([10, 25, 50, 100, 250, 500].map(x => redondo(x * economiaLocal(v.moradia.municipioId).custo)))];
+/**
+ * VIDA 12.9: a mesa alta. Quem tem mais na conta vê fichas maiores — a mesa de alto valor (R$ 200 mil na conta), o salão
+ * privado (R$ 5 milhões) e a mesa sem teto dos muito ricos (R$ 200 milhões). As regras e o RTP são os mesmos; as perdas,
+ * reais (saem da conta, como qualquer aposta).
+ */
+export const valoresDeAposta = (v: Vida) => {
+  const c = economiaLocal(v.moradia.municipioId).custo;
+  const conta = Math.max(0, v.financas.conta);
+  const fichas = [10, 25, 50, 100, 250, 500, ...(conta >= 200_000 * c ? [1000, 5000, 10_000] : []), ...(conta >= 5_000_000 * c ? [50_000, 100_000, 500_000] : []), ...(conta >= 200_000_000 * c ? [1_000_000, 5_000_000, 10_000_000] : [])];
+  return [...new Set(fichas.map(x => redondo(x * c)))];
+};
 
 export function podeApostar(v: Vida, valor: number): Veredito {
   if (idade(v) < 18) return bloqueio('ilegal', 'Aposta é coisa de maior de idade.');

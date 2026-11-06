@@ -49,7 +49,7 @@ import { moraComFamiliaDeOrigem, rendaDosOutros } from './domicilio';
 import { dinheiro as fmt, flex } from '../texto';
 import { abalar } from './abalo';
 import { conferir, fecharExtrato, lancar, medir } from './extrato';
-import { cobrirComAplicacoes, emTutela, liquidezImediata, processarInvestimentos, rendaDasAplicacoes, resgatar, totalAplicado } from './investimentos';
+import { cobrirComAplicacoes, emTutela, liquidez as liquidezDe, liquidezImediata, processarInvestimentos, rendaDasAplicacoes, resgatar, totalAplicado } from './investimentos';
 import { produto } from '../dados/investimentos';
 import { bloqueio, PERMITIDO, type Veredito } from '../plausibilidade';
 import { custoDosPets } from './pets';
@@ -388,6 +388,8 @@ export const despesasMensais = (v: Vida, estilo?: EstiloDeVida) => orcamento(v, 
 
 /** REWORK 12: custos mensais do patrimônio (preenchido pelos módulos de imóveis e de coleção). */
 export const PATRIMONIO_NO_MES: ((v: Vida, c: number) => { rotulo: string; valor: number }[])[] = [];
+/** VIDA 12.9: quem vende bens quando o rombo do ano é grande (`fortuna129`), antes do crédito caro. Recebe o que falta. */
+export const COBRIR_ROMBO: ((v: Vida, falta: number) => void)[] = [];
 
 /** Custo mensal de uma rotina (preenchido pelo módulo de rotinas, que conhece os níveis). */
 export const CUSTO_ROTINA: { de: (v: Vida, r: Rotina) => number; rotulo: (r: Rotina) => string } = { de: () => 0, rotulo: r => r.id };
@@ -524,7 +526,8 @@ export function condicaoEconomica(v: Vida): CondicaoEconomica {
   const b = balanco(v);
   const o = orcamento(v);
   const custo = Math.max(0.5, economiaLocal(v.moradia.municipioId).custo);
-  const liquidez = Math.max(0, b.conta) + b.aplicacoes + b.negocio;
+  // VIDA 12.9: a liquidez é a de `investimentos.liquidez` (uma fonte só; o caixa do negócio é dele, não seu).
+  const liquidez = liquidezDe(v).mobilizavel;
   const pat = b.liquido;
   const despesa = Math.max(1, o.despesa);
   const nivel = seguranca(v).nivel;
@@ -798,6 +801,9 @@ function cobrirRombo(v: Vida, r: Rng): void {
     escrever(v, { texto: `Para fechar as contas, precisou vender ${aplic.vendeuNaBaixa[0]} num momento ruim — por menos do que tinha posto.`, relevancia: 'biografia', tema: 'dinheiro', tom: 'ruim' });
   }
   if (f.conta >= 0) return;
+  // VIDA 12.9: o rombo grande de quem tem bens (a participação, a peça de coleção, o imóvel que não é a casa) vende bens antes do crédito caro.
+  if (i >= 18 && COBRIR_ROMBO.length) medir(v, 'Bens vendidos para cobrir o ano', 'resgate', () => { for (const fn of COBRIR_ROMBO) if (f.conta < 0) fn(v, -f.conta); });
+  if (f.conta >= 0) return;
   if (i >= 18) medir(v, 'A família cobriu parte do buraco do ano', 'familia', () => ajudaDaFamilia(v, r, -f.conta));
   if (f.conta >= 0) return;
   if (i < 18) {
@@ -954,7 +960,8 @@ export interface Capacidade {
 export function capacidade(v: Vida, valor: number): Capacidade {
   // A conta de verdade: se está no negativo, o que falta inclui tirar do vermelho.
   const conta = Math.round(v.financas.conta);
-  const aplicado = totalAplicado(v);
+  // VIDA 12.9: só o que dá para tirar (a herança em tutela não paga nada antes da maioridade).
+  const aplicado = liquidezDe(v).mobilizavel - Math.max(0, conta);
   const falta = Math.max(0, Math.round(valor - conta));
   if (falta <= 0) return { situacao: 'tem', conta, falta: 0, aplicado, naBaixa: [] };
   if (falta > aplicado) return { situacao: 'sem_patrimonio', conta, falta, aplicado, naBaixa: [] };
@@ -1016,7 +1023,7 @@ export function okDePagar(v: Vida, valor: number, oque = 'Custa'): { ok: boolean
 }
 
 /** O que dá para usar agora: conta + aplicações (vendendo pelo preço do dia). */
-export const disponivel = (v: Vida) => Math.max(0, v.financas.conta) + totalAplicado(v);
+export const disponivel = (v: Vida) => liquidezDe(v).mobilizavel;
 
 /** Paga um valor com a conta e, se faltar, com as aplicações (da mais fácil de tirar para a mais arriscada). */
 export function pagar(v: Vida, valor: number): void {

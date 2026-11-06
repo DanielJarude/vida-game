@@ -17,9 +17,10 @@ import { empresasAtivas, decidirEmpresa, disponibilidadeEmpresa, valorDaParte } 
 import { guardadoLonge, textoVeiculo, valorDeVenda } from '../sistemas/veiculos';
 
 const imovelComCalote = (v: Vida) => v.financas.bens.find((b): b is Imovel => b.tipo === 'imovel' && !!b.alugadoPor && (b.calote ?? 0) > 0);
-const empresaEmCrise = (v: Vida) => empresasAtivas(v).find(e => e.papel !== 'investidor' && e.estado === 'em_crise' && e.anosNoVermelho >= 1);
-const empresaDeGestorRuim = (v: Vida) => empresasAtivas(v).find(e => e.estado === 'operando' && e.gestao.quem === 'contratada' && (e.gestao.competencia ?? 50) < 38 && v.t - e.gestao.tInicio >= 24);
-const empresaCobicada = (v: Vida) => empresasAtivas(v).find(e => e.papel !== 'investidor' && e.estado === 'operando' && (e.historico ?? []).slice(-3).length === 3 && (e.historico ?? []).slice(-3).every(x => x > 0) && valorDaParte(e) > 0);
+// VIDA 12.9: as empresas grandes (`e.corp`) têm as cenas próprias (`acontecimentos129economia`): estas são das pequenas.
+const empresaEmCrise = (v: Vida) => empresasAtivas(v).find(e => !e.corp && e.papel !== 'investidor' && e.estado === 'em_crise' && e.anosNoVermelho >= 1);
+const empresaDeGestorRuim = (v: Vida) => empresasAtivas(v).find(e => !e.corp && e.estado === 'operando' && e.gestao.quem === 'contratada' && (e.gestao.competencia ?? 50) < 38 && v.t - e.gestao.tInicio >= 24);
+const empresaCobicada = (v: Vida) => empresasAtivas(v).find(e => !e.corp && e.papel !== 'investidor' && e.estado === 'operando' && (e.historico ?? []).slice(-3).length === 3 && (e.historico ?? []).slice(-3).every(x => x > 0) && valorDaParte(e) > 0);
 const guardadoHaTempo = (v: Vida) => v.financas.bens.find((b): b is Veiculo => b.tipo === 'veiculo' && guardadoLonge(v, b) && (b.historia ?? []).some(h => /Ficou guardad/.test(h.texto) && v.t - h.t >= 18));
 const classicoCobicado = (v: Vida) => v.financas.bens.find((b): b is Veiculo => b.tipo === 'veiculo' && modeloVeiculo(b.modeloId).segmento === 'classico' && b.estado >= 70 && v.t - b.tCompra >= 24);
 const museu = (v: Vida) => empresasAtivas(v).find(e => !!e.acervo && e.estado === 'operando' && e.papel !== 'investidor' && e.reputacao >= 45);

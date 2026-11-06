@@ -10,7 +10,8 @@ import { apertoDeVerdade, disponivel as guardado } from '../sistemas/dinheiro';
 import type { Conteudo } from './base';
 import * as P from './papeis';
 import { lembrarCom } from '../nucleo';
-import { dinheiro, estresse, fato, feliz, gp, prox, saude, tensao, local } from './efeitos';
+import { dinheiro, estresse, fato, feliz, gp, prox, saude, tensao, local, perda, perdaDasBets } from './efeitos';
+import { rngDe } from '../rng';
 import { idadePessoa, temFato } from '../nucleo';
 import { encerrarEmprego } from '../sistemas/trabalho';
 import { ocupacao } from '../dados/ocupacoes';
@@ -81,12 +82,14 @@ export const ESCOLHAS: Conteudo[] = [
     id: 'hab_bets_fundo', tipo: 'decisao', idade: [18, 80], tema: 'dinheiro', repetir: 3, prioritario: true,
     quando: c => temFato(c.v, 'aposta_online') && c.v.t - (c.v.fatos['aposta_online'] ?? c.v.t) >= 12,
     titulo: 'As apostas',
-    texto: c => `As apostas já comeram ${moedaCurta(c.r.int(8, 40) * 1000)}. Você esconde o celular${P.parceiro(c.v)[0] ? ` de ${P.parceiro(c.v)[0].nome}` : ''} e acorda de madrugada para ver resultado de jogo que nem sabe onde é.`,
+    texto: c => `As apostas já comeram ${moedaCurta(perdaDasBets(c))}. Você esconde o celular${P.parceiro(c.v)[0] ? ` de ${P.parceiro(c.v)[0].nome}` : ''} e acorda de madrugada para ver resultado de jogo que nem sabe onde é.`,
     opcoes: [
       { id: 'ajuda', texto: 'Procurar ajuda e bloquear os aplicativos', comportamento: { coragem: 1, disciplina: 1 },
-        resolver: c => ({ texto: 'Um grupo de apoio às quintas, um amigo guardando o cartão. Um dia de cada vez.', memoria: 'Procurou ajuda para parar de apostar.', relevancia: 'marco', efeito: () => { delete c.v.fatos['aposta_online']; estresse(c, -6); } }) },
+        resolver: c => ({ texto: 'Um grupo de apoio às quintas, um amigo guardando o cartão. Um dia de cada vez.', memoria: 'Procurou ajuda para parar de apostar.', relevancia: 'marco', efeito: () => { perda(c, perdaDasBets(c), 'o que as apostas já tinham levado', { endividar: true }); delete c.v.fatos['aposta_online']; estresse(c, -6); } }) },
       { id: 'recuperar', texto: 'Apostar mais para recuperar', comportamento: { impulsividade: 2 },
-        resolver: c => ({ texto: 'Não recuperou.', memoria: null, tom: 'ruim', efeito: () => { dinheiro(c, -Math.max(3000, Math.round(c.v.financas.conta * 0.5))); estresse(c, 12); c.v.fatos['aposta_online'] = c.v.t; } }) }
+        // VIDA 12.9 (a auditoria): tirava metade da conta, sem teto, com o texto dizendo "8–40 mil". Agora o que já se perdeu
+        // (o número do texto) e o que se perde tentando recuperar saem de verdade — e o que faltar vira dívida.
+        resolver: c => { const ja = perdaDasBets(c); const mais = Math.round(ja * (1 + rngDe(c.v.id, 'bets_recuperar', c.v.t).next()) / 1000) * 1000; return { texto: `Não recuperou: mais ${moedaCurta(mais)} foram embora.`, memoria: null, tom: 'ruim', efeito: () => { perda(c, ja + mais, 'as apostas', { endividar: true }); estresse(c, 12); c.v.fatos['aposta_online'] = c.v.t; } }; } }
     ]
   },
   {

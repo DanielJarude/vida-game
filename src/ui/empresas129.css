@@ -1,0 +1,55 @@
+/*
+ * VIDA 12.9 — a gestão ativa das empresas, o fundar/comprar das grandes e o raio-x financeiro (`jogo/Empresas129`).
+ * Classes próprias (`e129-*`), tokens do tema (claro e escuro), bom em 390 px (nada com largura fixa fora das tabelas que rolam).
+ */
+
+.e129 { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
+.e129-kpis { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: var(--space-2); margin: 0; }
+.e129-kpi { display: flex; flex-direction: column; gap: 2px; padding: var(--space-2); border-radius: var(--radius-sm); background: var(--veu-1); border-left: 3px solid var(--rule-strong); min-width: 0; }
+.e129-kpi dt { font-size: var(--type-caption); color: var(--text-muted); }
+.e129-kpi dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.e129-kpi--bom { border-left-color: var(--patrimonio-aplicado); }
+.e129-kpi--ruim { border-left-color: var(--danger-line); }
+
+.e129-atencao { padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); border: 1px solid var(--danger-line); }
+.e129-atencao ul, .e129-causas ul { margin: var(--space-1) 0 0; padding-left: var(--space-4); display: flex; flex-direction: column; gap: var(--space-1); font-size: var(--type-caption); }
+.e129-causas ul { list-style: none; padding-left: 0; }
+.e129-causa { padding-left: var(--space-2); border-left: 3px solid var(--rule); overflow-wrap: anywhere; }
+.e129-causa--bom { border-left-color: var(--patrimonio-aplicado); }
+.e129-causa--ruim { border-left-color: var(--danger-line); }
+.e129-selo { display: inline-block; padding: 0 6px; border-radius: 999px; border: 1px solid var(--rule-strong); font-size: var(--type-meta); color: var(--text-muted); }
+
+.e129-evolucao, .e129-bloco { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+.e129-projetos, .e129-lancar, .e129-diretoria { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.e129-projeto { padding: var(--space-2); border-radius: var(--radius-sm); border: 1px solid var(--rule); border-left: 3px solid var(--patrimonio-empresa); display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+.e129-projeto--fracassado, .e129-projeto--descontinuado { opacity: 0.7; border-left-color: var(--rule-strong); }
+.e129-projeto p { margin: 0; overflow-wrap: anywhere; }
+.e129-barra { height: 6px; border-radius: 999px; background: var(--veu-1); overflow: hidden; }
+.e129-barra span { display: block; height: 100%; background: var(--patrimonio-empresa); }
+.e129-lancar li, .e129-diretoria li { display: flex; flex-direction: column; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
+.e129-lancar .nota { margin: 0; }
+
+.e129-decidir { display: flex; flex-direction: column; gap: var(--space-3); }
+.e129-delegar { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-2); border-radius: var(--radius-sm); background: var(--veu-1); }
+.e129-grupo { display: flex; flex-direction: column; gap: var(--space-2); }
+.e129-alavanca { display: flex; flex-direction: column; gap: var(--space-1); }
+.e129-alavanca__rotulo { margin: 0; font-weight: 600; font-size: var(--type-caption); }
+.e129-alavanca__dica { margin: 0; }
+.e129-opcoes { display: flex; flex-wrap: wrap; gap: var(--space-1); }
+.e129-opcao { min-height: var(--touch-target, 44px); padding: var(--space-1) var(--space-2); border-radius: var(--radius-sm); border: 1px solid var(--rule-strong); background: transparent; color: inherit; font: inherit; font-size: var(--type-caption); display: inline-flex; flex-direction: column; align-items: flex-start; justify-content: center; text-align: left; cursor: pointer; max-width: 100%; }
+.e129-opcao small { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.e129-opcao--atual { border-width: 2px; border-color: var(--tinta); font-weight: 600; cursor: default; }
+.e129-opcao:disabled:not(.e129-opcao--atual) { opacity: 0.55; cursor: not-allowed; }
+.e129-opcao:focus-visible { outline: 2px solid var(--tinta); outline-offset: 2px; }
+.e129-contratar { display: flex; flex-direction: column; gap: var(--space-2); }
+
+.e129-fundar { display: flex; flex-direction: column; gap: var(--space-2); padding-top: var(--space-2); border-top: 1px solid var(--rule); min-width: 0; }
+.e129-oferta { padding: var(--space-2); border-radius: var(--radius-sm); border: 1px solid var(--rule); display: flex; flex-direction: column; gap: var(--space-1); }
+.e129-oferta p { margin: 0; overflow-wrap: anywhere; }
+
+.e129-raiox { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3); border-radius: var(--radius-sm); border: 1px solid var(--rule-strong); }
+.e129-raiox__frase { margin: 0; }
+.e129-lista { list-style: none; margin: var(--space-1) 0 var(--space-2); padding: 0; display: flex; flex-direction: column; gap: var(--space-1); }
+.e129-lista li { display: flex; justify-content: space-between; gap: var(--space-2); font-size: var(--type-caption); border-bottom: 1px dotted var(--rule); padding-bottom: 2px; }
+.e129-lista li span { min-width: 0; overflow-wrap: anywhere; }
+.e129-lista li strong { font-variant-numeric: tabular-nums; white-space: nowrap; }

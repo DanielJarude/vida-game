@@ -30,6 +30,22 @@ import type { Veredito } from '../plausibilidade';
 import { anoDoSetor, bemEstarDoZoo, efeitosDoSetor, garantirSetor, sincronizarZoo, temaMaisForte, montarExposicaoDoTema } from './setores';
 
 export const empresas = (v: Vida): Empresa[] => v.financas.empresas ?? [];
+
+/**
+ * VIDA 12.9 — quem estende o ano das empresas (`empresas129`: as alavancas, a diretoria, os projetos, os ramos grandes),
+ * sem import circular: o módulo de cima se registra aqui. Ausentes (ou a empresa sem estratégia), nada muda.
+ */
+export const GANCHOS_EMPRESA: {
+  /** Trata o ano inteiro da empresa (os ramos grandes): devolve true se tratou. */
+  motor?: (v: Vida, e: Empresa, r: Rng) => boolean;
+  /** O que as alavancas, a diretoria e os projetos mudam na empresa pequena. */
+  ajuste?: (v: Vida, e: Empresa) => { procura: number; variavel: number; fixos: { rotulo: string; valor: number }[] };
+  /** Depois do ano (o painel: os números com as causas). */
+  depois?: (v: Vida, e: Empresa, contas: ResultadoDoAno, caixaAntes: number) => void;
+  /** Quantas unidades a empresa comporta (a rede pede diretoria). */
+  unidades?: (e: Empresa) => number;
+} = {};
+const ajusteDe = (v: Vida, e: Empresa) => GANCHOS_EMPRESA.ajuste?.(v, e) ?? { procura: 1, variavel: 1, fixos: [] };
 export const empresasAtivas = (v: Vida) => empresas(v).filter(e => e.estado !== 'encerrada');
 export const empresa = (v: Vida, id: string) => empresas(v).find(e => e.id === id);
 
@@ -106,6 +122,8 @@ export function custosFixos(v: Vida, e: Empresa): { rotulo: string; valor: numbe
   if (e.zoo && !e.setor?.zoo) out.push({ rotulo: 'Alimentação, veterinária e recintos', valor: e.zoo.recintos * 95000 * c * (0.7 + e.zoo.bemEstar / 170) + (e.zoo.conservacao ? 600000 * c : 0) });
   // REWORK 12.2: o que é próprio do ramo (o chef, os serviços do hotel, os profissionais da clínica, os animais).
   if (e.setor) out.push(...efeitosDoSetor(v, e).fixos.filter(x => Math.abs(x.valor) >= 1));
+  // VIDA 12.9: o marketing, o P&D, a diretoria (em reais da cidade da empresa).
+  out.push(...ajusteDe(v, e).fixos);
   return out;
 }
 
@@ -212,6 +230,13 @@ export function comprarParticipacao(v: Vida, ofertaId: string): string {
   } satisfies Partial<Empresa>);
   if (e.zoo) delete e.zoo;
   if (e.acervo) delete e.acervo;
+  // VIDA 12.9 (a auditoria): a empresa comprada perdia 20–25% do valor na primeira reavaliação — o caixa e as instalações
+  // inventados não batiam com a avaliação da oferta. O porte acompanha o tamanho dela, e o caixa fecha a conta: o que se
+  // pagou é o que a parte vale no dia da compra (o ano seguinte é que diz se valia).
+  e.unidades = Math.max(1, Math.min(4, Math.round(o.avaliacao / Math.max(1, capitalDaUnidade(e)) / 0.8)));
+  e.equipe = t.equipe * e.unidades;
+  e.caixa += o.avaliacao - avaliar(v, e);
+  avaliar(v, e);
   v.financas.conta -= o.preco;
   v.anoAtual.acoes.push(`participacao:${ofertaId}`);
   (v.financas.empresas ??= []).push(e);
@@ -232,7 +257,7 @@ function procura(v: Vida, e: Empresa, r: Rng): number {
   const qual = 0.75 + e.qualidade / 250;
   const gestao = 0.85 + competenciaDaGestao(v, e) / 380;
   const sorte = Math.max(0.55, 1 + r.normal() * 0.12);
-  let base = t.publico * e.unidades * fatorDaCidade(t, e.municipioId) * rep * qual * gestao * t.procura[e.preco] * ciclo * sorte;
+  let base = t.publico * e.unidades * fatorDaCidade(t, e.municipioId) * rep * qual * gestao * t.procura[e.preco] * ciclo * sorte * ajusteDe(v, e).procura;
   // REWORK 12.2: o ramo decide o resto (a nota do restaurante, a ocupação do hotel, os animais, as obras).
   if (e.setor) return base * efeitosDoSetor(v, e).procura * (e.tipo === 'estudio' && doRamo(v, 'estudio') && e.papel !== 'investidor' ? 1 + Math.min(0.5, (v.notoriedade?.valor ?? 0) / 120) : 1);
   if (e.tipo === 'museu' && e.acervo) base *= (0.6 + Math.min(1.2, (e.acervo.valor + valorCedidoAoMuseu(v, e)) / Math.max(1, t.capital * 0.6)) * 0.4) * (e.acervo.exposicao && v.t - (e.acervo.tExposicao ?? 0) < 12 ? 1.45 : 1);
@@ -264,7 +289,7 @@ export function contasDoAno(v: Vida, e: Empresa, r: Rng): ResultadoDoAno {
   } else publico = Math.round(Math.min(teto, procura(v, e, r)));
   const receita = publico * t.ticket[e.preco] * ef.ticket * c;
   const fixos = custosFixos(v, e).reduce((s, x) => s + x.valor, 0);
-  const custos = fixos + receita * (t.variavel * ef.variavel + t.outros);
+  const custos = fixos + receita * (t.variavel * ef.variavel * ajusteDe(v, e).variavel + t.outros);
   // O apoio (museu, zoológico): patrocínio e incentivo cobrem parte do custo — mais para quem tem reputação e cuida bem.
   const cuidado = e.setor?.zoo ? 1 : e.zoo ? e.zoo.bemEstar / 100 * (e.zoo.conservacao ? 1.3 : 1) : e.acervo ? e.acervo.conservacao / 100 : 1;
   // O patrocínio contratado do museu entra como apoio (já nos preços da vida: volta para os da cidade da empresa).
@@ -281,6 +306,9 @@ export function processarEmpresas(v: Vida, r: Rng): void {
 }
 
 function processarEmpresa(v: Vida, e: Empresa, r: Rng): void {
+  // VIDA 12.9: os ramos grandes têm o ano próprio (capacidade, projetos, dívida da empresa) — `empresas129`.
+  if (GANCHOS_EMPRESA.motor?.(v, e, r)) return;
+  const caixaAntes = e.caixa;
   // Quem se mudou não toca de longe: a gestão passa a alguém contratado (a empresa fica onde está).
   if (e.gestao.quem === 'propria' && e.municipioId !== v.moradia.municipioId) empresasNaMudanca(v, v.moradia.municipioId);
   garantirSetor(v, e);
@@ -336,6 +364,7 @@ function processarEmpresa(v: Vida, e: Empresa, r: Rng): void {
   e.historico = [...(e.historico ?? []), resultado].slice(-6);
   e.ultimo = { t: v.t, publico: contas.publico, receita: Math.round(contas.receita * k), custos: Math.round(contas.custos * k), apoio: contas.apoio ? Math.round(contas.apoio * k) : undefined, imposto: Math.round(contas.imposto * k), resultado, distribuido, nota };
   avaliar(v, e);
+  GANCHOS_EMPRESA.depois?.(v, e, contas, caixaAntes);
   if (e.anosNoVermelho >= 3 && e.caixa < -contas.custos * k * 0.5) falir(v, e);
 }
 
@@ -381,7 +410,7 @@ export function avaliar(v: Vida, e: Empresa): number {
  * fica em parte com quem a tocava (o aval pessoal que todo banco pede): um acordo parcelado, não uma ruína
  * instantânea. A história fica.
  */
-function falir(v: Vida, e: Empresa): void {
+export function falir(v: Vida, e: Empresa): void {
   const sobra = e.ativos * 0.3 + e.caixa;
   e.estado = 'encerrada';
   e.tFim = v.t;
@@ -432,7 +461,7 @@ export function disponibilidadeEmpresa(v: Vida, e: Empresa | undefined, d: Decis
     case 'contratar_gestor': return { ok: true };
     case 'melhorar': return pagar(custoDaDecisao(v, e, d), 'A reforma custa');
     case 'expandir':
-      if (e.unidades >= 4) return { ok: false, motivo: 'Já são quatro unidades.' };
+      if (e.unidades >= (GANCHOS_EMPRESA.unidades?.(e) ?? 4)) return { ok: false, motivo: e.unidades >= 4 && !(e.executivos ?? []).some(x => x.cargo === 'coo') ? `Já são ${e.unidades} unidades: uma rede maior pede uma diretoria de operações.` : `Já são ${e.unidades} unidades.` };
       if (e.tipo === 'museu' || e.tipo === 'zoologico') return { ok: false, motivo: 'Não se abre filial de museu ou de zoológico.' };
       if (e.estado !== 'operando') return { ok: false, motivo: 'Primeiro, sair da crise.' };
       return pagar(custoDaDecisao(v, e, d), 'A nova unidade custa');

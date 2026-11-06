@@ -1,8 +1,10 @@
 /** Efeitos curtos para o conteúdo. */
 
-import { clamp } from '../rng';
+import { clamp, rngDe } from '../rng';
 import type { Ctx } from './base';
-import { capacidade } from '../sistemas/dinheiro';
+import { capacidade, pagar } from '../sistemas/dinheiro';
+import { liquidez } from '../sistemas/investimentos';
+import { aplicarPerda, type ResultadoDaPerda } from '../sistemas/fortuna129';
 import { dinheiro as fmt } from '../texto';
 import { economiaLocal } from '../dados/lugares';
 
@@ -19,7 +21,18 @@ export const forma = (c: Ctx, n: number) => { c.v.corpo.forma = clamp(c.v.corpo.
 export const cognicao = (c: Ctx, n: number) => { c.v.mente.cognicao = clamp(c.v.mente.cognicao + n); };
 // REWORK 9.7 · ECO-01: um acontecimento não tira o que não existe (antes, um assalto de −1.500 com a conta zerada virava
 // "conta que ficou sem pagar" e nome sujo no ano seguinte, sem dívida nenhuma por trás).
-export const dinheiro = (c: Ctx, n: number) => { c.v.financas.conta += n >= 0 ? n : Math.max(n, -Math.max(0, c.v.financas.conta)); };
+// VIDA 12.9 (a auditoria): a perda tirava só do que estava NA CONTA — quem deixava tudo aplicado nunca perdia nada num
+// acontecimento. Agora sai da conta e, faltando, das aplicações (pelo preço do dia). O que não existe continua não se perdendo.
+export const dinheiro = (c: Ctx, n: number) => {
+  if (n >= 0) { c.v.financas.conta += n; return; }
+  const tirar = Math.min(-n, liquidez(c.v).mobilizavel);
+  if (tirar > 0) pagar(c.v, tirar);
+};
+/**
+ * VIDA 12.9: uma perda que acontece de verdade, na escala de quem perde: conta, aplicações e — conforme o caso — bens vendidos
+ * às pressas (`vender`) ou dívida nova (`endividar`: a aposta no crédito, o aval, o processo perdido). `sistemas/fortuna129`.
+ */
+export const perda = (c: Ctx, valor: number, motivo: string, opcoes: { vender?: boolean; endividar?: boolean; humor?: boolean } = {}): ResultadoDaPerda => aplicarPerda(c.v, valor, motivo, opcoes);
 export const fato = (c: Ctx, chave: string) => { if (c.v.fatos[chave] === undefined) c.v.fatos[chave] = c.v.t; };
 
 /** Muda a proximidade com a pessoa de um papel. */
@@ -67,3 +80,14 @@ export function custa(c: Ctx, valor: number, semDinheiro = 'Não há esse dinhei
   if (k.situacao === 'resgatando') return { motivo: `Custa ${fmt(valor)}; na conta há ${fmt(k.conta)}. O resto está nas aplicações${k.naBaixa.length ? ` (${k.naBaixa.join(' e ')} abaixo do que você pôs)` : ''}.`, resgate: k.falta };
   return k.aplicado > 0 ? `${semDinheiro} Somando conta e aplicações, você tem ${fmt(k.conta + k.aplicado)}.` : semDinheiro;
 }
+
+/**
+ * VIDA 12.9: o que as apostas on-line já levaram — o MESMO número no texto e no efeito (sorteio derivado, fixo enquanto o
+ * vício é o mesmo): 8 a 40 mil no custo do lugar, e mais para quem tem mais (até 25 vezes: o aplicativo tem limite, e
+ * ninguém aposta a fortuna inteira pelo celular).
+ */
+export const perdaDasBets = (c: Ctx) => {
+  const r = rngDe(c.v.id, 'bets_129', c.v.fatos['aposta_online'] ?? 0);
+  const escala = clamp(liquidez(c.v).mobilizavel / 300_000, 1, 25);
+  return Math.round(r.int(8, 40) * 1000 * economiaLocal(c.v.moradia.municipioId).custo * escala / 1000) * 1000;
+};

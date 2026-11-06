@@ -16,6 +16,7 @@
  */
 
 import type { PrecoEmpresa, TipoEmpresa } from '../tipos';
+import { NOMES_129 } from './empresas129';
 
 export interface TipoDeEmpresa {
   id: TipoEmpresa;
@@ -130,8 +131,10 @@ export const NOMES_DE_EMPRESA: Record<TipoEmpresa, string[]> = {
   hotel: ['Hotel {sobrenome}', 'Grande Hotel do Centro', 'Hotel Mirante', 'Pousada do Porto'],
   loja: ['Loja {sobrenome}', 'Empório da Rua', 'Casa & Cia', 'Vitrine'],
   museu: ['Museu {sobrenome}', 'Instituto {sobrenome} de Arte', 'Museu da Cidade', 'Casa da Memória'],
-  zoologico: ['Parque Zoológico {sobrenome}', 'Zoológico da Serra', 'Parque da Fauna', 'Bioparque']
-};
+  zoologico: ['Parque Zoológico {sobrenome}', 'Zoológico da Serra', 'Parque da Fauna', 'Bioparque'],
+  // VIDA 12.9: os ramos grandes (`dados/empresas129`).
+  ...(NOMES_129 as Record<string, string[]>)
+} as Record<TipoEmpresa, string[]>;
 
 /** Os nomes dos gestores contratados (texto; não viram pessoas da vida). */
 export const GESTORES: [string, string][] = [
