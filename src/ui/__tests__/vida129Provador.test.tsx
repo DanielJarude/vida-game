@@ -69,7 +69,7 @@ describe('12.9 · variante única: vitrine = provador = compra = guarda-roupa', 
     fireEvent.click(within(cartao()).getByRole('button', { name: 'Comprar' }));
     const item = v.eu.estilo!.itens.find(x => x.itemId === 'camisa_time')!;
     expect(item.variante).toBe(varianteDaCor('camisa_time', vermelha));
-    expect(pecasDoItem('camisa_time', sementeDaPeca(item)).cima!.cor).toBe(vermelha);
+    expect((pecasDoItem('camisa_time', sementeDaPeca(item)).cima as { cor?: string }).cor).toBe(vermelha);
     // O retrato (a parte de cima) e o guarda-roupa mostram a mesma.
     expect(v.eu.visual.superior).toBe(`camisa_time#${item.variante}`);
     const g = render(<OQueVeste vida={v} agir={() => true} />);

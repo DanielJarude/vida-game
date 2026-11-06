@@ -139,6 +139,7 @@ export function OQueVeste({ vida, agir }: { vida: Vida; agir: (a: Acao) => boole
         {partes.map(p => <ParteDoCorpo key={p.id} vida={vida} agir={agir} parte={p} />)}
       </ul>
       <p className="nota">A peça que sai fica guardada: é sua, dá para voltar a usar quando quiser.</p>
+      {idade(vida) >= 10 && <LooksSalvos vida={vida} agir={agir} />}
     </div>
   );
 }
@@ -168,5 +169,62 @@ function ParteDoCorpo({ vida, agir, parte }: { vida: Vida; agir: (a: Acao) => bo
         {atual && <BotaoAcao vida={vida} acao={{ tipo: 'usar_item', itemId: atual.itemId, id: atual.id, usar: false }} agir={agir} variante="discreto">Tirar</BotaoAcao>}
       </span>
     </li>
+  );
+}
+
+/**
+ * VIDA 12.9 — OS LOOKS COM NOME: o que se está usando agora, guardado com um nome (casual, trabalho, festa...), para
+ * vestir de novo com um toque. Guarda as peças de verdade (os ids do guarda-roupa): vestir um look veste aquelas peças,
+ * não outras parecidas. Não precisa ter todas as partes — o que o look não tem continua como está.
+ */
+const SUGESTOES_DE_LOOK = ['Casual', 'Trabalho', 'Formal', 'Esportivo', 'Elegante', 'Alternativo', 'Festa'];
+function LooksSalvos({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
+  const salvos = vida.eu.estilo?.looksSalvos ?? [];
+  const meus = new Map((vida.eu.estilo?.itens ?? []).map(x => [x.id, x]));
+  const livre = SUGESTOES_DE_LOOK.find(n => !salvos.some(l => l.nome.toLowerCase() === n.toLowerCase())) ?? '';
+  const [nome, setNome] = useState(livre);
+  const [renomeando, setRenomeando] = useState<{ id: string; nome: string } | null>(null);
+  const op = (o: Extract<Acao, { tipo: 'personalizar' }>['op']): Acao => ({ tipo: 'personalizar', op: o });
+  const i = idade(vida);
+  return (
+    <section className="looks" aria-labelledby="looks-titulo">
+      <h3 id="looks-titulo" className="subtitulo">Meus looks</h3>
+      <div className="looks__novo">
+        <label className="campo campo--compacto"><span className="campo__rotulo">Guardar o que estou usando como</span>
+          <input type="text" value={nome} maxLength={32} onChange={e => setNome(e.target.value)} list="looks-sugestoes" placeholder="Ex.: Casual" /></label>
+        <datalist id="looks-sugestoes">{SUGESTOES_DE_LOOK.map(n => <option key={n} value={n} />)}</datalist>
+        <BotaoAcao vida={vida} agir={a => { const ok = agir(a); if (ok) setNome(''); return ok; }} acao={op({ o: 'look_salvar', nome })} variante="secundario">Guardar look</BotaoAcao>
+      </div>
+      {salvos.length === 0 ? <p className="nota">Monte a roupa acima e guarde com um nome: depois é só vestir de novo.</p> : (
+        <ul className="looks__lista">
+          {salvos.map(l => {
+            const pecas = l.itens.map(id => meus.get(id)).filter((x): x is NonNullable<typeof x> => !!x);
+            const emUso = pecas.length > 0 && pecas.every(x => x.usando);
+            return (
+              <li key={l.id} className="looks__look" data-look={l.id}>
+                <span className="looks__figura" aria-hidden>
+                  <Figura visual={vida.eu.visual} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} corpo={tipoDeCorpo(vida)} pecas={pecas} largura={56} semFundo rotulo={l.nome} />
+                </span>
+                <span className="looks__texto">
+                  {renomeando?.id === l.id ? (
+                    <span className="looks__renomear">
+                      <input type="text" aria-label="Novo nome" value={renomeando.nome} maxLength={32} onChange={e => setRenomeando({ id: l.id, nome: e.target.value })} />
+                      <BotaoAcao vida={vida} agir={a => { const ok = agir(a); if (ok) setRenomeando(null); return ok; }} acao={op({ o: 'look_renomear', id: l.id, nome: renomeando.nome })} variante="discreto">Salvar nome</BotaoAcao>
+                    </span>
+                  ) : <strong>{l.nome}</strong>}
+                  <span className="nota">{pecas.length ? pecas.map(x => itemEstilo(x.itemId)?.nome ?? x.itemId).join(' · ') : 'As peças deste look não são mais suas.'}{emUso ? ' · em uso' : ''}</span>
+                  <span className="looks__acoes">
+                    <BotaoAcao vida={vida} agir={agir} acao={op({ o: 'look_vestir', id: l.id })} variante="secundario" ocultarImpossivel>Vestir</BotaoAcao>
+                    <BotaoAcao vida={vida} agir={agir} acao={op({ o: 'look_salvar', id: l.id, nome: l.nome })} variante="discreto">Trocar pelo que estou usando</BotaoAcao>
+                    {renomeando?.id !== l.id && <button type="button" className="botao botao--discreto" onClick={() => setRenomeando({ id: l.id, nome: l.nome })}>Renomear</button>}
+                    <BotaoAcao vida={vida} agir={agir} acao={op({ o: 'look_excluir', id: l.id })} variante="discreto">Apagar</BotaoAcao>
+                  </span>
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
   );
 }

@@ -1306,3 +1306,16 @@ button.agora-sinal:hover { color: var(--text-primary); }
   .legado__passos { align-self: flex-start; }
   .linhagem__corpo { padding-left: 0; }
 }
+
+/* VIDA 12.9 — os looks com nome (Aparência → o que você está usando). */
+.looks { margin-top: var(--space-4, 16px); display: grid; gap: var(--space-2, 8px); }
+.looks__novo { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-2, 8px); }
+.looks__novo .campo { flex: 1 1 200px; min-width: 0; }
+.looks__lista { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2, 8px); grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.looks__look { display: flex; gap: var(--space-3, 12px); align-items: flex-start; padding: var(--space-2, 8px) var(--space-3, 12px); border: 1px solid var(--fio); border-radius: var(--radius-md, 10px); background: var(--surface); min-width: 0; }
+.looks__figura { flex: 0 0 56px; }
+.looks__texto { display: grid; gap: 4px; min-width: 0; }
+.looks__texto .nota { overflow-wrap: anywhere; }
+.looks__acoes { display: flex; flex-wrap: wrap; gap: 4px 8px; }
+.looks__renomear { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.looks__renomear input { min-width: 0; flex: 1 1 120px; }
