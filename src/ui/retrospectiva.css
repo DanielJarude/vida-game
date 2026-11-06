@@ -58,3 +58,14 @@
 }
 /* VIDA 12.6 — a foto da memória (quem estava, com a idade daquele dia, no cenário da categoria). */
 .retro-foto__cena { display: block; width: 100%; height: 100%; }
+
+/* VIDA 12.9 — a faixa da vida: do nascimento a hoje, cada memória um ponto na idade dela. */
+.retro-faixa { margin: var(--space-3, 12px) 0 var(--space-4, 16px); }
+.retro-faixa__linha { position: relative; height: 44px; border-radius: 22px; background: var(--surface); border: 1px solid var(--fio); overflow: hidden; }
+.retro-faixa__fase { position: absolute; top: 0; bottom: 0; border-right: 1px dashed var(--fio); }
+.retro-faixa__fase:nth-child(even) { background: color-mix(in oklab, var(--fio) 22%, transparent); }
+.retro-faixa__rotulo { position: absolute; left: 8px; top: 3px; font-size: 0.68rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; max-width: calc(100% - 10px); text-overflow: ellipsis; }
+.retro-faixa__ponto { position: absolute; top: 24px; width: 10px; height: 10px; margin-left: -5px; padding: 0; border-radius: 50%; border: 1px solid var(--surface-strong, #fff); background: var(--retro-tom, var(--accent)); cursor: pointer; }
+.retro-faixa__ponto--marcante { top: 21px; width: 16px; height: 16px; margin-left: -8px; box-shadow: 0 0 0 2px color-mix(in oklab, var(--retro-tom, var(--accent)) 35%, transparent); }
+.retro-faixa__ponto:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.retro-faixa__legenda { display: flex; justify-content: space-between; margin-top: 2px; }

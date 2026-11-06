@@ -22,6 +22,8 @@ export function Retrospectiva({ vida, abrirPessoa }: { vida: Vida; abrirPessoa?:
   const memorias = useMemo(() => memoriasDaVida(vida), [vida]);
   const [filtro, setFiltro] = useState<CategoriaDaMemoria | 'todas'>('todas');
   const [soMarcantes, setSoMarcantes] = useState(false);
+  // 12.9: o álbum inteiro (todas as memórias importantes como fotos), não só os doze marcantes mais recentes.
+  const [albumTodo, setAlbumTodo] = useState(false);
   const contagem = useMemo(() => {
     const c = {} as Record<CategoriaDaMemoria, number>;
     for (const m of memorias) c[m.categoria] = (c[m.categoria] ?? 0) + 1;
@@ -43,11 +45,13 @@ export function Retrospectiva({ vida, abrirPessoa }: { vida: Vida; abrirPessoa?:
         </p>
       </header>
 
+      {memorias.length > 1 && <FaixaDaVida memorias={memorias} idadeAgora={i} irPara={(m) => { setFiltro('todas'); setSoMarcantes(false); setTimeout(() => irParaFase(faseDe(m.idade)), 0); }} />}
+
       {marcantes.length > 0 && (
         <section className="retro__marcantes" aria-label="Momentos marcantes">
-          <h2 className="secao__titulo">Momentos marcantes</h2>
+          <h2 className="secao__titulo">{albumTodo ? 'O álbum inteiro' : 'Momentos marcantes'}</h2>
           <ol className="retro__fotos">
-            {marcantes.slice(-12).map((m, k) => (
+            {(albumTodo ? memorias.filter(m => m.destaque >= 1) : marcantes.slice(-12)).map((m, k) => (
               <li key={m.id} className={`retro-foto retro--${m.categoria}`} style={{ ['--giro' as string]: `${(k % 3) - 1}deg` }}>
                 <div className="retro-foto__imagem"><FotoDaMemoria vida={vida} m={m} /></div>
                 <p className="retro-foto__titulo">{m.titulo}</p>
@@ -55,6 +59,7 @@ export function Retrospectiva({ vida, abrirPessoa }: { vida: Vida; abrirPessoa?:
               </li>
             ))}
           </ol>
+          {memorias.filter(m => m.destaque >= 1).length > Math.min(12, marcantes.length) && <button type="button" className="botao botao--discreto" onClick={() => setAlbumTodo(x => !x)}>{albumTodo ? 'Só os marcantes' : `Ver o álbum inteiro (${memorias.filter(m => m.destaque >= 1).length} fotos)`}</button>}
         </section>
       )}
 
@@ -89,6 +94,28 @@ export function Retrospectiva({ vida, abrirPessoa }: { vida: Vida; abrirPessoa?:
         </section>
       ))}
     </section>
+  );
+}
+
+/**
+ * 12.9 — A FAIXA DA VIDA: do nascimento a hoje numa linha só, as fases como trechos e cada memória um ponto na idade em
+ * que aconteceu (os marcantes maiores), na cor da categoria. Um toque leva à fase na linha do tempo.
+ */
+function FaixaDaVida({ memorias, idadeAgora, irPara }: { memorias: Memoria[]; idadeAgora: number; irPara: (m: Memoria) => void }) {
+  const fim = Math.max(1, idadeAgora, ...memorias.map(m => m.idade));
+  const x = (idadeAnos: number) => `${Math.min(100, Math.max(0, (idadeAnos / fim) * 100))}%`;
+  let inicio = 0;
+  const trechos = FASES.map(f => { const t = { nome: f.nome, de: inicio, ate: Math.min(f.ate + 1, fim) }; inicio = f.ate + 1; return t; }).filter(t => t.de < fim);
+  return (
+    <figure className="retro-faixa" aria-label="A vida numa linha">
+      <div className="retro-faixa__linha">
+        {trechos.map(t => <span key={t.nome} className="retro-faixa__fase" style={{ left: x(t.de), width: `calc(${x(t.ate)} - ${x(t.de)})` }}><span className="retro-faixa__rotulo">{t.nome}</span></span>)}
+        {memorias.map(m => (
+          <button key={m.id} type="button" className={`retro-faixa__ponto retro--${m.categoria}${m.destaque === 2 ? ' retro-faixa__ponto--marcante' : ''}`} style={{ left: x(m.idade + 0.5) }} title={`${m.titulo} · ${quandoFoi(m)}`} aria-label={`${m.titulo}, ${quandoFoi(m)}`} onClick={() => irPara(m)} />
+        ))}
+      </div>
+      <figcaption className="retro-faixa__legenda nota"><span>0</span><span>{fim} anos</span></figcaption>
+    </figure>
   );
 }
 
