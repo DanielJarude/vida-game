@@ -53,6 +53,8 @@ import { rotuloDe } from '../apresentar';
 import { leituraDaPratica } from '../leituraPratica';
 import { CartaoPratica, FichaPratica } from './Pratica';
 import { Emblema } from './Emblemas';
+import { sobDemanda } from '../util/sobDemanda';
+const Calendario = sobDemanda(() => import('./Calendario').then(m => m.Calendario));
 import { Agenda } from './Agenda';
 import { LeituraDaRotina, tituloDaRotina } from './Rotina';
 import { avaliarRotina } from '../../motor/sistemas/avaliacaoDaRotina';
@@ -313,6 +315,8 @@ export function Tempo({ vida, agir, irPara, aba: abaDeFora, irAba, abrirPessoa }
               {i >= 10 ? <Estresse vida={vida} agir={agir} irPara={ir} /> : <p className="nota">{i < 7 ? 'A semana é de brincar — e da escola.' : 'Além da escola, a semana é sua.'}</p>}
             </section>
             <AtividadesAtivas vida={vida} agir={agir} irPara={irPara} abrirPessoa={abrirPessoa} ativas={ativas} titulo="O que você pratica" vazio="Nada fixo na semana por enquanto. As abas acima mostram o que dá para começar." />
+            {/* VIDA 12.9: o calendário do ano (as datas que o jogo já tem: aniversários, feriados, eleição, o que aconteceu). */}
+            <Calendario vida={vida} abrirPessoa={abrirPessoa} />
             <ComoVoceVai vida={vida} agir={agir} irPara={irPara} />
           </>
         )}
