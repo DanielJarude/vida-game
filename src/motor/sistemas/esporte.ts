@@ -713,11 +713,16 @@ function aplicarLances(e: CarreiraEsportiva, t: Temporada, individual: boolean):
   t.gols += l.gols ?? 0;
   t.assistencias += l.assistencias ?? 0;
   if (l.semSofrerGol && t.semSofrerGol !== undefined) t.semSofrerGol = Math.min(t.titular, t.semSofrerGol + l.semSofrerGol);
-  // A final nacional das provas individuais: o pódio soma; o ouro faz da temporada um título (a colocação é do atleta).
-  if (individual && (l.podios || l.ouro)) {
-    if (t.prova) { t.prova.podios += (l.podios ?? 0) + (l.ouro ?? 0); t.prova.finais = Math.max(1, t.prova.finais); t.prova.vitorias += l.ouro ?? 0; }
-    else if (t.luta) { t.luta.podios += (l.podios ?? 0) + (l.ouro ?? 0); t.luta.titulos += l.ouro ?? 0; }
-    t.colocacao = l.ouro ? 1 : Math.min(t.colocacao, 3);
+  // A final nacional das provas individuais (VIDA 12.9: só depois da classificação, `esportes129`): o lugar que a final
+  // deu é a colocação do atleta na prova que importa — o ouro é título; prata e bronze, pódio; fora do pódio, nunca
+  // título (antes, "pódio" mantinha o 1º do sorteio do ano, e "último lugar" não mudava nada). Saves antigos: ouro/pódio.
+  const lugar = l.finalNacional ?? (l.ouro ? 1 : l.podios ? Math.max(2, Math.min(t.colocacao, 3)) : undefined);
+  if (individual && lugar !== undefined) {
+    const podio = lugar <= 3 ? 1 : 0, ouro = lugar === 1 ? 1 : 0;
+    if (t.prova) { t.prova.podios += podio; t.prova.finais = Math.max(1, t.prova.finais); t.prova.vitorias += ouro; }
+    else if (t.luta) { t.luta.podios += podio; t.luta.titulos += ouro; }
+    t.partidas = Math.max(1, t.partidas); t.titular = Math.max(1, t.titular);
+    t.colocacao = lugar <= 3 ? lugar : Math.max(t.colocacao, lugar);
   }
 }
 
@@ -767,6 +772,16 @@ function jogarCircuito(_v: Vida, r: Rng, e: CarreiraEsportiva, t: Temporada, not
     melhor = Math.max(melhor, rd);
     pontos += pontosDaRodada(rd, rodadas, e.nivel >= 4 ? PONTOS_PRINCIPAL[porte] : PONTOS_CAMPEAO[e.nivel]);
     if (rd >= rodadas - 2 && (rd >= rodadas - 1 || e.nivel >= 3)) marcantes.push({ nome: nomeDoTorneio(e.nivel, r, porte), fase: faseDoTenis(rd, rodadas), v: rd });
+  }
+  // VIDA 12.9: a fase que um momento do ano jogou (a semifinal vencida no tie-break) é do ano — se o sorteio dos outros
+  // torneios não chegou lá, um torneio chega (um nome estável, sem gastar o gerador).
+  const garantida = e.lances?.faseTenis;
+  if (garantida !== undefined && t.partidas > 0 && rodadas - garantida > melhor) {
+    const rd = Math.max(0, rodadas - garantida);
+    melhor = rd;
+    if (rd >= rodadas - 1) fin++;
+    pontos += pontosDaRodada(rd, rodadas, e.nivel >= 4 ? PONTOS_PRINCIPAL[0] : PONTOS_CAMPEAO[e.nivel]);
+    if (rd >= rodadas - 2) marcantes.push({ nome: nomeDoTorneio(e.nivel, rngDe(_v.id, 'torneio_do_momento129', t.ano), 0), fase: faseDoTenis(rd, rodadas), v: rd });
   }
   t.vitorias = vit; t.derrotas = der; t.titulos = tit; t.finais = fin;
   t.pontosRanking = pontos;

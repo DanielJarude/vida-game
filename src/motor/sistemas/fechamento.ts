@@ -17,6 +17,7 @@ import { divisaoDe, linhaDaTemporada, nomePosicao, palavraDaNota, palavraDaReput
 import { leituraDoNome } from './notoriedade';
 import { leituraPolitica } from './politica';
 import { negocioAberto } from './negocio';
+import { marcaDeTituloSemRegistro } from './esportes129';
 
 export interface Fechamento { titulo: string; linhas: string[] }
 
@@ -67,7 +68,8 @@ export const MARCAS_DE_CONQUISTA = new Set(['conquista', 'aprovacao', 'formacao'
  */
 export function conquistasDoAno(v: Vida): string[] {
   const vistos = new Set<string>();
-  return v.caminhos.marcas.filter(m => MARCAS_DE_CONQUISTA.has(m.tipo) && m.peso >= 2 && m.t > v.t - 12 && m.t <= v.t)
+  // VIDA 12.9: título esportivo só com título no palmarés (a conquista inventada por um acontecimento antigo não aparece).
+  return v.caminhos.marcas.filter(m => MARCAS_DE_CONQUISTA.has(m.tipo) && m.peso >= 2 && m.t > v.t - 12 && m.t <= v.t && !marcaDeTituloSemRegistro(v, m))
     .sort((a, b) => b.peso - a.peso).map(m => m.texto).filter(t => (vistos.has(t) ? false : (vistos.add(t), true))).slice(0, 4);
 }
 

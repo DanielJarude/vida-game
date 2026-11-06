@@ -16,6 +16,7 @@ import { tipoNegocio } from '../dados/negocios';
 import { NOME_PRIORIDADE } from './politica';
 import { infoPet } from './pets';
 import { ocupacaoOuNula } from '../dados/ocupacoes';
+import { contradicoesEsportivas } from './esportes129';
 
 const TEXTO_QUEBRADO = /undefined|NaN|\[object |null\b/;
 
@@ -49,6 +50,8 @@ export function verificarCoerencia(v: Vida, desde = 0): string[] {
   }
   if (!Number.isFinite(v.financas.conta)) out.push('Conta bancária não é um número.');
   out.push(...coerenciaTemporal(v));
+  // VIDA 12.9: nenhuma conquista ou memória de título esportivo sem o título no palmarés (o "campeão" da final que não houve).
+  out.push(...contradicoesEsportivas(v, desde));
   for (const e of v.biografia.slice(desde)) if (TEXTO_QUEBRADO.test(e.texto)) out.push(`Texto quebrado na Linha da Vida: "${e.texto}"`);
   return out;
 }

@@ -13,6 +13,7 @@
  */
 
 import { procuraComoSeNada } from '../sistemas/magoas';
+import { encerrarMatricula129 } from '../sistemas/estudos129';
 import type { Conteudo, Ctx } from './base';
 import * as P from './papeis';
 import { fixo } from './papeis';
@@ -38,6 +39,7 @@ import { registrarEco, ecoAberto, ecoVoltou, pessoaDoEco } from '../sistemas/eco
 import { premissaVale } from '../sistemas/premissas';
 import { reacaoDaParceriaAMudanca } from '../sistemas/convivio';
 import { lesionar, machucarNaBriga } from '../sistemas/lesoes';
+import { palavrasDoEsporte } from '../sistemas/esportes129';
 import { dinheiro as fmt } from '../texto';
 import { seguranca } from '../sistemas/dinheiro';
 
@@ -253,7 +255,7 @@ export const ACONTECIMENTOS_10: Conteudo[] = [
     opcoes: [
       { id: 'mudar', texto: 'Largar e tentar outro curso no próximo processo', comportamento: { coragem: 1 },
         consequencia: () => 'O curso acaba agora; o próximo começa do zero (a escolha volta em Caminhos · Estudos).',
-        resolver: c => ({ texto: 'Você largou. Ficou um alívio e uma pergunta: e agora?', memoria: `Largou ${curso(c.v.educacao.matricula!.cursoId).nome} para tentar outro curso.`, relevancia: 'marco', efeito: () => { registrarEco(c.v, 'mudou_de_curso', { texto: curso(c.v.educacao.matricula!.cursoId).nome, cursoId: c.v.educacao.matricula!.cursoId, de: 3, ate: 10 }); c.v.educacao.matricula = undefined; estresse(c, -8); } }) },
+        resolver: c => ({ texto: 'Você largou. Ficou um alívio e uma pergunta: e agora?', memoria: `Largou ${curso(c.v.educacao.matricula!.cursoId).nome} para tentar outro curso.`, relevancia: 'marco', efeito: () => { registrarEco(c.v, 'mudou_de_curso', { texto: curso(c.v.educacao.matricula!.cursoId).nome, cursoId: c.v.educacao.matricula!.cursoId, de: 3, ate: 10 }); encerrarMatricula129(c.v); estresse(c, -8); } }) },
       { id: 'insistir', texto: 'Insistir: mais um semestre com outra postura', comportamento: { disciplina: 2 },
         resolver: c => ({ texto: 'Você mudou o horário de estudo, sentou na frente. O semestre foi difícil — e melhor.', memoria: null, efeito: () => { subirNota(c, 7); estresse(c, 6); } }) },
       { id: 'trancar', texto: 'Trancar um semestre para pensar', resolver: c => ({ texto: 'Um semestre fora para entender o que se quer. O curso espera.', memoria: null, efeito: () => { const m = c.v.educacao.matricula!; m.trancado = true; m.tTrancou = c.v.t; estresse(c, -5); } }) }
@@ -777,15 +779,27 @@ export const ACONTECIMENTOS_10: Conteudo[] = [
     ]
   },
   {
+    // VIDA 12.9: este acontecimento é genérico (não sabe de competição nenhuma): fala do jogo grande do ano, nunca de
+    // final nem de título. Antes, "a final" com 55% de "campeão" e uma conquista no resumo do ano — mesmo com a equipe
+    // eliminada na fase de grupos. Título só existe no palmarés (a simulação da temporada, das copas, da seleção).
     id: 'esp10_dor', tipo: 'decisao', peso: 2, idade: [15, 38], tema: 'saude', repetir: 3,
     quando: c => { const e = c.v.caminhos.esporte; return !!e && e.fase !== 'encerrada' && !c.v.corpo.condicoes.some(x => x.lesao && v_ativa(c, x.lesao.tFim)); },
-    titulo: 'A dor antes da final',
-    texto: () => 'O joelho dói desde terça. Domingo é o jogo mais importante do ano.',
+    titulo: c => (palavrasDoEsporte(c.v.caminhos.esporte?.modalidade).individual ? 'A dor antes da competição' : 'A dor antes do jogo grande'),
+    texto: c => { const p = palavrasDoEsporte(c.v.caminhos.esporte?.modalidade); return `O joelho dói desde terça. Domingo é ${p.individual ? `${p.disputa === 'a luta' ? 'a luta' : 'a competição'} mais importante do ano até aqui` : 'o jogo mais importante do ano até aqui'}.`; },
     opcoes: [
-      { id: 'jogar', texto: 'Jogar assim mesmo', comportamento: { coragem: 1, impulsividade: 1 },
-        resolver: c => { const piorou = c.r.chance(0.45); return { texto: piorou ? 'No segundo tempo, o joelho cedeu. Você saiu de maca.' : 'Você jogou no limite e saiu de campo mancando — e campeão.', memoria: piorou ? null : 'Jogou a final com dor e foi campeão.', tom: piorou ? 'ruim' : 'bom', efeito: () => { if (piorou) lesionar(c.v, c.r, 2, c.v.caminhos.esporte!.fase === 'profissional' ? 'profissional' : 'pratica'); else marcar(c.v, 'conquista', 'Campeão com o joelho doendo.', 2, { dominio: c.v.caminhos.esporte!.modalidade }); } }; } },
+      { id: 'jogar', texto: c => (palavrasDoEsporte(c.v.caminhos.esporte?.modalidade).individual ? 'Competir assim mesmo' : 'Jogar assim mesmo'), comportamento: { coragem: 1, impulsividade: 1 },
+        resolver: c => {
+          const piorou = c.r.chance(0.45);
+          const p = palavrasDoEsporte(c.v.caminhos.esporte?.modalidade);
+          return {
+            texto: piorou ? `${p.momento}, o joelho cedeu. Você saiu ${p.deOnde} de maca.` : `Você aguentou até o fim e saiu ${p.deOnde} mancando. O joelho segurou — por enquanto.`,
+            memoria: piorou ? null : p.individual ? 'Competiu com o joelho doendo numa das competições mais importantes do ano.' : 'Jogou com o joelho doendo um dos jogos mais importantes do ano.',
+            tom: piorou ? 'ruim' : undefined,
+            efeito: () => { if (piorou) lesionar(c.v, c.r, 2, c.v.caminhos.esporte!.fase === 'profissional' ? 'profissional' : 'pratica'); else estresse(c, 3); }
+          };
+        } },
       { id: 'poupar', texto: 'Contar ao departamento médico e ficar de fora', comportamento: { disciplina: 1 },
-        resolver: c => ({ texto: 'O exame mostrou uma inflamação. Uma semana de gelo e você voltou inteiro. O time perdeu sem você.', memoria: null, efeito: () => { saude(c, 1); estresse(c, 3); } }) }
+        resolver: c => { const p = palavrasDoEsporte(c.v.caminhos.esporte?.modalidade); return { texto: `O exame mostrou uma inflamação. Uma semana de gelo e você voltou inteiro. ${p.individual ? `${p.disputa.charAt(0).toUpperCase()}${p.disputa.slice(1)} ficou sem você.` : 'O time jogou sem você.'}`, memoria: null, efeito: () => { saude(c, 1); estresse(c, 3); } }; } }
     ]
   },
   {

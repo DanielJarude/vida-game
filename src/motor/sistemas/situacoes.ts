@@ -59,6 +59,7 @@ import { mercadoDoTrabalho } from './mercados';
 import { marcar } from './marcas';
 import { daCompeticao, registrarConquista } from './palmares';
 import { anoDe } from '../tempo';
+import { classificadoParaFinalNacional, faseTenisPlausivel, naFaseTenis, registrarFaseTenis, registrarFinalNacional } from './esportes129';
 import { OCUPACAO_TECNICO, decidirFinal, deixarOClube, demitirDoComando, passagemAtual, trabalhoDoTecnico } from './tecnico';
 import { economiaLocal } from '../dados/lugares';
 import { MODELOS_ARTE_11 } from './situacoesArte';
@@ -410,6 +411,8 @@ export function resolverSituacao(v: Vida, r: Rng, intencaoId: string): { texto: 
   const desfecho = sortearDesfecho(v, r, it, a.d);
   const dm = it.desfechos[desfecho];
   aplicar(v, a.m.trajetoria, dm.efeitos ?? {}, a.d, desfecho, r);
+  // VIDA 12.9: a fase que a cena de tênis jogou entra no ano do tenista (vencer leva à seguinte; não jogar, não).
+  if (a.d.faseTenis !== undefined) registrarFaseTenis(v, String(a.d.faseTenis), it.id !== a.d.semJogo && String(a.d.vence ?? '').split(',').includes(desfecho));
   const texto = txt(dm.texto, v, a.d);
   const memoria = dm.memoria ? txt(dm.memoria, v, a.d) : undefined;
   registrarMomento(v, { id: a.m.id, t: v.t, trajetoria: a.m.trajetoria, intencao: typeof it.texto === 'string' ? it.texto : it.texto(v, a.d), desfecho, texto: memoria ?? texto });
@@ -495,7 +498,7 @@ const contextoDeJogo = (v: Vida, r: Rng): Dados => {
   const jogo = t && t.colocacao <= 2 ? 'decisão' : r.chance(0.35) ? 'clássico' : 'jogo de meio de tabela';
   return { minuto: r.int(72, 88), placar: r.pick(['perde por 1 a 0', 'perde por 1 a 0', 'está empatado', 'vence por 1 a 0']), jogo, clube: es.clube };
 };
-const abertura = (_v: Vida, d: Dados) => `${d.minuto} minutos de ${d.jogo === 'decisão' ? 'uma decisão' : d.jogo === 'clássico' ? 'um clássico' : 'um jogo de meio de tabela'}. ${cap(oClube(String(d.clube)))} ${d.placar}.`;
+const abertura = (_v: Vida, d: Dados) => `${d.minuto} minutos de ${d.jogo === 'decisão' ? 'um jogo decisivo' : d.jogo === 'clássico' ? 'um clássico' : 'um jogo de meio de tabela'}. ${cap(oClube(String(d.clube)))} ${d.placar}.`;
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const memoravel = (d: Dados) => d.jogo === 'decisão' || d.jogo === 'clássico';
 const placarDepois = (d: Dados, gol: boolean) => (!gol ? '' : d.placar === 'perde por 1 a 0' ? ' 1 a 1.' : d.placar === 'está empatado' ? ' A virada no placar.' : ' 2 a 0, jogo resolvido.');
@@ -510,7 +513,7 @@ const MODELOS_FUTEBOL: ModeloSituacao[] = [
     intencoes: [
       { id: 'arriscar', texto: 'Tentar o passe arriscado', dica: 'Pode decidir o jogo — ou virar contra-ataque.', risco: 0.6, fatores: (v, d) => [tecnicaFut(v), leitura(v), cabeca(v, d)],
         desfechos: {
-          otimo: { texto: (_v, d) => `O passe atravessou a defesa e o atacante só empurrou.${placarDepois(d, true)}`, efeitos: { nome: 3, confianca: 1, assistencias: 1, noto: 1, humor: 4 }, memoria: (_v, d) => (memoravel(d) ? `Deu a assistência decisiva aos ${d.minuto} minutos de ${d.jogo === 'decisão' ? 'uma decisão' : 'um clássico'}, ${peloClube(String(d.clube))}.` : `Deu uma assistência que mudou um jogo aos ${d.minuto} minutos.`) },
+          otimo: { texto: (_v, d) => `O passe atravessou a defesa e o atacante só empurrou.${placarDepois(d, true)}`, efeitos: { nome: 3, confianca: 1, assistencias: 1, noto: 1, humor: 4 }, memoria: (_v, d) => (memoravel(d) ? `Deu a assistência decisiva aos ${d.minuto} minutos de ${d.jogo === 'decisão' ? 'um jogo decisivo' : 'um clássico'}, ${peloClube(String(d.clube))}.` : `Deu uma assistência que mudou um jogo aos ${d.minuto} minutos.`) },
           bom: { texto: 'O passe chegou — e o atacante mandou por cima. Mas a jogada ficou: o treinador bateu palmas na beira do campo.', efeitos: { nome: 1, confianca: 1 } },
           ruim: { texto: 'A bola bateu no zagueiro. Ninguém aproveitou, mas a jogada morreu ali.', efeitos: { nome: -1 } },
           pessimo: { texto: (_v, d) => `Interceptado — e o contra-ataque terminou no gol deles${d.placar === 'vence por 1 a 0' ? ': empate' : ''}. Na saída, ninguém falou com você.`, efeitos: { nome: -2, confianca: -1, estresse: 5, humor: -3 } }
@@ -524,7 +527,7 @@ const MODELOS_FUTEBOL: ModeloSituacao[] = [
         } },
       { id: 'carregar', texto: 'Carregar a bola até a área', dica: 'Pede perna e técnica — e o fim de jogo cobra o fôlego.', risco: 0.45, fatores: (v, d) => [tecnicaFut(v), folego(v, d), coragem(v)],
         desfechos: {
-          otimo: { texto: (_v, d) => `Passou por um, por dois — e bateu cruzado.${placarDepois(d, true)} O estádio veio abaixo.`, efeitos: { nome: 3, confianca: 1, gols: 1, noto: 1, humor: 5 }, memoria: (_v, d) => `Fez um gol de arrancada aos ${d.minuto} minutos${memoravel(d) ? ` de ${d.jogo === 'decisão' ? 'uma decisão' : 'um clássico'}` : ''}.` },
+          otimo: { texto: (_v, d) => `Passou por um, por dois — e bateu cruzado.${placarDepois(d, true)} O estádio veio abaixo.`, efeitos: { nome: 3, confianca: 1, gols: 1, noto: 1, humor: 5 }, memoria: (_v, d) => `Fez um gol de arrancada aos ${d.minuto} minutos${memoravel(d) ? ` de ${d.jogo === 'decisão' ? 'um jogo decisivo' : 'um clássico'}` : ''}.` },
           bom: { texto: 'Arrancou e sofreu a falta na entrada da área. A cobrança passou perto.', efeitos: { nome: 1 } },
           ruim: { texto: 'As pernas não acompanharam: perdeu a bola na intermediária.', efeitos: { nome: -1, estresse: 2 } },
           pessimo: { texto: 'Perdeu a bola sozinho, o contra-ataque pegou o time aberto. Gol deles.', efeitos: { nome: -2, confianca: -1, estresse: 4 } }
@@ -547,7 +550,7 @@ const MODELOS_FUTEBOL: ModeloSituacao[] = [
     intencoes: [
       { id: 'chutar', texto: 'Chutar de primeira', dica: 'Se entrar, é gol de placa. Se não entrar, é bola perdida.', risco: 0.6, fatores: (v, d) => [tecnicaFut(v), cabeca(v, d), coragem(v)],
         desfechos: {
-          otimo: { texto: (_v, d) => `Pegou de primeira, no ângulo.${placarDepois(d, true)}`, efeitos: { nome: 3, gols: 1, noto: 1, confianca: 1, humor: 5 }, memoria: (_v, d) => `Fez um gol de primeira, no ângulo, aos ${d.minuto} minutos${memoravel(d) ? ` de ${d.jogo === 'decisão' ? 'uma decisão' : 'um clássico'}` : ''}.` },
+          otimo: { texto: (_v, d) => `Pegou de primeira, no ângulo.${placarDepois(d, true)}`, efeitos: { nome: 3, gols: 1, noto: 1, confianca: 1, humor: 5 }, memoria: (_v, d) => `Fez um gol de primeira, no ângulo, aos ${d.minuto} minutos${memoravel(d) ? ` de ${d.jogo === 'decisão' ? 'um jogo decisivo' : 'um clássico'}` : ''}.` },
           bom: { texto: 'Pegou bem. O goleiro buscou no canto — escanteio.', efeitos: { nome: 1 } },
           ruim: { texto: 'A bola subiu demais. Arquibancada.', efeitos: {} },
           pessimo: { texto: 'Furou. A bola sobrou para eles, e o contra-ataque quase custou caro. O apelido do dia não foi bom.', efeitos: { nome: -2, estresse: 4, imagem: 'polemica' } }
@@ -724,14 +727,15 @@ const MODELOS_FUTEBOL: ModeloSituacao[] = [
     intencoes: [
       { id: 'assumir', texto: 'Chamar a responsabilidade', dica: 'Se der certo, é lembrado por anos. Se der errado, também.', risco: 0.6, fatores: v => [lideranca(v), tecnicaFut(v), cabeca(v)],
         desfechos: {
-          otimo: { texto: 'Duas vitórias seguidas com você no centro de tudo. O time escapou, e a torcida cantou o seu nome.', efeitos: { nome: 3, noto: 1, humor: 6 }, memoria: 'Chamou a responsabilidade na reta final e ajudou o time a escapar do rebaixamento.' },
+          // VIDA 12.9: a cena é no meio da briga — quem escapa (ou cai) é a tabela, no fim da temporada. O texto não promete.
+          otimo: { texto: 'Duas vitórias seguidas com você no centro de tudo. O time respirou, e a torcida cantou o seu nome.', efeitos: { nome: 3, noto: 1, humor: 6 }, memoria: 'Chamou a responsabilidade na reta final da briga contra o rebaixamento.' },
           bom: { texto: 'Jogou o que sabia e o time respirou.', efeitos: { nome: 1 } },
           ruim: { texto: 'Lutou, mas o time seguiu tropeçando.', efeitos: { estresse: 4 } },
           pessimo: { texto: 'Errou o lance que decidiu a rodada, e a culpa caiu em você.', efeitos: { nome: -2, estresse: 8, imagem: 'polemica' } }
         } },
       { id: 'seu_jogo', texto: 'Fazer o seu jogo, sem inventar', dica: 'Menos holofote, menos risco.', risco: 0.15, fatores: v => [disciplina(v), tecnicaFut(v)],
         desfechos: {
-          otimo: { texto: 'Partidas sóbrias, sem erro. O time ficou.', efeitos: { nome: 1 } },
+          otimo: { texto: 'Partidas sóbrias, sem erro. O time somou os pontos que precisava naquelas rodadas.', efeitos: { nome: 1 } },
           bom: { texto: 'Cumpriu o papel.', efeitos: {} },
           ruim: { texto: 'O time afundou um pouco mais.', efeitos: { estresse: 3 } },
           pessimo: { texto: 'Cobrado por "não aparecer" na hora difícil.', efeitos: { nome: -1, estresse: 3 } }
@@ -925,11 +929,13 @@ const MODELOS_ESPORTES: ModeloSituacao[] = [
   {
     id: 'bas_ultimo_ataque', trajetoria: 'basquete', peso: () => 2,
     cabe: v => esporteDe(v, 'basquete'),
-    contexto: (v, r) => { const t = v.caminhos.esporte?.temporadas?.slice(-1)[0]; return { segundos: r.int(5, 14), placar: r.pick(['perde por um', 'perde por dois', 'empate']), jogo: t && t.colocacao <= 2 ? 'final' : r.chance(0.4) ? 'playoff' : 'jogo de temporada', funcao: funcaoBasquete(v) }; },
+    contexto: (v, r) => { const t = v.caminhos.esporte?.temporadas?.slice(-1)[0]; return { segundos: r.int(5, 14), placar: r.pick(['perde por um', 'perde por dois', 'empate']), jogo: t && t.colocacao <= 2 ? 'playoff' : r.chance(0.4) ? 'playoff' : 'jogo de temporada', funcao: funcaoBasquete(v) }; },
     titulo: 'O último ataque',
-    texto: (_v, d) => `${d.segundos} segundos no relógio, ${d.jogo === 'final' ? 'a final' : d.jogo === 'playoff' ? 'um jogo de playoff' : 'um jogo da temporada'}, o time ${d.placar}. O técnico pediu tempo e desenhou a jogada — ${d.funcao === 'pivo' ? 'a bola vai para você no garrafão' : d.funcao === 'armador' ? 'a bola está na sua mão' : 'você é a opção de arremesso'}.`,
+    texto: (_v, d) => `${d.segundos} segundos no relógio, ${d.jogo === 'final' || d.jogo === 'playoff' ? 'um jogo de playoff' : 'um jogo da temporada'}, o time ${d.placar}. O técnico pediu tempo e desenhou a jogada — ${d.funcao === 'pivo' ? 'a bola vai para você no garrafão' : d.funcao === 'armador' ? 'a bola está na sua mão' : 'você é a opção de arremesso'}.`,
     intencoes: (_v, d) => {
-      const decisivo = (v: Vida) => d.jogo === 'final' ? `Fez a cesta da vitória nos últimos segundos de uma final, ${peloClube(v.caminhos.esporte!.clube)}.` : 'Decidiu um jogo no último ataque.';
+      // VIDA 12.9: nenhuma final sem a simulação levar até ela — o ano anterior entre os dois primeiros dá playoff, não final
+      // (a cena antiga, salva com 'final', também vira playoff); a cesta decide o jogo, não o título.
+      const decisivo = (v: Vida) => d.jogo === 'final' || d.jogo === 'playoff' ? `Fez a cesta da vitória nos últimos segundos de um jogo de playoff, ${peloClube(v.caminhos.esporte!.clube)}.` : 'Decidiu um jogo no último ataque.';
       const ok = { nome: 3, confianca: 1, humor: 5, noto: 1 };
       if (d.funcao === 'pivo') return [
         { id: 'poste', texto: 'Jogar de costas, no poste', dica: 'O corpo decide — se o marcador deixar.', risco: 0.45, fatores: v => [tecnicaEsp(v), estaturaF(v), cabeca(v)],
@@ -981,12 +987,14 @@ const MODELOS_ESPORTES: ModeloSituacao[] = [
   {
     id: 'ten_tiebreak', trajetoria: 'tenis', peso: () => 2,
     cabe: v => esporteDe(v, 'tenis'),
-    contexto: (_v, r) => ({ fase: r.pick(['quartas de final', 'semifinal', 'semifinal']), placar: r.pick(['5 a 5', '6 a 6']), quadra: r.pick(['saibro', 'quadra dura']) }),
+    // VIDA 12.9: a fase cabe no que o tenista alcança (no máximo um passo além do melhor do ano anterior) e entra no ano:
+    // vencer o tie-break leva à fase seguinte (`resolverSituacao` → `esportes129.registrarFaseTenis`).
+    contexto: (v, r) => { const fase = faseTenisPlausivel(v, r.pick(['quartas de final', 'semifinal', 'semifinal'])); return { fase, faseTenis: fase, vence: 'otimo,bom', placar: r.pick(['5 a 5', '6 a 6']), quadra: r.pick(['saibro', 'quadra dura']) }; },
     titulo: 'O tie-break',
     texto: (_v, d) => `${String(d.fase).charAt(0).toUpperCase()}${String(d.fase).slice(1)}, terceiro set, ${d.placar} no tie-break, ${d.quadra}. O saque é seu. O braço pesa.`,
     intencoes: [
       { id: 'forte', texto: 'Sacar forte e subir à rede', dica: 'Se entrar, acaba. Se não, a dupla falta mora ao lado.', risco: 0.6, fatores: (v, d) => [tecnicaEsp(v), coragem(v), cabeca(v, d)],
-        desfechos: { otimo: { texto: 'Ace no T, voleio no ponto seguinte. A vitória veio com o punho fechado.', efeitos: { nome: 3, humor: 5 }, memoria: (_v, d) => `Fechou um tie-break de terceiro set nas ${d.fase} com dois saques que ninguém devolveu.` }, bom: { texto: 'Primeiro saque dentro, voleio difícil, ponto seu. Passou.', efeitos: { nome: 1 } }, ruim: { texto: 'O voleio ficou na rede.', efeitos: { estresse: 3 } }, pessimo: { texto: 'Dupla falta no match point. O silêncio da quadra.', efeitos: { nome: -2, estresse: 6, humor: -3 } } } },
+        desfechos: { otimo: { texto: 'Ace no T, voleio no ponto seguinte. A vitória veio com o punho fechado.', efeitos: { nome: 3, humor: 5 }, memoria: (_v, d) => `Fechou um tie-break de terceiro set ${naFaseTenis(String(d.fase))} com dois saques que ninguém devolveu.` }, bom: { texto: 'Primeiro saque dentro, voleio difícil, ponto seu. Passou.', efeitos: { nome: 1 } }, ruim: { texto: 'O voleio ficou na rede.', efeitos: { estresse: 3 } }, pessimo: { texto: 'Dupla falta no match point. O silêncio da quadra.', efeitos: { nome: -2, estresse: 6, humor: -3 } } } },
       { id: 'fundo', texto: 'Jogar do fundo e esperar o erro', dica: 'Pede fôlego e paciência.', risco: 0.25, fatores: v => [F('fôlego', (v.corpo.forma - 70) / 60), disciplina(v), cabeca(v)],
         desfechos: { otimo: { texto: 'Trinta e duas trocas de bola. Ele errou primeiro.', efeitos: { nome: 2, humor: 3 } }, bom: { texto: 'Ganhou nos erros dele.', efeitos: { nome: 1 } }, ruim: { texto: 'A paciência dele foi maior.', efeitos: {} }, pessimo: { texto: 'As pernas acabaram antes do ponto.', efeitos: { nome: -1, estresse: 4 } } } },
       { id: 'variar', texto: 'Variar: slice e deixada', dica: 'Desmonta quem joga no ritmo — se a mão estiver boa.', risco: 0.45, fatores: v => [leitura(v), tecnicaEsp(v)],
@@ -1007,18 +1015,22 @@ const MODELOS_ESPORTES: ModeloSituacao[] = [
   {
     id: 'ten_dor', trajetoria: 'tenis', peso: () => 0.8,
     cabe: v => esporteDe(v, 'tenis') && idade(v) >= 22,
+    // VIDA 12.9: a véspera é de uma fase que o tenista alcança; a fase entra no ano (só a vitória leva à seguinte).
+    contexto: v => { const fase = faseTenisPlausivel(v, 'semifinal'); return { fase, faseTenis: fase, vence: 'otimo', semJogo: 'abandonar' }; },
     titulo: 'A dor no ombro',
-    texto: () => 'Na véspera de uma semifinal, o ombro do saque dói ao levantar o braço. O fisioterapeuta faz uma cara que você conhece.',
+    texto: (_v, d) => `Na véspera de um jogo ${d.fase === 'semifinal' || d.fase === undefined ? 'de semifinal' : d.fase === 'final' ? 'de final' : String(d.fase).startsWith('quartas') ? 'de quartas de final' : `de ${d.fase}`}, o ombro do saque dói ao levantar o braço. O fisioterapeuta faz uma cara que você conhece.`,
     intencoes: [
-      { id: 'jogar', texto: 'Jogar assim mesmo', dica: 'Os pontos do ranking estão ali. O ombro também.', risco: 0.6, fatores: v => [F('corpo', (v.corpo.saude - 60) / 70), coragem(v)], desfechos: { otimo: { texto: 'Jogou no sacrifício e ganhou. O ombro aguentou.', efeitos: { nome: 2, estresse: 4 } }, bom: { texto: 'Perdeu, mas competiu. O ombro aguentou.', efeitos: { estresse: 3 } }, ruim: { texto: 'Abandonou no segundo set.', efeitos: { nome: -1, estresse: 4 } }, pessimo: { texto: 'O ombro não aguentou: lesão de verdade, meses fora.', efeitos: { nome: -2, estresse: 8, extra: v => { lesionar(v, rngParaLesao(v), 2, 'profissional'); } }, memoria: 'Jogou machucado uma semifinal e saiu com uma lesão que custou meses.' } } },
-      { id: 'abandonar', texto: 'Não jogar e tratar', dica: 'Perde os pontos; ganha o ombro.', risco: 0.1, fatores: () => [], desfechos: D('O tratamento resolveu em duas semanas.', 'Voltou no torneio seguinte.', 'Os pontos da semifinal ficaram pelo caminho.', 'Os pontos da semifinal ficaram pelo caminho — e o ombro ainda demorou a responder.', { otimo: { nome: 0, estresse: -2 }, bom: { nome: 0 }, ruim: { nome: -1 }, pessimo: { nome: -2 } }) },
+      { id: 'jogar', texto: 'Jogar assim mesmo', dica: 'Os pontos do ranking estão ali. O ombro também.', risco: 0.6, fatores: v => [F('corpo', (v.corpo.saude - 60) / 70), coragem(v)], desfechos: { otimo: { texto: 'Jogou no sacrifício e ganhou. O ombro aguentou.', efeitos: { nome: 2, estresse: 4 } }, bom: { texto: 'Perdeu, mas competiu. O ombro aguentou.', efeitos: { estresse: 3 } }, ruim: { texto: 'Abandonou no segundo set.', efeitos: { nome: -1, estresse: 4 } }, pessimo: { texto: 'O ombro não aguentou: lesão de verdade, meses fora.', efeitos: { nome: -2, estresse: 8, extra: v => { lesionar(v, rngParaLesao(v), 2, 'profissional'); } }, memoria: (_v, d) => `Jogou machucado ${naFaseTenis(String(d.fase ?? 'semifinal'))} de um torneio e saiu com uma lesão que custou meses.` } } },
+      { id: 'abandonar', texto: 'Não jogar e tratar', dica: 'Perde os pontos; ganha o ombro.', risco: 0.1, fatores: () => [], desfechos: D('O tratamento resolveu em duas semanas.', 'Voltou no torneio seguinte.', 'Os pontos do jogo ficaram pelo caminho.', 'Os pontos do jogo ficaram pelo caminho — e o ombro ainda demorou a responder.', { otimo: { nome: 0, estresse: -2 }, bom: { nome: 0 }, ruim: { nome: -1 }, pessimo: { nome: -2 } }) },
       { id: 'adaptar', texto: 'Jogar mudando o saque', dica: 'Menos força, mais colocação.', risco: 0.4, fatores: v => [leitura(v), tecnicaEsp(v)], desfechos: D('O saque colocado funcionou: ganhou sem forçar o ombro.', 'Perdeu em três sets apertados, sem piorar o ombro.', 'O saque fraco virou alvo.', 'Forçou mesmo assim no fim e piorou a dor.') }
     ]
   },
   {
     id: 'atl_final', trajetoria: 'atleta', peso: () => 2,
-    cabe: v => esporteDe(v, 'atleta') && individualEsp(v),
-    titulo: v => (v.caminhos.esporte?.modalidade === 'lutas' ? 'A final' : 'A final'),
+    // VIDA 12.9: só quem se classificou para a final (a força do ano decide; `esportes129`) — e o lugar que a final der é
+    // a colocação da temporada em curso: o ouro é título no palmarés; fora do pódio, nunca.
+    cabe: v => esporteDe(v, 'atleta') && individualEsp(v) && classificadoParaFinalNacional(v),
+    titulo: 'A final',
     // A final da SUA prova (ou da sua categoria): a natação tem raia, o salto tem tentativas, a luta tem chave.
     texto: v => {
       const d = v.caminhos.esporte!.modalidade;
@@ -1034,9 +1046,9 @@ const MODELOS_ESPORTES: ModeloSituacao[] = [
       const forte = d === 'lutas' ? 'Partir para cima desde o primeiro segundo' : 'Sair forte desde o começo';
       const guardar = d === 'lutas' ? 'Esperar o erro e contra-atacar' : 'Guardar para o fim';
       return [
-        { id: 'forte', texto: forte, dica: 'Se o corpo aguentar, ninguém alcança.', risco: 0.6, fatores: v2 => [tecnicaEsp(v2), F('fôlego', (v2.corpo.forma - 70) / 50), coragem(v2)], desfechos: { otimo: { texto: 'Ninguém acompanhou. O ouro veio com folga.', efeitos: { nome: 3, humor: 5, noto: 1, extra: v3 => finalNacional(v3, true) }, memoria: `Venceu uma final nacional de ${NOME_MOD[d] ?? d} saindo na frente desde o começo.` }, bom: { texto: 'Liderou quase tudo; terminou no pódio.', efeitos: { nome: 1, extra: v3 => finalNacional(v3, false) } }, ruim: { texto: 'O corpo cobrou no fim: fora do pódio.', efeitos: { estresse: 3 } }, pessimo: { texto: 'Quebrou no meio. Último lugar.', efeitos: { nome: -2, estresse: 6 } } } },
-        { id: 'guardar', texto: guardar, dica: 'Pede leitura da prova — e sangue frio.', risco: 0.4, fatores: v2 => [leitura(v2), cabeca(v2), tecnicaEsp(v2)], desfechos: { otimo: { texto: 'A arrancada do fim foi a mais bonita da prova. Ouro.', efeitos: { nome: 3, humor: 5, extra: v3 => finalNacional(v3, true) } }, bom: { texto: 'Recuperou posições no fim: pódio.', efeitos: { nome: 1, extra: v3 => finalNacional(v3, false) } }, ruim: { texto: 'Esperou demais.', efeitos: { estresse: 3 } }, pessimo: { texto: 'Quando foi, já não dava: o pior resultado do ano.', efeitos: { nome: -1, estresse: 5 } } } },
-        { id: 'plano', texto: 'Seguir o plano do técnico à risca', dica: 'O plano é bom — se a prova for a que ele imaginou.', risco: 0.15, fatores: v2 => [disciplina(v2), tecnicaEsp(v2)], desfechos: D('O plano encaixou: medalha de prata.', 'Fez o que treinou: pódio.', 'A prova não foi a que o plano imaginava.', 'Errou a tática no meio e não se recuperou.', { otimo: { extra: v3 => finalNacional(v3, false) }, bom: { extra: v3 => finalNacional(v3, false) } }) }
+        { id: 'forte', texto: forte, dica: 'Se o corpo aguentar, ninguém alcança.', risco: 0.6, fatores: v2 => [tecnicaEsp(v2), F('fôlego', (v2.corpo.forma - 70) / 50), coragem(v2)], desfechos: { otimo: { texto: 'Ninguém acompanhou. O ouro veio com folga.', efeitos: { nome: 3, humor: 5, noto: 1, extra: v3 => registrarFinalNacional(v3, 1) }, memoria: `Venceu uma final nacional de ${NOME_MOD[d] ?? d} saindo na frente desde o começo.` }, bom: { texto: 'Liderou quase tudo; terminou com a prata.', efeitos: { nome: 1, extra: v3 => registrarFinalNacional(v3, 2) } }, ruim: { texto: 'O corpo cobrou no fim: fora do pódio.', efeitos: { estresse: 3, extra: v3 => registrarFinalNacional(v3, 5) } }, pessimo: { texto: 'Quebrou no meio. Último lugar.', efeitos: { nome: -2, estresse: 6, extra: v3 => registrarFinalNacional(v3, 8) } } } },
+        { id: 'guardar', texto: guardar, dica: 'Pede leitura da prova — e sangue frio.', risco: 0.4, fatores: v2 => [leitura(v2), cabeca(v2), tecnicaEsp(v2)], desfechos: { otimo: { texto: 'A arrancada do fim foi a mais bonita da prova. Ouro.', efeitos: { nome: 3, humor: 5, extra: v3 => registrarFinalNacional(v3, 1) } }, bom: { texto: 'Recuperou posições no fim: bronze.', efeitos: { nome: 1, extra: v3 => registrarFinalNacional(v3, 3) } }, ruim: { texto: 'Esperou demais: fora do pódio.', efeitos: { estresse: 3, extra: v3 => registrarFinalNacional(v3, 5) } }, pessimo: { texto: 'Quando foi, já não dava: o último lugar da final.', efeitos: { nome: -1, estresse: 5, extra: v3 => registrarFinalNacional(v3, 8) } } } },
+        { id: 'plano', texto: 'Seguir o plano do técnico à risca', dica: 'O plano é bom — se a prova for a que ele imaginou.', risco: 0.15, fatores: v2 => [disciplina(v2), tecnicaEsp(v2)], desfechos: D('O plano encaixou: medalha de prata.', 'Fez o que treinou: bronze.', 'A prova não foi a que o plano imaginava: fora do pódio.', 'Errou a tática no meio e não se recuperou: fora do pódio.', { otimo: { extra: v3 => registrarFinalNacional(v3, 2) }, bom: { extra: v3 => registrarFinalNacional(v3, 3) }, ruim: { extra: v3 => registrarFinalNacional(v3, 5) }, pessimo: { extra: v3 => registrarFinalNacional(v3, 7) } }) }
       ];
     }
   },
@@ -1088,21 +1100,7 @@ const MODELOS_ESPORTES: ModeloSituacao[] = [
   }
 ];
 
-/**
- * A final nacional decidida no momento entra na temporada (auditoria das
- * consequências: o texto dizia "ouro" e "pódio", e nada mudava). O pódio soma
- * na temporada; o ouro faz da temporada um título — no palmarés, com o mesmo
- * texto que a temporada campeã teria — se ela ainda não era.
- */
-function finalNacional(v: Vida, ouro: boolean): void {
-  // REWORK 11 · ESP-11.6: a final é da temporada EM CURSO. O pódio e o ouro entram nela quando fecha
-  // (`esporte.fecharTemporada`), antes do palmarés — que registra o título com a colocação que a temporada teve. Antes, o
-  // ouro reescrevia a colocação da temporada já fechada (depois do acesso e do rebaixamento decididos).
-  const es = v.caminhos.esporte;
-  if (!es || es.fase !== 'profissional') return;
-  const l = (es.lances ??= {});
-  if (ouro) l.ouro = (l.ouro ?? 0) + 1; else l.podios = (l.podios ?? 0) + 1;
-}
+/* A final nacional decidida no momento entra na temporada pelo lugar: `esportes129.registrarFinalNacional` (VIDA 12.9). */
 
 /** Um sorteio estável para a lesão que um desfecho causa (o desfecho já foi sorteado; a gravidade é dele). */
 const rngParaLesao = (v: Vida): Rng => rngDe(v.id, 'lesao_situacao', v.t);
@@ -1463,7 +1461,7 @@ const MODELOS_FUTEBOL_MAIS: ModeloSituacao[] = [
     retorno: (_v, _d, antes) => `Outro pênalti. O de ${anoDe(antes.t)} ${antes.desfecho === 'otimo' || antes.desfecho === 'bom' ? 'entrou' : 'não entrou'} — e todo mundo lembra.`,
     intencoes: [
       { id: 'forte', texto: 'Bater forte, no alto', dica: 'Indefensável — se for no gol.', risco: 0.55, fatores: (v, d) => [tecnicaFut(v), cabeca(v, d), coragem(v)],
-        desfechos: { otimo: { texto: (_v, d) => `No ângulo. O goleiro nem pulou.${placarDepois(d, true)}`, efeitos: { nome: 3, gols: 1, noto: 1, humor: 5, confianca: 1 }, memoria: (_v, d) => `Bateu o pênalti que ninguém queria bater aos ${d.minuto} minutos${memoravel(d) ? ` de ${d.jogo === 'decisão' ? 'uma decisão' : 'um clássico'}` : ''} — e fez.` }, bom: { texto: (_v, d) => `Gol, no meio, com o goleiro caído.${placarDepois(d, true)}`, efeitos: { nome: 1, gols: 1 } }, ruim: { texto: 'O goleiro foi buscar.', efeitos: { nome: -1, estresse: 4 } }, pessimo: { texto: 'Por cima do travessão. O estádio inteiro pôs a mão na cabeça.', efeitos: { nome: -3, estresse: 8, imagem: 'polemica', confianca: -1 } } } },
+        desfechos: { otimo: { texto: (_v, d) => `No ângulo. O goleiro nem pulou.${placarDepois(d, true)}`, efeitos: { nome: 3, gols: 1, noto: 1, humor: 5, confianca: 1 }, memoria: (_v, d) => `Bateu o pênalti que ninguém queria bater aos ${d.minuto} minutos${memoravel(d) ? ` de ${d.jogo === 'decisão' ? 'um jogo decisivo' : 'um clássico'}` : ''} — e fez.` }, bom: { texto: (_v, d) => `Gol, no meio, com o goleiro caído.${placarDepois(d, true)}`, efeitos: { nome: 1, gols: 1 } }, ruim: { texto: 'O goleiro foi buscar.', efeitos: { nome: -1, estresse: 4 } }, pessimo: { texto: 'Por cima do travessão. O estádio inteiro pôs a mão na cabeça.', efeitos: { nome: -3, estresse: 8, imagem: 'polemica', confianca: -1 } } } },
       { id: 'colocado', texto: 'Deslocar o goleiro e colocar', dica: 'Pede sangue frio.', risco: 0.35, fatores: (v, d) => [tecnicaFut(v), cabeca(v, d)],
         desfechos: { otimo: { texto: (_v, d) => `Esperou o goleiro cair e rolou no outro canto.${placarDepois(d, true)}`, efeitos: { nome: 2, gols: 1, confianca: 1 } }, bom: { texto: 'Gol, no canto.', efeitos: { nome: 1, gols: 1 } }, ruim: { texto: 'O goleiro esperou e defendeu.', efeitos: { nome: -1, estresse: 3 } }, pessimo: { texto: 'A cavadinha saiu fraca, no colo dele. Virou meme.', efeitos: { nome: -3, estresse: 7, imagem: 'polemica' } } } },
       { id: 'outro', texto: 'Deixar para um companheiro', dica: 'Ninguém culpa quem não bateu. Ninguém lembra também.', risco: 0.15, fatores: v => [social(v), leitura(v)],

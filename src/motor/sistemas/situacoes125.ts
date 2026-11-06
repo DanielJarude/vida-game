@@ -14,6 +14,7 @@ import { clamp } from '../rng';
 import { idade } from '../nucleo';
 import { ocupacaoOuNula } from '../dados/ocupacoes';
 import { habilidade } from './frentes';
+import { classificadoParaFinalNacional, registrarFinalNacional } from './esportes129';
 
 const F = (id: string, valor: number): Fator => ({ id, valor: Math.round(valor * 100) / 100 });
 const D = (otimo: string, bom: string, ruim: string, pessimo: string, ef: Partial<Record<Desfecho, Efeitos>> = {}, mem: Partial<Record<Desfecho, string>> = {}): Record<Desfecho, DesfechoModelo> => ({
@@ -37,6 +38,8 @@ const trilha = (v: Vida) => (v.trabalho.atual ? ocupacaoOuNula(v.trabalho.atual.
 const naTrilha = (...ts: string[]) => (v: Vida) => { const t = trilha(v); return !!t && ts.includes(t); };
 const modalidade = (m: string) => (v: Vida) => v.caminhos.esporte?.modalidade === m && v.caminhos.esporte?.fase === 'profissional';
 const nivelEsp = (v: Vida) => v.caminhos.esporte?.nivel ?? 1;
+/** VIDA 12.9: convocado de verdade (a seleção chamou na última janela do ano). */
+const convocadoNoAno = (v: Vida) => { const s = v.caminhos.esporte?.selecao; return s?.tUltima !== undefined && v.t - s.tUltima <= 12; };
 const anosDeCasa = (v: Vida) => (v.trabalho.atual ? (v.t - v.trabalho.atual.tInicio) / 12 : 0);
 const musico = (v: Vida) => trilha(v) === 'musica' || trilha(v) === 'orquestra';
 const POLICIA = ['pm', 'pm_oficial', 'policia_civil', 'federal', 'pericia', 'guarda', 'penal'];
@@ -53,7 +56,7 @@ const BASE_125: ModeloSituacao[] = [
       { id: 'aceitar', texto: 'Aceitar o convite', dica: 'Uma vitória ali vale uma temporada. Uma surra também ensina.', risco: 0.6, fatores: v => [tecnica(v), coragem(v), cabeca(v)],
         desfechos: D('Passou duas rodadas e derrubou um cabeça de chave. O seu nome apareceu no placar central.', 'Ganhou um jogo e perdeu com dignidade para um top 50.', 'Perdeu na estreia, sem chance.', 'Levou um pneu no primeiro set e perdeu os pontos do torneio menor.', { otimo: { noto: 1, extra: v => { const es = v.caminhos.esporte; if (es) es.reputacao = clamp((es.reputacao ?? 30) + 5); } } }, { otimo: 'Entrou de convidado num torneio grande e derrubou um cabeça de chave.' }) },
       { id: 'recusar', texto: 'Defender os pontos no torneio menor', dica: 'O ranking agradece; a história, talvez não.', risco: 0.15, fatores: v => [disciplina(v), tecnica(v)],
-        desfechos: D('Ganhou o torneio menor e subiu no ranking.', 'Defendeu os pontos.', 'Caiu cedo no torneio menor e ficou sem nenhum dos dois.', 'Perdeu na estreia e ainda ficou pensando no convite.') }
+        desfechos: D('Foi longe no torneio menor e subiu no ranking.', 'Defendeu os pontos.', 'Caiu cedo no torneio menor e ficou sem nenhum dos dois.', 'Perdeu na estreia e ainda ficou pensando no convite.') }
     ] },
   { id: 'ten125_patrocinio', trajetoria: 'tenis', tema: 'ten_dinheiro', recarga: 4, cabe: v => modalidade('tenis')(v) && nivelEsp(v) >= 2,
     titulo: 'A marca de raquetes',
@@ -81,7 +84,7 @@ const BASE_125: ModeloSituacao[] = [
     titulo: 'O calendário',
     texto: () => 'O corpo pede descanso, e a gira de torneios do outro continente começa em duas semanas: três meses de avião, hotel e pontos para defender.',
     intencoes: [
-      { id: 'pular', texto: 'Pular a gira e treinar em casa', dica: 'Perde ranking; ganha corpo.', risco: 0.2, fatores: v => [disciplina(v), forma(v)], desfechos: D('Voltou inteiro e ganhou o primeiro torneio depois da pausa.', 'Voltou descansado.', 'O ranking caiu mais do que esperava.', 'O ranking despencou e os convites sumiram.', { otimo: { extra: v => { v.corpo.forma = clamp(v.corpo.forma + 4); } }, bom: { estresse: -4 } }) },
+      { id: 'pular', texto: 'Pular a gira e treinar em casa', dica: 'Perde ranking; ganha corpo.', risco: 0.2, fatores: v => [disciplina(v), forma(v)], desfechos: D('Voltou inteiro e ganhou jogo atrás de jogo no primeiro torneio depois da pausa.', 'Voltou descansado.', 'O ranking caiu mais do que esperava.', 'O ranking despencou e os convites sumiram.', { otimo: { extra: v => { v.corpo.forma = clamp(v.corpo.forma + 4); } }, bom: { estresse: -4 } }) },
       { id: 'ir', texto: 'Ir para a gira assim mesmo', dica: 'Os pontos estão lá. O cansaço também.', risco: 0.5, fatores: v => [forma(v), cabeca(v)], desfechos: D('A gira foi a melhor da carreira.', 'Defendeu os pontos.', 'O cansaço cobrou: três derrotas na estreia.', 'Uma lesão no meio da gira encerrou a temporada.', { pessimo: { estresse: 8 } }) }
     ] },
   { id: 'ten125_tecnico', trajetoria: 'tenis', tema: 'ten_equipe', recarga: 7, cabe: v => modalidade('tenis')(v) && idade(v) >= 22,
@@ -95,9 +98,9 @@ const BASE_125: ModeloSituacao[] = [
   /* ---------------------------------------------------------------- Vôlei */
   { id: 'vol125_tiebreak', trajetoria: 'atleta', tema: 'vol_jogo', recarga: 4, peso: () => 1.4, cabe: modalidade('volei'),
     titulo: 'O tie-break',
-    texto: () => 'Quinto set, 13 a 13, decisão do campeonato. O levantador olha para você antes do saque adversário.',
+    texto: () => 'Quinto set, 13 a 13, um dos jogos grandes da temporada. O levantador olha para você antes do saque adversário.',
     intencoes: [
-      { id: 'pedir', texto: 'Pedir a bola', dica: 'Quem pede, carrega.', risco: 0.55, fatores: v => [tecnica(v), coragem(v), cabeca(v)], desfechos: D('Ataque na diagonal, bola no chão. No ponto seguinte, o bloqueio fechou o jogo.', 'Ponto seu; o time fechou depois.', 'O bloqueio adversário parou o seu ataque.', 'Duas bolas suas no bloqueio. O título ficou do outro lado.', { otimo: { noto: 1 } }, { otimo: 'Pediu a bola no tie-break da final e decidiu.' }) },
+      { id: 'pedir', texto: 'Pedir a bola', dica: 'Quem pede, carrega.', risco: 0.55, fatores: v => [tecnica(v), coragem(v), cabeca(v)], desfechos: D('Ataque na diagonal, bola no chão. No ponto seguinte, o bloqueio fechou o jogo.', 'Ponto seu; o time fechou depois.', 'O bloqueio adversário parou o seu ataque.', 'Duas bolas suas no bloqueio. O jogo ficou do outro lado.', { otimo: { noto: 1 } }, { otimo: 'Pediu a bola num tie-break de quinto set e decidiu o jogo.' }) },
       { id: 'servir', texto: 'Segurar o passe e deixar o jogo fluir', dica: 'O ponto nasce no passe.', risco: 0.25, fatores: v => [tecnica(v), disciplina(v)], desfechos: D('Passe na mão do levantador duas vezes seguidas. O time fechou.', 'O passe segurou.', 'O passe saiu longe da rede.', 'Um ace no seu passe, no 14 a 14.') }
     ] },
   { id: 'vol125_posicao', trajetoria: 'atleta', tema: 'vol_rumo', recarga: 7, cabe: v => modalidade('volei')(v) && idade(v) >= 22,
@@ -123,12 +126,12 @@ const BASE_125: ModeloSituacao[] = [
     ] },
 
   /* ---------------------------------------------------------------- Atletismo */
-  { id: 'atl125_largada', trajetoria: 'atleta', tema: 'atl_prova', recarga: 4, peso: () => 1.4, cabe: modalidade('atletismo'),
+  { id: 'atl125_largada', trajetoria: 'atleta', tema: 'atl_prova', recarga: 4, peso: () => 1.4, cabe: v => modalidade('atletismo')(v) && classificadoParaFinalNacional(v),
     titulo: 'A final',
     texto: () => 'Na final do campeonato nacional, o vento está no limite para validar recorde e o atleta da raia ao lado já queimou uma largada.',
     intencoes: [
-      { id: 'arriscar', texto: 'Antecipar a largada', dica: 'Um centésimo ganho — ou a desclassificação.', risco: 0.65, fatores: v => [tecnica(v), coragem(v), forma(v)], desfechos: D('Saiu no tiro perfeito e cravou o melhor tempo da vida.', 'Boa saída, pódio.', 'Saiu atrasado de tanto se segurar.', 'Queimou a largada: desclassificado na final.', { otimo: { noto: 1 } }, { otimo: 'Cravou o melhor tempo da vida numa final nacional.', pessimo: 'Queimou a largada numa final nacional.' }) },
-      { id: 'segurar', texto: 'Esperar o tiro e correr limpo', dica: 'Correr o que treinou.', risco: 0.2, fatores: v => [disciplina(v), forma(v)], desfechos: D('Correu limpo e ganhou no fim.', 'Pódio com tempo bom.', 'Ficou fora do pódio por pouco.', 'A perna travou na metade da prova.') }
+      { id: 'arriscar', texto: 'Antecipar a largada', dica: 'Um centésimo ganho — ou a desclassificação.', risco: 0.65, fatores: v => [tecnica(v), coragem(v), forma(v)], desfechos: D('Saiu no tiro perfeito, cravou o melhor tempo da vida — e o ouro.', 'Boa saída: bronze.', 'Saiu atrasado de tanto se segurar: fora do pódio.', 'Queimou a largada: desclassificado na final.', { otimo: { noto: 1, extra: v => registrarFinalNacional(v, 1) }, bom: { extra: v => registrarFinalNacional(v, 3) }, ruim: { extra: v => registrarFinalNacional(v, 5) }, pessimo: { extra: v => registrarFinalNacional(v, 8) } }, { otimo: 'Cravou o melhor tempo da vida numa final nacional — e venceu.', pessimo: 'Queimou a largada numa final nacional.' }) },
+      { id: 'segurar', texto: 'Esperar o tiro e correr limpo', dica: 'Correr o que treinou.', risco: 0.2, fatores: v => [disciplina(v), forma(v)], desfechos: D('Correu limpo e ganhou no fim: ouro.', 'Prata, com tempo bom.', 'Ficou fora do pódio por pouco.', 'A perna travou na metade da prova: último lugar.', { otimo: { extra: v => registrarFinalNacional(v, 1) }, bom: { extra: v => registrarFinalNacional(v, 2) }, ruim: { extra: v => registrarFinalNacional(v, 4) }, pessimo: { extra: v => registrarFinalNacional(v, 8) } }) }
     ] },
   { id: 'atl125_prova', trajetoria: 'atleta', tema: 'atl_rumo', recarga: 7, cabe: v => modalidade('atletismo')(v) && idade(v) >= 23,
     titulo: 'A troca de prova',
@@ -137,12 +140,12 @@ const BASE_125: ModeloSituacao[] = [
       { id: 'trocar', texto: 'Trocar de prova', dica: 'Um teto mais alto. Um caminho mais longo.', risco: 0.5, fatores: v => [disciplina(v), forma(v), leitura(v)], desfechos: D('Na prova nova, encontrou índice olímpico em dois anos.', 'Adaptou-se e melhorou as marcas.', 'Um ano de marcas piores.', 'Não encaixou em nenhuma das duas.', {}, { otimo: 'Trocou de prova e encontrou o índice que nunca tinha chegado perto.' }) },
       { id: 'ficar', texto: 'Insistir na sua prova', dica: 'Quem conhece, refina.', risco: 0.2, fatores: v => [tecnica(v)], desfechos: D('Baixou a marca pessoal.', 'Seguiu evoluindo devagar.', 'A marca estacionou.', 'A marca piorou e o treinador se afastou.') }
     ] },
-  { id: 'atl125_revezamento', trajetoria: 'atleta', tema: 'atl_grupo', recarga: 5, cabe: v => modalidade('atletismo')(v) && nivelEsp(v) >= 2,
+  { id: 'atl125_revezamento', trajetoria: 'atleta', tema: 'atl_grupo', recarga: 5, cabe: v => modalidade('atletismo')(v) && nivelEsp(v) >= 2 && convocadoNoAno(v),
     titulo: 'O revezamento',
     texto: () => 'Convocado para o revezamento da seleção. A passagem de bastão com quem corre antes de você ainda não está acertada.',
     intencoes: [
-      { id: 'treinar', texto: 'Treinar a passagem até cansar', dica: 'O revezamento se ganha na troca.', risco: 0.3, fatores: v => [disciplina(v), social(v)], desfechos: D('A passagem perfeita. Medalha.', 'Passagem limpa, final.', 'A troca saiu lenta.', 'O bastão caiu no chão.', { otimo: { noto: 1 } }, { otimo: 'Ganhou medalha no revezamento da seleção.', pessimo: 'Deixou o bastão cair no revezamento da seleção.' }) },
-      { id: 'confiar', texto: 'Confiar no instinto na hora', dica: 'Corredor corre.', risco: 0.55, fatores: v => [tecnica(v), cabeca(v)], desfechos: D('Na hora, deu certo — e o tempo foi recorde do país.', 'Passou bem.', 'Quase saiu da zona de troca.', 'Desclassificados por passagem fora da zona.') }
+      { id: 'treinar', texto: 'Treinar a passagem até cansar', dica: 'O revezamento se ganha na troca.', risco: 0.3, fatores: v => [disciplina(v), social(v)], desfechos: D('A passagem perfeita: o melhor tempo da equipe no ano.', 'Passagem limpa, sem perder tempo.', 'A troca saiu lenta.', 'O bastão caiu no chão.', { otimo: { noto: 1 } }, { otimo: 'Fez a passagem perfeita no revezamento da seleção.', pessimo: 'Deixou o bastão cair no revezamento da seleção.' }) },
+      { id: 'confiar', texto: 'Confiar no instinto na hora', dica: 'Corredor corre.', risco: 0.55, fatores: v => [tecnica(v), cabeca(v)], desfechos: D('Na hora, deu certo — e o tempo foi o melhor da equipe em anos.', 'Passou bem.', 'Quase saiu da zona de troca.', 'Desclassificados por passagem fora da zona.') }
     ] },
   { id: 'atl125_patrocinio', trajetoria: 'atleta', tema: 'atl_dinheiro', recarga: 4, cabe: v => (modalidade('atletismo')(v) || modalidade('natacao')(v)) && nivelEsp(v) >= 2,
     titulo: 'O patrocinador de material',

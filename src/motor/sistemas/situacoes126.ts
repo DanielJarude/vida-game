@@ -220,8 +220,8 @@ const BASE_126: ModeloSituacao[] = [
     titulo: 'A gira pelos torneios pequenos',
     texto: () => 'Seis semanas de torneios pequenos em outro continente: pontos baratos de ganhar, hotel barato, sem técnico, sem ninguém.',
     intencoes: [
-      { id: 'ir', texto: 'Ir sozinho, com a mala e as raquetes', dica: 'É assim que quase todo mundo começa.', risco: 0.5, fatores: v => [tecnica(v), cabeca(v)], desfechos: D('Dois títulos pequenos e uma final: o ranking deu um salto.', 'Pontos suficientes para subir.', 'Voltou com poucos pontos e muita saudade.', 'Uma lesão na terceira semana e a conta do hotel no cartão.', { otimo: { noto: 1 }, pessimo: { dinheiro: -3000, estresse: 10 } }) },
-      { id: 'perto', texto: 'Jogar os torneios do próprio país', dica: 'Menos pontos, mais perto de casa.', risco: 0.25, fatores: v => [tecnica(v)], desfechos: D('Ganhou o nacional e subiu no ranking.', 'Jogou bem.', 'Os pontos não vieram.', 'Caiu na primeira rodada em todos.', {}) }
+      { id: 'ir', texto: 'Ir sozinho, com a mala e as raquetes', dica: 'É assim que quase todo mundo começa.', risco: 0.5, fatores: v => [tecnica(v), cabeca(v)], desfechos: D('Seis semanas de vitórias nos torneios pequenos: o ranking deu um salto.', 'Pontos suficientes para subir.', 'Voltou com poucos pontos e muita saudade.', 'Uma lesão na terceira semana e a conta do hotel no cartão.', { otimo: { noto: 1 }, pessimo: { dinheiro: -3000, estresse: 10 } }) },
+      { id: 'perto', texto: 'Jogar os torneios do próprio país', dica: 'Menos pontos, mais perto de casa.', risco: 0.25, fatores: v => [tecnica(v)], desfechos: D('Foi longe nos torneios do país e subiu no ranking.', 'Jogou bem.', 'Os pontos não vieram.', 'Caiu na primeira rodada em todos.', {}) }
     ] },
   { id: 'ten126_tecnico', trajetoria: 'tenis', tema: 'ten_equipe', recarga: 6, cabe: v => v.caminhos.esporte?.modalidade === 'tenis' && v.caminhos.esporte.fase === 'profissional',
     titulo: 'Trocar de técnico',

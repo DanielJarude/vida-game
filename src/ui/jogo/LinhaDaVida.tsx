@@ -24,6 +24,7 @@
  */
 
 import { MARCAS_DE_CONQUISTA } from '../../motor/sistemas/fechamento';
+import { marcaDeTituloSemRegistro } from '../../motor/sistemas/esportes129';
 import { useMemo, useState } from 'react';
 import type { Entrada, Vida } from '../../motor/tipos';
 import { idade, idadePessoa } from '../../motor/nucleo';
@@ -198,7 +199,8 @@ function ItemBiografia({ e, nova, idade, vida, abrirPessoa, rosto = true, origem
  * promovido, estrear, vencer — e o palmarés do esporte, em ordem. A sala de troféus começa aqui, só com o que houve.
  */
 function Conquistas({ vida }: { vida: Vida }) {
-  const marcas = vida.caminhos.marcas.filter(m => MARCAS_DE_CONQUISTA.has(m.tipo)).sort((a, b) => b.t - a.t);
+  // VIDA 12.9: o título esportivo que o palmarés não tem (a conquista inventada de um save antigo) não entra na sala.
+  const marcas = vida.caminhos.marcas.filter(m => MARCAS_DE_CONQUISTA.has(m.tipo) && !marcaDeTituloSemRegistro(vida, m)).sort((a, b) => b.t - a.t);
   const pal = leituraDoPalmares(vida);
   if (!marcas.length && !pal.titulos.length && !pal.premios.length) return <p className="nota">Ainda não há conquistas registradas. Formar-se, ser aprovado, ser promovido, ganhar um título: tudo isso aparece aqui.</p>;
   return (
