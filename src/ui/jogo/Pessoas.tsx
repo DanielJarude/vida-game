@@ -13,6 +13,8 @@
  * do mais relevante para o menos.
  */
 
+import { sobDemanda } from '../util/sobDemanda';
+const Encontros = sobDemanda(() => import('./Encontros').then(m => m.Encontros));
 import { Estrela } from './Atalhos';
 import { textoLocal } from '../../motor/mundo/locais';
 import { useState } from 'react';
@@ -47,7 +49,7 @@ import { estadoDaRelacao, forcaDaRelacao } from '../../motor/sistemas/lacos';
 import { estadosContextuais, fraseDaMagoa, type EstadoContextual } from '../../motor/sistemas/magoas';
 import { dimensoesEmPalavras } from '../../motor/sistemas/afetos';
 import { fraseDoSaber, pendentes, saberes } from '../../motor/sistemas/conhecimento';
-import { presentesDados, presentesPara } from '../../motor/sistemas/presentes';
+import { ocasioesDoPresente, presentesDados, presentesPara } from '../../motor/sistemas/presentes';
 import { contasAtivas } from '../../motor/sistemas/redesBase';
 import { DesenhoObjeto } from './material/Objetos';
 import { dinheiroCurto as precoCurto } from '../leituraMaterial';
@@ -186,6 +188,8 @@ export function Pessoas({ vida, agir, aberta, abrir, parte: parteDeFora, irParte
         </Secao>
       )}
       {c.amigos.length > 0 && <Secao titulo="Amigos" recolhivel aberta><Figurinhas vida={vida} itens={c.amigos} abrir={abrir} limite={8} rotuloTodos="Todos os amigos" /></Secao>}
+      {/* VIDA 12.9: receber em casa e sair em grupo, com quem você escolher. */}
+      {i >= 8 && <Secao titulo="Receber gente e sair junto" recolhivel aberta={false}><Encontros vida={vida} agir={agir} /></Secao>}
       {c.contexto.length > 0 && <Secao titulo={i < 18 ? 'Da escola e do bairro' : 'Do dia a dia'} recolhivel aberta={c.contexto.length <= 6}><Figurinhas vida={vida} itens={c.contexto} abrir={abrir} limite={8} rotuloTodos="Todos" /></Secao>}
       {c.passado.length > 0 && <Secao titulo="Gente que passou" recolhivel aberta={false}><Lista vida={vida} itens={c.passado} abrir={abrir} /></Secao>}
       {mortos.length > 0 && <Secao titulo="Quem se foi" recolhivel aberta={false}><Lista vida={vida} itens={mortos} abrir={abrir} /></Secao>}
@@ -789,6 +793,9 @@ const TIPO_DO_PRESENTE: Record<string, string> = { eletronicos: 'eletrônico', c
 
 function PresenteERede({ vida, p, vin, agir }: { vida: Vida; p: Pessoa; vin: Vinculo; agir: (a: Acao) => boolean }) {
   const [presentes, setPresentes] = useState(false);
+  // 12.9: a ocasião do presente (o aniversário, o Natal, as bodas...): na data, vale um pouco mais.
+  const [ocasiao, setOcasiao] = useState('');
+  const ocasioes = presentes ? ocasioesDoPresente(vida, p.id) : [];
   const conta = contasAtivas(vida).length > 0;
   const ip = idadePessoa(vida, p);
   const bloqueado = vin.digital?.bloqueado !== undefined;
@@ -800,6 +807,14 @@ function PresenteERede({ vida, p, vin, agir }: { vida: Vida; p: Pessoa; vin: Vin
       {idade(vida) >= 10 && !bloqueado && (
         <div className="ficha__presente">
           <button type="button" className="botao botao--discreto" aria-expanded={presentes} onClick={() => setPresentes(x => !x)}>{presentes ? 'Fechar os presentes' : `Dar um presente a ${p.nome}`}</button>
+          {presentes && ocasioes.length > 0 && (
+            <label className="campo campo--compacto presentes__ocasiao"><span className="campo__rotulo">Ocasião</span>
+              <select value={ocasiao} onChange={e => setOcasiao(e.target.value)}>
+                <option value="">Sem motivo especial</option>
+                {ocasioes.map(o => <option key={o.id} value={o.id}>{o.nome.charAt(0).toUpperCase() + o.nome.slice(1)}</option>)}
+              </select>
+            </label>
+          )}
           {presentes && (
             <ul className="presentes">
               {lista.map(x => (
@@ -813,7 +828,7 @@ function PresenteERede({ vida, p, vin, agir }: { vida: Vida; p: Pessoa; vin: Vin
                     <span className="presente__tipo">{TIPO_DO_PRESENTE[x.coisa.loja]} · {precoCurto(x.preco)}{GOSTO[x.gosto] ? ` · ${GOSTO[x.gosto].replace('dela', p.genero === 'feminino' ? 'dela' : p.genero === 'masculino' ? 'dele' : 'delu')}` : ''}</span>
                     <span className="presente__descricao">{x.coisa.descricao}</span>
                   </span>
-                  <BotaoAcao vida={vida} acao={{ tipo: 'presentear', pessoaId: p.id, coisaId: x.coisa.id }} agir={agir} variante={x.gosto === 'certeiro' ? 'principal' : 'secundario'}>Dar</BotaoAcao>
+                  <BotaoAcao vida={vida} acao={{ tipo: 'presentear', pessoaId: p.id, coisaId: x.coisa.id, ...(ocasiao ? { ocasiao } : {}) }} agir={agir} variante={x.gosto === 'certeiro' ? 'principal' : 'secundario'}>Dar</BotaoAcao>
                 </li>
               ))}
             </ul>

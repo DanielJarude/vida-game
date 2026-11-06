@@ -23,6 +23,9 @@ import { precoDaCoisa } from './coisas';
 import { estadoDaRelacao } from './lacos';
 import { interesseDe } from './interacoes';
 import { flex } from '../texto';
+import { paisCorrente } from '../mundo/moeda';
+
+const cap1 = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /** O que combina com quem (pelo interesse da pessoa, que o motor já usa para os filhos). */
 const DO_INTERESSE: Record<string, string[]> = {
@@ -58,7 +61,29 @@ export function presentesPara(v: Vida, pessoaId: string): { coisa: Coisa; preco:
     .sort((a, b) => ['certeiro', 'bom', 'neutro'].indexOf(a.gosto) - ['certeiro', 'bom', 'neutro'].indexOf(b.gosto) || a.preco - b.preco);
 }
 
-export function disponibilidadePresentear(v: Vida, pessoaId: string, coisaId: string): Veredito {
+/**
+ * VIDA 12.9 — AS OCASIÕES: o aniversário (todo ano), o fim de ano, o aniversário de casamento, o dia das mães e dos
+ * pais, o dia dos namorados. Presente na data vale um pouco mais (e a pessoa lembra a data); cada ocasião, um presente
+ * por ano — o de "sem motivo" continua sendo um por ano também.
+ */
+export type OcasiaoDoPresente = 'aniversario' | 'fim_de_ano' | 'bodas' | 'dia_maes' | 'dia_pais' | 'namorados';
+export function ocasioesDoPresente(v: Vida, pessoaId: string): { id: OcasiaoDoPresente; nome: string; bonus: number }[] {
+  const p = v.pessoas[pessoaId], vin = v.vinculos[pessoaId];
+  if (!p || !vin || !p.vivo) return [];
+  const out: { id: OcasiaoDoPresente; nome: string; bonus: number }[] = [];
+  const faz = idadePessoa(v, p) + 1;
+  out.push({ id: 'aniversario', nome: `aniversário (${faz} anos)`, bonus: 2 });
+  out.push({ id: 'fim_de_ano', nome: paisCorrente() === 'BR' ? 'Natal' : 'fim de ano', bonus: 1 });
+  const ro = vin.romance;
+  if (ro?.estagio === 'casamento') { const n = Math.max(1, Math.floor((v.t - ro.tEstagio) / 12)); out.push({ id: 'bodas', nome: `aniversário de casamento (${n} ${n === 1 ? 'ano' : 'anos'})`, bonus: 3 }); }
+  if (ro && (ro.estagio === 'namoro' || ro.estagio === 'morando_junto' || ro.estagio === 'casamento') && !ro.secreto) out.push({ id: 'namorados', nome: paisCorrente() === 'BR' ? 'Dia dos Namorados' : 'Dia de São Valentim', bonus: 2 });
+  if (vin.parentesco === 'mae') out.push({ id: 'dia_maes', nome: 'Dia das Mães', bonus: 2 });
+  if (vin.parentesco === 'pai') out.push({ id: 'dia_pais', nome: 'Dia dos Pais', bonus: 2 });
+  return out;
+}
+const chaveDoPresente = (pessoaId: string, ocasiao?: string) => (ocasiao ? `presente_${ocasiao}_${pessoaId}` : `presente_coisa_${pessoaId}`);
+
+export function disponibilidadePresentear(v: Vida, pessoaId: string, coisaId: string, ocasiao?: string): Veredito {
   const p = v.pessoas[pessoaId];
   const vin = v.vinculos[pessoaId];
   const c = coisa(coisaId);
@@ -66,14 +91,17 @@ export function disponibilidadePresentear(v: Vida, pessoaId: string, coisaId: st
   if (idade(v) < 10) return bloqueio('impossivel', 'Com essa idade, o presente é um desenho — e vale mais.');
   if (estadoDaRelacao(v, vin) === 'rompido') return bloqueio('incompativel', 'Vocês não se falam: um presente agora não chegaria como presente.');
   if (vin.digital?.bloqueado !== undefined) return bloqueio('incompativel', 'Você bloqueou essa pessoa.');
-  const f = v.fatos[`presente_coisa_${pessoaId}`];
-  if (f !== undefined && Math.floor(f / 12) === Math.floor(v.t / 12)) return bloqueio('incompativel', `Você já deu um presente a ${p.nome} neste ano.`);
+  const oc = ocasiao ? ocasioesDoPresente(v, pessoaId).find(o => o.id === ocasiao) : undefined;
+  if (ocasiao && !oc) return bloqueio('impossivel', `Não é uma data de ${p.nome}.`);
+  const f = v.fatos[chaveDoPresente(pessoaId, ocasiao)];
+  if (f !== undefined && Math.floor(f / 12) === Math.floor(v.t / 12)) return bloqueio('incompativel', oc ? `Você já deu a ${p.nome} o presente de ${oc.nome.replace(/ \(.*\)$/, '')} deste ano.` : `Você já deu um presente a ${p.nome} neste ano.`);
   if ((p.ganhou ?? []).some(x => x.coisaId === coisaId)) return bloqueio('incompativel', `${p.nome} já tem ${c.artigo} ${c.nome} que você deu.`);
   return vereditoDePagar(v, precoDaCoisa(v, coisaId)) ?? PERMITIDO;
 }
 
 /** Dá o presente: paga, a pessoa passa a ter a coisa, a relação sente — pelo gosto, pelo gesto e pela relação. */
-export function presentear(v: Vida, pessoaId: string, coisaId: string): string {
+export function presentear(v: Vida, pessoaId: string, coisaId: string, ocasiao?: string): string {
+  const oc = ocasiao ? ocasioesDoPresente(v, pessoaId).find(o => o.id === ocasiao) : undefined;
   const p = v.pessoas[pessoaId];
   const vin = v.vinculos[pessoaId];
   const c = coisa(coisaId)!;
@@ -82,20 +110,21 @@ export function presentear(v: Vida, pessoaId: string, coisaId: string): string {
   const vs = variantesDaCoisa(coisaId);
   const cor = vs[Math.floor(rngDe(v.id, pessoaId, coisaId, v.t).next() * vs.length)];
   (p.ganhou ??= []).push({ coisaId, t: v.t, cor: cor.cor, acabamento: cor.nome });
-  v.fatos[`presente_coisa_${pessoaId}`] = v.t;
+  v.fatos[chaveDoPresente(pessoaId, oc?.id)] = v.t;
   const gosto = gostoDe(v, p, c);
   // O tamanho do gesto: o preço diante da renda de quem dá (um violão vale mais vindo de quem ganha pouco).
   const renda = Math.max(800, rendaPropriaMensal(v));
   const gesto = clamp(Math.round((preco / renda) * 2), 0, 4);
   const tensa = vin.tensao >= 40;
-  const ganho = (gosto === 'certeiro' ? 8 : gosto === 'bom' ? 5 : 2) + gesto - (tensa ? 3 : 0);
+  const ganho = (gosto === 'certeiro' ? 8 : gosto === 'bom' ? 5 : 2) + gesto - (tensa ? 3 : 0) + (oc?.bonus ?? 0);
   vin.proximidade = clamp(vin.proximidade + Math.max(1, ganho));
   vin.confianca = clamp(vin.confianca + (tensa ? 0 : 2));
   if (tensa) vin.tensao = clamp(vin.tensao - 6);
   vin.tUltimoContato = v.t;
   v.anoAtual.acoes.push(`pessoa:presente:${pessoaId}`);
-  lembrarCom(v, pessoaId, `Ganhou de você ${c.artigo} ${c.nome} (${cor.nome}).`, gosto === 'certeiro' ? 'apoio' : 'ritual', gosto === 'certeiro' ? 2 : 1);
-  return reacaoAoPresente(v, p, vin, c, cor.nome, gosto, gesto, tensa);
+  lembrarCom(v, pessoaId, `${oc ? `No ${oc.nome}, g` : 'G'}anhou de você ${c.artigo} ${c.nome} (${cor.nome}).`, gosto === 'certeiro' ? 'apoio' : 'ritual', gosto === 'certeiro' ? 2 : 1);
+  const reacao = reacaoAoPresente(v, p, vin, c, cor.nome, gosto, gesto, tensa);
+  return oc ? `${cap1(oc.nome)}. ${reacao}` : reacao;
 }
 
 /* ------------------------------------------------------------------ A reação */
