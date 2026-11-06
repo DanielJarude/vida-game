@@ -15,10 +15,11 @@ import { curso } from '../../motor/dados/cursos';
 import { escalaDeNotas, nomeDaMatricula, notaNaEscala } from '../../motor/sistemas/escola';
 import { CREDITOS_POR_DISCIPLINA, creditosDoCurso, gradeDoCurso, historicoDe, registrosDoCurso } from '../../motor/sistemas/historicoAcademico';
 import { anoDe } from '../../motor/tempo';
+import { semestres129 } from '../../motor/sistemas/estudos129';
 
 const num = (x: number) => (Math.round(x * 10) / 10).toString().replace('.', ',');
 const SITUACAO: Record<RegistroAcademico['situacao'], string> = {
-  aprovado: 'aprovado', reprovado: 'com reprovação', concluido: 'concluído', trancado: 'matrícula trancada', abandonado: 'abandonou', cancelado: 'matrícula cancelada', cursando: 'cursando'
+  aprovado: 'aprovado', reprovado: 'com reprovação', concluido: 'concluído', trancado: 'matrícula trancada', abandonado: 'abandonou', cancelado: 'matrícula cancelada', cursando: 'cursando', transferido: 'trocou de curso'
 };
 const SITUACAO_ESCOLA: Partial<Record<RegistroAcademico['situacao'], string>> = { aprovado: 'aprovado', reprovado: 'reprovado', concluido: 'concluiu', abandonado: 'deixou a escola' };
 
@@ -36,10 +37,11 @@ export function HistoricoDoCurso({ vida, m = vida.educacao.matricula }: { vida: 
   const { escala, fmt, abaixo } = escalaDe(vida);
   const anos = registrosDoCurso(vida, m.cursoId, m.tInicio).filter(x => x.disciplinas.length);
   const cred = creditosDoCurso(vida, m.cursoId, m.tInicio);
-  const totalDeAnos = Math.max(1, Math.ceil(c.meses / 12));
   const previstos = Math.max(cred.cursados, gradeDoCurso(m.area ?? c.area, c.nivel).length * CREDITOS_POR_DISCIPLINA);
   const ano = anoDe(vida.t);
   const media = anos.length ? anos.reduce((a, x) => a + (x.media ?? 0), 0) / anos.length : undefined;
+  // VIDA 12.9: o curso em semestres (dois por ano letivo: as disciplinas do ano em duas metades).
+  const sem = semestres129(vida, m);
   const id = 'titulo-historico-curso';
   return (
     <section className={`boletim historico-academico papel${ano < 2000 ? ' papel--antigo' : ''}`} aria-labelledby={id} data-historico="curso">
@@ -54,7 +56,7 @@ export function HistoricoDoCurso({ vida, m = vida.educacao.matricula }: { vida: 
           <div className="campo-impresso"><dt>Aluno</dt><dd>{vida.eu.nome} {vida.eu.sobrenome}</dd></div>
           <div className="campo-impresso"><dt>Curso</dt><dd>{nomeDaMatricula(vida, m)}</dd></div>
           <div className="campo-impresso"><dt>Ingresso</dt><dd>{anoDe(m.tInicio)}</dd></div>
-          <div className="campo-impresso"><dt>Andamento</dt><dd>{m.trancado ? 'trancado' : `${Math.min(totalDeAnos, anos.length + 1)}º de ${totalDeAnos} ${totalDeAnos === 1 ? 'ano' : 'anos'}`}</dd></div>
+          <div className="campo-impresso"><dt>Andamento</dt><dd>{m.trancado ? 'trancado' : `${sem.atual}º de ${sem.total} semestres`}</dd></div>
         </dl>
       </header>
       {anos.length === 0 ? (
@@ -62,14 +64,14 @@ export function HistoricoDoCurso({ vida, m = vida.educacao.matricula }: { vida: 
       ) : (
         <table className="boletim__tabela historico-academico__tabela">
           <caption className="sr-only">As disciplinas de cada ano, com a nota (de 0 a {escala.max}) e a situação</caption>
-          <thead><tr><th scope="col">Ano</th><th scope="col">Disciplina</th><th scope="col">Nota <small>(0–{escala.max})</small></th><th scope="col">Situação</th></tr></thead>
+          <thead><tr><th scope="col">Período</th><th scope="col">Disciplina</th><th scope="col">Nota <small>(0–{escala.max})</small></th><th scope="col">Situação</th></tr></thead>
           <tbody>
-            {anos.flatMap(x => x.disciplinas.map((d, k) => (
+            {anos.flatMap((x, a) => x.disciplinas.map((d, k) => (
               <tr key={`${x.t}-${d.nome}`} className="boletim__linha" data-disciplina={d.nome} data-situacao={d.situacao}>
-                <td data-rotulo="Ano">{k === 0 ? anoDe(x.t - 6) : ''}</td>
+                <td data-rotulo="Período">{k === 0 || k === Math.ceil(x.disciplinas.length / 2) ? `${a * 2 + (k === 0 ? 1 : 2)}º sem. · ${anoDe(x.t - 6)}` : ''}</td>
                 <th scope="row" className="boletim__materia">{d.nome}</th>
                 <td data-rotulo="Nota"><strong className={`manuscrito boletim__nota${abaixo(d.nota) ? ' manuscrito--vermelho' : ''}`}>{fmt(d.nota)}</strong></td>
-                <td data-rotulo="Situação">{d.situacao === 'reprovada' ? 'reprovada — volta a ser cursada' : 'aprovada'}</td>
+                <td data-rotulo="Situação">{d.situacao === 'reprovada' ? 'reprovada — volta a ser cursada' : d.rec ? 'aprovada no exame final' : 'aprovada'}</td>
               </tr>
             )))}
           </tbody>

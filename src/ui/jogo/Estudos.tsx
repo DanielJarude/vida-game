@@ -35,7 +35,6 @@ import { dinheiroCurto, palavraDesempenho } from '../apresentar';
 import { Catalogo, type ItemCatalogo } from './Catalogo';
 import type { Aba, ParteCaminhos } from '../navegacao';
 import { analisarEntrada, notaDaBaseCom } from '../../motor/sistemas/compromissos';
-import { custoDoEstudo } from '../../motor/sistemas/custoDoEstudo';
 import { historiaDaFormacao } from '../../motor/sistemas/vidaEstudantil';
 import { novaMatricula, opcoesDeCurso as opcoesDosCursos } from '../../motor/sistemas/escola';
 import { descricaoDaRotina, modeloRotina, nivelDa, nivelModelo } from '../../motor/sistemas/rotinas';
@@ -50,6 +49,14 @@ import { oportunidadesAbertas } from '../../motor/sistemas/mercados';
 import { naturezaDaOportunidade, ROTULO_NATUREZA } from '../../motor/sistemas/indicacoes';
 import type { Objetivo } from '../../motor/tipos';
 import { HistoricoEscolar } from './HistoricoAcademico';
+import { sobDemanda } from '../util/sobDemanda';
+import '../estudos129.css';
+
+// VIDA 12.9 · Estudos: o curso em andamento e a entrada por instituição (pacote sob demanda — `Faculdade129`).
+const MinhaFaculdade129 = sobDemanda(() => import('./Faculdade129').then(m => m.MinhaFaculdade129));
+const Ingresso129 = sobDemanda(() => import('./Faculdade129').then(m => m.Ingresso129));
+/** Para a tela abrir sem "Carregando…" (o `precarregar` do App chama). */
+export const precarregarEstudos129 = () => Promise.all([MinhaFaculdade129.precarregar(), Ingresso129.precarregar()]);
 
 interface Props { vida: Vida; agir: (a: Acao) => boolean; irPara?: (a: Aba) => void; abrirPessoa?: (id: string) => void }
 
@@ -131,6 +138,7 @@ export function Estudos({ vida, agir, irPara, abrirPessoa, parte, explorar, aoEx
       {em('oportunidades') && <PortasAbertas vida={vida} agir={agir} filtro={o => areaDaPorta(o) === 'estudos'} titulo="Ao seu alcance agora" />}
       {/* REWORK 10 · UX-13: primeiro o que é seu agora (onde, turno, custo, a dedicação), depois o que fazer no ano letivo,
           e por último o lugar (a gente e as atividades) — antes, o curso e a escolha da dedicação ficavam no fim. */}
+      {em('agora') && vida.educacao.matricula && <MinhaFaculdade129 vida={vida} agir={agir} irPara={irPara ? (d: Aba) => irPara(d) : undefined} />}
       {em('agora') && <Estudo vida={vida} agir={agir} />}
       {em('agora') && inst && <NoAnoLetivo vida={vida} agir={agir} />}
       {em('agora') && inst && <OLugar vida={vida} agir={agir} abrirPessoa={abrirPessoa} irPara={irPara} />}
@@ -607,22 +615,12 @@ function Estudo({ vida, agir }: Props) {
           {b.reprovacoes > 0 && <Linha rotulo="Repetências" valor={String(b.reprovacoes)} />}
         </>
       )}
-      {m && (
-        <>
-          <Linha rotulo="Onde" valor={`${m.instituicao}${m.modalidade === 'ead' ? ' · a distância' : ` · ${nomeLugar(m.municipioId)}`}`} />
-          <Linha rotulo="Turno" valor={m.modalidade === 'ead' ? 'no seu tempo' : curso(m.cursoId).carga === 'integral' ? 'período integral (com emprego, a semana passa muito do que cabe)' : 'à noite (cabe com trabalho)'} />
-          {/* O custo pela mesma fonte do extrato e dos acontecimentos (`custoDoEstudo`): a tela não diz uma coisa e o mês outra. */}
-          {(() => { const ce = custoDoEstudo(vida, m); if (!ce) return null; const credito = educacaoDaVida(vida).credito?.nome ?? 'crédito estudantil';
-            return <Linha rotulo="Custo" valor={ce.regime === 'gratuita' ? 'sem mensalidade' : ce.regime === 'bolsa_integral' ? (m.bolsaAtleta ? 'bolsa de atleta integral: nada a pagar' : 'bolsa integral: nada a pagar') : ce.bolsa ? `${dinheiroCurto(Math.round(m.mensalidade * (1 - ce.bolsa)))}/mês, com a bolsa de atleta de ${Math.round(ce.bolsa * 100)}%${ce.daFamilia > 0 ? ` · a família põe ${dinheiroCurto(ce.daFamilia)}` : ''}` : ce.regime === 'credito' ? `${dinheiroCurto(m.mensalidade)}/mês, pelo ${credito.replace(/^(o|a) /, '')}: paga depois de formado` : ce.daFamilia > 0 ? `${dinheiroCurto(m.mensalidade)}/mês · a família põe ${dinheiroCurto(ce.daFamilia)}` : `${dinheiroCurto(m.mensalidade)}/mês`} />; })()}
-        </>
-      )}
+      {/* VIDA 12.9: o curso em andamento (onde, turno, custo, semestres, trancar, trocar, abandonar) mora no cartão
+          `MinhaFaculdade129`, logo acima; aqui ficam a escola, a dedicação e o exame. */}
       {e.evadiu && !b && <p className="nota">{`Você largou a escola. Dá para voltar pelo ${textoLocal(vida, 'supletivo').replace(/^(o|a) /, '')}.`}</p>}
       {estudando && i >= 7 && <DedicacaoNosEstudos vida={vida} agir={agir} />}
       <div className="grupo-acoes">
         {i >= 15 && <BotaoAcao vida={vida} acao={{ tipo: 'enem' }} agir={agir} ocultarImpossivel>{educacaoDaVida(vida).acao}</BotaoAcao>}
-        {m && !m.trancado && <BotaoAcao vida={vida} acao={{ tipo: 'trancar' }} agir={agir} variante="discreto">Trancar o curso</BotaoAcao>}
-        {m?.trancado && <BotaoAcao vida={vida} acao={{ tipo: 'destrancar' }} agir={agir}>Voltar ao curso</BotaoAcao>}
-        {m && <BotaoAcao vida={vida} acao={{ tipo: 'abandonar_curso' }} agir={agir} variante="perigo">Abandonar o curso</BotaoAcao>}
         {b && i >= 15 && <BotaoAcao vida={vida} acao={{ tipo: 'largar_escola' }} agir={agir} variante="perigo">Largar a escola</BotaoAcao>}
         {e.evadiu && <BotaoAcao vida={vida} acao={{ tipo: 'voltar_a_estudar' }} agir={agir}>{`Voltar a estudar (${textoLocal(vida, 'supletivo').replace(/^(o|a) /, '')})`}</BotaoAcao>}
       </div>
@@ -824,22 +822,25 @@ function EntrarNaFaculdade({ vida, agir, voltar, irBolsas }: { vida: Vida; agir:
   const medio = ['medio', 'superior', 'pos'].includes(e.escolaridade);
   const nota = melhorNotaRecente(vida);
   const emCurso = e.matricula && !e.matricula.trancado;
+  // VIDA 12.9: escolher o curso, a instituição e o campus, o processo (cada um com fases e notas próprias), o resultado e
+  // a matrícula — o caminho inteiro no pacote `Faculdade129`; aqui, a moldura (os passos, o que você tem, as bolsas).
   return (
-    <section className="entrar-faculdade" aria-labelledby="titulo-entrar-faculdade" data-fluxo="faculdade">
+    <section className="entrar129" aria-labelledby="titulo-entrar-faculdade" data-fluxo="faculdade">
       <h2 id="titulo-entrar-faculdade" className="secao-fio">Entrar na faculdade</h2>
-      <ol className="entrar-faculdade__passos" aria-label="Como funciona">
-        <li><strong>Escolher o curso</strong><span>o que pede, custo, duração</span></li>
-        <li><strong>Candidatar-se</strong><span>{ed.aberto ? 'matrícula aberta na pública' : ed.prova ? `com a nota ${ed.do}` : 'pelas notas do último ano'}</span></li>
-        <li><strong>Resultado</strong><span>aprovado, a vaga fica reservada</span></li>
-        <li><strong>Confirmar a matrícula</strong><span>o turno, o custo, a semana</span></li>
+      <ol className="entrar129__passos" aria-label="Como funciona">
+        <li><strong>Escolher o curso</strong><span>duração, turno, corte</span></li>
+        <li><strong>A instituição</strong><span>campus, cidade, custo, processo</span></li>
+        <li><strong>Candidatar-se</strong><span>{ed.aberto ? 'matrícula aberta na pública' : ed.prova ? `a prova ou a nota ${ed.do}` : 'pelas notas do último ano'}</span></li>
+        <li><strong>Confirmar a matrícula</strong><span>a vaga espera um ano</span></li>
       </ol>
-      <div className="entrar-faculdade__situacao">
+      <div className="entrar129__situacao">
         <Linha rotulo="Requisito" valor={medio ? `${ed.medio.completo.charAt(0).toUpperCase()}${ed.medio.completo.slice(1)}: ok` : `Pede ${ed.medio.completo} — ${e.basica ? `você está no ${rotuloSerie(e.basica)}` : 'você ainda não concluiu'}`} tom={medio ? 'bom' : 'ruim'} />
         {!ed.aberto && <Linha rotulo={`Nota ${ed.do}`} valor={nota > 0 ? `${nota}${temCota(vida) ? ' · você concorre por cota' : ''}` : `ainda sem nota — ${idade(vida) >= 15 ? `${ed.acao.toLowerCase()} em Minha formação` : 'a partir dos 15'}`} />}
+        <Linha rotulo="Onde você mora" valor={nomeLugar(vida.moradia.municipioId)} />
       </div>
-      {emCurso && <p className="nota">Você já está cursando {nomeDaMatricula(vida, e.matricula!)}: um curso de cada vez. A lista abaixo mostra o que dá para fazer depois.</p>}
-      <p className="nota"><button type="button" className="link" onClick={irBolsas}>Bolsas e auxílios para estudar →</button> · <button type="button" className="link" onClick={voltar}>Ver todos os cursos (técnico, qualificação, pós) →</button></p>
-      {idade(vida) >= 15 ? <Cursos vida={vida} agir={agir} soFaculdade /> : <p className="nota">As graduações aparecem aqui a partir dos 15 anos, com o que cada uma pede.</p>}
+      {emCurso && <p className="nota">Você já está cursando {nomeDaMatricula(vida, e.matricula!)}: um curso de cada vez. Para mudar, use "Trocar de curso" no cartão do curso, em Agora.</p>}
+      <p className="entrar129__links"><button type="button" className="link" onClick={irBolsas}>Bolsas e auxílios para estudar →</button><button type="button" className="link" onClick={voltar}>Ver todos os cursos (técnico, qualificação, pós) →</button></p>
+      {idade(vida) >= 15 ? <Ingresso129 vida={vida} agir={agir} /> : <p className="nota">As graduações aparecem aqui a partir dos 15 anos, com o que cada uma pede.</p>}
     </section>
   );
 }

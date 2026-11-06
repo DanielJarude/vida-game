@@ -18,7 +18,7 @@ import { FiguraSobDemanda } from './avatar/figuraSobDemanda';
 export function precarregar(): Promise<unknown> {
   // 12.4.1: a figura de corpo inteiro (Você · Aparência, as lojas de roupa) também, para não piscar "Carregando…".
   // HOTFIX 11.5.1: a busca e os segmentos de Compras (pacotes à parte), para a aba abrir sem "Carregando…".
-  return Promise.all([carregarMotor(), Criacao.precarregar(), Jogo.precarregar(), Vidas.precarregar(), FiguraSobDemanda.precarregar(), import('./jogo/Compras').then(m => m.precarregarCompras())]);
+  return Promise.all([carregarMotor(), Criacao.precarregar(), Jogo.precarregar(), Vidas.precarregar(), FiguraSobDemanda.precarregar(), import('./jogo/Compras').then(m => m.precarregarCompras()), import('./jogo/Estudos').then(m => m.precarregarEstudos129())]);
 }
 
 export function App() {

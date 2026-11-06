@@ -33,6 +33,7 @@ import { processarDescendentes, processarPartosDaFamilia } from './sistemas/filh
 import { processarLuto } from './sistemas/luto';
 import { alvoCabeca, alvoHumor, registrarEstado } from './sistemas/estado';
 import { processarCurso, processarEscola, processarOab } from './sistemas/escola';
+import { depoisDoCurso129 } from './sistemas/estudos129';
 import { processarParalelas, tempoParaAObra } from './sistemas/paralelas';
 import { processarAcademia } from './sistemas/academia';
 import { processarHabilitacoes } from './sistemas/habilitacoes';
@@ -40,6 +41,7 @@ import { processarTrabalho } from './sistemas/trabalho';
 import { processarProfissao } from './sistemas/profissao';
 import { processarPolitica } from './sistemas/politica';
 import { processarRotinas } from './sistemas/rotinas';
+import { processarHobbies129 } from './sistemas/hobbies129';
 import { processarFundamentos } from './sistemas/perseguir';
 import { processarPrisao } from './sistemas/prisao';
 import { processarMundoVivo } from './sistemas/mundoVivo';
@@ -68,6 +70,7 @@ import { processarExoticos } from './sistemas/exoticos';
 import { processarParalelos } from './sistemas/paralelos';
 import { processarClandestinos } from './sistemas/clandestinos';
 import { processarEmpresas } from './sistemas/empresas';
+import { processarFortuna129, vidaEconomicaDoAno129 } from './sistemas/fortuna129';
 import { processarPets } from './sistemas/pets';
 import { processarObrigacoes } from './sistemas/obrigacoes';
 import { calcularHeranca } from './sistemas/partilha';
@@ -175,6 +178,7 @@ function viverAno(v: Vida, r: Rng): void {
   const cansaco = cansacoNosEstudos(v);
   praticandoPor('escola', () => processarEscola(v, r, presencaNaEscola(v, semanaDoAno), estudoDoAno, cansaco));
   praticandoPor('curso', () => processarCurso(v, r, presencaNoCurso(v, semanaDoAno), estudoDoAno, cansaco));
+  depoisDoCurso129(v); // VIDA 12.9: o jubilamento (reprovações demais cancelam a matrícula)
   // REWORK 10 · ROT-05: a bolsa de atleta se mantém treinando e indo bem no curso (ou acaba).
   processarBolsaDeAtleta(v);
   processarOab(v, r);
@@ -205,6 +209,8 @@ function viverAno(v: Vida, r: Rng): void {
   // REWORK 9: a agenda da semana (o que não existe mais sai; o conflito novo vira nota) — antes das rotinas, que leem a presença.
   const agendaDoAno = processarAgenda(v);
   processarRotinas(v, r, agendaDoAno.presenca);
+  // VIDA 12.9: o instrumento e os marcos dos hobbies (silencioso na biografia; sem acaso).
+  processarHobbies129(v);
   processarEstetica(v);
   // A formação como lugar: o que ficou para trás com a escola, o professor que repara.
   processarFormacao(v);
@@ -291,6 +297,8 @@ function viverAno(v: Vida, r: Rng): void {
   fixarEstatura(v);
   processarDinheiro(v, r, ec);
   processarObrigacoes(v);
+  // VIDA 12.9: os patamares da fortuna, a queda, a insolvência e a volta por cima (silencioso quase sempre).
+  processarFortuna129(v);
   // A primeira vez que as contas foram todas suas (a transição, não uma data): `independencia`.
   processarIndependencia(v);
   // O que o público sabe de você (esporte, obra, mandato, negócio) — depois do ano de cada um.
@@ -408,6 +416,8 @@ function faseDeConteudo(v: Vida, r: Rng, linhasSistemicas: number): void {
   vidaPorFasesDoAno(v);
   // VIDA 12.6: o que a vida devolve (consequências, família, raros) — sorteio derivado próprio.
   vidaQueDevolveDoAno(v);
+  // VIDA 12.9: as cenas de cada faixa de fortuna e das empresas (`acontecimentos129economia`) — sorteio derivado próprio.
+  vidaEconomicaDoAno129(v, CATALOGO, preparar, (c, ctx) => (c.tipo === 'acontecimento' ? aplicarAcontecimento(v, c, ctx) : (abrirDecisao(v, c, ctx), true)));
 }
 
 export function totalDeConteudo(): { acontecimentos: number; decisoes: number } {

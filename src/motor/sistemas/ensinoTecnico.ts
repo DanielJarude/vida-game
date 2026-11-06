@@ -16,6 +16,7 @@
  */
 import { rngDe } from '../rng';
 import { CURSOS, type Curso } from '../dados/cursos';
+import { EXTRAS_TECNICOS_129 } from '../dados/cursos129';
 import { municipio, paisDaCidade, economiaLocal } from '../dados/lugares';
 
 export type PerfilTecnico = 'industrial' | 'tecnologia' | 'gestao' | 'saude' | 'agro' | 'hotelaria' | 'criativa' | 'construcao' | 'politecnica';
@@ -135,7 +136,10 @@ export function instituicoesTecnicas(municipioId: string): InstituicaoTecnica[] 
     const pool = POOL[perfil].filter(id => CURSOS.some(c => c.id === id));
     const quantos = Math.min(pool.length, perfil === 'politecnica' ? r.int(4, 6) : r.int(3, 5));
     const embaralhado = [...pool].sort((a, b) => rngDe(municipioId, k, a).next() - rngDe(municipioId, k, b).next());
-    const cursos = embaralhado.slice(0, quantos);
+    // VIDA 12.9: 1 ou 2 cursos a mais do perfil (`cursos129`), sorteados à parte — o catálogo de antes fica igual.
+    const rx = rngDe('escola-tecnica-129', municipioId, k);
+    const extras = [...(EXTRAS_TECNICOS_129[perfil] ?? [])].sort((a, b) => rngDe(municipioId, k, '129', a).next() - rngDe(municipioId, k, '129', b).next()).slice(0, rx.int(1, 2));
+    const cursos = [...embaralhado.slice(0, quantos), ...extras.filter(id => CURSOS.some(c => c.id === id))];
     const nome = publica ? rota.publica(m.nome, perfil, k) : rota.particular(m.nome, perfil);
     out.push({ chave: `tec:${municipioId}:${k}`, nome, municipioId, perfil, publica, integra: publica && cursos.some(id => CURSOS.find(c => c.id === id)?.integravel), cursos, sobre: perfil === 'politecnica' ? 'uma escola de várias áreas' : `uma escola de ${NOME_PERFIL[perfil]}` });
   }

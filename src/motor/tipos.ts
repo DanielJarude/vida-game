@@ -1,4 +1,5 @@
 import type { EspecialidadeMedica } from './dados/especialidades';
+import type { MatriculaInstituicao129, ProcessoFeito129 } from './dados/instituicoes129';
 import type { CorDaTatuagem, FundoDeComposicao, Lado, LocalDeTatuagem, RegiaoDeTatuagem, SignificadoDaTatuagem, TamanhoDeTatuagem, TipoDeComposicao } from './dados/tatuagens';
 /**
  * O modelo de uma vida.
@@ -254,6 +255,8 @@ export interface Visual {
   modeloChapeu?: string;
   /** VIDA 12.7: o modelo dos brincos em uso (a argola simples, a de ouro, o diamante). */
   modeloBrincos?: string;
+  /** VIDA 12.9: os piercings em uso (ids de item de `dados/piercings129`), um por furo — sincronizados por `sincronizarVisual`. */
+  piercings?: string[];
   /** O jeito de vestir (a cor e o corte da roupa no retrato). */
   roupa?: EstiloRoupa;
   /** A joia em uso, quando aparece no retrato (a corrente no pescoço, os brincos). O relógio não aparece: fica no pulso, fora do quadro. */
@@ -319,6 +322,8 @@ export interface EstiloPessoal {
    * ninguém é obrigado a trocar de roupa a cada saída.
    */
   looks?: Partial<Record<Ocasiao, string[]>>;
+  /** VIDA 12.9: looks com nome (casual, trabalho, festa...): ids reais de `ItemDeEstilo`, não precisa ter todas as partes. */
+  looksSalvos?: { id: string; nome: string; itens: string[]; t: number }[];
   /** REWORK 12.4: as fases do estilo (quando o jeito de se vestir mudou de cara), para a história. */
   fases?: { t: number; estilo: string }[];
 }
@@ -795,6 +800,12 @@ export interface Matricula {
   area?: string;
   /** A especialidade escolhida na residência médica (define duração, título e o que vem depois). */
   especialidade?: EspecialidadeMedica;
+  /** VIDA 12.9 · Estudos: a instituição real (campus, processo, turno). Ausente: a instituição genérica de sempre. */
+  inst129?: MatriculaInstituicao129;
+  /** VIDA 12.9: o crédito estudantil do curso anterior (troca interna de curso), que vira dívida junto com o deste. */
+  fiesAnterior129?: number;
+  /** VIDA 12.9: o ano (t) da última dependência cursada nas férias (uma por ano). */
+  dependencia129?: number;
 }
 
 /**
@@ -811,9 +822,11 @@ export interface RegistroAcademico {
   cursoId?: string;
   /** A matrícula a que o registro pertence (o `tInicio` dela): separa duas passagens pelo mesmo curso. */
   tInicioCurso?: number;
-  disciplinas: { nome: string; nota: number; situacao?: 'aprovada' | 'reprovada' }[];
+  /** `rec` (VIDA 12.9): aprovada no exame final (recuperação). */
+  disciplinas: { nome: string; nota: number; situacao?: 'aprovada' | 'reprovada'; rec?: boolean }[];
   media?: number;
-  situacao: 'aprovado' | 'reprovado' | 'concluido' | 'trancado' | 'abandonado' | 'cancelado' | 'cursando';
+  /** `transferido` (VIDA 12.9): saiu deste curso para outro (troca de curso). */
+  situacao: 'aprovado' | 'reprovado' | 'concluido' | 'trancado' | 'abandonado' | 'cancelado' | 'cursando' | 'transferido';
   /** O país onde se estudou (a escala de notas é a de lá). */
   pais?: string;
 }
@@ -835,7 +848,9 @@ export interface Educacao {
    * REWORK 10.6 · C2: a vaga conquistada que ainda espera a confirmação da matrícula (candidatar-se não é se matricular).
    * Vale até `tAte`; sem confirmação, passa — e fica dito.
    */
-  aprovacao?: { novo: Extract<NovoCompromisso, { tipo: 'curso' }>; nome: string; t: number; tAte: number };
+  aprovacao?: { novo: Extract<NovoCompromisso, { tipo: 'curso' }>; nome: string; t: number; tAte: number; /** VIDA 12.9: a vaga é para TROCAR de curso (confirmar fecha o de agora). */ troca129?: boolean };
+  /** VIDA 12.9 · Estudos: os processos seletivos feitos (fases, notas, resultado), os mais recentes por último (até 12). */
+  processos129?: ProcessoFeito129[];
   concluidos: { cursoId: string; nome: string; nivel: NivelCurso; area: string; tFim: number; instituicao: string; rede?: 'publica' | 'privada'; modalidade?: 'presencial' | 'ead'; fies?: boolean; /** O desempenho ao se formar (0..100): o histórico que a seleção da pós lê. */ desempenho?: number; /** A especialidade da residência médica (da pessoa: vai para todo emprego). */ especialidade?: EspecialidadeMedica }[];
   /**
    * As notas do exame de ingresso (o nome do campo é histórico: é o exame do
@@ -1355,6 +1370,8 @@ export interface Financas {
   veiculoPrincipal?: string;
   /** REWORK 12.2: o que os animais exóticos pedem (terrário, viveiro, aquário marinho) — `sistemas/exoticos`. */
   instalacoes?: InstalacaoAnimal[];
+  /** VIDA 12.9: o dinheiro posto em algo que só se resolve anos depois (o negócio do amigo, o fundo, o megaprojeto) — `fortuna129`. */
+  pendentes129?: { tipo: string; valor: number; t: number }[];
 }
 
 /** REWORK 12.2: uma instalação para animal exótico (sem ela, a loja não vende a espécie que precisa dela). */
@@ -1433,7 +1450,9 @@ export interface RegistroDePecaUnica {
 
 /* ---------------------------------------------------- REWORK 12 · empresas */
 
-export type TipoEmpresa = 'restaurante' | 'clinica' | 'academia' | 'estudio' | 'hotel' | 'loja' | 'museu' | 'zoologico';
+export type TipoEmpresa = 'restaurante' | 'clinica' | 'academia' | 'estudio' | 'hotel' | 'loja' | 'museu' | 'zoologico'
+  /** VIDA 12.9: os ramos de porte médio, grande e bilionário (`dados/empresas129`, `sistemas/empresas129`). */
+  | 'tecnologia' | 'construtora' | 'industria' | 'montadora' | 'banco' | 'aerea' | 'aeroespacial' | 'semicondutores' | 'energia' | 'infraestrutura';
 /** O que a pessoa É na empresa: dona (toda), sócia (uma parte, com voz) ou investidora (parte pequena, sem gestão). */
 export type PapelNaEmpresa = 'dono' | 'socio' | 'investidor';
 export type PrecoEmpresa = 'popular' | 'medio' | 'alto';
@@ -1446,6 +1465,92 @@ export interface GestaoEmpresa {
   competencia?: number;
   salario?: number;
   tInicio: number;
+  /** VIDA 12.9: o jeito do gestor (ausente nos saves antigos: derivado do id, sempre o mesmo). */
+  perfil?: PerfilExecutivo;
+}
+
+/* ------------------------------------------- VIDA 12.9 · gestão ativa e grandes empresas */
+
+export type PerfilExecutivo = 'conservador' | 'agressivo' | 'inovador' | 'expansao' | 'eficiencia' | 'financas';
+export type CargoExecutivo = 'cfo' | 'coo' | 'cto';
+/** Um diretor (financeiro, de operações, de tecnologia). O CEO é a `gestao` (contratada) — ou a própria pessoa. */
+export interface Executivo { cargo: CargoExecutivo; nome: string; perfil: PerfilExecutivo; competencia: number; salario: number; t: number }
+
+/**
+ * As alavancas que ficam como a pessoa (ou a gestão, quando delega) deixou — até alguém mudar. Ausente = o padrão. Há as
+ * comuns (marketing, eficiência, P&D) e as próprias de cada ramo (a política de crédito do banco, o rigor de testes do foguete).
+ */
+export interface EstrategiaDaEmpresa {
+  /** id da alavanca → id da opção escolhida. */
+  alavancas: Record<string, string>;
+  /** Quando cada alavanca mudou (uma mudança por ano em cada). */
+  mudou?: Record<string, number>;
+  /** A gestão (o CEO contratado) decide as alavancas e os projetos. */
+  delegar?: boolean;
+}
+
+/** Um projeto da empresa: um modelo de carro, um foguete, uma usina, um empreendimento, um produto — e, pronto, o que ele vende. */
+export interface ProjetoDaEmpresa {
+  id: string;
+  /** O item do catálogo do setor (`dados/empresas129`). */
+  item: string;
+  nome: string;
+  estado: 'desenvolvimento' | 'ativo' | 'descontinuado' | 'fracassado';
+  /** O que já se gastou nele. */
+  investido: number;
+  /** O orçamento previsto (que pode estourar). */
+  orcamento: number;
+  /** Meses previstos e já andados do desenvolvimento. */
+  meses: number;
+  feitos: number;
+  tInicio: number;
+  tLanc?: number;
+  /** 0..100: como o mercado recebeu (só depois do lançamento). */
+  aceitacao?: number;
+  /** Escala da produção (1 = a prevista; ampliar soma). */
+  escala?: number;
+  /** O que ele vendeu no último ano. */
+  receitaAno?: number;
+  /** O que marcou o projeto (o atraso, a explosão no teste, o lançamento) — e se foi acaso ou consequência. */
+  marcos?: { t: number; texto: string; acaso?: boolean }[];
+}
+
+/** O porte grande: capacidade, dívida da empresa, fatia do mercado, projetos. */
+export interface CorporacaoDaEmpresa {
+  /** Capacidade produtiva (fábricas, aeronaves, agências, plataformas): o teto do que se vende. */
+  capacidade: number;
+  /** Capacidade em obra (quanto, meses que faltam). */
+  obras?: { quanto: number; faltam: number }[];
+  /** A dívida da empresa (não é sua: a sociedade anônima responde com o que tem). */
+  divida: number;
+  /** Fatia do mercado do setor (0..1), para a tela. */
+  participacao?: number;
+  projetos: ProjetoDaEmpresa[];
+  /** Concorrentes comprados (nomes). */
+  aquisicoes?: string[];
+  /** O caixa acabou e o crédito também: quanto a empresa pede aos donos (e desde quando). */
+  pedido?: { valor: number; t: number };
+  /** Quando passou por recuperação judicial (uma vez só). */
+  recuperacao?: number;
+}
+
+/** Um ano da empresa com o porquê: os números e as causas (o que foi escolha e o que foi acaso). */
+export interface AnoDetalhadoDaEmpresa {
+  t: number;
+  receita: number;
+  custos: number;
+  lucro: number;
+  /** O que o caixa variou no ano. */
+  fluxo: number;
+  investimentos: number;
+  /** 0..100: o quanto a capacidade rendeu. */
+  produtividade: number;
+  reputacao: number;
+  valor: number;
+  participacao?: number;
+  /** Os fatores do ano (para comparar com o anterior e explicar). */
+  fatores?: Record<string, number>;
+  causas: { texto: string; acaso: boolean; tom: 'bom' | 'ruim' | 'neutro' }[];
 }
 
 /**
@@ -1508,6 +1613,16 @@ export interface Empresa {
   setor?: SetorDaEmpresa;
   /** REWORK 12.2: a empresa serve de fachada a um negócio por fora (o risco é dela também) — `sistemas/clandestinos`. */
   fachada?: { negocioId: string; tInicio: number; suspeita: number; tFim?: number; descoberta?: number };
+  /** VIDA 12.9: as alavancas (marketing, eficiência, P&D, as do ramo) — ausente = o padrão de sempre. */
+  estrategia?: EstrategiaDaEmpresa;
+  /** VIDA 12.9: a diretoria (financeiro, operações, tecnologia). */
+  executivos?: Executivo[];
+  /** VIDA 12.9: o porte grande (os ramos de `dados/empresas129`): capacidade, dívida, projetos. */
+  corp?: CorporacaoDaEmpresa;
+  /** VIDA 12.9: os projetos de uma empresa pequena (um produto, um serviço, um canal novo). */
+  projetos?: ProjetoDaEmpresa[];
+  /** VIDA 12.9: os últimos anos com as causas (o painel). */
+  anos?: AnoDetalhadoDaEmpresa[];
 }
 
 /* ------------------------------------------------- REWORK 12.2 · negócios vivos */
@@ -2819,6 +2934,8 @@ export interface Caminhos {
   entrevistas: { recentes: string[]; feitas: number };
   /** Os retornos das últimas tentativas. */
   devolutivas: Devolutiva[];
+  /** VIDA 12.9: o instrumento escolhido, os meses de prática em cada um e os marcos dos hobbies (`sistemas/hobbies129`). */
+  hobbies129?: import('./dados/hobbies129').EstadoHobbies129;
   frentes: Partial<Record<Dominio, Frente>>;
   marcas: MarcaCaminho[];
   oportunidades: Oportunidade[];
@@ -2911,7 +3028,7 @@ export type NovoCompromisso =
   | { tipo: 'dedicar_negocio' }
   | { tipo: 'servico_militar' }
   /** Aprovado num curso (ou voltando a um trancado): a matrícula só entra depois de caber no resto da vida. */
-  | { tipo: 'curso'; cursoId: string; via: string; modalidade: 'presencial' | 'ead'; rede: 'publica' | 'privada'; mensalidade: number; municipioId: string; instituicao: string; destrancar?: boolean; /** A especialidade de uma residência médica. */ especialidade?: EspecialidadeMedica };
+  | { tipo: 'curso'; cursoId: string; via: string; modalidade: 'presencial' | 'ead'; rede: 'publica' | 'privada'; mensalidade: number; municipioId: string; instituicao: string; destrancar?: boolean; /** A especialidade de uma residência médica. */ especialidade?: EspecialidadeMedica; /** VIDA 12.9: a instituição real. */ inst129?: MatriculaInstituicao129 };
 
 /** REWORK 11 · Fase B — o ajuste de uma contratação fora da vaga comum (`compromissos.contratarComAnalise`). */
 export interface AjusteDeEmprego {
@@ -3380,8 +3497,8 @@ export interface RelacaoComOrganizacao {
 
 /* ------------------------------------------------------------- Vida política */
 
-/** Cargos eletivos que a vida pode alcançar (presidência fica fora do jogo). */
-export type CargoEletivo = 'vereador' | 'prefeito' | 'deputado_estadual' | 'deputado_federal' | 'senador' | 'governador';
+/** Cargos eletivos que a vida pode alcançar (VIDA 12.9: a Presidência, onde há eleição direta — `dados/presidencia129`). */
+export type CargoEletivo = 'vereador' | 'prefeito' | 'deputado_estadual' | 'deputado_federal' | 'senador' | 'governador' | 'presidente';
 
 /** Prioridades de mandato ou de bandeira: metas de gestão, nunca ideologia. */
 export type Prioridade = 'saude' | 'educacao' | 'mobilidade' | 'emprego' | 'seguranca' | 'ambiente' | 'contas' | 'cultura';
@@ -3452,6 +3569,8 @@ export interface VidaPolitica {
   promessas?: PromessaPolitica[];
   /** REWORK 11.5 · POL-05: o pedido de um aliado neste ano (a decisão `pol_alianca_pedido` lê). */
   pedido?: { aliancaId: string; t: number };
+  /** VIDA 12.9: a corrida presidencial, as candidaturas, o governo e os mandatos de presidente (`sistemas/presidencia129`). */
+  presidencia?: import('./dados/presidencia129').Presidencia129;
 }
 
 /** REWORK 11.5 · POL-05: uma aliança política — uma pessoa de um grupo, a confiança, os favores e o rompimento. */

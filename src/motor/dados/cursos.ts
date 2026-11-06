@@ -21,6 +21,7 @@
 
 import { paisCorrente } from '../mundo/moeda';
 import type { Dominio, NivelCurso } from '../tipos';
+import { CURSOS_129 } from './cursos129';
 
 export type AreaFormacao =
   | 'medicina' | 'enfermagem' | 'psicologia' | 'educacao_fisica' | 'nutricao' | 'fisioterapia' | 'odontologia' | 'farmacia' | 'veterinaria' | 'radiologia'
@@ -149,7 +150,9 @@ export const CURSOS: readonly Curso[] = [
   { id: 'esp_educacao', nome: 'Especialização em Educação', nivel: 'pos', area: 'educacao', meses: 18, publica: null, privada: 0, ead: true, mensalidade: 280, corte: 0, requerArea: 'educacao', carga: 'parcial', descricao: 'Soma pontos na carreira docente.' },
   { id: 'residencia', nome: 'Residência Médica', nivel: 'residencia', area: 'medicina', meses: 36, publica: 2, privada: null, ead: false, mensalidade: 0, corte: 0, requerArea: 'medicina', bolsa: 4100, carga: 'integral', descricao: 'Três anos de plantão e especialização, com bolsa.' },
   { id: 'mestrado', nome: 'Mestrado', nivel: 'mestrado', area: 'qualquer', meses: 24, publica: 1, privada: null, ead: false, mensalidade: 0, corte: 0, bolsa: 2100, carga: 'integral', descricao: 'Dois anos de pesquisa na área da sua graduação, com bolsa quando há vaga. Abre a docência no ensino superior e o doutorado.' },
-  { id: 'doutorado', nome: 'Doutorado', nivel: 'doutorado', area: 'qualquer', meses: 48, publica: 2, privada: null, ead: false, mensalidade: 0, corte: 0, bolsa: 3100, carga: 'integral', descricao: 'Quatro anos de pesquisa na área do seu mestrado. Porta da carreira acadêmica: universidade, pós-doutorado, institutos de pesquisa.' }
+  { id: 'doutorado', nome: 'Doutorado', nivel: 'doutorado', area: 'qualquer', meses: 48, publica: 2, privada: null, ead: false, mensalidade: 0, corte: 0, bolsa: 3100, carga: 'integral', descricao: 'Quatro anos de pesquisa na área do seu mestrado. Porta da carreira acadêmica: universidade, pós-doutorado, institutos de pesquisa.' },
+  // VIDA 12.9: técnicos e qualificações ligados a vagas do jogo (`cursos129`), no FIM (os índices de antes não mudam).
+  ...CURSOS_129
 ];
 
 const POR_ID = new Map(CURSOS.map(c => [c.id, c]));

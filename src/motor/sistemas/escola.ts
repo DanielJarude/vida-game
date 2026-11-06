@@ -26,7 +26,7 @@ import { LISTA_ESPECIALIDADES, modeloEspecialidade, type EspecialidadeMedica } f
 import { avaliacaoDaResidencia, MOTIVO_RESIDENCIA, preparoDaResidencia } from './medicina';
 import type { Rng } from '../rng';
 import { clamp, rngDe } from '../rng';
-import type { EscolaBasica, Escolaridade, Matricula, NivelCurso, Vida, NovoCompromisso } from '../tipos';
+import type { EscolaBasica, Escolaridade, Matricula, NivelCurso, Vida, NovoCompromisso, RegistroAcademico } from '../tipos';
 import { escrever, idade, marcarFato, temFato } from '../nucleo';
 import { CURSOS, curso, cursoOuNulo, type AreaFormacao, type Curso, type Materia, ROTULO_AREA } from '../dados/cursos';
 import { estudarMaterias, habilidade, materiasExtremas, mediaEscolar, praticar } from './frentes';
@@ -517,7 +517,7 @@ export function temCota(v: Vida): boolean {
   return educacaoDaVida(v).cotas && !temFato(v, 'estudou_privada') && rendaPerCapita(v) <= 1.5 * salarioMinimoDoPais(paisDaVida(v));
 }
 
-function requisitoDoCurso(v: Vida, c: Curso): Veredito | null {
+export function requisitoDoCurso(v: Vida, c: Curso): Veredito | null {
   const i = idade(v);
   const e = v.educacao;
   if (e.matricula) return bloqueio('incompativel', `Já está cursando ${nomeDaMatricula(v, e.matricula)}.`);
@@ -660,6 +660,9 @@ export function em(instituicao: string): string {
   if (instituicao.startsWith('o ')) return 'no ' + instituicao.slice(2);
   if (instituicao.startsWith('uma ')) return 'numa ' + instituicao.slice(4);
   if (instituicao.startsWith('um ')) return 'num ' + instituicao.slice(3);
+  // VIDA 12.9: o nome próprio de uma instituição real ("Universidade de São Paulo", "Instituto Tecnológico...").
+  if (/^(Universidade|Faculdade|Pontifícia|Fundação|Escola)\b/.test(instituicao)) return 'na ' + instituicao;
+  if (/^(Instituto|Centro)\b/.test(instituicao)) return 'no ' + instituicao;
   return 'em ' + instituicao;
 }
 
@@ -802,7 +805,7 @@ export function efetivarMatricula(v: Vida, n: Extract<NovoCompromisso, { tipo: '
     rede: n.rede,
     modalidade: n.modalidade,
     tInicio: v.t,
-    mesesRestantes: n.especialidade ? modeloEspecialidade(n.especialidade).meses : c.meses,
+    mesesRestantes: n.especialidade ? modeloEspecialidade(n.especialidade).meses : n.inst129?.meses ?? c.meses,
     mensalidade: n.mensalidade,
     // A pública de contribuição diferida (HECS-HELP, Student Finance) entra pelo crédito público: nada no mês, dívida depois.
     financiamento: n.via === 'fies' || (n.rede === 'publica' && n.mensalidade > 0 && educacaoDaVida(v).publicaDiferida) ? 'fies' : n.via === 'prouni' ? 'prouni' : undefined,
@@ -812,7 +815,8 @@ export function efetivarMatricula(v: Vida, n: Extract<NovoCompromisso, { tipo: '
     area: areaDaPos(v, c),
     ...(n.especialidade ? { especialidade: n.especialidade } : {})
   };
-  if (n.via === 'fies') m.mensalidade = Math.round(c.mensalidade * economiaLocal(n.municipioId).custo);
+  if (n.via === 'fies' && !n.inst129) m.mensalidade = Math.round(c.mensalidade * economiaLocal(n.municipioId).custo);
+  if (n.inst129) { m.inst129 = n.inst129; if (n.inst129.turno && n.inst129.turno !== 'integral' && n.modalidade === 'presencial') ((v.agenda ??= {}).turnos ??= {}).curso = n.inst129.turno; }
   v.educacao.matricula = m;
   // O cursinho acaba com a aprovação (a rotina é a fonte única; a preparação fica para trás).
   v.rotinas = v.rotinas.filter(x => x.id !== 'cursinho');
@@ -853,6 +857,8 @@ export function processarCurso(v: Vida, r: Rng, presenca = 1, estudo = 1, cansac
   const anoDoCurso = registrosDoCurso(v, m.cursoId, m.tInicio).filter(x => x.disciplinas.length).length + 1;
   const totalDeAnos = Math.max(1, Math.ceil(c.meses / 12));
   const disciplinas = disciplinasDoAno(v, gradeDoCurso(m.area ?? c.area, c.nivel), anoDoCurso, totalDeAnos, m.desempenho, atraso > 0);
+  // VIDA 12.9: o exame final (recuperação, `estudos129`) — passando em todas, o ano não atrasa.
+  if (atraso > 0 && ganchos129.recuperacao?.(v, m, disciplinas)) { m.mesesRestantes = Math.max(0, m.mesesRestantes - atraso); atraso = 0; }
   const reprovadas = disciplinas.filter(d => d.situacao === 'reprovada');
   if (reprovadas.length) m.reprovacoes = (m.reprovacoes ?? 0) + reprovadas.length;
   registrarAnoLetivo(v, {
@@ -931,7 +937,7 @@ function concluirCurso(v: Vida, r: Rng, m: Matricula, c: Curso): void {
 
   // FIES vira dívida.
   if (m.financiamento === 'fies') {
-    const total = Math.round(m.mensalidade * c.meses * 0.85);
+    const total = Math.round(m.mensalidade * c.meses * 0.85) + (m.fiesAnterior129 ?? 0);
     v.financas.dividas.push({ id: `fies${v.seq++}`, tipo: 'fies', saldo: total, jurosMes: 0.001, parcela: Math.round(total / 120), descricao: `${educacaoDaVida(v).credito?.nome ?? 'Crédito estudantil'} de ${c.nome}` });
     escrever(v, { texto: `A conta ${doPrograma(educacaoDaVida(v).credito?.nome ?? 'crédito estudantil')} chegou: ${moedaCurta(total)} a pagar nos próximos dez anos.`, relevancia: 'cotidiano', tema: 'dinheiro' });
   }
@@ -955,9 +961,14 @@ export function processarOab(v: Vida, r: Rng): void {
   }
 }
 
+/** VIDA 12.9 · Estudos: o que o módulo de cima (`estudos129`) registra ao carregar — o exame final e a saída com crédito. */
+export const ganchos129: { recuperacao?: (v: Vida, m: Matricula, disciplinas: RegistroAcademico['disciplinas']) => boolean; aoSair?: (v: Vida, m: Matricula) => void } = {};
+
 /** REWORK 10.5 · EDU-05: a matrícula que fecha sem formatura (trancada, abandonada, cancelada) fica no histórico. */
-export function fecharNoHistorico(v: Vida, m: Matricula, situacao: 'trancado' | 'abandonado' | 'cancelado'): void {
+export function fecharNoHistorico(v: Vida, m: Matricula, situacao: 'trancado' | 'abandonado' | 'cancelado' | 'transferido'): void {
   const c = cursoOuNulo(m.cursoId);
   if (!c) return;
+  // VIDA 12.9: sair do curso sem formatura (abandono, cancelamento) leva o crédito estudantil do que foi cursado (`estudos129`).
+  if (situacao === 'abandonado' || situacao === 'cancelado') ganchos129.aoSair?.(v, m);
   registrarAnoLetivo(v, { nivel: c.nivel, instituicao: m.instituicao, cursoId: c.id, tInicioCurso: m.tInicio, pais: paisDaVida(v), rotulo: nomeDaMatricula(v, m), disciplinas: [], situacao });
 }

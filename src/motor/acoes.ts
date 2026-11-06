@@ -76,6 +76,7 @@ import { formalizar } from './conteudo/trajetorias';
 import { disponibilidadeProfissao, executarProfissao, type AcaoProfissaoCmd } from './sistemas/profissao';
 import { NEGOCIOS } from './sistemas/negocio';
 import { disponibilidadePolitica, executarPolitica, type AcaoPoliticaCmd } from './sistemas/politica';
+import { disponibilidadeEstudos129, encerrarParaTroca129, executarEstudos129, textoDeTrancar129, type AcaoEstudos129 } from './sistemas/estudos129';
 import { abrirConflitoPendente } from './conteudo/compromissos';
 import { horarioQueImpede, noServicoInicial, propor } from './sistemas/compromissos';
 import { definirObjetivo, podeDefinirObjetivo } from './sistemas/vestibular';
@@ -83,7 +84,7 @@ import { buscarAlguem, buscarAmizade, disponibilidadeAmizade, disponibilidadeBus
 import { disponibilidadeCasamento, executarCasamento, type OpCasamento } from './sistemas/casamento';
 import { disponibilidadePedirAjuda, pedirAjuda, principal as principalDaOrigem, type MotivoDeAjuda } from './sistemas/origem';
 import { autonomia } from './sistemas/autonomia';
-import { comprarItem, disponibilidadeAparencia, disponibilidadeComprarItem, disponibilidadeUsarItem, mudarAparencia, usarItem, type MudancaVisual } from './sistemas/estilo';
+import { comprarItem, disponibilidadeAparencia, disponibilidadeComprarItem, disponibilidadeUsarItem, mudarAparencia, usarItem, vestirLook, type MudancaVisual } from './sistemas/estilo';
 import { clamp, rngDe } from './rng';
 import { variantesDeVeiculo } from './dados/pertences';
 import { disponibilidadeParalela, encerrarParalela, encerrarPausada, trocarPrincipal } from './sistemas/paralelas';
@@ -97,6 +98,8 @@ import { DE_FORMACAO, instituicaoAtual } from './sistemas/formacao';
 // REWORK 4 (por último: a ordem de inicialização dos módulos não muda para quem já vinha antes).
 import { disponibilidadeUsarCoisa, usarCoisa } from './sistemas/pertences';
 import { disponibilidadePresentear, presentear } from './sistemas/presentes';
+import { disponibilidadeEncontro, fazerEncontro } from './sistemas/encontros129';
+import { disponibilidadeInstrumento, escolherInstrumento } from './sistemas/hobbies129';
 import { disponibilidadeRede, executarRede, type OpRede } from './sistemas/redes';
 // FIX pós-REWORK 4: o miúdo do trabalho (o projeto, a chefia, o colega, o treino extra): `noOficio`.
 import { disponibilidadeOficio, executarOficio, type OqueOficio } from './sistemas/noOficio';
@@ -113,6 +116,7 @@ import { disponibilidadeAposta, executarAposta, type OpAposta } from './sistemas
 import { bloqueioDaLiberdade, disponibilidadePrisao, executarPrisao, type OquePrisao } from './sistemas/prisao';
 import { comprarColecao, disponibilidadeComprarColecao, disponibilidadeVenderColecao, venderColecao, type ModoDeVenda } from './sistemas/colecao';
 import { abrirEmpresa, cederAoMuseu, comprarParticipacao, decidirEmpresa, disponibilidadeEmpresa, empresa, ofertasDeParticipacao, planoDeAbertura, type DecisaoEmpresa } from './sistemas/empresas';
+import { adquirirEmpresa, decidirEmpresa129, disponibilidadeAquisicao, disponibilidadeEmpresa129, fundarEmpresa, planoDeFundacao, type OqueEmpresa129 } from './sistemas/empresas129';
 import { decidirObra, decidirSetor, disponibilidadeObra, disponibilidadeSetor, garantirSetor } from './sistemas/setores';
 import { disponibilidadeProposta, disponibilidadeServicoColecao, responderProposta, servicoColecao, type ServicoDeColecao } from './sistemas/colecao';
 import { legalidade, comprarExotico, comprarInstalacao, definirCuidador, disponibilidadeComprarExotico, disponibilidadeCuidador, disponibilidadeInstalacao, disponibilidadePetAoZoo, petAoZoo } from './sistemas/exoticos';
@@ -230,6 +234,12 @@ export type Acao =
   | { tipo: 'obra'; empresaId: string; obraId: string; oque: 'verificar' | 'restaurar_obra' | 'emprestar_obra' | 'expor' }
   /** REWORK 12.2: deixar (ou não) o gestor contratado decidir o dia a dia do ramo. */
   | { tipo: 'empresa_delegar'; empresaId: string; delegar: boolean }
+  /** VIDA 12.9: a gestão ativa (alavancas, projetos, capacidade, diretoria, capital) — `sistemas/empresas129`. */
+  | { tipo: 'empresa129'; empresaId: string; oque: OqueEmpresa129; alvo?: string }
+  /** VIDA 12.9: fundar uma empresa de porte médio, grande ou bilionário (o ramo e o primeiro projeto). */
+  | { tipo: 'fundar129'; setor: TipoEmpresa; item: string; comSocio: boolean }
+  /** VIDA 12.9: comprar uma empresa grande à venda (o controle ou uma fatia). */
+  | { tipo: 'adquirir129'; ofertaId: string; parte: number }
   /** REWORK 12.2: avaliar, autenticar, restaurar ou emprestar uma peça da coleção. */
   | { tipo: 'colecao_servico'; pecaId: string; servico: ServicoDeColecao }
   /** REWORK 12.2: responder à proposta de um colecionador por uma peça sua. */
@@ -264,6 +274,8 @@ export type Acao =
   | AcaoProfissaoCmd
   /** A vida política: aproximar-se, filiar-se, a comunidade, a candidatura, a crise, a saída. */
   | AcaoPoliticaCmd
+  /** VIDA 12.9 · Estudos: candidatar-se a uma instituição real, a transferência interna, a dependência nas férias. */
+  | AcaoEstudos129
   /** Perseguir um caminho: pedir um teste, montar um grupo, dirigir o estudo, pedir uma bolsa. */
   | AcaoPerseguirCmd
   /** O curso que se quer (Medicina, Direito...): a preparação passa a ser dirigida a ele. Sem curso: deixar de lado. */
@@ -303,7 +315,11 @@ export type Acao =
   /** REWORK 4: usar uma coisa sua (tocar, jogar, fotografar...), sozinho ou com alguém (`pertences`). */
   | { tipo: 'usar_coisa'; coisaTidaId: string; uso: string; pessoaId?: string }
   /** REWORK 4: dar a alguém uma coisa do catálogo das lojas (`presentes`). */
-  | { tipo: 'presentear'; pessoaId: string; coisaId: string }
+  | { tipo: 'presentear'; pessoaId: string; coisaId: string; /** VIDA 12.9: a ocasião (aniversário, fim de ano, bodas...). */ ocasiao?: string }
+  /** VIDA 12.9: receber em casa ou sair em grupo, com quem você escolher (`encontros129`). */
+  | { tipo: 'encontro'; oque: string; convidados: string[]; jeito?: 'simples' | 'caprichado' | 'buffet'; rachar?: boolean }
+  /** VIDA 12.9: escolher (ou trocar) o instrumento que se pratica (`hobbies129`). */
+  | { tipo: 'instrumento'; id: string }
   /** REWORK 4: as redes sociais do jogo (`redes`). */
   | { tipo: 'rede'; op: OpRede }
   /** FIX pós-REWORK 4: agir dentro do trabalho de agora (`noOficio`). */
@@ -431,6 +447,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'abrir_negocio': return podeAbrirNegocio(v, a.negocio);
     case 'profissao': return disponibilidadeProfissao(v, a);
     case 'politica': return disponibilidadePolitica(v, a);
+    case 'estudos129': return disponibilidadeEstudos129(v, a);
     case 'perseguir': return disponibilidadePerseguir(v, a);
     case 'postura': return v.educacao.basica || v.educacao.matricula ? disponibilidadeDaPostura(v, a.valor) : bloqueio('impossivel', 'Você não está estudando.');
     case 'enem': return podeFazerEnem(v);
@@ -441,7 +458,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'confirmar_matricula': {
       const ap = v.educacao.aprovacao;
       if (!ap || ap.tAte <= v.t) return bloqueio('incompativel', 'Não há vaga esperando confirmação.');
-      if (!a.recusar && v.educacao.matricula && !v.educacao.matricula.trancado) return bloqueio('incompativel', `Já está cursando ${nomeDaMatricula(v, v.educacao.matricula)}: um curso de cada vez.`);
+      if (!a.recusar && !ap.troca129 && v.educacao.matricula && !v.educacao.matricula.trancado) return bloqueio('incompativel', `Já está cursando ${nomeDaMatricula(v, v.educacao.matricula)}: um curso de cada vez.`);
       return PERMITIDO;
     }
     case 'matricular': {
@@ -642,6 +659,14 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'empresa': return deOk(disponibilidadeEmpresa(v, empresa(v, a.empresaId), a.decisao));
     case 'setor': return deOk(disponibilidadeSetor(v, empresa(v, a.empresaId), a.decisao, a.alvo));
     case 'obra': return deOk(disponibilidadeObra(v, empresa(v, a.empresaId), a.oque, a.obraId));
+    case 'empresa129': return deOk(disponibilidadeEmpresa129(v, empresa(v, a.empresaId), a.oque, a.alvo));
+    case 'fundar129': {
+      const p = planoDeFundacao(v, a.setor, a.item, a.comSocio);
+      if (!p.disponivel) return bloqueio(i < 18 ? 'ilegal' : 'requisito', p.motivo!);
+      if (v.anoAtual.acoes.includes('abriu_empresa')) return bloqueio('incompativel', 'Uma empresa nova por ano já é muito.');
+      return vereditoDePagar(v, p.capitalDaPessoa, a.comSocio ? 'A sua metade do capital é' : 'O capital para fundar é');
+    }
+    case 'adquirir129': return deOk(disponibilidadeAquisicao(v, a.ofertaId, a.parte));
     case 'empresa_delegar': {
       const e = empresa(v, a.empresaId);
       if (!e || e.estado === 'encerrada' || e.papel === 'investidor') return bloqueio('impossivel', 'Não se aplica.');
@@ -777,7 +802,9 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'personalizar': return disponibilidadePersonalizar(v, a.op);
     case 'vender_coisa': return disponibilidadeVenderCoisa(v, a.coisaTidaId);
     case 'usar_coisa': return disponibilidadeUsarCoisa(v, a.coisaTidaId, a.uso, a.pessoaId);
-    case 'presentear': return disponibilidadePresentear(v, a.pessoaId, a.coisaId);
+    case 'presentear': return disponibilidadePresentear(v, a.pessoaId, a.coisaId, a.ocasiao);
+    case 'encontro': return disponibilidadeEncontro(v, a.oque, a.convidados, a.jeito, a.rachar);
+    case 'instrumento': return disponibilidadeInstrumento(v, a.id);
     case 'rede': return disponibilidadeRede(v, a.op);
     case 'oficio': return disponibilidadeOficio(v, a.oque);
     case 'formacao': return disponibilidadeFormacao(v, a.oque);
@@ -964,6 +991,8 @@ function linhaDoExtrato(a: Acao): [string, TipoMovimento] {
     case 'comprar_coisa': case 'vender_coisa': return ['Coisas da casa e da vida: compra e venda', 'escolha'];
     case 'personalizar': return a.op.o === 'cultural' || a.op.o === 'obra' || a.op.o === 'usar_comodo' ? ['Música, arte e programas culturais', 'escolha'] : a.op.o.startsWith('veiculo') ? ['Imóveis e veículos: compra, venda e reparo', 'escolha'] : ['A casa e os objetos: reformas, fretes e personalização', 'escolha'];
     case 'presentear': return ['Presentes', 'escolha'];
+    case 'encontro': return ['Receber gente e sair junto', 'escolha'];
+    case 'instrumento': return ['Música, arte e programas culturais', 'escolha'];
     case 'rede': return ['Rede social', 'escolha'];
     case 'oficio': return ['No trabalho', 'escolha'];
     case 'formacao': return ['Na escola e na faculdade', 'escolha'];
@@ -971,7 +1000,7 @@ function linhaDoExtrato(a: Acao): [string, TipoMovimento] {
     case 'pessoa': return ['Com as pessoas: presentes, visitas, ajudas', 'escolha'];
     case 'aposta': return ['Apostas (loteria e cassino)', 'escolha'];
     case 'colecao_comprar': case 'colecao_vender': case 'colecao_ceder': return ['Coleção: compra e venda de peças', 'escolha'];
-    case 'empresa_abrir': case 'empresa': case 'participacao': case 'setor': case 'obra': case 'empresa_delegar': return ['Empresas: capital, aportes e vendas', 'escolha'];
+    case 'empresa_abrir': case 'empresa': case 'participacao': case 'setor': case 'obra': case 'empresa_delegar': case 'empresa129': case 'fundar129': case 'adquirir129': return ['Empresas: capital, aportes e vendas', 'escolha'];
     case 'colecao_servico': case 'colecao_proposta': case 'paralelo': return ['Coleção: compra e venda de peças', 'escolha'];
     case 'exotico_comprar': case 'instalacao_comprar': case 'pet_cuidador': case 'pet_ao_zoo': case 'animal_por_fora': return ['Os bichos: compras e cuidados', 'escolha'];
     // REWORK 12.25 · FIN-12.25-01: o que é do caminho tem linha própria (antes, a ação do Submundo caía em "Compras, viagens").
@@ -1121,6 +1150,7 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       const n = abrirNegocio(v, r, a.negocio);
       return ok(`${n.nome} abriu as portas.`, 'bom');
     }
+    case 'estudos129': return executarEstudos129(v, r, a);
     case 'politica': case 'profissao': case 'perseguir': {
       const res: { texto?: string; tom?: 'bom' | 'ruim' | 'neutro'; decisao?: string; papeis?: Record<string, string> } = a.tipo === 'politica' ? executarPolitica(v, r, a) : a.tipo === 'perseguir' ? executarPerseguir(v, r, a) : executarProfissao(v, r, a);
       if (v.caminhos.pendente && !res.decisao) return {};
@@ -1159,6 +1189,8 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       const ap = v.educacao.aprovacao!;
       v.educacao.aprovacao = undefined;
       if (a.recusar) { escrever(v, { texto: `Abriu mão da vaga em ${ap.nome}.`, relevancia: 'cotidiano', tema: 'estudo', escolha: true }); return ok('Vaga recusada.'); }
+      // VIDA 12.9: a vaga de troca de curso fecha o curso de agora antes de a matrícula nova entrar.
+      if (ap.troca129) encerrarParaTroca129(v);
       const situacao = propor(v, r, ap.novo);
       const porque = v.caminhos.pendente?.conflitos[0];
       return { resultado: situacao === 'pendente' ? `Matrícula em ${ap.nome}: ${porque ? `${porque.charAt(0).toLowerCase()}${porque.slice(1)}` : 'junto com o que você já tem, não cabe tudo'} — é preciso escolher o que fazer.` : `Matrícula confirmada: ${ap.nome}. As aulas começam já.`, titulo: 'Matrícula' };
@@ -1185,7 +1217,7 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       fecharNoHistorico(v, v.educacao.matricula!, 'trancado');
       v.educacao.matricula!.trancado = true;
       v.educacao.matricula!.tTrancou = v.t;
-      escrever(v, { texto: 'Trancou a matrícula da faculdade.', relevancia: 'biografia', tema: 'estudo', escolha: true });
+      escrever(v, { texto: textoDeTrancar129(v, v.educacao.matricula!), relevancia: 'biografia', tema: 'estudo', escolha: true });
       return ok('Matrícula trancada. Dá para voltar depois.');
     case 'destrancar': {
       const m = v.educacao.matricula!;
@@ -1266,6 +1298,9 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
     case 'empresa': { const e = empresa(v, a.empresaId)!; return { resultado: decidirEmpresa(v, e, a.decisao), titulo: e.nome }; }
     case 'setor': { const e = empresa(v, a.empresaId)!; return { resultado: decidirSetor(v, e, a.decisao, a.alvo), titulo: e.nome }; }
     case 'obra': { const e = empresa(v, a.empresaId)!; return { resultado: decidirObra(v, e, a.oque, a.obraId), titulo: e.nome }; }
+    case 'empresa129': { const e = empresa(v, a.empresaId)!; return { resultado: decidirEmpresa129(v, e, a.oque, a.alvo), titulo: e.nome }; }
+    case 'fundar129': { v.anoAtual.acoes.push('abriu_empresa'); return { resultado: fundarEmpresa(v, a.setor, a.item, a.comSocio), titulo: 'Uma empresa sua' }; }
+    case 'adquirir129': return { resultado: adquirirEmpresa(v, a.ofertaId, a.parte), titulo: 'Uma aquisição' };
     case 'empresa_delegar': {
       const e = empresa(v, a.empresaId)!;
       garantirSetor(v, e).delegar = a.delegar;
@@ -1579,10 +1614,12 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
     case 'em_casa': return ok(fazerEmCasa(v, a.oque), 'bom');
     case 'usar_item': return ok(usarItem(v, a.itemId, a.usar, a.id));
     case 'comprar_coisa': return ok(comprarCoisa(v, a.coisaId, a.marca, a.loja), 'bom');
-    case 'personalizar': return ok(personalizar(v, a.op), 'bom');
+    case 'personalizar': return ok(a.op.o === 'look_vestir' ? vestirLook(v, a.op.id) : personalizar(v, a.op), 'bom');
     case 'vender_coisa': return ok(venderCoisa(v, a.coisaTidaId));
     case 'usar_coisa': return ok(usarCoisa(v, a.coisaTidaId, a.uso, a.pessoaId), 'bom');
-    case 'presentear': return ok(presentear(v, a.pessoaId, a.coisaId), 'bom');
+    case 'presentear': return ok(presentear(v, a.pessoaId, a.coisaId, a.ocasiao), 'bom');
+    case 'encontro': return ok(fazerEncontro(v, a.oque, a.convidados, a.jeito, a.rachar), 'bom');
+    case 'instrumento': return ok(escolherInstrumento(v, a.id), 'bom');
     case 'rede': return ok(executarRede(v, a.op));
     case 'oficio': return ok(executarOficio(v, r, a.oque));
     case 'formacao': return ok(executarFormacao(v, r, a.oque));

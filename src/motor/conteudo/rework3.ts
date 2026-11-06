@@ -16,6 +16,7 @@ import { idade, lembrarCom, temFato } from '../nucleo';
 import { fato, feliz, estresse, prox, tensao, local } from './efeitos';
 import { genitorEmCasa } from './papeis';
 import { cursoOuNulo, CURSOS } from '../dados/cursos';
+import { encerrarMatricula129 } from '../sistemas/estudos129';
 import { OCUPACOES } from '../dados/ocupacoes';
 import { elegibilidade, nomeOcupacao } from '../sistemas/trabalho';
 import { novaOportunidade } from '../sistemas/oportunidades';
@@ -177,7 +178,7 @@ export const REWORK3: Conteudo[] = [
         resolver: c => ({ texto: 'Você trancou. O alívio veio antes da culpa.', memoria: `Trancou ${cursoOuNulo(c.v.educacao.matricula!.cursoId)!.nome}.`, relevancia: 'biografia', efeito: () => { const m = c.v.educacao.matricula!; m.trancado = true; m.tTrancou = c.v.t; estresse(c, -8); } }) },
       { id: 'trocar', texto: 'Largar o curso e repensar a área', comportamento: { independencia: 1 },
         consequencia: () => 'O que foi cursado fica para trás; a escolha de outro curso é sua, em Formação.',
-        resolver: c => { const nome = cursoOuNulo(c.v.educacao.matricula!.cursoId)!.nome; return { texto: `Você saiu de ${nome}. Não era o seu lugar — e agora você sabia disso.`, memoria: `Largou ${nome} para repensar o caminho.`, relevancia: 'marco', efeito: () => { c.v.educacao.matricula = undefined; } }; } },
+        resolver: c => { const nome = cursoOuNulo(c.v.educacao.matricula!.cursoId)!.nome; return { texto: `Você saiu de ${nome}. Não era o seu lugar — e agora você sabia disso.`, memoria: `Largou ${nome} para repensar o caminho.`, relevancia: 'marco', efeito: () => { encerrarMatricula129(c.v); } }; } },
       { id: 'seguir', texto: 'Seguir e insistir', comportamento: { disciplina: 1 }, resolver: () => ({ texto: 'Você seguiu. Às vezes insistir é o que resolve.', memoria: null }) }
     ]
   },

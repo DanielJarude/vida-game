@@ -226,7 +226,7 @@ function blocosDeEstudo(v: Vida): Bloco[] {
     const c = cursoOuNulo(m.cursoId);
     const nome = c ? `${c.nivel === 'superior' ? 'Faculdade' : 'Curso'} (${c.nome})` : 'Curso';
     if (m.modalidade === 'ead') out.push({ id: 'curso_ead', origem: 'curso', ref: 'curso_ead', rotulo: `${nome}, a distância`, dias: [], inicio: 0, fim: 0, obrigatorio: false, movel: true, vezes: 3 });
-    else if (c?.carga === 'integral' || m.cursoId === 'residencia') out.push({ id: 'curso', origem: 'curso', rotulo: nome, detalhe: 'período integral', dias: UTEIS, inicio: h(8), fim: m.cursoId === 'residencia' ? h(19) : h(17), obrigatorio: true, movel: false, turno: 'integral' });
+    else if (c?.carga === 'integral' || m.cursoId === 'residencia' || m.inst129?.turno === 'integral') out.push({ id: 'curso', origem: 'curso', rotulo: nome, detalhe: 'período integral', dias: UTEIS, inicio: h(8), fim: m.cursoId === 'residencia' ? h(19) : h(17), obrigatorio: true, movel: false, turno: 'integral' });
     else {
       const turnos: Turno[] = ['manha', 'tarde', 'noite'];
       const t = v.agenda?.turnos?.curso ?? (v.trabalho.atual && v.trabalho.atual.carga === 'integral' ? 'noite' : turnoQueCabeContraTrabalho(v) ?? 'noite');

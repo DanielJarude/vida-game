@@ -95,7 +95,9 @@ describe('EDU-05 · o boletim e o histórico na faculdade', () => {
     const regs = registrosDoCurso(v, 'direito', m.tInicio).filter(x => x.disciplinas.length);
     const reprovadas = regs.flatMap(x => x.disciplinas).filter(d => d.situacao === 'reprovada').length;
     expect(reprovadas).toBeGreaterThan(0);
-    expect(v.educacao.matricula?.reprovacoes ?? 0).toBe(reprovadas);
+    // VIDA 12.9: reprovações demais cancelam a matrícula (o jubilamento) — então o contador fica no histórico.
+    if (v.educacao.matricula) expect(v.educacao.matricula.reprovacoes ?? 0).toBe(reprovadas);
+    else expect(historicoDe(v, 'cursos').some(x => x.cursoId === 'direito' && x.situacao === 'cancelado')).toBe(true);
     expect(regs.some(x => x.situacao === 'reprovado')).toBe(true);
     expect(regs.length).toBeGreaterThan(0);
   });

@@ -11,6 +11,7 @@ import { perfilDaVida } from '../mundo/vida';
 import { capitalizar } from '../texto';
 import { educacaoDaVida, paisDaVida } from '../mundo/vida';
 import { redeDeSaude } from '../sistemas/saude';
+import { encerrarMatricula129 } from '../sistemas/estudos129';
 import { cotidiano, previdencia, registroCivil } from './local';
 import { dinheiro as moeda } from '../texto';
 import { disponivel as guardado } from '../sistemas/dinheiro';
@@ -400,7 +401,7 @@ export const SISTEMICOS: Conteudo[] = [
       { id: 'trancar', texto: 'Trancar e voltar quando der',
         resolver: c => ({ texto: 'Você trancou a matrícula. A instituição guarda a vaga por quatro anos.', memoria: `Trancou ${nomeCurso(c)}.`, relevancia: 'biografia', efeito: () => { const m = c.v.educacao.matricula!; m.trancado = true; m.tTrancou = c.v.t; estresse(c, -6); } }) },
       { id: 'largar', texto: 'Largar o curso de vez', comportamento: { impulsividade: 1 },
-        resolver: c => ({ texto: 'Você cancelou a matrícula. O alívio veio antes do arrependimento.', memoria: `Largou ${nomeCurso(c)} no meio.`, relevancia: 'marco', tom: 'ruim', efeito: () => { c.v.educacao.matricula = undefined; estresse(c, -8); } }) }
+        resolver: c => ({ texto: 'Você cancelou a matrícula. O alívio veio antes do arrependimento.', memoria: `Largou ${nomeCurso(c)} no meio.`, relevancia: 'marco', tom: 'ruim', efeito: () => { encerrarMatricula129(c.v); estresse(c, -8); } }) }
     ]
   },
 

@@ -73,9 +73,10 @@ describe('K1 · entrar na faculdade', () => {
     expect(fluxo.textContent).toMatch(/Candidatar-se/);
     expect(fluxo.textContent).toMatch(/Confirmar a matrícula/);
     // As graduações aparecem (mesmo as que ainda não estão ao alcance, com o porquê).
-    const itens = fluxo.querySelectorAll('.cat-item');
+    // VIDA 12.9: as graduações são uma lista própria (curso → onde → processo), não o catálogo genérico.
+    const itens = fluxo.querySelectorAll('[data-curso129]');
     expect(itens.length).toBeGreaterThan(3);
-    fireEvent.click(itens[0].querySelector('.cat-item__cabeca')!);
+    fireEvent.click(itens[0].querySelector('.fac129-curso__cabeca')!);
     expect(fluxo.textContent).toMatch(/Candidatar-se|não dá agora|Exige|exige/);
     // Bolsas e auxílios, a um toque.
     fireEvent.click(within(fluxo as HTMLElement).getByRole('button', { name: /Bolsas e auxílios/ }));
