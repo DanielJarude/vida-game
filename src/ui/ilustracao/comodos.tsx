@@ -14,7 +14,8 @@
  * a linguagem do VIDA (formas chapadas, um tom de sombra): nada de textura fotográfica.
  */
 import { memo, useId, useMemo, type ReactElement } from 'react';
-import { hash, Ilustracao, valida, type Amostra } from './nucleo';
+import { hash, Ilustracao, valida, type Amostra, type Peca } from './nucleo';
+import { medidaDe } from './medidas';
 import { VARIANTES_DE_DESENHO } from './objetosDaCasa';
 import { caixaDaAmostra } from './caixa';
 import { comEstiloDaMarca } from './estiloDeMarca';
@@ -211,6 +212,14 @@ function ObjetoPosto({ p, g, postoDe }: { p: Posto; g: Geometria; postoDe: (id: 
   // O par (as mesas de cabeceira): cada posto é uma metade do desenho.
   const a: Amostra = p.metade ? metadeDe(base, p.metade) : base;
   const comum = { 'data-coisa': p.coisaId, 'data-montagem': p.montagem, ...(p.parede ? { 'data-parede': p.parede } : {}), ...(p.fixo ? { 'data-fixo': 'sim' } : {}) };
+  if (p.montagem === 'parede' && p.parede === 'esq') {
+    // 12.9: na parede esquerda, o mesmo paralelogramo, espelhado (quem olha vê o fundo à direita do desenho).
+    const c = caixaDaAmostra(a);
+    const [ax, ay] = tela(g, 0, p.base + p.h, p.z1), [bx, by] = tela(g, 0, p.base + p.h, p.z0), [, cy] = tela(g, 0, p.base, p.z1);
+    const sx = (bx - ax) / (c.x1 - c.x0), skew = (by - ay) / (c.x1 - c.x0), sy = (cy - ay) / (c.y1 - c.y0);
+    const m = [sx, skew, 0, sy, ax - c.x0 * sx, ay - c.x0 * skew - c.y0 * sy].map(n => n.toFixed(4)).join(' ');
+    return <g data-posto={p.id} {...comum} transform={`matrix(${m})`}><Ilustracao a={a} largura={a.vb[0]} rotulo="" className="cena-comodo__objeto" /></g>;
+  }
   if (p.montagem === 'parede' && p.parede === 'dir') {
     // Na parede lateral direita: o desenho vai para o plano da parede (um paralelogramo que acompanha a perspectiva).
     const c = caixaDaAmostra(a);
@@ -219,6 +228,7 @@ function ObjetoPosto({ p, g, postoDe }: { p: Posto; g: Geometria; postoDe: (id: 
     const m = [sx, skew, 0, sy, ax - c.x0 * sx, ay - c.x0 * skew - c.y0 * sy].map(n => n.toFixed(4)).join(' ');
     return <g data-posto={p.id} {...comum} transform={`matrix(${m})`}><Ilustracao a={a} largura={a.vb[0]} rotulo="" className="cena-comodo__objeto" /></g>;
   }
+  if (p.montagem === 'chao' && p.giro) return <Girado p={p} a={a} g={g} cor={cor} comum={comum} />;
   // Sobre um tampo: na profundidade do tampo (o desenho do móvel de baixo); no chão, o fundo do objeto.
   const zc = p.sobre ? zDoDesenho(postoDe(p.sobre) ?? p) - 0.02 : zDoDesenho(p);
   const s = escalaEm(g, zc);
@@ -236,6 +246,51 @@ function ObjetoPosto({ p, g, postoDe }: { p: Posto; g: Geometria; postoDe: (id: 
       </g>
     </g>
   );
+}
+
+/**
+ * 12.9 — O MÓVEL GIRADO: encostado na parede lateral, a frente virada para o meio do cômodo. O desenho de frente vai
+ * para o plano da frente do móvel (paralelo à parede, como a TV da parede direita), com a lateral que dá para quem
+ * olha (a espessura do móvel) e, se for baixo, o tampo visto de cima. A profundidade real dele no chão é a de catálogo.
+ */
+function Girado({ p, a, g, cor, comum }: { p: Posto; a: Amostra; g: Geometria; cor: string; comum: Record<string, string> }) {
+  const c = caixaDaAmostra(a);
+  const bw = Math.max(1, c.x1 - c.x0), bh = Math.max(1, c.y1 - c.y0);
+  const comprimento = p.z1 - p.z0;
+  // a altura do desenho na escala da largura real (sem passar de 1,3× a altura de catálogo)
+  const alt = Math.min(bh * comprimento / bw, p.h * 1.3);
+  const esq = p.giro === 'esq';
+  const xf = esq ? p.x1 : p.x0; // o plano da frente
+  const xp = esq ? p.x0 : p.x1; // o da parede
+  // De frente para o móvel da parede esquerda, o lado esquerdo dele fica no fundo (z0); na direita, o contrário.
+  const [zEsq, zDir] = esq ? [p.z0, p.z1] : [p.z1, p.z0];
+  const [ax, ay] = tela(g, xf, alt, zEsq), [bx, by] = tela(g, xf, alt, zDir);
+  // a altura na tela pela profundidade do meio (a perspectiva vira afim; o meio erra menos)
+  const sy = alt * g.k * escalaEm(g, (p.z0 + p.z1) / 2) / bh;
+  const sx = (bx - ax) / bw, skew = (by - ay) / bw;
+  const m = [sx, skew, 0, sy, ax - c.x0 * sx, ay - c.x0 * skew - c.y0 * sy].map(n => n.toFixed(4)).join(' ');
+  const pt = (x: number, h: number, z: number) => tela(g, x, h, z).map(n => n.toFixed(1)).join(',');
+  const caixa = medidaDe(p.coisaId).gira === 'caixa';
+  const base = corPrincipal(a.pecas) ?? cor;
+  const lado = misturar(base, '#000000', 0.2), tampo = misturar(base, '#ffffff', 0.1);
+  const topo = alt * 0.97;
+  return (
+    <g data-posto={p.id} {...comum} data-giro={p.giro}>
+      <polygon points={`${pt(p.x0, 0, p.z0)} ${pt(p.x1, 0, p.z0)} ${pt(p.x1, 0, p.z1)} ${pt(p.x0, 0, p.z1)}`} fill="#000000" opacity={0.13} />
+      {caixa && <polygon data-peca="lateral" points={`${pt(xp, 0, p.z1)} ${pt(xf, 0, p.z1)} ${pt(xf, topo, p.z1)} ${pt(xp, topo, p.z1)}`} fill={lado} />}
+      {caixa && alt < 1.5 && <polygon data-peca="tampo" points={`${pt(xp, topo, p.z0)} ${pt(xf, topo, p.z0)} ${pt(xf, topo, p.z1)} ${pt(xp, topo, p.z1)}`} fill={tampo} />}
+      <g transform={`matrix(${m})`}><Ilustracao a={a} largura={a.vb[0]} rotulo="" className="cena-comodo__objeto" /></g>
+    </g>
+  );
+}
+
+/** A cor do maior volume do desenho (a primeira massa): a lateral do móvel girado é do mesmo material da frente. */
+function corPrincipal(pecas: Peca[]): string | undefined {
+  for (const x of pecas) {
+    if (x.tipo === 'massa' && /^#[0-9a-f]{6}$/i.test(x.cor)) return x.cor;
+    if (x.tipo === 'grupo') { const c = corPrincipal(x.pecas); if (c) return c; }
+  }
+  return undefined;
 }
 
 const METADES = new WeakMap<Amostra, { esq: Amostra; dir: Amostra }>();
