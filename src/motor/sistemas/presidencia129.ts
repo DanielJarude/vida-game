@@ -25,6 +25,7 @@
  * Os sorteios novos são DERIVADOS (`rngDe`): as vidas que não chegam aqui seguem iguais.
  */
 
+import { apurarColegio, ladoDoCandidato, MAIORIA_NO_COLEGIO, TOTAL_DE_DELEGADOS } from './colegioEleitoral129';
 import type { Rng } from '../rng';
 import { clamp, rngDe } from '../rng';
 import type { Vida, VidaPolitica } from '../tipos';
@@ -39,7 +40,7 @@ import { sortearNome, sortearSobrenome } from '../dados/nomes';
 import { oPartido, partidoDe } from '../dados/partidos';
 import {
   EIXOS_129, PERFIS_ADVERSARIO, PIB_DA_FASE, POLITICAS_129, REFORMAS_129, REGRAS_PRESIDENCIAIS, semPresidenciaTexto,
-  type Adversario129, type CampanhaPresidencial129, type Eixo129, type Governo129, type MandatoPresidencial129, type Presidencia129,
+  type Adversario129, type CampanhaPresidencial129, type CandidaturaPresidencial129, type Eixo129, type Governo129, type MandatoPresidencial129, type Presidencia129,
   type RegraPresidencial, type Reforma129
 } from '../dados/presidencia129';
 import { aliviar, desgastar } from './desgastePolitico';
@@ -180,11 +181,17 @@ function gerarAdversarios(v: Vida, ano: number, r: RegraPresidencial): Adversari
   const fortes = PERFIS_ADVERSARIO.filter(x => x.forca >= 60);
   const outros = PERFIS_ADVERSARIO.filter(x => x.forca < 60);
   const perfis = r.segundoTurno ? [rng.pick(fortes), rng.pick(fortes.filter(x => x.id !== 'governador')), rng.pick(outros), rng.pick(outros)] : [rng.pick(fortes), rng.pick(outros.filter(x => x.forca < 50))];
+  // VIDA 12.9.1 (EUA, Colégio Eleitoral): a disputa é de dois grandes lados — o adversário forte é do lado oposto ao seu
+  // (quem é de centro ou independente enfrenta um grande de cada lado); o pequeno é uma terceira via.
+  const ladoMeu = ladoDoCandidato(meu);
+  const partidosDoColegio = r.colegio ? (ladoMeu > 0 ? ['~direita', '~centro_direita'] : ladoMeu < 0 ? ['~centro_esquerda', '~esquerda'] : ['~centro_esquerda', '~centro_direita']) : [];
+  if (r.colegio && ladoMeu === 0) perfis[1] = rng.pick(fortes.filter(x => x.id !== perfis[0].id));
   return perfis.map((perfil, k) => {
     const fem = rng.chance(0.35);
     const anoNasc = ano - rng.int(40, 72);
     const nome = `${sortearNome(rng, fem ? 'feminino' : 'masculino', anoNasc, pais)} ${sortearSobrenome(rng, pais)}`;
-    return { nome, feminino: fem, partido: umPartido(), perfil: perfil.texto(fem), forca: r1(perfil.forca + rng.normal() * 5 - (k >= 2 ? 3 : 0)) };
+    const partido = r.colegio ? (k === 0 ? partidosDoColegio[0] : ladoMeu === 0 ? partidosDoColegio[1] : rng.pick(['~centro', '~verde', '~regional'].filter(x => x !== meu))) : umPartido();
+    return { nome, feminino: fem, partido, perfil: perfil.texto(fem), forca: r1(perfil.forca + rng.normal() * 5 - (k >= 2 ? 3 : 0)) };
   });
 }
 
@@ -248,9 +255,11 @@ export function chancePresidencial(v: Vida, n = 300): number {
   const rng = rngDe(v.id, 'pres_chance', c.ano, c.etapa);
   const P = forcaPresidencial(v);
   let ganhou = 0;
+  const lados = r.colegio ? ladosDaDisputa(v, c) : [];
   for (let k = 0; k < n; k++) {
     const fs = [P, ...c.adversarios.map(a => a.forca)].map(f => f + rng.normal() * RUIDO_DA_URNA);
     const x = votos(fs);
+    if (r.colegio) { if (apurarColegio(x.map((y, i) => ({ nacional: y, lado: lados[i] })), rng).eleito === 0) ganhou++; continue; }
     const ordem = x.map((_y, i) => i).sort((a, b) => x[b] - x[a]);
     if (!r.segundoTurno || venceNoPrimeiro(r, x, ordem)) { if (ordem[0] === 0) ganhou++; continue; }
     if (ordem[0] !== 0 && ordem[1] !== 0) continue;
@@ -265,6 +274,39 @@ function venceNoPrimeiro(r: RegraPresidencial, x: number[], ordem: number[]): bo
   const a = x[ordem[0]], b = x[ordem[1]];
   if (a > r.limiar) return true;
   return r.limiar === 45 && a >= 40 && a - b >= 10;
+}
+
+/** VIDA 12.9.1: o lado no espectro de cada um na disputa (você primeiro; o independente é de centro). */
+function ladosDaDisputa(v: Vida, c: CampanhaPresidencial129): number[] {
+  return [ladoDoCandidato(v.caminhos.politica?.partido), ...c.adversarios.map(a => ladoDoCandidato(a.partido))];
+}
+
+/**
+ * VIDA 12.9.1 — a apuração americana: o voto popular é o da urna (`x`), mas quem decide é o Colégio Eleitoral — os
+ * estados, um a um (vencedor leva tudo; Maine e Nebraska por distrito), 270 de 538; sem maioria, a Câmara.
+ */
+function apurarNoColegio(v: Vida, c: CampanhaPresidencial129, x: number[], placar: string, nome: string,
+  fim: (ganhou: boolean, segundo?: { voce: number; adversario: string }, colegio?: CandidaturaPresidencial129['colegio']) => { ganhou: boolean; chance: number }) {
+  const res = apurarColegio(x.map((y, i) => ({ nacional: y, lado: ladosDaDisputa(v, c)[i] })), rngDe(v.id, 'pres_colegio', c.ano));
+  const nomes = ['você', ...c.adversarios.map(a => a.nome)];
+  const ganhou = res.eleito === 0;
+  const popularVenceu = res.popular.indexOf(Math.max(...res.popular));
+  const ordem = res.delegados.map((_d, i) => i).filter(i => res.delegados[i] > 0 || i === 0).sort((a, b) => res.delegados[b] - res.delegados[a]);
+  const colegioTxt = ordem.map(i => `${nomes[i]} ${res.delegados[i]}`).join(' · ');
+  let texto = `A apuração para ${nome}. Voto popular: ${placar}. Colégio Eleitoral: ${colegioTxt} (${MAIORIA_NO_COLEGIO} de ${TOTAL_DE_DELEGADOS} para vencer).`;
+  if (res.contingencia) {
+    const d = res.contingencia;
+    texto += ` Ninguém chegou a ${MAIORIA_NO_COLEGIO}: a Câmara dos Representantes decidiu, uma delegação por estado — ${d.finalistas.map(i => `${nomes[i]} ${d.delegacoes[i]}`).join(' · ')} (26 de 50 para vencer${d.repetida ? '; nenhuma maioria na primeira votação, e as votações se repetiram' : ''}).`;
+  }
+  texto += ganhou
+    ? (popularVenceu !== 0 ? ` Você venceu no Colégio Eleitoral mesmo com menos votos no país que ${nomes[popularVenceu]}.` : ` Você venceu no voto popular e no Colégio Eleitoral${res.contingencia ? ' — pela Câmara' : ''}.`)
+    : (popularVenceu === 0 ? ` Você teve mais votos no país, mas ${nomes[res.eleito]} venceu no Colégio Eleitoral${res.contingencia ? ' (pela Câmara)' : ''}.` : ` ${nomes[res.eleito]} venceu${res.contingencia ? ', escolhid' + (c.adversarios[res.eleito - 1]?.feminino ? 'a' : 'o') + ' pela Câmara' : ''}.`);
+  escrever(v, { texto, relevancia: 'biografia', tema: 'trabalho', tom: ganhou ? 'bom' : 'ruim' });
+  if (popularVenceu !== res.eleito) marcar(v, ganhou ? 'eleicao' : 'derrota', ganhou ? `Eleit${ge(v) === 'feminino' ? 'a' : 'o'} pelo Colégio Eleitoral, com menos votos no país.` : 'Mais votos no país — e a derrota no Colégio Eleitoral.', 2);
+  return fim(ganhou, undefined, {
+    delegados: res.delegados, nomes, estados: res.estadosGanhos[0], popular: res.popular.map(r1), eleito: nomes[res.eleito],
+    ...(res.contingencia ? { camara: { delegacoes: res.contingencia.finalistas.map(i => res.contingencia!.delegacoes[i]), finalistas: res.contingencia.finalistas.map(i => nomes[i]) } } : {})
+  });
 }
 
 /** O que a última semana do segundo turno somou (`prest_segundo_turno`). */
@@ -282,8 +324,8 @@ function apurar(v: Vida, conta: { fatores: FatorEleitoral[]; chance: number }): 
   c.chance = chance;
   const nome = nomeCargo(v, 'presidente');
   const meu = p.partido;
-  const fim = (ganhou: boolean, segundo?: { voce: number; adversario: string }) => {
-    e.candidaturas.push({ ano: c.ano, partido: meu, via: c.via, resultado: ganhou ? 'eleito' : 'derrotado', primeiro: c.primeiro, segundo, adversarios: c.adversarios.map(a => a.nome), debate: c.debateFoi, eixo: c.eixo, chapa: c.chapa, reeleicao: c.via === 'reeleicao' || undefined });
+  const fim = (ganhou: boolean, segundo?: { voce: number; adversario: string }, colegio?: CandidaturaPresidencial129['colegio']) => {
+    e.candidaturas.push({ ano: c.ano, partido: meu, via: c.via, resultado: ganhou ? 'eleito' : 'derrotado', primeiro: c.primeiro, segundo, adversarios: c.adversarios.map(a => a.nome), debate: c.debateFoi, eixo: c.eixo, chapa: c.chapa, reeleicao: c.via === 'reeleicao' || undefined, ...(colegio ? { colegio } : {}) });
     e.campanha = undefined;
     delete v.fatos['pres_2turno'];
     return { ganhou, chance };
@@ -295,6 +337,7 @@ function apurar(v: Vida, conta: { fatores: FatorEleitoral[]; chance: number }): 
     const ordem = x.map((_y, i) => i).sort((a, b) => x[b] - x[a]);
     c.primeiro = ordem.slice(0, 4).concat(ordem.slice(0, 4).includes(0) ? [] : [0]).map(i => (i === 0 ? { nome: 'você', partido: meu, pct: r1(x[0]), voce: true } : { nome: c.adversarios[i - 1].nome, partido: c.adversarios[i - 1].partido, pct: r1(x[i]) }));
     const placar = c.primeiro.map(y => `${y.voce ? 'você' : y.nome} ${pct(y.pct)}`).join(' · ');
+    if (r.colegio) return apurarNoColegio(v, c, x, placar, nome, fim);
     if (!r.segundoTurno || venceNoPrimeiro(r, x, ordem)) {
       const ganhou = ordem[0] === 0;
       escrever(v, { texto: `A apuração para ${nome}: ${placar}.${ganhou ? (r.segundoTurno ? ' Venceu já no primeiro turno.' : '') : ` ${c.adversarios[ordem[0] - 1].nome} venceu.`}`, relevancia: 'biografia', tema: 'trabalho' });
@@ -698,7 +741,7 @@ function horizonte(v: Vida): string | undefined {
 export interface LeituraPresidencial {
   /** Onde não há eleição direta para presidente. */
   semPresidencia?: string;
-  regras?: { titulo: string; idade: number; anos: number; limite: string; segundoTurno: boolean; independente: boolean; nato: boolean; proxima: number };
+  regras?: { titulo: string; idade: number; anos: number; limite: string; segundoTurno: boolean; independente: boolean; nato: boolean; proxima: number; colegio?: boolean };
   /** O que falta (ou o que pesa) para disputar, quando a pessoa está na política. */
   requisitos?: { texto: string; ok: boolean }[];
   campanha?: { ano: number; etapa: number; via: string; pesquisa: ReturnType<typeof pesquisa>; historia: number[]; segundo?: string; debate?: string; eixo?: string; chance: string };
@@ -722,7 +765,7 @@ export function leituraPresidencial(v: Vida): LeituraPresidencial | undefined {
   if (!r) out.semPresidencia = semPresidenciaTexto(pais);
   else {
     const prox = (() => { for (let a = anoDe(v.t); a < anoDe(v.t) + 12; a++) if (cargoNoCiclo('presidente', a, pais) && tDaEleicao(a) > v.t) return a; return r.ciclo[0]; })();
-    out.regras = { titulo: nomeCargo(v, 'presidente'), idade: r.idade, anos: r.anos, limite: r.limite.texto, segundoTurno: r.segundoTurno, independente: r.independente, nato: r.nato, proxima: prox };
+    out.regras = { titulo: nomeCargo(v, 'presidente'), idade: r.idade, anos: r.anos, limite: r.limite.texto, segundoTurno: r.segundoTurno, independente: r.independente, nato: r.nato, proxima: prox, ...(r.colegio ? { colegio: true } : {}) };
     if (!emMandatoPresidencial(v) && !e?.campanha && p.fase !== 'encerrada') {
       const tP = tDaPosse(prox);
       const req: { texto: string; ok: boolean }[] = [];
@@ -761,7 +804,9 @@ export function leituraPresidencial(v: Vida): LeituraPresidencial | undefined {
     const quem = x.primeiro?.find(y => y.voce);
     const texto = x.resultado === 'preterido' ? `${x.ano}: não foi ${x.via === 'primarias' ? 'escolhido nas primárias' : 'o escolhido na convenção'}`.replace('escolhido', flex(ge(v), 'escolhido', 'escolhida', 'escolhide'))
       : x.resultado === 'desistiu' ? `${x.ano}: retirou a candidatura`
-        : `${x.ano}: ${x.resultado === 'eleito' ? (x.reeleicao ? flex(ge(v), 'reeleito', 'reeleita', 'reeleite') : flex(ge(v), 'eleito', 'eleita', 'eleite')) : 'derrotado'.replace('derrotado', flex(ge(v), 'derrotado', 'derrotada', 'derrotade'))}${quem ? ` — ${pct(quem.pct)} no primeiro turno` : ''}${x.segundo ? `, ${pct(x.segundo.voce)} no segundo contra ${x.segundo.adversario}` : ''}`;
+        : `${x.ano}: ${x.resultado === 'eleito' ? (x.reeleicao ? flex(ge(v), 'reeleito', 'reeleita', 'reeleite') : flex(ge(v), 'eleito', 'eleita', 'eleite')) : 'derrotado'.replace('derrotado', flex(ge(v), 'derrotado', 'derrotada', 'derrotade'))}${x.colegio
+          ? ` — ${x.colegio.delegados[0]} delegados no Colégio Eleitoral (${x.colegio.estados} estados), ${pct(x.colegio.popular[0])} do voto popular${x.colegio.camara ? '; decidido pela Câmara' : ''}${x.resultado !== 'eleito' ? `; ${x.colegio.eleito} venceu` : ''}`
+          : `${quem ? ` — ${pct(quem.pct)} no primeiro turno` : ''}${x.segundo ? `, ${pct(x.segundo.voce)} no segundo contra ${x.segundo.adversario}` : ''}`}`;
     return { ano: x.ano, texto, ganhou: x.resultado === 'eleito' };
   });
   if (!out.regras && !out.campanha && !out.governo && !out.candidaturas.length && !out.mandatos.length) return { ...out, semPresidencia: out.semPresidencia };

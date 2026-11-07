@@ -34,6 +34,8 @@ export interface RegraPresidencial {
   /** Há segundo turno; `limiar` é o percentual dos votos válidos que elege já no primeiro (Argentina: 45, ou 40 com dez de vantagem). */
   segundoTurno: boolean;
   limiar: number;
+  /** VIDA 12.9.1: a eleição se decide no Colégio Eleitoral (EUA: 270 de 538 delegados), não no voto popular. */
+  colegio?: boolean;
   /**
    * O limite de mandatos: `seguidos` (no máximo tantos mandatos consecutivos), `total` (na vida inteira), `intervalo`
    * (anos entre o fim do último mandato e a posse do novo: 1 = sem reeleição imediata; Costa Rica, oito anos).
@@ -61,7 +63,7 @@ export const REGRAS_PRESIDENCIAIS: Record<string, RegraPresidencial> = {
     limite: { seguidos: 2, texto: 'Uma só reeleição seguida (CF, art. 14, §5º); depois de um mandato de intervalo, pode voltar.' },
     palacio: 'o Palácio do Planalto', congresso: 'o Congresso Nacional', casas: ['a Câmara dos Deputados', 'o Senado Federal'],
     impeachment: { nome: 'o impeachment', acusa: 67, condena: 67, inabilita: 8 }, quorum: { emenda: 60, lei: 50 }, desemprego: 7.5 },
-  US: { titulo: ['presidente', 'presidente'], anos: 4, idade: 35, ciclo: [2028, 4], nato: true, independente: true, segundoTurno: false, limiar: 0,
+  US: { titulo: ['presidente', 'presidente'], anos: 4, idade: 35, ciclo: [2028, 4], nato: true, independente: true, segundoTurno: false, limiar: 0, colegio: true,
     limite: { total: 2, texto: 'No máximo dois mandatos na vida (22ª Emenda).' },
     palacio: 'a Casa Branca', congresso: 'o Congresso', casas: ['a Câmara dos Representantes', 'o Senado'], escolha: 'primarias',
     impeachment: { nome: 'o impeachment', acusa: 50, condena: 67 }, quorum: { emenda: 67, lei: 60 }, desemprego: 4.2 },
@@ -264,6 +266,11 @@ export interface CandidaturaPresidencial129 {
   eixo?: Eixo129;
   chapa?: CampanhaPresidencial129['chapa'];
   reeleicao?: boolean;
+  /**
+   * VIDA 12.9.1 (EUA): o Colégio Eleitoral — os delegados de cada um (você primeiro), os estados que você ganhou, o voto
+   * popular e quem o venceu, e a eleição pela Câmara quando ninguém fez 270.
+   */
+  colegio?: { delegados: number[]; nomes: string[]; estados: number; popular: number[]; eleito: string; camara?: { delegacoes: number[]; finalistas: string[] } };
 }
 
 /** O governo em exercício: a economia do país, a base no Congresso, o mundo, as reformas, o que ficou. */

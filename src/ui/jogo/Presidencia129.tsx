@@ -97,7 +97,7 @@ export function PainelPresidencial({ vida }: { vida: Vida }) {
       {l.regras && l.requisitos && (
         <div className="pres129__bloco">
           <p className="pres129__kicker">A Presidência · próxima eleição em {l.regras.proxima}</p>
-          <p className="pres129__regra">{l.regras.titulo.charAt(0).toUpperCase() + l.regras.titulo.slice(1)}: {l.regras.idade} anos na posse, mandato de {l.regras.anos}. {l.regras.limite}{l.regras.segundoTurno ? ' Há segundo turno.' : ' Vence quem tiver mais votos.'}</p>
+          <p className="pres129__regra">{l.regras.titulo.charAt(0).toUpperCase() + l.regras.titulo.slice(1)}: {l.regras.idade} anos na posse, mandato de {l.regras.anos}. {l.regras.limite}{l.regras.colegio ? ' Quem decide é o Colégio Eleitoral: vencer em cada estado leva os delegados dele (Maine e Nebraska dividem por distrito), e é preciso 270 de 538 — mais votos no país não bastam.' : l.regras.segundoTurno ? ' Há segundo turno.' : ' Vence quem tiver mais votos.'}</p>
           <ul className="pres129__requisitos">{l.requisitos.map(x => <li key={x.texto} className={x.ok ? 'ok' : 'falta'}><span aria-hidden>{x.ok ? '✓' : '·'}</span> {x.texto}<span className="sr-only">{x.ok ? ' (cumprido)' : ' (falta)'}</span></li>)}</ul>
         </div>
       )}
