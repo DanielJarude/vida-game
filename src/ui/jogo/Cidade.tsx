@@ -12,7 +12,7 @@ import { useMemo, useState } from 'react';
 import type { Vida } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
 import { idade } from '../../motor/nucleo';
-import { cidadesDoPais, economiaLocal, municipio, nomeDaDivisao, nomeLugar, siglaDaDivisao } from '../../motor/dados/lugares';
+import { cidadesNoMapa, economiaLocal, municipio, nomeDaDivisao, nomeLugar, siglaDaDivisao } from '../../motor/dados/lugares';
 import { perfilDoPais } from '../../motor/mundo/registro';
 import { CustoDeViverAqui, MudarDePais } from './Mundo';
 import { consequenciasDaMudanca, custoDeMudanca } from '../../motor/sistemas/processos';
@@ -113,7 +113,7 @@ function Mudar({ vida, agir }: Props) {
   const [destino, setDestino] = useState('');
   // As cidades do país onde se mora (mudar de país é outra seção: `MudarDePais`).
   const pais = municipio(vida.moradia.municipioId).pais;
-  const doPais = cidadesDoPais(pais);
+  const doPais = cidadesNoMapa(pais);
   const ufs = useMemo(() => [...new Set(doPais.map(m => m.uf))].map(u => ({ u, nome: nomeDaDivisao(doPais.find(m => m.uf === u)!) })).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')), [doPais]);
   const cidades = doPais.filter(m => m.uf === uf && m.id !== vida.moradia.municipioId);
   const tipo = perfilDoPais(pais).divisao.tipo[0];

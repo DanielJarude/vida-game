@@ -18,7 +18,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { MotivoMigracao, Vida } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
 import { ORDEM_REGIOES, ROTULO_REGIAO, nomeDoPais, noPais, paisDoCatalogo, paisesVivenciaveis, perfilDoPais, todosOsPaises, gentilico } from '../../motor/mundo/registro';
-import { cidadesDoPais, economiaLocal, municipio, nomeDaDivisao, nomeLugar, rotuloPerfil, NOMES_UF, MUNICIPIOS } from '../../motor/dados/lugares';
+import { cidadesDoPais, cidadesNoMapa, economiaLocal, municipio, nomeDaDivisao, nomeLugar, rotuloPerfil, NOMES_UF, MUNICIPIOS } from '../../motor/dados/lugares';
 import { converterEntrePaises, formatarDinheiroCurto, nomeDaMoeda, simboloDaMoeda } from '../../motor/mundo/moeda';
 import { salarioMinimoDoPais } from '../../motor/mundo/economia';
 import { anosNoPais, linguasDaPessoa, nacionalidadesDaVida, paisDaVida, paisNatal } from '../../motor/mundo/vida';
@@ -105,7 +105,7 @@ export function LugarDeNascimento({ cidade, aoMudar }: { cidade: string; aoMudar
   const m = municipio(cidade);
   const [trocando, setTrocando] = useState(false);
   const divisoes = useMemo(() => divisoesDe(m.pais), [m.pais]);
-  const cidades = cidadesDoPais(m.pais).filter(x => x.uf === m.uf);
+  const cidades = cidadesNoMapa(m.pais).filter(x => x.uf === m.uf);
   const tipo = perfilDoPais(m.pais).divisao.tipo[0];
   if (trocando) return (
     <>
@@ -245,7 +245,7 @@ export function MudarDePais({ vida, agir }: { vida: Vida; agir: (a: Acao) => boo
         <div className="viagem">
           <h3 ref={titulo} tabIndex={-1} className="viagem__pergunta">Qual cidade?</h3>
           <ul className="viagem__opcoes">
-            {cidadesDoPais(pais).filter(x => x.perfil !== 'pequena' || x.capital).map(x => (
+            {cidadesNoMapa(pais).filter(x => x.perfil !== 'pequena' || x.capital).map(x => (
               <li key={x.id}><button type="button" className="viagem__opcao" onClick={() => setCidade(x.id)}>
                 <span className="viagem__nome">{x.nome}<span className="viagem__sub">{nomeDaDivisao(x)} · {rotuloPerfil(x.perfil)}</span></span>
                 <span className="viagem__preco">aluguel {formatarDinheiroCurto(economiaLocal(x.id).aluguel, pais)}/mês</span>

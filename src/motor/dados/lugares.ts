@@ -12,6 +12,7 @@
 
 import type { Regiao } from '../tipos';
 import type { PerfilDePais, PerfilUrbano } from '../mundo/tipos';
+import { MUNICIPIOS_1291 } from './municipios1291';
 import { aoRegistrar, idDaCidade, indiceNoCatalogo, PAIS_PADRAO, paisDoCatalogo, paisDoId, paisPeloIndice, perfilDoPais, temPerfil } from '../mundo/registro';
 
 /*
@@ -120,7 +121,7 @@ function slug(s: string): string {
  * As cidades BRASILEIRAS, na ordem de sempre (há saves que guardam a posição
  * de uma cidade nesta lista). As de outros países estão em `cidadesDoPais`.
  */
-export const MUNICIPIOS: readonly Municipio[] = LINHAS.map(([nome, uf, perfil, capital, metropole]) => ({
+const doBrasil = ([nome, uf, perfil, capital, metropole]: Linha): Municipio => ({
   id: `${slug(nome)}-${uf.toLowerCase()}`,
   nome,
   pais: PAIS_PADRAO,
@@ -130,9 +131,14 @@ export const MUNICIPIOS: readonly Municipio[] = LINHAS.map(([nome, uf, perfil, c
   capital: capital || undefined,
   capitalNacional: uf === 'DF' || undefined,
   metropole: metropole ? `${slug(metropole)}-${uf.toLowerCase()}` : undefined
-}));
+});
+export const MUNICIPIOS: readonly Municipio[] = LINHAS.map(doBrasil);
+/** VIDA 12.9.1: as cidades dos campi (`municipios1291`) — no mapa, DEPOIS da lista de sempre e fora dos sorteios. */
+const BR_NO_MAPA: readonly Municipio[] = [...MUNICIPIOS, ...MUNICIPIOS_1291.map(([n, uf, p, metro]) => doBrasil([n, uf, p, false, metro]))];
+/** As cidades onde se pode morar (a escolha do jogador): no Brasil, a lista de sempre + as dos campi; fora, as do perfil. */
+export const cidadesNoMapa = (pais: string): readonly Municipio[] => (pais === PAIS_PADRAO ? BR_NO_MAPA : cidadesDoPais(pais));
 
-const POR_ID = new Map(MUNICIPIOS.map(m => [m.id, m]));
+const POR_ID = new Map(BR_NO_MAPA.map(m => [m.id, m]));
 const POR_PAIS = new Map<string, Municipio[]>([[PAIS_PADRAO, [...MUNICIPIOS]]]);
 
 /** As cidades de um perfil viram municípios do mesmo índice. */
@@ -166,7 +172,7 @@ export function municipio(id: string): Municipio {
 export const existeMunicipio = (id: string) => POR_ID.has(id);
 
 export function municipioPorNome(nome: string, uf: string): Municipio | undefined {
-  return MUNICIPIOS.find(m => m.nome === nome && m.uf === uf);
+  return BR_NO_MAPA.find(m => m.nome === nome && m.uf === uf);
 }
 
 /**
@@ -177,12 +183,12 @@ export function municipioPorNome(nome: string, uf: string): Municipio | undefine
 export function codigoDoMunicipio(id: string): number {
   const m = POR_ID.get(id);
   if (!m) return -1;
-  if (m.pais === PAIS_PADRAO) return MUNICIPIOS.findIndex(x => x.id === id);
+  if (m.pais === PAIS_PADRAO) return BR_NO_MAPA.findIndex(x => x.id === id);
   return 10000 + indiceNoCatalogo(m.pais) * 100 + (POR_PAIS.get(m.pais) ?? []).findIndex(x => x.id === id);
 }
 export function municipioDoCodigo(n: number): string | undefined {
   if (n < 0) return undefined;
-  if (n < 10000) return MUNICIPIOS[n]?.id;
+  if (n < 10000) return BR_NO_MAPA[n]?.id;
   const pais = paisPeloIndice(Math.floor((n - 10000) / 100));
   return pais ? POR_PAIS.get(pais)?.[(n - 10000) % 100]?.id : undefined;
 }
