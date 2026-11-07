@@ -95,4 +95,8 @@ motor-dados 779,3 · motor-textos 775,6 · motor-carreira 730,2 · motor 724,1 �
 
 ## I. Publicação
 
-(preenchido após o deploy)
+- **Commit publicado:** `6618f2a` (código idêntico ao de `564234b`; o último commit só acrescentou este relatório). `main`, `claude/fix-pos-rework3-playtest` (produção) e `claude/vida12.9-atualizacao-unificada` avançados por fast-forward de `810bc06` para `6618f2a`. Este registro da publicação é um commit de documentação posterior, só em `main` e na branch.
+- **Deploy:** Cloudflare Pages, check-run `completed/success` no SHA `6618f2a` (pré-visualização `e443aa17.vida-game.pages.dev` com o mesmo `index-3UKip6aW.js`); o deploy de produção trocou o índice em seguida.
+- **URL:** https://vida-game.pages.dev/ serve `index-3UKip6aW.js`; **60/60** arquivos (o índice pela raiz `/` e todos os JS e CSS) **SHA-256 idênticos** ao `dist/` testado (`compararProd129.sh`; dois arquivos diferiram na primeira leitura por propagação e bateram na seguinte).
+- **Verificação em produção:** `URL=https://vida-game.pages.dev/ node scripts/playtest/vida129.mjs` (contextos novos; saves de QA só no navegador de teste) — 10 cenas (cômodos, aparência, loja, encontros, calendário, faculdade, empresa, presidência, tatuagens, novidades), tema claro, 4 larguras: **0 problemas**, 0 erros de console.
+- **Rollback**, se preciso: `git push origin 810bc06:claude/fix-pos-rework3-playtest --force-with-lease` (e `main` para `810bc06`).
