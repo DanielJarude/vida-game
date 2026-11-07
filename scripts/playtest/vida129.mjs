@@ -31,6 +31,8 @@ const TODAS = [
   ['presidente*', 'r129-presidente', 'Caminhos', 'clique:text=Concursos, política, serviço público >> nth=0', 'ver:.pres129'],
   ['garagem*', 'r128-mansao', 'Vida', 'aba:Patrimônio', 'clique:role=tab[name=/Garagem/]', 'ver:main'],
   ['tatuagens*', 'r129-jovem', 'Você', 'clique:role=tab[name=/Aparência/]', 'ver:.estudio-tatuagem'],
+  ['motos*', 'r129-motos', 'Vida', 'aba:Patrimônio', 'clique:role=tab[name=/Garagem/]', 'ver:.gar129'],
+  ['colecao-motos', 'r129-motos', 'Vida', 'aba:Patrimônio', 'clique:role=tab[name=/Coleção/]', 'ver:main'],
   ['novidades', 'r129-jovem', 'novidades']
 ].map(([n, ...r]) => [n.replace('*', ''), n.endsWith('*'), ...r]);
 const so = process.env.CENAS?.split(',');
@@ -152,7 +154,7 @@ for (const [nome, extra, sv, area, ...passos] of cenas) {
     p.on('pageerror', e => problemas.push(`${rot}: ${e.message}`));
     p.on('console', m => { if (m.type() === 'error') problemas.push(`${rot}: console: ${m.text()}`); });
     await p.goto(URL);
-    await p.evaluate(([s, t, nv]) => { localStorage.clear(); localStorage.setItem('VIDA_APARENCIA', t); localStorage.setItem('VIDA_NOVIDADES_VISTAS', nv); if (s) localStorage.setItem('VIDA_GAME_SAVE_V1', s); }, [sv ? save(sv) : null, tema, area === 'novidades' ? '12.8' : '12.9']);
+    await p.evaluate(([s, t, nv]) => { localStorage.clear(); localStorage.setItem('VIDA_APARENCIA', t); localStorage.setItem('VIDA_NOVIDADES_VISTAS', nv); if (s) localStorage.setItem('VIDA_GAME_SAVE_V1', s); }, [sv ? save(sv) : null, tema, area === 'novidades' ? '12.9' : '12.9.1']);
     await p.goto(URL);
     await p.waitForTimeout(300);
     if (area === 'novidades') {

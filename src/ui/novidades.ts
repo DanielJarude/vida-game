@@ -33,8 +33,12 @@ export const NOTAS: NotaDeVersao[] = [
       'Motos clássicas: Triumph Bonneville, Norton Commando, Vincent Black Shadow, Ducati 750 SS, BMW R 90 S, Honda CB750, Kawasaki Z1, Harley-Davidson Knucklehead, Indian Chief e mais — na garagem do colecionador, sem depreciar pela idade, com raridade pela produção de verdade e uma coleção própria. Filete no tanque, banco de couro e rodas raiadas aparecem no desenho.',
       'As cidades dos campi que faltavam entraram no mapa (São Carlos, Limeira, Botucatu, Araraquara, Franca, Macaé, Toledo, Camaçari, Betim, Poços de Caldas e outras): dá para morar, trabalhar e estudar nelas, e todos os campi das universidades reais podem ser escolhidos.'
     ],
-    melhorias: [],
+    melhorias: [
+      'O painel político dos EUA explica as regras do Colégio Eleitoral, e o histórico de candidaturas mostra os delegados, os estados ganhos e o voto popular.',
+      'As cidades novas aparecem na escolha de onde nascer e na mudança de cidade.'
+    ],
     correcoes: [
+      'O número de fabricados na raridade de um veículo de coleção aparece com o milhar certo (10.594, não 10,594).',
       'A eleição para presidente dos EUA agora se decide no Colégio Eleitoral: cada estado dá os seus delegados a quem vence nele (Maine e Nebraska dividem por distrito), e é preciso 270 de 538. Dá para ter mais votos no país e perder — e, sem maioria, a Câmara decide.'
     ]
   },

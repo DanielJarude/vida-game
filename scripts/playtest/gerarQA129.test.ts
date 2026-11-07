@@ -13,6 +13,7 @@ import { presidencia } from '../../src/motor/sistemas/presidencia129';
 import { processarEmpresas } from '../../src/motor/sistemas/empresas';
 import { AREAS_ENEM } from '../../src/motor/sistemas/escola';
 import type { Vida } from '../../src/motor/tipos';
+import { versaoVeiculo } from '../../src/motor/dados/bens';
 
 const OUT = process.env.QA129;
 const salvar = (n: string, v: Vida) => { v.momento = null; delete v.fila; writeFileSync(`${OUT}/saves/vida-r129-${n}.json`, JSON.stringify(v)); };
@@ -50,4 +51,16 @@ it.skipIf(!OUT)('gera os saves', () => {
   p.t = tDaEleicao(2030, 'BR') + 1; processarPolitica(p, criarRng(4));
   p.t = tDaPosse(2030, 'BR') + 1; p.anoAtual = { acoes: [] }; processarPolitica(p, criarRng(5));
   salvar('presidente', p);
+  // 12.9.1: o colecionador de motos clássicas (a garagem, a coleção, as peças no desenho).
+  const m = transacao(adulto(50, { semente: 1291, municipioId: 'sao-paulo-sp' }), x => {
+    x.financas.conta = 5_000_000; x.financas.dividas = []; x.financas.negativado = false;
+    if (!x.trabalho.licencas.includes('cnh')) x.trabalho.licencas.push('cnh');
+    x.financas.bens = [{ id: 'icasa', tipo: 'imovel', modeloId: 'casa_3q', nome: 'casa', valor: 900000, tCompra: x.t - 60, municipioId: x.moradia.municipioId, estado: 80 } as never];
+    x.moradia = { tipo: 'propria', municipioId: x.moradia.municipioId, imovelId: 'icasa', modeloId: 'casa_3q', aluguel: 0, padrao: 4, tInicio: x.t - 60 };
+    for (const [id, mods] of [['vincent_black_shadow_1950', { filete: 'dourado' }], ['honda_cb750_1970', {}], ['harley_knucklehead_1937', { banco: 'couro_caramelo' }], ['ducati_750ss_1974', {}], ['triumph_t120_1969', {}]] as const) {
+      const ver = versaoVeiculo(id)!;
+      x.financas.bens.push({ id: `v-${id}`, tipo: 'veiculo', modeloId: ver.classe, versaoId: id, nome: `${ver.marca} ${ver.modelo}`, valor: ver.preco, tCompra: x.t - 24, estado: 85, anoFabricacao: ver.ano ?? 2000, precoPago: ver.preco, papel: 'colecao', mods } as never);
+    }
+  }).vida;
+  salvar('motos', m);
 });
