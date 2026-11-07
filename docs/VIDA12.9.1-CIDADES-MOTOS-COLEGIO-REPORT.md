@@ -42,4 +42,7 @@ motor-dados 779,5 · motor-textos 775,6 · motor-carreira 730,2 · motor 724,1 k
 - Motos: muitos modelos sem número de produção ficam "incomum"; clássica só no colecionador (cidades grandes); a XR750 (de pista) é usável como qualquer moto.
 
 ## G. Publicação
-(preenchido após o deploy)
+- **Commit publicado:** `10668b3`. `main`, `claude/fix-pos-rework3-playtest` (produção) e a branch avançados por fast-forward (`90dedd3`/`6618f2a` → `10668b3`). Este registro é um commit de documentação posterior, só em `main` e na branch.
+- **URL:** https://vida-game.pages.dev/ serve `index-D_hTpSFy.js`; **60/60** arquivos (o índice pela raiz e todos os JS e CSS) **SHA-256 idênticos** ao `dist/` testado.
+- **Verificação em produção:** `URL=https://vida-game.pages.dev/ node scripts/playtest/vida129.mjs` — garagem e coleção de motos, faculdade, presidência, novidades: 0 problemas, 0 erros de console.
+- **Rollback:** `git push origin 6618f2a:claude/fix-pos-rework3-playtest --force-with-lease` (e `main` para `90dedd3`).
