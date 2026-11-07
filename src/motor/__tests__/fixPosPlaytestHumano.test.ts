@@ -276,7 +276,8 @@ describe('D — fazer algo junto é uma cena, não uma barra', () => {
       v = r.vida;
       const vin = v.vinculos[p.id];
       expect(vin.cenas!.length).toBeGreaterThan(0);
-      tipos.push(vin.cenas![vin.cenas!.length - 1].split(".")[0]);
+      // O tipo da cena é a última MARCA de cena (as falas do jeito, "jeito:...", moram na mesma lista e são reordenadas).
+      tipos.push(vin.cenas!.filter(x => !x.startsWith('jeito:')).slice(-1)[0].split(".")[0]);
       textos.push(r.resultado ?? "");
       // Alguma coisa da relação se moveu (proximidade, confiança, tensão ou o que você sabe).
       expect(vin.proximidade !== antes.proximidade || vin.confianca !== antes.confianca || vin.tensao !== antes.tensao || (vin.sabe?.length ?? 0) !== (antes.sabe?.length ?? 0)).toBe(true);
@@ -287,7 +288,9 @@ describe('D — fazer algo junto é uma cena, não uma barra', () => {
     expect(new Set(textos).size, JSON.stringify([tipos, textos])).toBe(textos.length);
     const rr = reabrir(v);
     expect(rr.vinculos[p.id].cenas).toEqual(v.vinculos[p.id].cenas);
-    expect(rr.vinculos[p.id].cenas!.length).toBeLessThanOrEqual(4);
+    // Compacta: até 4 marcas de cena; desde a 12.6 a mesma lista guarda também até 2 falas do jeito (`convivio126`, teto 8).
+    expect(rr.vinculos[p.id].cenas!.filter(x => !x.startsWith('jeito:')).length).toBeLessThanOrEqual(4);
+    expect(rr.vinculos[p.id].cenas!.length).toBeLessThanOrEqual(8);
   });
 
   it('o que a cena revela entra no que você sabe; a cidade de origem volta à conversa depois', () => {

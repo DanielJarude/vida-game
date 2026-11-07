@@ -28,6 +28,8 @@ function morta(): { v: Vida; a: string; b: string } {
   const { p: b } = comFilho(v, 28, { outroId: mae.id, casa: false, genero: 'feminino' });
   a.renda = 3900; b.renda = 5200; a.ocupacao = 'professor'; b.ocupacao = 'arquiteta';
   v.financas.conta = 120000;
+  // VIDA 12.9: a vida sorteada até os 66 pode terminar endividada (a economia cobra de verdade); o cenário é o da partilha.
+  v.financas.dividas = []; v.financas.negativado = false;
   v.morte = { t: v.t, causa: 'infarto', heranca: calcularHeranca(v) };
   return { v, a: a.nome, b: b.nome };
 }

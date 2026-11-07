@@ -83,7 +83,7 @@ export const ACONTECIMENTOS_129_ECONOMIA: Conteudo[] = [
     ]
   },
   {
-    id: 'eco129_pob_bico', manual: true, tipo: 'decisao', idade: [18, 70], tema: 'trabalho', repetir: 5,
+    id: 'eco129_pob_bico', manual: true, tipo: 'decisao', idade: [18, 70], tema: 'trabalho', repetir: 5, peso: 2,
     quando: c => em(c, 'pobreza', 'media') && c.v.corpo.saude >= 45,
     titulo: 'Um bico no fim de semana',
     texto: c => `Um conhecido precisa de alguém nos sábados e domingos, o ano inteiro: uns ${fmt(local(c, 400))} por mês. É o descanso que vai embora.`,

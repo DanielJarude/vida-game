@@ -347,7 +347,9 @@ export function vidaEconomicaDoAno129<C extends { id: string; tipo: string; manu
   const temEmpresa = empresasAtivas(v).some(e => e.papel !== 'investidor');
   // A empresa que ficou sem caixa pergunta aos donos todo ano (não depende de a tela ser aberta).
   const pedido = empresasAtivas(v).some(e => e.papel !== 'investidor' && !!e.corp?.pedido);
-  if (!pedido && !r.chance(temEmpresa ? 0.38 : 0.2)) return;
+  // VIDA 12.9 (integração): sem empresa, uma cena a cada ~10 anos — o jogo já tem os imprevistos de sempre; com 0,2 a
+  // mediana do patrimônio aos 66 caía pela metade e os negativados quase triplicavam (scripts/sim/dividas129.ts).
+  if (!pedido && !r.chance(temEmpresa ? 0.38 : 0.1)) return;
   // Uma decisão por ano destas; se outra está aberta, esta entra na fila do ano (abre quando aquela fechar).
   const cabeDecisao = !v.ocorrencias.some(o => o.t === v.t && /^eco129_/.test(o.id)) && !(v.fila ?? []).some(x => x.id.startsWith('eco129_'));
   const lista: { c: C; ctx: X }[] = [];

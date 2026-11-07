@@ -173,7 +173,8 @@ describe('4. "Pede atenção": parentesco não é vínculo', () => {
     expect(vinculoReal(v, pai, vp)).toBe(false);
     expect(vinculoReal(v, primo, vpr)).toBe(false);
     expect(vinculoReal(v, amigaP, va)).toBe(true);
-    const sinais = sinaisSociais(v).map(x => x.pessoaId);
+    // VIDA 12.9: sem o limite da tela (3): a vida-base tem outras pessoas pedindo atenção, e o que importa aqui é quem pede.
+    const sinais = sinaisSociais(v, 99).map(x => x.pessoaId);
     expect(sinais).not.toContain(pai.id);
     expect(sinais).not.toContain(primo.id);
     expect(sinais).toContain(amigaP.id);

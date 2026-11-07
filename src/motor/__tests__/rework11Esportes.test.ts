@@ -394,19 +394,24 @@ describe('ESP-11.7 · a comissão técnica', () => {
   }
 
   it('o auxiliar trabalha num clube concreto (o último clube de quem jogou, se fica perto) — não "um clube"', () => {
-    const v = transacao(exJogador(), (x, r) => { contratar(x, r, ocupacao('auxiliar_tecnico')); }).vida;
+    // VIDA 12.9: o último clube sai da carreira simulada (a vida-base vive até os 36 e as temporadas podem transferir).
+    const ex = exJogador();
+    const ultimo = ultimoClubeDe(ex.caminhos.esporte!)?.clube ?? ex.caminhos.esporte!.clube;
+    const v = transacao(ex, (x, r) => { contratar(x, r, ocupacao('auxiliar_tecnico')); }).vida;
     const e = v.trabalho.atual!;
-    expect(e.clube).toBe('Cruzeiro');
-    expect(e.empregador).toBe('o Cruzeiro');
-    expect(e.municipioId).toBe(clubePorNome('Cruzeiro', 'BR')!.cidade);
+    expect(e.clube).toBe(ultimo);
+    expect(e.empregador).toBe(`o ${ultimo}`);
+    expect(e.municipioId).toBe(clubePorNome(ultimo, 'BR')!.cidade);
     expect(e.empregador).not.toMatch(/um clube|uma equipe profissional/);
   });
 
   it('promovido a técnico, o comando é no mesmo clube, sem mudança de cidade', () => {
-    let v = transacao(exJogador(), (x, r) => { contratar(x, r, ocupacao('auxiliar_tecnico')); }).vida;
+    const ex = exJogador();
+    const ultimo = ultimoClubeDe(ex.caminhos.esporte!)?.clube ?? ex.caminhos.esporte!.clube;
+    let v = transacao(ex, (x, r) => { contratar(x, r, ocupacao('auxiliar_tecnico')); }).vida;
     const casa = v.moradia.municipioId;
     v = transacao(v, (x, r) => { const e = x.trabalho.atual!; e.postos = [{ ocupacaoId: 'auxiliar_tecnico', t: e.tInicio }] as never; e.ocupacaoId = 'tecnico_futebol'; processarTecnico(x, r); }).vida;
-    expect(passagemAtual(v)?.clube).toBe('Cruzeiro');
+    expect(passagemAtual(v)?.clube).toBe(ultimo);
     expect(v.moradia.municipioId).toBe(casa);
   });
 

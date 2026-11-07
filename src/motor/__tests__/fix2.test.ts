@@ -596,6 +596,8 @@ describe('entrevista em etapas', () => {
     delete (bruto.mente as Partial<Vida['mente']>).historico;
     delete (bruto.caminhos as Partial<Vida['caminhos']>).entrevistas;
     delete (bruto.caminhos as Partial<Vida['caminhos']>).devolutivas;
+    // VIDA 12.9: um save v8 não tinha fila de decisões do ano (a vida-base de hoje pode ter uma esperando).
+    delete (bruto as Partial<Vida>).fila;
     bruto.fatos['entrevista_oc'] = OCUPACOES.findIndex(o => o.id === 'atendente');
     bruto.momento = { id: 'm1', situacaoId: 'trab_entrevista', t: v.t, titulo: 'Entrevista: atendente', texto: 'Sala pequena.', tema: 'trabalho', papeis: {}, opcoes: [{ id: 'preparo', texto: 'Mostrar que estudou' }, { id: 'confianca', texto: 'Vender seu peixe' }, { id: 'sinceridade', texto: 'Ser sincero' }] };
     const r = interpretar(JSON.stringify(bruto));

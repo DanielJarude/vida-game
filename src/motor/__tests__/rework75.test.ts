@@ -116,7 +116,13 @@ describe('conversar, passar um tempo, carinho: situações, não rodízio de fra
       const r = fazer(v, p.id, 'conversar');
       v = r.vida;
       const ultima = (v.vinculos[p.id].cenas ?? []).slice(-1)[0] ?? '';
-      if (ultima.startsWith('conv:lembranca')) { achouLembranca = true; expect(r.aviso?.texto ?? r.resultado).toMatch(/viajaram juntas para a praia/); }
+      // VIDA 12.9: a vida-base ganha outros marcos reais com a amiga ao longo dos anos (a lembrança pode ser qualquer um
+      // deles): o que vale é ser um marco DE VERDADE de vocês — o ano e o que aconteceu.
+      if (ultima.startsWith('conv:lembranca')) {
+        achouLembranca = true;
+        const texto = (r.aviso?.texto ?? r.resultado ?? '').toLowerCase();
+        expect(v.vinculos[p.id].historia.some(h => texto.includes(String(Math.floor(h.t / 12))) && texto.includes(h.texto.slice(0, 14).toLowerCase())), texto).toBe(true);
+      }
       v = umAno(v);
     }
     expect(achouLembranca).toBe(true);

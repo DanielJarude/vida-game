@@ -87,6 +87,8 @@ export function reneEFrankie(): { v: Vida; frankie: string } {
   const v = adulto(52, { semente: 31, genero: 'masculino', municipioId: 'au:sydney' });
   v.eu.nome = 'René';
   sozinho(v);
+  // VIDA 12.9: a vida-base pode ter se mudado de cidade até os 52; o cenário é "em Sydney".
+  v.moradia.municipioId = 'au:sydney';
   const { p: f } = comFilho(v, 15, { casa: true, genero: 'feminino' });
   f.nome = 'Frankie';
   v.fatos[`adotado_${f.id}`] = v.t - 9 * 12;

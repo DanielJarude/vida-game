@@ -26,6 +26,36 @@ export interface NotaDeVersao {
 
 export const NOTAS: NotaDeVersao[] = [
   {
+    versao: '12.9',
+    data: '2026-11-06',
+    titulo: 'Uma vida maior: empresas que você comanda, fortunas que mudam de verdade, faculdades reais, política mais longe, identidade e vida social',
+    novidades: [
+      'Empresas de todos os portes: além dos negócios de sempre, dá para fundar ou comprar empresa de tecnologia, construtora, indústria, montadora, banco, companhia aérea, aeroespacial, semicondutores, energia e infraestrutura — cada uma com capital próprio, projetos que levam anos para dar retorno, riscos e alavancas diferentes. Só aparece o que você consegue bancar.',
+      'Gestão de verdade: cada empresa tem um painel com faturamento, custos, lucro, caixa, reputação, valor e os motivos do ano (o que foi escolha sua e o que foi acaso). Você define preço, marketing, qualidade, produção, expansão e pesquisa; contrata ou troca a diretoria (conservadora, agressiva, inovadora...) e decide se toca a empresa ou delega.',
+      'O dinheiro pesa conforme o tamanho da fortuna: o patrimônio separa o que está na conta, o que está em bens e empresas e o que se deve. Uma grande perda pode obrigar a vender bens às pressas ou virar dívida — e dá para quebrar e se reerguer. Quem é rico aposta alto e perde de verdade; cada faixa de vida tem seus próprios acontecimentos.',
+      'Faculdades e universidades reais do Brasil (USP, Unicamp, Unesp, UFRJ, UFMG, UnB, UFRGS, PUCs, FGV, Mackenzie, Insper, ESPM e outras), com os cursos de cada campus e o processo seletivo de cada uma — Fuvest, Comvest, Vunesp, PAS, SISU, vestibular próprio — com as fases e a nota de cada uma.',
+      'A vida acadêmica por semestre: notas, exame final, dependência nas férias, cancelamento por reprovações (com aviso antes), trancamento, troca de curso (transferência interna ou novo processo), o turno na sua agenda. Novos cursos técnicos ligados a vagas de verdade.',
+      'A política vai mais longe: a disputa nacional tem convenção, vice, adversários, debate, pesquisa e segundo turno onde existe — e o mandato tem economia, Congresso, reformas, crises, relações internacionais e legado, com as regras de cada país. O governo do estado ganhou problemas próprios.',
+      'Piercings: nariz, septo, sobrancelha, lábio, helix, tragus e umbigo, com joias de aço, titânio, prata, ouro e pedras — no provador antes de comprar, trocando a joia de cada furo.',
+      'Mais 168 desenhos de tatuagem: cultura pop (inspirados em dezenas de animes, séries e filmes), bichos, natureza e estilos novos (aquarela, pontilhismo, sketch, neotradicional, surrealista...), com filtros por tema, obra e busca no estúdio.',
+      'Looks com nome: guarde o que está usando (casual, trabalho, festa...) e vista de novo com um toque.',
+      'Receber gente e sair junto: jantar, festa, churrasco, festa na piscina, cinema em casa, noite de jogos, bar, cinema — você escolhe quem vai e o jeito (do dia a dia, caprichado, com buffet). A casa decide o que dá e quantos cabem; quem estava de mal pode fazer as pazes (ou não).',
+      'Presentes por ocasião (aniversário, Natal, bodas, Dia das Mães e dos Pais, Dia dos Namorados) e um calendário do ano com os aniversários de quem importa, os feriados, a eleição e o que já aconteceu.',
+      'Instrumentos de verdade: escolha qual aprender, veja o progresso em cada um (sem perder o que aprendeu ao trocar). Foto, desenho, pintura, cozinha e plantas ganham marcos — e alguns rendem.',
+      'Mais veículos (motos, clássicos, esportivos, luxo e edições limitadas) e uma garagem para ver a coleção. Pintura metálica, perolizada, acetinada ou fosca, rodas, teto e faixas aparecem no desenho.'
+    ],
+    melhorias: [
+      'Os cômodos se arrumam melhor: penteadeira, closet, armários planejados e vitrines vão de lado, junto da parede — a cama, a ilha da cozinha e o sofá ficam à vista, e quase nada fica de fora da cena.',
+      'A Retrospectiva ganhou a faixa da vida (cada memória na idade dela) e o álbum inteiro; a foto do primeiro carro e da primeira casa mostra o carro e a casa de verdade.',
+      'A raridade dos carros de coleção vem dos dados do modelo (tiragem, produção), não do preço; o nome é o do modelo.'
+    ],
+    correcoes: [
+      'A peça do provador era de uma cor e a do cartão de outra (a camisa de time amarela no provador, preta no cartão): agora você escolhe a cor, e o que se vê é o que se compra e o que fica no guarda-roupa.',
+      'Uma cena de "jogar a final com dor" podia dar título mesmo com a equipe já eliminada. Nenhuma escolha dá mais título, final ou medalha que a simulação não deu, em nenhum esporte.',
+      'Perdas de acontecimentos não somem mais só porque o dinheiro estava aplicado; o FIES não deixa de virar dívida ao abandonar o curso; reprovações demais cancelam a matrícula.'
+    ]
+  },
+  {
     versao: '12.8',
     data: '2026-11-02',
     titulo: 'Casas de verdade: cômodos montados, banheiros na conta certa, o lado de fora, marcas com identidade, coleções e mais exóticos',
