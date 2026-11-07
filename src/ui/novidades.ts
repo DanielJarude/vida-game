@@ -26,6 +26,19 @@ export interface NotaDeVersao {
 
 export const NOTAS: NotaDeVersao[] = [
   {
+    versao: '12.9.1',
+    data: '2026-11-07',
+    titulo: 'Colégio Eleitoral nos EUA, as cidades das universidades no mapa e motos clássicas',
+    novidades: [
+      'Motos clássicas: Triumph Bonneville, Norton Commando, Vincent Black Shadow, Ducati 750 SS, BMW R 90 S, Honda CB750, Kawasaki Z1, Harley-Davidson Knucklehead, Indian Chief e mais — na garagem do colecionador, sem depreciar pela idade, com raridade pela produção de verdade e uma coleção própria. Filete no tanque, banco de couro e rodas raiadas aparecem no desenho.',
+      'As cidades dos campi que faltavam entraram no mapa (São Carlos, Limeira, Botucatu, Araraquara, Franca, Macaé, Toledo, Camaçari, Betim, Poços de Caldas e outras): dá para morar, trabalhar e estudar nelas, e todos os campi das universidades reais podem ser escolhidos.'
+    ],
+    melhorias: [],
+    correcoes: [
+      'A eleição para presidente dos EUA agora se decide no Colégio Eleitoral: cada estado dá os seus delegados a quem vence nele (Maine e Nebraska dividem por distrito), e é preciso 270 de 538. Dá para ter mais votos no país e perder — e, sem maioria, a Câmara decide.'
+    ]
+  },
+  {
     versao: '12.9',
     data: '2026-11-06',
     titulo: 'Uma vida maior: empresas que você comanda, fortunas que mudam de verdade, faculdades reais, política mais longe, identidade e vida social',
