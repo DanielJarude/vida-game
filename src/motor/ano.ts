@@ -71,6 +71,7 @@ import { processarParalelos } from './sistemas/paralelos';
 import { processarClandestinos } from './sistemas/clandestinos';
 import { processarEmpresas } from './sistemas/empresas';
 import { processarFortuna129, vidaEconomicaDoAno129 } from './sistemas/fortuna129';
+import { mundoReage13 } from './sistemas/reconhecimento13';
 import { processarPets } from './sistemas/pets';
 import { processarObrigacoes } from './sistemas/obrigacoes';
 import { calcularHeranca } from './sistemas/partilha';
@@ -126,6 +127,11 @@ export interface ResumoDoAno {
 export function avancarAno(vida: Vida): Retorno {
   entrarNaVida(vida);
   if (vida.morte) return { vida, aviso: { texto: 'Esta vida terminou.', tom: 'neutro' } };
+  // VIDA 13 · Ações: o resultado que ficou na tela sai; a decisão do ano que esperava atrás dele abre (o ano não anda por cima).
+  if (vida.desfecho13 || (!vida.momento && vida.fila?.some(x => x.t <= vida.t))) {
+    vida = transacao(vida, v => { delete v.desfecho13; abrirProximaDaFila(v); }).vida;
+    if (vida.momento) return { vida, aviso: { texto: 'Há uma decisão esperando por você.', tom: 'neutro' } };
+  }
   if (vida.momento) return { vida, aviso: { texto: 'Há uma decisão esperando por você.', tom: 'neutro' } };
   // Uma escolha de trajetória pendente (duas coisas que não cabem juntas) não fica esquecida: vira pergunta antes do ano andar.
   if (vida.caminhos.pendente && !vida.caminhos.pendente.perguntado) {
@@ -418,6 +424,8 @@ function faseDeConteudo(v: Vida, r: Rng, linhasSistemicas: number): void {
   vidaQueDevolveDoAno(v);
   // VIDA 12.9: as cenas de cada faixa de fortuna e das empresas (`acontecimentos129economia`) — sorteio derivado próprio.
   vidaEconomicaDoAno129(v, CATALOGO, preparar, (c, ctx) => (c.tipo === 'acontecimento' ? aplicarAcontecimento(v, c, ctx) : (abrirDecisao(v, c, ctx), true)));
+  // VIDA 13 · Fama: os marcos do nome (silencioso) e, às vezes, o mundo reage ao nome ou o passado volta — sorteio derivado.
+  mundoReage13(v, CATALOGO, preparar, (c, ctx) => (c.tipo === 'acontecimento' ? aplicarAcontecimento(v, c, ctx) : (abrirDecisao(v, c, ctx), true)));
 }
 
 export function totalDeConteudo(): { acontecimentos: number; decisoes: number } {

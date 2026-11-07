@@ -14,6 +14,7 @@
 import type { ReactNode } from 'react';
 import { desenhoDeTatuagem, type DesenhoDeTatuagem } from '../../motor/dados/tatuagens';
 import { desenho129 } from './tatuagens129';
+import { desenho13 } from './tatuagens13';
 
 type Cor = (hex: string) => string;
 
@@ -331,5 +332,8 @@ function desenho(id: string, tinta: string, cor: Cor, traco: number, W: number, 
   // VIDA 12.9: os desenhos novos têm a arte em `tatuagens129`.
   const novo = desenho129(id, { tinta, cor, traco, W, H, texto, espelhado });
   if (novo !== undefined) return novo;
+  // VIDA 13: os desenhos novos (estilos, temas e a cultura pop nova) têm a arte em `tatuagens13`.
+  const de13 = desenho13(id, { tinta, cor, traco, W, H, texto, espelhado });
+  if (de13 !== undefined) return de13;
   return <circle cx={W / 2} cy={H / 2} r={Math.min(W, H) * 0.2} fill="none" stroke={tinta} strokeWidth={s(0.8)} />;
 }

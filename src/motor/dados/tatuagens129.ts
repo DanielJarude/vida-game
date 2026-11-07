@@ -18,15 +18,18 @@ export const NOME_ESTILO_129: Record<EstiloDeTatuagem129, string> = {
   pontilhismo: 'Pontilhismo', sketch: 'Sketch', aquarela: 'Aquarela'
 };
 
-export type TemaDeTatuagem = 'animais' | 'natureza';
-export const NOME_TEMA: Record<TemaDeTatuagem, string> = { animais: 'Bichos', natureza: 'Natureza e paisagens' };
+/** VIDA 13: criaturas e mitos, céu e espaço. */
+export type TemaDeTatuagem = 'animais' | 'natureza' | 'criaturas' | 'cosmos';
+export const NOME_TEMA: Record<TemaDeTatuagem, string> = { animais: 'Bichos', natureza: 'Natureza e paisagens', criaturas: 'Criaturas e mitos', cosmos: 'Céu e espaço' };
 
 /** Os desenhos de antes que são bichos ou natureza (o filtro de tema os encontra também). */
 export const TEMA_DOS_ANTIGOS: Record<string, TemaDeTatuagem> = {
   leao_realista: 'animais', lobo_realista: 'animais', andorinha: 'animais', pantera: 'animais', cobra_tradicional: 'animais', aguia_tradicional: 'animais',
   serpente_negra: 'animais', corvo: 'animais', lobo_geometrico: 'animais', carpa: 'animais', tigre: 'animais', gato_linha: 'animais', borboleta: 'animais',
   beija_flor: 'animais', aguia_peito: 'animais', floresta: 'natureza', montanha: 'natureza', onda: 'natureza', cerejeira: 'natureza', nuvens: 'natureza',
-  onda_mini: 'natureza', montanha_mini: 'natureza', ramo_fino: 'natureza', lua_estrelas: 'natureza', ramos: 'natureza', arvore_da_vida: 'natureza'
+  onda_mini: 'natureza', montanha_mini: 'natureza', ramo_fino: 'natureza', lua_estrelas: 'natureza', ramos: 'natureza', arvore_da_vida: 'natureza',
+  // VIDA 13: os temas novos
+  dragao_oriental: 'criaturas', dragao_tres_cabecas: 'criaturas', espirito_da_floresta: 'criaturas', saturno: 'cosmos', cometa: 'cosmos', constelacao: 'cosmos'
 };
 export const temaDoDesenho = (d: Pick<DesenhoDeTatuagem, 'id' | 'tema'>): TemaDeTatuagem | undefined => d.tema ?? TEMA_DOS_ANTIGOS[d.id];
 

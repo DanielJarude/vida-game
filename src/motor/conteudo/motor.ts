@@ -158,7 +158,7 @@ export function liberarOpcaoPaga(v: Vida, r: Rng, opcaoId: string): void {
 }
 
 /** Resolve o momento aberto com a opção escolhida. */
-export function resolverDecisao(v: Vida, r: Rng, opcaoId: string): { texto: string } | { erro: string } {
+export function resolverDecisao(v: Vida, r: Rng, opcaoId: string, segurarFila = false): { texto: string } | { erro: string } {
   const m = v.momento;
   if (!m) return { erro: 'Não há decisão aberta.' };
   const d = conteudoPorId(m.situacaoId);
@@ -215,7 +215,8 @@ export function resolverDecisao(v: Vida, r: Rng, opcaoId: string): { texto: stri
   if (seguinte && seguinte !== m && elo && (res.reabrir || res.abrir)) seguinte.segue = elo;
   if (escrita) for (const x of v.fila ?? []) if (!x.segue && familiaDe(x.id) === familiaDe(d.id)) x.segue = escrita;
   // REWORK 11.5 · EVT-01: a próxima decisão do ano (conferida de novo: o que esta escolha desfez não aparece).
-  if (!v.momento) abrirProximaDaFila(v);
+  // VIDA 13: `segurarFila` — a próxima espera o jogador ver este resultado (`sistemas/desfecho13`).
+  if (!v.momento && !segurarFila) abrirProximaDaFila(v);
   return { texto: res.texto };
 }
 

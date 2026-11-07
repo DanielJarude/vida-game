@@ -22,6 +22,7 @@ import { anoDe } from '../tempo';
 import { dinheiro as fmt } from '../texto';
 import { economiaLocal, municipio, paisDaCidade, pertoDaAgua } from '../dados/lugares';
 import { GESTORES, NOMES_DE_EMPRESA, TIPOS_DE_EMPRESA, tipoDeEmpresa, type TipoDeEmpresa } from '../dados/empresas';
+import { nomeDeEmpresa13, nomesEmUso13 } from './empresas13';
 import { converterEntrePaises } from '../mundo/moeda';
 import { paisDaVida } from '../mundo/vida';
 import { okDePagar } from './dinheiro';
@@ -151,7 +152,10 @@ function novaEmpresa(v: Vida, tipo: TipoEmpresa, comSocio: boolean, id: string):
   const onde = v.moradia.municipioId;
   const capital = Math.round(t.capital * Math.pow(custoLocal(onde), 1.2) / 1000) * 1000;
   const r = rngDe(v.id, id, 'nome');
-  const nome = r.pick(NOMES_DE_EMPRESA[tipo]).replace('{sobrenome}', v.eu.sobrenome.split(' ').slice(-1)[0] ?? 'Silva');
+  // VIDA 13: o nome sai do gerador (ramo e porte, sem confundir com as outras empresas da pessoa). O sorteio antigo
+  // continua (descartado): o sócio sai igual ao da 12.9.
+  r.pick(NOMES_DE_EMPRESA[tipo]);
+  const nome = nomeDeEmpresa13(rngDe(v.id, id, 'nome13'), tipo, 'pequeno', nomesEmUso13(v), v.eu.sobrenome.split(' ').slice(-1)[0] || undefined);
   return {
     id, tipo, nome, municipioId: onde, tInicio: v.t, papel: comSocio ? 'socio' : 'dono', parte: comSocio ? 0.5 : 1, investido: comSocio ? capital / 2 : capital,
     caixa: Math.round(capital * (1 - t.ativos)), ativos: Math.round(capital * t.ativos), unidades: 1, qualidade: 62, reputacao: t.obra ? 45 : 40, equipe: t.equipe, preco: 'medio',
@@ -202,6 +206,7 @@ export function ofertasDeParticipacao(v: Vida): OfertaDeParticipacao[] {
   const ano = anoDe(v.t);
   const r = rngDe(v.economia?.semente ?? 1, 'participacoes', ano, onde);
   const out: OfertaDeParticipacao[] = [];
+  const usados = nomesEmUso13(v);
   for (let k = 0; k < 2; k++) {
     const t = r.pick(TIPOS_DE_EMPRESA.filter(x => x.id !== 'zoologico' && x.id !== 'museu'));
     const base = t.capital * Math.pow(custoLocal(onde), 1.2) * (0.9 + r.next() * 0.8);
@@ -211,7 +216,9 @@ export function ofertasDeParticipacao(v: Vida): OfertaDeParticipacao[] {
     const lucro = historico.reduce((s, x) => s + x, 0) / 3;
     const avaliacao = Math.round(Math.max(base * 0.45, base * 0.3 + Math.max(0, lucro) * 4.5) / 1000) * 1000;
     const parte = r.pick([0.1, 0.2, 0.3]);
-    const nome = r.pick(NOMES_DE_EMPRESA[t.id]).replace('{sobrenome}', r.pick(['Albuquerque', 'Ferraz', 'Monteiro', 'Duarte', 'Siqueira']));
+    r.pick(NOMES_DE_EMPRESA[t.id]); r.pick(['Albuquerque']);
+    const nome = nomeDeEmpresa13(rngDe(v.economia?.semente ?? 1, 'participacoes13', ano, onde, k), t.id, 'pequeno', usados);
+    usados.push(nome);
     out.push({ id: `pa-${ano}-${k}`, tipo: t.id, nome, parte, preco: Math.round(avaliacao * parte / 1000) * 1000, avaliacao, historico, papel: 'investidor' });
   }
   return out;

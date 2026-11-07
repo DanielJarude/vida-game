@@ -25,8 +25,10 @@ import { economiaLocal } from '../dados/lugares';
 import { vereditoDePagar, pagar } from './dinheiro';
 import { dinheiro as fmt } from '../texto';
 import { moraComFamiliaDeOrigem } from './domicilio';
+import { ajustarMechas, vereditoAparencia13 } from './aparencia13';
 
-export type MudancaVisual = Partial<Pick<Visual, 'cabelo' | 'corCabelo' | 'textura' | 'barba' | 'bigode' | 'oculos' | 'chapeu' | 'roupa'>>;
+/** VIDA 13: e as mechas e a maquiagem (`aparencia13`; `nenhum` tira). */
+export type MudancaVisual = Partial<Pick<Visual, 'cabelo' | 'corCabelo' | 'textura' | 'barba' | 'bigode' | 'oculos' | 'chapeu' | 'roupa' | 'mechas' | 'mechasEstilo' | 'delineado' | 'sombraOlhos' | 'batom' | 'blush'>>;
 
 /** O tipo de cabelo com que a pessoa nasceu (os genes; sem genes guardados, o visual é a genética). */
 export const texturaNatural = (v: Vida): string | undefined => geneticaDe(v.eu)?.textura;
@@ -60,11 +62,13 @@ export function disponibilidadeAparencia(v: Vida, m: MudancaVisual): Veredito {
   if (v.justica?.prisao) return bloqueio('incompativel', 'Na prisão, o visual é o que a unidade permite.');
   for (const k of campos) {
     const x = m[k];
+    const r13 = vereditoAparencia13(v, k, x);
+    if (r13) return r13;
     if (k === 'cabelo') {
       const c = CORTES.find(y => y.id === x);
       if (!c) return bloqueio('impossivel', 'Esse corte não existe.');
       if (x === vis.cabelo) return bloqueio('incompativel', 'Já é esse o corte.');
-      if (i < AUTONOMIA.aparencia.idade && (x === 'raspado' || x === 'black' || x === 'trancas' || x === 'locs')) return bloqueio('impossivel', AUTONOMIA.aparencia.antes);
+      if (i < AUTONOMIA.aparencia.idade && (c.restrito || x === 'raspado' || x === 'black' || x === 'trancas' || x === 'locs')) return bloqueio('impossivel', AUTONOMIA.aparencia.antes);
     }
     if (k === 'corCabelo') {
       if (x === vis.corCabelo) return bloqueio('incompativel', 'Já é essa a cor.');
@@ -116,9 +120,10 @@ export function mudarAparencia(v: Vida, m: MudancaVisual, alvo?: ItemDeEstilo): 
   for (const k of Object.keys(m) as (keyof MudancaVisual)[]) {
     const x = m[k];
     if (k === 'barba') vis.barba = x === 'nenhuma' ? undefined : x as string;
-    else if (x === undefined || (k === 'roupa' && x === 'basica')) delete (vis as unknown as Record<string, unknown>)[k];
+    else if (x === undefined || x === 'nenhum' || (k === 'roupa' && x === 'basica')) delete (vis as unknown as Record<string, unknown>)[k];
     else (vis as unknown as Record<string, unknown>)[k] = x;
   }
+  ajustarMechas(vis);
   // Tirar ou pôr um item muda o "em uso" dele — e só dele (12.7: antes, todos os itens do mesmo desenho viravam "em uso").
   alinharItens(v, m, alvo);
   v.eu.estilo.tMudanca = v.t;

@@ -91,7 +91,8 @@ describe('Você × Política: o mesmo nome dos dois lados', () => {
     const { unmount } = render(<Voce vida={v} agir={() => true} irPara={() => {}} abrirPessoa={() => {}} />);
     expect(screen.getAllByText(/Para o público: famoso pelo futebol/).length).toBeGreaterThan(0);
     // Usar a visibilidade é uma ação (com o resultado em aberto).
-    expect(screen.getByRole('heading', { name: 'O seu nome' })).toBeTruthy();
+    // VIDA 13 · Fama: "O seu nome" virou a parte Fama de Você (os usos ficam em "O que fazer com o nome").
+    expect(screen.getByRole('heading', { name: 'O que fazer com o nome' })).toBeTruthy();
     expect(screen.getAllByText('Levar o nome para a política').length).toBeGreaterThan(0);
     unmount();
     render(<Trabalho vida={v} agir={() => true} irPara={() => {}} />);

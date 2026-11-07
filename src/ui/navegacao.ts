@@ -52,7 +52,7 @@ export interface Lugar {
   /** Em Caminhos · Oportunidades, o que procurar (vagas, concursos, negócio). */
   explorar?: 'vagas' | 'concursos' | 'negocio' | 'faculdade' | 'bolsas';
   /** REWORK 10 · UX-13: em Você, a parte do retrato (Resumo, Saúde, Habilidades, Aparência, No mundo). */
-  voce?: 'resumo' | 'saude' | 'habilidades' | 'aparencia' | 'mundo';
+  voce?: 'resumo' | 'saude' | 'habilidades' | 'aparencia' | 'fama' | 'mundo';
   /** REWORK 10: na História, a parte (o Agora ou a Biografia). */
   historia?: 'agora' | 'biografia';
   /** HOTFIX 11.5.1: em Vida · Compras, o segmento (Veículos, Serviços…). */
@@ -155,7 +155,7 @@ export const SECOES_VIDA: { id: SecaoVida; rotulo: string; oque: string }[] = [
   { id: 'apostas', rotulo: 'Apostas', oque: 'Loteria, blackjack, roleta e caça-níquel — só com o dinheiro do jogo, para maiores de idade' }
 ];
 
-const PARTE_VOCE: Record<NonNullable<Lugar['voce']>, string> = { resumo: 'Resumo', saude: 'Saúde', habilidades: 'Habilidades', aparencia: 'Aparência', mundo: 'No mundo' };
+const PARTE_VOCE: Record<NonNullable<Lugar['voce']>, string> = { resumo: 'Resumo', saude: 'Saúde', habilidades: 'Habilidades', aparencia: 'Aparência', fama: 'Fama', mundo: 'No mundo' };
 export const rotuloDoLugar = (l: Lugar) => {
   const a = AREAS.find(x => x.id === l.area)!.rotulo;
   // REWORK 10.5 · UX-20: o destino diz a parte (antes, "Você" — e o jogador caía no Resumo procurando o médico).

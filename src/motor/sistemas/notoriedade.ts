@@ -46,6 +46,10 @@ export function palavraDaNotoriedade(v: Vida, x = v.notoriedade?.valor ?? 0): st
 const ESCOPO_CARGO: Record<string, number> = { vereador: 0.45, prefeito: 0.7, deputado_estadual: 0.6, deputado_federal: 0.8, senador: 0.9, governador: 0.95, presidente: 1 };
 const PESO_DIVISAO = [0, 0.12, 0.28, 0.55, 0.85];
 
+/** VIDA 13: motivos do nome registrados por quem os conhece (as empresas grandes — `reconhecimento13`), sem ciclo. */
+const MOTIVOS_EXTRAS: ((v: Vida) => { valor: number; fonte: FonteDoNome } | undefined)[] = [];
+export const registrarMotivoDoNome = (f: (typeof MOTIVOS_EXTRAS)[number]) => { if (!MOTIVOS_EXTRAS.includes(f)) MOTIVOS_EXTRAS.push(f); };
+
 /**
  * O que cada motivo daria de nome HOJE (antes da inércia). A carreira em
  * curso é o motivo principal; uma carreira que acabou deixa um LEGADO
@@ -106,6 +110,7 @@ export function candidatosDaNotoriedade(v: Vida): { valor: number; fonte: FonteD
   // REWORK 4: a rede também dá nome (muitos seguidores com credibilidade), como mais um motivo — não o único.
   const rede = nomeDaRede(v);
   if (rede > 0) cands.push({ valor: rede, fonte: 'rede' });
+  for (const f of MOTIVOS_EXTRAS) { const c = f(v); if (c) cands.push(c); }
   return cands.map(c => ({ valor: clamp(c.valor), fonte: c.fonte }));
 }
 

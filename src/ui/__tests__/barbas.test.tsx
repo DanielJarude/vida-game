@@ -52,7 +52,8 @@ describe('toda barba, todo rosto, toda expressão', () => {
       expect(h, caso).not.toMatch(/NaN|Infinity/);
       expect(h, caso).toMatch(/class="retrato__barba"[^>]*data-boca="[\d.,-]+"/);
     }
-  });
+    // VIDA 13: com as oito barbas novas, o produto cartesiano dobrou (5 mil retratos): mais tempo, mesma regra.
+  }, 90000);
   it('nenhuma barba antes dos 16 nem em rosto feminino', () => {
     for (const b of TIPOS) {
       expect(html({ barba: b }, 14)).not.toContain('retrato__barba');

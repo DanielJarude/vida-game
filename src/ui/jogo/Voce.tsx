@@ -15,14 +15,13 @@ import { sobDemanda } from '../util/sobDemanda';
 /** REWORK 12.4: os gostos (música e arte) e o que se faz com eles (pacote sob demanda). */
 const GostosECultura = sobDemanda(() => import('./Personalizar').then(m => m.GostosECultura));
 import { TratamentoEmCurso } from './Alcance';
-import { leituraDaFama } from '../../motor/sistemas/fama';
+import { leituraDaFama13 } from '../../motor/sistemas/reconhecimento13';
+import { Fama13 } from './Fama13';
 import { redeDeSaude } from '../../motor/sistemas/saude';
 import { QuemNoMundo } from './Mundo';
 import { imagemPublica, leituraDoNome } from '../../motor/sistemas/notoriedade';
-import { USOS } from '../../motor/sistemas/visibilidade';
 import type { Dominio, Vida } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
-import { disponibilidade } from '../../motor/acoes';
 import { idade } from '../../motor/nucleo';
 import { tracosMarcantes } from '../../motor/personalidade';
 import type { Dimensao } from '../../motor/sistemas/estado';
@@ -31,7 +30,7 @@ import { ResumoDaRotina } from './Rotina';
 import { evolucaoDaFrente } from '../../motor/sistemas/progressao';
 import { MATERIAS } from '../../motor/dados/frentes';
 import { Retrato } from '../avatar/Retrato';
-import { BotaoAcao, Dado, Subnav, Vazio } from '../comum';
+import { BotaoAcao, Subnav, Vazio } from '../comum';
 import { useState } from 'react';
 import { frentesDaVida } from '../../motor/sistemas/frentes';
 import { faseDaVida, ocupacaoAtual, ondeMora } from '../apresentar';
@@ -55,13 +54,16 @@ export type Destino = Aba;
  * as Habilidades (e o seu jeito), a Aparência e o Mundo (o nome público, os lugares, o que construiu, a família de antes).
  * O índice de âncoras (que só rolava a página) deu lugar às abas; a parte aberta é guardada pelo Jogo.
  */
-export type ParteVoce = 'resumo' | 'saude' | 'habilidades' | 'aparencia' | 'gostos' | 'mundo';
+export type ParteVoce = 'resumo' | 'saude' | 'habilidades' | 'aparencia' | 'gostos' | 'fama' | 'mundo';
 
 interface Props { vida: Vida; agir: (a: Acao) => boolean; irPara: (a: Destino) => void; abrirPessoa: (id: string) => void; parte?: ParteVoce; irParte?: (p: ParteVoce) => void }
 
 export function Voce({ vida, agir, irPara, abrirPessoa, parte: parteDeFora, irParte }: Props) {
   const [parteLocal, setParteLocal] = useState<ParteVoce>('resumo');
-  const parte = parteDeFora ?? parteLocal;
+  // VIDA 13 · Fama: a parte "Fama" só existe para quem o público conhece (ou tem prestígio, ou público nas redes).
+  const fama = leituraDaFama13(vida);
+  const pedida = parteDeFora ?? parteLocal;
+  const parte = pedida === 'fama' && !fama.relevante ? 'mundo' : pedida;
   const irA = (p: ParteVoce) => { setParteLocal(p); irParte?.(p); };
   const fora = (p: ParteVoce) => `voce__parte voce__parte--${p}${parte === p ? '' : ' voce__parte--fora'}`;
   const i = idade(vida);
@@ -85,6 +87,7 @@ export function Voce({ vida, agir, irPara, abrirPessoa, parte: parteDeFora, irPa
           {afeto && <p className="voce-rosto__linha">{afeto}{luto ? ` · ${luto}` : ''}</p>}
           {leituraDoNome(vida) && <p className="voce-rosto__linha">Para o público: {leituraDoNome(vida)!.frase}</p>}
           {(() => { const im = imagemPublica(vida); return im ? <p className="voce-rosto__linha">Imagem pública: {im.palavra} — {im.texto.charAt(0).toLowerCase() + im.texto.slice(1)}</p> : null; })()}
+          {fama.relevante && fama.nivel >= 1 && parte !== 'fama' && <button type="button" className="fama13-atalho" onClick={() => irA('fama')}>A sua fama: o que traz, o que cobra, o que fazer com ela →</button>}
         </div>
       </section>
 
@@ -94,7 +97,8 @@ export function Voce({ vida, agir, irPara, abrirPessoa, parte: parteDeFora, irPa
         { id: 'habilidades', rotulo: 'Habilidades', oque: 'No que você é bom e o seu jeito' },
         { id: 'aparencia', rotulo: 'Aparência', oque: 'O corpo, o rosto, o cabelo, a roupa, os acessórios' },
         ...(i >= 8 ? [{ id: 'gostos' as ParteVoce, rotulo: 'Gostos e cultura', oque: 'O que você ouve e gosta; shows, exposições, obras' }] : []),
-        { id: 'mundo', rotulo: 'No mundo', oque: 'O nome público, os lugares, o que construiu, a família' }
+        ...(fama.relevante ? [{ id: 'fama' as ParteVoce, rotulo: 'Fama', oque: 'O nome público: por que conhecem você, a imagem, o que a fama traz e cobra' }] : []),
+        { id: 'mundo', rotulo: 'No mundo', oque: fama.relevante ? 'Os lugares, o que construiu, a família' : 'O nome público, os lugares, o que construiu, a família' }
       ]} />
 
       {/* As cinco partes ficam na página (a de fora só não aparece): nada é desmontado ao trocar, nada some. */}
@@ -184,8 +188,11 @@ export function Voce({ vida, agir, irPara, abrirPessoa, parte: parteDeFora, irPa
       {/* 12.4.1: os gostos e a vida cultural saíram de Aparência — não são o visual. */}
       <div className={fora('gostos')} id="voce-gostos">{i >= 8 && <GostosECultura vida={vida} agir={agir} />}</div>
 
+      {/* VIDA 13 · Fama: o nome público ganhou parte própria (antes, "O seu nome" dentro de No mundo). */}
+      {fama.relevante && <div className={fora('fama')} id="voce-fama"><Fama13 vida={vida} agir={agir} /></div>}
+
       <div className={fora('mundo')}>
-      <OSeuNome vida={vida} agir={agir} />
+      {fama.relevante && <button type="button" className="fama13-atalho" onClick={() => irA('fama')}>O seu nome público mora em Fama →</button>}
       <div id="voce-mundo"><QuemNoMundo vida={vida} agir={agir} /></div>
       {i >= 14 && <OQueConstruiu vida={vida} />}
       <Linhagem vida={vida} />
@@ -283,41 +290,6 @@ function Estado({ l, vida, agir, irPara, abrirPessoa }: { l: LeituraDimensao; vi
         )}
       </div>
     </details>
-  );
-}
-
-/**
- * O seu nome (Fama 2.0): quem o público conhece pode decidir o que fazer com
- * isso — e o resultado não é garantido (`visibilidade`). Só aparece para
- * quem tem nome; o que não cabe agora fica de fora.
- */
-function OSeuNome({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
-  const nome = leituraDoNome(vida);
-  const f = leituraDaFama(vida);
-  // REWORK 10.5 · FAM-01: o reconhecimento do público, o prestígio no meio, o alcance e a influência digital são coisas
-  // diferentes — a ficha diz cada uma (quem é respeitado no meio sem ser famoso também tem o que ver aqui).
-  const temAlgo = (nome && nome.valor >= 15) || f.prestigio.valor >= 12 || !!f.digital;
-  if (!temAlgo) return null;
-  return (
-    <section className="visibilidade" aria-labelledby="titulo-visibilidade">
-      <h2 id="titulo-visibilidade" className="secao-fio">O seu nome</h2>
-      <dl className="dados fama-ficha">
-        <Dado rotulo="Reconhecimento público">{f.reconhecimento.palavra}{nome && nome.valor >= 10 ? ` ${nome.por}` : ''}</Dado>
-        <Dado rotulo="Prestígio profissional">{f.prestigio.palavra}{f.prestigio.por && f.prestigio.valor >= 12 ? ` (${f.prestigio.por})` : ''}</Dado>
-        <Dado rotulo="Alcance">{f.alcance === 'ninguém' ? 'só quem convive com você' : `o nome chega a ${f.alcance}`}</Dado>
-        {f.digital && <Dado rotulo="Nas redes">{f.digital.palavra} · {f.digital.credibilidade}</Dado>}
-        {f.imagem && <Dado rotulo="Imagem">{f.imagem}</Dado>}
-      </dl>
-      {nome && nome.valor >= 15 && <p className="nota">Para o público: {nome.frase}. O que você faz com isso muda a imagem, a cabeça — e, às vezes, nada.</p>}
-      <ul className="experiencias__lista">
-        {(nome?.valor ?? 0) >= 15 && USOS.filter(u => disponibilidade(vida, { tipo: 'visibilidade', oque: u.id }).grau !== 'impossivel').map(u => (
-          <li key={u.id} className="experiencia">
-            <span className="experiencia__texto"><strong>{u.rotulo}</strong><span>{u.descricao}</span></span>
-            <BotaoAcao vida={vida} acao={{ tipo: 'visibilidade', oque: u.id }} agir={agir} variante="discreto">{u.id === 'privacidade' ? 'Recolher-se' : 'Fazer'}</BotaoAcao>
-          </li>
-        ))}
-      </ul>
-    </section>
   );
 }
 

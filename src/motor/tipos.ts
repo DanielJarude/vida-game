@@ -257,6 +257,14 @@ export interface Visual {
   modeloBrincos?: string;
   /** VIDA 12.9: os piercings em uso (ids de item de `dados/piercings129`), um por furo — sincronizados por `sincronizarVisual`. */
   piercings?: string[];
+  /** VIDA 13 (`dados/aparencia13`): as mechas (a cor e o jeito: luzes, ombré, uma na frente) e a maquiagem (o delineado,
+   *  a cor da sombra, do batom e do blush). Escolhas de visual: nunca vão para os genes. Ausentes: sem. */
+  mechas?: string;
+  mechasEstilo?: string;
+  delineado?: string;
+  sombraOlhos?: string;
+  batom?: string;
+  blush?: string;
   /** O jeito de vestir (a cor e o corte da roupa no retrato). */
   roupa?: EstiloRoupa;
   /** A joia em uso, quando aparece no retrato (a corrente no pescoço, os brincos). O relógio não aparece: fica no pulso, fora do quadro. */
@@ -1513,6 +1521,40 @@ export interface ProjetoDaEmpresa {
   receitaAno?: number;
   /** O que marcou o projeto (o atraso, a explosão no teste, o lançamento) — e se foi acaso ou consequência. */
   marcos?: { t: number; texto: string; acaso?: boolean }[];
+  /** VIDA 13: o produto específico (`dados/produtos13`) — ausente = o item genérico, como na 12.9. */
+  produto?: string;
+  /** VIDA 13: como a linha é tocada (posicionamento, preço, qualidade, versão) — ausente = como o catálogo prevê. */
+  linha?: LinhaDoProduto13;
+}
+
+/** VIDA 13: as escolhas sobre uma linha à venda. Tudo opcional: ausente = o que o produto é de nascença. */
+export interface LinhaDoProduto13 {
+  pos?: 'popular' | 'intermediario' | 'premium';
+  /** Preço relativo ao de mercado (−0,2 a +0,3). */
+  preco?: number;
+  /** Investimento em qualidade (0 a 3 degraus). */
+  qualidade?: number;
+  /** Versões lançadas depois da primeira, e quando saiu a última (o envelhecimento recomeça). */
+  versao?: number;
+  tRenov?: number;
+  /** Fatia do mercado do produto no último ano (0..1). */
+  fatia?: number;
+}
+
+/** VIDA 13: uma decisão registrada na empresa (o que foi escolhido, quanto custou, o que mudou na hora, o que se espera e o que aconteceu depois). */
+export interface DecisaoDaEmpresa13 {
+  t: number;
+  titulo: string;
+  custo: number;
+  /** De onde saiu o dinheiro (caixa da empresa, crédito dela, a sua conta). */
+  pago?: { caixa: number; credito: number; conta: number };
+  mudou: string[];
+  esperado: string;
+  /** O fechamento do ano seguinte à decisão (preenchido quando o ano fecha). */
+  ocorreu?: string;
+  /** A linha envolvida e o que ela vendia antes (para comparar no fechamento). */
+  linha?: string;
+  antes?: number;
 }
 
 /** O porte grande: capacidade, dívida da empresa, fatia do mercado, projetos. */
@@ -1532,6 +1574,8 @@ export interface CorporacaoDaEmpresa {
   pedido?: { valor: number; t: number };
   /** Quando passou por recuperação judicial (uma vez só). */
   recuperacao?: number;
+  /** VIDA 13: as concorrentes com nome (geradas uma vez e gravadas; a compra de concorrente escolhe entre elas). */
+  rivais?: string[];
 }
 
 /** Um ano da empresa com o porquê: os números e as causas (o que foi escolha e o que foi acaso). */
@@ -1615,6 +1659,8 @@ export interface Empresa {
   fachada?: { negocioId: string; tInicio: number; suspeita: number; tFim?: number; descoberta?: number };
   /** VIDA 12.9: as alavancas (marketing, eficiência, P&D, as do ramo) — ausente = o padrão de sempre. */
   estrategia?: EstrategiaDaEmpresa;
+  /** VIDA 13: as últimas decisões (o que foi escolhido, o custo, o que mudou, o esperado e o que aconteceu). */
+  decisoes13?: DecisaoDaEmpresa13[];
   /** VIDA 12.9: a diretoria (financeiro, operações, tecnologia). */
   executivos?: Executivo[];
   /** VIDA 12.9: o porte grande (os ramos de `dados/empresas129`): capacidade, dívida, projetos. */
@@ -2047,6 +2093,33 @@ export interface DecisaoNaFila {
   adiada?: boolean;
   /** A entrada da biografia de que ela é consequência (a escolha que a trouxe). */
   segue?: string;
+}
+
+/**
+ * VIDA 13 · Ações: o resultado imediato de uma escolha (`sistemas/desfecho13`) — o que foi escolhido, o que aconteceu, o
+ * que custou, como ficou a conta, o que mudou e o que esperar. Na vida (`Vida.desfecho13`), enquanto o jogador não o viu:
+ * a próxima decisão do ano espera atrás dele (e recarregar o jogo mostra o mesmo resultado, sem refazer nada).
+ */
+export interface Desfecho13 {
+  t: number;
+  titulo: string;
+  /** O que foi escolhido (o texto da opção). */
+  escolha?: string;
+  texto: string;
+  mudancas?: string[];
+  /** A conta pessoal antes e depois (só quando mexeu). */
+  conta?: { antes: number; depois: number };
+  /** O total das dívidas antes e depois (só quando mexeu: o parcelamento, o empréstimo, a quitação). */
+  dividas?: { antes: number; depois: number };
+  /** O caixa da empresa envolvida, antes e depois (só quando mexeu). */
+  caixa?: { nome: string; antes: number; depois: number };
+  /** O que esperar (o efeito que vem depois: no fechamento do ano, nos próximos meses). */
+  esperado?: string[];
+  /** Decisões do ano que ainda esperam a vez (depois desta). */
+  restantes?: number;
+  /** Destas, as que não podem esperar (luto, gravidez, processo). */
+  urgentes?: number;
+  pessoaId?: string;
 }
 
 /* ------------------------------------------------------------------- Rotina */
@@ -3759,6 +3832,8 @@ export interface Vida {
    * por ano). Cada uma é conferida de novo antes de abrir — o que a escolha anterior desfez não aparece. Ausente: vazia.
    */
   fila?: DecisaoNaFila[];
+  /** VIDA 13 · Ações: o resultado da última escolha, enquanto não foi visto (a próxima decisão do ano espera). */
+  desfecho13?: Desfecho13;
   /**
    * REWORK 11.5 · REL-22: uma relação entre TRÊS adultos (a parceria principal e o namoro paralelo do poliamor, que
    * também se relacionam): a harmonia entre os dois, os ciúmes, a casa, o dinheiro. Ausente: não há trio.
@@ -3789,6 +3864,8 @@ export interface Vida {
   segredos?: Segredo[];
   /** Quanto o público conhece você (ausente = anônimo). */
   notoriedade?: Notoriedade;
+  /** VIDA 13 · Fama: os marcos do nome, a série anual, o que a fama pagou (`sistemas/reconhecimento13`). Ausente: nada ainda. */
+  fama13?: import('./sistemas/reconhecimento13').Fama13;
   /** REWORK 4: as redes sociais do jogo (simulação interna, sem internet): `sistemas/redes`. Opcional. */
   redes?: { contas: Record<string, ContaSocial> };
   /** REWORK 4: as organizações onde a vida trabalhou (nome, setor, cidade) — `sistemas/organizacoes`. Opcional. */
@@ -4138,6 +4215,8 @@ export interface Retorno {
   resultado?: string;
   /** O resultado de uma ação merece uma folha (com este título), não um aviso passageiro. */
   titulo?: string;
+  /** VIDA 13 · Ações: o resultado imediato, com conta, caixa e o que esperar (`sistemas/desfecho13`). */
+  desfecho?: Desfecho13;
   /** Quem aparece na folha do resultado. */
   pessoaId?: string;
   /**

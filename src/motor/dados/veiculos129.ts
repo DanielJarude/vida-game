@@ -162,6 +162,11 @@ export interface VisualVeiculo {
   /** VIDA 12.9.1 (moto): o filete pintado no tanque e a cor do banco de couro. */
   filete?: string;
   banco?: string;
+  /** VIDA 13: o que as peças funcionais mudam à vista — a suspensão (rebaixada desce, reforçada sobe), o escape
+   *  preparado (a ponteira maior), o baú e os alforjes da moto. */
+  suspensao?: 'baixa' | 'alta';
+  escape?: boolean;
+  bagageiro?: 'bau' | 'alforjes';
 }
 
 /** Opções com o que mostram (a peça guarda só o id; o desenho lê daqui). */
@@ -251,12 +256,16 @@ export function visualDasMods(cat: CategoriaVeiculo, mods: Readonly<Record<strin
     const f = op('faixas')?.faixa; if (f) out.faixa = f;
     if (mods.aerofolio === 'aerofolio') out.aerofolio = true;
     if (mods.acessorios === 'pelicula') out.pelicula = true;
+    if (mods.suspensao === 'rebaixada' || mods.suspensao === 'reforcada') out.suspensao = mods.suspensao === 'rebaixada' ? 'baixa' : 'alta';
+    if (mods.motor === 'remap') out.escape = true;
   } else {
     const fi = (op('filete') as { filete?: string } | undefined)?.filete; if (fi) out.filete = fi;
     const bc = (op('banco') as { banco?: string } | undefined)?.banco; if (bc) out.banco = bc;
+    if (mods.escape === 'esportivo') out.escape = true;
+    if (mods.bagageiro === 'bau' || mods.bagageiro === 'alforjes') out.bagageiro = mods.bagageiro;
   }
   return Object.keys(out).length ? out : undefined;
 }
 
 /** Uma chave curta e estável do visual (para o cache dos desenhos). */
-export const chaveDoVisual = (x: VisualVeiculo | undefined) => (x ? `${x.acabamento ?? ''}.${x.roda ? `${x.roda.estilo}${x.roda.raios ?? ''}${x.roda.cor}${x.roda.aroMaior ? 'M' : ''}` : ''}.${x.tetoCor ?? ''}.${x.faixa ?? ''}.${x.aerofolio ? 'a' : ''}.${x.pelicula ? 'p' : ''}${x.filete ?? ''}${x.banco ?? ''}` : '');
+export const chaveDoVisual = (x: VisualVeiculo | undefined) => (x ? `${x.acabamento ?? ''}.${x.roda ? `${x.roda.estilo}${x.roda.raios ?? ''}${x.roda.cor}${x.roda.aroMaior ? 'M' : ''}` : ''}.${x.tetoCor ?? ''}.${x.faixa ?? ''}.${x.aerofolio ? 'a' : ''}.${x.pelicula ? 'p' : ''}${x.filete ?? ''}${x.banco ?? ''}.${x.suspensao ?? ''}${x.escape ? 'e' : ''}${x.bagageiro ?? ''}` : '');

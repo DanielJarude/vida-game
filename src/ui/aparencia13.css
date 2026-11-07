@@ -1,0 +1,35 @@
+/* VIDA 13 — Você · Aparência: a prévia em dois enquadramentos (o rosto e o corpo inteiro), a maquiagem e os piercings. */
+
+.aparencia13__quadros { display: flex; gap: var(--space-3); align-items: flex-end; justify-content: center; flex-wrap: wrap; }
+.aparencia13__rosto { position: relative; margin: 0; display: grid; justify-items: center; }
+.aparencia13__rosto .retrato { border-radius: var(--radius-md); border: 1px solid var(--rule); }
+.aparencia13__antes { position: absolute; left: calc(-1 * var(--space-2)); bottom: calc(-1 * var(--space-2)); display: grid; justify-items: center; gap: 2px; padding: 3px; border-radius: var(--radius-md); background: var(--superficie-topo, var(--paper)); border: 1px solid var(--rule); }
+.aparencia13__antes .retrato { border: 0; }
+.aparencia13__maquiagem { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--space-2); border: 1px solid var(--rule); border-radius: var(--radius-md); padding: var(--space-2) var(--space-3) var(--space-3); margin: 0; min-width: 0; }
+.aparencia13__maquiagem legend { padding: 0 var(--space-1); }
+
+.piercings13 { margin-top: var(--space-5); display: grid; gap: var(--space-2); }
+.piercings13__corpo { display: grid; grid-template-columns: min(240px, 40%) minmax(0, 1fr); gap: var(--space-4); align-items: start; }
+.piercings13__lupa { margin: 0; width: min(240px, 100%); display: grid; gap: var(--space-1); justify-items: center; position: sticky; top: 72px; }
+.piercings13__lupa svg { display: block; width: 100%; height: auto; aspect-ratio: 3 / 4; border-radius: var(--radius-md); border: 1px solid var(--rule); }
+.piercings13__controles { display: grid; gap: var(--space-1); justify-items: center; }
+.piercings13__furos { display: grid; gap: var(--space-2); min-width: 0; }
+.piercings13__lista { list-style: none; margin: 0; padding: 0; display: grid; border-top: 1px solid var(--rule); }
+.piercings13__furo { display: grid; grid-template-columns: minmax(8rem, 11rem) minmax(0, 1fr) auto; gap: var(--space-1) var(--space-3); align-items: center; padding: var(--space-2) 0; border-bottom: 1px solid var(--rule); }
+.piercings13__nome { display: grid; gap: 2px; }
+.piercings13__joias { display: flex; flex-wrap: wrap; gap: var(--space-1); }
+.piercings13__joia { display: inline-flex; align-items: center; gap: 6px; min-height: var(--touch-target, 40px); padding: 2px 10px; border: 1px solid var(--rule); border-radius: 999px; background: transparent; color: inherit; font: inherit; font-size: 0.9em; cursor: pointer; text-align: left; }
+.piercings13__joia:hover { background: var(--veu-1, rgba(127, 127, 127, 0.08)); }
+.piercings13__joia:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.piercings13__joia--uso { border-color: currentColor; }
+.piercings13__joia--prova { background: var(--veu-2, rgba(127, 127, 127, 0.16)); border-color: currentColor; font-weight: 600; }
+.piercings13__amostra { flex: none; }
+.piercings13__acoes { display: flex; flex-wrap: wrap; gap: var(--space-1); justify-content: flex-end; }
+
+@media (max-width: 560px) {
+  .piercings13__corpo { grid-template-columns: minmax(0, 1fr); }
+  .piercings13__lupa { justify-self: center; position: static; }
+  .piercings13__furo { grid-template-columns: minmax(0, 1fr); }
+  .piercings13__acoes { justify-content: flex-start; }
+  .aparencia13__antes { left: 0; }
+}

@@ -649,8 +649,232 @@ export function desenharCabelo(p: CabeloProps): Desenho {
       };
     }
     default: {
+      const novo = cortes13();
+      if (novo) return novo;
       const cap = calota(1.2, 2.4, { costeleta: 1 });
       return { frente: <path d={ct(cap)} fill={cor} /> };
+    }
+  }
+
+  /**
+   * VIDA 13 — os cortes novos, montados com as mesmas peças (o crânio, a linha da testa herdada, a textura da borda): o
+   * degradê, o moicano, o undercut, o raspado de um lado, o mullet, o bob com franja reta, o repicado (shag), o longo
+   * com franja, o meio preso, os dois coques e a maria-chiquinha. As laterais raspadas mostram a pele (a cor do cabelo
+   * transparente); o que cai atrás vai na camada de trás.
+   */
+  function cortes13(): Desenho | null {
+    const T = cy - hh * 0.4725;
+    const lateraisRaspadas = (op = 0.42) => <path d={curva(calota(0.35, 0.55, { costeleta: 0.4, t: 0 }))} fill={cor} opacity={op} />;
+    const brilhoTopo = (dx = 0) => crespa(tex)
+      ? <Cachinhos pts={espalhar(cx + dx, ty - 4, w * 0.26, 3.2, 5, sem)} r={rCacho(tex, 1.05)} cor={sombra} sem={sem} op={0.4} />
+      : <Fios d={[`M${r1(cx - w * 0.22 + dx)} ${r1(ty)}q2 -5 6 -7.5`, `M${r1(cx - 1 + dx)} ${r1(ty - 0.5)}q3 -5 7.5 -6.5`]} cor={brilho} op={0.55} />;
+    // Os longos com variações (a franja, o comprimento, as camadas): a mesma montagem dos longos de sempre.
+    const longo = (o: { fim: number; abre: number; franja: 'reta' | 'cortina' | 'puxado'; camadas?: boolean }): { atras: ReactElement; frente: ReactElement } => {
+      const t = tex === 'liso' ? 0 : 1;
+      const { fim } = o;
+      const abre = o.abre * dens;
+      const ombro = Math.min(cy + 12, fim - 6);
+      const atras: Pt[] = [
+        H(176, 2.6 * dens), H(130, 3.2 * dens), H(90, 3.2 * dens), H(50, 3.2 * dens), H(4, 2.6 * dens),
+        { x: R + abre * 0.7, y: ombro }, { x: R + abre, y: fim - 4 }, { x: R + abre * 0.8, y: fim + 1, t },
+        ...(o.camadas ? [{ x: cx + w * 0.3, y: fim - 1.5, t: 1 }, { x: cx + w * 0.12, y: fim + 2, t: 1 }, { x: cx - w * 0.12, y: fim + 0.5, t: 1 }, { x: cx - w * 0.3, y: fim + 2, t: 1 }]
+          : [{ x: cx + 6, y: fim + 2.5, t }, { x: cx - 6, y: fim + 2.5, t }]),
+        { x: L - abre * 0.8, y: fim + 1, t }, { x: L - abre, y: fim - 4 }, { x: L - abre * 0.7, y: ombro }
+      ];
+      const fora = perfil((o.camadas ? 3 : 2.2) * dens, (o.camadas ? 3.8 : 3) * dens);
+      const mecha = (l: 1 | -1): Pt[] => {
+        const x0 = l > 0 ? R : L;
+        const meioY = (cy + fim) / 2;
+        return [
+          { x: x0 - l * 1.4, y: ty + 4, t: 0.15 }, { x: x0 - l * 1.9, y: cy - 1, t: 0.15 }, { x: x0 - l * 1.6, y: Math.min(cy + 9, meioY), t: 0.2 },
+          { x: x0 - l * 0.6, y: Math.min(cy + 18, fim - 4), t: 0.3 }, { x: x0 + l * 0.6, y: fim - 2, t: 0.6 }, { x: x0 + l * abre * 0.45, y: fim + 0.5, t: 1 },
+          ...(o.camadas ? [{ x: x0 + l * abre * 0.95, y: fim - 6, t: 1 }, { x: x0 + l * abre * 0.6, y: meioY, t: 1 }, { x: x0 + l * (abre * 0.85 + 1), y: meioY - 4, t: 1 }] : [{ x: x0 + l * abre * 0.75, y: fim - 5, t: 1 }, { x: x0 + l * (abre * 0.5 + 1.4), y: cy + 8 }]),
+          { x: x0 + l * 2.6 * dens, y: cy - 2 }
+        ];
+      };
+      const meio: Pt[] = o.franja === 'reta'
+        ? [{ x: L + 2.2, y: ty + 7.4, t: 0.3 }, { x: cx - w * 0.2, y: ty + 7.8, t: 0.3 }, { x: cx, y: ty + 7.9, t: 0.3 }, { x: cx + w * 0.2, y: ty + 7.8, t: 0.3 }, { x: R - 2.2, y: ty + 7.4, t: 0.3 }]
+        : o.franja === 'cortina'
+          ? [{ x: L + 2.6, y: ty + 7, t: 0.3 }, { x: cx - w * 0.2, y: ty + 4.2, t: 0.3 }, { x: cx - 1, y: ty + 0.6, t: 0.1 }, { x: cx, y: ty - 0.4, t: 0 }, { x: cx + 1, y: ty + 0.6, t: 0.1 }, { x: cx + w * 0.2, y: ty + 4.2, t: 0.3 }, { x: R - 2.6, y: ty + 7, t: 0.3 }]
+          : testa({ t: crespa(tex) ? 0.5 : 0.1 }).slice(2, -2);
+      const esq = mecha(-1), dir = mecha(1);
+      const frente: Pt[] = [...esq.slice(0, 6).reverse(), ...meio, ...dir.slice(0, 6), ...dir.slice(6), ...arco(H, 2, 178, 11, fora), ...esq.slice(6).reverse()];
+      return {
+        atras: <path d={contorno(atras, tex, { esc: o.camadas ? 1.2 : 1, sem })} fill={escuro} />,
+        frente: (
+          <g>
+            <path d={contorno(frente, tex, { esc: o.camadas ? 1.15 : 1, sem })} fill={cor} />
+            {crespa(tex)
+              ? <Cachinhos pts={[...espalhar(cx, ty - 4, w * 0.33, 4.5, 6, sem), ...espalhar(L - 1, cy + 10, 2.2, 7, 3, sem + 5), ...espalhar(R + 1, cy + 10, 2.2, 7, 3, sem + 9)]} r={rCacho(tex, 1.3)} cor={sombra} sem={sem} op={0.3} />
+              : <Fios d={[`M${r1(cx - 1)} ${r1(ty - 2)}Q${r1(L + 3)} ${r1(ty - 2)} ${r1(L - 1)} ${r1(cy + 6)}`, `M${r1(cx + 1)} ${r1(ty - 3)}Q${r1(R - 2)} ${r1(ty - 3)} ${r1(R + 1)} ${r1(cy + 4)}`, ...(o.camadas ? [`M${r1(L - 1.5)} ${r1(cy + 8)}l-1 4`, `M${r1(R + 1.5)} ${r1(cy + 8)}l1 4`] : [`M${r1(L - 1.5)} ${r1(cy + 10)}L${r1(L - 1)} ${r1(fim - 4)}`])]} cor={brilho} op={0.42} />}
+            {o.franja === 'reta' && !crespa(tex) && <Fios d={[-0.25, -0.08, 0.08, 0.25].map(f => `M${r1(cx + f * w)} ${r1(ty - 1)}L${r1(cx + f * w * 1.05)} ${r1(ty + 7)}`)} cor={sombra} op={0.35} w={0.45} />}
+          </g>
+        )
+      };
+    };
+    const coquinho = (x: number, y: number, r: number) => {
+      const bola = Array.from({ length: 10 }, (_, k) => { const a = (k / 10) * Math.PI * 2; return { x: x + Math.cos(a) * r, y: y + Math.sin(a) * r * 0.92, t: 1 }; });
+      return (
+        <g key={`${r1(x)}`}>
+          <path d={contorno(bola, tex, { esc: 0.7, sem })} fill={cor} />
+          {crespa(tex) ? <Cachinhos pts={espalhar(x, y, r * 0.6, r * 0.55, 4, sem)} r={1} cor={sombra} sem={sem} /> : <Fios d={[`M${r1(x - r * 0.6)} ${r1(y - r * 0.2)}Q${r1(x)} ${r1(y - r * 1.1)} ${r1(x + r * 0.6)} ${r1(y)}`]} cor={escuro} op={0.6} />}
+        </g>
+      );
+    };
+    const puxado = (risca?: boolean) => (
+      <g>
+        <path d={tex === 'liso' || tex === 'ondulado' ? curva(calota(1, 1.6, { costeleta: 0.5, t: 0 })) : contorno(calota(1, 1.6, { costeleta: 0.5, t: 0.4 }), tex, { esc: 0.6, sem })} fill={cor} />
+        {risca ? <path d={`M${cx} ${r1(ty - 0.6)}Q${r1(cx - 0.3)} ${r1(T + 4)} ${cx} ${r1(T + 0.4)}`} stroke={sombra} strokeWidth={0.6} fill="none" opacity={0.6} />
+          : [-0.3, 0, 0.3].map((f, k) => <path key={k} d={`M${r1(cx + f * w * 1.15)} ${r1(ty + 0.5)}Q${r1(cx + f * w * 0.7)} ${r1(T + 2)} ${r1(cx + f * 4)} ${r1(T - 0.4)}`} stroke={brilho} strokeWidth={0.6} fill="none" opacity={0.55} />)}
+      </g>
+    );
+    switch (estilo) {
+      case 'degrade': {
+        // Degradê: as laterais batidas (a pele aparece embaixo, o cabelo escurece subindo) e o topo curto, texturizado.
+        const meioLado = calota(0.6, 1.1, { costeleta: -1.5, t: 0, ate: 14 });
+        const fora = (g: number) => (g > 26 && g < 154 ? 0.6 + 2.6 * Math.sin(((g - 26) / 128) * Math.PI) ** 0.8 : 0.6) * dens;
+        const alto = [...arco(H, 160, 20, 13, fora), { x: R - 3, y: ty - 0.3, t: 0.3 }, ...testa({ t: crespa(tex) ? 0.6 : 0.25 }).slice(2, -2).reverse(), { x: L + 3, y: ty - 0.3, t: 0.3 }];
+        return {
+          frente: (
+            <g>
+              {lateraisRaspadas(0.3)}
+              <path d={curva(meioLado)} fill={cor} opacity={0.4} />
+              <path d={contorno(alto, tex, { esc: 0.75, sem })} fill={cor} />
+              {brilhoTopo()}
+            </g>
+          )
+        };
+      }
+      case 'moicano': {
+        // Moicano: as laterais raspadas e uma crista no meio, do alto da testa até a nuca, alta e espetada (crespa: arredondada).
+        const m = w * 0.15;
+        const alt = (crespa(tex) ? 6 : 8) * dens;
+        const crista: Pt[] = [
+          { x: cx - m, y: ty + 0.6, t: 0 }, { x: cx - m * 1.15, y: T - 1.5, t: 0.4 }, { x: cx - m * 0.8, y: T - alt * 0.8, t: 1 }, { x: cx - m * 0.35, y: T - alt * 0.55, t: 1 },
+          { x: cx, y: T - alt, t: 1 }, { x: cx + m * 0.35, y: T - alt * 0.55, t: 1 }, { x: cx + m * 0.8, y: T - alt * 0.8, t: 1 }, { x: cx + m * 1.15, y: T - 1.5, t: 0.4 }, { x: cx + m, y: ty + 0.6, t: 0 }
+        ];
+        const pontas = `M${r1(cx - m)} ${r1(ty + 0.6)}L${r1(cx - m * 1.15)} ${r1(T - 1.5)}L${r1(cx - m * 0.8)} ${r1(T - alt * 0.9)}L${r1(cx - m * 0.35)} ${r1(T - alt * 0.5)}L${cx} ${r1(T - alt * 1.05)}L${r1(cx + m * 0.35)} ${r1(T - alt * 0.5)}L${r1(cx + m * 0.8)} ${r1(T - alt * 0.9)}L${r1(cx + m * 1.15)} ${r1(T - 1.5)}L${r1(cx + m)} ${r1(ty + 0.6)}Z`;
+        return {
+          frente: (
+            <g>
+              {lateraisRaspadas(0.32)}
+              <path d={crespa(tex) ? contorno(crista, tex, { esc: 0.8, sem }) : pontas} fill={cor} strokeLinejoin="round" />
+              {!crespa(tex) && <Fios d={[`M${r1(cx - m * 0.5)} ${r1(ty)}L${r1(cx - m * 0.7)} ${r1(T - alt * 0.6)}`, `M${r1(cx + m * 0.4)} ${r1(ty)}L${r1(cx + m * 0.6)} ${r1(T - alt * 0.6)}`]} cor={brilho} op={0.55} />}
+            </g>
+          )
+        };
+      }
+      case 'undercut': {
+        // Undercut: os lados raspados e o topo comprido, penteado para trás e para um lado (cai um pouco na testa).
+        const fora = (g: number) => (g > 18 && g < 162 ? 0.6 + 4.2 * Math.sin(((g - 18) / 144) * Math.PI) ** 0.9 : 0.6) * dens;
+        const topo: Pt[] = [
+          ...arco(H, 162, 18, 15, fora), { x: R - 2.2, y: ty - 2.2, t: 0.2 }, { x: cx + w * 0.18, y: ty + 0.8, t: 0.3 }, { x: cx - w * 0.12, y: ty + 3.4, t: 0.3 },
+          { x: L + 3.6, y: ty + 4.6, t: 0.3 }, { x: L + 2.4, y: ty + 1, t: 0.2 }
+        ];
+        return {
+          frente: (
+            <g>
+              {lateraisRaspadas(0.36)}
+              <path d={contorno(topo, tex, { esc: 0.8, sem })} fill={cor} />
+              {crespa(tex) ? brilhoTopo() : <Fios d={[`M${r1(R - 3)} ${r1(ty - 2)}Q${r1(cx)} ${r1(T - 2)} ${r1(L + 4)} ${r1(ty + 3)}`, `M${r1(R - 5)} ${r1(ty - 4.5)}Q${r1(cx - 2)} ${r1(T - 3)} ${r1(L + 3)} ${r1(ty - 1)}`]} cor={brilho} op={0.55} />}
+            </g>
+          )
+        };
+      }
+      case 'raspado_lado': {
+        // Raspado de um lado (o lado de lá: a orelha furada aparece); do outro, o comprimento varrido por cima até o queixo.
+        const fim = cy + (infancia ? 10 : 16) * (idoso ? 0.85 : 1);
+        const vol = 3 * dens;
+        const frente: Pt[] = [
+          { x: R - 2.4, y: ty - 3.5, t: 0 }, ...arco(H, 50, 178, 12, g => vol * (0.5 + 0.5 * Math.sin((g * Math.PI) / 180))), { x: L - vol, y: cy + 4 },
+          { x: L - vol * 0.9, y: fim - 2, t: 0.6 }, { x: L + 0.6, y: fim, t: 0.7 }, { x: L + 1.7, y: cy + 6, t: 0 }, { x: L + 1.6, y: ty + 5, t: 0.2 },
+          { x: cx - w * 0.12, y: ty + 2.2, t: 0.3 }, { x: cx + w * 0.16, y: ty - 0.8, t: 0.2 }
+        ];
+        const atras: Pt[] = [H(178, vol * 0.8), H(140, vol), { x: L - vol - 0.6, y: fim - 3 }, { x: L + 1, y: fim + 1 }, { x: cx - 2, y: cy + 6 }];
+        return {
+          atras: <path d={contorno(atras, tex, { esc: 0.9, sem })} fill={escuro} />,
+          frente: (
+            <g>
+              {lateraisRaspadas(0.36)}
+              <path d={contorno(frente, tex, { esc: 0.9, sem })} fill={cor} />
+              {crespa(tex) ? <Cachinhos pts={espalhar(cx - w * 0.15, ty - 3, w * 0.24, 4, 6, sem)} r={rCacho(tex, 1.1)} cor={sombra} sem={sem} op={0.4} />
+                : <Fios d={[`M${r1(cx + w * 0.12)} ${r1(ty - 2)}Q${r1(cx - w * 0.2)} ${r1(ty - 4)} ${r1(L - 1)} ${r1(cy + 6)}`, `M${r1(cx)} ${r1(T + 1)}Q${r1(L)} ${r1(ty - 6)} ${r1(L - 2)} ${r1(fim - 4)}`]} cor={brilho} op={0.5} />}
+            </g>
+          )
+        };
+      }
+      case 'mullet': {
+        // Mullet: curto em cima e dos lados, comprido atrás (aparece dos dois lados do pescoço até o ombro).
+        const cap = calota(1.2, crespa(tex) ? 3 : 2.6, { costeleta: 1.5, t: crespa(tex) ? 0.6 : 0.2 });
+        const fim = cy + (infancia ? 16 : 26) * (idoso ? 0.85 : 1);
+        const t = tex === 'liso' ? 0.3 : 1;
+        const atras: Pt[] = [
+          H(192, 2.4 * dens), H(150, 3 * dens), H(90, 3 * dens), H(30, 3 * dens), H(-12, 2.4 * dens),
+          { x: R + 2.8 * dens, y: cy + 13 }, { x: R + 3.6 * dens, y: fim - 2, t }, { x: R - 1.5, y: fim, t }, { x: cx + 3, y: cy + 18 }, { x: cx - 3, y: cy + 18 },
+          { x: L + 1.5, y: fim, t }, { x: L - 3.6 * dens, y: fim - 2, t }, { x: L - 2.8 * dens, y: cy + 13 }
+        ];
+        return {
+          atras: <path d={contorno(atras, tex, { esc: 1, sem })} fill={escuro} />,
+          frente: <g><path d={ct(cap, 0.8)} fill={cor} />{brilhoTopo()}</g>
+        };
+      }
+      case 'bob_franja': {
+        // Bob com franja reta: o corte arredondado na altura da boca, as pontas para dentro, e uma franja reta e cheia,
+        // na linha da sobrancelha, de têmpora a têmpora (o chanel tem a franja curta e o corte reto no queixo).
+        const corte = cy + hh * 0.3;
+        const vol = 3.6 * dens;
+        const franja = ty + 7.6;
+        const frente: Pt[] = [
+          { x: L + 1.2, y: corte - 2.2, t: 0.4 }, { x: L + 1.5, y: cy + 3, t: 0 }, { x: L + 1.8, y: franja, t: 0.2 }, { x: cx - w * 0.2, y: franja + 0.4, t: 0.2 }, { x: cx, y: franja + 0.5, t: 0.2 },
+          { x: cx + w * 0.2, y: franja + 0.4, t: 0.2 }, { x: R - 1.8, y: franja, t: 0.2 }, { x: R - 1.5, y: cy + 3, t: 0 }, { x: R - 1.2, y: corte - 2.2, t: 0.4 },
+          { x: R + vol * 0.4, y: corte + 0.6, t: 0.5 }, { x: R + vol + 0.4, y: corte - 5 }, ...arco(H, 0, 180, 11, () => vol), { x: L - vol - 0.4, y: corte - 5 }, { x: L - vol * 0.4, y: corte + 0.6, t: 0.5 }
+        ];
+        const atras: Pt[] = [H(176, vol, 0), H(90, vol + 0.5, 0), H(4, vol, 0), { x: R + vol + 0.6, y: corte - 3 }, { x: R, y: corte + 1.5 }, { x: cx, y: corte + 2 }, { x: L, y: corte + 1.5 }, { x: L - vol - 0.6, y: corte - 3 }];
+        return {
+          atras: <path d={crespa(tex) ? contorno(atras, tex, { esc: 0.7, sem }) : curva(atras)} fill={escuro} />,
+          frente: (
+            <g>
+              <path d={contorno(frente, tex, { esc: 0.65, sem })} fill={cor} />
+              {crespa(tex) ? <Cachinhos pts={espalhar(cx, ty - 3, w * 0.34, 4, 6, sem)} r={rCacho(tex, 1.15)} cor={sombra} sem={sem} op={0.35} />
+                : <Fios d={[...[-0.28, -0.1, 0.1, 0.28].map(f => `M${r1(cx + f * w)} ${r1(ty)}L${r1(cx + f * w * 1.04)} ${r1(franja - 0.6)}`), `M${r1(L - 1)} ${r1(cy + 2)}Q${r1(L - 2)} ${r1(corte - 4)} ${r1(L + 1)} ${r1(corte - 1)}`]} cor={sombra} op={0.35} w={0.45} />}
+            </g>
+          )
+        };
+      }
+      case 'shag': return longo({ fim: cy + (infancia ? 13 : 21) * (idoso ? 0.85 : 1), abre: 6.5, franja: 'cortina', camadas: true });
+      case 'longo_franja': return longo({ fim: cy + (infancia ? 17 : 32) * (idoso ? 0.85 : 1), abre: 4.5, franja: 'reta' });
+      case 'meio_preso': {
+        // Meio preso: o comprimento solto embaixo e a parte de cima puxada para trás, presa num coquinho no alto da cabeça.
+        const l = longo({ fim: cy + (infancia ? 16 : 30) * (idoso ? 0.85 : 1), abre: 4, franja: 'puxado' });
+        return { atras: <g>{l.atras}{coquinho(cx, T - 1.5 * dens, (crespa(tex) ? 4.6 : 3.8) * dens)}</g>, frente: <g>{l.frente}<path d={`M${r1(cx - w * 0.36)} ${r1(cy - hh * 0.3)}Q${cx} ${r1(T - 0.5)} ${r1(cx + w * 0.36)} ${r1(cy - hh * 0.3)}`} stroke={sombra} strokeWidth={0.6} fill="none" opacity={0.5} /></g> };
+      }
+      case 'dois_coques': {
+        // Dois coques no alto, um de cada lado (a risca no meio).
+        const r = (crespa(tex) ? 5.6 : 4.6) * dens;
+        const a = H(132, r * 0.35), b = H(48, r * 0.35);
+        return { atras: <g>{coquinho(a.x, a.y, r)}{coquinho(b.x, b.y, r)}</g>, frente: puxado(true) };
+      }
+      case 'maria_chiquinha': {
+        // Maria-chiquinha: a risca no meio e dois rabos baixos, presos atrás das orelhas, caindo na frente dos ombros.
+        const comp = (infancia ? 15 : 22) * (idoso ? 0.8 : 1);
+        const larg = crespa(tex) ? 5.6 : 4;
+        const elastico = misturar(cor, '#000000', 0.5);
+        const rabo = (l: 1 | -1) => {
+          const x0 = l > 0 ? R : L;
+          const pts: Pt[] = [
+            { x: x0 - l * 2, y: cy + 1, t: 0 }, { x: x0 + l * 1.5, y: cy - 0.5 }, { x: x0 + l * (2.5 + larg * 0.5), y: cy + 5 }, { x: x0 + l * (2.8 + larg * 0.55), y: cy + comp * 0.6 },
+            { x: x0 + l * 1.8, y: cy + comp, t: 1 }, { x: x0 + l * (1.2 - larg * 0.2), y: cy + comp * 0.6 }, { x: x0 + l * 0.6, y: cy + 6 }, { x: x0 - l * 2, y: cy + 4, t: 0 }
+          ];
+          return (
+            <g key={l}>
+              <path d={contorno(pts, tex, { esc: 0.9, sem: sem + (l > 0 ? 3 : 0) })} fill={escuro} />
+              <rect x={x0 + l * 1.6 - 1.7} y={cy + 1.4} width={3.4} height={2.4} rx={1} fill={elastico} />
+            </g>
+          );
+        };
+        return { atras: <g>{rabo(-1)}{rabo(1)}</g>, frente: puxado(true) };
+      }
+      default: return null;
     }
   }
 }

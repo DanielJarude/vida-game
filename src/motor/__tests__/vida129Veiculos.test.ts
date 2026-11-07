@@ -181,6 +181,8 @@ describe('saves antigos', () => {
     expect(r.vida.financas.bens.find(x => x.id === b.id)).toEqual(antes);
     // Sem peça nenhuma, o desenho é o mesmo de sempre (nenhum visual).
     expect(visualDoVeiculo('hatch', undefined)).toBeUndefined();
-    expect(visualDoVeiculo('hatch', { motor: 'remap', pneus: 'bons' })).toBeUndefined();
+    // VIDA 13: a preparação do motor passou a aparecer (a ponteira do escape); pneus e freios continuam invisíveis.
+    expect(visualDoVeiculo('hatch', { motor: 'remap', pneus: 'bons' })).toEqual({ escape: true });
+    expect(visualDoVeiculo('hatch', { pneus: 'bons', freios: 'reforcados' })).toBeUndefined();
   });
 });

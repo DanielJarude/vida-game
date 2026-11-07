@@ -1,0 +1,77 @@
+/* VIDA 13 · Fama — a parte "Fama" de Você (só para quem o público conhece). Tokens do tema: claro e escuro. */
+.fama13 { display: flex; flex-direction: column; gap: var(--space-5); margin: var(--space-4) 0 var(--space-6); }
+.fama13__capa {
+  padding: var(--space-5);
+  border-radius: var(--radius-md);
+  background: var(--superficie);
+  box-shadow: 0 0 0 1px var(--rule);
+  border-top: 3px solid var(--p-voce);
+}
+.fama13__palavra { font-family: var(--font-serif); font-size: var(--type-title); line-height: var(--leading-tight); letter-spacing: var(--tracking-tight); margin: var(--space-1) 0 var(--space-3); }
+.fama13__por { font-size: var(--type-lead); color: var(--text-secondary); font-weight: var(--weight-regular); }
+.fama13__escada { list-style: none; padding: 0; margin: 0 0 var(--space-2); display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; }
+.fama13__degrau {
+  font-size: var(--type-meta); text-align: center; padding: var(--space-1) 2px; color: var(--text-muted);
+  border-bottom: 4px solid var(--rule); line-height: var(--leading-snug); overflow-wrap: anywhere;
+}
+.fama13__degrau--passou { border-bottom-color: color-mix(in oklab, var(--p-voce) 45%, transparent); color: var(--text-secondary); }
+.fama13__degrau--aqui { border-bottom-color: var(--p-voce); color: var(--text-primary); font-weight: var(--weight-semibold); }
+.fama13__numeros { font-variant-numeric: tabular-nums; }
+.fama13__numeros strong { font-size: var(--type-subheading); }
+.fama13__tendencia { margin-left: var(--space-2); font-size: var(--type-caption); white-space: nowrap; }
+.fama13__tendencia--bom { color: var(--bom); }
+.fama13__tendencia--ruim { color: var(--ruim); }
+.fama13__tendencia--neutro { color: var(--text-muted); }
+.fama13__ficha { margin: 0 0 var(--space-3); }
+.fama13__trajeto { margin: var(--space-2) 0 0; }
+.fama13__trajeto svg { width: 100%; height: 56px; display: block; overflow: visible; }
+.fama13__faixa { stroke: var(--rule); stroke-width: 1; stroke-dasharray: 2 3; vector-effect: non-scaling-stroke; }
+.fama13__linha { fill: none; stroke: var(--p-voce); stroke-width: 2; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.fama13__pico { fill: var(--p-voce); }
+.fama13__trajeto figcaption { display: flex; justify-content: space-between; font-size: var(--type-meta); color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.fama13__bloco { margin: 0; }
+.fama13__origens { list-style: none; padding: 0; margin: var(--space-2) 0 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.fama13__origem { display: flex; gap: var(--space-3); align-items: baseline; padding-bottom: var(--space-2); border-bottom: 1px solid var(--rule); }
+.fama13__selo {
+  flex: none; min-width: 6.5rem; font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase;
+  color: var(--p-voce); font-weight: var(--weight-semibold);
+}
+.fama13__origem--controversia .fama13__selo { color: var(--ruim); }
+.fama13__origem--feito .fama13__selo { color: var(--alerta); }
+.fama13__porque { color: var(--text-primary); }
+.fama13__barra { display: grid; grid-template-columns: 6.5rem 1fr 2.5rem; align-items: center; gap: var(--space-3); margin: var(--space-2) 0; }
+.fama13__barra-rotulo { font-size: var(--type-caption); color: var(--text-secondary); }
+.fama13__barra-trilho { height: 8px; border-radius: var(--radius-pill); background: var(--veu-2, var(--rule)); overflow: hidden; }
+.fama13__barra-trilho > span { display: block; height: 100%; border-radius: inherit; }
+.fama13__barra--bom .fama13__barra-trilho > span { background: var(--bom); }
+.fama13__barra--ruim .fama13__barra-trilho > span { background: var(--ruim); }
+.fama13__barra-valor { font-variant-numeric: tabular-nums; text-align: right; font-size: var(--type-caption); }
+.fama13__dois { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-5); }
+.fama13__lado { padding: var(--space-4); border-radius: var(--radius-md); background: var(--superficie); box-shadow: 0 0 0 1px var(--rule); }
+.fama13__lado--bom { border-left: 3px solid var(--bom); }
+.fama13__lado--ruim { border-left: 3px solid var(--ruim); }
+.fama13__lado .voce-subtitulo { margin-top: 0; }
+.fama13__dinheiro { margin: 0 0 var(--space-3); }
+.fama13__lista { margin: 0; padding-left: 1.1em; display: flex; flex-direction: column; gap: var(--space-2); }
+.fama13__lista li { line-height: var(--leading-snug); }
+.fama13__marcos { list-style: none; padding: 0; margin: var(--space-2) 0 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.fama13__marco { display: flex; gap: var(--space-3); align-items: baseline; }
+.fama13__marco::before { content: ''; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); transform: translateY(-1px); }
+.fama13__marco--bom::before { background: var(--bom); }
+.fama13__marco--ruim::before { background: var(--ruim); }
+.fama13__ano { flex: none; min-width: 2.8rem; font-variant-numeric: tabular-nums; color: var(--text-muted); font-size: var(--type-caption); }
+/* O atalho para a Fama (no alto de Você e em No mundo). */
+.fama13-atalho {
+  display: inline-flex; align-items: center; gap: var(--space-2); margin-top: var(--space-2);
+  padding: var(--space-1) var(--space-3); border-radius: var(--radius-pill); border: 1px solid color-mix(in oklab, var(--p-voce) 45%, transparent);
+  background: color-mix(in oklab, var(--p-voce) 8%, transparent); color: var(--text-primary); font: inherit; font-size: var(--type-caption); cursor: pointer;
+}
+.fama13-atalho:hover { background: color-mix(in oklab, var(--p-voce) 16%, transparent); }
+.fama13-atalho:focus-visible { outline: 2px solid var(--p-voce); outline-offset: 2px; }
+.fama13-atalho:active { transform: translateY(1px); }
+@media (max-width: 640px) {
+  .fama13__capa { padding: var(--space-4); }
+  .fama13__dois { grid-template-columns: 1fr; }
+  .fama13__origem { flex-direction: column; gap: 2px; }
+  .fama13__barra { grid-template-columns: 5.2rem 1fr 2rem; }
+}

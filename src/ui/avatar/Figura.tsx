@@ -10,6 +10,7 @@
  */
 
 import { PiercingDoUmbigo } from './piercings';
+import { CabeloDeCostas } from './identidade13';
 import { memo, useId, type ReactNode } from 'react';
 import type { Genero, Visual } from '../../motor/tipos';
 import type { TipoDeCorpo } from '../../motor/sistemas/silhueta';
@@ -622,8 +623,10 @@ export const Figura = memo(function Figura({ visual, genero, idade, semente = 'e
         // De costas: a nuca e o cabelo (o rosto não aparece).
         <g className="figura__cabeca figura__cabeca--costas">
           <ellipse cx={60} cy={40} rx={16.5} ry={19.5} fill={pele} stroke={contorno} strokeWidth={0.6} />
-          {visual.cabelo !== 'raspado' && <path d={`M 43.5 40 Q 43 20 60 19.5 Q 77 20 76.5 40 Q 76 ${visual.cabelo.startsWith('longo') || visual.cabelo === 'trancas' || visual.cabelo === 'cacheado_longo' ? 70 : 52} 60 ${visual.cabelo.startsWith('longo') || visual.cabelo === 'trancas' || visual.cabelo === 'cacheado_longo' ? 74 : 55} Q 44 ${visual.cabelo.startsWith('longo') ? 70 : 52} 43.5 40 Z`} fill={corDoCabelo(visual.corCabelo)} />}
           {([-1, 1] as const).map(s => <ellipse key={s} cx={60 + s * 17} cy={42} rx={2.4} ry={4} fill={sombraPele} />)}
+          {/* VIDA 13: o comprimento e o volume de cada corte de costas (o que fica preso, os cordões, as mechas); o chapéu. */}
+          <CabeloDeCostas cabelo={idade <= 2 ? 'raspado' : visual.cabelo} cor={corDoCabelo(visual.corCabelo)} mechas={visual.mechas && idade >= 13 ? corDoCabelo(visual.mechas) : undefined} />
+          {visual.chapeu && idade > 2 && <path data-chapeu-costas={visual.chapeu} d={visual.chapeu === 'bone' || visual.chapeu === 'gorro' ? 'M 43 33 Q 43 16 60 15.5 Q 77 16 77 33 Q 60 30 43 33 Z' : 'M 36 31 Q 44 29 46 20 Q 60 12 74 20 Q 76 29 84 31 Q 60 35 36 31 Z'} fill="#3d4650" />}
         </g>
       ) : (
         <g transform="translate(20 0)" className="figura__cabeca">

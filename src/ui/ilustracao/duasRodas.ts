@@ -16,6 +16,7 @@ import { cantos, circulo, escurecer, membro, ret, suave, type Amostra, type Peca
 import type { VisualVeiculo } from '../../motor/dados/veiculos129';
 import { MODELOS_MOTO_129, visualNaMoto } from './veiculos129';
 import { MOTOS_CLASSICAS_1291, motoClassica } from './motosClassicas1291';
+import { MOTOS_MODERNAS_13, MOTOS_RETRO_13, motoModerna, motoRetro } from './motos13';
 
 const CHAO = 122;
 const PRETO = '#2b2826', PRATA = '#b8b4ad', CROMO = '#d9d6d0', BORRACHA = '#3a3633', COURO = '#2f2a27';
@@ -219,7 +220,9 @@ export function moto(forma: 'cub' | 'scooter' | 'street' | 'esportiva' | 'cruise
   const m = (versaoId && (MODELOS_MOTO[versaoId] ?? MODELOS_MOTO_129[versaoId])) || {};
   // VIDA 12.9.1: as motos clássicas são montadas peça a peça (motor, guidão, tanque, banco, escape, garfo).
   const mc = versaoId ? MOTOS_CLASSICAS_1291[versaoId] : undefined;
-  const pecas = mc ? motoClassica(cor, mc) : forma === 'cub' ? motoneta(cor, m) : forma === 'scooter' ? scooter(cor, m) : forma === 'esportiva' ? esportiva(cor, m) : forma === 'cruiser' ? classica(cor, m) : forma === 'trail' ? trilha(cor, m) : deRua(cor, m);
+  // VIDA 13: as de hoje também (as nakeds, as esportivas, as trails; e as de linha clássica pelo montador das clássicas).
+  const mm = versaoId ? MOTOS_MODERNAS_13[versaoId] : undefined;
+  const pecas = mc ? motoClassica(cor, mc) : versaoId && MOTOS_RETRO_13[versaoId] ? motoRetro(cor, versaoId) : mm ? motoModerna(cor, mm) : forma === 'cub' ? motoneta(cor, m) : forma === 'scooter' ? scooter(cor, m) : forma === 'esportiva' ? esportiva(cor, m) : forma === 'cruiser' ? classica(cor, m) : forma === 'trail' ? trilha(cor, m) : deRua(cor, m);
   // VIDA 12.9: o acabamento e as rodas escolhidas aparecem no desenho.
   return { vb: [240, 132], chao: CHAO, sombra: [122, 76], pecas: visualNaMoto(pecas, forma, cor, visual) };
 }

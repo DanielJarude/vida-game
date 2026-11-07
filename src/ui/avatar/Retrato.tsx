@@ -8,7 +8,8 @@
  * sobrancelha, cílios, lábios e o repertório de cabelo, sem caricatura.
  */
 
-import { PiercingsDoRosto } from './piercings';
+import { BrincoNovo, PiercingsDoRosto } from './piercings';
+import { Batom, Blush, Delineado, Mechas, SombraDosOlhos, temBigode } from './identidade13';
 import { misturar } from './cores';
 import { desenharCabelo, estagioDaCalvicie } from './cabelos';
 import { memo, useId, type ReactElement } from 'react';
@@ -29,7 +30,9 @@ const PELE: Record<string, [string, string]> = {
 const CABELO: Record<string, string> = {
   preto: '#1c1917', castanho_escuro: '#35251c', castanho: '#563a28', castanho_claro: '#86603f', loiro: '#caa25e', ruivo: '#a24a27',
   // Tinta (a partir da adolescência) e o grisalho assumido.
-  platinado: '#e6e0cf', vermelho: '#a8232f', azul: '#2f5f9e', rosa: '#d9829e', grisalho: '#a9a39b'
+  platinado: '#e6e0cf', vermelho: '#a8232f', azul: '#2f5f9e', rosa: '#d9829e', grisalho: '#a9a39b',
+  // VIDA 13: mais tintas (o cobre e o mel são tinta; o natural é o ruivo e o loiro).
+  verde: '#2f7a52', roxo: '#6a3f9a', cobre: '#b8582a', mel: '#c08a3e', prata: '#c4c8cc'
 };
 const OLHOS: Record<string, string> = {
   castanho_escuro: '#2f1d14', castanho: '#553620', mel: '#86662b', verde: '#56764a', azul: '#4b75a0'
@@ -132,7 +135,7 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
 
   // Cabelo envelhece (a tinta, não: quem pinta, pinta a raiz também)
   let cor = CABELO[v.corCabelo] ?? CABELO.castanho;
-  const tinta = ['platinado', 'vermelho', 'azul', 'rosa', 'grisalho'].includes(v.corCabelo);
+  const tinta = ['platinado', 'vermelho', 'azul', 'rosa', 'grisalho', 'verde', 'roxo', 'cobre', 'mel', 'prata'].includes(v.corCabelo);
   if (f === 'meia' && !tinta) cor = misturar(cor, '#b8b2aa', idade >= 55 ? 0.45 : 0.22);
   if (f === 'idoso' && !tinta) cor = misturar(cor, '#ddd8d0', idade >= 78 ? 0.9 : 0.7);
   if (f === 'bebe' || f === 'crianca') cor = misturar(cor, '#caa25e', v.corCabelo === 'preto' || v.corCabelo === 'castanho_escuro' ? 0.05 : 0.2);
@@ -202,6 +205,12 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
 
   // REWORK 6: o cabelo é uma forma só (atrás e na frente), com a textura herdada e a calvície no próprio desenho da testa.
   const cabelo = desenharCabelo({ estilo: calvo && !bebe ? 'calvo' : estilo, cor, cx, cy, w, hh, fase: f, linha: v.linhaCabelo, textura: v.textura, estagio: entradas ? 1 : 0, pele });
+  // VIDA 13: as mechas — a forma do mesmo cabelo, em branco, recorta as luzes (qualquer corte, qualquer comprimento).
+  const comMechas = !!v.mechas && !calvo && f !== 'bebe' && f !== 'crianca';
+  const mascara = comMechas ? desenharCabelo({ estilo, cor: '#ffffff', cx, cy, w, hh, fase: f, linha: v.linhaCabelo, textura: v.textura, estagio: entradas ? 1 : 0, pele: '#000000' }) : undefined;
+  const corMecha = comMechas ? (CABELO[v.mechas!] ?? CABELO.loiro) : '';
+  const maquiada = f !== 'bebe' && f !== 'crianca';
+  const geoOlhos = { cx, olhoY: cy + G.olhoY, esp: G.esp + distOlho, olho: G.olho * tamOlho, rx: G.olho * tamOlho * olhoRx, ry: G.olho * tamOlho * (f === 'idoso' ? 0.8 : olhoRy) };
   const fundo = fundoDoRetrato(cor, pele, h);
   // A boca muda de curva: sorriso, reta de quem aperta os dentes, canto que cai. (A barba usa a mesma geometria.)
   const larg = (fem ? 3.6 : 3.8) * (x === 'tenso' ? 0.85 : x === 'bem' ? 1.08 : 1);
@@ -217,6 +226,7 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
       {/* Cabelo de trás */}
       {/* As camadas do cabelo marcadas (a auditoria geométrica dos retratos mede o que é cabelo — playtest/cabelos.mjs). */}
       {cabelo.atras && <g className="retrato__cabelo retrato__cabelo--atras">{cabelo.atras}</g>}
+      {cabelo.atras && mascara?.atras && <Mechas id={`${uid}-ma`} forma={mascara.atras} cor={corMecha} estilo={v.mechasEstilo} cx={cx} cy={cy} w={w} hh={hh} />}
 
       {!soCabeca && (<>
       {/* Corpo */}
@@ -256,6 +266,9 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
       {f !== 'bebe' && (v.joia === 'brincos' || v.brincos) && [-1, 1].map(s => {
         const x = cx + s * (w / 2 - 0.4 + orelhaFora), y = olhoY + 7.6;
         const m = v.modeloBrincos;
+        // VIDA 13: os brincos novos (pérola, argola grande, gota, cruz, alargador).
+        const novo = BrincoNovo({ modelo: m, x, y, s });
+        if (novo) return <g key={s}>{novo}</g>;
         return m === 'brincos_diamante'
           ? <g key={s} className="retrato__joia" data-brinco="diamante"><circle cx={x} cy={y} r={2.6} fill="#dff3ff" opacity={0.45} /><path d={`M ${x} ${y - 1.9} L ${x + 1.4} ${y} L ${x} ${y + 1.9} L ${x - 1.4} ${y} Z`} fill="#f4fbff" stroke="#5f8aa8" strokeWidth={0.45} /></g>
           : m === 'brincos_ouro'
@@ -275,6 +288,10 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
           {(v.sardas === 'muitas' ? [[-9, 6], [-7, 7.6], [-10.5, 7.8], [-5.5, 6.2], [-8, 9.2], [9, 6], [7, 7.6], [10.5, 7.8], [5.5, 6.2], [8, 9.2], [-1.6, 4.8], [1.6, 4.8]] : [[-8, 6.4], [-6, 7.6], [-9.6, 8], [8, 6.4], [6, 7.6], [9.6, 8]]).map(([dx, dy], k) => <circle key={k} cx={cx + dx} cy={olhoY + dy} r={0.6} />)}
         </g>
       )}
+
+      {/* VIDA 13: a maquiagem que vai por baixo — o blush nas maçãs e a sombra na pálpebra (o olho fica por cima). */}
+      {maquiada && <Blush cor={v.blush} g={geoOlhos} />}
+      {maquiada && <SombraDosOlhos cor={v.sombraOlhos} g={geoOlhos} />}
 
       {/* Sobrancelhas */}
       {f !== 'bebe' && (
@@ -306,6 +323,9 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
           )}
         </g>
       ))}
+
+      {/* VIDA 13: o delineado (por cima do olho). */}
+      {maquiada && <Delineado tipo={v.delineado} g={geoOlhos} />}
 
       {/* Cansaço: pálpebra caída e olheira. */}
       {f !== 'bebe' && (x === 'cansado' || x === 'doente' || x === 'abatido') && [-1, 1].map(lado => (
@@ -353,6 +373,9 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
             );
           })()}
 
+      {/* VIDA 13: o batom (os dois lábios, com a curva da expressão). */}
+      {maquiada && <Batom cor={v.batom} cx={cx} cantos={cantos} larg={larg * lb} curva={curva} cheia={v.boca === 'cheia'} />}
+
       {/* O queixo marcado: a sombra do queixo (herdada). */}
       {!bebe && v.queixo === 'marcado' && <path d={`M ${cx - jaw * 0.55} ${queixo - 2.6} Q ${cx} ${queixo - 1.2} ${cx + jaw * 0.55} ${queixo - 2.6}`} fill="none" stroke={misturar(sombra, '#000000', 0.18)} strokeWidth={0.7} opacity={0.6} strokeLinecap="round" />}
 
@@ -364,13 +387,14 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
       )}
 
       {/* VIDA 12.9: os piercings, cada um no seu furo (depois da barba: o labret fica por cima). */}
-      {f !== 'bebe' && f !== 'crianca' && <PiercingsDoRosto ids={v.piercings} g={{ cx, olhoY, esp, w, orelhaFora, orelhaRx, boca: larg * lb, cantos }} />}
+      {f !== 'bebe' && f !== 'crianca' && <PiercingsDoRosto ids={v.piercings} g={{ cx, olhoY, esp, w, orelhaFora, orelhaRx, boca: larg * lb, cantos, bigode: temBigode(v, genero, idade) }} />}
 
       {/* Óculos: os escolhidos; sem escolha, parte dos idosos usa os de leitura */}
       {v.oculos ? <Oculos tipo={v.oculos} modelo={v.modeloOculos} cx={cx} olhoY={olhoY} esp={esp} w={w} uid={uid} /> : f === 'idoso' && h % 2 === 0 && <Oculos tipo="grau" cx={cx} olhoY={olhoY} esp={esp} />}
 
       {/* Cabelo da frente */}
       {cabelo.frente && <g className="retrato__cabelo retrato__cabelo--frente">{cabelo.frente}</g>}
+      {cabelo.frente && mascara?.frente && <Mechas id={`${uid}-mf`} forma={mascara.frente} cor={corMecha} estilo={v.mechasEstilo} cx={cx} cy={cy} w={w} hh={hh} />}
 
       {/* O que vai na cabeça */}
       {v.chapeu && f !== 'bebe' && <Chapeu tipo={v.chapeu} modelo={v.modeloChapeu} cx={cx} cy={cy} w={w} hh={hh} semente={h} />}
@@ -652,7 +676,9 @@ const espelho = (g: GeoBarba, p: Pt[]): Pt[] => p.map(([x, y]) => [2 * g.cx - x,
 
 /** Volume (para fora, no queixo), o quanto desce além do queixo e a cor de cada barba. */
 const FORMA_BARBA: Record<string, { vol: number; desce: number }> = {
-  por_fazer: { vol: 0.25, desce: 0 }, curta: { vol: 0.9, desce: 0.4 }, cheia: { vol: 2.3, desce: 1.6 }, longa: { vol: 2.7, desce: 10 }
+  por_fazer: { vol: 0.25, desce: 0 }, curta: { vol: 0.9, desce: 0.4 }, cheia: { vol: 2.3, desce: 1.6 }, longa: { vol: 2.7, desce: 10 },
+  // VIDA 13: a desenhada (curta, contorno marcado) e a de lenhador (a mais longa e cheia).
+  desenhada: { vol: 0.8, desce: 0.3 }, lenhador: { vol: 3.4, desce: 13 }
 };
 
 function Barba({ tipo, cor: corFio, pele, textura, rala, g, bigode: comBigode = true }: { tipo: string; cor: string; pele: string; textura?: string; rala?: boolean; g: GeoBarba; bigode?: boolean }) {
@@ -705,7 +731,35 @@ function Barba({ tipo, cor: corFio, pele, textura, rala, g, bigode: comBigode = 
     );
   }
 
-  // Por fazer, curta, cheia, longa: a massa inteira.
+  // VIDA 13 — os bigodes com desenho próprio: o fino (um traço sobre o lábio), o guidão (as pontas viradas para cima) e
+  // a ferradura (desce pelos cantos da boca até a linha do queixo).
+  if (tipo === 'bigode_fino' || tipo === 'bigode_guidao' || tipo === 'ferradura') {
+    const topo = olhoY + 10.2, base = boca.cantos + Math.min(0, boca.curva / 2) - 0.6;
+    if (tipo === 'bigode_fino') return <g className="retrato__barba" {...marca}><path className="retrato__bigode" d={`M ${cx - ml - 0.4} ${boca.cantos - 0.7} Q ${cx - ml * 0.5} ${topo + 0.9} ${cx - 0.9} ${topo + 0.6} L ${cx + 0.9} ${topo + 0.6} Q ${cx + ml * 0.5} ${topo + 0.9} ${cx + ml + 0.4} ${boca.cantos - 0.7} Q ${cx + ml * 0.5} ${base - 0.2} ${cx} ${base - 0.3} Q ${cx - ml * 0.5} ${base - 0.2} ${cx - ml - 0.4} ${boca.cantos - 0.7} Z`} fill={cor} {...borda} /></g>;
+    if (tipo === 'bigode_guidao') {
+      const m = ml + 1.6;
+      const lado = (l: 1 | -1) => `M ${cx} ${topo + 0.2} Q ${cx + l * m * 0.6} ${topo - 0.4} ${cx + l * m} ${boca.cantos - 0.6} Q ${cx + l * (m + 1.6)} ${boca.cantos - 0.9} ${cx + l * (m + 1.9)} ${boca.cantos - 3} Q ${cx + l * (m + 2.5)} ${boca.cantos - 0.2} ${cx + l * (m + 0.4)} ${boca.cantos + 0.5} Q ${cx + l * m * 0.5} ${base + 0.4} ${cx} ${base} Z`;
+      return <g className="retrato__barba" {...marca}><path className="retrato__bigode" d={`${lado(-1)} ${lado(1)}`} fill={cor} {...borda} /></g>;
+    }
+    const lado = (l: 1 | -1) => `M ${cx} ${topo - 0.2} Q ${cx + l * ml * 0.8} ${topo} ${cx + l * (ml + 1.4)} ${boca.cantos - 0.4} L ${cx + l * (ml + 1.6)} ${queixo - 1.2} L ${cx + l * (ml + 0.4)} ${queixo - 1} L ${cx + l * (ml + 0.2)} ${boca.cantos + 0.6} Q ${cx + l * ml * 0.5} ${base} ${cx} ${base} Z`;
+    return <g className="retrato__barba" {...marca}><path className="retrato__bigode" d={`${lado(-1)} ${lado(1)}`} fill={cor} {...borda} /></g>;
+  }
+  // A mosca: só o tufo embaixo do lábio de baixo.
+  if (tipo === 'mosca') return <g className="retrato__barba" {...marca}><path d={`M ${cx - 1.1} ${sob + 0.1} Q ${cx} ${sob - 0.3} ${cx + 1.1} ${sob + 0.1} L ${cx} ${sob + 2.6} Z`} fill={cor} {...borda} />{comBigode && <Bigode />}</g>;
+  // O Van Dyke: o cavanhaque em ponta no queixo, solto do bigode (a pele aparece entre os dois).
+  if (tipo === 'van_dyke') {
+    const pts: Pt[] = [[cx + ml * 0.75, sob + 0.4], [cx + ml * 0.85, queixo - 1.4], [cx + 0.6, queixo + 2.6], [cx, queixo + 3.2], [cx - 0.6, queixo + 2.6], [cx - ml * 0.85, queixo - 1.4], [cx - ml * 0.75, sob + 0.4], [cx, sob - 0.2]];
+    return <g className="retrato__barba" {...marca}><path d={suave(pts)} fill={cor} {...borda} /><Bigode /></g>;
+  }
+  // A barba de queixo: uma faixa fina que segue a mandíbula, da costeleta ao queixo.
+  if (tipo === 'queixo') {
+    const fora: Pt[] = [[cx + g.w / 2 + 0.3, topoCosteleta], ...[0.06, 0.25, 0.45, 0.65, 0.85, 1].map(t => { const [x, y, nx, ny] = mandibula(g, t); return [x + nx * 0.5, y + ny * 0.5] as Pt; })];
+    const dentro: Pt[] = [1, 0.85, 0.65, 0.45, 0.25, 0.06].map(t => { const [x, y, nx, ny] = mandibula(g, t); return [x - nx * 1.7, y - ny * 1.7] as Pt; });
+    const meio: Pt[] = [...fora, ...espelho(g, fora).slice(1), ...espelho(g, dentro.slice().reverse()).reverse(), ...dentro.slice(1)];
+    return <g className="retrato__barba" {...marca}><path d={suave(meio)} fill={cor} {...borda} />{comBigode && <Bigode />}</g>;
+  }
+
+  // Por fazer, curta, cheia, longa (e a desenhada e a de lenhador): a massa inteira.
   const forma = FORMA_BARBA[tipo] ?? FORMA_BARBA.curta;
   const vol = forma.vol * (rala ? 0.6 : 1);
   const desce = rala ? Math.min(forma.desce, 3) : forma.desce;
@@ -721,7 +775,9 @@ function Barba({ tipo, cor: corFio, pele, textura, rala, g, bigode: comBigode = 
   }
   const fundo: Pt = [cx, queixo + 0.25 + vol + desce + (cachos && tipo !== 'por_fazer' ? cachos : 0)];
   // A linha da bochecha: desce da costeleta até o canto da boca, onde o bigode encontra a barba.
-  const bochecha: Pt[] = [[cx + g.w / 2 - 2.6, topoCosteleta], [cx + g.w / 2 - 3.1, olhoY + 3], [cx + g.w / 2 - 4.3, olhoY + 7.6], [cx + ml + 2.4, boca.cantos - 1.4]];
+  // A desenhada tem a linha da bochecha mais baixa e reta (o contorno feito na navalha).
+  const des = tipo === 'desenhada';
+  const bochecha: Pt[] = [[cx + g.w / 2 - 2.6, topoCosteleta], [cx + g.w / 2 - (des ? 2.4 : 3.1), olhoY + (des ? 5.6 : 3)], [cx + g.w / 2 - (des ? 3.6 : 4.3), olhoY + (des ? 9.2 : 7.6)], [cx + ml + 2.4, boca.cantos - (des ? 0.6 : 1.4)]];
   const labio: Pt[] = [[cx + ml + 1.1, boca.cantos + 1], [cx + ml * 0.45, sob], [cx - ml * 0.45, sob], [cx - ml - 1.1, boca.cantos + 1]];
   const pts: Pt[] = [...fora, fundo, ...espelho(g, fora), ...espelho(g, bochecha.slice().reverse()), ...labio.slice().reverse(), ...bochecha.slice().reverse()];
   const d = suave(pts);
@@ -739,13 +795,13 @@ function Barba({ tipo, cor: corFio, pele, textura, rala, g, bigode: comBigode = 
       </g>
     );
   }
-  const curta = tipo === 'curta';
-  const massa = curta ? misturar(cor, pele, 0.28) : cor;
+  const curta = tipo === 'curta' || des;
+  const massa = tipo === 'curta' ? misturar(cor, pele, 0.28) : cor;
   // Os fios: traços curtos no comprimento, mais escuros (no fio escuro, mais claros).
   const fio = luminancia(massa) < 0.06 ? misturar(massa, '#ffffff', 0.22) : misturar(massa, '#000000', 0.3);
   return (
     <g className="retrato__barba" {...marca}>
-      <path d={d} fill={massa} {...borda} />
+      <path d={d} fill={massa} {...borda} {...(des ? { strokeOpacity: 0.9, strokeWidth: 0.55 } : {})} />
       {!curta && (
         <g stroke={fio} strokeWidth={0.45} strokeLinecap="round" fill="none" opacity={0.55}>
           {[0.55, 0.7, 0.84, 0.96].flatMap(t => {

@@ -15,7 +15,7 @@ import { guardarAviso } from './atalhos';
 import { idade } from '../motor/nucleo';
 import { anoDe } from '../motor/tempo';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { DecisoesDeHeranca, Vida } from '../motor/tipos';
+import type { DecisoesDeHeranca, Desfecho13, Vida } from '../motor/tipos';
 import type { Armazenamento, Estatisticas } from '../motor/save';
 import type { OpcoesCriacao } from '../motor/criacao';
 import type { Acao } from '../motor/acoes';
@@ -43,7 +43,7 @@ export function useVida() {
   const [vida, setVida] = useState<Vida | null>(null);
   const [salva, setSalva] = useState<{ nome: string; idade: number; morta?: boolean } | null>(null);
   const [aviso, setAviso] = useState<Aviso | null>(null);
-  const [resultado, setResultado] = useState<{ titulo: string; texto: string; pessoaId?: string; mudancas?: string[] } | null>(null);
+  const [resultado, setResultado] = useState<{ titulo: string; texto: string; pessoaId?: string; mudancas?: string[]; desfecho?: Desfecho13 } | null>(null);
   /** Primeira entrada da biografia gerada pelo último ano vivido (para destacar). */
   const [marcaAno, setMarcaAno] = useState<number>(0);
   const [avisoSave, setAvisoSave] = useState<string | null>(null);
@@ -168,7 +168,8 @@ export function useVida() {
     if (!vida || !motor) return;
     const antes = vida.biografia.length;
     const r = motor.avancarAno(vida);
-    if (r.aviso) { avisar(r.aviso.texto, r.aviso.tom); return; }
+    // VIDA 13: o aviso pode vir com a decisão que esperava a vez já aberta (a vida mudou: fica).
+    if (r.aviso) { if (r.vida !== vida) aplicar(r.vida); avisar(r.aviso.texto, r.aviso.tom); return; }
     // O que foi dito sobre o ano que passou não fica pendurado no ano novo.
     setResultado(null); setAviso(null);
     setMarcaAno(antes);
@@ -197,11 +198,14 @@ export function useVida() {
     // VIDA 12.6: o que aconteceu fica nos "Últimos avisos" (neste navegador).
     const textoDoAviso = r.resultado ?? r.aviso?.texto;
     if (textoDoAviso) guardarAviso(r.vida.id, { texto: textoDoAviso, titulo: r.titulo, ano: anoDe(r.vida.t), idade: idade(r.vida) });
+    // VIDA 13 · Ações: o resultado que mora na vida (a decisão uma de cada vez, a ação que abriu uma decisão) aparece pela
+    // vida — já salvo; recarregar mostra o mesmo, e a próxima decisão espera atrás dele.
+    if (r.vida.desfecho13 && r.vida.desfecho13 !== vida.desfecho13) { setResultado(null); sound.playClick(); return true; }
     if (r.resultado) {
       // Resultado de decisão aparece dentro do próprio momento (o modal decide);
       // resultado de ação que não abriu decisão vira aviso — a não ser que tenha mudado coisas na vida.
       if (a.tipo === 'decidir') setResultado({ titulo, texto: r.resultado, mudancas });
-      else if (r.titulo || mudancas.length >= 2) setResultado({ titulo: r.titulo ?? 'O que aconteceu', texto: r.resultado, pessoaId: r.pessoaId, mudancas });
+      else if (r.titulo || mudancas.length >= 2 || r.desfecho?.caixa || r.desfecho?.esperado) setResultado({ titulo: r.titulo ?? 'O que aconteceu', texto: r.resultado, pessoaId: r.pessoaId, mudancas, desfecho: r.desfecho });
       else avisar(r.resultado, 'neutro', deQuem);
     } else if (r.aviso) {
       if (mudancas.length >= 2 && !r.vida.momento) setResultado({ titulo: 'O que mudou', texto: r.aviso.texto, mudancas });

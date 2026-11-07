@@ -26,13 +26,13 @@ export function mercadoDoPais(pais: string): Mercado {
 export const mercadoDe = (v: Vida): Mercado => mercadoDoPais(municipio(v.moradia.municipioId).pais);
 
 const ELETRO = new Set(['maquina_lavar', 'lava_loucas', 'aspirador_robo', 'ar_condicionado', 'cozinha_equipada']);
-const ACESSORIO_SIMPLES = new Set(['pulseira_couro', 'pulseira_contas']);
+const ACESSORIO_SIMPLES = new Set(['pulseira_couro', 'pulseira_contas', 'brincos_argola_grande', 'brincos_cruz', 'brincos_alargador']);
 
 export function categoriaDoItem(it: ItemEstilo): CategoriaDeProduto {
   if (it.categoria === 'oculos') return 'otica';
   if (it.categoria === 'chapeu') return 'acessorios';
   // 12.9: o piercing de ouro e de pedra é joalheria; o de aço, titânio, prata e preto, a loja de acessórios.
-  if (it.piercing) return it.piercing.metal === 'ouro' || it.piercing.metal === 'ouro_rose' ? 'joias' : 'acessorios';
+  if (it.piercing) return it.piercing.metal === 'ouro' || it.piercing.metal === 'ouro_rose' || it.piercing.metal === 'ouro_branco' ? 'joias' : 'acessorios';
   if (it.categoria === 'acessorio') return it.lugar === 'pulso' ? 'relogios' : ACESSORIO_SIMPLES.has(it.id) ? 'acessorios' : 'joias';
   return it.lugar === 'pes' ? 'calcados' : 'vestuario';
 }

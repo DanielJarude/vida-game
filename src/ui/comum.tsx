@@ -6,6 +6,8 @@ import { disponibilidade, type Acao } from '../motor/acoes';
 import { podeTentar } from '../motor/plausibilidade';
 import { dinheiroCurto, palavraChance } from './apresentar';
 import { formatarDinheiroCheio, formatarDinheiroCurto } from '../motor/mundo/moeda';
+import { agruparAcoes13 } from './gruposDeAcoes13';
+import './acoes13.css';
 
 interface BotaoAcaoProps {
   vida: Vida;
@@ -26,6 +28,9 @@ interface BotaoAcaoProps {
 
 /** Botão ligado ao motor: pergunta a disponibilidade e explica o bloqueio. */
 export function BotaoAcao({ vida, acao, agir, children, variante = 'secundario', mostrarChance, aoAgir, ocultarImpossivel, ocultarBloqueado, semAviso }: BotaoAcaoProps) {
+  // VIDA 13 · Ações: o retorno do clique (um instante de "feito", dito também ao leitor de tela) e o motivo ligado ao botão.
+  const [feito, marcarFeito] = useFeito13();
+  const idMotivo = useId();
   const d = disponibilidade(vida, acao);
   const pode = podeTentar(d);
   if (ocultarImpossivel && d.grau === 'impossivel') return null;
@@ -37,12 +42,13 @@ export function BotaoAcao({ vida, acao, agir, children, variante = 'secundario',
   const comResgate: Acao | undefined = !pode && d.resgate ? { tipo: 'resgatar_e', acao } : undefined;
   const podeResgatar = comResgate ? podeTentar(disponibilidade(vida, comResgate)) : false;
   return (
-    <div className={`acao acao--${variante}${pode ? '' : ' acao--bloqueada'}`}>
-      <button type="button" className={`botao botao--${variante}`} disabled={!pode} onClick={() => { if (agir(acao)) aoAgir?.(); }}>
+    <div className={`acao acao--${variante}${pode ? '' : ' acao--bloqueada'}${feito ? ' acao--feita' : ''}`}>
+      <button type="button" className={`botao botao--${variante}`} disabled={!pode} aria-describedby={!pode && d.motivo ? idMotivo : undefined} onClick={() => { if (agir(acao)) { marcarFeito(); aoAgir?.(); } }}>
         <span>{children}</span>
         {chance && <span className="botao__chance">{chance}</span>}
       </button>
-      {!pode && d.motivo && <p className="acao__motivo">{d.motivo}</p>}
+      {feito && <span className="acao__feito" role="status"><span aria-hidden>✓ </span>Feito</span>}
+      {!pode && d.motivo && <p className="acao__motivo" id={idMotivo}><Cadeado13 />{d.motivo}</p>}
       {comResgate && podeResgatar && <button type="button" className="botao botao--discreto acao__resgate" onClick={() => { if (agir(comResgate)) aoAgir?.(); }}>Tirar {dinheiroCurto(d.resgate!.valor)} das aplicações e pagar</button>}
       {pode && aviso && !semAviso && <p className="acao__aviso">{aviso}</p>}
     </div>
@@ -192,21 +198,77 @@ export function Medidor({ valor, rotulo, palavra, limite, marcas = 10 }: { valor
   );
 }
 
-export interface AcaoViva { id: string; rotulo: string; porque?: string; aviso?: string; acao?: Acao; ir?: string; saida?: boolean; bloqueado?: string }
+/** `peso` (do motor): quanto a ação importa agora — as de peso alto ganham destaque. */
+export interface AcaoViva { id: string; rotulo: string; porque?: string; aviso?: string; acao?: Acao; ir?: string; saida?: boolean; bloqueado?: string; peso?: number }
 
-/** Ações contextuais: poucas, com o porquê, cada uma uma linha — não uma parede de botões. */
-export function AcoesVivas({ acoes, agir, ir, rotulo }: { acoes: AcaoViva[]; agir: (a: Acao) => boolean; ir?: (destino: string) => void; rotulo: string }) {
-  if (!acoes.length) return null;
+/** VIDA 13 · Ações: um instante de "feito" depois do clique (o retorno visível de que a ação aconteceu). */
+function useFeito13(): [boolean, () => void] {
+  const [feito, setFeito] = useState(false);
+  const t = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (t.current) clearTimeout(t.current); }, []);
+  return [feito, () => { setFeito(true); if (t.current) clearTimeout(t.current); t.current = setTimeout(() => setFeito(false), 1600); }];
+}
+
+const ICONE13 = {
+  acao: 'M9 6l6 6-6 6',
+  lugar: 'M7 17L17 7M9 7h8v8',
+  bloqueada: 'M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5z',
+  saida: 'M14 4h5v16h-5M10 16l4-4-4-4M14 12H4'
+} as const;
+function Icone13({ tipo }: { tipo: keyof typeof ICONE13 }) {
+  return <svg className="acao13__icone" viewBox="0 0 24 24" aria-hidden fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d={ICONE13[tipo]} /></svg>;
+}
+function Cadeado13() {
+  return <svg className="acao__cadeado" viewBox="0 0 24 24" aria-hidden fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d={ICONE13.bloqueada} /></svg>;
+}
+
+/** Uma ação da lista: com cara de controle (ícone, borda, estados), o porquê ou o motivo de não dar. */
+function ItemDeAcao13({ x, agir, ir }: { x: AcaoViva; agir: (a: Acao) => boolean; ir?: (destino: string) => void }) {
+  const [feito, marcarFeito] = useFeito13();
+  const idMotivo = useId();
+  const tipo = x.bloqueado ? 'bloqueada' : x.saida ? 'saida' : x.ir ? 'lugar' : 'acao';
+  const destaque = !x.bloqueado && !x.saida && (x.peso ?? 0) >= 7;
   return (
-    <ul className="acoes-vivas" aria-label={rotulo}>
-      {acoes.map(x => (
-        <li key={x.id}>
-          <button type="button" className={`acao-viva${x.saida ? ' acao-viva--saida' : ''}${x.ir ? ' acao-viva--lugar' : ''}${x.bloqueado ? ' acao-viva--bloqueada' : ''}`} disabled={!!x.bloqueado} onClick={() => { if (x.acao) agir(x.acao); else if (x.ir) ir?.(x.ir); }}>
-            <span className="acao-viva__rotulo">{x.rotulo}</span>
-            {x.bloqueado ? <span className="acao-viva__porque acao-viva__motivo">{x.bloqueado}</span> : x.porque && <span className="acao-viva__porque">{x.porque}</span>}
-            {x.aviso && <span className="acao-viva__aviso">{x.aviso}</span>}
-            <span className="acao-viva__seta" aria-hidden>{x.ir ? '↗' : '→'}</span>
-          </button>
+    <li className="acoes13__item">
+      <button type="button" className={`acao13 acao13--${tipo}${destaque ? ' acao13--destaque' : ''}${feito ? ' acao13--feita' : ''}`} disabled={!!x.bloqueado} aria-describedby={x.bloqueado ? idMotivo : undefined}
+        onClick={() => { if (x.acao) { if (agir(x.acao)) marcarFeito(); } else if (x.ir) ir?.(x.ir); }}>
+        <span className="acao13__marca"><Icone13 tipo={tipo} /></span>
+        <span className="acao13__corpo">
+          <span className="acao13__rotulo">{x.rotulo}</span>
+          {x.bloqueado ? <span className="acao13__motivo" id={idMotivo}>{x.bloqueado}</span> : x.porque && <span className="acao13__porque">{x.porque}</span>}
+          {x.aviso && <span className="acao13__aviso">{x.aviso}</span>}
+        </span>
+        {destaque && <span className="acao13__selo" aria-hidden>agora</span>}
+      </button>
+      {feito && <span className="acao__feito" role="status"><span aria-hidden>✓ </span>Feito</span>}
+    </li>
+  );
+}
+
+/**
+ * Ações contextuais: com o porquê, cada uma com cara de botão. VIDA 13 · Ações: a lista longa vem em CONTEXTOS (o mandato,
+ * a campanha, o partido, as relações, a exposição, a estratégia; o dia a dia, crescer, procurar — `gruposDeAcoes13`), as
+ * de peso em destaque, as indisponíveis com o motivo, as saídas por último e separadas.
+ */
+export function AcoesVivas({ acoes, agir, ir, rotulo }: { acoes: AcaoViva[]; agir: (a: Acao) => boolean; ir?: (destino: string) => void; rotulo: string }) {
+  const base = useId();
+  if (!acoes.length) return null;
+  const grupos = agruparAcoes13(acoes);
+  if (!grupos) {
+    return (
+      <ul className="acoes-vivas acoes13" aria-label={rotulo}>
+        {acoes.map(x => <ItemDeAcao13 key={x.id} x={x} agir={agir} ir={ir} />)}
+      </ul>
+    );
+  }
+  return (
+    <ul className="acoes-vivas acoes13 acoes13--grupos" aria-label={rotulo}>
+      {grupos.map(g => (
+        <li key={g.grupo.id} className={`acoes13__grupo acoes13__grupo--${g.grupo.id}`}>
+          <p className="acoes13__titulo" id={`${base}-${g.grupo.id}`}>{g.grupo.titulo}<span className="acoes13__conta" aria-hidden>{g.acoes.length}</span></p>
+          <ul className="acoes13__lista" aria-labelledby={`${base}-${g.grupo.id}`}>
+            {g.acoes.map(x => <ItemDeAcao13 key={x.id} x={x} agir={agir} ir={ir} />)}
+          </ul>
         </li>
       ))}
     </ul>

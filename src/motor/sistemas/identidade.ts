@@ -41,7 +41,7 @@ export const ROSTOS = ['oval', 'redondo', 'quadrado', 'longo', 'coracao'] as con
 export const SOBRANCELHAS = ['fina', 'media', 'grossa'] as const;
 const LISTAS: Record<string, readonly string[]> = { textura: TEXTURAS, corCabelo: CORES_CABELO, olhos: CORES_OLHOS, olhosForma: FORMAS_OLHOS, nariz: NARIZES, boca: BOCAS, rosto: ROSTOS, sobrancelha: SOBRANCELHAS };
 const CAMPO: Record<string, keyof Visual> = { textura: 'textura', corCabelo: 'corCabelo', olhos: 'olhos', olhosForma: 'olhosForma', nariz: 'nariz', boca: 'boca', rosto: 'rosto', sobrancelha: 'sobrancelha' };
-const TINTAS = new Set(['platinado', 'vermelho', 'azul', 'rosa', 'grisalho']);
+const TINTAS = new Set(['platinado', 'vermelho', 'azul', 'rosa', 'grisalho', 'verde', 'roxo', 'cobre', 'mel', 'prata']);
 
 /**
  * FIX pós-playtest humano — os traços UNIVERSAIS: variação individual que existe em toda família do mundo, sem peso
@@ -96,6 +96,8 @@ export function geneticaDe(p: { visual?: Visual; genes?: Genes; estilo?: { corNa
   const natural = p.genes?.corCabelo ?? p.estilo?.corNatural;
   if (natural && !TINTAS.has(natural)) base.corCabelo = natural;
   delete base.transplante; delete base.lifting;
+  // VIDA 13: mechas, maquiagem e piercings são escolha: nunca genética.
+  delete base.mechas; delete base.mechasEstilo; delete base.delineado; delete base.sombraOlhos; delete base.batom; delete base.blush; delete base.piercings;
   return base;
 }
 /** Guarda os genes antes da primeira mudança no corpo (idempotente): depois disso, o visual pode mudar à vontade. */
@@ -275,10 +277,12 @@ export function variarBarba(v: Visual): Visual {
   if (!v.barba) return v;
   const r = rngDe('barba', v.pele, v.nariz ?? '', v.rosto ?? '', v.olhos, v.boca ?? '', v.corCabelo);
   const z = r.next();
-  if (v.barba === 'cheia' && z < 0.22) return { ...v, barba: 'longa' };
-  if (v.barba === 'bigode' && z < 0.3) return { ...v, barba: 'bigodao' };
-  if (v.barba === 'curta') return z < 0.25 ? { ...v, barba: 'por_fazer' } : z < 0.32 ? { ...v, barba: 'costeletas' } : v;
-  if (v.barba === 'cavanhaque' && z < 0.25) return { ...v, bigode: false };
+  // VIDA 13: e as barbas novas (lenhador, bigode fino, guidão, ferradura, desenhada, de queixo, Van Dyke, mosca) — o mesmo
+  // gerador do rosto; cada resultado é um tipo sem regra, então aplicar de novo não muda.
+  if (v.barba === 'cheia') return z < 0.22 ? { ...v, barba: 'longa' } : z < 0.28 ? { ...v, barba: 'lenhador' } : v;
+  if (v.barba === 'bigode') return z < 0.3 ? { ...v, barba: 'bigodao' } : z < 0.4 ? { ...v, barba: 'bigode_fino' } : z < 0.46 ? { ...v, barba: 'bigode_guidao' } : z < 0.51 ? { ...v, barba: 'ferradura' } : v;
+  if (v.barba === 'curta') return z < 0.25 ? { ...v, barba: 'por_fazer' } : z < 0.32 ? { ...v, barba: 'costeletas' } : z < 0.4 ? { ...v, barba: 'desenhada' } : z < 0.45 ? { ...v, barba: 'queixo' } : v;
+  if (v.barba === 'cavanhaque') return z < 0.25 ? { ...v, bigode: false } : z < 0.34 ? { ...v, barba: 'van_dyke' } : z < 0.4 ? { ...v, barba: 'mosca' } : v;
   return v;
 }
 

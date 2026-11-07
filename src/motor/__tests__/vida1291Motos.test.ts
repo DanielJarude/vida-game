@@ -251,7 +251,9 @@ describe('saves antigos', () => {
     expect(r.vida.financas.bens.filter(x => x.tipo === 'veiculo')).toEqual(antes);
     // Sem peça nova, nenhum visual novo: o desenho da moto de antes é o de sempre.
     expect(visualDoVeiculo('street', { pintura: 'vermelho' })).toBeUndefined();
-    expect(visualDoVeiculo('cruiser', { escape: 'esportivo' })).toBeUndefined();
+    // VIDA 13: o escape esportivo passou a aparecer no desenho (a ponteira curta); pneus continuam invisíveis.
+    expect(visualDoVeiculo('cruiser', { escape: 'esportivo' })).toEqual({ escape: true });
+    expect(visualDoVeiculo('cruiser', { pneus: 'bons' })).toBeUndefined();
     // A moto sem versão (save v≤13) continua sorteando só entre as versões de antes da classe dela.
     for (let k = 0; k < 20; k++) {
       const x = versaoParaVeiculoAntigo({ id: `m${k}`, tipo: 'veiculo', modeloId: 'moto_media', nome: 'moto média', valor: 30000, tCompra: 0, estado: 80 } as Veiculo);

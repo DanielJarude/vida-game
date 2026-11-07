@@ -11,7 +11,7 @@
  * - **As suas**: cada tatuagem com a data, a idade, o lugar, o significado e o estado da tinta; retocar, cobrir com um
  *   desenho maior, tirar no laser; e o histórico (o que saiu e o que foi coberto continua lembrado).
  */
-import { useMemo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import type { Tatuagem, Vida } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
 import { idade } from '../../motor/nucleo';
@@ -21,7 +21,8 @@ import {
   regioesDoDesenho, SIGNIFICADO_COM_PESSOA, TONS_DO_TRACO, COMPOSICAO_TEM_LADO, modeloDeComposicao, type CorDaTatuagem, type EstiloDeTatuagem, type GrupoDoCorpo, type Lado,
   type RegiaoDeTatuagem, type SignificadoDaTatuagem, type TamanhoDeTatuagem, type TipoDeComposicao
 } from '../../motor/dados/tatuagens';
-import { NOME_TEMA, REFERENCIAS_129, temaDoDesenho, type TemaDeTatuagem } from '../../motor/dados/tatuagens129';
+import { NOME_TEMA, temaDoDesenho, type TemaDeTatuagem } from '../../motor/dados/tatuagens129';
+import { MIDIA_DA_OBRA, NOME_MIDIA, type MidiaDaObra } from '../../motor/dados/tatuagens13';
 import {
   composicoesNaFigura, desgasteDaTinta, estadoDaTatuagem, fraseDoSignificado, historicoDeTatuagens, IDADE_PARA_TATUAR, nomeDaTatuagem, ondeEsta, precoDaRemocao, precoDoPedido,
   precoDoRetoque, previaDaComposicao, previaDoPedido, regiaoDe, tatuagensDe, tatuagensNaFigura, tamanhoDe, type PedidoDeTatuagem, type TatuagemParaFigura
@@ -41,11 +42,25 @@ const ESTILOS = (Object.keys(NOME_ESTILO) as EstiloDeTatuagem[]);
 const maiuscula = (t: string) => t.replace(/^./, c => c.toUpperCase());
 /** VIDA 12.9: a busca ignora acento e maiúscula. */
 const semAcento = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-/** O que o filtro do estúdio procura num desenho: o nome, a descrição, o estilo e a obra (cultura pop). */
+/** VIDA 13: o texto em que a busca procura — o nome, a descrição, o estilo, o tema, a obra e o tipo de obra (game, livro...). */
+const TEXTO_DA_BUSCA = new Map(DESENHOS.map(x => {
+  const tema = temaDoDesenho(x), midia = x.referencia ? MIDIA_DA_OBRA[x.referencia] : undefined;
+  return [x.id, semAcento(`${x.nome} ${x.descricao} ${NOME_ESTILO[x.estilo]} ${tema ? NOME_TEMA[tema] : ''} ${x.referencia ?? ''} ${midia ? NOME_MIDIA[midia] : ''}`)];
+}));
+/** VIDA 13: as obras da cultura pop, agrupadas por tipo (videogames, livros, séries, filmes, animações), com a contagem. */
+export const OBRAS_POR_MIDIA: { midia: MidiaDaObra; nome: string; obras: { obra: string; n: number }[] }[] = (() => {
+  const n = new Map<string, number>();
+  for (const x of DESENHOS) if (x.referencia) n.set(x.referencia, (n.get(x.referencia) ?? 0) + 1);
+  return (Object.keys(NOME_MIDIA) as MidiaDaObra[]).map(midia => ({
+    midia, nome: NOME_MIDIA[midia],
+    obras: [...n].filter(([o]) => (MIDIA_DA_OBRA[o] ?? 'filmes') === midia).map(([obra, k]) => ({ obra, n: k })).sort((a, b) => a.obra.localeCompare(b.obra, 'pt-BR'))
+  })).filter(g => g.obras.length);
+})();
+/** O que o filtro do estúdio procura num desenho: o estilo, o tema, a obra (cultura pop) e a busca por palavra (todas as palavras). */
 export function desenhosDoFiltro(f: { estilo?: EstiloDeTatuagem | ''; tema?: TemaDeTatuagem | ''; referencia?: string; busca?: string }) {
-  const q = semAcento(f.busca?.trim() ?? '');
+  const palavras = semAcento(f.busca?.trim() ?? '').split(/\s+/).filter(Boolean);
   return DESENHOS.filter(x => x.tamanho !== 4 && (!f.estilo || x.estilo === f.estilo) && (!f.tema || temaDoDesenho(x) === f.tema) && (!f.referencia || x.referencia === f.referencia)
-    && (!q || semAcento(`${x.nome} ${x.descricao} ${NOME_ESTILO[x.estilo]} ${x.referencia ?? ''}`).includes(q)));
+    && palavras.every(q => TEXTO_DA_BUSCA.get(x.id)!.includes(q)));
 }
 
 type Parte = 'nova' | 'projetos' | 'minhas';
@@ -123,10 +138,11 @@ function NovaTatuagem({ vida, agir, cobrindo, aoCancelarCobertura }: { vida: Vid
   const acao: Acao = { tipo: 'tatuar', ...pedido };
   const preco = precoDoPedido(vida, pedido);
   const fig = useMemo<Fig>(() => ({ visual: vida.eu.visual, genero: vida.eu.genero, idade: i, semente: vida.eu.semente ?? 'eu', corpo: tipoDeCorpo(vida) }), [vida, i]);
-  const desenhos = desenhosDoFiltro({ estilo, tema, referencia: estilo === 'cultura_pop' ? referencia : '', busca });
+  const desenhos = desenhosDoFiltro({ estilo, tema, referencia: !estilo || estilo === 'cultura_pop' ? referencia : '', busca });
   const pecas = desenhos.filter(x => x.tamanhos.some(t => regioesDoDesenho(x, t).includes(regiao)));
   const fora = desenhos.filter(x => !pecas.includes(x));
-  const escolherDesenho = (id: string) => { setDesenho(id); const n = desenhoDeTatuagem(id)!; setTamanho(n.tamanho); setTexto(''); if (!n.colorida && cor === 'colorida') setCor(''); };
+  // VIDA 13: só setters (a miniatura é memorizada e guarda a primeira versão desta função).
+  const escolherDesenho = (id: string) => { setDesenho(id); const n = desenhoDeTatuagem(id)!; setTamanho(n.tamanho); setTexto(''); if (!n.colorida) setCor(c => (c === 'colorida' ? '' : c)); };
   const escolherRegiao = (r: RegiaoDeTatuagem, l?: Lado) => { if (alvo) return; setRegiao(r); if (l) setLado(l); setAj(a => ({ ...a, x: 0, y: 0 })); setPosLivre(true); };
   const grupos = (Object.keys(NOME_GRUPO) as GrupoDoCorpo[]);
   return (
@@ -168,24 +184,26 @@ function NovaTatuagem({ vida, agir, cobrindo, aoCancelarCobertura }: { vida: Vid
                 {(Object.keys(NOME_TEMA) as TemaDeTatuagem[]).map(t => <option key={t} value={t}>{NOME_TEMA[t]}</option>)}
               </select>
             </label>
-            {estilo === 'cultura_pop' && (
+            {(!estilo || estilo === 'cultura_pop') && (
               <label className="campo">
                 <span className="campo__rotulo">Obra</span>
+                {/* VIDA 13: as obras agrupadas por tipo, com quantos desenhos cada uma tem. */}
                 <select value={referencia} onChange={e => setReferencia(e.target.value)}>
                   <option value="">Todas as obras</option>
-                  {[...REFERENCIAS_129].sort((a, b) => a.localeCompare(b, 'pt-BR')).map(r => <option key={r} value={r}>{r}</option>)}
+                  {OBRAS_POR_MIDIA.map(g => <optgroup key={g.midia} label={g.nome}>{g.obras.map(o => <option key={o.obra} value={o.obra}>{o.obra} ({o.n})</option>)}</optgroup>)}
                 </select>
               </label>
             )}
             <label className="campo">
               <span className="campo__rotulo">Buscar</span>
-              <input type="search" value={busca} placeholder="lobo, lua, chapéu…" onChange={e => setBusca(e.target.value)} />
+              <input type="search" value={busca} placeholder="lobo, lua, anime, livro…" onChange={e => setBusca(e.target.value)} />
             </label>
           </div>
           <div className="estudio-tatuagem__catalogo" role="radiogroup" aria-label="Desenhos">
             {pecas.map(x => <Miniatura key={x.id} id={x.id} ativo={x.id === desenho} aoEscolher={() => escolherDesenho(x.id)} />)}
           </div>
           {desenhos.length === 0 && <p className="nota">Nenhum desenho com esse filtro.</p>}
+          {desenhos.length > 0 && <p className="nota" aria-live="polite">{pecas.length} desenho{pecas.length > 1 ? 's' : ''} {pecas.length > 1 ? 'cabem' : 'cabe'} {ondeEsta(regiao, ladoR)}.</p>}
           {fora.length > 0 && <p className="nota">{fora.length} desenho{fora.length > 1 ? 's' : ''} desse filtro não cabe{fora.length > 1 ? 'm' : ''} {ondeEsta(regiao, ladoR)} ({fora.slice(0, 3).map(x => x.nome.toLowerCase()).join(', ')}{fora.length > 3 ? '…' : ''}).</p>}
           <p className="campo__nota"><strong>{d.nome}</strong> · {NOME_ESTILO[d.estilo]}{d.referencia ? ` (inspirado em ${d.referencia})` : ''}: {d.descricao}</p>
           {tamanhosAqui.length > 1 && <Escolha rotulo="Tamanho" valor={String(tamanho) as '1'} aoMudar={t => setTamanho(Number(t) as TamanhoDeTatuagem)} opcoes={tamanhosAqui.map(t => ({ id: String(t) as '1', rotulo: maiuscula(NOME_TAMANHO[t]) }))} />}
@@ -258,7 +276,8 @@ function Faixa({ rotulo, min, max, passo, valor, aoMudar, leitura }: { rotulo: s
 }
 
 /** A miniatura do desenho (o desenho de verdade, em preto). */
-function Miniatura({ id, ativo, aoEscolher }: { id: string; ativo: boolean; aoEscolher: () => void }) {
+/** VIDA 13: memorizada — o catálogo passou de 400 desenhos e não precisa redesenhar a cada ajuste de posição ou cor. */
+const Miniatura = memo(function Miniatura({ id, ativo, aoEscolher }: { id: string; ativo: boolean; aoEscolher: () => void }) {
   const d = desenhoDeTatuagem(id)!;
   const [w, h] = caixaNativa(d);
   return (
@@ -269,7 +288,7 @@ function Miniatura({ id, ativo, aoEscolher }: { id: string; ativo: boolean; aoEs
       <span>{d.nome}</span>
     </button>
   );
-}
+}, (a, b) => a.id === b.id && a.ativo === b.ativo);
 
 /** Quem pode estar no significado: a família, os filhos, o amor, os amigos próximos — e quem já morreu. */
 function pessoasParaHomenagem(v: Vida, sig: SignificadoDaTatuagem): { id: string; rotulo: string }[] {

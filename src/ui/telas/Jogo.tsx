@@ -122,7 +122,7 @@ export function Jogo({ c }: { c: ControleVida }) {
   const rolouAte = useRef(0);
   useEffect(() => { if (c.marcaAno > 0) { setLugar({ area: 'linha' }); setParteHistoria('agora'); } }, [c.marcaAno]);
   // A rolagem espera as decisões e o resultado do ano fecharem (com a folha aberta, a página está travada).
-  const livre = !vida.momento && !c.resultado;
+  const livre = !vida.momento && !c.resultado && !vida.desfecho13;
   useEffect(() => {
     if (c.marcaAno <= 0 || !livre || rolouAte.current === c.marcaAno) return;
     const id = requestAnimationFrame?.(() => {
@@ -175,7 +175,7 @@ export function Jogo({ c }: { c: ControleVida }) {
           {/* FIX pós-playtest humano: "Viver mais um ano" é "terminei o que queria fazer neste ano" — mora no FIM da
               página, depois de tudo o que dá para ver e fazer nela; nunca por cima do conteúdo. */}
           <div className="avancar">
-            <button type="button" className="avancar__botao" onClick={c.avancar} disabled={!!vida.momento}>
+            <button type="button" className="avancar__botao" onClick={c.avancar} disabled={!!vida.momento || !!vida.desfecho13}>
               <span className="avancar__rotulo">Viver mais um ano</span>
               <span className="avancar__idade">{i} → {i + 1}</span>
             </button>
@@ -195,8 +195,10 @@ export function Jogo({ c }: { c: ControleVida }) {
         ))}
       </nav>
 
-      {vida.momento && <Momento vida={vida} agir={c.agir} />}
-      {!vida.momento && c.resultado && <Resultado titulo={c.resultado.titulo} texto={c.resultado.texto} aoFechar={c.fecharResultado} vida={vida} pessoaId={c.resultado.pessoaId} mudancas={c.resultado.mudancas} />}
+      {/* VIDA 13 · Ações: o resultado da escolha vem antes da próxima decisão (uma de cada vez; está salvo na vida). */}
+      {vida.desfecho13 && <Resultado titulo={vida.desfecho13.titulo} texto={vida.desfecho13.texto} vida={vida} pessoaId={vida.desfecho13.pessoaId} mudancas={vida.desfecho13.mudancas} desfecho={vida.desfecho13} aoFechar={() => c.agir({ tipo: 'desfecho13', oque: 'seguir' })} aoEncerrar={() => c.agir({ tipo: 'desfecho13', oque: 'encerrar' })} />}
+      {vida.momento && !vida.desfecho13 && <Momento vida={vida} agir={c.agir} />}
+      {!vida.momento && !vida.desfecho13 && c.resultado && <Resultado titulo={c.resultado.titulo} texto={c.resultado.texto} aoFechar={c.fecharResultado} vida={vida} pessoaId={c.resultado.pessoaId} mudancas={c.resultado.mudancas} desfecho={c.resultado.desfecho} />}
       {menu && <Menu c={c} aoFechar={fecharMenu} ir={l => { irLugar(l); setMenu(false); }} />}
       {convite && !vida.momento && <DetalheDaOportunidade vida={vida} id={convite} agir={c.agir} aoFechar={() => setConvite(null)} abrirPessoa={abrirPessoa} />}
     </div>

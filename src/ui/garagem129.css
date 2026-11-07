@@ -7,15 +7,23 @@
   background: linear-gradient(to bottom, var(--bg-inset) 0 72%, color-mix(in oklab, var(--rule-strong) 45%, var(--bg-inset)) 72% 100%);
   box-shadow: inset 0 0 0 1px var(--rule);
 }
-.gar129__vaga { display: inline-block; max-width: 100%; }
+/* VIDA 13: cada vaga é um botão (abre o veículo de perto); a escala é a de verdade (a moto ao lado do carro). */
+.gar129__vaga { display: inline-block; max-width: 100%; padding: 0; margin: 0; border: 0; background: none; cursor: zoom-in; border-radius: var(--radius-sm); }
+.gar129__vaga:hover { background: color-mix(in oklab, var(--text-primary) 5%, transparent); }
+.gar129__vaga:focus-visible, .gar129__desenho:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .gar129__vaga svg { max-width: 100%; height: auto; }
+.gar129__mais-vagas { align-self: center; line-height: 1.3; }
+.gar129__perto { line-height: 0; background: var(--bg-inset); border-radius: var(--radius-sm); padding: var(--space-3) var(--space-2) var(--space-2); }
+.gar129__perto svg { width: 100%; height: auto; }
+.gar129__perto-legenda { margin: var(--space-2) 0; overflow-wrap: anywhere; }
 .gar129__vaga--colecao { filter: drop-shadow(0 0 6px color-mix(in oklab, #b8964a 45%, transparent)); }
 .gar129__organizar { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--space-2); }
 .gar129__ordem { min-width: 9rem; }
 .gar129__cartoes { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr)); }
 .gar129__cartao { display: grid; gap: var(--space-2); align-content: start; padding: var(--space-3); border-radius: var(--radius-sm); background: var(--surface); box-shadow: inset 0 0 0 1px var(--rule-strong); min-width: 0; }
 .gar129__cartao--colecao { box-shadow: inset 0 0 0 1px color-mix(in oklab, #b8964a 60%, var(--rule-strong)); }
-.gar129__desenho { line-height: 0; text-align: center; background: var(--bg-inset); border-radius: var(--radius-sm); padding: var(--space-2); }
+.gar129__desenho { line-height: 0; text-align: center; background: var(--bg-inset); border-radius: var(--radius-sm); padding: var(--space-2); border: 0; width: 100%; cursor: zoom-in; }
+.gar129__desenho:hover { background: color-mix(in oklab, var(--text-primary) 6%, var(--bg-inset)); }
 .gar129__desenho svg { max-width: 100%; height: auto; }
 .gar129__corpo { display: grid; gap: var(--space-1); min-width: 0; }
 .gar129__nome { margin: 0; overflow-wrap: anywhere; }

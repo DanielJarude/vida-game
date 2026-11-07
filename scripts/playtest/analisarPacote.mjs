@@ -1,6 +1,6 @@
 import { build } from 'vite';
 const alvo = process.env.ALVO ?? 'motor';
-await build({ configFile: 'vite.config.ts', logLevel: 'error', build: { outDir: process.env.HOME + '/vida-trabalho/a129/dist-analise', emptyOutDir: true }, plugins: [{
+await build({ configFile: 'vite.config.ts', logLevel: 'error', build: { outDir: process.env.HOME + '/vida-trabalho/a13/dist-analise', emptyOutDir: true }, plugins: [{
   name: 'analise', generateBundle(_o, bundle) {
     const chunkDe = new Map();
     for (const c of Object.values(bundle)) if (c.type === 'chunk') for (const id of Object.keys(c.modules)) chunkDe.set(id, c.name);

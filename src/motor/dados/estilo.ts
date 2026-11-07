@@ -8,9 +8,11 @@
 
 import type { EstiloRoupa, Ocasiao, Vida, Visual } from '../tipos';
 import { PIERCINGS, type Piercing, type RegiaoDePiercing } from './piercings129';
+import { BRINCOS_13 } from './piercings13';
+import { BARBAS_13, BARBAS_COM_BIGODE_13, CORES_TINTA_13, CORTES_13, NOME_COR_13 } from './aparencia13';
 
 /** Cortes de cabelo (o retrato desenha todos). Nenhum é de um gênero só. */
-export const CORTES: { id: string; nome: string; curto?: boolean }[] = [
+export const CORTES: { id: string; nome: string; curto?: boolean; restrito?: boolean }[] = [
   { id: 'raspado', nome: 'Raspado', curto: true },
   { id: 'curto', nome: 'Curto', curto: true },
   { id: 'curto_lado', nome: 'Curto, repartido de lado', curto: true },
@@ -28,15 +30,17 @@ export const CORTES: { id: string; nome: string; curto?: boolean }[] = [
   { id: 'cacheado_longo', nome: 'Cacheado longo' },
   { id: 'trancas', nome: 'Tranças' },
   { id: 'rabo', nome: 'Rabo de cavalo' },
-  { id: 'coque', nome: 'Coque' }
+  { id: 'coque', nome: 'Coque' },
+  // VIDA 13: mais cortes (`dados/aparencia13`).
+  ...CORTES_13
 ];
 
 /** Cores: as naturais e as de tinta (a tinta é a partir da adolescência). */
 export const CORES_NATURAIS = ['preto', 'castanho_escuro', 'castanho', 'castanho_claro', 'loiro', 'ruivo'];
-export const CORES_TINTA = ['platinado', 'vermelho', 'azul', 'rosa'];
+export const CORES_TINTA = ['platinado', 'vermelho', 'azul', 'rosa', ...CORES_TINTA_13];
 export const NOME_COR: Record<string, string> = {
   preto: 'Preto', castanho_escuro: 'Castanho-escuro', castanho: 'Castanho', castanho_claro: 'Castanho-claro', loiro: 'Loiro', ruivo: 'Ruivo',
-  platinado: 'Platinado', vermelho: 'Vermelho (tinta)', azul: 'Azul (tinta)', rosa: 'Rosa (tinta)', grisalho: 'Grisalho'
+  platinado: 'Platinado', vermelho: 'Vermelho (tinta)', azul: 'Azul (tinta)', rosa: 'Rosa (tinta)', grisalho: 'Grisalho', ...NOME_COR_13
 };
 
 /**
@@ -56,10 +60,11 @@ export const TIPOS_DE_CABELO: { id: string; nome: string; nota: string }[] = [
 export const BARBAS: { id: string; nome: string }[] = [
   { id: 'nenhuma', nome: 'Sem barba' }, { id: 'por_fazer', nome: 'Por fazer' }, { id: 'curta', nome: 'Curta' },
   { id: 'cheia', nome: 'Cheia' }, { id: 'longa', nome: 'Longa' }, { id: 'cavanhaque', nome: 'Cavanhaque' },
-  { id: 'costeletas', nome: 'Costeletas' }, { id: 'bigode', nome: 'Só bigode' }, { id: 'bigodao', nome: 'Bigodão' }
+  { id: 'costeletas', nome: 'Costeletas' }, { id: 'bigode', nome: 'Só bigode' }, { id: 'bigodao', nome: 'Bigodão' },
+  ...BARBAS_13
 ];
 /** As barbas que podem ir com ou sem bigode (o cavanhaque sem bigode é o tufo do queixo). */
-export const BARBAS_COM_BIGODE = ['por_fazer', 'curta', 'cheia', 'longa', 'cavanhaque', 'costeletas'];
+export const BARBAS_COM_BIGODE = ['por_fazer', 'curta', 'cheia', 'longa', 'cavanhaque', 'costeletas', ...BARBAS_COM_BIGODE_13];
 
 export const ROUPAS: { id: EstiloRoupa; nome: string }[] = [
   { id: 'basica', nome: 'Do dia a dia' }, { id: 'esportiva', nome: 'Esportiva' }, { id: 'social', nome: 'Social' },
@@ -273,7 +278,9 @@ export const ITENS_ESTILO: readonly ItemEstilo[] = [
   { id: 'brincos_diamante', nome: 'Brincos de diamante', categoria: 'acessorio', lugar: 'orelha', preco: 85000, luxo: true, nivel: 5, colecao: 'Alta joalheria', visual: { joia: 'brincos' }, estilos: ['luxuoso', 'elegante'], ocasioes: ['evento', 'festa', 'encontro'], descricao: 'Dois pontos de luz de um quilate cada.' },
   { id: 'anel_diamante', nome: 'Anel solitário de diamante', categoria: 'acessorio', lugar: 'anel', preco: 140000, luxo: true, nivel: 5, colecao: 'Alta joalheria', estilos: ['luxuoso', 'elegante'], ocasioes: ['evento', 'encontro'], descricao: 'Platina e um diamante de dois quilates.' },
   // VIDA 12.9: as joias dos piercings (catálogo próprio, `dados/piercings129`).
-  ...PIERCINGS
+  ...PIERCINGS,
+  // VIDA 13: os brincos novos (`dados/piercings13`).
+  ...BRINCOS_13
 ];
 
 /**

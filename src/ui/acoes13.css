@@ -1,0 +1,75 @@
+/* VIDA 13 · Ações — as listas de ações com cara de controle (Caminhos, Trabalho, vida pública, banda, negócio), os estados
+   globais dos botões de ação e o resultado imediato de uma escolha (`Momento.Resultado`). Só tokens do tema. */
+
+/* ------------------------------------------------------------ Lista de ações (AcoesVivas) */
+.acoes13 { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: var(--space-2); margin: var(--space-2) 0; }
+.acoes13--grupos { grid-template-columns: minmax(0, 1fr); gap: var(--space-4); }
+.acoes13__grupo { display: flex; flex-direction: column; gap: var(--space-2); }
+.acoes13__titulo { display: flex; align-items: center; gap: var(--space-2); margin: 0; font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; font-weight: var(--weight-bold); color: var(--text-secondary); }
+.acoes13__titulo::after { content: ''; flex: 1; height: 1px; background: var(--rule); }
+.acoes13__conta { min-width: 1.5em; padding: 0 6px; border-radius: var(--radius-pill); background: var(--tom-wash); color: var(--tom); font-size: var(--type-meta); text-align: center; letter-spacing: 0; }
+.acoes13__grupo--saidas .acoes13__titulo { color: var(--danger); }
+.acoes13__lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: var(--space-2); }
+.acoes13__item { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.acoes13__item > .acao13 { flex: 1 0 auto; }
+
+.acao13 {
+  position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; column-gap: var(--space-3);
+  width: 100%; min-height: var(--touch-target); padding: var(--space-2) var(--space-3); text-align: left;
+  background: var(--surface); border: 1px solid var(--rule-strong); border-radius: var(--radius-md); box-shadow: var(--shadow-sm);
+  color: var(--text-primary); cursor: pointer;
+  transition: background var(--motion-fast) var(--ease-out), border-color var(--motion-fast), box-shadow var(--motion-fast), transform var(--motion-fast);
+}
+.acao13:hover:not(:disabled) { background: var(--tom-wash); border-color: var(--tom); box-shadow: var(--shadow-md); }
+.acao13:focus-visible { outline: 2px solid var(--tom); outline-offset: 2px; }
+.acao13:active:not(:disabled) { transform: translateY(1px) scale(0.99); box-shadow: none; }
+.acao13__marca { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--tom-wash); color: var(--tom); flex: none; }
+.acao13__icone { width: 16px; height: 16px; }
+.acao13__corpo { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.acao13__rotulo { font-weight: var(--weight-semibold); font-size: var(--type-body); line-height: var(--leading-snug); overflow-wrap: anywhere; }
+.acao13__porque { font-size: var(--type-caption); color: var(--text-secondary); line-height: var(--leading-snug); overflow-wrap: anywhere; }
+.acao13__aviso { font-size: var(--type-caption); color: var(--warning); line-height: var(--leading-snug); }
+.acao13__aviso::before { content: '! '; font-weight: 700; }
+.acao13__selo { align-self: start; padding: 1px 8px; border-radius: var(--radius-pill); background: var(--tom); color: var(--tom-sobre); font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; font-weight: var(--weight-bold); }
+/* O que pesa agora: a borda do tom e o selo. */
+.acao13--destaque { border-color: var(--tom-linha); box-shadow: inset 3px 0 0 var(--tom), var(--shadow-sm); }
+/* Ir a outro lugar (não faz nada aqui): sem sombra, contorno tracejado. */
+.acao13--lugar { background: transparent; box-shadow: none; border-style: dashed; }
+.acao13--lugar .acao13__rotulo { font-weight: var(--weight-medium); }
+/* Saída: o tom de perigo, nunca em destaque. */
+.acao13--saida { background: transparent; box-shadow: none; border-color: var(--danger-line-soft); }
+.acao13--saida .acao13__marca { background: var(--danger-wash); color: var(--danger); }
+.acao13--saida:hover:not(:disabled) { background: var(--danger-wash); border-color: var(--danger); }
+/* Indisponível: não parece clicável, e diz por quê. */
+.acao13--bloqueada { cursor: not-allowed; background: transparent; box-shadow: none; border-style: dashed; border-color: var(--rule); color: var(--text-secondary); }
+.acao13--bloqueada .acao13__marca { background: transparent; color: var(--text-muted); box-shadow: inset 0 0 0 1px var(--rule); }
+.acao13__motivo { font-size: var(--type-caption); color: var(--text-secondary); font-style: italic; line-height: var(--leading-snug); }
+.acao13--feita { border-color: var(--success); }
+
+/* ------------------------------------------------------------ Estados globais dos botões de ação (BotaoAcao) */
+.botao:focus-visible { outline: 2px solid var(--tom); outline-offset: 2px; }
+.botao:active:not(:disabled) { transform: translateY(1px); }
+.botao--secundario:not(:disabled), .botao--principal:not(:disabled) { cursor: pointer; }
+.botao:disabled { cursor: not-allowed; }
+.acao .acao__motivo { display: flex; gap: 6px; align-items: baseline; }
+.acao__cadeado { width: 12px; height: 12px; flex: none; transform: translateY(1px); color: var(--text-muted); }
+.acao__feito { font-size: var(--type-caption); color: var(--success); font-weight: var(--weight-semibold); animation: acao13-feito var(--motion-slow) var(--ease-out); }
+@keyframes acao13-feito { from { opacity: 0; transform: translateY(-2px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .acao13, .botao { transition: none; } .acao13:active:not(:disabled), .botao:active:not(:disabled) { transform: none; } .acao__feito { animation: none; } }
+
+/* ------------------------------------------------------------ O resultado imediato (Resultado com desfecho) */
+.desfecho__escolha { margin: 0; font-size: var(--type-body); color: var(--text-secondary); }
+.desfecho__rotulo { display: block; font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; font-weight: var(--weight-bold); color: var(--text-muted); margin-bottom: 2px; }
+.desfecho__contas { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); background: var(--surface); box-shadow: inset 0 0 0 1px var(--rule); }
+.desfecho__dinheiro { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-3); }
+.desfecho__dinheiro-rotulo { flex: 1 1 8em; color: var(--text-secondary); font-size: var(--type-caption); }
+.desfecho__delta { font-weight: var(--weight-bold); font-variant-numeric: tabular-nums; }
+.desfecho__delta--saiu { color: var(--danger); }
+.desfecho__delta--entrou { color: var(--success); }
+.desfecho__agora { font-size: var(--type-caption); color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.desfecho__esperado { border-left: 3px solid var(--info); padding: var(--space-2) 0 var(--space-2) var(--space-4); background: var(--surface); border-radius: 0 var(--radius-md) var(--radius-md) 0; }
+.desfecho__esperado .mudancas__titulo { color: var(--info); }
+.desfecho__esperado ul { display: flex; flex-direction: column; gap: var(--space-2); color: var(--text-secondary); }
+.desfecho__fila { margin: 0; font-size: var(--type-caption); color: var(--text-secondary); line-height: var(--leading-snug); }
+.desfecho__botoes { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+@media (max-width: 480px) { .desfecho__botoes .botao { flex: 1 1 100%; justify-content: center; } }

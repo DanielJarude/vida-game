@@ -19,7 +19,7 @@
  * resto da vida não muda.
  */
 
-import type { AnoDetalhadoDaEmpresa, CargoExecutivo, Empresa, EstrategiaDaEmpresa, Executivo, PerfilExecutivo, ProjetoDaEmpresa, TipoEmpresa, Vida } from '../tipos';
+import type { AnoDetalhadoDaEmpresa, CargoExecutivo, DecisaoDaEmpresa13, Empresa, EstrategiaDaEmpresa, Executivo, PerfilExecutivo, ProjetoDaEmpresa, TipoEmpresa, Vida } from '../tipos';
 import type { Rng } from '../rng';
 import { clamp, rngDe } from '../rng';
 import { escrever, idade, marcarFato, temFato } from '../nucleo';
@@ -39,6 +39,11 @@ import { abalar } from './abalo';
 import {
   GANCHOS_EMPRESA, capitalDaUnidade, competenciaDaGestao, conversao, custoLocal, empresa, empresasAtivas, falir, salarioLocal, type ResultadoDoAno
 } from './empresas';
+import {
+  NOME_POSICAO_13, NOME_QUALIDADE_13, POSICOES_13, bonusDeReputacao13, fatorDaLinha13, fichaDoProduto13, garantirRivais13, idxPos, itemDoProjeto13, itemEfetivo13, leituraDoPrecoDaLinha13,
+  nomeDaLinha13, nomeDeEmpresa13, nomeDeFundo13, nomesEmUso13, produtoDoProjeto13, produtoPadrao13, produtoPequenoDoProjeto13, produtoPequeno13, produtosDoSetor13, produtosPequenos13,
+  resolverProjeto13, rivaisDe13, sobrenomeAoAcaso13, trocarRival13, type FichaDoProduto13, type Posicionamento13, type ProdutoDoSetor13
+} from './empresas13';
 
 /* ================================================================== Básico */
 
@@ -164,11 +169,11 @@ export function leituraDeExecutivo(v: Vida, desde: number, competencia: number):
 const CICLO: Record<string, number> = { expansao: 1.06, normal: 1, desaceleracao: 0.95, crise: 0.84, recuperacao: 0.98 };
 const ativos = (e: Empresa) => (e.corp?.projetos ?? []).filter(p => p.estado === 'ativo');
 const emObra = (e: Empresa) => (e.corp?.projetos ?? []).filter(p => p.estado === 'desenvolvimento');
-const usoDe = (s: SetorGrande, ps: ProjetoDaEmpresa[]) => ps.reduce((t, p) => t + (itemDoSetor(s, p.item)?.usa ?? 1) * (p.escala ?? 1), 0);
+const usoDe = (s: SetorGrande, ps: ProjetoDaEmpresa[]) => ps.reduce((t, p) => t + (itemDoProjeto13(s, p)?.usa ?? 1) * (p.escala ?? 1), 0);
 export const capacidadeEmObra = (e: Empresa) => (e.corp?.obras ?? []).reduce((t, o) => t + o.quanto, 0);
 
 /** A receita "de catálogo" (madura, aceitação média) do que está ativo, na moeda da vida. */
-const receitaPotencial = (v: Vida, s: SetorGrande, e: Empresa) => ativos(e).reduce((t, p) => t + (itemDoSetor(s, p.item)?.receita ?? 0) * (p.escala ?? 1), 0) * kDe(v);
+const receitaPotencial = (v: Vida, s: SetorGrande, e: Empresa) => ativos(e).reduce((t, p) => t + (itemDoProjeto13(s, p)?.receita ?? 0) * (p.escala ?? 1), 0) * kDe(v);
 
 /** Quanto o banco empresta à empresa (receita, o que já foi construído, o que está em obra). */
 export function limiteDeDivida(v: Vida, e: Empresa): number {
@@ -198,7 +203,7 @@ export function avaliarGrande(v: Vida, e: Empresa): number {
   const instalado = c.capacidade * s.custoCapacidade * k * 0.55 + capacidadeEmObra(e) * s.custoCapacidade * k * 0.8;
   const linhas = ativos(e).reduce((t, p) => t + p.investido * 0.35, 0);
   // O que está em obra vale pelo que já foi feito, descontado o risco do ramo (o foguete que pode não voar).
-  const pipeline = emObra(e).reduce((t, p) => { const it = itemDoSetor(s, p.item); return t + p.investido * clamp(0.85 - (it?.risco ?? 0.2) - (it?.fatal ?? 0) * 3, 0.25, 0.85); }, 0);
+  const pipeline = emObra(e).reduce((t, p) => { const it = itemDoProjeto13(s, p); return t + p.investido * clamp(0.85 - (it?.risco ?? 0.2) - (it?.fatal ?? 0) * 3, 0.25, 0.85); }, 0);
   const crescimento = clamp(1 + ((h[h.length - 1]?.receita ?? 0) - (h[0]?.receita ?? 0)) / Math.max(1, h[0]?.receita ?? 1) / 2, 0.6, 1.8);
   const operacao = Math.max(0, lucro) * s.multiplo + receita * s.multReceita * (lucro > 0 ? crescimento : crescimento * 0.5) + pipeline;
   const liquidacao = instalado + linhas + pipeline * 0.4;
@@ -229,6 +234,7 @@ function anoDaGrande(v: Vida, e: Empresa): boolean {
   const s = setorDe(e);
   if (!s) return false;
   const c = (e.corp ??= { capacidade: s.capacidadeInicial, divida: 0, projetos: [] });
+  garantirRivais13(v, e);
   const k = kDe(v);
   const r = rngDe(v.id, e.id, 'ano129', v.t);
   const ef = efeitosDaEmpresa(v, e);
@@ -248,7 +254,7 @@ function anoDaGrande(v: Vida, e: Empresa): boolean {
   // 2. Os projetos em desenvolvimento: andam, custam, tropeçam — e alguns lançam.
   let capex = 0;
   for (const p of emObra(e)) {
-    const it = itemDoSetor(s, p.item);
+    const it = itemDoProjeto13(s, p);
     if (!it) continue;
     const anda = 12 * ef.velocidade;
     const fracao = Math.min(1, anda / Math.max(1, p.meses - p.feitos));
@@ -299,18 +305,24 @@ function anoDaGrande(v: Vida, e: Empresa): boolean {
   let receita = 0;
   let variavel = 0;
   for (const p of at) {
-    const it = itemDoSetor(s, p.item);
+    const it = itemDoProjeto13(s, p);
     if (!it) continue;
     const anos = (v.t - (p.tLanc ?? v.t)) / 12;
+    // VIDA 13: o produto da linha (o mercado dele, a concorrência, o posicionamento, o preço, a qualidade, a versão).
+    const fl = fatorDaLinha13(v, e, s, p);
+    // Uma versão nova recomeça o relógio do envelhecimento longo (o de dez anos).
+    const anosDec = p.linha?.tRenov !== undefined ? (v.t - p.linha.tRenov) / 12 : anos;
     // O primeiro ano vende parte; depois, maduro; com os anos (e sem P&D), envelhece.
-    const maturidade = it.vida ? 1 : anos < 1 ? 0.6 : anos < 2 ? 0.85 : 1 - Math.max(0, anos - 10) * 0.02 * (ef.velocidade >= 1.2 ? 0.4 : 1);
-    const aceitacao = 0.3 + (p.aceitacao ?? 55) / 85;
-    const linha = it.receita * (p.escala ?? 1) * aceitacao * Math.max(0.3, maturidade) * ef.demanda * ef.preco * ciclo * rep * sorte * fatorCap * k;
+    const maturidade = (it.vida ? 1 : anos < 1 ? 0.6 : anos < 2 ? 0.85 : 1 - Math.max(0, anosDec - 10) * 0.02 * (ef.velocidade >= 1.2 ? 0.4 : 1)) * fl.envelhece;
+    const aceitacao = 0.3 + clamp((p.aceitacao ?? 55) + fl.aceitacao, 3, 99) / 85;
+    const linha = it.receita * (p.escala ?? 1) * aceitacao * Math.max(0.3, maturidade) * ef.demanda * fl.demanda * ef.preco * fl.preco * ciclo * rep * sorte * fatorCap * k;
     p.receitaAno = r1000(linha);
     receita += linha;
+    const prod = produtoDoProjeto13(s, p);
+    if (prod) (p.linha ??= {}).fatia = Math.round(Math.min(0.95, linha / Math.max(1, prod.mercado * k)) * 10000) / 10000;
     // A margem melhora com o preço (o mesmo custo, mais por unidade) e com o P&D no elétrico.
-    const margem = clamp(1 - (1 - it.margem) / ef.preco + (it.segmento === 'eletrico' ? (ef.velocidade - 1) * 0.06 : 0), 0.02, 0.95);
-    variavel += linha * (1 - margem) * ef.variavel;
+    const margem = clamp(1 - (1 - it.margem) / (ef.preco * fl.preco) + (it.segmento === 'eletrico' ? (ef.velocidade - 1) * 0.06 : 0), 0.02, 0.95);
+    variavel += linha * (1 - margem) * ef.variavel * fl.variavel;
     // O empreendimento esgota: depois da vida dele, sai de linha.
     if (it.vida && anos + 1 >= it.vida) { p.estado = 'descontinuado'; (p.marcos ??= []).push({ t: v.t, texto: 'Esgotado: todas as unidades vendidas.' }); causas.push({ texto: `${p.nome} esgotou: as equipes precisam de um empreendimento novo.`, acaso: false, tom: 'neutro' }); }
   }
@@ -339,7 +351,7 @@ function anoDaGrande(v: Vida, e: Empresa): boolean {
       custoExtra += receita * i * (x.credito ? ef.inadimplencia : 1);
     }
     if (x.reputacao) e.reputacao = clamp(e.reputacao - x.reputacao);
-    causas.push({ texto: x.texto, acaso: true, tom: x.bom ? 'bom' : 'ruim' });
+    causas.push({ texto: textoComRival(e, x.id, x.texto, r), acaso: true, tom: x.bom ? 'bom' : 'ruim' });
   }
 
   // 5. Os custos.
@@ -382,7 +394,7 @@ function anoDaGrande(v: Vida, e: Empresa): boolean {
 
   // 7. A reputação anda com o que a empresa entrega (as alavancas, a diretoria, os lançamentos).
   const aceitMedia = at.length ? at.reduce((t, p) => t + (p.aceitacao ?? 50), 0) / at.length : 50;
-  const alvo = clamp(45 + ef.reputacao * 5 + (aceitMedia - 50) / 2 + (lucro < 0 ? -5 : 0), 5, 95);
+  const alvo = clamp(45 + ef.reputacao * 5 + (aceitMedia - 50) / 2 + (lucro < 0 ? -5 : 0) + bonusDeReputacao13(s, e), 5, 95);
   e.reputacao = clamp(Math.round(e.reputacao + (alvo - e.reputacao) * 0.2 + r.normal() * 2));
   c.participacao = receita > 0 ? Math.min(0.9, receita / (s.mercado * k)) : 0;
 
@@ -405,6 +417,7 @@ function anoDaGrande(v: Vida, e: Empresa): boolean {
 
   const valor = avaliarGrande(v, e);
   const produtividade = Math.round(clamp(teto > 0 ? Math.min(uso, teto) / teto * 100 * (0.6 + aceitMedia / 125) : 0, 0, 100));
+  fecharDecisoes13(v, e, causas, r1000(receita), lucro);
   registrarAno(e, { t: v.t, receita: r1000(receita), custos: r1000(custos + imposto), lucro, fluxo: r1000(e.caixa - caixaAntes), investimentos: r1000(capex), produtividade, reputacao: e.reputacao, valor, participacao: c.participacao, fatores: { ciclo, sorte, demanda: ef.demanda, preco: ef.preco, cap: fatorCap }, causas });
   e.historico = [...(e.historico ?? []), lucro].slice(-6);
   e.ultimo = { t: v.t, publico: produtividade, receita: r1000(receita), custos: r1000(custos), imposto: r1000(imposto), resultado: lucro, distribuido, nota: causas.find(x => x.acaso)?.texto };
@@ -497,12 +510,22 @@ function delegado(v: Vida, e: Empresa): string[] {
       .sort((a, b) => (b.receita * b.margem / b.capex) - (a.receita * a.margem / a.capex));
     const escolhido = acerta ? op[0] : op[op.length - 1];
     if (escolhido && (acerta || perfil !== 'conservador')) {
-      iniciarProjeto(v, e, escolhido);
-      out.push(`${nome} começou ${escolhido.nome.charAt(0).toLowerCase()}${escolhido.nome.slice(1)} (${fmtc(escolhido.capex * k)}).`);
+      // VIDA 13: a gestão lança o produto de nascença do item (o neutro: as contas são as da 12.9), com marca própria.
+      const prod = produtoPadrao13(s.id, escolhido.id);
+      const p = iniciarProjeto(v, e, escolhido, undefined, prod);
+      out.push(`${nome} começou ${prod ? `${p.nome} (${minusc(prod.nome)})` : minusc(escolhido.nome)} (${fmtc(escolhido.capex * k)}).`);
     } else if (livreCap <= 0 && e.caixa > s.custoCapacidade * k + Math.min(...s.itens.map(it => it.capex)) * k * (1 - s.alavancagem) && (perfil === 'expansao' || acerta)) {
       (e.corp.obras ??= []).push({ quanto: 1, faltam: s.mesesCapacidade });
       e.caixa -= r1000(s.custoCapacidade * k);
       out.push(`${nome} mandou construir mais ${s.unidade[0] === 'fábrica' ? 'uma' : 'uma unidade de'} ${s.unidade[0]}.`);
+    }
+  }
+  // VIDA 13: a gestão que acerta renova a linha que envelheceu (se o caixa da empresa cobre a versão nova).
+  if (s && e.corp && acerta) {
+    const velha = ativos(e).filter(p => produtoDoProjeto13(s, p) && fatorDaLinha13(v, e, s, p).envelhece < 0.9).sort((a, b) => (b.receitaAno ?? 0) - (a.receitaAno ?? 0))[0];
+    if (velha && disponibilidadeEmpresa129(v, e, 'melhorar', velha.id).ok && e.caixa > custoEmpresa129(v, e, 'melhorar', velha.id) * 2) {
+      decidirEmpresa129Base(v, e, 'melhorar', velha.id);
+      out.push(`${nome} lançou uma versão nova de ${velha.nome}: a linha estava envelhecendo.`);
     }
   }
   return out;
@@ -522,8 +545,12 @@ function ajustePequena(v: Vida, e: Empresa): { procura: number; variavel: number
     if (p.estado !== 'ativo') continue;
     const pp = PROJETOS_PEQUENOS.find(x => x.id === p.item);
     if (!pp) continue;
-    procura *= 1 + pp.ganho * clamp(((p.aceitacao ?? 50) - 45) / 40, -0.5, 1.2);
-    if (pp.variavel) variavel *= pp.variavel;
+    // VIDA 13: o produto escolhido (o brunch, o pilates, o spa) tem o ganho, o custo e o mercado dele; sem produto, o de sempre.
+    const x = p.produto ? produtoPequeno13(e.tipo, p.produto) : undefined;
+    const mercado = x ? clamp(Math.pow(1 + x.cresc, Math.max(0, (v.t - (p.tLanc ?? v.t)) / 12)), 0.7, 1.5) * (1 + (3 - x.conc) * 0.03) : 1;
+    procura *= 1 + (x?.ganho ?? pp.ganho) * mercado * clamp(((p.aceitacao ?? 50) - 45) / 40, -0.5, 1.2);
+    const vr = x ? x.variavel : pp.variavel;
+    if (vr) variavel *= vr;
   }
   // A receita de referência (o último ano, nos preços da cidade da empresa; ou a de uma casa madura).
   const receitaRef = e.ultimo?.receita ? e.ultimo.receita / k : t.publico * e.unidades * t.ticket[e.preco] * custoLocal(e.municipioId);
@@ -571,6 +598,7 @@ function depoisDaPequena(v: Vida, e: Empresa, contas: ResultadoDoAno, caixaAntes
     const fase = v.economia?.fase ?? 'normal';
     if (fase === 'crise' || fase === 'expansao') causas.push({ texto: fase === 'crise' ? 'A economia em crise tirou clientes de todo o ramo — não foi só aqui.' : 'A economia em expansão ajudou o ramo inteiro.', acaso: true, tom: fase === 'crise' ? 'ruim' : 'bom' });
   }
+  fecharDecisoes13(v, e, causas, u?.receita ?? 0, u?.resultado ?? 0);
   const t = tipoDeEmpresa(e.tipo);
   const teto = t.capacidade * e.unidades;
   registrarAno(e, { t: v.t, receita: u?.receita ?? 0, custos: u?.custos ?? 0, lucro: u?.resultado ?? 0, fluxo: r1000(e.caixa - caixaAntes), investimentos: 0, produtividade: Math.round(clamp(contas.publico / Math.max(1, teto) * 100, 0, 100)), reputacao: e.reputacao, valor: e.avaliacao ?? 0, causas });
@@ -590,16 +618,45 @@ function explicarVariacao(v: Vida, e: Empresa, d: number): string {
 
 /* ================================================================ Decisões */
 
-export type OqueEmpresa129 = 'alavanca' | 'projeto' | 'ampliar' | 'descontinuar' | 'capacidade' | 'concorrente' | 'captar' | 'amortizar' | 'aportar' | 'investidores' | 'executivo' | 'demitir' | 'ceo' | 'delegar';
+export type OqueEmpresa129 = 'alavanca' | 'projeto' | 'ampliar' | 'descontinuar' | 'capacidade' | 'concorrente' | 'captar' | 'amortizar' | 'aportar' | 'investidores' | 'executivo' | 'demitir' | 'ceo' | 'delegar'
+  /** VIDA 13: uma linha nova com o produto escolhido (a capacidade que faltar + o projeto), e as decisões sobre uma linha à venda. */
+  | 'linha' | 'melhorar' | 'qualidade' | 'reposicionar' | 'preco';
 
 const requisitoOk = (e: Empresa, it: ItemDeProjeto) => !it.requer || ativos(e).some(p => new RegExp(`^(${it.requer})$`).test(p.item));
 const jaDecidiu = (v: Vida, e: Empresa, chave: string) => v.anoAtual.acoes.includes(`e129:${e.id}:${chave}`);
 const marcar = (v: Vida, e: Empresa, chave: string) => v.anoAtual.acoes.push(`e129:${e.id}:${chave}`);
+const projetoDe = (e: Empresa, id: string) => [...(e.corp?.projetos ?? []), ...(e.projetos ?? [])].find(x => x.id === id);
+/** Quanto da capacidade (pronta e em obra) ainda está livre. */
+const capacidadeLivre = (s: SetorGrande, e: Empresa) => (e.corp?.capacidade ?? 0) + capacidadeEmObra(e) - usoDe(s, [...ativos(e), ...emObra(e)]);
+/** Quantas unidades de capacidade uma linha nova precisa construir (o que já está livre conta). */
+const unidadesParaLinha = (s: SetorGrande, e: Empresa, usa: number) => Math.max(1, Math.ceil(usa - Math.max(0, capacidadeLivre(s, e)) - 1e-9));
+const minusc = (t: string) => t.charAt(0).toLowerCase() + t.slice(1);
+
+/** O produto de uma linha antiga (sem produto): adota o de nascença do item — o nome fica, o relógio da versão recomeça. */
+function adotarProduto(v: Vida, s: SetorGrande, p: ProjetoDaEmpresa): ProdutoDoSetor13 | undefined {
+  const atual = produtoDoProjeto13(s, p);
+  if (atual) return atual;
+  const prod = produtoPadrao13(s.id, p.item);
+  if (prod) { p.produto = prod.id; (p.linha ??= {}).tRenov = v.t; }
+  return prod;
+}
+/** O produto de uma linha (sem adotar): o dela ou o de nascença do item. */
+const produtoDaLinha = (s: SetorGrande, p: ProjetoDaEmpresa) => produtoDoProjeto13(s, p) ?? produtoPadrao13(s.id, p.item);
 
 /** Os valores de aporte oferecidos (o que a empresa pede; 5% e 15% do valor dela). */
 export function aportesPossiveis(v: Vida, e: Empresa): number[] {
   const base = Math.max(e.avaliacao ?? 0, capitalDaUnidade(e) * conversao(v, e));
   return [...new Set([e.corp?.pedido?.valor ?? 0, r1000(base * 0.05), r1000(base * 0.15)].filter(x => x > 0))].sort((a, b) => a - b);
+}
+
+/** O custo de lançar um produto pequeno (fração do capital de uma unidade, como o projeto de sempre). */
+function custoPequeno(v: Vida, e: Empresa, capex: number) { return r1000(capex * capitalDaUnidade(e) * conversao(v, e) * e.unidades ** 0.5); }
+/** O alvo de um lançamento pequeno: um produto do tipo ou um projeto de sempre ('produto', 'online'). */
+function lancamentoPequeno(e: Empresa, alvo: string): { nome: string; capex: number; meses: number; item: string; produto?: string } | undefined {
+  const x = produtoPequeno13(e.tipo, alvo);
+  if (x) return { nome: x.nome, capex: x.capex, meses: x.meses, item: x.item, produto: x.id };
+  const pp = PROJETOS_PEQUENOS.find(y => y.id === alvo);
+  return pp ? { nome: pp.nome[e.tipo] ?? pp.nome.padrao, capex: pp.capex, meses: pp.meses, item: pp.id } : undefined;
 }
 
 /** O que custa cada decisão (para a tela dizer antes). */
@@ -609,11 +666,28 @@ export function custoEmpresa129(v: Vida, e: Empresa, oque: OqueEmpresa129, alvo 
   switch (oque) {
     case 'alavanca': { const [a, o] = alvo.split(':'); const op = alavancasDe(e).find(x => x.id === a)?.opcoes.find(x => x.id === o); return op?.custo ? r1000(op.custo * (s ? baseDoSetor(s) * k : capitalDaUnidade(e) * k)) : 0; }
     case 'projeto': {
-      if (s) { const it = itemDoSetor(s, alvo); return it ? r1000(it.capex * k) : 0; }
-      const pp = PROJETOS_PEQUENOS.find(x => x.id === alvo);
-      return pp ? r1000(pp.capex * capitalDaUnidade(e) * k * e.unidades ** 0.5) : 0;
+      if (s) { const { it, prod } = resolverProjeto13(s, alvo); return it ? r1000(itemEfetivo13(it, prod).capex * k) : 0; }
+      const l = lancamentoPequeno(e, alvo);
+      return l ? custoPequeno(v, e, l.capex) : 0;
     }
-    case 'ampliar': { const p = (e.corp?.projetos ?? []).find(x => x.id === alvo); const it = p && s ? itemDoSetor(s, p.item) : undefined; return it ? r1000(it.capex * 0.4 * k) : 0; }
+    case 'linha': {
+      if (!s) return 0;
+      const { it, prod } = resolverProjeto13(s, alvo);
+      if (!it) return 0;
+      const ie = itemEfetivo13(it, prod);
+      return r1000((unidadesParaLinha(s, e, ie.usa) * s.custoCapacidade + ie.capex) * k);
+    }
+    case 'ampliar': { const p = (e.corp?.projetos ?? []).find(x => x.id === alvo); const it = p && s ? itemDoProjeto13(s, p) : undefined; return it ? r1000(it.capex * 0.4 * k) : 0; }
+    case 'melhorar': case 'qualidade': case 'reposicionar': {
+      const [id] = alvo.split(':');
+      const p = projetoDe(e, id);
+      if (!p) return 0;
+      if (!s) { const x = produtoPequenoDoProjeto13(e.tipo, p); return x && oque === 'melhorar' ? custoPequeno(v, e, x.capex * 0.5) : 0; }
+      const it = itemDoProjeto13(s, p);
+      if (!it) return 0;
+      const fr = oque === 'melhorar' ? 0.25 : oque === 'qualidade' ? 0.12 * ((p.linha?.qualidade ?? 0) + 1) : 0.08;
+      return r1000(it.capex * fr * k);
+    }
     case 'capacidade': return s ? r1000(s.custoCapacidade * k) : 0;
     case 'concorrente': return r1000(Math.max(e.avaliacao ?? 0, s ? baseDoSetor(s) * k : 0) * 0.3);
     case 'captar': return r1000(creditoLivre(v, e) * 0.5);
@@ -640,34 +714,81 @@ export function disponibilidadeEmpresa129(v: Vida, e: Empresa | undefined, oque:
       if (jaDecidiu(v, e, `al:${a}`)) return { ok: false, motivo: 'Já mudou isso este ano: deixe o efeito aparecer.' };
       return custo ? podePagarPelaEmpresa(v, e, custo, 'A mudança custa') : { ok: true };
     }
-    case 'projeto': {
+    case 'projeto': case 'linha': {
       if (s) {
-        const it = itemDoSetor(s, alvo);
-        if (!it) return { ok: false, motivo: 'Projeto desconhecido.' };
+        const { it: base, prod } = resolverProjeto13(s, alvo);
+        if (!base) return { ok: false, motivo: 'Projeto desconhecido.' };
+        const it = itemEfetivo13(base, prod);
         if (!requisitoOk(e, it)) return { ok: false, motivo: 'Precisa antes de outro projeto pronto (o foguete antes da cápsula, o lançador antes dos satélites).' };
-        if (emObra(e).length >= Math.max(2, Math.floor((e.corp?.capacidade ?? 1) + capacidadeEmObra(e)))) return { ok: false, motivo: 'Já há projetos demais em andamento para esta estrutura.' };
-        const livre = (e.corp?.capacidade ?? 0) + capacidadeEmObra(e) - usoDe(s, [...ativos(e), ...emObra(e)]);
-        if (it.usa > livre + 1e-9) return { ok: false, motivo: `Não há ${s.unidade[0]} livre para produzir isto: amplie a capacidade antes (ou descontinue algo).` };
+        if (emObra(e).length >= Math.max(2, Math.floor((e.corp?.capacidade ?? 1) + capacidadeEmObra(e) + (oque === 'linha' ? unidadesParaLinha(s, e, it.usa) : 0)))) return { ok: false, motivo: 'Já há projetos demais em andamento para esta estrutura.' };
+        if (prod && ativos(e).concat(emObra(e)).some(p => p.produto === prod.id) && jaDecidiu(v, e, `lan:${prod.id}`)) return { ok: false, motivo: 'Já lançou isso este ano.' };
+        if (oque === 'linha') {
+          if ((e.corp?.obras ?? []).length >= 2) return { ok: false, motivo: `Já há duas obras de capacidade em andamento: espere uma ficar pronta.` };
+          const n = unidadesParaLinha(s, e, it.usa);
+          // A capacidade nova é paga já; o projeto, ao longo dos meses (o primeiro quarto para começar).
+          return podePagarPelaEmpresa(v, e, r1000(n * s.custoCapacidade * kDe(v) + it.capex * kDe(v) * 0.25), `${n > 1 ? `${n} ${s.unidade[1]} novas` : `A ${s.unidade[0]} nova`} e o primeiro ano do produto custam uns`);
+        }
+        if (it.usa > capacidadeLivre(s, e) + 1e-9) return { ok: false, motivo: `Não há ${s.unidade[0]} livre para produzir isto: escolha "nova ${s.unidade[0]}" para este produto, amplie a capacidade ou descontinue algo.` };
         // O projeto se paga ao longo dos meses; para começar, a empresa precisa cobrir ao menos um quarto (o primeiro ano).
         return podePagarPelaEmpresa(v, e, r1000(custo * 0.25), 'O primeiro ano do projeto custa uns');
       }
-      const pp = PROJETOS_PEQUENOS.find(x => x.id === alvo);
-      if (!pp) return { ok: false, motivo: 'Projeto desconhecido.' };
-      if ((e.projetos ?? []).some(p => p.item === alvo && (p.estado === 'ativo' || p.estado === 'desenvolvimento'))) return { ok: false, motivo: 'Já existe.' };
+      if (oque === 'linha') return { ok: false, motivo: 'Na empresa pequena, crescer é abrir outra unidade.' };
+      const l = lancamentoPequeno(e, alvo);
+      if (!l) return { ok: false, motivo: 'Projeto desconhecido.' };
       if (e.tipo === 'museu' || e.tipo === 'zoologico') return { ok: false, motivo: 'Não se aplica a esta casa.' };
+      const igual = (p: ProjetoDaEmpresa) => (l.produto ? (p.produto ?? produtoPequenoDoProjeto13(e.tipo, p)?.id) === l.produto : p.item === l.item && !p.produto);
+      if ((e.projetos ?? []).some(p => igual(p) && (p.estado === 'ativo' || p.estado === 'desenvolvimento'))) return { ok: false, motivo: 'Já existe: já está no ar ou sendo preparado.' };
+      if ((e.projetos ?? []).filter(p => p.estado === 'ativo' || p.estado === 'desenvolvimento').length >= 2 + e.unidades) return { ok: false, motivo: `Já são ${2 + e.unidades} produtos e serviços novos para ${e.unidades > 1 ? `${e.unidades} unidades` : 'uma unidade'}: mais um dispersa a equipe. Descontinue um antes.` };
       return podePagarPelaEmpresa(v, e, custo, 'O projeto custa');
     }
     case 'ampliar': {
       const p = (e.corp?.projetos ?? []).find(x => x.id === alvo);
       if (!s || !p || p.estado !== 'ativo') return { ok: false, motivo: 'Só o que já está à venda.' };
-      if ((p.aceitacao ?? 0) < 45) return { ok: false, motivo: 'Com essa aceitação, ampliar é produzir encalhe.' };
-      const it = itemDoSetor(s, p.item)!;
-      const livre = (e.corp?.capacidade ?? 0) + capacidadeEmObra(e) - usoDe(s, [...ativos(e), ...emObra(e)]);
-      if (it.usa * 0.5 > livre + 1e-9) return { ok: false, motivo: `Ampliar pede ${s.unidade[0]} livre: construa capacidade antes.` };
-      if (jaDecidiu(v, e, `amp:${alvo}`)) return { ok: false, motivo: 'Já ampliado este ano.' };
-      return podePagarPelaEmpresa(v, e, custo, 'Ampliar custa');
+      if ((p.aceitacao ?? 0) < 45) return { ok: false, motivo: 'Com essa aceitação, expandir é produzir encalhe.' };
+      const it = itemDoProjeto13(s, p)!;
+      if (it.usa * 0.5 > capacidadeLivre(s, e) + 1e-9) return { ok: false, motivo: `Expandir pede ${s.unidade[0]} livre: construa capacidade antes.` };
+      if (jaDecidiu(v, e, `amp:${alvo}`)) return { ok: false, motivo: 'Já expandida este ano.' };
+      return podePagarPelaEmpresa(v, e, custo, 'Expandir custa');
     }
-    case 'descontinuar': { const p = [...(e.corp?.projetos ?? []), ...(e.projetos ?? [])].find(x => x.id === alvo); return p && (p.estado === 'ativo' || p.estado === 'desenvolvimento') ? { ok: true } : { ok: false, motivo: 'Não se aplica.' }; }
+    case 'melhorar': {
+      const p = projetoDe(e, alvo);
+      if (!p || p.estado !== 'ativo') return { ok: false, motivo: 'Só o que já está à venda.' };
+      if (jaDecidiu(v, e, `mel:${alvo}`)) return { ok: false, motivo: 'Uma versão nova por ano.' };
+      if (!s && !produtoPequenoDoProjeto13(e.tipo, p)) return { ok: false, motivo: 'Não se aplica.' };
+      if (v.t - (p.linha?.tRenov ?? p.tLanc ?? v.t) < 12) return { ok: false, motivo: 'A versão atual acabou de sair: espere o mercado responder.' };
+      return podePagarPelaEmpresa(v, e, custo, 'A versão nova custa');
+    }
+    case 'qualidade': {
+      const p = projetoDe(e, alvo);
+      if (!s || !p || p.estado !== 'ativo') return { ok: false, motivo: 'Só nas linhas à venda das empresas grandes.' };
+      if ((p.linha?.qualidade ?? 0) >= 3) return { ok: false, motivo: 'Já é referência: mais qualidade não aparece para o público.' };
+      if (jaDecidiu(v, e, `q:${alvo}`)) return { ok: false, motivo: 'Um degrau de qualidade por ano: a fábrica precisa absorver.' };
+      return podePagarPelaEmpresa(v, e, custo, 'O investimento em qualidade custa');
+    }
+    case 'reposicionar': {
+      const [id, pos] = alvo.split(':') as [string, Posicionamento13];
+      const p = projetoDe(e, id);
+      if (!s || !p || p.estado !== 'ativo') return { ok: false, motivo: 'Só nas linhas à venda das empresas grandes.' };
+      if (!POSICOES_13.includes(pos)) return { ok: false, motivo: 'Escolha um posicionamento.' };
+      const prod = produtoDaLinha(s, p);
+      if (!prod) return { ok: false, motivo: 'Não se aplica.' };
+      if ((p.linha?.pos ?? prod.pos) === pos) return { ok: false, motivo: 'Já está assim.' };
+      if (Math.abs(idxPos(pos) - idxPos(p.linha?.pos ?? prod.pos)) > 1) return { ok: false, motivo: 'Um degrau de cada vez: o público não acredita num salto do popular ao premium.' };
+      if (jaDecidiu(v, e, `pos:${id}`)) return { ok: false, motivo: 'Já reposicionou esta linha este ano.' };
+      return podePagarPelaEmpresa(v, e, custo, 'Reposicionar (embalagem, campanha, rede) custa');
+    }
+    case 'preco': {
+      const [id, dir] = alvo.split(':');
+      const p = projetoDe(e, id);
+      if (!s || !p || p.estado !== 'ativo') return { ok: false, motivo: 'Só nas linhas à venda das empresas grandes.' };
+      if (dir !== '+' && dir !== '-') return { ok: false, motivo: 'Subir ou baixar.' };
+      const x = p.linha?.preco ?? 0;
+      if (dir === '+' && x >= 0.3 - 1e-9) return { ok: false, motivo: 'Já está 30% acima do mercado: mais que isso, ninguém compra.' };
+      if (dir === '-' && x <= -0.2 + 1e-9) return { ok: false, motivo: 'Já está 20% abaixo do mercado: mais que isso é vender no prejuízo.' };
+      if (jaDecidiu(v, e, `pr:${id}`)) return { ok: false, motivo: 'Uma mudança de preço por linha por ano: o mercado precisa de tempo para responder.' };
+      return { ok: true };
+    }
+    case 'descontinuar': { const p = projetoDe(e, alvo); return p && (p.estado === 'ativo' || p.estado === 'desenvolvimento') ? { ok: true } : { ok: false, motivo: 'Não se aplica.' }; }
     case 'capacidade':
       if (!s) return { ok: false, motivo: 'Na empresa pequena, crescer é abrir outra unidade.' };
       if ((e.corp?.obras ?? []).length >= 2) return { ok: false, motivo: 'Já há duas obras de capacidade em andamento.' };
@@ -681,7 +802,7 @@ export function disponibilidadeEmpresa129(v: Vida, e: Empresa | undefined, oque:
       if (!s) return { ok: false, motivo: 'Só nas empresas grandes.' };
       if (custo < 1000) return { ok: false, motivo: 'O banco não empresta mais a esta empresa agora.' };
       return jaDecidiu(v, e, 'captar') ? { ok: false, motivo: 'Já captou este ano.' } : { ok: true };
-    case 'amortizar': return s && (e.corp?.divida ?? 0) > 0 && e.caixa > 0 ? { ok: true } : { ok: false, motivo: 'Sem dívida a pagar, ou sem caixa.' };
+    case 'amortizar': return s && (e.corp?.divida ?? 0) > 0 && e.caixa > 0 ? { ok: true } : { ok: false, motivo: s && !(e.corp?.divida) ? 'A empresa não deve nada.' : 'Sem caixa para pagar a dívida.' };
     case 'aportar':
       if (!aportesPossiveis(v, e).includes(custo)) return { ok: false, motivo: 'Escolha um valor.' };
       return okDePagar(v, custo, 'O aporte é de');
@@ -708,18 +829,127 @@ export function disponibilidadeEmpresa129(v: Vida, e: Empresa | undefined, oque:
   }
 }
 
-function iniciarProjeto(v: Vida, e: Empresa, it: ItemDeProjeto, id?: string): ProjetoDaEmpresa {
+function iniciarProjeto(v: Vida, e: Empresa, it: ItemDeProjeto, id?: string, prod?: ProdutoDoSetor13): ProjetoDaEmpresa {
   const k = kDe(v);
-  const p: ProjetoDaEmpresa = { id: id ?? `pj${v.seq++}`, item: it.id, nome: it.nome.replace(/^(Um|Uma|A|O) /, m => m.charAt(0).toUpperCase() + m.slice(1)), estado: 'desenvolvimento', investido: 0, orcamento: r1000(it.capex * k), meses: it.meses, feitos: 0, tInicio: v.t, escala: 1, marcos: [{ t: v.t, texto: 'Projeto aprovado.' }] };
+  const ie = itemEfetivo13(it, prod);
+  const pid = id ?? `pj${v.seq++}`;
+  // VIDA 13: a linha com produto ganha uma marca própria (que a empresa ainda não usa); sem produto, o nome do item, como antes.
+  const nome = prod
+    ? nomeDaLinha13(rngDe(e.id, pid, 'marca13'), prod, (e.corp?.projetos ?? []).map(x => x.nome).concat(e.nome))
+    : it.nome.replace(/^(Um|Uma|A|O) /, m => m.charAt(0).toUpperCase() + m.slice(1));
+  const p: ProjetoDaEmpresa = { id: pid, item: it.id, nome, estado: 'desenvolvimento', investido: 0, orcamento: r1000(ie.capex * k), meses: ie.meses, feitos: 0, tInicio: v.t, escala: 1, marcos: [{ t: v.t, texto: 'Projeto aprovado.' }], ...(prod ? { produto: prod.id } : {}) };
   (e.corp ??= { capacidade: 0, divida: 0, projetos: [] }).projetos.push(p);
   return p;
 }
 
+/* ---------------------------------------------- O registro da decisão (o que foi escolhido, o custo, o que mudou) */
+
+interface Foto { caixa: number; divida: number; conta: number; capacidade: number; obra: number; parte: number; reputacao: number; linhas: number; emObra: number }
+const foto = (v: Vida, e: Empresa): Foto => ({ caixa: e.caixa, divida: e.corp?.divida ?? 0, conta: v.financas.conta, capacidade: e.corp?.capacidade ?? 0, obra: capacidadeEmObra(e), parte: e.parte, reputacao: e.reputacao, linhas: ativos(e).length + (e.projetos ?? []).filter(p => p.estado === 'ativo').length, emObra: emObra(e).length + (e.projetos ?? []).filter(p => p.estado === 'desenvolvimento').length });
+
+function tituloDaDecisao(e: Empresa, oque: OqueEmpresa129, alvo: string): { titulo: string; linha?: string } {
+  const s = setorDe(e);
+  const [id, sub] = alvo.split(':');
+  const p = projetoDe(e, id);
+  const nomeDoAlvo = () => (s ? resolverProjeto13(s, alvo).prod?.nome ?? resolverProjeto13(s, alvo).it?.nome : lancamentoPequeno(e, alvo)?.nome) ?? alvo;
+  switch (oque) {
+    case 'alavanca': { const al = alavancasDe(e).find(x => x.id === id); return { titulo: `${al?.rotulo ?? id}: ${minusc(al?.opcoes.find(o => o.id === sub)?.rotulo ?? sub)}` }; }
+    case 'projeto': return { titulo: `Lançar: ${minusc(nomeDoAlvo())}` };
+    case 'linha': return { titulo: `Nova ${s?.unidade[0] ?? 'linha'} para ${minusc(nomeDoAlvo())}` };
+    case 'ampliar': return { titulo: `Expandir ${p?.nome ?? ''}`, linha: id };
+    case 'melhorar': return { titulo: `Versão nova de ${p?.nome ?? ''}`, linha: id };
+    case 'qualidade': return { titulo: `Qualidade de ${p?.nome ?? ''}`, linha: id };
+    case 'reposicionar': return { titulo: `${p?.nome ?? ''}: posicionamento ${NOME_POSICAO_13[sub as Posicionamento13] ?? sub}`, linha: id };
+    case 'preco': return { titulo: `${p?.nome ?? ''}: preço ${sub === '+' ? 'para cima' : 'para baixo'}`, linha: id };
+    case 'descontinuar': return { titulo: `${p?.estado === 'desenvolvimento' ? 'Cancelar' : 'Descontinuar'} ${p?.nome ?? ''}` };
+    case 'capacidade': return { titulo: `Mais uma ${s?.unidade[0] ?? 'unidade'}` };
+    case 'concorrente': return { titulo: 'Comprar uma concorrente' };
+    case 'captar': return { titulo: 'Crédito para a empresa' };
+    case 'amortizar': return { titulo: 'Pagar dívida da empresa' };
+    case 'aportar': return { titulo: 'Aporte do seu dinheiro' };
+    case 'investidores': return { titulo: 'Rodada com investidores' };
+    case 'executivo': return { titulo: `Diretoria: ${NOME_CARGO[id as CargoExecutivo]?.toLowerCase() ?? id}` };
+    case 'demitir': return { titulo: `Dispensar: ${NOME_CARGO[id as CargoExecutivo]?.toLowerCase() ?? id}` };
+    case 'ceo': return { titulo: ehGrande(e) ? 'Nova presidência' : 'Nova gestão' };
+    case 'delegar': return { titulo: alvo === 'sim' ? 'Delegar a estratégia' : 'Retomar a estratégia' };
+  }
+  return { titulo: oque };
+}
+
+/** O que mudou na hora (as diferenças que importam), em frases curtas. */
+function mudancas(e: Empresa, a: Foto, d: Foto): string[] {
+  const out: string[] = [];
+  const s = setorDe(e);
+  if (Math.abs(d.caixa - a.caixa) >= 1000) out.push(`Caixa da empresa: ${fmtc(a.caixa)} → ${fmtc(d.caixa)}`);
+  if (Math.abs(d.divida - a.divida) >= 1000) out.push(`Dívida da empresa: ${fmtc(a.divida)} → ${fmtc(d.divida)}`);
+  if (Math.abs(d.conta - a.conta) >= 1) out.push(`Sua conta: ${fmtc(a.conta)} → ${fmtc(d.conta)}`);
+  if (s && d.capacidade !== a.capacidade) out.push(`${s.unidade[1].charAt(0).toUpperCase()}${s.unidade[1].slice(1)}: ${a.capacidade} → ${d.capacidade}`);
+  if (s && d.obra !== a.obra) out.push(`Em obra: ${a.obra} → ${d.obra} ${d.obra === 1 ? s.unidade[0] : s.unidade[1]} (prontas em uns ${s.mesesCapacidade} meses)`);
+  if (d.linhas !== a.linhas) out.push(`Linhas à venda: ${a.linhas} → ${d.linhas}`);
+  if (d.emObra !== a.emObra) out.push(`Em desenvolvimento: ${a.emObra} → ${d.emObra}`);
+  if (d.parte !== a.parte) out.push(`Sua parte: ${Math.round(a.parte * 1000) / 10}% → ${Math.round(d.parte * 1000) / 10}%`);
+  if (Math.round(d.reputacao) !== Math.round(a.reputacao)) out.push(`Reputação: ${Math.round(a.reputacao)} → ${Math.round(d.reputacao)}`);
+  return out;
+}
+
 export function decidirEmpresa129(v: Vida, e: Empresa, oque: OqueEmpresa129, alvo = ''): string {
+  const antes = foto(v, e);
+  const custo = custoEmpresa129(v, e, oque, alvo);
+  const { titulo, linha } = tituloDaDecisao(e, oque, alvo);
+  const pj = linha ? projetoDe(e, linha) : undefined;
+  const receitaAntes = pj?.receitaAno;
+  const texto = decidirEmpresa129Base(v, e, oque, alvo);
+  const depois = foto(v, e);
+  const mudou = mudancas(e, antes, depois);
+  // De onde saiu o dinheiro: o caixa e o crédito da empresa e (o que faltou) a sua conta.
+  const pago = custo > 0 && !['aportar', 'captar', 'amortizar'].includes(oque)
+    ? { caixa: Math.max(0, antes.caixa - depois.caixa), credito: Math.max(0, depois.divida - antes.divida), conta: Math.max(0, antes.conta - depois.conta) }
+    : undefined;
+  const reg: DecisaoDaEmpresa13 = { t: v.t, titulo, custo, ...(pago ? { pago } : {}), mudou, esperado: texto, ...(linha ? { linha } : {}), ...(receitaAntes ? { antes: receitaAntes } : {}) };
+  e.decisoes13 = [...(e.decisoes13 ?? []), reg].slice(-8);
+  const partes = pago ? [pago.caixa && `${fmtc(pago.caixa)} do caixa da empresa`, pago.credito && `${fmtc(pago.credito)} de crédito da empresa`, pago.conta && `${fmtc(pago.conta)} da sua conta`].filter(Boolean) : [];
+  const pagoTxt = partes.length ? ` Pago agora: ${partes.join(', ')}.` : '';
+  const caixaTxt = Math.abs(depois.caixa - antes.caixa) >= 1000 ? ` Caixa da empresa: ${fmtc(antes.caixa)} → ${fmtc(depois.caixa)}.` : '';
+  return `${texto}${pagoTxt}${caixaTxt}`;
+}
+
+/** No fechamento do ano: o que aconteceu com as decisões do ano que passou (e as das linhas viram causa no painel). */
+function fecharDecisoes13(v: Vida, e: Empresa, causas: AnoDetalhadoDaEmpresa['causas'], receita: number, lucro: number): void {
+  const ant = e.anos?.[e.anos.length - 1];
+  for (const d of e.decisoes13 ?? []) {
+    if (d.ocorreu || d.t >= v.t) continue;
+    const p = d.linha ? projetoDe(e, d.linha) : undefined;
+    if (p) {
+      d.ocorreu = p.estado === 'ativo' && p.receitaAno !== undefined
+        ? `${p.nome} vendeu ${fmtc(p.receitaAno)} em ${anoDe(v.t)}${d.antes ? ` (no ano anterior, ${fmtc(d.antes)})` : ''}; o mercado recebe ${leituraDaAceitacao(p.aceitacao ?? 50)}${p.linha?.fatia ? `; fatia de ${(p.linha.fatia * 100).toFixed(1).replace('.', ',')}% do mercado do produto` : ''}.`
+        : p.estado === 'desenvolvimento' ? `${p.nome}: ${Math.round(clamp(p.feitos / Math.max(1, p.meses), 0, 1) * 100)}% do desenvolvimento feito.` : `${p.nome} está fora de linha.`;
+      if (p.estado === 'ativo' && d.antes && p.receitaAno !== undefined) {
+        const dv = p.receitaAno / Math.max(1, d.antes) - 1;
+        causas.push({ texto: `${d.titulo}: as vendas da linha ${dv >= 0 ? 'subiram' : 'caíram'} ${pct(dv)}.`, acaso: false, tom: dv >= 0.02 ? 'bom' : dv <= -0.02 ? 'ruim' : 'neutro' });
+      }
+    } else {
+      const dv = ant && ant.receita > 0 ? receita / ant.receita - 1 : undefined;
+      d.ocorreu = `Fechamento de ${anoDe(v.t)}: faturou ${fmtc(receita)}${dv !== undefined && Math.abs(dv) >= 0.01 ? ` (${dv > 0 ? '+' : '−'}${pct(dv)})` : ''} e ${lucro >= 0 ? `lucrou ${fmtc(lucro)}` : `perdeu ${fmtc(-lucro)}`}.`;
+    }
+  }
+}
+
+/** Os acasos com concorrente passam a dizer QUEM (a rival com nome) e quem sofreu (a empresa da pessoa). */
+function textoComRival(e: Empresa, id: string, texto: string, r: Rng): string {
+  const rivais = e.corp?.rivais;
+  if (!rivais?.length) return texto;
+  const quem = rivais[Math.floor(r.next() * rivais.length)];
+  if (id === 'gigante') return `${quem}, uma concorrente grande, lançou um produto parecido de graça: parte dos clientes de ${e.nome} migrou.`;
+  if (id === 'guerra_tarifas') return `Guerra de tarifas com ${quem}: os aviões de ${e.nome} voaram cheios, com passagem a preço de ônibus.`;
+  return texto;
+}
+
+function decidirEmpresa129Base(v: Vida, e: Empresa, oque: OqueEmpresa129, alvo = ''): string {
   const s = setorDe(e);
   const custo = custoEmpresa129(v, e, oque, alvo);
   const hist = (texto: string) => (e.historia ??= []).push({ t: v.t, texto });
   const st = estrategia(e);
+  const k = kDe(v);
   switch (oque) {
     case 'alavanca': {
       const [a, o] = alvo.split(':');
@@ -733,63 +963,140 @@ export function decidirEmpresa129(v: Vida, e: Empresa, oque: OqueEmpresa129, alv
       hist(`${al.rotulo}: ${op.rotulo.toLowerCase()}.`);
       return `${al.rotulo}: ${op.rotulo.toLowerCase()}. ${op.descricao}${custo ? ` (${fmtc(custo)} agora.)` : ''} O efeito aparece no fechamento do ano.`;
     }
-    case 'projeto': {
+    case 'projeto': case 'linha': {
       if (s) {
-        const it = itemDoSetor(s, alvo)!;
-        const p = iniciarProjeto(v, e, it);
-        hist(`Aprovou ${it.nome.charAt(0).toLowerCase()}${it.nome.slice(1)} (${fmtc(p.orcamento)}).`);
-        if (p.orcamento >= 5e8) escrever(v, { texto: `${e.nome} aprovou ${it.nome.charAt(0).toLowerCase()}${it.nome.slice(1)}: ${fmt(p.orcamento)} previstos e ${Math.round(it.meses / 12 * 10) / 10} anos até vender.`, relevancia: 'biografia', tema: 'trabalho', escolha: true });
-        return `Aprovado: ${fmtc(p.orcamento)} ao longo de uns ${Math.round(it.meses / 12 * 10) / 10} anos (o dinheiro sai aos poucos, do caixa e do crédito da empresa). ${it.fatal ? 'Pode atrasar, estourar — e até não dar certo.' : 'Pode atrasar e estourar o orçamento.'}`;
+        const { it, prod } = resolverProjeto13(s, alvo);
+        const ie = itemEfetivo13(it!, prod);
+        let obra = '';
+        if (oque === 'linha') {
+          const n = unidadesParaLinha(s, e, ie.usa);
+          const cap = r1000(n * s.custoCapacidade * k);
+          pagarPelaEmpresa(v, e, cap, `nova ${s.unidade[0]}`);
+          (e.corp!.obras ??= []).push({ quanto: n, faltam: s.mesesCapacidade });
+          obra = `${n > 1 ? `${n} ${s.unidade[1]} novas` : `Uma ${s.unidade[0]} nova`} (${fmtc(cap)}, já pagos) fica${n > 1 ? 'm' : ''} pront${n > 1 ? 'as' : 'a'} em uns ${s.mesesCapacidade} meses. `;
+        }
+        if (prod) marcar(v, e, `lan:${prod.id}`);
+        const p = iniciarProjeto(v, e, it!, undefined, prod);
+        // A linha nova só vende quando a capacidade dela existir.
+        if (oque === 'linha') p.meses = Math.max(p.meses, s.mesesCapacidade);
+        const anos = String(Math.round(p.meses / 12 * 10) / 10).replace('.', ',');
+        hist(`Aprovou ${p.nome}${prod ? ` (${minusc(prod.nome)})` : ''}: ${fmtc(p.orcamento)}.`);
+        if (p.orcamento >= 5e8) escrever(v, { texto: `${e.nome} aprovou ${prod ? `${p.nome}, ${minusc(prod.nome)}` : minusc(it!.nome)}: ${fmt(p.orcamento)} previstos e ${anos} anos até vender.`, relevancia: 'biografia', tema: 'trabalho', escolha: true });
+        const espera = prod ? ` Maduro, deve faturar uns ${fmtc(ie.receita * k)} por ano, com margem de ${Math.round(ie.margem * 100)}% — para ${prod.publico}, concorrência ${['', 'quase nenhuma', 'pouca', 'normal', 'forte', 'feroz'][prod.conc]}.` : '';
+        return `${obra}${prod ? `${p.nome} (${minusc(prod.nome)})` : 'O projeto'} aprovado: ${fmtc(p.orcamento)} ao longo de uns ${anos} anos (o dinheiro sai aos poucos, do caixa e do crédito da empresa).${espera} ${ie.fatal ? 'Pode atrasar, estourar — e até não dar certo.' : 'Pode atrasar e estourar o orçamento.'}`;
       }
-      const pp = PROJETOS_PEQUENOS.find(x => x.id === alvo)!;
+      const l = lancamentoPequeno(e, alvo)!;
       pagarPelaEmpresa(v, e, custo, 'projeto novo');
-      const nome = pp.nome[e.tipo] ?? pp.nome.padrao;
-      (e.projetos ??= []).push({ id: `pj${v.seq++}`, item: pp.id, nome, estado: 'desenvolvimento', investido: custo, orcamento: custo, meses: pp.meses, feitos: 0, tInicio: v.t });
-      e.investido += 0;
-      hist(`${nome} (${fmtc(custo)}).`);
-      return `${nome}: ${fmtc(custo)}. Em uns meses, o público diz se pegou.`;
+      (e.projetos ??= []).push({ id: `pj${v.seq++}`, item: l.item, nome: l.nome, estado: 'desenvolvimento', investido: custo, orcamento: custo, meses: l.meses, feitos: 0, tInicio: v.t, ...(l.produto ? { produto: l.produto } : {}) });
+      hist(`${l.nome} (${fmtc(custo)}).`);
+      const x = l.produto ? produtoPequeno13(e.tipo, l.produto) : undefined;
+      return `${l.nome}: ${fmtc(custo)}. Fica pronto em uns ${l.meses} meses; ${x ? `se o público (${x.publico}) gostar, a procura sobe até uns ${Math.round(x.ganho * 100)}%` : 'o público diz se pegou'}${x?.variavel && x.variavel > 1 ? `, e o custo de cada venda sobe ${Math.round((x.variavel - 1) * 100)}%` : ''}.`;
     }
     case 'ampliar': {
       const p = e.corp!.projetos.find(x => x.id === alvo)!;
       marcar(v, e, `amp:${alvo}`);
-      pagarPelaEmpresa(v, e, custo, `ampliar ${p.nome}`);
+      pagarPelaEmpresa(v, e, custo, `expandir ${p.nome}`);
       p.escala = (p.escala ?? 1) + 0.5;
       p.investido += custo;
-      (p.marcos ??= []).push({ t: v.t, texto: `Produção ampliada (${fmtc(custo)}).` });
-      return `${p.nome}: produção ampliada pela metade (${fmtc(custo)}). Se o mercado acompanhar, vende mais; se não, sobra.`;
+      (p.marcos ??= []).push({ t: v.t, texto: `Produção expandida (${fmtc(custo)}).`, acaso: false });
+      return `${p.nome}: produção expandida pela metade (${fmtc(custo)}); ocupa mais ${s ? s.unidade[0] : 'capacidade'}. Se o mercado acompanhar, vende mais; se não, sobra.`;
+    }
+    case 'melhorar': {
+      const p = projetoDe(e, alvo)!;
+      marcar(v, e, `mel:${alvo}`);
+      pagarPelaEmpresa(v, e, custo, `versão nova de ${p.nome}`);
+      p.investido += custo;
+      const r = rngDe(v.id, e.id, 'versao13', alvo, v.t);
+      const antes = p.aceitacao ?? 50;
+      const ganho = Math.round(clamp(4 + r.normal() * 5 + (e.estrategia?.alavancas.pd === 'forte' || e.estrategia?.alavancas.pd === 'lider' ? 3 : 0), -4, 16));
+      p.aceitacao = Math.round(clamp(antes + ganho, 5, 97));
+      const l = (p.linha ??= {});
+      l.versao = (l.versao ?? 0) + 1;
+      l.tRenov = v.t;
+      if (s) adotarProduto(v, s, p);
+      (p.marcos ??= []).push({ t: v.t, texto: `Versão ${l.versao + 1} lançada (${fmtc(custo)}).`, acaso: false });
+      hist(`Lançou a versão ${l.versao + 1} de ${p.nome}.`);
+      return `${p.nome} ganhou uma versão nova (${fmtc(custo)}): o relógio do envelhecimento recomeça. O mercado recebeu ${ganho >= 6 ? 'bem a novidade' : ganho >= 1 ? 'a novidade sem alarde' : 'mal a mudança'}: aceitação de ${Math.round(antes)} para ${p.aceitacao}.`;
+    }
+    case 'qualidade': {
+      const p = projetoDe(e, alvo)!;
+      marcar(v, e, `q:${alvo}`);
+      adotarProduto(v, s!, p);
+      pagarPelaEmpresa(v, e, custo, `qualidade de ${p.nome}`);
+      p.investido += custo;
+      const l = (p.linha ??= {});
+      l.qualidade = Math.min(3, (l.qualidade ?? 0) + 1);
+      p.aceitacao = Math.round(clamp((p.aceitacao ?? 50) + 3, 5, 97));
+      (p.marcos ??= []).push({ t: v.t, texto: `Qualidade ${NOME_QUALIDADE_13[l.qualidade]} (${fmtc(custo)}).`, acaso: false });
+      hist(`Investiu na qualidade de ${p.nome}.`);
+      return `${p.nome}: qualidade ${NOME_QUALIDADE_13[l.qualidade]} (${fmtc(custo)}). Cada unidade custa uns ${l.qualidade * 4}% mais para fazer; em troca, o público aceita melhor (+${l.qualidade * 4} pontos de aceitação nas contas), a procura sobe uns ${l.qualidade * 3}% e a reputação da empresa sente ao longo do ano.`;
+    }
+    case 'reposicionar': {
+      const [id, pos] = alvo.split(':') as [string, Posicionamento13];
+      const p = projetoDe(e, id)!;
+      marcar(v, e, `pos:${id}`);
+      const prod = adotarProduto(v, s!, p)!;
+      pagarPelaEmpresa(v, e, custo, `reposicionar ${p.nome}`);
+      const de = p.linha?.pos ?? prod.pos;
+      (p.linha ??= {}).pos = pos;
+      if (pos === prod.pos) delete p.linha.pos;
+      const sobe = idxPos(pos) > idxPos(de);
+      const fraco = sobe && e.reputacao < 60 && (p.linha.qualidade ?? 0) < 2;
+      (p.marcos ??= []).push({ t: v.t, texto: `Reposicionado: de ${NOME_POSICAO_13[de]} para ${NOME_POSICAO_13[pos]}.`, acaso: false });
+      hist(`${p.nome}: de ${NOME_POSICAO_13[de]} para ${NOME_POSICAO_13[pos]}.`);
+      return `${p.nome} passa de ${NOME_POSICAO_13[de]} para ${NOME_POSICAO_13[pos]} (${fmtc(custo)} em embalagem, campanha e rede). ${sobe ? 'Preço uns 20% mais alto, um quarto menos de volume' : 'Preço uns 15% mais baixo, um quinto a mais de volume'} — a margem de cada venda ${sobe ? 'sobe' : 'cai'}.${fraco ? ' Atenção: sem reputação forte nem qualidade investida, o público pode não comprar a história.' : ''}`;
+    }
+    case 'preco': {
+      const [id, dir] = alvo.split(':');
+      const p = projetoDe(e, id)!;
+      marcar(v, e, `pr:${id}`);
+      const prod = adotarProduto(v, s!, p)!;
+      const l = (p.linha ??= {});
+      const de = l.preco ?? 0;
+      l.preco = Math.round(clamp(de + (dir === '+' ? 0.1 : -0.1), -0.2, 0.3) * 100) / 100;
+      const volume = Math.pow((1 + l.preco) / (1 + de), -prod.elast) - 1;
+      (p.marcos ??= []).push({ t: v.t, texto: `Preço: ${leituraDoPrecoDaLinha13(l.preco)}.`, acaso: false });
+      hist(`${p.nome}: preço ${leituraDoPrecoDaLinha13(l.preco)}.`);
+      return `${p.nome}: preço ${leituraDoPrecoDaLinha13(l.preco)} (antes, ${leituraDoPrecoDaLinha13(de)}). Para este público (${leituraDoPreco13Curta(prod.elast)}), o volume deve ${volume >= 0 ? 'subir' : 'cair'} uns ${pct(volume)}; a margem de cada venda ${dir === '+' ? 'sobe' : 'cai'}.${dir === '+' && (l.qualidade ?? 0) === 0 && l.preco > 0.05 ? ' Sem qualidade para justificar, a aceitação sofre.' : ''}`;
     }
     case 'descontinuar': {
-      const p = [...(e.corp?.projetos ?? []), ...(e.projetos ?? [])].find(x => x.id === alvo)!;
+      const p = projetoDe(e, alvo)!;
       const emDev = p.estado === 'desenvolvimento';
       p.estado = 'descontinuado';
-      (p.marcos ??= []).push({ t: v.t, texto: emDev ? 'Cancelado.' : 'Descontinuado.' });
+      (p.marcos ??= []).push({ t: v.t, texto: emDev ? 'Cancelado.' : 'Descontinuado.', acaso: false });
       hist(`${emDev ? 'Cancelou' : 'Descontinuou'} ${p.nome}.`);
-      return emDev ? `${p.nome} cancelado: os ${fmtc(p.investido)} já gastos não voltam; o resto do orçamento fica no caixa.` : `${p.nome} saiu de linha: libera capacidade, e a receita dele acaba.`;
+      const libera = s ? itemDoProjeto13(s, p) : undefined;
+      return emDev ? `${p.nome} cancelado: os ${fmtc(p.investido)} já gastos não voltam; o resto do orçamento fica no caixa.` : `${p.nome} saiu de linha: a receita dele${p.receitaAno ? ` (${fmtc(p.receitaAno)} no último ano)` : ''} acaba${libera && s ? ` e ${Math.round(libera.usa * (p.escala ?? 1) * 100) / 100} ${libera.usa * (p.escala ?? 1) > 1 ? s.unidade[1] : s.unidade[0]} fica${libera.usa * (p.escala ?? 1) > 1 ? 'm' : ''} livre${libera.usa * (p.escala ?? 1) > 1 ? 's' : ''} para outro produto` : ''}.`;
     }
     case 'capacidade': {
       pagarPelaEmpresa(v, e, custo, `nova ${s!.unidade[0]}`);
       (e.corp!.obras ??= []).push({ quanto: 1, faltam: s!.mesesCapacidade });
-      e.investido += 0;
       hist(`Mandou construir mais ${s!.unidade[0] === 'aeronave' ? 'uma' : 'uma unidade:'} ${s!.unidade[0]} (${fmtc(custo)}).`);
-      return `Mais ${s!.unidade[0] === 'aeronave' ? 'uma' : 'uma'} ${s!.unidade[0]}: ${fmtc(custo)}, pront${s!.unidade[0].endsWith('a') || s!.unidade[0].endsWith('e') ? 'a' : 'o'} em uns ${s!.mesesCapacidade} meses.`;
+      return `Mais uma ${s!.unidade[0]}: ${fmtc(custo)}, pront${s!.unidade[0].endsWith('a') || s!.unidade[0].endsWith('e') ? 'a' : 'o'} em uns ${s!.mesesCapacidade} meses. Sem produto, é capacidade parada: escolha o que ela vai produzir em "Lançar".`;
     }
     case 'concorrente': {
       marcar(v, e, 'concorrente');
       pagarPelaEmpresa(v, e, custo, 'compra de concorrente');
       const r = rngDe(v.id, e.id, 'concorrente', v.t);
       const c = e.corp!;
-      const nome = r.pick(s!.nomes).replace('{sobrenome}', r.pick(['Albuquerque', 'Ferraz', 'Monteiro', 'Duarte', 'Siqueira', 'Valadares']));
+      // VIDA 13 (o bug "Fortaleza Industrial comprou a concorrente Fortaleza Industrial"): o nome saía da mesma lista de
+      // cinco nomes do ramo, sem olhar o da própria empresa. Agora a comprada é uma das rivais com nome (geradas sem
+      // confundir com a empresa, com as outras da pessoa e com as já compradas); outra rival entra no lugar dela.
+      r.pick(s!.nomes); r.pick(['Albuquerque']); // o mesmo número de sorteios de antes: o resto do acaso da compra não muda
+      const rivais = garantirRivais13(v, e);
+      const nome = rivais[Math.floor(rngDe(e.id, 'qual-rival', v.t).next() * rivais.length)];
       const ganho = Math.max(1, Math.round(c.capacidade * 0.3));
       c.capacidade += ganho;
       const melhor = [...ativos(e)].sort((a, b) => (b.receitaAno ?? 0) - (a.receitaAno ?? 0))[0];
-      if (melhor) { const copia = iniciarProjeto(v, e, itemDoSetor(s!, melhor.item)!); Object.assign(copia, { estado: 'ativo', investido: custo * 0.4, feitos: copia.meses, tLanc: v.t - 24, aceitacao: Math.round(clamp((melhor.aceitacao ?? 50) + r.normal() * 12, 10, 90)), escala: 0.6, nome: `${melhor.nome} (linha de ${nome})` }); }
+      if (melhor) { const copia = iniciarProjeto(v, e, s!.itens.find(i => i.id === melhor.item)!, undefined, produtoDoProjeto13(s!, melhor)); Object.assign(copia, { estado: 'ativo', investido: custo * 0.4, feitos: copia.meses, tLanc: v.t - 24, aceitacao: Math.round(clamp((melhor.aceitacao ?? 50) + r.normal() * 12, 10, 90)), escala: 0.6, nome: `${melhor.nome} (linha de ${nome})` }); if (copia.produto) copia.linha = { tRenov: v.t }; }
       (c.aquisicoes ??= []).push(nome);
+      trocarRival13(v, e, nome);
       // A integração: às vezes custa mais que o previsto (a cultura, os sistemas) — o perfil de finanças ou de expansão ajuda.
       const dificil = r.chance(perfilDoCeo(e) === 'expansao' || perfilDoCeo(e) === 'financas' ? 0.15 : 0.35);
       if (dificil) e.reputacao = clamp(e.reputacao - 6);
       hist(`Comprou a concorrente ${nome} (${fmtc(custo)}).`);
-      escrever(v, { texto: `${e.nome} comprou a concorrente ${nome} por ${fmt(custo)}.`, relevancia: custo >= 1e9 ? 'marco' : 'biografia', tema: 'trabalho', escolha: true });
-      return `${nome} agora é sua: mais ${ganho} ${ganho > 1 ? s!.unidade[1] : s!.unidade[0]} e as linhas dela. ${dificil ? 'A integração começou difícil: sistemas que não conversam, gente saindo.' : 'A integração anda bem.'}`;
+      escrever(v, { texto: `${e.nome}, a sua empresa, comprou a concorrente ${nome} por ${fmt(custo)}. ${nome} deixa de existir como rival e vira parte de ${e.nome}.`, relevancia: custo >= 1e9 ? 'marco' : 'biografia', tema: 'trabalho', escolha: true });
+      return `${e.nome} comprou ${nome}, que era concorrente: mais ${ganho} ${ganho > 1 ? s!.unidade[1] : s!.unidade[0]}${melhor ? ` e uma linha de ${minusc(produtoDoProjeto13(s!, melhor)?.nome ?? melhor.nome)} que ${nome} já vendia` : ''}. ${dificil ? 'A integração começou difícil: sistemas que não conversam, gente saindo.' : 'A integração anda bem.'}`;
     }
     case 'captar': {
       marcar(v, e, 'captar');
@@ -801,7 +1108,7 @@ export function decidirEmpresa129(v: Vida, e: Empresa, oque: OqueEmpresa129, alv
     case 'amortizar': {
       e.corp!.divida -= custo;
       e.caixa -= custo;
-      return `${fmtc(custo)} da dívida pagos: menos juros daqui para a frente, menos caixa agora.`;
+      return `${fmtc(custo)} da dívida pagos: menos juros daqui para a frente (uns ${fmtc(custo * taxaDaDivida(v, e))} por ano), menos caixa agora.`;
     }
     case 'aportar': {
       pagar(v, custo);
@@ -820,12 +1127,14 @@ export function decidirEmpresa129(v: Vida, e: Empresa, oque: OqueEmpresa129, alv
       const entra = r1000(Math.max(valor * 0.25, e.corp?.pedido?.valor ?? 0));
       const fatia = entra / (valor + entra);
       const antes = e.parte;
+      // VIDA 13: quem põe o dinheiro tem nome (um fundo que não se confunde com as empresas da pessoa).
+      const fundo = nomeDeFundo13(rngDe(e.id, 'fundo13', v.t), nomesEmUso13(v));
       e.parte = Math.round(e.parte * (1 - fatia) * 1000) / 1000;
       e.caixa += entra;
-      if (e.parte < 1 && e.papel === 'dono') { e.papel = 'socio'; e.socio ??= 'um grupo de investidores'; }
+      if (e.parte < 1 && e.papel === 'dono') { e.papel = 'socio'; e.socio ??= `o fundo ${fundo}`; }
       if (e.corp?.pedido && e.caixa >= 0) delete e.corp.pedido;
-      hist(`Rodada de investimento: ${fmtc(entra)} de fora; a sua parte foi de ${Math.round(antes * 100)}% para ${Math.round(e.parte * 100)}%.`);
-      return `${fmtc(entra)} entraram de investidores por ${pct(fatia)} da empresa. Você fica com ${Math.round(e.parte * 1000) / 10}% — de uma empresa com mais caixa.`;
+      hist(`Rodada de investimento: ${fmtc(entra)} do fundo ${fundo}; a sua parte foi de ${Math.round(antes * 100)}% para ${Math.round(e.parte * 100)}%.`);
+      return `O fundo ${fundo} pôs ${fmtc(entra)} em ${e.nome} por ${pct(fatia)} da empresa. Você fica com ${Math.round(e.parte * 1000) / 10}% — de uma empresa com mais caixa.`;
     }
     case 'executivo': {
       const [cargo, perfil] = alvo.split(':') as [CargoExecutivo, PerfilExecutivo];
@@ -860,6 +1169,7 @@ export function decidirEmpresa129(v: Vida, e: Empresa, oque: OqueEmpresa129, alv
       return st.delegar ? `${e.gestao.nome ?? 'A gestão'} passa a decidir as alavancas e os projetos — com o juízo e o viés de quem está lá. Você continua podendo mudar qualquer coisa (o que você mudar, a gestão respeita por dois anos).` : 'As decisões de estratégia voltam a ser só suas: a gestão executa o que estiver decidido.';
   }
 }
+const leituraDoPreco13Curta = (elast: number) => (elast >= 1.6 ? 'muito sensível a preço' : elast >= 1.2 ? 'sensível a preço' : elast >= 0.9 ? 'aceita algum aumento' : 'pouco sensível a preço');
 
 /* ================================================================ Fundar e adquirir */
 
@@ -868,13 +1178,14 @@ export interface PlanoDeFundacao { setor: TipoEmpresa; item: string; capital: nu
 /** O que fundar custa: a capacidade inicial, o primeiro projeto e o capital de giro (com sócios, metade). */
 export function planoDeFundacao(v: Vida, setor: TipoEmpresa, item: string, comSocio: boolean): PlanoDeFundacao {
   const s = setorGrande(setor)!;
-  const it = itemDoSetor(s, item) ?? s.itens[0];
+  const alvo = resolverProjeto13(s, item);
+  const it = alvo.it ? itemEfetivo13(alvo.it, alvo.prod) : s.itens[0];
   const k = kDe(v);
   const capital = r1000((s.custoCapacidade * s.capacidadeInicial + it.capex + s.giro) * k);
   const capitalDaPessoa = comSocio ? r1000(capital / 2) : capital;
   const consumoAnual = r1000((s.fixoPorCapacidade * s.capacidadeInicial + s.estrutura) * k + it.capex * k / Math.max(1, it.meses / 12));
   const motivo = idade(v) < 18 ? 'A partir dos 18.' : empresasAtivas(v).filter(e => e.papel !== 'investidor').length >= 8 ? 'Já são oito empresas.' : !requisitoOk({ corp: { projetos: [] } } as unknown as Empresa, it) ? 'Esse projeto depende de outro pronto: comece pelo que vem antes.' : undefined;
-  return { setor, item: it.id, capital, capitalDaPessoa, consumoAnual, anosAteVender: Math.round(Math.max(it.meses, s.mesesCapacidade * (s.custoCapacidade > 1e9 ? 1 : 0)) / 12 * 10) / 10, receitaPrevista: r1000(it.receita * k), disponivel: !motivo, motivo };
+  return { setor, item: alvo.prod?.id ?? it.id, capital, capitalDaPessoa, consumoAnual, anosAteVender: Math.round(Math.max(it.meses, s.mesesCapacidade * (s.custoCapacidade > 1e9 ? 1 : 0)) / 12 * 10) / 10, receitaPrevista: r1000(it.receita * k), disponivel: !motivo, motivo };
 }
 
 /** Os ramos que fazem sentido mostrar: os que a pessoa pode bancar (ou quase: vendendo o que tem). */
@@ -891,34 +1202,38 @@ export function setoresAoAlcance(v: Vida): { s: SetorGrande; minimo: number; per
 export function fundarEmpresa(v: Vida, setor: TipoEmpresa, item: string, comSocio: boolean): string {
   const s = setorGrande(setor)!;
   const p = planoDeFundacao(v, setor, item, comSocio);
-  const it = itemDoSetor(s, p.item)!;
+  const { it: molde, prod } = resolverProjeto13(s, p.item);
+  const it = itemEfetivo13(molde!, prod);
   const id = `em${v.seq++}`;
   const r = rngDe(v.id, id, 'nome');
-  const nome = r.pick(s.nomes).replace('{sobrenome}', v.eu.sobrenome.split(' ').slice(-1)[0] ?? 'Silva');
+  // VIDA 13: o nome sai do gerador (ramo, porte, sem confundir com as outras empresas da pessoa). O sorteio antigo
+  // continua sendo feito (e descartado) para o perfil e o sócio saírem iguais aos da 12.9.
+  r.pick(s.nomes);
+  const nome = nomeDeEmpresa13(rngDe(v.id, id, 'nome13'), setor, s.porte, nomesEmUso13(v), v.eu.sobrenome.split(' ').slice(-1)[0] || undefined);
   const k = kDe(v);
   const perfil = r.pick(PERFIS);
   const e: Empresa = {
     id, tipo: setor, nome, municipioId: v.moradia.municipioId, tInicio: v.t, papel: comSocio ? 'socio' : 'dono', parte: comSocio ? 0.5 : 1, investido: p.capitalDaPessoa,
     caixa: r1000(s.giro * k + it.capex * k), ativos: 0, unidades: 1, qualidade: 60, reputacao: 40, equipe: 0, preco: 'medio',
     gestao: { quem: 'contratada', tInicio: v.t, perfil, nome: '', competencia: 50, salario: 0 }, distribuir: false, anosNoVermelho: 0, estado: 'abrindo',
-    ...(comSocio ? { socio: r.pick(['um fundo de investimento', 'um grupo de investidores', 'um sócio do ramo']) } : {}),
+    ...(comSocio ? { socio: (r.pick(['um fundo de investimento', 'um grupo de investidores', 'um sócio do ramo']), `o fundo ${nomeDeFundo13(rngDe(v.id, id, 'fundo13'), [...nomesEmUso13(v), nome])}`) } : {}),
     corp: { capacidade: 0, obras: [{ quanto: s.capacidadeInicial, faltam: s.mesesCapacidade }], divida: 0, projetos: [] },
     estrategia: { alavancas: {}, delegar: true }, avaliacao: p.capital
   };
   const c = candidato(v, e, 'ceo', perfil);
   e.gestao = { quem: 'contratada', nome: c.nome, competencia: c.competencia, salario: c.salario, tInicio: v.t, perfil };
   // A capacidade inicial é paga já (a obra começa); o primeiro projeto sai do caixa ao longo dos meses.
-  iniciarProjeto(v, e, it);
+  const primeiro = iniciarProjeto(v, e, molde!, undefined, prod ?? produtoPadrao13(s.id, molde!.id));
   pagar(v, p.capitalDaPessoa);
   lancar(v, `Capital para fundar ${nome}`, 'escolha', -p.capitalDaPessoa);
   (v.financas.empresas ??= []).push(e);
   e.historia = [{ t: v.t, texto: `Fundada com ${fmt(p.capital)}${comSocio ? `, meio a meio com ${e.socio}` : ''}.` }];
-  escrever(v, { texto: `Fundou ${s.nome}: ${nome}. ${fmt(p.capital)} de capital, ${it.nome.charAt(0).toLowerCase()}${it.nome.slice(1)} como primeiro projeto — e uns ${p.anosAteVender} anos até vender alguma coisa.`, relevancia: p.capital >= 1e8 ? 'marco' : 'biografia', tema: 'trabalho', tom: 'bom', escolha: true });
+  escrever(v, { texto: `Fundou ${s.nome}: ${nome}. ${fmt(p.capital)} de capital, ${primeiro.nome} (${minusc(it.nome)}) como primeiro projeto — e uns ${p.anosAteVender} anos até vender alguma coisa.`, relevancia: p.capital >= 1e8 ? 'marco' : 'biografia', tema: 'trabalho', tom: 'bom', escolha: true });
   if (!temFato(v, 'abriu_empresa')) marcarFato(v, 'abriu_empresa');
   return `${nome} existe. ${c.nome} assume a presidência (perfil ${NOME_PERFIL[perfil]}); a empresa começa com ${fmtc(e.caixa)} em caixa, ${s.unidade[1]} em obra e o primeiro projeto andando. Até vender, ela só gasta: uns ${fmtc(p.consumoAnual)} por ano.`;
 }
 
-export interface OfertaDeAquisicao { id: string; setor: TipoEmpresa; nome: string; preco: number; receita: number; lucro: number; divida: number; capacidade: number; linhas: string[]; partes: number[]; nota: string }
+export interface OfertaDeAquisicao { id: string; setor: TipoEmpresa; nome: string; preco: number; receita: number; lucro: number; divida: number; capacidade: number; linhas: string[]; partes: number[]; nota: string; /** VIDA 13: quem vende (a família, o fundo, os fundadores). */ vendedor: string }
 
 /** As empresas grandes à venda no ano (o controle ou uma fatia), do tamanho que a pessoa consegue pagar. */
 export function ofertasDeAquisicao(v: Vida): OfertaDeAquisicao[] {
@@ -929,25 +1244,37 @@ export function ofertasDeAquisicao(v: Vida): OfertaDeAquisicao[] {
   const r = rngDe(v.economia?.semente ?? 1, 'aquisicoes129', ano, v.id);
   const out: OfertaDeAquisicao[] = [];
   const candidatos = SETORES_GRANDES.filter(s => (s.custoCapacidade + s.itens[0].capex) * k * 0.1 <= liq);
+  const usados = nomesEmUso13(v);
   for (let n = 0; n < 3 && candidatos.length; n++) {
     const s = candidatos.splice(r.int(0, candidatos.length - 1), 1)[0];
-    const e = empresaAVenda(v, s, `aq-${ano}-${n}`, r, liq);
+    const e = empresaAVenda(v, s, `aq-${ano}-${n}`, r, liq, usados);
     const lucro = e.anos?.[e.anos.length - 1]?.lucro ?? 0;
     const partes = [1, 0.25, 0.1].filter(p => r1000((e.avaliacao ?? 0) * p) <= liq * 1.05 && (e.avaliacao ?? 0) * p >= 1e5);
     if (!partes.length) continue;
-    out.push({ id: e.id, setor: s.id, nome: e.nome, preco: e.avaliacao ?? 0, receita: e.ultimo?.receita ?? 0, lucro, divida: e.corp!.divida, capacidade: e.corp!.capacidade, linhas: ativos(e).map(p => p.nome), partes,
+    out.push({ id: e.id, setor: s.id, nome: e.nome, preco: e.avaliacao ?? 0, receita: e.ultimo?.receita ?? 0, lucro, divida: e.corp!.divida, capacidade: e.corp!.capacidade, linhas: ativos(e).map(p => { const pr = produtoDoProjeto13(s, p); return pr ? `${p.nome} (${minusc(pr.nome)})` : p.nome; }), partes, vendedor: vendedorDe(v, e.id, usados),
       nota: e.corp!.divida > (e.avaliacao ?? 0) * 0.6 ? 'Endividada: o preço é baixo pelo que deve.' : lucro < 0 ? 'Dá prejuízo: quem vende está cansado.' : (e.reputacao >= 60 ? 'Marca respeitada no ramo.' : 'Uma operação mediana, sem nada de especial.') });
   }
   return out;
 }
 
 /** Monta a empresa à venda (sempre a mesma no ano): capacidade, linhas maduras, dívida, reputação — e o valor que o mercado dá. */
-function empresaAVenda(v: Vida, s: SetorGrande, id: string, r: Rng, liq: number): Empresa {
+/** Quem vende a empresa (sempre o mesmo para a mesma oferta). */
+function vendedorDe(v: Vida, id: string, usados: readonly string[]): string {
+  const r = rngDe(v.economia?.semente ?? 1, id, 'vendedor13', v.id);
+  const x = r.next();
+  return x < 0.4 ? `a família ${sobrenomeAoAcaso13(r)}, que fundou a empresa` : x < 0.7 ? `o fundo ${nomeDeFundo13(r, usados)}` : x < 0.85 ? 'os sócios fundadores' : `o grupo ${nomeDeEmpresa13(r, 'industria', 'grande', usados)}`;
+}
+
+function empresaAVenda(v: Vida, s: SetorGrande, id: string, r: Rng, liq: number, usados: string[] = nomesEmUso13(v)): Empresa {
   const k = kDe(v);
   const base = (s.custoCapacidade + s.itens[0].capex) * k;
   const escala = clamp(liq / base * (0.4 + r.next() * 0.9), 0.5, 6);
   const cap = Math.max(1, Math.round(s.capacidadeInicial * escala));
-  const nome = r.pick(s.nomes).replace('{sobrenome}', r.pick(['Albuquerque', 'Ferraz', 'Monteiro', 'Duarte', 'Siqueira', 'Valadares', 'Brandão']));
+  // VIDA 13: o nome sai do gerador, sem confundir com as empresas da pessoa nem com as outras ofertas do ano. Os dois
+  // sorteios antigos continuam (descartados): o resto da oferta (capacidade, linhas, dívida) sai igual ao da 12.9.
+  r.pick(s.nomes); r.pick(['Albuquerque']);
+  const nome = nomeDeEmpresa13(rngDe(v.economia?.semente ?? 1, id, 'nome13', v.id), s.id, s.porte, usados);
+  usados.push(nome);
   const e: Empresa = { id, tipo: s.id, nome, municipioId: v.moradia.municipioId, tInicio: v.t - 12 * r.int(4, 30), papel: 'dono', parte: 1, investido: 0, caixa: 0, ativos: 0, unidades: 1, qualidade: 60, reputacao: Math.round(clamp(52 + r.normal() * 14, 15, 90)), equipe: 0, preco: 'medio',
     gestao: { quem: 'contratada', nome: '', competencia: Math.round(clamp(52 + r.normal() * 14, 20, 90)), salario: 0, tInicio: v.t, perfil: r.pick(PERFIS) }, distribuir: true, anosNoVermelho: 0, estado: 'operando',
     corp: { capacidade: cap, divida: 0, projetos: [] }, estrategia: { alavancas: {}, delegar: true } };
@@ -958,11 +1285,11 @@ function empresaAVenda(v: Vida, s: SetorGrande, id: string, r: Rng, liq: number)
   for (const it of ordem) {
     if (usado + it.usa > cap + 1e-9) continue;
     usado += it.usa;
-    const p = iniciarProjeto(v, e, it, `${id}-${it.id}`);
-    Object.assign(p, { estado: 'ativo', investido: r1000(it.capex * k * 0.6), feitos: it.meses, tLanc: v.t - 12 * r.int(2, 6), aceitacao: Math.round(clamp(55 + r.normal() * 14, 15, 92)) });
+    const p = iniciarProjeto(v, e, it, `${id}-${it.id}`, produtoPadrao13(s.id, it.id));
+    Object.assign(p, { estado: 'ativo', investido: r1000(it.capex * k * 0.6), feitos: it.meses, tLanc: v.t - 12 * r.int(2, 6), aceitacao: Math.round(clamp(55 + r.normal() * 14, 15, 92)), linha: { tRenov: v.t } });
     if (usado >= cap * 0.8) break;
   }
-  if (!ativos(e).length) { const it = possiveis[0]; const p = iniciarProjeto(v, e, it, `${id}-${it.id}`); Object.assign(p, { estado: 'ativo', feitos: it.meses, tLanc: v.t - 36, aceitacao: 50 }); }
+  if (!ativos(e).length) { const it = possiveis[0]; const p = iniciarProjeto(v, e, it, `${id}-${it.id}`, produtoPadrao13(s.id, it.id)); Object.assign(p, { estado: 'ativo', feitos: it.meses, tLanc: v.t - 36, aceitacao: 50, linha: { tRenov: v.t } }); }
   // O último ano dela (o que o comprador vê): as contas de catálogo com o acaso de um ano.
   const receita = r1000(ativos(e).reduce((t, p) => t + (itemDoSetor(s, p.item)!.receita * (0.3 + (p.aceitacao ?? 50) / 85)), 0) * k * (0.85 + r.next() * 0.3));
   const custos = r1000(ativos(e).reduce((t, p) => { const it = itemDoSetor(s, p.item)!; return t + it.receita * (0.3 + (p.aceitacao ?? 50) / 85) * (1 - it.margem); }, 0) * k + (cap * s.fixoPorCapacidade + s.estrutura) * k + receita * s.gastoBase);
@@ -993,12 +1320,14 @@ export function adquirirEmpresa(v: Vida, ofertaId: string, parte: number): strin
   const r = rngDe(v.economia?.semente ?? 1, 'aquisicoes129', ano, v.id);
   const cands = SETORES_GRANDES.filter(x => (x.custoCapacidade + x.itens[0].capex) * kDe(v) * 0.1 <= liq);
   let e: Empresa | undefined;
+  const usados = nomesEmUso13(v);
   for (let n = 0; n < 3 && cands.length; n++) {
     const sx = cands.splice(r.int(0, cands.length - 1), 1)[0];
-    const x = empresaAVenda(v, sx, `aq-${ano}-${n}`, r, liq);
+    const x = empresaAVenda(v, sx, `aq-${ano}-${n}`, r, liq, usados);
     if (x.id === ofertaId) { e = x; break; }
   }
   e ??= empresaAVenda(v, s, ofertaId, rngDe(v.id, ofertaId), liq);
+  const vendedor = vendedorDe(v, ofertaId, usados);
   const preco = r1000((e.avaliacao ?? 0) * parte);
   const taxas = r1000(preco * 0.02);
   v.anoAtual.acoes.push('aquisicao129');
@@ -1013,10 +1342,10 @@ export function adquirirEmpresa(v: Vida, ofertaId: string, parte: number): strin
   e.gestao.nome = candidato(v, e, 'ceo', e.gestao.perfil ?? 'conservador').nome;
   e.gestao.salario = salarioDeExecutivo(v, e, true, e.gestao.competencia ?? 50);
   if (parte < 1) e.socio = 'os acionistas majoritários';
-  e.historia = [{ t: v.t, texto: `${parte === 1 ? 'Comprada' : `Comprou ${Math.round(parte * 100)}%`} por ${fmt(preco)}.` }];
+  e.historia = [{ t: v.t, texto: `${parte === 1 ? 'Comprada' : `Comprou ${Math.round(parte * 100)}%`} por ${fmt(preco)}, de ${vendedor}.` }];
   (v.financas.empresas ??= []).push(e);
-  escrever(v, { texto: parte === 1 ? `Comprou ${s.nome}: ${e.nome}, por ${fmt(preco)}.` : `Comprou ${Math.round(parte * 100)}% de ${e.nome} (${s.rotulo.toLowerCase()}) por ${fmt(preco)}.`, relevancia: preco >= 1e8 ? 'marco' : 'biografia', tema: 'dinheiro', escolha: true });
-  return parte === 1 ? `${e.nome} é sua: ${e.corp!.capacidade} ${e.corp!.capacidade > 1 ? s.unidade[1] : s.unidade[0]}, ${ativos(e).length} ${ativos(e).length > 1 ? 'linhas' : 'linha'} vendendo, ${fmtc(e.corp!.divida)} de dívida da empresa. A gestão de ${e.gestao.nome} continua — mude o que quiser.` : `${Math.round(parte * 100)}% de ${e.nome}: você recebe a sua parte dos dividendos e não manda em nada.`;
+  escrever(v, { texto: parte === 1 ? `Comprou ${s.nome}: ${e.nome}, por ${fmt(preco)}. Quem vendeu foi ${vendedor}.` : `Comprou ${Math.round(parte * 100)}% de ${e.nome} (${s.rotulo.toLowerCase()}) por ${fmt(preco)}, de ${vendedor}.`, relevancia: preco >= 1e8 ? 'marco' : 'biografia', tema: 'dinheiro', escolha: true });
+  return parte === 1 ? `Você comprou ${e.nome} de ${vendedor}. ${e.nome} é sua: ${e.corp!.capacidade} ${e.corp!.capacidade > 1 ? s.unidade[1] : s.unidade[0]}, ${ativos(e).length} ${ativos(e).length > 1 ? 'linhas' : 'linha'} vendendo, ${fmtc(e.corp!.divida)} de dívida da empresa. A gestão de ${e.gestao.nome} continua — mude o que quiser.` : `${Math.round(parte * 100)}% de ${e.nome}: você recebe a sua parte dos dividendos e não manda em nada.`;
 }
 
 /* ================================================================ O painel (leitura para a tela) */
@@ -1072,20 +1401,72 @@ export function painelDaEmpresa(v: Vida, e: Empresa): PainelDaEmpresa {
   const diretoria: PainelDaEmpresa['diretoria'] = [{ cargo: 'ceo', nome: e.gestao.quem === 'propria' ? 'Você' : e.gestao.nome ?? '—', perfil: e.gestao.perfil, leitura: e.gestao.quem === 'propria' ? 'você mesm' + (fem(v) ? 'a' : 'o') : leituraDeExecutivo(v, e.gestao.tInicio, e.gestao.competencia ?? 50), salario: e.gestao.quem === 'contratada' ? e.gestao.salario ?? 0 : 0 },
     ...executivos(e).map(d => ({ cargo: d.cargo, nome: d.nome, perfil: d.perfil, leitura: leituraDeExecutivo(v, d.t, d.competencia), salario: d.salario }))];
   const projetos = [...(e.corp?.projetos ?? []), ...(e.projetos ?? [])].filter(p => p.estado !== 'descontinuado' || v.t - (p.marcos?.[p.marcos.length - 1]?.t ?? 0) < 24)
-    .map(p => ({ p, progresso: p.estado === 'desenvolvimento' ? clamp(p.feitos / Math.max(1, p.meses), 0, 1) : 1, descricao: s ? itemDoSetor(s, p.item)?.descricao : PROJETOS_PEQUENOS.find(x => x.id === p.item)?.descricao }));
+    .map(p => ({ p, progresso: p.estado === 'desenvolvimento' ? clamp(p.feitos / Math.max(1, p.meses), 0, 1) : 1, descricao: s ? itemDoProjeto13(s, p)?.descricao : (produtoPequeno13(e.tipo, p.produto)?.descricao ?? PROJETOS_PEQUENOS.find(x => x.id === p.item)?.descricao) }));
   return { porte: porteDe(e), grande: !!s, setor: s, kpis, alertas, causas: a?.causas ?? [], serie: (e.anos ?? []).map(x => ({ ano: anoDe(x.t), receita: x.receita, lucro: x.lucro, valor: x.valor })), projetos, diretoria, delegado: !!e.estrategia?.delegar };
 }
 
-/** Os projetos que dá para começar (com o custo e o que se espera). */
-export function projetosPossiveis(v: Vida, e: Empresa): { id: string; nome: string; descricao: string; custo: number; meses: number; receita?: number; risco?: string }[] {
+/** Os projetos que dá para começar (com o custo e o que se espera). VIDA 13: os produtos do ramo (ou do tipo, na pequena). */
+export function projetosPossiveis(v: Vida, e: Empresa): { id: string; nome: string; descricao: string; custo: number; meses: number; receita?: number; risco?: string; familia?: string }[] {
   const s = setorDe(e);
   if (s) {
     const k = kDe(v);
-    return s.itens.map(it => ({ id: it.id, nome: it.nome, descricao: it.descricao, custo: r1000(it.capex * k), meses: it.meses, receita: r1000(it.receita * k), risco: it.fatal ? (it.fatal >= 0.04 ? 'alto (pode fracassar)' : 'médio') : it.risco >= 0.2 ? 'médio' : 'baixo' }));
+    return produtosDoSetor13(s.id).map(prod => { const it = itemEfetivo13(s.itens.find(i => i.id === prod.item)!, prod); return { id: prod.id, nome: prod.nome, descricao: prod.descricao, custo: r1000(it.capex * k), meses: it.meses, receita: r1000(it.receita * k), risco: it.fatal ? (it.fatal >= 0.04 ? 'alto (pode fracassar)' : 'médio') : it.risco >= 0.2 ? 'médio' : 'baixo', familia: prod.familia }; });
   }
   if (e.tipo === 'museu' || e.tipo === 'zoologico') return [];
-  return PROJETOS_PEQUENOS.map(pp => ({ id: pp.id, nome: pp.nome[e.tipo] ?? pp.nome.padrao, descricao: pp.descricao, custo: custoEmpresa129(v, e, 'projeto', pp.id), meses: pp.meses }));
+  const proprios = produtosPequenos13(e.tipo);
+  const base = proprios.length ? [...proprios.map(x => ({ id: x.id, nome: x.nome, descricao: x.descricao, meses: x.meses })), ...PROJETOS_PEQUENOS.filter(pp => pp.id !== 'produto').map(pp => ({ id: pp.id, nome: pp.nome[e.tipo] ?? pp.nome.padrao, descricao: pp.descricao, meses: pp.meses }))]
+    : PROJETOS_PEQUENOS.map(pp => ({ id: pp.id, nome: pp.nome[e.tipo] ?? pp.nome.padrao, descricao: pp.descricao, meses: pp.meses }));
+  return base.map(x => ({ ...x, custo: custoEmpresa129(v, e, 'projeto', x.id) }));
 }
+
+/* ---------------------------------------------- VIDA 13: o catálogo de produtos e a leitura de cada linha (para a tela) */
+
+export interface ProdutoNoCatalogo13 extends FichaDoProduto13 { unidadesLinha: number; custoLinha: number; jaTem: boolean; requer?: string }
+/** Os produtos do ramo, por família, com a ficha (investimento, prazo, capacidade, custos, demanda, concorrência, preço, margem, público, posicionamento, risco, potencial). */
+export function catalogoDeProdutos13(v: Vida, e: Empresa): { familia: string; produtos: ProdutoNoCatalogo13[] }[] {
+  const s = setorDe(e);
+  if (!s) return [];
+  const k = kDe(v);
+  const rivais = e.corp?.rivais?.length ? e.corp.rivais : rivaisDe13(v, e);
+  const out: { familia: string; produtos: ProdutoNoCatalogo13[] }[] = [];
+  for (const prod of produtosDoSetor13(s.id)) {
+    const molde = s.itens.find(i => i.id === prod.item)!;
+    const ie = itemEfetivo13(molde, prod);
+    const f = fichaDoProduto13(s, prod, k, rivais);
+    const item: ProdutoNoCatalogo13 = { ...f, unidadesLinha: unidadesParaLinha(s, e, ie.usa), custoLinha: custoEmpresa129(v, e, 'linha', prod.id), jaTem: [...ativos(e), ...emObra(e)].some(p => p.produto === prod.id), ...(molde.requer ? { requer: s.itens.find(i => new RegExp(`^(${molde.requer})$`).test(i.id))?.nome } : {}) };
+    const g = out.find(x => x.familia === prod.familia);
+    if (g) g.produtos.push(item); else out.push({ familia: prod.familia, produtos: [item] });
+  }
+  return out;
+}
+
+export interface ProdutoPequenoNoCatalogo13 { id: string; nome: string; descricao: string; publico: string; posicionamento: string; custo: number; meses: number; ganho: number; variavel: number; concorrencia: string; potencial: string; jaTem: boolean }
+export function catalogoPequeno13(v: Vida, e: Empresa): ProdutoPequenoNoCatalogo13[] {
+  if (setorDe(e) || e.tipo === 'museu' || e.tipo === 'zoologico') return [];
+  const vivos = (e.projetos ?? []).filter(p => p.estado === 'ativo' || p.estado === 'desenvolvimento');
+  return produtosPequenos13(e.tipo).map(x => ({ id: x.id, nome: x.nome, descricao: x.descricao, publico: x.publico, posicionamento: NOME_POSICAO_13[x.pos], custo: custoEmpresa129(v, e, 'projeto', x.id), meses: x.meses, ganho: x.ganho, variavel: x.variavel ?? 1,
+    concorrencia: ['', 'quase nenhuma', 'pouca', 'normal', 'forte', 'feroz'][x.conc], potencial: x.cresc >= 0.03 ? 'cresce' : x.cresc > 0 ? 'cresce devagar' : 'estável', jaTem: vivos.some(p => (p.produto ?? produtoPequenoDoProjeto13(e.tipo, p)?.id) === x.id) }));
+}
+
+export interface LeituraDaLinha13 { produto: string; familia: string; publico: string; pos: Posicionamento13; posNascenca: Posicionamento13; preco: number; precoTexto: string; qualidade: number; qualidadeTexto: string; versao: number; anosDaVersao: number; envelhece: number; fatia?: number; mercado: string; concorrencia: string; margem: number }
+/** O retrato de uma linha à venda (o produto, como está sendo tocada, o quanto envelheceu, a fatia). */
+export function leituraDaLinha13(v: Vida, e: Empresa, p: ProjetoDaEmpresa): LeituraDaLinha13 | undefined {
+  const s = setorDe(e);
+  if (!s) return undefined;
+  const prod = produtoDaLinha(s, p);
+  if (!prod) return undefined;
+  const it = itemDoProjeto13(s, p) ?? itemEfetivo13(s.itens.find(i => i.id === p.item)!, prod);
+  const l = p.linha ?? {};
+  const f = p.produto ? fatorDaLinha13(v, e, s, p) : undefined;
+  const margem = clamp(1 - (1 - it.margem) / (efeitosDaEmpresa(v, e).preco * (f?.preco ?? 1)), 0.02, 0.95);
+  return {
+    produto: prod.nome, familia: prod.familia, publico: prod.publico, pos: l.pos ?? prod.pos, posNascenca: prod.pos, preco: l.preco ?? 0, precoTexto: leituraDoPrecoDaLinha13(l.preco ?? 0),
+    qualidade: l.qualidade ?? 0, qualidadeTexto: NOME_QUALIDADE_13[l.qualidade ?? 0], versao: (l.versao ?? 0) + 1, anosDaVersao: Math.max(0, Math.floor((v.t - (l.tRenov ?? p.tLanc ?? v.t)) / 12)),
+    envelhece: f?.envelhece ?? 1, fatia: l.fatia, mercado: ['', 'quase nenhuma', 'pouca', 'normal', 'forte', 'feroz'][prod.conc] ? `concorrência ${['', 'quase nenhuma', 'pouca', 'normal', 'forte', 'feroz'][prod.conc]}` : '', concorrencia: ['', 'quase nenhuma', 'pouca', 'normal', 'forte', 'feroz'][prod.conc], margem
+  };
+}
+/** As decisões recentes (do ano que corre e do anterior), da mais nova para a mais velha. */
+export const decisoesRecentes13 = (v: Vida, e: Empresa) => (e.decisoes13 ?? []).filter(d => v.t - d.t <= 12).slice().reverse();
 
 /* ================================================================ Registro e saves */
 

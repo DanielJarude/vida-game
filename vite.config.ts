@@ -111,6 +111,9 @@ export default defineConfig({
           // ações, o ano e as telas os importam. Sem ciclo, e nenhum dos dois pacotes grandes cresce.
           // REWORK 9: a agenda da semana (horários, conflitos, presença) vai com os verbos: só o ano, as ações e as telas a
           // chamam — e ela se registra em `compromissos` (que está embaixo) para dizer o conflito de horário de uma proposta.
+          // VIDA 13 · Fama: o núcleo do reconhecimento (as origens, os marcos, a imagem, o que o mundo devolve) — só o ano, o
+          // save, os acontecimentos e as telas o importam; ele só importa os sistemas e a base. Pacote próprio, sem ciclo.
+          if (/[\\/]src[\\/]motor[\\/]sistemas[\\/]reconhecimento13\.ts/.test(id)) return 'motor-fama';
           if (/[\\/]src[\\/]motor[\\/]sistemas[\\/](redes|leituraDoEstresse|juntos|naFormacao|noOficio|microcenas|prisao|mundoVivo|agenda|avaliacaoDaRotina|convivio|apostas|ecos|seguroDesemprego|indiretos|afetos|fama|pedidosDaCrianca|afetosAdultos|casamento|convivio126|casaNoDia|viagens126)\.ts/.test(id)) return 'motor-vida';
           // REWORK 10: o pacote dos textos estava a ~50 kB do limite e a Fase F traz muitos acontecimentos. Os conteúdos novos
           // (a margem, os acontecimentos do REWORK 10) e as peças que todo conteúdo usa (a base, os efeitos, os papéis, os
@@ -118,7 +121,7 @@ export default defineConfig({
           // importam. Sem ciclo, e o pacote dos textos volta a ter folga sem aumentar o limite.
           if (/[\\/]src[\\/]motor[\\/]conteudo[\\/](base|efeitos|papeis|local|margem|submundo|aliancas|possibilidades|acontecimentos[a-zA-Z0-9]*)\.ts/.test(id)) return 'motor-acontecimentos';
           if (/[\\/]src[\\/]motor[\\/](conteudo[\\/]|sistemas[\\/](entrevista|cuidados|usos|busca|estilo|independencia|pausa|ambiente|empregabilidade|interacoes|experiencias|autoria|gestos|pertences|presentes|vidaEstudantil|estetica|conversas|conflitos)\.ts)/.test(id)) return 'motor-textos';
-          if (/[\\/]src[\\/]motor[\\/](ano\.ts|acoes\.ts|fachada\.ts|sistemas[\\/]relevancia\.ts)/.test(id)) return 'motor-conteudo';
+          if (/[\\/]src[\\/]motor[\\/](ano\.ts|acoes\.ts|fachada\.ts|sistemas[\\/]relevancia\.ts|sistemas[\\/]desfecho13\.ts)/.test(id)) return 'motor-conteudo';
           // REWORK 3: o que só a camada de cima usa (salvar, nascer, as ações de cuidado, de estilo, de busca, a
           // entrevista, a leitura da independência) vai com ela — o pacote dos sistemas volta a caber no limite, sem ciclo.
           // FIX 3.1: as interações com pessoas, as experiências e a autoria (só as ações e as telas as chamam) também.
@@ -151,17 +154,22 @@ export default defineConfig({
           // (o ano, as ações, os acontecimentos, as telas). Importam só os sistemas e a base: sem ciclo, e o pacote dos
           // textos (o mais apertado) não cresce.
           // REWORK 12.2: o que é próprio de cada ramo (`setores`) e os exóticos vêm junto (importam empresas e a base).
-          if (/[\\/]src[\\/]motor[\\/]sistemas[\\/](colecao|empresas|setores|exoticos|personalizacao|gostos|casaViva|encontros129|empresas129|fortuna129|hobbies129)\.ts/.test(id)) return 'motor-patrimonio';
+          if (/[\\/]src[\\/]motor[\\/]sistemas[\\/](colecao|empresas|setores|exoticos|personalizacao|gostos|casaViva|encontros129|empresas129|empresas13|fortuna129|hobbies129)\.ts/.test(id)) return 'motor-patrimonio';
           // VIDA 12.8: os catálogos novos da casa, das marcas, das coleções e dos bichos (puros: só tipos) num pacote próprio,
           // EMBAIXO dos catálogos de sempre (que os importam) — o pacote dos catálogos estava a 8 kB do limite. Não importam nada
           // em tempo de execução: sem ciclo.
-          if (/[\\/]src[\\/]motor[\\/]dados[\\/](casa128|perfisDeMarca|colecao128|animais128|categoriasDaCasa|tatuagens129|veiculos129|motosClassicas1291|piercings129|instituicoes129|cursos129|encontros129|empresas129|presidencia129|hobbies129|municipios1291|colegioEleitoral129)\.ts/.test(id)) return 'motor-casa';
+          // VIDA 13 · Ações: a anotação do resultado imediato (sem imports) mora com os catálogos puros, fora de motor-dados.
+          if (/[\\/]src[\\/]motor[\\/]sistemas[\\/]anotar13\.ts/.test(id)) return 'motor-casa';
+          if (/[\\/]src[\\/]motor[\\/]dados[\\/](casa128|perfisDeMarca|colecao128|animais128|categoriasDaCasa|tatuagens129|tatuagens13|veiculos129|motosClassicas1291|piercings129|piercings13|aparencia13|instituicoes129|cursos129|encontros129|empresas129|produtos13|nomes13|presidencia129|hobbies129|municipios1291|colegioEleitoral129)\.ts/.test(id)) return 'motor-casa';
           if (/[\\/]src[\\/]motor[\\/]dados[\\/]/.test(id)) return 'motor-dados';
           // Pacote pré-América do Sul: a CAMADA DE BASE — os sistemas-folha que só importam os catálogos e uns aos outros
           // (núcleo, texto, tempo, mercado, origem, rede, notoriedade, economia...) — vai com os catálogos, embaixo de
           // tudo. É a mesma regra de camadas, só que medida no grafo real (um módulo-folha novo cai aqui sozinho, e um
           // que passe a importar um sistema de cima sai daqui sozinho): nenhum ciclo entre pacotes, e o pacote dos
           // sistemas volta a ter folga sem aumentar o limite.
+          // VIDA 13: as regras das mechas e da maquiagem (e o normalizador) num pacote próprio — só importa a base; quem
+          // chama é o estilo e o save. Sem isto, caía na base (os catálogos, a 800 kB).
+          if (/[\\/]src[\\/]motor[\\/]sistemas[\\/]aparencia13\.ts/.test(id)) return 'motor-aparencia';
           if (/[\\/]src[\\/]motor[\\/]/.test(id) && ehBase(id, getModuleInfo)) return 'motor-dados';
           // VIDA 12.9: o pacote dos sistemas chegou a 799,7 kB. Os sistemas que NENHUM outro módulo dele importa e que só
           // importam os sistemas e os catálogos (as tatuagens, perseguir um sonho, a gestão do negócio, o treinador de

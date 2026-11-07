@@ -12,6 +12,7 @@ import { podeTentar } from '../plausibilidade';
 import { interpretar } from '../save';
 import { DESENHOS, NOME_ESTILO, REGIOES, regioesDoDesenho, desenhoDeTatuagem, corPadraoDe } from '../dados/tatuagens';
 import { DESENHOS_129, REFERENCIAS_129, TEMA_DOS_ANTIGOS, temaDoDesenho } from '../dados/tatuagens129';
+import { DESENHOS_13 } from '../dados/tatuagens13';
 import { normalizarTatuagens, tatuagensDe, tatuagensNaFigura } from '../sistemas/tatuagens';
 import { desenho129 } from '../../ui/avatar/tatuagens129';
 import { DesenhoDaTatuagem, caixaNativa } from '../../ui/avatar/tatuagens';
@@ -24,7 +25,9 @@ const fazer = (v: Vida, a: Acao) => { const d = disponibilidade(v, a); expect(po
 /** O catálogo de antes da 12.9 (83 desenhos soltos e 5 peças inteiras). */
 const DESENHOS_ANTES = 88;
 const NOVOS = new Set(DESENHOS_129.map(d => d.id));
-const ANTIGOS = DESENHOS.filter(d => !NOVOS.has(d.id));
+// VIDA 13: os desenhos da 13 (`dados/tatuagens13`) também não são "de antes da 12.9".
+const DA_13 = new Set(DESENHOS_13.map(d => d.id));
+const ANTIGOS = DESENHOS.filter(d => !NOVOS.has(d.id) && !DA_13.has(d.id));
 const arte = (id: string) => { const d = desenhoDeTatuagem(id)!; const [W, H] = caixaNativa(d); return renderToStaticMarkup(createElement('svg', { viewBox: `0 0 ${W} ${H}` }, createElement(DesenhoDaTatuagem, { id, tinta: '#111', cor: (c: string) => c }))); };
 const FALLBACK = renderToStaticMarkup(createElement('svg', { viewBox: '0 0 20 20' }, createElement(DesenhoDaTatuagem, { id: 'nao_existe', tinta: '#111', cor: (c: string) => c })));
 
@@ -81,7 +84,9 @@ describe('VIDA 12.9 · catálogo de tatuagens', () => {
 
   it('o filtro do estúdio encontra os novos: estilo, tema, obra e busca sem acento', () => {
     const pop = desenhosDoFiltro({ estilo: 'cultura_pop' });
-    expect(pop.length).toBe(DESENHOS_129.filter(d => d.estilo === 'cultura_pop').length);
+    // VIDA 13: o catálogo de cultura pop cresceu (`dados/tatuagens13`); o filtro encontra todos, os da 12.9 inclusive.
+    expect(pop.length).toBe(DESENHOS.filter(d => d.estilo === 'cultura_pop').length);
+    for (const d of DESENHOS_129.filter(x => x.estilo === 'cultura_pop')) expect(pop).toContain(d);
     expect(desenhosDoFiltro({ estilo: 'cultura_pop', referencia: 'Harry Potter' }).map(d => d.id)).toContain('raio_e_oculos');
     expect(desenhosDoFiltro({ busca: 'senhor dos aneis' }).map(d => d.id)).toContain('anel_com_inscricao');
     expect(desenhosDoFiltro({ busca: 'TORDO' }).map(d => d.id)).toEqual(['tordo_e_flecha']);

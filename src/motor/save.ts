@@ -33,7 +33,11 @@ import { clubePorNome } from './dados/clubes';
 import { fixarEstatura } from './sistemas/modalidades';
 import { normalizarTatuagens } from './sistemas/tatuagens';
 import { normalizarVida129Economia } from './sistemas/empresas129';
+import { normalizarVida13Empresas } from './sistemas/empresas13';
 import { normalizarVida129Presidencia } from './sistemas/presidencia129';
+import { normalizarVida13Acoes } from './sistemas/desfecho13';
+import { normalizarVida13Aparencia } from './sistemas/aparencia13';
+import { normalizarVida13Fama } from './sistemas/reconhecimento13';
 import { alvoDaNotoriedade } from './sistemas/notoriedade';
 import type { Financas,
   Classe, Dominio, Entrada, Escolaridade, EstiloDeVida, Genero, Marco, Parentesco, Pessoa, Relevancia, TabelaEmCurso, Tema, Vida, Vinculo
@@ -119,7 +123,11 @@ export function interpretar(bruto: string): Leitura {
   const r = interpretarSemNormalizar(bruto);
   if (r.tipo === 'ok') { normalizarRework75(r.vida); normalizarRework97(r.vida); normalizarRework106(r.vida); normalizarRework11Relacoes(r.vida); normalizarRework11Esportes(r.vida); normalizarRework11Artes(r.vida); normalizarRework115(r.vida); normalizarRework12(r.vida); normalizarRework122(r.vida); normalizarRework125(r.vida); normalizarRework123(r.vida); normalizarRework1235(r.vida); normalizarRework124(r.vida); normalizarHotfix1151(r.vida); normalizarVida126(r.vida); fixarEstatura(r.vida, true); }
   if (r.tipo === 'ok') normalizarVida129Economia(r.vida);
+  if (r.tipo === 'ok') normalizarVida13Empresas(r.vida);
   if (r.tipo === 'ok') normalizarVida129Presidencia(r.vida);
+  if (r.tipo === 'ok') normalizarVida13Acoes(r.vida);
+  if (r.tipo === 'ok') normalizarVida13Aparencia(r.vida);
+  if (r.tipo === 'ok') normalizarVida13Fama(r.vida);
   return r;
 }
 

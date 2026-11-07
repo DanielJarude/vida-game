@@ -12,6 +12,8 @@ const GuardaRoupa = sobDemanda(() => import('./Personalizar').then(m => m.Guarda
 /** 12.7: a miniatura de cada peça (a figura recortada) vem sob demanda, como a figura inteira. */
 const Miniatura = sobDemanda(() => import('../avatar/MiniaturaDaPeca').then(m => m.MiniaturaDaPeca));
 const EstudioDeTatuagem = sobDemanda(() => import('./Tatuagens').then(m => m.EstudioDeTatuagem));
+/** VIDA 13: os piercings (a lupa por zona do corpo) — pacote sob demanda, como o estúdio de tatuagem. */
+const PiercingsDaAparencia = sobDemanda(() => import('./Piercings13').then(m => m.PiercingsDaAparencia));
 import { useState } from 'react';
 import type { Vida, Visual } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
@@ -23,7 +25,11 @@ import { texturaDe } from '../avatar/cabelos';
 import { FiguraSobDemanda as Figura } from '../avatar/figuraSobDemanda';
 import { NOME_DO_CORPO, tipoDeCorpo } from '../../motor/sistemas/silhueta';
 import { lugaresDoItem } from '../../motor/dados/estilo';
-import { BotaoAcao } from '../comum';
+import { BotaoAcao, Escolha } from '../comum';
+import { Retrato } from '../avatar/Retrato';
+import { CAMPOS_13 } from '../../motor/sistemas/aparencia13';
+import { BLUSHES_13, CORES_DE_BATOM_13, CORES_DE_SOMBRA_13, DELINEADOS_13, MECHAS_13 } from '../../motor/dados/aparencia13';
+import '../aparencia13.css';
 import { nomeDaMarca } from '../../motor/sistemas/lojas';
 import { composicoesNaFigura, tatuagensNaFigura } from '../../motor/sistemas/tatuagens';
 import type { Aba } from '../navegacao';
@@ -34,13 +40,17 @@ export function AparenciaEEstilo({ vida, agir, irPara }: Props) {
   const i = idade(vida);
   const vis = vida.eu.visual;
   const [m, setM] = useState<MudancaVisual>({});
+  const [vista, setVista] = useState<'frente' | 'costas'>('frente');
   if (i < 3) return null;
   const fase = faseDeAutonomia(i);
   const previa: Visual = { ...vis, ...m, ...(m.barba === 'nenhuma' ? { barba: undefined } : {}) };
+  // VIDA 13: "nenhum" tira a mecha ou a maquiagem (só na prévia, até confirmar).
+  for (const k of CAMPOS_13) if (previa[k] === 'nenhum') delete previa[k];
+  if (previa.mechas && !previa.mechasEstilo) previa.mechasEstilo = 'luzes';
   const mudou = Object.keys(m).length > 0;
   const natural = vida.eu.estilo?.corNatural ?? vis.corCabelo;
   const cores = [...new Set([natural, ...(i >= AUTONOMIA.aparencia.idade ? [...CORES_NATURAIS, ...CORES_TINTA] : [])])];
-  const cortes = CORTES.filter(c => i >= AUTONOMIA.aparencia.idade || !['raspado', 'black', 'trancas', 'locs'].includes(c.id));
+  const cortes = CORTES.filter(c => i >= AUTONOMIA.aparencia.idade || !(c.restrito || ['raspado', 'black', 'trancas', 'locs'].includes(c.id)));
   // HOTFIX dos cabelos — o TIPO de cabelo (liso, ondulado, encaracolado, cacheado, crespo). O natural vem dos genes; os
   // outros são química (alisar, fazer cachos), liberados na idade de decidir o visual. Voltar ao natural, sempre.
   const tipoAtual = texturaDe(vis.cabelo, vis.textura);
@@ -50,15 +60,39 @@ export function AparenciaEEstilo({ vida, agir, irPara }: Props) {
   const itens = itensDaPessoa(vida);
   const barba = podeTerBarba(vida);
   const barbaAtual = vis.barba ?? 'nenhuma';
+  const decide = i >= AUTONOMIA.aparencia.idade;
   const set = (k: keyof MudancaVisual, x: string | boolean | undefined, atual: unknown) => setM(o => { const n = { ...o } as Record<string, unknown>; if (x === atual) delete n[k]; else n[k] = x; return n as MudancaVisual; });
+  // VIDA 13: um seletor das opções novas (mechas, maquiagem), com "sem" no começo.
+  const opcao13 = (k: (typeof CAMPOS_13)[number], rotulo: string, opcoes: [string, string][], semRotulo = 'Sem') => {
+    const atual = vis[k] ?? 'nenhum';
+    return (
+      <label className="campo" key={k}>
+        <span className="campo__rotulo">{rotulo}</span>
+        <select value={(m[k] as string | undefined) ?? atual} onChange={e => set(k, e.target.value, atual)}>
+          <option value="nenhum">{semRotulo}</option>
+          {opcoes.map(([id, nome]) => <option key={id} value={id}>{nome}</option>)}
+        </select>
+      </label>
+    );
+  };
+  const comMechas = ((m.mechas as string | undefined) ?? vis.mechas ?? 'nenhum') !== 'nenhum';
   return (
     <section className="aparencia" aria-labelledby="aparencia-titulo">
       <h2 id="aparencia-titulo" className="voce-subtitulo">Aparência e estilo</h2>
       {fase === 'familia_decide' ? <p className="nota">{AUTONOMIA.aparencia_basica.antes}</p> : (
         <div className="aparencia__corpo">
-          <div className="aparencia__previa">
-            {/* 12.4.1: o corpo inteiro (o tipo de corpo vem do condicionamento, dos hábitos e do que se pratica). */}
-            <Figura visual={previa} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} corpo={tipoDeCorpo(vida)} pecas={itens.filter(x => x.usando)} tatuagens={tatuagensNaFigura(vida)} composicoes={composicoesNaFigura(vida)} largura={150} rotulo={mudou ? 'Como ficaria' : 'Como você está'} />
+          {/* VIDA 13: a prévia em dois enquadramentos — o rosto de perto e o corpo inteiro (de frente ou de costas) —, e o
+              "antes" ao lado enquanto há mudança por confirmar. O desenho é de frente e de costas: perfil não existe. */}
+          <div className="aparencia__previa aparencia13__previa">
+            <div className="aparencia13__quadros">
+              <figure className="aparencia13__rosto">
+                <Retrato visual={previa} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} tamanho={132} rotulo={mudou ? 'O rosto como ficaria' : 'O seu rosto hoje'} />
+                {mudou && <span className="aparencia13__antes"><Retrato visual={vis} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} tamanho={52} rotulo="Antes" /><span className="nota">antes</span></span>}
+              </figure>
+              {/* 12.4.1: o corpo inteiro (o tipo de corpo vem do condicionamento, dos hábitos e do que se pratica). */}
+              <Figura visual={previa} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} corpo={tipoDeCorpo(vida)} pecas={itens.filter(x => x.usando)} tatuagens={tatuagensNaFigura(vida)} composicoes={composicoesNaFigura(vida)} largura={112} vista={vista} rotulo={`${mudou ? 'Como ficaria' : 'Como você está'}${vista === 'costas' ? ' (de costas)' : ''}`} />
+            </div>
+            <Escolha rotulo="Ângulo do corpo" valor={vista} aoMudar={setVista} opcoes={[{ id: 'frente', rotulo: 'De frente' }, { id: 'costas', rotulo: 'De costas' }]} />
             <span className="nota">{mudou ? 'Como ficaria' : 'Hoje'} · corpo {NOME_DO_CORPO[tipoDeCorpo(vida)]}</span>
           </div>
           <div className="aparencia__escolhas">
@@ -81,6 +115,15 @@ export function AparenciaEEstilo({ vida, agir, irPara }: Props) {
                 {[...new Set([vis.corCabelo, ...cores])].map(c => <option key={c} value={c}>{NOME_COR[c] ?? c}{c === natural ? ' (natural)' : ''}</option>)}
               </select>
             </label>
+            {decide && opcao13('mechas', 'Mechas', [...CORES_NATURAIS, ...CORES_TINTA].map(c => [c, NOME_COR[c] ?? c] as [string, string]), 'Sem mechas')}
+            {decide && comMechas && (
+              <label className="campo">
+                <span className="campo__rotulo">Jeito das mechas</span>
+                <select value={(m.mechasEstilo as string | undefined) ?? vis.mechasEstilo ?? 'luzes'} onChange={e => set('mechasEstilo', e.target.value, vis.mechasEstilo ?? 'luzes')}>
+                  {MECHAS_13.map(x => <option key={x.id} value={x.id}>{x.nome}</option>)}
+                </select>
+              </label>
+            )}
             {barba && (
               <label className="campo">
                 <span className="campo__rotulo">Barba</span>
@@ -93,7 +136,16 @@ export function AparenciaEEstilo({ vida, agir, irPara }: Props) {
               <label className="marcar"><input type="checkbox" checked={(m.bigode ?? vis.bigode) !== false} onChange={e => set('bigode', e.target.checked ? undefined : false, vis.bigode === false ? false : undefined)} /> Com bigode</label>
             )}
             {!barba && i < AUTONOMIA.barba.idade && vida.eu.genero !== 'feminino' && <p className="nota">{AUTONOMIA.barba.antes}</p>}
-            {i < AUTONOMIA.aparencia.idade && <p className="nota">Raspar, pintar e mudar de vez ainda passa pela família.</p>}
+            {decide && (
+              <fieldset className="aparencia13__maquiagem">
+                <legend className="campo__rotulo">Maquiagem</legend>
+                {opcao13('delineado', 'Delineado', DELINEADOS_13.map(x => [x.id, x.nome] as [string, string]))}
+                {opcao13('sombraOlhos', 'Sombra', Object.entries(CORES_DE_SOMBRA_13).map(([id, [nome]]) => [id, nome] as [string, string]))}
+                {opcao13('batom', 'Batom', Object.entries(CORES_DE_BATOM_13).map(([id, [nome]]) => [id, nome] as [string, string]))}
+                {opcao13('blush', 'Blush', Object.entries(BLUSHES_13).map(([id, [nome]]) => [id, nome] as [string, string]))}
+              </fieldset>
+            )}
+            {i < AUTONOMIA.aparencia.idade && <p className="nota">Raspar, pintar, fazer mechas e se maquiar de verdade ainda passa pela família.</p>}
             {mudou && (
               <div className="grupo-acoes grupo-acoes--linha">
                 <BotaoAcao vida={vida} acao={{ tipo: 'aparencia', mudanca: m }} agir={agir} variante="principal" aoAgir={() => setM({})}>{i < 13 ? 'Pedir esse corte' : 'Mudar o visual'}</BotaoAcao>
@@ -106,8 +158,10 @@ export function AparenciaEEstilo({ vida, agir, irPara }: Props) {
       {i >= 3 && <OQueVeste vida={vida} agir={agir} />}
       <GuardaRoupa vida={vida} agir={agir} />
       {(i >= 16 || (vida.eu.tatuagens?.length ?? 0) > 0) && <EstudioDeTatuagem vida={vida} agir={agir} />}
+      {/* VIDA 13: os piercings — junto das tatuagens (a loja vende; aqui se vê, experimenta, usa, troca e tira). */}
+      <PiercingsDaAparencia vida={vida} agir={agir} irPara={irPara} />
       {i >= AUTONOMIA.compra_pessoal.idade && (
-        <p className="nota">{precisaDeOculos(vida) && !itens.some(x => x.itemId === 'oculos_grau') ? 'A vista anda pedindo óculos de grau. ' : ''}Óculos, chapéus, roupas: <button type="button" className="link" onClick={() => irPara('compras')}>Vida · Compras →</button></p>
+        <p className="nota">{precisaDeOculos(vida) && !itens.some(x => x.itemId === 'oculos_grau') ? 'A vista anda pedindo óculos de grau. ' : ''}Óculos, chapéus, roupas, joias: <button type="button" className="link" onClick={() => irPara('compras')}>Vida · Compras →</button></p>
       )}
     </section>
   );
@@ -124,11 +178,7 @@ const PARTES: { id: string; nome: string; lugares: string[] }[] = [
   { id: 'casaco', nome: 'Por cima', lugares: ['casaco'] }, { id: 'pes', nome: 'Nos pés', lugares: ['pes'] },
   { id: 'pulso', nome: 'Relógio', lugares: ['pulso'] }, { id: 'pulseira', nome: 'Pulseira', lugares: ['pulseira'] },
   { id: 'anel', nome: 'Anel', lugares: ['anel'] }, { id: 'joia', nome: 'No pescoço', lugares: ['joia'] }, { id: 'orelha', nome: 'Nas orelhas', lugares: ['orelha'] },
-  // VIDA 12.9: os piercings — um cartão por furo (trocar a joia, tirar).
-  { id: 'helix', nome: 'Piercing no helix', lugares: ['helix'] }, { id: 'tragus', nome: 'Piercing no tragus', lugares: ['tragus'] },
-  { id: 'nariz', nome: 'Piercing no nariz', lugares: ['nariz'] }, { id: 'septo', nome: 'Piercing no septo', lugares: ['septo'] },
-  { id: 'sobrancelha', nome: 'Piercing na sobrancelha', lugares: ['sobrancelha'] }, { id: 'labio', nome: 'Piercing no lábio', lugares: ['labio'] },
-  { id: 'umbigo', nome: 'Piercing no umbigo', lugares: ['umbigo'] }
+  // VIDA 13: os piercings saíram daqui (eram um cartão por furo): têm a seção própria, com a lupa (`Piercings13`).
 ];
 
 export function OQueVeste({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {

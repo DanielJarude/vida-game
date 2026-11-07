@@ -20,6 +20,7 @@
  */
 
 import { DESENHOS_129, NOME_ESTILO_129, type EstiloDeTatuagem129, type TemaDeTatuagem } from './tatuagens129';
+import { DESENHOS_13 } from './tatuagens13';
 
 export type EstiloDeTatuagem =
   | EstiloDeTatuagem129 | 'realista' | 'tradicional' | 'blackwork' | 'tribal' | 'geometrica' | 'oriental' | 'minimalista' | 'fine_line'
@@ -248,7 +249,8 @@ export const DESENHOS: readonly DesenhoDeTatuagem[] = [
   { id: 'fenix_costas', nome: 'Fênix nas costas', estilo: 'composicao', tamanho: 4, tamanhos: T(4), colorida: true, regioes: ['costas_inteiras'], descricao: 'A fênix subindo, as asas de ombro a ombro.' },
   { id: 'aguia_peito', nome: 'Águia no peito', estilo: 'composicao', tamanho: 4, tamanhos: T(4), regioes: ['peito_inteiro'], descricao: 'As asas abertas de um ombro ao outro.' },
   { id: 'perna_floral', nome: 'Perna florida', estilo: 'composicao', tamanho: 4, tamanhos: T(4), colorida: true, proporcao: 0.3, regioes: ['perna_inteira'], descricao: 'Rosas e folhas subindo do tornozelo à coxa.' },
-  ...DESENHOS_129
+  ...DESENHOS_129,
+  ...DESENHOS_13
 ];
 const POR_ID = new Map(DESENHOS.map(d => [d.id, d]));
 export const desenhoDeTatuagem = (id: string) => POR_ID.get(id);

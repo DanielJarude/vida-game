@@ -31,6 +31,9 @@ import type { Rng } from './rng';
 import type { EstiloDeVida, Imovel, Pessoa, Produto, Ramo, Retorno, TipoMovimento, Veiculo, Vida } from './tipos';
 import { escrever, filhos, idade, idadePessoa, lembrarCom, marcarFato, parceiro, temFato, transacao, vinculosVivos } from './nucleo';
 import { bloqueio, podeTentar, PERMITIDO, type Veredito } from './plausibilidade';
+import type { Desfecho13 } from './tipos';
+import { antesDaAcao13, disponibilidadeDesfecho13, montarDesfecho13, seguirDesfecho13, type OqueDesfecho13 } from './sistemas/desfecho13';
+import { recolherDesfecho13 } from './sistemas/anotar13';
 import { abrirDecisao, abrirProximaDaFila, candidatos, conteudoPorId, liberarOpcaoPaga, preparar, resolverDecisao } from './conteudo/motor';
 import { modeloRotina, nivelModelo, podeComecarRotina } from './sistemas/rotinas';
 import { fazerEnem, largarEscola, opcoesDeCurso, podeFazerEnem, tentarIngresso, voltarAEstudar, type OpcaoCurso, novaMatricula, fecharNoHistorico, nomeDaMatricula } from './sistemas/escola';
@@ -132,7 +135,11 @@ export type Acao =
   /** REWORK 5: o que se faz cumprindo pena (ou foragido): a rotina de dentro e as respostas ao pavilhão (`sistemas/prisao`). */
   | { tipo: 'prisao'; oque: OquePrisao }
   /** `resgatar`: a opção custa mais do que há na conta, e o jogador aceitou tirar das aplicações. */
-  | { tipo: 'decidir'; opcaoId: string; resgatar?: boolean }
+  /** VIDA 13: `umaPorVez` — o resultado aparece antes da próxima decisão do ano (`sistemas/desfecho13`); `momentoId` — só
+   *  vale para ESTA decisão (o clique repetido não escolhe por engano na seguinte). */
+  | { tipo: 'decidir'; opcaoId: string; resgatar?: boolean; umaPorVez?: boolean; momentoId?: string }
+  /** VIDA 13: depois do resultado — a próxima decisão do ano, ou deixar as que podem esperar para depois. */
+  | { tipo: 'desfecho13'; oque: OqueDesfecho13 }
   /** Tirar das aplicações o que falta na conta e fazer (o jogador consentiu: nada é vendido sozinho). */
   | { tipo: 'resgatar_e'; acao: Acao }
   /** Começar, mudar a intensidade (nivel) ou parar uma atividade. */
@@ -377,6 +384,7 @@ function presoALugar(v: Vida): Veredito | undefined {
 
 export function disponibilidade(v: Vida, a: Acao): Veredito {
   if (v.morte) return bloqueio('impossivel', 'Esta vida terminou.');
+  if (a.tipo === 'desfecho13') return disponibilidadeDesfecho13(v, a.oque);
   if (v.momento && a.tipo !== 'decidir') return bloqueio('incompativel', 'Há uma decisão esperando por você.');
   const i = idade(v);
   // REWORK 5: a porta CENTRAL da liberdade — o preso não segue vivendo a vida da rua (comprar carro, mudar de cidade,
@@ -387,6 +395,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'prisao': return disponibilidadePrisao(v, a.oque);
     case 'decidir': {
       if (!v.momento) return bloqueio('incompativel', 'Não há decisão aberta.');
+      if (a.momentoId && a.momentoId !== v.momento.id) return bloqueio('incompativel', 'Essa decisão já foi tomada.');
       if (!a.resgatar) return PERMITIDO;
       const op = v.momento.opcoes.find(o => o.id === a.opcaoId);
       if (!op?.resgate) return bloqueio('incompativel', 'Essa escolha não precisa tirar dinheiro das aplicações.');
@@ -948,14 +957,20 @@ export function executar(vida: Vida, a: Acao): Retorno {
   let titulo: string | undefined;
   let pessoaId: string | undefined;
   let consequencias: string[] | undefined;
+  let desfecho: Desfecho13 | undefined;
   const antes = vida.biografia.length;
   const { vida: nova } = transacao(vida, (v, r) => {
     // O extrato (`extrato`): o que mexeu no dinheiro antes (os acontecimentos do fim do ano) e o que esta escolha
     // mexeu ficam, cada um, com o seu nome — nenhum real some sem linha.
     conferir(v, 'Acontecimentos do fim do ano', 'acontecimento');
     const tinhaMomento = !!v.momento;
+    // VIDA 13 · Ações: o retrato de antes (a conta, o caixa da empresa) e o que os sistemas anotarem para o resultado.
+    const momentoAntes = v.momento;
+    const umaPorVez = a.tipo === 'decidir' && !!a.umaPorVez;
+    const emp = 'empresaId' in a && typeof a.empresaId === 'string' ? empresa(v, a.empresaId) : undefined;
+    const retrato = antesDaAcao13(v, emp);
     // REWORK 9 · PROG-01: o que a escolha fizer com uma frente é atribuído a ela (`acao:oficio`, `acao:formacao`…).
-    const out = praticandoPor(`acao:${a.tipo}`, () => executarNaTransacao(v, r, a));
+    const { valor: out, esperado, mudou } = recolherDesfecho13(() => praticandoPor(`acao:${a.tipo}`, () => executarNaTransacao(v, r, a)));
     resultado = out.resultado;
     aviso = out.aviso;
     titulo = out.titulo;
@@ -965,16 +980,29 @@ export function executar(vida: Vida, a: Acao): Retorno {
     if (v.caminhos.pendente && !v.momento) abrirConflitoPendente(v, r);
     // REWORK 11.5 · EVT-01: a decisão do ano que esperava a vez abre quando esta ação fechou a que estava aberta por outro
     // caminho (o conflito resolvido em Caminhos) — nunca se perde por isso. (A resolução normal já abre a próxima.)
-    if (tinhaMomento && !v.momento) abrirProximaDaFila(v);
+    if (tinhaMomento && !v.momento && !umaPorVez) abrirProximaDaFila(v);
     conferir(v, ...linhaDoExtrato(a));
     // REWORK 9: a agenda guarda só escolhas de coisas que existem (a atividade largada leva o lugar dela junto).
     limparAgenda(v);
     // REWORK 12.4: os objetos nunca ficam num lugar que deixou de existir (o imóvel vendido, a casa para onde se mudou).
     normalizarLocais(v);
+    // VIDA 13 · Ações: o resultado imediato. Fica na vida (até ser visto) quando há uma decisão atrás dele: a próxima do ano
+    // (uma de cada vez) ou a que esta ação abriu — antes, a decisão aberta escondia o resultado da ação que a trouxe.
+    const texto = a.tipo === 'decidir' ? out.resultado : out.resultado ?? out.aviso?.texto;
+    if (texto && a.tipo !== 'desfecho13') {
+      const dec = a.tipo === 'decidir' ? momentoAntes : null;
+      desfecho = montarDesfecho13(v, retrato, {
+        titulo: dec ? dec.titulo.replace(/ · .*$/, '') : out.titulo ?? 'O que aconteceu', texto,
+        escolha: dec && a.tipo === 'decidir' ? dec.opcoes.find(o => o.id === a.opcaoId)?.texto : undefined,
+        mudancas: [...mudou, ...(out.consequencias ?? []), ...v.biografia.slice(antes).filter(e => e.relevancia !== 'tecnico').map(e => e.texto)],
+        esperado, empresa: emp, pessoaId: out.pessoaId
+      });
+      if (umaPorVez || (!tinhaMomento && v.momento)) v.desfecho13 = desfecho;
+    }
   });
   // REWORK 12.3 · D10: as consequências objetivas da ação (o Submundo as mede) vêm antes do que entrou na Linha da Vida.
   const mudancas = [...(consequencias ?? []), ...nova.biografia.slice(antes).filter(e => e.relevancia !== 'tecnico').map(e => e.texto)];
-  return { vida: nova, resultado, aviso, titulo, pessoaId: pessoaId ?? (a.tipo === 'pessoa' && titulo ? a.pessoaId : undefined), ...(mudancas.length ? { mudancas } : {}) };
+  return { vida: nova, resultado, aviso, titulo, pessoaId: pessoaId ?? (a.tipo === 'pessoa' && titulo ? a.pessoaId : undefined), ...(mudancas.length ? { mudancas } : {}), ...(desfecho ? { desfecho } : {}) };
 }
 
 /** Como cada escolha aparece no extrato do ano (o rótulo e o tipo do movimento). */
@@ -1035,7 +1063,8 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       const id = `v${v.seq++}`;
       const cores = variantesDeVeiculo(m.categoria);
       const cor = o.cor ? { cor: o.cor, nome: o.corNome } : cores[Math.floor(rngDe(v.id, id, 'cor').next() * cores.length)];
-      v.financas.bens.push({ id, tipo: 'veiculo', cor: cor.cor, corNome: cor.nome, modeloId: m.id, nome: m.nome, valor: o.preco, precoPago: o.preco, tCompra: v.t, estado: o.estado, anoFabricacao: o.anoFabricacao, usado: o.usado, dono: 'eu', historia: [{ t: v.t, texto: `Presente de ${quem.p.nome}${o.usado ? `, usada, ano ${o.anoFabricacao}` : ''}.` }] });
+      // VIDA 13: o modelo do anúncio vai junto (antes, o presente chegava sem versão e a garagem desenhava outro).
+      v.financas.bens.push({ id, tipo: 'veiculo', cor: cor.cor, corNome: cor.nome, modeloId: m.id, versaoId: versaoVeiculo(o.versaoId)?.id, nome: m.nome, valor: o.preco, precoPago: o.preco, tCompra: v.t, estado: o.estado, anoFabricacao: o.anoFabricacao, usado: o.usado, dono: 'eu', historia: [{ t: v.t, texto: `Presente de ${quem.p.nome}${o.usado ? `, usada, ano ${o.anoFabricacao}` : ''}.` }] });
       v.fatos['veiculos_comprados'] = (v.fatos['veiculos_comprados'] ?? 0) + 1;
       lembrarCom(v, quem.p.id, `Comprou ${m.nome === 'bicicleta' ? 'a sua primeira bicicleta' : `uma ${m.nome}`} para você.`, 'apoio', 1, v.t, 'ela');
       escrever(v, { texto: `${quem.p.nome} comprou ${m.nome === 'bicicleta' ? 'uma bicicleta' : `uma ${m.nome}`} para você${o.usado ? ', usada' : ''}.`, relevancia: 'cotidiano', tema: 'familia', tom: 'bom', escolha: true, pessoas: [quem.p.id] });
@@ -1074,9 +1103,10 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
         tirarDasAplicacoes(v, op.resgate!, 'para pagar');
         liberarOpcaoPaga(v, r, a.opcaoId);
       }
-      const res = resolverDecisao(v, r, a.opcaoId);
+      const res = resolverDecisao(v, r, a.opcaoId, !!a.umaPorVez);
       return 'erro' in res ? ok(res.erro, 'ruim') : { resultado: res.texto };
     }
+    case 'desfecho13': { const t = seguirDesfecho13(v, a.oque); return t ? ok(t) : {}; }
     case 'rotina': {
       const m = modeloRotina(a.id)!;
       const atual = v.rotinas.find(x => x.id === a.id);

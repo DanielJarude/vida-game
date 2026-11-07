@@ -123,7 +123,9 @@ const KICKER: Partial<Record<ModoTrabalho, string>> = {
 };
 
 /** Uma ação que é vida pública (a política, o caminho dos concursos): mora na divisão Vida pública (REWORK 9.6). */
-export const ehAcaoPublica = (x: AcaoProfissional) => x.id.startsWith('pol_') || x.id === 'concursos';
+// VIDA 13 · Ações: o governo do país (`pres_*`, da Presidência 12.9) também é vida pública — antes, os verbos da presidenta
+// ficavam em Trabalho, embaixo do aviso "o mandato está em Vida pública", e a Vida pública mostrava só três ações.
+export const ehAcaoPublica = (x: AcaoProfissional) => x.id.startsWith('pol_') || x.id.startsWith('pres_') || x.id === 'concursos';
 
 /**
  * O TRABALHO como um lado de Caminhos (REWORK 9). Sem `parte`, a página inteira (como antes); com `parte`, só o que é

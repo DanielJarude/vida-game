@@ -8,18 +8,31 @@
  * amarelo e rosé, o preto (PVD); argola (segmento/clicker), ponto de luz (labret de rosca), barra curva, ferradura
  * (o septo), trio (pontos em fila no helix). Puro: só tipos.
  */
-export type RegiaoDePiercing = 'nariz' | 'septo' | 'sobrancelha' | 'labio' | 'helix' | 'tragus' | 'umbigo';
-export type FormaDePiercing = 'ponto' | 'argola' | 'barra' | 'ferradura' | 'trio' | 'pingente';
-export type MetalDePiercing = 'aco' | 'titanio' | 'prata' | 'ouro' | 'ouro_rose' | 'preto';
+import { PIERCINGS_13, REGIOES_13 } from './piercings13';
 
-export interface Piercing { regiao: RegiaoDePiercing; forma: FormaDePiercing; metal: MetalDePiercing; /** A pedra (cor), quando tem. */ pedra?: string }
+/** VIDA 13: mais furos (`dados/piercings13`) — o 2º do lóbulo, a concha, o daith, o industrial, a outra narina, a ponte, o medusa, o outro canto do lábio. */
+export type RegiaoDePiercing = 'nariz' | 'septo' | 'sobrancelha' | 'labio' | 'helix' | 'tragus' | 'umbigo'
+  | 'lobulo2' | 'concha' | 'daith' | 'industrial' | 'nariz2' | 'ponte' | 'medusa' | 'labio2';
+/** VIDA 13: o clicker (argola articulada cravejada), a flor de pedras, a barra reta, o espeto e o pingente pequeno (charme). */
+export type FormaDePiercing = 'ponto' | 'argola' | 'barra' | 'ferradura' | 'trio' | 'pingente' | 'clicker' | 'cluster' | 'barra_reta' | 'spike' | 'charme';
+/** VIDA 13: o ouro branco (os diamantes da 12.9 já diziam "ouro branco") e o titânio anodizado (azul, arco-íris). */
+export type MetalDePiercing = 'aco' | 'titanio' | 'prata' | 'ouro' | 'ouro_rose' | 'preto' | 'ouro_branco' | 'titanio_azul' | 'titanio_arco';
+
+export interface Piercing {
+  regiao: RegiaoDePiercing; forma: FormaDePiercing; metal: MetalDePiercing; /** A pedra (cor), quando tem. */ pedra?: string;
+  /** VIDA 13: o acabamento do metal (ausente: polido). */ acabamento?: 'polido' | 'fosco' | 'martelado';
+  /** VIDA 13: o desenho do pingente ou do detalhe (a lua, a estrela, o coração, as pontas em espeto, a cascata). */ simbolo?: 'lua' | 'estrela' | 'coracao' | 'espetos' | 'cascata';
+}
 
 export const COR_DO_METAL: Record<MetalDePiercing, [string, string]> = {
   aco: ['#b9bec4', '#7d848c'], titanio: ['#a7adb6', '#6c737c'], prata: ['#d9dde2', '#8d939b'],
-  ouro: ['#e1bd5f', '#a3802c'], ouro_rose: ['#e6a98f', '#a8664f'], preto: ['#3b3d42', '#141518']
+  ouro: ['#e1bd5f', '#a3802c'], ouro_rose: ['#e6a98f', '#a8664f'], preto: ['#3b3d42', '#141518'],
+  ouro_branco: ['#e8e6df', '#9a978c'], titanio_azul: ['#4f7fd6', '#24427e'], titanio_arco: ['#9b6fd0', '#3e6f8e']
 };
 export const NOME_DA_REGIAO: Record<RegiaoDePiercing, string> = {
-  nariz: 'no nariz', septo: 'no septo', sobrancelha: 'na sobrancelha', labio: 'no lábio', helix: 'no alto da orelha (helix)', tragus: 'no tragus', umbigo: 'no umbigo'
+  nariz: 'no nariz', septo: 'no septo', sobrancelha: 'na sobrancelha', labio: 'no lábio', helix: 'no alto da orelha (helix)', tragus: 'no tragus', umbigo: 'no umbigo',
+  lobulo2: 'no 2º furo do lóbulo', concha: 'na concha da orelha', daith: 'no daith', industrial: 'no industrial (alto da orelha)', nariz2: 'na narina direita',
+  ponte: 'na ponte do nariz', medusa: 'acima do lábio (medusa)', labio2: 'no outro canto do lábio'
 };
 
 /** O item de estilo de cada joia (o mesmo formato de `dados/estilo.ItemEstilo`, sem importar o módulo: só os campos). */
@@ -37,7 +50,7 @@ export const PIERCINGS: ItemDePiercing[] = [
   p('pc_nariz_ponto_zirconia', 'Piercing no nariz — ponto de luz', 180, { regiao: 'nariz', forma: 'ponto', metal: 'titanio', pedra: '#e9f6ff' }, 'Titânio com uma zircônia que pega a luz.', { estilos: ['casual', 'elegante'] }),
   p('pc_nariz_argola_prata', 'Argola no nariz — prata', 160, { regiao: 'nariz', forma: 'argola', metal: 'prata' }, 'Argola fina de prata, depois de cicatrizado.', { estilos: ['alternativo', 'rock', 'vintage'] }),
   p('pc_nariz_argola_ouro', 'Argola no nariz — ouro 18k', 1400, { regiao: 'nariz', forma: 'argola', metal: 'ouro' }, 'Ouro dezoito, argola delicada.', { estilos: ['elegante'], luxo: true, nivel: 4 }),
-  p('pc_nariz_diamante', 'Ponto de diamante no nariz', 9800, { regiao: 'nariz', forma: 'ponto', metal: 'ouro', pedra: '#f4fbff' }, 'Um diamante pequeno em ouro branco. Brilha sem fazer barulho.', { estilos: ['luxuoso', 'elegante'], luxo: true, nivel: 5 }),
+  p('pc_nariz_diamante', 'Ponto de diamante no nariz', 9800, { regiao: 'nariz', forma: 'ponto', metal: 'ouro_branco', pedra: '#f4fbff' }, 'Um diamante pequeno em ouro branco. Brilha sem fazer barulho.', { estilos: ['luxuoso', 'elegante'], luxo: true, nivel: 5 }),
   // Septo
   p('pc_septo_ferradura', 'Septo — ferradura de aço', 140, { regiao: 'septo', forma: 'ferradura', metal: 'aco' }, 'A ferradura de aço: dá para virar para dentro quando precisa.', { estilos: ['alternativo', 'punk', 'rock'] }),
   p('pc_septo_clicker_ouro', 'Septo — argola dourada', 900, { regiao: 'septo', forma: 'argola', metal: 'ouro' }, 'Argola clicker banhada a ouro, fecho escondido.', { estilos: ['alternativo', 'elegante'], nivel: 3 }),
@@ -56,14 +69,16 @@ export const PIERCINGS: ItemDePiercing[] = [
   p('pc_helix_preto', 'Helix — argola preta', 120, { regiao: 'helix', forma: 'argola', metal: 'preto' }, 'Argola preta, fina, na borda da orelha.', { estilos: ['rock', 'punk', 'streetwear'] }),
   // Tragus
   p('pc_tragus_ponto', 'Tragus — ponto de titânio', 140, { regiao: 'tragus', forma: 'ponto', metal: 'titanio' }, 'O furo na cartilagem da frente da orelha.', { estilos: ['casual', 'alternativo'] }),
-  p('pc_tragus_diamante', 'Tragus — ponto de diamante', 7200, { regiao: 'tragus', forma: 'ponto', metal: 'ouro', pedra: '#f4fbff' }, 'Diamante pequeno em ouro branco.', { estilos: ['luxuoso'], luxo: true, nivel: 5 }),
+  p('pc_tragus_diamante', 'Tragus — ponto de diamante', 7200, { regiao: 'tragus', forma: 'ponto', metal: 'ouro_branco', pedra: '#f4fbff' }, 'Diamante pequeno em ouro branco.', { estilos: ['luxuoso'], luxo: true, nivel: 5 }),
   // Umbigo
   p('pc_umbigo_barra', 'Umbigo — barra com pedra', 160, { regiao: 'umbigo', forma: 'barra', metal: 'aco', pedra: '#7fd0e8' }, 'A barra curva com uma pedra azul em cima.', { estilos: ['casual'] }),
   p('pc_umbigo_pingente', 'Umbigo — pingente de prata', 240, { regiao: 'umbigo', forma: 'pingente', metal: 'prata', pedra: '#c6a7e8' }, 'Barra de prata com um pingente pequeno.', { estilos: ['alternativo'] }),
-  p('pc_umbigo_ouro', 'Umbigo — barra de ouro', 1500, { regiao: 'umbigo', forma: 'barra', metal: 'ouro', pedra: '#f4fbff' }, 'Ouro dezoito com zircônia.', { estilos: ['elegante'], luxo: true, nivel: 4 })
+  p('pc_umbigo_ouro', 'Umbigo — barra de ouro', 1500, { regiao: 'umbigo', forma: 'barra', metal: 'ouro', pedra: '#f4fbff' }, 'Ouro dezoito com zircônia.', { estilos: ['elegante'], luxo: true, nivel: 4 }),
+  // VIDA 13: os furos e as joias novas.
+  ...PIERCINGS_13
 ];
 
-export const REGIOES_DE_PIERCING = new Set<string>(['nariz', 'septo', 'sobrancelha', 'labio', 'helix', 'tragus', 'umbigo']);
+export const REGIOES_DE_PIERCING = new Set<string>(['nariz', 'septo', 'sobrancelha', 'labio', 'helix', 'tragus', 'umbigo', ...REGIOES_13]);
 const POR_ID = new Map(PIERCINGS.map(x => [x.id, x]));
 export const piercingDoItem = (itemId: string): Piercing | undefined => POR_ID.get(itemId)?.piercing;
 /** A idade mínima: no Brasil e em quase todo lugar, menor só com autorização — aqui, a partir dos 16. */

@@ -241,8 +241,45 @@ function dispor(tipo: string, area: number | undefined, objetos: ObjetoParaDispo
     });
   }
 
+  /**
+   * VIDA 13 — quanto um lugar esconde (na tela): para cada móvel do chão que fica atrás do outro, a fração da figura
+   * dele que o da frente cobre (as caixas dos dois em perspectiva). Sem lugar que não tape nada, fica o que tapa menos
+   * (a banheira na frente do box de vidro alto, não na frente do vaso, que sumia inteiro).
+   */
+  const figura = (r: Retangulo, h: number) => {
+    const pts = [r.z0, r.z1].flatMap(z => [r.x0, r.x1].flatMap(x => [tela(g, x, 0, z), tela(g, x, h, z)]));
+    return { x0: Math.min(...pts.map(q => q[0])), x1: Math.max(...pts.map(q => q[0])), y0: Math.min(...pts.map(q => q[1])), y1: Math.max(...pts.map(q => q[1])), z: (r.z0 + r.z1) / 2 };
+  };
+  function custoDeOclusao(r: Retangulo, h: number): number {
+    const a = figura(r, h);
+    let custo = 0;
+    for (const q of postos) {
+      if (q.montagem !== 'chao') continue;
+      const b = figura(q, q.h);
+      const ix = Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0), iy = Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0);
+      if (ix <= 0 || iy <= 0) continue;
+      const tras = a.z < b.z ? a : b;
+      custo += (ix * iy) / Math.max(1, (tras.x1 - tras.x0) * (tras.y1 - tras.y0));
+    }
+    return custo;
+  }
+  /** No modo sem rigor, os lugares possíveis são juntados aqui (em vez de ficar o primeiro). */
+  let coletados: Posto[] | undefined;
+
   /** Tenta pôr no chão, pelas zonas, na ordem. */
   function noChao(o: ObjetoParaDispor, m: Medida): Posto | Posto[] | undefined {
+    if (!rigor && !m.par && !coletados) {
+      // VIDA 13: o primeiro lugar que cabe pode esconder outro inteiro; junta os possíveis e fica com o que menos tapa
+      // (empate: o de antes, na ordem de preferência das zonas).
+      coletados = [];
+      noChao(o, m);
+      const lista = coletados;
+      coletados = undefined;
+      if (!lista.length) return undefined;
+      let melhor = lista[0], nota = custoDeOclusao(melhor, melhor.h);
+      for (const c of lista.slice(1, 400)) { const n = custoDeOclusao(c, c.h); if (n < nota - 0.05) { melhor = c; nota = n; } }
+      return melhor;
+    }
     const w = Math.min(m.w, g.Wm - 0.04), d = Math.min(m.d, g.Dv - 0.04);
     const tenta = (x0: number, z0: number, ignorar?: Retangulo, encostado = false): Posto | undefined => {
       const r = { x0, x1: x0 + w, z0, z1: z0 + d };
@@ -253,7 +290,9 @@ function dispor(tipo: string, area: number | undefined, objetos: ObjetoParaDispo
       // E inteiro à vista: o que fica perto de quem olha não sai pela borda da cena.
       const zd = z0 + Math.min(d, 0.6);
       if (!g.externo && (xEm(g, x0 + w * 0.3, zd) < 1 || xEm(g, x0 + w * 0.7, zd) > g.W - 1 || chaoEm(g, zd) > g.H - 1)) return undefined;
-      return { id: o.id, coisaId: o.coisaId, cor: o.cor, marca: o.marca, ...r, base: 0, h: m.h, montagem: 'chao' };
+      const p: Posto = { id: o.id, coisaId: o.coisaId, cor: o.cor, marca: o.marca, ...r, base: 0, h: m.h, montagem: 'chao' };
+      if (coletados) { coletados.push(p); return undefined; }
+      return p;
     };
     /**
      * 12.9 — GIRADO: o móvel de encostar (a penteadeira, o closet, o armário planejado, a vitrine) vai de lado, encostado
@@ -271,7 +310,9 @@ function dispor(tipo: string, area: number | undefined, objetos: ObjetoParaDispo
           const r = { x0, x1: x0 + gw, z0, z1: z0 + gd };
           if (!livre(r, undefined, g.Dr)) continue;
           if (rigor && escondeOuSome(r, m.h, 1.6)) continue;
-          return { id: o.id, coisaId: o.coisaId, cor: o.cor, marca: o.marca, ...r, base: 0, h: m.h, montagem: 'chao', giro: lado };
+          const p: Posto = { id: o.id, coisaId: o.coisaId, cor: o.cor, marca: o.marca, ...r, base: 0, h: m.h, montagem: 'chao', giro: lado };
+          if (coletados) { coletados.push(p); continue; }
+          return p;
         }
       }
       return undefined;

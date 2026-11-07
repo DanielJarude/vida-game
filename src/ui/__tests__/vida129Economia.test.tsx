@@ -49,6 +49,8 @@ describe('12.9 · telas da economia', () => {
     expect(screen.getAllByText('Faturamento').length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Produtividade|Reputação/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Presidente \(CEO\)/).length).toBeGreaterThan(0);
+    // VIDA 13: as alavancas moram na aba "Mercado e operação" das decisões (a primeira aba é a de lançar produto).
+    fireEvent.click(screen.getByRole('tab', { name: /Mercado e operação/ }));
     const forte = screen.getByRole('radio', { name: /Campanha forte/ });
     expect(forte.getAttribute('aria-checked')).toBe('false');
     fireEvent.click(forte);
