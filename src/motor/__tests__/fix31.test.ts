@@ -431,7 +431,8 @@ describe('11. Casa própria: quem pode comprar encontra uma opção que cabe (e 
   });
 });
 
-describe('12. Ajuda da família: capacidade, necessidade e contexto — não renda automática', () => {
+// VIDA 13: estes casos simulam centenas de anos e já levavam ~19,8 s na 12.9.1 (limite global 20 s): folga própria, sem mudar o que testam.
+describe('12. Ajuda da família: capacidade, necessidade e contexto — não renda automática', { timeout: 60000 }, () => {
   function comIrmao(renda: number, semente: number): { v: Vida; p: Pessoa } {
     const v = adulto(32, { semente });
     for (const x of vinculosVivos(v)) if (['mae', 'pai', 'avo', 'irmao', 'filho'].includes(x.vin.parentesco ?? '')) x.p.vivo = false;

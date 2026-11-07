@@ -26,6 +26,35 @@ export interface NotaDeVersao {
 
 export const NOTAS: NotaDeVersao[] = [
   {
+    versao: '13',
+    data: '2026-11-07',
+    titulo: 'Fama que muda a vida, empresas que escolhem o que fazem, decisões com resultado na hora e um visual novo para casa, veículos e aparência',
+    novidades: [
+      'Fama: quem ficou conhecido ganha uma parte própria em Você, com o tamanho do nome, até onde ele chega, por que conhecem você (esporte, arte, música, negócios, política, internet, um feito ou uma polêmica), a imagem pública (admiração e rejeição) e o que a fama traz e cobra. O mundo reage na medida do nome: campanhas e patrocínios, convites, palestras, gente querendo conhecer você — e paparazzi, boatos e vaias. Para quem não é conhecido, nada disso aparece.',
+      'O passado volta: um título que completa anos redondos, uma polêmica antiga, um negócio que fechou, um emprego que você deixou, um amigo ou rival de antes — só o que de fato aconteceu na sua vida, com as pessoas que você conheceu.',
+      'Empresas escolhem o que produzir: cada ramo tem os seus produtos (salgadinhos, cereais e chocolates; SUVs, sedãs, esportivos e elétricos; smartphones e software; satélites e foguetes; pratos e cardápios...), cada um com investimento, prazo, público, concorrência, margem e risco. Dá para lançar, abrir uma linha nova para ele, melhorar, investir em qualidade, reposicionar, mudar o preço e descontinuar — e o resultado aparece no faturamento, no lucro, na reputação, na fatia de mercado e no valor da empresa.',
+      'Piercings em Você → Aparência: veja cada furo de perto (orelha, nariz, sobrancelha, boca, umbigo), experimente as joias que você já tem antes de usar, troque ou tire. Furos novos (segundo lóbulo, concha, daith, industrial, ponte, medusa...) e muitas joias novas em ouro, prata, aço, titânio e pedras.',
+      'Mais 11 cortes de cabelo, 8 barbas, mechas e ombré, novas cores e maquiagem (delineado, sombra, batom e blush), com prévia do rosto e do corpo inteiro, de frente e de costas, ao lado de como você está hoje.',
+      'Mais 174 desenhos de tatuagem: cultura pop de videogames, livros, séries, filmes e animações (71 obras), e novos geométricos, minimalistas, fine line, blackwork, old school, oriental, tribal, criaturas, céu e espaço e bichos do Brasil. A busca entende várias palavras e o filtro de obra separa por tipo.'
+    ],
+    melhorias: [
+      'Uma decisão de cada vez: depois de escolher, o resultado aparece na hora (o que você escolheu, a conta antes e depois, o que mudou e o que esperar), e só então vem a próxima — já levando em conta o que acabou de acontecer. Dá para deixar as que podem esperar para depois.',
+      'As ações de Caminhos viraram botões de verdade, agrupadas pelo que fazem (na política: mandato, campanha, partido, relações, exposição, estratégia), com o motivo à vista quando algo não está ao alcance.',
+      'A gestão da empresa ficou mais clara: as decisões estão em abas, a opção escolhida aparece marcada, o que não dá para fazer diz por quê, e cada decisão deixa registrado o que custou, o que mudou e, no fim do ano, o que aconteceu.',
+      'Móveis com volume: tampo, laterais e profundidade — a penteadeira, cômodas, aparadores, escrivaninhas, armários e bancadas deixaram de parecer recortes de papel quando ficam de lado.',
+      'Carros e motos redesenhados pelas medidas reais de cada modelo: um 911, um Huracán, um Fusca, um sedã, um SUV e uma picape têm formas próprias, com faróis, lanternas, rodas e para-choques de cada um. Suspensão, motor preparado, escape e baú aparecem no desenho; na garagem, os veículos ficam em escala e dá para ver cada um de perto.',
+      'Nomes de empresas, marcas e concorrentes muito mais variados, sem repetir nem confundir no mesmo contexto.'
+    ],
+    correcoes: [
+      'Ao decidir várias coisas no mesmo ano, só o último resultado aparecia — agora cada um aparece antes da próxima decisão.',
+      'Uma empresa podia comprar uma concorrente com o mesmo nome dela; agora fica claro quem comprou quem.',
+      'O veículo comprado às vezes aparecia diferente na garagem (e o presente pedido por um filho chegava como outro modelo).',
+      'Móveis encostados na parede lateral apareciam espelhados; na cozinha estreita, a bancada ficava baixa e o micro-ondas flutuava; a escrivaninha mostrava duas cadeiras.',
+      'As ações de governo de quem ocupa a Presidência apareciam em Trabalho.',
+      'Os diamantes em ouro branco eram desenhados em ouro amarelo.'
+    ]
+  },
+  {
     versao: '12.9.1',
     data: '2026-11-07',
     titulo: 'Colégio Eleitoral nos EUA, as cidades das universidades no mapa e motos clássicas',

@@ -279,12 +279,13 @@ function Volume({ p, a, g, cor, comum, prefixo, px, semCadeira }: { p: Posto; a:
       <>
         <defs><g id={idD}>{ilu}</g></defs>
         {fs.map((f, k) => {
-          // as fatias se sobrepõem um pouco (sem fresta); a primeira e a última não cortam a borda do desenho
-          const ua = k === 0 ? -200 : f.u0 - 0.35, ub = k === fs.length - 1 ? 400 : f.u1 + 0.35;
+          // as fatias se sobrepõem só um fio (mais que isso, o vidro e o brilho translúcidos dobravam em listras; nada, e
+          // aparece a fresta do antisserrilhado); a primeira e a última não cortam a borda do desenho
+          const ua = k === 0 ? -200 : f.u0 - 0.06, ub = k === fs.length - 1 ? 400 : f.u1 + 0.06;
           const cid = `${idD}c${k}`;
           return (
             <g key={k} transform={`matrix(${f.m.map(n => n.toFixed(4)).join(' ')})`}>
-              <clipPath id={cid}><rect x={ua.toFixed(2)} y={-400} width={(ub - ua).toFixed(2)} height={1000} /></clipPath>
+              <clipPath id={cid}><rect x={ua.toFixed(3)} y={-400} width={(ub - ua).toFixed(3)} height={1000} /></clipPath>
               <g clipPath={`url(#${cid})`}><use href={`#${idD}`} /></g>
             </g>
           );

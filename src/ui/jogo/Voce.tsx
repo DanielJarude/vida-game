@@ -19,7 +19,7 @@ import { leituraDaFama13 } from '../../motor/sistemas/reconhecimento13';
 import { Fama13 } from './Fama13';
 import { redeDeSaude } from '../../motor/sistemas/saude';
 import { QuemNoMundo } from './Mundo';
-import { imagemPublica, leituraDoNome } from '../../motor/sistemas/notoriedade';
+import { leituraDoNome } from '../../motor/sistemas/notoriedade';
 import type { Dominio, Vida } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
 import { idade } from '../../motor/nucleo';
@@ -86,7 +86,8 @@ export function Voce({ vida, agir, irPara, abrirPessoa, parte: parteDeFora, irPa
           <p className="voce-rosto__linha">{ocupacaoAtual(vida)} · {ondeMora(vida)}</p>
           {afeto && <p className="voce-rosto__linha">{afeto}{luto ? ` · ${luto}` : ''}</p>}
           {leituraDoNome(vida) && <p className="voce-rosto__linha">Para o público: {leituraDoNome(vida)!.frase}</p>}
-          {(() => { const im = imagemPublica(vida); return im ? <p className="voce-rosto__linha">Imagem pública: {im.palavra} — {im.texto.charAt(0).toLowerCase() + im.texto.slice(1)}</p> : null; })()}
+          {/* VIDA 13 · Fama: uma leitura só da imagem — a do núcleo (`reconhecimento13`), a mesma da parte Fama. */}
+          {fama.imagem && <p className="voce-rosto__linha">Imagem pública: {fama.imagem.palavra} — {fama.imagem.texto.charAt(0).toLowerCase() + fama.imagem.texto.slice(1)}</p>}
           {fama.relevante && fama.nivel >= 1 && parte !== 'fama' && <button type="button" className="fama13-atalho" onClick={() => irA('fama')}>A sua fama: o que traz, o que cobra, o que fazer com ela →</button>}
         </div>
       </section>

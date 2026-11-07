@@ -277,7 +277,7 @@ export function imagemPublica(v: Vida): { palavra: PalavraImagem; texto: string;
   if (desgaste) return { palavra: 'desgastada', texto: 'A imagem anda desgastada: o público cobra.', fator: 0.85 };
   if (est.marcante && n.valor >= 30) return { palavra: 'marcante', texto: `Um visual que o público reconhece de longe${est.luxo ? ' — e o luxo aparece nas fotos' : ''}.`, fator: querida ? 1.2 : 1.1 };
   if (querida || boa) return { palavra: 'querida', texto: boa && !querida ? 'O público gosta do que vê: o que você fez com o nome ajudou.' : 'O público gosta do que vê: a fase é boa.', fator: 1.15 };
-  return { palavra: 'discreta', texto: 'Conhecido pelo que faz, sem muito barulho em volta.', fator: 1 };
+  return { palavra: 'discreta', texto: `${flex(ge(v), 'Conhecido', 'Conhecida', 'Conhecide')} pelo que faz, sem muito barulho em volta.`, fator: 1 };
 }
 
 /** A pressão de ser visto: pesa na cabeça de quem é famoso. */

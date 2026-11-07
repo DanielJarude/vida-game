@@ -28,6 +28,7 @@ describe('VIDA 13 · móveis com volume', () => {
         expect(b.u0 >= c.x0 - 3 && b.u1 <= c.x1 + 3 && b.v0 >= c.y0 - 3 && b.v1 <= c.y1 + 3, `${id} fora do desenho`).toBe(true);
         expect(b.p0 <= b.p1 && b.p0 >= -0.8 && b.p1 <= 1, id).toBe(true);
         if (b.pecas) expect(b.pecas[0] < b.pecas[1] && b.pecas[1] <= a!.pecas.length, `${id} peças`).toBe(true);
+        if (b.tira) expect(b.tira[1] <= a!.pecas.length && /pes|pernas|montantes/.test(String(a!.pecas[b.tira[0]].marca ?? 'pes')), `${id} pés desenhados`).toBe(true);
       }
     }
   });
@@ -78,6 +79,9 @@ describe('VIDA 13 · móveis com volume', () => {
     expect(partes.porBloco.get(espelho)!.pecas.some(x => x.marca === 'espelho')).toBe(true);
     // pernas da frente e de trás no mesmo x do desenho
     expect(bl.filter(b => b.u0 === 16).map(b => b.p0).sort()).toEqual([0.04, 0.87]);
+    // os pés desenhados saem (as pernas são blocos com a frente pintada): nada de perna dupla no girado
+    expect(partes.frente.pecas.some(x => x.marca === 'pes')).toBe(false);
+    expect(fs.filter(f => f.tipo === 'frente').length).toBeGreaterThanOrEqual(2);
   });
   it('de frente: a lateral que aparece é a do lado do meio; o tampo aparece abaixo do olho, não acima', () => {
     const d = dispor('cozinha', 20, ['armarios_planejados', 'ilha_cozinha', 'geladeira_inox', 'adega_parede', 'cooktop_forno', 'lava_loucas', 'cafeteira']);

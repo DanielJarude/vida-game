@@ -50,6 +50,8 @@ const vencimento = (c: Ctx) => r1000(Math.max(0, pat(c)) * 0.05);
 const comPedido = (c: Ctx) => empresasAtivas(c.v).find(e => e.papel !== 'investidor' && !!e.corp?.pedido);
 const cobicada = (c: Ctx) => empresasAtivas(c.v).filter(e => e.papel !== 'investidor' && e.estado === 'operando' && valorDaParte(e) > 0 && (e.historico ?? []).slice(-2).every(x => x > 0) && c.v.t - e.tInicio >= 36).sort((a, b) => valorDaParte(b) - valorDaParte(a))[0];
 const premio = (c: Ctx, e: Empresa) => r1000(valorDaParte(e) * (1.15 + rngDe(c.v.id, e.id, 'eco129_proposta', anoDe(c.v.t)).next() * 0.25));
+/** VIDA 13: a concorrente com nome (das rivais gravadas da empresa), escolhida sem sorteio — ou "uma concorrente". */
+const rivalQueChama = (e: { corp?: { rivais?: string[] } }, quem: string) => { const r = e.corp?.rivais; return r?.length ? r[[...quem].reduce((t, ch) => t + ch.charCodeAt(0), 0) % r.length] : undefined; };
 const diretorCobicado = (c: Ctx) => { for (const e of empresasAtivas(c.v)) { if (e.papel === 'investidor') continue; const d = (e.executivos ?? []).find(x => x.competencia >= 70 && c.v.t - x.t >= 24); if (d) return { e, d }; } return undefined; };
 
 export const ACONTECIMENTOS_129_ECONOMIA: Conteudo[] = [
@@ -235,10 +237,10 @@ export const ACONTECIMENTOS_129_ECONOMIA: Conteudo[] = [
     id: 'eco129_emp_proposta', manual: true, tipo: 'decisao', idade: [18, 100], tema: 'trabalho', repetir: 4, peso: 2,
     quando: c => !!cobicada(c),
     titulo: c => `Querem comprar ${cobicada(c)!.nome}`,
-    texto: c => { const e = cobicada(c)!; return `Um grupo maior quer comprar ${e.nome}. Pela sua parte, oferecem ${fmt(premio(c, e))} — acima do que o mercado diria que ela vale (${fmt(valorDaParte(e))}).`; },
+    texto: c => { const e = cobicada(c)!; const quem = rivalQueChama(e, e.nome); return `${quem ? `A concorrente ${quem}` : 'Um grupo maior'} quer comprar ${e.nome}. Pela sua parte, oferecem ${fmt(premio(c, e))} — acima do que o mercado diria que ela vale (${fmt(valorDaParte(e))}).`; },
     opcoes: [
       { id: 'vender', texto: 'Vender', consequencia: () => 'O dinheiro na conta; a empresa deixa de ser sua.',
-        resolver: c => { const e = cobicada(c)!; const p = premio(c, e); return { texto: `Vendida por ${fmt(p)}.`, memoria: `Vendeu ${e.nome} por ${fmt(p)}.`, relevancia: 'marco', tom: 'bom', efeito: () => { receberGanho(c.v, p, `A venda de ${e.nome}`); e.estado = 'encerrada'; e.tFim = c.v.t; (e.historia ??= []).push({ t: c.v.t, texto: `Vendida por ${fmt(p)}.` }); c.v.financas.empresas = (c.v.financas.empresas ?? []).filter(x => x.id !== e.id); } }; } },
+        resolver: c => { const e = cobicada(c)!; const p = premio(c, e); const quem = rivalQueChama(e, e.nome); return { texto: `Vendida por ${fmt(p)}${quem ? ` à concorrente ${quem}` : ''}.`, memoria: `Vendeu ${e.nome} por ${fmt(p)}${quem ? ` à concorrente ${quem}` : ''}.`, relevancia: 'marco', tom: 'bom', efeito: () => { receberGanho(c.v, p, `A venda de ${e.nome}`); e.estado = 'encerrada'; e.tFim = c.v.t; (e.historia ??= []).push({ t: c.v.t, texto: `Vendida por ${fmt(p)}.` }); c.v.financas.empresas = (c.v.financas.empresas ?? []).filter(x => x.id !== e.id); } }; } },
       { id: 'recusar', texto: 'Recusar: não está à venda', resolver: c => ({ texto: `${cobicada(c)!.nome} continua sua.`, memoria: null }) }
     ]
   },
@@ -246,11 +248,11 @@ export const ACONTECIMENTOS_129_ECONOMIA: Conteudo[] = [
     id: 'eco129_emp_diretor', manual: true, tipo: 'decisao', idade: [18, 100], tema: 'trabalho', repetir: 3,
     quando: c => !!diretorCobicado(c),
     titulo: 'Querem levar a sua diretoria',
-    texto: c => { const { e, d } = diretorCobicado(c)!; return `${d.nome}, da ${NOME_CARGO[d.cargo].toLowerCase()} de ${e.nome}, recebeu uma proposta de uma concorrente: 40% a mais.`; },
+    texto: c => { const { e, d } = diretorCobicado(c)!; return `${d.nome}, da ${NOME_CARGO[d.cargo].toLowerCase()} de ${e.nome}, recebeu uma proposta ${rivalQueChama(e, d.nome) ? `da concorrente ${rivalQueChama(e, d.nome)}` : 'de uma concorrente'}: 40% a mais.`; },
     opcoes: [
       { id: 'cobrir', texto: 'Cobrir a proposta', consequencia: c => `O salário passa a uns ${fmt(Math.round(diretorCobicado(c)!.d.salario * 1.4))} por mês.`,
         resolver: c => { const { d } = diretorCobicado(c)!; return { texto: `${d.nome} ficou.`, memoria: null, efeito: () => { d.salario = Math.round(d.salario * 1.4); d.t = c.v.t - 24; } }; } },
-      { id: 'deixar', texto: 'Deixar ir', resolver: c => { const { e, d } = diretorCobicado(c)!; return { texto: `${d.nome} foi para a concorrência. O cargo ficou vago.`, memoria: null, tom: 'ruim', efeito: () => { e.executivos = (e.executivos ?? []).filter(x => x !== d); } }; } }
+      { id: 'deixar', texto: 'Deixar ir', resolver: c => { const { e, d } = diretorCobicado(c)!; return { texto: `${d.nome} saiu de ${e.nome} e foi para ${rivalQueChama(e, d.nome) ? `a concorrente ${rivalQueChama(e, d.nome)}` : 'a concorrência'}. O cargo ficou vago.`, memoria: null, tom: 'ruim', efeito: () => { e.executivos = (e.executivos ?? []).filter(x => x !== d); } }; } }
     ]
   }
 ];

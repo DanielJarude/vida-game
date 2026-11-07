@@ -193,7 +193,8 @@ export interface ImagemDaFama13 { admiracao: number; rejeicao: number; palavra: 
 export function imagemDaFama13(v: Vida): ImagemDaFama13 | undefined {
   const noto = v.notoriedade?.valor ?? 0;
   if (noto < 15) return undefined;
-  let adm = 20, rej = 6;
+  // A base é neutra: sem marcos nem fase boa, o público conhece o nome sem opinião forte.
+  let adm = 12, rej = 6;
   const superou = new Set((v.fama13?.marcos ?? []).filter(m => m.tipo === 'superou').map(m => m.ref.replace(/^sup:/, '')));
   for (const m of marcosDaFama13(v)) {
     const w = desbota(v, m) * (superou.has(m.ref) ? 0.4 : 1);

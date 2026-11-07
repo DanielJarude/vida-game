@@ -462,7 +462,8 @@ describe('serviço público depois da posse', () => {
     v.educacao.escolaridade = 'superior';
     let w = emTransacao(v, x => contratar(x, criarRng(1), ocupacao('professor_concursado'), 'concurso')).vida;
     const s0 = w.trabalho.atual!.salario;
-    for (let a = 0; a < 7; a++) w = avancarAno(w).vida, w.momento = null;
+    // VIDA 13: o ano não anda por cima de uma decisão que espera na fila — o teste descarta as duas (momento e fila).
+    for (let a = 0; a < 7; a++) w = avancarAno(w).vida, w.momento = null, w.fila = [];
     if (w.trabalho.atual?.ocupacaoId === 'professor_concursado') {
       expect(w.trabalho.atual.contrato).toBe('servidor');
       expect(w.trabalho.atual.salario).toBeGreaterThan(s0);

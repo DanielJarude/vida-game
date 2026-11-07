@@ -35,12 +35,18 @@ export interface Bloco {
   semFaces?: boolean;
   /** É a cadeira que o desenho traz junto (a da escrivaninha): sai quando o cômodo já tem a cadeira de verdade. */
   cadeira?: boolean;
+  /** As peças [de, até) saem do desenho de vez (os pés desenhados, trocados pelos blocos de perna). */
+  tira?: [number, number];
+  /** A face da frente do bloco também é pintada (a perna: o desenho dela saiu). */
+  comFrente?: boolean;
 }
 
 const b = (x: number, y: number, w: number, h: number, p0 = 0, p1 = 1, extra: Partial<Bloco> = {}): Bloco => ({ u0: x, v0: y, u1: x + w, v1: y + h, p0, p1, ...extra });
 /** As pernas: a da frente e a de trás, em cada x dado (a largura `w`), de `y0` ao chão (`y1`). */
 const pernas = (xs: number[], w: number, y0: number, y1: number, cor?: string, f: [number, number] = [0.04, 0.13], t: [number, number] = [0.87, 0.96]): Bloco[] =>
-  xs.flatMap(x => [b(x, y0, w, y1 - y0, f[0], f[1], { cor }), b(x, y0, w, y1 - y0, t[0], t[1], { cor })]);
+  xs.flatMap(x => [b(x, y0, w, y1 - y0, f[0], f[1], { cor, comFrente: true }), b(x, y0, w, y1 - y0, t[0], t[1], { cor, comFrente: true })]);
+/** Os pés desenhados (as peças [de, até)) saem: as pernas viram blocos (senão o pé desenhado, inclinado, sobra ao lado). */
+const semPes = (de: number, ate = de + 1): Bloco => ({ u0: 50, v0: 50, u1: 51, v1: 51, p0: 0.5, p1: 0.5, semFaces: true, tira: [de, ate] });
 const escuro = (c: string, k: number) => misturarHex(c, '#000000', k);
 const claro = (c: string, k: number) => misturarHex(c, '#ffffff', k);
 
@@ -55,10 +61,10 @@ export const VOLUMES: Record<string, (cor: string) => Bloco[]> = {
     b(30, 8, 60, 50, 0.84, 0.94, { pecas: [0, 3] }),                    // o espelho com as lâmpadas, encostado atrás
     b(10, 56, 100, 6, 0, 1, { cor: c }),                                // o tampo
     b(14, 62, 92, 14, 0.03, 0.92, { cor: escuro(c, 0.05) }),            // o corpo das gavetas
-    ...pernas([16, 100], 5, 76, 108, escuro(c, 0.15)),
+    ...pernas([16, 100], 5, 76, 108, escuro(c, 0.15)), semPes(7),
     b(38, 82, 44, 9, -0.55, -0.15, { cor: '#d9a3a0', pecas: [10, 12] }) // a banqueta, na frente
   ],
-  comoda: c => [b(10, 36, 100, 6, 0, 1, { cor: claro(c, 0.08) }), b(14, 42, 92, 58, 0.03, 0.97), ...pernas([16, 98], 6, 100, 108, escuro(c, 0.2), [0.05, 0.16], [0.84, 0.95]),
+  comoda: c => [b(10, 36, 100, 6, 0, 1, { cor: claro(c, 0.08) }), b(14, 42, 92, 58, 0.03, 0.97), ...pernas([16, 98], 6, 100, 108, escuro(c, 0.2), [0.05, 0.16], [0.84, 0.95]), semPes(4),
     b(24, 18, 80, 18, 0.5, 0.5, { pecas: [5, 8], semFaces: true })],   // o porta-retrato e o vaso, no meio do tampo
   guarda_roupa: () => [b(4, 6, 112, 102)],
   closet: () => [b(2, 4, 116, 104)],
@@ -67,7 +73,7 @@ export const VOLUMES: Record<string, (cor: string) => Bloco[]> = {
   aparador: c => [
     b(40, 6, 40, 40, 0.94, 1, { cor: '#c9a23a', pecas: [0, 3] }),     // o espelho redondo na parede
     b(8, 56, 104, 32, 0, 1),
-    ...pernas([12, 104], 4, 88, 108, escuro(c, 0.4), [0.06, 0.14], [0.86, 0.94]),
+    ...pernas([12, 104], 4, 88, 108, escuro(c, 0.4), [0.06, 0.14], [0.86, 0.94]), semPes(7),
     b(10, 28, 96, 28, 0.45, 0.45, { pecas: [8, 12], semFaces: true })  // a luminária e a bandeja, em cima
   ],
   home_theater: c => [b(2, 22, 20, 86, 0, 0.8), b(98, 22, 20, 86, 0, 0.8), b(26, 82, 68, 26, 0, 0.95, { cor: '#3a2f2a' }), b(36, 72, 48, 10, 0.1, 0.7, { cor: c })],
@@ -75,7 +81,7 @@ export const VOLUMES: Record<string, (cor: string) => Bloco[]> = {
   vitrine_colecao: () => [b(28, 6, 64, 104)],
   estante_trofeus: () => [b(14, 6, 92, 104)],
   lareira: c => [b(8, 18, 104, 90, 0.15, 1), b(2, 48, 116, 6, 0, 1, { cor: '#5a3a24' }), b(2, 98, 116, 10, 0, 1, { cor: escuro(c, 0.15) })],
-  mesa_jantar: c => [b(24, 58, 72, 7, 0, 1), ...pernas([30, 85], 5, 65, 108, escuro(c, 0.2), [0.06, 0.14], [0.86, 0.94])],
+  mesa_jantar: c => [b(24, 58, 72, 7, 0, 1), ...pernas([30, 85], 5, 65, 108, escuro(c, 0.2), [0.06, 0.14], [0.86, 0.94]), semPes(1)],
   // ------------------------------------------------------------ cozinha e lavanderia
   geladeira: () => [b(30, 4, 60, 104)],
   geladeira_inox: () => [b(12, 4, 96, 104)],
@@ -100,7 +106,7 @@ export const VOLUMES: Record<string, (cor: string) => Bloco[]> = {
   escrivaninha: c => [
     b(20, 54, 38, 11, -0.62, -0.12, { cor: '#2b2826', pecas: [4, 9], cadeira: true }), // a cadeira, puxada para a frente
     b(6, 42, 92, 7, 0, 1, { cor: c }), b(64, 49, 30, 26, 0.03, 0.95, { cor: escuro(c, 0.08) }),
-    ...pernas([10], 5, 49, 108, escuro(c, 0.15), [0.03, 0.11], [0.89, 0.97]), ...pernas([90], 4, 75, 108, escuro(c, 0.15), [0.03, 0.11], [0.89, 0.97])
+    ...pernas([10], 5, 49, 108, escuro(c, 0.15), [0.03, 0.11], [0.89, 0.97]), ...pernas([90], 4, 75, 108, escuro(c, 0.15), [0.03, 0.11], [0.89, 0.97]), semPes(3)
   ],
   mesa_executiva: c => [b(4, 46, 112, 7, 0, 1, { cor: c }), b(10, 53, 30, 55, 0.04, 0.96), b(80, 53, 30, 55, 0.04, 0.96), b(40, 53, 40, 31, 0.5, 0.58, { cor: escuro(c, 0.12) }),
     b(14, 20, 94, 18, 0.45, 0.45, { pecas: [11, 17], semFaces: true })], // a luminária, os papéis e o porta-canetas, em cima
@@ -114,7 +120,7 @@ export const VOLUMES: Record<string, (cor: string) => Bloco[]> = {
     b(30, 38, 66, 6, 0.95, 0.95, { pecas: [3, 5], semFaces: true }),   // as bicas, saindo da parede
     b(2, 54, 116, 12, 0, 1, { cor: c }),
     b(8, 88, 104, 5, 0.06, 0.94, { cor: c }),
-    ...pernas([8, 109], 3, 66, 108, '#c9a23a', [0.05, 0.11], [0.89, 0.95])
+    ...pernas([8, 109], 3, 66, 108, '#c9a23a', [0.05, 0.11], [0.89, 0.95]), semPes(8)
   ],
   // ------------------------------------------------------------ jogos e garagem
   fliperama: () => [b(26, 4, 68, 104)],
@@ -122,12 +128,12 @@ export const VOLUMES: Record<string, (cor: string) => Bloco[]> = {
     b(6, 4, 108, 48, 0.96, 1, { cor: '#d7c9a8', pecas: [0, 10] }),    // o painel perfurado na parede, com as ferramentas
     b(2, 56, 116, 8, 0, 1, { cor: c }),
     b(14, 92, 92, 5, 0.05, 0.95, { cor: escuro(c, 0.12) }),
-    ...pernas([6, 106], 8, 64, 108, escuro(c, 0.12), [0.02, 0.14], [0.86, 0.98])
+    ...pernas([6, 106], 8, 64, 108, escuro(c, 0.12), [0.02, 0.14], [0.86, 0.98]), semPes(14)
   ],
   armario_garagem: c => [b(4, 8, 75, 100, 0, 1, { cor: c }), b(82, 30, 34, 78, 0, 1, { cor: escuro(c, 0.06) })],
   organizadores: () => [
     ...[4, 27, 54, 80, 104].map(y => b(8, y, 104, 3, 0, 1, { cor: '#b8b4ad' })),
-    ...pernas([10, 106], 4, 4, 108, '#8d8a85', [0, 0.06], [0.94, 1])
+    ...pernas([10, 106], 4, 4, 108, '#8d8a85', [0, 0.06], [0.94, 1]), semPes(0)
   ],
   // ------------------------------------------------------------ o que vem com o cômodo
   _bancada: () => [
@@ -209,7 +215,7 @@ export function projetar(g: Geometria, [x, alt, z]: V3): [number, number] {
 
 /* ================================================================ as faces */
 
-export type TipoDeFace = 'topo' | 'lado' | 'ponta' | 'baixo';
+export type TipoDeFace = 'topo' | 'lado' | 'ponta' | 'baixo' | 'frente';
 export interface Face { bloco: number; tipo: TipoDeFace; pts: [number, number][]; cor: string }
 /**
  * O que a cena desenha, na ordem: as faces de cada bloco (do mais longe para o mais perto), os recortes do desenho no
@@ -242,6 +248,7 @@ export function passosDoMovel(g: Geometria, p: Posto, a: Amostra, base: string, 
     // as faces: [normal, quatro cantos, tipo]
     const up: V3 = [0, 1, 0];
     const faces: [V3, V3[], TipoDeFace][] = [
+      ...(bl.comFrente ? [[neg(r.D), [P(bl.u0, bl.v0, bl.p0), P(bl.u1, bl.v0, bl.p0), P(bl.u1, bl.v1, bl.p0), P(bl.u0, bl.v1, bl.p0)], 'frente'] as [V3, V3[], TipoDeFace]] : []),
       [r.D, [P(bl.u0, bl.v0, bl.p1), P(bl.u1, bl.v0, bl.p1), P(bl.u1, bl.v1, bl.p1), P(bl.u0, bl.v1, bl.p1)], 'lado'], // o fundo (quase nunca)
       [neg(r.U), [P(bl.u0, bl.v0, bl.p0), P(bl.u0, bl.v0, bl.p1), P(bl.u0, bl.v1, bl.p1), P(bl.u0, bl.v1, bl.p0)], 'lado'],
       [r.U, [P(bl.u1, bl.v0, bl.p0), P(bl.u1, bl.v0, bl.p1), P(bl.u1, bl.v1, bl.p1), P(bl.u1, bl.v1, bl.p0)], 'lado'],
@@ -253,7 +260,7 @@ export function passosDoMovel(g: Geometria, p: Posto, a: Amostra, base: string, 
       if (dot(sub(cam, cantos[0]), n) <= 1e-6) continue;
       // a face que dá para quem olha (normal +z): a ponta do móvel girado — mais clara que a lateral.
       const t: TipoDeFace = tipo === 'lado' && n[2] > 0.5 ? 'ponta' : tipo;
-      const tom = t === 'topo' ? misturarHex(cor, '#ffffff', 0.14) : t === 'ponta' ? misturarHex(cor, '#000000', 0.1) : t === 'baixo' ? misturarHex(cor, '#000000', 0.38) : misturarHex(cor, '#000000', 0.24);
+      const tom = t === 'frente' ? cor : t === 'topo' ? misturarHex(cor, '#ffffff', 0.14) : t === 'ponta' ? misturarHex(cor, '#000000', 0.1) : t === 'baixo' ? misturarHex(cor, '#000000', 0.38) : misturarHex(cor, '#000000', 0.24);
       out.push({ tipo: 'face', face: { bloco: i, tipo: t, pts: cantos.map(q => projetar(g, q)), cor: tom } });
     }
     if (bl.pecas) out.push({ tipo: 'pecas', bloco: bl });
@@ -278,8 +285,8 @@ export function fatias(g: Geometria, r: Referencial, u0: number, u1: number, v0:
   const s = (z: number) => g.dist / Math.max(0.25, g.dist - z);
   // a altura do plano na tela (px), no lado mais perto: o erro de uma fatia é ~ a variação da escala × meia altura / 2
   const alturaPx = Math.max(Math.abs(P(u0, v1)[1] - P(u0, v0)[1]), Math.abs(P(u1, v1)[1] - P(u1, v0)[1])) * px;
-  const tol = Math.max(0.006, Math.min(0.05, 2 / Math.max(1, alturaPx)));
-  const n = Math.abs(zA - zB) < 1e-6 ? 1 : Math.max(2, Math.min(72, Math.ceil(Math.abs(Math.log(s(zA) / s(zB))) / tol)));
+  const tol = Math.max(0.004, Math.min(0.03, 1 / Math.max(1, alturaPx)));
+  const n = Math.abs(zA - zB) < 1e-6 ? 1 : Math.max(2, Math.min(96, Math.ceil(Math.abs(Math.log(s(zA) / s(zB))) / tol)));
   const out: Fatia[] = [];
   for (let k = 0; k < n; k++) {
     const ua = u0 + ((u1 - u0) * k) / n, ub = u0 + ((u1 - u0) * (k + 1)) / n;
@@ -303,7 +310,7 @@ const PARTES = new WeakMap<Amostra, Map<string, { frente: Amostra; porBloco: Map
  * desenho só com elas (no mesmo quadro). `semCadeira`: a cadeira que o desenho traz sai de vez.
  */
 export function partesDoDesenho(a: Amostra, blocos: Bloco[], semCadeira = false): { frente: Amostra; porBloco: Map<Bloco, Amostra> } {
-  const chave = `${semCadeira}|${blocos.map(x => x.pecas ? `${x.pecas[0]}-${x.pecas[1]}${x.cadeira ? 'c' : ''}` : '').join(',')}`;
+  const chave = `${semCadeira}|${blocos.map(x => (x.pecas ? `${x.pecas[0]}-${x.pecas[1]}${x.cadeira ? 'c' : ''}` : '') + (x.tira ? `t${x.tira[0]}-${x.tira[1]}` : '')).join(',')}`;
   let porA = PARTES.get(a);
   if (!porA) { porA = new Map(); PARTES.set(a, porA); }
   const ja = porA.get(chave);
@@ -311,6 +318,7 @@ export function partesDoDesenho(a: Amostra, blocos: Bloco[], semCadeira = false)
   const fora = new Set<number>();
   const porBloco = new Map<Bloco, Amostra>();
   for (const x of blocos) {
+    if (x.tira) for (let i = x.tira[0]; i < Math.min(x.tira[1], a.pecas.length); i++) fora.add(i);
     if (!x.pecas) continue;
     for (let i = x.pecas[0]; i < Math.min(x.pecas[1], a.pecas.length); i++) fora.add(i);
     if (!(semCadeira && x.cadeira)) porBloco.set(x, { vb: a.vb, pecas: a.pecas.slice(x.pecas[0], x.pecas[1]) });

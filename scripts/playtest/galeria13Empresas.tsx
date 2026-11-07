@@ -12,6 +12,7 @@ import '../../src/ui/experiencia.css';
 import '../../src/ui/objetos.css';
 import '../../src/ui/possibilidades.css';
 import '../../src/ui/patrimonio.css';
+import '../../src/ui/material.css';
 import { carregarMundo } from '../../src/motor/mundo/carregar';
 import { adulto } from '../../src/motor/__tests__/cenarios';
 import { executar, type Acao } from '../../src/motor/acoes';

@@ -10,7 +10,7 @@ for (const [W, H] of [[1440, 900], [390, 844]]) for (const tema of ['claro', 'es
   const p = await (await b.newContext({ viewport: { width: W, height: H } })).newPage();
   const erros = []; p.on('pageerror', e => erros.push(e.message));
   await p.goto(URL);
-  await p.evaluate(([s, t]) => { localStorage.clear(); localStorage.setItem('VIDA_APARENCIA', t); localStorage.setItem('VIDA_NOVIDADES_VISTAS', '12.9.1'); localStorage.setItem('VIDA_GAME_SAVE_V1', s); }, [readFileSync(`${SP}/saves/vida-${SAVE}.json`, 'utf8'), tema]);
+  await p.evaluate(([s, t]) => { localStorage.clear(); localStorage.setItem('VIDA_APARENCIA', t); localStorage.setItem('VIDA_NOVIDADES_VISTAS', '13'); localStorage.setItem('VIDA_GAME_SAVE_V1', s); }, [readFileSync(`${SP}/saves/vida-${SAVE}.json`, 'utf8'), tema]);
   await p.goto(URL); await p.waitForTimeout(400);
   await p.getByRole('button', { name: /Continuar a vida/ }).click(); await p.waitForTimeout(600);
   let bt = p.locator('.barra__item', { hasText: 'Você' }).locator('visible=true').first();

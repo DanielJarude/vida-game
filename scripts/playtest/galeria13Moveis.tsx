@@ -29,7 +29,7 @@ if (process.env.OUT) {
     if (so && !so.has(i)) continue;
     const objetos = ids.map((c, k) => ({ id: `o${k}`, coisaId: c }));
     const d = disporComodo(tipo, area, objetos);
-    html.push(`<div class=s id=c${i}>${renderToStaticMarkup(<CenaDoComodo tipo={tipo} area={area} objetos={objetos} largura={760} rotulo={tipo} />)}<span><b>#${i} ${tipo} ${area} m²</b> · fora: ${d.fora.map(f => objetos.find(o => o.id === f)?.coisaId).join(',')}<br>${d.postos.map(p => `${p.coisaId}[${p.montagem[0]}${p.giro ? '↻' + p.giro : ''} x${p.x0.toFixed(1)}-${p.x1.toFixed(1)} z${p.z0.toFixed(1)}-${p.z1.toFixed(1)}]`).join(' ')}</span></div>`);
+    html.push(`<div class=s id=c${i}>${renderToStaticMarkup(<CenaDoComodo tipo={tipo} area={area} objetos={objetos} largura={Number(process.env.LARGURA ?? 760)} rotulo={tipo} />)}<span><b>#${i} ${tipo} ${area} m²</b> · fora: ${d.fora.map(f => objetos.find(o => o.id === f)?.coisaId).join(',')}<br>${d.postos.map(p => `${p.coisaId}[${p.montagem[0]}${p.giro ? '↻' + p.giro : ''} x${p.x0.toFixed(1)}-${p.x1.toFixed(1)} z${p.z0.toFixed(1)}-${p.z1.toFixed(1)}]`).join(' ')}</span></div>`);
   }
   writeFileSync(process.env.OUT!, `<!doctype html><meta charset=utf-8><style>body{font:11px sans-serif;background:#f4efe6;display:flex;flex-wrap:wrap;gap:6px;margin:8px;width:1600px}.s{width:780px;background:#fbf8f2;border:1px solid #ddd}.s span{display:block;padding:4px}</style>${html.join('')}`);
 }
