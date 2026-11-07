@@ -1,0 +1,2186 @@
+{
+ "meta": {
+  "geradoEm": "2026-11-06",
+  "acessoFontes": "2026-11",
+  "nota": "Somente cursos presenciais verificados em fonte institucional; campi listados são um subconjunto (principal + notáveis). Lista de cursos de campus pode estar incompleta, mas não deve conter cursos não ofertados.",
+  "idsCursos": [
+   "medicina",
+   "enfermagem",
+   "fisioterapia",
+   "odontologia",
+   "farmacia",
+   "veterinaria",
+   "psicologia",
+   "direito",
+   "eng_civil",
+   "eng_producao",
+   "eng_mecanica",
+   "arquitetura",
+   "computacao",
+   "administracao",
+   "contabeis",
+   "economia",
+   "pedagogia",
+   "licenciatura",
+   "letras",
+   "jornalismo",
+   "publicidade",
+   "design",
+   "musica_grad",
+   "artes_cenicas",
+   "ed_fisica",
+   "nutricao",
+   "agronomia",
+   "estatistica"
+  ]
+ },
+ "universidades": [
+  {
+   "id": "usp",
+   "nome": "Universidade de São Paulo",
+   "sigla": "USP",
+   "tipo": "estadual",
+   "cidadeSede": "São Paulo",
+   "uf": "SP",
+   "ingresso": [
+    {
+     "forma": "Fuvest",
+     "obs": "Vestibular da USP (fase única + 2ª fase por carreira); Medicina tem ingresso unificado SP/Ribeirão Preto/Bauru com ordem de preferência"
+    },
+    {
+     "forma": "ENEM (nota)",
+     "obs": "ENEM-USP, processo próprio organizado pela Fuvest"
+    },
+    {
+     "forma": "Provão Paulista",
+     "obs": "Provão Paulista Seriado (alunos da rede pública de SP)"
+    }
+   ],
+   "campi": [
+    {
+     "nome": "São Paulo (Butantã / Quadrilátero Saúde / USP Leste)",
+     "cidade": "São Paulo",
+     "uf": "SP",
+     "cursos": [
+      "medicina",
+      "enfermagem",
+      "fisioterapia",
+      "odontologia",
+      "farmacia",
+      "veterinaria",
+      "psicologia",
+      "direito",
+      "eng_civil",
+      "eng_producao",
+      "eng_mecanica",
+      "arquitetura",
+      "computacao",
+      "administracao",
+      "contabeis",
+      "economia",
+      "pedagogia",
+      "licenciatura",
+      "letras",
+      "jornalismo",
+      "publicidade",
+      "design",
+      "musica_grad",
+      "artes_cenicas",
+      "ed_fisica",
+      "nutricao",
+      "estatistica"
+     ],
+     "notas": {
+      "computacao": "Ciência da Computação (IME), Engenharia de Computação (Poli/EP) e Sistemas de Informação (EACH)",
+      "estatistica": "Estatística e Matemática bacharelado (IME)",
+      "licenciatura": "Lic. Matemática/Física (IME/IF), Letras, História, Geografia etc.",
+      "publicidade": "Comunicação Social: Publicidade e Propaganda (ECA)",
+      "musica_grad": "Música (ECA, exige prova de habilidade)"
+     }
+    },
+    {
+     "nome": "Ribeirão Preto",
+     "cidade": "Ribeirão Preto",
+     "uf": "SP",
+     "cursos": [
+      "medicina",
+      "enfermagem",
+      "fisioterapia",
+      "odontologia",
+      "farmacia",
+      "psicologia",
+      "direito",
+      "computacao",
+      "administracao",
+      "contabeis",
+      "economia",
+      "pedagogia",
+      "licenciatura",
+      "musica_grad",
+      "ed_fisica",
+      "nutricao"
+     ],
+     "notas": {
+      "computacao": "Ciência da Computação (FFCLRP)",
+      "nutricao": "Nutrição e Metabolismo (FMRP)",
+      "licenciatura": "Química, Ciências Biológicas e Música com licenciatura (FFCLRP)"
+     }
+    },
+    {
+     "nome": "São Carlos",
+     "cidade": "São Carlos",
+     "uf": "SP",
+     "cursos": [
+      "eng_civil",
+      "eng_producao",
+      "eng_mecanica",
+      "arquitetura",
+      "computacao",
+      "estatistica",
+      "licenciatura"
+     ],
+     "notas": {
+      "computacao": "Ciências de Computação (ICMC), Engenharia de Computação (EESC/ICMC), Sistemas de Informação (ICMC)",
+      "estatistica": "Estatística e Ciência de Dados; Matemática (ICMC)",
+      "licenciatura": "Ciências Exatas (licenciatura) e Matemática B/L"
+     }
+    },
+    {
+     "nome": "Bauru",
+     "cidade": "Bauru",
+     "uf": "SP",
+     "cursos": [
+      "medicina",
+      "odontologia"
+     ],
+     "notas": {
+      "medicina": "FMBRU, 43 vagas Fuvest 2027"
+     }
+    },
+    {
+     "nome": "Piracicaba (ESALQ)",
+     "cidade": "Piracicaba",
+     "uf": "SP",
+     "cursos": [
+      "agronomia",
+      "administracao",
+      "economia",
+      "licenciatura"
+     ],
+     "notas": {
+      "agronomia": "Engenharia Agronômica",
+      "licenciatura": "Ciências Biológicas noturno (B/L)"
+     }
+    },
+    {
+     "nome": "Pirassununga (FZEA)",
+     "cidade": "Pirassununga",
+     "uf": "SP",
+     "cursos": [
+      "veterinaria"
+     ]
+    },
+    {
+     "nome": "Lorena (EEL)",
+     "cidade": "Lorena",
+     "uf": "SP",
+     "cursos": [
+      "eng_producao"
+     ]
+    }
+   ],
+   "mensalidadeReferencia": null,
+   "turnos": [
+    "integral",
+    "matutino",
+    "vespertino",
+    "noturno"
+   ],
+   "fontes": [
+    "https://www.fuvest.br/wp-content/uploads/fuvest2027-guia-carreiras.pdf",
+    "https://www.fuvest.br/vestibular-da-usp",
+    "https://www.fuvest.br/",
+    "https://www.fuvest.br/wp-content/uploads/fuvest2027-relacao-candidato-vagas.pdf"
+   ]
+  },
+  {
+   "id": "unicamp",
+   "nome": "Universidade Estadual de Campinas",
+   "sigla": "Unicamp",
+   "tipo": "estadual",
+   "cidadeSede": "Campinas",
+   "uf": "SP",
+   "ingresso": [
+    {
+     "forma": "Comvest (Vestibular Unicamp)",
+     "obs": "Vestibular próprio organizado pela Comvest"
+    },
+    {
+     "forma": "ENEM (nota)",
+     "obs": "Edital ENEM-Unicamp"
+    },
+    {
+     "forma": "Provão Paulista",
+     "obs": "listado entre as modalidades da Comvest"
+    },
+    {
+     "forma": "Vagas Olímpicas",
+     "obs": "por desempenho em olimpíadas científicas"
+    },
+    {
+     "forma": "Vestibular Indígena",
+     "obs": "processo específico"
+    }
+   ],
+   "campi": [
+    {
+     "nome": "Campinas (Barão Geraldo)",
+     "cidade": "Campinas",
+     "uf": "SP",
+     "cursos": [
+      "medicina",
+      "enfermagem",
+      "farmacia",
+      "eng_civil",
+      "eng_mecanica",
+      "arquitetura",
+      "computacao",
+      "economia",
+      "pedagogia",
+      "licenciatura",
+      "letras",
+      "musica_grad",
+      "artes_cenicas",
+      "ed_fisica",
+      "estatistica"
+     ],
+     "notas": {
+      "computacao": "Ciência da Computação (noturno) e Engenharia de Computação (integral)",
+      "letras": "Licenciatura em Letras – Português; também Estudos Literários e Linguística",
+      "arquitetura": "Arquitetura e Urbanismo (noturno)",
+      "estatistica": "Estatística (integral); Matemática via Curso 51"
+     }
+    },
+    {
+     "nome": "Limeira (FCA/FT)",
+     "cidade": "Limeira",
+     "uf": "SP",
+     "cursos": [
+      "eng_producao",
+      "computacao",
+      "administracao",
+      "nutricao"
+     ],
+     "notas": {
+      "computacao": "Sistemas de Informação",
+      "ed_fisica": "Limeira oferece Ciências do Esporte (não mapeado como ed_fisica)"
+     }
+    },
+    {
+     "nome": "Piracicaba (FOP)",
+     "cidade": "Piracicaba",
+     "uf": "SP",
+     "cursos": [
+      "odontologia"
+     ]
+    }
+   ],
+   "mensalidadeReferencia": null,
+   "turnos": [
+    "integral",
+    "noturno"
+   ],
+   "fontes": [
+    "https://www.comvest.unicamp.br/cursos/",
+    "https://www.comvest.unicamp.br/cursos/curso-medicina/"
+   ]
+  },
+  {
+   "id": "unesp",
+   "nome": "Universidade Estadual Paulista \"Júlio de Mesquita Filho\"",
+   "sigla": "Unesp",
+   "tipo": "estadual",
+   "cidadeSede": "São Paulo",
+   "uf": "SP",
+   "ingresso": [
+    {
+     "forma": "Vunesp",
+     "obs": "Vestibular Unesp aplicado pela Fundação Vunesp (2 fases)"
+    },
+    {
+     "forma": "Provão Paulista",
+     "obs": "vagas do Provão Paulista Seriado (fonte secundária: Estratégia sobre o Manual 2027)"
+    },
+    {
+     "forma": "ENEM (nota)",
+     "obs": "Unesp-Enem (fonte secundária: Estratégia sobre o Manual 2027)"
+    }
+   ],
+   "campi": [
+    {
+     "nome": "Botucatu",
+     "cidade": "Botucatu",
+     "uf": "SP",
+     "cursos": [
+      "medicina",
+      "enfermagem",
+      "veterinaria",
+      "agronomia",
+      "nutricao"
+     ],
+     "notas": {
+      "agronomia": "Engenharia Agronômica (FCA)"
+     }
+    },
+    {
+     "nome": "Bauru",
+     "cidade": "Bauru",
+     "uf": "SP",
+     "cursos": [
+      "arquitetura",
+      "jornalismo",
+      "design",
+      "computacao",
+      "ed_fisica",
+      "licenciatura",
+      "pedagogia",
+      "psicologia",
+      "eng_civil",
+      "eng_producao",
+      "eng_mecanica",
+      "estatistica"
+     ],
+     "notas": {
+      "computacao": "Ciência da Computação e Sistemas de Informação (FC)",
+      "estatistica": "Matemática (FC); Estatística bacharelado fica em Presidente Prudente",
+      "licenciatura": "Física, Matemática, Química, Ciências Biológicas (FC)"
+     }
+    },
+    {
+     "nome": "Araraquara",
+     "cidade": "Araraquara",
+     "uf": "SP",
+     "cursos": [
+      "farmacia",
+      "odontologia",
+      "economia",
+      "letras",
+      "pedagogia"
+     ]
+    },
+    {
+     "nome": "Franca",
+     "cidade": "Franca",
+     "uf": "SP",
+     "cursos": [
+      "direito",
+      "licenciatura"
+     ],
+     "notas": {
+      "licenciatura": "História"
+     }
+    },
+    {
+     "nome": "São Paulo (Instituto de Artes)",
+     "cidade": "São Paulo",
+     "uf": "SP",
+     "cursos": [
+      "musica_grad",
+      "artes_cenicas",
+      "licenciatura"
+     ],
+     "notas": {
+      "artes_cenicas": "Arte-Teatro e Artes Cênicas",
+      "licenciatura": "Arte-Teatro (licenciatura)"
+     }
+    }
+   ],
+   "mensalidadeReferencia": null,
+   "turnos": null,
+   "fontes": [
+    "https://www.ourinhos.unesp.br/Home/guia-unesp-de-profissoes-2024bx-compactado.pdf",
+    "https://vestibular.unesp.br/",
+    "https://vestibulares.estrategia.com/portal/noticias/vestibular-unesp-2027-manual-do-candidato-esta-disponivel/"
+   ]
+  },
+  {
+   "id": "ufrj",
+   "nome": "Universidade Federal do Rio de Janeiro",
+   "sigla": "UFRJ",
+   "tipo": "federal",
+   "cidadeSede": "Rio de Janeiro",
+   "uf": "RJ",
+   "ingresso": [
+    {
+     "forma": "SISU/ENEM",
+     "obs": "ingresso regular via SiSU; cursos de Música/Dança exigem Teste de Habilidade Específica (THE) segundo acessograduacao.ufrj.br (não aprofundado)"
+    }
+   ],
+   "campi": [
+    {
+     "nome": "Rio de Janeiro (Cidade Universitária, Praia Vermelha e centro)",
+     "cidade": "Rio de Janeiro",
+     "uf": "RJ",
+     "cursos": [
+      "medicina",
+      "enfermagem",
+      "fisioterapia",
+      "odontologia",
+      "farmacia",
+      "psicologia",
+      "direito",
+      "eng_civil",
+      "eng_producao",
+      "eng_mecanica",
+      "arquitetura",
+      "computacao",
+      "administracao",
+      "contabeis",
+      "economia",
+      "pedagogia",
+      "licenciatura",
+      "letras",
+      "jornalismo",
+      "publicidade",
+      "design",
+      "musica_grad",
+      "artes_cenicas",
+      "ed_fisica",
+      "nutricao",
+      "estatistica"
+     ],
+     "notas": {
+      "computacao": "Ciência da Computação e Engenharia de Computação e Informação",
+      "design": "Comunicação Visual Design / Design Industrial",
+      "artes_cenicas": "Artes Cênicas (Direção Teatral, Cenografia, Indumentária)",
+      "publicidade": "Comunicação Social – Publicidade e Propaganda",
+      "obs": "o repositório SIGA não separa os sub-campi do Rio; cursos sem sufixo foram atribuídos à cidade do Rio"
+     }
+    },
+    {
+     "nome": "Macaé",
+     "cidade": "Macaé",
+     "uf": "RJ",
+     "cursos": [
+      "medicina",
+      "enfermagem",
+      "farmacia",
+      "nutricao",
+      "eng_civil",
+      "eng_producao",
+      "eng_mecanica",
+      "licenciatura"
+     ],
+     "notas": {
+      "obs": "cursos com sufixo '- M' no repositório curricular SIGA/UFRJ",
+      "licenciatura": "Ciências Biológicas e Química (licenciatura)"
+     }
+    }
+   ],
+   "mensalidadeReferencia": null,
+   "turnos": null,
+   "fontes": [
+    "https://siga.ufrj.br/sira/repositorio-curriculo/80167CF7-3880-478C-8293-8E7D80CEDEBE.html",
+    "https://ufrj.br/ensino-e-pesquisa/cursos-de-graduacao/"
+   ]
+  },
+  {
+   "id": "ufmg",
+   "nome": "Universidade Federal de Minas Gerais",
+   "sigla": "UFMG",
+   "tipo": "federal",
+   "cidadeSede": "Belo Horizonte",
+   "uf": "MG",
+   "ingresso": [
+    {
+     "forma": "SISU/ENEM",
+     "obs": "Edital 50/2026: vagas iniciais selecionadas exclusivamente com base no ENEM via SiSU (BH e Montes Claros)"
+    },
+    {
+     "forma": "Processo seletivo próprio com prova",
+     "obs": "cursos com habilidade específica (ex.: Música) não constam do quadro SiSU; forma exata não verificada"
+    }
+   ],
+   "campi": [
+    {
+     "nome": "Belo Horizonte (Pampulha / Saúde)",
+     "cidade": "Belo Horizonte",
+     "uf": "MG",
+     "cursos": [
+      "medicina",
+      "enfermagem",
+      "fisioterapia",
+      "odontologia",
+      "farmacia",
+      "veterinaria",
+      "psicologia",
+      "direito",
+      "eng_civil",
+      "eng_producao",
+      "eng_mecanica",
+      "arquitetura",
+      "computacao",
+      "administracao",
+      "contabeis",
+      "economia",
+      "pedagogia",
+      "licenciatura",
+      "letras",
+      "jornalismo",
+      "publicidade",
+      "design",
+      "artes_cenicas",
+      "ed_fisica",
+      "nutricao",
+      "estatistica"
+     ],
+     "notas": {
+      "computacao": "Ciência da Computação e Sistemas de Informação (entrada conjunta) + Engenharia de Computação",
+      "artes_cenicas": "Teatro (bacharelado e licenciatura)",
+      "musica_grad": "Música não aparece no quadro SiSU 2026 (provável processo com habilidade específica) — não incluído"
+     }
+    },
+    {
+     "nome": "Montes Claros (ICA)",
+     "cidade": "Montes Claros",
+     "uf": "MG",
+     "cursos": [
+      "agronomia",
+      "administracao"
+     ]
+    }
+   ],
+   "mensalidadeReferencia": null,
+   "turnos": [
+    "diurno",
+    "integral",
+    "matutino",
+    "vespertino",
+    "noturno"
+   ],
+   "fontes": [
+    "https://www.ufmg.br/sisu/wp-content/uploads/2026/01/SISU-2026-SEI_UFMG-4871178-Edital.pdf",
+    "https://www.ufmg.br/sisu/edital/"
+   ]
+  },
+  {
+   "id": "unb",
+   "nome": "Universidade de Brasília",
+   "sigla": "UnB",
+   "tipo": "federal",
+   "cidadeSede": "Brasília",
+   "uf": "DF",
+   "ingresso": [
+    {
+     "forma": "PAS UnB",
+     "obs": "Programa de Avaliação Seriada (3 etapas, Cebraspe); 1º semestre"
+    },
+    {
+     "forma": "Vestibular próprio",
+     "obs": "Vestibular UnB (Cebraspe); a partir da Res. CEPE 130/2026 vale para o 2º semestre (50% das vagas)"
+    },
+    {
+     "forma": "ENEM (nota)",
+     "obs": "Acesso Enem (processo próprio com nota do ENEM); 2º semestre (50%)"
+    },
+    {
+     "forma": "SISU/ENEM",
+     "obs": "Res. CEPE 130/2026: SiSU passa a dividir as vagas do 1º semestre com o PAS (20%–80% conforme o curso)"
+    }
+   ],
+   "campi": [
+    {
+     "nome": "Darcy Ribeiro (Asa Norte)",
+     "cidade": "Brasília",
+     "uf": "DF",
+     "cursos": [
+      "medicina",
+      "enfermagem",
+      "odontologia",
+      "farmacia",
+      "veterinaria",
+      "psicologia",
+      "direito",
+      "eng_civil",
+      "eng_producao",
+      "eng_mecanica",
+      "arquitetura",
+      "computacao",
+      "administracao",
+      "contabeis",
+      "economia",
+      "pedagogia",
+      "licenciatura",
+      "letras",
+      "jornalismo",
+      "publicidade",
+      "design",
+      "musica_grad",
+      "artes_cenicas",
+      "ed_fisica",
+      "nutricao",
+      "agronomia",
+      "estatistica"
+     ],
+     "notas": {
+      "computacao": "Ciência da Computação e Engenharia de Computação (+ Computação licenciatura noturna)",
+      "eng_producao": "Engenharia de Produção (noturno)",
+      "musica_grad": "exige Certificação de Habilidade Específica"
+     }
+    },
+    {
+     "nome": "UnB Ceilândia (FCTS)",
+     "cidade": "Brasília (Ceilândia)",
+     "uf": "DF",
+     "cursos": [
+      "enfermagem",
+      "farmacia",
+      "fisioterapia"
+     ]
+    },
+    {
+     "nome": "UnB Gama (FCTE)",
+     "cidade": "Brasília (Gama)",
+     "uf": "DF",
+     "cursos": [],
+     "notas": {
+      "obs": "Engenharias Aeroespacial/Automotiva/Eletrônica/Energia/Software com entrada comum — nenhuma corresponde exatamente à lista do jogo"
+     }
+    }
+   ],
+   "mensalidadeReferencia": null,
+   "turnos": [
+    "diurno",
+    "noturno"
+   ],
+   "fontes": [
+    "https://cdn.cebraspe.org.br/vestibulares/UNB_26_ACESSOENEM/arquivos/7EE434DB526CE4532D041724565669FAC3A15D9EBB9FE3554E2AB41E166BDA49.pdf",
+    "https://saa.unb.br/wp-content/uploads/2026/07/CEPE-0130-2026-Distribuicao-de-Vagas.pdf"
+   ]
+  },
+  {
+   "id": "ufrgs",
+   "nome": "Universidade Federal do Rio Grande do Sul",
+   "sigla": "UFRGS",
+   "tipo": "federal",
+   "cidadeSede": "Porto Alegre",
+   "uf": "RS",
+   "ingresso": [
+    {
+     "forma": "Vestibular próprio",
+     "obs": "Concurso Vestibular UFRGS (Coperse): 70% das vagas"
+    },
+    {
+     "forma": "SISU/ENEM",
+     "obs": "30% das vagas via SiSU"
+    }
+   ],
+   "campi": [
+    {
+     "nome": "Porto Alegre (Centro, Saúde, Vale, Olímpico)",
+     "cidade": "Porto Alegre",
+     "uf": "RS",
+     "cursos": [
+      "medicina",
+      "enfermagem",
+      "fisioterapia",
+      "odontologia",
+      "farmacia",
+      "veterinaria",
+      "psicologia",
+      "direito",
+      "eng_civil",
+      "eng_producao",
+      "eng_mecanica",
+      "arquitetura",
+      "computacao",
+      "administracao",
+      "contabeis",
+      "economia",
+      "pedagogia",
+      "licenciatura",
+      "letras",
+      "jornalismo",
+      "publicidade",
+      "design",
+      "musica_grad",
+      "artes_cenicas",
+      "ed_fisica",
+      "nutricao",
+      "agronomia",
+      "estatistica"
+     ],
+     "notas": {
+      "computacao": "Ciência da Computação e Engenharia de Computação",
+      "artes_cenicas": "Teatro (bacharelado e licenciatura)",
+      "design": "Design de Produto e Design Visual",
+      "musica_grad": "exige prova específica"
+     }
+    },
+    {
+     "nome": "Litoral Norte (Tramandaí)",
+     "cidade": "Tramandaí",
+     "uf": "RS",
+     "cursos": [
+      "pedagogia",
+      "licenciatura"
+     ],
+     "notas": {
+      "licenciatura": "Geografia e Educação do Campo – Ciências da Natureza"
+     }
+    }
+   ],
+   "mensalidadeReferencia": null,
+   "turnos": [
+    "diurno",
+    "noturno"
+   ],
+   "fontes": [
+    "https://www.ufrgs.br/coperse/wp-content/uploads/2026/08/Edital-COPERSE-n.-16-2026-Vestibular-UFRGS-2027.pdf",
+    "https://www.ufrgs.br/coperse/concurso-vestibular/",
+    "https://www.ufrgs.br/coperse/wp-content/uploads/2026/09/Manual_CV_2027.pdf"
+   ]
+  },
+  {
+   "id": "ufsc",
+   "nome": "Universidade Federal de Santa Catarina",
+   "sigla": "UFSC",
+   "tipo": "federal",
+   "cidadeSede": "Florianópolis",
+   "uf": "SC",
+   "ingresso": [
+    {
+     "forma": "Vestibular próprio",
+     "obs": "Vestibular Unificado UFSC/IFC (Coperve): 70% das vagas"
+    },
+    {
+     "forma": "SISU/ENEM",
+     "obs": "demais vagas via SiSU/UFSC"
+    }
+   ],
+   "campi": [
+    {
+     "nome": "Florianópolis (Trindade)",
+     "cidade": "Florianópolis",
+     "uf": "SC",
+     "cursos": [
+      "medicina",
+      "enfermagem",
+      "odontologia",
+      "farmacia",
+      "psicologia",
+      "direito",
+      "eng_civil",
+      "eng_producao",
+      "eng_mecanica",
+      "arquitetura",
+      "computacao",
+      "administracao",
+      "contabeis",
+      "economia",
+      "pedagogia",
+      "licenciatura",
+      "letras",
+      "jornalismo",
+      "design",
+      "artes_cenicas",
+      "ed_fisica",
+      "nutricao",
+      "agronomia",
+      "estatistica"
+     ],
+     "notas": {
+      "computacao": "Ciência da Computação (integral) e Sistemas de Informação (noturno)",
+      "estatistica": "Matemática bacharelado (não há Estatística no quadro)"
+     }
+    },
+    {
+     "nome": "Araranguá",
+     "cidade": "Araranguá",
+     "uf": "SC",
+     "cursos": [
+      "medicina",
+      "fisioterapia",
+      "computacao"
+     ],
+     "notas": {
+      "computacao": "Engenharia de Computação"
+     }
+    },
+    {
+     "nome": "Curitibanos",
+     "cidade": "Curitibanos",
+     "uf": "SC",
+     "cursos": [
+      "medicina",
+      "veterinaria",
+      "agronomia"
+     ]
+    },
+    {
+     "nome": "Blumenau",
+     "cidade": "Blumenau",
+     "uf": "SC",
+     "cursos": [
+      "licenciatura"
+     ],
+     "notas": {
+      "licenciatura": "Matemática e Química (licenciatura)"
+     }
+    }
+   ],
+   "mensalidadeReferencia": null,
+   "turnos": [
+    "integral",
+    "matutino",
+    "vespertino",
+    "noturno"
+   ],
+   "fontes": [
+    "https://vestibularunificado2027.ufsc.br/files/2026/08/ANEXO-A1-e-A2-UFSC-2027.pdf",
+    "https://vestibularunificado2027.ufsc.br/files/2026/09/Edital-Vestibular-2027-retificado.pdf"
+   ]
+  },
+  {
+   "id": "ufpr",
+   "nome": "Universidade Federal do Paraná",
+   "sigla": "UFPR",
+   "tipo": "federal",
+   "cidadeSede": "Curitiba",
+   "uf": "PR",
+   "ingresso": [
+    {
+     "forma": "Vestibular próprio",
+     "obs": "Vestibular UFPR 2027 (NC/UFPR), fase única a partir de 2027"
+    },
+    {
+     "forma": "SISU/ENEM",
+     "obs": "edital menciona ingressos PS/SiSU e PSS ENEM"
+    }
+   ],
+   "campi": [
+    {
+     "nome": "Curitiba",
+     "cidade": "Curitiba",
+     "uf": "PR",
+     "cursos": [
+      "medicina",
+      "enfermagem",
+      "fisioterapia",
+      "odontologia",
+      "farmacia",
+      "veterinaria",
+      "psicologia",
+      "direito",
+      "eng_civil",
+      "eng_producao",
+      "eng_mecanica",
+      "arquitetura",
+      "computacao",
+      "administracao",
+      "contabeis",
+      "economia",
+      "pedagogia",
+      "licenciatura",
+      "letras",
+      "jornalismo",
+      "publicidade",
+      "design",
+      "musica_grad",
+      "ed_fisica",
+      "nutricao",
+      "agronomia",
+      "estatistica"
+     ],
+     "notas": {
+      "computacao": "Ciência da Computação",
+      "estatistica": "Estatística e Ciência de Dados; Matemática (ABI)",
+      "design": "Design Gráfico e Design de Produto"
+     }
+    },
+    {
+     "nome": "Toledo",
+     "cidade": "Toledo",
+     "uf": "PR",
+     "cursos": [
+      "medicina"
+     ]
+    },
+    {
+     "nome": "Palotina",
+     "cidade": "Palotina",
+     "uf": "PR",
+     "cursos": [
+      "veterinaria",
+      "agronomia",
+      "licenciatura"
+     ],
+     "notas": {
+      "licenciatura": "Computação e Ciências Biológicas (licenciatura)"
+     }
+    },
+    {
+     "nome": "Jandaia do Sul",
+     "cidade": "Jandaia do Sul",
+     "uf": "PR",
+     "cursos": [
+      "agronomia",
+      "eng_producao",
+      "licenciatura"
+     ],
+     "notas": {
+      "licenciatura": "Matemática e Tecnologias Digitais"
+     }
+    }
+   ],
+   "mensalidadeReferencia": null,
+   "turnos": [
+    "integral",
+    "matutino",
+    "vespertino",
+    "noturno"
+   ],
+   "fontes": [
+    "https://servicos.nc.ufpr.br/PortalNC/obterDocumento?pub=9363",
+    "https://servicos.nc.ufpr.br/PortalNC/Concurso?concurso=PS2027"
+   ]
+  },
+  {
+   "id": "ufpe",
+   "nome": "Universidade Federal de Pernambuco",
+   "sigla": "UFPE",
+   "tipo": "federal",
+   "cidadeSede": "Recife",
+   "uf": "PE",
+   "ingresso": [
+    {
+     "forma": "SISU/ENEM",
+     "obs": "Processo Seletivo UFPE|SiSU (edital em sisu.ufpe.br; não aberto por erro de certificado)"
+    }
+   ],
+   "campi": [
+    {
+     "nome": "Recife",
+     "cidade": "Recife",
+     "uf": "PE",
+     "cursos": [
+      "medicina",
+      "enfermagem",
+      "fisioterapia",
+      "odontologia",
+      "farmacia",
+      "psicologia",
+      "direito",
+      "eng_civil",
+      "eng_producao",
+      "eng_mecanica",
+      "arquitetura",
+      "computacao",
+      "administracao",
+      "contabeis",
+      "economia",
+      "pedagogia",
+      "licenciatura",
+      "letras",
+      "jornalismo",
+      "publicidade",
+      "design",
+      "musica_grad",
+      "artes_cenicas",
+      "ed_fisica",
+      "nutricao",
+      "estatistica"
+     ],
+     "notas": {
+      "computacao": "Ciência da Computação, Engenharia da Computação e Sistemas de Informação (CIn)",
+      "artes_cenicas": "Teatro (licenciatura)"
+     }
+    },
+    {
+     "nome": "Caruaru (Centro Acadêmico do Agreste)",
+     "cidade": "Caruaru",
+     "uf": "PE",
+     "cursos": [
+      "medicina",
+      "administracao",
+      "economia",
+      "design",
+      "eng_civil",
+      "eng_producao",
+      "pedagogia",
+      "licenciatura"
+     ],
+     "notas": {
+      "licenciatura": "Física, Matemática e Química (licenciatura)"
+     }
+    },
+    {
+     "nome": "Vitória de Santo Antão (CAV)",
+     "cidade": "Vitória de Santo Antão",
+     "uf": "PE",
+     "cursos": [
+      "enfermagem",
+      "nutricao",
+      "ed_fisica",
+      "licenciatura"
+     ],
+     "notas": {
+      "licenciatura": "Ciências Biológicas"
+     }
+    }
+   ],
+   "mensalidadeReferencia": null,
+   "turnos": null,
+   "fontes": [
+    "https://www.ufpe.br/cursos/graduacao",
+    "https://sisu.ufpe.br/arquivos/2026/Edital%20Sisu%20-%20UFPE%202026.pdf"
+   ]
+  },
+  {
+   "id": "ufba",
+   "nome": "Universidade Federal da Bahia",
+   "sigla": "UFBA",
+   "tipo": "federal",
+   "cidadeSede": "Salvador",
+   "uf": "BA",
+   "ingresso": [
+    {
+     "forma": "SISU/ENEM",
+     "obs": "catálogo 2026 informa 'oferta anual de vagas SISU' por curso"
+    },
+    {
+     "forma": "Processo seletivo próprio com prova",
+     "obs": "BI-CPL: vagas para egressos dos Bacharelados Interdisciplinares (progressão linear) — não é prova, é seleção interna"
+    }
+   ],
+   "campi": [
+    {
+     "nome": "Salvador (Ondina, Canela, Federação, Piedade)",
+     "cidade": "Salvador",
+     "uf": "BA",
+     "cursos": [
+      "medicina",
+      "enfermagem",
+      "fisioterapia",
+      "odontologia",
+      "farmacia",
+      "veterinaria",
+      "psicologia",
+      "direito",
+      "eng_civil",
+      "eng_producao",
+      "eng_mecanica",
+      "arquitetura",
+      "computacao",
+      "administracao",
+      "contabeis",
+      "economia",
+      "pedagogia",
+      "licenciatura",
+      "letras",
+      "jornalismo",
+      "design",
+      "musica_grad",
+      "artes_cenicas",
+      "ed_fisica",
+      "nutricao",
+      "estatistica"
+     ],
+     "notas": {
+      "computacao": "Ciência da Computação, Sistemas de Informação e Engenharia da Computação",
+      "artes_cenicas": "Artes Cênicas (bach.) e Teatro (lic.)"
+     }
+    },
+    {
+     "nome": "Vitória da Conquista (IMS – Anísio Teixeira)",
+     "cidade": "Vitória da Conquista",
+     "uf": "BA",
+     "cursos": [
+      "medicina",
+      "enfermagem",
+      "farmacia",
+      "nutricao",
+      "psicologia"
+     ]
+    },
+    {
+     "nome": "Camaçari (Carlos Marighella)",
+     "cidade": "Camaçari",
+     "uf": "BA",
+     "cursos": [
+      "eng_producao"
+     ]
+    }
+   ],
+   "mensalidadeReferencia": null,
+   "turnos": [
+    "diurno",
+    "noturno"
+   ],
+   "fontes": [
+    "https://web.archive.org/web/20260607225643/https://prograd.ufba.br/catalogo-de-cursos",
+    "https://prograd.ufba.br/sites/prograd.ufba.br/files/2026_catalogo_de_cursos_.pdf"
+   ]
+  },
+  {
+   "id": "ufc",
+   "nome": "Universidade Federal do Ceará",
+   "sigla": "UFC",
+   "tipo": "federal",
+   "cidadeSede": "Fortaleza",
+   "uf": "CE",
+   "ingresso": [
+    {
+     "forma": "SISU/ENEM",
+     "obs": "110 cursos no SiSU 2026 (6.408 vagas)"
+    }
+   ],
+   "campi": [
+    {
+     "nome": "Fortaleza (Benfica, Pici, Porangabuçu)",
+     "cidade": "Fortaleza",
+     "uf": "CE",
+     "cursos": [
+      "medicina",
+      "enfermagem",
+      "fisioterapia",
+      "odontologia",
+      "farmacia",
+      "psicologia",
+      "direito",
+      "eng_civil",
+      "eng_producao",
+      "eng_mecanica",
+      "arquitetura",
+      "computacao",
+      "administracao",
+      "contabeis",
+      "economia",
+      "pedagogia",
+      "licenciatura",
+      "letras",
+      "jornalismo",
+      "publicidade",
+      "design",
+      "musica_grad",
+      "artes_cenicas",
+      "ed_fisica",
+      "agronomia",
+      "estatistica"
+     ],
+     "notas": {
+      "computacao": "Ciência da Computação e Engenharia de Computação",
+      "artes_cenicas": "Teatro (licenciatura)",
+      "musica_grad": "Música (licenciatura)"
+     }
+    },
+    {
+     "nome": "Sobral",
+     "cidade": "Sobral",
+     "uf": "CE",
+     "cursos": [
+      "medicina",
+      "odontologia",
+      "psicologia",
+      "economia",
+      "computacao",
+      "musica_grad"
+     ],
+     "notas": {
+      "computacao": "Engenharia de Computação",
+      "musica_grad": "Música (licenciatura, noturno)"
+     }
+    },
+    {
+     "nome": "Quixadá",
+     "cidade": "Quixadá",
+     "uf": "CE",
+     "cursos": [
+      "computacao",
+      "design"
+     ],
+     "notas": {
+      "computacao": "Ciência da Computação, Engenharia de Computação, Sistemas de Informação",
+      "design": "Design Digital"
+     }
+    },
+    {
+     "nome": "Russas",
+     "cidade": "Russas",
+     "uf": "CE",
+     "cursos": [
+      "eng_civil",
+      "eng_producao",
+      "eng_mecanica",
+      "computacao"
+     ],
+     "notas": {
+      "computacao": "Ciência da Computação"
+     }
+    }
+   ],
+   "mensalidadeReferencia": null,
+   "turnos": [
+    "integral",
+    "noturno"
+   ],
+   "fontes": [
+    "https://sisu.ufc.br/wp-content/uploads/2025/12/termo-de-adesao-ufc-sisu-2026.pdf",
+    "https://sisu.ufc.br/wp-content/uploads/2026/01/260129-guiasisu2026.pdf"
+   ]
+  },
+  {
+   "id": "pucsp",
+   "nome": "Pontifícia Universidade Católica de São Paulo",
+   "sigla": "PUC-SP",
+   "tipo": "privada_comunitaria",
+   "cidadeSede": "São Paulo",
+   "uf": "SP",
+   "ingresso": [
+    {
+     "forma": "Vestibular próprio",
+     "obs": "Vestibular (de Verão) com prova presencial; campi Monte Alegre, Consolação, Ipiranga e Sorocaba"
+    },
+    {
+     "forma": "ENEM (nota)",
+     "obs": "nao_verificado"
+    }
+   ],
+   "campi": [
+    {
+     "nome": "Monte Alegre (Perdizes)",
+     "cidade": "São Paulo",
+     "uf": "SP",
+     "cursos": [
+      "direito",
+      "psicologia",
+      "administracao",
+      "jornalismo",
+      "fisioterapia",
+      "contabeis",
+      "economia",
+      "pedagogia",
+      "letras",
+      "publicidade"
+     ]
+    },
+    {
+     "nome": "Consolação (inclui Marquês de Paranaguá)",
+     "cidade": "São Paulo",
+     "uf": "SP",
+     "cursos": [
+      "computacao",
+      "eng_civil",
+      "eng_producao",
+      "design"
+     ],
+     "notas": {
+      "computacao": "Ciência da Computação"
+     }
+    },
+    {
+     "nome": "Sorocaba",
+     "cidade": "Sorocaba",
+     "uf": "SP",
+     "cursos": [
+      "medicina",
+      "enfermagem"
+     ]
+    }
+   ],
+   "mensalidadeReferencia": [
+    {
+     "curso": "medicina",
+     "valorMensal": 12749.0,
+     "ano": 2026,
+     "fonte": "https://www.pucsp.br/graduacao/medicina",
+     "obs": "valor ingressantes 2026"
+    },
+    {
+     "curso": "direito",
+     "valorMensal": 5372.0,
+     "ano": 2026,
+     "fonte": "https://www.pucsp.br/graduacao/direito",
+     "obs": "valor ingressantes 2026"
+    },
+    {
+     "curso": "psicologia",
+     "valorMensal": 6151.0,
+     "ano": 2026,
+     "fonte": "https://www.pucsp.br/graduacao/psicologia",
+     "obs": "valor ingressantes 2026"
+    },
+    {
+     "curso": "administracao",
+     "valorMensal": 3450.0,
+     "ano": 2026,
+     "fonte": "https://www.pucsp.br/graduacao/administracao",
+     "obs": "valor ingressantes 2026"
+    },
+    {
+     "curso": "eng_civil",
+     "valorMensal": 2950.0,
+     "ano": 2026,
+     "fonte": "https://www.pucsp.br/graduacao/engenharia-civil",
+     "obs": "valor ingressantes 2026"
+    },
+    {
+     "curso": "enfermagem",
+     "valorMensal": 2150.0,
+     "ano": 2027,
+     "fonte": "https://www.pucsp.br/graduacao/enfermagem",
+     "obs": "valor ingressantes 2027"
+    }
+   ],
+   "turnos": [
+    "matutino",
+    "vespertino",
+    "noturno",
+    "integral"
+   ],
+   "fontes": [
+    "https://www.pucsp.br/graduacao/medicina",
+    "https://www.pucsp.br/graduacao/direito",
+    "https://www.pucsp.br/graduacao/psicologia",
+    "https://www.pucsp.br/graduacao/administracao",
+    "https://www.pucsp.br/graduacao/enfermagem",
+    "https://www.pucsp.br/graduacao/engenharia-civil",
+    "https://www.pucsp.br/graduacao/ciencia-da-computacao",
+    "https://www.pucsp.br/graduacao/design",
+    "https://j.pucsp.br/noticia/puc-sp-abre-inscricoes-para-o-vestibular-de-verao-2027"
+   ]
+  },
+  {
+   "id": "pucrio",
+   "nome": "Pontifícia Universidade Católica do Rio de Janeiro",
+   "sigla": "PUC-Rio",
+   "tipo": "privada_comunitaria",
+   "cidadeSede": "Rio de Janeiro",
+   "uf": "RJ",
+   "ingresso": [
+    {
+     "forma": "Vestibular próprio",
+     "obs": "Vestibular PUC-Rio 2027 (fonte secundária: Estratégia, resumindo o manual oficial dsi.puc-rio.br, que não abriu por erro TLS)"
+    },
+    {
+     "forma": "ENEM (nota)",
+     "obs": "ENEM 2022–2026 (mesma fonte secundária)"
+    },
+    {
+     "forma": "Exames internacionais",
+     "obs": "mesma fonte secundária"
+    }
+   ],
+   "campi": [
+    {
+     "nome": "Gávea",
+     "cidade": "Rio de Janeiro",
+     "uf": "RJ",
+     "cursos": [
+      "medicina",
+      "farmacia",
+      "nutricao",
+      "psicologia",
+      "direito",
+      "eng_civil",
+      "eng_producao",
+      "eng_mecanica",
+      "arquitetura",
+      "computacao",
+      "administracao",
+      "economia",
+      "pedagogia",
+      "letras",
+      "jornalismo",
+      "publicidade",
+      "design",
+      "artes_cenicas",
+      "estatistica"
+     ],
+     "notas": {
+      "medicina": "marcado como NOVO na lista da CCG",
+      "farmacia": "NOVO",
+      "computacao": "Ciência da Computação, Engenharia de Computação e Sistemas de Informação",
+      "publicidade": "Publicidade e Comunicação Corporativa",
+      "estatistica": "Matemática (bacharelado) / Matemática Aplicada e Computacional"
+     }
+    }
+   ],
+   "mensalidadeReferencia": null,
+   "turnos": null,
+   "fontes": [
+    "https://www.puc-rio.br/ensinopesq/ccg/cursos.html",
+    "https://www.puc-rio.br/ensinopesq/ccg/anuidadesCCG.html",
+    "https://vestibulares.estrategia.com/portal/noticias/vestibular-puc-rio-2027-confira-o-manual-do-candidato-inscricoes-estao-abertas/"
+   ],
+   "obsMensalidade": "PUC-Rio cobra por faixa de créditos e por centro (tabela 2026 publicada; ex.: 07–08 créditos no CTC = R$ 3.861/mês), não por curso; por isso mensalidadeReferencia = null"
+  },
+  {
+   "id": "pucrs",
+   "nome": "Pontifícia Universidade Católica do Rio Grande do Sul",
+   "sigla": "PUCRS",
+   "tipo": "privada_comunitaria",
+   "cidadeSede": "Porto Alegre",
+   "uf": "RS",
+   "ingresso": [
+    {
+     "forma": "Vestibular próprio",
+     "obs": "Vestibular de Verão/Inverno: 50% das vagas por prova presencial (Modalidade I)"
+    },
+    {
+     "forma": "ENEM (nota)",
+     "obs": "50% das vagas via ENEM (Modalidade II); Medicina tem edital próprio"
+    }
+   ],
+   "campi": [
+    {
+     "nome": "Campus Central (Av. Ipiranga)",
+     "cidade": "Porto Alegre",
+     "uf": "RS",
+     "cursos": [
+      "medicina",
+      "enfermagem",
+      "fisioterapia",
+      "odontologia",
+      "farmacia",
+      "psicologia",
+      "direito",
+      "eng_civil",
+      "eng_producao",
+      "eng_mecanica",
+      "arquitetura",
+      "computacao",
+      "administracao",
+      "economia",
+      "pedagogia",
+      "licenciatura",
+      "letras",
+      "jornalismo",
+      "publicidade",
+      "design",
+      "ed_fisica",
+      "nutricao"
+     ],
+     "notas": {
+      "computacao": "Ciência da Computação, Engenharia de Computação, Sistemas de Informação",
+      "contabeis": "só há 'Ciências Contábeis – Dual Study' com edital próprio — não incluído",
+      "medicina": "edital próprio; campus da Medicina não explicitado na página do curso"
+     }
+    }
+   ],
+   "mensalidadeReferencia": [
+    {
+     "curso": "medicina",
+     "valorMensal": 10878.68,
+     "ano": 2026,
+     "fonte": "https://portal.pucrs.br/ensino/cursos/graduacao/medicina/",
+     "obs": "demais parcelas; 1ª parcela R$ 12.087,55"
+    },
+    {
+     "curso": "psicologia",
+     "valorMensal": 3910.85,
+     "ano": 2026,
+     "fonte": "https://portal.pucrs.br/ensino/cursos/graduacao/psicologia/",
+     "obs": "demais parcelas; 1ª parcela R$ 3.810,22"
+    },
+    {
+     "curso": "direito",
+     "valorMensal": 3214.76,
+     "ano": 2026,
+     "fonte": "https://portal.pucrs.br/ensino/cursos/graduacao/direito/",
+     "obs": "demais parcelas"
+    },
+    {
+     "curso": "odontologia",
+     "valorMensal": 5189.46,
+     "ano": 2026,
+     "fonte": "https://portal.pucrs.br/ensino/cursos/graduacao/odontologia/",
+     "obs": "demais parcelas; 1ª R$ 6.498,92"
+    },
+    {
+     "curso": "eng_civil",
+     "valorMensal": 3306.56,
+     "ano": 2026,
+     "fonte": "https://portal.pucrs.br/ensino/cursos/graduacao/engenharia-civil/",
+     "obs": "demais parcelas"
+    },
+    {
+     "curso": "computacao",
+     "valorMensal": 3709.42,
+     "ano": 2026,
+     "fonte": "https://portal.pucrs.br/ensino/cursos/graduacao/ciencia-da-computacao/",
+     "obs": "Ciência da Computação, demais parcelas"
+    }
+   ],
+   "turnos": [
+    "manhã",
+    "tarde",
+    "noite"
+   ],
+   "fontes": [
+    "https://portal.pucrs.br/ensino/cursos/graduacao/medicina/",
+    "https://portal.pucrs.br/ensino/cursos/graduacao/direito/",
+    "https://portal.pucrs.br/wp-content/uploads/2025/09/2025_09_25-vestibular_verao_2026-00-oc_10-demais_cursos-prova_22_nov-edital.pdf",
+    "https://portal.pucrs.br/wp-content/uploads/2025/10/2025_10_15-vestibular_verao_2026-00-oc_10-demais_cursos-prova_22_nov-manual_do_candidato.pdf"
+   ]
+  },
+  {
+   "id": "pucminas",
+   "nome": "Pontifícia Universidade Católica de Minas Gerais",
+   "sigla": "PUC Minas",
+   "tipo": "privada_comunitaria",
+   "cidadeSede": "Belo Horizonte",
+   "uf": "MG",
+   "ingresso": [
+    {
+     "forma": "Vestibular próprio",
+     "obs": "sistema de provas (presenciais ou on-line)"
+    },
+    {
+     "forma": "ENEM (nota)",
+     "obs": "sistema de média do ENEM; Medicina (Betim/Contagem/Poços) por provas ou ENEM, com bolsas integrais via ENEM"
+    }
+   ],
+   "campi": [
+    {
+     "nome": "Coração Eucarístico",
+     "cidade": "Belo Horizonte",
+     "uf": "MG",
+     "cursos": [
+      "enfermagem",
+      "fisioterapia",
+      "odontologia",
+      "farmacia",
+      "psicologia",
+      "direito",
+      "eng_civil",
+      "eng_producao",
+      "arquitetura",
+      "computacao",
+      "administracao",
+      "economia",
+      "pedagogia",
+      "licenciatura",
+      "letras",
+      "jornalismo",
+      "publicidade",
+      "ed_fisica",
+      "nutricao"
+     ],
+     "notas": {
+      "computacao": "Ciência da Computação",
+      "licenciatura": "Física, Geografia, História, Matemática, Letras (licenciatura)"
+     }
+    },
+    {
+     "nome": "São Gabriel",
+     "cidade": "Belo Horizonte",
+     "uf": "MG",
+     "cursos": [
+      "eng_mecanica",
+      "direito",
+      "psicologia",
+      "computacao"
+     ],
+     "notas": {
+      "computacao": "Sistemas de Informação"
+     }
+    },
+    {
+     "nome": "Betim",
+     "cidade": "Betim",
+     "uf": "MG",
+     "cursos": [
+      "medicina",
+      "enfermagem",
+      "fisioterapia",
+      "veterinaria",
+      "psicologia",
+      "direito",
+      "administracao",
+      "computacao"
+     ],
+     "notas": {
+      "computacao": "Sistemas de Informação"
+     }
+    },
+    {
+     "nome": "Contagem",
+     "cidade": "Contagem",
+     "uf": "MG",
+     "cursos": [
+      "medicina",
+      "administracao",
+      "contabeis",
+      "direito",
+      "computacao"
+     ],
+     "notas": {
+      "computacao": "Sistemas de Informação"
+     }
+    },
+    {
+     "nome": "Poços de Caldas",
+     "cidade": "Poços de Caldas",
+     "uf": "MG",
+     "cursos": [
+      "medicina",
+      "veterinaria",
+      "odontologia",
+      "enfermagem",
+      "fisioterapia",
+      "psicologia",
+      "direito",
+      "eng_civil",
+      "arquitetura",
+      "computacao"
+     ],
+     "notas": {
+      "computacao": "Ciência da Computação"
+     }
+    }
+   ],
+   "mensalidadeReferencia": null,
+   "turnos": [
+    "manhã",
+    "tarde",
+    "noite",
+    "integral"
+   ],
+   "fontes": [
+    "https://www.pucminas.br/sala-imprensa/noticias/Documents/Edital%20078.2025%20-%20Processo%20Seletivo%20-%2012-09-2025%20assinado.pdf",
+    "https://www.pucminas.br/sala-imprensa/noticias/Documents/Edital%20071.2026%20-%20Medicina%20-%201-2027%20%28assinado%20em%2031-08-2026%29.pdf"
+   ],
+   "obsCursos": "lista de cursos por campus vem do Edital 078 (ingresso 1º/2026), exceto Medicina (Edital 071/2026, ingresso 1º/2027)"
+  },
+  {
+   "id": "pucpr",
+   "nome": "Pontifícia Universidade Católica do Paraná",
+   "sigla": "PUCPR",
+   "tipo": "privada_comunitaria",
+   "cidadeSede": "Curitiba",
+   "uf": "PR",
+   "ingresso": [
+    {
+     "forma": "Vestibular próprio",
+     "obs": "Processo Seletivo 2027/1 (vestibular) e Processo Seletivo Agendado"
+    },
+    {
+     "forma": "ENEM (nota)",
+     "obs": "edital específico; em Toledo há 20% de desconto para ingresso via Enem"
+    }
+   ],
+   "campi": [
+    {
+     "nome": "Curitiba (Prado Velho)",
+     "cidade": "Curitiba",
+     "uf": "PR",
+     "cursos": [
+      "medicina",
+      "enfermagem",
+      "fisioterapia",
+      "odontologia",
+      "farmacia",
+      "veterinaria",
+      "psicologia",
+      "direito",
+      "eng_civil",
+      "eng_producao",
+      "eng_mecanica",
+      "arquitetura",
+      "computacao",
+      "administracao",
+      "contabeis",
+      "pedagogia",
+      "licenciatura",
+      "jornalismo",
+      "publicidade",
+      "design",
+      "musica_grad",
+      "artes_cenicas",
+      "ed_fisica",
+      "nutricao",
+      "agronomia"
+     ],
+     "notas": {
+      "computacao": "Ciência da Computação",
+      "licenciatura": "Matemática e Química (licenciatura)",
+      "artes_cenicas": "Teatro (3 anos, noite)"
+     }
+    },
+    {
+     "nome": "Londrina",
+     "cidade": "Londrina",
+     "uf": "PR",
+     "cursos": [
+      "medicina",
+      "direito",
+      "psicologia"
+     ]
+    },
+    {
+     "nome": "Toledo",
+     "cidade": "Toledo",
+     "uf": "PR",
+     "cursos": [
+      "medicina",
+      "agronomia",
+      "veterinaria",
+      "direito"
+     ]
+    }
+   ],
+   "mensalidadeReferencia": [
+    {
+     "curso": "medicina",
+     "valorMensal": 14718.13,
+     "ano": 2027,
+     "fonte": "https://www.pucpr.br/cursos-graduacao/medicina/",
+     "obs": "Câmpus Curitiba"
+    },
+    {
+     "curso": "direito",
+     "valorMensal": 3150.94,
+     "ano": 2027,
+     "fonte": "https://www.pucpr.br/cursos-graduacao/direito/",
+     "obs": "Curitiba"
+    },
+    {
+     "curso": "psicologia",
+     "valorMensal": 3762.29,
+     "ano": 2027,
+     "fonte": "https://www.pucpr.br/cursos-graduacao/psicologia/",
+     "obs": "Curitiba"
+    },
+    {
+     "curso": "eng_civil",
+     "valorMensal": 4158.81,
+     "ano": 2027,
+     "fonte": "https://www.pucpr.br/cursos-graduacao/engenharia-civil/",
+     "obs": "Curitiba; descontos de 19% no 1º e 6,5% no 2º período"
+    },
+    {
+     "curso": "computacao",
+     "valorMensal": 3539.97,
+     "ano": 2027,
+     "fonte": "https://www.pucpr.br/cursos-graduacao/ciencia-da-computacao/",
+     "obs": "Ciência da Computação, Curitiba"
+    },
+    {
+     "curso": "veterinaria",
+     "valorMensal": 6337.85,
+     "ano": 2027,
+     "fonte": "https://www.pucpr.br/cursos-graduacao/medicina-veterinaria/",
+     "obs": "Curitiba"
+    }
+   ],
+   "turnos": [
+    "manhã",
+    "noite",
+    "integral"
+   ],
+   "fontes": [
+    "https://www.pucpr.br/cursos-graduacao/medicina/",
+    "https://www.pucpr.br/cursos-graduacao/medicina-londrina/",
+    "https://www.pucpr.br/cursos-graduacao/medicina-toledo/",
+    "https://www.pucpr.br/cursos-graduacao/direito/",
+    "https://www.pucpr.br/cursos-graduacao/agronomia-toledo/",
+    "https://www.pucpr.br/vestibular/editais/"
+   ]
+  },
+  {
+   "id": "fgv",
+   "nome": "Fundação Getulio Vargas",
+   "sigla": "FGV",
+   "tipo": "privada",
+   "cidadeSede": "Rio de Janeiro",
+   "uf": "RJ",
+   "ingresso": [
+    {
+     "forma": "Vestibular próprio",
+     "obs": "Vestibular FGV, duas vezes por ano; 2º dia de prova só para Direito SP e Economia EESP"
+    },
+    {
+     "forma": "ENEM (nota)",
+     "obs": "nao_verificado para cada escola"
+    }
+   ],
+   "campi": [
+    {
+     "nome": "São Paulo (EAESP, EESP, Direito SP)",
+     "cidade": "São Paulo",
+     "uf": "SP",
+     "cursos": [
+      "administracao",
+      "economia",
+      "direito"
+     ]
+    },
+    {
+     "nome": "Rio de Janeiro (EBAPE, EPGE, Direito Rio)",
+     "cidade": "Rio de Janeiro",
+     "uf": "RJ",
+     "cursos": [
+      "administracao",
+      "economia",
+      "direito"
+     ]
+    }
+   ],
+   "mensalidadeReferencia": [
+    {
+     "curso": "administracao",
+     "valorMensal": 7850.0,
+     "ano": 2026,
+     "fonte": "https://vestibular.fgv.br/en/courses/sao-paulo/business-administration",
+     "obs": "EAESP (SP), valor 2026.1"
+    },
+    {
+     "curso": "direito",
+     "valorMensal": 8335.7,
+     "ano": 2026,
+     "fonte": "https://vestibular.fgv.br/en/courses/sao-paulo/law-school",
+     "obs": "FGV Direito SP, valor 2026.1"
+    },
+    {
+     "curso": "economia",
+     "valorMensal": 9885.0,
+     "ano": 2026,
+     "fonte": "https://vestibular.fgv.br/en/courses/sao-paulo/economics",
+     "obs": "EESP (SP), valor 2026.1"
+    },
+    {
+     "curso": "direito",
+     "valorMensal": 6880.0,
+     "ano": 2026,
+     "fonte": "https://vestibular.fgv.br/en/courses/rio-de-janeiro/law-school",
+     "obs": "FGV Direito Rio, valor 2026.1"
+    },
+    {
+     "curso": "administracao",
+     "valorMensal": 7834.33,
+     "ano": 2026,
+     "fonte": "https://vestibular.fgv.br/en/courses/rio-de-janeiro/management",
+     "obs": "EBAPE (Rio), valor 2026.1"
+    },
+    {
+     "curso": "economia",
+     "valorMensal": 7186.0,
+     "ano": 2026,
+     "fonte": "https://vestibular.fgv.br/en/courses/rio-de-janeiro/economics",
+     "obs": "EPGE (Rio), valor 2026.1"
+    }
+   ],
+   "turnos": [
+    "integral"
+   ],
+   "fontes": [
+    "https://vestibular.fgv.br/en/courses/sao-paulo/business-administration",
+    "https://vestibular.fgv.br/en/courses/sao-paulo/law-school",
+    "https://vestibular.fgv.br/en/courses/sao-paulo/economics",
+    "https://vestibular.fgv.br/en/courses/rio-de-janeiro/law-school",
+    "https://vestibular.fgv.br/en/courses/rio-de-janeiro/management",
+    "https://vestibular.fgv.br/en/courses/rio-de-janeiro/economics",
+    "https://vestibular.fgv.br/formas-de-ingresso/vestibular-fgv"
+   ]
+  },
+  {
+   "id": "mackenzie",
+   "nome": "Universidade Presbiteriana Mackenzie",
+   "sigla": "UPM",
+   "tipo": "privada_comunitaria",
+   "cidadeSede": "São Paulo",
+   "uf": "SP",
+   "ingresso": [
+    {
+     "forma": "Vestibular próprio",
+     "obs": "Vestibular por campus (Higienópolis, Alphaville, Campinas)"
+    },
+    {
+     "forma": "Exames internacionais",
+     "obs": "Notas Internacionais (ABITUR, BAC, IB, SAT)"
+    },
+    {
+     "forma": "ENEM (nota)",
+     "obs": "nao_verificado"
+    }
+   ],
+   "campi": [
+    {
+     "nome": "Higienópolis",
+     "cidade": "São Paulo",
+     "uf": "SP",
+     "cursos": [
+      "farmacia",
+      "fisioterapia",
+      "nutricao",
+      "psicologia",
+      "direito",
+      "eng_civil",
+      "eng_producao",
+      "eng_mecanica",
+      "arquitetura",
+      "computacao",
+      "administracao",
+      "contabeis",
+      "economia",
+      "pedagogia",
+      "licenciatura",
+      "letras",
+      "jornalismo",
+      "publicidade",
+      "design"
+     ],
+     "notas": {
+      "computacao": "Ciência da Computação, Engenharia da Computação, Sistemas de Informação",
+      "licenciatura": "Ciências Biológicas (licenciatura)",
+      "medicina": "Medicina não consta no edital de Higienópolis (nao_verificado em outros editais)"
+     }
+    },
+    {
+     "nome": "Alphaville",
+     "cidade": "Barueri",
+     "uf": "SP",
+     "cursos": [
+      "administracao",
+      "computacao",
+      "direito"
+     ],
+     "notas": {
+      "computacao": "Ciência da Computação e Sistemas de Informação"
+     }
+    },
+    {
+     "nome": "Campinas",
+     "cidade": "Campinas",
+     "uf": "SP",
+     "cursos": [
+      "administracao",
+      "direito",
+      "eng_civil",
+      "eng_producao"
+     ]
+    }
+   ],
+   "mensalidadeReferencia": null,
+   "turnos": [
+    "matutino",
+    "vespertino",
+    "noturno",
+    "integral"
+   ],
+   "fontes": [
+    "https://www.mackenzie.br/fileadmin/ARQUIVOS/Public/2-processos-seletivos/upm/VESTIBULAR_REGULAR/2026/IN_RE_046_2026_Edital_Processo_Seletivo_Notas_Internacionais_2026_2_sem_SCA_Assinada.pdf",
+    "https://www.mackenzie.br/memorias/150-anos/acontece/arquivo/n/a/i/estao-abertas-as-inscricoes-para-o-vestibular-20271-da-universidade-presbiteriana-mackenzie"
+   ]
+  },
+  {
+   "id": "insper",
+   "nome": "Insper Instituto de Ensino e Pesquisa",
+   "sigla": "Insper",
+   "tipo": "privada",
+   "cidadeSede": "São Paulo",
+   "uf": "SP",
+   "ingresso": [
+    {
+     "forma": "Vestibular próprio",
+     "obs": "Vestibular Insper (grupos de cursos: Adm/Economia, Engenharias, Direito, Ciência da Computação)"
+    },
+    {
+     "forma": "ENEM (nota)",
+     "obs": "nao_verificado"
+    }
+   ],
+   "campi": [
+    {
+     "nome": "Vila Olímpia",
+     "cidade": "São Paulo",
+     "uf": "SP",
+     "cursos": [
+      "administracao",
+      "economia",
+      "direito",
+      "computacao",
+      "eng_mecanica",
+      "eng_producao"
+     ],
+     "notas": {
+      "computacao": "Ciência da Computação e Engenharia de Computação",
+      "obs": "lista do Edital Vestibular 2026.2 (via resumo do buscador; o site bloqueou acesso direto com 403). Insper também oferece Engenharia Mecatrônica"
+     }
+    }
+   ],
+   "mensalidadeReferencia": [
+    {
+     "curso": "eng_producao",
+     "valorMensal": 8300.0,
+     "ano": 2026,
+     "fonte": "https://www.insper.edu.br/pt/cursos/graduacao/engenharia/engenharia-de-producao",
+     "obs": "'preços válidos até 31/12/2026' — lido via snippet do buscador; página retornou 403 para acesso direto"
+    }
+   ],
+   "turnos": null,
+   "fontes": [
+    "https://www.insper.edu.br/content/dam/insper-portal/documentos/vestibular/vestibular-26-2/Edital_Vestibular_26_2_V4.pdf",
+    "https://www.insper.edu.br/pt/cursos/graduacao/engenharia/engenharia-de-producao"
+   ]
+  },
+  {
+   "id": "espm",
+   "nome": "Escola Superior de Propaganda e Marketing",
+   "sigla": "ESPM",
+   "tipo": "privada",
+   "cidadeSede": "São Paulo",
+   "uf": "SP",
+   "ingresso": [
+    {
+     "forma": "Vestibular próprio",
+     "obs": "processo seletivo Vestibular"
+    },
+    {
+     "forma": "ENEM (nota)",
+     "obs": "processo seletivo ENEM"
+    },
+    {
+     "forma": "Exames internacionais",
+     "obs": "ABITUR/AP/BAC/IB/SAT etc."
+    }
+   ],
+   "campi": [
+    {
+     "nome": "São Paulo (Vila Mariana)",
+     "cidade": "São Paulo",
+     "uf": "SP",
+     "cursos": [
+      "administracao",
+      "publicidade",
+      "design",
+      "direito",
+      "jornalismo",
+      "computacao"
+     ],
+     "notas": {
+      "computacao": "Sistemas de Informação (bacharelado); também Ciência de Dados e Negócios"
+     }
+    },
+    {
+     "nome": "Rio de Janeiro",
+     "cidade": "Rio de Janeiro",
+     "uf": "RJ",
+     "cursos": [
+      "administracao",
+      "publicidade",
+      "jornalismo"
+     ],
+     "notas": {
+      "administracao": "dupla titulação Administração e Economia"
+     }
+    }
+   ],
+   "mensalidadeReferencia": [
+    {
+     "curso": "administracao",
+     "valorMensal": 8061.0,
+     "ano": 2027,
+     "fonte": "https://www.espm.br/cursos-de-graduacao/administracao/",
+     "obs": "São Paulo, diurno (noturno R$ 6.276,00)"
+    },
+    {
+     "curso": "publicidade",
+     "valorMensal": 8208.0,
+     "ano": 2027,
+     "fonte": "https://www.espm.br/cursos-de-graduacao/comunicacao-e-publicidade/",
+     "obs": "São Paulo (Rio: R$ 7.112,00)"
+    },
+    {
+     "curso": "jornalismo",
+     "valorMensal": 6569.0,
+     "ano": 2027,
+     "fonte": "https://www.espm.br/cursos-de-graduacao/jornalismo/",
+     "obs": "São Paulo (Rio: R$ 6.058,00)"
+    }
+   ],
+   "turnos": [
+    "diurno",
+    "noturno",
+    "integral"
+   ],
+   "fontes": [
+    "https://www.espm.br/wp-content/uploads/Edital-2026-1-VEST-ENEM-INT-Sao.pdf",
+    "https://www.espm.br/cursos-de-graduacao/administracao/",
+    "https://www.espm.br/cursos-de-graduacao/comunicacao-e-publicidade/",
+    "https://www.espm.br/cursos-de-graduacao/jornalismo/"
+   ]
+  }
+ ],
+ "duracoes": {
+  "usp:medicina": "12 semestres (6 anos)",
+  "usp:direito": "10 semestres",
+  "usp:eng_civil": "10 semestres",
+  "usp:computacao": "8 semestres (Ciência da Computação IME)",
+  "usp:administracao": "8 semestres (integral) / 10 (noturno)",
+  "usp:jornalismo": "8 semestres (matutino) / 9 (noturno)",
+  "usp:psicologia": "8 a 10 semestres (IP)",
+  "usp:odontologia": "10 semestres (FO integral) / 8 (Bauru e Ribeirão)",
+  "usp:arquitetura": "10 semestres",
+  "usp:veterinaria": "10 semestres",
+  "unicamp:medicina": "12 semestres (6 anos)",
+  "ufc:medicina": "12 semestres",
+  "ufc:direito": "10 semestres",
+  "ufc:eng_civil": "10 semestres",
+  "ufc:computacao": "8 semestres (Ciência da Computação)",
+  "ufc:psicologia": "10 semestres",
+  "ufc:odontologia": "10 semestres",
+  "ufc:enfermagem": "9 semestres",
+  "ufc:administracao": "9 semestres (integral) / 10 (noturno)",
+  "ufc:pedagogia": "8 semestres (integral) / 10 (noturno)",
+  "pucsp:medicina": "12 semestres",
+  "pucsp:direito": "10 semestres",
+  "pucsp:psicologia": "10 semestres",
+  "pucsp:administracao": "8 semestres",
+  "pucsp:enfermagem": "10 semestres",
+  "pucsp:jornalismo": "8 semestres",
+  "pucrs:medicina": "12 semestres",
+  "pucrs:psicologia": "10 semestres",
+  "pucrs:direito": "10 semestres",
+  "pucrs:eng_civil": "10 semestres",
+  "pucrs:computacao": "8 semestres",
+  "pucrs:odontologia": "10 semestres",
+  "pucrs:enfermagem": "10 semestres",
+  "pucpr:medicina": "6 anos",
+  "pucpr:direito": "5 anos",
+  "pucpr:psicologia": "5 anos",
+  "pucpr:eng_civil": "5 anos",
+  "pucpr:odontologia": "5 anos",
+  "pucpr:computacao": "4 anos",
+  "pucpr:veterinaria": "5 anos",
+  "pucpr:agronomia": "5 anos",
+  "pucpr:enfermagem": "5 anos",
+  "pucpr:fisioterapia": "4 anos",
+  "pucpr:farmacia": "5 anos",
+  "pucpr:arquitetura": "5 anos",
+  "pucpr:administracao": "4 anos",
+  "pucpr:jornalismo": "4 anos",
+  "pucpr:design": "4 anos",
+  "pucpr:ed_fisica": "4 anos",
+  "pucpr:nutricao": "5 anos",
+  "pucpr:pedagogia": "4 anos",
+  "pucpr:musica_grad": "4 anos",
+  "pucpr:artes_cenicas": "3 anos (Teatro)",
+  "fgv:administracao": "4 anos",
+  "fgv:direito": "5 anos",
+  "fgv:economia": "4 anos",
+  "mackenzie:direito": "10 semestres (mínimo)",
+  "mackenzie:administracao": "8 semestres (mínimo)",
+  "mackenzie:eng_civil": "10 semestres (mínimo)",
+  "mackenzie:arquitetura": "10 semestres (mínimo)",
+  "mackenzie:computacao": "8 semestres (Ciência da Computação, mínimo)",
+  "mackenzie:psicologia": "10 semestres (mínimo)",
+  "mackenzie:farmacia": "8 semestres (mínimo)",
+  "mackenzie:fisioterapia": "10 semestres (mínimo)",
+  "espm:administracao": "4 anos (diurno) / 5 anos (noturno)",
+  "espm:direito": "5 anos",
+  "espm:jornalismo": "4 anos",
+  "espm:design": "4 anos"
+ }
+}

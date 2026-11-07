@@ -361,7 +361,9 @@ export function leituraPolitica(v: Vida): LeituraPolitica | undefined {
     publico: leituraDoNome(v)?.frase ?? `${flex(ge(v), 'anônimo', 'anônima', 'anônime')} fora da política`,
     noPartido: p.partido && !p.indicacaoMilitar ? palavraPartidaria(basePartidaria(v)) : undefined,
     ultimaEleicao: ultima?.fatores ? `${anoDe(ultima.t)}, ${nomeCargo(v, ultima.cargo)}: ${explicarEleicao(v, ultima)}` : undefined,
-    perspectiva: cargo && p.partido && !p.campanha && !p.posse && base.fase !== 'encerrada' ? `${cap(nomeCargo(v, cargo))} em ${e.ano}: ${perspectiva(v, cargo, e.t)}` : undefined,
+    // VIDA 12.9: no meio de um mandato que não acaba nesta eleição, a perspectiva não oferece outro cargo (a presidenta não é
+    // "vereadora em 2032").
+    perspectiva: cargo && p.partido && !p.campanha && !p.posse && base.fase !== 'encerrada' && (!p.mandato || cargo === p.mandato.cargo) ? `${cap(nomeCargo(v, cargo))} em ${e.ano}: ${perspectiva(v, cargo, e.t)}` : undefined,
     partidos: passados.length ? `Antes: ${passados.map(x => `${partidoDe(x.sigla)?.chamado ?? x.sigla} (${anoDe(x.tInicio)}–${anoDe(x.tFim!)})`).join(', ')}.` : undefined,
     escandalo: p.escandalo && v.t - p.escandalo.t <= 72 ? `${p.escandalo.tipo === 'caso' ? 'O caso' : p.escandalo.tipo === 'prisao' ? 'A prisão' : 'O processo'} que veio a público em ${anoDe(p.escandalo.t)} ainda pesa${p.escandalo.resposta === 'desculpas' ? ', menos depois do pedido de desculpas' : p.escandalo.resposta === 'negou' ? ', e a negativa não ajudou' : ''}.` : undefined
   };

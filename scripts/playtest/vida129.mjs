@@ -20,11 +20,17 @@ const TODAS = [
   ['casa-quarto*', 'r128-mansao', 'Vida', 'aba:Casa', 'clique:.pz-comodo >> nth=3', 'ver:.pz-painel'],
   ['casa-cozinha*', 'r128-mansao', 'Vida', 'aba:Casa', 'clique:.pz-comodo >> nth=2', 'ver:.pz-painel'],
   ['apto-quarto*', 'r128-apto', 'Vida', 'aba:Casa', 'clique:.pz-comodo >> nth=3', 'ver:.pz-painel'],
-  ['aparencia*', 'r129-jovem', 'Você', 'ver:.aparencia__itens'],
-  ['looks*', 'r129-jovem', 'Você', 'ver:.looks'],
-  ['loja-roupa*', 'r129-jovem', 'Vida', 'aba:Compras', 'botao:Roupas', 'clique:.vitrines--especializada .vitrine__abrir', 'ver:.catalogo-loja'],
-  ['encontros*', 'r129-jovem', 'Pessoas', 'clique:summary:has-text("Receber gente")', 'ver:.encontros'],
+  ['aparencia*', 'r129-jovem', 'Você', 'clique:role=tab[name=/Aparência/]', 'ver:.aparencia__itens'],
+  ['looks*', 'r129-jovem', 'Você', 'clique:role=tab[name=/Aparência/]', 'ver:.looks'],
+  ['loja-roupa*', 'r129-jovem', 'Vida', 'aba:Compras', 'clique:text=Moda e acessórios >> nth=0', 'clique:.vitrines--especializada .vitrine__abrir', 'ver:.catalogo-loja'],
+  ['encontros*', 'r129-jovem', 'Pessoas', 'clique:text=Receber gente e sair junto >> nth=0', 'ver:.encontros'],
   ['calendario*', 'r129-jovem', 'Minha Semana', 'ver:.calendario'],
+  ['estudos-vestibular*', 'r129-vestibulanda', 'Caminhos', 'clique:text=Escola, boletim, cursos >> nth=0', 'ver:main'],
+  ['estudos-faculdade*', 'r129-estudante', 'Caminhos', 'clique:text=Escola, boletim, cursos >> nth=0', 'ver:.fac129'],
+  ['empresa*', 'r129-empresaria', 'Vida', 'aba:Patrimônio', 'clique:role=tab[name=/Empresas/]', 'ver:.e129'],
+  ['presidente*', 'r129-presidente', 'Caminhos', 'clique:text=Concursos, política, serviço público >> nth=0', 'ver:.pres129'],
+  ['garagem*', 'r128-mansao', 'Vida', 'aba:Patrimônio', 'clique:role=tab[name=/Garagem/]', 'ver:main'],
+  ['tatuagens*', 'r129-jovem', 'Você', 'clique:role=tab[name=/Aparência/]', 'ver:.estudio-tatuagem'],
   ['novidades', 'r129-jovem', 'novidades']
 ].map(([n, ...r]) => [n.replace('*', ''), n.endsWith('*'), ...r]);
 const so = process.env.CENAS?.split(',');
@@ -211,6 +217,7 @@ for (const [nome, extra, sv, area, ...passos] of cenas) {
         } else if (passo.startsWith('select:')) {
           const [rotulo, valor] = passo.slice(7).split('='); const r = (rotulo.startsWith('.') ? p.locator(rotulo) : p.getByLabel(rotulo, { exact: true })).locator('visible=true').first(); if (await r.count()) { await r.selectOption(valor); await p.waitForTimeout(300); } else notas.push(`${rot}: sem ${passo}`);
         } else if (passo.startsWith('ver:')) {
+          await p.locator(passo.slice(4)).first().waitFor({ state: 'visible', timeout: 3000 }).catch(() => {}); // 12.9: o que é sob demanda chega depois
           const r = p.locator(passo.slice(4)).locator('visible=true').first(); if (await r.count()) { await r.evaluate(x => x.scrollIntoView({ block: 'start' })); await p.waitForTimeout(250); } else notas.push(`${rot}: sem ${passo}`);
         } else if (passo.startsWith('clique:')) {
           const r = p.locator(passo.slice(7)).locator('visible=true').first(); if (await r.count()) { await r.click(); await p.waitForTimeout(400); } else notas.push(`${rot}: sem ${passo}`);

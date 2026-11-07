@@ -1,0 +1,12 @@
+import { chromium } from 'playwright';
+import { readFileSync } from 'fs';
+const save = readFileSync(process.env.HOME + '/vida-trabalho/qa129/saves/vida-r129-jovem.json', 'utf8');
+const b = await chromium.launch(); const p = await (await b.newContext({ viewport: { width: 1440, height: 900 } })).newPage();
+await p.goto('http://localhost:4173/'); await p.evaluate(s => { localStorage.clear(); localStorage.setItem('VIDA_NOVIDADES_VISTAS', '12.9'); localStorage.setItem('VIDA_GAME_SAVE_V1', s); }, save);
+await p.goto('http://localhost:4173/'); await p.waitForTimeout(1500);
+await p.getByRole('button', { name: /Continuar/ }).first().click().catch(() => {}); await p.waitForTimeout(1500);
+await p.getByRole('button', { name: 'Você', exact: true }).first().click(); await p.waitForTimeout(800);
+const tabs = await p.locator('[role=tab]').allInnerTexts(); console.log('tabs', tabs.join(' | '));
+await p.locator('[role=tab]', { hasText: 'Aparência' }).first().click().catch(e => console.log('sem tab', e.message)); await p.waitForTimeout(2000);
+console.log('estudio', await p.locator('.estudio-tatuagem').count(), 'itens', await p.locator('.aparencia__itens').count());
+await b.close();
