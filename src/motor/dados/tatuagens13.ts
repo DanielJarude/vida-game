@@ -6,6 +6,9 @@
  *   Como na 12.9, a arte é um desenho ORIGINAL do estúdio que lembra a obra — o objeto, a arma, a criatura, o cenário,
  *   o emblema reinterpretado, uma palavra curta —, nunca a arte oficial, o logotipo ou o rosto de um personagem
  *   copiado. O campo `referencia` diz a obra; `MIDIA_DA_OBRA` agrupa as obras (o estúdio filtra por elas).
+ * - PERSONAGENS (correção final da 13, lotes `tatuagens13c{A,B,C,D}`): 81 personagens e criaturas desenhados de verdade —
+ *   rosto, corpo, roupa e atributos — de obras em domínio público (no Brasil e nos EUA), segundo o texto e as ilustrações
+ *   originais (Paget, Tenniel, Denslow, Mazzanti, Doré, McCay…), nunca o visual de adaptações ainda protegidas.
  * - Os estilos independentes ganham peças: geométricas, abstratas, minimalistas, ornamentais, surrealistas,
  *   conceituais, blackwork, old school, oriental, fine line, tribal, realistas; e os temas bichos (com a fauna
  *   brasileira), natureza, criaturas e mitos, céu e espaço.
@@ -13,6 +16,10 @@
  * Puro (só tipos e dados): fica no pacote `motor-casa`, como a 12.9. O save guarda só o id: nada muda para quem já tem.
  */
 import type { DesenhoDeTatuagem, TamanhoDeTatuagem } from './tatuagens';
+import { CLASSICOS_A } from './tatuagens13cA';
+import { CLASSICOS_B } from './tatuagens13cB';
+import { CLASSICOS_C } from './tatuagens13cC';
+import { CLASSICOS_D } from './tatuagens13cD';
 
 const T = (...xs: TamanhoDeTatuagem[]) => xs;
 type D = Omit<DesenhoDeTatuagem, 'tamanho' | 'tamanhos'> & { tamanhos: TamanhoDeTatuagem[] };
@@ -20,8 +27,8 @@ const pop = (referencia: string, xs: Omit<D, 'estilo' | 'referencia'>[]): D[] =>
 const tema = (t: NonNullable<D['tema']>, xs: D[]): D[] => xs.map(x => ({ ...x, tema: t }));
 
 /** De que tipo de obra é cada referência (o seletor de obra do estúdio agrupa por aqui). */
-export type MidiaDaObra = 'games' | 'livros' | 'series' | 'filmes' | 'animacoes';
-export const NOME_MIDIA: Record<MidiaDaObra, string> = { games: 'Videogames', livros: 'Livros', series: 'Séries', filmes: 'Filmes', animacoes: 'Animações e anime' };
+export type MidiaDaObra = 'games' | 'livros' | 'series' | 'filmes' | 'animacoes' | 'quadrinhos' | 'lendas';
+export const NOME_MIDIA: Record<MidiaDaObra, string> = { games: 'Videogames', livros: 'Livros', series: 'Séries', filmes: 'Filmes', animacoes: 'Animações e anime', quadrinhos: 'Quadrinhos', lendas: 'Mitos, lendas e contos' };
 export const MIDIA_DA_OBRA: Record<string, MidiaDaObra> = {
   // de antes (12.9)
   'Pokémon': 'games', 'The Legend of Zelda': 'games', 'Super Mario': 'games',
@@ -36,7 +43,9 @@ export const MIDIA_DA_OBRA: Record<string, MidiaDaObra> = {
   'Percy Jackson': 'livros', 'Duna': 'livros', 'Sherlock Holmes': 'livros', 'O Pequeno Príncipe': 'livros', 'Dom Quixote': 'livros', 'Moby Dick': 'livros', 'Alice no País das Maravilhas': 'livros', 'Drácula': 'livros',
   'Vikings': 'series', 'Friends': 'series', 'Dark': 'series', 'Round 6': 'series', 'Lost': 'series', 'La Casa de Papel': 'series',
   'Indiana Jones': 'filmes', 'O Iluminado': 'filmes', 'Interestelar': 'filmes', 'Kill Bill': 'filmes', 'O Poderoso Chefão': 'filmes',
-  'Death Note': 'animacoes', 'Rick and Morty': 'animacoes', 'Demon Slayer': 'animacoes', 'Evangelion': 'animacoes', 'Cavaleiros do Zodíaco': 'animacoes'
+  'Death Note': 'animacoes', 'Rick and Morty': 'animacoes', 'Demon Slayer': 'animacoes', 'Evangelion': 'animacoes', 'Cavaleiros do Zodíaco': 'animacoes',
+  // VIDA 13 (correção final): os personagens desenhados de verdade — obras em domínio público (tatuagens13c*)
+  ...CLASSICOS_A.midias, ...CLASSICOS_B.midias, ...CLASSICOS_C.midias, ...CLASSICOS_D.midias
 };
 
 const LISTA: D[] = [
@@ -364,7 +373,9 @@ const LISTA: D[] = [
     { id: 'sistema_solar', nome: 'Sistema solar', estilo: 'minimalista', tamanhos: T(1, 2), proporcao: 3, descricao: 'O sol e os planetas em fila, cada um do seu tamanho.' },
     { id: 'galaxia_espiral', nome: 'Galáxia', estilo: 'pontilhismo', tamanhos: T(1, 2, 3), proporcao: 1.3, descricao: 'Os braços da galáxia em pontos, o centro denso e claro.' },
     { id: 'eclipse', nome: 'Eclipse', estilo: 'blackwork', tamanhos: T(1, 2), descricao: 'O disco preto da lua cobrindo o sol, a coroa de raios em volta.' }
-  ])
+  ]),
+  /* ================================================================ PERSONAGENS (domínio público, tatuagens13c*) */
+  ...CLASSICOS_A.lista, ...CLASSICOS_B.lista, ...CLASSICOS_C.lista, ...CLASSICOS_D.lista
 ];
 
 export const DESENHOS_13: DesenhoDeTatuagem[] = LISTA.map(x => ({ ...x, tamanho: x.tamanhos.length === 3 ? x.tamanhos[1] : x.tamanhos[x.tamanhos.length - 1] }));

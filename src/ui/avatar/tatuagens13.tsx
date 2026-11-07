@@ -10,12 +10,18 @@ import {
   ROXO, sorte, TERRA, TURQUESA, VERDE, VERDE_CLARO, VERMELHO, type PincelDaTatuagem13
 } from './tatuagens13Base';
 import { desenho13Pop } from './tatuagens13Pop';
+import { desenho13cA } from './tatuagens13cA';
+import { desenho13cB } from './tatuagens13cB';
+import { desenho13cC } from './tatuagens13cC';
+import { desenho13cD } from './tatuagens13cD';
 
 export type { PincelDaTatuagem13 } from './tatuagens13Base';
 
 export function desenho13(id: string, p: PincelDaTatuagem13): ReactNode | undefined {
   const pop = desenho13Pop(id, p);
   if (pop !== undefined) return pop;
+  const classico = desenho13cA(id, p) ?? desenho13cB(id, p) ?? desenho13cC(id, p) ?? desenho13cD(id, p);
+  if (classico !== undefined) return classico;
   const { tinta, cor, W, H } = p;
   const { s, L, C } = atalhos(p);
   switch (id) {

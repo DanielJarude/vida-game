@@ -14,7 +14,11 @@ import { interpretar } from '../save';
 import { DESENHOS, NOME_ESTILO, regioesDoDesenho, desenhoDeTatuagem, REGIOES_SIMPLES } from '../dados/tatuagens';
 import { DESENHOS_129, NOME_TEMA, temaDoDesenho } from '../dados/tatuagens129';
 import { DESENHOS_13, MIDIA_DA_OBRA, NOME_MIDIA } from '../dados/tatuagens13';
-import { normalizarTatuagens, tatuagensDe, tatuagensNaFigura } from '../sistemas/tatuagens';
+import { CLASSICOS_A } from '../dados/tatuagens13cA';
+import { CLASSICOS_B } from '../dados/tatuagens13cB';
+import { CLASSICOS_C } from '../dados/tatuagens13cC';
+import { CLASSICOS_D } from '../dados/tatuagens13cD';
+import { estadoDaTatuagem, historicoDeTatuagens, normalizarTatuagens, tatuagensDe, tatuagensNaFigura } from '../sistemas/tatuagens';
 import { desenho13 } from '../../ui/avatar/tatuagens13';
 import { DesenhoDaTatuagem, caixaNativa } from '../../ui/avatar/tatuagens';
 import { desenhosDoFiltro, OBRAS_POR_MIDIA } from '../../ui/jogo/Tatuagens';
@@ -152,5 +156,57 @@ describe('VIDA 13 · catálogo de tatuagens', () => {
     expect(JSON.stringify(lido.vida.eu.tatuagens)).toBe(antes);
     // E a arte das antigas é a mesma de antes (os desenhos novos só entram no fim do `desenho()`).
     for (const id of ['andorinha', 'chapeu_de_palha', 'polvo']) expect(desenho13(id, { tinta: '#111', cor: c => c, traco: 1, W: 20, H: 20 }), id).toBeUndefined();
+  });
+});
+
+describe('VIDA 13 (correção final) · personagens desenhados (obras em domínio público)', () => {
+  const PERSONAGENS = [CLASSICOS_A, CLASSICOS_B, CLASSICOS_C, CLASSICOS_D].flatMap(l => l.lista);
+  it('pelo menos 80 personagens novos, de pelo menos 35 obras, em livros, filmes, quadrinhos, animação e lendas; todos no catálogo', () => {
+    expect(PERSONAGENS.length).toBeGreaterThanOrEqual(80);
+    const obras = new Set(PERSONAGENS.map(d => d.referencia));
+    expect(obras.size).toBeGreaterThanOrEqual(35);
+    const midias = new Set([...obras].map(o => MIDIA_DA_OBRA[o!]));
+    for (const m of ['livros', 'filmes', 'quadrinhos', 'animacoes', 'lendas'] as const) expect(midias.has(m), m).toBe(true);
+    for (const d of PERSONAGENS) {
+      expect(d.estilo, d.id).toBe('cultura_pop');
+      expect(desenhoDeTatuagem(d.id)?.id, d.id).toBe(d.id);
+    }
+    // As obras que já tinham objetos ganham agora o personagem, no mesmo grupo do filtro.
+    for (const o of ['Sherlock Holmes', 'Drácula', 'Alice no País das Maravilhas', 'O Mágico de Oz', 'Dom Quixote', 'Moby Dick'])
+      expect(PERSONAGENS.some(d => d.referencia === o), o).toBe(true);
+    expect(desenhosDoFiltro({ referencia: 'Sítio do Picapau Amarelo' }).map(d => d.id)).toContain('emilia_de_pano');
+    expect(desenhosDoFiltro({ busca: 'quadrinhos popeye' }).map(d => d.id)).toEqual(['popeye_marinheiro_1929']);
+    expect(desenhosDoFiltro({ busca: 'lendas curupira' }).map(d => d.id)).toContain('curupira_pes_virados');
+  });
+
+  it('aplicar, ajustar (posição, tamanho, rotação), cobrir e remover um personagem; o save guarda e relê igual', () => {
+    let v = rica();
+    v = fazer(v, { tipo: 'tatuar', desenho: 'holmes_de_perfil', regiao: 'pulso', lado: 'e', tamanho: 1 });
+    v = fazer(v, { tipo: 'tatuar', desenho: 'quixote_e_sancho', regiao: 'costas_alta', tamanho: 3 });
+    v = fazer(v, { tipo: 'tatuar', desenho: 'emilia_de_pano', regiao: 'panturrilha', lado: 'd', tamanho: 2, cor: 'colorida', ajuste: { x: 0.1, y: -0.1, escala: 1.15, rot: 20 } });
+    v = fazer(v, { tipo: 'tatuar', desenho: 'conde_orlok', regiao: 'antebraco', lado: 'e', tamanho: 2, ajuste: { x: 0, y: 0, escala: 0.9, rot: 90 } });
+    expect(tatuagensDe(v)).toHaveLength(4);
+    expect(tatuagensNaFigura(v)).toHaveLength(4);
+    const emilia = tatuagensDe(v).find(x => x.desenho === 'emilia_de_pano')!;
+    expect(emilia.ajuste).toMatchObject({ escala: 1.15, rot: 20 });
+    // Cobertura: a regra do tatuador vale para os personagens (cultura pop não cobre; um neotradicional cobre o personagem).
+    v = fazer(v, { tipo: 'tatuar', desenho: 'holmes_de_perfil', regiao: 'biceps', lado: 'd', tamanho: 1 });
+    const alvo = tatuagensDe(v).find(x => x.desenho === 'holmes_de_perfil' && x.regiao === 'biceps')!;
+    expect(disponibilidade(v, { tipo: 'tatuar', desenho: 'leao_covarde', regiao: 'biceps', lado: 'd', tamanho: 3, cobre: alvo.id }).grau).toBe('incompativel');
+    v = fazer(v, { tipo: 'tatuar', desenho: 'coruja_neo', regiao: 'biceps', lado: 'd', tamanho: 3, cobre: alvo.id });
+    const por = tatuagensDe(v).find(x => x.desenho === 'coruja_neo')!;
+    expect(v.eu.tatuagens!.find(x => x.id === alvo.id)!.coberta?.por).toBe(por.id);
+    expect(estadoDaTatuagem(v, v.eu.tatuagens!.find(x => x.id === alvo.id)!)).toBe('coberta');
+    expect(historicoDeTatuagens(v).some(x => x.id === alvo.id)).toBe(true);
+    // Remoção.
+    const orlok = tatuagensDe(v).find(x => x.desenho === 'conde_orlok')!;
+    expect(podeTentar(disponibilidade(v, { tipo: 'remover_tatuagem', id: orlok.id }))).toBe(true);
+    v = executar(v, { tipo: 'remover_tatuagem', id: orlok.id }).vida;
+    // O laser é por sessões: a peça passa a "saindo" e fica no histórico.
+    expect(estadoDaTatuagem(v, v.eu.tatuagens!.find(x => x.id === orlok.id)!)).not.toBe('na_pele');
+    expect(historicoDeTatuagens(v).some(x => x.id === orlok.id)).toBe(true);
+    const lido = interpretar(JSON.stringify(v));
+    expect(lido.tipo).toBe('ok');
+    if (lido.tipo === 'ok') { expect(lido.vida.eu.tatuagens).toEqual(v.eu.tatuagens); normalizarTatuagens(lido.vida); expect(lido.vida.eu.tatuagens).toEqual(v.eu.tatuagens); }
   });
 });
