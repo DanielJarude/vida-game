@@ -44,7 +44,7 @@ import { mesesProcurando, patrimonioPagaAVida } from './intencao';
 import { creditarRamos, exposicaoDosRamos, fatorDosRamos, garantirRamos, NOME_DO_RAMO, novaEspecializacao, RAMO_DA_CATEGORIA, ramosAtivos } from './ramos';
 import { movimentoPorFora, pedirRumo, registrarRumo } from './porFora';
 import { nivelNaOrganizacao } from './tempoDoCrime';
-import { fatorDoLugar } from './submundo';
+import { fatorDoLugar, garantirFichas } from './submundo';
 
 /** Renda mensal por categoria e nível (reais de hoje): dinheiro rápido, com teto. */
 const RENDA: Record<CategoriaIlicita, [number, number, number]> = {
@@ -387,9 +387,14 @@ export function entrar(v: Vida, cat: CategoriaIlicita, contatoId: string | undef
   const novo = v.caminhos.envolvimento;
   if (antes) {
     if (antes.especializacoes) garantirRamos(v, antes);
-    for (const k of ['especializacoes', 'fichas', 'organizacoes', 'diario', 'divida', 'traicoes', 'anosSecos'] as const) if (antes[k] !== undefined) (novo as unknown as Record<string, unknown>)[k] = antes[k];
+    // VIDA 12.9: a carreira criminal (patamar, marcos) e as cenas já vistas também voltam — antes se perdiam na volta (e o
+    // carregamento recriava a carreira pela história: o save reaberto ficava diferente do jogo).
+    for (const k of ['especializacoes', 'fichas', 'organizacoes', 'diario', 'divida', 'traicoes', 'anosSecos', 'carreira', 'cenas', 'cenasOrg'] as const) if (antes[k] !== undefined) (novo as unknown as Record<string, unknown>)[k] = antes[k];
     if (antes.contatos) novo.contatos = [...antes.contatos];
   }
+  // VIDA 12.9: quem abre a porta ganha a ficha agora (antes só o carregamento a criava — o save reaberto ficava diferente
+  // do jogo em andamento).
+  garantirFichas(v, novo);
   const ramo = RAMO_DA_CATEGORIA[cat];
   const esp = (novo.especializacoes ??= {});
   if (esp[ramo]) { delete esp[ramo]!.largou; esp[ramo]!.tInicio = v.t; } else esp[ramo] = novaEspecializacao(v, novo, ramo);

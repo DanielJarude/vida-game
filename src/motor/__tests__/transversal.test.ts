@@ -81,20 +81,26 @@ describe('transversal: Brasil → EUA → a geração seguinte', () => {
     expect(rotuloDe(v, v.pessoas[amigaId], v.vinculos[amigaId])).toMatch(/amiga/);
 
     // 6. Um filho nascido nos EUA: americano pelo solo, brasileiro pelo sangue.
-    let idDoFilho = '';
+    // VIDA 12.9: dois filhos nascidos nos EUA — a geração seguinte continua com quem estiver vivo aos 52 da mãe (a vida-base
+    // pode perder um filho no caminho: o acidente é da vida, não do cenário).
+    const filhos: string[] = [];
     v = transacao(v, x => {
-      const { p } = comFilho(x, 2, { genero: 'masculino' });
-      idDoFilho = p.id;
-      p.municipioNatal = 'us:chicago';
-      p.nacionalidades = nacionalidadesDoBebe('us:chicago', [nacionalidadesDaVida(x)], 10);
+      for (const idadeF of [2, 1]) {
+        const { p } = comFilho(x, idadeF, { genero: 'masculino' });
+        filhos.push(p.id);
+        p.municipioNatal = 'us:chicago';
+        p.nacionalidades = nacionalidadesDoBebe('us:chicago', [nacionalidadesDaVida(x)], 10);
+      }
       x.financas.conta = 400000;
     }).vida;
     // REWORK 9.7: o filho é o criado aqui (a vida pode ter outros filhos — a semente decide).
-    const filho = v.pessoas[idDoFilho];
-    expect(filho.nacionalidades).toEqual(expect.arrayContaining(['US', 'BR']));
+    for (const id of filhos) expect(v.pessoas[id].nacionalidades).toEqual(expect.arrayContaining(['US', 'BR']));
 
     // 7. Morre; a herança é pela lei de onde morava; o filho continua.
     v = viverAte(v, 52);
+    const idDoFilho = filhos.find(id => v.pessoas[id]?.vivo)!;
+    expect(idDoFilho).toBeTruthy();
+    const filho = v.pessoas[idDoFilho];
     entrarNaVida(v);
     // REWORK 9.7: o filho continua de onde ELE mora — adulto, ele pode ter emigrado por conta própria (a semente decide).
     const aindaNosEua = paisDaVida(v) === 'US' && paisDaCidade(v.pessoas[idDoFilho].municipioId ?? v.moradia.municipioId) === 'US';

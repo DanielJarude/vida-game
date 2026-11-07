@@ -178,13 +178,16 @@ describe('Fase C · os atributos no motor: diferença, não destino', () => {
   });
 
   it('felicidade baixa apesar do dinheiro: o temperamento, a solidão e o luto pesam mais do que a folga', () => {
-    const v = transacao(viverAte(nova({ semente: 734, atributos: ESCOLHIDOS({ felicidade: 40 }) }), 35), x => { x.financas.estilo = 'folgado'; x.financas.conta = 900000; }).vida;
+    const v = transacao(viverAte(nova({ semente: 734, atributos: ESCOLHIDOS({ felicidade: 40 }) }), 35), x => { x.financas.estilo = 'folgado'; x.financas.conta = 900000; x.financas.dividas = []; x.financas.negativado = false; }).vida;
     const f = fatoresHumor(v);
     expect(f.some(x => x.id === 'temperamento' && x.efeito < 0)).toBe(true);
     const folga = f.find(x => x.id === 'folga')?.efeito ?? 0;
     expect(folga).toBeLessThan(5);
-    const animado = transacao(viverAte(nova({ semente: 734, atributos: ESCOLHIDOS({ felicidade: 90 }) }), 35), x => { x.financas.estilo = 'folgado'; x.financas.conta = 900000; }).vida;
-    expect(alvoHumor(animado)).toBeGreaterThan(alvoHumor(v));
+    const animado = transacao(viverAte(nova({ semente: 734, atributos: ESCOLHIDOS({ felicidade: 90 }) }), 35), x => { x.financas.estilo = 'folgado'; x.financas.conta = 900000; x.financas.dividas = []; x.financas.negativado = false; }).vida;
+    // VIDA 12.9: o temperamento isolado — a MESMA vida com o temperamento da pessoa animada (duas vidas inteiras diferem
+    // também na solidão e no luto, que pesam tanto quanto).
+    const mesma = structuredClone(v); mesma.predisposicoes = animado.predisposicoes;
+    expect(alvoHumor(mesma)).toBeGreaterThan(alvoHumor(v));
   });
 
   it('beleza não garante química: o peso da aparência é de quem olha (de quase nada a um pouco mais)', () => {

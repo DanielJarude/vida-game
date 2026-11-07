@@ -357,7 +357,10 @@ describe('morte e luto', () => {
     let a = comPerda, b = structuredClone(v);
     const pesos: number[] = [];
     for (let k = 0; k < 4; k++) {
+      // VIDA 12.9: o luto só passa para quem continua vivo (a vida-base de 62 anos pode morrer no ano seguinte).
+      a.corpo.saude = Math.max(a.corpo.saude, 85); a.corpo.condicoes = [];
       a = avancarAno(a).vida; if (a.momento) a = responder(a);
+      expect(a.morte).toBeUndefined();
       b = avancarAno(b).vida; if (b.momento) b = responder(b);
       pesos.push(a.luto.find(l => l.pessoaId === par.id)?.peso ?? 0);
     }

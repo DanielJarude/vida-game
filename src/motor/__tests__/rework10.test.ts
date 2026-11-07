@@ -840,6 +840,8 @@ function cenas(): Vida[] {
     // a cena mede as respostas, então começa sem os acontecimentos do REWORK 10 já vistos.
     t15.ocorrencias = t15.ocorrencias.filter(o => !/^(inf|esc|ado)10_/.test(o.id)); out.push(t15);
     out.push(em(adulto(36, { semente: 33 }), (x, r) => {
+      // VIDA 12.9: como a de 15 anos — a vida-base pode já ter vivido as cenas do REWORK 10 (a cena mede as respostas).
+      x.ocorrencias = x.ocorrencias.filter(o => !/^(trab|cas|din|fam)10_/.test(o.id));
       contratar(x, r, ocupacao('vendedor')); x.trabalho.atual!.desempenho = 70; x.trabalho.atual!.tInicio = x.trabalho.atual!.tPosto = x.t - 48; x.trabalho.experiencia.comercio = 48; x.financas.conta = 80000;
       const par = comParceiro(x, { estagio: 'casamento', anos: 8 }); par.vin.romance!.envolvimento = 55;
       comFilho(x, 12, { outroId: par.p.id }); comParente(x, 'irmao', 38); const mae = comParente(x, 'mae', 68, 'feminino'); mae.p.saude = 40;
