@@ -190,9 +190,13 @@ export function visualNaMoto(pecas: Peca[], forma: FormaVeiculo, cor: string, v?
   const out = pecas.map((x): Peca => {
     if (x.tipo === 'pneu' && v.roda) return { ...x, aro: v.roda.estilo === 'cravos' ? x.aro : v.roda.estilo, raios: v.roda.raios ?? x.raios, corAro: v.roda.cor, aroMaior: v.roda.aroMaior };
     if (x.tipo === 'massa' && x.cor === cor && ac) return { ...x, cor: corComAcabamento(cor, v), semVolume: ac === 'fosco' || ac === 'acetinado' ? true : x.semVolume, attrs: { ...x.attrs, 'data-acabamento': ac } };
+    // VIDA 12.9.1: o banco de couro na cor escolhida (banco, selim, garupa).
+    if (x.tipo === 'massa' && v.banco && /^(banco|selim|garupa)/.test(x.marca ?? '')) return { ...x, cor: v.banco, attrs: { ...x.attrs, 'data-banco': v.banco } };
     return x;
   });
   const t = TANQUE[forma];
+  // VIDA 12.9.1: o filete pintado à mão, contornando o tanque.
+  if (t && v.filete) { const [a, b, y] = t; out.push({ tipo: 'linha', d: `M${a + 2} ${y + 3}Q${(a + b) / 2} ${y - 4} ${b - 2} ${y - 1}M${a + 4} ${y + 8}Q${(a + b) / 2} ${y + 3} ${b - 6} ${y + 5}`, larg: 1, cor: v.filete, marca: 'filete' }); }
   if (t && ac && ac !== 'fosco') {
     const [a, b, y] = t;
     out.push(ac === 'metalico' ? { tipo: 'linha', d: `M${a + 4} ${y}Q${(a + b) / 2} ${y - 6} ${b - 4} ${y - 2}`, larg: 1.6, cor: BRANCO, marca: 'acabamento-metalico' }

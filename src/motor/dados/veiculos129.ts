@@ -17,6 +17,7 @@
 import type { CategoriaVeiculo, FormaVeiculo, VersaoVeiculo } from './bens';
 import type { GrauDeRaridade } from './colecao128';
 import type { OpcaoDePeca, PecaDeVeiculo } from './personalizacaoVeiculo';
+import { RODAS_MOTO_1291 } from './motosClassicas1291';
 
 type V = VersaoVeiculo;
 const AS: V['mercados'] = ['america_sul'];
@@ -122,18 +123,21 @@ export const producaoDaVersao = (x: Pick<V, 'id' | 'producao'> | undefined): num
  * número fabricado (até mil: muito rara; até 15 mil: rara; até 100 mil: incomum; mais: comum — um Fusca é um clássico, não
  * uma raridade) e, sem número, a classe (o clássico sobrevivente é incomum; o exótico de série é incomum — caro, não raro).
  */
-export function grauDoVeiculo(x: Pick<V, 'id' | 'limitada' | 'producao'> | undefined, segmento?: 'exotico' | 'classico'): GrauDeRaridade {
+export function grauDoVeiculo(x: Pick<V, 'id' | 'limitada' | 'producao' | 'historica'> | undefined, segmento?: 'exotico' | 'classico'): GrauDeRaridade {
   if (x?.limitada) return x.limitada <= 1 ? 'unica' : 'limitada';
   const p = producaoDaVersao(x);
-  if (p !== undefined) return p <= 1000 ? 'muito_rara' : p <= 15000 ? 'rara' : p <= 100000 ? 'incomum' : 'comum';
+  // VIDA 12.9.1: o marco da história (`historica`) sobe um grau — só com a produção conhecida, e nunca além de muito rara.
+  if (p !== undefined) return GRAUS_POR_PRODUCAO[Math.min(3, (p <= 1000 ? 3 : p <= 15000 ? 2 : p <= 100000 ? 1 : 0) + (x?.historica ? 1 : 0))];
   return segmento ? 'incomum' : 'comum';
 }
+const GRAUS_POR_PRODUCAO: readonly GrauDeRaridade[] = ['comum', 'incomum', 'rara', 'muito_rara'];
 
 /** O que sustenta o grau, em palavras ("edição limitada de 799 unidades", "cerca de 351 fabricados"). */
-export function fundamentoDaRaridade(x: Pick<V, 'id' | 'limitada' | 'producao' | 'ano'> | undefined, segmento?: 'exotico' | 'classico'): string {
+export function fundamentoDaRaridade(x: Pick<V, 'id' | 'limitada' | 'producao' | 'ano' | 'historica'> | undefined, segmento?: 'exotico' | 'classico'): string {
   if (x?.limitada) return x.limitada <= 1 ? 'exemplar único' : `edição limitada de ${x.limitada.toLocaleString('pt-BR')} unidades`;
   const p = producaoDaVersao(x);
-  if (p !== undefined) return `${p >= 100000 ? 'mais de' : 'cerca de'} ${(p >= 1_000_000 ? `${Math.round(p / 100_000) / 10} milhões` : p.toLocaleString('pt-BR')).replace('.', ',')} fabricados`;
+  // VIDA 12.9.1: o milhar com ponto ("10.594"); antes a vírgula do "3,3 milhões" trocava também o ponto do milhar ("10,594").
+  if (p !== undefined) return `${x?.historica ? 'marco da história; ' : ''}${p >= 100000 ? 'mais de' : 'cerca de'} ${p >= 1_000_000 ? `${(Math.round(p / 100_000) / 10).toLocaleString('pt-BR')} milhões` : p.toLocaleString('pt-BR')} fabricados`;
   return segmento === 'classico' ? 'clássico de série' : segmento === 'exotico' ? 'produção em série' : 'carro de série';
 }
 
@@ -155,6 +159,9 @@ export interface VisualVeiculo {
   faixa?: 'lateral' | 'dupla';
   aerofolio?: boolean;
   pelicula?: boolean;
+  /** VIDA 12.9.1 (moto): o filete pintado no tanque e a cor do banco de couro. */
+  filete?: string;
+  banco?: string;
 }
 
 /** Opções com o que mostram (a peça guarda só o id; o desenho lê daqui). */
@@ -209,7 +216,8 @@ export const RODAS_MOTO_129: PecaDeVeiculo = {
     ORIG('as rodas de série'),
     { id: 'raiadas', nome: 'raiadas, aro cromado', frac: 0.05, piso: 1800, valor: 0.99, roda: { estilo: 'raios', cor: '#e2e0db' } } as Opcao129,
     { id: 'liga_preta', nome: 'liga leve preta', frac: 0.04, piso: 1500, valor: 1, roda: { estilo: 'liga', raios: 6, cor: '#26272a' } } as Opcao129,
-    { id: 'liga_dourada', nome: 'liga leve dourada', frac: 0.05, piso: 1900, valor: 0.98, roda: { estilo: 'liga', raios: 5, cor: '#c9a23a' } } as Opcao129
+    { id: 'liga_dourada', nome: 'liga leve dourada', frac: 0.05, piso: 1900, valor: 0.98, roda: { estilo: 'liga', raios: 5, cor: '#c9a23a' } } as Opcao129,
+    ...RODAS_MOTO_1291
   ]
 };
 
@@ -243,9 +251,12 @@ export function visualDasMods(cat: CategoriaVeiculo, mods: Readonly<Record<strin
     const f = op('faixas')?.faixa; if (f) out.faixa = f;
     if (mods.aerofolio === 'aerofolio') out.aerofolio = true;
     if (mods.acessorios === 'pelicula') out.pelicula = true;
+  } else {
+    const fi = (op('filete') as { filete?: string } | undefined)?.filete; if (fi) out.filete = fi;
+    const bc = (op('banco') as { banco?: string } | undefined)?.banco; if (bc) out.banco = bc;
   }
   return Object.keys(out).length ? out : undefined;
 }
 
 /** Uma chave curta e estável do visual (para o cache dos desenhos). */
-export const chaveDoVisual = (x: VisualVeiculo | undefined) => (x ? `${x.acabamento ?? ''}.${x.roda ? `${x.roda.estilo}${x.roda.raios ?? ''}${x.roda.cor}${x.roda.aroMaior ? 'M' : ''}` : ''}.${x.tetoCor ?? ''}.${x.faixa ?? ''}.${x.aerofolio ? 'a' : ''}.${x.pelicula ? 'p' : ''}` : '');
+export const chaveDoVisual = (x: VisualVeiculo | undefined) => (x ? `${x.acabamento ?? ''}.${x.roda ? `${x.roda.estilo}${x.roda.raios ?? ''}${x.roda.cor}${x.roda.aroMaior ? 'M' : ''}` : ''}.${x.tetoCor ?? ''}.${x.faixa ?? ''}.${x.aerofolio ? 'a' : ''}.${x.pelicula ? 'p' : ''}${x.filete ?? ''}${x.banco ?? ''}` : '');

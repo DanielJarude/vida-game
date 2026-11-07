@@ -146,7 +146,7 @@ export default defineConfig({
           if (/[\\/]src[\\/]motor[\\/]sistemas[\\/]estudos129\.ts/.test(id)) return 'motor-estudos';
           // VIDA 12.9 · Presidência: a corrida, o governo do país e o do estado. Registra ganchos em `politica` ao carregar
           // (quem a importa é a camada de cima: os acontecimentos e as telas); só importa os sistemas e a base. Sem ciclo.
-          if (/[\\/]src[\\/]motor[\\/]sistemas[\\/]presidencia129\.ts/.test(id)) return 'motor-presidencia';
+          if (/[\\/]src[\\/]motor[\\/]sistemas[\\/](presidencia129|colegioEleitoral129)\.ts/.test(id)) return 'motor-presidencia';
           // REWORK 12: o patrimônio novo (a coleção, as empresas) num pacote próprio, ENTRE os sistemas e quem os chama
           // (o ano, as ações, os acontecimentos, as telas). Importam só os sistemas e a base: sem ciclo, e o pacote dos
           // textos (o mais apertado) não cresce.
@@ -155,7 +155,7 @@ export default defineConfig({
           // VIDA 12.8: os catálogos novos da casa, das marcas, das coleções e dos bichos (puros: só tipos) num pacote próprio,
           // EMBAIXO dos catálogos de sempre (que os importam) — o pacote dos catálogos estava a 8 kB do limite. Não importam nada
           // em tempo de execução: sem ciclo.
-          if (/[\\/]src[\\/]motor[\\/]dados[\\/](casa128|perfisDeMarca|colecao128|animais128|categoriasDaCasa|tatuagens129|veiculos129|piercings129|instituicoes129|cursos129|encontros129|empresas129|presidencia129|hobbies129)\.ts/.test(id)) return 'motor-casa';
+          if (/[\\/]src[\\/]motor[\\/]dados[\\/](casa128|perfisDeMarca|colecao128|animais128|categoriasDaCasa|tatuagens129|veiculos129|motosClassicas1291|piercings129|instituicoes129|cursos129|encontros129|empresas129|presidencia129|hobbies129|municipios1291|colegioEleitoral129)\.ts/.test(id)) return 'motor-casa';
           if (/[\\/]src[\\/]motor[\\/]dados[\\/]/.test(id)) return 'motor-dados';
           // Pacote pré-América do Sul: a CAMADA DE BASE — os sistemas-folha que só importam os catálogos e uns aos outros
           // (núcleo, texto, tempo, mercado, origem, rede, notoriedade, economia...) — vai com os catálogos, embaixo de

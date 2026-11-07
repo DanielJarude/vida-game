@@ -15,6 +15,7 @@
 
 import type { CategoriaVeiculo } from './bens';
 import { ACABAMENTO_129, DETALHES_CARRO_129, PINTURAS_129, RODAS_CARRO_129, RODAS_MOTO_129 } from './veiculos129';
+import { BANCOS_1291, FILETE_1291 } from './motosClassicas1291';
 
 export interface OpcaoDePeca {
   id: string;
@@ -70,7 +71,8 @@ export const PECAS_POR_CATEGORIA: Record<CategoriaVeiculo, PecaDeVeiculo[]> = {
     PINTURA,
     ACABAMENTO_129,
     RODAS_MOTO_129,
-    { id: 'banco', nome: 'Banco', tipo: 'estetica', opcoes: [ORIGINAL('o banco de série'), { id: 'conforto', nome: 'banco de viagem, com gel', frac: 0.03, piso: 900, valor: 1 }] },
+    FILETE_1291,
+    { id: 'banco', nome: 'Banco', tipo: 'estetica', opcoes: [ORIGINAL('o banco de série'), { id: 'conforto', nome: 'banco de viagem, com gel', frac: 0.03, piso: 900, valor: 1 }, ...BANCOS_1291] },
     { id: 'bagageiro', nome: 'Baú e alforjes', tipo: 'estetica', opcoes: [ORIGINAL('sem bagageiro'), { id: 'bau', nome: 'baú traseiro', frac: 0.02, piso: 600, valor: 1 }, { id: 'alforjes', nome: 'alforjes de couro', frac: 0.04, piso: 1500, valor: 1 }] },
     { id: 'pneus', nome: 'Pneus', tipo: 'funcional', opcoes: [ORIGINAL('pneus comuns'), { id: 'bons', nome: 'pneus de marca boa', frac: 0.03, piso: 700, fragilidade: 0.92 }] },
     { id: 'escape', nome: 'Escapamento', tipo: 'funcional', opcoes: [ORIGINAL('escape de série'), { id: 'esportivo', nome: 'escape esportivo (barulhento)', frac: 0.04, piso: 1200, fragilidade: 1.05, valor: 0.96 }] },

@@ -125,7 +125,7 @@ function Cartao({ vida, b, custo, aoPersonalizar }: { vida: Vida; b: Veiculo; cu
           <div><dt>Onde</dt><dd>{guardadoLonge(vida, b) ? `guardado em ${municipio(ondeEsta(vida, b)).nome}` : b.garagem ? 'em outra garagem sua' : 'com você'}</dd></div>
           {b.tCompra !== undefined && <div><dt>Desde</dt><dd>{anoDe(b.tCompra)}</dd></div>}
         </dl>
-        {notavel && <p className="nota gar129__raridade">{cap(fundamentoDaRaridade(x, m.segmento))}{b.papel === 'colecao' ? ' · na coleção de carros' : ''}.</p>}
+        {notavel && <p className="nota gar129__raridade">{cap(fundamentoDaRaridade(x, m.segmento))}{b.papel === 'colecao' ? ` · na coleção de ${m.categoria === 'moto' ? 'motos' : 'carros'}` : ''}.</p>}
         {pecas.length > 0 && <p className="nota gar129__pecas">{pecas.join(' · ')}</p>}
         {historia.length > 0 && (
           <details className="detalhes gar129__historia">

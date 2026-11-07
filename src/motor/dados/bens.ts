@@ -12,6 +12,7 @@
  * Cidade de custo 1,0.
  */
 import { VERSOES_VEICULO_129 } from './veiculos129';
+import { CLASSE_MOTO_CLASSICA, VERSOES_MOTOS_CLASSICAS } from './motosClassicas1291';
 
 export type CategoriaVeiculo = 'bicicleta' | 'moto' | 'carro' | 'embarcacao' | 'aeronave';
 
@@ -119,7 +120,8 @@ export const VEICULOS: readonly ModeloVeiculo[] = [
   // REWORK 12.4: o iate (tripulação própria: capitão e marinheiro) e o helicóptero (pista nenhuma, heliponto e hangar).
   { id: 'iate', nome: 'iate', categoria: 'embarcacao', preco: 9500000, usoMensal: 38000, taxaAnual: 0.035, idadeMin: 18, cnh: false, raro: true, tripulacao: 32000, patrimonioMin: 25000000, lugares: 12, conforto: 5, fragilidade: 1.1, descricao: 'Cabines, cozinha, a tripulação na folha: uma casa que flutua e uma conta de marina de casa grande.', usado: true, fatorConserto: 3.4, pesoUsado: 0.15 },
   { id: 'helicoptero', nome: 'helicóptero', categoria: 'aeronave', preco: 5200000, usoMensal: 22000, taxaAnual: 0.045, idadeMin: 18, cnh: false, habilitacao: 'piloto', raro: true, patrimonioMin: 12000000, lugares: 4, conforto: 4, fragilidade: 1.25, descricao: 'Pousa no heliponto do prédio ou no gramado da fazenda. Hora de voo cara, inspeção rígida, piloto com licença de asas rotativas.', usado: true, fatorConserto: 3.8, pesoUsado: 0.2 },
-  { id: 'jato', nome: 'jato executivo', categoria: 'aeronave', preco: 25000000, usoMensal: 65000, taxaAnual: 0.025, idadeMin: 18, cnh: false, raro: true, tripulacao: 70000, patrimonioMin: 40000000, lugares: 6, conforto: 5, fragilidade: 1, descricao: 'O país em duas horas, de qualquer aeroporto. Dois pilotos na folha, hangar, programa de manutenção por hora voada: uma empresa que só gasta.', usado: true, fatorConserto: 4, pesoUsado: 0.15 }
+  { id: 'jato', nome: 'jato executivo', categoria: 'aeronave', preco: 25000000, usoMensal: 65000, taxaAnual: 0.025, idadeMin: 18, cnh: false, raro: true, tripulacao: 70000, patrimonioMin: 40000000, lugares: 6, conforto: 5, fragilidade: 1, descricao: 'O país em duas horas, de qualquer aeroporto. Dois pilotos na folha, hangar, programa de manutenção por hora voada: uma empresa que só gasta.', usado: true, fatorConserto: 4, pesoUsado: 0.15 },
+  CLASSE_MOTO_CLASSICA
 ];
 
 /** Faixa de preço dentro da categoria (carros, motos, bicicletas). */
@@ -166,6 +168,8 @@ export interface VersaoVeiculo {
   limitada?: number;
   /** VIDA 12.9: quantos se fabricaram (só quando o número é conhecido): a raridade vem daqui, não do preço. */
   producao?: number;
+  /** VIDA 12.9.1: um marco da história (sobe um grau de raridade, só quando a produção é conhecida). */
+  historica?: boolean;
 }
 
 const VERSOES_DE_ANTES: readonly VersaoVeiculo[] = [
@@ -301,7 +305,7 @@ const VERSOES_DE_ANTES: readonly VersaoVeiculo[] = [
   { id: 'jaguar_etype', classe: 'classico', marca: 'Jaguar', modelo: 'E-Type Série 1', dica: 'clássico de 1963', faixa: 'alta', preco: 2400000, artigo: 'o', pesoUsado: 0.3, ano: 1963, forma: 'esportivo', lugares: 2 }
 ];
 /** VIDA 12.9: as versões novas (motos, esportivos, luxo, edições limitadas, clássicos) vêm do catálogo `veiculos129`. */
-export const VERSOES_VEICULO: readonly VersaoVeiculo[] = [...VERSOES_DE_ANTES, ...VERSOES_VEICULO_129];
+export const VERSOES_VEICULO: readonly VersaoVeiculo[] = [...VERSOES_DE_ANTES, ...VERSOES_VEICULO_129, ...VERSOES_MOTOS_CLASSICAS];
 
 /** A forma de uma versão (o desenho que a representa). */
 export function formaDaVersao(x: VersaoVeiculo | undefined, classe?: string): FormaVeiculo {

@@ -272,7 +272,7 @@ function SuasColecoes({ vida }: { vida: Vida }) {
               <summary><strong>{c.nome}</strong> <span className="nota">· {c.itens.length} {c.itens.length === 1 ? 'peça' : 'peças'}{c.valor ? ` · uns ${dinheiroCurto(c.valor)}` : ''}{c.expostas ? ` · ${c.expostas} à vista` : ''}{c.expositor ? ` · ${c.expositor}` : ''}</span></summary>
               <p className="nota">{ORDEM_DO_GRAU.filter(g => c.graus[g]).reverse().map(g => `${NOME_GRAU[g]}: ${c.graus[g]}`).join(' · ')}</p>
               <ul className="pat-colecoes__itens">
-                {c.itens.slice(0, 30).map(x => <li key={x.id}><span className={`pat-grau pat-grau--${x.grau}`}>{NOME_GRAU[x.grau]}</span> {cap(x.nome)}{x.valor ? ` — ${dinheiroCurto(x.valor)}` : ''} <span className="nota">({x.onde}{x.procedencia ? `; ${x.procedencia}` : ''}{c.id === 'carros' && x.detalhe ? `; ${x.detalhe}` : ''})</span></li>)}
+                {c.itens.slice(0, 30).map(x => <li key={x.id}><span className={`pat-grau pat-grau--${x.grau}`}>{NOME_GRAU[x.grau]}</span> {cap(x.nome)}{x.valor ? ` — ${dinheiroCurto(x.valor)}` : ''} <span className="nota">({x.onde}{x.procedencia ? `; ${x.procedencia}` : ''}{(c.id === 'carros' || c.id === 'motos') && x.detalhe ? `; ${x.detalhe}` : ''})</span></li>)}
               </ul>
               {c.id === 'vinho' && !temAdega(vida) && <p className="nota">Sem adega em casa, o vinho de guarda envelhece mal: perde valor todo ano.</p>}
             </details>

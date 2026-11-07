@@ -92,10 +92,11 @@ describe('ofertas e vitrine', () => {
       expect(ofertasDeVeiculos(structuredClone(v), l)).toEqual(a);
     }
     // A concessionária tem todos os carros zero DO MERCADO DO PAÍS (REWORK 12: o Mobi no Brasil, a F-150 nos EUA), sem os
-    // exóticos e os clássicos (esses, na garagem de colecionador); a loja de motos, todas as motos e bicicletas do país.
+    // exóticos e os clássicos (esses, na garagem de colecionador); a loja de motos, todas as motos e bicicletas do país
+    // (VIDA 12.9.1: menos as motos clássicas, que só existem usadas, na garagem de colecionador).
     const locais = versoesNoPais(paisDaCidade(v.moradia.municipioId));
     expect(ofertasDeVeiculos(v, 'concessionaria').filter(o => !o.usado).length).toBe(locais.filter(x => categoriaDe(x.classe) === 'carro' && !modeloVeiculo(x.classe).segmento).length);
-    expect(ofertasDeVeiculos(v, 'motos').filter(o => !o.usado).length).toBe(locais.filter(x => ['moto', 'bicicleta'].includes(categoriaDe(x.classe))).length);
+    expect(ofertasDeVeiculos(v, 'motos').filter(o => !o.usado).length).toBe(locais.filter(x => ['moto', 'bicicleta'].includes(categoriaDe(x.classe)) && !modeloVeiculo(x.classe).segmento).length);
     expect(ofertasDeVeiculos(v, 'usados').every(o => o.usado)).toBe(true);
   });
 

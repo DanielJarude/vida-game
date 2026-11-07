@@ -26,6 +26,7 @@ import { paisDaVida } from '../mundo/vida';
 import { fatorDeImportado, fatorDoBairro, rendimentoDoMercado } from './precos';
 import { indiceImoveis } from './economia';
 import { corDaOferta } from '../dados/pertences';
+import { HISTORICOS_MOTO_CLASSICA } from '../dados/motosClassicas1291';
 
 function rngDe(v: Vida, chave: string): Rng {
   let h = (v.economia?.semente ?? 1) >>> 0;
@@ -169,7 +170,7 @@ export type LojaDeVeiculo = 'concessionaria' | 'usados' | 'motos' | 'nautica' | 
  * mostra carro, nem o filtro "Carros").
  */
 export const CATEGORIAS_DA_LOJA: Record<LojaDeVeiculo, CategoriaVeiculo[]> = {
-  concessionaria: ['carro'], usados: ['carro'], motos: ['moto', 'bicicleta'], nautica: ['embarcacao'], aeroclube: ['aeronave'], colecionador: ['carro']
+  concessionaria: ['carro'], usados: ['carro'], motos: ['moto', 'bicicleta'], nautica: ['embarcacao'], aeroclube: ['aeronave'], colecionador: ['carro', 'moto']
 };
 
 /** REWORK 12: o segmento que cada loja de carros vende (a concessionária não vende Ferrari; o colecionador não vende Mobi). */
@@ -283,7 +284,7 @@ export function ofertasDeVeiculos(v: Vida, lugar: OfertaVeiculo['lugar']): Ofert
   const usado = (m: ModeloVeiculo) => {
     const x = r.weighted(daClasse(m.id), y => y.pesoUsado)!;
     if (m.segmento === 'classico') {
-      const [historico, base] = r.pick(HISTORICOS_CLASSICO);
+      const [historico, base] = r.pick(m.categoria === 'moto' ? HISTORICOS_MOTO_CLASSICA : HISTORICOS_CLASSICO);
       const estado = Math.round(Math.max(20, Math.min(97, base + r.normal() * 5)));
       // Quem vende um clássico pede um pouco acima do mercado (a margem da garagem): comprar e revender no mesmo ano perde.
       const preco = Math.round(valorDeClassico(v, x.preco, estado) * 1.1 / 100) * 100;
@@ -304,6 +305,8 @@ export function ofertasDeVeiculos(v: Vida, lugar: OfertaVeiculo['lugar']): Ofert
     const exoticos = VEICULOS.filter(m => m.segmento === 'exotico');
     for (let q = 0; q < 2; q++) usado(r.weighted(exoticos, m => m.preco > 5e6 ? 0.5 : 1)!);
     for (let q = 0; q < 4; q++) usado(modeloVeiculo('classico'));
+    // VIDA 12.9.1: e umas motos clássicas (depois dos carros: os anúncios de antes não mudam).
+    for (let q = 0; q < 3; q++) usado(modeloVeiculo('moto_classica'));
   } else if (lugar === 'nautica' || lugar === 'aeroclube') {
     // Raros: todas as versões novas da loja e um ou dois usados (anúncio de marina, de hangar).
     const cats = CATEGORIAS_DA_LOJA[lugar];
@@ -311,7 +314,7 @@ export function ofertasDeVeiculos(v: Vida, lugar: OfertaVeiculo['lugar']): Ofert
     const classes = VEICULOS.filter(m => cats.includes(m.categoria));
     for (let q = 0; q < (lugar === 'nautica' ? 2 : 1); q++) usado(r.weighted(classes, m => m.pesoUsado)!);
   } else if (lugar === 'motos') {
-    for (const x of daCategoria(m => CATEGORIAS_DA_LOJA.motos.includes(m.categoria))) novo(x);
+    for (const x of daCategoria(m => CATEGORIAS_DA_LOJA.motos.includes(m.categoria) && !m.segmento)) novo(x);
     usado(modeloVeiculo('moto_pequena'));
     usado(modeloVeiculo('moto_pequena'));
     usado(modeloVeiculo('moto_media'));

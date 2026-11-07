@@ -533,7 +533,7 @@ export const grauDe = (c: Colecionavel): GrauDeRaridade => { const p = pecaDeCol
 export interface ItemDeColecaoLido { id: string; nome: string; grau: GrauDeRaridade; valor: number; onde: string; exposta: boolean; marca?: string; procedencia?: string; detalhe?: string }
 export interface ColecaoLida { id: string; nome: string; itens: ItemDeColecaoLido[]; valor: number; expostas: number; graus: Partial<Record<GrauDeRaridade, number>>; expositor?: string }
 
-const NOME_DO_GRUPO: Record<string, string> = { relogio: 'Relógios', arte: 'Obras de arte', joia: 'Joias', antiguidade: 'Antiguidades', memorabilia: 'Memorabilia e lembranças do esporte', vinho: 'Vinhos', carros: 'Carros de coleção', edicoes: 'Peças numeradas e edições limitadas', discos: 'Discos de vinil', trofeus: 'Troféus e conquistas' };
+const NOME_DO_GRUPO: Record<string, string> = { relogio: 'Relógios', arte: 'Obras de arte', joia: 'Joias', antiguidade: 'Antiguidades', memorabilia: 'Memorabilia e lembranças do esporte', vinho: 'Vinhos', carros: 'Carros de coleção', motos: 'Motos de coleção', edicoes: 'Peças numeradas e edições limitadas', discos: 'Discos de vinil', trofeus: 'Troféus e conquistas' };
 
 /**
  * As coleções da vida, organizadas: as peças de coleção por categoria; os carros marcados como de coleção; as peças
@@ -553,8 +553,9 @@ export function colecoesDaVida(v: Vida, nomeDoLocal: (local?: string, comodo?: s
   }
   // Os carros: os que a pessoa marcou como de coleção (sem grau inventado: o modelo diz o que é, não a raridade).
   for (const b of v.financas.bens) if (b.tipo === 'veiculo' && b.papel === 'colecao') {
-    const g = grupo('carros');
     const m = modeloVeiculo(b.modeloId);
+    // VIDA 12.9.1: a moto de coleção tem o seu grupo (a Vincent não é "carro de coleção").
+    const g = grupo(m?.categoria === 'moto' ? 'motos' : 'carros');
     // VIDA 12.9: o grau vem do produto (a tiragem numerada, quantos se fizeram, a classe) — não do preço nem só da classe;
     // o nome é marca, modelo e ano ("Jaguar E-Type Série 1, 1963"), não "carro clássico".
     const x = versaoVeiculo(b.versaoId);
@@ -595,7 +596,7 @@ export function colecoesDaVida(v: Vida, nomeDoLocal: (local?: string, comodo?: s
     if (tem) g.expositor = coisa(tem)?.nome;
     g.itens.sort((a, b) => ORDEM_DO_GRAU.indexOf(b.grau) - ORDEM_DO_GRAU.indexOf(a.grau) || b.valor - a.valor);
   }
-  const ordem = ['relogio', 'arte', 'joia', 'antiguidade', 'vinho', 'memorabilia', 'carros', 'edicoes', 'discos', 'trofeus'];
+  const ordem = ['relogio', 'arte', 'joia', 'antiguidade', 'vinho', 'memorabilia', 'carros', 'motos', 'edicoes', 'discos', 'trofeus'];
   return [...grupos.values()].sort((a, b) => ordem.indexOf(a.id) - ordem.indexOf(b.id));
 }
 

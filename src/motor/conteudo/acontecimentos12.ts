@@ -158,7 +158,7 @@ export const ACONTECIMENTOS_12: Conteudo[] = [
     id: 'pat12_classico', tipo: 'decisao', idade: [25, 100], tema: 'dinheiro', repetir: 5, peso: 1.5,
     quando: c => !!classicoCobicado(c.v),
     titulo: 'Um colecionador bate à porta',
-    texto: c => { const b = classicoCobicado(c.v)!; return `Um colecionador viu ${textoVeiculo(b)} num encontro de carros antigos e não esqueceu: oferece ${fmt(ofertaPeloClassico(c.v, b))}. É acima do que o mercado paga hoje — e é o seu carro.`; },
+    texto: c => { const b = classicoCobicado(c.v)!; return `Um colecionador viu ${textoVeiculo(b)} num encontro de ${b.modeloId === 'moto_classica' ? 'motos' : 'carros'} antigos e não esqueceu: oferece ${fmt(ofertaPeloClassico(c.v, b))}. É acima do que o mercado paga hoje — e é ${b.modeloId === 'moto_classica' ? 'a sua moto' : 'o seu carro'}.`; },
     opcoes: [
       { id: 'vender', texto: 'Vender', disponivel: c => !c.v.financas.dividas.some(d => d.bemId === classicoCobicado(c.v)!.id) || 'Ainda está financiado.',
         resolver: c => { const b = classicoCobicado(c.v)!; const valor = ofertaPeloClassico(c.v, b); c.v.financas.conta += valor; tirarBem(c.v.financas, b.id); return { texto: `Apertaram a mão. ${fmt(valor)} — e ${textoVeiculo(b)} foi embora num caminhão fechado.`, memoria: `Vendeu ${textoVeiculo(b)} para um colecionador.`, relevancia: 'biografia', tom: 'bom' }; } },
