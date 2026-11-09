@@ -142,6 +142,7 @@ export function reconhecimentoDoMeio14<C extends { id: string; tipo: string; man
   }
   const pick = r.weighted(lista, y => (typeof y.c.peso === 'number' ? y.c.peso : 1) * pesoPelaMeta14(v, y.c.id));
   if (!pick) return;
-  if (pick.c.tipo === 'decisao' && v.momento) (v.fila ??= []).push({ id: pick.c.id, t: v.t, papeis: Object.fromEntries(Object.entries(pick.ctx.p).map(([k, x]) => [k, x.id])), prioridade: 1 });
-  else abrir(pick.c, pick.ctx);
+  // Com outra decisão aberta, o convite fica para outra vez (não entra na fila: o ano não pode parar por ele).
+  if (pick.c.tipo === 'decisao' && v.momento) return;
+  abrir(pick.c, pick.ctx);
 }

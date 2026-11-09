@@ -78,6 +78,8 @@ describe('a casa por dentro', () => {
     expect(confortoDaCasa(v).valor).toBeGreaterThan(antes);
     const inquilina = adulto(30);
     inquilina.financas.conta = 100000;
+    // (VIDA 14: a vida-base mudou; o cenário pede uma inquilina num apartamento com sala)
+    inquilina.moradia = { ...inquilina.moradia, tipo: 'aluguel', modeloId: 'apto_2q' };
     expect(pode(inquilina, p({ o: 'acabamento', comodo: 'sala', aspecto: 'piso', opcao: 'madeira' }))).toBe(false);
     expect(pode(inquilina, p({ o: 'acabamento', comodo: 'sala', aspecto: 'parede', opcao: 'terracota' }))).toBe(true);
     expect(pode(inquilina, p({ o: 'construir', tipo: 'piscina' }))).toBe(false);

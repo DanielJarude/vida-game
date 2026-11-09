@@ -26,6 +26,38 @@ export interface NotaDeVersao {
 
 export const NOTAS: NotaDeVersao[] = [
   {
+    versao: '14',
+    data: '2026-11-09',
+    titulo: 'Expansão e aprofundamento',
+    novidades: [
+      'Objetivos pessoais em Você: escolha metas de vida, acompanhe o progresso medido do que acontece de verdade, mude ou deixe de lado.',
+      'Mandatos com medidas concretas: leis, reformas, investimentos, impostos e programas que pesam nas contas e mudam a vida da cidade por anos — e deixam legado.',
+      'Viagens de negócios, culturais, a eventos internacionais, a lugares conhecidos e de luxo, com os países que você já conheceu.',
+      'Reconhecimento profissional: prêmios, congressos, feiras, palestras e entrevistas conforme a sua área.',
+      'Restaurantes especiais, cozinhas de outros países, degustações, festivais, galas, leilões, desfiles e premiações — do simples ao exclusivo.',
+      'O mundo muda com as décadas: crises, avanços, desastres, pandemias e profissões que surgem e somem, com efeito no trabalho, nas empresas e nas viagens.',
+      'Processos na Justiça fora do crime: trabalhistas, de contrato, de consumidor, indenizações e multas, com advogado, acordo e recurso.',
+      'Crença e espiritualidade: ter ou não uma religião, praticar, celebrar as datas e mudar ao longo da vida.',
+      'Dependências tratadas com cuidado: o uso que vira problema, os limites, o pedido de ajuda, o tratamento, a recuperação e as recaídas.',
+      'Futsal como modalidade própria, com posições e goleiro-linha; e handebol, pedal, skate, surfe e tênis de mesa como prática.',
+      'Riscos na sobrancelha, desenhos de sobrancelha, pintas e cílios em Você → Aparência.',
+      'Imóveis vazios, semimobiliados, mobiliados e de luxo para alugar ou comprar; conjuntos de móveis por cômodo e estilo.',
+      'Mais 67 municípios brasileiros, Igarassu (PE) entre eles, cada um com o que a cidade faz.'
+    ],
+    melhorias: [
+      'A casa por fora agora é um conjunto em 2.5D: volume, sombra, garagem junto da casa, calçada, muro, jardim e estilos distintos.',
+      'A loja de móveis agrupa por tipo de móvel, mostra o espaço que cada peça ocupa e se cabe no cômodo, com prévia — o que não cabe vai para o depósito.',
+      'Piercings inteiramente no painel de Aparência: o furo, as joias que cabem, o preço, comprar, usar e tirar.',
+      'Os números das empresas organizados por grupo, com a participação e a valorização em destaque.',
+      'Trocar de partido tem permanência mínima e justa causa (expulsão, fusão, perseguição).'
+    ],
+    correcoes: [
+      'A candidatura à Presidência de Portugal agora existe: eleição em data própria, candidatura de cidadãos, e o Presidente que não governa.',
+      'Empresas compradas e revendidas não dão mais lucro artificial: o preço sai do lucro de verdade, com desconto por risco, juventude e participação minoritária.',
+      'Morar numa cidade pequena não fecha portas de carreira: a vaga é mais rara, não proibida.'
+    ]
+  },
+  {
     versao: '13',
     data: '2026-11-07',
     titulo: 'Fama que muda a vida, empresas que escolhem o que fazem, decisões com resultado na hora e um visual novo para casa, veículos e aparência',

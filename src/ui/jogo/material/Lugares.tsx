@@ -342,6 +342,7 @@ function DetalheImovel({ vida, agir, o, voltar }: { vida: Vida; agir: (a: Acao) 
   const [prazo, setPrazo] = useState(30);
   const [morar, setMorar] = useState(true);
   const [dividir, setDividir] = useState(false);
+  const [comMobilia, setComMobilia] = useState(true);
   const amigo = amigoParaDividir(vida);
   if (o.modo === 'aluguel') {
     const parte = dividir ? o.aluguel / 2 : o.aluguel;
@@ -371,7 +372,7 @@ function DetalheImovel({ vida, agir, o, voltar }: { vida: Vida; agir: (a: Acao) 
   const entrada = entradaPct === 'min' ? minimo.entradaMinima : Math.round(o.preco * (entradaPct === '30' ? 0.3 : 0.5));
   const c = condicoesImovel(vida, o.preco, financiar, entrada, prazo);
   const prazos = [10, 20, 30, 35].filter(x => x <= c.prazoMaximo);
-  const acao: Acao = { tipo: 'comprar_imovel', ofertaId: o.id, financiar, morar, entrada, prazo };
+  const acao: Acao = { tipo: 'comprar_imovel', ofertaId: o.id, financiar, morar, entrada, prazo, ...(o.mobilia && morar && comMobilia ? { comMobilia: true } : {}) };
   return (
     <div className="detalhe">
       <button type="button" className="botao botao--discreto" onClick={voltar}>← Voltar às ofertas</button>
@@ -402,6 +403,7 @@ function DetalheImovel({ vida, agir, o, voltar }: { vida: Vida; agir: (a: Acao) 
       <MobiliaDaOferta14 vida={vida} o={o} />
       <AntesDeDecidir linhas={custosAntesDeComprarImovel(vida, o, morar)} />
       <label className="marcar"><input type="checkbox" checked={morar} onChange={e => setMorar(e.target.checked)} /> Morar lá (sem marcar: comprar para alugar)</label>
+      {o.mobilia && morar && <label className="marcar"><input type="checkbox" checked={comMobilia} onChange={e => setComMobilia(e.target.checked)} /> Levar a mobília junto ({dinheiroCurto(mobiliaDaOferta14(vida, o).precoExtra)})</label>}
       <BotaoAcao vida={vida} acao={acao} agir={agir} variante="principal">{financiar ? 'Financiar e comprar' : 'Comprar à vista'}</BotaoAcao>
     </div>
   );

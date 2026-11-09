@@ -277,10 +277,13 @@ describe('D — fazer algo junto é uma cena, não uma barra', () => {
       const vin = v.vinculos[p.id];
       expect(vin.cenas!.length).toBeGreaterThan(0);
       // O tipo da cena é a última MARCA de cena (as falas do jeito, "jeito:...", moram na mesma lista e são reordenadas).
-      tipos.push(vin.cenas!.filter(x => !x.startsWith('jeito:')).slice(-1)[0].split(".")[0]);
-      textos.push(r.resultado ?? "");
+      if (!/desmarcou/.test(r.resultado ?? '')) { // (o programa desmarcado não é cena: não deixa marca)
+        tipos.push(vin.cenas!.filter(x => !x.startsWith('jeito:')).slice(-1)[0].split(".")[0]);
+        textos.push(r.resultado ?? "");
+      }
       // Alguma coisa da relação se moveu (proximidade, confiança, tensão ou o que você sabe).
-      expect(vin.proximidade !== antes.proximidade || vin.confianca !== antes.confianca || vin.tensao !== antes.tensao || (vin.sabe?.length ?? 0) !== (antes.sabe?.length ?? 0)).toBe(true);
+      // (VIDA 14: o sorteio da vida-base mudou e pode cair no programa desmarcado — esse não mexe na relação, de propósito.)
+      if (!/desmarcou/.test(r.resultado ?? '')) expect(vin.proximidade !== antes.proximidade || vin.confianca !== antes.confianca || vin.tensao !== antes.tensao || (vin.sabe?.length ?? 0) !== (antes.sabe?.length ?? 0)).toBe(true);
       v.t += 12; v.anoAtual = { acoes: [] };
     }
     for (let k = 1; k < tipos.length; k++) expect(tipos[k], tipos.join(',')).not.toBe(tipos[k - 1]);

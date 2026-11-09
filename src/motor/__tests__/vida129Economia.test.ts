@@ -307,7 +307,7 @@ describe('12.9 · as empresas', () => {
 
   it('comprar uma empresa grande: o preço é o valor (mais as taxas), e ela já vende', () => {
     let v = pessoa(15e9);
-    const o = ofertasDeAquisicao(v)[0];
+    const o = ofertasDeAquisicao(v).find(x => x.partes.includes(1))!; // (VIDA 14: o valor justo mudou o porte das ofertas: escolhe uma que se compra inteira)
     expect(o).toBeDefined();
     v = fazer(v, { tipo: 'adquirir129', ofertaId: o.id, parte: 1 });
     const e = corp(v);

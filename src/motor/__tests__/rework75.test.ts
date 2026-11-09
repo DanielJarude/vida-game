@@ -32,6 +32,8 @@ import { capitalDoPais } from '../dados/lugares';
 import type { Pessoa, Vida } from '../tipos';
 
 const umAno = (v: Vida) => responderTudo(avancarAno(v).vida);
+/** (VIDA 14: a vida-base mudou e as amigas de teste às vezes se mudam no sorteio do ano; o cenário pede a amiga na cidade.) */
+const naCidade = (v: Vida, id: string) => { if (v.pessoas[id]) v.pessoas[id].municipioId = v.moradia.municipioId; return v; };
 const amigaDe = (v: Vida, anos = 6): Pessoa => {
   const p = pessoaNova(v, 30, 'feminino');
   const vin = vincular(v, p, { origem: 'trabalho', proximidade: 72, convivio: [] });
@@ -95,7 +97,7 @@ describe('conversar, passar um tempo, carinho: situações, não rodízio de fra
     const cenas: string[] = [];
     const textos: string[] = [];
     for (let k = 0; k < 8; k++) {
-      const r = fazer(v, p.id, 'conversar');
+      const r = fazer(naCidade(v, p.id), p.id, 'conversar');
       v = r.vida;
       textos.push(r.aviso?.texto ?? r.resultado ?? '');
       cenas.push((v.vinculos[p.id].cenas ?? []).filter(x => x.startsWith('conv:')).slice(-1)[0]?.split('@')[0] ?? '');
@@ -113,7 +115,7 @@ describe('conversar, passar um tempo, carinho: situações, não rodízio de fra
     lembrarCom(v, p.id, 'Viajaram juntas para a praia, sem dinheiro e sem plano.', 'amizade', 2, v.t - 60);
     let achouLembranca = false;
     for (let k = 0; k < 10 && !achouLembranca; k++) {
-      const r = fazer(v, p.id, 'conversar');
+      const r = fazer(naCidade(v, p.id), p.id, 'conversar');
       v = r.vida;
       const ultima = (v.vinculos[p.id].cenas ?? []).slice(-1)[0] ?? '';
       // VIDA 12.9: a vida-base ganha outros marcos reais com a amiga ao longo dos anos (a lembrança pode ser qualquer um

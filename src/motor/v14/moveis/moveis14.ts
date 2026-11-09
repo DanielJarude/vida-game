@@ -12,7 +12,6 @@
  *               já é seu o proprietário guarda (sem duplicar). Na COMPRA a mobília é sua (paga junto, pelo valor de
  *               usada). Ninguém paga duas vezes pela mesma peça.
  */
-import { rngDe } from '../../rng';
 import type { CoisaTida, Moradia, Vida } from '../../tipos';
 import { escrever } from '../../nucleo';
 import { dinheiro as fmt } from '../../texto';
@@ -105,10 +104,8 @@ export interface Mobilia14 { nivel: NivelDeMobilia; estilo: EstiloDeMovel; pecas
 /** A mobília de uma oferta (sorteio derivado do id da oferta: a mesma oferta, a mesma mobília). */
 export function mobiliaDaOferta14(v: Vida, o: OfertaImovel): Mobilia14 {
   const m = modeloMoradia(o.modeloId);
-  const r = rngDe(v.id, 'mob14', o.id);
-  const x = r.next();
-  const nivel: NivelDeMobilia = o.modeloId === 'republica' ? 'mobiliado' : m.padrao >= 4 && x < 0.18 ? 'luxo' : x < 0.42 ? 'vazio' : x < 0.66 ? 'parcial' : x < 0.92 ? 'mobiliado' : m.padrao >= 3 ? 'luxo' : 'mobiliado';
-  const estilo: EstiloDeMovel = nivel === 'luxo' ? 'luxo' : r.pick(ESTILOS.filter(e => e.id !== 'luxo').map(e => e.id));
+  const nivel: NivelDeMobilia = o.mobilia ?? 'vazio';
+  const estilo: EstiloDeMovel = o.estiloMobilia ?? 'moderno';
   const pecas = pecasDaMobilia14(nivel, estilo, m.casa ?? false);
   const valor = pecas.reduce((s, id) => s + precoDaCoisa(v, id), 0);
   return { nivel, estilo, pecas, valor, acrescimo: ACRESCIMO_DO_ALUGUEL[nivel], precoExtra: Math.round(valor * FATOR_DA_MOBILIA_NA_VENDA / 1000) * 1000 };
@@ -156,7 +153,6 @@ export function instalarMobilia14(v: Vida, o: OfertaImovel, modo: 'aluguel' | 'c
   }
   if (modo === 'aluguel') {
     v.moradia.mobilia14 = { contrato, nivel: mob.nivel, estilo: mob.estilo, ...(devolvidos.length ? { devolvidos } : {}) };
-    v.moradia.aluguel = Math.round(v.moradia.aluguel * (1 + mob.acrescimo) / 10) * 10;
   }
   // O que é seu e não cabe mais vai para o depósito (nunca some).
   const guardadas = reacomodar14(v);

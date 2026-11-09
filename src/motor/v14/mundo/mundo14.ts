@@ -370,6 +370,6 @@ export function normalizarVida14Mundo(v: Vida): void {
   if (m.eventos.length > MAX_EVENTOS) m.eventos.splice(0, m.eventos.length - MAX_EVENTOS);
   if (m.exteriorAte !== undefined && !Number.isFinite(m.exteriorAte)) delete m.exteriorAte;
   if (m.ultimo !== undefined && !Number.isFinite(m.ultimo)) delete m.ultimo;
-  m.efeitos = combinarEfeitos(m.eventos, anoDe(v.t));
-  if (!m.efeitos) delete m.efeitos;
+  // (os efeitos guardados são os do ano processado: recalcular aqui mudaria o save reaberto — o próximo ano recalcula)
+  if (m.efeitos !== undefined && (typeof m.efeitos !== 'object' || m.efeitos === null)) delete m.efeitos;
 }

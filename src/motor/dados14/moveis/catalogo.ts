@@ -130,6 +130,15 @@ export const conjuntoDe = (cena: CenaDoConjunto, estilo: EstiloDeMovel) => CONJU
 
 export type NivelDeMobilia = 'vazio' | 'parcial' | 'mobiliado' | 'luxo';
 export const NOME_DA_MOBILIA: Record<NivelDeMobilia, string> = { vazio: 'Vazio', parcial: 'Semimobiliado', mobiliado: 'Mobiliado', luxo: 'Mobiliado de luxo' };
+/** O nível e o estilo da mobília de uma oferta (puro: um hash do id da oferta — a mesma oferta, a mesma mobília). */
+export function mobiliaDaOfertaPura14(semente: string, padrao: number, modeloId: string): { nivel: NivelDeMobilia; estilo: EstiloDeMovel } {
+  let h = 2166136261;
+  for (let i = 0; i < semente.length; i++) { h ^= semente.charCodeAt(i); h = Math.imul(h, 16777619); }
+  const x = ((h >>> 0) % 10000) / 10000, y = ((Math.imul(h, 2654435761) >>> 0) % 10000) / 10000;
+  const nivel: NivelDeMobilia = modeloId === 'republica' ? 'mobiliado' : padrao >= 4 && x < 0.18 ? 'luxo' : x < 0.42 ? 'vazio' : x < 0.66 ? 'parcial' : x < 0.92 ? 'mobiliado' : padrao >= 3 ? 'luxo' : 'mobiliado';
+  const comuns = ESTILOS.filter(e => e.id !== 'luxo');
+  return { nivel, estilo: nivel === 'luxo' ? 'luxo' : comuns[Math.floor(y * comuns.length)].id };
+}
 /** Quanto o aluguel mobiliado custa a mais (fração do aluguel vazio). */
 export const ACRESCIMO_DO_ALUGUEL: Record<NivelDeMobilia, number> = { vazio: 0, parcial: 0.1, mobiliado: 0.22, luxo: 0.35 };
 /** Na venda, a mobília entra pelo valor de usada em bom estado (fração do preço de novo). */

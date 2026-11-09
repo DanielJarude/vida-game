@@ -190,7 +190,7 @@ export type Acao =
   /** Comprar um veículo de uma oferta (novo ou usado); `entrada` em reais, quando financia. */
   | { tipo: 'comprar_veiculo'; modeloId?: string; ofertaId?: string; financiar: boolean; entrada?: number }
   /** Comprar um imóvel: à vista ou financiado (entrada em reais, prazo em anos). */
-  | { tipo: 'comprar_imovel'; modeloId?: string; ofertaId?: string; financiar: boolean; morar: boolean; entrada?: number; prazo?: number }
+  | { tipo: 'comprar_imovel'; modeloId?: string; ofertaId?: string; financiar: boolean; morar: boolean; entrada?: number; prazo?: number; /** VIDA 14: levar a mobília que vem com o imóvel (paga pelo valor de usada). */ comMobilia?: boolean }
   | { tipo: 'vender_bem'; bemId: string }
   /** Oficina e cuidados de um veículo. */
   | { tipo: 'veiculo'; bemId: string; oque: AcaoVeiculo }
@@ -1499,9 +1499,10 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       marcarFato(v, 'comprou_imovel');
       // VIDA 14: o imóvel mobiliado vendido com a mobília (paga pelo valor de usada; as peças são suas).
       const mobC = mobiliaDaOferta14(v, o);
-      if (mobC.nivel !== 'vazio' && a.morar) pagarTudo(v, mobC.precoExtra);
+      const levaMobilia = mobC.nivel !== 'vazio' && a.morar && !!a.comMobilia;
+      if (levaMobilia) pagarTudo(v, mobC.precoExtra);
       if (a.morar) morarNoImovel(v, id);
-      const mobTexto = a.morar && mobC.nivel !== 'vazio' ? instalarMobilia14(v, o, 'compra') : (limparMobilia14(v), undefined);
+      const mobTexto = levaMobilia ? instalarMobilia14(v, o, 'compra') : (limparMobilia14(v), undefined);
       const artigoM = m.nome.startsWith('casa') || m.nome.startsWith('kitnet') ? 'a' : 'o';
       escrever(v, { texto: `${primeira ? `Comprou ${m.nome.startsWith('casa') ? 'a primeira casa' : 'o primeiro imóvel'}: ` : 'Comprou '}${artigoM === 'a' ? 'uma' : 'um'} ${m.nome} ${o.bairro}${financiou ? `, financiad${artigoM} em ${Math.round(cond.meses / 12)} anos${cond.social ? ' por um programa habitacional' : ''}` : ' à vista'}${a.morar ? '' : ', para alugar'}.`, relevancia: primeira || a.morar ? 'marco' : 'biografia', tema: 'casa', tom: 'bom', escolha: true , fato: { tipo: 'm_imovel', dados: { primeiro: primeira ? 1 : 0 } } });
       // 12.4.1: o resultado diz o que saiu do dinheiro e o que sobrou para gastar — o imóvel passa a ser patrimônio, não saldo.

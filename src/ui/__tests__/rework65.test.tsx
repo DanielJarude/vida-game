@@ -64,7 +64,7 @@ afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 function vida(idade: number, ajuste: (v: Vida) => void = () => {}, semente = 5): Vida {
   let v = criarVida({ nome: 'Rita', sobrenome: 'Lopes', genero: 'feminino', municipioId: 'recife-pe', semente });
-  for (let i = 0; i < idade; i++) { v = avancarAno(v).vida; v.momento = null; v.caminhos.pendente = undefined; }
+  for (let i = 0; i < idade; i++) { v = avancarAno(v).vida; v.momento = null; v.fila = undefined; v.caminhos.pendente = undefined; } // (VIDA 14: as decisões novas também esperam na fila)
   v.caminhos.processo = undefined;
   ajuste(v);
   return v;

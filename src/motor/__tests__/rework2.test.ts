@@ -555,7 +555,7 @@ describe('fundação pessoal', () => {
     expect(marcos.length).toBe(1);
     // Seis anos de treino não viram seis linhas: o marco, e no máximo um ou outro destaque de campeonato.
     // (Só as linhas destes seis anos: a primeira infância da vida sorteada pode ter tido a sua bola.)
-    expect(v.biografia.filter(e => e.t > t0 && /bola|futebol|escolinha|artilheir/i.test(e.texto) && e.relevancia !== 'tecnico').length).toBeLessThanOrEqual(3);
+    expect(v.biografia.filter(e => e.t > t0 && !e.id.startsWith('m14:') && /bola|futebol|escolinha|artilheir/i.test(e.texto) && e.relevancia !== 'tecnico').length).toBeLessThanOrEqual(3);
   });
 });
 

@@ -64,7 +64,8 @@ describe('VIDA 14 · imóveis mobiliados', () => {
     expect(doDono.length).toBeGreaterThan(0);
     expect((v.financas.coisas ?? []).filter(t => t.coisaId === 'geladeira').length).toBe(1); // a sua (na casa ou no depósito); a dele ficou guardada com ele
     expect(v.moradia.mobilia14?.devolvidos?.some(d => d.coisaId === 'geladeira')).toBe(true);
-    expect(v.moradia.aluguel).toBeGreaterThanOrEqual(Math.round(o!.aluguel * (1 + mob.acrescimo) / 10) * 10 - 10);
+    expect(v.moradia.aluguel).toBe(o!.aluguel); // o anunciado (já com a mobília) é o que se paga
+    void mob;
     expect(disponibilidade(v, { tipo: 'vender_coisa', id: doDono[0].id } as never).grau).toBe('impossivel');
     v.t += 13; v.anoAtual = { acoes: [] };
     const vazio = ofertasDeImoveis(v, 'aluguel').find(x => mobiliaDaOferta14(v, x).nivel === 'vazio' && x.modeloId !== 'republica')!;

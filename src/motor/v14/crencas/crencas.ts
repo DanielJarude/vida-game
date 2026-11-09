@@ -227,8 +227,9 @@ export function vidaDeCrencas14<C extends { id: string; tipo: string; manual?: b
   }
   const x = r.weighted(lista, y => (typeof y.c.peso === 'number' ? y.c.peso : 1));
   if (!x) return;
-  if (x.c.tipo === 'decisao' && v.momento) (v.fila ??= []).push({ id: x.c.id, t: v.t, papeis: Object.fromEntries(Object.entries(x.ctx.p).map(([k, p]) => [k, p.id])), prioridade: 1 });
-  else abrir(x.c, x.ctx);
+  // Com outra decisão aberta, a da fé espera o ano seguinte (não entra na fila: o ano não pode parar por ela).
+  if (x.c.tipo === 'decisao' && v.momento) return;
+  abrir(x.c, x.ctx);
 }
 
 /* ================================================================ Saves */

@@ -132,8 +132,8 @@ export function MobiliaDaOferta14({ vida, o }: { vida: Vida; o: OfertaImovel }) 
       <p className="m14-titulo">{NOME_DA_MOBILIA[mob.nivel]} · estilo {ESTILOS.find(e => e.id === mob.estilo)!.nome.toLowerCase()}</p>
       <ul className="m14-pecas">{mob.pecas.map(id => <li key={id}>{coisa(id)?.nome ?? id}</li>)}</ul>
       <p className="nota">{o.modo === 'aluguel'
-        ? `Aluguel com a mobília: ${dinheiroCurto(Math.round(o.aluguel * (1 + mob.acrescimo) / 10) * 10)}/mês (+${Math.round(mob.acrescimo * 100)}%). As peças são do proprietário: ficam no imóvel ao sair. O que repetir o que você já tem, ele guarda — ninguém paga duas vezes.`
-        : `Morando, a mobília vem junto por ${dinheiroCurto(mob.precoExtra)} (valor de usada) e passa a ser sua. Comprando para alugar, o vendedor leva.`}</p>
+        ? `O aluguel anunciado já inclui a mobília (+${Math.round(mob.acrescimo * 100)}% sobre o vazio). As peças são do proprietário: ficam no imóvel ao sair. O que repetir o que você já tem, ele guarda — ninguém paga duas vezes.`
+        : `Para quem vai morar, dá para levar a mobília por ${dinheiroCurto(mob.precoExtra)} (valor de usada): passa a ser sua. Sem ela, o vendedor leva.`}</p>
     </div>
   );
 }

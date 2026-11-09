@@ -130,7 +130,8 @@ export function processarDependencias14(v: Vida): void {
     const custo = r100(t === 'compras' ? renda * info.custo[k] * 12 : info.custo[k] * custoLocal(v) * 12);
     if (custo > 0 && idade(v) >= 16) { pagar(v, Math.min(custo, Math.max(0, v.financas.conta) + custo * 0.3)); lancar(v, info.linha, 'despesa', -custo); }
     // As consequências, pelo estágio.
-    if (k >= 1) { v.corpo.saude = clamp(v.corpo.saude - (t === 'drogas' || t === 'alcool' ? k * 1.5 : t === 'tabaco' ? k : 0)); v.mente.estresse = clamp(v.mente.estresse + k); }
+    // (o cigarro e a bebida já pesam na saúde pelos hábitos de sempre — `corpo.habitos`; aqui, só o que é novo: as drogas)
+    if (k >= 1) { if (t === 'drogas') v.corpo.saude = clamp(v.corpo.saude - k * 1.5); if (k >= 2) v.mente.estresse = clamp(v.mente.estresse + k - 1); }
     if (k >= 2) {
       const emp = v.trabalho.atual;
       if (emp && t !== 'tabaco') emp.desempenho = clamp(emp.desempenho - (k === 3 ? 8 : 4));

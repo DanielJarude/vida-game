@@ -11,6 +11,7 @@
  * (`sistemas/relevancia`); o resto fica em "ver outras".
  */
 
+import { ACRESCIMO_DO_ALUGUEL, mobiliaDaOfertaPura14, type EstiloDeMovel, type NivelDeMobilia } from '../dados14/moveis/catalogo';
 import { paisCorrente } from '../mundo/moeda';
 import { textoLocal } from '../mundo/locais';
 import { criarRng, type Rng } from '../rng';
@@ -54,6 +55,9 @@ export interface OfertaImovel {
   detalhe: string;
   /** REWORK 12: o índice do bairro (1 = comum; o nobre, 1,5; o extremo da periferia, 0,62). */
   indiceBairro?: number;
+  /** VIDA 14: a mobília que vem com o imóvel (`dados14/moveis`); no aluguel, já somada ao valor. Ausente: vazio. */
+  mobilia?: NivelDeMobilia;
+  estiloMobilia?: EstiloDeMovel;
 }
 
 // [onde, o índice do bairro: o quanto o endereço é disputado (1 = um bairro comum)]
@@ -134,9 +138,12 @@ export function ofertasDeImoveis(v: Vida, modo: 'aluguel' | 'venda', municipioId
       const ruido = 0.93 + r.next() * 0.14;
       const preco = Math.round(precoDeImovel(v, m, municipioId) * fatorDoBairro(ib, m.id, 'preco') * fe * ruido / 1000) * 1000;
       const aluguel = Math.round(aluguelDe(v, m, municipioId) * fatorDoBairro(ib, m.id, 'aluguel') * (0.92 + (fe - 1) * 0.5 + r.next() * 0.16) / 10) * 10;
+      // VIDA 14: a mobília da oferta (o aluguel mobiliado já vem com o acréscimo: o anunciado é o que se paga).
+      const mob = mobiliaDaOfertaPura14(`${v.id}:${modo}:${ano}:${municipioId}:${k}`, m.padrao, m.id);
+      const aluguelFinal = modo === 'aluguel' ? Math.round(aluguel * (1 + ACRESCIMO_DO_ALUGUEL[mob.nivel]) / 10) * 10 : aluguel;
       const aceitaPet = m.casa ? true : m.id === 'republica' ? r.chance(0.3) : r.chance(m.id === 'kitnet' ? 0.4 : 0.7);
       out.push({
-        id: `im-${modo}-${ano}-${k++}`, modo, modeloId: m.id, bairro, estado, preco, aluguel, aceitaPet, quartos: m.quartos, indiceBairro: ib,
+        id: `im-${modo}-${ano}-${k++}`, modo, modeloId: m.id, bairro, estado, preco, aluguel: aluguelFinal, aceitaPet, quartos: m.quartos, indiceBairro: ib, ...(mob.nivel !== 'vazio' ? { mobilia: mob.nivel, estiloMobilia: mob.estilo } : {}),
         detalhe: m.id === 'republica' ? r.pick(['quatro moradores', 'três moradores, um gato', 'casa de estudantes']) : `${textoEstado}, ${r.pick(DETALHES)}`
       });
     }
