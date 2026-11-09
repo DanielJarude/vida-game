@@ -44,6 +44,8 @@ import type { Aba } from '../navegacao';
 import { MODS as MODS_ESPORTE } from '../../motor/sistemas/oportunidades';
 import { custoDaExperiencia, escolhasDaExperiencia, experienciasPossiveis, nomeDaExperiencia, type TipoExperiencia } from '../../motor/sistemas/experiencias';
 import { EscolherViagem } from './Viagem';
+import { sobDemanda as sobDemandaV14 } from '../util/sobDemanda';
+const Viagens14 = sobDemandaV14(() => import('../v14/viagens/Viagens14').then(m => m.Viagens14));
 import { RedesSociais } from './Redes';
 import { SECOES_TEMPO, type SecaoTempo } from '../navegacao';
 import { leituraDoEstresse } from '../../motor/sistemas/leituraDoEstresse';
@@ -225,6 +227,8 @@ export function Experiencias({ vida, agir }: { vida: Vida; agir: (a: Acao) => bo
           );
         })}
       </ul>
+      {/* VIDA 14: negócios, cultura, eventos, lugares conhecidos e luxo (sob demanda, `ui/v14/viagens`). */}
+      <Viagens14 vida={vida} agir={agir} />
     </section>
   );
 }
