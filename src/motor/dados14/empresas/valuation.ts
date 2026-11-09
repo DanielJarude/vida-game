@@ -62,6 +62,10 @@ export interface EntradaDoValor14 {
   emAndamento?: number;
   caixa: number;
   divida: number;
+  /** Os lucros LÍQUIDOS (depois dos juros), quando a empresa tem dívida: o capital nunca vale menos que uma fração do
+   *  que ele rende — a empresa muito endividada que ainda dá lucro não sai de graça (sem isso, comprava-se por quase
+   *  nada uma empresa que distribuía em um ano mais do que custou). */
+  lucrosLiquidos?: readonly number[];
 }
 
 export interface ValorDetalhado14 {
@@ -92,7 +96,10 @@ export function valorJusto14(x: EntradaDoValor14): ValorDetalhado14 {
     operacao = receita * x.multReceita * 0.3 * historico;
   }
   operacao += x.emAndamento ?? 0;
-  const valor = Math.max(0, Math.max(operacao, x.liquidacao) + x.caixa - x.divida);
+  let valor = Math.max(0, Math.max(operacao, x.liquidacao) + x.caixa - x.divida);
+  const ln = x.lucrosLiquidos?.slice(-3) ?? [];
+  const liquido = ln.length ? ln.reduce((s, y) => s + y, 0) / ln.length : 0;
+  if (liquido > 0) valor = Math.max(valor, liquido * x.multiplo * 0.5 * historico * risco);
   return { valor, operacao, liquidacao: x.liquidacao, lucroNormal, fatores: { historico, risco, crescimento } };
 }
 

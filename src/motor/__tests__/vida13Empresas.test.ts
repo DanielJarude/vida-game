@@ -46,6 +46,8 @@ function industriaPronta(semente = 41): Vida {
   const e = corp(v);
   e.estrategia!.delegar = false;
   v = anos(v, 2);
+  // (VIDA 14: o crédito sai do valor justo — numa ou noutra semente, a primeira linha leva um ano a mais.)
+  for (let k = 0; k < 3 && corp(v).estado === 'abrindo'; k++) v = anos(v, 1);
   const x = corp(v);
   x.caixa = 400e6;
   x.corp!.capacidade += 1;

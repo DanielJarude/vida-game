@@ -213,7 +213,7 @@ export function detalheDoValorGrande14(v: Vida, e: Empresa): ValorDetalhado14 {
   // tendência) — antes somava o múltiplo do lucro E o da receita, com prêmio de crescimento no teto para a recém-fundada.
   // O lucro de operação (os juros somados de volta, já sem o imposto): a dívida sai uma vez só, no fim (valor do capital).
   const jurosHoje = c.divida * taxaDaDivida(v, e);
-  return valorJusto14({ lucros: h.map(a => a.lucro + (a.juros ?? jurosHoje) * 0.75), receitas: h.map(a => a.receita), multiplo: s.multiplo, multReceita: s.multReceita, liquidacao: instalado + linhas + pipeline * 0.4, emAndamento: pipeline, caixa: e.caixa, divida: c.divida });
+  return valorJusto14({ lucros: h.map(a => a.lucro + (a.juros ?? jurosHoje) * 0.75), receitas: h.map(a => a.receita), multiplo: s.multiplo, multReceita: s.multReceita, liquidacao: instalado + linhas + pipeline * 0.4, emAndamento: pipeline, caixa: e.caixa, divida: c.divida, lucrosLiquidos: h.map(a => a.lucro) });
 }
 
 /** Tira do caixa da empresa; o que faltar, do crédito dela; o resto, da sua conta (um aporte). Devolve o aporte. */

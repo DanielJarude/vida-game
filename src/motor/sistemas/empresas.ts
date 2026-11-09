@@ -52,7 +52,7 @@ export const empresasAtivas = (v: Vida) => empresas(v).filter(e => e.estado !== 
 export const empresa = (v: Vida, id: string) => empresas(v).find(e => e.id === id);
 
 /** O valor da sua parte (o que entra no patrimônio). */
-export const valorDaParte = (e: Empresa) => (e.estado === 'encerrada' ? 0 : Math.max(0, e.avaliacao ?? 0) * e.parte);
+export const valorDaParte = (e: Empresa) => (e.estado === 'encerrada' ? 0 : Math.max(0, e.avaliacao ?? 0) * e.parte * descontoMinoritario14(e.parte));
 export const valorDasEmpresas = (v: Vida) => empresas(v).reduce((s, e) => s + valorDaParte(e), 0);
 
 /* ------------------------------------------------------- O lugar e o ramo */
