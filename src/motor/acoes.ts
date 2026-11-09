@@ -129,6 +129,7 @@ import type { TipoEmpresa } from './tipos';
 import type { SignificadoDaTatuagem } from './dados/tatuagens';
 import { disponibilidadeRosto14, mudarRosto14, type MudancaRosto14 } from './v14/aparencia/rosto14';
 import { disponibilidadePiercing14, executarPiercing14, type OquePiercing14 } from './v14/aparencia/piercings14';
+import { fronteirasFechadas } from './v14/mundo/mundo14';
 import { disponibilidadeViagem14, executarViagem14, type OquaViagem14 } from './v14/viagens/viagens14';
 import { disponibilidadeConquistas14, executarConquistas14, linhaDoExtrato14, type OqueConquistas14 } from './v14/conquistas/conquistas';
 
@@ -810,7 +811,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'aparencia': return disponibilidadeAparencia(v, a.mudanca);
     case 'rosto14': return disponibilidadeRosto14(v, a.mudanca);
     case 'piercing14': return disponibilidadePiercing14(v, a.oque);
-    case 'viagem14': return disponibilidadeViagem14(v, a);
+    case 'viagem14': return fronteirasFechadas(v) && !a.destino.startsWith('neg_sao_paulo') ? bloqueio('impossivel', fronteirasFechadas(v)!) : disponibilidadeViagem14(v, a);
     case 'conquistas14': return disponibilidadeConquistas14(v, a.oque);
     case 'visibilidade': return disponibilidadeVisibilidade(v, a.oque);
     case 'comprar_item': return disponibilidadeComprarItem(v, a.itemId, a.marca, a.loja);
@@ -836,7 +837,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'cnh_preparar': return disponibilidadePrepararCnh(v, a.como);
     case 'habilitacao': return disponibilidadeHabilitacao(v, a.qual);
     // REWORK 12.25: quem é procurado (o mandado, a fuga) não passa por fronteira — o passaporte acusaria.
-    case 'experiencia': return a.id === 'viagem_exterior' && v.justica?.foragido ? bloqueio('impossivel', 'Quem é procurado não passa por uma fronteira: o passaporte acusaria.') : disponibilidadeExperiencia(v, a.id, a.escolha, a.luaDeMel);
+    case 'experiencia': return a.id === 'viagem_exterior' && v.justica?.foragido ? bloqueio('impossivel', 'Quem é procurado não passa por uma fronteira: o passaporte acusaria.') : a.id === 'viagem_exterior' && fronteirasFechadas(v) ? bloqueio('impossivel', fronteirasFechadas(v)!) : disponibilidadeExperiencia(v, a.id, a.escolha, a.luaDeMel);
     case 'renomear': return disponibilidadeRenomear(v, a.alvo, a.nome, a.k);
     case 'cnh_prova': return cnhEmProva(v) ? PERMITIDO : bloqueio('incompativel', 'A prova ainda não foi marcada.');
     case 'cnh':

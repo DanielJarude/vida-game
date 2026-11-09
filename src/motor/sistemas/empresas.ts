@@ -286,7 +286,7 @@ function procura(v: Vida, e: Empresa, r: Rng): number {
   const qual = 0.75 + e.qualidade / 250;
   const gestao = 0.85 + competenciaDaGestao(v, e) / 380;
   const sorte = Math.max(0.55, 1 + r.normal() * 0.12);
-  let base = t.publico * e.unidades * fatorDaCidade(t, e.municipioId) * rep * qual * gestao * t.procura[e.preco] * ciclo * sorte * ajusteDe(v, e).procura;
+  let base = t.publico * e.unidades * fatorDaCidade(t, e.municipioId) * rep * qual * gestao * t.procura[e.preco] * ciclo * sorte * ajusteDe(v, e).procura * (v.mundo14?.efeitos?.ramos?.[e.tipo] ?? 1); // VIDA 14: o mundo (a pandemia fecha o salão; o boom do turismo enche o hotel)
   // REWORK 12.2: o ramo decide o resto (a nota do restaurante, a ocupação do hotel, os animais, as obras).
   if (e.setor) return base * efeitosDoSetor(v, e).procura * (e.tipo === 'estudio' && doRamo(v, 'estudio') && e.papel !== 'investidor' ? 1 + Math.min(0.5, (v.notoriedade?.valor ?? 0) / 120) : 1);
   if (e.tipo === 'museu' && e.acervo) base *= (0.6 + Math.min(1.2, (e.acervo.valor + valorCedidoAoMuseu(v, e)) / Math.max(1, t.capital * 0.6)) * 0.4) * (e.acervo.exposicao && v.t - (e.acervo.tExposicao ?? 0) < 12 ? 1.45 : 1);

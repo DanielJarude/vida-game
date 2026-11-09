@@ -306,7 +306,7 @@ function anoDaGrande(v: Vida, e: Empresa): boolean {
   const fatorCap = uso > teto && uso > 0 ? teto / uso : 1;
   if (fatorCap < 0.97) causas.push({ texto: `A capacidade não deu conta: ${pct(1 - fatorCap)} do que dava para vender ficou sem produzir. Ampliar ${s.unidade[1]} resolve — e leva tempo.`, acaso: false, tom: 'ruim' });
   const rep = 0.8 + e.reputacao / 250;
-  const sorte = Math.max(0.4, 1 + r.normal() * s.volatilidade * ef.volatilidade * 0.5);
+  const sorte = Math.max(0.4, 1 + r.normal() * s.volatilidade * ef.volatilidade * 0.5) * (v.mundo14?.efeitos?.ramos?.[s.id] ?? 1); // VIDA 14: o mundo no ramo
   let receita = 0;
   let variavel = 0;
   for (const p of at) {

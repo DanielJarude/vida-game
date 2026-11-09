@@ -42,6 +42,7 @@ import { anoDe } from '../../motor/tempo';
 import { AparenciaEEstilo } from './Aparencia';
 import { sobDemanda as sobDemandaV14 } from '../util/sobDemanda';
 const Objetivos14 = sobDemandaV14(() => import('../v14/conquistas/Objetivos14').then(m => m.Objetivos14));
+const Mundo14 = sobDemandaV14(() => import('../v14/mundo/Mundo14').then(m => m.Mundo14));
 import { OQueConstruiu } from './Trajetorias';
 import { Linhagem } from './Linhagem';
 import { Medidor } from './Sinais';
@@ -201,6 +202,7 @@ export function Voce({ vida, agir, irPara, abrirPessoa, parte: parteDeFora, irPa
       <div className={fora('mundo')}>
       {fama.relevante && <button type="button" className="fama13-atalho" onClick={() => irA('fama')}>O seu nome público mora em Fama →</button>}
       <div id="voce-mundo"><QuemNoMundo vida={vida} agir={agir} /></div>
+      {parte === 'mundo' && <Mundo14 vida={vida} />}
       {i >= 14 && <OQueConstruiu vida={vida} />}
       <Linhagem vida={vida} />
       </div>
