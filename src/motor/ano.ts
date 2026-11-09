@@ -46,6 +46,7 @@ import { processarFundamentos } from './sistemas/perseguir';
 import { processarPrisao } from './sistemas/prisao';
 import { processarMundoVivo } from './sistemas/mundoVivo';
 import { processarMundo14 } from './v14/mundo/mundo14';
+import { processarConquistas14 } from './v14/conquistas/conquistas';
 import { processarConcursos } from './sistemas/concurso';
 import { processarEsporte, treinoProfissional } from './sistemas/esporte';
 import { processarLesoes } from './sistemas/lesoes';
@@ -428,6 +429,8 @@ function faseDeConteudo(v: Vida, r: Rng, linhasSistemicas: number): void {
   vidaEconomicaDoAno129(v, CATALOGO, preparar, (c, ctx) => (c.tipo === 'acontecimento' ? aplicarAcontecimento(v, c, ctx) : (abrirDecisao(v, c, ctx), true)));
   // VIDA 13 · Fama: os marcos do nome (silencioso) e, às vezes, o mundo reage ao nome ou o passado volta — sorteio derivado.
   mundoReage13(v, CATALOGO, preparar, (c, ctx) => (c.tipo === 'acontecimento' ? aplicarAcontecimento(v, c, ctx) : (abrirDecisao(v, c, ctx), true)));
+  // VIDA 14 · Conquistas: os objetivos pessoais (silencioso, salvo a conclusão) e, às vezes, um convite do meio profissional.
+  processarConquistas14(v, CATALOGO, preparar, (c, ctx) => (c.tipo === 'acontecimento' ? aplicarAcontecimento(v, c, ctx) : (abrirDecisao(v, c, ctx), true)));
 }
 
 export function totalDeConteudo(): { acontecimentos: number; decisoes: number } {

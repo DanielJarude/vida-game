@@ -47,7 +47,10 @@ export function prestigioProfissional(v: Vida): { valor: number; por?: string } 
     cands.push({ valor: clamp(oc.nivel * 11 + Math.min(25, anos * 1.2) + (e.desempenho - 50) * 0.2), por: 'no trabalho' });
   }
   const top = cands.sort((x, y) => y.valor - x.valor)[0];
-  return top ? { valor: Math.round(top.valor), por: top.por } : { valor: 0 };
+  // VIDA 14: o reconhecimento do meio (prêmios, congressos, palestras — `v14/conquistas`) soma ao que o ofício já dá.
+  const extra = v.conquistas14?.prestigio ?? 0;
+  if (top) return { valor: Math.round(clamp(top.valor + extra)), por: top.por };
+  return extra > 0 ? { valor: Math.round(extra), por: 'no meio' } : { valor: 0 };
 }
 
 const PALAVRA_PRESTIGIO = (x: number) => (x >= 75 ? 'referência no meio' : x >= 50 ? 'muito respeitado no meio' : x >= 30 ? 'respeitado no meio' : x >= 12 ? 'começando a ser notado no meio' : 'sem nome no meio ainda');

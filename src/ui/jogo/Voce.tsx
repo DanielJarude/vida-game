@@ -40,6 +40,8 @@ import { FichaDeAtributos } from './FichaDeAtributos';
 import { sinaisDoCorpo } from '../../motor/sistemas/saude';
 import { anoDe } from '../../motor/tempo';
 import { AparenciaEEstilo } from './Aparencia';
+import { sobDemanda as sobDemandaV14 } from '../util/sobDemanda';
+const Objetivos14 = sobDemandaV14(() => import('../v14/conquistas/Objetivos14').then(m => m.Objetivos14));
 import { OQueConstruiu } from './Trajetorias';
 import { Linhagem } from './Linhagem';
 import { Medidor } from './Sinais';
@@ -54,7 +56,7 @@ export type Destino = Aba;
  * as Habilidades (e o seu jeito), a Aparência e o Mundo (o nome público, os lugares, o que construiu, a família de antes).
  * O índice de âncoras (que só rolava a página) deu lugar às abas; a parte aberta é guardada pelo Jogo.
  */
-export type ParteVoce = 'resumo' | 'saude' | 'habilidades' | 'aparencia' | 'gostos' | 'fama' | 'mundo';
+export type ParteVoce = 'resumo' | 'saude' | 'habilidades' | 'aparencia' | 'gostos' | 'objetivos' | 'fama' | 'mundo';
 
 interface Props { vida: Vida; agir: (a: Acao) => boolean; irPara: (a: Destino) => void; abrirPessoa: (id: string) => void; parte?: ParteVoce; irParte?: (p: ParteVoce) => void }
 
@@ -98,6 +100,7 @@ export function Voce({ vida, agir, irPara, abrirPessoa, parte: parteDeFora, irPa
         { id: 'habilidades', rotulo: 'Habilidades', oque: 'No que você é bom e o seu jeito' },
         { id: 'aparencia', rotulo: 'Aparência', oque: 'O corpo, o rosto, o cabelo, a roupa, os acessórios' },
         ...(i >= 8 ? [{ id: 'gostos' as ParteVoce, rotulo: 'Gostos e cultura', oque: 'O que você ouve e gosta; shows, exposições, obras' }] : []),
+        ...(i >= 12 ? [{ id: 'objetivos' as ParteVoce, rotulo: 'Objetivos', oque: 'As metas que você escolheu, o quanto falta e o reconhecimento que veio' }] : []),
         ...(fama.relevante ? [{ id: 'fama' as ParteVoce, rotulo: 'Fama', oque: 'O nome público: por que conhecem você, a imagem, o que a fama traz e cobra' }] : []),
         { id: 'mundo', rotulo: 'No mundo', oque: fama.relevante ? 'Os lugares, o que construiu, a família' : 'O nome público, os lugares, o que construiu, a família' }
       ]} />
@@ -188,6 +191,9 @@ export function Voce({ vida, agir, irPara, abrirPessoa, parte: parteDeFora, irPa
 
       {/* 12.4.1: os gostos e a vida cultural saíram de Aparência — não são o visual. */}
       <div className={fora('gostos')} id="voce-gostos">{i >= 8 && <GostosECultura vida={vida} agir={agir} />}</div>
+
+      {/* VIDA 14: os objetivos pessoais (opcionais) e o reconhecimento do meio — sob demanda. */}
+      <div className={fora('objetivos')} id="voce-objetivos">{i >= 12 && parte === 'objetivos' && <Objetivos14 vida={vida} agir={agir} />}</div>
 
       {/* VIDA 13 · Fama: o nome público ganhou parte própria (antes, "O seu nome" dentro de No mundo). */}
       {fama.relevante && <div className={fora('fama')} id="voce-fama"><Fama13 vida={vida} agir={agir} /></div>}

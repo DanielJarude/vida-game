@@ -1,0 +1,19 @@
+/* VIDA 14 — objetivos pessoais, reconhecimento e programas. Prefixo c14-. */
+.c14 { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
+.c14__intro { margin: 0; color: var(--text-secondary); font-size: var(--type-meta); }
+.c14__sub { margin: 0 0 var(--space-1); font-weight: 600; color: var(--text-primary); }
+.c14__lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); }
+.c14__obj { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-3); border-radius: var(--radius-sm); background: var(--veu-1); min-width: 0; }
+.c14__nome { margin: 0; display: flex; flex-direction: column; font-weight: 600; color: var(--text-primary); overflow-wrap: anywhere; }
+.c14__nome small { font-weight: 400; font-size: var(--type-caption); color: var(--text-muted); }
+.c14__barra { height: 8px; border-radius: 999px; background: var(--rule); overflow: hidden; }
+.c14__barra span { display: block; height: 100%; background: var(--patrimonio-aplicado); border-radius: inherit; }
+.c14__prog { margin: 0; font-size: var(--type-meta); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.c14__mede { margin: 0; font-size: var(--type-caption); color: var(--text-faint); }
+.c14__tipos { display: flex; flex-wrap: wrap; gap: var(--space-1); }
+.c14__tipo { border: 1px solid var(--rule); background: transparent; color: var(--text-secondary); border-radius: 999px; padding: 6px 12px; min-height: 36px; font: inherit; font-size: var(--type-meta); cursor: pointer; }
+.c14__tipo--ativo { background: var(--veu-1); color: var(--text-primary); border-color: var(--text-muted); font-weight: 600; }
+.c14__escolha { display: flex; flex-direction: column; gap: var(--space-2); margin-top: var(--space-2); }
+.c14p__grupo { margin-top: var(--space-2); }
+.c14p__prog { display: flex; flex-direction: column; gap: 4px; padding: var(--space-2) 0; border-bottom: 1px solid var(--rule); }
+.c14p__prog:last-child { border-bottom: 0; }

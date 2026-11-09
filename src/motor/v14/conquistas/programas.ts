@@ -31,7 +31,7 @@ import { praticar } from '../../sistemas/frentes';
 import { apresentarAlguem } from '../../sistemas/social';
 import { novoContexto } from '../../sistemas/relacoes';
 import { lojaDeColecaoNaCidade } from '../../sistemas/colecao';
-import { bloqueio, PERMITIDO, type Veredito } from '../../plausibilidade';
+import { bloqueio, type Veredito } from '../../plausibilidade';
 import { PROGRAMAS14, type ModeloPrograma14, type NivelPrograma14, type VersaoDoPrograma14 } from '../../dados14/conquistas/catalogo';
 import { estadoConquistas14 } from './objetivos';
 import { perfilDoMeio14, registrarReconhecimento14, somarPrestigio14 } from './reconhecimento';

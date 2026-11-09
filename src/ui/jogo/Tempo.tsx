@@ -46,6 +46,7 @@ import { custoDaExperiencia, escolhasDaExperiencia, experienciasPossiveis, nomeD
 import { EscolherViagem } from './Viagem';
 import { sobDemanda as sobDemandaV14 } from '../util/sobDemanda';
 const Viagens14 = sobDemandaV14(() => import('../v14/viagens/Viagens14').then(m => m.Viagens14));
+const Programas14 = sobDemandaV14(() => import('../v14/conquistas/Programas14').then(m => m.Programas14));
 import { RedesSociais } from './Redes';
 import { SECOES_TEMPO, type SecaoTempo } from '../navegacao';
 import { leituraDoEstresse } from '../../motor/sistemas/leituraDoEstresse';
@@ -229,6 +230,7 @@ export function Experiencias({ vida, agir }: { vida: Vida; agir: (a: Acao) => bo
       </ul>
       {/* VIDA 14: negócios, cultura, eventos, lugares conhecidos e luxo (sob demanda, `ui/v14/viagens`). */}
       <Viagens14 vida={vida} agir={agir} />
+      <Programas14 vida={vida} agir={agir} />
     </section>
   );
 }
