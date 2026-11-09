@@ -14,6 +14,7 @@ import { criarRng } from '../rng';
 import type { Vida } from '../tipos';
 import { INSTITUICOES_129 } from '../dados/instituicoes129';
 import { MUNICIPIOS_1291 } from '../dados/municipios1291';
+import { MUNICIPIOS_14 } from '../dados14/cidades/municipios14';
 import {
   cidadesDoPais, cidadesNoMapa, codigoDoMunicipio, economiaLocal, existeMunicipio, municipio, municipioDoCodigo, municipioPorNome,
   MUNICIPIOS, nivelDeOferta, nomeLugar, sortearMunicipio
@@ -49,7 +50,7 @@ describe('As cidades dos campi no mapa', () => {
 
   it('as 20 cidades novas: reais, sem duplicata (nome+UF, id), no fim da lista, com economia e oferta coerentes', () => {
     expect(NOVAS.length).toBe(MUNICIPIOS_1291.length);
-    expect(NOVAS.length).toBe(20);
+    expect(NOVAS.length - MUNICIPIOS_14.length).toBe(20); // (VIDA 14: as cidades novas entram depois, pelo mesmo caminho)
     const todas = cidadesNoMapa('BR');
     expect(new Set(todas.map(m => `${m.nome}|${m.uf}`)).size).toBe(todas.length);
     expect(new Set(todas.map(m => m.id)).size).toBe(todas.length);

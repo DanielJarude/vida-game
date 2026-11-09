@@ -12,6 +12,7 @@ import { useMemo, useState } from 'react';
 import type { Vida } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
 import { idade } from '../../motor/nucleo';
+import { vocacoesEmPalavras14 } from '../../motor/dados14/cidades/municipios14';
 import { cidadesNoMapa, economiaLocal, municipio, nomeDaDivisao, nomeLugar, siglaDaDivisao } from '../../motor/dados/lugares';
 import { perfilDoPais } from '../../motor/mundo/registro';
 import { CustoDeViverAqui, MudarDePais } from './Mundo';
@@ -44,6 +45,7 @@ export function Cidade({ vida, agir, irCompras, abrir }: Props & { irCompras?: (
         <div className="dado"><dt>Salários</dt><dd>{ec.salario > 1.1 ? 'acima da média' : ec.salario < 0.9 ? 'abaixo da média' : 'na média'}</dd></div>
         <div className="dado"><dt>Aluguel de referência</dt><dd>{dinheiroCurto(ec.aluguel)}/mês</dd></div>
         <div className="dado"><dt>Transporte público</dt><dd>{ec.transporte === 'bom' ? 'bom: dá para viver sem carro' : ec.transporte === 'ruim' ? 'fraco: o ônibus demora' : 'razoável'}</dd></div>
+        {vocacoesEmPalavras14(m.id).length > 0 && <div className="dado"><dt>O que a cidade faz</dt><dd>{vocacoesEmPalavras14(m.id).join(', ')} — vagas mais comuns nessas áreas</dd></div>}
         {desl && <div className="dado"><dt>O seu trajeto</dt><dd>{NOME_MODO[desl.modo]}{desl.nomeVeiculo ? ` (${desl.nomeVeiculo})` : ''} · {tempoEmPalavras(desl.minutos)}</dd></div>}
       </dl>
       <CustoDeViverAqui vida={vida} />

@@ -17,6 +17,7 @@
  * mudar de cargo. Não existe escada infinita.
  */
 
+import { vocacaoDaVaga14 } from '../dados14/cidades/municipios14';
 import { EFEITO_DO_CHEFE, perfilDoChefe } from './jeito';
 import { nomeDoRegistro } from '../mundo/locais';
 import { regrasDaVida } from '../mundo/regras';
@@ -226,7 +227,9 @@ export function elegibilidade(v: Vida, oc: Ocupacao, via: ViaDeEntrada = 'curric
   if (oc.forma && via !== 'promocao' && (v.corpo.saude < 55 || v.corpo.condicoes.some(c => c.cronica && c.gravidade >= 2))) return bloqueio('requisito', 'A inspeção de saúde não aprovaria.');
   // VIDA 14: a cidade pequena não fecha a porta (antes: requisito duro, "seria preciso morar numa cidade maior"). Vagas
   // assim são raras aqui — a disputa é maior e a chance cai —, mas há a cidade vizinha, a estrada e o trabalho à distância.
-  const rara = nivelDeOferta(v.moradia.municipioId) < oc.oferta && via !== 'oportunidade';
+  // VIDA 14: a vocação da cidade (o porto, a indústria, o turismo) faz a vaga comum e a disputa menor — nunca o contrário.
+  const vocacao = vocacaoDaVaga14(v.moradia.municipioId, oc.id);
+  const rara = !vocacao && nivelDeOferta(v.moradia.municipioId) < oc.oferta && via !== 'oportunidade';
   // Onde o serviço público não entra por concurso (o perfil do país), o cargo é uma vaga como as outras: candidatura e seleção.
   if (oc.concurso && via === 'curriculo' && porConcursoAqui(v, oc)) {
     if (!editalAberto(v, oc)) return bloqueio('incompativel', 'Não há edital aberto para este cargo agora. Os concursos abrem em anos diferentes.');
@@ -240,7 +243,7 @@ export function elegibilidade(v: Vida, oc: Ocupacao, via: ViaDeEntrada = 'curric
   const tit = oc.nivel <= 4 ? titulacaoNaTrilha(v, oc) : { meses: 0 };
   const exp = (oc.nivel >= 4 ? (v.trabalho.experiencia[oc.trilha] ?? 0) : experienciaNaTrilha(v, oc.trilha)) + tit.meses;
   const contando = tit.meses && tit.nome ? ` (contando ${tit.nome.startsWith('Especialização') ? 'a' : 'o'} ${tit.nome.charAt(0).toLowerCase() + tit.nome.slice(1)} como estrada)` : '';
-  let chance = chanceBase(v, oc, bonus) * (rara ? 0.45 : 1);
+  let chance = Math.min(0.95, chanceBase(v, oc, bonus) * (rara ? 0.45 : 1) * (vocacao ? 1.2 : 1));
   if (oc.experiencia && via !== 'promocao') {
     if (exp < oc.experiencia / 2) return bloqueio('requisito', `Pedem ${anosTxt(oc.experiencia)} de experiência na área; você tem ${anosTxt(exp)}${contando}.`);
     if (exp < oc.experiencia) {

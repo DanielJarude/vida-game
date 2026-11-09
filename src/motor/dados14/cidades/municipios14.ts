@@ -225,3 +225,11 @@ export const AJUSTE_LOCAL_14: Readonly<Record<string, readonly [number, number, 
 const POR_ID = new Map(MUNICIPIOS_14.map(m => [idDoMunicipio14(m), m]));
 /** A ficha de uma cidade da VIDA 14 (undefined para as outras). */
 export const municipio14 = (id: string): Municipio14 | undefined => POR_ID.get(id);
+
+/** A vocação da cidade que puxa esta ocupação (undefined se nenhuma): a vaga é mais comum e a disputa, menor. */
+export function vocacaoDaVaga14(municipioId: string, ocupacaoId: string): Vocacao14 | undefined {
+  const m = POR_ID.get(municipioId);
+  return m?.vocacoes.find(x => VOCACOES_14[x].ocupacoes.includes(ocupacaoId));
+}
+/** As vocações da cidade em palavras (para a tela da cidade); vazio para as cidades de antes. */
+export const vocacoesEmPalavras14 = (municipioId: string): string[] => (POR_ID.get(municipioId)?.vocacoes ?? []).map(x => VOCACOES_14[x].rotulo);
