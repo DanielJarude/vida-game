@@ -93,7 +93,8 @@ export function disponibilidadeComprarCoisa(v: Vida, id: string, marca?: string,
   if (c.daCasa && moraComFamiliaDeOrigem(v)) return bloqueio('impossivel', 'Na casa da família, os móveis e os eletrodomésticos são decisão dos adultos da casa.');
   if (id === 'prancha' && !pertoDaAgua(v.moradia.municipioId)) return bloqueio('impossivel', 'Longe do mar, a prancha vira enfeite de parede.');
   // REWORK 12.4: os discos se compram de lote em lote (a coleção cresce); o resto, um de cada.
-  if (temCoisa(v, id) && id !== 'discos') return bloqueio('incompativel', `Você já tem ${c.artigo} ${c.nome}.`);
+  // VIDA 14: um de cada EM CASA — a peça do proprietário (aluguel mobiliado) e a sua guardada no depósito não contam.
+  if (coisasDaVida(v).some(t => t.coisaId === id && !t.doImovel && naCasaAtual(t)) && id !== 'discos') return bloqueio('incompativel', `Você já tem ${c.artigo} ${c.nome}.`);
   if ((marca || loja) && !ofertaValida(v, { tipo: 'coisa', id }, marca, loja)) return bloqueio('impossivel', 'Essa loja não vende isso.');
   return vereditoDePagar(v, loja ? precoNaLoja(v, { tipo: 'coisa', id }, marca, loja) : precoDaCoisa(v, id));
 }
@@ -143,6 +144,7 @@ export function receberCoisa(v: Vida, id: string, preco: number, dada = false): 
 export function disponibilidadeVenderCoisa(v: Vida, coisaTidaId: string): Veredito {
   const t = coisasDaVida(v).find(x => x.id === coisaTidaId);
   if (!t) return bloqueio('impossivel', 'Isso não é mais seu.');
+  if (t.doImovel) return bloqueio('impossivel', 'É do proprietário do imóvel: fica na casa quando o aluguel acabar.');
   // VIDA 12.5 (B2): o que está emprestado está na casa de outra pessoa.
   if (t.emprestadaA) return bloqueio('incompativel', 'Está emprestado: primeiro, pedir de volta.');
   return PERMITIDO;
@@ -194,7 +196,8 @@ export function processarCoisas(v: Vida): void {
   for (const t of lista) {
     const c = coisa(t.coisaId);
     if (!c) { quebradas.push(t); continue; }
-    if (t.lembranca) continue;
+    // VIDA 14: a peça do proprietário (aluguel mobiliado) é dele: o desgaste e a troca são com ele.
+    if (t.lembranca || t.doImovel) continue;
     const r = rngDe(v.id, 'coisa', t.id, v.t);
     // REWORK 12.4: o que está guardado (depósito, outra casa) quase não se gasta; emprestado, gasta como em uso.
     const guardada = !!t.local && !t.emprestadaA ? 0.25 : 1;
@@ -233,7 +236,7 @@ export function processarCoisas(v: Vida): void {
 export function coisasNaMudancaDePais(v: Vida): number {
   // REWORK 12.4: só o que está na casa (o que está guardado noutro lugar fica onde está) e o que não tem história:
   // o piano da avó vai de navio, com frete.
-  const daCasa = coisasDaVida(v).filter(t => coisa(t.coisaId)?.daCasa && naCasaAtual(t) && !t.lembranca);
+  const daCasa = coisasDaVida(v).filter(t => coisa(t.coisaId)?.daCasa && naCasaAtual(t) && !t.lembranca && !t.doImovel);
   const vaoJunto = daCasa.filter(t => afetoDe(v, t) >= 45);
   if (vaoJunto.length) {
     const frete = Math.round(vaoJunto.reduce((s, t) => s + Math.max(800, t.preco * 0.15), 0) / 10) * 10;

@@ -543,9 +543,9 @@ export function aceitarOportunidade(v: Vida, r: Rng, id: string): Aceite {
 /** O que dizer quando a oferta não entrou agora porque outra escolha grande está em aberto (`propor` → 'perdido'). */
 const PASSOU = 'Chegou quando outra escolha grande estava em aberto — e o prazo passou. Ficou registrado na Linha da Vida.';
 
-const VERBO: Partial<Record<Dominio, string>> = { musica: 'tocar', futebol: 'jogar bola', volei: 'jogar vôlei', basquete: 'jogar basquete', tenis: 'jogar tênis', teatro: 'fazer teatro', danca: 'dançar', desenho: 'desenhar', escrita: 'escrever', natacao: 'nadar', lutas: 'treinar luta', xadrez: 'jogar xadrez', fotografia: 'fotografar', cozinha: 'cozinhar' };
+const VERBO: Partial<Record<Dominio, string>> = { musica: 'tocar', futebol: 'jogar bola', futsal: 'jogar futsal', volei: 'jogar vôlei', basquete: 'jogar basquete', tenis: 'jogar tênis', teatro: 'fazer teatro', danca: 'dançar', desenho: 'desenhar', escrita: 'escrever', natacao: 'nadar', lutas: 'treinar luta', xadrez: 'jogar xadrez', fotografia: 'fotografar', cozinha: 'cozinhar' };
 // (Novas modalidades entram no FIM: o índice é guardado nos fatos da peneira.)
-export const MODS: Dominio[] = ['futebol', 'volei', 'natacao', 'atletismo', 'lutas', 'basquete', 'tenis'];
+export const MODS: Dominio[] = ['futebol', 'volei', 'natacao', 'atletismo', 'lutas', 'basquete', 'tenis', 'futsal'];
 export const MODS_ARTE: Dominio[] = ['musica', 'teatro', 'danca'];
 
 import { codigoDoMunicipio, municipioDoCodigo } from '../dados/lugares';

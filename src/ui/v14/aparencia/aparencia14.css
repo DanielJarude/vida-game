@@ -1,0 +1,53 @@
+/* VIDA 14 — Você · Aparência: "Sobrancelhas e rosto" (a14-rosto) e o painel de piercings (a14-pc). */
+
+.a14-rosto { margin-top: var(--space-5); display: grid; gap: var(--space-2); }
+.a14-rosto__corpo { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-4); align-items: start; }
+.a14-rosto__previa { display: grid; grid-template-columns: auto auto; gap: var(--space-2); justify-items: center; align-items: end; }
+.a14-rosto__previa > .nota { grid-column: 1 / -1; }
+.a14-rosto__previa svg { display: block; border-radius: var(--radius-md); border: 1px solid var(--rule); }
+.a14-rosto__escolhas { display: grid; gap: var(--space-2); min-width: 0; }
+.a14-rosto__riscos { display: grid; gap: var(--space-2); border: 1px solid var(--rule); border-radius: var(--radius-md); padding: var(--space-2) var(--space-3) var(--space-3); margin: 0; min-width: 0; }
+.a14-rosto__riscos legend { padding: 0 var(--space-1); }
+
+.a14-pc { margin-top: var(--space-5); display: grid; gap: var(--space-2); scroll-margin-top: 72px; }
+.a14-pc__corpo { display: grid; grid-template-columns: min(240px, 40%) minmax(0, 1fr); gap: var(--space-4); align-items: start; }
+.a14-pc__lupa { margin: 0; width: min(240px, 100%); display: grid; gap: var(--space-1); justify-items: center; position: sticky; top: 72px; }
+.a14-pc__lupa svg { display: block; width: 100%; height: auto; aspect-ratio: 3 / 4; border-radius: var(--radius-md); border: 1px solid var(--rule); }
+.a14-pc__controles { display: grid; gap: var(--space-1); justify-items: center; }
+.a14-pc__painel { display: grid; gap: var(--space-2); min-width: 0; }
+.a14-pc__furos { display: grid; grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); gap: var(--space-1); }
+.a14-pc__furo { display: grid; gap: 2px; justify-items: start; min-height: var(--touch-target, 40px); padding: 6px 10px; border: 1px solid var(--rule); border-radius: var(--radius-md); background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.a14-pc__furo:hover { background: var(--veu-1); }
+.a14-pc__furo:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.a14-pc__furo--ativo { border-color: currentColor; background: var(--veu-2); }
+.a14-pc__furo--sem_furo .a14-pc__furo-nome { opacity: 0.78; }
+.a14-pc__furo-nome { font-weight: 600; font-size: 0.92em; }
+.a14-pc__selo { font-size: 0.76em; letter-spacing: 0.02em; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--rule); }
+.a14-pc__selo--ocupado { background: var(--acao); color: var(--acao-sobre); border-color: transparent; }
+.a14-pc__selo--livre { border-color: var(--bom); color: var(--bom); }
+.a14-pc__selo--sem_furo { border-style: dashed; opacity: 0.8; }
+.a14-pc__detalhe { display: grid; gap: var(--space-2); border-top: 1px solid var(--rule); padding-top: var(--space-2); }
+.a14-pc__estado { margin: 0; }
+.a14-pc__titulo { margin: var(--space-1) 0 0; font-size: 0.95em; }
+.a14-pc__lista { list-style: none; margin: 0; padding: 0; display: grid; border-top: 1px solid var(--rule); }
+.a14-pc__joia { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: var(--space-1) var(--space-3); align-items: center; padding: var(--space-1) 0; border-bottom: 1px solid var(--rule); }
+.a14-pc__joia--uso .a14-pc__provar { border-color: currentColor; }
+.a14-pc__joia--prova .a14-pc__provar { background: var(--veu-2); border-color: currentColor; font-weight: 600; }
+.a14-pc__provar { display: inline-flex; align-items: center; gap: 8px; min-height: var(--touch-target, 40px); padding: 2px 12px 2px 8px; border: 1px solid var(--rule); border-radius: 999px; background: transparent; color: inherit; font: inherit; font-size: 0.92em; cursor: pointer; text-align: left; justify-self: start; max-width: 100%; }
+.a14-pc__provar:hover { background: var(--veu-1); }
+.a14-pc__provar:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.a14-pc__nome { overflow-wrap: anywhere; }
+.a14-pc__amostra { flex: none; }
+.a14-pc__info { white-space: nowrap; font-size: 0.92em; }
+.a14-pc__acoes { display: flex; flex-wrap: wrap; gap: var(--space-1); justify-content: flex-end; }
+.a14-pc__descricao { grid-column: 1 / -1; }
+
+@media (max-width: 560px) {
+  .a14-rosto__corpo { grid-template-columns: minmax(0, 1fr); }
+  .a14-rosto__previa { justify-self: center; }
+  .a14-pc__corpo { grid-template-columns: minmax(0, 1fr); }
+  .a14-pc__lupa { justify-self: center; position: static; }
+  .a14-pc__furos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .a14-pc__joia { grid-template-columns: minmax(0, 1fr) auto; }
+  .a14-pc__acoes { grid-column: 1 / -1; justify-content: flex-start; }
+}

@@ -113,6 +113,14 @@ export default defineConfig({
           // chamam — e ela se registra em `compromissos` (que está embaixo) para dizer o conflito de horário de uma proposta.
           // VIDA 13 · Fama: o núcleo do reconhecimento (as origens, os marcos, a imagem, o que o mundo devolve) — só o ano, o
           // save, os acontecimentos e as telas o importam; ele só importa os sistemas e a base. Pacote próprio, sem ciclo.
+          // VIDA 14: cada frente nova mora num diretório próprio e vira um pacote próprio. Os sistemas e textos da frente
+          // (`motor/v14/<frente>/`) ficam ACIMA dos sistemas e da base (só os importam) e ABAIXO de quem os chama (o ano, as
+          // ações, o save, os textos, as telas). Os catálogos puros (`motor/dados14/<frente>/`, só imports de tipo) ficam
+          // embaixo de tudo. Nenhum pacote antigo cresce, e nenhum módulo de baixo importa um de cima: sem ciclo.
+          const v14 = /[\\/]src[\\/]motor[\\/]v14[\\/]([a-z0-9]+)[\\/]/.exec(id);
+          if (v14) return `motor14-${v14[1]}`;
+          const d14 = /[\\/]src[\\/]motor[\\/]dados14[\\/]([a-z0-9]+)[\\/]/.exec(id);
+          if (d14) return `dados14-${d14[1]}`;
           if (/[\\/]src[\\/]motor[\\/]sistemas[\\/]reconhecimento13\.ts/.test(id)) return 'motor-fama';
           if (/[\\/]src[\\/]motor[\\/]sistemas[\\/](redes|leituraDoEstresse|juntos|naFormacao|noOficio|microcenas|prisao|mundoVivo|agenda|avaliacaoDaRotina|convivio|apostas|ecos|seguroDesemprego|indiretos|afetos|fama|pedidosDaCrianca|afetosAdultos|casamento|convivio126|casaNoDia|viagens126)\.ts/.test(id)) return 'motor-vida';
           // REWORK 10: o pacote dos textos estava a ~50 kB do limite e a Fase F traz muitos acontecimentos. Os conteúdos novos

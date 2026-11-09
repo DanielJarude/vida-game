@@ -265,6 +265,12 @@ export interface Visual {
   sombraOlhos?: string;
   batom?: string;
   blush?: string;
+  /** VIDA 14 (`dados14/aparencia/rosto14`): os riscos na sobrancelha, o desenho dela (sobre a herdada), a pinta e os cílios.
+   *  Escolhas (nunca genes). Ausentes: sem riscos, sobrancelha natural, sem pinta, cílios naturais. */
+  sobrancelhaRiscos?: { quantidade: number; lado: 'esquerdo' | 'direito' | 'ambos'; posicao: 'interno' | 'central' | 'externo'; estilo: 'reto' | 'diagonal' | 'duplo_fino' | 'largo' | 'escalonado' };
+  sobrancelhaDesenho?: string;
+  pinta?: string;
+  cilios?: string;
   /** O jeito de vestir (a cor e o corte da roupa no retrato). */
   roupa?: EstiloRoupa;
   /** A joia em uso, quando aparece no retrato (a corrente no pescoço, os brincos). O relógio não aparece: fica no pulso, fora do quadro. */
@@ -334,6 +340,8 @@ export interface EstiloPessoal {
   looksSalvos?: { id: string; nome: string; itens: string[]; t: number }[];
   /** REWORK 12.4: as fases do estilo (quando o jeito de se vestir mudou de cara), para a história. */
   fases?: { t: number; estilo: string }[];
+  /** VIDA 14: os furos de piercing feitos (o lugar → quando furou). O furo fica mesmo sem joia (`v14/aparencia/piercings14`). */
+  furos?: Record<string, number>;
 }
 
 /** REWORK 12.4: as ocasiões em que a roupa pode importar (`sistemas/guardaRoupa`). */
@@ -1349,6 +1357,9 @@ export interface CoisaTida {
   quantidade?: number;
   /** REWORK 12.4: guardada como lembrança depois de parar de funcionar (não se usa, não se joga fora). */
   lembranca?: boolean;
+  /** VIDA 14: é do PROPRIETÁRIO do imóvel alugado mobiliado (o contrato, `Moradia.mobilia14.contrato`): fica no imóvel ao
+   *  sair, não se vende, não se empresta, não vai para o depósito. Ausente = é seu. */
+  doImovel?: string;
 }
 
 export interface Financas {
@@ -1584,6 +1595,8 @@ export interface AnoDetalhadoDaEmpresa {
   receita: number;
   custos: number;
   lucro: number;
+  /** VIDA 14: os juros da dívida da empresa no ano (a avaliação soma de volta: o valor da operação não depende de quem a financia). */
+  juros?: number;
   /** O que o caixa variou no ano. */
   fluxo: number;
   investimentos: number;
@@ -1923,6 +1936,9 @@ export interface Moradia {
   atrasoDesde?: number;
   /** REWORK 12.4: o que se fez da casa alugada (pintura, luz, o quarto que virou escritório) — fica nela ao sair. */
   lar?: LarPersonalizado;
+  /** VIDA 14 (`v14/moveis`): o aluguel mobiliado — o contrato (as peças do proprietário levam o id dele em
+   *  `CoisaTida.doImovel`), o nível, o estilo e o que o proprietário guardou a pedido (ou por repetir o que é seu). */
+  mobilia14?: { contrato: string; nivel: 'parcial' | 'mobiliado' | 'luxo'; estilo: string; devolvidos?: { coisaId: string; marca?: string; cor?: string; acabamento?: string; preco: number }[] };
 }
 
 /**
@@ -2147,6 +2163,8 @@ export interface Rotina {
 export type Dominio =
   // esporte
   | 'futebol' | 'volei' | 'natacao' | 'atletismo' | 'lutas' | 'basquete' | 'tenis'
+  // VIDA 14: o futsal, modalidade própria (`dados14/esportes/futsal`, `v14/esportes`)
+  | 'futsal'
   // arte
   | 'musica' | 'teatro' | 'danca' | 'desenho' | 'escrita' | 'fotografia'
   // escola e estudo
@@ -2314,6 +2332,8 @@ export interface CarreiraEsportiva {
   ultimoClube?: { clube: string; municipioId: string; nivel: 1 | 2 | 3 | 4; ate: number };
   /** REWORK 11 · ESP-11.6: capitão do clube (o clube e desde quando; sai ao trocar de clube). */
   capitao?: { clube: string; desde: number };
+  /** VIDA 14 · futsal: a posição na quadra (goleiro, fixo, ala, pivô) e se o técnico usa você como goleiro-linha. Ausente: a do corpo. */
+  futsal?: { funcao?: 'goleiro' | 'fixo' | 'ala_esquerda' | 'ala_direita' | 'pivo'; goleiroLinha?: boolean };
 }
 
 /** Uma proposta concreta de clube (ou de empréstimo): o que se viu é o que se assina. */
@@ -2591,6 +2611,8 @@ export interface Temporada {
   prova?: { nome: string; unidade: 's' | 'm'; marca: number; recorde?: boolean; finais: number; podios: number; vitorias: number };
   /** Luta: a categoria de peso e o cartel do ano (sem empate: a chave decide), os títulos e pódios, a maior sequência de vitórias. */
   luta?: { categoria: string; lutas: number; vitorias: number; derrotas: number; antesDoTempo: number; titulos: number; podios: number; sequencia: number };
+  /** VIDA 14 · futsal: os jogos em que o time jogou com goleiro-linha (o quinto jogador de linha) com você nele. */
+  goleiroLinha?: number;
 }
 
 /** Um projeto artístico coletivo (banda, grupo de teatro, companhia). */
@@ -3629,7 +3651,7 @@ export interface VidaPolitica {
     marcos?: string[];
   }[];
   /** Os partidos por onde passou (a troca fica na história). */
-  partidos?: { sigla: string; tInicio: number; tFim?: number; como?: 'janela' | 'fora_da_janela' | 'majoritario' | 'sem_mandato' }[];
+  partidos?: { sigla: string; tInicio: number; tFim?: number; como?: 'janela' | 'fora_da_janela' | 'majoritario' | 'sem_mandato' | 'justa_causa' }[];
   /** Um escândalo que veio a público (o caso, o processo): pesa na próxima eleição, conforme a resposta. */
   escandalo?: { t: number; tipo: 'caso' | 'processo' | 'prisao' | 'ilicito'; resposta?: 'desculpas' | 'negou' | 'silencio' };
   /** O trabalho que ficou para trás (para voltar depois). */
@@ -3644,6 +3666,8 @@ export interface VidaPolitica {
   pedido?: { aliancaId: string; t: number };
   /** VIDA 12.9: a corrida presidencial, as candidaturas, o governo e os mandatos de presidente (`sistemas/presidencia129`). */
   presidencia?: import('./dados/presidencia129').Presidencia129;
+  /** VIDA 14: a gestão (medidas, contas, indicadores), o legado, a filiação e Belém (Portugal) — `v14/politica`. */
+  v14?: import('./dados14/politica/tipos').Politica14;
 }
 
 /** REWORK 11.5 · POL-05: uma aliança política — uma pessoa de um grupo, a confiança, os favores e o rompimento. */
@@ -3835,6 +3859,12 @@ export interface Vida {
   /** VIDA 13 · Ações: o resultado da última escolha, enquanto não foi visto (a próxima decisão do ano espera). */
   desfecho13?: Desfecho13;
   /**
+   * VIDA 14 · Viagens (`v14/viagens`): os países conhecidos (ISO → quando foi a primeira vez; inclui os inferidos das
+   * viagens antigas na carga) e as viagens da VIDA 14 (tipo → quando foi a última, para o intervalo entre elas).
+   * Ausente: nenhuma registrada (o natal e as mudanças de país contam do mesmo jeito — `paisesVisitados`).
+   */
+  viagens14?: { paises: Record<string, number>; ultima?: Record<string, number>; n?: number };
+  /**
    * REWORK 11.5 · REL-22: uma relação entre TRÊS adultos (a parceria principal e o namoro paralelo do poliamor, que
    * também se relacionam): a harmonia entre os dois, os ciúmes, a casa, o dinheiro. Ausente: não há trio.
    */
@@ -3866,12 +3896,20 @@ export interface Vida {
   notoriedade?: Notoriedade;
   /** VIDA 13 · Fama: os marcos do nome, a série anual, o que a fama pagou (`sistemas/reconhecimento13`). Ausente: nada ainda. */
   fama13?: import('./sistemas/reconhecimento13').Fama13;
+  /** VIDA 14 · Conquistas: objetivos pessoais, reconhecimento no meio, programas da cidade (`v14/conquistas`). Ausente: nada ainda. */
+  conquistas14?: import('./dados14/conquistas/catalogo').Conquistas14;
+  /** VIDA 14 · Crenças (`v14/crencas`): a crença, a prática, as mudanças. Ausente: refeita da família, sem história. */
+  crenca14?: import('./dados14/crencas/crencas').EstadoCrenca14;
+  /** VIDA 14 · Dependências (`v14/dependencias`): o que virou dependência, o tratamento, a recuperação. Ausente: nada. */
+  dependencias14?: import('./dados14/crencas/crencas').EstadoDependencias14;
   /** REWORK 4: as redes sociais do jogo (simulação interna, sem internet): `sistemas/redes`. Opcional. */
   redes?: { contas: Record<string, ContaSocial> };
   /** REWORK 4: as organizações onde a vida trabalhou (nome, setor, cidade) — `sistemas/organizacoes`. Opcional. */
   organizacoes?: Record<string, Organizacao>;
   /** Como prefere ir ao trabalho e ao estudo. Ausente = o jeito mais rápido que tem (`sistemas/transporte`). */
   deslocamento?: { modo: 'a_pe' | 'bicicleta' | 'publico' | 'moto' | 'carro'; t: number };
+  /** VIDA 14 (`v14/mundo`): os acontecimentos mundiais vividos e os efeitos ativos (`efeitos`, lido pelos sistemas antigos). */
+  mundo14?: import('./dados14/mundo/tipos').Mundo14;
   morte?: {
     t: number; causa: string; heranca?: Heranca;
     /** O que o jogador decidiu sobre o patrimônio na tela do legado (guardado: recarregar mostra as mesmas escolhas). */

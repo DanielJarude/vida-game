@@ -1,0 +1,29 @@
+/* VIDA 14 — os números de uma empresa (grupos, destaque da participação). Prefixo e14-. */
+.e14 { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
+.e14-ano { margin: 0; font-size: var(--type-caption); color: var(--text-muted); }
+.e14-destaque { display: flex; flex-wrap: wrap; gap: var(--space-3); padding: var(--space-3); border-radius: var(--radius-sm); background: var(--veu-1); border-left: 4px solid var(--patrimonio-empresa); }
+.e14-destaque__principal { display: flex; flex-direction: column; gap: 2px; flex: 1 1 180px; min-width: 0; }
+.e14-destaque__rotulo { font-size: var(--type-caption); color: var(--text-secondary); }
+.e14-destaque__valor { font-size: var(--type-heading); font-variant-numeric: tabular-nums; color: var(--text-primary); line-height: 1.15; overflow-wrap: anywhere; }
+.e14-destaque__var { font-size: var(--type-caption); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.e14-destaque__var--bom { color: var(--patrimonio-aplicado); font-weight: 600; }
+.e14-destaque__var--ruim { color: var(--danger); font-weight: 600; }
+.e14-destaque__lado { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: var(--space-1) var(--space-3); margin: 0; flex: 2 1 240px; min-width: 0; }
+.e14-destaque__lado div { display: flex; flex-direction: column; min-width: 0; }
+.e14-destaque__lado dt { font-size: var(--type-caption); color: var(--text-muted); }
+.e14-destaque__lado dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.e14-destaque__lado dd.e14-texto { font-weight: 400; font-size: var(--type-caption); }
+.e14-grupos { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-3); }
+.e14-grupo { min-width: 0; }
+.e14-grupo__titulo { margin: 0 0 var(--space-1); font-size: var(--type-caption); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-muted); }
+.e14-lista { margin: 0; display: flex; flex-direction: column; }
+.e14-linha { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-2); padding: 6px 0 6px var(--space-2); border-bottom: 1px solid var(--rule); border-left: 3px solid transparent; min-width: 0; }
+.e14-linha:last-child { border-bottom: 0; }
+.e14-linha dt { display: flex; flex-direction: column; font-size: var(--type-meta); color: var(--text-secondary); min-width: 0; }
+.e14-linha dt small { font-size: var(--type-caption); color: var(--text-faint); }
+.e14-linha dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; color: var(--text-primary); }
+.e14-linha--bom { border-left-color: var(--patrimonio-aplicado); }
+.e14-linha--bom dd { color: var(--patrimonio-aplicado); }
+.e14-linha--ruim { border-left-color: var(--danger-line); }
+.e14-linha--ruim dd { color: var(--danger); }
+.e14-porque { font-size: var(--type-caption); }

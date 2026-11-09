@@ -13,9 +13,12 @@
  *
  * FORA (documentado): os países em que o chefe de governo sai do parlamento (Alemanha, Itália, Índia, Espanha, Reino
  * Unido, Japão, Canadá, Austrália, Nova Zelândia, Marrocos, África do Sul, China) e Angola (o Presidente é o cabeça
- * da lista mais votada às legislativas) não têm eleição direta para presidente: a Presidência não é oferecida. Portugal,
- * França e Coreia do Sul elegem o presidente diretamente, mas num calendário que não cai nas eleições gerais do jogo
- * (2026/2031, 2027/2032, 2030/2035): ficam para uma atualização com eleição presidencial avulsa.
+ * da lista mais votada às legislativas) não têm eleição direta para presidente: a Presidência não é oferecida. França
+ * e Coreia do Sul elegem o presidente diretamente, num calendário próprio (2027/2032, 2030/2035): ainda de fora.
+ * VIDA 14 · PORTUGAL entra com ELEIÇÃO AVULSA (`avulsa`: janeiro, posse em março — CRP arts. 121-128; a lei eleitoral
+ * do PR, Decreto-Lei 319-A/76: 7.500 a 15.000 assinaturas, sem partido) e regime SEMIPRESIDENCIAL (`semipresidencial`): o PR não
+ * governa — `v14/politica/portugal` cuida dos poderes dele. Antes, a Presidência portuguesa não aparecia porque o
+ * calendário só conhecia os ciclos local e geral, e a eleição de 2031 não cai em nenhum dos dois.
  */
 import type { CargoDoPais } from '../mundo/tipos';
 
@@ -54,6 +57,12 @@ export interface RegraPresidencial {
   quorum: { emenda: number; lei: number };
   /** Desemprego "normal" do país (%), o ponto de partida do mandato quando a economia está normal. */
   desemprego: number;
+  /** VIDA 14: eleição em data própria, fora do ciclo geral do país (mês da eleição e mês da posse, 0 = janeiro). */
+  avulsa?: { mes: number; posse: number };
+  /** VIDA 14: o presidente não governa (semipresidencialismo): o Governo sai do parlamento; o PR tem poderes próprios. */
+  semipresidencial?: boolean;
+  /** VIDA 14: candidatura por assinaturas de cidadãos eleitores [mínimo, máximo] (Portugal: 7.500 a 15.000). */
+  assinaturas?: [number, number];
 }
 
 const BR_LIKE = { escolha: 'convencao' as const };
@@ -106,12 +115,20 @@ export const REGRAS_PRESIDENCIAIS: Record<string, RegraPresidencial> = {
   DO: { ...BR_LIKE, titulo: ['presidente da República', 'presidenta da República'], anos: 4, idade: 30, ciclo: [2028, 4], nato: true, independente: false, segundoTurno: true, limiar: 50,
     limite: { seguidos: 2, total: 2, texto: 'Dois mandatos seguidos no máximo, e nunca mais depois (art. 124).' },
     palacio: 'o Palácio Nacional', congresso: 'o Congresso Nacional', casas: ['a Câmara de Deputados', 'o Senado'],
-    impeachment: { nome: 'o juízo político', acusa: 67, condena: 67 }, quorum: { emenda: 67, lei: 50 }, desemprego: 6 }
+    impeachment: { nome: 'o juízo político', acusa: 67, condena: 67 }, quorum: { emenda: 67, lei: 50 }, desemprego: 6 },
+  // VIDA 14 · Portugal (CRP arts. 120-140): sufrágio direto em duas voltas (mais de metade dos votos validamente expressos),
+  // candidatura proposta por 7.500 a 15.000 cidadãos eleitores (partido não é exigido), português de origem com mais de
+  // 35 anos, mandato de cinco anos, sem terceiro mandato seguido nem nos cinco anos depois do segundo (art. 123.º).
+  // Eleição em janeiro, posse a 9 de março (2026, 2031, 2036...). O PR não governa: o Governo responde à AR.
+  PT: { ...BR_LIKE, titulo: ['Presidente da República', 'Presidente da República'], anos: 5, idade: 35, ciclo: [2031, 5], nato: true, independente: true, segundoTurno: true, limiar: 50,
+    limite: { seguidos: 2, texto: 'No máximo dois mandatos seguidos; depois do segundo, só passados cinco anos (CRP, art. 123.º).' },
+    palacio: 'o Palácio de Belém', congresso: 'a Assembleia da República', casas: ['a Assembleia da República'],
+    impeachment: { nome: 'o processo por crime no exercício de funções, julgado pelo Supremo Tribunal de Justiça', acusa: 67, condena: 67 }, quorum: { emenda: 67, lei: 50 }, desemprego: 6.5,
+    avulsa: { mes: 0, posse: 2 }, semipresidencial: true, assinaturas: [7500, 15000] }
 };
 
 /** O porquê de não haver Presidência eleita num país do jogo (para a tela). */
 export const SEM_PRESIDENCIA: Record<string, string> = {
-  PT: 'Em Portugal, o Presidente é eleito em data própria (2026, 2031), fora das eleições gerais do jogo: ainda não dá para disputar.',
   FR: 'Na França, a eleição presidencial tem data própria (2027, 2032), fora das eleições gerais do jogo: ainda não dá para disputar.',
   KR: 'Na Coreia do Sul, a eleição presidencial tem data própria, fora das eleições gerais do jogo: ainda não dá para disputar.',
   AO: 'Em Angola, o Presidente é o cabeça da lista mais votada às legislativas: não há candidatura avulsa à Presidência.',
@@ -124,6 +141,9 @@ export function cargoPresidencial(pais: string): CargoDoPais | undefined {
   const r = REGRAS_PRESIDENCIAIS[pais];
   return r ? { titulo: r.titulo, anos: r.anos, idade: r.idade, casa: r.palacio } : undefined;
 }
+
+/** VIDA 14: a eleição de data própria do cargo no país (só a Presidência portuguesa, por ora). */
+export const eleicaoAvulsa129 = (pais: string, cargo: string) => (cargo === 'presidente' ? REGRAS_PRESIDENCIAIS[pais]?.avulsa : undefined);
 
 /*
  * O CALENDÁRIO DE CADA CARGO. O jogo tem dois ciclos por país (local e geral). Quase todo cargo cai no seu; alguns

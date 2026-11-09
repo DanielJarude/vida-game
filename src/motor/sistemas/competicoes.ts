@@ -26,6 +26,7 @@ import { paisDoCatalogo, temPerfil, perfilDoPais } from '../mundo/registro';
 import { forcaNaLiga, ligaDe } from './ligas';
 import { nomeSemCatalogo, SEM_CATALOGO } from './tabelaDaLiga';
 import { cidadesDoPais } from '../dados/lugares';
+import { nomeCompeticaoFutsal, POPULARIDADE_FUTSAL } from '../dados14/esportes/futsal';
 
 export type CompeticaoId = string;
 export type Confederacao = 'CONMEBOL' | 'UEFA' | 'CONCACAF' | 'CAF' | 'AFC' | 'OFC';
@@ -51,6 +52,7 @@ const SELECOES: Record<'mundial' | Confederacao, string> = { mundial: 'Copa do M
 export function nomeDaCompeticao(id: CompeticaoId): string {
   const [tipo, a, b] = id.split(':');
   if (tipo === 'liga') return divisaoDoNivel(Number(b), a) || 'liga nacional';
+  if (b === 'futsal' || a === 'futsal') return nomeCompeticaoFutsal(tipo, a === 'futsal' ? b : a);
   // REWORK 11.5 · ESP-02: as copas de quadra levam a modalidade no id (`copa:BR:volei`, `cont:CONMEBOL:basquete`).
   if (tipo === 'copa' && (b === 'basquete' || b === 'volei')) return COPAS_DE_QUADRA[b][a] ?? `copa nacional de ${NOME_QUADRA[b]}`;
   if (tipo === 'cont' && (b === 'basquete' || b === 'volei')) return `torneio continental de clubes de ${NOME_QUADRA[b]}`;
@@ -261,7 +263,7 @@ export function copasDeQuadra(v: Vida, m: Quadra, pais: string, ano: number, clu
  * de `selecao.concorrenciaNoPais` (popularidade × tamanho), de ~1 (um país pequeno sem tradição) a ~4,8.
  */
 export function forcaDaSelecao(pais: string, d: Dominio = 'futebol'): number {
-  const pop = temPerfil(pais) ? perfilDoPais(pais).esporte.popularidade[d] ?? 1 : 0.7;
+  const pop = temPerfil(pais) ? perfilDoPais(pais).esporte.popularidade[d] ?? (d === 'futsal' ? POPULARIDADE_FUTSAL[pais] ?? 0.6 : 1) : 0.7;
   const tamanho = Math.log10(Math.max(1, paisDoCatalogo(pais)?.populacao ?? 30) / 1000);
   return Math.round(clamp(1.2 + (pop - 0.6) * 3.2 + tamanho * 0.45, 0.8, 4.8) * 100) / 100;
 }

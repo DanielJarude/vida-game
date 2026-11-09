@@ -122,7 +122,7 @@ interface Comum {
   attrs?: Record<string, string>;
 }
 export type Peca = Comum & (
-  | { tipo: 'massa'; d: string; cor: string; semVolume?: boolean; opacidade?: number }
+  | { tipo: 'massa'; d: string; cor: string; semVolume?: boolean; opacidade?: number; /** VIDA 14: sem o fio (a sombra no chão, o brilho da janela). */ semContorno?: boolean }
   | { tipo: 'vidro'; d: string; claro?: boolean }
   | { tipo: 'metal'; d: string; cor?: string }
   | { tipo: 'linha'; d: string; larg?: number; cor?: string }
@@ -200,7 +200,7 @@ export function Ilustracao({ a, largura, rotulo, className, dados, semChao, styl
         if (volume) usaLuz = true;
         return (
           <g key={i} {...m}>
-            <path d={p.d} fill={cor} fillOpacity={p.opacidade} stroke={contorno(cor)} strokeWidth={fio} vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
+            <path d={p.d} fill={cor} fillOpacity={p.opacidade} stroke={p.semContorno ? 'none' : contorno(cor)} strokeWidth={fio} vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
             {volume && <path d={p.d} fill={`url(#${luz})`} />}
           </g>
         );

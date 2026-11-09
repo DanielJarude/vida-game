@@ -105,6 +105,8 @@ export function Jogo({ c }: { c: ControleVida }) {
     setLugar(l);
   };
   const ir = (d: Aba) => irLugar(resolverDestino(d));
+  // VIDA 14: a loja de piercings leva ao painel (Você · Aparência · Piercings) — `v14/aparencia/irAosPiercings`.
+  useEffect(() => { const f = () => irLugar({ area: 'voce', voce: 'aparencia' }); window.addEventListener(EVENTO_IR_PIERCINGS, f); return () => window.removeEventListener(EVENTO_IR_PIERCINGS, f); });
   // Tocar em Caminhos estando em Caminhos volta à página inicial dele; vindo de outra área, abre onde estava.
   const irArea = (a: Area) => { if (a === 'caminhos' && area === 'caminhos') irLugar({ area: 'caminhos', divisao: 'inicio' }); else ir(a); };
   const focar = (id: string | null) => { setPessoaAberta(id); c.focarPessoa(id); };
@@ -453,6 +455,7 @@ import { Tempo } from '../jogo/Tempo';
 import { oportunidadesAbertas } from '../../motor/sistemas/mercados';
 import { DetalheDaOportunidade } from '../jogo/Alcance';
 import { guardarCompras } from '../jogo/memoriaDeCompras';
+import { EVENTO_IR_PIERCINGS } from '../v14/aparencia/irAosPiercings';
 import { agendaDaSemana } from '../../motor/sistemas/agenda';
 
 /** Um conflito entre compromissos obrigatórios (o trabalho em cima da aula), não uma atividade que perde uma vez. */

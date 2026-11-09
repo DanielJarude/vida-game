@@ -28,6 +28,7 @@ import { paisDaVida } from '../mundo/vida';
 import { okDePagar } from './dinheiro';
 import { lancar } from './extrato';
 import type { Veredito } from '../plausibilidade';
+import { MULTIPLO_PEQUENA_14, descontoMinoritario14, precoDeVenda14, valorJusto14, type ValorDetalhado14 } from '../dados14/empresas/valuation';
 import { anoDoSetor, bemEstarDoZoo, efeitosDoSetor, garantirSetor, sincronizarZoo, temaMaisForte, montarExposicaoDoTema } from './setores';
 
 export const empresas = (v: Vida): Empresa[] => v.financas.empresas ?? [];
@@ -194,12 +195,41 @@ export function abrirEmpresa(v: Vida, tipo: TipoEmpresa, comSocio: boolean): str
 
 /* ---------------------------------------------- Participações à venda */
 
-export interface OfertaDeParticipacao { id: string; tipo: TipoEmpresa; nome: string; parte: number; preco: number; avaliacao: number; historico: number[]; papel: PapelNaEmpresa }
+export interface OfertaDeParticipacao { id: string; tipo: TipoEmpresa; nome: string; parte: number; preco: number; avaliacao: number; historico: number[]; papel: PapelNaEmpresa; /** VIDA 14: o porte de partida (para a compra montar a mesma empresa). */ base14?: number }
 
 /**
  * Participações que aparecem no ano (cidade grande): uma fatia de um hotel, de uma clínica, de uma academia — com
  * o histórico dos últimos anos (o que se sabe de verdade). O preço é a avaliação; o resultado, ninguém promete.
  */
+/**
+ * VIDA 14: a empresa por trás de uma participação à venda — sempre a mesma para a mesma oferta (o porte, a reputação, a
+ * gestão), com os três últimos anos simulados pelas mesmas contas do jogo. É desse histórico que sai o preço.
+ */
+export function empresaDaParticipacao14(v: Vida, tipo: TipoEmpresa, id: string, base: number): Empresa {
+  const t = tipoDeEmpresa(tipo);
+  const r = rngDe(v.economia?.semente ?? 1, id, 'participacao14', v.id);
+  const e = novaEmpresa(v, tipo, false, id);
+  if (e.zoo) delete e.zoo;
+  if (e.acervo) delete e.acervo;
+  e.unidades = Math.max(1, Math.min(4, Math.round(base / Math.max(1, capitalDaUnidade(e)))));
+  e.equipe = t.equipe * e.unidades;
+  e.ativos = Math.round(capitalDaUnidade(e) * t.ativos * e.unidades * (0.5 + r.next() * 0.3));
+  e.reputacao = Math.round(clamp(52 + r.normal() * 14, 20, 85));
+  e.qualidade = Math.round(clamp(58 + r.normal() * 10, 30, 85));
+  e.estado = 'operando';
+  e.tInicio = v.t - 12 * r.int(4, 20);
+  garantirSetor(v, e);
+  const k = conversao(v, e);
+  // Seis anos simulados, os três últimos à vista (a carteira da academia, por exemplo, precisa de anos para assentar).
+  const contas = [0, 1, 2, 3, 4, 5].map(n => contasDoAno(v, e, rngDe(v.economia?.semente ?? 1, id, 'passado14', n, v.id))).slice(-3);
+  e.historico = contas.map(c => Math.round(c.resultado * k / 1000) * 1000);
+  const u = contas[2];
+  e.ultimo = { t: v.t, publico: u.publico, receita: Math.round(u.receita * k), custos: Math.round(u.custos * k), imposto: Math.round(u.imposto * k), resultado: e.historico[2], distribuido: 0 };
+  e.caixa = Math.round(u.custos * k / 6 / 1000) * 1000;
+  avaliar(v, e);
+  return e;
+}
+
 export function ofertasDeParticipacao(v: Vida): OfertaDeParticipacao[] {
   const onde = v.moradia.municipioId;
   if (!['metropole', 'capital'].includes(municipio(onde).perfil) || idade(v) < 18) return [];
@@ -210,16 +240,18 @@ export function ofertasDeParticipacao(v: Vida): OfertaDeParticipacao[] {
   for (let k = 0; k < 2; k++) {
     const t = r.pick(TIPOS_DE_EMPRESA.filter(x => x.id !== 'zoologico' && x.id !== 'museu'));
     const base = t.capital * Math.pow(custoLocal(onde), 1.2) * (0.9 + r.next() * 0.8);
-    // Os últimos anos: a média diz se é boa; a dispersão, o risco. Às vezes quem vende está saindo de um negócio ruim.
-    const media = base * (r.normal() * 0.08 + 0.07);
-    const historico = [0, 1, 2].map(() => Math.round(media * (1 + r.normal() * 0.6) / 1000) * 1000);
-    const lucro = historico.reduce((s, x) => s + x, 0) / 3;
-    const avaliacao = Math.round(Math.max(base * 0.45, base * 0.3 + Math.max(0, lucro) * 4.5) / 1000) * 1000;
+    // VIDA 14: os sorteios antigos do histórico continuam (descartados) para o resto da oferta sair igual; o histórico
+    // agora é o da PRÓPRIA empresa simulada (antes era inventado e não batia com o que ela rendia: o bug da revenda).
+    r.normal(); r.normal(); r.normal(); r.normal();
     const parte = r.pick([0.1, 0.2, 0.3]);
     r.pick(NOMES_DE_EMPRESA[t.id]); r.pick(['Albuquerque']);
     const nome = nomeDeEmpresa13(rngDe(v.economia?.semente ?? 1, 'participacoes13', ano, onde, k), t.id, 'pequeno', usados);
     usados.push(nome);
-    out.push({ id: `pa-${ano}-${k}`, tipo: t.id, nome, parte, preco: Math.round(avaliacao * parte / 1000) * 1000, avaliacao, historico, papel: 'investidor' });
+    const id = `pa-${ano}-${k}`;
+    const e = empresaDaParticipacao14(v, t.id, id, base);
+    const avaliacao = e.avaliacao ?? 0;
+    // A fatia minoritária sai com desconto (sem controle, sem mandar no dividendo).
+    out.push({ id, tipo: t.id, nome, parte, preco: Math.round(avaliacao * parte * descontoMinoritario14(parte) / 1000) * 1000, avaliacao, historico: e.historico ?? [], papel: 'investidor', base14: base });
   }
   return out;
 }
@@ -227,23 +259,13 @@ export function ofertasDeParticipacao(v: Vida): OfertaDeParticipacao[] {
 export function comprarParticipacao(v: Vida, ofertaId: string): string {
   const o = ofertasDeParticipacao(v).find(x => x.id === ofertaId)!;
   const t = tipoDeEmpresa(o.tipo);
-  const id = `em${v.seq++}`;
-  const e = novaEmpresa(v, o.tipo, false, id);
-  const media = o.historico.reduce((s, x) => s + x, 0) / 3;
+  // VIDA 14: a mesma empresa da oferta (o porte, a gestão, o histórico simulado) — o que se pagou é o que ela vale.
+  const e = empresaDaParticipacao14(v, o.tipo, o.id, o.base14 ?? o.avaliacao);
+  e.id = `em${v.seq++}`;
   Object.assign(e, {
-    nome: o.nome, papel: 'investidor', parte: o.parte, investido: o.preco, avaliacao: o.avaliacao, estado: 'operando', reputacao: 50 + Math.round(clamp(media / Math.max(1, t.capital) * 300, -20, 25)), qualidade: 60,
-    caixa: Math.round(o.avaliacao * 0.08), ativos: Math.round(o.avaliacao * 0.6), historico: o.historico, socio: 'os sócios majoritários',
+    nome: o.nome, papel: 'investidor', parte: o.parte, investido: o.preco, socio: 'os sócios majoritários',
     historia: [{ t: v.t, texto: `Comprou ${Math.round(o.parte * 100)}% por ${fmt(o.preco)}.` }]
   } satisfies Partial<Empresa>);
-  if (e.zoo) delete e.zoo;
-  if (e.acervo) delete e.acervo;
-  // VIDA 12.9 (a auditoria): a empresa comprada perdia 20–25% do valor na primeira reavaliação — o caixa e as instalações
-  // inventados não batiam com a avaliação da oferta. O porte acompanha o tamanho dela, e o caixa fecha a conta: o que se
-  // pagou é o que a parte vale no dia da compra (o ano seguinte é que diz se valia).
-  e.unidades = Math.max(1, Math.min(4, Math.round(o.avaliacao / Math.max(1, capitalDaUnidade(e)) / 0.8)));
-  e.equipe = t.equipe * e.unidades;
-  e.caixa += o.avaliacao - avaliar(v, e);
-  avaliar(v, e);
   v.financas.conta -= o.preco;
   v.anoAtual.acoes.push(`participacao:${ofertaId}`);
   (v.financas.empresas ??= []).push(e);
@@ -403,13 +425,17 @@ function zooNoAno(v: Vida, e: Empresa, r: Rng): void {
  * caixa). Nunca abaixo de zero (a responsabilidade é limitada — a dívida da empresa não é avaliada como sua).
  */
 export function avaliar(v: Vida, e: Empresa): number {
-  const h = e.historico ?? [];
-  const media = h.length ? h.slice(-3).reduce((s, x) => s + x, 0) / Math.min(3, h.length) : 0;
-  const acervo = e.acervo ? e.acervo.valor * 0.6 * conversao(v, e) : 0;
-  const liquidacao = e.ativos * 0.45 + e.caixa + acervo;
-  const operacao = Math.max(0, media) * 4.5 + e.caixa + e.ativos * 0.3 + acervo;
-  e.avaliacao = Math.max(0, Math.round(Math.max(liquidacao, operacao) / 1000) * 1000);
+  e.avaliacao = Math.max(0, Math.round(detalheDoValorPequena14(v, e).valor / 1000) * 1000);
   return e.avaliacao;
+}
+
+/**
+ * VIDA 14: o valor justo (`dados14/empresas/valuation`): o múltiplo do ramo sobre o lucro normal, com desconto pela falta
+ * de histórico e pela instabilidade — sem somar as instalações por cima do lucro que elas já rendem. O piso é a liquidação.
+ */
+export function detalheDoValorPequena14(v: Vida, e: Empresa): ValorDetalhado14 {
+  const acervo = e.acervo ? e.acervo.valor * 0.6 * conversao(v, e) : 0;
+  return valorJusto14({ lucros: (e.historico ?? []).slice(-6), receitas: [], multiplo: MULTIPLO_PEQUENA_14[e.tipo] ?? 3.5, multReceita: 0, liquidacao: e.ativos * 0.45 + acervo, caixa: e.caixa, divida: 0 });
 }
 
 /**
@@ -452,7 +478,7 @@ export function custoDaDecisao(v: Vida, e: Empresa, d: DecisaoEmpresa): number {
 }
 
 /** O valor da venda da sua parte (um comprador negocia para baixo; a corretagem fica com 5%). */
-export const valorDeVendaDaParte = (e: Empresa) => Math.round(valorDaParte(e) * 0.85 / 1000) * 1000;
+export const valorDeVendaDaParte = (e: Empresa) => (e.estado === 'encerrada' ? 0 : precoDeVenda14(e.avaliacao ?? 0, e.parte));
 
 export function disponibilidadeEmpresa(v: Vida, e: Empresa | undefined, d: DecisaoEmpresa): Pick<Veredito, 'motivo'> & { ok: boolean; resgate?: Veredito['resgate'] } {
   if (!e || e.estado === 'encerrada') return { ok: false, motivo: 'Essa empresa não existe mais.' };
@@ -563,7 +589,7 @@ export function decidirEmpresa(v: Vida, e: Empresa, d: DecisaoEmpresa): string {
     case 'vender_parte': {
       // Um quarto da empresa para um investidor: dinheiro agora, menos lucro depois — e você segue no comando.
       const fatia = Math.min(0.25, e.parte - 0.5);
-      const valor = Math.round(Math.max(0, e.avaliacao ?? 0) * fatia * 0.85 / 1000) * 1000;
+      const valor = precoDeVenda14(e.avaliacao ?? 0, fatia);
       v.financas.conta += valor;
       e.investido = Math.round(e.investido * (e.parte - fatia) / e.parte);
       e.parte = Math.round((e.parte - fatia) * 100) / 100;

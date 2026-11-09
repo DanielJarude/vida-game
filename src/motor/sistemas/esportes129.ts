@@ -23,7 +23,7 @@ import { habilidade } from './frentes';
 
 /** As provas individuais com equipe (a colocação da temporada é a do atleta na prova que importa). */
 const INDIVIDUAIS = new Set<string>(['natacao', 'atletismo', 'lutas']);
-const ESPORTES = new Set<string>(['futebol', 'basquete', 'volei', 'tenis', 'natacao', 'atletismo', 'lutas']);
+const ESPORTES = new Set<string>(['futebol', 'basquete', 'volei', 'tenis', 'natacao', 'atletismo', 'lutas', 'futsal']);
 
 /** A temporada que está correndo agora (a que o próximo `fecharTemporada` fecha). */
 export const anoDaTemporadaEmCurso = (v: Vida) => anoDe(v.t + 6);
@@ -37,6 +37,7 @@ export function palavrasDoEsporte(d: Dominio | string | undefined): PalavrasDoEs
   switch (d) {
     case 'basquete': return { individual: false, onde: 'quadra', deOnde: 'da quadra', momento: 'No terceiro quarto', disputa: 'o jogo' };
     case 'volei': return { individual: false, onde: 'quadra', deOnde: 'da quadra', momento: 'No terceiro set', disputa: 'o jogo' };
+    case 'futsal': return { individual: false, onde: 'quadra', deOnde: 'da quadra', momento: 'A dois minutos do fim', disputa: 'o jogo' };
     case 'tenis': return { individual: true, onde: 'quadra', deOnde: 'da quadra', momento: 'No segundo set', disputa: 'o torneio' };
     case 'natacao': return { individual: true, onde: 'piscina', deOnde: 'da piscina', momento: 'Na metade da prova', disputa: 'a competição' };
     case 'atletismo': return { individual: true, onde: 'pista', deOnde: 'da pista', momento: 'Na metade da prova', disputa: 'a competição' };

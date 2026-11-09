@@ -32,6 +32,8 @@ import { DesenhoObjeto } from './Objetos';
 import { Figura } from '../../avatar/Figura';
 import { tatuagensNaFigura } from '../../../motor/sistemas/tatuagens';
 import '../../catalogo.css';
+import { furoDaJoia, furoFeito } from '../../../motor/v14/aparencia/piercings14';
+import { irAosPiercings } from '../../v14/aparencia/irAosPiercings';
 
 const POR_PAGINA = 18;
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -165,6 +167,7 @@ function ProdutoNaLoja({ vida, agir, linha, lojaId, faixa, marca, preco, crianca
   const meuCoisa = p.tipo === 'coisa' ? vida.financas.coisas?.find(y => y.coisaId === p.id) : undefined;
   const marcaDoMeu = meu?.marca ?? meuCoisa?.marca;
   const cores = it ? coresDoItem(p.id) : [];
+  const furo = it?.piercing ? furoDaJoia(p.id) : undefined;
   // O que se vê no cartão: a peça que você tem (a cor dela), ou a variante escolhida para comprar.
   const variante = meu ? sementeDaPeca(meu) : corEscolhida ? varianteDaCor(p.id, corEscolhida) : varianteDaVitrine(p.id);
   const corDoCartao = it ? corPrincipalDa(p.id, variante) : undefined;
@@ -214,7 +217,10 @@ function ProdutoNaLoja({ vida, agir, linha, lojaId, faixa, marca, preco, crianca
             <span className="nota">É seu{marcaDoMeu ? ` (${marcaPorId(marcaDoMeu)?.nome ?? marcaDoMeu})` : ''}{meu ? (meu.usando ? ' · em uso' : ' · guardado') : ''}.</span>
             {meu && <BotaoAcao vida={vida} acao={{ tipo: 'usar_item', itemId: p.id, id: meu.id, usar: !meu.usando }} agir={agir} variante="discreto">{meu.usando ? 'Guardar' : 'Usar'}</BotaoAcao>}
           </span>
-        ) : <BotaoAcao vida={vida} acao={acao} agir={agir} variante="secundario" ocultarImpossivel={crianca}>Comprar</BotaoAcao>}
+        ) : furo && !furoFeito(vida, furo) ? <button type="button" className="botao botao--secundario" onClick={() => irAosPiercings(furo)}>Furar e comprar no painel</button>
+          : <BotaoAcao vida={vida} acao={acao} agir={agir} variante="secundario" ocultarImpossivel={crianca}>Comprar</BotaoAcao>}
+        {/* VIDA 14: joia de furo — o painel de piercings (Você · Aparência) mostra o furo, as joias que cabem e o resultado no rosto. */}
+        {furo && <button type="button" className="link" onClick={() => irAosPiercings(furo)}>Ver no painel de piercings →</button>}
       </span>
     </li>
   );

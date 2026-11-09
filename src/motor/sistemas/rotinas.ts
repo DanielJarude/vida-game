@@ -672,6 +672,10 @@ export const tempoDaRotina = (r: Rotina) => {
 };
 
 for (const r of ROTINAS) if (r.social) ROTINAS_SOCIAIS[r.id] = r.social;
+/** VIDA 14: as atividades de um módulo novo (`v14/*`) entram por aqui — o motor antigo não importa o novo. */
+export function registrarRotinas(ms: ModeloRotina[]): void {
+  for (const m of ms) if (!POR_ID.has(m.id)) { (ROTINAS as ModeloRotina[]).push(m); POR_ID.set(m.id, m); if (m.social) ROTINAS_SOCIAIS[m.id] = m.social; }
+}
 /** A terapia com encaminhamento sai pela rede pública, de graça — onde a rede pública existe (no sistema de seguro, não). */
 export const terapiaPublica = (v: Vida) => encaminhado(v) && redeDeSaude(v).sistema !== 'seguro';
 /** O custo de uma atividade para esta vida. */

@@ -364,6 +364,7 @@ function comuns(v: Vida, sai: (r: string, x: number, g: LinhaRazao['grupo']) => 
   // coleção) — cada módulo diz o seu (`PATRIMONIO_NO_MES`), e só aparece para quem é dono (não a criança na casa dos pais).
   if (!naFamilia || i >= 18) for (const fn of PATRIMONIO_NO_MES) for (const l of fn(v, c)) sai(l.rotulo, l.valor, 'moradia');
   if (v.fatos['aposta_online'] !== undefined && i >= 18) sai('Apostas', Math.max(300, Math.min(2500, rendaPropriaMensal(v) * 0.15)), 'lazer');
+  if (i >= 18) for (const fn of GASTOS_DO_MES) for (const l of fn(v, c)) sai(l.rotulo, l.valor, l.grupo);
   if (naFamilia && i >= 18) sai('Animais: ração, vacina, areia', custoDosPets(v, c, 'eu'), 'animais');
   for (const d of f.dividas) if (d.parcela > 0 && d.saldo > 0) sai(d.descricao, Math.min(d.parcela, d.saldo), 'dividas');
 }
@@ -388,6 +389,8 @@ export const despesasMensais = (v: Vida, estilo?: EstiloDeVida) => orcamento(v, 
 
 /** REWORK 12: custos mensais do patrimônio (preenchido pelos módulos de imóveis e de coleção). */
 export const PATRIMONIO_NO_MES: ((v: Vida, c: number) => { rotulo: string; valor: number }[])[] = [];
+/** VIDA 14: outras saídas do mês ditas por módulos de cima (as dependências: o cigarro, a bebida, as compras por impulso). */
+export const GASTOS_DO_MES: ((v: Vida, c: number) => { rotulo: string; valor: number; grupo: LinhaRazao['grupo'] }[])[] = [];
 /** VIDA 12.9: quem vende bens quando o rombo do ano é grande (`fortuna129`), antes do crédito caro. Recebe o que falta. */
 export const COBRIR_ROMBO: ((v: Vida, falta: number) => void)[] = [];
 

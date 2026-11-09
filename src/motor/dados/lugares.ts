@@ -13,6 +13,7 @@
 import type { Regiao } from '../tipos';
 import type { PerfilDePais, PerfilUrbano } from '../mundo/tipos';
 import { MUNICIPIOS_1291 } from './municipios1291';
+import { AJUSTE_LOCAL_14 as AJ14 } from '../dados14/cidades/municipios14';
 import { aoRegistrar, idDaCidade, indiceNoCatalogo, PAIS_PADRAO, paisDoCatalogo, paisDoId, paisPeloIndice, perfilDoPais, temPerfil } from '../mundo/registro';
 
 /*
@@ -262,11 +263,12 @@ export function economiaLocal(id: string) {
   if (m.pais === PAIS_PADRAO) {
     const r = REGIAO[m.regiao!];
     const brasilia = m.id === 'brasilia-df' ? 1.12 : 1;
+    const [kc, ks] = AJ14[m.id] ?? [1, 1]; // VIDA 14: o ajuste fino das cidades novas
     return {
-      custo: p.custo * r.custo * brasilia,
-      salario: p.salario * r.salario * brasilia,
+      custo: p.custo * r.custo * brasilia * kc,
+      salario: p.salario * r.salario * brasilia * ks,
       /** Aluguel de referência (padrão 3, dois quartos). */
-      aluguel: Math.round(p.aluguel * r.custo * brasilia),
+      aluguel: Math.round(p.aluguel * r.custo * brasilia * kc),
       transporte: p.transporte,
       rotulo: p.rotulo
     };
@@ -323,6 +325,7 @@ const LITORAL = new Set(['AP', 'PA', 'MA', 'PI', 'CE', 'RN', 'PB', 'PE', 'AL', '
 export function pertoDaAgua(id: string): boolean {
   const m = municipio(id);
   if (m.pais !== PAIS_PADRAO) return !!m.litoral;
+  if (AJ14[m.id]) return AJ14[m.id][2] > 0;
   if (m.uf === 'DF' || m.uf === 'GO' || ['sao-paulo-sp', 'campinas-sp', 'curitiba-pr', 'goiania-go'].includes(m.id)) return false;
   if (m.perfil === 'metropolitana' || (m.perfil === 'metropole' && !m.capital)) return false;
   return LITORAL.has(m.uf) || m.perfil === 'pequena' || m.perfil === 'polo';

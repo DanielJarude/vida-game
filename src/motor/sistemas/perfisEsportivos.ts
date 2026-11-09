@@ -59,6 +59,7 @@ export interface PerfilEsportivo {
 
 export const PERFIS: Record<string, PerfilEsportivo> = {
   futebol: { modalidade: 'futebol', estrutura: 'clube', coletivo: true, unidade: 'temporada', disputas: ['jogo', 'jogos'] },
+  futsal: { modalidade: 'futsal', estrutura: 'clube', coletivo: true, unidade: 'temporada', disputas: ['jogo', 'jogos'] },
   basquete: { modalidade: 'basquete', estrutura: 'clube', coletivo: true, unidade: 'temporada', disputas: ['jogo', 'jogos'] },
   volei: { modalidade: 'volei', estrutura: 'clube', coletivo: true, unidade: 'temporada', disputas: ['jogo', 'jogos'] },
   tenis: { modalidade: 'tenis', estrutura: 'circuito', coletivo: false, unidade: 'ano de circuito', disputas: ['torneio', 'torneios'] },
@@ -230,8 +231,8 @@ export function historicoDaCarreira(e: CarreiraEsportiva): HistoricoEsportivo {
       })
     };
   }
-  if (e.modalidade === 'futebol') {
-    const def = !!e.posicao && ['goleiro', 'zagueiro', 'volante', 'lateral'].includes(e.posicao);
+  if (e.modalidade === 'futebol' || e.modalidade === 'futsal') {
+    const def =!!e.posicao && ['goleiro', 'zagueiro', 'volante', 'lateral'].includes(e.posicao);
     return {
       agrupado: 'clube', colunas: ['Clube', 'Anos', 'Jogos', 'Titular', 'Gols', 'Assist.', ...(def ? [e.posicao === 'goleiro' ? 'Sem sofrer gol' : 'Desarmes'] : [])],
       linhas: grupos.map(g => [nome(g), anos(g), String(soma(g.ts, t => t.partidas)), String(soma(g.ts, t => t.titular)), String(soma(g.ts, t => t.gols)), String(soma(g.ts, t => t.assistencias)), ...(def ? [String(soma(g.ts, t => t.defesa ?? 0))] : [])])
@@ -299,7 +300,7 @@ export function resumoDaCarreira(e: CarreiraEsportiva): string {
   }
   const jogos = soma(t => t.partidas);
   const casa = um(equipes, e.modalidade === 'futebol' ? ['clube', 'clubes'] : ['equipe', 'equipes']);
-  if (e.modalidade === 'futebol') return `${anos}, ${casa}, ${um(jogos, p.disputas)}, ${um(soma(t => t.gols), ['gol', 'gols'])}`;
+  if (e.modalidade === 'futebol' || e.modalidade === 'futsal') return `${anos}, ${casa},${um(jogos, p.disputas)}, ${um(soma(t => t.gols), ['gol', 'gols'])}`;
   if (e.modalidade === 'basquete') return `${anos}, ${casa}, ${um(jogos, p.disputas)}, ${virgula(soma(t => (t.pontos ?? 0) * t.partidas) / (jogos || 1))} pontos por jogo`;
   const vs = ts.filter(t => t.volei);
   if (e.modalidade === 'volei' && vs.length) {

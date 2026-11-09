@@ -56,8 +56,18 @@ import { premiosDoMundo } from './premiosDoFutebol';
 import { nomePor } from './notoriedade';
 import { daPorta, individualComEquipe, perfilDe, portaAmadora, semVinculo } from './perfisEsportivos';
 import { formatarMarca, jogarLutas, jogarProvas, jogarTemporadaVolei, NOME_FUNCAO_VOLEI, numeroDaFuncao, podiosDe, type FuncaoVolei } from './provas';
+import { BASE_FUTSAL, CONTRATO_FUTSAL, divisaoFutsal, funcaoFutsalPorSorteio, JOGOS_FUTSAL, PRODUCAO_FUTSAL, type FuncaoFutsal } from '../dados14/esportes/futsal';
 
-export const MODALIDADES: Dominio[] = ['futebol', 'volei', 'natacao', 'atletismo', 'lutas', 'basquete', 'tenis'];
+export const MODALIDADES: Dominio[] = ['futebol', 'volei', 'natacao', 'atletismo', 'lutas', 'basquete', 'tenis', 'futsal'];
+
+/**
+ * VIDA 14 · ganchos de modalidade: o que uma modalidade nova põe na temporada (o futsal: a posição, os gols, o
+ * goleiro-linha, as copas). Registrados por `v14/esportes` (o motor antigo não importa o novo).
+ */
+export interface GanchoDeModalidade { temporada?: (v: Vida, r: Rng, e: CarreiraEsportiva, t: Temporada, nota: number, ajuste: number, disp: number) => void }
+export const GANCHOS_DE_MODALIDADE: Partial<Record<Dominio, GanchoDeModalidade>> = {};
+/** A posição no futsal: a escolhida (ou dada pelo técnico) — senão, a que a quadra dá ao corpo. */
+export const funcaoFutsalDe = (v: Vida, e?: CarreiraEsportiva): FuncaoFutsal => e?.futsal?.funcao ?? funcaoFutsalPorSorteio(hashMisturado(`${v.id}:futsal_funcao`));
 
 /** "a base do Bahia", "a equipe de base do Minas", "a equipe da prefeitura de Manaus", "a academia de tênis de Recife" — sem repetir "equipe". */
 export function aEquipe(d: Dominio, clube: string): string {
@@ -103,15 +113,17 @@ export function conviteDaBase(v: Vida): { dominio: Dominio; municipioId: string;
 /** A categoria de quem está na base (sub-15, sub-17...): a mesma na tela e no texto. */
 export function categoriaDaBase(v: Vida, e: CarreiraEsportiva): string {
   const i = idade(v);
-  return e.modalidade === 'tenis' ? 'circuito juvenil' : e.modalidade !== 'futebol' ? 'equipe de base' : i <= 15 ? 'sub-15' : i <= 17 ? 'sub-17' : 'sub-20';
+  // VIDA 14: o futsal de base também é por categoria (sub-15, sub-17, sub-20).
+  return e.modalidade === 'tenis' ? 'circuito juvenil' : e.modalidade !== 'futebol' && e.modalidade !== 'futsal' ? 'equipe de base' : i <= 15 ? 'sub-15' : i <= 17 ? 'sub-17' : 'sub-20';
 }
 
 /** O contrato profissional: a idade em que chega e a técnica que o clube pede (a mesma conta do ano na base). */
-export const contratoDaBase = (d: Dominio) => ({ idade: (d === 'futebol' ? [17, 20] : [17, 22]) as [number, number], tecnica: d === 'futebol' ? 79 : 82 });
+export const contratoDaBase = (d: Dominio) => (d === 'futsal' ? CONTRATO_FUTSAL : { idade: (d === 'futebol' ? [17, 20] : [17, 22]) as [number, number], tecnica: d === 'futebol' ? 79 : 82 });
 
 /** O nome da divisão (ou do circuito) em cada modalidade: fonte única para tela e texto. */
 export function divisaoDe(d: Dominio, nivel: number, pais = paisCorrente()): string {
   if (d === 'futebol') return divisaoDoNivel(nivel, pais) ?? '';
+  if (d === 'futsal') return divisaoFutsal(nivel, pais);
   // Basquete e vôlei: as ligas brasileiras (NBB, Superliga) só no Brasil; fora, a liga do país dita pelo que ela é —
   // sem inventar nome (o perfil dos países só traz as divisões do futebol).
   if (d === 'basquete') return (pais === PAIS_PADRAO ? DIVISAO_BASQUETE : DIVISAO_GENERICA_QUADRA('basquete'))[nivel] ?? '';
@@ -131,8 +143,8 @@ export const OCUPACOES_DE_ATLETA = ['jogador_futebol', 'atleta', 'jogador_basque
 /** A ocupação de quem se profissionaliza em cada modalidade. */
 export const ocupacaoDaModalidade = (d: Dominio) => (d === 'futebol' ? 'jogador_futebol' : d === 'basquete' ? 'jogador_basquete' : d === 'tenis' ? 'tenista' : 'atleta');
 
-const NOME_MOD: Partial<Record<Dominio, string>> = { futebol: 'futebol', volei: 'vôlei', natacao: 'natação', atletismo: 'atletismo', lutas: 'luta', basquete: 'basquete', tenis: 'tênis' };
-const EQUIPE: Partial<Record<Dominio, string>> = { futebol: 'a base', volei: 'a equipe de base', natacao: 'a equipe de natação', atletismo: 'a equipe de atletismo', lutas: 'a equipe de competição', basquete: 'a equipe de base', tenis: 'a academia de tênis' };
+const NOME_MOD: Partial<Record<Dominio, string>> = { futebol: 'futebol', volei: 'vôlei', natacao: 'natação', atletismo: 'atletismo', lutas: 'luta', basquete: 'basquete', tenis: 'tênis', futsal: 'futsal' };
+const EQUIPE: Partial<Record<Dominio, string>> = { futebol: 'a base', volei: 'a equipe de base', natacao: 'a equipe de natação', atletismo: 'a equipe de atletismo', lutas: 'a equipe de competição', basquete: 'a equipe de base', tenis: 'a academia de tênis', futsal: 'a base de futsal' };
 
 function hash(s: string): number {
   let h = 2166136261;
@@ -212,7 +224,7 @@ const AUGE_MODALIDADE: Partial<Record<Dominio, number>> = { volei: 31, natacao: 
 /** O risco de lesão da modalidade (o joelho e o tornozelo do basquete; o ombro e o cotovelo do tênis). */
 const RISCO_MODALIDADE: Partial<Record<Dominio, number>> = { basquete: 1.1, tenis: 1, volei: 1.05, lutas: 1.2, natacao: 0.8, atletismo: 1 };
 export { posicaoDe };
-export const augeDe = (v: Vida, e: CarreiraEsportiva) => (e.modalidade === 'futebol' ? AUGE_POSICAO[posicaoDe(v, e)] : AUGE_MODALIDADE[e.modalidade] ?? 29);
+export const augeDe = (v: Vida, e: CarreiraEsportiva) => (e.modalidade === 'futebol' ? AUGE_POSICAO[posicaoDe(v, e)] : e.modalidade === 'futsal' ? PRODUCAO_FUTSAL[funcaoFutsalDe(v, e)].auge : AUGE_MODALIDADE[e.modalidade] ?? 29);
 
 /* ------------------------------------------------------------ Salário */
 
@@ -240,7 +252,7 @@ export function salarioDoContrato(v: Vida, e: CarreiraEsportiva, nivel: number =
   const futebol = e.modalidade === 'futebol';
   // Tênis não tem salário de clube: vive de premiação (`modalidades.premiacaoTenis`).
   if (vivePremiacao(e.modalidade)) return 0;
-  const base = (futebol ? BASE_FUTEBOL : e.modalidade === 'basquete' ? BASE_BASQUETE : BASE_OUTROS)[nivel] ?? 0;
+  const base = (futebol ? BASE_FUTEBOL : e.modalidade === 'basquete' ? BASE_BASQUETE : e.modalidade === 'futsal' ? BASE_FUTSAL : BASE_OUTROS)[nivel] ?? 0;
   const rep = e.reputacao ?? 30;
   const papel = espaco === 'titular' ? 1 : 0.55;
   const nome = 0.45 + (rep / 100) ** 2 * 2.2;
@@ -556,7 +568,7 @@ export const barraDaDivisao = (d: Dominio, nivel: number) => (d === 'futebol' ? 
 /** A técnica que a divisão pede para começar jogando (a mesma barra, um pouco acima; nos outros esportes, a escada de antes). */
 export const barraDeTitular = (d: Dominio, nivel: number) => (d === 'futebol' ? (BARRA_FUTEBOL[nivel] ?? 89) + 1 : d === 'tenis' ? BARRA_TENIS[nivel] ?? 91 : 72 + nivel * 2);
 /** Quantos jogos (ou competições) a temporada tem, em cada modalidade e nível: fonte única (temporada, palmarés, seleção). */
-export const jogosDaTemporada = (d: Dominio, nivel: number) => (d === 'futebol' ? PARTIDAS[nivel] : d === 'basquete' ? [0, 18, 26, 32, 34][nivel] : d === 'tenis' ? [0, 14, 20, 22, 22][nivel] : d === 'volei' ? [0, 14, 20, 24, 26][nivel] : [0, 8, 10, 12, 12][nivel]) ?? 0;
+export const jogosDaTemporada = (d: Dominio, nivel: number) => (d === 'futebol' ? PARTIDAS[nivel] : d === 'futsal' ? JOGOS_FUTSAL[nivel] : d === 'basquete' ? [0, 18, 26, 32, 34][nivel] : d === 'tenis' ? [0, 14, 20, 22, 22][nivel] : d === 'volei' ? [0, 14, 20, 24, 26][nivel] : [0, 8, 10, 12, 12][nivel]) ?? 0;
 /** O que cada posição produz por jogo, em média (a temporada sorteia em volta disso; o palmarés mede contra isso). */
 export const GOL: Record<Posicao, number> = { goleiro: 0, lateral: 0.05, zagueiro: 0.05, volante: 0.06, meia: 0.18, ponta: 0.3, atacante: 0.46 };
 export const ASSIST: Record<Posicao, number> = { goleiro: 0.005, lateral: 0.14, zagueiro: 0.03, volante: 0.1, meia: 0.27, ponta: 0.24, atacante: 0.14 };
@@ -658,6 +670,7 @@ export function fecharTemporada(v: Vida, r: Rng, e: CarreiraEsportiva): Temporad
   if (e.modalidade === 'volei') jogarTemporadaVolei(v, r, e, t, nota);
   if (e.modalidade === 'natacao' || e.modalidade === 'atletismo') jogarProvas(v, r, e, t, nota, h);
   if (e.modalidade === 'lutas') jogarLutas(v, r, t, nota);
+  GANCHOS_DE_MODALIDADE[e.modalidade]?.temporada?.(v, r, e, t, nota, ajuste, disp);
   if (futebol) t.minutos = Math.round(titular * (78 + r.next() * 10) + (partidas - titular) * (18 + r.next() * 10));
   // REWORK 11 · ESP-11.6: os lances que os momentos do ano somaram entram AQUI (antes do palmarés, dos prêmios, da
   // biografia e dos totais) — e a final nacional vencida numa prova individual faz da temporada um título.
@@ -844,7 +857,7 @@ export const palavraDaNota = (n: number) => (n >= 8.2 ? 'temporada de destaque' 
 /** O nome no mercado, em palavras. */
 /** A reputação no mercado, no idioma da modalidade (o vôlei tem equipe; o atletismo e a luta, circuito — não "elenco"). */
 export const palavraDaReputacao = (x: number, modalidade: Dominio = 'futebol') => {
-  const coletivo = modalidade === 'futebol' || modalidade === 'volei' || modalidade === 'basquete';
+  const coletivo = modalidade === 'futebol' || modalidade === 'volei' || modalidade === 'basquete' || modalidade === 'futsal';
   const quem = modalidade === 'futebol' ? 'jogador de confiança do elenco' : coletivo ? 'atleta de confiança da equipe' : 'atleta respeitado no circuito';
   const mais = modalidade === 'futebol' ? 'mais um no elenco' : coletivo ? 'mais uma peça da equipe' : 'mais um nas competições';
   return x >= 75 ? (coletivo ? 'um dos nomes do campeonato' : 'um dos nomes da modalidade no país') : x >= 58 ? 'nome respeitado no mercado' : x >= 40 ? quem : x >= 24 ? mais : 'pouco lembrado pelo mercado';
@@ -864,14 +877,14 @@ export function processarEsporte(v: Vida, r: Rng, presenca: Record<string, numbe
     const h = habilidade(v, mod.d);
     if (mod.nivel >= 2 && h >= 50 && !temFato(v, `destaque_${mod.d}`) && r.chance(0.5)) {
       marcarFato(v, `destaque_${mod.d}`);
-      const texto = mod.d === 'futebol' ? `Foi ${flex(ge(v), 'o artilheiro', 'a artilheira')} do campeonato ${i <= 12 ? 'da escolinha' : 'entre escolas da cidade'}.` : `Ganhou a primeira medalha de ${NOME_MOD[mod.d]} num torneio regional.`;
+      const texto = mod.d === 'futebol' || mod.d === 'futsal' ? `Foi ${flex(ge(v), 'o artilheiro', 'a artilheira')} do campeonato ${mod.d === 'futsal' ? 'de futsal ' : ''}${i <= 12 ? 'da escolinha' : 'entre escolas da cidade'}.` : `Ganhou a primeira medalha de ${NOME_MOD[mod.d]} num torneio regional.`;
       escrever(v, { texto, relevancia: 'biografia', tema: 'lazer', tom: 'bom' });
       marcar(v, 'destaque', texto, 2, { dominio: mod.d });
     }
     // A peneira aparece para quem se destaca — raramente para quem só brinca.
     const ultimaPeneira = v.caminhos.ultimas[`peneira_${mod.d}`];
     const tentativas = v.fatos[`peneiras_${mod.d}`] ?? 0;
-    const janela = mod.d === 'futebol' ? i >= 11 && i <= 17 : mod.d === 'tenis' ? i >= 10 && i <= 16 : i >= 12 && i <= 18;
+    const janela = mod.d === 'futebol' || mod.d === 'futsal' ? i >= 11 && i <= 17 : mod.d === 'tenis' ? i >= 10 && i <= 16 : i >= 12 && i <= 18;
     if (janela && h >= 42 && tentativas < 3 && (ultimaPeneira === undefined || v.t - ultimaPeneira >= 24)) {
       const serio = mod.nivel >= 2 ? 1 : 0.35;
       // Quem foi destaque (ou capitão) do time da escola é visto por quem indica (`arcos`): a história da atividade pesa na descoberta.
@@ -944,7 +957,7 @@ export function processarEsporte(v: Vida, r: Rng, presenca: Record<string, numbe
  * luta (o torneio aberto) entraram. A natação não (o auge é cedo: quem não nadou base não chega ao adulto), e o
  * tênis também não (não há "time de cima": o caminho é o ranking, desde o juvenil).
  */
-export const MODALIDADES_AMADORAS: Dominio[] = ['futebol', 'basquete', 'volei', 'atletismo', 'lutas'];
+export const MODALIDADES_AMADORAS: Dominio[] = ['futebol', 'basquete', 'volei', 'atletismo', 'lutas', 'futsal'];
 /** REWORK 9.7 · FUT-02: a idade da porta amadora (o teste no time de cima de um clube pequeno). */
 export const IDADE_AMADOR: [number, number] = [17, 30];
 /**
@@ -1181,7 +1194,7 @@ function anoProfissional(v: Vida, r: Rng, e: CarreiraEsportiva): void {
   if (e.doping && r.chance(0.24)) { flagrado(v, e); return; }
   // Lesões: mais prováveis com a idade, o treino forçado, a posição, a semana sem descanso — e jogando machucado.
   const atual = lesaoAtiva(v);
-  const lesao = (0.07 + Math.max(0, i - 26) * 0.012) * (forcar ? 1.6 : preservar ? 0.6 : 1) * (e.doping ? 1.3 : 1) * (e.modalidade === 'futebol' ? RISCO_POSICAO[pos] : RISCO_MODALIDADE[e.modalidade] ?? 1) * fatorDeRiscoFisico(v) * (atual?.lesao.cuidado === 'sacrificio' ? 1.4 : 1) * (v.fatos['oficio:fisico'] !== undefined && v.t - v.fatos['oficio:fisico'] < 12 ? 1.15 : 1);
+  const lesao = (0.07 + Math.max(0, i - 26) * 0.012) * (forcar ? 1.6 : preservar ? 0.6 : 1) * (e.doping ? 1.3 : 1) * (e.modalidade === 'futebol' ? RISCO_POSICAO[pos] : e.modalidade === 'futsal' ? PRODUCAO_FUTSAL[funcaoFutsalDe(v, e)].risco : RISCO_MODALIDADE[e.modalidade] ?? 1) * fatorDeRiscoFisico(v) * (atual?.lesao.cuidado === 'sacrificio' ? 1.4 : 1) * (v.fatos['oficio:fisico'] !== undefined && v.t - v.fatos['oficio:fisico'] < 12 ? 1.15 : 1);
   if ((!atual || atual.lesao.cuidado === 'sacrificio') && r.chance(lesao)) {
     e.lesoes += 1;
     const x = r.next();
@@ -1432,7 +1445,7 @@ export function encerrarCarreira(v: Vida, e: CarreiraEsportiva, motivo: NonNulla
     // REWORK 11.5 · ESP-04: quem foi goleiro é chamado para treinar goleiros (a comissão tem o seu lugar).
     const goleiro = e.modalidade === 'futebol' && e.posicao === 'goleiro' && i >= ocupacao('treinador_goleiros').idadeMin;
     const aux = goleiro ? 'treinador_goleiros' : comissaoDe(e.modalidade).auxiliar;
-    const oc = e.modalidade === 'tenis' ? 'professor_tenis' : aux && i >= ocupacao(aux).idadeMin ? aux : e.modalidade === 'futebol' ? 'treinador_escolinha' : e.modalidade === 'lutas' ? 'instrutor_lutas' : undefined;
+    const oc = e.modalidade === 'tenis' ? 'professor_tenis' : aux && i >= ocupacao(aux).idadeMin ? aux : e.modalidade === 'futebol' || e.modalidade === 'futsal' ? 'treinador_escolinha' : e.modalidade === 'lutas' ? 'instrutor_lutas' : undefined;
     if (oc) novaOportunidade(v, { tipo: 'convite', ocupacaoId: oc, dominio: e.modalidade, meses: 24, chave: 'pos_treinador', titulo: e.modalidade === 'tenis' ? 'Da quadra para a aula' : e.modalidade === 'futebol' ? 'Do campo para o banco' : perfilDe(e.modalidade).estrutura === 'clube' ? 'Da quadra para o banco' : 'Do outro lado do treino', texto: oc === 'treinador_goleiros' ? 'Um clube montando a comissão técnica quer alguém que entenda de goleiro por dentro: o treino próprio, a leitura do jogo pela área, quem joga no domingo.' : oc === 'professor_tenis' ? 'Um clube da cidade quer alguém com passado de circuito para as turmas e os juvenis: aula por hora, alunos seus.' : oc === aux ? (temFato(v, 'pos_treinador') ? 'O treinador que você conheceu no clube montou uma comissão técnica e lembrou de quem tirou os cursos ainda jogando.' : 'Um treinador que trabalhou com você montou uma comissão técnica: quer alguém que o vestiário respeite. Os cursos, você tira no caminho.') : oc === 'instrutor_lutas' ? 'Uma academia do bairro quer abrir turmas com alguém que já lutou de verdade.' : 'Uma escolinha do bairro precisa de alguém que saiba ensinar e que já tenha jogado de verdade.' });
   }
   abalar(v, eraPro ? 'o fim da carreira no esporte' : `a dispensa ${e.modalidade === 'futebol' ? 'da base' : 'da equipe'}`, -(eraPro ? 8 : 10), 6);

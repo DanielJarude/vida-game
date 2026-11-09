@@ -64,7 +64,7 @@ import type { AcaoProfissional } from './profissao';
 import { registrarQuemApareceu } from './rede';
 import { leituraDoNome, porOrigem } from './notoriedade';
 import { ACOES_DO_CARGO, disponibilidadeDoCargo, executarDoCargo, rotuloDoCargo } from './mandato';
-import { caiNoCiclo, cargoPresidencial, ciclosDoCargo129, crisesDoCargo129, ehCrise129 } from '../dados/presidencia129';
+import { caiNoCiclo, cargoPresidencial, ciclosDoCargo129, crisesDoCargo129, ehCrise129, eleicaoAvulsa129 } from '../dados/presidencia129';
 
 /**
  * VIDA 12.9 · A PRESIDÊNCIA mora num pacote acima (`presidencia129`): a corrida (adversários, debate, segundo turno), o
@@ -82,6 +82,9 @@ export interface GanchosPresidencia {
   acoes?: (v: Vida) => AcaoProfissional[];
   disp?: (v: Vida, valor?: string) => Veredito;
   exec?: (v: Vida, r: Rng, valor?: string) => SaidaPolitica;
+  /** VIDA 14 (`v14/politica`): a troca de partido — o veto da permanência mínima e a justa causa na hora da troca. */
+  troca?: (v: Vida) => Veredito | undefined;
+  trocou?: (v: Vida, antes: string | undefined, nova: string | undefined) => { justa?: boolean; texto?: string } | undefined;
 }
 export const PRESIDENCIA: GanchosPresidencia = {};
 
@@ -208,6 +211,10 @@ export const tipoDeEleicao = (ano: number, pais = paisCorrente()): 'municipal' |
 export const tDaEleicao = (ano: number, pais = paisCorrente()) => ano * 12 + politicaDo(pais).mes;
 /** A posse: janeiro do ano seguinte quando a eleição é no fim do ano; dois meses depois, quando não. */
 export const tDaPosse = (ano: number, pais = paisCorrente()) => { const m = politicaDo(pais).mes; return m >= 9 ? (ano + 1) * 12 : ano * 12 + m + 2; };
+/** VIDA 14 · a eleição de DATA PRÓPRIA do cargo (Portugal: o PR em janeiro, posse em março), fora dos ciclos local e geral. */
+export const eleicaoAvulsa = (c: CargoEletivo, pais = paisCorrente()) => eleicaoAvulsa129(pais, c);
+export const tDaEleicaoDe = (c: CargoEletivo, ano: number, pais = paisCorrente()) => { const a = eleicaoAvulsa(c, pais); return a ? ano * 12 + a.mes : tDaEleicao(ano, pais); };
+export const tDaPosseDe = (c: CargoEletivo, ano: number, pais = paisCorrente()) => { const a = eleicaoAvulsa(c, pais); return a ? ano * 12 + a.posse : tDaPosse(ano, pais); };
 
 /** A próxima eleição (de um tipo, ou qualquer uma) a partir de um instante. */
 export function proximaEleicao(t: number, tipo?: 'municipal' | 'geral', pais = paisCorrente()): { ano: number; tipo: 'municipal' | 'geral'; t: number } {
@@ -227,7 +234,7 @@ export function eleicaoNaJanela(v: Vida): { ano: number; tipo: 'municipal' | 'ge
 }
 
 /** Esta eleição encerra o mandato? (a posse que ela produz é o fim dele: a eleição de outubro do último ano). */
-export const mandatoAcabaNaEleicao = (m: { tFim: number }, anoEleicao: number) => m.tFim <= tDaPosse(anoEleicao);
+export const mandatoAcabaNaEleicao = (m: { tFim: number; cargo?: CargoEletivo }, anoEleicao: number) => m.tFim <= (m.cargo ? tDaPosseDe(m.cargo, anoEleicao) : tDaPosse(anoEleicao));
 
 /**
  * O CALENDÁRIO DO MANDATO — a fonte única (pós-playtest): início, fim,
@@ -277,7 +284,7 @@ export function calendarioDoMandato(v: Vida, m = v.caminhos.politica?.mandato): 
     cargo: m.cargo, tInicio: m.tInicio, tFim: m.tFim, anos, ano, anoPosse, anoFinal,
     ultimoAno: anoDe(v.t) >= anoFinal,
     mesesRestantes: Math.max(0, m.tFim - v.t),
-    eleicaoDoFim: { ano: anoFinal, t: tDaEleicao(anoFinal) },
+    eleicaoDoFim: eleicaoAvulsa(m.cargo) ? { ano: anoDe(m.tFim), t: tDaEleicaoDe(m.cargo, anoDe(m.tFim)) } : { ano: anoFinal, t: tDaEleicao(anoFinal) },
     naJanela: e ? { ...e, encerra: mandatoAcabaNaEleicao(m, e.ano) } : undefined
   };
 }
@@ -434,9 +441,11 @@ export function podeConcorrer(v: Vida, cargo: CargoEletivo, tEleicao: number): V
   const ano = Math.floor(tEleicao / 12);
   const p = v.caminhos.politica;
   if (!existeCargo(cargo, paisDaVida(v))) return bloqueio('impossivel', `${cap(noPais(paisDaVida(v)))} não há esse cargo eletivo.`);
-  if (!tiposDeEleicao(ano).includes(c.tipo)) return bloqueio('impossivel', c.tipo === 'municipal' ? 'Esse cargo é da eleição municipal.' : 'Esse cargo é da eleição geral.');
+  // VIDA 14: o cargo de eleição avulsa (o PR português) só se disputa na data própria dele, nunca na eleição geral.
+  const avulsa = eleicaoAvulsa(cargo, paisDaVida(v));
+  if (avulsa ? tEleicao !== tDaEleicaoDe(cargo, ano, paisDaVida(v)) : !tiposDeEleicao(ano).includes(c.tipo)) return bloqueio('impossivel', avulsa ? `A eleição para ${nomeCargo(v, cargo)} tem data própria (em ${MESES[avulsa.mes]}), fora das outras eleições.` : c.tipo === 'municipal' ? 'Esse cargo é da eleição municipal.' : 'Esse cargo é da eleição geral.');
   if (!cargoNoCiclo(cargo, ano, paisDaVida(v), ufDaVida(v))) return bloqueio('impossivel', cargo === 'presidente' ? 'A eleição presidencial não cai neste ano.' : 'Nesta eleição, esse cargo não está em disputa aqui.');
-  const quando = cargo === 'vereador' ? ano * 12 + 7 : tDaPosse(ano);
+  const quando = cargo === 'vereador' ? ano * 12 + 7 : tDaPosseDe(cargo, ano, paisDaVida(v));
   if (idadeEm(v.eu.tNasc, quando) < c.idade) return bloqueio('ilegal', `A Constituição exige ${c.idade} anos para ${nomeCargo(v, cargo)} (${cargo === 'vereador' ? 'no registro' : 'na posse'}).`);
   if (v.justica?.prisao) return bloqueio('ilegal', 'Preso não se candidata.');
   // Disputar eleição é direito de quem tem a NACIONALIDADE do país (a residência não basta): `mundo/vida`.
@@ -472,7 +481,7 @@ export function cargosDaEleicao(v: Vida): { cargo: CargoEletivo; veredito: Vered
   const e = eleicaoNaJanela(v);
   if (!e) return [];
   const tipos = tiposDeEleicao(e.ano);
-  return cargosDoPais(paisDaVida(v)).filter(c => tipos.includes(cargoNoPais(c).tipo) && cargoNoCiclo(c, e.ano, paisDaVida(v), ufDaVida(v))).map(cargo => ({ cargo, veredito: podeConcorrer(v, cargo, e.t) }));
+  return cargosDoPais(paisDaVida(v)).filter(c => tipos.includes(cargoNoPais(c).tipo) && !eleicaoAvulsa(c, paisDaVida(v)) && cargoNoCiclo(c, e.ano, paisDaVida(v), ufDaVida(v))).map(cargo => ({ cargo, veredito: podeConcorrer(v, cargo, e.t) }));
 }
 
 /* ==================================================================== Portas */
@@ -596,9 +605,11 @@ export function trocarDePartido(v: Vida, r: Rng, nova: string | undefined, porte
   const p = v.caminhos.politica!;
   const antes = p.partido;
   const regra = regraDaTroca(v);
+  // VIDA 14: a justa causa (expulsão, fusão, perseguição interna) protege o mandato; a troca em série custa mais.
+  const j = PRESIDENCIA.trocou?.(v, antes, nova);
   p.partidos ??= antes ? [{ sigla: antes, tInicio: p.tFiliacao ?? p.tInicio }] : [];
   const aberto = p.partidos.find(x => x.sigla === antes && x.tFim === undefined);
-  if (aberto) { aberto.tFim = v.t; aberto.como = regra.como; }
+  if (aberto) { aberto.tFim = v.t; aberto.como = j?.justa ? 'justa_causa' : regra.como; }
   p.partido = nova;
   p.tFiliacao = nova ? v.t : undefined;
   if (nova) { p.partidos.push({ sigla: nova, tInicio: v.t }); v.fatos['pol_partido_porte'] = porte; }
@@ -613,7 +624,7 @@ export function trocarDePartido(v: Vida, r: Rng, nova: string | undefined, porte
   escrever(v, { texto: nova ? `Deixou ${oPartido(antes)} e filiou-se ${aoPartido(nova)}.` : texto, relevancia: p.mandato ? 'marco' : 'biografia', tema: 'trabalho', escolha: true });
   marcar(v, 'politica', nova ? `Trocou de partido: ${partidoDe(antes)?.chamado ?? antes} → ${partidoDe(nova)?.chamado ?? nova}.` : `Saiu ${doPartido(antes)}.`, 2);
   // Fora da janela, o partido de antes pode ir à Justiça pelo mandato proporcional.
-  if (regra.como === 'fora_da_janela' && (p.mandato || p.posse) && r.chance(RISCO_FORA_DA_JANELA)) {
+  if (regra.como === 'fora_da_janela' && !j?.justa && (p.mandato || p.posse) && r.chance(RISCO_FORA_DA_JANELA)) {
     // Perde a cadeira que exerce e a que ia assumir (a do partido de antes).
     const m = p.mandato ?? p.posse!;
     p.historico.push({ t: v.t, cargo: m.cargo, resultado: 'cassado', partido: antes });
@@ -631,7 +642,8 @@ export function trocarDePartido(v: Vida, r: Rng, nova: string | undefined, porte
   }
   const e = eleicaoNaJanela(v);
   const seis = e && nova && e.t - v.t < 6 ? ` A filiação nova tem menos de seis meses até a eleição de ${e.ano}: esta, não dá para disputar ${peloPartido(nova)}.` : '';
-  return nova ? `Agora ${peloPartido(nova).replace(/^pel[oa] /, x => (x === 'pela ' ? 'na ' : 'no '))}. Quem votava pela legenda estranhou; parte da base ficou para trás.${seis}` : 'Sem partido, por enquanto: sem partido, não há candidatura.';
+  const mais = j?.texto ? ` ${j.texto}` : '';
+  return nova ? `Agora ${peloPartido(nova).replace(/^pel[oa] /, x => (x === 'pela ' ? 'na ' : 'no '))}. Quem votava pela legenda estranhou; parte da base ficou para trás.${seis}${mais}` : `Sem partido, por enquanto: sem partido, não há candidatura.${mais}`;
 }
 
 /* ============================================================== Campanha */
@@ -707,7 +719,10 @@ export function fatoresDaEleicao(v: Vida, cargo: CargoEletivo, tEleicao: number,
   }
   // Partido novo: parte do eleitor votava na legenda, e desconfia de quem troca.
   const ultimaTroca = (p.partidos ?? []).filter(x => x.tFim !== undefined).sort((a, b) => b.tFim! - a.tFim!)[0];
-  if (ultimaTroca && tEleicao - ultimaTroca.tFim! <= 30) add('troca', -3);
+  // VIDA 14: a troca em série (sem justa causa) pesa mais — duas legendas trocadas em oito anos já viram "vira-casaca".
+  const serie = (p.partidos ?? []).filter(x => x.tFim !== undefined && x.como !== 'justa_causa' && tEleicao - x.tFim <= 96).length;
+  if (ultimaTroca && ultimaTroca.como !== 'justa_causa' && tEleicao - ultimaTroca.tFim! <= 30) add('troca', -3 - 2 * Math.max(0, serie - 1));
+  else if (serie >= 2) add('troca', -2 * (serie - 1));
   // REWORK 11.5 · POL-05: as alianças de confiança, as promessas cobradas e o rompimento recente (`aliancas`).
   const al = fatorDasAliancas(p, tEleicao);
   add('aliancas', al.aliancas);
@@ -838,9 +853,9 @@ export function apurar(v: Vida, r: Rng): void {
   p.reputacao = clamp(p.reputacao + (ganhou ? 3 : 1));
   if (ganhou) {
     const mesmo = p.mandato?.cargo === cargo;
-    p.posse = { cargo, t: tDaPosse(Math.floor(c.tEleicao / 12)) };
+    p.posse = { cargo, t: tDaPosseDe(cargo, Math.floor(c.tEleicao / 12)) };
     if (!mesmo) p.fase = 'eleito';
-    const texto = mesmo ? `${cap(flex(ge(v), 'Reeleito', 'Reeleita', 'Reeleite'))} ${nome}, em ${anoDe(c.tEleicao)}.` : `${cap(flex(ge(v), 'Eleito', 'Eleita', 'Eleite'))} ${nome} em ${anoDe(c.tEleicao)}, ${peloPartido(p.partido)}.`;
+    const texto = mesmo ? `${cap(flex(ge(v), 'Reeleito', 'Reeleita', 'Reeleite'))} ${nome}, em ${anoDe(c.tEleicao)}.` : `${cap(flex(ge(v), 'Eleito', 'Eleita', 'Eleite'))} ${nome} em ${anoDe(c.tEleicao)}, ${p.partido ? peloPartido(p.partido) : 'sem partido'}.`;
     escrever(v, { texto: `${texto} ${porque}`.trim(), relevancia: 'marco', tema: 'trabalho', tom: 'bom' });
     marcar(v, 'eleicao', texto, 3);
     abalar(v, 'a vitória na eleição', 12, 2);
@@ -906,7 +921,7 @@ function tomarPosse(v: Vida, r: Rng): void {
   // Governar o estado é morar na capital.
   if (cargo === 'governador') { const aqui = municipio(v.moradia.municipioId); const cap = cidadesDoPais(aqui.pais).find(m => m.uf === aqui.uf && m.capital); if (cap && cap.id !== v.moradia.municipioId) mudarAgora(v, cap.id, 'para governar o estado'); }
   // Governar o país é morar na capital do país.
-  if (cargo === 'presidente') { const cap = capitalDoPais(paisDaVida(v)); if (cap && cap.id !== v.moradia.municipioId) mudarAgora(v, cap.id, 'para governar o país'); }
+  if (cargo === 'presidente') { const cap = capitalDoPais(paisDaVida(v)); if (cap && cap.id !== v.moradia.municipioId) mudarAgora(v, cap.id, eleicaoAvulsa(cargo, paisDaVida(v)) ? 'para exercer a Presidência' : 'para governar o país'); }
   const inicio = tPosse;
   const emprego: Emprego = { ocupacaoId: cargo, empregador: orgaoDe(v, cargo), contrato: 'eletivo', salario: subsidio(v, cargo), tInicio: inicio, tPosto: inicio, desempenho: 60, municipioId: v.moradia.municipioId, carga: 'integral', via: 'eleicao' };
   v.trabalho.atual = emprego;
@@ -1252,6 +1267,7 @@ export function disponibilidadePolitica(v: Vida, a: AcaoPoliticaCmd): Veredito {
       if (p.indicacaoMilitar) return bloqueio('impossivel', 'Com indicação de militar não há filiação para trocar: outra indicação só na próxima convenção.');
       if (p.campanha) return bloqueio('incompativel', 'Com a candidatura registrada, a legenda já está na urna.');
       if (v.anoAtual.acoes.includes('pol_troca')) return bloqueio('incompativel', 'Já mudou de partido neste ano.');
+      { const x = PRESIDENCIA.troca?.(v); if (x) return x; }
       if (p.tFiliacao !== undefined && v.t - p.tFiliacao < 12) return bloqueio('incompativel', 'A filiação é recente: trocar agora apagaria o pouco que se construiu.');
       return regraDaTroca(v).como === 'fora_da_janela' ? { grau: 'irregular', motivo: regraDaTroca(v).texto } : PERMITIDO;
     case 'comunidade':

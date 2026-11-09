@@ -52,7 +52,8 @@ export const aparenciaBase = (v: Vida) => v.corpo.aparenciaBase ?? v.corpo.apare
  * sessão de academia três vezes por semana vale 1; o treino de base, quase
  * todo dia, vale mais. Trabalho braçal e farda também contam um pouco.
  */
-const CARGA: Record<string, number[]> = {
+/** (VIDA 14: exportados para as atividades novas — `v14/esportes` — somarem a carga delas.) */
+export const CARGA: Record<string, number[]> = {
   academia: [1], corrida: [0.6], futebol: [0.45, 0.85, 1.3], volei: [0.4, 0.8, 1.2], natacao: [0.8, 1.05, 1.35],
   atletismo: [0.5, 0.9, 1.3], lutas: [0.8, 1.1], basquete: [0.45, 0.85, 1.25], tenis: [0.5, 0.9, 1.25], danca: [0.55, 0.85], bico: [0.15],
   // O time da escola e a atlética treinam de verdade (antes não contavam para o corpo).
@@ -61,8 +62,8 @@ const CARGA: Record<string, number[]> = {
 /** O que não é treino do corpo (é trabalho avulso): a lesão não o tira da semana. */
 const NAO_E_TREINO = new Set(['bico']);
 /** A modalidade, para dizer de qual base é o treino. */
-const NOME_MODALIDADE: Record<string, string> = { futebol: 'futebol', volei: 'vôlei', basquete: 'basquete', tenis: 'tênis', natacao: 'natação', atletismo: 'atletismo', lutas: 'luta' };
-const NOME_CARGA: Record<string, string> = {
+const NOME_MODALIDADE: Record<string, string> = { futebol: 'futebol', volei: 'vôlei', basquete: 'basquete', tenis: 'tênis', natacao: 'natação', atletismo: 'atletismo', lutas: 'luta', futsal: 'futsal' };
+export const NOME_CARGA: Record<string, string> = {
   academia: 'a academia', corrida: 'correr', futebol: 'o futebol', volei: 'o vôlei', natacao: 'a natação', atletismo: 'o atletismo',
   lutas: 'a luta', basquete: 'o basquete', tenis: 'o tênis', danca: 'a dança', bico: 'os bicos', time_escola: 'o time da escola', atletica: 'a atlética', farda: 'o treino da farda', obra: 'o trabalho pesado', profissional: 'o treino de atleta'
 };

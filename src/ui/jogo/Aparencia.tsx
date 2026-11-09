@@ -13,7 +13,8 @@ const GuardaRoupa = sobDemanda(() => import('./Personalizar').then(m => m.Guarda
 const Miniatura = sobDemanda(() => import('../avatar/MiniaturaDaPeca').then(m => m.MiniaturaDaPeca));
 const EstudioDeTatuagem = sobDemanda(() => import('./Tatuagens').then(m => m.EstudioDeTatuagem));
 /** VIDA 13: os piercings (a lupa por zona do corpo) — pacote sob demanda, como o estúdio de tatuagem. */
-const PiercingsDaAparencia = sobDemanda(() => import('./Piercings13').then(m => m.PiercingsDaAparencia));
+const PainelDePiercings = sobDemanda(() => import('../v14/aparencia/PainelDePiercings').then(m => m.PainelDePiercings));
+const RostoDetalhes = sobDemanda(() => import('../v14/aparencia/RostoDetalhes').then(m => m.RostoDetalhes));
 import { useState } from 'react';
 import type { Vida, Visual } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
@@ -155,11 +156,13 @@ export function AparenciaEEstilo({ vida, agir, irPara }: Props) {
           </div>
         </div>
       )}
+      {/* VIDA 14: os riscos na sobrancelha, o desenho dela, a pinta e os cílios (pacote sob demanda). */}
+      {fase !== 'familia_decide' && <RostoDetalhes vida={vida} agir={agir} />}
       {i >= 3 && <OQueVeste vida={vida} agir={agir} />}
       <GuardaRoupa vida={vida} agir={agir} />
       {(i >= 16 || (vida.eu.tatuagens?.length ?? 0) > 0) && <EstudioDeTatuagem vida={vida} agir={agir} />}
-      {/* VIDA 13: os piercings — junto das tatuagens (a loja vende; aqui se vê, experimenta, usa, troca e tira). */}
-      <PiercingsDaAparencia vida={vida} agir={agir} irPara={irPara} />
+      {/* VIDA 14: os piercings inteiros aqui — o furo, as joias que cabem, o preço, comprar, usar e tirar (`v14/aparencia`). */}
+      <PainelDePiercings vida={vida} agir={agir} />
       {i >= AUTONOMIA.compra_pessoal.idade && (
         <p className="nota">{precisaDeOculos(vida) && !itens.some(x => x.itemId === 'oculos_grau') ? 'A vista anda pedindo óculos de grau. ' : ''}Óculos, chapéus, roupas, joias: <button type="button" className="link" onClick={() => irPara('compras')}>Vida · Compras →</button></p>
       )}

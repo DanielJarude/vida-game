@@ -127,6 +127,8 @@ import { disponibilidadeAnimalPorFora, disponibilidadeParalelo, executarAnimalPo
 import { decidirClandestino, disponibilidadeClandestino, type OqueClandestino } from './sistemas/clandestinos';
 import type { TipoEmpresa } from './tipos';
 import type { SignificadoDaTatuagem } from './dados/tatuagens';
+import { disponibilidadeRosto14, mudarRosto14, type MudancaRosto14 } from './v14/aparencia/rosto14';
+import { disponibilidadePiercing14, executarPiercing14, type OquePiercing14 } from './v14/aparencia/piercings14';
 
 /** Id de uma interação do catálogo (`sistemas/interacoes`). O que existe depende da pessoa e do momento. */
 export type InteracaoPessoa = string;
@@ -299,6 +301,9 @@ export type Acao =
   | { tipo: 'contribuicao'; valor: 'nada' | 'combinado' | 'mais' }
   /** Mudar o visual: corte, cor, barba, óculos, chapéu, roupa (`estilo`). */
   | { tipo: 'aparencia'; mudanca: MudancaVisual }
+  /** VIDA 14: os detalhes do rosto (riscos na sobrancelha, o desenho dela, a pinta, os cílios) e a joia com o furo, no painel. */
+  | { tipo: 'rosto14'; mudanca: MudancaRosto14 }
+  | { tipo: 'piercing14'; oque: OquePiercing14 }
   /** Comprar um item de estilo (óculos, chapéu, roupa, acessório). */
   | { tipo: 'comprar_item'; itemId: string; /** 12.4.1: a marca e a loja (ausentes: o preço de referência). */ marca?: string; loja?: string; /** 12.9: a variante vista na vitrine e no provador. */ variante?: string }
   | { tipo: 'estetica'; id: string; clinica: Clinica; alvo?: string; revisao?: boolean }
@@ -797,6 +802,8 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
       return PERMITIDO;
     }
     case 'aparencia': return disponibilidadeAparencia(v, a.mudanca);
+    case 'rosto14': return disponibilidadeRosto14(v, a.mudanca);
+    case 'piercing14': return disponibilidadePiercing14(v, a.oque);
     case 'visibilidade': return disponibilidadeVisibilidade(v, a.oque);
     case 'comprar_item': return disponibilidadeComprarItem(v, a.itemId, a.marca, a.loja);
     case 'estetica': return disponibilidadeProcedimento(v, a.id, a.clinica, a.alvo, a.revisao);
@@ -1629,6 +1636,8 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       return ok(a.valor === 'nada' ? 'O salário fica todo com você. Em casa, o assunto não morre.' : a.valor === 'mais' ? 'Você passou a pôr mais em casa. A casa respira.' : 'Combinado: uma parte do salário vai para a casa todo mês.', a.valor === 'nada' ? 'ruim' : 'bom');
     }
     case 'aparencia': return ok(mudarAparencia(v, a.mudanca), 'neutro');
+    case 'rosto14': return ok(mudarRosto14(v, a.mudanca), 'neutro');
+    case 'piercing14': return ok(executarPiercing14(v, a.oque), 'bom');
     case 'visibilidade': {
       const res = usarVisibilidade(v, r, a.oque);
       if (res.decisao) { const d = conteudoPorId(res.decisao); if (d && d.tipo === 'decisao') abrirDecisao(v, d, contexto(v, r)); return {}; }

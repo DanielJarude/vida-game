@@ -14,8 +14,9 @@ import type { CargoExecutivo, DecisaoDaEmpresa13, Empresa, PerfilExecutivo, Proj
 import { anoDe } from '../../motor/tempo';
 import {
   alavancasDe, aportesPossiveis, cargosPossiveis, catalogoDeProdutos13, catalogoPequeno13, custoEmpresa129, decisoesRecentes13, ehGrande, leituraDaAceitacao, leituraDaLinha13, NOME_PORTE, opcaoAtual,
-  ofertasDeAquisicao, painelDaEmpresa, planoDeFundacao, projetosPossiveis, setoresAoAlcance
+  ofertasDeAquisicao, painelDaEmpresa, planoDeFundacao, precoDaFatia129, projetosPossiveis, setoresAoAlcance
 } from '../../motor/sistemas/empresas129';
+import { IndicadoresEmpresa14 } from '../v14/empresas/IndicadoresEmpresa14';
 import { NOME_POSICAO_13, POSICOES_13, produtosDoSetor13 } from '../../motor/sistemas/empresas13';
 import { indicadores, NOME_ESCALA } from '../../motor/sistemas/fortuna129';
 import { DESCRICAO_PERFIL, NOME_CARGO, NOME_PERFIL, setorGrande } from '../../motor/dados/empresas129';
@@ -44,14 +45,8 @@ export function PainelDaEmpresa129({ vida, agir, e }: { vida: Vida; agir: Agir; 
     <div className="e129">
       <section className="e13-bloco" aria-labelledby={`e13-numeros-${e.id}`}>
         <h4 className="e13-titulo" id={`e13-numeros-${e.id}`}>Como a empresa está</h4>
-        <dl className="e129-kpis">
-          {p.kpis.map(k => (
-            <div key={k.rotulo} className={`e129-kpi${k.tom ? ` e129-kpi--${k.tom}` : ''}`}>
-              <dt>{k.rotulo}</dt>
-              <dd>{k.tipo === 'dinheiro' ? sinal(k.valor) : k.tipo === 'pct' ? `${(k.valor * 100).toFixed(k.valor < 0.01 ? 2 : 1).replace('.', ',')}%` : `${Math.round(k.valor)}/100`}</dd>
-            </div>
-          ))}
-        </dl>
+        {/* VIDA 14: os números em grupos (o que é seu, o ano, o balanço, a operação). A pequena já os mostra no cartão. */}
+        {p.grande && <IndicadoresEmpresa14 vida={vida} e={e} />}
         {p.alertas.length > 0 && (
           <div className="e129-atencao" role="status">
             <p className="rotulo-pequeno">Pede atenção</p>
@@ -474,7 +469,7 @@ export function FundarOuAdquirir129({ vida, agir }: { vida: Vida; agir: Agir }) 
                 <p><strong>{o.nome}</strong> <span className="nota">({setorGrande(o.setor)!.rotulo.toLowerCase()})</span></p>
                 <p className="nota">Faturou {dinheiroCurto(o.receita)} e {o.lucro >= 0 ? `lucrou ${dinheiroCurto(o.lucro)}` : `perdeu ${dinheiroCurto(-o.lucro)}`} no último ano · dívida de {dinheiroCurto(o.divida)} · {o.linhas.join(', ')}. {o.nota} A empresa toda vale uns {dinheiroCurto(o.preco)}. Quem vende: {o.vendedor}.</p>
                 <div className="grupo-acoes grupo-acoes--linha">
-                  {o.partes.map(parte => <BotaoAcao key={parte} vida={vida} acao={{ tipo: 'adquirir129', ofertaId: o.id, parte }} agir={agir} variante={parte === 1 ? 'secundario' : 'discreto'}>{parte === 1 ? `Comprar o controle (${dinheiroCurto(o.preco)})` : `Comprar ${Math.round(parte * 100)}% (${dinheiroCurto(o.preco * parte)})`}</BotaoAcao>)}
+                  {o.partes.map(parte => <BotaoAcao key={parte} vida={vida} acao={{ tipo: 'adquirir129', ofertaId: o.id, parte }} agir={agir} variante={parte === 1 ? 'secundario' : 'discreto'}>{parte === 1 ? `Comprar o controle (${dinheiroCurto(o.preco)})` : `Comprar ${Math.round(parte * 100)}% (${dinheiroCurto(precoDaFatia129(o.preco, parte))})`}</BotaoAcao>)}
                 </div>
               </li>
             ))}

@@ -167,7 +167,10 @@ export function registrarTemporada(v: Vida, r: Rng, e: CarreiraEsportiva, t: Tem
     const mov = futebol
       ? fecharTemporadaDaLiga(v, paisT, t.ano, t.clube, t.nivel, t.colocacao, marcaNaLiga(t))
       : t.nivel < 4 && t.colocacao <= (t.nivel === 1 ? 2 : 4) ? 1 : t.nivel >= 2 && t.colocacao >= 17 ? -1 : 0;
-    if (mov === 1 && e.nivel === t.nivel) {
+    // VIDA 14: nas ligas de quadra o nível 3 e o 4 são a MESMA liga (o 4 é estar entre os de cima): mudar entre eles não é
+    // acesso nem rebaixamento (antes: "Campeão do NBB" e, no mesmo ano, "Acesso para o NBB").
+    if (mov && e.nivel === t.nivel && competicaoDe(e.modalidade, t.nivel + mov, paisT) === comp) e.nivel = (t.nivel + mov) as 1 | 2 | 3 | 4;
+    else if (mov === 1 && e.nivel === t.nivel) {
       e.nivel = (t.nivel + 1) as 1 | 2 | 3 | 4;
       const para = competicaoDe(e.modalidade, e.nivel, paisT);
       const texto = `Acesso: ${futebol ? oClube(e.clube) : 'a equipe'} subiu para ${aCompeticao(para)}${ava.participacao >= 0.5 ? ', com você entre os titulares' : ''}.`;

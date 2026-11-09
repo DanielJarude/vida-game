@@ -46,7 +46,8 @@ import { flex, ge } from '../texto';
 import { marcar } from './marcas';
 import { lesaoAtiva } from './lesoes';
 import { avaliarTemporada, conquistasRecentes, registrarConquista } from './palmares';
-import { aCompeticaoId, campanhaDaSelecao, idDaSelecao, torneioDeSelecoes } from './competicoes';
+import { aCompeticaoId, campanhaDaSelecao, confederacaoDe, idDaSelecao, torneioDeSelecoes } from './competicoes';
+import { POPULARIDADE_FUTSAL, torneioFutsalDoAno } from '../dados14/esportes/futsal';
 
 /** O país da seleção da pessoa (a da nacionalidade; depois da primeira convocação, a que ela escolheu). */
 export const paisEsportivo = (v: Vida): string => v.caminhos.esporte?.selecao?.pais ?? nacionalidadesDaVida(v)[0];
@@ -78,7 +79,7 @@ export function representacaoDe(v: Vida, d: Dominio): { selecao: string; daSelec
  * Pontos somados aos limiares (radar, convocação, titular).
  */
 export function concorrenciaNoPais(pais: string, d: Dominio): number {
-  const pop = temPerfil(pais) ? perfilDoPais(pais).esporte.popularidade[d] ?? 1 : 1;
+  const pop = temPerfil(pais) ? perfilDoPais(pais).esporte.popularidade[d] ?? (d === 'futsal' ? POPULARIDADE_FUTSAL[pais] ?? 0.6 : 1) : 1;
   const tamanho = Math.log10(Math.max(1, paisDoCatalogo(pais).populacao) / 1000);  // milhões, em log: o Brasil ~2,3
   return Math.round(clamp((pop - 1.25) * 10 + (tamanho - 2.33) * 3, -12, 4));
 }
@@ -239,6 +240,8 @@ export function torneioDoAno(d: Dominio, ano: number, pais?: string): string | u
   if (d === 'futebol' && pais) { const id = torneioDeSelecoes(pais, ano); return id ? aCompeticaoId(id) : undefined; }
   if (d === 'futebol') return ano % 4 === 2 ? 'o torneio mundial de seleções' : ano % 4 === 0 ? 'o torneio continental de seleções' : undefined;
   if (d === 'tenis') return 'a competição mundial por equipes';
+  // VIDA 14: o futsal não é olímpico — a Copa do Mundo de Futsal e, dois anos depois, o continental (pelo nome do país).
+  if (d === 'futsal') { const x = torneioFutsalDoAno(ano); return x && aCompeticaoId(`sel:futsal:${x === 'mundial' ? x : confederacaoDe(pais ?? 'BR')}`); }
   if (d === 'basquete' || d === 'volei') return ano % 4 === 0 ? 'os jogos multiesportivos mundiais' : ano % 4 === 2 ? 'o campeonato mundial' : ano % 4 === 3 ? 'o campeonato continental' : undefined;
   return ano % 4 === 0 ? 'os jogos multiesportivos mundiais' : ano % 2 === 1 ? 'o campeonato mundial' : 'os jogos continentais';
 }
@@ -267,11 +270,11 @@ const FASES = ['caiu na fase de grupos', 'caiu nas oitavas', 'caiu nas quartas',
 
 function disputarTorneio(v: Vida, r: Rng, e: CarreiraEsportiva, sel: TrajetoriaNaSelecao, ano: number, nome: string, titular: boolean): void {
   // A campanha é da seleção (o mundo), com um pouco de quem joga: ninguém ganha torneio sozinho.
-  const mundial = nome.includes('mundial') || nome.includes('multiesportivos') || nome === 'a Copa do Mundo';
+  const mundial = nome.includes('mundial') || nome.includes('multiesportivos') || nome.startsWith('a Copa do Mundo');
   // REWORK 11 · ESP-11.4: a campanha é JOGADA (grupos e mata-mata) com a força do país na modalidade (antes, um sorteio
   // de fase com pesos fixos: o Brasil e San Marino com a mesma chance de título). O acaso é da vida e do ano.
   const pais = sel.pais ?? paisEsportivo(v);
-  const id = e.modalidade === 'futebol' ? torneioDeSelecoes(pais, ano) ?? idDaSelecao('mundial') : `sel:${e.modalidade}:${mundial ? 'mundial' : 'continental'}`;
+  const id = e.modalidade === 'futebol' ? torneioDeSelecoes(pais, ano) ?? idDaSelecao('mundial') : `sel:${e.modalidade}:${mundial ? 'mundial' : e.modalidade === 'futsal' ? confederacaoDe(pais) : 'continental'}`;
   void r;
   const camp = campanhaDaSelecao(rngDe(v.id, 'torneio_selecao', e.modalidade, ano), id, pais, titular ? 0.12 : 0.03, e.modalidade);
   const k = ['primeira fase', 'oitavas', 'quartas', 'semifinal', 'vice', 'campeão'].indexOf(camp.fase);

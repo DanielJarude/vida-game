@@ -19,6 +19,8 @@
  */
 
 import type { PerfilUrbano } from '../mundo/tipos';
+// VIDA 14: as cidades novas (Igarassu e outras) vêm depois das dos campi, pelo mesmo caminho (no mapa, fora dos sorteios).
+import { LINHAS_MUNICIPIOS_14 } from '../dados14/cidades/municipios14';
 
 /** [nome oficial, UF, perfil, metrópole (para 'metropolitana'), população (Censo 2022, mil hab.)] */
 export type LinhaMunicipio1291 = [string, string, PerfilUrbano, string | undefined, number];
@@ -52,5 +54,6 @@ export const MUNICIPIOS_1291: readonly LinhaMunicipio1291[] = [
   // Bahia
   ['Camaçari', 'BA', 'metropolitana', 'Salvador', 300],  // UFBA Camaçari
   // Ceará
-  ['Russas', 'CE', 'pequena', undefined, 80]             // UFC Russas
+  ['Russas', 'CE', 'pequena', undefined, 80],            // UFC Russas
+  ...LINHAS_MUNICIPIOS_14
 ];

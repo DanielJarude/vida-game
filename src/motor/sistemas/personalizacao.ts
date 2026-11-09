@@ -151,6 +151,9 @@ export function locaisPara(v: Vida, ref: RefObjeto): { id: string | null; nome: 
 
 export function disponibilidadePersonalizar(v: Vida, op: OpPersonalizar): Veredito {
   const i = idade(v);
+  // VIDA 14: a peça do proprietário (aluguel mobiliado) muda de cômodo, mas não sai da casa, não se empresta nem se dá.
+  { const id = 'ref' in op && op.ref.tipo === 'coisa' ? op.ref.id : 'coisa' in op ? op.coisa : undefined;
+    if (id && ['mover', 'emprestar', 'doar', 'repaginar'].includes(op.o) && coisasDaVida(v).find(x => x.id === id)?.doImovel) return bloqueio('impossivel', 'É do proprietário do imóvel: fica na casa.'); }
   if (v.justica?.prisao && op.o !== 'de_familia') return bloqueio('incompativel', 'Na prisão, não.');
   switch (op.o) {
     case 'acabamento': {
@@ -646,6 +649,11 @@ PATRIMONIO_NO_MES.push(v => custosDaPersonalizacao(v));
  * fica em dois lugares (o campo é um só) e nunca some (o lugar inválido vira "em casa", com a linha na história).
  */
 export function normalizarLocais(v: Vida): void {
+  // VIDA 14: as peças do proprietário só existem enquanto dura o contrato mobiliado (mudou, acabou: ficam no imóvel).
+  if (v.financas.coisas?.some(t => t.doImovel && t.doImovel !== v.moradia.mobilia14?.contrato)) {
+    v.financas.coisas = v.financas.coisas.filter(t => !t.doImovel || t.doImovel === v.moradia.mobilia14?.contrato);
+    escrever(v, { texto: 'Os móveis do imóvel alugado ficaram lá, com o proprietário.', relevancia: 'cotidiano', tema: 'casa' });
+  }
   const meus = new Set(v.financas.bens.filter(b => b.tipo === 'imovel').map(b => b.id));
   const arrumar = (o: { local?: string; historia?: { t: number; texto: string }[]; emprestadaA?: string }, vivo = true) => {
     if (o.local?.startsWith('im:')) {

@@ -50,7 +50,7 @@ import { habilidade } from './frentes';
 import { encerrarEmprego } from './trabalho';
 import {
   PRESIDENCIA, aliado, basePartidaria, calendarioDoMandato, cargoNoCiclo, eleicaoNaJanela, fatoresDaEleicao, naPolitica, nomeCargo,
-  nomePublico, partidosDoPais, podeConcorrer, registrarNoMandato, resumoDoMandato, tDaEleicao, tDaPosse, voltarAoTrabalho,
+  nomePublico, partidosDoPais, podeConcorrer, registrarNoMandato, resumoDoMandato, tDaEleicao, tDaEleicaoDe, tDaPosse, tDaPosseDe, voltarAoTrabalho,
   type FatorEleitoral, type SaidaPolitica
 } from './politica';
 import type { AcaoProfissional } from './profissao';
@@ -764,17 +764,19 @@ export function leituraPresidencial(v: Vida): LeituraPresidencial | undefined {
   const out: LeituraPresidencial = { candidaturas: [], mandatos: e?.mandatos ?? [] };
   if (!r) out.semPresidencia = semPresidenciaTexto(pais);
   else {
-    const prox = (() => { for (let a = anoDe(v.t); a < anoDe(v.t) + 12; a++) if (cargoNoCiclo('presidente', a, pais) && tDaEleicao(a) > v.t) return a; return r.ciclo[0]; })();
+    // VIDA 14: a eleição de data própria (Portugal) conta pelo mês dela, e a posse também.
+    const prox = (() => { for (let a = anoDe(v.t); a < anoDe(v.t) + 12; a++) if (cargoNoCiclo('presidente', a, pais) && tDaEleicaoDe('presidente', a, pais) > v.t) return a; return r.ciclo[0]; })();
     out.regras = { titulo: nomeCargo(v, 'presidente'), idade: r.idade, anos: r.anos, limite: r.limite.texto, segundoTurno: r.segundoTurno, independente: r.independente, nato: r.nato, proxima: prox, ...(r.colegio ? { colegio: true } : {}) };
     if (!emMandatoPresidencial(v) && !e?.campanha && p.fase !== 'encerrada') {
-      const tP = tDaPosse(prox);
+      const tP = tDaPosseDe('presidente', prox, pais);
       const req: { texto: string; ok: boolean }[] = [];
       req.push({ texto: `Idade mínima de ${r.idade} anos na posse`, ok: (tP - v.eu.tNasc) / 12 >= r.idade });
-      if (r.nato) req.push({ texto: 'Nacionalidade de nascença', ok: natoDoPais(v, pais) });
-      req.push({ texto: r.independente ? 'Partido (ou candidatura independente, com assinaturas)' : 'Filiação a um partido', ok: !!p.partido || r.independente });
+      if (r.nato) req.push({ texto: r.semipresidencial ? 'Português de origem (CRP, art. 122.º)' : 'Nacionalidade de nascença', ok: natoDoPais(v, pais) });
+      if (r.assinaturas) req.push({ texto: `Assinaturas de ${r.assinaturas[0].toLocaleString('pt-BR')} a ${r.assinaturas[1].toLocaleString('pt-BR')} eleitores (partido não é exigido)`, ok: true });
+      else req.push({ texto: r.independente ? 'Partido (ou candidatura independente, com assinaturas)' : 'Filiação a um partido', ok: !!p.partido || r.independente });
       req.push({ texto: 'Nome conhecido no país inteiro', ok: nomeNacional(v) >= 50 });
-      if (p.partido) req.push({ texto: 'Lugar dentro do partido (para ser o escolhido)', ok: basePartidaria(v) >= 25 });
-      req.push({ texto: 'Um cargo de peso antes (governo do estado, Senado, Congresso, prefeitura grande)', ok: trajetoria(p) >= 3 });
+      if (p.partido && !r.semipresidencial) req.push({ texto: 'Lugar dentro do partido (para ser o escolhido)', ok: basePartidaria(v) >= 25 });
+      if (!r.semipresidencial) req.push({ texto: 'Um cargo de peso antes (governo do estado, Senado, Congresso, prefeitura grande)', ok: trajetoria(p) >= 3 });
       out.requisitos = req;
     }
   }

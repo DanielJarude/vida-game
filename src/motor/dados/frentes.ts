@@ -11,6 +11,7 @@
 
 import { linguaEstrangeiraDaEscola, nomeDaMateria } from '../mundo/materias';
 import type { Dominio } from '../tipos';
+import { FRENTE_FUTSAL } from '../dados14/esportes/futsal';
 
 export type Categoria = 'esporte' | 'arte' | 'estudo' | 'social' | 'oficio';
 
@@ -119,7 +120,8 @@ export const FRENTES: readonly ModeloFrente[] = [
     facilidade: 'tem lábia' }),
   m({ id: 'campo', nome: 'trabalho no campo', categoria: 'oficio', janela: [10, 50], esquece: 0.8,
     estagios: ['ajuda na roça quando chamam', 'conhece o trabalho da terra', 'sabe cuidar de uma lavoura', 'entende de terra e bicho', 'toca uma produção', 'é produtor respeitado'],
-    facilidade: 'tem jeito com a terra' })
+    facilidade: 'tem jeito com a terra' }),
+  FRENTE_FUTSAL
 ];
 
 const POR_ID = new Map(FRENTES.map(f => [f.id, f]));

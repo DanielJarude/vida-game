@@ -33,6 +33,7 @@ import {
 import { converterEntrePaises } from '../mundo/moeda';
 import { paisDaVida } from '../mundo/vida';
 import { municipio } from '../dados/lugares';
+import { descontoMinoritario14, valorJusto14, type ValorDetalhado14 } from '../dados14/empresas/valuation';
 import { disponivel, okDePagar, pagar } from './dinheiro';
 import { lancar } from './extrato';
 import { abalar } from './abalo';
@@ -194,21 +195,25 @@ const taxaDaDivida = (v: Vida, e: Empresa) => ((v.economia?.juroReal ?? 0.045) +
 
 /** O valor da empresa inteira: o que um comprador pagaria (lucro, receita do ramo que cresce, projetos, caixa, dívida). */
 export function avaliarGrande(v: Vida, e: Empresa): number {
+  e.avaliacao = Math.max(0, r1000(detalheDoValorGrande14(v, e).valor));
+  return e.avaliacao;
+}
+
+/** VIDA 14: as contas do valor da empresa grande (para avaliar e para a tela explicar). */
+export function detalheDoValorGrande14(v: Vida, e: Empresa): ValorDetalhado14 {
   const s = setorDe(e)!;
   const c = e.corp!;
   const k = kDe(v);
-  const h = (e.anos ?? []).slice(-3);
-  const lucro = h.length ? h.reduce((t, a) => t + a.lucro, 0) / h.length : 0;
-  const receita = e.ultimo?.receita ?? 0;
+  const h = (e.anos ?? []).slice(-6);
   const instalado = c.capacidade * s.custoCapacidade * k * 0.55 + capacidadeEmObra(e) * s.custoCapacidade * k * 0.8;
   const linhas = ativos(e).reduce((t, p) => t + p.investido * 0.35, 0);
   // O que está em obra vale pelo que já foi feito, descontado o risco do ramo (o foguete que pode não voar).
   const pipeline = emObra(e).reduce((t, p) => { const it = itemDoProjeto13(s, p); return t + p.investido * clamp(0.85 - (it?.risco ?? 0.2) - (it?.fatal ?? 0) * 3, 0.25, 0.85); }, 0);
-  const crescimento = clamp(1 + ((h[h.length - 1]?.receita ?? 0) - (h[0]?.receita ?? 0)) / Math.max(1, h[0]?.receita ?? 1) / 2, 0.6, 1.8);
-  const operacao = Math.max(0, lucro) * s.multiplo + receita * s.multReceita * (lucro > 0 ? crescimento : crescimento * 0.5) + pipeline;
-  const liquidacao = instalado + linhas + pipeline * 0.4;
-  e.avaliacao = Math.max(0, r1000(Math.max(operacao, liquidacao) + e.caixa - c.divida));
-  return e.avaliacao;
+  // VIDA 14: um valor só (o lucro normal × o múltiplo do ramo, a receita como âncora, os descontos de histórico, risco e
+  // tendência) — antes somava o múltiplo do lucro E o da receita, com prêmio de crescimento no teto para a recém-fundada.
+  // O lucro de operação (os juros somados de volta, já sem o imposto): a dívida sai uma vez só, no fim (valor do capital).
+  const jurosHoje = c.divida * taxaDaDivida(v, e);
+  return valorJusto14({ lucros: h.map(a => a.lucro + (a.juros ?? jurosHoje) * 0.75), receitas: h.map(a => a.receita), multiplo: s.multiplo, multReceita: s.multReceita, liquidacao: instalado + linhas + pipeline * 0.4, emAndamento: pipeline, caixa: e.caixa, divida: c.divida });
 }
 
 /** Tira do caixa da empresa; o que faltar, do crédito dela; o resto, da sua conta (um aporte). Devolve o aporte. */
@@ -415,13 +420,15 @@ function anoDaGrande(v: Vida, e: Empresa): boolean {
   // 9. A gestão delegada mexe nas alavancas e nos projetos para o ano que vem.
   if (e.estrategia?.delegar && e.gestao.quem === 'contratada' && manda(e)) for (const t of delegado(v, e)) causas.push({ texto: t, acaso: false, tom: 'neutro' });
 
-  const valor = avaliarGrande(v, e);
   const produtividade = Math.round(clamp(teto > 0 ? Math.min(uso, teto) / teto * 100 * (0.6 + aceitMedia / 125) : 0, 0, 100));
   fecharDecisoes13(v, e, causas, r1000(receita), lucro);
-  registrarAno(e, { t: v.t, receita: r1000(receita), custos: r1000(custos + imposto), lucro, fluxo: r1000(e.caixa - caixaAntes), investimentos: r1000(capex), produtividade, reputacao: e.reputacao, valor, participacao: c.participacao, fatores: { ciclo, sorte, demanda: ef.demanda, preco: ef.preco, cap: fatorCap }, causas });
+  registrarAno(e, { t: v.t, receita: r1000(receita), custos: r1000(custos + imposto), lucro, juros: r1000(juros), fluxo: r1000(e.caixa - caixaAntes), investimentos: r1000(capex), produtividade, reputacao: e.reputacao, valor: 0, participacao: c.participacao, fatores: { ciclo, sorte, demanda: ef.demanda, preco: ef.preco, cap: fatorCap }, causas });
   e.historico = [...(e.historico ?? []), lucro].slice(-6);
   e.ultimo = { t: v.t, publico: produtividade, receita: r1000(receita), custos: r1000(custos), imposto: r1000(imposto), resultado: lucro, distribuido, nota: causas.find(x => x.acaso)?.texto };
   e.ativos = r1000(c.capacidade * s.custoCapacidade * k * 0.55);
+  // VIDA 14: a avaliação vem DEPOIS do ano registrado (antes, olhava os anos anteriores e o ano novo ficava de fora).
+  const valor = avaliarGrande(v, e);
+  e.anos![e.anos!.length - 1].valor = valor;
 
   // 10. A recuperação judicial (uma vez) e a falência.
   const buraco = e.caixa < -fixos * 0.15;
@@ -1235,6 +1242,9 @@ export function fundarEmpresa(v: Vida, setor: TipoEmpresa, item: string, comSoci
 
 export interface OfertaDeAquisicao { id: string; setor: TipoEmpresa; nome: string; preco: number; receita: number; lucro: number; divida: number; capacidade: number; linhas: string[]; partes: number[]; nota: string; /** VIDA 13: quem vende (a família, o fundo, os fundadores). */ vendedor: string }
 
+/** VIDA 14: o preço de uma fatia (a minoritária, sem controle, sai com desconto — na compra e na venda). */
+export const precoDaFatia129 = (valorDaEmpresa: number, parte: number) => r1000(valorDaEmpresa * parte * descontoMinoritario14(parte));
+
 /** As empresas grandes à venda no ano (o controle ou uma fatia), do tamanho que a pessoa consegue pagar. */
 export function ofertasDeAquisicao(v: Vida): OfertaDeAquisicao[] {
   if (idade(v) < 18) return [];
@@ -1249,7 +1259,7 @@ export function ofertasDeAquisicao(v: Vida): OfertaDeAquisicao[] {
     const s = candidatos.splice(r.int(0, candidatos.length - 1), 1)[0];
     const e = empresaAVenda(v, s, `aq-${ano}-${n}`, r, liq, usados);
     const lucro = e.anos?.[e.anos.length - 1]?.lucro ?? 0;
-    const partes = [1, 0.25, 0.1].filter(p => r1000((e.avaliacao ?? 0) * p) <= liq * 1.05 && (e.avaliacao ?? 0) * p >= 1e5);
+    const partes = [1, 0.25, 0.1].filter(p => precoDaFatia129(e.avaliacao ?? 0, p) <= liq * 1.05 && (e.avaliacao ?? 0) * p >= 1e5);
     if (!partes.length) continue;
     out.push({ id: e.id, setor: s.id, nome: e.nome, preco: e.avaliacao ?? 0, receita: e.ultimo?.receita ?? 0, lucro, divida: e.corp!.divida, capacidade: e.corp!.capacidade, linhas: ativos(e).map(p => { const pr = produtoDoProjeto13(s, p); return pr ? `${p.nome} (${minusc(pr.nome)})` : p.nome; }), partes, vendedor: vendedorDe(v, e.id, usados),
       nota: e.corp!.divida > (e.avaliacao ?? 0) * 0.6 ? 'Endividada: o preço é baixo pelo que deve.' : lucro < 0 ? 'Dá prejuízo: quem vende está cansado.' : (e.reputacao >= 60 ? 'Marca respeitada no ramo.' : 'Uma operação mediana, sem nada de especial.') });
@@ -1293,14 +1303,36 @@ function empresaAVenda(v: Vida, s: SetorGrande, id: string, r: Rng, liq: number,
   // O último ano dela (o que o comprador vê): as contas de catálogo com o acaso de um ano.
   const receita = r1000(ativos(e).reduce((t, p) => t + (itemDoSetor(s, p.item)!.receita * (0.3 + (p.aceitacao ?? 50) / 85)), 0) * k * (0.85 + r.next() * 0.3));
   const custos = r1000(ativos(e).reduce((t, p) => { const it = itemDoSetor(s, p.item)!; return t + it.receita * (0.3 + (p.aceitacao ?? 50) / 85) * (1 - it.margem); }, 0) * k + (cap * s.fixoPorCapacidade + s.estrutura) * k + receita * s.gastoBase);
-  const lucro = r1000((receita - custos) * (receita > custos ? 0.75 : 1));
   e.corp!.divida = r1000(Math.max(0, receita * s.alavancagem * (0.2 + r.next() * 1.1)));
   e.caixa = r1000(Math.max(receita * 0.05, s.giro * k * 0.3));
-  e.anos = [{ t: v.t, receita, custos, lucro, fluxo: 0, investimentos: 0, produtividade: 80, reputacao: e.reputacao, valor: 0, causas: [] }];
-  e.ultimo = { t: v.t, publico: 80, receita, custos, imposto: 0, resultado: lucro, distribuido: 0 };
+  // VIDA 14: as contas de catálogo são só o ponto de partida. O que o comprador vê são os TRÊS últimos anos da empresa
+  // pelas mesmas contas do jogo (o ano das empresas grandes, numa vida-sombra): antes o preço saía de um ano de catálogo
+  // que não batia com o que a empresa rendia depois — comprava-se barato e revendia-se caro (o bug da revenda).
+  const juros = r1000(e.corp!.divida * taxaDaDivida(v, e));
+  const lucro = r1000((receita - custos - juros) * (receita > custos + juros ? 0.75 : 1));
+  e.anos = [{ t: v.t - 36, receita, custos: custos + juros, lucro, juros, fluxo: 0, investimentos: 0, produtividade: 80, reputacao: e.reputacao, valor: 0, causas: [] }];
+  e.ultimo = { t: v.t - 36, publico: 80, receita, custos: custos + juros, imposto: 0, resultado: lucro, distribuido: 0 };
   e.historico = [lucro];
+  passadoDaEmpresa14(v, e);
   avaliarGrande(v, e);
   return e;
+}
+
+/** VIDA 14: três anos da empresa à venda, simulados numa sombra da vida (nada da vida de verdade muda). */
+function passadoDaEmpresa14(v: Vida, e: Empresa): void {
+  const sombra: Vida = {
+    ...v, biografia: [], fatos: { ...v.fatos }, mente: structuredClone(v.mente), anoAtual: { ...v.anoAtual, acoes: [] },
+    financas: { ...v.financas, conta: 0, dividas: [], investimentos: [], empresas: [e], extratoAberto: undefined }
+  };
+  for (const d of [2, 1, 0]) {
+    sombra.t = v.t - 12 * d;
+    sombra.anoAtual = { ...v.anoAtual, acoes: [] };
+    if (e.estado !== 'encerrada') anoDaGrande(sombra, e);
+  }
+  e.anos = (e.anos ?? []).slice(-3);
+  e.historico = e.anos.map(a => a.lucro);
+  for (const p of e.corp?.projetos ?? []) p.marcos = [];
+  e.historia = [];
 }
 
 export function disponibilidadeAquisicao(v: Vida, ofertaId: string, parte: number): { ok: boolean; motivo?: string; resgate?: { valor: number; naBaixa: string[] } } {
@@ -1309,7 +1341,7 @@ export function disponibilidadeAquisicao(v: Vida, ofertaId: string, parte: numbe
   if (!o.partes.includes(parte)) return { ok: false, motivo: 'Essa fatia não está à venda (ou não cabe no que você tem).' };
   if (v.anoAtual.acoes.includes('aquisicao129')) return { ok: false, motivo: 'Uma aquisição por ano: a análise e a negociação levam meses.' };
   if (parte === 1 && empresasAtivas(v).filter(e => e.papel !== 'investidor').length >= 8) return { ok: false, motivo: 'Já são oito empresas.' };
-  return okDePagar(v, r1000(o.preco * parte * 1.02), 'Com as taxas da operação (2%), custa');
+  return okDePagar(v, r1000(precoDaFatia129(o.preco, parte) * 1.02), 'Com as taxas da operação (2%), custa');
 }
 
 export function adquirirEmpresa(v: Vida, ofertaId: string, parte: number): string {
@@ -1328,7 +1360,7 @@ export function adquirirEmpresa(v: Vida, ofertaId: string, parte: number): strin
   }
   e ??= empresaAVenda(v, s, ofertaId, rngDe(v.id, ofertaId), liq);
   const vendedor = vendedorDe(v, ofertaId, usados);
-  const preco = r1000((e.avaliacao ?? 0) * parte);
+  const preco = precoDaFatia129(e.avaliacao ?? 0, parte);
   const taxas = r1000(preco * 0.02);
   v.anoAtual.acoes.push('aquisicao129');
   pagar(v, preco + taxas);

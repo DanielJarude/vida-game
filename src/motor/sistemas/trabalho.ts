@@ -224,9 +224,9 @@ export function elegibilidade(v: Vida, oc: Ocupacao, via: ViaDeEntrada = 'curric
   }
   if (oc.forma && via !== 'promocao' && v.corpo.forma < oc.forma) return bloqueio('requisito', 'O teste físico pede um preparo que você ainda não tem.');
   if (oc.forma && via !== 'promocao' && (v.corpo.saude < 55 || v.corpo.condicoes.some(c => c.cronica && c.gravidade >= 2))) return bloqueio('requisito', 'A inspeção de saúde não aprovaria.');
-  if (nivelDeOferta(v.moradia.municipioId) < oc.oferta && via !== 'oportunidade') {
-    return bloqueio('requisito', `Quase não há vagas assim em ${municipio(v.moradia.municipioId).nome}. Seria preciso morar numa cidade maior.`);
-  }
+  // VIDA 14: a cidade pequena não fecha a porta (antes: requisito duro, "seria preciso morar numa cidade maior"). Vagas
+  // assim são raras aqui — a disputa é maior e a chance cai —, mas há a cidade vizinha, a estrada e o trabalho à distância.
+  const rara = nivelDeOferta(v.moradia.municipioId) < oc.oferta && via !== 'oportunidade';
   // Onde o serviço público não entra por concurso (o perfil do país), o cargo é uma vaga como as outras: candidatura e seleção.
   if (oc.concurso && via === 'curriculo' && porConcursoAqui(v, oc)) {
     if (!editalAberto(v, oc)) return bloqueio('incompativel', 'Não há edital aberto para este cargo agora. Os concursos abrem em anos diferentes.');
@@ -240,7 +240,7 @@ export function elegibilidade(v: Vida, oc: Ocupacao, via: ViaDeEntrada = 'curric
   const tit = oc.nivel <= 4 ? titulacaoNaTrilha(v, oc) : { meses: 0 };
   const exp = (oc.nivel >= 4 ? (v.trabalho.experiencia[oc.trilha] ?? 0) : experienciaNaTrilha(v, oc.trilha)) + tit.meses;
   const contando = tit.meses && tit.nome ? ` (contando ${tit.nome.startsWith('Especialização') ? 'a' : 'o'} ${tit.nome.charAt(0).toLowerCase() + tit.nome.slice(1)} como estrada)` : '';
-  let chance = chanceBase(v, oc, bonus);
+  let chance = chanceBase(v, oc, bonus) * (rara ? 0.45 : 1);
   if (oc.experiencia && via !== 'promocao') {
     if (exp < oc.experiencia / 2) return bloqueio('requisito', `Pedem ${anosTxt(oc.experiencia)} de experiência na área; você tem ${anosTxt(exp)}${contando}.`);
     if (exp < oc.experiencia) {
@@ -255,6 +255,7 @@ export function elegibilidade(v: Vida, oc: Ocupacao, via: ViaDeEntrada = 'curric
     return { grau: 'improvavel', chance, motivo: `Procuram quem já trabalha com ${oc.areaProfissional}.` };
   }
   if (v.financas.negativado && oc.trilha === 'financas') chance *= 0.3;
+  if (rara) return { grau: 'improvavel', chance, motivo: `Vagas assim são raras em ${municipio(v.moradia.municipioId).nome}: a disputa é maior (há quem vá e volte de uma cidade maior, ou trabalhe à distância).` };
   return { grau: chance < 0.25 ? 'improvavel' : 'permitido', chance };
 }
 
@@ -363,9 +364,9 @@ function chanceBase(v: Vida, oc: Ocupacao, bonus: number): number {
   if (oc.nivel <= 2 && !oc.area && !oc.habilidade && !porContaPropria(oc) && v.educacao.concluidos.some(x => ['superior', 'pos', 'mestrado', 'doutorado', 'residencia'].includes(x.nivel))) c -= 0.04;
   const setor = forcaDoSetor(v.moradia.municipioId, oc.setor, anoDe(v.t));
   c *= 0.7 + setor * 0.3;
-  c *= sobraNaEpoca(oc.declinio, anoDe(v.t)) * fatorDaEpoca(oc, anoDe(v.t));
+  c *= sobraNaEpoca(oc.declinio, anoDe(v.t)) * fatorDaEpoca(oc, anoDe(v.t)) * mundoNoSetor(v, oc.setor);
   if (v.trabalho.desempregadoDesde !== undefined && v.t - v.trabalho.desempregadoDesde > 24) c -= 0.1;
-  c += ajusteContratacao(v);
+  c += ajusteContratacao(v) + (v.mundo14?.efeitos?.contratacao ?? 0);
   // O lugar: onde quase todo trabalho é informal, a vaga com contrato é rara (o Brasil, ~38%, é a referência); e quem
   // acabou de chegar de outro país, sem a língua e sem rede, é menos chamado (`mundo/vida`).
   if (oc.contrato === 'clt') c *= 1 + (0.38 - perfilDaVida(v).economia.informalidade) * 0.5;
@@ -766,7 +767,8 @@ function ajustarSalarioCheio(v: Vida, r: Rng, e: Emprego, oc: Ocupacao): void {
     return;
   }
   // Reajuste real: acima da inflação na expansão, abaixo na crise (o servidor, por lei, só repõe).
-  let fator = 1.01 + (e.contrato === 'servidor' || e.contrato === 'militar' ? Math.min(0, reajusteReal(v)) * 0.5 : reajusteReal(v));
+  const real = reajusteReal(v) + (v.mundo14?.efeitos?.reajuste ?? 0); // VIDA 14: o choque de fora (inflação) também pesa
+  let fator = 1.01 + (e.contrato === 'servidor' || e.contrato === 'militar' ? Math.min(0, real) * 0.5 : real);
   if (oc.promocao === 'antiguidade') fator += 0.005;
   else if (e.desempenho >= 70 && r.chance(0.5)) fator += 0.025;
   e.salario = Math.round(clamp(e.salario * fator, piso, Math.max(teto, e.salario)) / 10) * 10;
@@ -779,7 +781,8 @@ function processarClientela(v: Vida, r: Rng, e: Emprego, oc: Ocupacao): boolean 
   const setor = forcaDoSetor(e.municipioId, oc.setor, anoDe(v.t));
   const porte = nivelDeOferta(e.municipioId);
   const delta = (hab - 50) / 12 + Math.min(4, exp / 3) + v.personalidade.tracos.sociabilidade / 40 + (setor - 1) * 8 + (porte - 1.5) * 1.5
-    + ajusteClientela(v) - Math.max(0, (e.clientela ?? 0) - 70) / 6 + r.normal() * 6 + 1 + deltaDeFreguesia(e, hab);
+    + ajusteClientela(v) - Math.max(0, (e.clientela ?? 0) - 70) / 6 + r.normal() * 6 + 1 + deltaDeFreguesia(e, hab)
+    + (v.mundo14?.efeitos?.clientela ?? 0) + (mundoNoSetor(v, oc.setor) - 1) * 20; // VIDA 14: a pandemia, o setor em alta
   e.clientela = Math.round(clamp((e.clientela ?? 20) + delta, 0, 100));
   // Quem vive do palco não ganha pela tabela de freguesia: a renda sai da agenda do ano (`palco`).
   if (!trabalhoDePalco(v)) e.salario = rendaDeClientela(v, oc, e.clientela, e);
@@ -848,6 +851,9 @@ function marcoDeEstrada(v: Vida, oc: Ocupacao): void {
   }
 }
 
+/** VIDA 14 (`v14/mundo`): o que os acontecimentos mundiais ativos fazem com um setor (1 = nada; lido de um campo da vida). */
+function mundoNoSetor(v: Vida, setor: string): number { return v.mundo14?.efeitos?.setores?.[setor] ?? 1; }
+
 function demissao(v: Vida, r: Rng, e: Emprego, oc: Ocupacao): boolean {
   // Atleta não sai em "corte de pessoal": o contrato tem prazo e acaba na renovação (`esporte`).
   if (oc.trilha === 'atleta') return false;
@@ -855,7 +861,7 @@ function demissao(v: Vida, r: Rng, e: Emprego, oc: Ocupacao): boolean {
   const epoca = 1 - sobraNaEpoca(oc.declinio, anoDe(v.t));
   const base = e.contrato === 'servidor' ? 0.002 : e.contrato === 'militar' ? 0.003 : e.desempenho < 35 ? 0.3 : e.contrato === 'clt' ? 0.045 : 0.03;
   const clima = climaDe(e) < 30 ? 1.7 : climaDe(e) > 70 ? 0.8 : 1;
-  const risco = (base + (e.contrato === 'clt' ? epoca * 0.12 + riscoDaEpoca(oc, anoDe(v.t)) : 0)) * (e.contrato !== 'servidor' && e.contrato !== 'militar' ? fatorDemissao(v) * clima : 1) * (i >= 55 && e.contrato === 'clt' ? 1.3 : 1);
+  const risco = (base + (e.contrato === 'clt' ? epoca * 0.12 + riscoDaEpoca(oc, anoDe(v.t)) : 0)) * (e.contrato !== 'servidor' && e.contrato !== 'militar' ? fatorDemissao(v) * clima * (v.mundo14?.efeitos?.demissao ?? 1) * (2 - Math.min(1, mundoNoSetor(v, oc.setor))) : 1) * (i >= 55 && e.contrato === 'clt' ? 1.3 : 1);
   // VIDA 12.6: o bom nome protege um pouco; a má fama expõe.
   if (!r.chance(risco * (1.25 - (v.trabalho.reputacao ?? 50) / 200))) return false;
   const anos = Math.max(1, Math.floor((v.t - e.tInicio) / 12));

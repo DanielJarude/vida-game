@@ -11,6 +11,7 @@
 import { BrincoNovo, PiercingsDoRosto } from './piercings';
 import { Batom, Blush, Delineado, Mechas, SombraDosOlhos, temBigode } from './identidade13';
 import { misturar } from './cores';
+import { Cilios14, Pinta14, Sobrancelhas14 } from '../v14/aparencia/sobrancelhas';
 import { desenharCabelo, estagioDaCalvicie } from './cabelos';
 import { memo, useId, type ReactElement } from 'react';
 import type { Especie } from '../../motor/tipos';
@@ -294,19 +295,13 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
       {maquiada && <SombraDosOlhos cor={v.sombraOlhos} g={geoOlhos} />}
 
       {/* Sobrancelhas */}
+      {/* Sobrancelha: o canto de dentro sobe na tristeza, desce na tensão; a forma é herdada (reta, arqueada, angulosa).
+          VIDA 14: o desenho escolhido por cima da herdada e os riscos (cortes de verdade no traço) — `v14/aparencia`. */}
       {f !== 'bebe' && (
-        <g stroke={f === 'idoso' ? misturar(cor, '#8a8580', 0.3) : misturar(cor, '#000000', 0.15)} strokeLinecap="round" fill="none"
-           strokeWidth={(masc && adultoOuAdol ? 1.9 : 1.25) * grossura}>
-          {/* Sobrancelha: o canto de dentro sobe na tristeza, desce na tensão. */}
-          {/* A forma é herdada (reta, arqueada, angulosa); a expressão mexe no canto de dentro. */}
-          <path d={angulo
-            ? `M ${cx - esp - 3.4} ${olhoY - 4.4} L ${cx - esp - 0.6} ${olhoY - 6.6 - (x === 'bem' ? 0.5 : 0)} L ${cx - esp + 3.2} ${olhoY - 5 + (x === 'tenso' ? 1.1 : x === 'abatido' || x === 'doente' ? -1.3 : 0)}`
-            : `M ${cx - esp - 3.4} ${olhoY - 4.6 - (x === 'bem' ? 0.5 : 0)} Q ${cx - esp} ${olhoY - 6.2 - arco - (x === 'bem' ? 0.6 : 0)} ${cx - esp + 3.2} ${olhoY - 4.8 + (x === 'tenso' ? 1.1 : x === 'abatido' || x === 'doente' ? -1.3 : 0)}`} />
-          <path d={angulo
-            ? `M ${cx + esp - 3.2} ${olhoY - 5 + (x === 'tenso' ? 1.1 : x === 'abatido' || x === 'doente' ? -1.3 : 0)} L ${cx + esp + 0.6} ${olhoY - 6.6 - (x === 'bem' ? 0.5 : 0)} L ${cx + esp + 3.4} ${olhoY - 4.4}`
-            : `M ${cx + esp - 3.2} ${olhoY - 4.8 + (x === 'tenso' ? 1.1 : x === 'abatido' || x === 'doente' ? -1.3 : 0)} Q ${cx + esp} ${olhoY - 6.2 - arco - (x === 'bem' ? 0.6 : 0)} ${cx + esp + 3.4} ${olhoY - 4.6 - (x === 'bem' ? 0.5 : 0)}`} />
-        </g>
+        <Sobrancelhas14 v={v} cx={cx} esp={esp} olhoY={olhoY} x={x} base={(masc && adultoOuAdol ? 1.9 : 1.25) * grossura} pele={pele}
+          cor={f === 'idoso' ? misturar(cor, '#8a8580', 0.3) : misturar(cor, '#000000', 0.15)} arco={arco} angulo={angulo} uid={uid} tamanho={tamanho} />
       )}
+      {maquiada && <Pinta14 pinta={v.pinta} g={geoOlhos} sombra={sombra} />}
 
       {/* Olhos */}
       {[-1, 1].map(lado => (
@@ -326,6 +321,7 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
 
       {/* VIDA 13: o delineado (por cima do olho). */}
       {maquiada && <Delineado tipo={v.delineado} g={geoOlhos} />}
+      {maquiada && <Cilios14 cilios={v.cilios} g={geoOlhos} />}
 
       {/* Cansaço: pálpebra caída e olheira. */}
       {f !== 'bebe' && (x === 'cansado' || x === 'doente' || x === 'abatido') && [-1, 1].map(lado => (
