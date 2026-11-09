@@ -387,7 +387,7 @@ const tintaNova = (x: number): Peca => marcado('cena__tinta', { 'data-detalhe': 
 /* ---------------------------------------------------------- Bichos e veículo na porta */
 
 const PELO = ['#b07a45', '#5d5a56', '#e0c7a0', '#2f2b28', '#c9893f', '#8a7a6a'];
-const cachorro = (x: number, id: string): Peca => {
+export const cachorro = (x: number, id: string): Peca => {
   const cor = PELO[hash(id) % PELO.length];
   return marcado('cena__bicho', { 'data-bicho': 'cachorro' }, [
     { tipo: 'massa', d: membro([[x + 3, C], [x + 3, C - 7]], [2.2, 2.4]) + membro([[x + 13, C], [x + 13, C - 7]], [2.2, 2.4]), cor: escurecer(cor, 0.12), semVolume: true },
@@ -397,7 +397,7 @@ const cachorro = (x: number, id: string): Peca => {
     { tipo: 'massa', d: membro([[x + 1, C - 10], [x - 3, C - 15]], [1.8, 1]), cor, semVolume: true }
   ]);
 };
-const gato = (x: number, id: string): Peca => {
+export const gato = (x: number, id: string): Peca => {
   const cor = PELO[(hash(id) >>> 3) % PELO.length];
   return marcado('cena__bicho', { 'data-bicho': 'gato' }, [
     { tipo: 'massa', d: suave([[x + 2, C], [x + 1, C - 6], [x + 4, C - 11], [x + 10, C - 11], [x + 12, C - 5], [x + 12, C]], true, 0.5), cor, marca: 'corpo' },

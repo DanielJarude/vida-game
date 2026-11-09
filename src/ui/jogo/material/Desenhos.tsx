@@ -14,7 +14,8 @@ import { OPCOES_EXTERNAS, type AspectoExterno } from '../../../motor/dados/casa1
 import type { LadoDeFora } from '../../ilustracao/casas';
 import { IlustracaoVeiculo } from '../../ilustracao/veiculos';
 import { Ilustracao } from '../../ilustracao/nucleo';
-import { amostraDaCasa, amostraDaMiniatura, PLANTAS } from '../../ilustracao/casas';
+import { amostraDaMiniatura, PLANTAS } from '../../ilustracao/casas';
+import { amostraDaCasa14 } from '../../v14/fachadas/casas14';
 import { NOME_FORMA, type FormaVeiculo } from '../../../motor/dados/bens';
 
 const DESCRICAO: Record<FormaDaCasa, string> = {
@@ -64,7 +65,7 @@ export function CenaDaCasa({ l, externo }: { l: LeituraLar; externo?: LadoDeFora
   const tijolo = PLANTAS[l.forma].tijolo && l.padrao <= 1 && !(c.reformaRecente && c.nivel !== 'problema');
   const formaV = formaNaPorta(l);
   const rotulo = `Desenho: ${descricaoDaCasa(l)}; ${acesas} ${acesas === 1 ? 'janela acesa' : 'janelas acesas'}${l.bichos.length ? `, ${l.bichos.map(b => b.nome).join(' e ')} na frente` : ''}${l.veiculo ? `, ${l.veiculo === 'carro' ? 'um carro' : l.veiculo === 'moto' ? 'uma moto' : 'uma bicicleta'} (${NOME_FORMA[formaV!]}) na porta` : ''}.`;
-  const a = amostraDaCasa({
+  const a = amostraDaCasa14({
     externo,
     forma: l.forma, acesas, tijolo: tijolo && !externo?.fachada, fachada: externo?.corFachada ?? l.fachada?.cor, nivel: c.nivel, reforma: !!c.reformaRecente,
     veiculo: l.veiculo && formaV ? { tipo: l.veiculo, forma: formaV, cor: l.corVeiculo, versaoId: l.versaoVeiculo, estado: l.estadoVeiculo } : undefined,
