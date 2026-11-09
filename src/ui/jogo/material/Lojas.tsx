@@ -11,7 +11,9 @@ import { idade } from '../../../motor/nucleo';
 import { coisa } from '../../../motor/dados/coisas';
 import { itemEstilo, lugaresDoItem, nivelDoItem, TIPOS_DE_PECA, tipoDePeca } from '../../../motor/dados/estilo';
 import { segmentoDoNivel } from '../../../motor/dados/lar';
-import { CATEGORIAS_DA_CASA, categoriaDaCasa, nomeDaCategoriaDaCasa } from '../../../motor/dados/categoriasDaCasa';
+import { categoriaDaCasa, nomeDaCategoriaDaCasa } from '../../../motor/dados/categoriasDaCasa';
+import { TIPOS_DE_MOVEL, nomeDoTipoDeMovel, tipoDeMovel } from '../../../motor/dados14/moveis/catalogo';
+import { Conjuntos14, EncaixeNaLoja14 } from '../../v14/moveis/Moveis14';
 import { leituraDaMarca, segmentoDaMarca } from '../../../motor/sistemas/perfilDaMarca';
 import { NOME_SEGMENTO_DE_MARCA, NOME_QUALIDADE, type SegmentoDeMarca } from '../../../motor/dados/perfisDeMarca';
 import { MiniaturaDaPeca, visualComPecaDoRosto } from '../../avatar/MiniaturaDaPeca';
@@ -76,8 +78,9 @@ export function LojaDaVida({ vida, agir, lojaId }: { vida: Vida; agir: (a: Acao)
   const tipos = TIPOS_DE_PECA.filter(t => linhas.some(l => tipoDe(l) === t.id));
   // 12.8.1: na loja da casa, a categoria do móvel (sala e estar, quarto, cozinha e jantar… — como o tipo de peça da
   // roupa): só as que têm produto nesta loja, nenhuma vazia, nenhum produto sem.
-  const ambienteDe = (l: Linha) => (l.produto.tipo === 'coisa' && (l.categoria === 'moveis' || l.categoria === 'eletrodomesticos') ? categoriaDaCasa(l.produto.id, l.categoria === 'eletrodomesticos') as string : undefined);
-  const ambientes = CATEGORIAS_DA_CASA.filter(a => linhas.some(l => ambienteDe(l) === a.id));
+  // VIDA 14: agrupado pelo TIPO de móvel (todos os sofás juntos, todas as poltronas juntas...), não pelo cômodo.
+  const ambienteDe = (l: Linha) => (l.produto.tipo === 'coisa' && (l.categoria === 'moveis' || l.categoria === 'eletrodomesticos') ? tipoDeMovel(l.produto.id, l.categoria === 'eletrodomesticos') as string : undefined);
+  const ambientes = TIPOS_DE_MOVEL.filter(a => linhas.some(l => ambienteDe(l) === a.id));
   const ambiente = ambientes.some(a => a.id === m.ambiente) ? m.ambiente! : '';
   // A roupa se escolhe pelo tipo de peça e a casa pela categoria; a seção fica para o resto (a loja de departamento:
   // eletrônicos, esporte…).
@@ -115,6 +118,7 @@ export function LojaDaVida({ vida, agir, lojaId }: { vida: Vida; agir: (a: Acao)
           <select value={m.ordem} onChange={ev => mudar({ ordem: ev.target.value as OrdemDeCompras })}><option value="relevancia">Como na loja</option><option value="menor">Menor preço</option><option value="maior">Maior preço</option></select>
         </label>
       </div>
+      {ambientes.length > 1 && i >= 18 && !q && <Conjuntos14 vida={vida} agir={agir} />}
       <p className="nota">{visiveis.length} {visiveis.length === 1 ? 'produto' : 'produtos'}{m.texto || m.marca || m.preco || cat || faixa || tipo || ambiente ? ' com esses filtros' : ''}.</p>
       {provando && <Provador vida={vida} itemId={provando.itemId} variante={provando.variante} aoFechar={() => setProvando(null)} />}
       <ul className="catalogo-loja">
@@ -178,7 +182,7 @@ function ProdutoNaLoja({ vida, agir, linha, lojaId, faixa, marca, preco, crianca
   const segmento = segmentoDoNivel(nivel);
   const colecao = it?.colecao;
   const edicao = it?.edicao ?? c?.edicao;
-  const categoria = it ? TIPOS_DE_PECA.find(t => t.id === tipoDePeca(it))!.nome : c && (linha.categoria === 'moveis' || linha.categoria === 'eletrodomesticos') ? nomeDaCategoriaDaCasa(categoriaDaCasa(c.id, linha.categoria === 'eletrodomesticos')) : NOME_CATEGORIA[linha.categoria];
+  const categoria = it ? TIPOS_DE_PECA.find(t => t.id === tipoDePeca(it))!.nome : c && (linha.categoria === 'moveis' || linha.categoria === 'eletrodomesticos') ? `${nomeDoTipoDeMovel(tipoDeMovel(c.id, linha.categoria === 'eletrodomesticos'))} · ${nomeDaCategoriaDaCasa(categoriaDaCasa(c.id, linha.categoria === 'eletrodomesticos')).toLowerCase()}` : NOME_CATEGORIA[linha.categoria];
   return (
     <li className={`catalogo-loja__cartao${nivel >= 4 ? ' catalogo-loja__cartao--luxo' : ''}${nivel >= 6 ? ' catalogo-loja__cartao--exclusivo' : ''}`} data-produto={p.id} data-nivel={nivel}>
       <span className="catalogo-loja__imagem">
@@ -209,6 +213,7 @@ function ProdutoNaLoja({ vida, agir, linha, lojaId, faixa, marca, preco, crianca
           ))}
         </span>
       )}
+      {c?.daCasa && !tem && <EncaixeNaLoja14 vida={vida} coisaId={c.id} />}
       <span className="catalogo-loja__preco">{dinheiroCurto(o.preco)}</span>
       <span className="catalogo-loja__acoes">
         {it && !crianca && <button type="button" className="botao botao--discreto" aria-pressed={provando === variante} onClick={() => provar(variante)}>{provando === variante ? 'No provador' : 'Experimentar'}</button>}

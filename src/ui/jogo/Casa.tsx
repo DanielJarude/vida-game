@@ -9,6 +9,7 @@
  * Os lugares da cidade (concessionária, banco, abrigo) moram em Cidade.
  */
 
+import { EspacoDaCasa14 } from '../v14/moveis/Moveis14';
 import { Estrela } from './Atalhos';
 import { FAZERES_EM_CASA, rotuloFazerEmCasa } from '../../motor/sistemas/casaNoDia';
 import { disponibilidade } from '../../motor/acoes';
@@ -62,6 +63,7 @@ export function Lar({ vida, agir, abrir }: Props & { abrir: (l: QualLugar) => vo
             {l.selos.map((s, k) => <li key={k} className={`selo${s.tom ? ` selo--${s.tom}` : ''}`}>{s.tom === 'ruim' && <span aria-hidden>! </span>}{s.texto}</li>)}
           </ul>
         )}
+        {!naFamilia && <EspacoDaCasa14 vida={vida} agir={agir} />}
         {i >= 18 && (
           <div className="lar__acoes">
             <button type="button" className="botao botao--secundario" onClick={() => abrir('alugar')}>{naFamilia ? 'Procurar um lugar para morar' : 'Procurar outro lugar'}</button>

@@ -52,12 +52,14 @@ const LISTA: Record<Exclude<TipoDeMovel, 'eletro' | 'outros'>, string[]> = {
   garagem: ['ferramentas', 'bancada_ferramentas', 'armario_garagem', 'organizadores', 'carregador_ev', 'lavadora_pressao']
 };
 const DO_PRODUTO = new Map<string, TipoDeMovel>(Object.entries(LISTA).flatMap(([t, ids]) => ids.map(id => [id, t as TipoDeMovel] as const)));
-export const temTipoDeMovel = (coisaId: string) => DO_PRODUTO.has(coisaId);
+/** Eletrodomésticos do catálogo sem a marca `eletro` (a lavadora, a lava-louças, o aspirador robô, o ar-condicionado). */
+const ELETRO_SEM_MARCA = new Set(['maquina_lavar', 'lava_loucas', 'aspirador_robo', 'ar_condicionado']);
+export const temTipoDeMovel = (coisaId: string) => DO_PRODUTO.has(coisaId) || ELETRO_SEM_MARCA.has(coisaId);
 
 /** O tipo de um produto da casa: o eletrodoméstico é eletrodoméstico (menos o toalheiro, que é do banheiro). */
 export function tipoDeMovel(coisaId: string, eletro: boolean): TipoDeMovel {
   if (coisaId === 'toalheiro') return 'banheiro';
-  if (eletro) return 'eletro';
+  if (eletro || ELETRO_SEM_MARCA.has(coisaId)) return 'eletro';
   return DO_PRODUTO.get(coisaId) ?? 'outros';
 }
 export const nomeDoTipoDeMovel = (t: TipoDeMovel) => TIPOS_DE_MOVEL.find(x => x.id === t)!.nome;

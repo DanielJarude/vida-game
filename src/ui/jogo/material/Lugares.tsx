@@ -6,6 +6,9 @@
  * fica o orçamento, confirmar — sem oito telas.
  */
 
+import { MobiliaDaOferta14 } from '../../v14/moveis/Moveis14';
+import { mobiliaDaOferta14 } from '../../../motor/v14/moveis/moveis14';
+import { NOME_DA_MOBILIA } from '../../../motor/dados14/moveis/catalogo';
 import { PedidoDeCompra, PedidoDeVeiculo } from '../Alcance';
 import { dependeDosResponsaveis } from '../../../motor/sistemas/pedidosDaCrianca';
 import { CLINICAS, PROCEDIMENTOS, emRecuperacao, precoDoProcedimento, revisavel, riscoDe, type Clinica } from '../../../motor/sistemas/estetica';
@@ -323,7 +326,7 @@ function CartaoImovel({ o, motivo, abrir, vida }: { o: OfertaImovel; motivo?: st
       <span className="oferta__casa"><MiniaturaDaCasa forma={formaDoModelo(o.modeloId)} fachada={fachadaDe(chaveDaFachada(vida.moradia.municipioId, o.modeloId, o.bairro, vida.t), formaDoModelo(o.modeloId))} largura={128} />{o.estado !== 'bom' && <span className="oferta__casa-selo">{o.estado === 'reforma' ? 'obra' : 'novo'}</span>}</span>
       <span className="oferta__texto">
         <strong>{m.nome.charAt(0).toUpperCase() + m.nome.slice(1)} {o.bairro}</strong>
-        <span>{o.detalhe} · {m.quartos} {m.quartos === 1 ? 'quarto' : 'quartos'}{o.aceitaPet ? ' · aceita animais' : ''}</span>
+        <span>{o.detalhe} · {m.quartos} {m.quartos === 1 ? 'quarto' : 'quartos'}{o.aceitaPet ? ' · aceita animais' : ''} · {NOME_DA_MOBILIA[mobiliaDaOferta14(vida, o).nivel].toLowerCase()}</span>
         {motivo && <span className="oferta__motivo">{motivo}</span>}
       </span>
       <span className="oferta__preco">{dinheiroCurto(valor)}{o.modo === 'aluguel' ? <small>/mês · {Math.round(valor / renda * 100)}% da renda</small> : <small>à venda</small>}</span>
@@ -358,6 +361,7 @@ function DetalheImovel({ vida, agir, o, voltar }: { vida: Vida; agir: (a: Acao) 
         {amigo && m.quartos >= 2 && o.modeloId !== 'republica' && (
           <label className="marcar"><input type="checkbox" checked={dividir} onChange={e => setDividir(e.target.checked)} /> Dividir com {amigo.nome}</label>
         )}
+        <MobiliaDaOferta14 vida={vida} o={o} />
         <p className="nota">{naFamilia ? 'Sair de casa muda a conta: mercado, luz, internet, tudo passa a ser seu.' : 'A caução são dois aluguéis; a mudança, um frete.'}</p>
         <BotaoAcao vida={vida} acao={acao} agir={agir} variante="principal">{naFamilia ? 'Alugar e sair de casa' : 'Alugar e mudar'}</BotaoAcao>
       </div>
@@ -395,6 +399,7 @@ function DetalheImovel({ vida, agir, o, voltar }: { vida: Vida; agir: (a: Acao) 
         {financiar && <div><dt>Total pago no fim</dt><dd>{dinheiroCurto(c.total)}</dd></div>}
       </dl>
       {financiar && <p className="nota">Um financiamento é uma obrigação presa à casa: enquanto paga, a parte que já é sua cresce. {c.social ? 'Pela renda, entra num programa habitacional, com juro menor.' : ''}</p>}
+      <MobiliaDaOferta14 vida={vida} o={o} />
       <AntesDeDecidir linhas={custosAntesDeComprarImovel(vida, o, morar)} />
       <label className="marcar"><input type="checkbox" checked={morar} onChange={e => setMorar(e.target.checked)} /> Morar lá (sem marcar: comprar para alugar)</label>
       <BotaoAcao vida={vida} acao={acao} agir={agir} variante="principal">{financiar ? 'Financiar e comprar' : 'Comprar à vista'}</BotaoAcao>

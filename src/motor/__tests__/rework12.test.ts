@@ -301,6 +301,8 @@ describe('empresas: ao lado da carreira, lucro, prejuízo, venda e fim', () => {
     v = fazer(v, { tipo: 'empresa_abrir', empresa: 'restaurante', comSocio: false });
     const e = empresasAtivas(v)[0];
     e.caixa = -2_000_000;
+    // (VIDA 14: a vida-base mudou de cidade; o cenário pede um restaurante que não se paga — a nota e a fama no chão.)
+    e.qualidade = 10; e.reputacao = 5;
     v = transacao(v, (x, r) => processarEmpresas(x, r)).vida;
     expect(empresa(v, e.id)!.estado).not.toBe('encerrada');
     for (let k = 0; k < 4; k++) { v.t += 12; v = transacao(v, (x, r) => processarEmpresas(x, r)).vida; }

@@ -131,6 +131,7 @@ import { disponibilidadeRosto14, mudarRosto14, type MudancaRosto14 } from './v14
 import { disponibilidadePiercing14, executarPiercing14, type OquePiercing14 } from './v14/aparencia/piercings14';
 import { fronteirasFechadas } from './v14/mundo/mundo14';
 import { disponibilidadeViagem14, executarViagem14, type OquaViagem14 } from './v14/viagens/viagens14';
+import { acomodarCompra14, disponibilidadeMoveis14, executarMoveis14, instalarMobilia14, limparMobilia14, mobiliaDaOferta14, type OqueMoveis14 } from './v14/moveis/moveis14';
 import { disponibilidadeFutsal14, executarFutsal14, type OqueFutsal14 } from './v14/esportes/futsal14';
 import { disponibilidadeDep14, executarDep14, type OqueDep14 } from './v14/crencas/dependencias14';
 import { disponibilidadeCrenca14, executarCrenca14, type OpCrenca14 } from './v14/crencas/crencas';
@@ -323,6 +324,8 @@ export type Acao =
   | { tipo: 'dep14'; oque: OqueDep14 }
   /** VIDA 14: a posição no futsal e o goleiro-linha (`v14/esportes`). */
   | { tipo: 'futsal14'; oque: OqueFutsal14 }
+  /** VIDA 14: o depósito, a troca, os conjuntos, a peça do proprietário devolvida (`v14/moveis`). */
+  | { tipo: 'moveis14'; oque: OqueMoveis14 }
   /** Comprar um item de estilo (óculos, chapéu, roupa, acessório). */
   | { tipo: 'comprar_item'; itemId: string; /** 12.4.1: a marca e a loja (ausentes: o preço de referência). */ marca?: string; loja?: string; /** 12.9: a variante vista na vitrine e no provador. */ variante?: string }
   | { tipo: 'estetica'; id: string; clinica: Clinica; alvo?: string; revisao?: boolean }
@@ -829,6 +832,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'crenca14': return disponibilidadeCrenca14(v, a.op);
     case 'dep14': return disponibilidadeDep14(v, a.oque);
     case 'futsal14': return disponibilidadeFutsal14(v, a.oque);
+    case 'moveis14': return disponibilidadeMoveis14(v, a.oque);
     case 'visibilidade': return disponibilidadeVisibilidade(v, a.oque);
     case 'comprar_item': return disponibilidadeComprarItem(v, a.itemId, a.marca, a.loja);
     case 'estetica': return disponibilidadeProcedimento(v, a.id, a.clinica, a.alvo, a.revisao);
@@ -1071,6 +1075,7 @@ function linhaDoExtrato(a: Acao): [string, TipoMovimento] {
     case 'viagem14': return ['Viagens', 'escolha'];
     case 'justica14': return ['Justiça: advogados, acordos e custas', 'despesa'];
     case 'dep14': return ['Saúde: tratamento', 'despesa'];
+    case 'moveis14': return ['Coisas da casa e da vida: compra e venda', 'escolha'];
     default: return ['Compras, viagens e outras escolhas', 'escolha'];
   }
 }
@@ -1426,13 +1431,15 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       const o = a.ofertaId ? ofertaDeImovel(v, a.ofertaId)! : ofertaPorModelo(v, 'aluguel', a.modeloId!)!;
       const amigo = a.dividirCom ? v.pessoas[a.dividirCom] : undefined;
       alugar(v, o, undefined, false, amigo);
-      return ok(`Casa nova: ${nomeImovel(o)}${amigo ? `, dividindo com ${amigo.nome}` : ''}.`, a.tipo === 'sair_de_casa' ? 'bom' : 'neutro');
+      const mob = instalarMobilia14(v, o, 'aluguel'); // VIDA 14: a mobília do proprietário (ou nenhuma)
+      return ok(`Casa nova: ${nomeImovel(o)}${amigo ? `, dividindo com ${amigo.nome}` : ''}.${mob ? ` ${mob}` : ''}`, a.tipo === 'sair_de_casa' ? 'bom' : 'neutro');
     }
-    case 'voltar_pais': voltarParaCasaDosPais(v); return ok('De volta à casa da família.');
+    case 'voltar_pais': voltarParaCasaDosPais(v); limparMobilia14(v); return ok('De volta à casa da família.');
     case 'mudar_cidade': {
       const custo = custoDeMudanca(v.moradia.municipioId, a.municipioId);
       pagarTudo(v, custo);
       mudarAgora(v, a.municipioId, '');
+      limparMobilia14(v);
       // REWORK 10 · REL-01: a parceria que vem junto — combinado antes (`convivio.conversar_mudanca`), ou não.
       const par = reacaoDaParceriaAMudanca(v);
       return ok(`Mudança para ${nomeLugar(a.municipioId)} feita.${par ? ` ${par}` : ''}`);
@@ -1442,6 +1449,7 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       const av = avaliarMigracao(v, a.municipioId, a.motivo);
       if (v.financas.conta < av.custo) pagarTudo(v, 0);
       migrar(v, r, a.municipioId, a.motivo);
+      limparMobilia14(v);
       const par = reacaoDaParceriaAMudanca(v);
       return { resultado: `${v.biografia[v.biografia.length - 1]?.texto ?? ''}${par ? ` ${par}` : ''}`, titulo: `A vida ${noPais(paisDaCidade(a.municipioId))}` };
     }
@@ -1489,12 +1497,16 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       if (o.estado === 'reforma') v.financas.bens[v.financas.bens.length - 1].problema = { id: `pb${v.seq++}`, texto: 'a reforma que já vinha com ele', custo: Math.round(o.preco * 0.08 / 100) * 100, desde: v.t, gravidade: 2, adiado: 0 };
       const primeira = !v.financas.bens.some(b => b.tipo === 'imovel' && b.id !== id && !b.herdado) && !temFato(v, 'comprou_imovel');
       marcarFato(v, 'comprou_imovel');
+      // VIDA 14: o imóvel mobiliado vendido com a mobília (paga pelo valor de usada; as peças são suas).
+      const mobC = mobiliaDaOferta14(v, o);
+      if (mobC.nivel !== 'vazio' && a.morar) pagarTudo(v, mobC.precoExtra);
       if (a.morar) morarNoImovel(v, id);
+      const mobTexto = a.morar && mobC.nivel !== 'vazio' ? instalarMobilia14(v, o, 'compra') : (limparMobilia14(v), undefined);
       const artigoM = m.nome.startsWith('casa') || m.nome.startsWith('kitnet') ? 'a' : 'o';
       escrever(v, { texto: `${primeira ? `Comprou ${m.nome.startsWith('casa') ? 'a primeira casa' : 'o primeiro imóvel'}: ` : 'Comprou '}${artigoM === 'a' ? 'uma' : 'um'} ${m.nome} ${o.bairro}${financiou ? `, financiad${artigoM} em ${Math.round(cond.meses / 12)} anos${cond.social ? ' por um programa habitacional' : ''}` : ' à vista'}${a.morar ? '' : ', para alugar'}.`, relevancia: primeira || a.morar ? 'marco' : 'biografia', tema: 'casa', tom: 'bom', escolha: true , fato: { tipo: 'm_imovel', dados: { primeiro: primeira ? 1 : 0 } } });
       // 12.4.1: o resultado diz o que saiu do dinheiro e o que sobrou para gastar — o imóvel passa a ser patrimônio, não saldo.
       const pago = `Pagou ${fmt((financiou ? cond.entrada : o.preco) + cond.custos)}${financiou ? ' de entrada e escritura' : ' com a escritura'}; para gastar ficaram ${fmt(disponivel(v))}. O imóvel (${fmt(o.preco)}) entra no patrimônio.`;
-      return ok(a.morar ? `A chave é sua. ${pago}` : `Imóvel comprado. Alugado, deve render ${fmt(alugadoPor ?? 0)} por mês. ${pago}`, 'bom');
+      return ok(a.morar ? `A chave é sua. ${pago}${mobTexto ? ` ${mobTexto} (${fmt(mobC.precoExtra)} pela mobília.)` : ''}` : `Imóvel comprado. Alugado, deve render ${fmt(alugadoPor ?? 0)} por mês. ${pago}`, 'bom');
     }
     case 'vender_bem': {
       const b = v.financas.bens.find(x => x.id === a.bemId)!;
@@ -1673,6 +1685,7 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
     case 'crenca14': return ok(executarCrenca14(v, a.op), 'neutro');
     case 'dep14': { const x = executarDep14(v, a.oque); return ok(x.texto, x.tom); }
     case 'futsal14': return ok(executarFutsal14(v, a.oque), 'neutro');
+    case 'moveis14': return ok(executarMoveis14(v, a.oque), 'neutro');
     case 'visibilidade': {
       const res = usarVisibilidade(v, r, a.oque);
       if (res.decisao) { const d = conteudoPorId(res.decisao); if (d && d.tipo === 'decisao') abrirDecisao(v, d, contexto(v, r)); return {}; }
@@ -1687,7 +1700,13 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
     case 'compor_tatuagens': return ok(comporTatuagens(v, a.modelo, a.lado), 'bom');
     case 'em_casa': return ok(fazerEmCasa(v, a.oque), 'bom');
     case 'usar_item': return ok(usarItem(v, a.itemId, a.usar, a.id));
-    case 'comprar_coisa': return ok(comprarCoisa(v, a.coisaId, a.marca, a.loja), 'bom');
+    case 'comprar_coisa': {
+      const texto = comprarCoisa(v, a.coisaId, a.marca, a.loja);
+      // VIDA 14: a peça vai para onde cabe — ou para o depósito (nunca some, nunca é proibida).
+      const nova = [...(v.financas.coisas ?? [])].reverse().find(t => t.coisaId === a.coisaId && t.t === v.t);
+      const onde = nova && a.coisaId !== 'discos' ? acomodarCompra14(v, nova) : undefined;
+      return ok(onde ? `${texto} ${onde}` : texto, 'bom');
+    }
     case 'personalizar': return ok(a.op.o === 'look_vestir' ? vestirLook(v, a.op.id) : personalizar(v, a.op), 'bom');
     case 'vender_coisa': return ok(venderCoisa(v, a.coisaTidaId));
     case 'usar_coisa': return ok(usarCoisa(v, a.coisaTidaId, a.uso, a.pessoaId), 'bom');

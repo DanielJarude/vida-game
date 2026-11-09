@@ -42,6 +42,7 @@ import { normalizarVida14Conquistas } from './v14/conquistas/conquistas';
 import { normalizarVida14Justica } from './v14/justica/justica14';
 import { normalizarVida14Crencas } from './v14/crencas/crencas';
 import { normalizarVida14Dependencias } from './v14/crencas/dependencias14';
+import { normalizarVida14Moveis } from './v14/moveis/moveis14';
 import { normalizarVida13Acoes } from './sistemas/desfecho13';
 import { normalizarVida13Aparencia } from './sistemas/aparencia13';
 import { normalizarVida14Aparencia } from './v14/aparencia/normalizar14';
@@ -141,6 +142,7 @@ export function interpretar(bruto: string): Leitura {
   if (r.tipo === 'ok') normalizarVida14Justica(r.vida);
   if (r.tipo === 'ok') normalizarVida14Crencas(r.vida);
   if (r.tipo === 'ok') normalizarVida14Dependencias(r.vida);
+  if (r.tipo === 'ok') normalizarVida14Moveis(r.vida);
   if (r.tipo === 'ok') normalizarVida13Acoes(r.vida);
   if (r.tipo === 'ok') normalizarVida13Aparencia(r.vida);
   if (r.tipo === 'ok') normalizarVida14Aparencia(r.vida);
