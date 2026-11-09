@@ -131,6 +131,7 @@ import { disponibilidadeRosto14, mudarRosto14, type MudancaRosto14 } from './v14
 import { disponibilidadePiercing14, executarPiercing14, type OquePiercing14 } from './v14/aparencia/piercings14';
 import { fronteirasFechadas } from './v14/mundo/mundo14';
 import { disponibilidadeViagem14, executarViagem14, type OquaViagem14 } from './v14/viagens/viagens14';
+import { disponibilidadeJustica14, executarJustica14, type OqueJustica14 } from './v14/justica/justica14';
 import { disponibilidadeConquistas14, executarConquistas14, linhaDoExtrato14, type OqueConquistas14 } from './v14/conquistas/conquistas';
 
 /** Id de uma interação do catálogo (`sistemas/interacoes`). O que existe depende da pessoa e do momento. */
@@ -311,6 +312,8 @@ export type Acao =
   | ({ tipo: 'viagem14' } & OquaViagem14)
   /** VIDA 14: os objetivos pessoais (criar, alterar, abandonar) e os programas (restaurantes, degustações, galas, leilões). */
   | { tipo: 'conquistas14'; oque: OqueConquistas14 }
+  /** VIDA 14: as causas na Justiça (processar, advogado, acordo, recurso, desistir) — `v14/justica`. */
+  | { tipo: 'justica14'; oque: OqueJustica14 }
   /** Comprar um item de estilo (óculos, chapéu, roupa, acessório). */
   | { tipo: 'comprar_item'; itemId: string; /** 12.4.1: a marca e a loja (ausentes: o preço de referência). */ marca?: string; loja?: string; /** 12.9: a variante vista na vitrine e no provador. */ variante?: string }
   | { tipo: 'estetica'; id: string; clinica: Clinica; alvo?: string; revisao?: boolean }
@@ -813,6 +816,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'piercing14': return disponibilidadePiercing14(v, a.oque);
     case 'viagem14': return fronteirasFechadas(v) && !a.destino.startsWith('neg_sao_paulo') ? bloqueio('impossivel', fronteirasFechadas(v)!) : disponibilidadeViagem14(v, a);
     case 'conquistas14': return disponibilidadeConquistas14(v, a.oque);
+    case 'justica14': return disponibilidadeJustica14(v, a.oque);
     case 'visibilidade': return disponibilidadeVisibilidade(v, a.oque);
     case 'comprar_item': return disponibilidadeComprarItem(v, a.itemId, a.marca, a.loja);
     case 'estetica': return disponibilidadeProcedimento(v, a.id, a.clinica, a.alvo, a.revisao);
@@ -1053,6 +1057,7 @@ function linhaDoExtrato(a: Acao): [string, TipoMovimento] {
     case 'margem': return ['Justiça: advogados, fianças e custas', 'despesa'];
     case 'conquistas14': return [linhaDoExtrato14(a.oque), 'escolha'];
     case 'viagem14': return ['Viagens', 'escolha'];
+    case 'justica14': return ['Justiça: advogados, acordos e custas', 'despesa'];
     default: return ['Compras, viagens e outras escolhas', 'escolha'];
   }
 }
@@ -1651,6 +1656,7 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
     case 'piercing14': return ok(executarPiercing14(v, a.oque), 'bom');
     case 'viagem14': { const x = executarViagem14(v, r, a); return ok(x.texto, x.tom); }
     case 'conquistas14': { const x = executarConquistas14(v, r, a.oque); return ok(x.texto, 'bom'); }
+    case 'justica14': { const x = executarJustica14(v, r, a.oque); return ok(x.texto, x.tom); }
     case 'visibilidade': {
       const res = usarVisibilidade(v, r, a.oque);
       if (res.decisao) { const d = conteudoPorId(res.decisao); if (d && d.tipo === 'decisao') abrirDecisao(v, d, contexto(v, r)); return {}; }

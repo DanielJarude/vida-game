@@ -3908,6 +3908,8 @@ export interface Vida {
   organizacoes?: Record<string, Organizacao>;
   /** Como prefere ir ao trabalho e ao estudo. Ausente = o jeito mais rápido que tem (`sistemas/transporte`). */
   deslocamento?: { modo: 'a_pe' | 'bicicleta' | 'publico' | 'moto' | 'carro'; t: number };
+  /** VIDA 14 (`v14/justica`): as causas cíveis, trabalhistas, de consumo, as multas — abertas e encerradas. Ausente: nenhuma. */
+  justica14?: import('./v14/justica/justica14').Justica14;
   /** VIDA 14 (`v14/mundo`): os acontecimentos mundiais vividos e os efeitos ativos (`efeitos`, lido pelos sistemas antigos). */
   mundo14?: import('./dados14/mundo/tipos').Mundo14;
   morte?: {

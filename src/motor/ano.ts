@@ -47,6 +47,7 @@ import { processarPrisao } from './sistemas/prisao';
 import { processarMundoVivo } from './sistemas/mundoVivo';
 import { processarMundo14 } from './v14/mundo/mundo14';
 import { processarConquistas14 } from './v14/conquistas/conquistas';
+import { processarJustica14 } from './v14/justica/justica14';
 import { processarConcursos } from './sistemas/concurso';
 import { processarEsporte, treinoProfissional } from './sistemas/esporte';
 import { processarLesoes } from './sistemas/lesoes';
@@ -156,6 +157,7 @@ function viverAno(v: Vida, r: Rng): void {
   // A economia do país anda antes de tudo (e não depende de nada que a pessoa fez).
   const ec = avancarEconomia(v.economia, v.t, paisDaVida(v));
   processarMundo14(v, ec); // VIDA 14: os acontecimentos mundiais do ano (choques, pandemia, marcos) e os efeitos ativos
+  processarJustica14(v); // VIDA 14: as causas cíveis do ano (a demissão, a empresa, o carro, o nome) e as sentenças
 
   // O que a semana do ano faz pela pessoa (treino, leitura) vale no MESMO ano: vem antes do corpo e da escola.
   praticandoPor('vida', () => desenvolverPessoa(v, r));
