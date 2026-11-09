@@ -131,6 +131,7 @@ import { disponibilidadeRosto14, mudarRosto14, type MudancaRosto14 } from './v14
 import { disponibilidadePiercing14, executarPiercing14, type OquePiercing14 } from './v14/aparencia/piercings14';
 import { fronteirasFechadas } from './v14/mundo/mundo14';
 import { disponibilidadeViagem14, executarViagem14, type OquaViagem14 } from './v14/viagens/viagens14';
+import { disponibilidadeFutsal14, executarFutsal14, type OqueFutsal14 } from './v14/esportes/futsal14';
 import { disponibilidadeDep14, executarDep14, type OqueDep14 } from './v14/crencas/dependencias14';
 import { disponibilidadeCrenca14, executarCrenca14, type OpCrenca14 } from './v14/crencas/crencas';
 import { disponibilidadeJustica14, executarJustica14, type OqueJustica14 } from './v14/justica/justica14';
@@ -320,6 +321,8 @@ export type Acao =
   | { tipo: 'crenca14'; op: OpCrenca14 }
   /** VIDA 14: as dependências — limites, pedir ajuda, tratamento, parar (`v14/crencas/dependencias14`). */
   | { tipo: 'dep14'; oque: OqueDep14 }
+  /** VIDA 14: a posição no futsal e o goleiro-linha (`v14/esportes`). */
+  | { tipo: 'futsal14'; oque: OqueFutsal14 }
   /** Comprar um item de estilo (óculos, chapéu, roupa, acessório). */
   | { tipo: 'comprar_item'; itemId: string; /** 12.4.1: a marca e a loja (ausentes: o preço de referência). */ marca?: string; loja?: string; /** 12.9: a variante vista na vitrine e no provador. */ variante?: string }
   | { tipo: 'estetica'; id: string; clinica: Clinica; alvo?: string; revisao?: boolean }
@@ -825,6 +828,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'justica14': return disponibilidadeJustica14(v, a.oque);
     case 'crenca14': return disponibilidadeCrenca14(v, a.op);
     case 'dep14': return disponibilidadeDep14(v, a.oque);
+    case 'futsal14': return disponibilidadeFutsal14(v, a.oque);
     case 'visibilidade': return disponibilidadeVisibilidade(v, a.oque);
     case 'comprar_item': return disponibilidadeComprarItem(v, a.itemId, a.marca, a.loja);
     case 'estetica': return disponibilidadeProcedimento(v, a.id, a.clinica, a.alvo, a.revisao);
@@ -1668,6 +1672,7 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
     case 'justica14': { const x = executarJustica14(v, r, a.oque); return ok(x.texto, x.tom); }
     case 'crenca14': return ok(executarCrenca14(v, a.op), 'neutro');
     case 'dep14': { const x = executarDep14(v, a.oque); return ok(x.texto, x.tom); }
+    case 'futsal14': return ok(executarFutsal14(v, a.oque), 'neutro');
     case 'visibilidade': {
       const res = usarVisibilidade(v, r, a.oque);
       if (res.decisao) { const d = conteudoPorId(res.decisao); if (d && d.tipo === 'decisao') abrirDecisao(v, d, contexto(v, r)); return {}; }

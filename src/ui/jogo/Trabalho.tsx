@@ -24,6 +24,7 @@ const PremiosDoMundo = sobDemandaCampeonato(() => import('./Campeonato').then(m 
 /** VIDA 12.9: a Presidência no painel político (a corrida, o governo do país, a história) — sob demanda. */
 const PainelPresidencial = sobDemandaCampeonato(() => import('./Presidencia129').then(m => m.PainelPresidencial));
 const Justica14 = sobDemandaCampeonato(() => import('../v14/justica/Justica14').then(m => m.Justica14));
+const Futsal14 = sobDemandaCampeonato(() => import('../v14/esportes/Futsal14').then(m => m.Futsal14));
 import { CampoDoAtleta, ClaqueteDoAtor, PalcoDoMusico, PlenarioDoPolitico, PranchetaDoTecnico } from './CarreirasEspeciais';
 import { habilitacaoDaVida } from '../../motor/sistemas/autoescola';
 import { regrasDaVida } from '../../motor/mundo/regras';
@@ -232,6 +233,7 @@ export function Trabalho({ vida, agir, irPara, parte, explorar: abaDeFora, aoExp
           : (modo === 'autonomo' || modo === 'informal' || modo === 'plataforma' || modo === 'artista') && <PainelFreguesia vida={vida} />}
         {(modo === 'rural' || modo === 'pesca') && <PainelCampo vida={vida} />}
         {(modo === 'atleta' || espSemClube) && <PainelAtleta vida={vida} />}
+        {(modo === 'atleta' || espSemClube) && vida.caminhos.esporte?.modalidade === 'futsal' && <Futsal14 vida={vida} agir={agir} />}
         {modo === 'tecnico' && <PainelComissao vida={vida} />}
         {modo === 'base' && !div && <PainelBase vida={vida} />}
         {modo === 'base' && div && <p className="ligacao-caminho"><span>A base, os treinos e a peneira estão em Outros caminhos.</span> <button type="button" className="link" onClick={() => irPara('outros_caminhos')}>Ir para Outros caminhos →</button></p>}
