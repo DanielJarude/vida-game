@@ -43,6 +43,8 @@ import { AparenciaEEstilo } from './Aparencia';
 import { sobDemanda as sobDemandaV14 } from '../util/sobDemanda';
 const Objetivos14 = sobDemandaV14(() => import('../v14/conquistas/Objetivos14').then(m => m.Objetivos14));
 const Mundo14 = sobDemandaV14(() => import('../v14/mundo/Mundo14').then(m => m.Mundo14));
+const Crenca14 = sobDemandaV14(() => import('../v14/crencas/Crenca14').then(m => m.Crenca14));
+const Dependencias14 = sobDemandaV14(() => import('../v14/crencas/Dependencias14').then(m => m.Dependencias14));
 import { OQueConstruiu } from './Trajetorias';
 import { Linhagem } from './Linhagem';
 import { Medidor } from './Sinais';
@@ -110,6 +112,7 @@ export function Voce({ vida, agir, irPara, abrirPessoa, parte: parteDeFora, irPa
       <div role="tabpanel" id="voce-painel" aria-labelledby={`voce-aba-${parte}`} className={`voce__partes voce__partes--${parte}`}>
       <div className={fora('resumo')}>
       <FichaDeAtributos vida={vida} agir={agir} irPara={irPara} abrirPessoa={abrirPessoa} />
+      {parte === 'resumo' && i >= 6 && <Crenca14 vida={vida} agir={agir} />}
       {leituras.length > 0 && (
         <div id="voce-agora" className={`estados estados--${leituras.length}`}>
           {leituras.map(l => <Estado key={l.d} l={l} vida={vida} agir={agir} irPara={irPara} abrirPessoa={abrirPessoa} />)}
@@ -146,6 +149,7 @@ export function Voce({ vida, agir, irPara, abrirPessoa, parte: parteDeFora, irPa
       </div>
 
       <div className={fora('saude')}>
+      {parte === 'saude' && vida.dependencias14 && <Dependencias14 vida={vida} agir={agir} />}
       {!(sinais.length > 0 || condicoes.length > 0) && (
         <div id="voce-saude" className="voce-saude prontuario papel papel--sem-dobra">
           <p className="prontuario__cabeca"><span>Prontuário</span><span>{vida.eu.nome} {vida.eu.sobrenome} · {i} anos</span></p>

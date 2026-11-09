@@ -131,6 +131,8 @@ import { disponibilidadeRosto14, mudarRosto14, type MudancaRosto14 } from './v14
 import { disponibilidadePiercing14, executarPiercing14, type OquePiercing14 } from './v14/aparencia/piercings14';
 import { fronteirasFechadas } from './v14/mundo/mundo14';
 import { disponibilidadeViagem14, executarViagem14, type OquaViagem14 } from './v14/viagens/viagens14';
+import { disponibilidadeDep14, executarDep14, type OqueDep14 } from './v14/crencas/dependencias14';
+import { disponibilidadeCrenca14, executarCrenca14, type OpCrenca14 } from './v14/crencas/crencas';
 import { disponibilidadeJustica14, executarJustica14, type OqueJustica14 } from './v14/justica/justica14';
 import { disponibilidadeConquistas14, executarConquistas14, linhaDoExtrato14, type OqueConquistas14 } from './v14/conquistas/conquistas';
 
@@ -314,6 +316,10 @@ export type Acao =
   | { tipo: 'conquistas14'; oque: OqueConquistas14 }
   /** VIDA 14: as causas na Justiça (processar, advogado, acordo, recurso, desistir) — `v14/justica`. */
   | { tipo: 'justica14'; oque: OqueJustica14 }
+  /** VIDA 14: a crença (mudar, ter ou não) e a prática (nenhuma, nas datas, toda semana) — `v14/crencas`. */
+  | { tipo: 'crenca14'; op: OpCrenca14 }
+  /** VIDA 14: as dependências — limites, pedir ajuda, tratamento, parar (`v14/crencas/dependencias14`). */
+  | { tipo: 'dep14'; oque: OqueDep14 }
   /** Comprar um item de estilo (óculos, chapéu, roupa, acessório). */
   | { tipo: 'comprar_item'; itemId: string; /** 12.4.1: a marca e a loja (ausentes: o preço de referência). */ marca?: string; loja?: string; /** 12.9: a variante vista na vitrine e no provador. */ variante?: string }
   | { tipo: 'estetica'; id: string; clinica: Clinica; alvo?: string; revisao?: boolean }
@@ -817,6 +823,8 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'viagem14': return fronteirasFechadas(v) && !a.destino.startsWith('neg_sao_paulo') ? bloqueio('impossivel', fronteirasFechadas(v)!) : disponibilidadeViagem14(v, a);
     case 'conquistas14': return disponibilidadeConquistas14(v, a.oque);
     case 'justica14': return disponibilidadeJustica14(v, a.oque);
+    case 'crenca14': return disponibilidadeCrenca14(v, a.op);
+    case 'dep14': return disponibilidadeDep14(v, a.oque);
     case 'visibilidade': return disponibilidadeVisibilidade(v, a.oque);
     case 'comprar_item': return disponibilidadeComprarItem(v, a.itemId, a.marca, a.loja);
     case 'estetica': return disponibilidadeProcedimento(v, a.id, a.clinica, a.alvo, a.revisao);
@@ -1058,6 +1066,7 @@ function linhaDoExtrato(a: Acao): [string, TipoMovimento] {
     case 'conquistas14': return [linhaDoExtrato14(a.oque), 'escolha'];
     case 'viagem14': return ['Viagens', 'escolha'];
     case 'justica14': return ['Justiça: advogados, acordos e custas', 'despesa'];
+    case 'dep14': return ['Saúde: tratamento', 'despesa'];
     default: return ['Compras, viagens e outras escolhas', 'escolha'];
   }
 }
@@ -1657,6 +1666,8 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
     case 'viagem14': { const x = executarViagem14(v, r, a); return ok(x.texto, x.tom); }
     case 'conquistas14': { const x = executarConquistas14(v, r, a.oque); return ok(x.texto, 'bom'); }
     case 'justica14': { const x = executarJustica14(v, r, a.oque); return ok(x.texto, x.tom); }
+    case 'crenca14': return ok(executarCrenca14(v, a.op), 'neutro');
+    case 'dep14': { const x = executarDep14(v, a.oque); return ok(x.texto, x.tom); }
     case 'visibilidade': {
       const res = usarVisibilidade(v, r, a.oque);
       if (res.decisao) { const d = conteudoPorId(res.decisao); if (d && d.tipo === 'decisao') abrirDecisao(v, d, contexto(v, r)); return {}; }
