@@ -28,6 +28,9 @@ import { EFEITO_DO_ESTILO, FORMACAO_DO_ESTILO, passagemAtual, type EstiloDeJogo 
 import { leituraDoTreinadorDeGoleiros } from '../../motor/sistemas/treinadorDeGoleiros';
 import { papelNaMusica, rendaDeDireitos } from '../../motor/sistemas/musica';
 import { leituraDasAliancas } from '../../motor/sistemas/aliancas';
+import { sobDemanda } from '../util/sobDemanda';
+// VIDA 14: a gestão (medidas), a filiação, o legado e Belém — sob demanda (`ui/v14/politica`).
+const Politica14 = sobDemanda(() => import('../v14/politica/Politica14').then(m => m.Politica14));
 import { leituraPolitica, proximaEleicao } from '../../motor/sistemas/politica';
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -304,6 +307,7 @@ export function PlenarioDoPolitico({ vida, agir }: { vida: Vida; agir: (a: Acao)
           </ul>
         </div>
       )}
+      <Politica14 vida={vida} agir={agir} />
     </section>
   );
 }

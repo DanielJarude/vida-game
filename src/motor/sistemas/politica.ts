@@ -284,7 +284,7 @@ export function calendarioDoMandato(v: Vida, m = v.caminhos.politica?.mandato): 
     cargo: m.cargo, tInicio: m.tInicio, tFim: m.tFim, anos, ano, anoPosse, anoFinal,
     ultimoAno: anoDe(v.t) >= anoFinal,
     mesesRestantes: Math.max(0, m.tFim - v.t),
-    eleicaoDoFim: eleicaoAvulsa(m.cargo) ? { ano: anoDe(m.tFim), t: tDaEleicaoDe(m.cargo, anoDe(m.tFim)) } : { ano: anoFinal, t: tDaEleicao(anoFinal) },
+    eleicaoDoFim: eleicaoAvulsa(m.cargo, paisDaVida(v)) ? { ano: anoDe(m.tFim), t: tDaEleicaoDe(m.cargo, anoDe(m.tFim), paisDaVida(v)) } : { ano: anoFinal, t: tDaEleicao(anoFinal) },
     naJanela: e ? { ...e, encerra: mandatoAcabaNaEleicao(m, e.ano) } : undefined
   };
 }
@@ -853,7 +853,7 @@ export function apurar(v: Vida, r: Rng): void {
   p.reputacao = clamp(p.reputacao + (ganhou ? 3 : 1));
   if (ganhou) {
     const mesmo = p.mandato?.cargo === cargo;
-    p.posse = { cargo, t: tDaPosseDe(cargo, Math.floor(c.tEleicao / 12)) };
+    p.posse = { cargo, t: tDaPosseDe(cargo, Math.floor(c.tEleicao / 12), paisDaVida(v)) };
     if (!mesmo) p.fase = 'eleito';
     const texto = mesmo ? `${cap(flex(ge(v), 'Reeleito', 'Reeleita', 'Reeleite'))} ${nome}, em ${anoDe(c.tEleicao)}.` : `${cap(flex(ge(v), 'Eleito', 'Eleita', 'Eleite'))} ${nome} em ${anoDe(c.tEleicao)}, ${p.partido ? peloPartido(p.partido) : 'sem partido'}.`;
     escrever(v, { texto: `${texto} ${porque}`.trim(), relevancia: 'marco', tema: 'trabalho', tom: 'bom' });

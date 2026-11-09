@@ -36,6 +36,7 @@ import { normalizarVida129Economia } from './sistemas/empresas129';
 import { normalizarVida13Empresas } from './sistemas/empresas13';
 import { normalizarVida14Empresas } from './v14/empresas/empresas14';
 import { normalizarVida129Presidencia } from './sistemas/presidencia129';
+import { normalizarVida14Politica } from './v14/politica/politica14';
 import { normalizarVida13Acoes } from './sistemas/desfecho13';
 import { normalizarVida13Aparencia } from './sistemas/aparencia13';
 import { normalizarVida14Aparencia } from './v14/aparencia/normalizar14';
@@ -129,6 +130,7 @@ export function interpretar(bruto: string): Leitura {
   if (r.tipo === 'ok') normalizarVida13Empresas(r.vida);
   if (r.tipo === 'ok') normalizarVida14Empresas(r.vida);
   if (r.tipo === 'ok') normalizarVida129Presidencia(r.vida);
+  if (r.tipo === 'ok') normalizarVida14Politica(r.vida);
   if (r.tipo === 'ok') normalizarVida13Acoes(r.vida);
   if (r.tipo === 'ok') normalizarVida13Aparencia(r.vida);
   if (r.tipo === 'ok') normalizarVida14Aparencia(r.vida);

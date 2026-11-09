@@ -121,8 +121,9 @@ describe('elegibilidade · as regras do país', () => {
     expect(podeConcorrer(ny, 'senador', tDaEleicao(2026, 'US')).grau).toBe('impossivel');
     definirPaisCorrente('BR');
   });
-  it('parlamentaristas e monarquias não oferecem a Presidência (documentado); Portugal e França ficam de fora pelo calendário', () => {
-    for (const pais of ['DE', 'IT', 'GB', 'ES', 'JP', 'CA', 'IN', 'ZA', 'AO', 'PT', 'FR']) {
+  it('parlamentaristas e monarquias não oferecem a Presidência (documentado); a França fica de fora pelo calendário; Portugal entra (VIDA 14, eleição avulsa)', () => {
+    expect(existeCargo('presidente', 'PT')).toBe(true);
+    for (const pais of ['DE', 'IT', 'GB', 'ES', 'JP', 'CA', 'IN', 'ZA', 'AO', 'FR']) {
       expect(existeCargo('presidente', pais)).toBe(false);
       expect(cargosDoPais(pais)).not.toContain('presidente');
     }

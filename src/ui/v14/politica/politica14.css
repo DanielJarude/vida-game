@@ -1,0 +1,19 @@
+/* VIDA 14 — gestão, filiação, legado e Belém no plenário. Prefixo p14-. */
+.p14 { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; margin-top: var(--space-3); }
+.p14__bloco { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3); border-radius: var(--radius-sm); background: var(--veu-1); min-width: 0; }
+.p14__kicker { margin: 0; font-size: var(--type-caption); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-muted); }
+.p14__sub { margin: var(--space-2) 0 0; font-size: var(--type-meta); font-weight: 600; color: var(--text-secondary); }
+.p14__inds { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--space-2); }
+.p14__ind { display: flex; flex-direction: column; gap: 2px; padding: var(--space-2); border-left: 3px solid var(--rule); min-width: 0; }
+.p14__ind--bom { border-left-color: var(--patrimonio-aplicado); }
+.p14__ind--ruim { border-left-color: var(--danger-line); }
+.p14__ind-rotulo { font-size: var(--type-caption); color: var(--text-muted); }
+.p14__ind-valor { font-weight: 600; color: var(--text-primary); }
+.p14__ind-delta { font-size: var(--type-caption); color: var(--text-secondary); }
+.p14__medidas { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.p14__medida { display: flex; flex-direction: column; gap: 4px; padding: var(--space-2) 0; border-bottom: 1px solid var(--rule); min-width: 0; }
+.p14__medida:last-child { border-bottom: 0; }
+.p14__medida-nome { margin: 0; display: flex; flex-direction: column; font-weight: 600; color: var(--text-primary); overflow-wrap: anywhere; }
+.p14__medida-nome small { font-weight: 400; font-size: var(--type-caption); color: var(--text-muted); }
+.p14__medida-efeito { margin: 0; font-size: var(--type-meta); color: var(--text-secondary); }
+.p14__medida .botao { align-self: flex-start; }

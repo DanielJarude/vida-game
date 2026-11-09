@@ -50,7 +50,7 @@ import { habilidade } from './frentes';
 import { encerrarEmprego } from './trabalho';
 import {
   PRESIDENCIA, aliado, basePartidaria, calendarioDoMandato, cargoNoCiclo, eleicaoNaJanela, fatoresDaEleicao, naPolitica, nomeCargo,
-  nomePublico, partidosDoPais, podeConcorrer, registrarNoMandato, resumoDoMandato, tDaEleicao, tDaEleicaoDe, tDaPosse, tDaPosseDe, voltarAoTrabalho,
+  nomePublico, partidosDoPais, podeConcorrer, registrarNoMandato, resumoDoMandato, tDaEleicaoDe, tDaPosse, tDaPosseDe, voltarAoTrabalho,
   type FatorEleitoral, type SaidaPolitica
 } from './politica';
 import type { AcaoProfissional } from './profissao';
@@ -113,6 +113,9 @@ function elegivel(v: Vida, tEleicao: number): Veredito | undefined {
     const fim = fimDoUltimoMandato(p);
     if (r.limite.intervalo && fim !== undefined && (tDaPosse(anoDe(tEleicao)) - fim) / 12 < r.limite.intervalo) return bloqueio('ilegal', r.limite.texto);
   }
+  // VIDA 14 · Portugal: a candidatura é sempre de cidadãos (7.500 a 15.000 assinaturas), com ou sem partido por trás —
+  // e as assinaturas se juntam sem nome nacional; ganhar é outra conversa (a força conta na urna, não no registro).
+  if (r.assinaturas) return nomeNacional(v) < 15 ? { grau: 'improvavel', chance: 0.5, motivo: `Juntar ${r.assinaturas[0].toLocaleString('pt-BR')} assinaturas sem nome conhecido leva meses de banca na rua — e a urna, depois, é outra conversa.` } : PERMITIDO;
   // Sem partido: só onde a lei aceita candidatura independente (com assinaturas) — e só com nome no país inteiro.
   if (p && !p.partido) {
     if (!r.independente) return undefined;
@@ -159,6 +162,9 @@ export function forcaPresidencial(v: Vida, t?: number): number {
   const p = v.caminhos.politica!;
   const tEl = t ?? p.campanha?.tEleicao ?? v.t;
   const f = fatoresDaEleicao(v, 'presidente', tEl).fatores.filter(k => k.id !== 'disputa').reduce((s, k) => s + k.valor, 0);
+  // VIDA 14 · Portugal: o PR não governa e a candidatura é pessoal — pesa o nome no país (o comentador, o
+  // ex-autarca conhecido), não o cargo de antes; a economia pesa pouco (não é ele quem a conduz).
+  if (regraDaPresidencia(v)?.semipresidencial) return f + Math.max(0, nomeNacional(v) - 40) / 6 + pesoDaEconomia(v) * 0.3;
   return f + trajetoria(p) + pesoDaEconomia(v);
 }
 
@@ -215,11 +221,11 @@ function registrar(v: Vida): void {
   const r = regraDaPresidencia(v);
   if (!r || !p.campanha) return;
   const ano = anoDe(p.campanha.tEleicao);
-  const via: CampanhaPresidencial129['via'] = p.mandato?.cargo === 'presidente' ? 'reeleicao' : !p.partido ? 'independente' : r.escolha;
+  const via: CampanhaPresidencial129['via'] = p.mandato?.cargo === 'presidente' ? 'reeleicao' : !p.partido || r.assinaturas ? 'independente' : r.escolha;
   const rng = rngDe(v.id, 'pres_rival', ano);
   const fem = rng.chance(0.35);
   const rival = via === 'convencao' || via === 'primarias' ? `${sortearNome(rng, fem ? 'feminino' : 'masculino', ano - rng.int(40, 70), paisDaVida(v))} ${sortearSobrenome(rng, paisDaVida(v))}` : undefined;
-  presidencia(v).campanha = { ano, etapa: via === 'convencao' || via === 'primarias' ? 0 : 1, via, adversarios: gerarAdversarios(v, ano, r), rival, pesquisas: [] };
+  presidencia(v).campanha = { ano, etapa: via === 'convencao' || via === 'primarias' ? 0 : r.semipresidencial ? 2 : 1, /* VIDA 14: em Portugal não há vice nem chapa */ via, adversarios: gerarAdversarios(v, ano, r), rival, pesquisas: [] };
   anotarPesquisa(v);
 }
 
@@ -733,7 +739,7 @@ function horizonte(v: Vida): string | undefined {
   const cal = calendarioDoMandato(v);
   const p = v.caminhos.politica;
   if (!r || !cal || !p) return undefined;
-  const t = tDaEleicao(cal.eleicaoDoFim.ano);
+  const t = tDaEleicaoDe('presidente', cal.eleicaoDoFim.ano, paisDaVida(v));
   const pode = podeTentar(podeConcorrer(v, 'presidente', t));
   return `${cal.ultimoAno ? 'Último ano do mandato' : `Ano ${cal.ano} de ${cal.anos}`}: ${pode ? 'a reeleição é possível — e a economia vai pesar nela.' : `não há reeleição agora. ${r.limite.texto}`}`;
 }
