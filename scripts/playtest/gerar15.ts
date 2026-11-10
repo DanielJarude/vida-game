@@ -27,3 +27,14 @@ let n = viver(nova({ semente: 1504 }), 24);
 n.eu.atracao = n.eu.genero === 'masculino' ? 'mulheres' : 'homens';
 n = executar(n, { tipo: 'celular15', oque: { op: 'namoro_abrir' } }).vida;
 salvar('namoro', n);
+// O Submundo com anos de histórico e um processo (a mesma construção do teste da 12.25).
+import { transacao } from '../../src/motor/nucleo';
+import { entrar } from '../../src/motor/sistemas/ilicito';
+import { abrirProcesso } from '../../src/motor/sistemas/justica';
+import { adulto } from '../../src/motor/__tests__/cenarios';
+import { garantirCidade } from '../../src/motor/sistemas/faccoes';
+const cr0 = adulto(30, { semente: 41, municipioId: 'sao-paulo-sp' });
+cr0.financas.conta = 200_000; cr0.financas.dividas = []; cr0.momento = null; delete cr0.fila; cr0.justica = undefined;
+let cr = transacao(cr0, (x, r) => { entrar(x, 'mercado', undefined, r); garantirCidade(x); }).vida;
+cr = transacao(cr, (x, r) => { x.t += 48; abrirProcesso(x, r, 'mercado'); x.justica!.prisao = undefined; }).vida;
+salvar('submundo', cr);

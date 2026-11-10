@@ -86,7 +86,8 @@ describe('ROT-11.2 · o cuidado com o bicho e com a casa não cria conflito arti
 describe('ROT-11.2 · sozinho com os filhos', () => {
   it('quem sai da loja às 19h e mora só com a criança cuida dela depois do trabalho — sem a meia hora de conflito inventada', () => {
     let v = comEmprego('gerente_loja');
-    v = em(v, x => { comFilho(x, 4); });
+    // VIDA 15: a premissa ("mora só com a criança") explícita — a vida-base nova pode dividir a casa com outro adulto.
+    v = em(v, x => { for (const w of Object.values(x.vinculos)) w.convivio = w.convivio.filter(c => c !== 'casa'); comFilho(x, 4); });
     const noite = blocosFixos(v).find(b => b.id === 'filhos_pequenos')!;
     const fimDoTrabalho = Math.max(...blocosFixos(v).filter(b => b.origem === 'trabalho' || b.origem === 'trajeto').filter(b => b.dias.includes(0) && b.fim <= 21 * 60).map(b => b.fim));
     expect(noite.inicio).toBeGreaterThanOrEqual(fimDoTrabalho);

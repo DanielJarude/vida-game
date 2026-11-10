@@ -111,7 +111,9 @@ describe('VIDA 12.5 · a Retrospectiva da Vida (só o que o save registra)', () 
       expect(m.ano).toBe(Math.floor(m.t / 12));
       if (m.entradaId) expect(v.biografia.find(e => e.id === m.entradaId)?.texto).toBe(m.texto);
     }
-    const casamento = ms.filter(m => m.tipo === 'casamento');
+    // VIDA 15: a vida-base nova pode já ter casado antes (outra pessoa, outro ano) — o que importa é o casamento desta cena
+    // virar UMA memória (a estrutura e a biografia não se duplicam).
+    const casamento = ms.filter(m => m.tipo === 'casamento' && m.t === v.t);
     expect(casamento).toHaveLength(1);
     expect(casamento[0].destaque).toBe(2);
     expect(ms.find(m => m.tipo === 'viagem')?.titulo).toBe('Viagem: Lisboa');

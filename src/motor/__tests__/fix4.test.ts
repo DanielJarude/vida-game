@@ -966,7 +966,9 @@ describe('achados da auditoria independente do FIX #4', () => {
     const r = retrospectiva(v);
     expect(r.some(f => /Deixou 0/.test(f))).toBe(false);
     expect(r.some(f => /Não deixou filhos vivos; deixou \d+ net/.test(f))).toBe(true);
-  });
+    // VIDA 15: \`adulto(80)\` refaz a vida enquanto ela morre antes dos 80 — com a vida-base nova, leva mais tentativas
+    // (o custo por ano é o mesmo da 14: 11,0 × 11,2 ms medidos).
+  }, 90000);
 
   it('a conta do negócio só diz "saiu do seu bolso" quando saiu mesmo (o caixa cobriu = "saiu do caixa")', () => {
     const src = readFileSync(join(__dirname, '../../ui/jogo/Trabalho.tsx'), 'utf8');

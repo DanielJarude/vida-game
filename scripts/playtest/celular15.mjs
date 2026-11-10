@@ -24,5 +24,6 @@ for (const passo of (process.env.PASSOS ?? '').split('|').filter(Boolean)) {
 }
 // geometria: algo vazando para fora do aparelho, horizontalmente?
 const vaza = await p.evaluate(() => { const a = document.querySelector('.cel__aparelho'); if (!a) return []; const r = a.getBoundingClientRect(); return [...a.querySelectorAll('*')].filter(e => { const q = e.getBoundingClientRect(); return q.width > 0 && (q.right > r.right + 1 || q.left < r.left - 1) && e.checkVisibility?.() && !e.closest('.cel__app-corpo, .cel__inicio, .namoro__abas, .jornal15__editorias'); }).slice(0, 5).map(e => e.className.toString().slice(0, 40)); });
-console.log(process.env.NOME, 'erros', erros, 'vaza', vaza);
+const lateral = await p.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+console.log(process.env.NOME, 'erros', erros.length ? erros : '-', 'vaza', vaza.length ? vaza : '-', 'rolagem-lateral', lateral);
 await b.close();
