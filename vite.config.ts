@@ -121,6 +121,11 @@ export default defineConfig({
           if (v14) return `motor14-${v14[1]}`;
           const d14 = /[\\/]src[\\/]motor[\\/]dados14[\\/]([a-z0-9]+)[\\/]/.exec(id);
           if (d14) return `dados14-${d14[1]}`;
+          // VIDA 15: a mesma regra (motor/v15/<frente> → motor15-<frente>; motor/dados15/<frente> → dados15-<frente>).
+          const v15 = /[\\/]src[\\/]motor[\\/]v15[\\/]([a-z0-9]+)[\\/]/.exec(id);
+          if (v15) return `motor15-${v15[1]}`;
+          const d15 = /[\\/]src[\\/]motor[\\/]dados15[\\/]([a-z0-9]+)[\\/]/.exec(id);
+          if (d15) return `dados15-${d15[1]}`;
           if (/[\\/]src[\\/]motor[\\/]sistemas[\\/]reconhecimento13\.ts/.test(id)) return 'motor-fama';
           if (/[\\/]src[\\/]motor[\\/]sistemas[\\/](redes|leituraDoEstresse|juntos|naFormacao|noOficio|microcenas|prisao|mundoVivo|agenda|avaliacaoDaRotina|convivio|apostas|ecos|seguroDesemprego|indiretos|afetos|fama|pedidosDaCrianca|afetosAdultos|casamento|convivio126|casaNoDia|viagens126)\.ts/.test(id)) return 'motor-vida';
           // REWORK 10: o pacote dos textos estava a ~50 kB do limite e a Fase F traz muitos acontecimentos. Os conteúdos novos

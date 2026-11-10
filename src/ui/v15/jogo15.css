@@ -1,0 +1,40 @@
+/* VIDA 15 · o botão do celular no cabeçalho do jogo (carregado com o jogo; o aparelho tem o CSS próprio, sob demanda). */
+.cabecalho__celular { position: relative; display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; border: 1px solid color-mix(in oklab, var(--moldura-tinta, #fff) 25%, transparent); background: none; color: var(--moldura-tinta, #fff); cursor: pointer; flex: none; margin-left: auto; }
+.cabecalho__celular svg { width: 22px; height: 22px; }
+.cabecalho__celular:hover { background: color-mix(in oklab, var(--moldura-tinta, #fff) 10%, transparent); }
+.cabecalho__celular:focus-visible { outline: 2px solid var(--acao); outline-offset: 2px; }
+.cabecalho__celular-badge { position: absolute; top: -6px; right: -6px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px; background: #d93a2f; color: #fff; font: 700 11px/20px var(--font-sans); border: 2px solid var(--moldura, #22262c); }
+.figurinha__ultimo { font-size: var(--type-meta, 12px); color: var(--tinta-3, var(--text-tertiary)); }
+
+/* VIDA 15 · o perfil em Você: números grandes, rótulo pequeno — como um perfil de rede, mas cada um leva à sua tela. */
+.perfil15 { display: flex; flex-direction: column; gap: var(--space-2, 8px); margin: var(--space-2, 8px) 0 var(--space-4, 16px); }
+.perfil15__numeros { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.perfil15__item { display: flex; flex-direction: column; align-items: flex-start; min-width: 84px; padding: 8px 14px; border-radius: var(--radius-md, 12px); border: 1px solid var(--fio, var(--rule)); background: var(--superficie, var(--bg-raised)); color: var(--tinta, var(--text-primary)); cursor: pointer; font: inherit; text-align: left; }
+.perfil15__item:hover { border-color: var(--fio-forte, var(--rule-strong)); }
+.perfil15__item:focus-visible, .perfil15__atalho:focus-visible { outline: 2px solid var(--acao); outline-offset: 2px; }
+.perfil15__item strong { font: 700 var(--type-heading, 20px)/1.1 var(--font-sans); text-transform: none; }
+.perfil15__item--civil strong, .perfil15__item--fama strong { font-size: var(--type-body, 16px); line-height: 1.5; }
+.perfil15__item span { font-size: var(--type-meta, 12px); color: var(--tinta-3, var(--text-tertiary)); }
+.perfil15__atalhos { display: flex; flex-wrap: wrap; gap: 6px; }
+.perfil15__atalho { border: 0; background: color-mix(in oklab, var(--acao) 10%, transparent); color: var(--acao-texto, var(--acao)); border-radius: 999px; padding: 6px 12px; font: 600 var(--type-caption, 14px)/1.2 var(--font-sans); cursor: pointer; }
+@media (max-width: 520px) { .perfil15__item { min-width: 0; flex: 1 1 calc(33% - 6px); padding: 6px 10px; } }
+
+/* VIDA 15 · o crachá da carreira (um cartão de identidade do ofício, com a faixa da cor de cada carreira). */
+.cracha15 { display: grid; grid-template-columns: 14px 1fr; border-radius: var(--radius-md, 12px); overflow: hidden; border: 1px solid var(--fio, var(--rule)); background: var(--superficie-topo, var(--bg-elevated)); margin: 0 0 var(--space-4, 16px); box-shadow: var(--shadow-sm, 0 1px 2px rgba(0,0,0,.06)); }
+.cracha15__faixa { background: var(--p-trabalho, #5a6f8a); position: relative; }
+.cracha15__faixa span { position: absolute; left: 50%; top: 12px; transform: translateX(-50%) rotate(180deg); writing-mode: vertical-rl; font: 700 10px/1 var(--font-sans); letter-spacing: 0.14em; text-transform: uppercase; color: #fff; white-space: nowrap; }
+.cracha15--atleta .cracha15__faixa { background: #2f7a48; }
+.cracha15--medico .cracha15__faixa { background: #2a7570; }
+.cracha15--empresario .cracha15__faixa { background: #233f6e; }
+.cracha15--politico .cracha15__faixa { background: #8a3b2f; }
+.cracha15--artista .cracha15__faixa { background: #6a3fae; }
+.cracha15__corpo { padding: var(--space-3, 12px) var(--space-4, 16px); display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.cracha15__titulo { margin: 0; font: 700 var(--type-title, 24px)/1.15 var(--font-display, var(--font-serif)); color: var(--tinta); }
+.cracha15__sub { margin: 0; color: var(--tinta-2); font-size: var(--type-caption, 14px); }
+.cracha15__dados { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 6px 0 0; }
+.cracha15__dados div { display: flex; flex-direction: column; }
+.cracha15__dados dt { font-size: var(--type-meta, 12px); color: var(--tinta-3); text-transform: uppercase; letter-spacing: 0.05em; }
+.cracha15__dados dd { margin: 0; font-weight: 600; color: var(--tinta); }
+.cracha15__lista { margin-top: 6px; border-top: 1px dashed var(--fio, var(--rule)); padding-top: 6px; }
+.cracha15__lista p { margin: 0 0 2px; font-size: var(--type-meta, 12px); color: var(--tinta-3); text-transform: uppercase; letter-spacing: 0.05em; }
+.cracha15__lista ul { margin: 0; padding-left: 1.1em; font-size: var(--type-caption, 14px); color: var(--tinta-2); }

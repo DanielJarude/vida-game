@@ -341,7 +341,13 @@ export function Tempo({ vida, agir, irPara, aba: abaDeFora, irAba, abrirPessoa }
             )}
           </>
         )}
-        {aba === 'redes' && <RedesSociais vida={vida} agir={agir} abrirPessoa={abrirPessoa} />}
+        {aba === 'redes' && (
+          <>
+            {/* VIDA 15: o celular é um aparelho próprio (mensagens, namoro, notícias, banco…); aqui ficam as redes sociais. */}
+            <p className="nota">As mensagens, o namoro, as notícias e o banco estão no celular. <button type="button" className="botao botao--discreto" onClick={() => window.dispatchEvent(new CustomEvent('vida:celular', { detail: 'rede' }))}>Abrir o celular</button></p>
+            <RedesSociais vida={vida} agir={agir} abrirPessoa={abrirPessoa} />
+          </>
+        )}
       </div>
     </div>
   );

@@ -44,6 +44,8 @@ export interface Pessoa {
    * quando passa a ser jogada. Ausente: nenhum marco registrado.
    */
   marcos?: Record<string, number>;
+  /** VIDA 15: a pessoa é conhecida do público (a área, o tamanho do nome, desde quando). Ausente: anônima. */
+  celebridade15?: { area: import('./dados15/celular/tipos').AreaCelebridade15; nivel: 1 | 2 | 3; desde?: number };
   tMorte?: number;
   causaMorte?: string;
   temperamento: Temperamento;
@@ -3912,6 +3914,8 @@ export interface Vida {
   justica14?: import('./v14/justica/justica14').Justica14;
   /** VIDA 14 (`v14/mundo`): os acontecimentos mundiais vividos e os efeitos ativos (`efeitos`, lido pelos sistemas antigos). */
   mundo14?: import('./dados14/mundo/tipos').Mundo14;
+  /** VIDA 15 (`v15/celular`): as mensagens do ano, os perfis do aplicativo de namoro, as curtidas. Ausente: o celular não tocou. */
+  celular15?: import('./dados15/celular/tipos').Celular15;
   morte?: {
     t: number; causa: string; heranca?: Heranca;
     /** O que o jogador decidiu sobre o patrimônio na tela do legado (guardado: recarregar mostra as mesmas escolhas). */

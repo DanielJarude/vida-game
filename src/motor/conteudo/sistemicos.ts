@@ -6,6 +6,7 @@
  * existe porque um bebê nasceu.
  */
 
+import { opcoesDoAborto15 } from '../v15/saude/aborto15';
 import { marcoAfetivo } from '../sistemas/convivio';
 import { perfilDaVida } from '../mundo/vida';
 import { capitalizar } from '../texto';
@@ -290,7 +291,9 @@ export const SISTEMICOS: Conteudo[] = [
       { id: 'contar', texto: c => (c.idade < 20 ? 'Contar para a família de uma vez' : 'Sentar e refazer os planos juntos'), comportamento: { coragem: 1, familia: 1 },
         resolver: c => ({ texto: c.idade < 20 ? 'Teve choro, sermão e silêncio. Depois, alguém começou a separar roupas de bebê que estavam guardadas.' : 'Vocês passaram a noite fazendo contas. De manhã, riram de nervoso.', memoria: c.idade < 20 ? 'Contou para a família da gravidez inesperada.' : null, efeito: () => { estresse(c, 8); for (const p of P.genitor(c.v)) { const vin = c.v.vinculos[p.id]; vin.tensao = Math.min(100, vin.tensao + 15); } } }) },
       { id: 'esconder', texto: 'Esconder enquanto der', comportamento: { impulsividade: 1 },
-        resolver: c => ({ texto: 'Deu para esconder três meses. Quando a barriga apareceu, a conversa foi pior.', memoria: null, efeito: () => { estresse(c, 14); for (const p of P.genitor(c.v)) tensaoPessoa(c, p.id, 25); } }) }
+        resolver: c => ({ texto: 'Deu para esconder três meses. Quando a barriga apareceu, a conversa foi pior.', memoria: null, efeito: () => { estresse(c, 14); for (const p of P.genitor(c.v)) tensaoPessoa(c, p.id, 25); } }) },
+      // VIDA 15: interromper, pela lei de onde se vive (`v15/saude/aborto15`).
+      ...opcoesDoAborto15
     ]
   },
   {

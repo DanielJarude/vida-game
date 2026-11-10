@@ -143,7 +143,8 @@ describe('Pessoas: quem tomou a iniciativa', () => {
     const v = viva(27, 34);
     v.eu.atracao = 'homens';
     render(<main><Pessoas vida={v} agir={() => true} aberta={null} abrir={nada} /></main>);
-    expect(screen.getByRole('button', { name: 'Tentar um aplicativo de encontros' })).toBeTruthy();
+    // VIDA 15: o aplicativo de encontros mora no celular — daqui, o botão abre o aparelho no namoro.
+    expect(screen.getByRole('button', { name: 'Abrir o aplicativo de namoro (no celular)' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Sair para conhecer gente' })).toBeTruthy();
   });
 });

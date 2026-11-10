@@ -1,0 +1,28 @@
+// VIDA 15 — fotos do celular. SAVE= W= TEMA= PASSOS='app:Mensagens|clique:css|...' NOME=
+import { chromium } from 'playwright';
+import { readFileSync } from 'node:fs';
+const URL = process.env.URL ?? 'http://localhost:4173/';
+const OUT = `${process.env.HOME}/vida-trabalho/a15/fotos`;
+const W = Number(process.env.W ?? 1440), H = Number(process.env.H ?? 900);
+const b = await chromium.launch();
+const p = await (await b.newContext({ viewport: { width: W, height: H } })).newPage();
+const erros = []; p.on('pageerror', e => erros.push(e.message)); p.on('console', m => { if (m.type() === 'error') erros.push(m.text()); });
+await p.goto(URL);
+await p.evaluate(([s, t]) => { localStorage.clear(); localStorage.setItem('VIDA_APARENCIA', t); localStorage.setItem('VIDA_NOVIDADES_VISTAS', '14'); localStorage.setItem('VIDA_GAME_SAVE_V1', s); }, [readFileSync(`${process.env.HOME}/vida-trabalho/qa15/saves/vida-v15-${process.env.SAVE ?? 'adulto'}.json`, 'utf8'), process.env.TEMA ?? 'claro']);
+await p.goto(URL); await p.waitForTimeout(400);
+await p.getByRole('button', { name: /Continuar a vida/ }).click(); await p.waitForTimeout(700);
+for (const passo of (process.env.PASSOS ?? '').split('|').filter(Boolean)) {
+  const [k, v] = [passo.slice(0, passo.indexOf(':')), passo.slice(passo.indexOf(':') + 1)];
+  if (k === 'cel') await p.locator('.cabecalho__celular').first().click();
+  else if (k === 'app') await p.locator('.cel__apps button', { hasText: v }).first().click();
+  else if (k === 'botao') await p.getByRole('button', { name: new RegExp(v) }).locator('visible=true').first().click();
+  else if (k === 'tab') await p.getByRole('tab', { name: new RegExp(v) }).locator('visible=true').first().click();
+  else if (k === 'clique') await p.locator(v).locator('visible=true').first().click();
+  else if (k === 'foto') await p.screenshot({ path: `${OUT}/${v}.png` });
+  else if (k === 'area') { let bt = p.locator('.barra__item', { hasText: v }).locator('visible=true').first(); if (!(await bt.count())) bt = p.getByRole('button', { name: v, exact: true }).locator('visible=true').first(); await bt.click(); }
+  await p.waitForTimeout(500);
+}
+// geometria: algo vazando para fora do aparelho, horizontalmente?
+const vaza = await p.evaluate(() => { const a = document.querySelector('.cel__aparelho'); if (!a) return []; const r = a.getBoundingClientRect(); return [...a.querySelectorAll('*')].filter(e => { const q = e.getBoundingClientRect(); return q.width > 0 && (q.right > r.right + 1 || q.left < r.left - 1) && e.checkVisibility?.() && !e.closest('.cel__app-corpo, .cel__inicio, .namoro__abas, .jornal15__editorias'); }).slice(0, 5).map(e => e.className.toString().slice(0, 40)); });
+console.log(process.env.NOME, 'erros', erros, 'vaza', vaza);
+await b.close();

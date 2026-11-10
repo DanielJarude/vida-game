@@ -92,7 +92,7 @@ export const SECOES_TEMPO: { id: SecaoTempo; rotulo: string; oque: string }[] = 
   { id: 'corpo', rotulo: 'Corpo e mente', oque: 'Esporte, academia, corrida, terapia, descanso' },
   { id: 'atividades', rotulo: 'Hobbies', oque: 'Arte, música, leitura, estudo, ofícios, dinheiro por fora' },
   { id: 'gente', rotulo: 'Sair e ver gente', oque: 'Comunidade, noite, família, voluntariado — e com quem fazer' },
-  { id: 'redes', rotulo: 'Celular', oque: 'As redes sociais: Instagram, TikTok, YouTube, X, Facebook, Twitch, OnlyFans' }
+  { id: 'redes', rotulo: 'Redes sociais', oque: 'As redes sociais: Instagram, TikTok, YouTube, X, Facebook, Twitch, OnlyFans (o celular, com mensagens, namoro e notícias, fica no topo da tela)' }
 ];
 
 export const DIVISOES_CAMINHOS: { id: DivisaoCaminhos; rotulo: string; oque: string }[] = [

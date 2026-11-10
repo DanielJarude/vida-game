@@ -37,6 +37,7 @@ import type { Acao } from '../../motor/acoes';
 import { idade } from '../../motor/nucleo';
 import { anoDe } from '../../motor/tempo';
 import { ocupacaoOuNula } from '../../motor/dados/ocupacoes';
+import { Cracha15 } from '../v15/carreira/Cracha15';
 import { doClube } from '../../motor/dados/clubes';
 import { nomeOcupacao } from '../../motor/sistemas/trabalho';
 import { modoDoTrabalho } from '../../motor/sistemas/profissao';
@@ -278,6 +279,8 @@ export function PaginaCaminhos({ vida, agir, irPara, abrirPessoa, divisao = 'ini
           </nav>
           <div role="tabpanel" id={`caminhos-${parte}`} aria-labelledby={`subnav-caminhos-${parte}`} className={`caminhos__painel caminhos__painel--${parte} caminhos__painel--ativo`} data-ativo="sim" data-divisao={divisao}>
             {divisao === 'estudos' && parte === 'desenvolvimento' && <DesenvolvimentoReal vida={vida} lado="estudos" />}
+            {/* VIDA 15: o crachá da carreira (o atleta, o médico, o empresário, o político, o artista — ou o emprego). */}
+            {divisao === 'trabalho' && parte === 'agora' && <Cracha15 vida={vida} />}
             {divisao === 'trabalho' && parte === 'desenvolvimento' && <DesenvolvimentoReal vida={vida} lado="trabalho" />}
             {divisao === 'estudos'
               ? <div className="lado-caminho lado-caminho--formacao" data-lado="formacao"><Estudos vida={vida} agir={agir} irPara={irPara} abrirPessoa={abrirPessoa} parte={parte} divisao explorar={explorar} aoExplorar={aoExplorar} /></div>

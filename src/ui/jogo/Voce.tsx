@@ -50,6 +50,7 @@ import { Linhagem } from './Linhagem';
 import { Medidor } from './Sinais';
 import { leituraDaSeguranca } from '../leituraMaterial';
 import type { Aba } from '../navegacao';
+import { Perfil15 } from '../v15/perfil/Perfil15';
 
 export type Destino = Aba;
 
@@ -96,6 +97,9 @@ export function Voce({ vida, agir, irPara, abrirPessoa, parte: parteDeFora, irPa
           {fama.relevante && fama.nivel >= 1 && parte !== 'fama' && <button type="button" className="fama13-atalho" onClick={() => irA('fama')}>A sua fama: o que traz, o que cobra, o que fazer com ela →</button>}
         </div>
       </section>
+
+      {/* VIDA 15: o perfil — os números da vida social e os atalhos (cada um leva à tela que cuida dele). */}
+      <Perfil15 vida={vida} irPara={irPara} irParte={irA} />
 
       <Subnav rotulo="Partes do retrato" prefixo="voce" atual={parte} aoMudar={irA} classe="subnav--voce" itens={[
         { id: 'resumo', rotulo: 'Resumo', oque: 'Os atributos, a cabeça, a semana e o dinheiro' },

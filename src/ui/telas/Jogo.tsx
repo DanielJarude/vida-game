@@ -22,7 +22,10 @@ import { SeletorTema } from '../SeletorTema';
 import { Folha, useEstreito } from '../comum';
 import { habilitacaoDaVida } from '../../motor/sistemas/autoescola';
 import { redeDeSaude } from '../../motor/sistemas/saude';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { naoLidas15, temCelular15 } from '../../motor/v15/celular/celular15';
+import type { App15 } from '../v15/celular/Celular';
+import '../v15/jogo15.css';
 import type { ControleVida } from '../useVida';
 import type { Vida } from '../../motor/tipos';
 import { idade, idadePessoa } from '../../motor/nucleo';
@@ -49,6 +52,10 @@ import { doClube } from '../../motor/dados/clubes';
 import { AREAS, buscarIntencoes, resolverDestino, rotuloDoLugar, tipoDaIntencao, type Aba, type Area, type DivisaoCaminhos, type Lugar, type ParteCaminhos, type SecaoTempo, type SecaoVida } from '../navegacao';
 
 export type { Aba };
+
+/** VIDA 15: o celular (aparelho próprio, carregado quando se abre). */
+const Celular = lazy(() => import('../v15/celular/Celular'));
+const ICONE_CELULAR = 'M8 2h8a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zM11 18h2';
 
 function Icone({ d }: { d: string }) {
   return <svg className="icone" viewBox="0 0 24 24" aria-hidden fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>;
@@ -77,6 +84,14 @@ export function Jogo({ c }: { c: ControleVida }) {
   const [pessoaAberta, setPessoaAberta] = useState<string | null>(null);
   // REWORK 10.6 · UX-23: o convite aberto por cima da página (fechar devolve o jogador exatamente onde estava).
   const [convite, setConvite] = useState<string | null>(null);
+  // VIDA 15: o celular aberto (e em qual aplicativo). Outras telas pedem com o evento 'vida:celular' (ex.: o namoro, em Pessoas).
+  const [celular, setCelular] = useState<App15 | null>(null);
+  useEffect(() => {
+    const abrir = (e: Event) => setCelular(((e as CustomEvent).detail as App15) ?? 'inicio');
+    window.addEventListener('vida:celular', abrir);
+    return () => window.removeEventListener('vida:celular', abrir);
+  }, []);
+  const fecharCelular = useCallback(() => setCelular(null), []);
   // REWORK 10 · UX-13: a parte aberta de cada área fica aqui — voltar à área é voltar para onde se estava.
   const [parteHistoria, setParteHistoria] = useState<ParteHistoria>('agora');
   const [parteVoce, setParteVoce] = useState<ParteVoce>('resumo');
@@ -155,6 +170,11 @@ export function Jogo({ c }: { c: ControleVida }) {
             </button>
           ))}
         </nav>
+        {temCelular15(vida) && (() => { const n = naoLidas15(vida); return (
+          <button type="button" className="cabecalho__celular" onClick={() => setCelular('inicio')} aria-label={`Celular${n ? `: ${n} ${n === 1 ? 'novidade' : 'novidades'}` : ''}`}>
+            <Icone d={ICONE_CELULAR} />{n ? <span className="cabecalho__celular-badge">{n > 9 ? '9+' : n}</span> : null}
+          </button>
+        ); })()}
         <button type="button" className="cabecalho__eu" onClick={() => ir('voce')} aria-label={`${vida.eu.nome}, ${i} anos: ver como você está`}>
           <Retrato visual={vida.eu.visual} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? "eu"} tamanho={36} rotulo={vida.eu.nome} expressao={expressaoDe(vida)} />
           <span className="cabecalho__eu-texto">
@@ -201,6 +221,7 @@ export function Jogo({ c }: { c: ControleVida }) {
       {vida.desfecho13 && <Resultado titulo={vida.desfecho13.titulo} texto={vida.desfecho13.texto} vida={vida} pessoaId={vida.desfecho13.pessoaId} mudancas={vida.desfecho13.mudancas} desfecho={vida.desfecho13} aoFechar={() => c.agir({ tipo: 'desfecho13', oque: 'seguir' })} aoEncerrar={() => c.agir({ tipo: 'desfecho13', oque: 'encerrar' })} />}
       {vida.momento && !vida.desfecho13 && <Momento vida={vida} agir={c.agir} />}
       {!vida.momento && !vida.desfecho13 && c.resultado && <Resultado titulo={c.resultado.titulo} texto={c.resultado.texto} aoFechar={c.fecharResultado} vida={vida} pessoaId={c.resultado.pessoaId} mudancas={c.resultado.mudancas} desfecho={c.resultado.desfecho} />}
+      {celular && temCelular15(vida) && <Suspense fallback={null}><Celular vida={vida} agir={c.agir} aoFechar={fecharCelular} irPara={ir} irLugar={irLugar} abrirPessoa={id => abrirPessoa(id)} abrirConvite={setConvite} appInicial={celular} /></Suspense>}
       {menu && <Menu c={c} aoFechar={fecharMenu} ir={l => { irLugar(l); setMenu(false); }} />}
       {convite && !vida.momento && <DetalheDaOportunidade vida={vida} id={convite} agir={c.agir} aoFechar={() => setConvite(null)} abrirPessoa={abrirPessoa} />}
     </div>

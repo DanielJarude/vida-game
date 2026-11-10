@@ -218,6 +218,13 @@ function marcaDoLaco(vida: Vida, p: Pessoa, vin: Vinculo): string | undefined {
   return undefined;
 }
 
+/** VIDA 15: a última interação, em palavras ("falaram este ano", "há 3 anos"); quem mora junto, "em casa". */
+function ultimoContato15(vida: Vida, vin: Vinculo): string {
+  if (vin.convivio.includes('casa')) return 'em casa';
+  const m = vida.t - vin.tUltimoContato;
+  return m < 12 ? 'falaram este ano' : m < 24 ? 'última conversa: há 1 ano' : `última conversa: há ${Math.floor(m / 12)} anos`;
+}
+
 /** As figurinhas do álbum: rosto, nome, o papel e a idade, a força do laço e a marca do momento. */
 function Figurinhas({ vida, itens, abrir, limite, rotuloTodos }: { vida: Vida; itens: Par[]; abrir: (id: string) => void; limite?: number; rotuloTodos?: string }) {
   const [todos, setTodos] = useState(false);
@@ -233,6 +240,8 @@ function Figurinhas({ vida, itens, abrir, limite, rotuloTodos }: { vida: Vida; i
                 <Retrato visual={p.visual} genero={p.genero} idade={idadePessoa(vida, p)} semente={p.pet?.semente ?? p.id} tamanho={56} especie={p.especie} porte={p.pet?.porte} rotulo={p.nome} expressao={expressaoNpc(vida, p)} falecido={!p.vivo} />
                 <span className="figurinha__nome">{p.nome || 'Bebê'}</span>
                 <span className="figurinha__papel">{rotuloDe(vida, p, vin)}{p.vivo && !p.especie ? ` · ${idadePessoa(vida, p)}` : ''}</span>
+                {/* VIDA 15: a última vez que se falaram (quem mora junto, não precisa) e a pessoa famosa. */}
+                {p.vivo && !p.especie && <span className="figurinha__ultimo">{p.celebridade15 ? '★ ' : ''}{ultimoContato15(vida, vin)}</span>}
                 {p.vivo && !p.especie && <BarraRelacao vida={vida} vin={vin} />}
                 {marca ? <span className="figurinha__marca">{marca}</span> : <span className="figurinha__prox">{etiqueta(vida, p, vin)}</span>}
               </button>
@@ -352,7 +361,9 @@ function ConhecerAlguem({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean
       )}
       {vida.eu.atracao && feitas < limite && (
         <div className="grupo-acoes">
-          {ctxs.map(x => <BotaoAcao key={x} vida={vida} acao={{ tipo: 'conhecer_alguem', contexto: x }} agir={agir} variante="discreto">{ROTULO_BUSCA[x]}</BotaoAcao>)}
+          {ctxs.filter(x => x !== 'app').map(x => <BotaoAcao key={x} vida={vida} acao={{ tipo: 'conhecer_alguem', contexto: x }} agir={agir} variante="discreto">{ROTULO_BUSCA[x]}</BotaoAcao>)}
+          {/* VIDA 15: o aplicativo de namoro mora no celular (perfis, curtidas, matches, conversas). */}
+          {ctxs.includes('app') && <button type="button" className="botao botao--discreto" onClick={() => window.dispatchEvent(new CustomEvent('vida:celular', { detail: 'namoro' }))}>Abrir o aplicativo de namoro (no celular)</button>}
         </div>
       )}
       {feitas >= limite && <p className="nota">Este ano já foram {feitas} tentativas: a semana não tem mais noites livres para isso.</p>}
