@@ -58,7 +58,8 @@ describe('UI-12.25-01 · uma tela só', () => {
     expect(within(painel).queryByRole('heading', { name: 'A porta' })).toBeNull();
     expect(within(painel).queryByRole('heading', { name: 'À margem e a Justiça' })).toBeNull();
     // REWORK 12.3: as partes novas (o mercado por fora, quando há acesso; os pedidos por fora) entram antes da Justiça.
-    expect(within(painel).getAllByRole('tab').map(t => t.textContent?.replace(/\d+$/, '')).filter(t => t !== 'Mercados paralelos')).toEqual(['Visão geral', 'Carreira', 'Atividades', 'Contatos', 'Organizações', 'Negócios', 'Pedidos por fora', 'Justiça', 'Histórico']);
+    // VIDA 15: as partes do Submundo vêm em grupos (você no meio, o que se faz, gente e poder, a lei), cada aba com a descrição.
+    expect(within(painel).getAllByRole('tab').map(t => (t.querySelector('.svivo15-nav__rotulo')?.textContent ?? t.textContent)?.replace(/\d+$/, '')).filter(t => t !== 'Mercados paralelos')).toEqual(['Visão geral', 'Carreira', 'Histórico', 'Atividades', 'Negócios', 'Pedidos por fora', 'Contatos', 'Organizações', 'Justiça']);
     expect(painel.textContent).toMatch(/respondendo a processo/);
     fireEvent.click(within(painel).getByRole('tab', { name: /^Justiça/ }));
     expect(within(painel).getByRole('list', { name: 'As etapas da Justiça' }).textContent).toMatch(/Processo|Julgamento/);

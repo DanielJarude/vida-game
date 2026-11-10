@@ -244,7 +244,7 @@ function Namoro({ vida, agir, abrirPessoa }: { vida: Vida; agir: Props['agir']; 
       {aba === 'descobrir' && (atual ? (
         <article className="perfil-app" aria-label={`Perfil de ${atual.pessoa.nome}`}>
           <div className="perfil-app__foto">
-            <Retrato visual={atual.pessoa.visual} genero={atual.pessoa.genero} idade={idadePessoa(vida, atual.pessoa)} semente={atual.pessoa.id} tamanho={230} rotulo={atual.pessoa.nome} />
+            <Retrato visual={atual.pessoa.visual} genero={atual.pessoa.genero} idade={idadePessoa(vida, atual.pessoa)} semente={atual.pessoa.id} tamanho={230} rotulo={atual.pessoa.nome} especie={atual.pessoa.especie} />
             <div className="perfil-app__nome"><strong>{atual.pessoa.nome}, {idadePessoa(vida, atual.pessoa)}</strong><span>{atual.pessoa.ocupacao ? `${atual.pessoa.ocupacao} · ` : ''}a {atual.km} km</span></div>
           </div>
           <div className="perfil-app__corpo">
@@ -288,7 +288,7 @@ function Namoro({ vida, agir, abrirPessoa }: { vida: Vida; agir: Props['agir']; 
           <p className="namoro__match-titulo">É um match!</p>
           <div className="namoro__match-fotos">
             <Retrato visual={vida.eu.visual} genero={vida.eu.genero} idade={idade(vida)} semente={vida.eu.semente ?? 'eu'} tamanho={96} rotulo={vida.eu.nome} />
-            <Retrato visual={novoMatch.visual} genero={novoMatch.genero} idade={idadePessoa(vida, novoMatch)} semente={novoMatch.id} tamanho={96} rotulo={novoMatch.nome} />
+            <Retrato visual={novoMatch.visual} genero={novoMatch.genero} idade={idadePessoa(vida, novoMatch)} semente={novoMatch.id} tamanho={96} rotulo={novoMatch.nome} especie={novoMatch.especie} />
           </div>
           <p>Você e {novoMatch.nome} curtiram um ao outro.</p>
           <button type="button" className="botao botao--principal" onClick={() => { setMatch(null); setAba('conversas'); }}>Ir para a conversa</button>

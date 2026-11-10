@@ -356,6 +356,23 @@ export function vidaQueDevolveDoAno(v: Vida): void {
   if (cabeDecisao) abrirDecisao(v, x.c, x.ctx);
 }
 
+/**
+ * VIDA 15 — as cenas de cada fase (a infância, a adolescência, a velhice) e as que leem a história de cada um
+ * (`v15/eventos/acontecimentos15`): sorteio derivado próprio, como os de cima; a decisão só num ano sem nenhuma.
+ */
+const DA_VIDA15 = /^(inf|ado|vel|h)15_/;
+export function vidaDe15DoAno(v: Vida): void {
+  if (v.morte) return;
+  const i = idade(v);
+  const r = rngDe(v.id, 'vida15', v.t);
+  if (!r.chance(i < 13 ? 0.4 : i < 18 ? 0.3 : i >= 62 ? 0.22 : 0.1)) return;
+  if (v.momento || v.fila?.length || decisoesDoAno(v) > 0) return;
+  const lista: { c: Conteudo; ctx: Ctx }[] = [];
+  for (const c of CATALOGO) { if (!c.manual || !DA_VIDA15.test(c.id)) continue; const ctx = preparar(c, v, r); if (ctx) lista.push({ c, ctx }); }
+  const x = r.weighted(lista, y => peso(y.c, y.ctx));
+  if (x && x.c.tipo === 'decisao') abrirDecisao(v, x.c, x.ctx);
+}
+
 /** Quantas decisões ainda esperam neste ano (para a tela: "mais uma decisão neste ano"). */
 export const esperandoNoAno = (v: Vida) => (v.fila ?? []).filter(x => x.t === v.t).length;
 

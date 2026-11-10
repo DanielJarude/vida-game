@@ -284,12 +284,7 @@ export function processarCelular15(v: Vida): void {
   const c = celularDe(v);
   const ano = anoDe(v.t);
   if (c.ano === ano && c.msgs.some(m => m.onda === 0 && anoDe(m.t) === ano)) return;
-  // O que ficou sem resposta no ano que passou: o convite do amigo próximo ignorado esfria um pouco a relação.
-  for (const m of c.msgs) {
-    if (m.resposta || !m.de || anoDe(m.t) >= ano) continue;
-    const vin = v.vinculos[m.de];
-    if (vin && (m.tipo === 'convite' || m.tipo === 'saudade' || m.tipo === 'parceiro') && !m.lida) vin.proximidade = clamp(vin.proximidade - 1);
-  }
+  // O que ficou sem resposta no ano que passou sai do aparelho (o silêncio não pune: a relação segue pelo convívio de sempre).
   c.msgs = c.msgs.filter(m => m.resposta ? v.t - m.t <= 36 : anoDe(m.t) >= ano - 1 && v.t - m.t <= 12);
   if (c.msgs.length > 60) c.msgs.splice(0, c.msgs.length - 60);
   c.ano = ano;

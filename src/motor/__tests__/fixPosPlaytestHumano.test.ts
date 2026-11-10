@@ -265,6 +265,7 @@ describe('D — fazer algo junto é uma cena, não uma barra', () => {
 
   it('ir ao cinema com uma amiga → cena com título e texto concretos → a relação muda → a mesma cena não se repete em seguida → reabrir guarda o necessário', () => {
     let v = adulto(26, { semente: 41 });
+    v.financas.conta = Math.max(v.financas.conta, 5000); // VIDA 15: a vida-base pode chegar aos 26 sem dinheiro para o ingresso
     v.financas.conta = 50000;
     const { p } = amigaDe(v);
     const tipos: string[] = [];
@@ -277,13 +278,13 @@ describe('D — fazer algo junto é uma cena, não uma barra', () => {
       const vin = v.vinculos[p.id];
       expect(vin.cenas!.length).toBeGreaterThan(0);
       // O tipo da cena é a última MARCA de cena (as falas do jeito, "jeito:...", moram na mesma lista e são reordenadas).
-      if (!/desmarcou/.test(r.resultado ?? '')) { // (o programa desmarcado não é cena: não deixa marca)
+      if (!/desmarcou|cansad[oae] demais para sair/.test(r.resultado ?? '')) { // (o programa desmarcado não é cena: não deixa marca)
         tipos.push(vin.cenas!.filter(x => !x.startsWith('jeito:')).slice(-1)[0].split(".")[0]);
         textos.push(r.resultado ?? "");
       }
       // Alguma coisa da relação se moveu (proximidade, confiança, tensão ou o que você sabe).
       // (VIDA 14: o sorteio da vida-base mudou e pode cair no programa desmarcado — esse não mexe na relação, de propósito.)
-      if (!/desmarcou/.test(r.resultado ?? '')) expect(vin.proximidade !== antes.proximidade || vin.confianca !== antes.confianca || vin.tensao !== antes.tensao || (vin.sabe?.length ?? 0) !== (antes.sabe?.length ?? 0)).toBe(true);
+      if (!/desmarcou|cansad[oae] demais para sair/.test(r.resultado ?? '')) expect(vin.proximidade !== antes.proximidade || vin.confianca !== antes.confianca || vin.tensao !== antes.tensao || (vin.sabe?.length ?? 0) !== (antes.sabe?.length ?? 0)).toBe(true);
       v.t += 12; v.anoAtual = { acoes: [] };
     }
     for (let k = 1; k < tipos.length; k++) expect(tipos[k], tipos.join(',')).not.toBe(tipos[k - 1]);
@@ -298,8 +299,10 @@ describe('D — fazer algo junto é uma cena, não uma barra', () => {
 
   it('o que a cena revela entra no que você sabe; a cidade de origem volta à conversa depois', () => {
     let achouRevelacao = false; let achouLembranca = false;
-    for (let s = 0; s < 14 && !(achouRevelacao && achouLembranca); s++) {
-      let v = adulto(27, { semente: 41 });
+    // VIDA 15: a vida-base mudou (a infância tem cenas novas); mais tentativas para o mesmo achado.
+    const base = adulto(27, { semente: 41 });
+    for (let s = 0; s < 60 && !(achouRevelacao && achouLembranca); s++) {
+      let v = structuredClone(base);
       v.id = `${v.id}-cena${s}`; v.financas.conta = 50000;
       const { p } = amigaDe(v, 70);
       p.municipioNatal = cidadesDoPais('JP')[0].id;
@@ -309,7 +312,8 @@ describe('D — fazer algo junto é uma cena, não uma barra', () => {
         v = r.vida;
         // REWORK 10 (NPC-04): o convite pode ser recusado (a agenda dela, o gosto) — sem programa, sem cena; segue o ano.
         if (!v.vinculos[p.id].cenas?.length) { v.t += 12; v.anoAtual = { acoes: [] }; continue; }
-        const ult = v.vinculos[p.id].cenas!.slice(-1)[0].split(".")[0];
+        // (Como no teste de cima: as falas do jeito, "jeito:...", moram na mesma lista — a cena é a última marca que não é jeito.)
+        const ult = (v.vinculos[p.id].cenas!.filter(x => !x.startsWith('jeito:')).slice(-1)[0] ?? '').split(".")[0];
         if (ult === 'revelacao') { achouRevelacao = true; expect(v.vinculos[p.id].sabe?.length).toBeGreaterThan(0); }
         if (ult === 'lembranca') { achouLembranca = true; expect(r.resultado).toContain(municipio(p.municipioNatal!).nome); }
         v.t += 12; v.anoAtual = { acoes: [] };

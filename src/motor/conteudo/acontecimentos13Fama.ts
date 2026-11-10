@@ -13,6 +13,7 @@
  * fechou virando história, a empresa que você deixou, o rival e o amigo de antes que aparecem quando o nome cresce, a
  * obra redescoberta, o mandato lembrado na feira. Sem registro, não acontece.
  */
+import { palavrasDoEsporte } from '../sistemas/esportes129';
 import type { Conteudo, Ctx } from './base';
 import type { Pessoa, Vida } from '../tipos';
 import { clamp, rngDe } from '../rng';
@@ -335,7 +336,7 @@ export const ACONTECIMENTOS_13_FAMA: Conteudo[] = [
     texto: c => { const t = tituloDeAniversario13(c.v)!; return `Faz ${t.anos} anos: ${t.texto.charAt(0).toLowerCase()}${t.texto.slice(1)}${t.clube ? ` com ${oClube(t.clube)}` : ''}. ${t.doClube ? 'O clube' : 'A federação'} chamou quem estava lá para uma homenagem antes de um jogo.`; },
     opcoes: [
       { id: 'ir', texto: 'Ir à homenagem',
-        resolver: c => { const t = tituloDeAniversario13(c.v)!; return { texto: 'O estádio gritou o seu nome como se fosse aquele ano. Você não segurou.', memoria: `Voltou ao campo para os ${t.anos} anos do título.`, relevancia: 'biografia', tom: 'bom', efeito: () => { feliz(c, 6); if (noto(c.v) >= 10 || origemDoNome(c.v) === 'esporte') somarAoNome(c.v, 'esporte', 2); } }; } },
+        resolver: c => { const t = tituloDeAniversario13(c.v)!; const lugar = { piscina: 'O parque aquático', quadra: 'O ginásio', tatame: 'O ginásio', pista: 'A arquibancada' }[palavrasDoEsporte(c.v.caminhos.esporte?.modalidade).onde] ?? 'O estádio'; return { texto: `${lugar} gritou o seu nome como se fosse aquele ano. Você não segurou.`, memoria: `Voltou ${lugar === 'O estádio' ? 'ao campo' : 'ao clube'} para os ${t.anos} anos do título.`, relevancia: 'biografia', tom: 'bom', efeito: () => { feliz(c, 6); if (noto(c.v) >= 10 || origemDoNome(c.v) === 'esporte') somarAoNome(c.v, 'esporte', 2); } }; } },
       { id: 'video', texto: 'Mandar um vídeo', resolver: () => ({ texto: 'Passaram o seu vídeo no telão. Do sofá, você ouviu o barulho pela TV.', memoria: null }) }
     ]
   },

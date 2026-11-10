@@ -8,7 +8,7 @@ const b = await chromium.launch();
 const p = await (await b.newContext({ viewport: { width: W, height: H } })).newPage();
 const erros = []; p.on('pageerror', e => erros.push(e.message)); p.on('console', m => { if (m.type() === 'error') erros.push(m.text()); });
 await p.goto(URL);
-await p.evaluate(([s, t]) => { localStorage.clear(); localStorage.setItem('VIDA_APARENCIA', t); localStorage.setItem('VIDA_NOVIDADES_VISTAS', '14'); localStorage.setItem('VIDA_GAME_SAVE_V1', s); }, [readFileSync(`${process.env.HOME}/vida-trabalho/qa15/saves/vida-v15-${process.env.SAVE ?? 'adulto'}.json`, 'utf8'), process.env.TEMA ?? 'claro']);
+await p.evaluate(([s, t]) => { localStorage.clear(); localStorage.setItem('VIDA_APARENCIA', t); localStorage.setItem('VIDA_NOVIDADES_VISTAS', '15'); localStorage.setItem('VIDA_GAME_SAVE_V1', s); }, [readFileSync(`${process.env.HOME}/vida-trabalho/qa15/saves/vida-v15-${process.env.SAVE ?? 'adulto'}.json`, 'utf8'), process.env.TEMA ?? 'claro']);
 await p.goto(URL); await p.waitForTimeout(400);
 await p.getByRole('button', { name: /Continuar a vida/ }).click(); await p.waitForTimeout(700);
 for (const passo of (process.env.PASSOS ?? '').split('|').filter(Boolean)) {

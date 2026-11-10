@@ -774,8 +774,8 @@ export const ACONTECIMENTOS_10: Conteudo[] = [
         resolver: c => ({ texto: 'Você chegou antes e saiu depois por um mês. O técnico reparou.', memoria: null, efeito: () => { const e = c.v.caminhos.esporte!; if (e.fase === 'profissional') e.espaco = 'titular'; praticar(c.v, c.r, e.modalidade, 0.3, 1.2); estresse(c, 5); forma(c, 1); } }) },
       { id: 'conversar', texto: 'Pedir uma conversa para entender o que ele quer', comportamento: { coragem: 1 },
         resolver: c => ({ texto: 'Dez minutos na sala dele. Ele disse o que esperava; você soube onde estava.', memoria: null, efeito: () => estresse(c, -2) }) },
-      { id: 'bater', texto: 'Bater de frente quando ele mudar a sua posição', comportamento: { impulsividade: 1 },
-        resolver: c => ({ texto: 'A discussão foi no vestiário, na frente do grupo. Você foi para o banco.', memoria: null, tom: 'ruim', efeito: () => { const e = c.v.caminhos.esporte!; if (e.fase === 'profissional') e.espaco = 'reserva'; estresse(c, 6); } }) }
+      { id: 'bater', texto: c => (palavrasDoEsporte(c.v.caminhos.esporte?.modalidade).individual ? 'Bater de frente quando ele mudar o seu treino' : 'Bater de frente quando ele mudar a sua posição'), comportamento: { impulsividade: 1 },
+        resolver: c => ({ texto: palavrasDoEsporte(c.v.caminhos.esporte?.modalidade).individual ? `A discussão foi na beira ${palavrasDoEsporte(c.v.caminhos.esporte?.modalidade).deOnde}, na frente da equipe. Você ficou fora da próxima competição.` : 'A discussão foi no vestiário, na frente do grupo. Você foi para o banco.', memoria: null, tom: 'ruim', efeito: () => { const e = c.v.caminhos.esporte!; if (e.fase === 'profissional') e.espaco = 'reserva'; estresse(c, 6); } }) }
     ]
   },
   {

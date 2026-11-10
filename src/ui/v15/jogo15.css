@@ -38,3 +38,17 @@
 .cracha15__lista { margin-top: 6px; border-top: 1px dashed var(--fio, var(--rule)); padding-top: 6px; }
 .cracha15__lista p { margin: 0 0 2px; font-size: var(--type-meta, 12px); color: var(--tinta-3); text-transform: uppercase; letter-spacing: 0.05em; }
 .cracha15__lista ul { margin: 0; padding-left: 1.1em; font-size: var(--type-caption, 14px); color: var(--tinta-2); }
+
+/* VIDA 15 · a navegação do Submundo em grupos (cartões no computador; no celular, uma coluna por grupo). */
+.svivo15-nav { margin: var(--space-3, 12px) 0 var(--space-4, 16px); }
+.svivo15-nav__grupos { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3, 12px); }
+.svivo15-nav__grupo { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.svivo15-nav__titulo { font: 700 var(--type-meta, 12px)/1.2 var(--font-sans); text-transform: uppercase; letter-spacing: 0.08em; color: var(--tinta-3); padding-left: 2px; }
+.svivo15-nav__item { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; padding: 8px 10px; border-radius: var(--radius-md, 10px); border: 1px solid var(--fio, var(--rule)); background: var(--superficie, var(--bg-raised)); color: var(--tinta); cursor: pointer; font: inherit; }
+.svivo15-nav__item:hover { border-color: var(--fio-forte, var(--rule-strong)); }
+.svivo15-nav__item:focus-visible { outline: 2px solid var(--acao); outline-offset: 2px; }
+.svivo15-nav__item--ativo { border-color: var(--tinta); box-shadow: inset 3px 0 0 var(--ruim, #a33); }
+.svivo15-nav__rotulo { font-weight: 700; display: inline-flex; gap: 6px; align-items: center; }
+.svivo15-nav__oque { font-size: var(--type-meta, 12px); color: var(--tinta-3); line-height: 1.35; }
+@media (max-width: 900px) { .svivo15-nav__grupos { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .svivo15-nav__grupos { grid-template-columns: 1fr; } .svivo15-nav__grupo { flex-direction: row; flex-wrap: wrap; } .svivo15-nav__titulo { width: 100%; } .svivo15-nav__item { flex: 1 1 calc(50% - 6px); } }

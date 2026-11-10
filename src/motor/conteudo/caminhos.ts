@@ -10,6 +10,7 @@
  * fracasso, arriscar, voltar atrás — isso é comportamento.
  */
 
+import { palavrasDoEsporte } from '../sistemas/esportes129';
 import { textoLocal } from '../mundo/locais';
 import { ofertaIntegrada, rotaTecnica } from '../sistemas/ensinoTecnico';
 import { dinheiro as moeda } from '../texto';
@@ -98,7 +99,7 @@ export const CAMINHOS: Conteudo[] = [
       const lugar = pr?.lugar ?? municipio(lugarPeneira(c)).nome;
       const junto = pr?.via === 'familia' && pr.atual > 0 && P.genitor(c.v)[0] ? ` ${P.genitor(c.v)[0].nome} continua na arquibancada.` : '';
       // O teste de adulto não é a peneira de garotos: é uma semana com o elenco, e quem observa é a comissão do time de cima.
-      if (pr?.via === 'amador') return pr.atual === 0 ? `${cap(lugar)}, primeiro treino com o elenco adulto. Os jogadores do clube olham de lado: mais um que veio do amador. Rondo, passe, finalização.` : 'Jogo-treino contra os reservas, no último dia. A comissão técnica anota de pé, na beira do campo.';
+      if (pr?.via === 'amador') return pr.atual === 0 ? `${cap(lugar)}, primeiro treino com o elenco adulto. Os atletas do clube olham de lado: mais um que veio do amador. ${mod(c) === 'futebol' ? 'Rondo, passe, finalização.' : 'Aquecimento, séries, o técnico de olho.'}` : mod(c) === 'futebol' ? 'Jogo-treino contra os reservas, no último dia. A comissão técnica anota de pé, na beira do campo.' : `Último dia: ${palavrasDoEsporte(mod(c)).individual ? 'uma tomada de tempo valendo' : 'um coletivo contra os reservas'}. A comissão técnica anota de pé, na beira ${palavrasDoEsporte(mod(c)).deOnde}.`;
       return etapa.texto(mod(c), lugar) + junto;
     },
     opcoes: [
@@ -137,7 +138,7 @@ export const CAMINHOS: Conteudo[] = [
         resolver: c => {
           const novo = novoDaBase(c);
           delete c.v.fatos['convite_base'];
-          return { texto: analisarEntrada(c.v, novo).length ? 'Você disse que sim. Agora falta o resto da vida caber.' : 'A mochila ficou pesada de chuteira e caderno. O sonho, agora, tem horário.', memoria: null, efeito: () => { propor(c.v, c.r, novo); } };
+          return { texto: analisarEntrada(c.v, novo).length ? 'Você disse que sim. Agora falta o resto da vida caber.' : `A mochila ficou pesada de ${EQUIPO15[mod(c)] ?? 'treino'} e caderno. O sonho, agora, tem horário.`, memoria: null, efeito: () => { propor(c.v, c.r, novo); } };
         } },
       { id: 'ficar', texto: c => (c.v.educacao.matricula && !c.v.educacao.matricula.trancado ? 'Ficar: a faculdade e a vida daqui vêm primeiro' : c.v.trabalho.atual ? 'Ficar: o trabalho e a vida daqui vêm primeiro' : 'Ficar: a escola e a vida daqui vêm primeiro'),
         resolver: c => { delete c.v.fatos['convite_base']; const o = c.v.educacao.matricula && !c.v.educacao.matricula.trancado ? 'da faculdade' : c.v.trabalho.atual ? 'do trabalho' : 'da escola'; return { texto: `Você agradeceu. ${mod(c) === 'futebol' ? 'A bola' : 'O esporte'} continuou nos fins de semana.`, memoria: `Recusou o convite ${mod(c) === 'futebol' ? 'da base' : 'da equipe'} ${doClube(clubeDaBase(c))} para ficar perto de casa e ${o}.`, relevancia: 'marco' }; } }
@@ -199,10 +200,10 @@ export const CAMINHOS: Conteudo[] = [
       { id: 'tentar', texto: 'Treinar mais e tentar outro clube', comportamento: { disciplina: 1 },
         disponivel: c => ((c.v.fatos['peneiras_' + c.v.caminhos.esporte!.modalidade] ?? 0) < 3 && idade(c.v) <= 18 ? true : 'Já não há idade para outra base: o caminho, agora, é jogar bem no amador e pedir um teste num time adulto.'),
         resolver: c => ({ texto: 'Você voltou para o treino na semana seguinte. Ninguém mandou.', memoria: 'Foi dispensado e decidiu tentar de novo.'.replace('dispensado', c.g('dispensado', 'dispensada', 'dispensade')), efeito: () => { const e = c.v.caminhos.esporte!; delete c.v.caminhos.ultimas[`peneira_${e.modalidade}`]; c.v.caminhos.esporte = undefined; const rot = c.v.rotinas.find(x => x.id === e.modalidade); if (rot) rot.nivel = 2; } }) },
-      { id: 'gosto', texto: 'Continuar jogando por gosto',
-        resolver: () => ({ texto: 'A bola voltou a ser de fim de semana. Doeu menos do que parecia.', memoria: null }) },
+      { id: 'gosto', texto: c => `Continuar a ${VERBOS[c.v.caminhos.esporte!.modalidade] ?? 'treinar'} por gosto`,
+        resolver: c => ({ texto: `${cap(VERBOS[c.v.caminhos.esporte!.modalidade] ?? 'treinar')} voltou a ser coisa de fim de semana. Doeu menos do que parecia.`, memoria: null }) },
       { id: 'largar', texto: 'Largar de vez',
-        resolver: c => ({ texto: 'Você guardou a chuteira no fundo do armário.', memoria: null, efeito: () => { const d = c.v.caminhos.esporte!.modalidade; c.v.rotinas = c.v.rotinas.filter(x => x.id !== d); } }) }
+        resolver: c => ({ texto: `Você guardou ${EQUIPO15[c.v.caminhos.esporte!.modalidade] ?? 'o material de treino'} no fundo do armário.`, memoria: null, efeito: () => { const d = c.v.caminhos.esporte!.modalidade; c.v.rotinas = c.v.rotinas.filter(x => x.id !== d); } }) }
     ]
   },
   {
@@ -479,6 +480,8 @@ export const CAMINHOS: Conteudo[] = [
   }
 ];
 
+/** VIDA 15: o material de cada modalidade (a natação não tem chuteira). */
+const EQUIPO15: Record<string, string> = { futebol: 'chuteira', futsal: 'chuteira de salão', natacao: 'touca e óculos', atletismo: 'sapatilha', volei: 'joelheira', basquete: 'tênis de quadra', tenis: 'raquete', lutas: 'luva e faixa' };
 const VERBOS: Record<string, string> = { musica: 'tocar', futebol: 'jogar bola', volei: 'jogar vôlei', basquete: 'jogar basquete', tenis: 'jogar tênis', teatro: 'fazer teatro', danca: 'dançar', desenho: 'desenhar', escrever: 'escrever', natacao: 'nadar', lutas: 'treinar', xadrez: 'jogar xadrez', fotografia: 'fotografar', cozinhar: 'cozinhar', leitura: 'ler' };
 
 function frenteAntiga(c: Ctx): string | undefined {

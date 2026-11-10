@@ -26,6 +26,33 @@ export interface NotaDeVersao {
 
 export const NOTAS: NotaDeVersao[] = [
   {
+    versao: '15',
+    data: '2026-11-10',
+    titulo: 'Imersão, mundo vivo e interfaces',
+    novidades: [
+      'O celular: um aparelho de verdade no topo da tela, com notificações e aplicativos — Mensagens, Namoro, Rede, Notícias, Agenda, Mapas, Banco, E-mail e, para quem é conhecido, Fama.',
+      'O aplicativo de namoro: perfis com foto, idade, profissão, distância e interesses; curtir ou passar; o match só vem quando é recíproco; depois, conversa e encontro.',
+      'As pessoas tomam a iniciativa: amigos convidam para programas, a família conta novidades, a parceria sugere um tempo a dois, colegas antigos e ex reaparecem, contatos oferecem trabalho.',
+      'A vida acontece durante o ano: conforme você faz as coisas, chegam mensagens novas — e sair, viajar, comprar ou ir a um programa pode pôr alguém conhecido no seu caminho.',
+      'A fama com consequências: fãs pedem foto, eventos e festas fechadas convidam, pessoas famosas puxam conversa (e podem virar amizade ou romance), a imprensa pergunta sobre o seu relacionamento.',
+      'O jornal do ano: economia, política, esportes, mundo, gente conhecida — e você, quando o seu nome é notícia.',
+      'Interromper uma gravidez segue a lei de onde se vive: legal a pedido em alguns países, só em casos previstos em outros, proibido em outros — e, nos Estados Unidos, depende do estado.',
+      'Cenas novas na infância, na adolescência e na velhice, e cenas que voltam à sua história: a carta escrita aos onze anos, uma foto antiga, o colega de escola que ficou famoso, a volta à cidade onde você cresceu.'
+    ],
+    melhorias: [
+      'Você ganhou um perfil: amigos, família, seguidores, estado civil, fama e objetivos, cada um levando à sua tela.',
+      'Pessoas mostram quando foi a última conversa com cada um, e quem é famoso.',
+      'Caminhos · Trabalho abre com o crachá da sua carreira: o clube, a posição e os números do atleta; a especialidade do médico; as empresas; o partido e o mandato; os trabalhos do artista.',
+      'O Submundo organizado em grupos (você no meio, o que se faz, gente e poder, a lei), cada parte dizendo o que tem.',
+      'Conhecidos podem ficar famosos — e isso aparece na vida deles, na rede e no jornal.',
+      'Rodas com profundidade (flanco, aro, disco de freio) e faróis com lente nos desenhos dos veículos.'
+    ],
+    correcoes: [
+      'Natação, atletismo, lutas e outras modalidades não falam mais de bola, chuteira ou gramado.',
+      'A aba de redes em Minha Semana passou a se chamar Redes sociais (o celular agora é o aparelho).'
+    ]
+  },
+  {
     versao: '14',
     data: '2026-11-09',
     titulo: 'Expansão e aprofundamento',

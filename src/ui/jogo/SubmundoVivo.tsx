@@ -20,7 +20,8 @@
 import { useState } from 'react';
 import type { Vida } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
-import { BotaoAcao, Subnav, type ItemDeSubnav } from '../comum';
+import { BotaoAcao, type ItemDeSubnav } from '../comum';
+import { NavDoSubmundo15 } from '../v15/submundo/NavDoSubmundo15';
 import { dinheiroCurto } from '../leituraMaterial';
 import { anoDe } from '../../motor/tempo';
 import { contrair } from '../../motor/texto';
@@ -114,7 +115,8 @@ export function SubmundoVivo({ vida, agir }: { vida: Vida; agir: (a: Acao) => bo
   return (
     <div className="svivo">
       <Situacao vida={vida} ir={setParte} />
-      <Subnav rotulo="Partes do Submundo" itens={itens} atual={atual} aoMudar={setParte} prefixo="svivo" classe="svivo__partes" />
+      {/* VIDA 15: as partes agrupadas pelo que se procura (você no meio, o que se faz, gente e poder, a lei). */}
+      <NavDoSubmundo15 itens={itens} atual={atual} aoMudar={setParte} />
       <div role="tabpanel" id="svivo-painel" aria-labelledby={`svivo-aba-${atual}`} className={`svivo__painel svivo__painel--${atual}`} data-parte={atual}>
         {atual === 'geral' && <VisaoGeral vida={vida} agir={agir} />}
         {atual === 'carreira' && <Carreira vida={vida} agir={agir} />}

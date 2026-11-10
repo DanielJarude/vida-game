@@ -90,7 +90,7 @@ import { processarPausa } from './sistemas/pausa';
 import { processarRural } from './sistemas/rural';
 import { processarTransformacao } from './sistemas/carreira';
 import { efetivarMudancaMilitar } from './sistemas/militar';
-import { abrirDecisao, abrirProximaDaFila, aplicarAcontecimento, candidatos, conteudoPorId, montarFila, preparar, sortear, vidaComumDoAno, vidaPorFasesDoAno, vidaQueDevolveDoAno } from './conteudo/motor';
+import { abrirDecisao, abrirProximaDaFila, aplicarAcontecimento, candidatos, conteudoPorId, montarFila, preparar, sortear, vidaComumDoAno, vidaDe15DoAno, vidaPorFasesDoAno, vidaQueDevolveDoAno } from './conteudo/motor';
 import { contexto } from './conteudo/base';
 import { CATALOGO } from './conteudo/catalogo';
 import type { Conteudo } from './conteudo/base';
@@ -435,6 +435,8 @@ function faseDeConteudo(v: Vida, r: Rng, linhasSistemicas: number): void {
   vidaPorFasesDoAno(v);
   // VIDA 12.6: o que a vida devolve (consequências, família, raros) — sorteio derivado próprio.
   vidaQueDevolveDoAno(v);
+  // VIDA 15: as cenas de cada fase e as que leem a história de cada um — sorteio derivado próprio.
+  vidaDe15DoAno(v);
   // VIDA 12.9: as cenas de cada faixa de fortuna e das empresas (`acontecimentos129economia`) — sorteio derivado próprio.
   vidaEconomicaDoAno129(v, CATALOGO, preparar, (c, ctx) => (c.tipo === 'acontecimento' ? aplicarAcontecimento(v, c, ctx) : (abrirDecisao(v, c, ctx), true)));
   // VIDA 13 · Fama: os marcos do nome (silencioso) e, às vezes, o mundo reage ao nome ou o passado volta — sorteio derivado.

@@ -97,7 +97,7 @@ export const ACONTECIMENTOS_126: Conteudo[] = [
     narrar: c => {
       const g = gratidao(c.v, c.v.vinculos[c.p.quem.id], c.p.quem)!;
       const semEmprego = !c.v.trabalho.atual;
-      return { texto: `${c.p.quem.nome} soube da sua fase e apareceu sem ser chamad${o(c.p.quem)}: ${semEmprego ? 'passou o seu nome para duas vagas e pagou o almoço' : 'trouxe comida, resolveu o que dava e ficou para conversar'}. "Você esteve lá quando eu precisei" — ${g.texto ? `lembrando de ${anoDe(g.t)}` : 'e não precisou dizer mais nada'}.`, relevancia: 'biografia', tom: 'bom', lembrar: ['quem', 'Retribuiu a ajuda de anos atrás.', 'apoio'],
+      return { texto: `${c.p.quem.nome} soube da sua fase e apareceu sem ser chamad${o(c.p.quem)}: ${semEmprego ? 'passou o seu nome para duas vagas e pagou o almoço' : 'trouxe comida, deu conta do que dava e ficou para conversar'}. "Você esteve lá quando eu precisei" — ${g.texto ? `lembrando de ${anoDe(g.t)}` : 'e não precisou dizer mais nada'}.`, relevancia: 'biografia', tom: 'bom', lembrar: ['quem', 'Retribuiu a ajuda de anos atrás.', 'apoio'],
         efeito: () => { prox(c, 'quem', 6); estresse(c, -5); feliz(c, 4); if (semEmprego) c.v.fatos['indicacao_favor'] = c.v.t; } };
     }
   },

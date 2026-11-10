@@ -194,7 +194,8 @@ describe('Vida: moradia, dinheiro, compras, tempo, cidade — num lugar só', ()
     const v = vida(26, x => { adulta(x); x.moradia = { tipo: 'aluguel', municipioId: x.moradia.municipioId, modeloId: 'kitnet', aluguel: 900, padrao: 2, tInicio: x.t }; for (const vin of Object.values(x.vinculos)) vin.convivio = vin.convivio.filter(c => c !== 'casa'); x.financas.conta = -3000; });
     render(<main><VidaConcreta vida={v} agir={() => true} secao="dinheiro" irSecao={() => {}} irPara={() => {}} abrirPessoa={() => {}} /></main>);
     expect(screen.getByRole('heading', { name: 'A família' })).toBeTruthy();
-    expect(screen.getByText(/A casa de/)).toBeTruthy();
+    // VIDA 15: com a vida-base nova, pode haver mais de uma casa da família (pais separados) — basta haver a leitura.
+    expect(screen.getAllByText(/A casa de/).length).toBeGreaterThan(0);
     expect(screen.getAllByRole('button', { name: /Pedir ajuda a .* para segurar uma emergência/ }).length).toBeGreaterThan(0);
   });
 });

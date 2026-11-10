@@ -947,7 +947,8 @@ describe('EVT-03 · os ecos', () => {
     let v = cenas()[2];
     const amigoId = Object.values(v.vinculos).find(w => w.estagio === 'amigo_proximo')!.pessoaId;
     // Pré-condição dita (REWORK 10.5): a vida desta cena não pode já estar no aperto (é o que o teste provoca depois).
-    v = em(v, x => { registrarEco(x, 'favor', { pessoaId: amigoId, valor: 2000, de: 2, ate: 10 }); x.financas.conta = Math.max(x.financas.conta, 20000); x.financas.dividas = []; x.moradia.atraso = 0; });
+    // VIDA 15: a vida desta cena pode já trazer um favor guardado de antes (a vida-base mudou) — o teste começa do zero.
+    v = em(v, x => { x.ecos = (x.ecos ?? []).filter(e => e.tipo !== 'favor'); registrarEco(x, 'favor', { pessoaId: amigoId, valor: 2000, de: 2, ate: 10 }); x.financas.conta = Math.max(x.financas.conta, 20000); x.financas.dividas = []; x.moradia.atraso = 0; });
     const c = ACONTECIMENTOS_10.find(x => x.id === 'eco10_favor')!;
     const semAperto = (x: Vida) => preparar(c, x, criarRng(1));
     const apertado = (x: Vida) => em(x, y => { y.trabalho.atual = undefined; y.trabalho.desempregadoDesde = y.t - 12; });

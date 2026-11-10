@@ -188,8 +188,8 @@ export function Ilustracao({ a, largura, rotulo, className, dados, semChao, styl
   const id = `il${idDaAmostra(a)}${nivel}`;
   // O fio é constante NA TELA (non-scaling-stroke): 1 px na miniatura e no destaque, um pouco mais firme no grande.
   const fio = nivel === 3 ? 1.15 : nivel === 2 ? 1 : 0.9;
-  const luz = `${id}l`, reflexo = `${id}r`;
-  let usaLuz = false, usaReflexo = false;
+  const luz = `${id}l`, reflexo = `${id}r`, aroId = `${id}a`;
+  let usaLuz = false, usaReflexo = false, usaAro = false;
   const visivel = (p: Peca) => !(p.so3 && nivel < 3) && !(p.fino && nivel < 2) && !(p.tipo === 'texto' && nivel < 2) && !(p.tipo === 'linha' && !p.larg && nivel === 1);
   const desenhar = (lista: Peca[]): ReactElement[] => lista.filter(visivel).map((p, i): ReactElement => {
     const m = { 'data-peca': p.marca ?? p.tipo, ...(p.classe ? { className: p.classe } : {}), ...p.attrs };
@@ -221,7 +221,14 @@ export function Ilustracao({ a, largura, rotulo, className, dados, semChao, styl
       case 'linha':
         return <path key={i} {...m} d={p.d} fill="none" stroke={p.cor ?? TINTA} strokeOpacity={p.cor ? 1 : 0.5} strokeWidth={(p.larg ?? 0.8) * fio} vectorEffect="non-scaling-stroke" strokeLinecap="round" strokeLinejoin="round" />;
       case 'luz':
-        return <path key={i} {...m} d={p.d} fill={p.cor} stroke={contorno(p.cor)} strokeOpacity={0.7} strokeWidth={fio * 0.6} vectorEffect="non-scaling-stroke" />;
+        // VIDA 15: o farol é vidro — o reflexo da lente aparece a partir do destaque.
+        if (nivel > 1) usaReflexo = true;
+        return (
+          <g key={i} {...m}>
+            <path d={p.d} fill={p.cor} stroke={contorno(p.cor)} strokeOpacity={0.7} strokeWidth={fio * 0.6} vectorEffect="non-scaling-stroke" />
+            {nivel > 1 && <path d={p.d} fill={`url(#${reflexo})`} />}
+          </g>
+        );
       case 'texto':
         return <text key={i} {...m} x={p.x} y={p.y} fontSize={p.tam} fill={p.cor} textAnchor="middle" fontFamily={p.fonte === 'serif' ? 'Georgia, "Times New Roman", serif' : 'Inter, system-ui, sans-serif'} fontWeight={p.peso ?? 700} letterSpacing={p.espaco ?? p.tam * 0.16}>{p.texto}</text>;
       case 'grupo':
@@ -251,14 +258,24 @@ export function Ilustracao({ a, largura, rotulo, className, dados, semChao, styl
           : aro === 'liga' ? <path d={Array.from({ length: n }, (_, j) => { const g = (j / n) * Math.PI * 2 - Math.PI / 2; return `M${f(cx)} ${f(cy)}L${f(cx + Math.cos(g) * r * (ka - 0.04))} ${f(cy + Math.sin(g) * r * (ka - 0.04))}`; }).join('')} stroke={tom(0.4)} strokeWidth={r * (n > 8 && p.aroMaior ? 0.09 : 0.13)} strokeLinecap="round" />
             : aro === 'raios' ? <path d={Array.from({ length: 16 }, (_, j) => { const g = (j / 16) * Math.PI * 2; return `M${f(cx)} ${f(cy)}L${f(cx + Math.cos(g) * r * 0.62)} ${f(cy + Math.sin(g) * r * 0.62)}`; }).join('')} stroke={tom(0.3)} strokeWidth={0.4} />
               : <circle cx={cx} cy={cy} r={r * 0.42} fill="none" stroke={tom(0.25)} strokeWidth={0.6} />;
+        // VIDA 15: a roda com profundidade — o flanco do pneu (um anel mais claro), o aro com fundo (o centro saltado, a
+        // borda funda), o disco de freio atrás dos raios (com a pinça: vermelha no esportivo de perfil baixo) e a calota.
+        const rAro = r * (aro === 'raios' ? 0.66 : ka);
+        if (nivel > 1) usaAro = true;
+        const disco = nivel > 1 && (aro === 'liga' || aro === 'raios');
         return (
           <g key={i} {...m}>
             <circle cx={cx} cy={cy} r={r} fill="#26231f" stroke="#857e75" strokeOpacity={0.55} strokeWidth={fio * 0.7} vectorEffect="non-scaling-stroke" />
+            {nivel > 1 && <circle cx={cx} cy={cy} r={(r + rAro) / 2} fill="none" stroke="#4a4540" strokeWidth={Math.max(0.4, (r - rAro) * 0.42)} strokeOpacity={0.75} />}
+            {nivel > 1 && <path d={`M${f(cx - r * 0.78)} ${f(cy - r * 0.5)}A${f(r * 0.93)} ${f(r * 0.93)} 0 0 1 ${f(cx + r * 0.5)} ${f(cy - r * 0.8)}`} fill="none" stroke="#ffffff" strokeOpacity={0.12} strokeWidth={Math.max(0.3, r * 0.06)} strokeLinecap="round" />}
             {aro === 'cravos' && nivel > 1 && <circle cx={cx} cy={cy} r={r - 0.8} fill="none" stroke="#45403a" strokeWidth={r * 0.14} strokeDasharray={`${f(r * 0.22)} ${f(r * 0.16)}`} />}
-            <circle cx={cx} cy={cy} r={r * (aro === 'raios' ? 0.66 : ka)} fill={aroCor} stroke={escurecer(aroCor, 0.45)} strokeWidth={fio * 0.6} vectorEffect="non-scaling-stroke" />
-            {nivel > 1 && <circle cx={cx} cy={cy} r={r * ka} fill={`url(#${luz})`} />}
+            <circle cx={cx} cy={cy} r={rAro} fill={aroCor} stroke={escurecer(aroCor, 0.45)} strokeWidth={fio * 0.6} vectorEffect="non-scaling-stroke" />
+            {disco && <circle cx={cx} cy={cy} r={rAro * 0.78} fill="#5f5b56" stroke="#8b8680" strokeWidth={0.35} />}
+            {disco && <path d={`M${f(cx - rAro * 0.74)} ${f(cy - rAro * 0.2)}A${f(rAro * 0.76)} ${f(rAro * 0.76)} 0 0 1 ${f(cx - rAro * 0.2)} ${f(cy - rAro * 0.74)}`} fill="none" stroke={p.aroMaior ? '#b8352b' : '#3a3734'} strokeWidth={rAro * 0.2} strokeLinecap="round" />}
+            {nivel > 1 && <circle cx={cx} cy={cy} r={rAro} fill={`url(#${aroId})`} />}
             {desenhoAro}
             <circle cx={cx} cy={cy} r={r * 0.15} fill="#6b6660" />
+            {nivel > 1 && <circle cx={cx - r * 0.04} cy={cy - r * 0.05} r={r * 0.06} fill="#ffffff" fillOpacity={0.35} />}
           </g>
         );
       }
@@ -270,8 +287,9 @@ export function Ilustracao({ a, largura, rotulo, className, dados, semChao, styl
     : null;
   return (
     <svg viewBox={`0 0 ${w} ${h}`} width={largura} height={altura} preserveAspectRatio={ajuste} className={className} role={rotulo ? 'img' : undefined} aria-label={rotulo} aria-hidden={rotulo ? undefined : true} data-nivel={nivel} style={style} {...dados}>
-      {(usaLuz || usaReflexo) && (
+      {(usaLuz || usaReflexo || usaAro) && (
         <defs>
+          {usaAro && <radialGradient id={aroId} cx="0.45" cy="0.42" r="0.6"><stop offset="0" stopColor="#ffffff" stopOpacity={0.28} /><stop offset="0.55" stopColor="#ffffff" stopOpacity={0} /><stop offset="0.86" stopColor="#000000" stopOpacity={0.12} /><stop offset="1" stopColor="#000000" stopOpacity={0.38} /></radialGradient>}
           {usaLuz && <linearGradient id={luz} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#ffffff" stopOpacity={0.26} /><stop offset="0.42" stopColor="#ffffff" stopOpacity={0} /><stop offset="0.7" stopColor="#000000" stopOpacity={0} /><stop offset="1" stopColor="#000000" stopOpacity={0.13} /></linearGradient>}
           {usaReflexo && <linearGradient id={reflexo} x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#ffffff" stopOpacity={0.42} /><stop offset="0.38" stopColor="#ffffff" stopOpacity={0.04} /><stop offset="0.56" stopColor="#ffffff" stopOpacity={0.22} /><stop offset="1" stopColor="#ffffff" stopOpacity={0} /></linearGradient>}
         </defs>
