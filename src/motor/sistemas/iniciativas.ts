@@ -26,6 +26,7 @@ import type { Rng } from '../rng';
 import { clamp } from '../rng';
 import type { Chamado, Pessoa, TipoChamado, Vida, Vinculo } from '../tipos';
 import { escrever, idade, idadePessoa, lembrarCom, marcarFato, parceiro, temFato, vinculosVivos, foraDaParceria } from '../nucleo';
+import { arquivarChamado16 } from '../v16/celular/mensagens16';
 import { abalar } from './abalo';
 import { flex, comPreposicao } from '../texto';
 import { papelDe, vinculoReal, type Papel } from './vinculos';
@@ -91,7 +92,15 @@ export interface RespostaChamado { resultado: string; titulo?: string }
  * A reação do jogador. `interesse` aceito não é resolvido aqui (a saída
  * vira romance pelo mesmo caminho de qualquer outro começo: `interacoes`).
  */
-export function responderChamado(v: Vida, _r: Rng, p: Pessoa, vin: Vinculo, sim: boolean): RespostaChamado {
+export function responderChamado(v: Vida, r: Rng, p: Pessoa, vin: Vinculo, sim: boolean): RespostaChamado {
+  const ch = vin.chamado!;
+  const x = responderChamadoDe(v, r, p, vin, sim);
+  // VIDA 16: o chamado respondido fica na conversa com a pessoa (o que ela disse, o que você fez, no que deu).
+  arquivarChamado16(v, p.id, ch, { sim, texto: x.resultado });
+  return x;
+}
+
+function responderChamadoDe(v: Vida, _r: Rng, p: Pessoa, vin: Vinculo, sim: boolean): RespostaChamado {
   const ch = vin.chamado!;
   vin.chamado = undefined;
   vin.tUltimoContato = v.t;
@@ -227,6 +236,8 @@ function expirarChamados(v: Vida): void {
     const ch = vin.chamado;
     if (!ch || ch.t >= v.t) continue;
     vin.chamado = undefined;
+    // VIDA 16: o chamado sem resposta fica no histórico das Mensagens.
+    arquivarChamado16(v, p.id, ch);
     switch (ch.tipo) {
       case 'pedido_ajuda':
         afeto(vin, -8); confiar(vin, -8);

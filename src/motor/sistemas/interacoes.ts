@@ -22,6 +22,7 @@ import { clamp } from '../rng';
 import type { Dominio, Pessoa, Vida, Vinculo } from '../tipos';
 import { praticar } from './frentes';
 import { escrever, idade, idadePessoa, lembrarCom, marcarFato, parceiro, foraDaParceria } from '../nucleo';
+import { deixarRastro16 } from '../v16/romance/namoro16';
 import { bloqueio, PERMITIDO, type Veredito } from '../plausibilidade';
 import { compatibilidade } from './social';
 import {
@@ -663,19 +664,42 @@ export const INTERACOES: Interacao[] = [
   {
     // O aplicativo: depois do match, a conversa (pode seguir, esfriar, sumir).
     id: 'app_conversar', destaque: true, variante: 'principal',
-    quando: c => humano(c) && !parceiro(c.v) && etapaDoApp(c.v, c.vin) === 'match',
+    // VIDA 16: com alguém em casa também (o estado civil não bloqueia: o rastro e a descoberta são de `namoro16`).
+    quando: c => humano(c) && etapaDoApp(c.v, c.vin) === 'match',
+    disponivel: c => avisoDoAppNaInteracao(c),
     prioridade: () => 4,
     rotulo: c => `Puxar conversa com ${c.p.nome} no aplicativo`,
-    executar: (c, r) => { const x = conversarNoApp(c.v, r, c.p, c.vin); return { resultado: x.texto, titulo: c.p.nome }; }
+    executar: (c, r) => {
+      const x = conversarNoApp(c.v, r, c.p, c.vin);
+      const achado = c.vin.contexto?.etapa === 'conversa' ? deixarRastro16(c.v, 'mensagens', c.p.id) : {};
+      return { resultado: achado.texto ? `${x.texto} ${achado.texto}` : x.texto, titulo: c.p.nome };
+    }
   },
   {
     // O primeiro encontro: a química decide o depois — não o contexto.
     id: 'app_encontro', destaque: true, variante: 'principal',
-    quando: c => humano(c) && !parceiro(c.v) && etapaDoApp(c.v, c.vin) === 'conversa' && !c.longe,
+    quando: c => humano(c) && etapaDoApp(c.v, c.vin) === 'conversa' && !c.longe,
+    disponivel: c => avisoDoAppNaInteracao(c),
     prioridade: () => 4,
     rotulo: c => `Marcar um encontro com ${c.p.nome}`,
     executar: (c, r) => {
       const x = encontroDoApp(c.v, r, c.p, c.vin);
+      // VIDA 16: com uma parceria, o encontro é rastro; se engatar, é um caso (o sistema de casos que já existe).
+      const comAlguem = parceiro(c.v);
+      if (comAlguem) {
+        const achado = deixarRastro16(c.v, 'encontro', c.p.id);
+        const depois = achado.texto ? ` ${achado.texto}` : '';
+        if (x.resultado === 'saindo' && parceiro(c.v)) {
+          if (c.vin.contexto) c.vin.contexto.etapa = 'encerrado';
+          iniciarCaso(c.v, c.p, c.vin);
+          return { resultado: `O encontro com ${c.p.nome} foi além do café.${acordoConsentido(comAlguem.vin.romance) ? '' : ` Agora há um segredo entre você e ${comAlguem.p.nome}.`}${depois}`, titulo: c.p.nome };
+        }
+        if (x.resultado === 'saindo' || x.resultado === 'talvez') { if (c.vin.contexto) c.vin.contexto.etapa = 'conversa'; lembrarCom(c.v, c.p.id, 'Um encontro marcado pelo aplicativo.', 'romance', 1); return { resultado: `Foi bom — e ficou no ar. ${c.p.nome} quer se ver de novo.${depois}`, titulo: c.p.nome }; }
+        recusar(c);
+        if (c.vin.contexto) c.vin.contexto.etapa = 'encerrado';
+        registrarFase(c.v, c.vin, 'sem_quimica');
+        return { resultado: `${c.p.nome} foi gentil, você também. Ninguém marcou o segundo.${depois}`, titulo: c.p.nome };
+      }
       if (x.resultado === 'saindo') return comecarASair(c, Math.max(55, c.vin.romance?.envolvimento ?? 55), `Começou a sair com ${c.p.nome}, que conheceu pelo aplicativo.`, `O encontro durou até fecharem o bar. ${c.p.nome} mandou mensagem antes de você chegar em casa.`);
       if (x.resultado === 'talvez') { if (c.vin.contexto) c.vin.contexto.etapa = 'conversa'; lembrarCom(c.v, c.p.id, 'O primeiro encontro: bom, sem certeza.', 'romance', 1); return { resultado: `Foi bom — sem fogos. ${c.p.nome} topou um segundo encontro, "para ver".`, titulo: c.p.nome }; }
       recusar(c);
@@ -1228,6 +1252,13 @@ function temFatoRecente(v: Vida, chave: string, meses: number): boolean {
 }
 
 /* --------------------------------------------------------- Convite (romance) */
+
+/** VIDA 16: no aplicativo, com uma parceria exclusiva, a ação segue possível — com o aviso do que está em jogo. */
+function avisoDoAppNaInteracao(c: CtxI): Veredito {
+  const par = parceiro(c.v);
+  if (!par || acordoConsentido(par.vin.romance)) return { grau: 'permitido' };
+  return { grau: 'irregular', motivo: `Você está com ${par.p.nome}: isso pode ser descoberto.` };
+}
 
 function disponibilidadeConvite(c: CtxI): Veredito {
   // Solteiro: a idade decide se existe; o resto (orientação, compromisso) é a resposta da outra pessoa.

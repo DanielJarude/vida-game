@@ -24,6 +24,7 @@
 .atencao__item--urgente .atencao__tipo { color: var(--danger); }
 .atencao__item--importante .atencao__tipo { color: var(--tom-pessoas); }
 .atencao__item--oportunidade .atencao__tipo { color: var(--pig-azulejo); }
+.atencao__porque { font-family: var(--font-sans); font-size: var(--type-caption); color: var(--text-secondary); line-height: 1.35; }
 .atencao__ir { font-family: var(--font-sans); font-size: var(--type-meta); color: var(--text-muted); white-space: nowrap; padding-right: var(--space-3); }
 .atencao__item:hover .atencao__tipo, .atencao__item:hover .atencao__ir { text-decoration: none; }
 

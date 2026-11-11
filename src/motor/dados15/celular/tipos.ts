@@ -32,7 +32,11 @@ export type TipoMsg15 =
   /** Fama: a imprensa liga (um rumor, uma foto, uma pergunta). */
   | 'imprensa'
   /** Um encontro por acaso num lugar (o restaurante, o aeroporto, a praia). */
-  | 'encontro';
+  | 'encontro'
+  /** VIDA 16: uma mensagem que VOCÊ escreveu (o texto é seu; a resposta é da pessoa). */
+  | 'escrita'
+  /** VIDA 16: um chamado da pessoa que já saiu da tela (respondido, ou sem resposta) — fica no histórico. */
+  | 'chamado';
 
 export type Lugar15 = 'restaurante' | 'festa' | 'aeroporto' | 'praia' | 'evento' | 'shopping' | 'cinema' | 'show' | 'bar' | 'parque' | 'academia' | 'mercado' | 'rua';
 
@@ -94,4 +98,8 @@ export interface Celular15 {
   deck?: { ano: number; perfis: PerfilApp15[]; extras?: number; instalado?: boolean };
   /** As publicações dos amigos já curtidas (chaves; no máximo 160). */
   curtidas?: string[];
+  /** VIDA 16: o rastro do aplicativo de namoro usado com uma parceria exclusiva (`motor/v16/romance`). */
+  rastro16?: import('../../dados16/romance/tipos').RastroDoApp16;
+  /** VIDA 16: as conversas antigas (as mensagens que saíram do ano continuam no histórico; no máximo 400). */
+  arquivo16?: Msg15[];
 }

@@ -106,7 +106,8 @@ export function Pessoas({ vida, agir, aberta, abrir, parte: parteDeFora, irParte
   const moraComPais = vida.moradia.tipo === 'pais' || vida.moradia.tipo === 'parente';
   const total = c.nucleo.length + c.familia.length + c.amigos.length + c.contexto.length;
   const vazio = !total;
-  const sinais = sinaisSociais(vida).filter(x => x.pessoaId && vida.pessoas[x.pessoaId]);
+  // VIDA 16: em Pessoas cabem mais (o painel de acompanhamento); fora daqui, só o urgente.
+  const sinais = sinaisSociais(vida, 6).filter(x => x.pessoaId && vida.pessoas[x.pessoaId]);
   const passado = new Set(c.passado.map(x => x.p.id));
   const todos = [...c.nucleo, ...c.familia, ...c.familiaExtensa, ...c.amigos, ...c.contexto, ...c.passado].filter((x, k, a) => a.findIndex(y => y.p.id === x.p.id) === k);
   const contagem = (f: FiltroDoAlbum) => todos.filter(x => noFiltro(vida, x, f, passado)).length;
@@ -143,7 +144,7 @@ export function Pessoas({ vida, agir, aberta, abrir, parte: parteDeFora, irParte
                 <li key={k}>
                   <button type="button" className={`atencao__item atencao__item--${x.tipo}`} onClick={() => abrir(p.id)}>
                     <Retrato visual={p.visual} genero={p.genero} idade={idadePessoa(vida, p)} semente={p.pet?.semente ?? p.id} tamanho={40} especie={p.especie} porte={p.pet?.porte} rotulo={p.nome} expressao={expressaoNpc(vida, p)} falecido={!p.vivo} />
-                    <span className="atencao__texto"><span className="atencao__tipo">{ROTULO_SINAL[x.tipo]}</span>{x.texto}</span>
+                    <span className="atencao__texto"><span className="atencao__tipo">{ROTULO_SINAL[x.tipo]}</span>{x.texto}{(x.porque || x.noCelular) && <span className="atencao__porque">{x.porque}{x.noCelular ? `${x.porque ? ' · ' : ''}há uma mensagem no celular` : ''}</span>}</span>
                     <span className="atencao__ir" aria-hidden="true">{p.vivo ? 'abrir →' : 'ver →'}</span>
                   </button>
                 </li>

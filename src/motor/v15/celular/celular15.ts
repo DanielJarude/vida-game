@@ -28,6 +28,8 @@ import { acordoConsentido, atraiGenero, interesseInicial, podeTerRomance } from 
 import { compatibilidade } from '../../sistemas/social';
 import { novoContexto, buscaDoPerfil, registrarFase, etapaDoApp } from '../../sistemas/relacoes';
 import { vereditoDePagar } from '../../sistemas/dinheiro';
+import { avisoDoApp16, deixarRastro16, esquecerRastro16 } from '../../v16/romance/namoro16';
+import { arquivarMsgs16, disponibilidadeEscrever16, escrever16, type IntencaoMsg16 } from '../../v16/celular/mensagens16';
 import { somarAoNome, origemDoNome } from '../../sistemas/notoriedade';
 import { flex } from '../../texto';
 import { anoDe } from '../../tempo';
@@ -285,9 +287,14 @@ export function processarCelular15(v: Vida): void {
   const ano = anoDe(v.t);
   if (c.ano === ano && c.msgs.some(m => m.onda === 0 && anoDe(m.t) === ano)) return;
   // O que ficou sem resposta no ano que passou sai do aparelho (o silêncio não pune: a relação segue pelo convívio de sempre).
-  c.msgs = c.msgs.filter(m => m.resposta ? v.t - m.t <= 36 : anoDe(m.t) >= ano - 1 && v.t - m.t <= 12);
-  if (c.msgs.length > 60) c.msgs.splice(0, c.msgs.length - 60);
+  // VIDA 16: o que sai do ano vai para o histórico (`mensagens16`) — a conversa não some.
+  const fica = (m: Msg15) => (m.resposta ? v.t - m.t <= 36 : anoDe(m.t) >= ano - 1 && v.t - m.t <= 12);
+  arquivarMsgs16(v, c.msgs.filter(m => !fica(m)));
+  c.msgs = c.msgs.filter(fica);
+  if (c.msgs.length > 60) arquivarMsgs16(v, c.msgs.splice(0, c.msgs.length - 60));
   c.ano = ano;
+  // VIDA 16: o rastro do aplicativo envelhece (o de outra parceria não vale mais).
+  esquecerRastro16(v);
   c.ondas = 0;
   c.acoesNoAno = 0;
   c.encontrosNoAno = 0;
@@ -455,6 +462,8 @@ export function opcoesDaMsg15(v: Vida, m: Msg15): OpcaoMsg15[] {
       { op: 'conversar', rotulo: 'Parar para conversar', veredito: ok },
       { op: 'cumprimentar', rotulo: 'Cumprimentar e seguir', veredito: ok },
       { op: 'desviar', rotulo: 'Fingir que não viu', veredito: ok }];
+    // VIDA 16: o que você escreveu e os chamados guardados não pedem resposta aqui.
+    case 'escrita': case 'chamado': return [];
   }
 }
 
@@ -705,10 +714,11 @@ export function disponibilidadeNamoro15(v: Vida): Veredito {
   if (i < 18) return bloqueio('impossivel', 'Os aplicativos de namoro são a partir dos 18.');
   if (v.justica?.prisao) return bloqueio('impossivel', 'Não daqui.');
   if (!v.eu.atracao) return bloqueio('requisito', 'Diga antes por quem você se interessa (em Pessoas).');
+  // VIDA 16: o estado civil não bloqueia o aplicativo — o aviso diz o que está em jogo (`v16/romance/namoro16`).
+  const aviso = avisoDoApp16(v);
+  if (aviso) return { grau: 'irregular', motivo: aviso };
   const saindo = vinculosVivos(v).find(x => x.vin.romance?.estagio === 'saindo' && !foraDaParceria(x.vin.romance));
-  if (saindo) return bloqueio('incompativel', `Você está saindo com ${saindo.p.nome}: o aplicativo pode esperar.`);
-  const par = parceiro(v);
-  if (par && !acordoConsentido(par.vin.romance)) return { grau: 'irregular', motivo: `Você está com ${par.p.nome}, num relacionamento exclusivo: usar o aplicativo seria traição — e ${ele(par.p)} pode perceber.` };
+  if (saindo) return { grau: 'irregular', motivo: `Você está saindo com ${saindo.p.nome}: nada foi combinado, mas ${ele(saindo.p)} pode não gostar de saber.` };
   return PERMITIDO;
 }
 
@@ -746,7 +756,9 @@ export type OqueCelular15 =
   | { op: 'curtir'; pid: string }
   | { op: 'passar'; pid: string }
   | { op: 'desfazer'; pid: string }
-  | { op: 'curtir_post'; chave: string; pid: string };
+  | { op: 'curtir_post'; chave: string; pid: string }
+  /** VIDA 16: escrever para alguém (a intenção decide a frase; a resposta é da pessoa). */
+  | { op: 'escrever'; pid: string; intencao: IntencaoMsg16 };
 
 export function disponibilidadeCelular15(v: Vida, q: OqueCelular15): Veredito {
   if (!temCelular15(v)) return bloqueio('impossivel', 'Ainda sem celular.');
@@ -778,6 +790,7 @@ export function disponibilidadeCelular15(v: Vida, q: OqueCelular15): Veredito {
       return d;
     }
     case 'desfazer': return v.vinculos[q.pid] && etapaDoApp(v, v.vinculos[q.pid]) ? PERMITIDO : bloqueio('impossivel', 'Não há match com essa pessoa.');
+    case 'escrever': return disponibilidadeEscrever16(v, q.pid, q.intencao);
     case 'curtir_post': return v.celular15?.curtidas?.includes(q.chave) ? bloqueio('incompativel', 'Já curtiu.') : v.vinculos[q.pid] ? PERMITIDO : bloqueio('impossivel', 'Essa pessoa saiu da sua rede.');
   }
 }
@@ -790,7 +803,9 @@ export function executarCelular15(v: Vida, r: Rng, q: OqueCelular15): SaidaCelul
     case 'namoro_abrir': {
       if (c.deck?.ano !== anoDe(v.t)) c.deck = { ano: anoDe(v.t), perfis: gerarPerfis(v, TAMANHO_DO_DECK, 0), instalado: true };
       c.deck.instalado = true;
-      return { texto: '' };
+      // VIDA 16: o aplicativo instalado é a primeira pista (conta uma vez por ano).
+      const x = deixarRastro16(v, 'perfil', undefined, r);
+      return x.texto ? { texto: x.texto, titulo: 'Descoberto', tom: 'ruim' } : { texto: '' };
     }
     case 'namoro_mais': {
       const d = c.deck!;
@@ -807,6 +822,7 @@ export function executarCelular15(v: Vida, r: Rng, q: OqueCelular15): SaidaCelul
       registrarFase(v, vin, 'sem_quimica');
       return { texto: `Match desfeito com ${v.pessoas[q.pid].nome}.` };
     }
+    case 'escrever': return escrever16(v, r, q.pid, q.intencao);
     case 'curtir_post': {
       const l = (c.curtidas ??= []);
       l.push(q.chave);
@@ -841,15 +857,9 @@ function curtirPerfil(v: Vida, r: Rng, pf: PerfilApp15): SaidaCelular15 {
   lembrarCom(v, p.id, 'Deram match num aplicativo.', 'inicio', 1);
   escrever(v, { texto: `Deu match com ${p.nome} num aplicativo de encontros.`, relevancia: 'cotidiano', tema: 'amor', escolha: true, pessoas: [p.id] });
   // Num relacionamento exclusivo, a parceria pode perceber (o celular na mesa, a notificação).
-  const par = parceiro(v);
-  let extra = '';
-  if (par && !acordoConsentido(par.vin.romance) && r.chance(0.22)) {
-    par.vin.tensao = clamp(par.vin.tensao + 18);
-    par.vin.confianca = clamp(par.vin.confianca - 10);
-    if (!par.vin.conflito || par.vin.conflito.gravidade < 2) par.vin.conflito = { t: v.t, assunto: 'o aplicativo de encontros no seu celular', gravidade: 2, quem: 'eu' };
-    lembrarCom(v, par.p.id, 'Descobriu o aplicativo de encontros no seu celular.', 'conflito', 2);
-    extra = ` ${par.p.nome} viu a notificação.`;
-  }
+  // VIDA 16: a chance e a reação são da parceria (o jeito, a casa, a confiança, o que já foi achado) — `namoro16`.
+  const achado = deixarRastro16(v, 'match', p.id, r);
+  const extra = achado.texto ? ` ${achado.texto}` : '';
   return { texto: `Deu match com ${p.nome}!${extra}`, titulo: 'Match', pessoaId: p.id, tom: extra ? 'ruim' : 'bom' };
 }
 

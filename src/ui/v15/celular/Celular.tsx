@@ -25,6 +25,7 @@ import { leituraDaFama13 } from '../../../motor/sistemas/reconhecimento13';
 import { feed15, matches15, naoLidas15, nivelDaFama15, opcoesDaMsg15, rotuloArea, rotuloDoLugar15, TITULO_DO_POST15, disponibilidadeNamoro15 } from '../../../motor/v15/celular/celular15';
 import { jornal15, ROTULO_EDITORIA15, type Editoria15 } from '../../../motor/v15/celular/noticias15';
 import type { Msg15, PerfilApp15 } from '../../../motor/dados15/celular/tipos';
+import { contatos16, historico16, horaDaMsg16, ROTULO_INTENCAO16, type IntencaoMsg16 } from '../../../motor/v16/celular/mensagens16';
 import { Retrato } from '../../avatar/Retrato';
 import { BotaoAcao } from '../../comum';
 import { dinheiroCurto } from '../../apresentar';
@@ -64,7 +65,10 @@ function Icone({ d, className }: { d: string; className?: string }) {
   return <svg className={className ?? 'cel__icone'} viewBox="0 0 24 24" aria-hidden fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>;
 }
 
-const quando = (v: Vida, t: number) => (anoDe(t) === anoDe(v.t) ? 'este ano' : `${MESES[mesDe(t)].slice(0, 3)} ${anoDe(t)}`);
+const quando = (v: Vida, t: number) => (anoDe(t) === anoDe(v.t) ? MESES[mesDe(t)].slice(0, 3) : `${MESES[mesDe(t)].slice(0, 3)} ${anoDe(t)}`);
+/** VIDA 16: o dia e a hora da mensagem (saem do id: são sempre os mesmos). */
+const diaDe = (id: string) => 1 + (parseInt(horaDaMsg16(id + 'd').replace(':', ''), 10) % 28);
+const dataHora = (v: Vida, m: Msg15) => `${diaDe(m.id)} ${MESES[mesDe(m.t)].slice(0, 3)}${anoDe(m.t) === anoDe(v.t) ? '' : ` ${anoDe(m.t)}`} · ${horaDaMsg16(m.id)}`;
 
 function Foto({ vida, p, tamanho = 40 }: { vida: Vida; p?: Pessoa; tamanho?: number }) {
   if (!p) return <span className="cel__foto-vazia" style={{ width: tamanho, height: tamanho }} aria-hidden>★</span>;
@@ -74,7 +78,7 @@ function Foto({ vida, p, tamanho = 40 }: { vida: Vida; p?: Pessoa; tamanho?: num
 /* ------------------------------------------------------------------ Mensagens: as conversas */
 
 interface Fio { chave: string; pid?: string; nome: string; p?: Pessoa; itens: Item[]; t: number; naoLida: boolean; aberta: boolean }
-type Item = { tipo: 'msg'; m: Msg15 } | { tipo: 'chamado'; texto: string; t: number; sim: string; nao: string };
+type Item = { tipo: 'msg'; m: Msg15; arquivada?: boolean } | { tipo: 'chamado'; texto: string; t: number; sim: string; nao: string };
 
 function fiosDe(v: Vida): Fio[] {
   const fios = new Map<string, Fio>();
@@ -83,12 +87,14 @@ function fiosDe(v: Vida): Fio[] {
     if (!f) { f = { chave, pid: p?.id, nome, p, itens: [], t: -Infinity, naoLida: false, aberta: false }; fios.set(chave, f); }
     return f;
   };
-  for (const m of v.celular15?.msgs ?? []) {
+  // VIDA 16: o histórico inteiro (o do ano e o arquivo), não só as mensagens de agora.
+  for (const { m, arquivada } of historico16(v)) {
     const p = m.de ? v.pessoas[m.de] : undefined;
     if (m.de && !p) continue;
     const f = fio(m.de ?? `r:${m.remetente}`, p?.nome ?? m.remetente ?? 'Desconhecido', p);
-    f.itens.push({ tipo: 'msg', m });
-    f.t = Math.max(f.t, m.t);
+    f.itens.push({ tipo: 'msg', m, arquivada });
+    f.t = Math.max(f.t, m.resposta?.t ?? m.t);
+    if (arquivada) continue;
     if (!m.lida && !m.resposta) f.naoLida = true;
     if (!m.resposta && opcoesDaMsg15(v, m).length) f.aberta = true;
   }
@@ -105,7 +111,15 @@ function fiosDe(v: Vida): Fio[] {
   return [...fios.values()].sort((a, b) => Number(b.aberta) - Number(a.aberta) || b.t - a.t);
 }
 
-const previa = (f: Fio) => { const u = f.itens[f.itens.length - 1]; return u.tipo === 'msg' ? (u.m.resposta ? `Você: ${u.m.resposta.op === 'recusar' || u.m.resposta.op === 'ignorar' ? '—' : 'respondeu'}` : u.m.texto.replace(/^"|"$/g, '')) : u.texto; };
+const semAspas = (t: string) => t.replace(/^"|"$/g, '');
+const previa = (f: Fio) => {
+  const u = f.itens[f.itens.length - 1];
+  if (u.tipo !== 'msg') return u.texto;
+  const m = u.m;
+  if (m.tipo === 'escrita') return m.resposta?.op === 'respondeu' ? semAspas(m.resposta.texto) : `Você: ${m.texto}`;
+  if (m.tipo === 'chamado') return m.resposta ? `Você: ${m.resposta.op === 'sim' ? 'respondeu' : 'disse que não'}` : semAspas(m.texto);
+  return m.resposta ? `Você: ${m.resposta.op === 'recusar' || m.resposta.op === 'ignorar' ? '—' : 'respondeu'}` : u.arquivada ? `${semAspas(m.texto)} (sem resposta)` : semAspas(m.texto);
+};
 
 function Mensagens({ vida, agir, abrirPessoa, inicial }: { vida: Vida; agir: Props['agir']; abrirPessoa: (id: string) => void; inicial?: string | null }) {
   const [aberto, setAberto] = useState<string | null>(inicial ?? null);
@@ -116,12 +130,29 @@ function Mensagens({ vida, agir, abrirPessoa, inicial }: { vida: Vida; agir: Pro
     lidas.current = true;
     if ((vida.celular15?.msgs ?? []).some(m => !m.lida && !m.resposta)) agir({ tipo: 'celular15', oque: { op: 'ler' } });
   }, [agir, vida.celular15]);
+  const [nova, setNova] = useState(false);
+  const [filtro, setFiltro] = useState<'todas' | 'nao_lidas' | 'esperando'>('todas');
   const f = aberto ? fios.find(x => x.chave === aberto) : undefined;
+  if (nova) return <NovaMensagem vida={vida} agir={agir} voltar={() => setNova(false)} abrirConversa={pid => { setNova(false); setAberto(pid); }} />;
   if (f) return <Conversa vida={vida} agir={agir} fio={f} voltar={() => setAberto(null)} abrirPessoa={abrirPessoa} />;
-  if (!fios.length) return <p className="cel__vazio">Nenhuma mensagem por enquanto. A vida também tem dias quietos.</p>;
+  const escrever = <button type="button" className="botao botao--principal cel__escrever" onClick={() => setNova(true)}>Nova mensagem</button>;
+  if (!fios.length) return <>{escrever}<p className="cel__vazio">Nenhuma mensagem por enquanto. A vida também tem dias quietos.</p></>;
+  const naoLidas = fios.filter(x => x.naoLida).length;
+  const esperando = fios.filter(x => x.aberta).length;
+  const visiveis = fios.filter(x => filtro === 'todas' || (filtro === 'nao_lidas' ? x.naoLida : x.aberta));
   return (
+    <>
+    <div className="cel__msg-topo">
+      {escrever}
+      <div className="cel__filtros" role="group" aria-label="Mostrar conversas">
+        <button type="button" className="chip" aria-pressed={filtro === 'todas'} onClick={() => setFiltro('todas')}>Todas</button>
+        <button type="button" className="chip" aria-pressed={filtro === 'nao_lidas'} onClick={() => setFiltro('nao_lidas')}>Não lidas{naoLidas ? <span className="chip__conta">{naoLidas}</span> : null}</button>
+        <button type="button" className="chip" aria-pressed={filtro === 'esperando'} onClick={() => setFiltro('esperando')}>Esperando você{esperando ? <span className="chip__conta">{esperando}</span> : null}</button>
+      </div>
+    </div>
+    {!visiveis.length && <p className="cel__vazio">Nada aqui.</p>}
     <ul className="cel__lista" aria-label="Conversas">
-      {fios.map(x => (
+      {visiveis.map(x => (
         <li key={x.chave}>
           <button type="button" className={`cel__fio${x.naoLida ? ' cel__fio--nova' : ''}`} onClick={() => setAberto(x.chave)}>
             <Foto vida={vida} p={x.p} tamanho={44} />
@@ -137,6 +168,46 @@ function Mensagens({ vida, agir, abrirPessoa, inicial }: { vida: Vida; agir: Pro
         </li>
       ))}
     </ul>
+    </>
+  );
+}
+
+/** VIDA 16: escrever para alguém — a pessoa, a intenção; a resposta é dela (uma mensagem por pessoa por ano). */
+function NovaMensagem({ vida, agir, voltar, abrirConversa }: { vida: Vida; agir: Props['agir']; voltar: () => void; abrirConversa: (pid: string) => void }) {
+  const [busca, setBusca] = useState('');
+  const [quem, setQuem] = useState<string | null>(null);
+  const lista = contatos16(vida);
+  const achados = lista.filter(x => !busca || x.p.nome.toLowerCase().includes(busca.toLowerCase())).slice(0, 40);
+  const c = quem ? lista.find(x => x.p.id === quem) : undefined;
+  return (
+    <div className="cel__nova">
+      <div className="cel__conversa-topo">
+        <button type="button" className="cel__voltar" onClick={c ? () => setQuem(null) : voltar} aria-label="Voltar">‹</button>
+        <span className="cel__conversa-quem"><strong>{c ? `Para ${c.p.nome}` : 'Nova mensagem'}</strong><span>{c ? rotuloDe(vida, c.p, c.vin) : 'Escolha para quem'}</span></span>
+      </div>
+      {!c ? (
+        <>
+          <label className="cel__busca"><span className="sr-only">Buscar contato</span><input type="search" placeholder="Buscar nos contatos" value={busca} onChange={e => setBusca(e.target.value)} /></label>
+          <ul className="cel__lista" aria-label="Contatos">
+            {achados.map(x => (
+              <li key={x.p.id}>
+                <button type="button" className="cel__fio" onClick={() => setQuem(x.p.id)} disabled={x.escreveu}>
+                  <Foto vida={vida} p={x.p} tamanho={38} />
+                  <span className="cel__fio-texto"><strong>{x.p.nome}</strong><span>{x.escreveu ? 'Você já escreveu este ano' : rotuloDe(vida, x.p, x.vin)}</span></span>
+                </button>
+              </li>
+            ))}
+          </ul>
+          {!achados.length && <p className="cel__vazio">Ninguém com esse nome.</p>}
+        </>
+      ) : (
+        <div className="cel__intencoes" role="group" aria-label="O que escrever">
+          {c.intencoes.map((i: IntencaoMsg16) => (
+            <BotaoAcao key={i} vida={vida} acao={{ tipo: 'celular15', oque: { op: 'escrever', pid: c.p.id, intencao: i } }} agir={a => { const ok = agir(a); if (ok) abrirConversa(c.p.id); return ok; }} variante={i === 'saber' ? 'principal' : 'discreto'}>{ROTULO_INTENCAO16[i]}</BotaoAcao>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -161,9 +232,21 @@ function Conversa({ vida, agir, fio, voltar, abrirPessoa }: { vida: Vida; agir: 
               <BotaoAcao vida={vida} acao={{ tipo: 'pessoa', pessoaId: fio.pid!, interacao: 'chamado_nao' }} agir={agir} variante="discreto">{it.nao}</BotaoAcao>
             </div>
           </div>
+        ) : it.m.tipo === 'escrita' ? (
+          <div key={it.m.id} className="cel__grupo">
+            <span className="cel__data">{dataHora(vida, it.m)}</span>
+            <p className="cel__balao cel__balao--minha">{it.m.texto}</p>
+            {it.m.resposta?.op === 'respondeu' ? <p className="cel__balao cel__balao--dela">{semAspas(it.m.resposta.texto)}</p> : <p className="cel__narra">{it.m.resposta?.texto}</p>}
+          </div>
+        ) : it.m.tipo === 'chamado' ? (
+          <div key={it.m.id} className="cel__grupo">
+            <span className="cel__data">{dataHora(vida, it.m)}</span>
+            <p className="cel__balao cel__balao--dela">{semAspas(it.m.texto)}</p>
+            {it.m.resposta ? <p className="cel__narra">{it.m.resposta.texto}</p> : <p className="cel__narra">Ficou sem resposta.</p>}
+          </div>
         ) : (
           <div key={it.m.id} className="cel__grupo">
-            <span className="cel__data">{it.m.tipo === 'encontro' || (it.m.tipo === 'fa' && it.m.onde) ? `Por acaso, ${rotuloDoLugar15(it.m.onde ?? 'rua')}` : quando(vida, it.m.t)}</span>
+            <span className="cel__data">{it.m.tipo === 'encontro' || (it.m.tipo === 'fa' && it.m.onde) ? `Por acaso, ${rotuloDoLugar15(it.m.onde ?? 'rua')} · ${quando(vida, it.m.t)}` : dataHora(vida, it.m)}</span>
             <p className={`cel__balao ${it.m.tipo === 'encontro' || (it.m.tipo === 'fa' && it.m.onde) ? 'cel__balao--cena' : 'cel__balao--dela'}`}>{it.m.texto.replace(/^"|"$/g, '')}</p>
             {it.m.cartao && <p className="cel__cartao"><span>Compartilhou</span>{it.m.cartao}</p>}
             {it.m.custo ? <p className="cel__custo">Custa uns {dinheiroCurto(it.m.custo)}</p> : null}
@@ -172,7 +255,7 @@ function Conversa({ vida, agir, fio, voltar, abrirPessoa }: { vida: Vida; agir: 
                 <p className="cel__balao cel__balao--minha">{opcaoRotulo(vida, it.m)}</p>
                 <p className="cel__narra">{it.m.resposta.texto}</p>
               </>
-            ) : (
+            ) : it.arquivada ? <p className="cel__narra">Ficou sem resposta.</p> : (
               <div className="cel__respostas" role="group" aria-label="Responder">
                 {opcoesDaMsg15(vida, it.m).map(o => (
                   <button key={o.op} type="button" className={`botao botao--${o.op === 'aceitar' || o.op === 'ir' || o.op === 'ligar' || o.op === 'marcar' || o.op === 'conversar' || o.op === 'atender' || o.op === 'confirmar' ? 'principal' : 'discreto'}`}
