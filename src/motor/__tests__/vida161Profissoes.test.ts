@@ -44,7 +44,7 @@ describe('VIDA 16.1 · cinco ofícios por dentro', () => {
       for (const pl of ['economia', 'reforco']) {
         let v = plano(comEmprego(s, 'eng_pleno'), pl);
         v = ano(v);
-        const o = v.oficio16?.obras?.at(-1);
+        const o = v.oficio16?.obras?.slice(-1)[0];
         if (!o) continue;
         if (pl === 'economia') riscoEco += o.risco; else riscoRef += o.risco;
         expect(v.oficio16!.feitos.length).toBeGreaterThan(0);

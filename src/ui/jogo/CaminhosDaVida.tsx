@@ -64,6 +64,7 @@ import { proximoPasso } from '../../motor/sistemas/trabalho';
 import { oportunidadesAbertas } from '../../motor/sistemas/mercados';
 import { rotuloEscolaridade } from '../../motor/sistemas/escola';
 import { palavraDesempenho } from '../apresentar';
+import { Carteirinha161 } from '../v16/areas/Capas161';
 
 /** Uma coisa que ocupa a vida agora (a situação atual, em uma linha). */
 export interface Ocupacao { id: string; lado: 'formacao' | 'trabalho'; rotulo: string; detalhe?: string }
@@ -283,6 +284,8 @@ export function PaginaCaminhos({ vida, agir, irPara, abrirPessoa, divisao = 'ini
             {divisao === 'estudos' && parte === 'desenvolvimento' && <DesenvolvimentoReal vida={vida} lado="estudos" />}
             {/* VIDA 15: o crachá da carreira (o atleta, o médico, o empresário, o político, o artista — ou o emprego). */}
             {divisao === 'trabalho' && parte === 'agora' && <Cracha15 vida={vida} />}
+            {/* VIDA 16.1: a carteirinha de estudante (a formação de agora, os diplomas, o histórico). */}
+            {divisao === 'estudos' && parte === 'agora' && idade(vida) >= 6 && <Carteirinha161 vida={vida} formacao={situacaoAtual(vida).find(x => x.lado === 'formacao')} />}
             {/* VIDA 16: a pasta do ofício (direito, docência, tecnologia) — os casos, as turmas, o projeto do ano. */}
             {divisao === 'trabalho' && parte === 'agora' && <Suspense16 fallback={null}><Oficio16 vida={vida} agir={agir} /></Suspense16>}
             {divisao === 'trabalho' && parte === 'desenvolvimento' && <DesenvolvimentoReal vida={vida} lado="trabalho" />}

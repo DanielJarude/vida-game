@@ -1,0 +1,157 @@
+/*
+ * VIDA 16.1 · O REWORK DAS ÁREAS — cada área com a cara da função dela (o perfil, a revista, a vitrine, o provador, o
+ * showroom, a planta da casa, o passaporte, a carteirinha, o placar), no mesmo traço do VIDA. Prefixos próprios (161),
+ * e refinamentos sob `main` para não redeclarar classes-raiz de outros arquivos.
+ */
+:root {
+  --a161-capa: color-mix(in oklab, var(--tom-voce, #7a5a8c) 22%, var(--bg-raised));
+  --a161-tinta-escura: #f4efe6;
+  --a161-revista: #1d1a22;
+  --a161-revista-2: #2b2433;
+  --a161-showroom: #23262b;
+  --a161-showroom-2: #34383f;
+  --a161-papel: #f7f1e4;
+  --a161-ingresso: #fbf6ea;
+  --a161-placar: #14261c;
+}
+:root[data-tema='escuro'] {
+  --a161-capa: color-mix(in oklab, var(--tom-voce, #7a5a8c) 30%, var(--bg-raised));
+  --a161-papel: #2a2620;
+  --a161-ingresso: #26231e;
+}
+
+/* ================================================================ 1. Navegação geral */
+/* As abas de seção ficam presas embaixo do topo (trocar de seção sem voltar ao alto), com ícone e menos vazio em volta. */
+main .vida-concreta > .subnav, main .pessoas > .subnav, main .voce > .subnav--voce {
+  position: sticky; top: var(--header-height); z-index: 3; margin: 0 calc(-1 * var(--space-2)) var(--space-3);
+  padding: var(--space-2); background: color-mix(in oklab, var(--bg-app) 92%, transparent); backdrop-filter: blur(6px);
+  border-bottom: 1px solid var(--fio);
+}
+main .vida-concreta > .subnav .subnav__item { display: inline-flex; align-items: center; gap: 6px; }
+.nav161__icone { flex: none; opacity: 0.75; }
+main .subnav__item--ativo .nav161__icone { opacity: 1; }
+/* A cabeça compacta: dentro de uma seção, a área não se repete inteira — uma faixa com o essencial. */
+main .cabeca-area--compacta { padding-bottom: var(--space-3); margin-bottom: var(--space-2); }
+main .cabeca-area--compacta .cabeca-area__titulo { font-size: clamp(1.25rem, 1rem + 1.2vw, 1.7rem); margin: 2px 0 6px; }
+main .cabeca-area--compacta .cabeca-area__fatos { display: flex; flex-wrap: wrap; gap: 6px 10px; }
+main .cabeca-area--compacta .cabeca-area__fatos > div { display: inline-flex; align-items: baseline; gap: 6px; padding: 3px 10px; border-radius: 999px; background: var(--superficie); box-shadow: inset 0 0 0 1px var(--fio); }
+main .cabeca-area--compacta .cabeca-area__fatos dt { font-size: var(--type-meta); display: inline; }
+main .cabeca-area--compacta .cabeca-area__fatos dd { margin: 0; font-size: var(--type-caption); display: inline; }
+main .cabeca-area--compacta .cabeca-area__fatos > div { flex-direction: row; }
+
+/* ================================================================ 2. Você: o perfil */
+.perfil161 { position: relative; border-radius: var(--radius-lg, 16px); overflow: hidden; background: var(--bg-raised); box-shadow: inset 0 0 0 1px var(--fio), var(--shadow-sm, 0 1px 2px rgba(0,0,0,.06)); margin-bottom: var(--space-4); }
+.perfil161__capa { height: 72px; background:
+  radial-gradient(120% 140% at 10% 0%, color-mix(in oklab, var(--tom-voce, #7a5a8c) 55%, transparent), transparent 60%),
+  radial-gradient(90% 120% at 100% 100%, color-mix(in oklab, var(--tom-pessoas, #b45a6a) 40%, transparent), transparent 70%), var(--a161-capa); }
+main .perfil161 .voce-rosto { margin: -44px 0 0; background: none; box-shadow: none; border: 0; padding: 0 var(--space-4) var(--space-3); align-items: flex-start; }
+main .perfil161 .voce-rosto__texto { padding-top: 52px; }
+main .perfil161 .voce-rosto > :first-child { border: 4px solid var(--bg-raised); border-radius: 50%; background: var(--bg-raised); }
+.perfil161__ficha { display: flex; flex-wrap: wrap; margin: 0; border-top: 1px solid var(--fio); }
+.perfil161__linha { flex: 1 1 160px; background: var(--bg-raised); padding: 10px var(--space-4); min-width: 0; box-shadow: inset -1px 0 0 var(--fio), inset 0 -1px 0 var(--fio); }
+.perfil161__linha dt { font: 600 var(--type-meta)/1.2 var(--font-sans); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); }
+.perfil161__linha dd { margin: 3px 0 0; font: 500 var(--type-body)/1.3 var(--font-sans); color: var(--text-primary); overflow-wrap: anywhere; }
+main .perfil161 .perfil15 { padding: var(--space-3) var(--space-4); border-top: 1px solid var(--fio); margin: 0; }
+
+/* ================================================================ 3. Fama: a capa de revista */
+main .fama13__capa { background: linear-gradient(160deg, var(--a161-revista-2), var(--a161-revista)); color: var(--a161-tinta-escura); border: 0; border-radius: var(--radius-lg, 16px); padding: var(--space-5); box-shadow: 0 18px 40px -24px rgba(0,0,0,.6); }
+main .fama13__capa .rotulo-pequeno, main .fama13__capa dt, main .fama13__capa .fama13__por, main .fama13__capa figcaption { color: color-mix(in oklab, var(--a161-tinta-escura) 70%, transparent); }
+main .fama13__capa .fama13__palavra { color: #fff; font-size: clamp(2.2rem, 1.4rem + 3vw, 3.4rem); line-height: 1; letter-spacing: -0.01em; }
+main .fama13__capa dd, main .fama13__capa strong { color: #fff; }
+main .fama13__capa .fama13__degrau { color: color-mix(in oklab, var(--a161-tinta-escura) 60%, transparent); }
+main .fama13__capa .fama13__degrau--aqui { color: #ffd27a; }
+.fama161__masthead { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; border-bottom: 2px solid #ffd27a; padding-bottom: 8px; margin-bottom: var(--space-3); }
+.fama161__titulo-revista { font: 700 clamp(1.4rem, 1rem + 2vw, 2.1rem)/1 var(--font-serif, Georgia, serif); letter-spacing: 0.04em; text-transform: uppercase; color: #ffd27a; }
+.fama161__edicao { font: 500 var(--type-caption)/1.2 var(--font-sans); color: color-mix(in oklab, var(--a161-tinta-escura) 70%, transparent); }
+.fama161__manchete { flex-basis: 100%; margin: 6px 0 0; font: italic 500 var(--type-body)/1.35 var(--font-serif, Georgia, serif); color: #fff; }
+.fama161__manchete span { font: 700 var(--type-meta)/1 var(--font-sans); font-style: normal; text-transform: uppercase; letter-spacing: 0.08em; color: #1d1a22; background: #ffd27a; padding: 2px 6px; border-radius: 3px; margin-right: 6px; }
+
+/* ================================================================ 4. Lojas: a vitrine dos segmentos */
+main .compras-inicio__cartao { display: flex; flex-direction: column; padding: 0; overflow: hidden; text-align: left; }
+.compras161__vitrine { display: block; height: 92px; overflow: hidden; background: color-mix(in oklab, var(--tom-vida, #6b8a4a) 10%, var(--superficie)); border-bottom: 1px solid var(--fio); }
+.compras161__vitrine svg { width: 100%; height: 100%; display: block; }
+main .compras-inicio__cartao > span:not(.compras161__vitrine) { padding-left: var(--space-4); padding-right: var(--space-4); }
+main .compras-inicio__cartao .compras-inicio__nome { padding-top: var(--space-3); }
+main .compras-inicio__cartao .compras-inicio__preco { padding-bottom: var(--space-3); margin-top: auto; }
+
+/* ================================================================ 5. Guarda-roupa: o provador */
+main .aparencia13__quadros { position: sticky; top: calc(var(--header-height) + 60px); align-self: start; padding: var(--space-3); border-radius: var(--radius-lg, 16px);
+  background: linear-gradient(180deg, color-mix(in oklab, #9a3b3b 14%, var(--bg-raised)) 0 10px, var(--bg-raised) 10px calc(100% - 22px), color-mix(in oklab, #8a6a4a 22%, var(--bg-raised)) calc(100% - 22px));
+  box-shadow: inset 0 0 0 1px var(--fio); }
+main .aparencia__corpo { align-items: start; }
+
+/* ================================================================ 6. Garagem: o showroom */
+main .gar129__cena { position: relative; border-radius: var(--radius-lg, 16px); overflow: hidden; padding: var(--space-4) var(--space-3) var(--space-3);
+  background: radial-gradient(60% 50% at 30% 8%, rgba(255,240,200,.16), transparent 70%), radial-gradient(60% 50% at 75% 8%, rgba(255,240,200,.12), transparent 70%),
+    linear-gradient(180deg, var(--a161-showroom) 0 62%, var(--a161-showroom-2) 62%); color: var(--a161-tinta-escura); }
+main .gar129__cena :is(p, span, strong, dt, dd, h3, h4) { color: inherit; }
+.gar161-vazia { display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 150px; border-radius: var(--radius-lg, 16px); margin: var(--space-2) 0 var(--space-3);
+  background: radial-gradient(50% 60% at 50% 0%, rgba(255,240,200,.18), transparent 70%), linear-gradient(180deg, var(--a161-showroom) 0 66%, var(--a161-showroom-2) 66%);
+  color: var(--a161-tinta-escura); font: 500 var(--type-body)/1.4 var(--font-sans); text-align: center; padding: var(--space-4); }
+.gar161-vazia span { display: block; opacity: .75; font-size: var(--type-caption); margin-top: 4px; }
+
+/* ================================================================ 7. Casa: a planta e a placa */
+main .lar { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: var(--space-4); align-items: center; padding: var(--space-3); border-radius: var(--radius-lg, 16px);
+  background: linear-gradient(0deg, transparent 23px, color-mix(in oklab, var(--tom-casa, #4f7f9a) 10%, transparent) 24px), linear-gradient(90deg, transparent 23px, color-mix(in oklab, var(--tom-casa, #4f7f9a) 10%, transparent) 24px), var(--bg-raised);
+  background-size: 24px 24px; box-shadow: inset 0 0 0 1px var(--fio); }
+main .lar > :first-child { border-radius: var(--radius-md, 10px); overflow: hidden; box-shadow: 0 10px 24px -16px rgba(0,0,0,.5); width: 100%; }
+main .lar > :first-child svg { width: 100% !important; height: auto !important; display: block; }
+main .lar .lar__texto { background: var(--bg-raised); border-radius: var(--radius-md, 10px); padding: var(--space-3); box-shadow: inset 0 0 0 1px var(--fio); }
+@media (max-width: 720px) { main .lar { grid-template-columns: 1fr; } }
+
+/* ================================================================ 8. Viagens: o passaporte e os bilhetes */
+.passaporte161 { display: grid; grid-template-columns: minmax(150px, 0.45fr) 1fr; border-radius: var(--radius-lg, 16px); overflow: hidden; box-shadow: inset 0 0 0 1px var(--fio), 0 14px 30px -24px rgba(0,0,0,.5); margin: 0 0 var(--space-4); }
+.passaporte161__capa { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 6px; padding: var(--space-4); background: linear-gradient(160deg, #1f3a5c, #12263f); color: #e9d9a6; text-align: center; }
+.passaporte161__brasao { font-size: 28px; line-height: 1; }
+.passaporte161__rotulo { font: 700 var(--type-meta)/1 var(--font-sans); letter-spacing: 0.3em; text-transform: uppercase; }
+.passaporte161__nome { font: 500 var(--type-caption)/1.3 var(--font-serif, Georgia, serif); color: #f4ead0; overflow-wrap: anywhere; }
+.passaporte161__paginas { padding: var(--space-4); background: repeating-linear-gradient(0deg, transparent 0 27px, color-mix(in oklab, var(--tom-cidade, #4a6b8a) 9%, transparent) 27px 28px), var(--a161-papel); min-width: 0; }
+.passaporte161__partida { margin: 0; display: flex; flex-direction: column; }
+.passaporte161__partida span { font: 600 var(--type-meta)/1.2 var(--font-sans); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); }
+.passaporte161__partida strong { font: 600 var(--type-title-3, 19px)/1.25 var(--font-serif, Georgia, serif); color: var(--text-primary); }
+.passaporte161__conta { margin: 6px 0 10px; font: 400 var(--type-caption)/1.4 var(--font-sans); color: var(--text-secondary); }
+.passaporte161__carimbos { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.passaporte161__carimbo { padding: 4px 10px; border: 2px solid currentColor; border-radius: 6px; font: 700 var(--type-meta)/1.2 var(--font-sans); letter-spacing: 0.06em; text-transform: uppercase; transform: rotate(-4deg); opacity: .85; }
+.passaporte161__carimbo--0 { color: #a8342f; } .passaporte161__carimbo--1 { color: #2f5f8a; transform: rotate(3deg); } .passaporte161__carimbo--2 { color: #3f7d4e; transform: rotate(-2deg); border-radius: 999px; } .passaporte161__carimbo--3 { color: #8a5a2a; transform: rotate(5deg); }
+:root[data-tema='escuro'] .passaporte161__carimbo { filter: brightness(1.5); }
+.passaporte161__vazio { margin: 0; font: italic 400 var(--type-caption)/1.4 var(--font-sans); color: var(--text-muted); }
+@media (max-width: 520px) { .passaporte161 { grid-template-columns: 1fr; } .passaporte161__capa { flex-direction: row; justify-content: flex-start; padding: var(--space-3) var(--space-4); } }
+/* Cada experiência vira um bilhete: o canhoto picotado à direita. */
+main .experiencias__lista > .experiencia { position: relative; background: var(--a161-ingresso); border-radius: var(--radius-md, 10px); box-shadow: inset 0 0 0 1px var(--fio); margin-bottom: var(--space-2); padding-right: var(--space-4); }
+main .experiencias__lista > .experiencia::after { content: ''; position: absolute; top: 10px; bottom: 10px; right: 120px; border-right: 2px dashed var(--fio); pointer-events: none; }
+@media (max-width: 640px) { main .experiencias__lista > .experiencia::after { display: none; } }
+
+/* ================================================================ 9. Estudos: a carteirinha */
+.carteirinha161 { max-width: 520px; border-radius: 14px; overflow: hidden; margin: 0 0 var(--space-4); box-shadow: inset 0 0 0 1px var(--fio), 0 12px 26px -20px rgba(0,0,0,.55); background: var(--bg-raised); }
+.carteirinha161__faixa { display: flex; justify-content: space-between; padding: 8px var(--space-4); background: linear-gradient(90deg, var(--tom-estudos, #4a6b8a), color-mix(in oklab, var(--tom-estudos, #4a6b8a) 60%, #1b2b3b)); color: #fff; font: 700 var(--type-meta)/1.2 var(--font-sans); letter-spacing: 0.18em; text-transform: uppercase; }
+.carteirinha161__corpo { padding: var(--space-3) var(--space-4) var(--space-4); }
+.carteirinha161__nome { margin: 0; font: 600 var(--type-title-3, 19px)/1.25 var(--font-serif, Georgia, serif); color: var(--text-primary); }
+.carteirinha161__curso { margin: 2px 0 10px; font: 500 var(--type-body)/1.35 var(--font-sans); color: var(--text-secondary); overflow-wrap: anywhere; }
+.carteirinha161__dados { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px 16px; margin: 0; }
+.carteirinha161__dados dt { font: 600 var(--type-meta)/1.2 var(--font-sans); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); }
+.carteirinha161__dados dd { margin: 2px 0 0; font: 500 var(--type-body)/1.3 var(--font-sans); color: var(--text-primary); overflow-wrap: anywhere; }
+
+/* ================================================================ 10. Esportes: o placar */
+main .cracha15--atleta { background: linear-gradient(180deg, var(--a161-placar), #0c1812); color: #e8f5ea; border: 0; box-shadow: 0 16px 32px -22px rgba(0,0,0,.7); }
+main .cracha15--atleta .cracha15__faixa { background: #ffd23f; color: #14261c; }
+main .cracha15--atleta :is(.cracha15__titulo, .cracha15__sub, dt, dd, li, h3, p, span) { color: inherit; }
+main .cracha15--atleta dd { font-variant-numeric: tabular-nums; font-family: var(--font-mono, ui-monospace, monospace); color: #ffd23f; }
+
+/* ================================================================ A pasta do ofício: um tom por profissão */
+main .of16 { border-top: 4px solid var(--tom-trabalho, #a9743a); }
+
+@media (max-width: 720px) {
+  main .perfil161 .voce-rosto__texto { padding-top: 6px; }
+  /* No celular, as abas continuam em grade (todas à vista, de toque fácil) — e por isso não ficam presas no alto. */
+  main .vida-concreta > .subnav, main .pessoas > .subnav, main .voce > .subnav--voce { position: static; backdrop-filter: none; background: none; border-bottom: 0; padding: 0; margin: 0 0 var(--space-3); }
+  main .cabeca-area--compacta .cabeca-area__fatos > div { padding: 2px 8px; }
+}
+@media (max-width: 420px) {
+  .perfil161__capa { height: 56px; }
+  main .fama13__capa { padding: var(--space-4); }
+}
+main .cracha15--atleta li, main .cracha15--atleta li * { color: #cfe7d4; }
+main .cracha15--atleta dt { color: color-mix(in oklab, #e8f5ea 70%, transparent); }
+main .cracha15--atleta .cracha15__lista ul, main .cracha15--atleta .cracha15__lista p { color: #d6ecd9; opacity: 1; }
+main .cracha15--atleta .cracha15__lista { border-top-color: rgba(255,255,255,.18); }
+main .of16__escolha button { text-align: left; justify-content: flex-start; }

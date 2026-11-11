@@ -26,6 +26,22 @@ export interface NotaDeVersao {
 
 export const NOTAS: NotaDeVersao[] = [
   {
+    versao: '16.1',
+    data: '2026-11-11',
+    titulo: 'Profissões por dentro e telas novas',
+    novidades: [
+      'Engenharia, enfermagem, contabilidade, jornalismo e psicologia por dentro: a obra do ano e o padrão de execução (com o risco que fica guardado), a escala de plantão e o cansaço que acumula, a carteira de clientes e os prazos fiscais, as pautas e a credibilidade, os pacientes que seguem de um ano para o outro até a alta.'
+    ],
+    melhorias: [
+      'Você virou um perfil: o retrato, a ficha (dinheiro, o que é seu, a cidade) e os números da vida social numa peça só.',
+      'A fama ganhou a sua capa de revista, com a manchete do momento.',
+      'Compras mostra a fachada de cada segmento; a garagem virou showroom; a casa aparece sobre a planta.',
+      'Viagens com passaporte e carimbos dos países visitados; Estudos com a carteirinha de estudante; o atleta com o placar da carreira também em Outros caminhos.',
+      'Em Vida, as abas ganharam ícones e ficam à mão enquanto você rola (no computador).'
+    ],
+    correcoes: ['Em Vida, a cabeça da área (onde mora, o dinheiro, o que é seu) não se repete mais inteira em cada seção: dentro de Compras, Patrimônio, Viagens e as outras, vira uma faixa curta.']
+  },
+  {
     versao: '16',
     data: '2026-11-11',
     titulo: 'Aprofundamento e imersão',

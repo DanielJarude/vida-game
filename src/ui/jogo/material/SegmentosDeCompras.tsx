@@ -59,6 +59,8 @@ export function InicioDeCompras({ vida, segmentos, escolher }: { vida: Vida; seg
           return (
             <li key={s.id}>
               <button type="button" className={`compras-inicio__cartao compras-inicio__cartao--${s.id}`} onClick={() => escolher(s.id)} disabled={!abertos.length}>
+                {/* VIDA 16.1: a vitrine do segmento — a fachada de verdade do primeiro lugar aberto dele. */}
+                {(abertos[0] ?? lugares[0]) && <span className="compras161__vitrine" aria-hidden><Fachada lugar={fachadaDoLugar((abertos[0] ?? lugares[0]).x.id)} largura={320} altura={92} recorte className="compras161__fachada" /></span>}
                 <span className="compras-inicio__nome">{s.nome}</span>
                 <span className="compras-inicio__frase">{s.frase}</span>
                 <span className="compras-inicio__meta">{abertos.length ? `${abertos.length} ${abertos.length === 1 ? 'lugar' : 'lugares'}${lojas.length ? ` · ${lojas.filter(l => l.x.tipoLoja !== 'online').length} na cidade, ${lojas.filter(l => l.x.tipoLoja === 'online').length} pela internet` : ''}` : `mais tarde (aos ${Math.min(...lugares.map(l => l.x.idadeMin))})`}{seus ? ` · você já tem coisas de ${seus}` : ''}</span>

@@ -226,7 +226,7 @@ function Garagem({ vida, agir, abrir }: Props) {
   const nomeLoja = { concessionaria: 'Concessionária', usados: 'Usados', motos: 'Motos e bicicletas', colecionador: 'Garagem de colecionador', nautica: 'Náutica', aeroclube: 'Aeroclube' } as const;
   return (
     <Secao titulo="Garagem">
-      {!lista.length && <p className="nota">Nenhum veículo. Carro dá mobilidade — e imposto, seguro, combustível e oficina.</p>}
+      {!lista.length && <p className="gar161-vazia">A garagem está vazia.<span>Carro dá mobilidade — e imposto, seguro, combustível e oficina.</span></p>}
       {lista.length > 0 && <GaragemVisual vida={vida} agir={agir} />}
       {lista.filter(b => guardadoLonge(vida, b)).map(b => {
         const t = custoDeTrazer(vida, b);

@@ -51,6 +51,7 @@ import { Medidor } from './Sinais';
 import { leituraDaSeguranca } from '../leituraMaterial';
 import type { Aba } from '../navegacao';
 import { Perfil15 } from '../v15/perfil/Perfil15';
+import { Identidade161 } from '../v16/areas/Capas161';
 
 export type Destino = Aba;
 
@@ -84,6 +85,9 @@ export function Voce({ vida, agir, irPara, abrirPessoa, parte: parteDeFora, irPa
   const sinais = sinaisDoCorpo(vida);
   return (
     <div className="voce">
+      {/* VIDA 16.1: o perfil numa peça só — a capa, o retrato, a ficha da identidade e os números da vida social. */}
+      <section className="perfil161" aria-label="O seu perfil">
+      <div className="perfil161__capa" aria-hidden />
       <section className="voce-rosto" aria-label="Como você está">
         <Retrato visual={vida.eu.visual} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? "eu"} tamanho={132} rotulo={`${vida.eu.nome} aos ${i}`} expressao={expressaoDe(vida)} />
         <div className="voce-rosto__texto">
@@ -98,8 +102,10 @@ export function Voce({ vida, agir, irPara, abrirPessoa, parte: parteDeFora, irPa
         </div>
       </section>
 
+      <Identidade161 vida={vida} />
       {/* VIDA 15: o perfil — os números da vida social e os atalhos (cada um leva à tela que cuida dele). */}
       <Perfil15 vida={vida} irPara={irPara} irParte={irA} />
+      </section>
 
       <Subnav rotulo="Partes do retrato" prefixo="voce" atual={parte} aoMudar={irA} classe="subnav--voce" itens={[
         { id: 'resumo', rotulo: 'Resumo', oque: 'Os atributos, a cabeça, a semana e o dinheiro' },

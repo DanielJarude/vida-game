@@ -61,6 +61,7 @@ const Calendario = sobDemanda(() => import('./Calendario').then(m => m.Calendari
 import { Agenda } from './Agenda';
 import { LeituraDaRotina, tituloDaRotina } from './Rotina';
 import { avaliarRotina } from '../../motor/sistemas/avaliacaoDaRotina';
+import { Passaporte161 } from '../v16/areas/Capas161';
 
 const DE_TEMPO = new Set<string>(SECOES_TEMPO.map(x => x.id));
 
@@ -182,6 +183,8 @@ export function Experiencias({ vida, agir }: { vida: Vida; agir: (a: Acao) => bo
   return (
     <section className="experiencias" aria-labelledby="titulo-experiencias">
       <h2 id="titulo-experiencias" className="secao-fio">Viagens e experiências</h2>
+      {/* VIDA 16.1: o passaporte — de onde você parte, quantas viagens, os carimbos dos países (só o que aconteceu). */}
+      <Passaporte161 vida={vida} />
       <ul className="experiencias__lista">
         {lista.map(id => {
           const escolhas = escolhasDaExperiencia(vida, id);

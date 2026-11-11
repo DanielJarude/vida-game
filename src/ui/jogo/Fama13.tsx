@@ -15,6 +15,7 @@ import { BotaoAcao, Dado } from '../comum';
 import { dinheiroCurto } from '../apresentar';
 import { anoDe } from '../../motor/tempo';
 import './fama13.css';
+import { Manchete161 } from '../v16/areas/Capas161';
 
 const CHEGA: Record<string, string> = { 'a cidade': 'à cidade', 'a região': 'à região', 'o país': 'ao país todo', 'fora do país': 'além das fronteiras' };
 const DEGRAUS = ['anônimo', 'local', 'reconhecido', 'famoso', 'muito famoso'];
@@ -61,6 +62,7 @@ export function Fama13({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean 
   return (
     <div className="fama13">
       <section className="fama13__capa" aria-labelledby="fama13-titulo">
+        <Manchete161 vida={vida} />
         <p className="rotulo-pequeno">Fama{l.origem ? ` · ${ROTULO_ORIGEM[l.origem]}` : ''}</p>
         <h2 id="fama13-titulo" className="fama13__palavra">{l.palavra.charAt(0).toUpperCase() + l.palavra.slice(1)}{nome?.por ? <span className="fama13__por"> {nome.por}</span> : null}</h2>
         <ol className="fama13__escada" aria-label={`Notoriedade ${l.valor} de 100`}>

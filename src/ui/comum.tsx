@@ -391,12 +391,14 @@ export interface FatoDaArea { rotulo: string; valor: ReactNode; tom?: 'bom' | 'r
  * da Linha da Vida naquele assunto) e qual é o próximo passo (um só, levando ao lugar dele). O que dá para fazer vem
  * logo abaixo, agrupado. Nada de painel: é a folha de rosto da área.
  */
-export function CabecaDaArea({ area, kicker, titulo, fatos, recente, proximo, retrato }: {
+export function CabecaDaArea({ area, kicker, titulo, fatos, recente, proximo, retrato, compacto }: {
   area: string; kicker?: ReactNode; titulo: ReactNode; fatos?: FatoDaArea[];
+  /** VIDA 16.1: dentro de uma seção, a cabeça da área vira uma faixa (o essencial; o 'Há pouco' fica na seção de entrada). */
+  compacto?: boolean;
   recente?: { quando: string; texto: string }; proximo?: { texto: string; rotulo?: string; ir?: () => void }; retrato?: ReactNode;
 }) {
   return (
-    <header className={`cabeca-area${retrato ? ' cabeca-area--com-retrato' : ''}`}>
+    <header className={`cabeca-area${retrato ? ' cabeca-area--com-retrato' : ''}${compacto ? ' cabeca-area--compacta' : ''}`}>
       {retrato && <div className="cabeca-area__retrato">{retrato}</div>}
       <div className="cabeca-area__texto">
         <p className="folio__kicker"><span className="folio__area">{area}</span>{kicker ? <> · {kicker}</> : null}</p>
@@ -407,9 +409,9 @@ export function CabecaDaArea({ area, kicker, titulo, fatos, recente, proximo, re
           </dl>
         )}
       </div>
-      {(recente || proximo) && (
+      {((recente && !compacto) || proximo) && (
         <div className="cabeca-area__rodape">
-          {recente && <p className="cabeca-area__recente"><span className="cabeca-area__rotulo">Há pouco</span><span className="cabeca-area__quando">{recente.quando}</span> {recente.texto}</p>}
+          {recente && !compacto && <p className="cabeca-area__recente"><span className="cabeca-area__rotulo">Há pouco</span><span className="cabeca-area__quando">{recente.quando}</span> {recente.texto}</p>}
           {proximo && (
             <p className="cabeca-area__proximo">
               <span className="cabeca-area__rotulo">Próximo passo</span>

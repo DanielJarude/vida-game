@@ -41,6 +41,7 @@ import { SECOES_VIDA, type Aba, type SecaoVida } from '../navegacao';
 import { Experiencias } from './Tempo';
 import '../material.css';
 import { sobDemanda } from '../util/sobDemanda';
+import { IconeDaSecao161 } from '../v16/areas/Capas161';
 
 /** REWORK 10 · JOG-01: os jogos num pacote à parte (só carregam quando se abre a seção; o service worker guarda para o offline). */
 const Apostas = sobDemanda(() => import('./Apostas').then(m => m.Apostas));
@@ -61,7 +62,7 @@ export function VidaConcreta({ vida, agir, secao, irSecao, abrirPessoa }: Props)
           {SECOES_VIDA.map(s => (
             <li key={s.id} role="presentation">
               <button type="button" role="tab" id={`subnav-${s.id}`} aria-selected={secao === s.id} tabIndex={secao === s.id ? 0 : -1} aria-controls={`secao-${s.id}`} className={`subnav__item${secao === s.id ? ' subnav__item--ativo' : ''}`} onClick={() => irSecao(s.id)} title={s.oque}>
-                {s.rotulo}
+                <IconeDaSecao161 s={s.id} />{s.rotulo}
               </button>
             </li>
           ))}
@@ -119,6 +120,7 @@ function CabecaVida({ vida, secao, irSecao }: { vida: Vida; secao: SecaoVida; ir
         ...(i >= 12 && liquido !== 0 ? [{ rotulo: 'O que é seu', valor: dinheiroCurto(liquido), tom: liquido < 0 ? 'ruim' as const : undefined }] : []),
         ...(i >= 16 ? [{ rotulo: 'Quem paga a casa', valor: independencia(vida).palavra }] : [])
       ]}
+      compacto={secao !== 'casa'}
       recente={recenteDe(vida, TEMAS_VIDA)}
       proximo={aperta && secao !== 'dinheiro' ? { texto: 'O mês não fecha: o extrato diz para onde vai o dinheiro e o que dá para cortar.', rotulo: 'Ver o dinheiro', ir: () => irSecao('dinheiro') }
         : emCasaDosPais && i >= 18 && rendaPropriaMensal(vida) > 0 && secao !== 'casa' ? { texto: 'Com renda própria, dá para pensar em sair de casa.', rotulo: 'Ver a casa', ir: () => irSecao('casa') } : undefined} />

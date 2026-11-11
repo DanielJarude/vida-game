@@ -31,6 +31,7 @@ import { DesenvolvimentoReal } from './Progresso';
 import { temMargem } from './Margem';
 import { SubmundoVivo } from './SubmundoVivo';
 import { CarreiraComoTecnico, CarreiraNoEsporte, Concursos, CurriculoArtistico, Devolutivas, OutrosCaminhos, PainelBase, PainelPolitico, ehAcaoPublica } from './Trabalho';
+import { Cracha15 } from '../v15/carreira/Cracha15';
 
 /** Para onde vai cada passo de um caminho (as divisões novas no lugar das abas da procura de antes). */
 function irDoPasso(irPara: (a: Aba) => void) {
@@ -104,6 +105,8 @@ export function OutrosCaminhosDaVida({ vida, agir, irPara }: { vida: Vida; agir:
           <p className="ligacao-caminho"><span>{sp.semVinculo ? 'Sem contrato agora: a situação da carreira e o que dá para fazer estão em Trabalho.' : naCarreira ? 'O clube, o contrato, os treinos extras e o dia a dia estão em Trabalho.' : 'Os trabalhos, as propostas e o dinheiro estão em Trabalho.'}</span> <button type="button" className="link" onClick={() => irPara('trabalho')}>Ir para Trabalho →</button></p>
         </section>
       )}
+      {/* VIDA 16.1: o placar do atleta logo no alto, onde o esporte mora (o mesmo crachá de Trabalho). */}
+      {esp && esp.fase !== 'encerrada' && <Cracha15 vida={vida} />}
       <PortasAbertas vida={vida} agir={agir} filtro={o => ['peneira', 'seletiva', 'banda', 'grupo'].includes(o.tipo)} titulo="Portas do esporte e da arte" />
       {esp?.fase === 'base' && (
         <section className="divisao__secao paralelo" aria-label="A base">
