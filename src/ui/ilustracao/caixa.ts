@@ -69,6 +69,8 @@ function juntar(pecas: Peca[], m: M2, acc: Caixa): void {
     let pts: [number, number][] = [];
     if (p.tipo === 'pneu') pts = [[p.cx - p.r, p.cy - p.r], [p.cx + p.r, p.cy + p.r]];
     else if (p.tipo === 'texto') pts = [[p.x - p.tam, p.y - p.tam], [p.x + p.tam, p.y]];
+    // VIDA 16: o halo é luz espalhada — não conta para a caixa do desenho.
+    else if (p.tipo === 'halo') continue;
     else pts = pontosDoCaminho(p.d);
     for (const [px, py] of pts) {
       const [X, Y] = aplicar(m, px, py);

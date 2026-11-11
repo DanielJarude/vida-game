@@ -128,6 +128,8 @@ export type Peca = Comum & (
   | { tipo: 'linha'; d: string; larg?: number; cor?: string }
   | { tipo: 'pneu'; cx: number; cy: number; r: number; aro?: 'raios' | 'liga' | 'bicicleta' | 'cravos' | 'calota'; raios?: number; /** VIDA 12.9: a cor do aro (roda preta, dourada, cromada) e o aro maior (pneu mais fino). */ corAro?: string; aroMaior?: boolean }
   | { tipo: 'luz'; d: string; cor: string }
+  /** VIDA 16: um halo de luz (degradê radial que some na borda) — a arandela acesa, o balizador, o espeto no jardim. */
+  | { tipo: 'halo'; cx: number; cy: number; rx: number; ry?: number; cor: string; forca?: number }
   | { tipo: 'texto'; x: number; y: number; texto: string; tam: number; cor: string; /** VIDA 12.5: a letra da placa (serifa, peso, espaçamento). */ fonte?: 'serif' | 'sans'; peso?: number; espaco?: number }
   | { tipo: 'grupo'; t: string; pecas: Peca[] }
 );
@@ -190,6 +192,7 @@ export function Ilustracao({ a, largura, rotulo, className, dados, semChao, styl
   const fio = nivel === 3 ? 1.15 : nivel === 2 ? 1 : 0.9;
   const luz = `${id}l`, reflexo = `${id}r`, aroId = `${id}a`;
   let usaLuz = false, usaReflexo = false, usaAro = false;
+  const halos = new Map<string, string>();
   const visivel = (p: Peca) => !(p.so3 && nivel < 3) && !(p.fino && nivel < 2) && !(p.tipo === 'texto' && nivel < 2) && !(p.tipo === 'linha' && !p.larg && nivel === 1);
   const desenhar = (lista: Peca[]): ReactElement[] => lista.filter(visivel).map((p, i): ReactElement => {
     const m = { 'data-peca': p.marca ?? p.tipo, ...(p.classe ? { className: p.classe } : {}), ...p.attrs };
@@ -229,6 +232,12 @@ export function Ilustracao({ a, largura, rotulo, className, dados, semChao, styl
             {nivel > 1 && <path d={p.d} fill={`url(#${reflexo})`} />}
           </g>
         );
+      case 'halo': {
+        // VIDA 16: a luz que se espalha e some (antes, um polígono chapado: virava um triângulo amarelo na parede).
+        const hid = `${id}h${p.cor.replace(/[^0-9a-z]/gi, '')}`;
+        halos.set(hid, p.cor);
+        return <ellipse key={i} {...m} cx={p.cx} cy={p.cy} rx={p.rx} ry={p.ry ?? p.rx} fill={`url(#${hid})`} opacity={p.forca ?? 0.8} style={{ mixBlendMode: 'screen' }} />;
+      }
       case 'texto':
         return <text key={i} {...m} x={p.x} y={p.y} fontSize={p.tam} fill={p.cor} textAnchor="middle" fontFamily={p.fonte === 'serif' ? 'Georgia, "Times New Roman", serif' : 'Inter, system-ui, sans-serif'} fontWeight={p.peso ?? 700} letterSpacing={p.espaco ?? p.tam * 0.16}>{p.texto}</text>;
       case 'grupo':
@@ -287,8 +296,9 @@ export function Ilustracao({ a, largura, rotulo, className, dados, semChao, styl
     : null;
   return (
     <svg viewBox={`0 0 ${w} ${h}`} width={largura} height={altura} preserveAspectRatio={ajuste} className={className} role={rotulo ? 'img' : undefined} aria-label={rotulo} aria-hidden={rotulo ? undefined : true} data-nivel={nivel} style={style} {...dados}>
-      {(usaLuz || usaReflexo || usaAro) && (
+      {(usaLuz || usaReflexo || usaAro || halos.size > 0) && (
         <defs>
+          {[...halos].map(([hid, cor]) => <radialGradient key={hid} id={hid}><stop offset="0" stopColor={cor} stopOpacity={0.9} /><stop offset="0.35" stopColor={cor} stopOpacity={0.45} /><stop offset="1" stopColor={cor} stopOpacity={0} /></radialGradient>)}
           {usaAro && <radialGradient id={aroId} cx="0.45" cy="0.42" r="0.6"><stop offset="0" stopColor="#ffffff" stopOpacity={0.28} /><stop offset="0.55" stopColor="#ffffff" stopOpacity={0} /><stop offset="0.86" stopColor="#000000" stopOpacity={0.12} /><stop offset="1" stopColor="#000000" stopOpacity={0.38} /></radialGradient>}
           {usaLuz && <linearGradient id={luz} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#ffffff" stopOpacity={0.26} /><stop offset="0.42" stopColor="#ffffff" stopOpacity={0} /><stop offset="0.7" stopColor="#000000" stopOpacity={0} /><stop offset="1" stopColor="#000000" stopOpacity={0.13} /></linearGradient>}
           {usaReflexo && <linearGradient id={reflexo} x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#ffffff" stopOpacity={0.42} /><stop offset="0.38" stopColor="#ffffff" stopOpacity={0.04} /><stop offset="0.56" stopColor="#ffffff" stopOpacity={0.22} /><stop offset="1" stopColor="#ffffff" stopOpacity={0} /></linearGradient>}

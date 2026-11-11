@@ -19,8 +19,8 @@ import { circulo, clarear, escurecer, num, ret, type Amostra, type Peca } from '
 import { amostraDoVeiculo } from '../../ilustracao/veiculos';
 import { cachorro, gato, PLANTAS, type CenaEntrada, type LadoDeFora } from '../../ilustracao/casas';
 import {
-  COR, KX, KY, arbusto, arvore, bloco, brilho, canteiro, chapado, degraus, duasAguas, frontal, frontao, grupo, janela, lajeEmBalanco, lateral,
-  marcado, noChao, palmeira, planoDoChao, platibanda, poli, porta, pt, quatroAguas, sombra, sombraDoBeiral, sombraDoBloco,
+  COR, KX, KY, arbusto, arvore, bloco, canteiro, chapado, degraus, duasAguas, frontal, frontao, grupo, janela, lajeEmBalanco, lateral,
+  marcado, noChao, palmeiraNoLote, halo, planoDoChao, platibanda, poli, porta, pt, quatroAguas, sombra, sombraDoBeiral, sombraDoBloco,
   type Bloco, type Textura, type Vista
 } from './kit';
 
@@ -112,7 +112,8 @@ function jardim(v: Vista, largura: number, zCasa: number, x0Casa: number, x1Casa
   const meio = (x0Casa + x1Casa) / 2;
   if (p && p !== 'nenhum') chao.push(noChao(v, 0.2, largura - 0.2, 0.25, zCasa - 0.2, COR.grama, 'grama'));
   if (p === 'canteiros' || p === 'assinado' || p === 'botanico') { chao.push(...canteiro(v, x0Casa + 0.2, meio - 0.9, zCasa - 1.1, zCasa - 0.3, { flores: '#e05a6a', semente: 3 }), ...canteiro(v, meio + 0.9, x1Casa - 0.2, zCasa - 1.1, zCasa - 0.3, { flores: '#f2c14e', semente: 5 })); }
-  if (p === 'tropical' || p === 'botanico') { fundo.push(palmeira(v, x0Casa - 1.6, zCasa + 1, 7)); frente.push(palmeira(v, largura - 1.2, 1.4, 6)); }
+  // VIDA 16: as palmeiras ficam nas faixas livres do lote (antes, em x fixo: o tronco atravessava o telhado e a parede).
+  if (p === 'tropical' || p === 'botanico') { fundo.push(...palmeiraNoLote(v, [0.5, x0Casa - 0.6], zCasa + 1, 7, -1)); const naFrente = palmeiraNoLote(v, [x1Casa + 0.7, largura - 0.4], 1.6, 6.5, 1, 2.4); if (naFrente.length) frente.push(...naFrente); else fundo.push(...palmeiraNoLote(v, [x1Casa + 0.3, largura - 0.2], zCasa + 2.5, 6, 1, 1.2)); }
   if (p === 'pomar') { fundo.push(arvore(v, x1Casa + 1.8, zCasa + 2.5, { alt: 4.5, frutas: '#e8952a' }), arvore(v, x0Casa - 1.6, zCasa + 3, { alt: 4, frutas: '#d2452f', copa: '#5f8f4e' })); }
   if (p === 'zen') chao.push(planoDoChao(v, x0Casa, zCasa - 1.2, [{ tipo: 'massa', d: [0.4, 1.1, 1.9, 2.6].map((x, k) => `M${x} ${0.3 + (k % 2) * 0.3}a0.25 0.16 0 1 0 0.5 0a0.25 0.16 0 1 0 -0.5 0z`).join(''), cor: '#cfc8bb', marca: 'seixos' }, { tipo: 'linha', d: 'M0 0.95H3.2M0 1.05H3.2', larg: 0.4, cor: '#a8a092', fino: true }]));
   if (p === 'gramado' || p === 'assinado') frente.push(arbusto(v, x0Casa + 0.4, zCasa - 0.5, 0.5), arbusto(v, x1Casa - 0.5, zCasa - 0.5, 0.45));
@@ -126,12 +127,27 @@ function jardim(v: Vista, largura: number, zCasa: number, x0Casa: number, x1Casa
 }
 
 /** A luz de fora (arandelas ao lado da porta, balizadores no caminho, espetos nas árvores, o projeto inteiro). */
-function luzDeFora(v: Vista, luz: string | undefined, z: number, xPorta: number, hPorta: number, caminho: [number, number] | undefined): Peca[] {
+function luzDeFora(v: Vista, luz: string | undefined, z: number, xPorta: number, hPorta: number, caminho: [number, number] | undefined, lPorta = 0.9): Peca[] {
   if (!luz) return [];
   const out: Peca[] = [];
-  if (luz === 'arandelas' || luz === 'projeto') for (const dx of [-0.5, 1.4]) out.push(grupo(frontal(v, xPorta + dx, z, hPorta + 2.2), [chapado(ret(0, 0, 0.14, 0.24, 0.03), '#3a3633', 'arandela'), brilho(`M0.07 0.24L-0.35 1.2H0.49Z`, COR.luz, 0.3)]));
-  if ((luz === 'balizadores' || luz === 'projeto') && caminho) for (let k = 0; k < 3; k++) out.push(...bloco(v, { x0: caminho[0] - 0.25, x1: caminho[0] - 0.12, z0: 0.6 + k * (z - 1) / 3, z1: 0.73 + k * (z - 1) / 3, h1: 0.45 }, { cor: COR.luz }));
-  if (luz === 'espetos' || luz === 'projeto') out.push(brilho(poli(v, [[xPorta - 4, z - 0.3, 0], [xPorta - 2.5, z - 0.3, 0], [xPorta - 3.2, z - 0.3, 3.5]]), COR.luz, 0.18));
+  // VIDA 16: as arandelas ficam dos dois lados da porta (simétricas, pela largura real dela), um palmo acima do batente;
+  // a luz é um halo que se espalha na parede (antes, um trapézio chapado que virava um triângulo amarelo).
+  const topo = hPorta + 2.1 + 0.45;
+  if (luz === 'arandelas' || luz === 'projeto') for (const xx of [xPorta - 0.42, xPorta + lPorta + 0.28]) {
+    out.push(halo(v, xx + 0.07, z - 0.02, topo - 0.4, 0.75, 0.55, COR.luz, 1.25));
+    out.push(grupo(frontal(v, xx, z - 0.02, topo), [chapado(ret(0, 0, 0.14, 0.26, 0.03), '#3a3633', 'arandela'), { tipo: 'luz', d: ret(0.03, 0.17, 0.08, 0.07, 0.02), cor: '#fbe7a8' }]));
+  }
+  if ((luz === 'balizadores' || luz === 'projeto') && caminho) for (let k = 0; k < 3; k++) {
+    const zz = 0.65 + k * (z - 1) / 3, xx = caminho[0] - 0.2;
+    out.push(halo(v, xx, zz, 0.02, 0.5, 0.5, COR.luz, 0.45));
+    out.push(...bloco(v, { x0: xx - 0.06, x1: xx + 0.06, z0: zz - 0.06, z1: zz + 0.06, h1: 0.4 }, { cor: '#3a3633' }));
+    out.push(halo(v, xx, zz, 0.36, 0.16, 0.85, '#fff1c2'));
+  }
+  // Os espetos: luz rasante no jardim, da base para o alto, encostada no lado da casa — nunca na fachada.
+  if (luz === 'espetos' || luz === 'projeto') for (const xx of [xPorta - 2.4, xPorta + lPorta + 2.2]) {
+    out.push(halo(v, xx, z - 0.6, 0.8, 0.9, 0.4, COR.luz, 1.6));
+    out.push(halo(v, xx, z - 0.6, 0.05, 0.12, 0.9, '#fff1c2'));
+  }
   return [marcado(undefined, { 'data-detalhe': 'luz-externa' }, out)];
 }
 
@@ -294,7 +310,7 @@ function predio(c: Ctx, o: { l: number; d: number; andares: number; tipo: 'baixo
       { tipo: 'linha', d: Array.from({ length: 6 }, (_, k) => { const a = pt(v, b.x0 + 0.2 + k * 0.5, b.z0 + 0.2, b.h1 + 2.4), q = pt(v, b.x0 + 0.2 + k * 0.5, b.z0 + 1.4, b.h1 + 2.4); return `M${num(a[0])} ${num(a[1])}L${num(q[0])} ${num(q[1])}`; }).join(''), larg: 1, cor: COR.madeira, marca: 'pergola' }]));
   }
   const frente = [...L.frente];
-  if (o.tipo === 'torre') frente.push(palmeira(v, b.x1 + 1.4, 1.4, 6), marcado(undefined, { 'data-detalhe': 'piscina' }, [noChao(v, b.x1 + 0.4, largura - 0.4, b.z0 + 1, b.z0 + 3.4, '#d9d4c9', 'deck', 0, true), noChao(v, b.x1 + 0.7, largura - 0.7, b.z0 + 1.3, b.z0 + 3.1, COR.agua, 'agua', 0.02)]), marcado(undefined, { 'data-detalhe': 'portaria' }, bloco(v, { x0: x0 + o.l * 0.66, x1: x0 + o.l * 0.66 + 1.4, z0: 0.6, z1: 1.8, h1: 2.4 }, { cor: '#cfe3ea' })));
+  if (o.tipo === 'torre') frente.push(...palmeiraNoLote(v, [b.x1 + 0.6, largura - 0.4], 1.4, 6), marcado(undefined, { 'data-detalhe': 'piscina' }, [noChao(v, b.x1 + 0.4, largura - 0.4, b.z0 + 1, b.z0 + 3.4, '#d9d4c9', 'deck', 0, true), noChao(v, b.x1 + 0.7, largura - 0.7, b.z0 + 1.3, b.z0 + 3.1, COR.agua, 'agua', 0.02)]), marcado(undefined, { 'data-detalhe': 'portaria' }, bloco(v, { x0: x0 + o.l * 0.66, x1: x0 + o.l * 0.66 + 1.4, z0: 0.6, z1: 1.8, h1: 2.4 }, { cor: '#cfe3ea' })));
   else frente.push(arvore(v, Math.min(largura - 1, b.x1 + 1.6), 1.6, { alt: 5 }));
   return { v, fundo: [], chao: [...L.chao, ...caminho(v, x0 + o.l / 2, b.z0, c.externo)], corpo, frente, largura, principal: b };
 }
@@ -325,7 +341,7 @@ function mansao(c: Ctx): Cena & { principal: Bloco } {
     ...bloco(v, { x0: po.x0, x1: po.x1, z0: po.z0, z1: z0, h0: ANDAR * 2 - 0.4, h1: ANDAR * 2 }, { cor: '#efe9dc' }),
     ...frontao(v, { x0: po.x0, x1: po.x1, z0: po.z0, z1: centro.z1, h1: ANDAR * 2 }, 1.8, { cor: COR.telhaEscura }, '#efe9dc')
   ]));
-  const frente = [...L.frente, ...J.frente, ...luzDeFora(v, c.externo?.luz ?? 'arandelas', centro.z0, cx - 0.9, 0.45, [cx, 0]), palmeira(v, 1.4, 2.2, 6.5), marcado(undefined, { 'data-detalhe': 'piscina' }, [noChao(v, ad.x1 + 0.6, largura - 0.6, z0 + 1, z0 + 5, '#e3ddd0', 'deck', 0, true), noChao(v, ad.x1 + 1, largura - 1, z0 + 1.4, z0 + 4.6, COR.agua, 'agua', 0.02)])];
+  const frente = [...L.frente, ...J.frente, ...luzDeFora(v, c.externo?.luz ?? 'arandelas', centro.z0, cx - 0.9, 0.45, [cx, 0], 1.8), ...palmeiraNoLote(v, [0.4, ae.x0 - 0.5], 2.2, 6.5, -1), marcado(undefined, { 'data-detalhe': 'piscina' }, [noChao(v, ad.x1 + 0.6, largura - 0.6, z0 + 1, z0 + 5, '#e3ddd0', 'deck', 0, true), noChao(v, ad.x1 + 1, largura - 1, z0 + 1.4, z0 + 4.6, COR.agua, 'agua', 0.02)])];
   return { v, fundo: J.fundo, chao: [...L.chao, ...J.chao, ...caminho(v, cx, po.z0, c.externo)], corpo, frente, largura, principal: centro };
 }
 

@@ -273,21 +273,78 @@ export function arvore(v: Vista, x: number, z: number, o: OpArvore = {}): Peca {
   if (o.frutas) pecas.push({ tipo: 'massa', d: [[-0.3, 0.1], [0.25, 0.25], [0.05, -0.2], [0.4, -0.05], [-0.15, 0.35]].map(([a, b]) => circulo(bx + rx * a, cy + ry * b, Math.max(0.8, S * 0.1))).join(''), cor: o.frutas, semVolume: true, marca: 'fruta' });
   return marcado('cena__arvore', { 'data-detalhe': 'arvore' }, pecas);
 }
-/** A palmeira: o estipe curvo, as folhas em leque, a sombra. */
-export function palmeira(v: Vista, x: number, z: number, alt = 7): Peca {
+/**
+ * A palmeira (VIDA 16: redesenhada). O estipe curva para um lado (`inclina`), afina para cima e tem os anéis; a copa
+ * cresce com a altura (as folhas medem ~40% da palmeira, como num coqueiro de verdade) e cada folha é uma nervura com
+ * folíolos que caem — as de trás na sombra, as da frente na luz, os cocos sob a copa. A base fica assentada no chão
+ * (sombra de contato e a sombra da copa projetada para a direita, como a luz da cena).
+ */
+export function palmeira(v: Vista, x: number, z: number, alt = 7, inclina = 1): Peca {
   const [bx, by] = pt(v, x, z, 0), S = v.S;
-  const tx = bx + S * 0.5, ty = by - alt * S;
-  const folhas = [[-1, 0.3], [-0.8, -0.35], [-0.2, -0.6], [0.4, -0.55], [0.95, -0.2], [1, 0.35], [0.1, 0.4]].map(([dx, dy], k): Peca => {
-    const L = S * 2.2;
-    const ex = tx + dx * L, ey = ty + dy * L * 0.6 + L * 0.35;
-    return { tipo: 'massa', d: `M${num(tx)} ${num(ty)}Q${num(tx + dx * L * 0.5)} ${num(ty + dy * L * 0.6 - S * 0.5)} ${num(ex)} ${num(ey)}Q${num(tx + dx * L * 0.45)} ${num(ty + dy * L * 0.4)} ${num(tx)} ${num(ty)}Z`, cor: k < 3 ? '#5f8f4a' : k < 5 ? '#4f7d3e' : '#40683a', semVolume: true, marca: 'folha' };
-  });
+  const lean = inclina * alt * 0.09 * S;
+  const tx = bx + lean, ty = by - alt * S;
+  const L = Math.max(1.6, alt * 0.4) * S;
+  const base = Math.max(0.9, 0.2 * S), topo = Math.max(0.6, 0.12 * S);
+  // O estipe: uma curva suave (mais inclinação em cima), largo embaixo, fino no alto.
+  const cx1 = bx + lean * 0.15, cy1 = by - alt * S * 0.55;
+  const estipe = `M${num(bx - base)} ${num(by)}Q${num(cx1 - base * 0.6)} ${num(cy1)} ${num(tx - topo)} ${num(ty + topo)}L${num(tx + topo)} ${num(ty + topo)}Q${num(cx1 + base * 0.6)} ${num(cy1)} ${num(bx + base)} ${num(by)}Z`;
+  const nAneis = Math.max(4, Math.round(alt * 1.6));
+  const aneis = Array.from({ length: nAneis }, (_, k) => {
+    const t = (k + 1) / (nAneis + 1);
+    const xx = (1 - t) * (1 - t) * bx + 2 * (1 - t) * t * cx1 + t * t * tx, yy = (1 - t) * (1 - t) * by + 2 * (1 - t) * t * cy1 + t * t * ty;
+    const w = base + (topo - base) * t;
+    return `M${num(xx - w)} ${num(yy)}q${num(w)} ${num(w * 0.35)} ${num(w * 2)} 0`;
+  }).join('');
+  // As folhas: ângulo (graus, 0 = direita), comprimento relativo, camada (0 atrás, 1 meio, 2 frente).
+  const FOLHAS: [number, number, 0 | 1 | 2][] = [[200, 0.85, 0], [-20, 0.85, 0], [250, 0.7, 0], [160, 1, 1], [20, 1, 1], [120, 0.9, 1], [60, 0.9, 1], [185, 0.95, 2], [-5, 0.95, 2], [95, 0.6, 2]];
+  const CORES = ['#4a7a3e', '#5b8d47', '#74a656'];
+  const folha = ([ang, k, camada]: [number, number, 0 | 1 | 2]): Peca => {
+    const a = (ang * Math.PI) / 180;
+    const len = L * k;
+    // A ponta cai (gravidade): a nervura sobe um pouco e despenca na ponta.
+    const ex = tx + Math.cos(a) * len, ey = ty - Math.sin(a) * len * 0.45 + len * 0.55;
+    const mx = tx + Math.cos(a) * len * 0.5, my = ty - Math.sin(a) * len * 0.55 - len * 0.12;
+    const n = 7, pts: string[] = [];
+    // Os folíolos: dentes ao longo da nervura, dos dois lados, mais longos no meio.
+    const q = (t: number) => [(1 - t) * (1 - t) * tx + 2 * (1 - t) * t * mx + t * t * ex, (1 - t) * (1 - t) * ty + 2 * (1 - t) * t * my + t * t * ey];
+    const lado = (s: 1 | -1) => {
+      for (let j = 1; j <= n; j++) {
+        const t = j / (n + 1), [px, py] = q(t), [qx, qy] = q(Math.min(1, t + 0.06));
+        const nx = -(qy - py), ny = qx - px, nl = Math.hypot(nx, ny) || 1;
+        const w = len * 0.16 * Math.sin(Math.PI * t) + len * 0.02;
+        pts.push(`L${num(px + (nx / nl) * w * s)} ${num(py + (ny / nl) * w * s + w * 0.6)}`, `L${num(qx)} ${num(qy)}`);
+      }
+    };
+    lado(1);
+    const ida = pts.join('');
+    pts.length = 0;
+    lado(-1);
+    return { tipo: 'massa', d: `M${num(tx)} ${num(ty)}${ida}L${num(ex)} ${num(ey)}L${num(tx)} ${num(ty)}${pts.join('')}Z`, cor: CORES[camada], semVolume: true, marca: 'folha' };
+  };
+  const cocos: Peca = { tipo: 'massa', d: [[-0.5, 0.6], [0.4, 0.7], [0, 1]].map(([dx, dy]) => circulo(tx + dx * topo * 2, ty + dy * topo * 2, Math.max(0.8, S * 0.13))).join(''), cor: '#7d5a2e', semVolume: true, marca: 'coco' };
   return marcado('cena__arvore', { 'data-detalhe': 'palmeira' }, [
-    sombra(`M${num(bx)} ${num(by)}a${num(S * 1.6)} ${num(S * 0.5)} 0 1 0 ${num(S * 3.2)} 0a${num(S * 1.6)} ${num(S * 0.5)} 0 1 0 ${num(-S * 3.2)} 0z`, 0.16),
-    { tipo: 'massa', d: `M${num(bx - S * 0.2)} ${num(by)}Q${num(bx - S * 0.3)} ${num(by - alt * S * 0.5)} ${num(tx - S * 0.1)} ${num(ty)}L${num(tx + S * 0.12)} ${num(ty)}Q${num(bx + S * 0.05)} ${num(by - alt * S * 0.5)} ${num(bx + S * 0.25)} ${num(by)}Z`, cor: '#9a7a52', semVolume: true, marca: 'estipe' },
-    { tipo: 'linha', d: Array.from({ length: Math.floor(alt * 1.4) }, (_, k) => { const t = (k + 1) / (alt * 1.4 + 1); const yy = by - (by - ty) * t; const xx = bx + (tx - bx) * t * t - S * 0.15; return `M${num(xx - S * 0.12)} ${num(yy)}h${num(S * 0.32)}`; }).join(''), larg: 0.5, cor: '#6e5638', fino: true },
-    ...folhas
+    sombra(`M${num(bx + S * 0.4)} ${num(by)}a${num(L * 0.7)} ${num(L * 0.16)} 0 1 0 ${num(L * 1.4)} 0a${num(L * 0.7)} ${num(L * 0.16)} 0 1 0 ${num(-L * 1.4)} 0z`, 0.12, 'sombra-arvore'),
+    sombra(`M${num(bx - base * 1.6)} ${num(by)}a${num(base * 1.6)} ${num(base * 0.5)} 0 1 0 ${num(base * 3.2)} 0a${num(base * 1.6)} ${num(base * 0.5)} 0 1 0 ${num(-base * 3.2)} 0z`, 0.22),
+    ...FOLHAS.filter(f => f[2] === 0).map(folha),
+    { tipo: 'massa', d: estipe, cor: '#9a7a52', semVolume: true, marca: 'estipe' },
+    { tipo: 'linha', d: aneis, larg: 0.5, cor: '#6e5638', fino: true },
+    cocos,
+    ...FOLHAS.filter(f => f[2] > 0).map(folha)
   ]);
+}
+/** A faixa livre do lote (entre a borda e a casa) onde cabe uma palmeira; sem espaço, nenhuma (não invade a casa). */
+export function palmeiraNoLote(v: Vista, faixa: [number, number], z: number, alt: number, inclina: 1 | -1 = 1, minimo = 0.9): Peca[] {
+  const [a, b] = faixa;
+  if (b - a < minimo) return [];
+  const x = (a + b) / 2;
+  // A copa não passa do lote: a palmeira encolhe para caber no espaço que há.
+  const altura = Math.min(alt, Math.max(3.5, (b - a + 1.6) * 1.9));
+  return [palmeira(v, x, z, altura, inclina)];
+}
+/** VIDA 16: o halo de luz num ponto do espaço (x, z, h), com raio em metros. */
+export function halo(v: Vista, x: number, z: number, h: number, r: number, forca = 0.75, cor: string = COR.luz, achatado = 1): Peca {
+  const [cx, cy] = pt(v, x, z, h);
+  return { tipo: 'halo', cx, cy, rx: r * v.S, ry: r * v.S * achatado, cor, forca };
 }
 /** Um arbusto assentado: a base apoiada no chão (sombra de contato), a massa com luz e sombra. */
 export function arbusto(v: Vista, x: number, z: number, r = 0.6, cor = COR.folha, flores?: string): Peca {
