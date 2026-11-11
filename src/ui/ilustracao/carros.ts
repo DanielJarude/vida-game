@@ -270,7 +270,14 @@ export function carro(perfil: PerfilCarro, corBase: string, estado?: number, vis
     ...paraChoques,
     ...vinco,
     ...farolPecas(),
-    ...lanterna()
+    ...lanterna(),
+    // VIDA 16 · carroceria com mais leitura (de referências reais, no traço do VIDA): a soleira entre as rodas um tom
+    // abaixo (a lateral "recolhe" para baixo, como a chapa de verdade), o lábio dos para-lamas pegando luz em cima dos
+    // arcos, a borracha da linha de cintura sob os vidros e a tampa do combustível no painel de trás.
+    ...(!p.saia && !p.paralamaSolto ? [{ tipo: 'massa' as const, d: cantos([[eT + meia(solo - 6) + 1.2, solo - 6, 1], [eD - meia(solo - 6) - 1.2, solo - 6.4, 1], [eD - meia(solo) - 0.8, solo + 0.2, 1], [eT + meia(solo) + 0.8, solo + 0.2, 1]]), cor: escurecer(pintura, 0.16), semVolume: true, semContorno: true, marca: 'soleira' }] : []),
+    ...(!p.paralamaSolto ? [{ tipo: 'linha' as const, d: [eT, eD].map(xx => { const a = meia(solo, R + 0.9); return a ? `M${f(xx - a)} ${f(solo)}A${f(R + 0.9)} ${f(R + 0.9)} 0 ${solo > cy ? 1 : 0} 1 ${f(xx + a)} ${f(solo)}` : ''; }).join(''), larg: 0.9, cor: clarear(pintura, 0.3), fino: true, marca: 'labio-do-paralama' }] : []),
+    ...(dlo.length ? [{ tipo: 'linha' as const, d: `M${f(tB[0] + 0.6)} ${f(cintT + 0.5)}L${f(fB[0] - 0.4)} ${f(cint + 0.5)}`, larg: 0.9, cor: '#232427', fino: true, marca: 'borracha-da-cintura' }] : []),
+    ...(p.traseira !== 'cacamba' && !p.semTeto ? [{ tipo: 'massa' as const, d: circulo(eT + R * 0.35, Math.min(cint + 5.2, cy - R - 3), 1.5), cor: escurecer(pintura, 0.08), so3: true, marca: 'tampa-combustivel' }] : [])
   ];
   // A grade cromada (os de luxo), a guelra no para-lama, a entrada de ar lateral, a saia, o difusor, as ponteiras.
   if (p.grade) pecas.push({ tipo: 'metal', d: cantos([[x1 - 2.4, capo + 2.6, 0.8], [x1 + 1, capo + 3, 0.8], [x1 + 1.2, solo - 13.5, 0.8], [x1 - 2, solo - 13, 0.8]]), cor: '#dcd9d3', marca: 'grade' });
