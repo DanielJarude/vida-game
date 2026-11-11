@@ -135,6 +135,41 @@ export const VOLUMES: Record<string, (cor: string) => Bloco[]> = {
     ...[4, 27, 54, 80, 104].map(y => b(8, y, 104, 3, 0, 1, { cor: '#b8b4ad' })),
     ...pernas([10, 106], 4, 4, 108, '#8d8a85', [0, 0.06], [0.94, 1]), semPes(0)
   ],
+  // ------------------------------------------------------------ VIDA 16: os que ainda eram desenho de frente
+  // A cama vista do pé: a cabeceira encostada na parede (no fundo), os travesseiros perto dela, o colchão com o tampo
+  // à vista indo até lá, o box embaixo. Os índices de `pecas` são os da lista do desenho (`objetosDaCasa`).
+  cama_box: c => [
+    b(8, 28, 104, 30, 0.95, 1, { cor: '#8a6a4a', pecas: [0, 1] }),
+    b(16, 46, 88, 14, 0.82, 0.82, { pecas: [1, 2], semFaces: true }),
+    b(6, 58, 108, 30, 0, 0.94, { cor: c }),
+    b(8, 88, 104, 14, 0.02, 0.92, { cor: '#e1dbd0' })
+  ],
+  cama_king: c => [
+    b(2, 10, 116, 66, 0.95, 1, { cor: c, pecas: [0, 2] }),
+    b(10, 38, 100, 30, 0.8, 0.8, { pecas: [2, 5], semFaces: true }),
+    b(4, 66, 112, 28, 0.02, 0.94, { cor: '#ece8e1' }),
+    b(18, 92, 84, 10, -0.16, -0.02, { cor: claro(c, 0.1), pecas: [8, 9] })
+  ],
+  colchao: c => [b(6, 30, 12, 76, 0, 1, { cor: '#8a6a4a' }), b(16, 66, 98, 30, 0, 1, { cor: c })],
+  cama_solteiro: () => [b(4, 40, 10, 68, 0, 1, { cor: '#c9a073' }), b(104, 60, 8, 48, 0, 1, { cor: '#c9a073' }), b(12, 60, 94, 28, 0.02, 0.98, { cor: '#f4f1ea' }), b(26, 88, 92, 14, 0.04, 0.9, { cor: claro('#c9a073', 0.15) })],
+  sofa_cama: c => [b(10, 38, 100, 30, 0.74, 1, { cor: c, pecas: [0, 1] }), b(4, 52, 14, 34, 0, 1, { cor: c }), b(102, 52, 14, 34, 0, 1, { cor: c }), b(6, 72, 108, 28, 0, 0.76, { cor: '#ece8e1' })],
+  beliche: c => [...pernas([6, 107], 7, 8, 108, c, [0, 0.08], [0.92, 1]), b(10, 36, 100, 17, 0.02, 0.98, { cor: c }), b(10, 84, 100, 17, 0.02, 0.98, { cor: c })],
+  // O sofá: o encosto no fundo (alto, raso), o assento na frente (com o tampo da almofada à vista), os braços inteiros.
+  sofa: c => [b(12, 34, 96, 36, 0.7, 1, { cor: c, pecas: [0, 1] }), b(4, 52, 20, 46, 0, 1, { cor: c }), b(96, 52, 20, 46, 0, 1, { cor: c }), b(22, 66, 76, 30, 0.04, 0.72, { cor: claro(c, 0.08) })],
+  sofa_retratil: c => [b(19, 34, 82, 32, 0.72, 1, { cor: c, pecas: [1, 5] }), b(2, 48, 18, 46, 0, 1, { cor: c }), b(100, 48, 18, 46, 0, 1, { cor: c }), b(20, 64, 80, 30, 0.04, 0.74, { cor: escuro(c, 0.04) })],
+  sofa_couro: c => [b(12, 36, 96, 36, 0.72, 1, { cor: c, pecas: [0, 3] }), b(2, 44, 22, 52, 0, 1, { cor: c }), b(96, 44, 22, 52, 0, 1, { cor: c }), b(22, 68, 76, 28, 0.04, 0.74, { cor: claro(c, 0.1) })],
+  sofa_designer: c => [b(5, 48, 110, 30, 0.66, 1, { cor: c, pecas: [1, 3] }), b(4, 70, 112, 8, 0.04, 0.68, { cor: claro(c, 0.08) }), b(2, 78, 116, 16, 0, 1, { cor: escuro(c, 0.1) })],
+  sofa_externo: c => [b(8, 36, 104, 42, 0.72, 1, { cor: '#c9b18a', pecas: [0, 2] }), b(2, 56, 18, 34, 0, 1, { cor: '#c9b18a' }), b(100, 56, 18, 34, 0, 1, { cor: '#c9b18a' }), b(18, 70, 84, 16, 0.04, 0.74, { cor: claro(c, 0.06) }), b(4, 88, 112, 6, 0, 1, { cor: '#9a6a3e' })],
+  poltrona: c => [b(30, 30, 52, 48, 0.7, 1, { cor: c, pecas: [0, 1] }), b(22, 58, 16, 40, 0, 1, { cor: escuro(c, 0.08) }), b(74, 58, 16, 40, 0, 1, { cor: escuro(c, 0.08) }), b(36, 70, 40, 28, 0.04, 0.72, { cor: claro(c, 0.1) })],
+  poltronas_cinema: c => [0, 1, 2, 3].flatMap(k => { const x = 6 + k * 27.5; return [b(x + 1, 30, 24, 50, 0.7, 1, { cor: c, pecas: [k * 5, k * 5 + 3] }), b(x + 2, 72, 22, 32, 0.04, 0.72, { cor: claro(c, 0.08) })]; }),
+  // O criado-mudo vem em par: duas mesinhas (o vão da cama no meio).
+  criado_mudo: c => [b(4, 64, 40, 34, 0, 1, { cor: c }), b(76, 64, 40, 34, 0, 1, { cor: c })],
+  // A mesa de bilhar: a borda de madeira com o feltro verde à vista por cima (a luminária fica no alto, no plano do meio).
+  bilhar_profissional: () => [b(2, 42, 116, 30, 0, 1, { cor: '#6b4428' }), b(6, 40, 108, 3, 0.07, 0.93, { cor: '#2f6b45' })],
+  churrasqueira: c => [b(8, 52, 104, 56, 0.1, 1, { cor: c }), b(4, 50, 112, 5, 0, 1, { cor: '#cfc8bc' }), b(48, 2, 24, 28, 0.55, 0.85, { cor: c })],
+  espaco_gourmet: c => [b(6, 64, 108, 44, 0.04, 1, { cor: '#8a5a32' }), b(2, 56, 116, 8, 0, 1, { cor: c })],
+  forno_pizza: c => [b(12, 72, 96, 36, 0, 1, { cor: '#9a9184' }), b(10, 70, 100, 5, 0, 1, { cor: '#cfc8bc' }), b(14, 34, 92, 36, 0.1, 0.9, { cor: c })],
+  cadeira_ergonomica: () => [b(36, 2, 48, 66, 0.7, 0.85, { cor: '#2b2826', pecas: [0, 6] }), b(22, 66, 76, 13, 0.1, 0.8, { cor: '#2b2826' })],
   // ------------------------------------------------------------ o que vem com o cômodo
   _bancada: () => [
     b(8, 8, 104, 24, 0.45, 1, { cor: '#e2dccf', pecas: [6, 8] }),     // os armários de cima
