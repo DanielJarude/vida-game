@@ -41,16 +41,18 @@ for (let s = 1; s <= N; s++) {
 // Ofícios: 3 ramos × N/3 vidas, decisões aleatórias, 6 anos.
 const ofi: Record<string, number> = {};
 for (let s = 1; s <= N; s++) {
-  const ocup = ['advogado', 'professor_fund', 'dev_pleno'][s % 3];
+  const ocups = ['advogado', 'professor_fund', 'dev_pleno', 'eng_pleno', 'enfermeiro', 'contador_socio', 'jornalista', 'psicologo_clinico'];
+  const ocup = ocups[s % ocups.length];
   const rr = criarRng(s * 7);
   try {
     let v = structuredClone(adulto(30, { semente: s }));
-    v.trabalho.atual = { ocupacaoId: ocup, empregador: 'x', contrato: ocup === 'advogado' ? 'autonomo' : 'clt', salario: 6000, tInicio: v.t - 36, desempenho: 60, municipioId: v.moradia.municipioId, carga: 'integral' };
-    for (let a = 0; a < 6 && !v.morte; a++) {
+    v.trabalho.atual = { ocupacaoId: ocup, empregador: 'x', contrato: ['advogado', 'contador_socio', 'psicologo_clinico'].includes(ocup) ? 'autonomo' : 'clt', salario: 6000, tInicio: v.t - 36, desempenho: 60, municipioId: v.moradia.municipioId, carga: 'integral' };
+    for (let a = 0; a < 10 && !v.morte; a++) {
       const p = pastaDe16(v);
       if (!p) break;
       v = tentar(v, { tipo: 'oficio16', oque: { op: 'abordagem', escolha: rr.pick(['tradicional', 'projetos', 'reforco', 'conversa'] as const) } });
       v = tentar(v, { tipo: 'oficio16', oque: { op: 'ritmo', escolha: rr.pick(['prazo', 'equilibrio', 'qualidade'] as const) } });
+      v = tentar(v, { tipo: 'oficio16', oque: { op: 'plano', escolha: rr.pick(['economia', 'norma', 'reforco', 'diurno', 'noturno', 'dobras', 'enxuta', 'normal', 'cheia', 'agilidade', 'equilibrio', 'investigacao', 'supervisao', 'regular']) } });
       for (const it of pastaDe16(v)!.itens) {
         v = tentar(v, { tipo: 'oficio16', oque: { op: rr.chance(0.7) ? 'aceitar' : 'recusar', id: it.id } });
         v = tentar(v, { tipo: 'oficio16', oque: { op: 'estrategia', id: it.id, escolha: rr.chance(0.5) ? 'acordo' : 'julgamento' } });
@@ -60,7 +62,8 @@ for (let s = 1; s <= N; s++) {
     }
     const p = v.oficio16;
     ofi[`${p?.ramo}`] = (ofi[`${p?.ramo}`] ?? 0) + 1;
-    if (p && (p.rep < 0 || p.rep > 100)) erros++;
+    if (p && (p.rep < 0 || p.rep > 100 || (p.sobrecarga ?? 0) > 100 || (p.credibilidade ?? 0) > 100 || (p.pacientes ?? []).some(x => x.evolucao > 100 || x.evolucao < 0) || (p.carteira?.clientes ?? 1) < 1)) { erros++; console.log('INV OFICIO', s, ocup); }
+    if (p) console.log('of', ocup, p.rep, p.feitos.length, JSON.stringify({ s: p.sobrecarga, c: p.carteira?.clientes, cr: p.credibilidade, pa: p.pacientes?.length, al: p.altas, ob: p.obras?.length }));
   } catch (e) { erros++; console.log('ERRO OFICIO', s, (e as Error).stack?.slice(0, 400)); }
 }
 console.log(JSON.stringify({ erros, finais, ofi }, null, 1));

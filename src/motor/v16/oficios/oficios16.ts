@@ -35,10 +35,13 @@ import {
   ABORDAGENS16, ALUNOS16, AREA_DO_ESCRITORIO16, CASOS16, DILEMAS_DIREITO16, INCIDENTES16, PERFIS_DE_TURMA16, PROJETOS_ESCOLARES16,
   PROJETOS_TEC16, RITMOS16, type Abordagem16, type AreaJuridica16, type PerfilDeTurma16, type Ramo16, type Ritmo16
 } from '../../dados16/oficios/catalogo16';
+import { decidirB, disponibilidadePlanoB, ehRamoB, fimB, novaPastaB, PLANOS_B } from './oficios16b';
 
 /* ------------------------------------------------------------------ O estado guardado */
 
-export type TipoItem16 = 'caso' | 'dilema' | 'turma' | 'aluno' | 'projeto_escola' | 'projeto' | 'incidente' | 'falha' | 'lideranca';
+export type TipoItem16 = 'caso' | 'dilema' | 'turma' | 'aluno' | 'projeto_escola' | 'projeto' | 'incidente' | 'falha' | 'lideranca'
+  /** VIDA 16.1 */
+  | 'obra' | 'imprevisto' | 'patologia' | 'plantao' | 'fechamento' | 'pauta' | 'paciente';
 export type EstadoItem16 = 'aberto' | 'aceito' | 'andamento' | 'resolvido' | 'recusado';
 
 export interface Item16 {
@@ -64,6 +67,12 @@ export interface Item16 {
   resultado?: string;
   bom?: boolean;
   genero?: 'masculino' | 'feminino';
+  /** VIDA 16.1: as decisões deste item (as profissões de `oficios16b` trazem as opções nos dados). */
+  opcoes?: { escolha: string; rotulo: string }[];
+  /** VIDA 16.1: a referência (o paciente). */
+  ref?: string;
+  /** VIDA 16.1 · engenharia: o risco que o improviso pôs na obra. */
+  latente?: number;
 }
 
 export interface AlunoMarcante16 { nome: string; t: number; situacao: string; desfecho: 'bem' | 'mal'; voltou?: boolean; genero?: 'masculino' | 'feminino' }
@@ -85,13 +94,31 @@ export interface Oficio16 {
   ritmo?: Ritmo16;
   divida?: number;
   entregas?: { ok: number; atrasos: number; incidentes: number };
+  /** VIDA 16.1: o plano do ano (o padrão da obra, a escala, a carteira, a linha, a agenda). */
+  plano?: string;
+  /** Engenharia: as obras entregues, com o risco latente de cada uma. */
+  obras?: { nome: string; t: number; padrao: string; risco: number; patologia?: boolean }[];
+  /** Enfermagem: a sobrecarga que atravessa os anos, os plantões da carreira, as notificações de segurança. */
+  sobrecarga?: number;
+  plantoes?: number;
+  seguranca?: number;
+  /** Contabilidade: a carteira. */
+  carteira?: { clientes: number; perdidos: number; multas: number; agressivo?: number };
+  /** Jornalismo: a credibilidade (não é audiência) e as fontes cultivadas. */
+  credibilidade?: number;
+  fontes?: number;
+  /** Psicologia: os pacientes (ficam de um ano para o outro) e as altas. */
+  pacientes?: import('./oficios16b').Paciente16[];
+  altas?: number;
   /** Os feitos do ofício (os últimos 30). */
   feitos: { t: number; texto: string; bom: boolean }[];
 }
 
 /* ------------------------------------------------------------------ Quem tem pasta */
 
-const RAMO_DA_TRILHA: Record<string, Ramo16> = { direito: 'direito', educacao: 'docencia', docencia_superior: 'docencia', ti: 'tecnologia', dados: 'tecnologia' };
+const RAMO_DA_TRILHA: Record<string, Ramo16> = { direito: 'direito', educacao: 'docencia', docencia_superior: 'docencia', ti: 'tecnologia', dados: 'tecnologia',
+  // VIDA 16.1
+  engenharia: 'engenharia', eng_industrial: 'engenharia', enfermagem: 'enfermagem', contabil: 'contabilidade', comunicacao: 'jornalismo', psicologia: 'psicologia' };
 
 /** O ramo do emprego de agora (só quem exerce: estágio, aprendiz e curso de formação ainda não têm pasta). */
 export function ramoDe16(v: Vida): Ramo16 | undefined {
@@ -135,6 +162,8 @@ function novaPasta(v: Vida, ramo: Ramo16, antes?: Oficio16): Oficio16 {
   const pais = municipio(v.moradia.municipioId).pais;
   const nome = (g?: 'masculino' | 'feminino', idadeDe = 35) => sortearNome(r, g ?? (r.chance(0.5) ? 'masculino' : 'feminino'), ANO(v) - idadeDe, pais);
   const id = (k: string) => `o16_${ANO(v)}_${k}`;
+  // VIDA 16.1: engenharia, enfermagem, contabilidade, jornalismo e psicologia têm a pasta delas (`oficios16b`).
+  if (ehRamoB(ramo)) { novaPastaB(v, r, base, antes); return base; }
   if (ramo === 'direito') {
     const area = AREA_DO_ESCRITORIO16[areaAtual(v, 'direito') ?? ''];
     const pool = [...CASOS16];
@@ -196,11 +225,14 @@ export type OqueOficio16 =
   | { op: 'recorrer'; id: string }
   | { op: 'decidir'; id: string; escolha: string }
   | { op: 'abordagem'; escolha: Abordagem16 }
-  | { op: 'ritmo'; escolha: Ritmo16 };
+  | { op: 'ritmo'; escolha: Ritmo16 }
+  /** VIDA 16.1: o plano do ano das profissões de `oficios16b`. */
+  | { op: 'plano'; escolha: string };
 
 /** As decisões de um item (para a tela): o rótulo de cada uma. */
 export function decisoesDe16(it: Item16): { escolha: string; rotulo: string }[] {
   if (it.estado !== 'aberto') return [];
+  if (it.opcoes) return it.opcoes;
   switch (it.tipo) {
     case 'dilema':
       if (it.titulo === 'A nota') return [{ escolha: 'manter', rotulo: 'Manter a nota e explicar o critério' }, { escolha: 'ceder', rotulo: 'Ceder e mudar a nota' }];
@@ -224,6 +256,7 @@ export function disponibilidadeOficio16(v: Vida, q: OqueOficio16): Veredito {
     if (p.abordagem && p.ano === ANO(v) && v.oficio16?.ano === ANO(v)) return p.abordagem === q.escolha ? bloqueio('incompativel', 'É a abordagem deste ano.') : bloqueio('incompativel', 'A abordagem do ano já foi escolhida: as turmas já se acostumaram.');
     return PERMITIDO;
   }
+  if (q.op === 'plano') return disponibilidadePlanoB(p, v, q.escolha);
   if (q.op === 'ritmo') {
     if (p.ramo !== 'tecnologia') return bloqueio('impossivel', 'Não é o seu ofício.');
     if (p.ritmo && v.oficio16?.ano === ANO(v)) return p.ritmo === q.escolha ? bloqueio('incompativel', 'É o ritmo deste ano.') : bloqueio('incompativel', 'O ritmo do projeto já está combinado com o time.');
@@ -264,6 +297,10 @@ export function executarOficio16(v: Vida, r: Rng, q: OqueOficio16): SaidaOficio1
     p.abordagem = q.escolha;
     cansar(v, ABORDAGENS16[q.escolha].cansa);
     return { texto: `${ABORDAGENS16[q.escolha].nome}: é assim que você vai conduzir as turmas este ano.`, tom: 'neutro' };
+  }
+  if (q.op === 'plano') {
+    p.plano = q.escolha;
+    return { texto: `${PLANOS_B[p.ramo].feita}: ${PLANOS_B[p.ramo].opcoes.find(o => o.id === q.escolha)!.nome.toLowerCase()}.`, tom: 'neutro' };
   }
   if (q.op === 'ritmo') {
     p.ritmo = q.escolha;
@@ -315,6 +352,7 @@ export function executarOficio16(v: Vida, r: Rng, q: OqueOficio16): SaidaOficio1
 }
 
 function decidir(v: Vida, r: Rng, p: Oficio16, it: Item16, escolha: string): SaidaOficio16 {
+  if (ehRamoB(p.ramo)) return decidirB(v, r, p, it, escolha);
   it.escolha = escolha;
   it.estado = 'resolvido';
   switch (it.tipo) {
@@ -393,7 +431,8 @@ export function processarOficio16(v: Vida): void {
   if (ramoDe16(v) !== p.ramo) { p.itens = []; return; }
   if (p.ramo === 'direito') fimDireito(v, r, p);
   else if (p.ramo === 'docencia') fimDocencia(v, r, p);
-  else fimTecnologia(v, r, p);
+  else if (p.ramo === 'tecnologia') fimTecnologia(v, r, p);
+  else fimB(v, r, p);
   alunosQueVoltam(v, r, p);
 }
 

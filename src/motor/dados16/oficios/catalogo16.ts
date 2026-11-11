@@ -7,7 +7,9 @@
  * Cada profissão tem a SUA mecânica (`motor/v16/oficios`), não uma cópia de outra. A lógica não mora aqui.
  */
 
-export type Ramo16 = 'direito' | 'docencia' | 'tecnologia';
+export type Ramo16 = 'direito' | 'docencia' | 'tecnologia'
+  /** VIDA 16.1 (`v16/oficios/oficios16b`). */
+  | 'engenharia' | 'enfermagem' | 'contabilidade' | 'jornalismo' | 'psicologia';
 
 /* ------------------------------------------------------------------ Direito */
 
