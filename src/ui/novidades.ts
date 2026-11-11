@@ -26,6 +26,27 @@ export interface NotaDeVersao {
 
 export const NOTAS: NotaDeVersao[] = [
   {
+    versao: '16',
+    data: '2026-11-11',
+    titulo: 'Aprofundamento e imersão',
+    novidades: [
+      'Advocacia, docência e tecnologia por dentro: os processos que chegam ao escritório (pegar o caso, buscar acordo ou ir a julgamento, preparar a fundo, recorrer), as turmas do ano e a sua forma de dar aula, o aluno que precisa de você, o projeto da escola, o projeto de software com o ritmo que você escolhe, a dívida técnica e os incidentes em produção.',
+      'Vida religiosa: caminhos próprios de cada tradição — o sacerdócio católico (do seminário ao conclave), o diaconato permanente, a vida consagrada, o ministério evangélico e o protestante, o candomblé (com as obrigações, ogãs e equedes), a umbanda, o trabalho espírita, o rabinato, a liderança da mesquita e o ensino islâmico, a vida monástica budista.',
+      'Na vida religiosa, a comunidade é sua responsabilidade: formação, reconhecimento, união, influência, o caixa da comunidade, projetos comunitários e as questões difíceis de cada ano.',
+      'Mensagens: escreva para quem quiser (perguntar como está, dizer que sente falta, chamar para um café, pedir desculpas, oferecer apoio) — e o histórico das conversas fica guardado, com dia e hora.'
+    ],
+    melhorias: [
+      'O aplicativo de namoro funciona mesmo para quem está num relacionamento. O que você faz nele pode — ou não — ser descoberto, e a reação depende de quem é a sua parceria e de como vocês estão.',
+      'Pede atenção, em Pessoas, diz o que está acontecendo em cada relação e por quê, sem repetir as mensagens.',
+      'Mais móveis com volume de verdade: camas, sofás, poltronas, a mesa de bilhar, as poltronas de cinema, a área gourmet.',
+      'Os carros ganharam soleira, para-lamas com brilho, borracha nos vidros e tampa do combustível.'
+    ],
+    correcoes: [
+      'As palmeiras das fachadas não atravessam mais o telhado nem a parede, e crescem na proporção certa.',
+      'As luzes de fora da casa (arandelas, balizadores, espetos) acendem como luz, no lugar certo — não mais como triângulos amarelos na parede.'
+    ]
+  },
+  {
     versao: '15',
     data: '2026-11-10',
     titulo: 'Imersão, mundo vivo e interfaces',

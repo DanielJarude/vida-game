@@ -126,7 +126,8 @@ describe('Pessoas: quem tomou a iniciativa', () => {
     const agir = (a: Acao) => { atual = executar(atual, a).vida; return true; };
     const { rerender } = render(<main><Pessoas vida={v} agir={agir} aberta={null} abrir={nada} /></main>);
     const atencao = screen.getByRole('region', { name: 'Pedem atenção' });
-    expect(within(atencao).getByText(`${nome} perdeu o emprego e pediu ajuda.`)).toBeTruthy();
+    // VIDA 16: Pede atenção diz a SITUAÇÃO (a mensagem em si mora em Mensagens, no celular).
+    expect(within(atencao).getByText(`${nome} está num aperto e procurou você.`)).toBeTruthy();
     // Não há contador de "momentos" no ano (sem moeda social).
     expect(screen.queryByText(/ainda há tempo para/)).toBeNull();
     rerender(<main><Pessoas vida={v} agir={agir} aberta={id} abrir={nada} /></main>);
@@ -136,7 +137,7 @@ describe('Pessoas: quem tomou a iniciativa', () => {
     expect(screen.getByRole('button', { name: r.nao })).toBeTruthy();
     expect(atual.vinculos[id].chamado).toBeUndefined();
     rerender(<main><Pessoas vida={atual} agir={agir} aberta={null} abrir={nada} /></main>);
-    expect(screen.queryByText(`${nome} perdeu o emprego e pediu ajuda.`)).toBeNull();
+    expect(screen.queryByText(`${nome} está num aperto e procurou você.`)).toBeNull();
   });
 
   it('conhecer alguém: os contextos desta vida, uma vez por ano', () => {

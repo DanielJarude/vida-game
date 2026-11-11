@@ -200,7 +200,8 @@ export function executarReligiao16(v: Vida, rr: Rng, q: OqueReligiao16): SaidaRe
         return { texto: `${T.verbos.formar}: um ano de estudo que se vê no jeito de falar.`, tom: 'neutro' };
       }
       if (q.g === 'servir') {
-        r.prestigio = clamp(r.prestigio + rr.int(4, 8));
+        // O reconhecimento rende menos lá em cima (o topo é de poucos).
+        r.prestigio = clamp(r.prestigio + Math.round(rr.int(4, 8) * (1 - r.prestigio / 130)));
         r.coesao = clamp(r.coesao + 3);
         if (e.lidera) r.comunidade = Math.round(r.comunidade * (1 + rr.int(2, 8) / 100));
         praticar(v, rr, 'lideranca', 0.6);
@@ -379,7 +380,9 @@ export function processarReligiao16(v: Vida): void {
   // Nomeação, eleição, conclave: não se pede — vem (ou não).
   const n = proximaEtapa16(r);
   if (n && (n.como === 'nomeacao' || n.como === 'eleicao') && oQueFalta16(v, r).length === 0 && !(T.celibato && parceiro(v))) {
-    const chance = clamp(0.18 + (r.prestigio - (n.prestigio ?? 0)) / 80 + r.coesao / 500, 0.08, 0.6);
+    // O topo de cada caminho é de poucos: a última etapa vem raramente, mesmo para quem tem todo o reconhecimento.
+    const topo = r.etapa + 1 === TRADICOES16[r.tradicao].etapas.length - 1 || n.id === 'cardeal' || n.id === 'arcebispo';
+    const chance = topo ? clamp(0.012 + (r.prestigio - (n.prestigio ?? 0)) / 600 + r.coesao / 3000, 0.008, 0.04) : clamp(0.12 + (r.prestigio - (n.prestigio ?? 0)) / 120 + r.coesao / 800, 0.05, 0.4);
     if (rr.chance(chance)) {
       const t = n.como === 'eleicao' ? `Foi eleit${G(v) ? 'a' : 'o'} ${nomeDaEtapa16(v, n).toLowerCase()}.` : r.tradicao === 'catolica' && n.id === 'bispo' ? 'O papa o nomeou bispo. A ordenação episcopal lotou a catedral.' : r.tradicao === 'catolica' && n.id === 'cardeal' ? 'Foi criado cardeal no consistório, em Roma.' : `Foi nomead${G(v) ? 'a' : 'o'} ${nomeDaEtapa16(v, n).toLowerCase()}.`;
       subir(v, r, t);
@@ -394,7 +397,9 @@ export function processarReligiao16(v: Vida): void {
   r.ano = anoDe(v.t);
   r.gestos = [];
   const qq = gerarQuestao(v, rr, r);
-  if (qq && (qq.tipo === 'celibato' || rr.chance(0.4))) r.questao = qq;
+  // A dúvida de vocação é rara (e não volta logo); as questões de quem lidera, mais comuns.
+  const recente = (tipo: string) => r.historico.length && v.fatos[`rel16_${tipo}`] !== undefined && v.t - v.fatos[`rel16_${tipo}`] < 72;
+  if (qq && (qq.tipo === 'celibato' || (qq.tipo === 'duvida' ? !recente('duvida') && rr.chance(0.12) : rr.chance(0.4)))) { r.questao = qq; v.fatos[`rel16_${qq.tipo}`] = v.t; }
 }
 
 export function normalizarReligiao16(v: Vida): void {
