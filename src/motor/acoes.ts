@@ -138,6 +138,8 @@ import { disponibilidadeCrenca14, executarCrenca14, type OpCrenca14 } from './v1
 import { disponibilidadeJustica14, executarJustica14, type OqueJustica14 } from './v14/justica/justica14';
 import { disponibilidadeConquistas14, executarConquistas14, linhaDoExtrato14, type OqueConquistas14 } from './v14/conquistas/conquistas';
 import { depoisDaAcao15, disponibilidadeCelular15, executarCelular15, type OqueCelular15 } from './v15/celular/celular15';
+import { disponibilidadeOficio16, executarOficio16, type OqueOficio16 } from './v16/oficios/oficios16';
+import { disponibilidadeReligiao16, executarReligiao16, type OqueReligiao16 } from './v16/religiao/religiao16';
 
 /** Id de uma interação do catálogo (`sistemas/interacoes`). O que existe depende da pessoa e do momento. */
 export type InteracaoPessoa = string;
@@ -329,6 +331,8 @@ export type Acao =
   | { tipo: 'moveis14'; oque: OqueMoveis14 }
   /** VIDA 15: o celular — responder mensagens, o aplicativo de namoro, curtir a rede dos amigos (`v15/celular`). */
   | { tipo: 'celular15'; oque: OqueCelular15 }
+  | { tipo: 'oficio16'; oque: OqueOficio16 }
+  | { tipo: 'religiao16'; oque: OqueReligiao16 }
   /** Comprar um item de estilo (óculos, chapéu, roupa, acessório). */
   | { tipo: 'comprar_item'; itemId: string; /** 12.4.1: a marca e a loja (ausentes: o preço de referência). */ marca?: string; loja?: string; /** 12.9: a variante vista na vitrine e no provador. */ variante?: string }
   | { tipo: 'estetica'; id: string; clinica: Clinica; alvo?: string; revisao?: boolean }
@@ -837,6 +841,8 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'futsal14': return disponibilidadeFutsal14(v, a.oque);
     case 'moveis14': return disponibilidadeMoveis14(v, a.oque);
     case 'celular15': return disponibilidadeCelular15(v, a.oque);
+    case 'oficio16': return disponibilidadeOficio16(v, a.oque);
+    case 'religiao16': return disponibilidadeReligiao16(v, a.oque);
     case 'visibilidade': return disponibilidadeVisibilidade(v, a.oque);
     case 'comprar_item': return disponibilidadeComprarItem(v, a.itemId, a.marca, a.loja);
     case 'estetica': return disponibilidadeProcedimento(v, a.id, a.clinica, a.alvo, a.revisao);
@@ -1694,6 +1700,8 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
     case 'futsal14': return ok(executarFutsal14(v, a.oque), 'neutro');
     case 'moveis14': return ok(executarMoveis14(v, a.oque), 'neutro');
     case 'celular15': { const x = executarCelular15(v, r, a.oque); return x.texto ? { aviso: { texto: x.texto, tom: x.tom ?? 'neutro' }, pessoaId: x.pessoaId } : {}; }
+    case 'oficio16': { const x = executarOficio16(v, r, a.oque); return x.texto ? { aviso: { texto: x.texto, tom: x.tom } } : {}; }
+    case 'religiao16': { const x = executarReligiao16(v, r, a.oque); return x.texto ? { aviso: { texto: x.texto, tom: x.tom } } : {}; }
     case 'visibilidade': {
       const res = usarVisibilidade(v, r, a.oque);
       if (res.decisao) { const d = conteudoPorId(res.decisao); if (d && d.tipo === 'decisao') abrirDecisao(v, d, contexto(v, r)); return {}; }

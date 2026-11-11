@@ -1,0 +1,44 @@
+/* VIDA 16 · a pasta do ofício e a vida religiosa (prefixos of16- e rel16-). */
+.of16 { margin: var(--space-4, 16px) 0; padding: var(--space-4, 16px); border: 1px solid var(--borda, var(--border-subtle)); border-radius: var(--raio-3, 14px); background: var(--bg-raised, var(--superficie)); }
+.of16__cabeca { display: flex; flex-direction: column; gap: 4px; margin-bottom: var(--space-3, 12px); }
+.of16__titulo { margin: 0; font: 600 var(--type-title-3, 19px)/1.25 var(--font-serif, var(--font-sans)); color: var(--text-primary); }
+.of16__ano { font: 500 var(--type-caption, 13px)/1 var(--font-sans); color: var(--text-muted); margin-left: 6px; }
+.of16__lede { margin: 0; display: flex; flex-wrap: wrap; gap: 6px 12px; font: 400 var(--type-caption, 13px)/1.4 var(--font-sans); color: var(--text-secondary); }
+.of16__selo { padding: 1px 8px; border-radius: 999px; background: color-mix(in oklab, var(--acao, #c0634a) 14%, transparent); color: var(--text-primary); }
+.of16__escolha { display: flex; flex-direction: column; gap: 6px; margin-bottom: var(--space-3, 12px); }
+.of16__pergunta { margin: 0; font: 600 var(--type-body, 15px)/1.4 var(--font-sans); color: var(--text-primary); }
+.of16__opcao { display: flex; flex-direction: column; gap: 2px; text-align: left; }
+.of16__opcao span { font-weight: 400; font-size: var(--type-caption, 13px); color: var(--text-secondary); }
+.of16__itens { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3, 12px); grid-template-columns: repeat(auto-fill, minmax(min(100%, 290px), 1fr)); }
+.of16-item { padding: var(--space-3, 12px); border-radius: var(--raio-2, 10px); border: 1px solid var(--borda, var(--border-subtle)); background: var(--bg-base, var(--fundo)); display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.of16-item--resolvido { opacity: 0.92; }
+.of16-item--bem { border-left: 3px solid var(--success, #3f7d4e); }
+.of16-item--mal { border-left: 3px solid var(--danger, #b3412f); }
+.of16-item__topo { display: flex; justify-content: space-between; gap: 8px; font: 600 var(--type-meta, 11px)/1.2 var(--font-sans); letter-spacing: var(--tracking-meta, 0.06em); text-transform: uppercase; color: var(--text-muted); }
+.of16-item--aberto .of16-item__estado, .of16-item--aceito .of16-item__estado { color: var(--acao, #c0634a); }
+.of16-item__titulo { margin: 0; font: 600 var(--type-body, 15px)/1.3 var(--font-sans); color: var(--text-primary); }
+.of16-item__texto, .of16-item__meta, .of16-item__resultado { margin: 0; font: 400 var(--type-caption, 13px)/1.45 var(--font-sans); color: var(--text-secondary); overflow-wrap: anywhere; }
+.of16-item__resultado { color: var(--text-primary); font-style: italic; }
+.of16-item__acoes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; }
+.of16__feitos { margin-top: var(--space-3, 12px); font: 400 var(--type-caption, 13px)/1.45 var(--font-sans); color: var(--text-secondary); }
+.of16__feitos summary { cursor: pointer; color: var(--text-primary); font-weight: 600; }
+.of16__feitos ul { list-style: none; padding: 0; margin: 6px 0 0; display: grid; gap: 4px; }
+.of16__feitos li span { color: var(--text-muted); font-variant-numeric: tabular-nums; margin-right: 6px; }
+.of16__feito--mal { color: var(--text-muted); }
+
+.rel16__caminhos { list-style: none; padding: 0; margin: var(--space-3, 12px) 0 0; display: grid; gap: var(--space-3, 12px); grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); }
+.rel16__caminho { padding: var(--space-3, 12px); border: 1px solid var(--borda, var(--border-subtle)); border-radius: var(--raio-2, 10px); display: flex; flex-direction: column; gap: 6px; min-width: 0; background: var(--bg-raised, var(--superficie)); }
+.rel16__caminho h3, .rel16__questao h3, .rel16__projetos h3 { margin: 0; font: 600 var(--type-body, 15px)/1.3 var(--font-sans); color: var(--text-primary); }
+.rel16__etapas { margin: 0; font: 400 var(--type-caption, 13px)/1.5 var(--font-sans); color: var(--text-secondary); overflow-wrap: anywhere; }
+.rel16__cracha { padding: var(--space-4, 16px); border-radius: var(--raio-3, 14px); background: linear-gradient(135deg, color-mix(in oklab, var(--tom-trabalho, var(--acao, #c0634a)) 12%, var(--bg-raised, #fff)), var(--bg-raised, #fff)); border: 1px solid var(--borda, var(--border-subtle)); }
+.rel16__selo { margin: 0; font: 600 var(--type-title-3, 19px)/1.2 var(--font-serif, var(--font-sans)); color: var(--text-primary); }
+.rel16__desc { margin: 4px 0 10px; font: 400 var(--type-caption, 13px)/1.45 var(--font-sans); color: var(--text-secondary); }
+.rel16__dados { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px 16px; margin: 0; }
+.rel16__dados dt { font: 600 var(--type-meta, 11px)/1.2 var(--font-sans); letter-spacing: var(--tracking-meta, 0.06em); text-transform: uppercase; color: var(--text-muted); }
+.rel16__dados dd { margin: 2px 0 0; font: 500 var(--type-body, 15px)/1.3 var(--font-sans); color: var(--text-primary); }
+.rel16__proxima, .rel16__questao, .rel16__projetos { margin-top: var(--space-3, 12px); display: flex; flex-direction: column; gap: 8px; font: 400 var(--type-body, 15px)/1.45 var(--font-sans); color: var(--text-secondary); }
+.rel16__proxima p, .rel16__questao p { margin: 0; }
+.rel16__questao { padding: var(--space-3, 12px); border-radius: var(--raio-2, 10px); border: 1px solid color-mix(in oklab, var(--acao, #c0634a) 40%, transparent); background: color-mix(in oklab, var(--acao, #c0634a) 6%, transparent); }
+.rel16__gestos, .rel16__opcoes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: var(--space-3, 12px); }
+.rel16__projetos ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+.rel16--ativa > .botao:last-child, .rel16--ativa > button:last-child { margin-top: var(--space-3, 12px); }

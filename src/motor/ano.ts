@@ -66,6 +66,8 @@ import { conhecerGente, envelhecerConhecidos, limparApertos, processarSocial, re
 import { processarRomance, surgirInteresse } from './sistemas/romance';
 import { processarIniciativas } from './sistemas/iniciativas';
 import { processarCelular15 } from './v15/celular/celular15';
+import { processarOficio16 } from './v16/oficios/oficios16';
+import { processarReligiao16 } from './v16/religiao/religiao16';
 import { processarExposicao } from './sistemas/exposicao';
 import { processarProcessos } from './sistemas/processos';
 import { fotografar, processarDinheiro } from './sistemas/dinheiro';
@@ -264,6 +266,9 @@ function viverAno(v: Vida, r: Rng): void {
   processarIniciativas(v, r);
   // VIDA 15: o celular — quem manda mensagem na virada do ano (sorteio derivado: não mexe no acaso da vida).
   processarCelular15(v);
+  // VIDA 16: a pasta do ofício e a carreira religiosa fecham o ano (só para quem abriu a pasta / tem a carreira).
+  processarOficio16(v);
+  processarReligiao16(v);
   // REWORK 10 · Fase C: o que se fez com as pessoas volta (a mentira descoberta, o segredo que vaza, a briga que esfria).
   processarConvivio(v);
   processarExposicao(v, r);

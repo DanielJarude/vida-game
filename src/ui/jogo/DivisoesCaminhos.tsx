@@ -12,7 +12,8 @@
  */
 
 import { PlenarioDoPolitico } from './CarreirasEspeciais';
-import { useMemo } from 'react';
+import { lazy, Suspense, useMemo } from 'react';
+const VidaReligiosa16 = lazy(() => import('../v16/religiao/VidaReligiosa16'));
 import type { Vida } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
 import { disponibilidade } from '../../motor/acoes';
@@ -124,6 +125,8 @@ export function OutrosCaminhosDaVida({ vida, agir, irPara }: { vida: Vida; agir:
       <CarreiraNoEsporte vida={vida} aberta={modo === 'atleta'} />
       <CarreiraComoTecnico vida={vida} />
       <CurriculoArtistico vida={vida} agir={agir} />
+      {/* VIDA 16: a vida religiosa (os caminhos da sua tradição; a carreira, para quem segue uma). */}
+      <Suspense fallback={null}><VidaReligiosa16 vida={vida} agir={agir} /></Suspense>
       {i < 6 && <p className="vazio">Por enquanto, brincar. O esporte e a arte começam na semana — e viram caminho com o tempo.</p>}
     </div>
   );

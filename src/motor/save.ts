@@ -49,6 +49,8 @@ import { normalizarVida14Aparencia } from './v14/aparencia/normalizar14';
 import { normalizarVida13Fama } from './sistemas/reconhecimento13';
 import { normalizarVida14Mundo } from './v14/mundo/mundo14';
 import { normalizarCelular15 } from './v15/celular/celular15';
+import { normalizarOficio16 } from './v16/oficios/oficios16';
+import { normalizarReligiao16 } from './v16/religiao/religiao16';
 import { alvoDaNotoriedade } from './sistemas/notoriedade';
 import type { Financas,
   Classe, Dominio, Entrada, Escolaridade, EstiloDeVida, Genero, Marco, Parentesco, Pessoa, Relevancia, TabelaEmCurso, Tema, Vida, Vinculo
@@ -150,6 +152,7 @@ export function interpretar(bruto: string): Leitura {
   if (r.tipo === 'ok') normalizarVida13Fama(r.vida);
   if (r.tipo === 'ok') normalizarVida14Mundo(r.vida);
   if (r.tipo === 'ok') normalizarCelular15(r.vida);
+  if (r.tipo === 'ok') { normalizarOficio16(r.vida); normalizarReligiao16(r.vida); }
   return r;
 }
 
