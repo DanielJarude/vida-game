@@ -40,6 +40,7 @@ import { dinheiro } from '../texto';
 import { ocupacao, ocupacaoOuNula } from '../dados/ocupacoes';
 import { TRILHAS_ARTISTICAS } from './trabalho';
 import { liquido, salarioLocal } from './renda';
+import { livreParaRomance } from './estadoConjugal';
 
 /** O que marca, na Linha da Vida, que foi o mundo (e não o jogador) quem fez acontecer. */
 const MUNDO = 'mundo';
@@ -220,7 +221,9 @@ function acontecerCom(v: Vida, r: Rng, p: Pessoa, vin: Vinculo): boolean {
     return true;
   }
   // O pai ou a mãe que ficou só refaz a vida (e a família reage).
-  if (papel === 'genitor' && ip >= 45 && ip <= 78 && !p.parceiroId && r.chance(0.04)) {
+  // VIDA 17: só quem está de fato só (`livreParaRomance`: sem parceria, sem casamento dos pais em curso, sem separação
+  // nem viuvez recentes). O sorteio vem antes, para não mudar o acaso do resto.
+  if (papel === 'genitor' && ip >= 45 && ip <= 78 && !p.parceiroId && r.chance(0.04) && livreParaRomance(v, p)) {
     p.parceiroId = 'fora';
     garantirVida(p).trajetoria.push({ t: v.t, texto: 'Começou um novo relacionamento.', tipo: 'amor' });
     const bem = vin.tensao < 35;
@@ -238,7 +241,7 @@ function acontecerCom(v: Vida, r: Rng, p: Pessoa, vin: Vinculo): boolean {
     return true;
   }
   // Um ex segue a vida (às vezes é a notícia que dói).
-  if (papel === 'ex' && ip >= 22 && !p.parceiroId && r.chance(0.05)) {
+  if (papel === 'ex' && ip >= 22 && !p.parceiroId && r.chance(0.05) && livreParaRomance(v, p)) {
     p.parceiroId = 'fora';
     noticia(v, 'pessoas', `Soube por outras pessoas que ${p.nome} está com alguém. ${vin.proximidade >= 40 ? 'Doeu um pouco mais do que você esperava.' : 'Você desejou, sinceramente, que dê certo.'}`, { pessoas: [p.id] });
     if (vin.proximidade >= 40) v.mente.felicidade = clamp(v.mente.felicidade - 2);

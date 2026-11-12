@@ -45,7 +45,8 @@ const PEDEM_A_RUA = new Set([
   'comprar_coisa', 'presentear', 'rede', 'abrir_negocio', 'horas_extras', 'pedir_aumento', 'oficio', 'formacao', 'atracao', 'renomear'
 ]);
 /** O semiaberto sai de dia para trabalhar: o emprego (e o que é dele) volta a caber. */
-const SEMIABERTO_PODE = new Set(['horas_extras', 'pedir_aumento', 'oficio', 'rede']);
+// VIDA 17: as redes sociais saíram daqui — o celular fica retido na unidade também no semiaberto.
+const SEMIABERTO_PODE = new Set(['horas_extras', 'pedir_aumento', 'oficio']);
 /** Quem foge não volta à vida formal: carteira, concurso, fronteira, cartório e banco pedem documento. */
 const FORAGIDO_NAO = new Set(['candidatar', 'migrar', 'naturalizar', 'comprar_imovel', 'emprestimo', 'cnh', 'cnh_prova', 'matricular', 'enem', 'abrir_negocio', 'plano_saude', 'politica', 'adotar']);
 

@@ -22,9 +22,10 @@ import { municipio, nomeLugar } from '../../../motor/dados/lugares';
 import { rotulosDoChamado } from '../../../motor/sistemas/iniciativas';
 import { extratoAberto } from '../../../motor/sistemas/extrato';
 import { leituraDaFama13 } from '../../../motor/sistemas/reconhecimento13';
-import { feed15, matches15, naoLidas15, nivelDaFama15, opcoesDaMsg15, rotuloArea, rotuloDoLugar15, TITULO_DO_POST15, disponibilidadeNamoro15 } from '../../../motor/v15/celular/celular15';
+import { feed15, matches15, naoLidas15, nivelDaFama15, opcoesDaMsg15, rotuloArea, rotuloDoLugar15, tituloDoPost17, disponibilidadeNamoro15 } from '../../../motor/v15/celular/celular15';
 import { jornal15, ROTULO_EDITORIA15, type Editoria15 } from '../../../motor/v15/celular/noticias15';
 import type { Msg15, PerfilApp15 } from '../../../motor/dados15/celular/tipos';
+import { contatosAutorizados17, ligacoesRestantes17, limiteDeLigacoes17, MOTIVO_PRESO17 } from '../../../motor/v17/prisao/telefone17';
 import { contatos16, historico16, horaDaMsg16, ROTULO_INTENCAO16, type IntencaoMsg16 } from '../../../motor/v16/celular/mensagens16';
 import { Retrato } from '../../avatar/Retrato';
 import { BotaoAcao } from '../../comum';
@@ -407,7 +408,7 @@ function Rede({ vida, agir, abrirPessoa }: { vida: Vida; agir: Props['agir']; ab
                   <Foto vida={vida} p={p} tamanho={36} />
                   <span><strong>{p.nome}</strong><span>{vin ? rotuloDe(vida, p, vin) : ''} · {quando(vida, x.t)}</span></span>
                 </button>
-                <p className="post15__titulo">{TITULO_DO_POST15[x.tipo] ?? 'Novidade'}</p>
+                <p className="post15__titulo">{tituloDoPost17(x.tipo, x.texto)}</p>
                 <p className="post15__texto">{x.texto}</p>
                 <button type="button" className={`post15__curtir${x.curtiu ? ' post15__curtir--sim' : ''}`} aria-pressed={x.curtiu} disabled={x.curtiu}
                   onClick={() => agir({ tipo: 'celular15', oque: { op: 'curtir_post', chave: x.chave, pid: x.pid } })}>{DIFICIL.has(x.tipo) ? (x.curtiu ? '🤍 Abraço enviado' : '🤍 Deixar um abraço') : x.curtiu ? '♥ Curtiu' : '♡ Curtir'}</button>
@@ -416,7 +417,7 @@ function Rede({ vida, agir, abrirPessoa }: { vida: Vida; agir: Props['agir']; ab
           })}
         </ol>
       ) : <p className="cel__vazio">Ninguém da sua vida postou nada de novo nos últimos dois anos.</p>)}
-      {aba === 'contas' && <Suspense fallback={<p className="cel__vazio">Abrindo…</p>}><div className="rede15__contas"><RedesSociais vida={vida} agir={agir} abrirPessoa={abrirPessoa} /></div></Suspense>}
+      {aba === 'contas' && <Suspense fallback={<p className="cel__vazio">Abrindo…</p>}><div className="rede15__contas"><RedesSociais vida={vida} agir={agir} abrirPessoa={abrirPessoa} embutido /></div></Suspense>}
     </div>
   );
 }
@@ -576,6 +577,38 @@ function Fama({ vida, irFama }: { vida: Vida; irFama: () => void }) {
   );
 }
 
+/* ------------------------------------------------------------------ VIDA 17 · Preso: o telefone da unidade */
+
+function TelefoneDaUnidade({ vida, agir }: { vida: Vida; agir: Props['agir'] }) {
+  const contatos = contatosAutorizados17(vida);
+  const resta = ligacoesRestantes17(vida);
+  const regime = vida.justica?.prisao?.regime === 'semiaberto' ? 'semiaberto' : 'fechado';
+  return (
+    <div className="cel__unidade" role="region" aria-label="Telefone da unidade">
+      <div className="cel__retido">
+        <span className="cel__retido-cadeado" aria-hidden>🔒</span>
+        <strong>Celular retido</strong>
+        <p>{MOTIVO_PRESO17}</p>
+        <p className="cel__nota">Mensagens, Rede, Namoro, Mapas, Banco e os outros aplicativos voltam quando a pena acabar.</p>
+      </div>
+      <section className="cel__unidade-lista">
+        <h3 className="cel__h">Telefone da unidade · regime {regime}</h3>
+        <p className="cel__nota">{resta ? `${resta} de ${limiteDeLigacoes17(vida)} ligações restantes neste ano.` : 'As ligações deste ano já foram usadas.'}</p>
+        {contatos.length ? (
+          <ul className="cel__linhas">
+            {contatos.map(x => (
+              <li key={x.p.id} className="cel__unidade-contato">
+                <span className="cel__rostos"><Foto vida={vida} p={x.p} tamanho={28} /> {x.p.nome}</span>
+                <BotaoAcao vida={vida} acao={{ tipo: 'celular15', oque: { op: 'ligacao_unidade', pid: x.p.id } }} agir={agir} variante="secundario">Ligar</BotaoAcao>
+              </li>
+            ))}
+          </ul>
+        ) : <p className="cel__vazio">Nenhum contato autorizado: a lista aceita só a família próxima e a parceria.</p>}
+      </section>
+    </div>
+  );
+}
+
 /* ------------------------------------------------------------------ O aparelho */
 
 function Relogio() {
@@ -627,7 +660,7 @@ export default function Celular({ vida, agir, aoFechar, irPara, irLugar, abrirPe
           <Relogio />
           <span className="cel__status-dir"><span className="cel__sinal" /><span className="cel__bateria" /></span>
         </div>
-        {app === 'inicio' ? (
+        {vida.justica?.prisao ? <TelefoneDaUnidade vida={vida} agir={agir} /> : app === 'inicio' ? (
           <div className="cel__inicio">
             <div className="cel__data-grande"><strong>{MESES[mesDe(vida.t)]}</strong><span>{anoDe(vida.t)} · {municipio(vida.moradia.municipioId).nome}</span></div>
             {notificacoes.length > 0 && (

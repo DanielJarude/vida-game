@@ -17,3 +17,10 @@
 .m14-conj__nome small { font-weight: 400; font-size: var(--type-caption); color: var(--text-muted); }
 .m14-conj .botao, .m14-comodo .botao { align-self: flex-start; }
 .m14-pecas { margin: 0; padding-left: 1.1em; columns: 2 160px; font-size: var(--type-meta); color: var(--text-secondary); }
+/* VIDA 17: a função do móvel na loja (o que já é seu, a vaga, a troca). */
+.m17-funcao { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.m17-funcao__seus { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.m17-funcao__rotulo { font-size: var(--type-meta); font-weight: var(--weight-bold); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--bom); }
+.m17-funcao__peca { font-size: var(--type-caption); padding: 2px 8px; border-radius: 999px; background: var(--veu-2); color: var(--text-secondary); }
+.m17-funcao__peca--este { background: color-mix(in oklab, var(--bom) 16%, transparent); color: var(--text-primary); }
+.m17-funcao__trocas { display: flex; flex-wrap: wrap; gap: 6px; }

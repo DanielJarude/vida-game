@@ -36,6 +36,7 @@ import { mesesProcurando } from './intencao';
 import { discutir } from './lacos';
 import { rngDe } from '../rng';
 import { pesoDaAparenciaPara } from './predisposicao';
+import { receber17 } from './cotaDeMensagens';
 
 const ele = (p: Pessoa) => flex(p.genero, 'ele', 'ela', 'elu');
 const o = (p: Pessoa) => flex(p.genero, 'o', 'a', 'e');
@@ -328,7 +329,8 @@ function apoioEspontaneo(v: Vida, r: Rng): void {
         : `${p.nome} percebeu que você não andava bem e apareceu, sem ser chamad${o(p)}.`;
   lembrarCom(v, p.id, 'Apareceu quando você precisava.', 'apoio', 2);
   escrever(v, { texto, relevancia: 'biografia', tema: papelDe(p, vin) === 'amigo_proximo' || papelDe(p, vin) === 'amigo' ? 'amizade' : papelDe(p, vin) === 'parceiro' ? 'amor' : 'familia', tom: 'bom', pessoas: [p.id] });
-  vin.chamado = { tipo: 'apoio', t: v.t, texto };
+  // VIDA 17: o apoio acontece de todo jeito; a mensagem só chega se houver cota no ano.
+  if (receber17(v, 'alta') !== undefined) vin.chamado = { tipo: 'apoio', t: v.t, texto };
 }
 
 interface Candidato { p: Pessoa; vin: Vinculo; tipo: TipoChamado; peso: number; texto: string; assunto?: string }
@@ -443,6 +445,8 @@ function novaIniciativa(v: Vida, r: Rng): void {
   if (!r.chance(Math.min(0.6, 0.18 + peso * 0.08))) return;
   const x = r.weighted(lista, c => c.peso);
   if (!x) return;
+  // VIDA 17: o chamado é uma mensagem recebida — só chega se houver cota no ano (4 no total, todas as fontes).
+  if (receber17(v, x.tipo === 'pedido_ajuda' || x.tipo === 'conversa_casal' ? 'alta' : 'normal') === undefined) return;
   x.vin.chamado = { tipo: x.tipo, t: v.t, texto: x.texto, assunto: x.assunto };
   v.fatos[`chamado_${x.p.id}`] = v.t;
   if (x.tipo === 'interesse') x.vin.romance = { estagio: 'interesse', tEstagio: v.t, envolvimento: 58 };

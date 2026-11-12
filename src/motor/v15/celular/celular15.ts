@@ -35,6 +35,10 @@ import { flex } from '../../texto';
 import { anoDe } from '../../tempo';
 import { municipio } from '../../dados/lugares';
 import { sortearNome, sortearSobrenome } from '../../dados/nomes';
+import { candidatos17, deixarFio17, ehTipo17, extrasDaVida15, opcoes17, responder17, semResposta17, aoChegar17 } from '../../v17/celular/mensagens17';
+import { podeReceber17, receber17, type Prioridade17 } from '../../sistemas/cotaDeMensagens';
+import { aindaEmRomance } from '../../sistemas/estadoConjugal';
+import { disponibilidadeLigacao17, ligarDaUnidade17, MOTIVO_PRESO17, preso17 } from '../../v17/prisao/telefone17';
 import type { AreaCelebridade15, Celular15, Lugar15, Molde15, Msg15, PerfilApp15, TipoMsg15 } from '../../dados15/celular/tipos';
 
 /* ------------------------------------------------------------------ Leitura */
@@ -109,7 +113,7 @@ const A_DOIS: Programa[] = [
 
 /* ------------------------------------------------------------------ Os candidatos */
 
-interface Candidato { tipo: TipoMsg15; peso: number; p?: Pessoa; montar: (r: Rng) => Omit<Msg15, 'id' | 't' | 'tipo' | 'onda'> }
+interface Candidato { tipo: TipoMsg15; peso: number; p?: Pessoa; prioridade?: Prioridade17; montar: (r: Rng) => Omit<Msg15, 'id' | 't' | 'tipo' | 'onda'> }
 
 const RECENTE = (v: Vida, chave: string, meses: number) => { const t = v.fatos[chave]; return t !== undefined && v.t - t < meses; };
 
@@ -130,7 +134,7 @@ function candidatos(v: Vida, excluir: Set<string>): Candidato[] {
     const semContato = (v.t - vin.tUltimoContato) / 12;
     const longe = p.municipioId !== cidade;
     // Convite: amigo por perto (ou família próxima, adulto) chama para um programa da idade dos dois.
-    if ((papel === 'amigo' || papel === 'amigo_proximo' || (papel === 'irmao' && eu >= 16) || (papel === 'colega' && vin.proximidade >= 40 && eu >= 16)) && !longe && ip >= 6 && vin.tensao < 50 && !moraJunto(vin)) {
+    if ((papel === 'amigo' || papel === 'amigo_proximo' || (papel === 'irmao' && eu >= 16) || (papel === 'colega' && vin.proximidade >= 40 && eu >= 16)) && !longe && !RECENTE(v, `cel17_semconvite_${p.id}`, 36) && ip >= 6 && vin.tensao < 50 && !moraJunto(vin)) {
       const ops = PROGRAMAS.filter(x => eu >= x.idade[0] && eu <= x.idade[1] && ip >= x.idade[0] && ip <= x.idade[1] + 10);
       if (ops.length) out.push({ tipo: 'convite', p, peso: (papel === 'amigo_proximo' ? 1.4 : 0.8) + Math.max(0, p.temperamento.extroversao) * 0.6, montar: rr => {
         const pr = rr.pick(ops);
@@ -151,7 +155,9 @@ function candidatos(v: Vida, excluir: Set<string>): Candidato[] {
     const traj = p.vida?.trajetoria?.filter(x => x.t >= v.t - 12 && x.t <= v.t && x.tipo !== 'escola') ?? [];
     if (traj.length && (['irmao', 'genitor', 'filho', 'neto', 'avo', 'amigo_proximo', 'parente'].includes(papel) || (papel === 'amigo' && vin.proximidade >= 45)) && ip >= 12) {
       const ult = traj[traj.length - 1];
-      if (!RECENTE(v, `cel15n_${p.id}_${ult.t}`, 999)) out.push({ tipo: 'noticia', p, peso: 1.6, montar: () => ({ de: p.id, texto: falaDaNoticia(p, ult.tipo), cartao: ult.texto, assunto: `${ult.tipo}:${ult.t}` }) });
+      // VIDA 17: "tô namorando" só de quem ainda está no romance que a trajetória anunciou (sem contradizer o estado).
+      const romanceAcabou = ult.tipo === 'amor' && /namor|relacionamento/i.test(ult.texto) && !/termin|separ/i.test(ult.texto) && !aindaEmRomance(p);
+      if (!romanceAcabou && !RECENTE(v, `cel15n_${p.id}_${ult.t}`, 999)) out.push({ tipo: 'noticia', p, peso: 1.6, montar: () => ({ de: p.id, texto: falaDaNoticia(p, ult.tipo, ult.texto), cartao: ult.texto, assunto: `${ult.tipo}:${ult.t}` }) });
     }
     // O colega de anos atrás: da escola, da faculdade, de um trabalho antigo (sem convívio, sem contato há 5+ anos).
     if ((papel === 'conhecido' || papel === 'colega' || papel === 'afastado' || papel === 'amigo') && vin.convivio.length === 0 && semContato >= 5 && eu >= 20 && vin.tensao < 40 && vin.historia.length >= 2 && !RECENTE(v, `cel15r_${p.id}`, 120)) {
@@ -196,7 +202,11 @@ function candidatos(v: Vida, excluir: Set<string>): Candidato[] {
 }
 
 /** A fala de quem conta a novidade (a novidade em si vai no cartão, com as palavras da trajetória — nada inventado). */
-function falaDaNoticia(p: Pessoa, tipo: string): string {
+function falaDaNoticia(p: Pessoa, tipo: string, texto = ''): string {
+  // VIDA 17: a fala acompanha o que de fato aconteceu (a separação não é "tô namorando"; o casamento também não).
+  if (tipo === 'amor' && /separ|termin|divorc/i.test(texto)) return '"A gente terminou. Tô bem, na medida do possível — só não queria que você soubesse por outra pessoa."';
+  if (tipo === 'amor' && /casou|casaram|morar juntos/i.test(texto)) return '"Vamos juntar as escovas de dente! Queria que você soubesse por mim."';
+  if (tipo === 'amor' && /novo relacionamento/i.test(texto)) return '"Tenho uma novidade meio sem jeito de contar: conheci alguém. Quero que você conheça."';
   const fala: Record<string, string> = {
     trabalho: '"Tenho novidade no trabalho! Ainda tô me acostumando."',
     promocao: `"Adivinha quem foi promovid${o(p)}? Vou pagar o jantar!"`,
@@ -210,6 +220,13 @@ function falaDaNoticia(p: Pessoa, tipo: string): string {
     estudo: '"Consegui! Finalmente."'
   };
   return fala[tipo] ?? '"Tenho novidade!"';
+}
+
+/** VIDA 17: o título do post lido do que aconteceu (uma separação não é "Namorando"). */
+export function tituloDoPost17(tipo: string, texto: string): string {
+  if (tipo === 'amor' && /separ|termin|divorc/i.test(texto)) return 'Fim de um ciclo';
+  if (tipo === 'amor' && /casou|casaram|morar juntos/i.test(texto)) return 'Juntos';
+  return TITULO_DO_POST15[tipo] ?? 'Novidade';
 }
 
 /** O título da publicação de cada tipo de acontecimento (a rede dos amigos). */
@@ -249,21 +266,33 @@ function molde(v: Vida, r: Rng, fama: number): Molde15 {
 
 const POR_ANO = (v: Vida) => (idade(v) < 13 ? 1 : 2) + (nivelDaFama15(v) >= 2 ? 1 : 0);
 
-/** Escolhe e grava `n` mensagens novas (sem repetir pessoa, nem a que já espera resposta). */
+/** A prioridade das mensagens da VIDA 15 na cota do ano (o acaso e o ruído ficam por último). */
+const PRIORIDADE15: Partial<Record<TipoMsg15, Prioridade17>> = { parceiro: 'alta', fa: 'baixa', evento: 'baixa' };
+
+/**
+ * Escolhe e grava até `n` mensagens novas (sem repetir pessoa, nem a que já espera resposta). VIDA 17: as situações
+ * novas entram no mesmo sorteio, e cada mensagem consome uma vaga da cota do ano (`receber17`): sem vaga, não chega.
+ */
 function entregar(v: Vida, r: Rng, n: number, onda: number): Msg15[] {
   const c = celularDe(v);
   const ja = new Set(c.msgs.filter(m => !m.resposta && m.de).map(m => m.de!));
   const out: Msg15[] = [];
   const tipos = new Set<TipoMsg15>();
+  const fama = nivelDaFama15(v);
   for (let k = 0; k < n; k++) {
-    const lista = candidatos(v, ja).filter(x => !tipos.has(x.tipo));
+    if (!podeReceber17(v, 'alta')) break;
+    const todos: Candidato[] = [...candidatos(v, ja), ...candidatos17(v, ja, fama)];
+    const lista = todos.filter(x => !tipos.has(x.tipo) && podeReceber17(v, x.prioridade ?? PRIORIDADE15[x.tipo] ?? 'normal'));
     if (!lista.length) break;
     const x = r.weighted(lista, y => y.peso);
     if (!x) break;
+    const mes = receber17(v, x.prioridade ?? PRIORIDADE15[x.tipo] ?? 'normal');
+    if (mes === undefined) break;
     const base = x.montar(r);
-    const m: Msg15 = { id: `m${anoDe(v.t)}_${onda}_${k}_${c.msgs.length}`, t: v.t, tipo: x.tipo, onda, ...base };
+    const m: Msg15 = { id: `m${anoDe(v.t)}_${onda}_${k}_${c.msgs.length}`, t: v.t, tipo: x.tipo, onda, mes17: mes, ...base };
     if (m.texto.includes('{o}')) m.texto = m.texto.replace(/\{o\}/g, flex(v.eu.genero, 'o', 'a', 'e'));
     c.msgs.push(m);
+    aoChegar17(v, m);
     out.push(m);
     tipos.add(x.tipo);
     if (x.p) { ja.add(x.p.id); v.fatos[`cel15_${x.p.id}`] = v.t; }
@@ -289,6 +318,8 @@ export function processarCelular15(v: Vida): void {
   // O que ficou sem resposta no ano que passou sai do aparelho (o silêncio não pune: a relação segue pelo convívio de sempre).
   // VIDA 16: o que sai do ano vai para o histórico (`mensagens16`) — a conversa não some.
   const fica = (m: Msg15) => (m.resposta ? v.t - m.t <= 36 : anoDe(m.t) >= ano - 1 && v.t - m.t <= 12);
+  // VIDA 17: o desabafo, a mágoa, a paquera que ficaram sem resposta podem voltar como cobrança.
+  semResposta17(v, c.msgs.filter(m => !fica(m)));
   arquivarMsgs16(v, c.msgs.filter(m => !fica(m)));
   c.msgs = c.msgs.filter(fica);
   if (c.msgs.length > 60) arquivarMsgs16(v, c.msgs.splice(0, c.msgs.length - 60));
@@ -299,11 +330,14 @@ export function processarCelular15(v: Vida): void {
   c.acoesNoAno = 0;
   c.encontrosNoAno = 0;
   const r = rngDe(v.id, 'celular15', v.t);
+  // VIDA 17: preso, nada chega ao aparelho retido (o sorteio do mundo segue: as pessoas da vida continuam vivendo).
+  if (preso17(v)) { vidasQueViramNoticia(v, r); return; }
   vidasQueViramNoticia(v, r);
   repercutirCasalFamoso(v);
   // Nem todo ano o telefone toca: quem tem pouca gente perto recebe pouco.
   const gente = vinculosVivos(v).filter(x => humano(x.p) && x.vin.proximidade >= 35).length;
-  const n = Math.min(POR_ANO(v), (r.chance(0.55) ? 1 : 0) + (gente >= 4 ? 1 : 0) + (nivelDaFama15(v) >= 2 ? 1 : 0));
+  // VIDA 17: a virada leva no máximo 2 (o resto do ano chega aos poucos, durante as escolhas; cota de 4 no total).
+  const n = Math.min(2, POR_ANO(v), (r.chance(0.55) ? 1 : 0) + (gente >= 4 ? 1 : 0) + (nivelDaFama15(v) >= 2 ? 1 : 0));
   entregar(v, r, n, 0);
 }
 
@@ -363,7 +397,8 @@ export function depoisDaAcao15(v: Vida, a: { tipo: string; [k: string]: unknown 
   if ((c.acoesNoAno === 3 && onda === 0) || (c.acoesNoAno === 7 && onda <= 1)) {
     c.ondas = onda + 1;
     const r = rngDe(v.id, 'celular15_onda', v.t, c.ondas);
-    if (r.chance(0.6)) entregar(v, r, r.chance(0.2) ? 2 : 1, c.ondas);
+    // VIDA 17: uma por onda (o sorteio do "2" segue sendo feito, para não mudar o acaso do resto).
+    if (r.chance(0.6)) { r.chance(0.2); entregar(v, r, 1, c.ondas); }
   }
   // Um convite aceito leva ao lugar do programa (a praia, o show, o restaurante, o evento).
   const aceita = q?.op === 'responder' && ['aceitar', 'ir', 'marcar'].includes(q.escolha ?? '') ? c.msgs.find(m => m.id === q.id) : undefined;
@@ -372,7 +407,8 @@ export function depoisDaAcao15(v: Vida, a: { tipo: string; [k: string]: unknown 
   const r = rngDe(v.id, 'celular15_acaso', v.t, c.acoesNoAno);
   if (!r.chance(lugar === 'aeroporto' ? 0.3 : 0.2)) return;
   const m = encontroPorAcaso(v, r, lugar);
-  if (m) { c.msgs.push(m); c.encontrosNoAno = (c.encontrosNoAno ?? 0) + 1; }
+  // VIDA 17: o acaso também é mensagem — só chega se sobrar cota (prioridade baixa: precisa de duas vagas).
+  if (m) { const mes = receber17(v, 'baixa'); if (mes === undefined) return; m.mes17 = mes; c.msgs.push(m); c.encontrosNoAno = (c.encontrosNoAno ?? 0) + 1; }
 }
 
 const ONDE: Record<Lugar15, string> = {
@@ -414,6 +450,11 @@ export interface OpcaoMsg15 { op: string; rotulo: string; veredito: Veredito }
 /** As respostas que fazem sentido para ESTA mensagem (com o porquê, quando não dá). */
 export function opcoesDaMsg15(v: Vida, m: Msg15): OpcaoMsg15[] {
   if (m.resposta || !mensagemViva(v, m)) return [];
+  if (ehTipo17(m.tipo)) return opcoes17(v, m);
+  return [...opcoesDaMsg15Base(v, m), ...extrasDaVida15(v, m)];
+}
+
+function opcoesDaMsg15Base(v: Vida, m: Msg15): OpcaoMsg15[] {
   const p = m.de ? v.pessoas[m.de] : undefined;
   const pagar = (x: number | undefined, t: string): Veredito => (x ? vereditoDePagar(v, x, t) : PERMITIDO);
   const ok = PERMITIDO;
@@ -465,6 +506,7 @@ export function opcoesDaMsg15(v: Vida, m: Msg15): OpcaoMsg15[] {
     // VIDA 16: o que você escreveu e os chamados guardados não pedem resposta aqui.
     case 'escrita': case 'chamado': return [];
   }
+  return [];
 }
 
 const humor = (v: Vida, feliz: number, estresse = 0) => {
@@ -481,6 +523,9 @@ export interface SaidaCelular15 { texto: string; titulo?: string; pessoaId?: str
 
 /** A resposta: muda a relação, custa o que custa, fica na história dos dois (e na Linha da Vida, quando importa). */
 export function responderMsg15(v: Vida, r: Rng, m: Msg15, op: string): SaidaCelular15 {
+  // VIDA 17: as situações novas e as respostas extras são respondidas lá.
+  const r17 = responder17(v, r, m, op);
+  if (r17) return r17;
   const p = m.de ? v.pessoas[m.de] : undefined;
   const vin = m.de ? v.vinculos[m.de] : undefined;
   const nome = p?.nome ?? m.remetente ?? 'Alguém';
@@ -514,9 +559,12 @@ export function responderMsg15(v: Vida, r: Rng, m: Msg15, op: string): SaidaCelu
         if (m.custo && m.custo >= 500) escrever(v, { texto: `${cap(nomeDoAssunto(m))} com ${p!.nome}.`, relevancia: 'cotidiano', tema: m.tipo === 'parceiro' ? 'amor' : 'lazer', escolha: true, pessoas: [p!.id] });
       } else if (op === 'outro_dia') {
         perto(vin, 1, true, v.t);
+        // VIDA 17: a promessa fica — e pode voltar como cobrança se ninguém marcar.
+        deixarFio17(v, { pid: p!.id, tipo: 'promessa', t: v.t, dado: nomeDoAssunto(m) });
         texto = `"Esse fim de semana não dá — mas a gente marca, prometo." ${p!.nome} mandou um "combinado!".`;
       } else if (op === 'adiar') {
         if (vin?.romance) vin.romance.envolvimento = clamp(vin.romance.envolvimento - 2);
+        deixarFio17(v, { pid: p!.id, tipo: 'promessa', t: v.t, dado: nomeDoAssunto(m) });
         texto = `${p!.nome} disse "tudo bem". O tom não era de tudo bem.`;
       } else {
         perto(vin, -1, false);
@@ -758,9 +806,14 @@ export type OqueCelular15 =
   | { op: 'desfazer'; pid: string }
   | { op: 'curtir_post'; chave: string; pid: string }
   /** VIDA 16: escrever para alguém (a intenção decide a frase; a resposta é da pessoa). */
-  | { op: 'escrever'; pid: string; intencao: IntencaoMsg16 };
+  | { op: 'escrever'; pid: string; intencao: IntencaoMsg16 }
+  /** VIDA 17: preso, o celular fica retido — só a ligação do telefone da unidade para um contato autorizado. */
+  | { op: 'ligacao_unidade'; pid: string };
 
 export function disponibilidadeCelular15(v: Vida, q: OqueCelular15): Veredito {
+  // VIDA 17: preso, o aparelho fica retido — nenhum aplicativo; só o telefone da unidade (que não depende de ter celular).
+  if (q.op === 'ligacao_unidade') return disponibilidadeLigacao17(v, q.pid);
+  if (preso17(v)) return bloqueio('impossivel', MOTIVO_PRESO17);
   if (!temCelular15(v)) return bloqueio('impossivel', 'Ainda sem celular.');
   switch (q.op) {
     case 'ler': return PERMITIDO;
@@ -800,6 +853,7 @@ export function executarCelular15(v: Vida, r: Rng, q: OqueCelular15): SaidaCelul
   switch (q.op) {
     case 'ler': for (const m of c.msgs) m.lida = true; return { texto: '' };
     case 'responder': return responderMsg15(v, r, c.msgs.find(x => x.id === q.id)!, q.escolha);
+    case 'ligacao_unidade': return ligarDaUnidade17(v, r, q.pid);
     case 'namoro_abrir': {
       if (c.deck?.ano !== anoDe(v.t)) c.deck = { ano: anoDe(v.t), perfis: gerarPerfis(v, TAMANHO_DO_DECK, 0), instalado: true };
       c.deck.instalado = true;

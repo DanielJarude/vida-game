@@ -22,6 +22,7 @@ import { papelDe } from '../../sistemas/vinculos';
 import { flex } from '../../texto';
 import { anoDe } from '../../tempo';
 import type { Msg15 } from '../../dados15/celular/tipos';
+import { receber17 } from '../../sistemas/cotaDeMensagens';
 
 const LIMITE_ARQUIVO = 400;
 const humano = (p: Pessoa) => !p.especie && p.vivo && !!p.nome;
@@ -192,6 +193,7 @@ export function escrever16(v: Vida, r: Rng, pid: string, intencao: IntencaoMsg16
   }
   const m: Msg15 = { id, t: v.t, tipo: 'escrita', de: pid, texto: minha, assunto: intencao, lida: true, resposta: { op: responde ? 'respondeu' : 'silencio', t: v.t, texto: resposta } };
   c.msgs.push(m);
-  if (segue) c.msgs.push(segue);
+  // VIDA 17: a continuação é uma mensagem recebida — consome a cota do ano (prioridade alta: foi você quem puxou).
+  if (segue) { const mes = receber17(v, 'alta'); if (mes !== undefined) c.msgs.push({ ...segue, mes17: mes }); }
   return { texto: responde ? `${p.nome} respondeu.` : `${p.nome} não respondeu.`, pessoaId: pid, tom };
 }

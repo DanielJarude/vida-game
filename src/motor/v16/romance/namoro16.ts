@@ -27,6 +27,7 @@ import { acordoConsentido, terminar } from '../../sistemas/romance';
 import { tem } from '../../sistemas/jeito';
 import { flex } from '../../texto';
 import type { Desfecho16, ProvaDoApp16, RastroDoApp16 } from '../../dados16/romance/tipos';
+import { receber17 } from '../../sistemas/cotaDeMensagens';
 
 const ele = (p: Pessoa) => flex(p.genero, 'ele', 'ela', 'elu');
 
@@ -133,7 +134,7 @@ function reagir(v: Vida, rr: Rng, par: { p: Pessoa; vin: Vinculo }, rastro: Rast
       if (!vin.conflito || vin.conflito.gravidade < 2) vin.conflito = { t: v.t, assunto: 'o aplicativo de encontros', gravidade: 2, quem: 'eu' };
       texto = `${nome} ${achou}. A discussão foi na cozinha, baixa no começo e alta no fim.`;
       lembrarCom(v, p.id, 'Brigaram por causa do aplicativo de encontros.', 'conflito', 2);
-      if (!vin.chamado) vin.chamado = { tipo: 'conversa_casal', t: v.t, texto: `${nome} quer conversar sobre o que viu no seu celular.`, assunto: 'app16' };
+      if (!vin.chamado && receber17(v, 'alta') !== undefined) vin.chamado = { tipo: 'conversa_casal', t: v.t, texto: `${nome} quer conversar sobre o que viu no seu celular.`, assunto: 'app16' };
       break;
     case 'crise':
       vin.tensao = clamp(vin.tensao + 32); vin.confianca = clamp(vin.confianca - 26);
@@ -141,7 +142,7 @@ function reagir(v: Vida, rr: Rng, par: { p: Pessoa; vin: Vinculo }, rastro: Rast
       vin.conflito = { t: v.t, assunto: 'o que você fazia no aplicativo de encontros', gravidade: 3, quem: 'eu' };
       texto = `${nome} ${achou}. Perguntou há quanto tempo, e com quantas pessoas. A relação entrou em crise.`;
       lembrarCom(v, p.id, 'Descobriu o aplicativo — e a confiança quebrou.', 'traicao', 2);
-      if (!vin.chamado) vin.chamado = { tipo: 'conversa_casal', t: v.t, texto: `${nome} disse que precisa de uma conversa de verdade — sobre o aplicativo e sobre vocês.`, assunto: 'app16' };
+      if (!vin.chamado && receber17(v, 'alta') !== undefined) vin.chamado = { tipo: 'conversa_casal', t: v.t, texto: `${nome} disse que precisa de uma conversa de verdade — sobre o aplicativo e sobre vocês.`, assunto: 'app16' };
       break;
     case 'afastamento':
       vin.tensao = clamp(vin.tensao + 28); vin.confianca = clamp(vin.confianca - 30);
@@ -163,7 +164,9 @@ function reagir(v: Vida, rr: Rng, par: { p: Pessoa; vin: Vinculo }, rastro: Rast
   if (fama >= 30 && pior >= 2 && rr.chance(0.3 + Math.min(0.3, (fama - 30) / 200))) {
     v.fatos['app16_publico'] = v.t;
     const c = v.celular15!;
-    c.msgs.push({ id: `app16_${v.t}_${c.msgs.length}`, t: v.t, tipo: 'imprensa', remetente: rr.pick(['Coluna Bastidores', 'Portal Holofote', 'Revista Ribalta']), texto: `"Recebemos prints de um aplicativo de encontros com o seu perfil. ${nome} sabe? Vamos publicar. Quer comentar?"`, assunto: p.id, onda: 9 });
+    // VIDA 17: a imprensa também é mensagem recebida (cota de 4 por ano).
+    const mes = receber17(v, 'normal');
+    if (mes !== undefined) c.msgs.push({ mes17: mes, id: `app16_${v.t}_${c.msgs.length}`, t: v.t, tipo: 'imprensa', remetente: rr.pick(['Coluna Bastidores', 'Portal Holofote', 'Revista Ribalta']), texto: `"Recebemos prints de um aplicativo de encontros com o seu perfil. ${nome} sabe? Vamos publicar. Quer comentar?"`, assunto: p.id, onda: 9 });
     texto += ' E a história chegou à imprensa.';
   }
   void ele;

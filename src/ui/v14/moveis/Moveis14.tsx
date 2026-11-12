@@ -12,6 +12,7 @@ import { dinheiroCurto } from '../../leituraMaterial';
 import { coisa } from '../../../motor/dados/coisas';
 import { CONJUNTOS, ESTILOS, NOME_DA_CENA, NOME_DA_MOBILIA } from '../../../motor/dados14/moveis/catalogo';
 import { encaixe14, leituraMoveis14, mobiliaDaOferta14, precoDoConjunto14 } from '../../../motor/v14/moveis/moveis14';
+import { vagaPara17 } from '../../../motor/v14/moveis/funcoes17';
 import './moveis14.css';
 
 const m2 = (x: number) => `${String(Math.round(x * 10) / 10).replace('.', ',')} m²`;
@@ -45,6 +46,43 @@ export function EncaixeNaLoja14({ vida, coisaId }: { vida: Vida; coisaId: string
       </span>
       {!e.semControle && <button type="button" className="link" aria-expanded={ver} onClick={() => setVer(x => !x)}>{ver ? 'Fechar a prévia' : 'Ver no cômodo'}</button>}
       {ver && c && <Planta capacidade={c.capacidade} pecas={c.pecas} nova={e.ocupa} nomeNova={coisa(coisaId)?.nome} />}
+    </span>
+  );
+}
+
+/**
+ * VIDA 17 · a função do móvel na loja: o que já é seu nessa função (e onde), para onde a peça nova vai (a 2ª cama, o 2º
+ * quarto), ou — sem vaga — o porquê e a troca (a antiga vai para o depósito). `acao` é a compra do cartão (marca, loja).
+ */
+export function FuncaoNaLoja17({ vida, agir, coisaId, acao }: { vida: Vida; agir: (a: Acao) => boolean; coisaId: string; acao: Extract<Acao, { tipo: 'comprar_coisa' }> }) {
+  const vg = vagaPara17(vida, coisaId);
+  if (!vg) return null;
+  const nomeDa = (id: string) => coisa(id)?.nome ?? id;
+  return (
+    <span className="m17-funcao" data-funcao={vg.funcao.id}>
+      {vg.ocupantes.length > 0 && (
+        <span className="m17-funcao__seus">
+          <span className="m17-funcao__rotulo">Já é seu</span>
+          {vg.ocupantes.slice(0, 4).map(o => (
+            <span key={o.t.id} className={`m17-funcao__peca${o.t.coisaId === coisaId ? ' m17-funcao__peca--este' : ''}`}>{nomeDa(o.t.coisaId)}{o.comodo ? ` · ${o.comodo.nome}` : ''}{o.t.doImovel ? ' (do proprietário)' : ''}</span>
+          ))}
+        </span>
+      )}
+      {vg.livre ? (
+        <>
+          <span className="nota m14-ok">{vg.ocupantes.length ? `Mais ${vg.funcao.artigo === 'a' ? 'uma' : 'um'}: iria para ${vg.livre.nome.startsWith('a') ? 'a' : 'o'} ${vg.livre.nome}.` : `Iria para ${vg.livre.nome.startsWith('a') ? 'a' : 'o'} ${vg.livre.nome}.`}</span>
+          <BotaoAcao vida={vida} acao={acao} agir={agir} variante="secundario">Comprar</BotaoAcao>
+        </>
+      ) : (
+        <>
+          <span className="nota m14-falta">{vg.motivo}</span>
+          <span className="m17-funcao__trocas">
+            {vg.ocupantes.filter(o => !o.t.lembranca).slice(0, 3).map(o => (
+              <BotaoAcao key={o.t.id} vida={vida} acao={{ ...acao, substituir: o.t.id }} agir={agir} variante="secundario">{`Trocar ${o.t.coisaId === coisaId ? 'o seu' : `${coisa(o.t.coisaId)?.artigo ?? 'o'} ${nomeDa(o.t.coisaId)}`}${vg.ocupantes.length > 1 && o.comodo ? ` (${o.comodo.nome})` : ''}`}</BotaoAcao>
+            ))}
+          </span>
+        </>
+      )}
     </span>
   );
 }

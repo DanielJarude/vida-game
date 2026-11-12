@@ -140,6 +140,7 @@ import { disponibilidadeConquistas14, executarConquistas14, linhaDoExtrato14, ty
 import { depoisDaAcao15, disponibilidadeCelular15, executarCelular15, type OqueCelular15 } from './v15/celular/celular15';
 import { disponibilidadeOficio16, executarOficio16, type OqueOficio16 } from './v16/oficios/oficios16';
 import { disponibilidadeReligiao16, executarReligiao16, type OqueReligiao16 } from './v16/religiao/religiao16';
+import { funcaoDe17, podeTrocar17, posicionar17, vagaPara17 } from './v14/moveis/funcoes17';
 
 /** Id de uma interação do catálogo (`sistemas/interacoes`). O que existe depende da pessoa e do momento. */
 export type InteracaoPessoa = string;
@@ -349,7 +350,8 @@ export type Acao =
   /** Usar ou guardar um item que é seu. */
   | { tipo: 'usar_item'; itemId: string; usar: boolean; /** 12.7: a peça escolhida (o id dela no inventário); sem ele, a do produto. */ id?: string }
   /** As coisas da vida: comprar numa loja da cidade; vender a usada (`sistemas/coisas`). */
-  | { tipo: 'comprar_coisa'; coisaId: string; marca?: string; loja?: string }
+  /** VIDA 17: `substituir` — a peça (CoisaTida.id) da mesma função que sai para a nova entrar (vai para o depósito). */
+  | { tipo: 'comprar_coisa'; coisaId: string; marca?: string; loja?: string; substituir?: string }
   /** REWORK 12.4: a casa, os objetos, os veículos, a roupa e o tempo livre do jeito da pessoa (`sistemas/personalizacao`). */
   | { tipo: 'personalizar'; op: OpPersonalizar }
   | { tipo: 'vender_coisa'; coisaTidaId: string }
@@ -853,7 +855,13 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'compor_tatuagens': return disponibilidadeCompor(v, a.modelo, a.lado);
     case 'em_casa': return disponibilidadeFazerEmCasa(v, a.oque);
     case 'usar_item': return disponibilidadeUsarItem(v, a.itemId, a.usar, a.id);
-    case 'comprar_coisa': return disponibilidadeComprarCoisa(v, a.coisaId, a.marca, a.loja);
+    case 'comprar_coisa': {
+      // VIDA 17: os móveis com função (a cama por quarto, o sofá da sala, a geladeira da cozinha) têm vagas.
+      const vg = vagaPara17(v, a.coisaId);
+      if (a.substituir) return podeTrocar17(v, a.coisaId, a.substituir) ? disponibilidadeComprarCoisa(v, a.coisaId, a.marca, a.loja, true) : bloqueio('impossivel', 'Essa peça não ocupa o mesmo lugar.');
+      if (vg && !vg.livre) { const base = disponibilidadeComprarCoisa(v, a.coisaId, a.marca, a.loja, true); return podeTentar(base) ? bloqueio('incompativel', vg.motivo ?? 'Não há vaga para mais uma.') : base; }
+      return disponibilidadeComprarCoisa(v, a.coisaId, a.marca, a.loja, !!vg?.livre);
+    }
     case 'personalizar': return disponibilidadePersonalizar(v, a.op);
     case 'vender_coisa': return disponibilidadeVenderCoisa(v, a.coisaTidaId);
     case 'usar_coisa': return disponibilidadeUsarCoisa(v, a.coisaTidaId, a.uso, a.pessoaId);
@@ -1720,7 +1728,9 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       const texto = comprarCoisa(v, a.coisaId, a.marca, a.loja);
       // VIDA 14: a peça vai para onde cabe — ou para o depósito (nunca some, nunca é proibida).
       const nova = [...(v.financas.coisas ?? [])].reverse().find(t => t.coisaId === a.coisaId && t.t === v.t);
-      const onde = nova && a.coisaId !== 'discos' ? acomodarCompra14(v, nova) : undefined;
+      // VIDA 17: a peça com função vai para a vaga dela (a 2ª cama, o 2º quarto) — ou entra no lugar da que foi trocada.
+      const lugar17 = nova && funcaoDe17(a.coisaId) ? posicionar17(v, nova, a.substituir) : undefined;
+      const onde = lugar17 ?? (nova && a.coisaId !== 'discos' && !(funcaoDe17(a.coisaId) && vagaPara17(v, a.coisaId)) ? acomodarCompra14(v, nova) : undefined);
       return ok(onde ? `${texto} ${onde}` : texto, 'bom');
     }
     case 'personalizar': return ok(a.op.o === 'look_vestir' ? vestirLook(v, a.op.id) : personalizar(v, a.op), 'bom');

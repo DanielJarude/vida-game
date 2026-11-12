@@ -36,7 +36,9 @@ export type TipoMsg15 =
   /** VIDA 16: uma mensagem que VOCÊ escreveu (o texto é seu; a resposta é da pessoa). */
   | 'escrita'
   /** VIDA 16: um chamado da pessoa que já saiu da tela (respondido, ou sem resposta) — fica no histórico. */
-  | 'chamado';
+  | 'chamado'
+  /** VIDA 17 (`motor/v17/celular/mensagens17`): situações com motivo real, no jeito de cada pessoa. */
+  | 'desabafo' | 'brincadeira' | 'paquera' | 'favor' | 'cobranca' | 'conflito' | 'comemoracao' | 'fama17' | 'trabalho17' | 'familia17' | 'retomada';
 
 export type Lugar15 = 'restaurante' | 'festa' | 'aeroporto' | 'praia' | 'evento' | 'shopping' | 'cinema' | 'show' | 'bar' | 'parque' | 'academia' | 'mercado' | 'rua';
 
@@ -65,8 +67,12 @@ export interface Msg15 {
   custo?: number;
   /** A pessoa famosa do convite (nasce na vida se você for). */
   molde?: Molde15;
-  /** A resposta dada (uma só). */
-  resposta?: { op: string; t: number; texto: string };
+  /** A resposta dada (uma só). VIDA 17: `fala` é o que você escreveu (o balão seu). */
+  resposta?: { op: string; t: number; texto: string; fala?: string };
+  /** VIDA 17: a situação do catálogo (`dados17/celular/catalogo17`). */
+  sit17?: string;
+  /** VIDA 17: o mês do ano (0–11) em que a mensagem chegou — a cota espalha as quatro do ano. */
+  mes17?: number;
   lida?: boolean;
   /** 0: chegou na virada do ano; 1+: chegou durante o ano (depois do que você fez). */
   onda?: number;
@@ -102,4 +108,6 @@ export interface Celular15 {
   rastro16?: import('../../dados16/romance/tipos').RastroDoApp16;
   /** VIDA 16: as conversas antigas (as mensagens que saíram do ano continuam no histórico; no máximo 400). */
   arquivo16?: Msg15[];
+  /** VIDA 17: os fios de conversa que podem voltar (a promessa, o apoio, o favor, a mágoa, a paquera; no máximo 40). */
+  fios17?: import('../../v17/celular/mensagens17').Fio17[];
 }

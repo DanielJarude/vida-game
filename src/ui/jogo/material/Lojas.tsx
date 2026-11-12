@@ -13,7 +13,8 @@ import { itemEstilo, lugaresDoItem, nivelDoItem, TIPOS_DE_PECA, tipoDePeca } fro
 import { segmentoDoNivel } from '../../../motor/dados/lar';
 import { categoriaDaCasa, nomeDaCategoriaDaCasa } from '../../../motor/dados/categoriasDaCasa';
 import { TIPOS_DE_MOVEL, nomeDoTipoDeMovel, tipoDeMovel } from '../../../motor/dados14/moveis/catalogo';
-import { Conjuntos14, EncaixeNaLoja14 } from '../../v14/moveis/Moveis14';
+import { Conjuntos14, EncaixeNaLoja14, FuncaoNaLoja17 } from '../../v14/moveis/Moveis14';
+import { funcaoDe17 } from '../../../motor/v14/moveis/funcoes17';
 import { leituraDaMarca, segmentoDaMarca } from '../../../motor/sistemas/perfilDaMarca';
 import { NOME_SEGMENTO_DE_MARCA, NOME_QUALIDADE, type SegmentoDeMarca } from '../../../motor/dados/perfisDeMarca';
 import { MiniaturaDaPeca, visualComPecaDoRosto } from '../../avatar/MiniaturaDaPeca';
@@ -177,6 +178,8 @@ function ProdutoNaLoja({ vida, agir, linha, lojaId, faixa, marca, preco, crianca
   const corDoCartao = it ? corPrincipalDa(p.id, variante) : undefined;
   const acao: Acao = p.tipo === 'item' ? { tipo: 'comprar_item', itemId: p.id, loja: lojaId, ...(o.marca ? { marca: o.marca } : {}), variante } : { tipo: 'comprar_coisa', coisaId: p.id, loja: lojaId, ...(o.marca ? { marca: o.marca } : {}) };
   const lm = o.marca ? leituraDaMarca(o.marca) : undefined;
+  // VIDA 17: o móvel com função (cama, sofá, geladeira…) mostra a vaga e a troca no lugar do "comprar" simples.
+  const comFuncao = !!c?.daCasa && !!funcaoDe17(c.id) && !crianca && !furo;
   // 12.8: o segmento do que se leva — o do produto com a marca por cima (o mesmo cálculo do motor, `lar.nivelDaCoisa`).
   const nivel = it ? nivelDoItem(it) : c ? Math.round(nivelDaCoisa({ coisaId: c.id, marca: o.marca } as CoisaTida)) : 2;
   const segmento = segmentoDoNivel(nivel);
@@ -214,10 +217,12 @@ function ProdutoNaLoja({ vida, agir, linha, lojaId, faixa, marca, preco, crianca
         </span>
       )}
       {c?.daCasa && !tem && <EncaixeNaLoja14 vida={vida} coisaId={c.id} />}
+      {/* VIDA 17: a função do móvel (a vaga, o que já é seu, a troca). */}
+      {comFuncao && acao.tipo === 'comprar_coisa' && <FuncaoNaLoja17 vida={vida} agir={agir} coisaId={c!.id} acao={acao} />}
       <span className="catalogo-loja__preco">{dinheiroCurto(o.preco)}</span>
       <span className="catalogo-loja__acoes">
         {it && !crianca && <button type="button" className="botao botao--discreto" aria-pressed={provando === variante} onClick={() => provar(variante)}>{provando === variante ? 'No provador' : 'Experimentar'}</button>}
-        {tem ? (
+        {comFuncao ? null : tem ? (
           <span className="loja-estilo__seu">
             <span className="nota">É seu{marcaDoMeu ? ` (${marcaPorId(marcaDoMeu)?.nome ?? marcaDoMeu})` : ''}{meu ? (meu.usando ? ' · em uso' : ' · guardado') : ''}.</span>
             {meu && <BotaoAcao vida={vida} acao={{ tipo: 'usar_item', itemId: p.id, id: meu.id, usar: !meu.usando }} agir={agir} variante="discreto">{meu.usando ? 'Guardar' : 'Usar'}</BotaoAcao>}

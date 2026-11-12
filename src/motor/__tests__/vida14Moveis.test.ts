@@ -29,7 +29,12 @@ describe('VIDA 14 · loja de móveis', () => {
   it('comprar além do espaço não proíbe: a peça vai para o depósito; dá para trocar e retirar', () => {
     let v = morador();
     const sofas = ['sofa', 'sofa_retratil', 'sofa_couro', 'sofa_designer', 'sofa_cama'];
-    for (const id of sofas) if (podeTentar(disponibilidade(v, { tipo: 'comprar_coisa', coisaId: id }))) v = executar(v, { tipo: 'comprar_coisa', coisaId: id }).vida;
+    // VIDA 17: o sofá da sala é uma vaga só — o 2º modelo entra por TROCA (o antigo vai para o depósito), não por cima.
+    for (const id of sofas) {
+      if (podeTentar(disponibilidade(v, { tipo: 'comprar_coisa', coisaId: id }))) { v = executar(v, { tipo: 'comprar_coisa', coisaId: id }).vida; continue; }
+      const naVaga = (v.financas.coisas ?? []).find(t => sofas.includes(t.coisaId) && !t.local && t.coisaId !== 'sofa_cama');
+      if (naVaga && podeTentar(disponibilidade(v, { tipo: 'comprar_coisa', coisaId: id, substituir: naVaga.id }))) v = executar(v, { tipo: 'comprar_coisa', coisaId: id, substituir: naVaga.id }).vida;
+    }
     const meus = (v.financas.coisas ?? []).filter(t => sofas.includes(t.coisaId));
     expect(meus.length).toBeGreaterThanOrEqual(3);
     expect(meus.some(t => t.local === DEPOSITO)).toBe(true);

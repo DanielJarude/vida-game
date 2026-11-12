@@ -45,6 +45,7 @@ import { pagar, vereditoDePagar } from './dinheiro';
 import { economiaLocal } from '../dados/lugares';
 import { encerrarEmprego } from './trabalho';
 import { mesmaCidade } from './vinculos';
+import { receber17 } from './cotaDeMensagens';
 
 /* ============================================================ O tempo do ano com as pessoas (BAL-03) */
 
@@ -800,7 +801,7 @@ export function processarConvivio(v: Vida): void {
         v.fatos[`mentira_descoberta_${id}`] = v.t;
         vin.confianca = clamp(vin.confianca - 20); vin.tensao = clamp(vin.tensao + 18);
         vin.conflito = { t: v.t, assunto: 'uma mentira', gravidade: 2, quem: 'eu' };
-        vin.chamado = { tipo: 'cobranca', t: v.t, texto: `${p.nome} descobriu a mentira — e quer uma explicação.`, assunto: 'a mentira' };
+        if (receber17(v, 'alta') !== undefined) vin.chamado = { tipo: 'cobranca', t: v.t, texto: `${p.nome} descobriu a mentira — e quer uma explicação.`, assunto: 'a mentira' };
         lembrarCom(v, id, `${p.nome} descobriu a mentira.`, 'traicao', 3);
         escrever(v, { texto: `${p.nome} descobriu uma mentira sua.`, relevancia: 'biografia', tema: vin.romance ? 'amor' : vin.parentesco ? 'familia' : 'amizade', tom: 'ruim', pessoas: [id], segue: undefined });
       } else if (v.t - m >= 96) delete v.fatos[`mentira_${id}`];
@@ -836,7 +837,7 @@ export function processarConvivio(v: Vida): void {
     if (c && v.t - c.t >= 24 && estadoDaRelacao(v, vin) !== 'rompido') {
       const t = p.temperamento;
       if (!vin.chamado && t.afabilidade > 0.25 && r.chance(0.35)) {
-        vin.chamado = { tipo: 'desculpas', t: v.t, texto: `${p.nome} procurou você: disse que sente falta, e que a briga por causa ${comPreposicao('de', c.assunto)} não vale o que custou.`, assunto: c.assunto };
+        if (receber17(v, 'normal') !== undefined) vin.chamado = { tipo: 'desculpas', t: v.t, texto: `${p.nome} procurou você: disse que sente falta, e que a briga por causa ${comPreposicao('de', c.assunto)} não vale o que custou.`, assunto: c.assunto };
       } else if (!vin.parentesco && !vin.romance && vin.proximidade < 35 && vin.tensao >= 55 && r.chance(0.4)) {
         vin.estagio = 'afastado'; vin.distancia = v.t; vin.conflito = undefined;
         lembrarCom(v, id, `${p.nome} se afastou depois da briga.`, 'distancia', 2);

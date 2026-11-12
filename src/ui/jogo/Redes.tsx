@@ -107,7 +107,7 @@ function Glifo({ id, tamanho = 22 }: { id: PlataformaId; tamanho?: number }) {
  * Instagram, para criar. A fileira de apps embaixo é a navegação (um `tablist`, pelo teclado também) e está sempre ali.
  * Tudo é local: nenhuma internet, nenhum serviço de fora.
  */
-export function RedesSociais({ vida, agir, abrirPessoa }: { vida: Vida; agir: (a: Acao) => boolean; abrirPessoa?: (id: string) => void }) {
+export function RedesSociais({ vida, agir, abrirPessoa, embutido }: { vida: Vida; agir: (a: Acao) => boolean; abrirPessoa?: (id: string) => void; embutido?: boolean }) {
   const i = idade(vida);
   const contas = ORDEM_PLATAFORMAS.filter(p => contaAtiva(vida, p));
   const primeira = [...contas].sort((a, b) => (contaAtiva(vida, b)!.seguidores - contaAtiva(vida, a)!.seguidores))[0] ?? 'instagram';
@@ -123,18 +123,15 @@ export function RedesSociais({ vida, agir, abrirPessoa }: { vida: Vida; agir: (a
     (e.currentTarget.parentElement?.parentElement?.querySelector(`[data-app="${prox}"]`) as HTMLElement | null)?.focus();
   };
   return (
-    <div className="redes redes--com-lado">
-      <div className={`celular celular--${tela}`} role="region" aria-label="Seu celular">
+    // VIDA 17: sem um segundo aparelho desenhado (moldura, câmera, barra de status) — as redes são um app do celular do
+    // VIDA: a fileira das plataformas vem em cima, como abas, e o conteúdo usa a largura toda.
+    <div className={`redes${embutido ? ' redes--embutido' : ' redes--com-lado'}`}>
+      <div className={`celular celular--${tela} celular--plano`} role="region" aria-label="Redes sociais">
         <div className="celular__tela">
-          <div className="celular__status" aria-hidden>
-            <span>{anoDe(vida.t)}</span>
-            <span className="celular__camera" />
-            <span>{contas.length ? `${contas.length} ${contas.length === 1 ? 'conta' : 'contas'}` : 'sem contas'}</span>
-          </div>
           <div className="celular__topo">
             {tela !== 'inicio'
               ? <button type="button" className="celular__voltar" onClick={() => setTela('inicio')} aria-label="Voltar para a tela inicial do celular">‹ Início{avisos.length ? <span className="celular__contador" aria-label={`${avisos.length} notificações`}>{avisos.length}</span> : null}</button>
-              : <span className="celular__titulo">Tela inicial</span>}
+              : <span className="celular__titulo">{contas.length ? `${contas.length} ${contas.length === 1 ? 'conta' : 'contas'}` : 'Sem contas ainda'}</span>}
             {tela !== 'inicio' && <span className="celular__app-nome" style={{ ['--cor-plataforma' as string]: PLATAFORMAS[tela].cor }}><Glifo id={tela} tamanho={18} /> {PLATAFORMAS[tela].nome}</span>}
           </div>
           <div className="celular__conteudo">

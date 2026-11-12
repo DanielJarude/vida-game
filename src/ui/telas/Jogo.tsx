@@ -26,6 +26,7 @@ import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { naoLidas15, temCelular15 } from '../../motor/v15/celular/celular15';
 import type { App15 } from '../v15/celular/Celular';
 import '../v15/jogo15.css';
+import '../v17/jogo17.css';
 import type { ControleVida } from '../useVida';
 import type { Vida } from '../../motor/tipos';
 import { idade, idadePessoa } from '../../motor/nucleo';
@@ -170,7 +171,7 @@ export function Jogo({ c }: { c: ControleVida }) {
             </button>
           ))}
         </nav>
-        {temCelular15(vida) && (() => { const n = naoLidas15(vida); return (
+        {temCelular15(vida) && (() => { const n = vida.justica?.prisao ? 0 : naoLidas15(vida); return (
           <button type="button" className="cabecalho__celular" onClick={() => setCelular('inicio')} aria-label={`Celular${n ? `: ${n} ${n === 1 ? 'novidade' : 'novidades'}` : ''}`}>
             <Icone d={ICONE_CELULAR} />{n ? <span className="cabecalho__celular-badge">{n > 9 ? '9+' : n}</span> : null}
           </button>

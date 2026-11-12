@@ -24,6 +24,7 @@ import { coisasDaVida, precoDaCoisa, receberCoisa } from '../../sistemas/coisas'
 import { pagar, vereditoDePagar } from '../../sistemas/dinheiro';
 import { lancar } from '../../sistemas/extrato';
 import type { OfertaImovel } from '../../sistemas/mercado';
+import { funcaoDe17, organizarFuncoes17, posicionar17, vagaPara17 } from './funcoes17';
 import {
   ACRESCIMO_DO_ALUGUEL, CONJUNTOS, COZINHA_DA_MOBILIA, ESTADO_DA_MOBILIA, ESTILOS, FATOR_DA_MOBILIA_NA_VENDA, NOME_DA_MOBILIA, QUARTO_DO_SEMIMOBILIADO,
   conjunto14, conjuntoDe, tipoDeMovel, type EstiloDeMovel, type NivelDeMobilia, type TipoDeMovel
@@ -155,6 +156,7 @@ export function instalarMobilia14(v: Vida, o: OfertaImovel, modo: 'aluguel' | 'c
     v.moradia.mobilia14 = { contrato, nivel: mob.nivel, estilo: mob.estilo, ...(devolvidos.length ? { devolvidos } : {}) };
   }
   // O que é seu e não cabe mais vai para o depósito (nunca some).
+  organizarFuncoes17(v);
   const guardadas = reacomodar14(v);
   return `${NOME_DA_MOBILIA[mob.nivel]} (estilo ${ESTILOS.find(e => e.id === mob.estilo)!.nome.toLowerCase()}): ${entrou} peças ${modo === 'aluguel' ? 'do proprietário' : 'agora suas'}${devolvidos.length ? `; ${devolvidos.length} que repetiam as suas o proprietário guardou` : ''}${guardadas ? `; ${guardadas} peça${guardadas > 1 ? 's' : ''} sua${guardadas > 1 ? 's' : ''} sem lugar foi para o depósito` : ''}.`;
 }
@@ -227,6 +229,17 @@ export function executarMoveis14(v: Vida, a: OqueMoveis14): string {
       for (const p of c.pecas) {
         const t = receberCoisa(v, p.coisaId, Math.round(preco / c.pecas.length));
         if (p.acabamento?.[0]) t.acabamento = p.acabamento[0];
+        // VIDA 17: a peça com função (o sofá, a cama, a mesa de jantar) entra no lugar da que ocupava a vaga.
+        if (funcaoDe17(p.coisaId)) {
+          t.local = DEPOSITO;
+          const vg = vagaPara17(v, p.coisaId);
+          t.local = undefined;
+          const sai = vg && !vg.livre ? vg.ocupantes.find(o => o.t.id !== t.id && !o.t.lembranca)?.t.id : undefined;
+          const y = posicionar17(v, t, sai);
+          if (t.local === DEPOSITO) notas.push(`${coisa(p.coisaId)?.nome}: depósito`);
+          else if (sai && y) notas.push(y);
+          continue;
+        }
         const x = acomodarCompra14(v, t);
         if (x) notas.push(`${coisa(p.coisaId)?.nome}: ${t.local === DEPOSITO ? 'depósito' : 'outro cômodo'}`);
       }
@@ -245,6 +258,8 @@ export function executarMoveis14(v: Vida, a: OqueMoveis14): string {
 
 /** O ano: o depósito cobra. */
 export function processarMoveis14(v: Vida): void {
+  // VIDA 17: depois de uma mudança, o que repete uma função além das vagas da casa vai para outro cômodo ou o depósito.
+  organizarFuncoes17(v);
   const c = custoDoDeposito14(v);
   if (c > 0) { pagar(v, Math.min(c, Math.max(0, v.financas.conta))); lancar(v, 'Depósito de móveis', 'despesa', -c); }
   limparMobilia14(v);
@@ -263,4 +278,6 @@ export function normalizarVida14Moveis(v: Vida): void {
   const m = v.moradia.mobilia14;
   if (m && (typeof m.contrato !== 'string' || v.moradia.tipo !== 'aluguel')) delete v.moradia.mobilia14;
   if (!v.moradia.mobilia14 && (v.financas.coisas ?? []).some(t => t.doImovel)) v.financas.coisas = (v.financas.coisas ?? []).filter(t => !t.doImovel);
+  // VIDA 17: saves com móveis repetidos na mesma vaga (dois sofás na sala, duas camas no mesmo quarto).
+  organizarFuncoes17(v);
 }

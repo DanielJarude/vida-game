@@ -348,7 +348,8 @@ export function Tempo({ vida, agir, irPara, aba: abaDeFora, irAba, abrirPessoa }
           <>
             {/* VIDA 15: o celular é um aparelho próprio (mensagens, namoro, notícias, banco…); aqui ficam as redes sociais. */}
             <p className="nota">As mensagens, o namoro, as notícias e o banco estão no celular. <button type="button" className="botao botao--discreto" onClick={() => window.dispatchEvent(new CustomEvent('vida:celular', { detail: 'rede' }))}>Abrir o celular</button></p>
-            <RedesSociais vida={vida} agir={agir} abrirPessoa={abrirPessoa} />
+            {/* VIDA 17: preso, as redes ficam fora de alcance (o celular está retido na unidade). */}
+            {vida.justica?.prisao ? <p className="nota">Sem acesso às redes sociais enquanto cumpre pena: o celular fica retido na unidade.</p> : <RedesSociais vida={vida} agir={agir} abrirPessoa={abrirPessoa} />}
           </>
         )}
       </div>

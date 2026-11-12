@@ -78,7 +78,7 @@ export function fazCalor(municipioId: string): boolean {
 
 /* ------------------------------------------------------------- Comprar */
 
-export function disponibilidadeComprarCoisa(v: Vida, id: string, marca?: string, loja?: string): Veredito {
+export function disponibilidadeComprarCoisa(v: Vida, id: string, marca?: string, loja?: string, outra = false): Veredito {
   const c = coisa(id);
   if (!c) return bloqueio('impossivel', 'Isso não existe na loja.');
   const i = idade(v);
@@ -94,7 +94,8 @@ export function disponibilidadeComprarCoisa(v: Vida, id: string, marca?: string,
   if (id === 'prancha' && !pertoDaAgua(v.moradia.municipioId)) return bloqueio('impossivel', 'Longe do mar, a prancha vira enfeite de parede.');
   // REWORK 12.4: os discos se compram de lote em lote (a coleção cresce); o resto, um de cada.
   // VIDA 14: um de cada EM CASA — a peça do proprietário (aluguel mobiliado) e a sua guardada no depósito não contam.
-  if (coisasDaVida(v).some(t => t.coisaId === id && !t.doImovel && naCasaAtual(t)) && id !== 'discos') return bloqueio('incompativel', `Você já tem ${c.artigo} ${c.nome}.`);
+  // VIDA 17: `outra` — a peça com função que tem vaga noutro cômodo (a 2ª cama de solteiro no 2º quarto) ou entra numa troca.
+  if (!outra && coisasDaVida(v).some(t => t.coisaId === id && !t.doImovel && naCasaAtual(t)) && id !== 'discos') return bloqueio('incompativel', `Você já tem ${c.artigo} ${c.nome}.`);
   if ((marca || loja) && !ofertaValida(v, { tipo: 'coisa', id }, marca, loja)) return bloqueio('impossivel', 'Essa loja não vende isso.');
   return vereditoDePagar(v, loja ? precoNaLoja(v, { tipo: 'coisa', id }, marca, loja) : precoDaCoisa(v, id));
 }

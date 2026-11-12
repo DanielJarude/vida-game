@@ -28,6 +28,7 @@ import { rngDe } from '../rng';
 import { carreiraDeAdulto, empregarAdulto } from './filhos';
 import { registrarFase } from './relacoes';
 import { ehAmizade, romper } from './lacos';
+import { livreParaRomance } from './estadoConjugal';
 
 /** Quem tem carreira acompanhada de perto: a parceria (até a de namoro), o amigo próximo, quem é muito próximo. */
 export const importaParaCarreira = (vin: Vinculo) => (!!vin.romance && ['namoro', 'morando_junto', 'casamento'].includes(vin.romance.estagio)) || vin.estagio === 'amigo_proximo' || vin.proximidade >= 60;
@@ -397,7 +398,7 @@ export function envelhecerConhecidos(v: Vida, r: Rng): void {
     if (p.aperto?.tipo === 'desemprego' && p.renda > 0) { if (v.t - p.aperto!.t < 24) p.aperto!.resolvido ??= v.t; else p.aperto = undefined; }
     // A vida de um amigo próximo também acontece — e fica na história de vocês.
     if (vin.estagio === 'amigo_proximo' && !vin.romance) {
-      if (!p.parceiroId && i >= 22 && i <= 50 && r.chance(0.07)) {
+      if (!p.parceiroId && i >= 22 && i <= 50 && r.chance(0.07) && livreParaRomance(v, p)) {
         p.parceiroId = 'fora';
         lembrarCom(v, p.id, `Casou${r.chance(0.5) ? ', e você estava lá' : ''}.`, 'romance', 1);
       }
