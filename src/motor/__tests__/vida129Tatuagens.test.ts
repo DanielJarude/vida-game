@@ -19,6 +19,7 @@ import { DesenhoDaTatuagem, caixaNativa } from '../../ui/avatar/tatuagens';
 import { desenhosDoFiltro } from '../../ui/jogo/Tatuagens';
 import type { Acao } from '../acoes';
 import type { Vida } from '../tipos';
+import { DESENHOS_17 } from '../dados17/tatuagens/tatuagens17';
 
 const rica = (i = 30): Vida => transacao(adulto(i, { semente: 1291, municipioId: 'sao-paulo-sp' }), x => { x.financas.conta = 5_000_000; x.momento = null; }).vida;
 const fazer = (v: Vida, a: Acao) => { const d = disponibilidade(v, a); expect(podeTentar(d), d.motivo).toBe(true); return executar(v, a).vida; };
@@ -27,7 +28,9 @@ const DESENHOS_ANTES = 88;
 const NOVOS = new Set(DESENHOS_129.map(d => d.id));
 // VIDA 13: os desenhos da 13 (`dados/tatuagens13`) também não são "de antes da 12.9".
 const DA_13 = new Set(DESENHOS_13.map(d => d.id));
-const ANTIGOS = DESENHOS.filter(d => !NOVOS.has(d.id) && !DA_13.has(d.id));
+// VIDA 17: o lote da rua, da periferia e da cadeia também fica de fora da conta "de antes".
+const DA_17 = new Set(DESENHOS_17.map(d => d.id));
+const ANTIGOS = DESENHOS.filter(d => !NOVOS.has(d.id) && !DA_13.has(d.id) && !DA_17.has(d.id));
 const arte = (id: string) => { const d = desenhoDeTatuagem(id)!; const [W, H] = caixaNativa(d); return renderToStaticMarkup(createElement('svg', { viewBox: `0 0 ${W} ${H}` }, createElement(DesenhoDaTatuagem, { id, tinta: '#111', cor: (c: string) => c }))); };
 const FALLBACK = renderToStaticMarkup(createElement('svg', { viewBox: '0 0 20 20' }, createElement(DesenhoDaTatuagem, { id: 'nao_existe', tinta: '#111', cor: (c: string) => c })));
 

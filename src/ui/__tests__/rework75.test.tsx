@@ -249,18 +249,18 @@ describe('o celular', () => {
   it('abre no Instagram para criar; publicar de dentro do app; a tela inicial mostra o que o motor registrou', () => {
     let atual = vida(16);
     render(<Ligado v0={atual} aoMudar={v => { atual = v; }} tela={(v, agir) => <Tempo vida={v} agir={agir} aba="redes" />} />);
-    const celular = screen.getByRole('region', { name: 'Seu celular' });
+    const celular = screen.getByRole('region', { name: 'Redes sociais' } /* VIDA 17: sem o segundo aparelho desenhado */);
     expect(within(celular).getAllByRole('tab')).toHaveLength(7);
     expect(within(celular).getByRole('tab', { name: /OnlyFans/ }).textContent).toMatch(/a partir dos 18/);
     fireEvent.click(within(celular).getByRole('button', { name: 'Criar uma conta no Instagram' }));
-    fireEvent.click(within(screen.getByRole('region', { name: 'Seu celular' })).getAllByRole('button').find(b => b.closest('.plataforma-painel__temas') && !(b as HTMLButtonElement).disabled)!);
+    fireEvent.click(within(screen.getByRole('region', { name: 'Redes sociais' } /* VIDA 17: sem o segundo aparelho desenhado */)).getAllByRole('button').find(b => b.closest('.plataforma-painel__temas') && !(b as HTMLButtonElement).disabled)!);
     // REWORK 11 · SOC-11: publicar é em passos (o tipo → configurar → confirmar); a ação no fim é a mesma.
-    fireEvent.click(within(screen.getByRole('region', { name: 'Seu celular' })).getByRole('button', { name: 'Continuar' }));
-    fireEvent.click(within(screen.getByRole('region', { name: 'Seu celular' })).getByRole('button', { name: 'Publicar' }));
+    fireEvent.click(within(screen.getByRole('region', { name: 'Redes sociais' } /* VIDA 17: sem o segundo aparelho desenhado */)).getByRole('button', { name: 'Continuar' }));
+    fireEvent.click(within(screen.getByRole('region', { name: 'Redes sociais' } /* VIDA 17: sem o segundo aparelho desenhado */)).getByRole('button', { name: 'Publicar' }));
     const post = atual.redes!.contas.instagram.publicacoes[0];
     expect(post).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: /Voltar para a tela inicial/ }));
-    const inicio = screen.getByRole('region', { name: 'Seu celular' });
+    const inicio = screen.getByRole('region', { name: 'Redes sociais' } /* VIDA 17: sem o segundo aparelho desenhado */);
     expect(inicio.textContent).toContain(post.texto);
     expect(inicio.textContent).toMatch(/viram/);
   });
@@ -270,11 +270,11 @@ describe('o celular', () => {
     v = fazer(v, { tipo: 'rede', op: { oque: 'criar', plataforma: 'youtube' } });
     v = fazer(v, { tipo: 'rede', op: { oque: 'criar', plataforma: 'x' } });
     render(<main><Tempo vida={v} agir={() => true} aba="redes" /></main>);
-    const celular = screen.getByRole('region', { name: 'Seu celular' });
+    const celular = screen.getByRole('region', { name: 'Redes sociais' } /* VIDA 17: sem o segundo aparelho desenhado */);
     fireEvent.click(within(celular).getByRole('tab', { name: /YouTube/ }));
-    expect(screen.getByRole('region', { name: 'Seu celular' }).textContent).toMatch(/vídeos? no canal/);
-    fireEvent.click(within(screen.getByRole('region', { name: 'Seu celular' })).getByRole('tab', { name: /X \(Twitter\)/ }));
-    expect(screen.getByRole('region', { name: 'Seu celular' }).textContent).toMatch(/\d+ posts?/);
+    expect(screen.getByRole('region', { name: 'Redes sociais' } /* VIDA 17: sem o segundo aparelho desenhado */).textContent).toMatch(/vídeos? no canal/);
+    fireEvent.click(within(screen.getByRole('region', { name: 'Redes sociais' } /* VIDA 17: sem o segundo aparelho desenhado */)).getByRole('tab', { name: /X \(Twitter\)/ }));
+    expect(screen.getByRole('region', { name: 'Redes sociais' } /* VIDA 17: sem o segundo aparelho desenhado */).textContent).toMatch(/\d+ posts?/);
   });
 });
 
@@ -379,7 +379,7 @@ describe('integração: os fluxos até salvar, reabrir e continuar', () => {
     v = reabrir(v);
     render(<main><Tempo vida={v} agir={() => true} aba="redes" /></main>);
     fireEvent.click(screen.getByRole('button', { name: /Voltar para a tela inicial/ }));
-    expect(screen.getByRole('region', { name: 'Seu celular' }).textContent).toContain(post.texto);
+    expect(screen.getByRole('region', { name: 'Redes sociais' } /* VIDA 17: sem o segundo aparelho desenhado */).textContent).toContain(post.texto);
     void nada;
   });
 });

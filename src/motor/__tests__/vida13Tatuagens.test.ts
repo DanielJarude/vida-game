@@ -24,6 +24,7 @@ import { DesenhoDaTatuagem, caixaNativa } from '../../ui/avatar/tatuagens';
 import { desenhosDoFiltro, OBRAS_POR_MIDIA } from '../../ui/jogo/Tatuagens';
 import type { Acao } from '../acoes';
 import type { Vida } from '../tipos';
+import { DESENHOS_17 } from '../dados17/tatuagens/tatuagens17';
 
 const rica = (i = 30): Vida => transacao(adulto(i, { semente: 1300, municipioId: 'sao-paulo-sp' }), x => { x.financas.conta = 5_000_000; x.momento = null; }).vida;
 const fazer = (v: Vida, a: Acao) => { const d = disponibilidade(v, a); expect(podeTentar(d), d.motivo).toBe(true); return executar(v, a).vida; };
@@ -39,8 +40,9 @@ const FALLBACK = (W: number, H: number) => renderToStaticMarkup(createElement('s
 describe('VIDA 13 · catálogo de tatuagens', () => {
   it('mais de 150 desenhos novos; ids e nomes únicos no catálogo inteiro; o de antes continua todo lá', () => {
     expect(DESENHOS_13.length).toBeGreaterThanOrEqual(150);
-    expect(DESENHOS.length).toBe(CATALOGO_ANTES + DESENHOS_13.length);
-    expect(DESENHOS.filter(d => !NOVOS.has(d.id))).toHaveLength(CATALOGO_ANTES);
+    // VIDA 17: o lote novo (rua, periferia, cadeia, rosto) soma por cima, sem tirar nada.
+    expect(DESENHOS.length).toBe(CATALOGO_ANTES + DESENHOS_13.length + DESENHOS_17.length);
+    expect(DESENHOS.filter(d => !NOVOS.has(d.id) && !DESENHOS_17.some(x => x.id === d.id))).toHaveLength(CATALOGO_ANTES);
     const ids = DESENHOS.map(d => d.id);
     expect(new Set(ids).size).toBe(ids.length);
     const nomes = DESENHOS.map(d => d.nome.toLowerCase());

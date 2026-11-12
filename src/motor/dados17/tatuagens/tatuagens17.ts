@@ -17,7 +17,7 @@
 import type { DesenhoDeTatuagem, RegiaoDeTatuagem, TamanhoDeTatuagem } from '../../dados/tatuagens';
 
 const T = (...xs: TamanhoDeTatuagem[]) => xs;
-const LETRA: RegiaoDeTatuagem[] = ['antebraco', 'antebraco_externo', 'biceps', 'peitoral', 'costelas', 'abdomen', 'costas_alta', 'costas_baixa', 'pescoco', 'nuca', 'coxa', 'canela', 'panturrilha', 'testa'];
+const LETRA: RegiaoDeTatuagem[] = ['antebraco', 'antebraco_externo', 'biceps', 'triceps', 'peitoral', 'costelas', 'abdomen', 'costas_alta', 'costas_baixa', 'pescoco', 'nuca', 'coxa', 'canela', 'panturrilha', 'testa'];
 const MAO: RegiaoDeTatuagem[] = ['mao', 'dedos', 'pulso', 'pescoco', 'sob_olho', 'bochecha', 'tempora', 'sobrancelha_t', 'nariz', 'queixo', 'tornozelo'];
 const ROSTO: RegiaoDeTatuagem[] = ['sob_olho', 'bochecha', 'tempora', 'sobrancelha_t', 'nariz', 'queixo', 'testa', 'mao', 'dedos', 'pulso', 'pescoco'];
 
@@ -52,7 +52,7 @@ export const DESENHOS_17: readonly DesenhoDeTatuagem[] = [
   /* ------------------------------------------------ tradição de cadeia */
   d({ id: 'lagrima', nome: 'Lágrima (contorno)', estilo: 'cadeia', tamanhos: T(1), proporcao: 0.66, regioes: ['sob_olho', 'bochecha', 'mao', 'dedos', 'pescoco', 'tempora'], descricao: 'A gota embaixo do olho. Em cadeias dos EUA e da América Latina, costuma lembrar uma perda ou um tempo preso; o sentido muda de lugar para lugar — e muita gente usa só pela estética.' }),
   d({ id: 'lagrima_cheia', nome: 'Lágrima (preenchida)', estilo: 'cadeia', tamanhos: T(1), proporcao: 0.66, regioes: ['sob_olho', 'bochecha', 'mao', 'dedos', 'pescoco', 'tempora'], descricao: 'A gota fechada, toda em preto. Algumas tradições distinguem a lágrima vazia da cheia; nenhuma leitura vale para todo mundo.' }),
-  d({ id: 'tres_pontos', nome: 'Três pontos', estilo: 'cadeia', tamanhos: T(1), regioes: MAO, descricao: 'Três pontos em triângulo, na mão ou perto do olho. Na tradição chicana, "mi vida loca"; em outros lugares, outras leituras.' }),
+  d({ id: 'tres_pontos', nome: 'Três pontos em triângulo', estilo: 'cadeia', tamanhos: T(1), regioes: MAO, descricao: 'Três pontos em triângulo, na mão ou perto do olho. Na tradição chicana, "mi vida loca"; em outros lugares, outras leituras.' }),
   d({ id: 'cinco_pontos', nome: 'Cinco pontos', estilo: 'cadeia', tamanhos: T(1), regioes: MAO, descricao: 'Quatro pontos e um no meio, como num dado: o preso entre as quatro paredes. Comum em cadeias da Europa e da América Latina.' }),
   d({ id: 'teia_aranha', nome: 'Teia de aranha', estilo: 'cadeia', tamanhos: T(1, 2), regioes: ['ombro', 'triceps', 'antebraco_externo', 'antebraco', 'mao', 'pescoco', 'joelho', 'tempora'], descricao: 'A teia que se abre do canto (no cotovelo, de tradição). Em algumas cadeias, tempo cumprido; no punk e no old school, virou estética.' }),
   d({ id: 'relogio_sem_ponteiros', nome: 'Relógio sem ponteiros', estilo: 'cadeia', tamanhos: T(1, 2, 3), descricao: 'O relógio de bolso sem os ponteiros: o tempo parado de quem cumpre pena — ou de quem perdeu alguém. Cada um lê do seu jeito.' }),

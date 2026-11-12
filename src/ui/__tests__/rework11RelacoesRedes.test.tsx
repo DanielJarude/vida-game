@@ -48,7 +48,7 @@ describe('SOC-11 · publicar em passos', () => {
     const v0 = executar(vida(), rede({ oque: 'criar', plataforma: 'instagram' })).vida;
     const feitas: Acao[] = [];
     render(<Ligado v0={v0} aoAgir={a => feitas.push(a)} tela={(v, agir) => <RedesSociais vida={v} agir={agir} />} />);
-    const cel = () => screen.getByRole('region', { name: 'Seu celular' });
+    const cel = () => screen.getByRole('region', { name: 'Redes sociais' } /* VIDA 17: sem o segundo aparelho desenhado */);
     fireEvent.click(within(cel()).getAllByRole('tab', { name: /Instagram/ })[0]);
     expect(within(cel()).getByText('1. O quê')).toBeTruthy();
     fireEvent.click(within(cel()).getByRole('button', { name: /Uma foto do dia/ }));
@@ -100,7 +100,7 @@ describe('SOC-11.5 · o número de hoje e o fim de cada ano, rotulados', () => {
     v0 = transacao(v0, x => { const c = x.redes!.contas.instagram; for (let k = 0; k < 9; k++) advertir(x, PLATAFORMAS.instagram, c, 'provocação nos comentários'); }).vida;
     render(<main><RedesSociais vida={v0} agir={() => true} /></main>);
     fireEvent.click(screen.getAllByRole('tab', { name: /Instagram/ })[0]);
-    const cel = screen.getByRole('region', { name: 'Seu celular' });
+    const cel = screen.getByRole('region', { name: 'Redes sociais' } /* VIDA 17: sem o segundo aparelho desenhado */);
     expect(cel.textContent).toMatch(/baniu a sua conta/);
     expect(cel.textContent).toMatch(/provocação nos comentários/);
   });

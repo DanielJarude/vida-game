@@ -65,11 +65,13 @@ export function ConstelacaoDePessoas({ vida, abrir }: { vida: Vida; abrir: (id: 
         {pontos.map(x => <line key={`l${x.p.id}`} x1={cx} y1={cy} x2={x.x} y2={x.y} stroke={COR_LACO[x.laco]} strokeOpacity={0.18 + x.prox / 250} strokeWidth={0.6 + x.prox / 70} />)}
         <g transform={`translate(${cx - 22} ${cy - 22})`} className="constelacao17__eu"><circle cx={22} cy={22} r={23} className="constelacao17__eu-halo" /><Retrato visual={vida.eu.visual} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} tamanho={44} rotulo="Você" /></g>
         {pontos.map(x => (
-          <g key={x.p.id} transform={`translate(${(x.x - 15).toFixed(1)} ${(x.y - 15).toFixed(1)})`} className="constelacao17__pessoa" role="button" tabIndex={0} aria-label={`Abrir ${x.p.nome}`}
-            onClick={() => abrir(x.p.id)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); abrir(x.p.id); } }}>
+          <g key={x.p.id} transform={`translate(${(x.x - 15).toFixed(1)} ${(x.y - 15).toFixed(1)})`} className="constelacao17__pessoa">
             <circle cx={15} cy={15} r={16} fill="none" stroke={COR_LACO[x.laco]} strokeWidth={x.casa ? 2.6 : 1.6} />
             <Retrato visual={x.p.visual} genero={x.p.genero} idade={idadePessoa(vida, x.p)} semente={x.p.id} tamanho={30} rotulo={x.p.nome} especie={x.p.especie} />
-            <text x={15} y={40} textAnchor="middle" className="constelacao17__nome">{x.p.nome}</text>
+            {/* O toque é um botão de verdade (teclado, leitor de tela): o retrato e o nome abrem a pessoa. */}
+            <foreignObject x={-13} y={-2} width={56} height={46}>
+              <button type="button" className="constelacao17__botao" onClick={() => abrir(x.p.id)} aria-label={`Abrir ${x.p.nome}`}><span>{x.p.nome}</span></button>
+            </foreignObject>
           </g>
         ))}
       </svg>
@@ -138,11 +140,6 @@ export function FitaDaVida({ vida }: { vida: Vida }) {
         <span className="fita17__hoje" style={{ left: '100%' }} />
       </div>
       <div className="fita17__escala"><span>{anoDe(vida.eu.tNasc)}</span><span>{marcos.length} {marcos.length === 1 ? 'marco' : 'marcos'}</span><span>{anoDe(vida.t)} · {i} anos</span></div>
-      {marcos.length > 0 && (
-        <ol className="fita17__ultimos">
-          {marcos.slice(-3).reverse().map(e => <li key={e.id}><span className="fita17__bola" style={{ background: COR_TEMA[e.tema] ?? '#8a8478' }} /><span className="fita17__ano">{e.idade} anos</span>{e.texto}</li>)}
-        </ol>
-      )}
     </figure>
   );
 }

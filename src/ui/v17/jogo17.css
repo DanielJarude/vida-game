@@ -206,3 +206,7 @@ main .catalogo-loja__preco { font: 800 1.12rem/1.1 var(--font-sans); font-varian
 .loja17-estado--uso { background: var(--bom); color: #fff; }
 main .ofertas .oferta { border-radius: 14px; }
 main .ofertas .oferta__preco { font-weight: 800; font-variant-numeric: tabular-nums; }
+.constelacao17__botao { display: flex; align-items: flex-end; justify-content: center; width: 100%; height: 100%; padding: 0; border: 0; background: none; cursor: pointer; border-radius: 10px; }
+.constelacao17__botao span { font: 600 7.5px/1 var(--font-sans); color: var(--text-secondary); background: color-mix(in oklab, var(--superficie-topo) 80%, transparent); padding: 1px 3px; border-radius: 4px; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.constelacao17__botao:focus-visible { outline: 2px solid var(--acao); }
+.constelacao17__botao:hover span { color: var(--text-primary); }

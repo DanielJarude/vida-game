@@ -630,7 +630,7 @@ export function GuardaRoupa({ vida, agir }: Props) {
   const visiveis = todas ? filtradas : filtradas.slice(0, 12);
   const emUso = roupas.filter(x => x.usando).length;
   return (
-    <details className="detalhes pz-detalhes pz-guarda-roupa" open>
+    <details className="detalhes pz-detalhes pz-guarda-roupa">
       <summary>Guarda-roupa: estilo e ocasiões{dominante ? ` · ${nomeDoEstilo(dominante).toLowerCase()}` : ''}</summary>
       <div className="pz17-cabeca">
         <span className="pz17-numero"><strong>{roupas.length}</strong> peças · <strong>{emUso}</strong> em uso</span>
