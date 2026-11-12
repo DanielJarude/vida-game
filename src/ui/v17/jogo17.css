@@ -210,3 +210,4 @@ main .ofertas .oferta__preco { font-weight: 800; font-variant-numeric: tabular-n
 .constelacao17__botao span { font: 600 7.5px/1 var(--font-sans); color: var(--text-secondary); background: color-mix(in oklab, var(--superficie-topo) 80%, transparent); padding: 1px 3px; border-radius: 4px; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 .constelacao17__botao:focus-visible { outline: 2px solid var(--acao); }
 .constelacao17__botao:hover span { color: var(--text-primary); }
+@media (max-width: 560px) { .fita17__fase span { display: none; } }
