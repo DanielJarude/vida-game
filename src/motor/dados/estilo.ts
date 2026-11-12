@@ -86,7 +86,7 @@ export interface ItemEstilo {
    * pescoço ou nas orelhas. Sem `visual` (o relógio), usar e guardar é posse
    * de verdade — aparece em Você, não no retrato.
    */
-  lugar?: 'pulso' | 'joia' | 'orelha' | 'pulseira' | 'anel' | LugarDoCorpo | RegiaoDePiercing;
+  lugar?: 'pulso' | 'joia' | 'orelha' | 'pulseira' | 'anel' | 'bolsa' | LugarDoCorpo | RegiaoDePiercing;
   /** VIDA 12.9: a joia de um piercing (o lugar é a região do furo). */
   piercing?: Piercing;
   /** REWORK 12.4: os estilos a que a peça pertence (`ESTILOS`) — uma peça pode ser de vários. */
@@ -280,7 +280,34 @@ export const ITENS_ESTILO: readonly ItemEstilo[] = [
   // VIDA 12.9: as joias dos piercings (catálogo próprio, `dados/piercings129`).
   ...PIERCINGS,
   // VIDA 13: os brincos novos (`dados/piercings13`).
-  ...BRINCOS_13
+  ...BRINCOS_13,
+  // ---------------------------------------------------------------- VIDA 17: acessórios novos (cada um com desenho próprio)
+  { id: 'bone_trucker', nome: 'Boné trucker', categoria: 'chapeu', preco: 95, visual: { chapeu: 'bone' }, estilos: ['streetwear', 'skate', 'casual'], ocasioes: ['dia', 'esporte'], descricao: 'Frente de espuma, a parte de trás em tela e o fecho de pressão.' },
+  { id: 'bone_dad', nome: 'Boné de aba curva (dad hat)', categoria: 'chapeu', preco: 85, visual: { chapeu: 'bone' }, estilos: ['casual', 'minimalista', 'vintage'], ocasioes: ['dia', 'estudo'], descricao: 'Copa baixa e mole, sarja lavada, bordadinho pequeno e a fivela atrás.' },
+  { id: 'bone_grife', nome: 'Boné de grife', categoria: 'chapeu', preco: 2400, luxo: true, nivel: 4, visual: { chapeu: 'bone' }, estilos: ['luxuoso', 'streetwear', 'hiphop'], ocasioes: ['dia', 'festa'], descricao: 'Lã fria, o monograma bordado em fio dourado.' },
+  { id: 'viseira', nome: 'Viseira', categoria: 'chapeu', preco: 60, visual: { chapeu: 'bone' }, estilos: ['esportivo', 'casual'], ocasioes: ['esporte', 'dia'], descricao: 'Só a aba e a faixa: o sol fora dos olhos, a cabeça ventilada.' },
+  { id: 'bucket', nome: 'Chapéu bucket', categoria: 'chapeu', preco: 110, visual: { chapeu: 'gorro' }, estilos: ['streetwear', 'baile', 'hiphop', 'alternativo'], ocasioes: ['dia', 'festa'], descricao: 'Aba caída em volta, algodão grosso com pesponto.' },
+  { id: 'fedora', nome: 'Fedora de feltro', categoria: 'chapeu', preco: 380, visual: { chapeu: 'chapeu' }, estilos: ['elegante', 'vintage', 'social'], ocasioes: ['evento', 'trabalho', 'encontro'], descricao: 'Feltro de lã, copa com vinco e aba média virada na frente.' },
+  { id: 'boina', nome: 'Boina', categoria: 'chapeu', preco: 140, visual: { chapeu: 'gorro' }, estilos: ['vintage', 'alternativo', 'elegante'], ocasioes: ['dia', 'encontro'], descricao: 'Lã batida, caída para um lado, com o cabinho no alto.' },
+  { id: 'gorro_pompom', nome: 'Gorro com pompom', categoria: 'chapeu', preco: 75, visual: { chapeu: 'gorro' }, estilos: ['casual', 'alternativo'], ocasioes: ['dia', 'estudo'], descricao: 'Tricô canelado, barra dobrada e um pompom em cima.' },
+  { id: 'touca_cetim', nome: 'Touca de cetim (durag)', categoria: 'chapeu', preco: 50, visual: { chapeu: 'lenco' }, estilos: ['hiphop', 'afro', 'urbano'], ocasioes: ['dia'], descricao: 'Cetim justo na cabeça e as pontas soltas atrás: protege as ondas e o cabelo crespo.' },
+  { id: 'chapeu_floppy', nome: 'Chapéu de aba larga mole', categoria: 'chapeu', preco: 190, visual: { chapeu: 'chapeu' }, estilos: ['elegante', 'vintage', 'casual'], ocasioes: ['dia', 'evento'], descricao: 'Palha fina, aba enorme e ondulada, fita na copa.' },
+  { id: 'oculos_gatinho', nome: 'Óculos gatinho', categoria: 'oculos', preco: 290, visual: { oculos: 'sol' }, estilos: ['vintage', 'elegante'], ocasioes: ['dia', 'encontro'], descricao: 'As pontas puxadas para cima, acetato tartaruga.' },
+  { id: 'oculos_quadrado', nome: 'Armação quadrada grossa', categoria: 'oculos', preco: 340, visual: { oculos: 'redondo' }, estilos: ['minimalista', 'alternativo', 'social'], ocasioes: ['dia', 'trabalho', 'estudo'], descricao: 'Acetato preto grosso, lente sem grau.' },
+  { id: 'oculos_esportivo', nome: 'Óculos esportivo', categoria: 'oculos', preco: 420, visual: { oculos: 'sol' }, estilos: ['esportivo', 'baile'], ocasioes: ['esporte', 'dia'], descricao: 'Lente única envolvente, espelhada, haste de borracha.' },
+  { id: 'oculos_redondo_metal', nome: 'Óculos redondo de metal', categoria: 'oculos', preco: 260, visual: { oculos: 'redondo' }, estilos: ['vintage', 'alternativo'], ocasioes: ['dia', 'estudo'], descricao: 'Aro fino dourado, ponte dupla.' },
+  { id: 'relogio_mergulho', nome: 'Relógio de mergulho', categoria: 'acessorio', lugar: 'pulso', preco: 1600, estilos: ['esportivo', 'casual'], ocasioes: ['dia', 'esporte', 'trabalho'], descricao: 'Aço, luneta giratória azul, à prova d’água de verdade.' },
+  { id: 'relogio_couro_classico', nome: 'Relógio clássico de couro', categoria: 'acessorio', lugar: 'pulso', preco: 890, estilos: ['social', 'elegante', 'vintage'], ocasioes: ['trabalho', 'evento', 'encontro'], descricao: 'Caixa fina, mostrador creme com algarismos romanos, pulseira de couro marrom.' },
+  { id: 'relogio_digital_retro', nome: 'Relógio digital retrô', categoria: 'acessorio', lugar: 'pulso', preco: 230, estilos: ['vintage', 'alternativo', 'casual'], ocasioes: ['dia', 'estudo'], descricao: 'Caixa dourada de resina, visor verde: o de calculadora dos anos 80.' },
+  { id: 'corrente_cruz', nome: 'Corrente com pingente de cruz', categoria: 'acessorio', lugar: 'joia', preco: 520, visual: { joia: 'corrente' }, estilos: ['hiphop', 'tradicional', 'urbano'], ocasioes: ['dia', 'festa', 'evento'], descricao: 'Elo cadeado de prata e a cruz no peito.' },
+  { id: 'colar_perolas', nome: 'Colar de pérolas', categoria: 'acessorio', lugar: 'joia', preco: 1900, visual: { joia: 'corrente' }, estilos: ['elegante', 'vintage', 'social'], ocasioes: ['evento', 'trabalho', 'encontro'], descricao: 'Uma volta de pérolas cultivadas.' },
+  { id: 'anel_grafite', nome: 'Anel de aço escovado', categoria: 'acessorio', lugar: 'anel', preco: 120, estilos: ['minimalista', 'rock', 'urbano'], ocasioes: ['dia', 'trabalho'], descricao: 'Aro largo de aço, acabamento fosco.' },
+  { id: 'bolsa_transversal', nome: 'Bolsa transversal', categoria: 'acessorio', lugar: 'bolsa', preco: 240, estilos: ['casual', 'urbano', 'minimalista'], ocasioes: ['dia', 'estudo', 'trabalho'], descricao: 'Pequena, alça comprida cruzando o peito, zíper na frente.' },
+  { id: 'bolsa_tote', nome: 'Bolsa sacola (tote)', categoria: 'acessorio', lugar: 'bolsa', preco: 320, estilos: ['casual', 'elegante', 'minimalista'], ocasioes: ['trabalho', 'estudo', 'dia'], descricao: 'Grande, de lona ou couro, alças curtas na mão.' },
+  { id: 'mochila', nome: 'Mochila', categoria: 'acessorio', lugar: 'bolsa', preco: 210, estilos: ['casual', 'skate', 'esportivo', 'streetwear'], ocasioes: ['estudo', 'dia', 'esporte'], descricao: 'Nas costas: as alças de náilon acolchoadas aparecem na frente.' },
+  { id: 'pochete', nome: 'Pochete', categoria: 'acessorio', lugar: 'bolsa', preco: 130, estilos: ['streetwear', 'baile', 'esportivo'], ocasioes: ['dia', 'festa', 'esporte'], descricao: 'Na cintura ou atravessada, náilon com fivela de plástico.' },
+  { id: 'clutch', nome: 'Bolsa de mão (clutch)', categoria: 'acessorio', lugar: 'bolsa', preco: 450, estilos: ['elegante', 'social'], ocasioes: ['evento', 'festa', 'encontro'], descricao: 'Pequena, rígida, de cetim, fecho de metal: vai na mão.' },
+  { id: 'bolsa_grife', nome: 'Bolsa de grife', categoria: 'acessorio', lugar: 'bolsa', preco: 26000, luxo: true, nivel: 5, estilos: ['luxuoso', 'elegante'], ocasioes: ['evento', 'encontro', 'trabalho'], descricao: 'Couro granulado, alça de corrente, o fecho que se reconhece.' },
 ];
 
 /**

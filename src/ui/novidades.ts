@@ -26,6 +26,31 @@ export interface NotaDeVersao {
 
 export const NOTAS: NotaDeVersao[] = [
   {
+    versao: '17',
+    data: '2026-11-12',
+    titulo: 'Imersão, personalização, lojas e mundo vivo',
+    novidades: [
+      'Mapas mostra a sua cidade num mapa ilustrado: o porte, o mar ou o rio, a economia da cidade (o porto, o centro histórico, o distrito industrial, o campus), os tipos de bairro e onde você mora, o trabalho, o estudo e o comércio.',
+      'Mensagens com vida: desabafos, brincadeiras, paqueras, favores, cobranças, mágoas, comemorações do que aconteceu com você, o seu aniversário, a fama vista pelos amigos, o trabalho em comum, a família e os filhos — cada pessoa no seu jeito de falar. As respostas têm tons diferentes e consequências diferentes, e algumas conversas voltam depois.',
+      'Tatuagens no rosto (testa, têmporas, canto do olho, bochechas, nariz, queixo, sobrancelha) e um catálogo novo da rua, da periferia e da tradição de cadeia, com os significados ditos com cuidado.',
+      'Cirurgias do corpo e mais: bariátrica (o corpo muda aos poucos, com suplementos para a vida toda), lipoaspiração, abdominoplastia, mamoplastia e prótese, bichectomia, mentoplastia, harmonização, botox, septoplastia e cirurgia refrativa — com recuperação, repouso, riscos e resultados que nem sempre agradam.',
+      'Bonés e chapéus novos (trucker, dad hat, grife, viseira, bucket, fedora, boina, gorro com pompom, touca de cetim, aba larga), óculos, relógios, joias e bolsas (transversal, sacola, mochila, pochete, de mão).'
+    ],
+    melhorias: [
+      'No máximo quatro mensagens por ano no celular, somando tudo: menos mensagens, mais significado.',
+      'Móveis com função: o sofá da sala, a cama de cada quarto, a geladeira da cozinha. Comprar outro modelo oferece trocar (o antigo vai para o depósito); a segunda cama vai para o segundo quarto.',
+      'O guarda-roupa virou uma grade de peças; Pessoas ganhou a constelação do seu círculo; Minha Semana, a semana em tiras; História, a fita da vida.',
+      'As lojas falam a mesma língua: o estado de cada produto (é seu, em uso) no mesmo canto, a cor de cada loja na vitrine, e os tecidos com textura (o jeans, o tricô, o linho, o couro, a seda).',
+      'A clínica separa rosto, corpo e procedimentos funcionais, com a prévia do corpo inteiro.'
+    ],
+    correcoes: [
+      'O app Rede não mostra mais um segundo celular dentro do celular.',
+      'Preso, o celular fica retido: nenhum aplicativo, só o telefone da unidade para a família e a parceria.',
+      'Pai e mãe casados não arranjam mais namorado; quem se separou ou ficou viúvo espera um tempo antes de um romance novo.',
+      'O boné não fica mais atravessado pelo coque.'
+    ]
+  },
+  {
     versao: '16.1',
     data: '2026-11-11',
     titulo: 'Profissões por dentro e telas novas',

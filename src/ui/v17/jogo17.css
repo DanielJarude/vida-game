@@ -179,3 +179,30 @@ main .agenda-semana--vazia .grade-semana { max-height: 180px; overflow: hidden; 
 .fita17__ultimos li { display: flex; gap: 8px; align-items: baseline; }
 .fita17__bola { flex: none; width: 8px; height: 8px; border-radius: 50%; }
 .fita17__ano { flex: none; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text-secondary); min-width: 4.5em; }
+
+/* -------------------------------------------------- Lojas (VIDA 17): a mesma linguagem em todas, a cor de cada uma */
+.catalogo-loja { --loja-cor: #8a6a4a; }
+.catalogo-loja[data-loja="roupas"], .catalogo-loja[data-loja="renner"], .catalogo-loja[data-loja="cea"] { --loja-cor: #b0553a; }
+.catalogo-loja[data-loja="sapataria"] { --loja-cor: #6b4a2a; }
+.catalogo-loja[data-loja="otica"] { --loja-cor: #2f6d8a; }
+.catalogo-loja[data-loja="acessorios"] { --loja-cor: #7a5c8c; }
+.catalogo-loja[data-loja="relojoaria"] { --loja-cor: #2e3b4e; }
+.catalogo-loja[data-loja="joalheria"], .catalogo-loja[data-loja="grifes"] { --loja-cor: #b8964a; }
+.catalogo-loja[data-loja="eletronicos"] { --loja-cor: #3d5aa8; }
+.catalogo-loja[data-loja="eletrodomesticos"] { --loja-cor: #2f8f8a; }
+.catalogo-loja[data-loja="moveis"] { --loja-cor: #8a5a3c; }
+.catalogo-loja[data-loja="instrumentos"] { --loja-cor: #9c3b4a; }
+.catalogo-loja[data-loja="esportes"] { --loja-cor: #3f7a45; }
+.catalogo-loja[data-loja="livraria"] { --loja-cor: #5a4636; }
+main .catalogo-loja__cartao { position: relative; border-radius: 14px; transition: box-shadow 0.15s ease, transform 0.15s ease; }
+main .catalogo-loja__cartao:hover { box-shadow: 0 0 0 1px var(--rule-strong, var(--fio)), 0 10px 24px -18px rgba(0, 0, 0, 0.45); transform: translateY(-1px); }
+main .catalogo-loja__cartao[data-estado="seu"] { box-shadow: 0 0 0 1.5px color-mix(in oklab, var(--bom) 55%, transparent); }
+main .catalogo-loja__cartao[data-estado="em-uso"] { box-shadow: 0 0 0 2px var(--bom); }
+main .catalogo-loja__imagem { border-radius: 10px; background: radial-gradient(circle at 50% 40%, color-mix(in oklab, var(--loja-cor) 14%, var(--superficie-topo, #fff)) 0, color-mix(in oklab, var(--loja-cor) 6%, var(--bg-inset, var(--superficie))) 75%); box-shadow: inset 0 -3px 0 color-mix(in oklab, var(--loja-cor) 35%, transparent); }
+main .catalogo-loja__nome { font: 700 1.02rem/1.25 var(--font-display, var(--font-serif)); }
+main .catalogo-loja__preco { font: 800 1.12rem/1.1 var(--font-sans); font-variant-numeric: tabular-nums; color: var(--text-primary); }
+.loja17-estado { position: absolute; top: 10px; left: 10px; z-index: 1; padding: 2px 9px; border-radius: 999px; font: 700 0.68rem/1.6 var(--font-sans); letter-spacing: 0.05em; text-transform: uppercase; box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08); }
+.loja17-estado--seu { background: color-mix(in oklab, var(--bom) 18%, var(--superficie-topo, #fff)); color: var(--bom); }
+.loja17-estado--uso { background: var(--bom); color: #fff; }
+main .ofertas .oferta { border-radius: 14px; }
+main .ofertas .oferta__preco { font-weight: 800; font-variant-numeric: tabular-nums; }

@@ -202,7 +202,9 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
   const esp = G.esp + distOlho;
   const olho = G.olho * tamOlho;
   const iris = OLHOS[v.olhos] ?? OLHOS.castanho;
-  const estilo = f === 'bebe' ? 'bebe' : v.cabelo;
+  // VIDA 17: debaixo do boné ou do chapéu, o que fica no alto da cabeça (o coque, o moicano) não atravessa a copa.
+  const COBRE_O_ALTO: Record<string, string> = { coque: 'rabo', dois_coques: 'meio_preso', moicano: 'curto_lado' };
+  const estilo = f === 'bebe' ? 'bebe' : v.chapeu && v.cabelo && COBRE_O_ALTO[v.cabelo] ? COBRE_O_ALTO[v.cabelo] : v.cabelo;
   // A calvície é HERDADA (Aparência 2.0: `calvicie` — passa de pai para filho); quem veio de antes, o sorteio antigo.
   const estagio = estagioDaCalvicie(v.calvicie, masc, idade, v.transplante);
   const calvo = estagio === undefined ? (f === 'idoso' && masc && (h % 3 !== 0) || (f === 'meia' && masc && h % 5 === 0)) : estagio === 2;
@@ -495,6 +497,38 @@ function Oculos({ tipo, modelo, cx, olhoY, esp, w = 30, uid = 'r' }: { tipo: 'gr
       </g>
     );
   }
+  // VIDA 17: os óculos novos — gatinho, quadrado grosso, esportivo envolvente, redondo de metal.
+  if (m === 'oculos_gatinho') return (
+    <g data-oculos="gatinho">
+      {lados.map(s => { const x = cx + s * esp; return <path key={s} d={`M ${x - s * 4.4} ${olhoY - 2} Q ${x} ${olhoY - 3.6} ${x + s * 5.8} ${olhoY - 5.2} Q ${x + s * 5.4} ${olhoY + 3} ${x + s * 0.6} ${olhoY + 3.6} Q ${x - s * 4.2} ${olhoY + 3} ${x - s * 4.4} ${olhoY - 2} Z`} fill="#3a2418" fillOpacity={0.82} stroke="#6b3f22" strokeWidth={1.3} />; })}
+      {lados.map(s => <circle key={`p${s}`} cx={cx + s * esp + s * 2.4} cy={olhoY - 1.4} r={0.7} fill="#c98a4a" opacity={0.7} />)}
+      <path d={`M ${cx - esp + 4.4} ${olhoY - 2} Q ${cx} ${olhoY - 3} ${cx + esp - 4.4} ${olhoY - 2}`} fill="none" stroke="#6b3f22" strokeWidth={1.2} />
+    </g>
+  );
+  if (m === 'oculos_quadrado') return (
+    <g data-oculos="quadrado" fill="none" stroke="#141416" strokeWidth={1.7}>
+      {lados.map(s => { const x = cx + s * esp; return <rect key={s} x={x - 4.6} y={olhoY - 3.6} width={9.2} height={7} rx={1.2} fill="#cfe2ee" fillOpacity={0.18} />; })}
+      <path d={`M ${cx - esp + 4.6} ${olhoY - 1.4} L ${cx + esp - 4.6} ${olhoY - 1.4}`} />
+      {lados.map(s => <path key={`h${s}`} d={`M ${cx + s * (esp + 4.6)} ${olhoY - 2.4} L ${cx + s * (w / 2 + 2)} ${olhoY - 2}`} />)}
+    </g>
+  );
+  if (m === 'oculos_esportivo') {
+    const gid = `${uid}-esportivo`;
+    return (
+      <g data-oculos="esportivo">
+        <defs><linearGradient id={gid} x1="0" y1="0" x2="1" y2="0"><stop offset="0" stopColor="#1d4fa3" /><stop offset="0.5" stopColor="#7cc4e4" /><stop offset="1" stopColor="#c8102e" /></linearGradient></defs>
+        <path d={`M ${cx - esp - 6} ${olhoY - 3} Q ${cx} ${olhoY - 5.4} ${cx + esp + 6} ${olhoY - 3} Q ${cx + esp + 5.4} ${olhoY + 3.4} ${cx + esp} ${olhoY + 3.6} Q ${cx + 2} ${olhoY + 3.4} ${cx} ${olhoY + 1.2} Q ${cx - 2} ${olhoY + 3.4} ${cx - esp} ${olhoY + 3.6} Q ${cx - esp - 5.4} ${olhoY + 3.4} ${cx - esp - 6} ${olhoY - 3} Z`} fill={`url(#${gid})`} fillOpacity={0.88} stroke="#1b1b1d" strokeWidth={0.9} />
+        {lados.map(s => <path key={s} d={`M ${cx + s * (esp + 6)} ${olhoY - 3} L ${cx + s * (w / 2 + 2)} ${olhoY - 2.2}`} stroke="#1b1b1d" strokeWidth={1.6} />)}
+      </g>
+    );
+  }
+  if (m === 'oculos_redondo_metal') return (
+    <g data-oculos="redondo_metal" fill="none" stroke="#c9a14a" strokeWidth={0.75}>
+      {lados.map(s => <circle key={s} cx={cx + s * esp} cy={olhoY} r={3.9} fill="#fff6e0" fillOpacity={0.12} />)}
+      <path d={`M ${cx - esp + 3.9} ${olhoY - 0.6} Q ${cx} ${olhoY - 2.2} ${cx + esp - 3.9} ${olhoY - 0.6} M ${cx - esp + 3.6} ${olhoY - 2} L ${cx + esp - 3.6} ${olhoY - 2}`} />
+      {lados.map(s => <path key={`h${s}`} d={`M ${cx + s * (esp + 3.9)} ${olhoY - 0.4} L ${cx + s * (w / 2 + 2)} ${olhoY - 1.4}`} />)}
+    </g>
+  );
   if (m === 'oculos_aviador') {
     const gid = `${uid}-aviador`;
     return (
@@ -566,6 +600,114 @@ function Chapeu({ tipo, modelo, cx, cy, w, hh, semente }: { tipo: 'bone' | 'chap
         <path d={`M ${cx - w / 2 - 3} ${topo + hh * 0.2} L ${cx + w / 2 + 3} ${topo + hh * 0.2} L ${cx + w / 2 + 2} ${topo + hh * 0.27} L ${cx - w / 2 - 2} ${topo + hh * 0.27} Z`} fill={e} />
         <rect x={cx - 4} y={topo - 3} width={8} height={4.4} rx={0.8} fill={misturar(c, '#ffffff', c === '#f2f0ea' ? 0 : 0.75)} stroke={e} strokeWidth={0.4} />
         <circle cx={cx + w / 2 - 6} cy={topo + hh * 0.235} r={1.3} fill="#d8b45a" />
+      </g>
+    );
+  }
+  // VIDA 17: os bonés e chapéus novos — cada um com a sua forma (a copa, a aba, o material), não só outra cor.
+  if (modelo === 'bone_trucker') {
+    const c = ['#c8102e', '#1d4fa3', '#1b1b1d', '#2f6a4a'][semente % 4], e = misturar(c, '#000000', 0.3);
+    return (
+      <g data-chapeu="trucker">
+        <path d={`M ${cx - w / 2 - 1.5} ${topo + hh * 0.21} C ${cx - w / 2 - 1} ${topo - 7} ${cx + w / 2 + 1} ${topo - 7} ${cx + w / 2 + 1.5} ${topo + hh * 0.21} Z`} fill="#f2efe8" stroke={e} strokeWidth={0.5} />
+        {[-2, -1, 0, 1, 2].map(k => <path key={k} d={`M ${cx + k * 4.4} ${topo - 5} L ${cx + k * 5.4} ${topo + hh * 0.2}`} stroke={c} strokeWidth={0.45} opacity={0.6} />)}
+        <path d={`M ${cx - w / 2 + 3} ${topo + hh * 0.2} C ${cx - w / 2 + 3} ${topo - 6.4} ${cx + w / 2 - 3} ${topo - 6.4} ${cx + w / 2 - 3} ${topo + hh * 0.2} Z`} fill={c} />
+        <path d={`M ${cx - w / 2 - 1} ${topo + hh * 0.2} Q ${cx - w * 0.2} ${topo + hh * 0.27} ${cx - w / 2 - 12} ${topo + hh * 0.29} Q ${cx - w / 2 - 6} ${topo + hh * 0.16} ${cx - w / 2 - 1} ${topo + hh * 0.2} Z`} fill={e} />
+        <rect x={cx - 4.4} y={topo - 2.6} width={8.8} height={3.6} rx={1.6} fill="#f2efe8" />
+      </g>
+    );
+  }
+  if (modelo === 'bone_dad') {
+    const c = ['#c7b59a', '#5d6b4f', '#7b2d3a', '#2d3e5c'][semente % 4], e = misturar(c, '#000000', 0.26);
+    return (
+      <g data-chapeu="dad">
+        <path d={`M ${cx - w / 2 - 0.8} ${topo + hh * 0.21} C ${cx - w / 2} ${topo - 2.6} ${cx + w / 2} ${topo - 2.6} ${cx + w / 2 + 0.8} ${topo + hh * 0.21} Z`} fill={c} stroke={e} strokeWidth={0.45} />
+        <path d={`M ${cx} ${topo - 1} L ${cx} ${topo + hh * 0.2}`} stroke={e} strokeWidth={0.4} opacity={0.7} />
+        <path d={`M ${cx - w / 2 - 0.8} ${topo + hh * 0.21} Q ${cx - w * 0.15} ${topo + hh * 0.28} ${cx - w / 2 - 10} ${topo + hh * 0.3} Q ${cx - w / 2 - 5} ${topo + hh * 0.18} ${cx - w / 2 - 0.8} ${topo + hh * 0.21} Z`} fill={misturar(c, '#000000', 0.12)} stroke={e} strokeWidth={0.4} />
+        <path d={`M ${cx - 2} ${topo + 2.6} q 2 -1.4 4 0`} stroke={misturar(c, '#ffffff', 0.6)} strokeWidth={0.8} fill="none" strokeLinecap="round" />
+      </g>
+    );
+  }
+  if (modelo === 'bone_grife') {
+    const c = '#1b1b1d', e = '#000000';
+    return (
+      <g data-chapeu="grife">
+        <path d={`M ${cx - w / 2 - 1} ${topo + hh * 0.2} C ${cx - w / 2} ${topo - 5.4} ${cx + w / 2} ${topo - 5.4} ${cx + w / 2 + 1} ${topo + hh * 0.2} Z`} fill={c} stroke={e} strokeWidth={0.4} />
+        <path d={`M ${cx - w / 2 - 1} ${topo + hh * 0.2} Q ${cx - w * 0.2} ${topo + hh * 0.26} ${cx - w / 2 - 12} ${topo + hh * 0.28} Q ${cx - w / 2 - 6} ${topo + hh * 0.16} ${cx - w / 2 - 1} ${topo + hh * 0.2} Z`} fill="#2b2b2e" />
+        <path d={`M ${cx - 3} ${topo + 1.6} l 1.5 -4 l 1.5 2.6 l 1.5 -2.6 l 1.5 4`} fill="none" stroke="#d8b45a" strokeWidth={0.8} strokeLinejoin="round" />
+        <circle cx={cx} cy={topo - 3.4} r={1} fill="#d8b45a" />
+      </g>
+    );
+  }
+  if (modelo === 'viseira') {
+    const c = ['#f2efe8', '#1d4fa3', '#c8102e'][semente % 3], e = misturar(c, '#000000', 0.3);
+    return (
+      <g data-chapeu="viseira">
+        <path d={`M ${cx - w / 2 - 1} ${topo + hh * 0.12} Q ${cx} ${topo + hh * 0.04} ${cx + w / 2 + 1} ${topo + hh * 0.12} L ${cx + w / 2 + 1} ${topo + hh * 0.2} Q ${cx} ${topo + hh * 0.12} ${cx - w / 2 - 1} ${topo + hh * 0.2} Z`} fill={c} stroke={e} strokeWidth={0.5} />
+        <path d={`M ${cx - w / 2 - 1} ${topo + hh * 0.2} Q ${cx - w * 0.2} ${topo + hh * 0.27} ${cx - w / 2 - 11} ${topo + hh * 0.29} Q ${cx - w / 2 - 6} ${topo + hh * 0.16} ${cx - w / 2 - 1} ${topo + hh * 0.2} Z`} fill={e} />
+      </g>
+    );
+  }
+  if (modelo === 'bucket') {
+    const c = ['#1b1b1d', '#c9b48a', '#2f6a4a', '#e8e2d4'][semente % 4], e = misturar(c, '#000000', 0.28);
+    return (
+      <g data-chapeu="bucket">
+        <path d={`M ${cx - w / 2 - 6} ${topo + hh * 0.26} Q ${cx} ${topo + hh * 0.34} ${cx + w / 2 + 6} ${topo + hh * 0.26} L ${cx + w / 2 + 1} ${topo + hh * 0.12} L ${cx - w / 2 - 1} ${topo + hh * 0.12} Z`} fill={misturar(c, '#000000', 0.1)} stroke={e} strokeWidth={0.5} />
+        <path d={`M ${cx - w / 2 - 1} ${topo + hh * 0.14} C ${cx - w / 2 + 1} ${topo - 7} ${cx + w / 2 - 1} ${topo - 7} ${cx + w / 2 + 1} ${topo + hh * 0.14} Z`} fill={c} stroke={e} strokeWidth={0.5} />
+        <path d={`M ${cx - w / 2 - 3} ${topo + hh * 0.22} Q ${cx} ${topo + hh * 0.29} ${cx + w / 2 + 3} ${topo + hh * 0.22}`} fill="none" stroke={misturar(c, '#ffffff', 0.4)} strokeWidth={0.4} strokeDasharray="1 0.8" />
+      </g>
+    );
+  }
+  if (modelo === 'fedora') {
+    const c = ['#3b3a40', '#5a4636', '#2e3b4e'][semente % 3], e = misturar(c, '#000000', 0.35);
+    return (
+      <g data-chapeu="fedora">
+        <path d={`M ${cx - w / 2 - 8} ${topo + hh * 0.17} Q ${cx} ${topo + hh * 0.24} ${cx + w / 2 + 8} ${topo + hh * 0.13} Q ${cx} ${topo + hh * 0.1} ${cx - w / 2 - 8} ${topo + hh * 0.17} Z`} fill={e} />
+        <path d={`M ${cx - w / 2 + 3} ${topo + hh * 0.15} C ${cx - w / 2 + 2} ${topo - 8} ${cx - 3} ${topo - 10} ${cx} ${topo - 7} C ${cx + 3} ${topo - 10} ${cx + w / 2 - 2} ${topo - 8} ${cx + w / 2 - 3} ${topo + hh * 0.15} Z`} fill={c} stroke={e} strokeWidth={0.5} />
+        <path d={`M ${cx - w / 2 + 3.2} ${topo + hh * 0.08} L ${cx + w / 2 - 3.2} ${topo + hh * 0.08}`} stroke="#1b1b1d" strokeWidth={1.8} />
+        <path d={`M ${cx - 2} ${topo - 6.4} Q ${cx} ${topo - 2.8} ${cx + 2} ${topo - 6.4}`} fill="none" stroke={e} strokeWidth={0.6} />
+      </g>
+    );
+  }
+  if (modelo === 'boina') {
+    const c = ['#7b2d3a', '#1b1b1d', '#5d6b4f', '#2d3e5c'][semente % 4], e = misturar(c, '#000000', 0.3);
+    return (
+      <g data-chapeu="boina">
+        <path d={`M ${cx - w / 2 - 2} ${topo + hh * 0.16} C ${cx - w / 2 - 4} ${topo - 6} ${cx + w / 2 + 8} ${topo - 9} ${cx + w / 2 + 6} ${topo + hh * 0.06} Q ${cx + w / 2 + 2} ${topo + hh * 0.18} ${cx} ${topo + hh * 0.2} Q ${cx - w / 2} ${topo + hh * 0.2} ${cx - w / 2 - 2} ${topo + hh * 0.16} Z`} fill={c} stroke={e} strokeWidth={0.5} />
+        <path d={`M ${cx - w / 2 - 1.5} ${topo + hh * 0.17} Q ${cx} ${topo + hh * 0.23} ${cx + w / 2 + 3} ${topo + hh * 0.14}`} fill="none" stroke={e} strokeWidth={1.1} />
+        <path d={`M ${cx + 3} ${topo - 5.6} l 0.4 -1.8`} stroke={e} strokeWidth={1} strokeLinecap="round" />
+      </g>
+    );
+  }
+  if (modelo === 'gorro_pompom') {
+    const c = ['#c84b31', '#2f4f7a', '#e8e2d4', '#5d6b3a'][semente % 4], e = misturar(c, '#000000', 0.25);
+    return (
+      <g data-chapeu="pompom">
+        <path d={`M ${cx - w / 2 - 1.5} ${topo + hh * 0.22} C ${cx - w / 2 - 1} ${topo - 9} ${cx + w / 2 + 1} ${topo - 9} ${cx + w / 2 + 1.5} ${topo + hh * 0.22} Z`} fill={c} />
+        {[-3, -2, -1, 0, 1, 2, 3].map(k => <path key={k} d={`M ${cx + k * 4.2} ${topo - 4.6} L ${cx + k * 4.8} ${topo + hh * 0.15}`} stroke={e} strokeWidth={0.4} opacity={0.5} />)}
+        <rect x={cx - w / 2 - 2} y={topo + hh * 0.12} width={w + 4} height={5.4} rx={2.2} fill={e} />
+        {[-2, -1, 0, 1, 2].map(k => <path key={`r${k}`} d={`M ${cx + k * 6} ${topo + hh * 0.12 + 0.6} l 0 4.2`} stroke={misturar(c, '#000000', 0.42)} strokeWidth={0.5} />)}
+        <circle cx={cx} cy={topo - 9.4} r={3.6} fill={misturar(c, '#ffffff', 0.35)} stroke={e} strokeWidth={0.4} />
+      </g>
+    );
+  }
+  if (modelo === 'touca_cetim') {
+    const c = ['#1b1b1d', '#5a2a6b', '#7b1e2b', '#c9a14a'][semente % 4], e = misturar(c, '#ffffff', 0.25);
+    return (
+      <g data-chapeu="durag">
+        <path d={`M ${cx - w / 2 - 0.8} ${topo + hh * 0.24} C ${cx - w / 2 - 1} ${topo - 5} ${cx + w / 2 + 1} ${topo - 5} ${cx + w / 2 + 0.8} ${topo + hh * 0.24} Q ${cx} ${topo + hh * 0.17} ${cx - w / 2 - 0.8} ${topo + hh * 0.24} Z`} fill={c} />
+        <path d={`M ${cx - w / 2 + 2} ${topo + 2} Q ${cx} ${topo - 4} ${cx + w / 2 - 2} ${topo + 2}`} fill="none" stroke={e} strokeWidth={0.7} opacity={0.6} />
+        <path d={`M ${cx} ${topo - 3.6} L ${cx} ${topo + hh * 0.18}`} stroke={misturar(c, '#000000', 0.3)} strokeWidth={0.5} />
+        {[-1, 1].map(s => <path key={s} d={`M ${cx + s * (w / 2 + 0.4)} ${topo + hh * 0.22} q ${s * 3} 6 ${s * 1.4} 14`} fill="none" stroke={c} strokeWidth={2.2} strokeLinecap="round" />)}
+      </g>
+    );
+  }
+  if (modelo === 'chapeu_floppy') {
+    const c = '#e6d3a8', e = '#b89a64';
+    return (
+      <g data-chapeu="floppy">
+        <path d={`M ${cx - w / 2 - 18} ${topo + hh * 0.2} Q ${cx - w / 2 - 10} ${topo + hh * 0.08} ${cx} ${topo + hh * 0.1} Q ${cx + w / 2 + 10} ${topo + hh * 0.08} ${cx + w / 2 + 18} ${topo + hh * 0.2} Q ${cx + w / 2 + 6} ${topo + hh * 0.28} ${cx} ${topo + hh * 0.24} Q ${cx - w / 2 - 6} ${topo + hh * 0.28} ${cx - w / 2 - 18} ${topo + hh * 0.2} Z`} fill={c} stroke={e} strokeWidth={0.6} />
+        <path d={`M ${cx - w / 2 + 3} ${topo + hh * 0.14} C ${cx - w / 2 + 2} ${topo - 8} ${cx + w / 2 - 2} ${topo - 8} ${cx + w / 2 - 3} ${topo + hh * 0.14} Z`} fill={c} stroke={e} strokeWidth={0.6} />
+        <path d={`M ${cx - w / 2 + 3.2} ${topo + hh * 0.07} L ${cx + w / 2 - 3.2} ${topo + hh * 0.07}`} stroke="#1b1b1d" strokeWidth={1.6} />
       </g>
     );
   }

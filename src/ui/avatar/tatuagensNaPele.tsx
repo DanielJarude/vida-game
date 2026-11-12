@@ -219,7 +219,7 @@ export function TatuagensDoRosto({ lista, g, pele, rosto, uid }: { lista: Tatuag
           return (
             <g key={t.id} opacity={op} data-tatuagem={t.desenho} data-regiao={t.regiao} data-lado={t.lado}
               transform={`translate(${x.toFixed(2)} ${y.toFixed(2)}) rotate(${rot.toFixed(1)}) scale(${((w / nw) * espelho).toFixed(4)} ${(h / nh).toFixed(4)}) translate(${(-nw / 2).toFixed(2)} ${(-nh / 2).toFixed(2)})`}>
-              <DesenhoDaTatuagem id={t.desenho} tinta={tinta} cor={cor} traco={0.9} texto={t.texto} espelhado={espelho < 0} />
+              <DesenhoDaTatuagem id={t.desenho} tinta={tinta} cor={cor} traco={1.4} texto={t.texto} espelhado={espelho < 0} />
             </g>
           );
         })}

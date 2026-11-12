@@ -28,6 +28,9 @@ import { processarEstetica, PROCEDIMENTOS } from '../sistemas/estetica';
 import '../v17/saude/cirurgias17';
 import { precisaDeOculos } from '../sistemas/estilo';
 import { idade } from '../nucleo';
+import { sementeDaPeca } from '../sistemas/estilo';
+import { itemEstilo } from '../dados/estilo';
+import { categoriaDoItem } from '../sistemas/lojas';
 
 const novo = (): Vida => { const v = structuredClone(adulto(30)); v.financas.conta = 3_000_000; for (const k of Object.keys(v.fatos)) if (k.startsWith('cota17')) delete v.fatos[k]; return v; };
 
@@ -329,6 +332,20 @@ describe('VIDA 17 · cirurgias com consequência', () => {
     const w = novo();
     w.fatos.refrativa17 = w.t;
     expect(idade(w) >= 42 || !precisaDeOculos(w)).toBe(true);
+  });
+});
+
+describe('VIDA 17 · da vitrine ao corpo: o mesmo produto', () => {
+  it('a variante vista na loja é a comprada, a do guarda-roupa e a do corpo; os acessórios novos existem e vão na loja certa', () => {
+    let v = novo();
+    v = executar(v, { tipo: 'comprar_item', itemId: 'jeans', variante: 'vitrine-7' } as never).vida;
+    const meu = v.eu.estilo!.itens.find(x => x.itemId === 'jeans')!;
+    expect(meu.variante).toBe('vitrine-7');
+    expect(sementeDaPeca(meu)).toBe('vitrine-7');
+    for (const id of ['bone_trucker', 'bone_dad', 'bucket', 'fedora', 'boina', 'gorro_pompom', 'touca_cetim', 'chapeu_floppy', 'viseira', 'bone_grife']) { const it = itemEstilo(id)!; expect(it.categoria, id).toBe('chapeu'); expect(categoriaDoItem(it)).toBe('acessorios'); }
+    for (const id of ['bolsa_transversal', 'bolsa_tote', 'mochila', 'pochete', 'clutch', 'bolsa_grife']) expect(categoriaDoItem(itemEstilo(id)!), id).toBe('acessorios');
+    v = executar(v, { tipo: 'comprar_item', itemId: 'bone_trucker' } as never).vida;
+    expect(v.eu.visual.modeloChapeu).toBe('bone_trucker');
   });
 });
 

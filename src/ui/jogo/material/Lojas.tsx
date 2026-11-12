@@ -122,7 +122,7 @@ export function LojaDaVida({ vida, agir, lojaId }: { vida: Vida; agir: (a: Acao)
       {ambientes.length > 1 && i >= 18 && !q && <Conjuntos14 vida={vida} agir={agir} />}
       <p className="nota">{visiveis.length} {visiveis.length === 1 ? 'produto' : 'produtos'}{m.texto || m.marca || m.preco || cat || faixa || tipo || ambiente ? ' com esses filtros' : ''}.</p>
       {provando && <Provador vida={vida} itemId={provando.itemId} variante={provando.variante} aoFechar={() => setProvando(null)} />}
-      <ul className="catalogo-loja">
+      <ul className="catalogo-loja" data-loja={lojaId}>
         {visiveis.slice(0, quantos).map(l => <ProdutoNaLoja key={l.chave} vida={vida} agir={agir} linha={l} lojaId={lojaId} faixa={faixa} marca={m.marca} preco={preco} crianca={i < 12} provando={provando?.itemId === l.produto.id ? provando.variante : undefined} provar={(variante: string) => setProvando(p => (p?.itemId === l.produto.id && p.variante === variante ? null : { itemId: l.produto.id, variante }))} />)}
       </ul>
       {visiveis.length > quantos && <button type="button" className="botao botao--discreto" onClick={() => setQuantos(q => q + POR_PAGINA)}>Ver mais ({visiveis.length - quantos})</button>}
@@ -187,7 +187,9 @@ function ProdutoNaLoja({ vida, agir, linha, lojaId, faixa, marca, preco, crianca
   const edicao = it?.edicao ?? c?.edicao;
   const categoria = it ? TIPOS_DE_PECA.find(t => t.id === tipoDePeca(it))!.nome : c && (linha.categoria === 'moveis' || linha.categoria === 'eletrodomesticos') ? `${nomeDoTipoDeMovel(tipoDeMovel(c.id, linha.categoria === 'eletrodomesticos'))} · ${nomeDaCategoriaDaCasa(categoriaDaCasa(c.id, linha.categoria === 'eletrodomesticos')).toLowerCase()}` : NOME_CATEGORIA[linha.categoria];
   return (
-    <li className={`catalogo-loja__cartao${nivel >= 4 ? ' catalogo-loja__cartao--luxo' : ''}${nivel >= 6 ? ' catalogo-loja__cartao--exclusivo' : ''}`} data-produto={p.id} data-nivel={nivel}>
+    <li className={`catalogo-loja__cartao${nivel >= 4 ? ' catalogo-loja__cartao--luxo' : ''}${nivel >= 6 ? ' catalogo-loja__cartao--exclusivo' : ''}`} data-produto={p.id} data-nivel={nivel} data-estado={meu?.usando ? 'em-uso' : tem ? 'seu' : 'disponivel'}>
+      {/* VIDA 17: o estado do produto, sempre no mesmo canto (em todas as lojas). */}
+      {(tem || meu?.usando) && <span className={`loja17-estado loja17-estado--${meu?.usando ? 'uso' : 'seu'}`}>{meu?.usando ? 'Em uso' : 'É seu'}</span>}
       <span className="catalogo-loja__imagem">
         {c && <DesenhoObjeto coisaId={c.id} cor={variantesDaCoisa(c.id)[0].cor} tamanho={96} rotulo={c.nome} marca={o.marca} />}
         {it && <MiniaturaDaPeca vida={vida} itemId={p.id} id={variante} largura={96} rotulo={`${nome}, como fica em você`} />}

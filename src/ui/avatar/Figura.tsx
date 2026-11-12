@@ -132,6 +132,8 @@ export function focoDaPeca(genero: Genero, corpo: TipoDeCorpo, idade: number, lu
     // O relógio no pulso esquerdo da pessoa (à direita de quem olha); a pulseira e o anel, no outro.
     pes: [g.cx, g.yTorn - 4, g.yChao + 4, 38], pulso: [g.cx + g.ombro + 2.6, 124, 150, 24], pulseira: [g.cx - g.ombro - 2.6, 124, 150, 24],
     anel: [g.cx - g.ombro - 2.7, 132, 158, 22], joia: [g.cx, g.topo - 8, g.topo + 30, 54],
+    // VIDA 17: a bolsa (o tronco e a mão: cabe a cruzada, a sacola e a de mão).
+    bolsa: [g.cx, g.topo - 6, 166, (g.ombro + 18) * 2],
     // 12.9: o umbigo (o piercing), a barriga em volta.
     umbigo: [g.cx, g.yCint - 10, g.yCint + 14, 34]
   };
@@ -258,12 +260,37 @@ function Estampa({ id, tipo, cor, cor2 }: { id: string; tipo: string; cor: strin
   );
 }
 
+/** VIDA 17: a textura do tecido (`pecas.materialDe`), num padrão com a cor da peça por baixo. */
+function MaterialDaPeca({ id, mat, cor }: { id: string; mat: string; cor: string }) {
+  const claro = misturar(cor, '#ffffff', 0.22), escuro = misturar(cor, '#000000', 0.18);
+  if (mat === 'couro' || mat === 'seda' || mat === 'veludo') return (
+    <linearGradient id={id} x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stopColor={misturar(cor, '#ffffff', mat === 'couro' ? 0.16 : mat === 'seda' ? 0.26 : 0.08)} />
+      <stop offset="0.38" stopColor={cor} />
+      <stop offset="0.62" stopColor={mat === 'seda' ? misturar(cor, '#ffffff', 0.14) : cor} />
+      <stop offset="1" stopColor={misturar(cor, '#000000', mat === 'veludo' ? 0.3 : 0.16)} />
+    </linearGradient>
+  );
+  const W = mat === 'trico' ? 3 : mat === 'linho' ? 2.6 : mat === 'moletom' ? 2.2 : 2.4;
+  return (
+    <pattern id={id} patternUnits="userSpaceOnUse" width={W} height={W}>
+      <rect width={W} height={W} fill={cor} />
+      {(mat === 'jeans' || mat === 'sarja') && <path d={`M 0 ${W} L ${W} 0`} stroke={mat === 'jeans' ? claro : escuro} strokeWidth={mat === 'jeans' ? 0.5 : 0.3} opacity={mat === 'jeans' ? 0.55 : 0.5} />}
+      {mat === 'trico' && <path d={`M 0 0.6 L ${W / 2} 2 L ${W} 0.6`} fill="none" stroke={escuro} strokeWidth={0.35} opacity={0.6} />}
+      {mat === 'linho' && <><path d={`M 0 0.8 H ${W}`} stroke={claro} strokeWidth={0.3} opacity={0.6} /><path d={`M 1.6 0 V ${W}`} stroke={escuro} strokeWidth={0.2} opacity={0.4} /></>}
+      {mat === 'moletom' && <circle cx={1.1} cy={1.1} r={0.35} fill={escuro} opacity={0.35} />}
+    </pattern>
+  );
+}
+
 const sombraDe = (c: string, t = 0.24) => misturar(c, '#000000', t);
 /** A camisa de time listrada (vertical) ou lisa com mangas de contraste — pela cor (estável para a mesma peça). */
 const camisaListrada = (cor: string) => parseInt(cor.slice(1, 3), 16) % 2 === 0;
 
-function preenchimento(p: { cor?: unknown; estampa?: string }, idEstampa: string, detalhe: boolean): string {
+function preenchimento(p: { cor?: unknown; estampa?: string; material?: string }, idEstampa: string, detalhe: boolean): string {
   const cor = p.cor as string;
+  // VIDA 17: sem estampa, o tecido (o padrão do material, definido junto das estampas).
+  if (!p.estampa && p.material && detalhe) return `url(#${idEstampa}-mat)`;
   if (p.estampa === 'time') return camisaListrada(cor) ? `url(#${idEstampa})` : cor;
   return detalhe && p.estampa && ['listras', 'xadrez', 'floral', 'chita', 'wax', 'tachas'].includes(p.estampa) ? `url(#${idEstampa})` : cor;
 }
@@ -391,8 +418,9 @@ function Inteira({ g, p, ide, detalhe, pele }: { g: Geo; p: P<'inteira'>; ide: s
   );
 }
 
-function Casaco({ g, p, detalhe, gravata }: { g: Geo; p: P<'casaco'>; detalhe: boolean; gravata?: boolean }) {
+function Casaco({ g, p, detalhe, gravata, ide }: { g: Geo; p: P<'casaco'>; detalhe: boolean; gravata?: boolean; ide?: string }) {
   const cor = p.cor as string, esc = sombraDe(cor, 0.3);
+  const tecido = ide ? preenchimento(p as { cor?: unknown; material?: string }, ide, detalhe) : cor;
   const fim = p.comprimento === 'cintura' ? g.yCint + 8 : p.comprimento === 'quadril' ? g.yQuad + 8 : g.yJoelho + 6;
   const lado_ = (s: 1 | -1) => {
     const o = g.ombro + 1.8, q = g.quadril + 2.4 + (p.comprimento === 'joelho' ? 4 : 0);
@@ -405,9 +433,9 @@ function Casaco({ g, p, detalhe, gravata }: { g: Geo; p: P<'casaco'>; detalhe: b
   const claro = misturar(cor, '#ffffff', 0.4);
   return (
     <g data-peca={p.forma} className="figura__casaco">
-      {([-1, 1] as const).map(s => <path key={`m${s}`} d={braco(g, s, 1.9, 142)} fill={cor} stroke={esc} strokeWidth={0.5} />)}
+      {([-1, 1] as const).map(s => <path key={`m${s}`} d={braco(g, s, 1.9, 142)} fill={tecido} stroke={esc} strokeWidth={0.5} />)}
       {gravata && <path d={`M ${g.cx - 1.6} ${g.topo + 6} L ${g.cx + 1.6} ${g.topo + 6} L ${g.cx + 2.2} ${g.topo + 30} L ${g.cx} ${g.topo + 33} L ${g.cx - 2.2} ${g.topo + 30} Z`} fill="#7b2d3a" />}
-      {([-1, 1] as const).map(s => <path key={s} d={lado_(s)} fill={cor} stroke={esc} strokeWidth={0.5} />)}
+      {([-1, 1] as const).map(s => <path key={s} d={lado_(s)} fill={tecido} stroke={esc} strokeWidth={0.5} />)}
       {p.lapela && ([-1, 1] as const).map(s => <path key={`l${s}`} d={`M ${lado(g, s, g.pesc - 0.4)} ${g.topo + 3} L ${lado(g, s, g.pesc + 5.5)} ${g.topo + 10} L ${lado(g, s, g.pesc + 2.2)} ${g.topo + 13} L ${lado(g, s, 3.6)} ${g.topo + 22}`} fill="none" stroke={esc} strokeWidth={0.8} strokeLinejoin="round" />)}
       {p.gola === 'alta' && <path d={`M ${lado(g, -1, g.pesc + 1.6)} ${g.topo - 4} L ${lado(g, -1, g.pesc + 2)} ${g.topo + 3} L ${lado(g, 1, g.pesc + 2)} ${g.topo + 3} L ${lado(g, 1, g.pesc + 1.6)} ${g.topo - 4} Z`} fill={cor} stroke={esc} strokeWidth={0.5} />}
       {p.gola === 'camisa' && ([-1, 1] as const).map(s => <path key={`g${s}`} d={`M ${lado(g, s, g.pesc + 1.2)} ${g.topo - 1.5} L ${lado(g, s, g.pesc + 6.5)} ${g.topo + 4} L ${lado(g, s, 2.6)} ${g.topo + 9} Z`} fill={misturar(cor, '#ffffff', 0.1)} stroke={esc} strokeWidth={0.5} />)}
@@ -553,12 +581,15 @@ export const Figura = memo(function Figura({ visual, genero, idade, semente = 'e
   const costas = vista === 'costas';
   const estampas: ReactNode[] = [];
   const ide = (k: string) => `${uid}-${k}`;
-  for (const k of ['cima', 'baixo', 'inteira'] as const) {
-    const p = conj[k] as { estampa?: string; cor?: string; cor2?: string } | undefined;
+  for (const k of ['cima', 'baixo', 'inteira', 'casaco'] as const) {
+    const p = conj[k] as { estampa?: string; cor?: string; cor2?: string; material?: string } | undefined;
+    if (p && !p.estampa && p.material && detalhe) { estampas.push(<MaterialDaPeca key={`${k}m`} id={`${ide(k)}-mat`} mat={p.material} cor={p.cor as string} />); continue; }
+    if (k === 'casaco') continue;
     if (p?.estampa === 'time') { if (camisaListrada(p.cor as string)) estampas.push(<Estampa key={k} id={ide(k)} tipo="listrasV" cor={p.cor as string} cor2={p.cor2 ?? '#f4f1ea'} />); continue; }
     if (p?.estampa && detalhe) estampas.push(<Estampa key={k} id={ide(k)} tipo={p.estampa} cor={p.cor as string} cor2={p.cor2 ?? '#f4f1ea'} />);
   }
   const relogio = acess.pulso as P<'pulso'> | undefined, pulseira = acess.pulseira as P<'pulseira'> | undefined, anel = acess.anel as P<'anel'> | undefined, colar = acess.pescoco as P<'pescoco'> | undefined;
+  const bolsa = acess.bolsa as P<'bolsa'> | undefined;
   // O pulso esquerdo da pessoa fica à direita de quem olha.
   const pulso = (s: 1 | -1) => ({ x: lado(g, s, g.ombro + 2.6), y: 137 });
   // A escala pela idade, a partir da base do pescoço (a cabeça não encolhe).
@@ -603,7 +634,7 @@ export const Figura = memo(function Figura({ visual, genero, idade, semente = 'e
         {descalco ? <g className="figura__pes figura__pes--descalco">{([-1, 1] as const).map(s => <path key={s} d={peDescalco(g, s)} fill={pele} stroke={contorno} strokeWidth={0.6} strokeLinejoin="round" />)}
           {tatuagens.some(t => t.regiao === 'pe') && !costas && <Tatuagens g={g} lista={tatuagens.filter(t => t.regiao === 'pe')} comps={[]} pele={pele} ide={ide} costas={costas} detalhe={detalhe} idade={idade} />}</g>
           : <Pes g={g} p={conj.pes as P<'pes'>} pele={pele} detalhe={detalhe} />}
-        {conj.casaco && <Casaco g={g} p={conj.casaco as P<'casaco'>} detalhe={detalhe} />}
+        {conj.casaco && <Casaco g={g} p={conj.casaco as P<'casaco'>} detalhe={detalhe} ide={ide('casaco')} />}
         {/* As mãos por cima das mangas longas (com o contorno, e a tatuagem da mão por cima delas). */}
         {([-1, 1] as const).map(s => <ellipse key={`mm${s}`} cx={lado(g, s, g.ombro + 2.7)} cy={145.5} rx={g.antebraco * 0.95} ry={5.2} fill={pele} stroke={contorno} strokeWidth={0.6} />)}
         {tatuagens.some(t => NA_MAO.has(t.regiao)) && <Tatuagens g={g} lista={tatuagens.filter(t => NA_MAO.has(t.regiao))} comps={[]} pele={pele} ide={ide} costas={costas} detalhe={detalhe} idade={idade} />}
@@ -611,7 +642,8 @@ export const Figura = memo(function Figura({ visual, genero, idade, semente = 'e
         {colar && (idade >= 8) && <g className="figura__colar" data-acessorio="pescoco">
           <path d={`M ${g.cx - g.pesc - 0.6} ${g.topo - 1} Q ${g.cx} ${g.topo + (colar.grossa ? 11 : 12.5)} ${g.cx + g.pesc + 0.6} ${g.topo - 1}`} fill="none" stroke={colar.cor} strokeWidth={colar.grossa ? 1.6 : 0.8} strokeLinecap="round" />
           {colar.contas && detalhe && [0, 1, 2, 3, 4, 5, 6].map(k => { const t = (k + 1) / 8; const x = g.cx - g.pesc + (2 * g.pesc) * t; const y = g.topo - 1 + Math.sin(Math.PI * t) * 12; return <circle key={k} cx={x} cy={y} r={0.9} fill={colar.contas![k % colar.contas!.length]} />; })}
-          {colar.pingente && <circle cx={g.cx} cy={g.topo + 11.4} r={1.3} fill={colar.pingente} />}
+          {colar.pingente && !colar.cruz && <circle cx={g.cx} cy={g.topo + 11.4} r={1.3} fill={colar.pingente} />}
+          {colar.cruz && <path d={`M ${g.cx} ${g.topo + 10.6} v 5.4 M ${g.cx - 1.7} ${g.topo + 12.2} h 3.4`} stroke={colar.pingente ?? colar.cor} strokeWidth={1.1} strokeLinecap="round" />}
         </g>}
         {relogio && (() => { const w = pulso(1); return (
           <g className="figura__relogio" data-acessorio="pulso" data-forma={relogio.forma}>
@@ -624,6 +656,40 @@ export const Figura = memo(function Figura({ visual, genero, idade, semente = 'e
             <path d={`M ${w.x - g.antebraco - 0.4} ${w.y} Q ${w.x} ${w.y + 1.6} ${w.x + g.antebraco + 0.4} ${w.y}`} fill="none" stroke={pulseira.cor} strokeWidth={pulseira.grossa ? 1.8 : 1.1} strokeLinecap="round" />
             {pulseira.contas && [-2, 0, 2].map((dx, k) => <circle key={k} cx={w.x + dx} cy={w.y + 0.9} r={0.9} fill={pulseira.contas![k]} />)}
           </g>); })()}
+        {/* VIDA 17: a bolsa — cruzada no peito, na mão, nas costas (as alças na frente), na cintura. */}
+        {bolsa && !costas && (() => {
+          const fer = bolsa.ferragem ?? '#c9ccd1', alca = bolsa.alca ?? misturar(bolsa.cor, '#000000', 0.3), esc2 = misturar(bolsa.cor, '#000000', 0.3);
+          if (bolsa.forma === 'transversal') { const bx = lado(g, -1, g.quadril - 1), by = g.yQuad - 2; return (
+            <g className="figura__bolsa" data-acessorio="bolsa" data-forma="transversal">
+              <path d={`M ${lado(g, 1, g.ombro - 3)} ${g.topo + 1} L ${bx + 3} ${by - 4}`} stroke={alca} strokeWidth={1.3} strokeLinecap="round" />
+              <rect x={bx - 6} y={by - 4.5} width={12} height={9} rx={1.8} fill={bolsa.cor} stroke={esc2} strokeWidth={0.5} />
+              <path d={`M ${bx - 6} ${by - 1.6} h 12`} stroke={esc2} strokeWidth={0.5} /><rect x={bx - 1.2} y={by - 2.4} width={2.4} height={1.6} rx={0.4} fill={fer} />
+            </g>); }
+          if (bolsa.forma === 'tote') { const m = { x: lado(g, 1, g.ombro + 2.7), y: 146 }; return (
+            <g className="figura__bolsa" data-acessorio="bolsa" data-forma="tote">
+              <path d={`M ${m.x - 3.6} ${m.y + 2} Q ${m.x} ${m.y - 5} ${m.x + 3.6} ${m.y + 2}`} fill="none" stroke={alca} strokeWidth={1} />
+              <path d={`M ${m.x - 8} ${m.y + 2} L ${m.x + 8} ${m.y + 2} L ${m.x + 7} ${m.y + 18} L ${m.x - 7} ${m.y + 18} Z`} fill={bolsa.cor} stroke={esc2} strokeWidth={0.5} />
+              <path d={`M ${m.x - 7.6} ${m.y + 5} h 15.2`} stroke={esc2} strokeWidth={0.4} opacity={0.6} />
+            </g>); }
+          if (bolsa.forma === 'mochila') return (
+            <g className="figura__bolsa" data-acessorio="bolsa" data-forma="mochila">
+              {([-1, 1] as const).map(s => <path key={s} d={`M ${lado(g, s, g.pesc + 3)} ${g.topo} C ${lado(g, s, g.peito * 0.62)} ${g.topo + 8} ${lado(g, s, g.peito * 0.7)} ${g.topo + 20} ${lado(g, s, g.peito * 0.74)} ${g.yCint - 6}`} fill="none" stroke={alca} strokeWidth={2.2} strokeLinecap="round" />)}
+              {([-1, 1] as const).map(s => <rect key={`f${s}`} x={lado(g, s, g.peito * 0.7) - 1.4} y={g.topo + 15} width={2.8} height={2} rx={0.5} fill={fer} />)}
+              {([-1, 1] as const).map(s => <path key={`o${s}`} d={`M ${lado(g, s, g.ombro - 1)} ${g.topo - 2} q ${s * 3} -1 ${s * 4} 3`} fill="none" stroke={bolsa.cor} strokeWidth={2.4} strokeLinecap="round" />)}
+            </g>);
+          if (bolsa.forma === 'pochete') return (
+            <g className="figura__bolsa" data-acessorio="bolsa" data-forma="pochete">
+              <path d={`M ${lado(g, -1, g.cintura + 1)} ${g.yCint + 3} Q ${g.cx} ${g.yCint + 5.6} ${lado(g, 1, g.cintura + 1)} ${g.yCint + 3}`} fill="none" stroke={alca} strokeWidth={1.2} />
+              <path d={`M ${g.cx - 7} ${g.yCint + 2} Q ${g.cx} ${g.yCint} ${g.cx + 7} ${g.yCint + 2} Q ${g.cx + 8} ${g.yCint + 9} ${g.cx} ${g.yCint + 10} Q ${g.cx - 8} ${g.yCint + 9} ${g.cx - 7} ${g.yCint + 2} Z`} fill={bolsa.cor} stroke={esc2} strokeWidth={0.5} />
+              <path d={`M ${g.cx - 6} ${g.yCint + 4.6} Q ${g.cx} ${g.yCint + 3.4} ${g.cx + 6} ${g.yCint + 4.6}`} fill="none" stroke={fer} strokeWidth={0.6} />
+            </g>);
+          const m = { x: lado(g, 1, g.ombro + 2.7), y: 144 };
+          return (
+            <g className="figura__bolsa" data-acessorio="bolsa" data-forma="clutch">
+              <rect x={m.x - 6.5} y={m.y - 1.5} width={13} height={7} rx={1.4} fill={bolsa.cor} stroke={esc2} strokeWidth={0.5} />
+              <path d={`M ${m.x - 6.5} ${m.y + 1.4} L ${m.x} ${m.y + 3.4} L ${m.x + 6.5} ${m.y + 1.4}`} fill="none" stroke={esc2} strokeWidth={0.5} /><circle cx={m.x} cy={m.y + 3.2} r={0.9} fill={fer} />
+            </g>);
+        })()}
         {anel && <g className="figura__anel" data-acessorio="anel"><circle cx={lado(g, -1, g.ombro + 2.7)} cy={149.5} r={1.2} fill="none" stroke={anel.cor} strokeWidth={0.9} />{anel.pedra && <circle cx={lado(g, -1, g.ombro + 2.7)} cy={148.4} r={0.7} fill={anel.pedra} />}</g>}
       </g>
       {/* A cabeça: o mesmo retrato (rosto, cabelo, barba, óculos, chapéu), sem o busto. */}

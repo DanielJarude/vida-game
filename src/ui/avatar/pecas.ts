@@ -25,7 +25,27 @@ export type Peca =
   | { parte: 'pulso'; forma: 'analogico' | 'digital' | 'smart'; pulseira: string; caixa: string; mostrador: string }
   | { parte: 'pulseira'; cor: string; grossa?: boolean; contas?: string[] }
   | { parte: 'anel'; cor: string; pedra?: string }
-  | { parte: 'pescoco'; cor: string; grossa?: boolean; contas?: string[]; pingente?: string };
+  | { parte: 'pescoco'; cor: string; grossa?: boolean; contas?: string[]; pingente?: string; cruz?: boolean }
+  /** VIDA 17: a bolsa (cruzada no peito, na mão, nas costas, na cintura). */
+  | { parte: 'bolsa'; forma: 'transversal' | 'tote' | 'mochila' | 'pochete' | 'clutch'; cor: string; alca?: string; ferragem?: string };
+
+/**
+ * VIDA 17 · O MATERIAL de cada peça (a textura que se vê de perto): lido do próprio produto — o jeans tem a sarja
+ * diagonal, o tricô o ponto, o linho a trama, o couro e a seda o brilho, a sarja e a alfaiataria a diagonal fina, o
+ * moletom a felpa. A cor é a mesma; o tecido deixa de ser chapado (a vitrine, o provador e o corpo usam o mesmo).
+ */
+export type Material = 'jeans' | 'trico' | 'linho' | 'couro' | 'seda' | 'sarja' | 'moletom' | 'veludo';
+export function materialDe(itemId: string): Material | undefined {
+  if (/jeans/.test(itemId)) return 'jeans';
+  if (/couro|motoqueiro/.test(itemId)) return 'couro';
+  if (/seda|cetim|festa|longo|gala/.test(itemId)) return 'seda';
+  if (/tricot|tric|sueter|cardigan|_la\b|casaco_la|gola_alta/.test(itemId)) return 'trico';
+  if (/linho|bata/.test(itemId)) return 'linho';
+  if (/veludo/.test(itemId)) return 'veludo';
+  if (/moletom|agasalho|baile/.test(itemId)) return 'moletom';
+  if (/alfaiataria|sarja|cargo|terno|blazer|sobretudo|bombacha|social/.test(itemId)) return 'sarja';
+  return undefined;
+}
 
 /** Um conjunto antigo (as "roupas" de antes do 12.4 ocupam a parte de cima e a de baixo). */
 export interface Conjunto { cima?: Peca; baixo?: Peca; inteira?: Peca; casaco?: Peca; pes?: Peca }
@@ -99,6 +119,19 @@ export const PECAS: Record<string, Peca | Conjunto> = {
 
   // ------------------------------------------------------------ pulso, mãos, pescoço
   relogio: { parte: 'pulso', forma: 'analogico', pulseira: '#5a3d2b', caixa: '#c9ccd1', mostrador: '#f4f1ea' },
+  // VIDA 17: os relógios, as joias e as bolsas novas.
+  relogio_mergulho: { parte: 'pulso', forma: 'analogico', pulseira: '#b9bec5', caixa: '#2d5fa8', mostrador: '#14213d' },
+  relogio_couro_classico: { parte: 'pulso', forma: 'analogico', pulseira: '#6b3f22', caixa: '#d8b45a', mostrador: '#f3ead2' },
+  relogio_digital_retro: { parte: 'pulso', forma: 'digital', pulseira: '#c9a14a', caixa: '#d8b45a', mostrador: '#9fb58a' },
+  corrente_cruz: { parte: 'pescoco', cor: '#c9ccd1', grossa: true, pingente: '#c9ccd1', cruz: true },
+  colar_perolas: { parte: 'pescoco', cor: '#f1ece0', contas: ['#f4efe4', '#f4efe4', '#f4efe4', '#f4efe4', '#f4efe4', '#f4efe4', '#f4efe4'] },
+  anel_grafite: { parte: 'anel', cor: '#7d838a' },
+  bolsa_transversal: { parte: 'bolsa', forma: 'transversal', cor: '#2b2f36', alca: '#1b1b1d', ferragem: '#c9ccd1' },
+  bolsa_tote: { parte: 'bolsa', forma: 'tote', cor: '#c9a46a', alca: '#6b4a2a' },
+  mochila: { parte: 'bolsa', forma: 'mochila', cor: '#2f4f7a', alca: '#1f2f4a' },
+  pochete: { parte: 'bolsa', forma: 'pochete', cor: '#1b1b1d', alca: '#3b3f45', ferragem: '#e0b43c' },
+  clutch: { parte: 'bolsa', forma: 'clutch', cor: '#7b1e2b', ferragem: '#d8b45a' },
+  bolsa_grife: { parte: 'bolsa', forma: 'transversal', cor: '#5a2a1e', alca: '#d8b45a', ferragem: '#d8b45a' },
   relogio_luxo: { parte: 'pulso', forma: 'analogico', pulseira: '#c9a14a', caixa: '#d8b45a', mostrador: '#1a2a44' },
   relogio_digital: { parte: 'pulso', forma: 'digital', pulseira: '#1b1b1d', caixa: '#2a2a2e', mostrador: '#9fb3a0' },
   smartwatch: { parte: 'pulso', forma: 'smart', pulseira: '#3a3f45', caixa: '#1b1b1d', mostrador: '#0d1520' },
@@ -158,7 +191,8 @@ export type PecaResolvida = Peca & { cor?: string };
 export function pecasDoItem(itemId: string, semente: string): Conjunto {
   const x = PECAS[itemId];
   if (!x) return {};
-  const resolver = (p: Peca): Peca => ('cor' in p ? { ...p, cor: corDe(p.cor as Cor, semente + p.parte) } as Peca : p);
+  const mat = materialDe(itemId);
+  const resolver = (p: Peca): Peca => ('cor' in p ? { ...p, cor: corDe(p.cor as Cor, semente + p.parte), ...(mat && p.parte !== 'pes' ? { material: mat } : {}) } as Peca : p);
   if (ehPeca(x)) {
     const p = resolver(x);
     const chave = p.parte === 'cima' ? 'cima' : p.parte === 'baixo' ? 'baixo' : p.parte === 'inteira' ? 'inteira' : p.parte === 'casaco' ? 'casaco' : p.parte === 'pes' ? 'pes' : undefined;
@@ -226,7 +260,7 @@ export function varianteDaCor(itemId: string, cor: string): string {
 }
 
 /** O acessório (pulso, pulseira, anel, pescoço) de um item. */
-export function acessorioDoItem(itemId: string): Extract<Peca, { parte: 'pulso' | 'pulseira' | 'anel' | 'pescoco' }> | undefined {
+export function acessorioDoItem(itemId: string): Extract<Peca, { parte: 'pulso' | 'pulseira' | 'anel' | 'pescoco' | 'bolsa' }> | undefined {
   const x = PECAS[itemId];
-  return x && ehPeca(x) && (x.parte === 'pulso' || x.parte === 'pulseira' || x.parte === 'anel' || x.parte === 'pescoco') ? x : undefined;
+  return x && ehPeca(x) && (x.parte === 'pulso' || x.parte === 'pulseira' || x.parte === 'anel' || x.parte === 'pescoco' || x.parte === 'bolsa') ? x : undefined;
 }
