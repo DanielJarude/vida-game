@@ -210,7 +210,7 @@ function NovaTatuagem({ vida, agir, cobrindo, aoCancelarCobertura }: { vida: Vid
           {tamanhosAqui.length === 1 && <p className="nota">Tamanho: {NOME_TAMANHO[tamanho]}.</p>}
           {d.texto && (
             <label className="campo">
-              <span className="campo__rotulo">{d.texto === 'nome' ? 'O nome' : d.texto === 'data' ? 'A data' : d.texto === 'iniciais' ? 'As iniciais' : d.texto === 'coordenadas' ? 'As coordenadas' : 'A frase'}</span>
+              <span className="campo__rotulo">{d.texto === 'nome' ? 'O nome' : d.texto === 'data' ? 'A data' : d.texto === 'iniciais' ? 'As iniciais' : d.texto === 'coordenadas' ? 'As coordenadas' : d.texto === 'numero' ? 'O número (DDD, ano, CEP)' : 'A frase'}</span>
               <input type="text" value={texto} maxLength={28} placeholder={textoSugerido(vida, d.texto, pessoaValida)} onChange={e => setTexto(e.target.value)} />
             </label>
           )}
@@ -314,6 +314,8 @@ function textoSugerido(v: Vida, tipo: NonNullable<ReturnType<typeof desenhoDeTat
   if (tipo === 'iniciais') return p ? `${p.nome[0]}·${p.sobrenome?.[0] ?? ''}`.replace(/·$/, '') : `${v.eu.nome[0]}·${v.eu.sobrenome[0]}`;
   if (tipo === 'data') return romanos(p ? anoDe(p.tNasc) : anoDe(v.t));
   if (tipo === 'coordenadas') return '23°33′S 46°38′O';
+  // VIDA 17: o número — o ano (de nascimento de quem a tatuagem homenageia, ou o seu).
+  if (tipo === 'numero') return String(anoDe(p ? p.tNasc : v.eu.tNasc));
   return 'Respira';
 }
 function romanos(n: number): string {

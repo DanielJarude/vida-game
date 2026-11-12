@@ -15,6 +15,7 @@ import type { ReactNode } from 'react';
 import { desenhoDeTatuagem, type DesenhoDeTatuagem } from '../../motor/dados/tatuagens';
 import { desenho129 } from './tatuagens129';
 import { desenho13 } from './tatuagens13';
+import { desenho17 } from './tatuagens17';
 
 type Cor = (hex: string) => string;
 
@@ -30,7 +31,7 @@ export function caixaNativa(d: Pick<DesenhoDeTatuagem, 'proporcao' | 'tamanho'>)
   return p >= 1 ? [20, 20 / p] : [20 * p, 20];
 }
 
-const TEXTO_PADRAO: Record<string, string> = { nome: 'Maria', data: 'XII·IV·MMX', frase: 'Respira', iniciais: 'A·M', coordenadas: '23°33′S 46°38′O' };
+const TEXTO_PADRAO: Record<string, string> = { nome: 'Maria', data: 'XII·IV·MMX', frase: 'Respira', iniciais: 'A·M', coordenadas: '23°33′S 46°38′O', numero: '011' };
 
 /** O desenho na caixa nativa. `texto` é o do jogador (lettering); `espelhado` desvira a letra (a letra nunca fica ao contrário). */
 export function DesenhoDaTatuagem({ id, tinta, cor, traco = 1, texto, espelhado }: { id: string; tinta: string; cor: Cor; traco?: number; texto?: string; espelhado?: boolean }): ReactNode {
@@ -335,5 +336,8 @@ function desenho(id: string, tinta: string, cor: Cor, traco: number, W: number, 
   // VIDA 13: os desenhos novos (estilos, temas e a cultura pop nova) têm a arte em `tatuagens13`.
   const de13 = desenho13(id, { tinta, cor, traco, W, H, texto, espelhado });
   if (de13 !== undefined) return de13;
+  // VIDA 17: rua e periferia, tradição de cadeia e as peças do rosto (`tatuagens17`).
+  const de17 = desenho17(id, { tinta, cor, traco, W, H, texto, espelhado });
+  if (de17 !== undefined) return de17;
   return <circle cx={W / 2} cy={H / 2} r={Math.min(W, H) * 0.2} fill="none" stroke={tinta} strokeWidth={s(0.8)} />;
 }

@@ -20,6 +20,14 @@ import { escrever16 } from '../v16/celular/mensagens16';
 import { criarRng, rngDe } from '../rng';
 import type { Msg15 } from '../dados15/celular/tipos';
 import type { Vida } from '../tipos';
+import { tatuagensNaFigura, temTatuagemVisivel } from '../sistemas/tatuagens';
+import { cabeNaRegiao, desenhoDeTatuagem, DESENHOS, NOME_ESTILO, REGIOES_SIMPLES } from '../dados/tatuagens';
+import { DESENHOS_17 } from '../dados17/tatuagens/tatuagens17';
+import { tipoDeCorpo } from '../sistemas/silhueta';
+import { processarEstetica, PROCEDIMENTOS } from '../sistemas/estetica';
+import '../v17/saude/cirurgias17';
+import { precisaDeOculos } from '../sistemas/estilo';
+import { idade } from '../nucleo';
 
 const novo = (): Vida => { const v = structuredClone(adulto(30)); v.financas.conta = 3_000_000; for (const k of Object.keys(v.fatos)) if (k.startsWith('cota17')) delete v.fatos[k]; return v; };
 
@@ -255,6 +263,72 @@ describe('VIDA 17 · a função dos móveis', () => {
   it('o que não tem função (poltrona) segue só a regra do espaço', () => {
     const v = emCasa('apto_2q');
     expect(vagaPara17(v, 'poltrona')).toBeUndefined();
+  });
+});
+
+describe('VIDA 17 · tatuagens no rosto e o catálogo novo', () => {
+  it('o rosto tem regiões; a lágrima cabe no canto do olho; a tatuagem aparece no retrato e conta como visível', () => {
+    let v = novo();
+    v.financas.conta = 50_000;
+    const pedido = { tipo: 'tatuar', desenho: 'lagrima', regiao: 'sob_olho', lado: 'd', tamanho: 1 } as const;
+    expect(podeTentar(disponibilidade(v, pedido as never))).toBe(true);
+    v = executar(v, pedido as never).vida;
+    const fig = tatuagensNaFigura(v);
+    expect(fig.some(t => t.regiao === 'sob_olho' && t.local === 'rosto')).toBe(true);
+    expect(temTatuagemVisivel(v)).toBe(true);
+    // A testa recebe a frase de lado a lado; a bochecha, a estrela — sem sobrepor.
+    v = executar(v, { tipo: 'tatuar', desenho: 'frase_testa', regiao: 'testa', tamanho: 1, texto: 'Fé' } as never).vida;
+    v = executar(v, { tipo: 'tatuar', desenho: 'estrela_rosto', regiao: 'bochecha', lado: 'e', tamanho: 1 } as never).vida;
+    expect(tatuagensNaFigura(v).filter(t => t.local === 'rosto').length).toBe(3);
+    expect(interpretar(JSON.stringify(v)).tipo).toBe('ok');
+  });
+  it('todo desenho novo cabe onde diz caber; os estilos novos existem; o catálogo cresceu', () => {
+    const novos = DESENHOS.filter(d => DESENHOS_17.includes(d));
+    expect(novos.length).toBeGreaterThanOrEqual(35);
+    for (const d of novos) {
+      expect(NOME_ESTILO[d.estilo], d.id).toBeTruthy();
+      const onde = d.regioes ?? REGIOES_SIMPLES;
+      expect(onde.some(r => d.tamanhos.some(t => cabeNaRegiao(d, r, t))), d.id).toBe(true);
+    }
+    for (const id of ['lagrima', 'tres_pontos', 'estrela_rosto', 'cruz_rosto', 'coracao_rosto']) expect(cabeNaRegiao(desenhoDeTatuagem(id)!, 'sob_olho', 1), id).toBe(true);
+    // O significado nunca trata a tatuagem como prova de crime: as de cadeia dizem que o sentido varia.
+    for (const d of novos.filter(x => x.estilo === 'cadeia' && !x.id.startsWith('letra_'))) expect(d.descricao, d.id).toMatch(/vari|muda|cada um|algumas|alguns|para muitos|outros|fora dela|em várias|nenhuma|tradição|comum|saudade|contar/i);
+  });
+});
+
+describe('VIDA 17 · cirurgias com consequência', () => {
+  function acimaDoPeso(): Vida {
+    const v = novo();
+    v.corpo.forma = 20; v.corpo.habitos.sedentario = true; v.corpo.saude = 70;
+    v.rotinas = v.rotinas.filter(r => r.id !== 'academia');
+    return v;
+  }
+  it('bariátrica: só para obesidade grave; o corpo muda aos poucos; suplementos todo ano; repouso bloqueia academia', () => {
+    const magro = novo(); magro.corpo.forma = 70;
+    expect(disponibilidade(magro, { tipo: 'estetica', id: 'bariatrica', clinica: 'renomada' } as never).grau).toBe('impossivel');
+    let v = acimaDoPeso();
+    expect(tipoDeCorpo(v)).toBe('acima_do_peso');
+    expect(podeTentar(disponibilidade(v, { tipo: 'estetica', id: 'bariatrica', clinica: 'renomada' } as never))).toBe(true);
+    v = executar(v, { tipo: 'estetica', id: 'bariatrica', clinica: 'renomada' } as never).vida;
+    expect(v.eu.cirurgia17?.bariatrica).toBeDefined();
+    // logo depois: o corpo ainda é o mesmo
+    expect(tipoDeCorpo(v)).toBe('acima_do_peso');
+    expect(disponibilidade(v, { tipo: 'rotina', id: 'academia', ativa: true } as never).grau).toBe('incompativel');
+    // um ano depois: mediano; a forma subiu; os suplementos foram pagos
+    const forma0 = v.corpo.forma;
+    v.t += 12; processarEstetica(v);
+    expect(tipoDeCorpo(v)).toBe('mediano');
+    expect(v.corpo.forma).toBeGreaterThan(forma0);
+    expect(interpretar(JSON.stringify(v)).tipo).toBe('ok');
+  });
+  it('lipo não é para obesidade; refrativa tira a miopia; o catálogo tem rosto, corpo e funcionais', () => {
+    const v = acimaDoPeso();
+    expect(disponibilidade(v, { tipo: 'estetica', id: 'lipo', clinica: 'boa' } as never).grau).toBe('impossivel');
+    expect(PROCEDIMENTOS.filter(p => p.area === 'corpo').length).toBeGreaterThanOrEqual(5);
+    expect(PROCEDIMENTOS.filter(p => p.area === 'funcional').length).toBeGreaterThanOrEqual(2);
+    const w = novo();
+    w.fatos.refrativa17 = w.t;
+    expect(idade(w) >= 42 || !precisaDeOculos(w)).toBe(true);
   });
 });
 

@@ -21,10 +21,13 @@
 
 import { DESENHOS_129, NOME_ESTILO_129, type EstiloDeTatuagem129, type TemaDeTatuagem } from './tatuagens129';
 import { DESENHOS_13 } from './tatuagens13';
+import { DESENHOS_17, MODELOS_17 } from '../dados17/tatuagens/tatuagens17';
 
 export type EstiloDeTatuagem =
   | EstiloDeTatuagem129 | 'realista' | 'tradicional' | 'blackwork' | 'tribal' | 'geometrica' | 'oriental' | 'minimalista' | 'fine_line'
-  | 'lettering' | 'ornamental' | 'floral' | 'simbolica' | 'abstrata' | 'composicao';
+  | 'lettering' | 'ornamental' | 'floral' | 'simbolica' | 'abstrata' | 'composicao'
+  /** VIDA 17: a rua e a periferia; a tradição de cadeia. */
+  | 'periferia' | 'cadeia';
 /** A parte grande do corpo (a lupa do estúdio enquadra por ela; os saves antigos guardavam só ela). */
 export type LocalDeTatuagem = 'braco' | 'antebraco' | 'ombro' | 'mao' | 'peito' | 'costas' | 'abdomen' | 'pescoco' | 'coxa' | 'panturrilha' | 'rosto';
 export type Lado = 'e' | 'd';
@@ -42,7 +45,7 @@ export type RegiaoDeTatuagem =
 export const NOME_ESTILO: Record<EstiloDeTatuagem, string> = {
   realista: 'Realista', tradicional: 'Old school', blackwork: 'Blackwork', tribal: 'Tribal', geometrica: 'Geométrica',
   oriental: 'Oriental', minimalista: 'Minimalista', fine_line: 'Fine line', lettering: 'Lettering', ornamental: 'Ornamental',
-  floral: 'Floral', simbolica: 'Simbólica', abstrata: 'Abstrata', ...NOME_ESTILO_129, composicao: 'Peças inteiras'
+  floral: 'Floral', simbolica: 'Simbólica', abstrata: 'Abstrata', ...NOME_ESTILO_129, periferia: 'Rua e periferia', cadeia: 'Tradição de cadeia', composicao: 'Peças inteiras'
 };
 
 /** 1 pequena · 2 média · 3 grande · 4 a peça que fecha a superfície. */
@@ -129,7 +132,7 @@ export const regioesCobertas = (r: RegiaoDeTatuagem): RegiaoDeTatuagem[] => REGI
 export const superficiesDe = (r: RegiaoDeTatuagem): RegiaoDeTatuagem[] => SUPERFICIES.filter(s => REGIOES[s].cobre!.includes(r));
 
 /** Se o texto do desenho é escrito pelo jogador (o nome, a data, a frase, as iniciais). */
-export type TextoDaTatuagem = 'nome' | 'data' | 'frase' | 'iniciais' | 'coordenadas';
+export type TextoDaTatuagem = 'nome' | 'data' | 'frase' | 'iniciais' | 'coordenadas' | 'numero';
 
 export interface DesenhoDeTatuagem {
   id: string;
@@ -262,7 +265,8 @@ export const DESENHOS: readonly DesenhoDeTatuagem[] = [
   { id: 'aguia_peito', nome: 'Águia no peito', estilo: 'composicao', tamanho: 4, tamanhos: T(4), regioes: ['peito_inteiro'], descricao: 'As asas abertas de um ombro ao outro.' },
   { id: 'perna_floral', nome: 'Perna florida', estilo: 'composicao', tamanho: 4, tamanhos: T(4), colorida: true, proporcao: 0.3, regioes: ['perna_inteira'], descricao: 'Rosas e folhas subindo do tornozelo à coxa.' },
   ...DESENHOS_129,
-  ...DESENHOS_13
+  ...DESENHOS_13,
+  ...DESENHOS_17
 ];
 const POR_ID = new Map(DESENHOS.map(d => [d.id, d]));
 export const desenhoDeTatuagem = (id: string) => POR_ID.get(id);
@@ -379,7 +383,9 @@ export const MODELOS_DE_COMPOSICAO: readonly ModeloDeComposicao[] = [
   { id: 'perna_old_school', nome: 'Perna old school', tipo: 'perna', fundo: 'nenhum', cor: 'colorida', descricao: 'Navio na coxa, rosa no joelho, serpente na canela, âncora na panturrilha.',
     pecas: [{ regiao: 'coxa', desenho: 'navio', tamanho: 3 }, { regiao: 'joelho', desenho: 'rosa_tradicional', tamanho: 2 }, { regiao: 'canela', desenho: 'cobra_tradicional', tamanho: 2 }, { regiao: 'panturrilha', desenho: 'ancora', tamanho: 3 }] },
   { id: 'perna_blackwork', nome: 'Perna blackwork', tipo: 'perna', fundo: 'blackwork', cor: 'preta', descricao: 'Corvo na coxa, mandala no joelho, floresta na canela, serpente na panturrilha.',
-    pecas: [{ regiao: 'coxa', desenho: 'corvo', tamanho: 3 }, { regiao: 'joelho', desenho: 'mandala', tamanho: 2 }, { regiao: 'canela', desenho: 'floresta', tamanho: 2 }, { regiao: 'panturrilha', desenho: 'serpente_negra', tamanho: 3 }] }
+    pecas: [{ regiao: 'coxa', desenho: 'corvo', tamanho: 3 }, { regiao: 'joelho', desenho: 'mandala', tamanho: 2 }, { regiao: 'canela', desenho: 'floresta', tamanho: 2 }, { regiao: 'panturrilha', desenho: 'serpente_negra', tamanho: 3 }] },
+  // VIDA 17: os conjuntos da rua, da fé, da família e da cadeia.
+  ...MODELOS_17
 ];
 export const modeloDeComposicao = (id: string) => MODELOS_DE_COMPOSICAO.find(m => m.id === id);
 
