@@ -70,7 +70,7 @@ export function Agenda({ vida, agir, irPara, abrirPessoa }: { vida: Vida; agir: 
   const nomeFamilia: Record<string, string> = { estudo: 'Estudo', trabalho: 'Trabalho', atividade: 'Atividades', casa: 'Casa e família', pena: 'Pena', trajeto: 'Trajeto' };
 
   return (
-    <section className="agenda agenda-semana" aria-labelledby="titulo-agenda">
+    <section className={`agenda agenda-semana${a.blocos.length ? '' : ' agenda-semana--vazia'}`} aria-labelledby="titulo-agenda">
       <header className="agenda-semana__cabeca">
         <h3 id="titulo-agenda" className="agenda__titulo">A agenda da semana</h3>
         {/* REWORK 9.5: a agenda diz só o que é dela (os compromissos e as horas); a exigência e a cabeça estão nas notas da rotina. */}

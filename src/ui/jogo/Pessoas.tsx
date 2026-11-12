@@ -60,6 +60,7 @@ import { faseDoLuto } from '../../motor/sistemas/luto';
 import { LuaDeMel, PlanejarCasamento } from './Casamento';
 import { acordoConsentido } from '../../motor/sistemas/romance';
 import { contextosDeAmizade, ROTULO_AMIZADE } from '../../motor/sistemas/busca';
+import { ConstelacaoDePessoas } from '../v17/areas/Capas17';
 
 interface Props { vida: Vida; agir: (a: Acao) => boolean; aberta: string | null; abrir: (id: string | null) => void; parte?: PartePessoas; irParte?: (p: PartePessoas) => void }
 
@@ -134,6 +135,8 @@ export function Pessoas({ vida, agir, aberta, abrir, parte: parteDeFora, irParte
       {parte === 'deles' && <AVidaDeles vida={vida} abrir={abrir} />}
       {parte === 'nossa' && <NossaHistoria vida={vida} abrir={abrir} />}
       <div className={`pessoas__circulo${parte === 'circulo' ? '' : ' pessoas__circulo--oculto'}`}>
+      {/* VIDA 17: a constelação — você no meio, cada pessoa no anel da proximidade, a cor do laço. */}
+      {parte === 'circulo' && <ConstelacaoDePessoas vida={vida} abrir={id => abrir(id)} />}
       {sinais.length > 0 && (
         <section className="atencao" aria-label="Pedem atenção">
           <h2 className="atencao__titulo">Pedem atenção</h2>

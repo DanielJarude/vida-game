@@ -47,6 +47,8 @@ import { BotaoAcao } from '../comum';
 import { dinheiroCurto } from '../leituraMaterial';
 import '../personalizar.css';
 import '../garagem129.css';
+import { MiniaturaDaPeca } from '../avatar/MiniaturaDaPeca';
+import { sementeDaPeca } from '../../motor/sistemas/estilo';
 
 interface Props { vida: Vida; agir: (a: Acao) => boolean }
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -606,27 +608,60 @@ function PecaDoVeiculo({ vida, agir, b, pecaId }: Props & { b: Veiculo; pecaId: 
 
 const OCASIOES: Ocasiao[] = ['trabalho', 'estudo', 'festa', 'evento', 'esporte', 'encontro'];
 
+const ONDE_VAI: Record<string, string> = { tronco: 'em cima', pernas: 'embaixo', casaco: 'por cima', pes: 'nos pés', cabeca: 'na cabeça', rosto: 'no rosto', pulso: 'no pulso', joia: 'no pescoço' };
+const ondeVai = (itemId: string) => { const it = itemEstilo(itemId); return it ? lugaresDoItem(it).map(l => ONDE_VAI[l] ?? '').filter(Boolean).join(' e ') : ''; };
+
+/**
+ * VIDA 17 · o guarda-roupa (rework visual): a lista virou uma GRADE de peças — a miniatura (a mesma peça, na cor dela),
+ * o nome, onde vai, o "em uso" — com os estilos em fichas e o botão de usar ou guardar (o provador ao lado muda na
+ * hora). O look de cada ocasião é montado tocando nos cartões (uma peça por parte do corpo, como antes).
+ */
 export function GuardaRoupa({ vida, agir }: Props) {
   const [estilo, setEstilo] = useState('');
   const [ocasiao, setOcasiao] = useState<Ocasiao | ''>('');
+  const [todas, setTodas] = useState(false);
   const itens = vida.eu.estilo?.itens ?? [];
   const roupas = itens.filter(x => itemEstilo(x.itemId)?.categoria === 'roupa' || itemEstilo(x.itemId)?.categoria === 'chapeu' || itemEstilo(x.itemId)?.categoria === 'acessorio' || itemEstilo(x.itemId)?.categoria === 'oculos');
   if (!roupas.length || idade(vida) < 10) return null;
   const dominante = estiloDominante(itens.filter(x => x.usando));
   const fases = vida.eu.estilo?.fases ?? [];
   const meusEstilos = ESTILOS.filter(e => roupas.some(x => itemEstilo(x.itemId)?.estilos?.includes(e.id)));
-  const visiveis = estilo ? roupas.filter(x => itemEstilo(x.itemId)?.estilos?.includes(estilo)) : roupas;
+  const filtradas = (estilo ? roupas.filter(x => itemEstilo(x.itemId)?.estilos?.includes(estilo)) : roupas).sort((a, b) => Number(!!b.usando) - Number(!!a.usando));
+  const visiveis = todas ? filtradas : filtradas.slice(0, 12);
+  const emUso = roupas.filter(x => x.usando).length;
   return (
-    <details className="detalhes pz-detalhes pz-guarda-roupa">
+    <details className="detalhes pz-detalhes pz-guarda-roupa" open>
       <summary>Guarda-roupa: estilo e ocasiões{dominante ? ` · ${nomeDoEstilo(dominante).toLowerCase()}` : ''}</summary>
-      {fases.length > 1 && <p className="nota">As fases: {fases.map(f => `${nomeDoEstilo(f.estilo).toLowerCase()} (${anoDe(f.t)})`).join(' → ')}.</p>}
+      <div className="pz17-cabeca">
+        <span className="pz17-numero"><strong>{roupas.length}</strong> peças · <strong>{emUso}</strong> em uso</span>
+        {dominante && <span className="pz17-estilo">O que as peças dizem: <strong>{nomeDoEstilo(dominante).toLowerCase()}</strong></span>}
+      </div>
+      {fases.length > 1 && <ol className="pz17-fases" aria-label="As fases do estilo">{fases.map((f, k) => <li key={k}><span>{anoDe(f.t)}</span>{nomeDoEstilo(f.estilo)}</li>)}</ol>}
       {meusEstilos.length > 1 && (
-        <label className="campo"><span className="campo__rotulo">Ver as peças de um estilo</span>
-          <select value={estilo} onChange={e => setEstilo(e.target.value)}><option value="">Todas ({roupas.length})</option>{meusEstilos.map(e => <option key={e.id} value={e.id}>{e.nome}</option>)}</select></label>
+        <div className="pz17-fichas" role="group" aria-label="Ver as peças de um estilo">
+          <button type="button" className={`pz17-ficha${!estilo ? ' pz17-ficha--ativa' : ''}`} aria-pressed={!estilo} onClick={() => setEstilo('')}>Todas <span>{roupas.length}</span></button>
+          {meusEstilos.map(e => <button key={e.id} type="button" className={`pz17-ficha${estilo === e.id ? ' pz17-ficha--ativa' : ''}`} aria-pressed={estilo === e.id} onClick={() => setEstilo(e.id)}>{e.nome} <span>{roupas.filter(x => itemEstilo(x.itemId)?.estilos?.includes(e.id)).length}</span></button>)}
+        </div>
       )}
-      <ul className="pz-lista">{visiveis.slice(0, 20).map(x => { const it = itemEstilo(x.itemId)!; return <li key={x.id} className="pz-item"><span><strong>{it.nome}</strong><span className="nota"> · {lugaresDoItem(it).map(l => ({ tronco: 'em cima', pernas: 'embaixo', casaco: 'por cima', pes: 'nos pés', cabeca: 'na cabeça', rosto: 'no rosto', pulso: 'no pulso', joia: 'no pescoço' } as Record<string, string>)[l] ?? '').filter(Boolean).join(' e ')}{x.usando ? ' · em uso' : ''}</span></span></li>; })}</ul>
-      <label className="campo"><span className="campo__rotulo">Separar a roupa de uma ocasião (opcional)</span>
-        <select value={ocasiao} onChange={e => setOcasiao(e.target.value as Ocasiao | '')}><option value="">—</option>{OCASIOES.map(o => <option key={o} value={o}>{cap(NOME_OCASIAO[o])}</option>)}</select></label>
+      <ul className="pz17-grade">
+        {visiveis.map(x => {
+          const it = itemEstilo(x.itemId)!;
+          return (
+            <li key={x.id} className={`pz17-peca${x.usando ? ' pz17-peca--uso' : ''}`}>
+              <span className="pz17-peca__foto"><MiniaturaDaPeca vida={vida} itemId={x.itemId} id={sementeDaPeca(x)} largura={72} rotulo={it.nome} /></span>
+              <strong className="pz17-peca__nome">{it.nome}</strong>
+              <span className="pz17-peca__onde">{ondeVai(x.itemId)}</span>
+              {x.usando && <span className="pz17-peca__selo">em uso</span>}
+              <BotaoAcao vida={vida} acao={{ tipo: 'usar_item', itemId: x.itemId, id: x.id, usar: !x.usando }} agir={agir} variante={x.usando ? 'discreto' : 'secundario'}>{x.usando ? 'Guardar' : 'Usar'}</BotaoAcao>
+            </li>
+          );
+        })}
+      </ul>
+      {filtradas.length > 12 && <button type="button" className="botao botao--discreto" onClick={() => setTodas(t => !t)}>{todas ? 'Mostrar menos' : `Ver todas as ${filtradas.length} peças`}</button>}
+      <div className="pz17-ocasioes" role="group" aria-label="Separar a roupa de uma ocasião (opcional)">
+        <span className="pz17-rotulo">Separar a roupa de uma ocasião</span>
+        {OCASIOES.map(o => <button key={o} type="button" className={`pz17-ficha${ocasiao === o ? ' pz17-ficha--ativa' : ''}${vida.eu.estilo?.looks?.[o]?.length ? ' pz17-ficha--feita' : ''}`} aria-pressed={ocasiao === o} onClick={() => setOcasiao(x => (x === o ? '' : o))}>{cap(NOME_OCASIAO[o])}</button>)}
+      </div>
       {ocasiao && <LookDaOcasiao key={ocasiao} vida={vida} agir={agir} ocasiao={ocasiao} />}
     </details>
   );
@@ -645,9 +680,14 @@ function LookDaOcasiao({ vida, agir, ocasiao }: Props & { ocasiao: Ocasiao }) {
     return [...m.filter(x => !lugaresDoItem(itemEstilo(itens.find(y => y.id === x)!.itemId)!).some(l => la.includes(l))), id];
   });
   return (
-    <div className="pz-look">
-      <ul className="pz-marcar">{roupas.map(x => <li key={x.id}><label className="marcar"><input type="checkbox" checked={marcados.includes(x.id)} onChange={() => alternar(x.id)} /> {itemEstilo(x.itemId)!.nome}</label></li>)}</ul>
-      {marcados.length > 0 && <p className="nota">Para {NOME_OCASIAO[ocasiao]}: {leitura === 'adequada' ? 'cai bem.' : leitura === 'destoa' ? 'destoa — vai chamar atenção (às vezes é o que se quer).' : 'nada demais.'}</p>}
+    <div className="pz-look pz17-look">
+      <ul className="pz17-grade pz17-grade--look">{roupas.map(x => { const it = itemEstilo(x.itemId)!; const on = marcados.includes(x.id); return (
+        <li key={x.id}><button type="button" className={`pz17-peca pz17-peca--botao${on ? ' pz17-peca--marcada' : ''}`} aria-pressed={on} onClick={() => alternar(x.id)}>
+          <span className="pz17-peca__foto"><MiniaturaDaPeca vida={vida} itemId={x.itemId} id={sementeDaPeca(x)} largura={56} rotulo={it.nome} /></span>
+          <span className="pz17-peca__nome">{it.nome}</span>
+          {on && <span className="pz17-peca__selo">no look</span>}
+        </button></li>); })}</ul>
+      {marcados.length > 0 && <p className={`nota pz17-leitura pz17-leitura--${leitura}`}>Para {NOME_OCASIAO[ocasiao]}: {leitura === 'adequada' ? 'cai bem.' : leitura === 'destoa' ? 'destoa — vai chamar atenção (às vezes é o que se quer).' : 'nada demais.'}</p>}
       <BotaoAcao vida={vida} agir={agir} acao={agirCom({ o: 'look', ocasiao, itens: marcados })} variante="secundario">{marcados.length ? 'Separar' : 'Usar a de todo dia'}</BotaoAcao>
     </div>
   );

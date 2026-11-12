@@ -183,7 +183,10 @@ export default defineConfig({
           // em tempo de execução: sem ciclo.
           // VIDA 13 · Ações: a anotação do resultado imediato (sem imports) mora com os catálogos puros, fora de motor-dados.
           if (/[\\/]src[\\/]motor[\\/]sistemas[\\/]anotar13\.ts/.test(id)) return 'motor-casa';
-          if (/[\\/]src[\\/]motor[\\/]dados[\\/](casa128|perfisDeMarca|colecao128|animais128|categoriasDaCasa|tatuagens129|tatuagens13|tatuagens13c[A-D]|tatuagens13cTipos|veiculos129|motosClassicas1291|piercings129|piercings13|aparencia13|instituicoes129|cursos129|encontros129|empresas129|produtos13|nomes13|presidencia129|hobbies129|municipios1291|colegioEleitoral129)\.ts/.test(id)) return 'motor-casa';
+          // VIDA 17: a cota de mensagens e o estado conjugal (sem imports em tempo de execução) e o catálogo de tatuagens
+          // (puro: só importa os outros catálogos de tatuagem, também puros) — motor-dados tinha passado de 800 kB.
+          if (/[\\/]src[\\/]motor[\\/]sistemas[\\/](cotaDeMensagens|estadoConjugal)\.ts/.test(id)) return 'motor-casa';
+          if (/[\\/]src[\\/]motor[\\/]dados[\\/](casa128|perfisDeMarca|colecao128|animais128|categoriasDaCasa|tatuagens|tatuagens129|tatuagens13|tatuagens13c[A-D]|tatuagens13cTipos|veiculos129|motosClassicas1291|piercings129|piercings13|aparencia13|instituicoes129|cursos129|encontros129|empresas129|produtos13|nomes13|presidencia129|hobbies129|municipios1291|colegioEleitoral129)\.ts/.test(id)) return 'motor-casa';
           if (/[\\/]src[\\/]motor[\\/]dados[\\/]/.test(id)) return 'motor-dados';
           // Pacote pré-América do Sul: a CAMADA DE BASE — os sistemas-folha que só importam os catálogos e uns aos outros
           // (núcleo, texto, tempo, mercado, origem, rede, notoriedade, economia...) — vai com os catálogos, embaixo de

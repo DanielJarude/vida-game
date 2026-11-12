@@ -18,6 +18,7 @@ import type { Aba } from '../navegacao';
 import { RetratoDaVida } from './RetratoDaVida';
 import { LinhaDaVida } from './LinhaDaVida';
 import { sobDemanda } from '../util/sobDemanda';
+import { FitaDaVida } from '../v17/areas/Capas17';
 
 /** VIDA 12.5: a Retrospectiva (o álbum e a linha do tempo) vem sob demanda. */
 const Retrospectiva = sobDemanda(() => import('./Retrospectiva').then(m => m.Retrospectiva));
@@ -43,6 +44,8 @@ export function Historia({ vida, marca, parte, irParte, irPara, abrirPessoa, ano
   return (
     <div className={`historia historia--${parte}`}>
       {parte === 'agora' && <RetratoDaVida vida={vida} irPara={irPara} abrirPessoa={abrirPessoa} />}
+      {/* VIDA 17: a fita da vida — as fases e os marcos de verdade, do nascimento até hoje. */}
+      {parte !== 'biografia' && <FitaDaVida vida={vida} />}
       {parte !== 'agora' && (
         <header className="folio">
           <p className="folio__kicker"><span className="folio__area">História</span> · {parte === 'biografia' ? 'Biografia' : 'Retrospectiva'} · {i} {i === 1 ? 'ano' : 'anos'} · {faseDaVida(i)}</p>

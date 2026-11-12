@@ -62,6 +62,7 @@ import { Agenda } from './Agenda';
 import { LeituraDaRotina, tituloDaRotina } from './Rotina';
 import { avaliarRotina } from '../../motor/sistemas/avaliacaoDaRotina';
 import { Passaporte161 } from '../v16/areas/Capas161';
+import { SemanaEmTiras } from '../v17/areas/Capas17';
 
 const DE_TEMPO = new Set<string>(SECOES_TEMPO.map(x => x.id));
 
@@ -318,6 +319,8 @@ export function Tempo({ vida, agir, irPara, aba: abaDeFora, irAba, abrirPessoa }
               <h2 id="titulo-semana" className="secao-fio">Sua semana</h2>
               {/* REWORK 9: a agenda em horários (`sistemas/agenda`): os dias, as horas, os conflitos. O tamanho da semana
                   (a faixa, o estresse) continua o de `semana`; a lista de antes fica logo abaixo, como outra leitura. */}
+              {/* VIDA 17: a semana em tiras — os sete dias lado a lado, antes da grade de horários. */}
+              <SemanaEmTiras vida={vida} />
               <Agenda vida={vida} agir={agir} irPara={irPara} abrirPessoa={abrirPessoa} />
               {/* REWORK 9.5 · ROT-01: as três leituras da rotina (horários, exigência, cabeça), da mesma conta que decide. */}
               <LeituraDaRotina vida={vida} av={av} />

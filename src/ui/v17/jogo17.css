@@ -63,7 +63,6 @@
 .mapa17__ponto { cursor: pointer; }
 .mapa17__ponto circle { stroke: #fff; stroke-width: 1.5; }
 .mapa17__ponto--foco circle { stroke-width: 3; }
-.mapa17__icone { font-size: 8px; pointer-events: none; }
 .mapa17__aqui-halo { fill: color-mix(in oklab, #d93a2f 25%, transparent); animation: mapa17-pulso 2.4s ease-in-out infinite; transform-origin: center; transform-box: fill-box; }
 .mapa17__aqui-ponto { fill: #d93a2f; stroke: #fff; stroke-width: 2; }
 @keyframes mapa17-pulso { 50% { transform: scale(1.35); opacity: 0.5; } }
@@ -80,7 +79,7 @@
 .mapa17__pontos { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
 .mapa17__pontos button { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 3px 10px 3px 4px; border-radius: 999px; border: 1px solid var(--cel-fio, var(--fio)); background: none; color: inherit; font: 600 12px/1.2 var(--font-sans); cursor: pointer; text-align: left; }
 .mapa17__pontos button[aria-pressed="true"] { border-color: currentColor; }
-.mapa17__bolinha { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; font-size: 11px; color: #fff; }
+
 .mapa17__nota { margin: 0; font-size: 12px; color: var(--cel-tinta-2, var(--text-muted)); }
 .mapa17__aviso { margin: 0; font-size: 11px; color: var(--cel-tinta-2, var(--text-muted)); font-style: italic; }
 
@@ -92,3 +91,91 @@
 .clinica17__fora summary { cursor: pointer; min-height: 32px; display: flex; align-items: center; font-weight: var(--weight-semibold); }
 .clinica17__fora ul { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 4px; }
 .clinica17__aviso { font-style: italic; }
+.mapa17__mancha { fill: color-mix(in oklab, var(--mapa-quadra) 35%, var(--mapa-terra)); }
+.mapa17__bolinha { width: 22px; height: 22px; flex: none; }
+
+/* -------------------------------------------------- Guarda-roupa (rework 17): a grade de peças */
+.pz17-cabeca { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); align-items: baseline; margin: var(--space-2) 0; }
+.pz17-numero, .pz17-estilo { font-size: var(--type-caption); color: var(--text-secondary); }
+.pz17-numero strong { font: 700 1.15rem/1 var(--font-display, var(--font-serif)); color: var(--text-primary); }
+.pz17-fases { list-style: none; margin: 0 0 var(--space-2); padding: 0; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; font-size: var(--type-caption); }
+.pz17-fases li { display: inline-flex; gap: 6px; align-items: baseline; padding: 2px 10px; border-radius: 999px; background: var(--veu-2); }
+.pz17-fases li + li::before { content: '→'; margin-right: 4px; color: var(--text-muted); }
+.pz17-fases span { font-variant-numeric: tabular-nums; color: var(--text-muted); }
+.pz17-fichas, .pz17-ocasioes { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: var(--space-2) 0; }
+.pz17-rotulo { width: 100%; font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); }
+.pz17-ficha { min-height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--fio); background: var(--superficie); color: var(--text-secondary); font: 600 var(--type-caption)/1 var(--font-sans); cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
+.pz17-ficha span { font-variant-numeric: tabular-nums; color: var(--text-muted); font-weight: 500; }
+.pz17-ficha--ativa { background: var(--acao); border-color: var(--acao); color: var(--acao-sobre); }
+.pz17-ficha--ativa span { color: inherit; opacity: 0.8; }
+.pz17-ficha--feita:not(.pz17-ficha--ativa)::after { content: '✓'; color: var(--bom); }
+.pz17-grade { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: var(--space-2); }
+.pz17-grade--look { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); }
+.pz17-peca { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: var(--space-2); border-radius: var(--radius-md); background: var(--superficie-topo); box-shadow: 0 0 0 1px var(--fio); text-align: center; min-width: 0; height: 100%; }
+.pz17-peca--uso { box-shadow: 0 0 0 2px color-mix(in oklab, var(--bom) 55%, transparent); }
+.pz17-peca--botao { width: 100%; border: 0; cursor: pointer; font: inherit; color: inherit; }
+.pz17-peca--botao:hover { background: var(--veu-2); }
+.pz17-peca--marcada { box-shadow: 0 0 0 2px var(--acao); background: color-mix(in oklab, var(--acao) 7%, var(--superficie-topo)); }
+.pz17-peca__foto { display: grid; place-items: center; width: 100%; aspect-ratio: 1; max-height: 84px; border-radius: var(--radius-md); background: color-mix(in oklab, var(--text-primary) 4%, transparent); overflow: hidden; }
+.pz17-peca__nome { font-size: var(--type-caption); line-height: 1.25; overflow-wrap: anywhere; }
+.pz17-peca__onde { font-size: var(--type-meta); color: var(--text-muted); }
+.pz17-peca__selo { position: absolute; top: 6px; right: 6px; padding: 1px 7px; border-radius: 999px; font: 700 0.66rem/1.5 var(--font-sans); text-transform: uppercase; letter-spacing: 0.04em; background: var(--bom); color: #fff; }
+.pz17-peca .botao { min-height: 32px; margin-top: auto; }
+.pz17-look { margin-top: var(--space-2); display: flex; flex-direction: column; gap: var(--space-2); align-items: flex-start; }
+.pz17-leitura--destoa { color: var(--atencao, #9a6b10); }
+.pz17-leitura--adequada { color: var(--bom); }
+
+/* -------------------------------------------------- Pessoas (rework 17): a constelação */
+.constelacao17 { margin: 0 0 var(--space-4); padding: var(--space-3); border-radius: var(--radius-lg, 16px); background:
+  radial-gradient(circle at 50% 50%, color-mix(in oklab, var(--acao) 8%, var(--superficie-topo)) 0, var(--superficie-topo) 70%); box-shadow: 0 0 0 1px var(--fio); }
+.constelacao17__svg { display: block; width: 100%; max-width: 640px; height: auto; margin: 0 auto; overflow: visible; }
+.constelacao17__anel { fill: none; stroke: var(--fio-forte, var(--fio)); stroke-dasharray: 2 3; }
+.constelacao17__anel--0 { fill: color-mix(in oklab, var(--acao) 6%, transparent); stroke-dasharray: none; }
+.constelacao17__eu-halo { fill: var(--superficie-topo); stroke: var(--acao); stroke-width: 2; }
+.constelacao17__pessoa { cursor: pointer; }
+.constelacao17__pessoa:hover circle, .constelacao17__pessoa:focus-visible circle { stroke-width: 3.4; }
+.constelacao17__pessoa:focus { outline: none; }
+.constelacao17__nome { font: 600 7.5px/1 var(--font-sans); fill: var(--text-secondary); paint-order: stroke; stroke: var(--superficie-topo); stroke-width: 2.4px; }
+.constelacao17__legenda { display: flex; flex-wrap: wrap; gap: 6px 14px; justify-content: center; font-size: var(--type-caption); color: var(--text-secondary); margin-top: var(--space-2); }
+.constelacao17__legenda i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+.constelacao17__anel-nota { width: 100%; text-align: center; color: var(--text-muted); font-size: var(--type-meta); }
+main .pessoas .atencao { border-radius: var(--radius-lg, 16px); box-shadow: 0 1px 0 var(--fio), 0 8px 24px -18px rgba(0,0,0,0.25); }
+
+/* -------------------------------------------------- Minha Semana (rework 17): a semana em tiras */
+.semana17 { margin: var(--space-2) 0 var(--space-3); padding: var(--space-3); border-radius: var(--radius-lg, 16px); background: var(--superficie-topo); box-shadow: 0 0 0 1px var(--fio); }
+.semana17__topo { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px var(--space-3); align-items: baseline; margin-bottom: var(--space-2); }
+.semana17__topo strong { font: 700 1.2rem/1.2 var(--font-display, var(--font-serif)); }
+.semana17__topo span { font-size: var(--type-caption); color: var(--text-muted); }
+.semana17__dias { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)) 8px repeat(2, minmax(0, 1fr)); gap: 6px; }
+.semana17__dia { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; padding: 6px 4px; border-radius: var(--radius-md); background: var(--superficie); }
+.semana17__dia:nth-child(6) { grid-column: 7; }
+.semana17__dia--fds { background: color-mix(in oklab, var(--acao) 6%, var(--superficie)); }
+.semana17__dia--conflito { box-shadow: 0 0 0 2px var(--ruim); }
+.semana17__nome { font: 700 var(--type-meta)/1 var(--font-sans); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-secondary); }
+.semana17__barra { position: relative; width: 70%; max-width: 36px; height: 86px; border-radius: 8px; background: repeating-linear-gradient(to bottom, var(--veu-2) 0 1px, transparent 1px 12.5%); box-shadow: inset 0 0 0 1px var(--fio); overflow: hidden; }
+.semana17__bloco { position: absolute; left: 3px; right: 3px; border-radius: 4px; background: color-mix(in oklab, var(--acao) 55%, transparent); }
+.semana17__bloco--fixo { background: var(--acao); }
+.semana17__horas { font: 700 var(--type-caption)/1 var(--font-sans); font-variant-numeric: tabular-nums; }
+.semana17__oque { font-size: 0.68rem; line-height: 1.2; color: var(--text-muted); text-align: center; overflow-wrap: anywhere; max-height: 2.5em; overflow: hidden; }
+@media (max-width: 560px) {
+  .semana17__dias { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; }
+  .semana17__dia:nth-child(6) { grid-column: auto; }
+  .semana17__oque { display: none; }
+  .semana17__barra { height: 64px; width: 80%; }
+}
+main .agenda-semana--vazia .grade-semana { max-height: 180px; overflow: hidden; -webkit-mask-image: linear-gradient(to bottom, #000 60%, transparent); mask-image: linear-gradient(to bottom, #000 60%, transparent); }
+
+/* -------------------------------------------------- História (rework 17): a fita da vida */
+.fita17 { margin: var(--space-3) 0 var(--space-4); padding: var(--space-3) var(--space-3) var(--space-2); border-radius: var(--radius-lg, 16px); background: var(--superficie-topo); box-shadow: 0 0 0 1px var(--fio); }
+.fita17__trilho { position: relative; height: 34px; margin: 6px 6px 0; }
+.fita17__fase { position: absolute; top: 10px; height: 14px; border-radius: 7px; background: color-mix(in oklab, var(--acao) 14%, var(--superficie)); box-shadow: inset 0 0 0 1px var(--fio); overflow: hidden; }
+.fita17__fase:nth-child(even) { background: color-mix(in oklab, var(--acao) 24%, var(--superficie)); }
+.fita17__fase span { position: absolute; left: 6px; top: 0; font: 600 0.62rem/14px var(--font-sans); color: var(--text-secondary); white-space: nowrap; }
+.fita17__marco { position: absolute; top: 6px; width: 10px; height: 22px; margin-left: -5px; border-radius: 5px; box-shadow: 0 0 0 2px var(--superficie-topo); cursor: help; }
+.fita17__marco:focus-visible { outline: 2px solid var(--acao); }
+.fita17__hoje { position: absolute; top: 0; width: 3px; height: 34px; margin-left: -1.5px; border-radius: 2px; background: var(--text-primary); }
+.fita17__escala { display: flex; justify-content: space-between; gap: 8px; font-size: var(--type-meta); color: var(--text-muted); font-variant-numeric: tabular-nums; margin: 4px 6px 0; }
+.fita17__ultimos { list-style: none; margin: var(--space-2) 0 0; padding: var(--space-2) 0 0; border-top: 1px dashed var(--fio); display: flex; flex-direction: column; gap: 4px; font-size: var(--type-caption); }
+.fita17__ultimos li { display: flex; gap: 8px; align-items: baseline; }
+.fita17__bola { flex: none; width: 8px; height: 8px; border-radius: 50%; }
+.fita17__ano { flex: none; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text-secondary); min-width: 4.5em; }
