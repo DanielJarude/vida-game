@@ -29,7 +29,6 @@ import { FichaDeHabilidade } from './Progresso';
 import { ResumoDaRotina } from './Rotina';
 import { evolucaoDaFrente } from '../../motor/sistemas/progressao';
 import { MATERIAS } from '../../motor/dados/frentes';
-import { Retrato } from '../avatar/Retrato';
 import { BotaoAcao, Subnav, Vazio } from '../comum';
 import { useState } from 'react';
 import { frentesDaVida } from '../../motor/sistemas/frentes';
@@ -52,6 +51,7 @@ import { leituraDaSeguranca } from '../leituraMaterial';
 import type { Aba } from '../navegacao';
 import { Perfil15 } from '../v15/perfil/Perfil15';
 import { Identidade161 } from '../v16/areas/Capas161';
+import { RetratoDoJogador17 } from '../avatar/RetratoDoJogador17';
 
 export type Destino = Aba;
 
@@ -89,7 +89,7 @@ export function Voce({ vida, agir, irPara, abrirPessoa, parte: parteDeFora, irPa
       <section className="perfil161" aria-label="O seu perfil">
       <div className="perfil161__capa" aria-hidden />
       <section className="voce-rosto" aria-label="Como você está">
-        <Retrato visual={vida.eu.visual} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? "eu"} tamanho={132} rotulo={`${vida.eu.nome} aos ${i}`} expressao={expressaoDe(vida)} />
+        <RetratoDoJogador17 vida={vida} visual={vida.eu.visual} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? "eu"} tamanho={132} rotulo={`${vida.eu.nome} aos ${i}`} expressao={expressaoDe(vida)} />
         <div className="voce-rosto__texto">
           <p className="folio__kicker"><span className="folio__area">Você</span> · {i} {i === 1 ? 'ano' : 'anos'} · {faseDaVida(i)}</p>
           <h1 className="voce-rosto__momento">{momentoAtual(vida)}</h1>

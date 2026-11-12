@@ -15,6 +15,7 @@ import { desenhoDeTatuagem, MEDIDA, REGIOES, type FundoDeComposicao, type Lado, 
 import { retanguloNaRegiao, type TatuagemParaFigura } from '../../motor/sistemas/tatuagens';
 import { DesenhoDaTatuagem, caixaNativa } from './tatuagens';
 import { misturar } from './cores';
+import { caixaNoRosto, ehDoRosto, ROSTO_PADRAO, type GeoDoRosto } from './rosto17';
 
 /** O que a figura sabe do corpo (o mesmo `Geo` da Figura). */
 export interface GeoDoCorpo {
@@ -81,6 +82,8 @@ export function caixaDaRegiao(g: GeoDoCorpo, r: RegiaoDeTatuagem, s: 1 | -1): Ca
     case 'tornozelo': return perna(g.yTorn - 5.5, g.yTorn + 0.5, 1.3);
     case 'pe': return { x: lado(g, s, g.quadril * 0.42 + 1.2), y: g.yTorn + 5, w: 7.5, h: 6, clip: 'cpe' + s };
     case 'perna_inteira': return perna(g.yVirilha - 2, g.yTorn - 1);
+    // VIDA 17: o rosto — a caixa no rosto típico, levada para as coordenadas da figura (a cabeça é o retrato, em +10, −8).
+    default: { const c = caixaNoRosto(ROSTO_PADRAO, r, s); return { x: c.x + 10 + (g.cx - 60), y: c.y - 8, w: c.w, h: c.h, clip: 'crosto' }; }
   }
 }
 
@@ -179,6 +182,52 @@ export function TatuagemNaPele({ g, t, pele, ide, costas, detalhe, halo }: { g: 
   );
 }
 
+/* ------------------------------------------------------------------ VIDA 17 · o rosto */
+
+/**
+ * As tatuagens do rosto, desenhadas DENTRO do retrato (que é também a cabeça da figura): a caixa sai da geometria viva
+ * do rosto (`rosto17.caixaNoRosto`), o desenho é recortado pelo próprio rosto (nunca flutua) e a tinta é a mesma do
+ * corpo (o tom, o desbote, o laser).
+ */
+export function TatuagensDoRosto({ lista, g, pele, rosto, uid }: { lista: TatuagemParaFigura[]; g: GeoDoRosto; pele: string; rosto: string; uid: string }): ReactNode {
+  const doRosto = lista.filter(t => ehDoRosto(t.regiao));
+  if (!doRosto.length) return null;
+  const clip = `${uid}-rosto17`;
+  return (
+    <g className="retrato__tatuagens">
+      <defs><clipPath id={clip}><path d={rosto} /></clipPath></defs>
+      <g clipPath={`url(#${clip})`}>
+        {doRosto.map(t => {
+          const d = desenhoDeTatuagem(t.desenho);
+          if (!d) return null;
+          const R = REGIOES[t.regiao];
+          // De frente: o lado esquerdo da pessoa fica à direita de quem olha.
+          const s: 1 | -1 = R.lados ? (t.lado === 'e' ? 1 : -1) : 1;
+          const c = caixaNoRosto(g, t.regiao, s);
+          const r = retanguloNaRegiao(d, t.regiao, t.tamanho, t.ajuste) ?? { cx: 0, cy: 0, w: R.w, h: R.h };
+          const kx = c.w / R.w, ky = c.h / R.h;
+          const x = c.x + (R.lados ? s : 1) * r.cx * kx, y = c.y + r.cy * ky;
+          const [nw, nh] = caixaNativa(d);
+          const lado0 = MEDIDA[t.tamanho] * t.ajuste.escala * (R.micro ?? 1) * ky;
+          const p = d.proporcao ?? 1;
+          const w = d.faixa ? c.w * 1.02 : p >= 1 ? lado0 : lado0 * p;
+          const h = d.faixa ? Math.max(1.6, lado0 / p) : p >= 1 ? lado0 / p : lado0;
+          const { tinta, cor } = tintaNaPele(t, pele);
+          const op = t.sombra ? 0.07 : (0.92 - Math.min(0.15, t.anos * 0.0035)) * (1 - 0.85 * t.clareou);
+          const rot = (t.ajuste.rot || 0) * (R.lados ? s : 1);
+          const espelho = (t.ajuste.espelhar ? -1 : 1) * (R.lados && s < 0 ? -1 : 1);
+          return (
+            <g key={t.id} opacity={op} data-tatuagem={t.desenho} data-regiao={t.regiao} data-lado={t.lado}
+              transform={`translate(${x.toFixed(2)} ${y.toFixed(2)}) rotate(${rot.toFixed(1)}) scale(${((w / nw) * espelho).toFixed(4)} ${(h / nh).toFixed(4)}) translate(${(-nw / 2).toFixed(2)} ${(-nh / 2).toFixed(2)})`}>
+              <DesenhoDaTatuagem id={t.desenho} tinta={tinta} cor={cor} traco={0.9} texto={t.texto} espelhado={espelho < 0} />
+            </g>
+          );
+        })}
+      </g>
+    </g>
+  );
+}
+
 /* ------------------------------------------------------------------ o fundo da composição */
 
 const REGIOES_DO_FUNDO: Record<TipoDeComposicao, RegiaoDeTatuagem[]> = {
@@ -223,13 +272,15 @@ export function FundoNaPele({ g, c, pele, ide, costas, idade }: { g: GeoDoCorpo;
 /* ------------------------------------------------------------------ o mapa do corpo (o estúdio) */
 
 /** As caixas clicáveis de cada região na vista (para o jogador escolher onde no próprio corpo). */
-export function MapaDoCorpo({ g, costas, escolhida, aoEscolher, ocupadas }: {
+export function MapaDoCorpo({ g, costas, escolhida, aoEscolher, ocupadas, rosto }: {
   g: GeoDoCorpo; costas: boolean; escolhida?: { regiao: RegiaoDeTatuagem; lado?: Lado };
   aoEscolher: (r: RegiaoDeTatuagem, lado?: Lado) => void; ocupadas?: Set<string>;
+  /** VIDA 17: só as regiões do rosto (desenhadas por cima da cabeça) — ou, sem isso, só as do corpo. */
+  rosto?: boolean;
 }): ReactNode {
   const out: ReactNode[] = [];
   for (const r of Object.keys(REGIOES) as RegiaoDeTatuagem[]) {
-    if (REGIOES[r].cobre || !visivelNaVista(r, costas)) continue;
+    if (REGIOES[r].cobre || !visivelNaVista(r, costas) || ehDoRosto(r) !== !!rosto) continue;
     const lados: (Lado | undefined)[] = REGIOES[r].lados ? ['e', 'd'] : [undefined];
     for (const ld of lados) {
       const s = REGIOES[r].lados ? ladoNaTela(ld, costas) : 1;

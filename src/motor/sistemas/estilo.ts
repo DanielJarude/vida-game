@@ -40,6 +40,8 @@ export const podeTerBarba = (v: Vida) => v.eu.genero !== 'feminino' && idade(v) 
 export function precisaDeOculos(v: Vida): boolean {
   const i = idade(v);
   if (i >= 42) return true;
+  // VIDA 17: a cirurgia refrativa corrigiu a miopia (a vista cansada depois dos 42 vem igual).
+  if (v.fatos.refrativa17 !== undefined) return false;
   const h = rngDe(v.id, 'miopia').next();
   return i >= 8 && h < 0.28 && i >= 8 + Math.floor(h * 30);
 }

@@ -26,3 +26,69 @@
 .cel__retido p { margin: 0; font-size: 13px; }
 .cel__unidade-contato { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .cel__unidade-contato .botao { min-height: 36px; }
+
+/* -------------------------------------------------- Mapas: o mapa ilustrado da cidade */
+.mapa17 { margin: 0; display: flex; flex-direction: column; gap: 10px; }
+.mapa17__moldura { border-radius: 16px; overflow: hidden; box-shadow: 0 0 0 1px var(--cel-fio, var(--fio)); background: var(--mapa-terra); }
+.mapa17 {
+  --mapa-terra: color-mix(in oklab, #efe4cf 88%, var(--cel-fundo, var(--superficie)));
+  --mapa-quadra: color-mix(in oklab, #d9c7a6 80%, var(--cel-fundo, var(--superficie)));
+  --mapa-quadra-forte: color-mix(in oklab, #c9ab80 82%, var(--cel-fundo, var(--superficie)));
+  --mapa-agua: #8fc3d9; --mapa-agua-funda: #5f9fc0; --mapa-areia: #ecd59a; --mapa-verde: #9cc27a; --mapa-verde-escuro: #6f9a52;
+  --mapa-rua: #fffaf0; --mapa-tinta: #4a3d2e;
+}
+:root[data-tema='escuro'] .mapa17 { --mapa-terra: #2b2a26; --mapa-quadra: #3e3b34; --mapa-quadra-forte: #4f4a3f; --mapa-agua: #1f4f66; --mapa-agua-funda: #173d50; --mapa-areia: #6b5b36; --mapa-verde: #3f5f34; --mapa-verde-escuro: #2f4a27; --mapa-rua: #57524a; --mapa-tinta: #efe6d6; }
+.mapa17__svg { display: block; width: 100%; height: auto; }
+.mapa17__terra { fill: var(--mapa-terra); }
+.mapa17__rio { fill: none; stroke: var(--mapa-agua); stroke-width: 9; stroke-linecap: round; }
+.mapa17__mar { fill: var(--mapa-agua); }
+.mapa17__praia { fill: none; stroke: var(--mapa-areia); stroke-width: 7; }
+.mapa17__onda { fill: none; stroke: var(--mapa-agua-funda); stroke-width: 1.4; stroke-linecap: round; }
+.mapa17__campo { fill: color-mix(in oklab, var(--mapa-verde) 70%, var(--mapa-areia)); stroke: var(--mapa-verde-escuro); stroke-width: 0.6; }
+.mapa17__campo--1 { fill: color-mix(in oklab, var(--mapa-areia) 75%, var(--mapa-verde)); }
+.mapa17__campo--2 { fill: var(--mapa-verde); }
+.mapa17__curva { fill: none; stroke: color-mix(in oklab, var(--mapa-tinta) 25%, transparent); stroke-width: 0.8; stroke-dasharray: 2 2; }
+.mapa17__anel { fill: none; stroke: var(--mapa-rua); stroke-width: 5; opacity: 0.95; }
+.mapa17__avenida { fill: none; stroke: var(--mapa-rua); stroke-width: 4; stroke-linecap: round; }
+.mapa17__quadra { fill: var(--mapa-quadra); }
+.mapa17__quadra--centro { fill: var(--mapa-quadra-forte); }
+.mapa17__quadra--nobre { fill: color-mix(in oklab, var(--mapa-quadra) 70%, var(--mapa-verde)); }
+.mapa17__quadra--condominio { fill: color-mix(in oklab, var(--mapa-quadra) 80%, var(--mapa-verde)); }
+.mapa17__quadra--periferia { fill: color-mix(in oklab, var(--mapa-quadra) 85%, #c9805a); }
+.mapa17__parque { fill: var(--mapa-verde); }
+.mapa17__arvore { fill: var(--mapa-verde-escuro); }
+.mapa17__metro { fill: none; stroke: #c0392b; stroke-width: 2.4; stroke-dasharray: 5 3; }
+.mapa17__regiao { font: 700 8.5px/1 var(--font-sans); fill: var(--mapa-tinta); paint-order: stroke; stroke: var(--mapa-terra); stroke-width: 3px; letter-spacing: 0.02em; }
+.mapa17__regiao--aqui { fill: #c0392b; }
+.mapa17__ponto { cursor: pointer; }
+.mapa17__ponto circle { stroke: #fff; stroke-width: 1.5; }
+.mapa17__ponto--foco circle { stroke-width: 3; }
+.mapa17__icone { font-size: 8px; pointer-events: none; }
+.mapa17__aqui-halo { fill: color-mix(in oklab, #d93a2f 25%, transparent); animation: mapa17-pulso 2.4s ease-in-out infinite; transform-origin: center; transform-box: fill-box; }
+.mapa17__aqui-ponto { fill: #d93a2f; stroke: #fff; stroke-width: 2; }
+@keyframes mapa17-pulso { 50% { transform: scale(1.35); opacity: 0.5; } }
+@media (prefers-reduced-motion: reduce) { .mapa17__aqui-halo { animation: none; } }
+.mapa17__rosa path { fill: var(--mapa-tinta); }
+.mapa17__rosa text, .mapa17__rumo { font: 700 8px/1 var(--font-sans); fill: var(--mapa-tinta); }
+.mapa17__legenda { display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+.mapa17__titulo { display: flex; flex-direction: column; }
+.mapa17__titulo strong { font: 700 20px/1.15 var(--font-display, var(--font-serif)); }
+.mapa17__titulo span { font-size: 12px; color: var(--cel-tinta-2, var(--text-muted)); }
+.mapa17__voce { margin: 0; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.mapa17__marca-aqui { width: 10px; height: 10px; border-radius: 50%; background: #d93a2f; box-shadow: 0 0 0 3px color-mix(in oklab, #d93a2f 25%, transparent); }
+.mapa17__foco { margin: 0; padding: 6px 10px; border-radius: 10px; background: color-mix(in oklab, var(--cel-tinta, var(--text-primary)) 6%, transparent); }
+.mapa17__pontos { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.mapa17__pontos button { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 3px 10px 3px 4px; border-radius: 999px; border: 1px solid var(--cel-fio, var(--fio)); background: none; color: inherit; font: 600 12px/1.2 var(--font-sans); cursor: pointer; text-align: left; }
+.mapa17__pontos button[aria-pressed="true"] { border-color: currentColor; }
+.mapa17__bolinha { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; font-size: 11px; color: #fff; }
+.mapa17__nota { margin: 0; font-size: 12px; color: var(--cel-tinta-2, var(--text-muted)); }
+.mapa17__aviso { margin: 0; font-size: 11px; color: var(--cel-tinta-2, var(--text-muted)); font-style: italic; }
+
+/* -------------------------------------------------- Clínica: as áreas (rosto, corpo, funcionais) */
+.clinica17__areas { display: flex; flex-wrap: wrap; gap: 6px; margin: var(--space-2) 0; }
+.clinica17__area { min-height: 36px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--fio); background: var(--superficie); color: var(--text-secondary); font-weight: var(--weight-semibold); cursor: pointer; }
+.clinica17__area--ativa { background: var(--acao); border-color: var(--acao); color: var(--acao-sobre); }
+.clinica17__fora { margin-top: var(--space-2); font-size: var(--type-caption); color: var(--text-secondary); }
+.clinica17__fora summary { cursor: pointer; min-height: 32px; display: flex; align-items: center; font-weight: var(--weight-semibold); }
+.clinica17__fora ul { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 4px; }
+.clinica17__aviso { font-style: italic; }

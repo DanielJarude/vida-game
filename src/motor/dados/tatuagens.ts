@@ -26,12 +26,14 @@ export type EstiloDeTatuagem =
   | EstiloDeTatuagem129 | 'realista' | 'tradicional' | 'blackwork' | 'tribal' | 'geometrica' | 'oriental' | 'minimalista' | 'fine_line'
   | 'lettering' | 'ornamental' | 'floral' | 'simbolica' | 'abstrata' | 'composicao';
 /** A parte grande do corpo (a lupa do estúdio enquadra por ela; os saves antigos guardavam só ela). */
-export type LocalDeTatuagem = 'braco' | 'antebraco' | 'ombro' | 'mao' | 'peito' | 'costas' | 'abdomen' | 'pescoco' | 'coxa' | 'panturrilha';
+export type LocalDeTatuagem = 'braco' | 'antebraco' | 'ombro' | 'mao' | 'peito' | 'costas' | 'abdomen' | 'pescoco' | 'coxa' | 'panturrilha' | 'rosto';
 export type Lado = 'e' | 'd';
 
 export type RegiaoDeTatuagem =
   | 'ombro' | 'biceps' | 'triceps' | 'antebraco' | 'antebraco_externo' | 'pulso' | 'mao' | 'dedos'
   | 'pescoco' | 'nuca'
+  // VIDA 17: o rosto (desenhado no próprio retrato — que também é a cabeça da figura de corpo inteiro).
+  | 'testa' | 'tempora' | 'sobrancelha_t' | 'sob_olho' | 'bochecha' | 'nariz' | 'queixo'
   | 'peitoral' | 'centro_peito' | 'costelas' | 'abdomen' | 'costas_alta' | 'costas_media' | 'costas_baixa'
   | 'coxa' | 'joelho' | 'canela' | 'panturrilha' | 'tornozelo' | 'pe'
   // As superfícies: a peça única que fecha a parte inteira.
@@ -75,6 +77,8 @@ export interface RegiaoDoCorpo {
   visivel?: boolean;
   /** As superfícies cobrem as regiões de baixo: ocupar uma ocupa as outras. */
   cobre?: RegiaoDeTatuagem[];
+  /** VIDA 17: a escala do "pequeno" na região (o rosto pede desenhos menores: a lágrima no canto do olho). */
+  micro?: number;
 }
 
 export const REGIOES: Record<RegiaoDeTatuagem, RegiaoDoCorpo> = {
@@ -88,6 +92,14 @@ export const REGIOES: Record<RegiaoDeTatuagem, RegiaoDoCorpo> = {
   dedos: { nome: 'dedos', plural: true, grupo: 'bracos', lados: true, frente: true, costas: false, w: 7, h: 5, maximo: 1, parte: 'mao', sensivel: true, visivel: true },
   pescoco: { nome: 'pescoço', grupo: 'cabeca', lados: true, frente: true, costas: false, w: 6, h: 9, maximo: 1, parte: 'pescoco', sensivel: true, visivel: true },
   nuca: { nome: 'nuca', fem: true, grupo: 'cabeca', lados: false, frente: false, costas: true, w: 10, h: 8, maximo: 1, parte: 'pescoco', sensivel: true },
+  // VIDA 17 · o rosto: regiões pequenas (unidades do retrato), sempre à vista, doloridas — e o retrato as desenha no lugar.
+  testa: { nome: 'testa', fem: true, grupo: 'cabeca', lados: false, frente: true, costas: false, w: 16, h: 7, maximo: 1, parte: 'rosto', sensivel: true, visivel: true, micro: 0.9 },
+  tempora: { nome: 'têmpora', fem: true, grupo: 'cabeca', lados: true, frente: true, costas: false, w: 5.5, h: 8, maximo: 1, parte: 'rosto', sensivel: true, visivel: true, micro: 0.75 },
+  sobrancelha_t: { nome: 'canto da sobrancelha', grupo: 'cabeca', lados: true, frente: true, costas: false, w: 4.5, h: 3.2, maximo: 1, parte: 'rosto', sensivel: true, visivel: true, micro: 0.5 },
+  sob_olho: { nome: 'canto do olho', grupo: 'cabeca', lados: true, frente: true, costas: false, w: 4, h: 4, maximo: 1, parte: 'rosto', sensivel: true, visivel: true, micro: 0.5 },
+  bochecha: { nome: 'bochecha', fem: true, grupo: 'cabeca', lados: true, frente: true, costas: false, w: 7, h: 7, maximo: 1, parte: 'rosto', sensivel: true, visivel: true, micro: 0.8 },
+  nariz: { nome: 'nariz', grupo: 'cabeca', lados: false, frente: true, costas: false, w: 3.6, h: 6, maximo: 1, parte: 'rosto', sensivel: true, visivel: true, micro: 0.55 },
+  queixo: { nome: 'queixo', grupo: 'cabeca', lados: false, frente: true, costas: false, w: 9, h: 4.5, maximo: 1, parte: 'rosto', sensivel: true, visivel: true, micro: 0.7 },
   peitoral: { nome: 'peitoral', grupo: 'tronco', lados: true, frente: true, costas: false, w: 17, h: 15, maximo: 3, parte: 'peito' },
   centro_peito: { nome: 'centro do peito', grupo: 'tronco', lados: false, frente: true, costas: false, w: 9, h: 20, maximo: 2, parte: 'peito', sensivel: true },
   costelas: { nome: 'costela', fem: true, grupo: 'tronco', lados: true, frente: true, costas: false, w: 14, h: 22, maximo: 3, parte: 'abdomen', sensivel: true },
@@ -259,7 +271,7 @@ export const desenhoDeTatuagem = (id: string) => POR_ID.get(id);
 export function medidaDoDesenho(d: DesenhoDeTatuagem, regiao: RegiaoDeTatuagem, tamanho: TamanhoDeTatuagem, escala = 1, rot = 0): { w: number; h: number } {
   const R = REGIOES[regiao];
   if (tamanho === 4) return { w: R.w, h: R.h };
-  const s = MEDIDA[tamanho] * escala;
+  const s = MEDIDA[tamanho] * escala * (R.micro ?? 1);
   const p = d.proporcao ?? 1;
   if (d.faixa) return { w: R.w, h: Math.max(2.4, s / p) };
   const w = p >= 1 ? s : s * p, h = p >= 1 ? s / p : s;
@@ -375,6 +387,7 @@ export const modeloDeComposicao = (id: string) => MODELOS_DE_COMPOSICAO.find(m =
 
 /** A região de um registro antigo (só com a parte grande): os lugares mais naturais daquela parte, em ordem. */
 export const REGIAO_DA_PARTE: Record<LocalDeTatuagem, RegiaoDeTatuagem[]> = {
+  rosto: ['bochecha', 'testa', 'tempora', 'sob_olho', 'queixo', 'nariz', 'sobrancelha_t'],
   braco: ['biceps', 'triceps', 'ombro'],
   antebraco: ['antebraco', 'antebraco_externo', 'pulso'],
   ombro: ['ombro', 'biceps'],

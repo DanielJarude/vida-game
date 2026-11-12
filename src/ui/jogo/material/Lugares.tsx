@@ -41,6 +41,8 @@ import { sobDemanda } from '../../util/sobDemanda';
 export const LojaDaVida = sobDemanda(() => import('./Lojas').then(m => m.LojaDaVida));
 import { estabelecimento } from '../../../motor/dados/lojas';
 import { Retrato } from '../../avatar/Retrato';
+import { Figura } from '../../avatar/Figura';
+import { tipoDeCorpo } from '../../../motor/sistemas/silhueta';
 import { DesenhoVeiculo, MiniaturaDaCasa } from './Desenhos';
 import { DesenhoObjeto } from './Objetos';
 import { chaveDaFachada, corConcordada, corDoVeiculo, fachadaDe, variantesDaCoisa } from '../../../motor/dados/pertences';
@@ -118,10 +120,14 @@ const RISCO_DA_CIRURGIA = (x: number) => (x < 0.025 ? 'baixo' : x < 0.05 ? 'mode
  */
 function ClinicaEstetica({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
   const [clinica, setClinica] = useState<Clinica>('boa');
+  // VIDA 17: o catálogo por área (o rosto, o corpo, os funcionais e reparadores); o que não cabe agora aparece com o porquê.
+  const [area, setArea] = useState<'rosto' | 'corpo' | 'funcional'>('rosto');
   const c = CLINICAS[clinica];
   const eu = vida.eu;
   const i = idade(vida);
-  const lista = PROCEDIMENTOS.filter(p => i >= p.idadeMin && (!p.cabe(vida) || revisavel(vida, p.id)));
+  const daArea = PROCEDIMENTOS.filter(p => (p.area ?? 'rosto') === area);
+  const lista = daArea.filter(p => i >= p.idadeMin && (!p.cabe(vida) || revisavel(vida, p.id)));
+  const foraAgora = daArea.filter(p => !lista.includes(p)).map(p => ({ p, porque: i < p.idadeMin ? `a partir dos ${p.idadeMin} anos` : p.cabe(vida) ?? '' }));
   const rec = emRecuperacao(vida);
   return (
     <div className="loja-estilo clinica">
@@ -129,22 +135,34 @@ function ClinicaEstetica({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolea
       {rec && <p className="nota nota--atencao">Ainda em recuperação da {rec}.</p>}
       <Escolha rotulo="Clínica" valor={clinica} aoMudar={setClinica} opcoes={(Object.keys(CLINICAS) as Clinica[]).map(k => ({ id: k, rotulo: CLINICAS[k].nome }))} />
       <p className="nota">{c.sobre}</p>
+      <div className="clinica17__areas" role="tablist" aria-label="Área">
+        {(['rosto', 'corpo', 'funcional'] as const).map(x => <button key={x} type="button" role="tab" aria-selected={area === x} className={`clinica17__area${area === x ? ' clinica17__area--ativa' : ''}`} onClick={() => setArea(x)}>{x === 'rosto' ? 'Rosto' : x === 'corpo' ? 'Corpo' : 'Funcionais e reparadores'}</button>)}
+      </div>
       {!lista.length && <p className="nota">Nada aqui faz sentido para você agora.</p>}
       <ul className="ofertas">
         {lista.map(p => {
           const rev = revisavel(vida, p.id);
           const alvos = rev ? [] : p.alvos?.(vida) ?? [{ id: '', rotulo: 'Fazer' }];
           const depois = (alvo?: string) => { const x = structuredClone(vida); p.aplicar(x, alvo); return x.eu.visual; };
+          // VIDA 17: no corpo, a prévia é a figura inteira — e a da bariátrica mostra como deve estar em um ano e meio.
+          const corpoDepois = () => { const x = structuredClone(vida); p.aplicar(x); if (p.id === 'bariatrica') x.t += 18; return { visual: x.eu.visual, corpo: tipoDeCorpo(x) }; };
+          const cd = p.area === 'corpo' ? corpoDepois() : undefined;
           return (
             <li key={p.id} className="oferta oferta--estilo clinica__item">
               <span className="clinica__previa" aria-hidden>
-                <Retrato visual={eu.visual} genero={eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} tamanho={56} />
-                <span className="clinica__seta">→</span>
-                <Retrato visual={depois(alvos[0]?.id || undefined)} genero={eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} tamanho={56} />
+                {cd ? <>
+                  <Figura visual={eu.visual} genero={eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} corpo={tipoDeCorpo(vida)} pecas={(eu.estilo?.itens ?? []).filter(x => x.usando)} largura={52} semFundo />
+                  <span className="clinica__seta">{p.id === 'bariatrica' ? '→ 18 meses →' : '→'}</span>
+                  <Figura visual={cd.visual} genero={eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} corpo={cd.corpo} pecas={(eu.estilo?.itens ?? []).filter(x => x.usando)} largura={52} semFundo />
+                </> : <>
+                  <Retrato visual={eu.visual} genero={eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} tamanho={56} />
+                  <span className="clinica__seta">→</span>
+                  <Retrato visual={depois(alvos[0]?.id || undefined)} genero={eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} tamanho={56} />
+                </>}
               </span>
               <span className="oferta__texto">
                 <strong>{p.nome} · {dinheiroCurto(precoDoProcedimento(vida, p.id, clinica, rev))}</strong>
-                <span>{capitalizar(p.oque)}. {p.recuperacao ? `Recuperação: ${p.recuperacao === 1 ? 'um mês' : `${p.recuperacao} meses`}.` : 'Sem recuperação.'} Risco {RISCO_DA_CIRURGIA(riscoDe(vida, p.id, clinica))}.</span>
+                <span>{capitalizar(p.oque)}. {p.recuperacao ? `Recuperação: ${p.recuperacao === 1 ? 'um mês' : `${p.recuperacao} meses`}.` : 'Sem recuperação.'}{p.restricao ? ` Sem esforço físico por ${p.restricao === 1 ? 'um mês' : `${p.restricao} meses`}.` : ''} Risco {RISCO_DA_CIRURGIA(riscoDe(vida, p.id, clinica))}.</span>
                 {rev && <span className="nota">O último resultado ficou abaixo do esperado: a revisão sai pela metade.</span>}
               </span>
               <span className="grupo-acoes grupo-acoes--linha">
@@ -155,6 +173,13 @@ function ClinicaEstetica({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolea
           );
         })}
       </ul>
+      {foraAgora.length > 0 && (
+        <details className="clinica17__fora">
+          <summary>Não cabe agora ({foraAgora.length})</summary>
+          <ul>{foraAgora.map(x => <li key={x.p.id}><strong>{x.p.nome}</strong> — {x.porque.charAt(0).toLowerCase() + x.porque.slice(1)}</li>)}</ul>
+        </details>
+      )}
+      <p className="nota clinica17__aviso">É uma simulação do jogo: os procedimentos, riscos e resultados daqui não são orientação médica.</p>
     </div>
   );
 }

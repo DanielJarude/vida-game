@@ -16,6 +16,14 @@ export const NOME_DO_CORPO: Record<TipoDeCorpo, string> = {
 };
 
 export function tipoDeCorpo(v: Vida): TipoDeCorpo {
+  const base = tipoDeCorpoBase(v);
+  // VIDA 17: a bariátrica muda o corpo AOS POUCOS — seis meses ainda igual; depois, mediano (com o reganho, volta).
+  const b = v.eu.cirurgia17?.bariatrica;
+  if (b && !b.reganho && base === 'acima_do_peso' && v.t - b.t >= (b.fraca ? 12 : 6)) return 'mediano';
+  return base;
+}
+
+function tipoDeCorpoBase(v: Vida): TipoDeCorpo {
   const i = idade(v);
   const forma = v.corpo.forma;
   const academia = v.rotinas.find(r => r.id === 'academia');

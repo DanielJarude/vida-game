@@ -33,6 +33,7 @@ import { dinheiroCurto } from '../../apresentar';
 import { rotuloDe } from '../../apresentar';
 import type { Aba, Lugar } from '../../navegacao';
 import './celular15.css';
+import { MapaDaCidade } from '../../v17/mapa/MapaDaCidade';
 
 const RedesSociais = lazy(() => import('../../jogo/Redes').then(m => ({ default: m.RedesSociais })));
 
@@ -488,10 +489,8 @@ function Mapas({ vida, sair }: { vida: Vida; sair: (a: Aba) => void }) {
   const lista = [...por.entries()].sort((a, b) => Number(b[0] === m.id) - Number(a[0] === m.id) || b[1].length - a[1].length).slice(0, 8);
   return (
     <div className="cel__secoes">
-      <div className="mapa15" aria-hidden>
-        <svg viewBox="0 0 320 150"><path className="mapa15__rio" d="M0 110 C60 90 90 130 150 105 S260 70 320 90" /><path className="mapa15__rua" d="M0 60 H320 M80 0 V150 M210 0 V150 M0 30 L320 140" /><circle className="mapa15__aqui" cx="150" cy="70" r="9" /></svg>
-      </div>
-      <p className="cel__h">Você está em {nomeLugar(m.id)}</p>
+      {/* VIDA 17: o mapa ilustrado da cidade onde você mora (no lugar do desenho genérico). */}
+      <MapaDaCidade vida={vida} />
       <section>
         <h3 className="cel__h">Onde está a sua gente</h3>
         <ul className="cel__linhas">{lista.map(([id, ps]) => (

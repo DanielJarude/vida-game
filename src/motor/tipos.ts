@@ -310,6 +310,13 @@ export interface Visual {
    *  o ano do lifting (as rugas voltam devagar). NUNCA vai para os filhos: a herança lê `genes`, não o visual. */
   transplante?: boolean;
   lifting?: number;
+  /** VIDA 17 (cirurgias do corpo e do rosto, só o que se vê): a cintura da lipo, o abdômen da abdominoplastia, o busto
+   *  (menor/maior), as bochechas da bichectomia, o ano do botox (as rugas aliviam por um ano). Nunca vão para os filhos. */
+  contorno17?: boolean;
+  abdomen17?: boolean;
+  busto17?: 'menor' | 'maior';
+  bochecha17?: 'fina';
+  botox17?: number;
 }
 
 /**
@@ -3772,6 +3779,16 @@ export interface Personagem {
   genes?: Genes;
   /** Os procedimentos estéticos feitos (`sistemas/estetica`, no máximo os 12 últimos): o resultado e a escolha. */
   procedimentos?: { id: string; t: number; resultado: string; alvo?: string; clinica?: string; revisado?: boolean }[];
+  /** VIDA 17: até quando (mês) o corpo pede repouso depois de uma cirurgia — sem academia, esporte ou aventura. */
+  restricao17?: number;
+  /** VIDA 17: as cirurgias do corpo que seguem mudando com o tempo (`v17/saude/cirurgias17`). */
+  cirurgia17?: {
+    /** A bariátrica: quando, se toma os suplementos, a resposta (fraca: o resultado abaixo do esperado) e o reganho. */
+    bariatrica?: { t: number; suplementos: boolean; fraca?: boolean; reganho?: number; pele?: boolean };
+    /** A prótese de mama (troca recomendada com o tempo) e a lipo (o reganho, para quem para de se mexer). */
+    protese?: number;
+    lipo?: number;
+  };
   /**
    * HOTFIX 11.5.1: as tatuagens (`sistemas/tatuagens`): o desenho, a parte do corpo, o lado, quando foi feita — e, se
    * está saindo no laser, desde quando (a tinta vai clareando por um ano e some). Ausente: nenhuma.

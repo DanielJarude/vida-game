@@ -11,11 +11,12 @@
 
 import { PiercingDoUmbigo } from './piercings';
 import { CabeloDeCostas } from './identidade13';
-import { memo, useId, type ReactNode } from 'react';
+import { memo, useId, type ReactElement, type ReactNode } from 'react';
 import type { Genero, Visual } from '../../motor/tipos';
 import type { TipoDeCorpo } from '../../motor/sistemas/silhueta';
 import { Retrato, contrasteEntre, corDaPele, corDoCabelo, fundoDaFigura } from './Retrato';
-import { caixaDaRegiao, FundoNaPele, ladoNaTela, MapaDoCorpo, TatuagemNaPele, visivelNaVista, type ComposicaoNaFigura } from './tatuagensNaPele';
+import { ehDoRosto } from './rosto17';
+import { caixaDaRegiao, TatuagensDoRosto, FundoNaPele, ladoNaTela, MapaDoCorpo, TatuagemNaPele, visivelNaVista, type ComposicaoNaFigura } from './tatuagensNaPele';
 import type { TatuagemParaFigura } from '../../motor/sistemas/tatuagens';
 import { REGIOES, type Lado, type LocalDeTatuagem, type RegiaoDeTatuagem } from '../../motor/dados/tatuagens';
 import { misturar } from './cores';
@@ -162,16 +163,19 @@ export function focoDaParte(genero: Genero, corpo: TipoDeCorpo, idade: number, l
       case 'abdomen': return caixa(g.cx, g.topo + 12, g.yQuad + 6, (Math.max(g.peito, g.quadril) + 10) * 2);
       case 'costas': return caixa(g.cx, g.topo - 8, g.yQuad + 4, (g.ombro + 9) * 2);
       case 'pescoco': return caixa(g.cx, 14, g.topo + 14, 52);
+      // VIDA 17: o rosto (a cabeça não escala com a idade).
+      case 'rosto': return caixa(g.cx, 12, 62, 44);
       case 'coxa': return caixa(lado(g, s, g.quadril * 0.5), g.yQuad - 8, g.yJoelho + 10, 40);
       case 'panturrilha': return caixa(lado(g, s, g.quadril * 0.44), g.yJoelho - 14, g.yTorn + 10, 34);
     }
   })();
   // Os membros e o tronco vivem no corpo escalado pela idade (a partir da base do pescoço); a cabeça, não.
   const esc = escalaDaIdade(idade);
-  const ty = (y: number) => local === 'pescoco' ? y : g.topo + (y - g.topo) * esc;
+  const cabeca = local === 'pescoco' || local === 'rosto';
+  const ty = (y: number) => cabeca ? y : g.topo + (y - g.topo) * esc;
   const cy = ty(r.cy);
-  let h = r.h * (local === 'pescoco' ? 1 : esc), w = r.w * (local === 'pescoco' ? 1 : esc);
-  const cx = local === 'pescoco' ? r.cx : g.cx + (r.cx - g.cx) * esc;
+  let h = r.h * (cabeca ? 1 : esc), w = r.w * (cabeca ? 1 : esc);
+  const cx = cabeca ? r.cx : g.cx + (r.cx - g.cx) * esc;
   // A proporção fixa (3 : 4) e o quanto aproximar.
   if (w / h < 0.75) w = h * 0.75; else h = w / 0.75;
   const z = Math.max(1, perto);
@@ -508,6 +512,10 @@ const PADRAO_CIMA = ['#4b5a6b', '#6b4f5a', '#4f6b5a', '#7a6248', '#5a5470', '#3f
 export const Figura = memo(function Figura({ visual, genero, idade, semente = 'eu', corpo, pecas, largura = 160, rotulo, semFundo, tatuagens = [], vista = 'frente', semCima, foco, destaque, composicoes = [], descalco, aoEscolherRegiao, regiaoEscolhida }: Props) {
   const uid = useId().replace(/:/g, '');
   const g = geometria(genero, corpo, idade);
+  // VIDA 17: o que as cirurgias do corpo mudam e se vê (a cintura da lipo, o abdômen, o volume do peito).
+  if (visual.contorno17) { g.cintura -= 1.8; g.barriga = Math.max(0, g.barriga - 2); }
+  if (visual.abdomen17) g.barriga = Math.max(0, g.barriga - 2.6);
+  if (visual.busto17 === 'maior') { g.peito += 1.4; g.busto += 0.8; } else if (visual.busto17 === 'menor') { g.peito -= 1; g.busto = Math.max(0, g.busto - 0.6); }
   const esc = escalaDaIdade(idade);
   const [pele, sombraPele] = corDaPele(visual.pele);
   const detalhe = largura >= 110;
@@ -584,7 +592,7 @@ export const Figura = memo(function Figura({ visual, genero, idade, semente = 'e
         {([-1, 1] as const).map(s => <path key={`ax${s}`} d={`M ${lado(g, s, g.peito - 0.6)} ${g.topo + 14} Q ${lado(g, s, g.peito - 1.6)} ${g.yCint - 14} ${lado(g, s, g.cintura + g.barriga * 0.6 - 0.4)} ${g.yCint - 2}`} fill="none" stroke={sombraPele} strokeWidth={1.6} opacity={0.7} />)}
         {([-1, 1] as const).map(s => <path key={`p${s}`} d={perna(g, s, 0, g.yTorn + 2)} fill={pele} stroke={contorno} strokeWidth={0.7} strokeLinejoin="round" />)}
         {/* HOTFIX 11.5.1: as tatuagens, na pele (a roupa vem por cima e cobre o que cobre). */}
-        {tatuagens.length > 0 && <Tatuagens g={g} lista={tatuagens.filter(t => !NA_MAO.has(t.regiao) && t.regiao !== 'pe')} comps={composicoes} pele={pele} ide={ide} costas={costas} detalhe={detalhe} idade={idade} />}
+        {tatuagens.length > 0 && <Tatuagens g={g} lista={tatuagens.filter(t => !NA_MAO.has(t.regiao) && t.regiao !== 'pe' && !ehDoRosto(t.regiao))} comps={composicoes} pele={pele} ide={ide} costas={costas} detalhe={detalhe} idade={idade} />}
         {/* VIDA 12.9: o piercing do umbigo (só com o tronco à mostra; a roupa de cima cobre). */}
         {!costas && !conj.cima && !conj.inteira && idade >= 16 && <PiercingDoUmbigo ids={visual.piercings} x={g.cx} y={g.yCint - 3} />}
         {/* O que se veste, de dentro para fora. */}
@@ -631,9 +639,11 @@ export const Figura = memo(function Figura({ visual, genero, idade, semente = 'e
       ) : (
         <g transform="translate(20 0)" className="figura__cabeca">
           {/* A figura é sempre de gente (o bicho tem o seu retrato): espécie nenhuma. */}
-          <Retrato visual={visual} genero={genero} idade={idade} semente={semente} tamanho={80} soCabeca rotulo="" especie={undefined} />
+          <Retrato visual={visual} genero={genero} idade={idade} semente={semente} tamanho={80} soCabeca rotulo="" especie={undefined} camadaDoRosto={tatuagens.some(t => ehDoRosto(t.regiao)) ? (gr, pl, ro, id) => <TatuagensDoRosto lista={tatuagens} g={gr} pele={pl} rosto={ro} uid={id} /> as ReactElement : undefined} />
         </g>
       )}
+      {/* VIDA 17: as regiões do rosto, por cima da cabeça (o estúdio escolhe nelas também). */}
+      {aoEscolherRegiao && !costas && <MapaDoCorpo g={g} costas={costas} escolhida={regiaoEscolhida} aoEscolher={aoEscolherRegiao} rosto ocupadas={new Set(tatuagens.filter(t => t.id !== 'previa').map(t => `${t.regiao}:${t.lado ?? ''}`))} />}
       {destaque && <rect className="figura__destaque" x={destaque.x} y={destaque.y} width={destaque.w} height={destaque.h} rx={2} fill="none" stroke="currentColor" strokeWidth={1.4} strokeDasharray="3 2" vectorEffect="non-scaling-stroke" />}
     </svg>
   );

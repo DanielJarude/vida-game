@@ -23,7 +23,9 @@ import { abalar } from './abalo';
 import { estagioDaCalvicie, geneticaDe, guardarGenes } from './identidade';
 import { bloqueio, PERMITIDO, type Veredito } from '../plausibilidade';
 
-export type IdProcedimento = 'rinoplastia' | 'otoplastia' | 'blefaroplastia' | 'lifting' | 'transplante' | 'labios';
+export type IdProcedimento = 'rinoplastia' | 'otoplastia' | 'blefaroplastia' | 'lifting' | 'transplante' | 'labios'
+  // VIDA 17 (`v17/saude/cirurgias17`, registrados aqui): o corpo, mais o rosto e os funcionais.
+  | 'bariatrica' | 'lipo' | 'abdominoplastia' | 'mamoplastia' | 'protese_mama' | 'bichectomia' | 'mentoplastia' | 'harmonizacao' | 'botox' | 'septoplastia' | 'refrativa';
 export type Clinica = 'popular' | 'boa' | 'renomada';
 export type Resultado = 'satisfatorio' | 'neutro' | 'abaixo' | 'complicacao';
 
@@ -33,7 +35,7 @@ export const CLINICAS: Record<Clinica, { nome: string; preco: number; mao: numbe
   renomada: { nome: 'Clínica renomada', preco: 1.9, mao: 0.78, risco: 0.7, sobre: 'Cara. Um nome que aparece em revista — o que melhora as chances, não garante o resultado.' }
 };
 
-interface Procedimento {
+export interface Procedimento {
   id: IdProcedimento;
   nome: string;
   /** O que muda, em palavras. */
@@ -48,6 +50,14 @@ interface Procedimento {
   /** O que muda no visual (alvo: a escolha, quando há). */
   aplicar: (v: Vida, alvo?: string, parcial?: boolean) => void;
   alvos?: (v: Vida) => { id: string; rotulo: string }[];
+  /** VIDA 17: onde age (o rosto, o corpo — a prévia é a figura inteira —, ou um procedimento funcional/reparador). */
+  area?: 'rosto' | 'corpo' | 'funcional';
+  /** VIDA 17: meses sem esforço físico (academia, esporte, aventura) depois de operar. */
+  restricao?: number;
+  /** VIDA 17: o que muda além do visual (a saúde, o corpo ao longo dos meses, a frase do resultado). */
+  depois?: (v: Vida, r: Rng, resultado: Resultado) => string | undefined;
+  /** VIDA 17: as complicações próprias do procedimento (o texto). */
+  complicacoes?: string[];
 }
 
 const vis = (v: Vida) => v.eu.visual;
@@ -88,6 +98,13 @@ export const PROCEDIMENTOS: Procedimento[] = [
   }
 ];
 export const procedimento = (id: string) => PROCEDIMENTOS.find(p => p.id === id);
+
+/** VIDA 17: os procedimentos de outra frente entram no MESMO catálogo (sem sistema paralelo) — e o ano deles também. */
+const ANUAIS: ((v: Vida) => void)[] = [];
+export function registrarProcedimentos(lista: Procedimento[], anual?: (v: Vida) => void): void {
+  for (const p of lista) if (!PROCEDIMENTOS.some(x => x.id === p.id)) PROCEDIMENTOS.push(p);
+  if (anual && !ANUAIS.includes(anual)) ANUAIS.push(anual);
+}
 
 /** O preço aqui (a cidade e a clínica). */
 export const precoDoProcedimento = (v: Vida, id: IdProcedimento, clinica: Clinica, revisao = false) =>
@@ -166,8 +183,12 @@ export function fazerProcedimento(v: Vida, r: Rng, id: IdProcedimento, clinica: 
   } else {
     v.corpo.saude = clamp(v.corpo.saude - (8 + r.int(0, 6)));
     abalar(v, `a complicação da ${nome}`, -7, 8);
-    texto = `Complicação: ${r.pick(['uma infecção que pediu antibiótico e mais um mês em casa', 'um hematoma que voltou para a mesa de cirurgia', 'uma cicatrização difícil, devagar, com curativo todo dia'])}. ${resultado === 'complicacao' && c.mao >= 0.7 ? 'A clínica acompanhou de perto.' : 'Você passou mais tempo no telefone com a clínica do que gostaria.'} Passou — e a saúde sentiu.`;
+    texto = `Complicação: ${r.pick(p.complicacoes ?? ['uma infecção que pediu antibiótico e mais um mês em casa', 'um hematoma que voltou para a mesa de cirurgia', 'uma cicatrização difícil, devagar, com curativo todo dia'])}. ${resultado === 'complicacao' && c.mao >= 0.7 ? 'A clínica acompanhou de perto.' : 'Você passou mais tempo no telefone com a clínica do que gostaria.'} Passou — e a saúde sentiu.`;
   }
+  // VIDA 17: o que o procedimento muda além do visual (o corpo ao longo dos meses, a saúde) e o tempo sem esforço.
+  const extra = p.depois?.(v, r, resultado);
+  if (extra) texto += ` ${extra}`;
+  if (p.restricao) v.eu.restricao17 = Math.max(v.eu.restricao17 ?? 0, v.t + p.restricao + (resultado === 'complicacao' ? 3 : 0));
   // Quem está perto repara (a repercussão: a parceria, a mãe).
   const par = parceiro(v);
   if (par && resultado !== 'neutro') {
@@ -185,6 +206,7 @@ export function fazerProcedimento(v: Vida, r: Rng, id: IdProcedimento, clinica: 
 
 /** O ano: o preenchimento passa (o lábio volta ao natural, o da genética). */
 export function processarEstetica(v: Vida): void {
+  for (const f of ANUAIS) f(v);
   const t = v.fatos.preenchimento_labial;
   if (t === undefined || v.t - t < 18) return;
   delete v.fatos.preenchimento_labial;

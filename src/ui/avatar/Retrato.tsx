@@ -116,11 +116,16 @@ interface Props {
   porte?: Porte;
   /** 12.4.1: só a cabeça (sem o busto, o pescoço e o fundo) — a figura de corpo inteiro desenha o resto. */
   soCabeca?: boolean;
+  /**
+   * VIDA 17: a camada das tatuagens do rosto (quem chama passa `tatuagensNaPele.TatuagensDoRosto` — o retrato não carrega
+   * a biblioteca dos desenhos): recebe a geometria viva do rosto, a pele, o contorno do rosto e um id único.
+   */
+  camadaDoRosto?: (g: { cx: number; cy: number; w: number; hh: number; olhoY: number; esp: number; queixo: number }, pele: string, rosto: string, uid: string) => ReactElement | null;
 }
 
 export type Expressao = 'bem' | 'neutro' | 'cansado' | 'abatido' | 'tenso' | 'doente';
 
-export const Retrato = memo(function Retrato({ visual, genero, idade, semente = '', tamanho = 64, rotulo, especie, falecido, expressao = 'neutro', porte, soCabeca }: Props) {
+export const Retrato = memo(function Retrato({ visual, genero, idade, semente = '', tamanho = 64, rotulo, especie, falecido, expressao = 'neutro', porte, soCabeca, camadaDoRosto }: Props) {
   const uid = useId().replace(/:/g, '');
   if (especie) return <RetratoPet especie={especie} tamanho={tamanho} rotulo={rotulo} semente={semente} porte={porte} />;
   const v: Visual = visual ?? { pele: 'p3', cabelo: 'curto', corCabelo: 'castanho', olhos: 'castanho' };
@@ -157,7 +162,8 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
   const fw = ro === 'redondo' ? 1.07 : ro === 'longo' ? 0.92 : ro === 'coracao' ? 1.03 : ro === 'quadrado' ? 1.03 : 1;
   const fh = ro === 'longo' ? 1.08 : ro === 'redondo' ? 0.95 : 1;
   const fj = ro === 'quadrado' ? 1.35 : ro === 'redondo' ? 1.2 : ro === 'coracao' ? 0.72 : ro === 'longo' ? 0.9 : 1;
-  const w = G.w * (adultoOuAdol && masc ? 1.04 : adultoOuAdol && fem ? 0.97 : 1) * (f === 'bebe' ? 1 : fw);
+  // VIDA 17: a bichectomia afina o rosto (só o que se vê; a genética fica).
+  const w = G.w * (adultoOuAdol && masc ? 1.04 : adultoOuAdol && fem ? 0.97 : 1) * (f === 'bebe' ? 1 : fw) * (v.bochecha17 && adultoOuAdol ? 0.965 : 1);
   const hh = G.hh * (f === 'bebe' ? 1 : fh);
   const cx = 50;
   const cy = G.cy;
@@ -202,7 +208,7 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
   const calvo = estagio === undefined ? (f === 'idoso' && masc && (h % 3 !== 0) || (f === 'meia' && masc && h % 5 === 0)) : estagio === 2;
   const entradas = estagio === 1 && !bebe;
   // O lifting apaga as rugas por uns dez anos (depois, o tempo volta).
-  const rugas = v.lifting !== undefined && idade - v.lifting < 10 ? 0.35 : 1;
+  const rugas = v.lifting !== undefined && idade - v.lifting < 10 ? 0.35 : v.botox17 !== undefined && idade - v.botox17 < 1 ? 0.5 : 1;
 
   // REWORK 6: o cabelo é uma forma só (atrás e na frente), com a textura herdada e a calvície no próprio desenho da testa.
   const cabelo = desenharCabelo({ estilo: calvo && !bebe ? 'calvo' : estilo, cor, cx, cy, w, hh, fase: f, linha: v.linhaCabelo, textura: v.textura, estagio: entradas ? 1 : 0, pele });
@@ -290,6 +296,8 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
         </g>
       )}
 
+      {/* VIDA 17: as tatuagens do rosto, na pele (o olho, a sobrancelha, a barba e os óculos vêm por cima). */}
+      {camadaDoRosto && f !== 'bebe' && f !== 'crianca' && camadaDoRosto({ cx, cy, w, hh, olhoY, esp, queixo }, pele, rosto, uid)}
       {/* VIDA 13: a maquiagem que vai por baixo — o blush nas maçãs e a sombra na pálpebra (o olho fica por cima). */}
       {maquiada && <Blush cor={v.blush} g={geoOlhos} />}
       {maquiada && <SombraDosOlhos cor={v.sombraOlhos} g={geoOlhos} />}

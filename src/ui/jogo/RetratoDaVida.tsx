@@ -22,6 +22,7 @@ import { nomeOcupacao } from '../../motor/sistemas/trabalho';
 import { nomeDaMatricula } from '../../motor/sistemas/escola';
 import { dinheiroCurto } from '../apresentar';
 import type { Aba } from '../navegacao';
+import { RetratoDoJogador17 } from '../avatar/RetratoDoJogador17';
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -67,7 +68,7 @@ export function RetratoDaVida({ vida, irPara, abrirPessoa }: { vida: Vida; irPar
   return (
     <header className="hoje hoje--retrato">
       <button type="button" className="hoje__rosto" onClick={() => irPara('voce')} aria-label="Ver como você está">
-        <Retrato visual={vida.eu.visual} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} tamanho={72} rotulo={`${vida.eu.nome} aos ${i}`} expressao={expressaoDe(vida)} />
+        <RetratoDoJogador17 vida={vida} visual={vida.eu.visual} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} tamanho={72} rotulo={`${vida.eu.nome} aos ${i}`} expressao={expressaoDe(vida)} />
       </button>
       <div className="hoje__texto">
         <p className="folio__kicker"><span className="folio__area">História</span> · {i} {i === 1 ? 'ano' : 'anos'} · {faseDaVida(i)}</p>

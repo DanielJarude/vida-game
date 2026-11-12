@@ -14,6 +14,8 @@ import { fotografarEvolucao, praticandoPor } from './sistemas/progressao';
 import { cansacoNosEstudos, faixaDaSemana, estudaAgora } from './sistemas/semana';
 import { agendaDaSemana, presencaNaEscola, presencaNoCurso, presencaNoEstudo, processarAgenda } from './sistemas/agenda';
 import { processarEstetica } from './sistemas/estetica';
+// VIDA 17: registra as cirurgias do corpo (e o ano delas) no catálogo da clínica.
+import './v17/saude/cirurgias17';
 import { processarCoisas } from './sistemas/coisas';
 import { educacaoDaVida } from './mundo/vida';
 import { processarMundo } from './sistemas/migracao';

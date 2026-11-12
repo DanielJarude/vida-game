@@ -141,6 +141,8 @@ import { depoisDaAcao15, disponibilidadeCelular15, executarCelular15, type OqueC
 import { disponibilidadeOficio16, executarOficio16, type OqueOficio16 } from './v16/oficios/oficios16';
 import { disponibilidadeReligiao16, executarReligiao16, type OqueReligiao16 } from './v16/religiao/religiao16';
 import { funcaoDe17, podeTrocar17, posicionar17, vagaPara17 } from './v14/moveis/funcoes17';
+// VIDA 17: as cirurgias do corpo entram no catálogo da clínica (registro) — e o repouso depois delas.
+import { emRepouso17 } from './v17/saude/cirurgias17';
 
 /** Id de uma interação do catálogo (`sistemas/interacoes`). O que existe depende da pessoa e do momento. */
 export type InteracaoPessoa = string;
@@ -469,7 +471,8 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     }
     case 'parar_tratamento': return podeParaTratamento(v, a.condicaoId);
     case 'aposta': return disponibilidadeAposta(v, a.op);
-    case 'rotina': return a.ativa ? podeComecarRotina(v, a.id, a.nivel ?? (v.rotinas.find(r => r.id === a.id)?.nivel ?? 1)) : v.rotinas.some(r => r.id === a.id) ? PERMITIDO : bloqueio('incompativel', 'Não faz parte da rotina.');
+    case 'rotina': if (a.ativa && emRepouso17(v) && (a.id === 'academia' || modeloRotina(a.id)?.categoria === 'esporte')) return bloqueio('incompativel', emRepouso17(v)!);
+      return a.ativa ? podeComecarRotina(v, a.id, a.nivel ?? (v.rotinas.find(r => r.id === a.id)?.nivel ?? 1)) : v.rotinas.some(r => r.id === a.id) ? PERMITIDO : bloqueio('incompativel', 'Não faz parte da rotina.');
     case 'oportunidade': {
       const o = v.caminhos.oportunidades.find(x => x.id === a.id);
       if (!o) return bloqueio('incompativel', 'Essa porta já fechou.');
@@ -835,7 +838,8 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'aparencia': return disponibilidadeAparencia(v, a.mudanca);
     case 'rosto14': return disponibilidadeRosto14(v, a.mudanca);
     case 'piercing14': return disponibilidadePiercing14(v, a.oque);
-    case 'viagem14': return fronteirasFechadas(v) && !a.destino.startsWith('neg_sao_paulo') ? bloqueio('impossivel', fronteirasFechadas(v)!) : disponibilidadeViagem14(v, a);
+    case 'viagem14': if (emRepouso17(v)) return bloqueio('incompativel', `${emRepouso17(v)!} Viagem longa, também não.`);
+      return fronteirasFechadas(v) && !a.destino.startsWith('neg_sao_paulo') ? bloqueio('impossivel', fronteirasFechadas(v)!) : disponibilidadeViagem14(v, a);
     case 'conquistas14': return disponibilidadeConquistas14(v, a.oque);
     case 'justica14': return disponibilidadeJustica14(v, a.oque);
     case 'crenca14': return disponibilidadeCrenca14(v, a.op);
@@ -875,7 +879,8 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'cnh_preparar': return disponibilidadePrepararCnh(v, a.como);
     case 'habilitacao': return disponibilidadeHabilitacao(v, a.qual);
     // REWORK 12.25: quem é procurado (o mandado, a fuga) não passa por fronteira — o passaporte acusaria.
-    case 'experiencia': return a.id === 'viagem_exterior' && v.justica?.foragido ? bloqueio('impossivel', 'Quem é procurado não passa por uma fronteira: o passaporte acusaria.') : a.id === 'viagem_exterior' && fronteirasFechadas(v) ? bloqueio('impossivel', fronteirasFechadas(v)!) : disponibilidadeExperiencia(v, a.id, a.escolha, a.luaDeMel);
+    case 'experiencia': if (emRepouso17(v) && /^viagem/.test(a.id)) return bloqueio('incompativel', `${emRepouso17(v)!} Viagem longa, também não.`);
+      return a.id === 'viagem_exterior' && v.justica?.foragido ? bloqueio('impossivel', 'Quem é procurado não passa por uma fronteira: o passaporte acusaria.') : a.id === 'viagem_exterior' && fronteirasFechadas(v) ? bloqueio('impossivel', fronteirasFechadas(v)!) : disponibilidadeExperiencia(v, a.id, a.escolha, a.luaDeMel);
     case 'renomear': return disponibilidadeRenomear(v, a.alvo, a.nome, a.k);
     case 'cnh_prova': return cnhEmProva(v) ? PERMITIDO : bloqueio('incompativel', 'A prova ainda não foi marcada.');
     case 'cnh':
