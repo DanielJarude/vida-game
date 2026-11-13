@@ -96,3 +96,10 @@ Reaproveita (não substitui): trajetória de descendentes (`filhos`), família d
 | Bugs conhecidos | nenhum novo; as 5 falhas da suíte são preexistentes |
 
 **Publicação**: autorizada pelo usuário condicionada aos critérios acima (suíte sem falha nova, typecheck, build, saves, inspeção visual) — todos atendidos. Resultado da publicação e conferência de hashes: seção G.
+
+## G. Publicação
+- Commit publicado: **`fd5884d`** — `main` e a branch de produção `claude/fix-pos-rework3-playtest` avançadas por fast-forward a partir de `e719fbd`; branch de trabalho `claude/vida19-npcs-conectada`.
+- Cloudflare Pages (vida-game.pages.dev) passou a servir `index-DCXyC3rr.js` cerca de 2 minutos depois do push.
+- Integridade: **`/` e os 129 arquivos JS/CSS do build sha256-idênticos** ao build validado localmente (`/index.html` responde 308 para `/`).
+- Conferido em produção: smoke de distribuição 27/27; celular → Rede (feed) e perfil em 1440 e 390 (tema escuro), sem erro de console, sem rolagem lateral.
+- Este registro (seção G) é um commit só de documentação.
