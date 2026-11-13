@@ -32,18 +32,22 @@ import { anosDaBiografia, faseDaVida, fiosDoAno, naturezaDe, TEMA_ROTULO } from 
 import { Retrato } from '../avatar/Retrato';
 import { anoDe } from '../../motor/tempo';
 import { leituraDoPalmares } from '../../motor/sistemas/palmares';
+import { padraoEm } from '../../motor/eras/base/moedas';
+import '../eras/eras.css';
 
 /**
  * REWORK 9 — ver a história por um fio: os estudos, o trabalho, as pessoas, os lugares e a saúde (o tema que o motor
  * deu a cada acontecimento — nada reclassificado) e as CONQUISTAS (os marcos que a vida registrou: formatura,
  * aprovação, promoção, título — a semente da sala de troféus, só com o que aconteceu).
  */
-export type FioDaHistoria = 'tudo' | 'estudos' | 'trabalho' | 'pessoas' | 'lugares' | 'saude' | 'conquistas';
-const TEMAS_DO_FIO: Record<Exclude<FioDaHistoria, 'tudo' | 'conquistas'>, Entrada['tema'][]> = {
+export type FioDaHistoria = 'tudo' | 'estudos' | 'trabalho' | 'pessoas' | 'lugares' | 'saude' | 'conquistas' | 'pais';
+const TEMAS_DO_FIO: Record<Exclude<FioDaHistoria, 'tudo' | 'conquistas' | 'pais'>, Entrada['tema'][]> = {
   estudos: ['escola', 'estudo'], trabalho: ['trabalho', 'dinheiro'], pessoas: ['amor', 'familia', 'filhos', 'amizade', 'perda', 'morte', 'nascimento'],
   lugares: ['lugar', 'casa', 'lazer'], saude: ['saude']
 };
-const ROTULO_DO_FIO: Record<FioDaHistoria, string> = { tudo: 'Tudo', estudos: 'Estudos', trabalho: 'Trabalho', pessoas: 'Pessoas', lugares: 'Lugares e lazer', saude: 'Saúde', conquistas: 'Conquistas' };
+const ROTULO_DO_FIO: Record<FioDaHistoria, string> = { tudo: 'Tudo', estudos: 'Estudos', trabalho: 'Trabalho', pessoas: 'Pessoas', lugares: 'Lugares e lazer', saude: 'Saúde', conquistas: 'Conquistas', pais: 'A época' };
+/** ERAS HISTÓRICAS: a entrada é uma lembrança da época (acontecimento do país, moeda, tecnologia, cultura). */
+const daEpoca = (e: Entrada) => e.fato?.tipo === 'era';
 
 /** Quantos anos aparecem de cada vez (o resto abre a pedido). */
 export const ANOS_POR_VEZ = 12;
@@ -58,8 +62,9 @@ export function LinhaDaVida({ vida, marca, abrirPessoa, compacta }: { vida: Vida
   const [limite, setLimite] = useState(compacta?.anos ?? ANOS_POR_VEZ);
   const [fio, setFio] = useState<FioDaHistoria>('tudo');
   const anos = useMemo(() => {
-    const todos = anosDaBiografia(vida, discreto);
+    const todos = anosDaBiografia(vida, fio === 'pais' ? true : discreto);
     if (fio === 'tudo' || fio === 'conquistas') return todos;
+    if (fio === 'pais') return todos.map(a => ({ ...a, entradas: a.entradas.filter(daEpoca) })).filter(a => a.entradas.length);
     const temas = new Set(TEMAS_DO_FIO[fio]);
     return todos.map(a => ({ ...a, entradas: a.entradas.filter(e => temas.has(e.tema)) })).filter(a => a.entradas.length);
   }, [vida, discreto, fio]);
@@ -87,7 +92,7 @@ export function LinhaDaVida({ vida, marca, abrirPessoa, compacta }: { vida: Vida
         </button>
       </div>
       <div className="linha-da-vida__fios" role="group" aria-label="Ver a história por um fio">
-        {(Object.keys(ROTULO_DO_FIO) as FioDaHistoria[]).map(f => <button key={f} type="button" className="chip" aria-pressed={fio === f} onClick={() => { setFio(f); setLimite(ANOS_POR_VEZ); }}>{ROTULO_DO_FIO[f]}</button>)}
+        {(Object.keys(ROTULO_DO_FIO) as FioDaHistoria[]).filter(f => f !== 'pais' || !!vida.era).map(f => <button key={f} type="button" className="chip" aria-pressed={fio === f} onClick={() => { setFio(f); setLimite(ANOS_POR_VEZ); }}>{ROTULO_DO_FIO[f]}</button>)}
       </div>
       </>}
       {fio === 'conquistas' && <Conquistas vida={vida} />}
@@ -101,11 +106,12 @@ export function LinhaDaVida({ vida, marca, abrirPessoa, compacta }: { vida: Vida
           return (
             <li key={a.idade} className={`ano${novo ? ' ano--novo' : ''}`}>
               {novoCapitulo && <p className="ano__capitulo">{fase}</p>}
+              {vida.era && (!anterior || Math.floor(anterior.ano / 10) !== Math.floor(a.ano / 10)) && <p className="ano__decada" data-era={Math.min(2020, Math.floor(a.ano / 10) * 10)}>Anos {Math.floor(a.ano / 10) * 10}</p>}
               {!novoCapitulo && salto > 2 && <p className="ano__silencio" aria-hidden>· · ·</p>}
               <div className="ano__corpo">
                 <h3 className="ano__cabeca">
                   <span className="ano__idade">{a.idade}<span className="ano__unidade"> {a.idade === 0 ? 'ao nascer' : a.idade === 1 ? 'ano' : 'anos'}</span></span>
-                  <span className="ano__calendario">{a.ano}</span>
+                  <span className="ano__calendario">{a.ano}{vida.era && a.ano <= 2025 ? <span className="ano__moeda">{padraoEm(a.ano * 12 + 6).simbolo}</span> : null}</span>
                   {novo && <span className="ano__selo">este ano</span>}
                 </h3>
                 <ul className="entradas">
@@ -170,7 +176,7 @@ function ItemBiografia({ e, nova, idade, vida, abrirPessoa, rosto = true, origem
   const deOutroAno = origem && origem.idade !== e.idade ? origem : undefined;
   const consequencia = natureza === 'consequencia' && (!junto || deOutroAno);
   return (
-    <li className={`entrada entrada--${e.relevancia} entrada--tema-${e.tema} entrada--natureza-${natureza}${nova ? ' entrada--nova' : ''}${e.tom ? ` entrada--${e.tom}` : ''}${e.escolha ? ' entrada--escolha' : ''}${gente.length ? ' entrada--gente' : ''}`}>
+    <li className={`entrada entrada--${e.relevancia} entrada--tema-${e.tema} entrada--natureza-${natureza}${daEpoca(e) ? ' entrada--era' : ''}${nova ? ' entrada--nova' : ''}${e.tom ? ` entrada--${e.tom}` : ''}${e.escolha ? ' entrada--escolha' : ''}${gente.length ? ' entrada--gente' : ''}`}>
       {(tema || e.escolha || natureza === 'virada' || consequencia) && (
         <p className="entrada__tipo">
           {tema && <span className="entrada__tema">{tema}</span>}

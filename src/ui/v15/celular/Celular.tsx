@@ -34,6 +34,9 @@ import { rotuloDe } from '../../apresentar';
 import type { Aba, Lugar } from '../../navegacao';
 import './celular15.css';
 import { MapaDaCidade } from '../../v17/mapa/MapaDaCidade';
+import { temAcesso } from '../../../motor/eras/base/contexto';
+import { GUARDAR_O_APARELHO, meioDaVida, NOME_DO_APARELHO } from '../../eras/epoca';
+import { CelularDeTeclas, TelefoneDeDisco } from '../../eras/Aparelhos';
 
 const RedesSociais = lazy(() => import('../../jogo/Redes').then(m => ({ default: m.RedesSociais })));
 
@@ -636,32 +639,54 @@ export default function Celular({ vida, agir, aoFechar, irPara, irLugar, abrirPe
   const n = naoLidas15(vida);
   const matchesAbertos = matches15(vida).filter(x => x.etapa === 'match').length;
   const opsNovas = vida.caminhos.oportunidades.filter(o => o.tFim >= vida.t && o.tInicio >= vida.t - 12).length;
+  // ERAS HISTÓRICAS: o aparelho da época (o telefone de casa, o celular de teclas, o smartphone) e só os "aplicativos" que
+  // existem para a pessoa no ano. Vida contemporânea: o smartphone de sempre, com tudo.
+  const meio = vida.era ? meioDaVida(vida) : 'smartphone';
+  const tem = (id: string) => !vida.era || temAcesso(vida, id);
+  const smart = meio === 'smartphone';
+  const nomes: Record<Exclude<App15, 'inicio'>, string> = !vida.era ? NOMES : {
+    ...NOMES,
+    mensagens: meio === 'fixo' ? (tem('telefone_fixo') ? 'Recados' : 'Cartas') : meio === 'celular' ? (tem('sms') ? 'Torpedos' : 'Ligações') : NOMES.mensagens,
+    noticias: smart ? NOMES.noticias : 'Jornal',
+    agenda: meio === 'fixo' ? 'Caderneta' : NOMES.agenda
+  };
   const apps: { id: Exclude<App15, 'inicio'>; conta?: number }[] = [
-    { id: 'mensagens', conta: n }, ...(adulto ? [{ id: 'namoro' as const, conta: matchesAbertos }] : []), { id: 'rede' }, { id: 'noticias' },
-    { id: 'agenda' }, { id: 'mapas' }, { id: 'banco' }, { id: 'email', conta: opsNovas }, ...(temFama ? [{ id: 'fama' as const }] : [])
+    { id: 'mensagens', conta: n }, ...(adulto && smart && tem('app_namoro') ? [{ id: 'namoro' as const, conta: matchesAbertos }] : []), ...(tem('redes_modernas') ? [{ id: 'rede' as const }] : []), { id: 'noticias' },
+    { id: 'agenda' }, ...(smart ? [{ id: 'mapas' as const }] : []), ...(smart && tem('banco_app') ? [{ id: 'banco' as const }] : []), ...(tem('email') ? [{ id: 'email' as const, conta: opsNovas }] : []), ...(temFama && smart ? [{ id: 'fama' as const }] : [])
   ];
+  // Um app que não existe na época (aberto por um atalho de outra tela) cai na tela inicial.
+  const atual: App15 = app === 'inicio' || apps.some(a => a.id === app) ? app : 'inicio';
   const notificacoes = useMemo(() => fiosDe(vida).filter(f => f.aberta).slice(0, 3), [vida]);
   const abrirApp = (a: App15, fio?: string) => { setFioInicial(fio ?? null); setApp(a); };
   let conteudo: ReactNode = null;
-  if (app === 'mensagens') conteudo = <Mensagens vida={vida} agir={agir} abrirPessoa={pessoa} inicial={fioInicial} />;
-  else if (app === 'namoro') conteudo = <Namoro vida={vida} agir={agir} abrirPessoa={pessoa} />;
-  else if (app === 'rede') conteudo = <Rede vida={vida} agir={agir} abrirPessoa={pessoa} />;
-  else if (app === 'noticias') conteudo = <Noticias vida={vida} />;
-  else if (app === 'agenda') conteudo = <Agenda vida={vida} sair={sair} />;
-  else if (app === 'mapas') conteudo = <Mapas vida={vida} sair={sair} />;
-  else if (app === 'banco') conteudo = <Banco vida={vida} sair={sair} />;
-  else if (app === 'email') conteudo = <Email vida={vida} abrir={id => { aoFechar(); abrirConvite?.(id); }} irMensagens={() => abrirApp('mensagens')} />;
-  else if (app === 'fama') conteudo = <Fama vida={vida} irFama={() => { aoFechar(); irLugar({ area: 'voce', voce: 'fama' }); }} />;
+  if (atual === 'mensagens') conteudo = <Mensagens vida={vida} agir={agir} abrirPessoa={pessoa} inicial={fioInicial} />;
+  else if (atual === 'namoro') conteudo = <Namoro vida={vida} agir={agir} abrirPessoa={pessoa} />;
+  else if (atual === 'rede') conteudo = <Rede vida={vida} agir={agir} abrirPessoa={pessoa} />;
+  else if (atual === 'noticias') conteudo = <Noticias vida={vida} />;
+  else if (atual === 'agenda') conteudo = <Agenda vida={vida} sair={sair} />;
+  else if (atual === 'mapas') conteudo = <Mapas vida={vida} sair={sair} />;
+  else if (atual === 'banco') conteudo = <Banco vida={vida} sair={sair} />;
+  else if (atual === 'email') conteudo = <Email vida={vida} abrir={id => { aoFechar(); abrirConvite?.(id); }} irMensagens={() => abrirApp('mensagens')} />;
+  else if (atual === 'fama') conteudo = <Fama vida={vida} irFama={() => { aoFechar(); irLugar({ area: 'voce', voce: 'fama' }); }} />;
   return (
     <div className="cel" onClick={e => { if (e.target === e.currentTarget) aoFechar(); }}>
-      <div className="cel__aparelho" role="dialog" aria-modal="true" aria-label="Celular" tabIndex={-1} ref={ref} data-app={app}>
+      <div className="cel__aparelho" role="dialog" aria-modal="true" aria-label={NOME_DO_APARELHO[meio]} tabIndex={-1} ref={ref} data-app={atual} data-meio={meio}>
+        {meio === 'fixo' ? <div className="cel__status" aria-hidden><span>Telefone de casa · {anoDe(vida.t)}</span></div> : (
         <div className="cel__status" aria-hidden>
           <Relogio />
           <span className="cel__status-dir"><span className="cel__sinal" /><span className="cel__bateria" /></span>
-        </div>
-        {vida.justica?.prisao ? <TelefoneDaUnidade vida={vida} agir={agir} /> : app === 'inicio' ? (
+        </div>)}
+        {vida.justica?.prisao ? <TelefoneDaUnidade vida={vida} agir={agir} /> : atual === 'inicio' ? (
           <div className="cel__inicio">
             <div className="cel__data-grande"><strong>{MESES[mesDe(vida.t)]}</strong><span>{anoDe(vida.t)} · {municipio(vida.moradia.municipioId).nome}</span></div>
+            {vida.era && !smart && (
+              <div className="cel__epoca">
+                {meio === 'fixo' ? <TelefoneDeDisco tamanho={44} /> : <CelularDeTeclas tamanho={44} />}
+                <p>{meio === 'fixo'
+                  ? (tem('telefone_fixo') ? 'O telefone da sala. Quem liga deixa recado; quem mora longe escreve carta, e a resposta leva dias.' : 'Sem telefone em casa: recado pelo vizinho, ligação do orelhão e carta pelo correio.')
+                  : `Celular de teclas: ligação cara${tem('sms') ? ', torpedo curto' : ''}.${tem('internet') ? ' A internet é no computador.' : ' Internet, ainda não.'}`}</p>
+              </div>
+            )}
             {notificacoes.length > 0 && (
               <ul className="cel__notificacoes" aria-label="Notificações">
                 {notificacoes.map(f => (
@@ -675,9 +700,9 @@ export default function Celular({ vida, agir, aoFechar, irPara, irLugar, abrirPe
             <ul className="cel__apps" aria-label="Aplicativos">
               {apps.map(a => (
                 <li key={a.id}>
-                  <button type="button" className={`cel__app-icone cel__app-icone--${a.id}`} onClick={() => abrirApp(a.id)} aria-label={`${NOMES[a.id]}${a.conta ? `, ${a.conta} novidades` : ''}`}>
+                  <button type="button" className={`cel__app-icone cel__app-icone--${a.id}`} onClick={() => abrirApp(a.id)} aria-label={`${nomes[a.id]}${a.conta ? `, ${a.conta} novidades` : ''}`}>
                     <span className="cel__tile"><Icone d={ICONES[a.id]} />{a.conta ? <span className="cel__badge">{a.conta > 9 ? '9+' : a.conta}</span> : null}</span>
-                    <span className="cel__app-nome">{NOMES[a.id]}</span>
+                    <span className="cel__app-nome">{nomes[a.id]}</span>
                   </button>
                 </li>
               ))}
@@ -687,14 +712,14 @@ export default function Celular({ vida, agir, aoFechar, irPara, irLugar, abrirPe
           <div className="cel__app">
             <div className="cel__app-topo">
               <button type="button" className="cel__voltar" onClick={() => setApp('inicio')} aria-label="Voltar à tela inicial">‹</button>
-              <span className="cel__app-titulo"><Icone d={ICONES[app]} className="cel__icone cel__icone--mini" />{NOMES[app]}</span>
+              <span className="cel__app-titulo"><Icone d={ICONES[atual]} className="cel__icone cel__icone--mini" />{nomes[atual]}</span>
             </div>
             <div className="cel__app-corpo">{conteudo}</div>
           </div>
         )}
         <div className="cel__home"><button type="button" aria-label="Tela inicial" onClick={() => setApp('inicio')} /></div>
       </div>
-      <button type="button" className="cel__fechar" onClick={aoFechar}>Guardar o celular</button>
+      <button type="button" className="cel__fechar" onClick={aoFechar}>{GUARDAR_O_APARELHO[meio]}</button>
     </div>
   );
 }

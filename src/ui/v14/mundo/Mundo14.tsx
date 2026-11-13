@@ -7,15 +7,18 @@ import { useState } from 'react';
 import type { Vida } from '../../../motor/tipos';
 import { resumoDoMundo14 } from '../../../motor/v14/mundo/mundo14';
 import '../politica/politica14.css';
+import { PainelDaEpoca } from '../../eras/PainelDaEpoca';
 
 const TIPO: Record<string, string> = { economia: 'Economia', tecnologia: 'Tecnologia', ciencia: 'Ciência', desastre: 'Desastre', pandemia: 'Pandemia', cultura: 'Cultura', esporte: 'Esporte', internacional: 'Mundo', trabalho: 'Trabalho', produtos: 'Produtos', politica: 'Política', sociedade: 'Sociedade' };
 
 export function Mundo14({ vida }: { vida: Vida }) {
   const [abertas, setAbertas] = useState(1);
   const r = resumoDoMundo14(vida);
-  if (!r.decadas.length && !r.antes.length) return null;
+  if (!r.decadas.length && !r.antes.length && !vida.era) return null;
   return (
     <section className="p14" aria-label="O mundo">
+      {/* ERAS HISTÓRICAS: o contexto do ano (só nas vidas históricas). */}
+      {vida.era && <PainelDaEpoca vida={vida} />}
       <div className="p14__bloco">
         <p className="p14__kicker">O mundo agora · {r.ano}</p>
         {r.ativos.length === 0 && <p className="nota">Nada de fora pesando na sua vida neste ano.</p>}

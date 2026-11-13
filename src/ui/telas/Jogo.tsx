@@ -33,6 +33,8 @@ import { idade, idadePessoa } from '../../motor/nucleo';
 import { anoDe, MESES, mesDe } from '../../motor/tempo';
 import { municipio, nomeLugar } from '../../motor/dados/lugares';
 import { entrarNaVida } from '../../motor/mundo/vida';
+import { decadaVisual, ICONE_DO_APARELHO, meioDaVida, NOME_DO_APARELHO, simboloDaEpoca } from '../eras/epoca';
+import '../eras/eras.css';
 import { seguranca } from '../../motor/sistemas/dinheiro';
 import { leituraDaSeguranca } from '../leituraMaterial';
 import { Retrato } from '../avatar/Retrato';
@@ -161,7 +163,7 @@ export function Jogo({ c }: { c: ControleVida }) {
   const m = municipio(vida.moradia.municipioId);
 
   return (
-    <div className="jogo" data-clima={climaDe(vida)}>
+    <div className="jogo" data-clima={climaDe(vida)} {...(decadaVisual(vida) ? { 'data-era': decadaVisual(vida) } : {})}>
       <header className="cabecalho">
         <button type="button" className="marca" onClick={() => setMenu(true)} aria-label="Menu">VIDA</button>
         <nav className="abas" aria-label="Áreas">
@@ -172,15 +174,15 @@ export function Jogo({ c }: { c: ControleVida }) {
           ))}
         </nav>
         {temCelular15(vida) && (() => { const n = vida.justica?.prisao ? 0 : naoLidas15(vida); return (
-          <button type="button" className="cabecalho__celular" onClick={() => setCelular('inicio')} aria-label={`Celular${n ? `: ${n} ${n === 1 ? 'novidade' : 'novidades'}` : ''}`}>
-            <Icone d={ICONE_CELULAR} />{n ? <span className="cabecalho__celular-badge">{n > 9 ? '9+' : n}</span> : null}
+          <button type="button" className="cabecalho__celular" onClick={() => setCelular('inicio')} aria-label={`${NOME_DO_APARELHO[meioDaVida(vida)]}${n ? `: ${n} ${n === 1 ? 'novidade' : 'novidades'}` : ''}`}>
+            <Icone d={vida.era ? ICONE_DO_APARELHO[meioDaVida(vida)] : ICONE_CELULAR} />{n ? <span className="cabecalho__celular-badge">{n > 9 ? '9+' : n}</span> : null}
           </button>
         ); })()}
         <button type="button" className="cabecalho__eu" onClick={() => ir('voce')} aria-label={`${vida.eu.nome}, ${i} anos: ver como você está`}>
           <Retrato visual={vida.eu.visual} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? "eu"} tamanho={36} rotulo={vida.eu.nome} expressao={expressaoDe(vida)} />
           <span className="cabecalho__eu-texto">
             <strong>{vida.eu.nome}, {i} {i === 1 ? 'ano' : 'anos'}</strong>
-            <span>{anoDe(vida.t)} · {nomeLugar(m.id)}</span>
+            <span>{anoDe(vida.t)}{simboloDaEpoca(vida) ? <> <span className="selo-era" title="A moeda do país neste mês">{simboloDaEpoca(vida)}</span></> : null} · {nomeLugar(m.id)}</span>
           </span>
         </button>
       </header>

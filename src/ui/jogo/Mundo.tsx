@@ -101,7 +101,7 @@ function divisoesDe(pais: string): { codigo: string; nome: string }[] {
 }
 
 /** Nascer: país, divisão, cidade. O Brasil vem escolhido (é onde o VIDA começou); trocar é um passo. */
-export function LugarDeNascimento({ cidade, aoMudar }: { cidade: string; aoMudar: (municipioId: string) => void }) {
+export function LugarDeNascimento({ cidade, aoMudar, soBrasil }: { cidade: string; aoMudar: (municipioId: string) => void; soBrasil?: boolean }) {
   const m = municipio(cidade);
   const [trocando, setTrocando] = useState(false);
   const divisoes = useMemo(() => divisoesDe(m.pais), [m.pais]);
@@ -118,7 +118,8 @@ export function LugarDeNascimento({ cidade, aoMudar }: { cidade: string; aoMudar
       <div className="mundo-nascer__pais">
         <span className="campo__rotulo">País</span>
         <strong>{nomeDoPais(m.pais)}</strong>
-        <button type="button" className="link" onClick={() => setTrocando(true)}>Trocar o país</button>
+        {/* ERAS HISTÓRICAS: a primeira versão das épocas é só no Brasil. */}
+        {soBrasil ? <span className="nota">As épocas históricas, por enquanto, só no Brasil.</span> : <button type="button" className="link" onClick={() => setTrocando(true)}>Trocar o país</button>}
       </div>
       <div className="campos-linha">
         <label className="campo">

@@ -17,6 +17,8 @@ import { Escolha } from '../comum';
 import { paisesVivenciaveis } from '../../motor/mundo/registro';
 import { ATRIBUTOS, type Atributo } from '../../motor/sistemas/predisposicao';
 import { AO_NASCER, NOME_ATRIBUTO, O_QUE_E } from '../atributos';
+import { EscolhaDaEpoca, type Epoca } from '../eras/EscolhaDaEpoca';
+import { sortearMunicipio } from '../../motor/dados/lugares';
 
 const ROTULO_CABELO: Record<string, string> = {
   raspado: 'Raspado', curto: 'Curto', curto_lado: 'Curto de lado', ondulado: 'Ondulado', crespo_curto: 'Crespo curto', cacheado: 'Cacheado',
@@ -61,9 +63,29 @@ export function Criacao({ c }: { c: ControleVida }) {
     const m = municipio(id);
     if (m.pais !== antes && !nomeEscrito) {
       const r = aleatorio();
-      setNome(sortearNome(r, genero, 2026, m.pais, m.uf));
+      setNome(sortearNome(r, genero, anoNasc, m.pais, m.uf));
       setSobrenome(sortearSobrenome(r, m.pais, m.uf));
     }
+  };
+  // ERAS HISTÓRICAS: quando se nasce. "Hoje" é o VIDA de sempre (2026, o mundo todo); uma década é o Brasil daquele ano.
+  const [epoca, setEpoca] = useState<Epoca>('hoje');
+  const [anoNasc, setAnoNasc] = useState(2026);
+  const historica = epoca !== 'hoje';
+  const escolherEpoca = (e: Epoca, ano: number) => {
+    tocado.current = true;
+    setEpoca(e);
+    setAnoNasc(ano);
+    // A primeira versão é brasileira: quem escolhe uma década e estava noutro país passa a nascer no Brasil.
+    let m = municipio(cidade);
+    if (e !== 'hoje' && m.pais !== 'BR') {
+      const r = aleatorio();
+      const id = sortearMunicipio(() => r.next(), 'BR').id;
+      setCidade(id);
+      m = municipio(id);
+      if (!nomeEscrito) setSobrenome(sortearSobrenome(r, 'BR', m.uf));
+    }
+    // O nome sugerido é o da época (os nomes da moda mudam com os anos).
+    if (!nomeEscrito) setNome(sortearNome(aleatorio(), genero, ano, m.pais, m.uf));
   };
   const [classe, setClasse] = useState<Classe | 'sorte'>('sorte');
   const [visual, setVisual] = useState<Visual>(inicial.visual);
@@ -81,12 +103,13 @@ export function Criacao({ c }: { c: ControleVida }) {
     visual,
     herdarCores: heranca,
     semente,
-    atributos: modoAtributos === 'escolher' && atributos ? atributos : undefined
+    atributos: modoAtributos === 'escolher' && atributos ? atributos : undefined,
+    ...(historica ? { ano: anoNasc, era: true } : {})
   };
   const previa = useMemo(() => {
     try { return previaDoNascimento(opcoes); } catch { return null; }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [opcoes.nome, opcoes.sobrenome, genero, cidade, classe, podeGestar, tratamento, visual, heranca, semente, modoAtributos, atributos]);
+  }, [opcoes.nome, opcoes.sobrenome, genero, cidade, classe, podeGestar, tratamento, visual, heranca, semente, modoAtributos, atributos, historica, anoNasc]);
   const visualDoBebe = previa?.eu ?? visual;
 
   // O mundo inteiro chega depois da tela (os pacotes de países): se o sorteio inicial só pôde escolher entre os países
@@ -107,7 +130,7 @@ export function Criacao({ c }: { c: ControleVida }) {
   const trocarGenero = (g: Genero) => {
     tocado.current = true;
     setGenero(g);
-    if (!nomeEscrito) { const m = municipio(cidade); setNome(sortearNome(aleatorio(), g, 2026, m.pais, m.uf)); }
+    if (!nomeEscrito) { const m = municipio(cidade); setNome(sortearNome(aleatorio(), g, anoNasc, m.pais, m.uf)); }
     const v = visualAleatorio(aleatorio(), g);
     setVisual(atual => ({ ...atual, cabelo: v.cabelo, barba: g === 'masculino' ? v.barba : undefined }));
   };
@@ -118,6 +141,14 @@ export function Criacao({ c }: { c: ControleVida }) {
     tocado.current = true;
     try { await carregarMundo(); } catch { /* sem rede e sem cache: sorteia entre os países que já chegaram */ }
     const f = sortearFormulario();
+    // ERAS HISTÓRICAS: com uma década escolhida, o acaso fica no Brasil e no ano escolhido (a época não é sorteada).
+    if (historica) {
+      const r = aleatorio();
+      const m = sortearMunicipio(() => r.next(), 'BR');
+      f.municipioId = m.id;
+      f.sobrenome = sortearSobrenome(r, 'BR', m.uf);
+      f.nome = sortearNome(r, f.genero, anoNasc, 'BR', m.uf, f.sobrenome);
+    }
     setGenero(f.genero);
     setNome(f.nome);
     setSobrenome(f.sobrenome);
@@ -153,7 +184,7 @@ export function Criacao({ c }: { c: ControleVida }) {
           <p className="criacao__legenda">Você</p>
           <div className="criacao__fileira" aria-hidden>
             {([[1, 'bebê'], [9, 'aos 9'], [30, 'aos 30'], [75, 'aos 75']] as const).map(([i, r]) => (
-              <figure key={i} className="criacao__retrato"><Retrato visual={visualDoBebe} genero={genero} idade={i} semente="eu" tamanho={96} /><figcaption>{r}</figcaption></figure>
+              <figure key={i} className="criacao__retrato"><Retrato visual={visualDoBebe} genero={genero} idade={i} semente="eu" tamanho={96} /><figcaption>{r}{historica ? ` · ${anoNasc + i}` : ''}</figcaption></figure>
             ))}
           </div>
           {heranca && previa && (previa.mae || previa.pai) && (
@@ -168,6 +199,7 @@ export function Criacao({ c }: { c: ControleVida }) {
         </div>
 
         <form className="criacao__form" onSubmit={e => { e.preventDefault(); nascer(); }}>
+          <EscolhaDaEpoca epoca={epoca} ano={anoNasc} aoMudar={escolherEpoca} />
           <fieldset className="campo">
             <legend className="campo__rotulo">Gênero</legend>
             <Escolha rotulo="Gênero" valor={genero} aoMudar={trocarGenero} opcoes={[{ id: 'feminino', rotulo: 'Mulher' }, { id: 'masculino', rotulo: 'Homem' }, { id: 'nao_binario', rotulo: 'Não binária' }]} />
@@ -196,7 +228,7 @@ export function Criacao({ c }: { c: ControleVida }) {
           </div>
           <fieldset className="campo">
             <legend className="campo__rotulo">Onde você nasce</legend>
-            <LugarDeNascimento cidade={cidade} aoMudar={mudarCidade} />
+            <LugarDeNascimento cidade={cidade} aoMudar={mudarCidade} soBrasil={historica} />
           </fieldset>
           <p className="nota">{notaDoLugar(cidade)}</p>
           <fieldset className="campo">

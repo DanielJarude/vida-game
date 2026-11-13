@@ -1,0 +1,93 @@
+/* ERAS HISTÓRICAS — a identidade das épocas. Cada década tem um tom e uma "tela" (o fósforo do monitor, o cristal
+   líquido do celular); tudo o mais vem dos tokens do VIDA (claro e escuro). Nada aqui muda a vida contemporânea. */
+
+[data-era] { --era-tom: var(--accent); --era-tela: var(--bg-inset); --era-fonte: var(--font-serif); }
+[data-era='1980'] { --era-tom: #c47a3d; --era-tela: #a9c2a4; }
+[data-era='1990'] { --era-tom: #8a6bb8; --era-tela: #b9cba3; }
+[data-era='2000'] { --era-tom: #6d8fb8; --era-tela: #c8d6b2; }
+[data-era='2010'] { --era-tom: #2f7f9e; --era-tela: #d6e6ee; }
+[data-era='2020'] { --era-tom: #3a8a72; --era-tela: #d7ece4; }
+[data-era='hoje'] { --era-tom: var(--acao); }
+
+.era-desenho { display: block; flex: none; }
+
+/* ------------------------------------------------------------ Nascer: a escolha da época */
+.epoca { display: grid; gap: .75rem; min-width: 0; }
+.epoca__portas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem; }
+@media (min-width: 720px) { .epoca__portas { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+.epoca__porta {
+  display: grid; gap: .15rem; text-align: left; padding: .6rem .7rem; min-height: var(--touch-target, 44px);
+  border: 1px solid var(--rule); border-radius: var(--radius-md); background: var(--surface); color: var(--text-primary);
+  border-top: 4px solid var(--era-tom); cursor: pointer; font: inherit;
+}
+.epoca__porta strong { font-family: var(--font-serif); font-size: 1.15rem; line-height: 1.1; }
+.epoca__porta span { font-size: var(--type-caption, .78rem); color: var(--text-secondary); }
+.epoca__porta[aria-checked='true'] { background: color-mix(in srgb, var(--era-tom) 16%, var(--surface)); box-shadow: inset 0 0 0 2px var(--era-tom); }
+.epoca__porta:focus-visible { outline: 2px solid var(--era-tom); outline-offset: 2px; }
+.epoca__previa { display: grid; gap: .6rem; min-width: 0; }
+.epoca__anos { display: flex; flex-wrap: wrap; gap: .35rem; }
+.epoca__ano[aria-checked='true'] { background: var(--era-tom); color: #fff; border-color: var(--era-tom); }
+.epoca__jornal {
+  display: flex; gap: .75rem; align-items: flex-start; padding: .75rem; border-radius: var(--radius-md);
+  background: var(--papel, var(--surface)); color: var(--text-primary); border-top: 3px double var(--text-primary); border-bottom: 1px solid var(--rule);
+}
+.epoca__objetos { display: flex; flex-direction: column; gap: .25rem; }
+.epoca__texto { min-width: 0; display: grid; gap: .4rem; }
+.epoca__manchete { margin: 0; font-family: var(--font-serif); font-size: 1.05rem; line-height: 1.3; font-weight: 600; }
+.epoca__fichas { margin: 0; display: grid; gap: .3rem; }
+.epoca__fichas div { display: grid; grid-template-columns: 6.2rem minmax(0, 1fr); gap: .5rem; }
+.epoca__fichas dt { font-size: var(--type-caption, .78rem); text-transform: uppercase; letter-spacing: .06em; color: var(--text-secondary); }
+.epoca__fichas dd { margin: 0; font-size: .92rem; }
+@media (max-width: 420px) { .epoca__fichas div { grid-template-columns: minmax(0, 1fr); gap: 0; } .epoca__objetos { display: none; } }
+.epoca__rotulo { margin: 0; font-size: var(--type-caption, .78rem); text-transform: uppercase; letter-spacing: .06em; color: var(--text-secondary); }
+.epoca__marcos { margin: 0; padding: 0; list-style: none; display: grid; gap: .3rem; }
+.epoca__marcos li { display: grid; grid-template-columns: 3.2rem minmax(0, 1fr); gap: .4rem; font-size: .92rem; }
+.epoca__marco-ano { font-family: var(--font-serif); font-weight: 700; color: var(--text-primary); border-right: 2px solid var(--era-tom); padding-right: .4rem; }
+
+/* ------------------------------------------------------------ O selo da época no cabeçalho */
+.selo-era {
+  display: inline-flex; align-items: center; gap: .3rem; padding: .05rem .45rem; border-radius: var(--radius-pill, 999px);
+  background: color-mix(in srgb, var(--era-tom) 20%, var(--surface)); color: var(--text-primary); font-size: .72rem; font-weight: 600;
+  border: 1px solid color-mix(in srgb, var(--era-tom) 55%, transparent); white-space: nowrap;
+}
+
+/* ------------------------------------------------------------ O aparelho da época (o Celular reaproveitado) */
+.cel__aparelho[data-meio='fixo'] {
+  border-radius: 28px 28px 18px 18px; background: color-mix(in srgb, #e9dcc3 70%, var(--surface));
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--era-tom) 65%, #3b2a1a), var(--shadow-lg);
+}
+:root[data-tema='escuro'] .cel__aparelho[data-meio='fixo'] { background: color-mix(in srgb, #3b3226 80%, var(--surface)); }
+.cel__aparelho[data-meio='fixo'] .cel__status { justify-content: center; font-family: var(--font-serif); letter-spacing: .08em; }
+.cel__aparelho[data-meio='celular'] { border-radius: 36px; box-shadow: 0 0 0 7px color-mix(in srgb, var(--era-tom) 70%, #222), var(--shadow-lg); }
+.cel__aparelho[data-meio='celular'] .cel__inicio,
+.cel__aparelho[data-meio='celular'] .cel__app-topo { background: color-mix(in srgb, var(--era-tela) 55%, var(--surface)); }
+:root[data-tema='escuro'] .cel__aparelho[data-meio='celular'] .cel__inicio,
+:root[data-tema='escuro'] .cel__aparelho[data-meio='celular'] .cel__app-topo { background: color-mix(in srgb, var(--era-tela) 18%, var(--surface)); }
+.cel__aparelho[data-meio='celular'] .cel__tile { border-radius: 6px; }
+.cel__aparelho[data-meio='fixo'] .cel__tile { border-radius: 50%; }
+.cel__epoca { display: flex; align-items: center; gap: .6rem; padding: .5rem .75rem; margin: 0 0 .5rem; border-radius: var(--radius-md); background: color-mix(in srgb, var(--era-tom) 12%, var(--surface)); }
+.cel__epoca p { margin: 0; font-size: .82rem; color: var(--text-primary); line-height: 1.35; }
+
+/* ------------------------------------------------------------ A Linha da Vida: a marca da época */
+.ano__decada { margin: .25rem 0 .1rem; font-family: var(--font-serif); font-size: .95rem; font-weight: 700; letter-spacing: .04em; color: var(--text-primary); border-bottom: 2px solid var(--era-tom); display: inline-block; }
+.ano__moeda { font-size: .72rem; color: var(--text-secondary); margin-left: .4rem; }
+.entrada--era { border-left: 3px solid var(--era-tom); padding-left: .5rem; }
+.entrada--era .entrada__texto, .entrada--era p { font-family: var(--font-serif); }
+
+/* ------------------------------------------------------------ O painel "A época" */
+.painel-epoca { display: grid; gap: .75rem; padding: .9rem; border-radius: var(--radius-lg, 14px); background: var(--papel, var(--surface)); border-top: 3px double var(--text-primary); color: var(--text-primary); min-width: 0; }
+.painel-epoca__topo { display: flex; gap: .75rem; align-items: center; }
+.painel-epoca__titulo { margin: 0; font-family: var(--font-serif); font-size: 1.35rem; line-height: 1.15; }
+.painel-epoca__sub { margin: 0; color: var(--text-secondary); font-size: .85rem; }
+.painel-epoca__grade { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .5rem; }
+.painel-epoca__dado { padding: .5rem .6rem; border-radius: var(--radius-md); background: var(--surface); border: 1px solid var(--rule); min-width: 0; }
+.painel-epoca__dado dt { font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; color: var(--text-secondary); }
+.painel-epoca__dado dd { margin: .1rem 0 0; font-family: var(--font-serif); font-size: 1.02rem; font-weight: 600; overflow-wrap: anywhere; }
+.painel-epoca__dado small { display: block; font-family: var(--font-sans); font-weight: 400; font-size: .76rem; color: var(--text-secondary); }
+.painel-epoca__tec { display: flex; flex-wrap: wrap; gap: .35rem; margin: 0; padding: 0; list-style: none; }
+.painel-epoca__tec li { font-size: .8rem; padding: .15rem .5rem; border-radius: 999px; border: 1px solid var(--rule); background: var(--surface); }
+.painel-epoca__tec li[data-acesso='comum'] { border-color: color-mix(in srgb, var(--era-tom) 60%, transparent); background: color-mix(in srgb, var(--era-tom) 14%, var(--surface)); }
+.painel-epoca__tec li[data-acesso='rara'] { border-style: dashed; }
+.painel-epoca__tec li[data-acesso='indisponivel'] { color: var(--text-muted); text-decoration: line-through; text-decoration-color: var(--text-muted); }
+.painel-epoca h3 { margin: .2rem 0 0; font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; color: var(--text-secondary); font-family: var(--font-sans); }
+.painel-epoca__nota { margin: 0; font-size: .78rem; color: var(--text-secondary); }
