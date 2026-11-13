@@ -26,6 +26,18 @@ export interface NotaDeVersao {
 
 export const NOTAS: NotaDeVersao[] = [
   {
+    versao: 'Eras (protótipo)',
+    data: '2026-11-13',
+    titulo: 'Eras históricas: nascer no Brasil de outra década',
+    novidades: [
+      'Nascer · "Quando você nasce": hoje (o VIDA de sempre) ou um ano entre 1980 e 2025, no Brasil. A vida segue o calendário: quem nasce em 1984 é criança nos anos 80, adolescente nos 90, adulto nos 2000 — e continua até hoje e além.',
+      'A moeda de cada mês: cruzeiro, cruzado, cruzado novo, cruzeiro, cruzeiro real e real, com os preços pela inflação oficial (IPCA). Trocar de moeda corta os zeros, não o seu dinheiro. O Plano Collor retém o que passa de NCz$ 50 mil.',
+      'O aparelho da época: o telefone de casa (recados e cartas), o celular de teclas (torpedos) e, só quando chega, o smartphone. Rede social, aplicativo de namoro, Pix e e-mail só existem a partir do ano em que chegaram ao Brasil.',
+      'Os acontecimentos reais do Brasil, com data e fonte — das Diretas Já à COP30 —, lembrados conforme a sua idade e o seu estado. As lojas, os carros, as profissões e os estudos de cada ano.',
+      'Você · No mundo · "A época": a presidência, a moeda, o salário mínimo, a inflação e a tecnologia do ano. Na Biografia, a marca de cada década e o fio "A época".'
+    ]
+  },
+  {
     versao: '18',
     data: '2026-11-13',
     titulo: 'Vida rural, apostas e loterias',

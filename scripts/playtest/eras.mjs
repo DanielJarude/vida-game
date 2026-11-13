@@ -22,7 +22,7 @@ async function pagina(w, tema) {
 }
 async function abrirSave(p, nome, tema) {
   await p.goto(URL);
-  await p.evaluate(([s, t]) => { localStorage.clear(); localStorage.setItem('VIDA_APARENCIA', t); localStorage.setItem('VIDA_NOVIDADES_VISTAS', '99'); localStorage.setItem('VIDA_GAME_SAVE_V1', s); }, [readFileSync(`${SAVES}/${nome}.json`, 'utf8'), tema]);
+  await p.evaluate(([s, t]) => { localStorage.clear(); localStorage.setItem('VIDA_APARENCIA', t); localStorage.setItem('VIDA_NOVIDADES_VISTAS', 'Eras (protótipo)'); localStorage.setItem('VIDA_GAME_SAVE_V1', s); }, [readFileSync(`${SAVES}/${nome}.json`, 'utf8'), tema]);
   await p.goto(URL); await p.waitForTimeout(500);
   await p.getByRole('button', { name: /Continuar a vida/ }).click(); await p.waitForTimeout(900);
 }
@@ -44,7 +44,7 @@ for (const tema of TEMAS) for (const w of TAMANHOS) {
   {
     const { p, ctx, erros } = await pagina(w, tema);
     await p.goto(URL);
-    await p.evaluate(t => { localStorage.clear(); localStorage.setItem('VIDA_APARENCIA', t); localStorage.setItem('VIDA_NOVIDADES_VISTAS', '99'); }, tema);
+    await p.evaluate(t => { localStorage.clear(); localStorage.setItem('VIDA_APARENCIA', t); localStorage.setItem('VIDA_NOVIDADES_VISTAS', 'Eras (protótipo)'); }, tema);
     await p.goto(URL); await p.waitForTimeout(400);
     const novo = p.getByRole('button', { name: /Nascer de novo|Nova vida|Começar/ }).first();
     if (await novo.count()) { await novo.click(); await p.waitForTimeout(700); }
