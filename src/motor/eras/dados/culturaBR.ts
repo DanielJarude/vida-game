@@ -64,17 +64,17 @@ export const LEMBRANCAS_CULTURAIS: readonly LembrancaCultural[] = [
 ];
 
 /** O que a pessoa viveu ao ganhar uma tecnologia (uma vez por vida). Texto factual sobre o objeto, sem marca. */
-export const CHEGADAS: readonly { tec: string; idade: number; texto: string; tema: 'casa' | 'lazer' | 'amizade' | 'dinheiro' }[] = [
+export const CHEGADAS: readonly { tec: string; idade: number; texto: string; tema: 'casa' | 'lazer' | 'amizade' | 'dinheiro'; depois?: { ano: number; texto: string } }[] = [
   { tec: 'telefone_fixo', idade: 4, tema: 'casa', texto: 'Instalaram a linha de telefone em casa. O aparelho ficou num lugar de honra, e a conta passou a ser conferida no fim do mês.' },
   { tec: 'videocassete', idade: 4, tema: 'lazer', texto: 'Chegou o videocassete. Filme de locadora no fim de semana e programa gravado da TV, se ninguém esquecesse de programar.' },
-  { tec: 'computador', idade: 6, tema: 'casa', texto: 'Chegou o primeiro computador em casa, com monitor de tubo e uma capa de plástico para o pó. Todo mundo queria a vez.' },
+  { tec: 'computador', idade: 6, tema: 'casa', texto: 'Chegou o primeiro computador em casa, com monitor de tubo e uma capa de plástico para o pó. Todo mundo queria a vez.', depois: { ano: 2008, texto: 'Chegou o primeiro computador em casa, de tela fina, comprado em parcelas. Todo mundo queria a vez.' } },
   { tec: 'internet', idade: 8, tema: 'casa', texto: 'A internet chegou em casa, discada: só depois da meia-noite saía mais barato, e enquanto alguém navegava, o telefone ficava ocupado.' },
-  { tec: 'celular', idade: 12, tema: 'amizade', texto: 'O primeiro celular: tela pequena, antena, bateria que durava dias. Ligar era caro, então se mandava recado curto.' },
+  { tec: 'celular', idade: 12, tema: 'amizade', texto: 'O primeiro celular: tela pequena, antena, bateria que durava dias. Ligar era caro, então se mandava recado curto.', depois: { ano: 2003, texto: 'O primeiro celular, pré-pago: tela colorida pequena, teclas que faziam barulho, crédito que acabava no meio da ligação.' } },
   { tec: 'banda_larga', idade: 10, tema: 'casa', texto: 'A internet passou a ficar ligada o tempo todo, sem ocupar o telefone. O computador da sala virou disputa.' },
   { tec: 'smartphone', idade: 11, tema: 'amizade', texto: 'O primeiro smartphone: a internet, a câmera e os amigos no mesmo aparelho, no bolso.' },
   { tec: 'mensageiro_app', idade: 11, tema: 'amizade', texto: 'As conversas foram para o aplicativo de mensagens: o recado virou áudio, e a família ganhou um grupo.' },
   { tec: 'streaming', idade: 8, tema: 'lazer', texto: 'Filmes e séries passaram a chegar pela internet, na hora que se quisesse. A locadora fechou as portas.' },
-  { tec: 'pix', idade: 14, tema: 'dinheiro', texto: 'O Pix chegou: o dinheiro passou a ir de uma conta para outra na hora, até para pagar o pastel da feira.' }
+  { tec: 'pix', idade: 14, tema: 'dinheiro', texto: 'Você passou a usar o Pix: o dinheiro vai de uma conta para outra na hora, até para pagar o pastel da feira.' }
 ];
 
 /** A tela de escolha: o resumo de cada período (curto, para a decisão; os detalhes vêm durante a vida). */

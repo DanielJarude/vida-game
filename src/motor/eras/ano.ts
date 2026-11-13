@@ -25,7 +25,7 @@ import { municipio } from '../dados/lugares';
 import { mundoDe } from '../v14/mundo/mundo14';
 import { lancar } from '../sistemas/extrato';
 import { fatorNominal, FIM_DA_SERIE, ipcaDoAno, padraoEm, PADROES_MONETARIOS_BR, nivelDePrecos } from './base/moedas';
-import { nivelEconomico, tecnologia } from './base/contexto';
+import { nivelEconomico, temAcesso, tecnologia } from './base/contexto';
 import { ACONTECIMENTOS_BR, ESPORTE_MUNDIAL_BR, PIB_BR, type AcontecimentoBR } from './dados/acontecimentosBR';
 
 const TODOS = [...ACONTECIMENTOS_BR, ...ESPORTE_MUNDIAL_BR].sort((a, b) => a.data[0] * 12 + a.data[1] - (b.data[0] * 12 + b.data[1]));
@@ -146,14 +146,19 @@ export function ehDoLugar(v: Vida, a: AcontecimentoBR): boolean {
   return m.pais === 'BR' && !!m.uf && a.ufs.includes(m.uf);
 }
 
-/** Como a notícia chega, pela época e pela idade (a moldura da lembrança). */
+/** Como a notícia chega, pela época, pela idade e pelo aparelho que a pessoa tem (a moldura da lembrança). */
 function comoChegou(v: Vida, a: AcontecimentoBR, ano: number): string {
   const i = idade(v);
-  if (i < 12) return a.categoria === 'esporte' ? 'Você era criança e lembra da rua inteira em festa. ' : 'Você era criança, mas lembra dos adultos parados em frente à televisão. ';
+  if (i < 12) {
+    if (a.id === 'tetra' || a.id === 'penta') return 'Você era criança e lembra da rua inteira em festa, buzina e bandeira na janela. ';
+    if (a.id === 'senna' || a.categoria === 'desastre') return 'Você era criança, mas lembra do silêncio dos adultos diante da televisão. ';
+    if (a.categoria === 'esporte') return 'Você era criança e lembra da televisão ligada o dia inteiro. ';
+    return 'Você era criança, mas lembra dos adultos falando disso na sala. ';
+  }
   if (a.ufs) return '';
   if (ano < 1995) return 'Na televisão e no rádio, só se falava nisso. ';
-  if (ano < 2010) return 'Saiu em todos os jornais e telejornais. ';
-  return 'A notícia chegou primeiro pelo celular. ';
+  if (temAcesso(v, 'smartphone', ano)) return 'A notícia chegou primeiro pelo celular. ';
+  return 'Saiu em todos os jornais e telejornais. ';
 }
 
 function auxilio(v: Vida): string {
@@ -188,14 +193,15 @@ function acontecimentos(v: Vida, tIni: number, tFim: number): void {
     if (!local) continue;
     // A lembrança: a idade decide se é da pessoa ou se ela só ouviu falar (e quem é muito pequeno não guarda).
     const i = Math.floor((t - v.eu.tNasc) / 12);
-    if (i < Math.min(4, a.idadeMin ?? 7)) continue;
+    // Abaixo da idade do acontecimento, ele fica só na linha do tempo do mundo: a criança pequena não guarda uma lei.
+    if (i < (a.idadeMin ?? 7)) continue;
     let pessoal = '';
     if (a.especial === 'collor' && i >= 10) pessoal = aplicarCollor(v, t);
     if (a.especial === 'auxilio') pessoal = auxilio(v);
     if (a.especial === 'apagao') pessoal = ' Em casa, a conta de luz virou assunto toda semana.';
     if (a.especial === 'covid_br') pessoal = i < 18 ? ' A escola fechou; as aulas, quando houve, foram por uma tela.' : v.trabalho.atual ? ' O trabalho mudou de um dia para o outro.' : '';
     const efeito = a.efeito && a.mods ? ` ${a.efeito}` : '';
-    const peso = i >= (a.idadeMin ?? 7) && a.peso === 'biografia' ? 'biografia' : 'cotidiano';
+    const peso = a.peso === 'biografia' ? 'biografia' : 'cotidiano';
     escrever(v, { t, texto: `${comoChegou(v, a, ano)}${a.fato}${efeito}${pessoal}`, relevancia: peso, tema: a.categoria === 'economia' ? 'dinheiro' : a.categoria === 'saude' ? 'saude' : 'lugar', tom: a.categoria === 'desastre' ? 'ruim' : a.id === 'tetra' || a.id === 'penta' || a.id.startsWith('jogos_') ? 'bom' : 'neutro', fato: { tipo: 'era', dados: { categoria: a.categoria, evento: a.id } } });
   }
 }
@@ -210,7 +216,10 @@ function chegadas(v: Vida): void {
     marcar(v, `tec:${c.tec}`);
     // Quem nasceu com a coisa já em casa não "ganhou" a coisa: só conta a chegada que a pessoa viu.
     if (anoDe(v.eu.tNasc) + c.idade > anoDe(v.t) - 1 && tecnologia(v, c.tec, anoDe(v.eu.tNasc) + 1) !== 'indisponivel') continue;
-    escrever(v, { texto: c.texto, relevancia: c.tec === 'smartphone' || c.tec === 'computador' || c.tec === 'celular' ? 'biografia' : 'cotidiano', tema: c.tema, tom: 'bom', fato: { tipo: 'era', dados: { categoria: 'tecnologia', evento: c.tec } } });
+    // A internet que já chega rápida não foi discada: as duas chegadas viram uma só.
+    if (c.tec === 'internet' && tecnologia(v, 'banda_larga') !== 'indisponivel') { marcar(v, 'tec:banda_larga'); escrever(v, { texto: 'A internet chegou em casa já rápida, ligada o tempo todo, sem ocupar o telefone. O computador da sala virou disputa.', relevancia: 'cotidiano', tema: 'casa', tom: 'bom', fato: { tipo: 'era', dados: { categoria: 'tecnologia', evento: 'internet' } } }); continue; }
+    const depois = c.depois && anoDe(v.t) >= c.depois.ano ? c.depois.texto : undefined;
+    escrever(v, { texto: depois ?? c.texto, relevancia: c.tec === 'smartphone' || c.tec === 'computador' || c.tec === 'celular' ? 'biografia' : 'cotidiano', tema: c.tema, tom: 'bom', fato: { tipo: 'era', dados: { categoria: 'tecnologia', evento: c.tec } } });
   }
 }
 

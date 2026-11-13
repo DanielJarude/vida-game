@@ -7,7 +7,8 @@
  */
 
 import type { Vida } from '../../tipos';
-import { anoDe } from '../../tempo';
+/** O ano civil de um instante (sem importar `tempo`: a base histórica não depende de nenhum pacote de cima). */
+const anoDe = (t: number) => Math.floor(t / 12);
 import { TECNOLOGIA_POR_ID, type MeioDeComunicacao } from './tecnologias';
 import { salarioMinimoReal } from './moedas';
 
@@ -50,8 +51,25 @@ function deslocamento(v: Vida, id: string): number {
  *   - comum: parte da vida da pessoa.
  * Vida contemporânea: sempre 'comum' (o jogo de hoje).
  */
+/**
+ * O que uma tecnologia exige antes dela (o torpedo exige o celular; o aplicativo de mensagens, o smartphone; a rede
+ * social, a internet). O acesso é o menor entre o dela e o das exigências.
+ */
+const DEPENDE: Readonly<Record<string, string[]>> = {
+  sms: ['celular'], smartphone: ['celular'], mensageiro_app: ['smartphone'], app_namoro: ['smartphone'], banco_app: ['smartphone'],
+  email: ['internet'], mensageiro_pc: ['internet'], rede_comunidades: ['internet'], redes_modernas: ['internet'], banda_larga: ['internet'],
+  streaming: ['banda_larga'], internet_banking: ['internet'], pix: ['internet'], ia_conversa: ['internet']
+};
+const ORDEM: Record<Acesso, number> = { indisponivel: 0, rara: 1, comum: 2 };
+
 export function tecnologia(v: Vida, id: string, ano = anoDe(v.t)): Acesso {
   if (!v.era) return 'comum';
+  let a = tecnologiaSozinha(v, id, ano);
+  for (const d of DEPENDE[id] ?? []) { if (a === 'indisponivel') break; const b = tecnologia(v, d, ano); if (ORDEM[b] < ORDEM[a]) a = b; }
+  return a;
+}
+
+function tecnologiaSozinha(v: Vida, id: string, ano: number): Acesso {
   const x = TECNOLOGIA_POR_ID.get(id);
   if (!x) return 'comum';
   if (x.fim !== undefined && ano >= x.fim) return 'indisponivel';
@@ -76,8 +94,12 @@ export function existeNoBrasil(v: Vida, id: string, ano = anoDe(v.t)): boolean {
 /** O aparelho com que a pessoa se comunica no ano (a vida contemporânea: o smartphone de sempre). */
 export function meioDeComunicacao(v: Vida): MeioDeComunicacao {
   if (!v.era) return 'smartphone';
-  if (temAcesso(v, 'smartphone')) return 'smartphone';
-  if (temAcesso(v, 'celular')) return 'celular';
+  // O aparelho é da pessoa: a criança usa o telefone da casa até ganhar o seu (o primeiro celular por volta dos 12; o
+  // primeiro smartphone por volta dos 11 — e dos 10, quando ele já é de todo mundo, como na vida contemporânea).
+  const i = Math.floor((v.t - v.eu.tNasc) / 12);
+  const ano = anoDe(v.t);
+  if (temAcesso(v, 'smartphone') && i >= (ano >= 2015 ? 10 : 11)) return 'smartphone';
+  if (temAcesso(v, 'celular') && i >= 12) return 'celular';
   return 'fixo';
 }
 

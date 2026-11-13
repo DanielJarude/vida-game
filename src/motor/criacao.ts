@@ -283,7 +283,7 @@ export function criarVida(o: OpcoesCriacao): Vida {
     anoAtual: { acoes: [] },
     luto: [],
     caminhos: caminhosVazios(),
-    ...(o.era && paisNatal === 'BR' && ano >= ANOS_HISTORICOS[0] && ano <= ANOS_HISTORICOS[1] ? { era: { pais: 'BR' as const, ano, decada: Math.floor(ano / 10) * 10 } } : {})
+    ...(o.era && paisNatal === 'BR' && ano >= ANOS_HISTORICOS[0] && ano <= ANOS_HISTORICOS[1] ? { era: { pais: 'BR' as const, ano, decada: Math.floor(ano / 10) * 10, vistos: [] } } : {})
   };
   // A moeda e o salário mínimo do texto de nascimento são os do mês em que se nasce (a vida contemporânea, a de sempre).
   if (v.era) entrarNaVida(v); else definirMesHistorico(null);

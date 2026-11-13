@@ -8,7 +8,8 @@
  */
 
 import type { Vida } from '../../tipos';
-import { anoDe } from '../../tempo';
+/** O ano civil de um instante (sem importar `tempo`: a base histórica não depende de nenhum pacote de cima). */
+const anoDe = (t: number) => Math.floor(t / 12);
 
 /** Ocupação → ano em que passa a existir no Brasil. */
 export const OCUPACOES_DESDE: Readonly<Record<string, { desde: number; fonte: string }>> = {
