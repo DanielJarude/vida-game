@@ -21,7 +21,7 @@ import { educacaoDaVida } from './mundo/vida';
 import { processarMundo } from './sistemas/migracao';
 import type { Rng } from './rng';
 import { entrarNaVida, paisDaVida } from './mundo/vida';
-import { clamp } from './rng';
+import { clamp, rngDe } from './rng';
 import type { Retorno, Vida } from './tipos';
 import { escrever, idade, transacao } from './nucleo';
 import { morreEsteAno, processarCorpo } from './sistemas/corpo';
@@ -92,6 +92,8 @@ import { processarServicos } from './sistemas/servicosPorFora';
 import { processarEquipe, atualizarReputacao } from './sistemas/equipe';
 import { processarPausa } from './sistemas/pausa';
 import { processarRural } from './sistemas/rural';
+import { processarFazendas18 } from './v18/rural/fazenda18';
+import { terraDaFamilia } from './v18/rural/acoes18';
 import { processarTransformacao } from './sistemas/carreira';
 import { efetivarMudancaMilitar } from './sistemas/militar';
 import { abrirDecisao, abrirProximaDaFila, aplicarAcontecimento, candidatos, conteudoPorId, montarFila, preparar, sortear, vidaComumDoAno, vidaDe15DoAno, vidaPorFasesDoAno, vidaQueDevolveDoAno } from './conteudo/motor';
@@ -122,6 +124,7 @@ import { processarAliancas } from './sistemas/aliancas';
 import { processarTreinadorDeGoleiros } from './sistemas/treinadorDeGoleiros';
 import { processarMargem } from './sistemas/margem';
 import { processarApostas } from './sistemas/apostas';
+import { processarApostas18 } from './v18/apostas/apostas18';
 import { processarEcos } from './sistemas/ecos';
 import { processarDistantes, processarIndiretos } from './sistemas/indiretos';
 import { processarSeguroDesemprego } from './sistemas/seguroDesemprego';
@@ -312,6 +315,8 @@ function viverAno(v: Vida, r: Rng): void {
   processarLegado(v);
   processarVeiculos(v, r);
   processarImoveis(v, r, ec);
+  if (v.fatos['rural18_familia'] === undefined) terraDaFamilia(v, rngDe(v.id, 'familia18')); // VIDA 18: a terra de quem vem do campo
+  processarFazendas18(v); // VIDA 18: o ano de cada propriedade rural (clima, safra, rebanho, custos) — uma vez, na conta
   // REWORK 12: a coleção (o mercado das peças) e as empresas (o ano de cada uma; a distribuição cai na conta).
   processarColecao(v, r);
   processarParalelos(v, r);
@@ -319,6 +324,7 @@ function viverAno(v: Vida, r: Rng): void {
   // REWORK 10 · JOG-01: a mão esquecida na mesa, e o jogo que virou assunto (antes das contas do ano).
   processarSeguroDesemprego(v);
   processarApostas(v);
+  processarApostas18(v); // VIDA 18: a conferência dos bilhetes, as apostas de temporada, o prêmio grande (depois dos anos pesados)
   processarEcos(v);
   fixarEstatura(v);
   processarDinheiro(v, r, ec);

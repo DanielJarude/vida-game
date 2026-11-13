@@ -52,6 +52,14 @@ const estado = (v: Vida): EstadoDasApostas => (v.apostas ??= { ultimas: [], ano:
 /** Onde o jogo de azar é proibido por lei (os países do catálogo em que ele é crime para todos): declarado, não deduzido. */
 const PROIBIDO = new Set(['SA', 'AE', 'QA', 'KW', 'IR', 'AF', 'BN', 'PK', 'BD', 'LY', 'SD', 'YE', 'MV']);
 export const proibido = (v: Vida) => PROIBIDO.has(paisDaVida(v));
+/**
+ * VIDA 18: a lei por modalidade. No Brasil, cassino e caça-níquel são contravenção (Decreto-Lei 3.688/1941, art. 50);
+ * as loterias da Caixa, o turfe (Lei 7.291/1984) e a aposta esportiva de quota fixa em operadora autorizada (Lei
+ * 14.790/2023) são permitidos. A "Seis de Quarenta" é a loteria fictícia de fora do Brasil (no Brasil, as da Caixa).
+ */
+export const CASSINO_PROIBIDO_NO_PAIS = new Set(['BR']);
+export const cassinoProibido = (v: Vida) => proibido(v) || CASSINO_PROIBIDO_NO_PAIS.has(paisDaVida(v));
+export const loteriaLocal = (v: Vida) => paisDaVida(v) !== 'BR';
 /** As fichas e o bilhete, em valores do lugar (o mesmo jogo custa outro tanto em outra economia). */
 export const precoDoBilhete = (v: Vida) => Math.max(1, Math.round(5 * economiaLocal(v.moradia.municipioId).custo));
 /** Um valor "redondo" (1, 2, 2,5, 5 × uma potência de 10): ficha de cassino não vale 55 nem 275. */
@@ -68,9 +76,10 @@ export const valoresDeAposta = (v: Vida) => {
   return [...new Set(fichas.map(x => redondo(x * c)))];
 };
 
-export function podeApostar(v: Vida, valor: number): Veredito {
+export function podeApostar(v: Vida, valor: number, cassino = false): Veredito {
   if (idade(v) < 18) return bloqueio('ilegal', 'Aposta é coisa de maior de idade.');
   if (proibido(v)) return bloqueio('ilegal', 'Aqui, o jogo de azar é proibido por lei.');
+  if (cassino && cassinoProibido(v)) return bloqueio('ilegal', 'No Brasil, cassino e caça-níquel são proibidos por lei (Decreto-Lei 3.688/1941, art. 50).');
   if (v.justica?.prisao) return bloqueio('impossivel', 'Não há cassino na unidade.');
   if (!Number.isFinite(valor) || valor <= 0) return bloqueio('impossivel', 'Escolha um valor.');
   const e = v.apostas;
@@ -81,7 +90,7 @@ export function podeApostar(v: Vida, valor: number): Veredito {
 }
 
 /** Debita a aposta e credita o prêmio, e conta no ano e na vida (nenhuma moeda aparece ou some fora daqui). */
-function registrar(v: Vida, res: ResultadoDeAposta): ResultadoDeAposta {
+export function registrar(v: Vida, res: ResultadoDeAposta): ResultadoDeAposta {
   const e = estado(v);
   if (e.ano.t !== v.t) e.ano = { t: v.t, apostado: 0, recebido: 0 };
   v.financas.conta = Math.round((v.financas.conta + res.recebido) * 100) / 100;
@@ -94,12 +103,14 @@ function registrar(v: Vida, res: ResultadoDeAposta): ResultadoDeAposta {
   if (liquido > 0) abalar(v, 'a sorte no jogo', clamp(liquido / renda * 2, 0.5, 6), -1);
   else if (liquido < 0) abalar(v, 'o que perdeu no jogo', -clamp(-liquido / renda * 1.5, 0, 5), clamp(-liquido / renda, 0, 4));
   // O que é grande entra na vida: o prêmio de verdade, a perda de um salário de uma vez.
-  if (liquido >= renda * 6) escrever(v, { texto: `Ganhou ${dinheiro(liquido)} ${res.jogo === 'loteria' ? 'na loteria' : res.jogo === 'roleta' ? 'na roleta' : res.jogo === 'blackjack' ? 'no blackjack' : 'no caça-níquel'}.`, relevancia: liquido >= renda * 60 ? 'marco' : 'biografia', tema: 'dinheiro', tom: 'bom', escolha: true });
-  else if (-liquido >= renda * 3) escrever(v, { texto: `Perdeu ${dinheiro(-liquido)} numa noite de ${res.jogo === 'roleta' ? 'roleta' : res.jogo === 'blackjack' ? 'blackjack' : res.jogo === 'niquel' ? 'caça-níquel' : 'apostas'}.`, relevancia: 'biografia', tema: 'dinheiro', tom: 'ruim', escolha: true });
+  if (liquido >= renda * 6) escrever(v, { texto: `Ganhou ${dinheiro(liquido)} ${ONDE_GANHOU[res.jogo]}.`, relevancia: liquido >= renda * 60 ? 'marco' : 'biografia', tema: 'dinheiro', tom: 'bom', escolha: true });
+  else if (-liquido >= renda * 3) escrever(v, { texto: `Perdeu ${dinheiro(-liquido)} ${res.jogo === 'roleta' ? 'numa noite de roleta' : res.jogo === 'blackjack' ? 'numa noite de blackjack' : res.jogo === 'niquel' ? 'numa noite de caça-níquel' : res.jogo === 'esportiva' ? 'em apostas esportivas' : res.jogo === 'turfe' ? 'no hipódromo' : 'em apostas'}.`, relevancia: 'biografia', tema: 'dinheiro', tom: 'ruim', escolha: true });
   return res;
 }
 /** Tira a aposta da conta (antes do sorteio). */
-function debitar(v: Vida, valor: number): void { v.financas.conta = Math.round((v.financas.conta - valor) * 100) / 100; }
+export function debitar(v: Vida, valor: number): void { v.financas.conta = Math.round((v.financas.conta - valor) * 100) / 100; }
+
+const ONDE_GANHOU: Record<ResultadoDeAposta['jogo'], string> = { loteria: 'na loteria', roleta: 'na roleta', blackjack: 'no blackjack', niquel: 'no caça-níquel', loteria18: 'na loteria', esportiva: 'numa aposta esportiva', turfe: 'no turfe', bingo: 'no bingo' };
 
 /* ============================================================ A loteria: seis de quarenta */
 
@@ -328,11 +339,11 @@ export function disponibilidadeAposta(v: Vida, op: OpAposta): Veredito {
   const mao = v.apostas?.mao;
   switch (op.jogo) {
     case 'controle': return idade(v) < 18 ? bloqueio('impossivel', 'Aposta é coisa de maior de idade.') : PERMITIDO;
-    case 'loteria': { const erro = validarBilhete(op.numeros); return erro ? bloqueio('impossivel', erro) : podeApostar(v, precoDoBilhete(v)); }
-    case 'roleta': { const erro = validarApostasNaRoleta(op.apostas); return erro ? bloqueio('impossivel', erro) : podeApostar(v, op.apostas.reduce((s, a) => s + a.valor, 0)); }
-    case 'niquel': return podeApostar(v, op.valor);
+    case 'loteria': { const erro = validarBilhete(op.numeros); return erro ? bloqueio('impossivel', erro) : !loteriaLocal(v) ? bloqueio('impossivel', 'No Brasil, as loterias são as da Caixa (Mega-Sena, Lotofácil, Quina...).') : podeApostar(v, precoDoBilhete(v)); }
+    case 'roleta': { const erro = validarApostasNaRoleta(op.apostas); return erro ? bloqueio('impossivel', erro) : podeApostar(v, op.apostas.reduce((s, a) => s + a.valor, 0), true); }
+    case 'niquel': return podeApostar(v, op.valor, true);
     case 'blackjack':
-      if (op.oque === 'apostar') return mao ? bloqueio('incompativel', 'Há uma mão na mesa: termine-a primeiro.') : podeApostar(v, op.valor);
+      if (op.oque === 'apostar') return mao ? bloqueio('incompativel', 'Há uma mão na mesa: termine-a primeiro.') : podeApostar(v, op.valor, true);
       if (!mao) return bloqueio('impossivel', 'Não há mão na mesa.');
       if (op.oque === 'dobrar') return mao.voce.length !== 2 ? bloqueio('impossivel', 'Dobrar só nas duas primeiras cartas.') : podeApostar(v, mao.aposta);
       return PERMITIDO;

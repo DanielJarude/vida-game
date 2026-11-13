@@ -53,6 +53,8 @@ export function aluguelDeMercado(v: Vida, b: Imovel): number {
 /** O ano dos imóveis. */
 export function processarImoveis(v: Vida, r: Rng, ec?: AnoEconomico): void {
   for (const b of imoveis(v)) {
+    // VIDA 18: o imóvel rural tem o ano dele (terra, lavoura, rebanho, estrutura: `v18/rural/fazenda18`).
+    if (b.rural) continue;
     const variacao = (ec?.imoveis ?? 0.005) + r.normal() * 0.02 - (b.problema ? 0.02 : 0);
     // REWORK 12: o valor anda com o mercado e com o acaso — e é puxado devagar para o que o mercado paga por um igual
     // (o tipo, a cidade, o bairro, o estado). Sem isso, o acaso acumulava sem freio por décadas.
@@ -92,6 +94,9 @@ export type AcaoImovel = 'reparar' | 'adiar' | 'alugar' | 'retomar' | 'morar' | 
 export function disponibilidadeImovel(v: Vida, b: Imovel | undefined, oque: AcaoImovel): { ok: boolean; motivo?: string; resgate?: Veredito['resgate'] } {
   if (!b) return { ok: false, motivo: 'Imóvel não encontrado.' };
   const aqui = v.moradia.imovelId === b.id;
+  // VIDA 18: a terra se arrenda (por safra, no Campo), não se aluga como apartamento; e só se mora onde há casa.
+  if (b.rural && (oque === 'alugar' || oque === 'administrar')) return { ok: false, motivo: 'Propriedade rural se arrenda: veja em Vida · Campo.' };
+  if (b.rural && oque === 'morar' && !b.rural.estruturas.some(e => e.id === 'sede')) return { ok: false, motivo: 'Não há casa na propriedade: construa a sede primeiro (Vida · Campo).' };
   switch (oque) {
     case 'reparar':
       if (!b.problema) return { ok: false, motivo: 'Não há reparo pendente.' };
@@ -183,6 +188,8 @@ export const valorDeVendaImovel = (b: Imovel) => Math.round(b.valor * 0.94 / 100
  */
 export function custosDoImovelDeInvestimento(v: Vida, b: Imovel, c: number): { rotulo: string; valor: number }[] {
   if (b.id === v.moradia.imovelId) return [];
+  // VIDA 18: o imposto da terra, a manutenção e a gestão de um imóvel rural entram no resultado do ano dele.
+  if (b.rural) return [];
   const m = modeloMoradia(b.modeloId);
   const nome = b.nome;
   const out: { rotulo: string; valor: number }[] = [];

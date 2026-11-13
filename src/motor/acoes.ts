@@ -140,6 +140,8 @@ import { disponibilidadeConquistas14, executarConquistas14, linhaDoExtrato14, ty
 import { depoisDaAcao15, disponibilidadeCelular15, executarCelular15, type OqueCelular15 } from './v15/celular/celular15';
 import { disponibilidadeOficio16, executarOficio16, type OqueOficio16 } from './v16/oficios/oficios16';
 import { disponibilidadeReligiao16, executarReligiao16, type OqueReligiao16 } from './v16/religiao/religiao16';
+import { disponibilidadeRural18, executarRural18, type OqueRural18 } from './v18/rural/acoes18';
+import { disponibilidadeAposta18, executarAposta18, type OqueAposta18 } from './v18/apostas/apostas18';
 import { funcaoDe17, podeTrocar17, posicionar17, vagaPara17 } from './v14/moveis/funcoes17';
 // VIDA 17: as cirurgias do corpo entram no catálogo da clínica (registro) — e o repouso depois delas.
 import { emRepouso17 } from './v17/saude/cirurgias17';
@@ -336,6 +338,10 @@ export type Acao =
   | { tipo: 'celular15'; oque: OqueCelular15 }
   | { tipo: 'oficio16'; oque: OqueOficio16 }
   | { tipo: 'religiao16'; oque: OqueReligiao16 }
+  /** VIDA 18: a propriedade rural (comprar, arrendar, plantar, criar, construir, festas). */
+  | { tipo: 'rural18'; oque: OqueRural18 }
+  /** VIDA 18: loterias da Caixa, bolões, apostas esportivas, turfe e bingo. */
+  | { tipo: 'aposta18'; oque: OqueAposta18 }
   /** Comprar um item de estilo (óculos, chapéu, roupa, acessório). */
   | { tipo: 'comprar_item'; itemId: string; /** 12.4.1: a marca e a loja (ausentes: o preço de referência). */ marca?: string; loja?: string; /** 12.9: a variante vista na vitrine e no provador. */ variante?: string }
   | { tipo: 'estetica'; id: string; clinica: Clinica; alvo?: string; revisao?: boolean }
@@ -849,6 +855,8 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'celular15': return disponibilidadeCelular15(v, a.oque);
     case 'oficio16': return disponibilidadeOficio16(v, a.oque);
     case 'religiao16': return disponibilidadeReligiao16(v, a.oque);
+    case 'rural18': return disponibilidadeRural18(v, a.oque);
+    case 'aposta18': return disponibilidadeAposta18(v, a.oque);
     case 'visibilidade': return disponibilidadeVisibilidade(v, a.oque);
     case 'comprar_item': return disponibilidadeComprarItem(v, a.itemId, a.marca, a.loja);
     case 'estetica': return disponibilidadeProcedimento(v, a.id, a.clinica, a.alvo, a.revisao);
@@ -1087,7 +1095,8 @@ function linhaDoExtrato(a: Acao): [string, TipoMovimento] {
     case 'formacao': return ['Na escola e na faculdade', 'escolha'];
     case 'decidir': return ['Decisões do ano', 'escolha'];
     case 'pessoa': return ['Com as pessoas: presentes, visitas, ajudas', 'escolha'];
-    case 'aposta': return ['Apostas (loteria e cassino)', 'escolha'];
+    case 'aposta': case 'aposta18': return ['Apostas (loteria e cassino)', 'escolha'];
+    case 'rural18': return ['O campo: terra, lavoura e rebanho', 'escolha'];
     case 'colecao_comprar': case 'colecao_vender': case 'colecao_ceder': return ['Coleção: compra e venda de peças', 'escolha'];
     case 'empresa_abrir': case 'empresa': case 'participacao': case 'setor': case 'obra': case 'empresa_delegar': case 'empresa129': case 'fundar129': case 'adquirir129': return ['Empresas: capital, aportes e vendas', 'escolha'];
     case 'colecao_servico': case 'colecao_proposta': case 'paralelo': return ['Coleção: compra e venda de peças', 'escolha'];
@@ -1715,6 +1724,8 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
     case 'celular15': { const x = executarCelular15(v, r, a.oque); return x.texto ? { aviso: { texto: x.texto, tom: x.tom ?? 'neutro' }, pessoaId: x.pessoaId } : {}; }
     case 'oficio16': { const x = executarOficio16(v, r, a.oque); return x.texto ? { aviso: { texto: x.texto, tom: x.tom } } : {}; }
     case 'religiao16': { const x = executarReligiao16(v, r, a.oque); return x.texto ? { aviso: { texto: x.texto, tom: x.tom } } : {}; }
+    case 'rural18': { const x = executarRural18(v, r, a.oque); return x.texto ? { aviso: { texto: x.texto, tom: x.tom ?? 'neutro' } } : {}; }
+    case 'aposta18': { const x = executarAposta18(v, r, a.oque); return x.texto ? { aviso: { texto: x.texto, tom: x.tom ?? 'neutro' } } : {}; }
     case 'visibilidade': {
       const res = usarVisibilidade(v, r, a.oque);
       if (res.decisao) { const d = conteudoPorId(res.decisao); if (d && d.tipo === 'decisao') abrirDecisao(v, d, contexto(v, r)); return {}; }

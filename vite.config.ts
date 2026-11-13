@@ -136,6 +136,9 @@ export default defineConfig({
           if (v17) return `motor17-${v17[1]}`;
           const d17 = /[\\/]src[\\/]motor[\\/]dados17[\\/]([a-z0-9]+)[\\/]/.exec(id);
           if (d17) return `dados17-${d17[1]}`;
+          // VIDA 18: o campo, as apostas e os acontecimentos num pacote só (motor18) e os catálogos puros em dados18.
+          if (/[\\/]src[\\/]motor[\\/]v18[\\/]/.test(id)) return 'motor18';
+          if (/[\\/]src[\\/]motor[\\/]dados18[\\/]/.test(id)) return 'dados18';
           if (/[\\/]src[\\/]motor[\\/]sistemas[\\/]reconhecimento13\.ts/.test(id)) return 'motor-fama';
           if (/[\\/]src[\\/]motor[\\/]sistemas[\\/](redes|leituraDoEstresse|juntos|naFormacao|noOficio|microcenas|prisao|mundoVivo|agenda|avaliacaoDaRotina|convivio|apostas|ecos|seguroDesemprego|indiretos|afetos|fama|pedidosDaCrianca|afetosAdultos|casamento|convivio126|casaNoDia|viagens126)\.ts/.test(id)) return 'motor-vida';
           // REWORK 10: o pacote dos textos estava a ~50 kB do limite e a Fase F traz muitos acontecimentos. Os conteúdos novos

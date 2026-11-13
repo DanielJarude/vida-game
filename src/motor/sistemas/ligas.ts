@@ -38,9 +38,9 @@ export const VAGAS_POR_DIVISAO = 20;
  * REWORK 11 · ESP-11.1: o acaso de uma temporada, em posições (o mesmo para todos os clubes e para o da vida). Era 4:
  * com o ruído maior que a diferença entre um grande e um tradicional (4,4 posições), a tabela era quase sorteio.
  */
-const RUIDO_DA_TEMPORADA = 3;
+export const RUIDO_DA_TEMPORADA = 3;
 /** As vagas que o catálogo não ocupa: clubes sem nome no jogo, um pouco abaixo da média da divisão (o catálogo lista os conhecidos). */
-const FORCA_SEM_NOME = 0.7;
+export const FORCA_SEM_NOME = 0.7;
 
 /** A força do elenco pelo porte (4 grande · 3 tradicional · 2 regional ou fora do catálogo): a mesma régua de sempre. */
 export const forcaDoClube = (nome: string, pais?: string): number => {

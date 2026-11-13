@@ -1268,6 +1268,8 @@ export interface Imovel {
   indiceBairro?: number;
   /** REWORK 12.4: a casa como foi deixada (cômodos, acabamentos). Ausente = como veio. */
   lar?: LarPersonalizado;
+  /** VIDA 18: a propriedade rural (área, solo, água, lavoura, rebanho, estruturas) — `motor/v18/rural`. Ausente: imóvel urbano. */
+  rural?: import('./v18/rural/fazenda18').PropriedadeRural18;
 }
 
 /** REWORK 12.4 — os aspectos de um cômodo que se escolhem (`dados/lar`). */
@@ -3937,6 +3939,10 @@ export interface Vida {
   oficio16?: import('./v16/oficios/oficios16').Oficio16;
   /** VIDA 16: a carreira religiosa (`motor/v16/religiao`). */
   religiao16?: import('./v16/religiao/religiao16').Religiao16;
+  /** VIDA 18: as terras arrendadas de terceiros, as festas do campo e as temporadas (`motor/v18/rural`). */
+  rural18?: import('./v18/rural/fazenda18').Rural18;
+  /** VIDA 18: loterias, apostas esportivas, turfe e bingo — os bilhetes, os concursos, o histórico (`motor/v18/apostas`). */
+  apostas18?: import('./v18/apostas/estado18').Apostas18;
   morte?: {
     t: number; causa: string; heranca?: Heranca;
     /** O que o jogador decidiu sobre o patrimônio na tela do legado (guardado: recarregar mostra as mesmas escolhas). */
@@ -3990,7 +3996,8 @@ export type Simbolo = 'folha' | 'sino' | 'estrela' | 'moeda' | 'raposa';
 export type Naipe = 'copas' | 'ouros' | 'espadas' | 'paus';
 export interface Carta { v: number; n: Naipe }
 export interface MaoDeBlackjack { aposta: number; voce: Carta[]; banca: Carta[]; baralho: Carta[]; dobrou?: boolean; t: number }
-export type JogoDeAzar = 'loteria' | 'blackjack' | 'roleta' | 'niquel';
+/** VIDA 18: `loteria18` (as da Caixa), `esportiva`, `turfe`, `bingo` (`motor/v18/apostas`). */
+export type JogoDeAzar = 'loteria' | 'blackjack' | 'roleta' | 'niquel' | 'loteria18' | 'esportiva' | 'turfe' | 'bingo';
 export interface ResultadoDeAposta {
   jogo: JogoDeAzar; t: number; apostado: number; recebido: number; texto: string;
   /** O que a tela mostra: os números sorteados, a casa da roleta, os símbolos dos rolos, as mãos do blackjack. */

@@ -16,7 +16,7 @@ import { anosNoPais, nacionalidadesDaPessoa, nacionalidadesDaVida, nacionalidade
 import type { Rng } from '../rng';
 import { economiaLocal, paisDaCidade } from '../dados/lugares';
 import { clamp, rngDe } from '../rng';
-import type { Pessoa, Processo, Vida } from '../tipos';
+import type { Imovel, Pessoa, Processo, Vida } from '../tipos';
 import {
   emRecessao, escrever, filhos, idade, idadePessoa, irmaos, lembrarCom, marcarFato, novoId, pais, parceiro, temFato, vinculosVivos, foraDaParceria } from '../nucleo';
 import { ancestralidadeDe, misturar, tradicaoDoFilho } from './identidade';
@@ -130,6 +130,23 @@ function herancaReal(v: Vida, falecido: Pessoa, conjuge?: Pessoa): void {
     v.financas.conta += dinheiro;
     lancar(v, `Herança de ${falecido.nome}`, 'familia', dinheiro);
     minha = total;
+  }
+  // VIDA 18: a terra da família com irmãos e sem cônjuge. Quem vive dela (ou mora na cidade dela) fica com a terra e
+  // acerta a diferença com os irmãos (a "torna"): a parte de cada um é a mesma, nada se cria nem some. Sem como pagar, vende-se.
+  const terra = !conjuge && cabecas > 1 ? bens.find((b): b is Imovel => b.tipo === 'imovel' && !!b.rural) : undefined;
+  if (terra && (v.trabalho.atual?.ocupacaoId === 'produtor_rural' || terra.municipioId === v.moradia.municipioId) && v.financas.conta + parte - terra.valor >= 0) {
+    v.financas.bens.push({ ...terra, id: `i${v.seq++}`, dono: 'eu', herdado: true, historia: [...(terra.historia ?? []), { t: v.t, texto: `Herdada de ${falecido.nome}; a parte dos irmãos foi paga em dinheiro.` }] });
+    const acerto = parte - terra.valor;
+    v.financas.conta += acerto;
+    lancar(v, `Herança de ${falecido.nome} (a terra, acertada com os irmãos)`, 'familia', acerto);
+    for (const ir of irmaosVivos) {
+      const pi = ir.posses ?? (ir.posses = { dinheiro: 0, bens: [], historia: [] });
+      pi.dinheiro += parte;
+      pi.historia.push({ t: v.t, texto: `Herança de ${falecido.nome}`, valor: parte });
+    }
+    v.fatos['herdado_total'] = (v.fatos['herdado_total'] ?? 0) + parte;
+    escrever(v, { texto: `O inventário de ${falecido.nome} terminou: ${terra.nome} ficou com você — a terra continua na família. A parte de cada irmão (${fmt(parte)}) foi acertada em dinheiro.`, relevancia: 'marco', tema: 'familia', pessoas: [falecido.id] });
+    return;
   }
   if (!(cabecas === 1 && !conjuge)) {
     v.financas.conta += parte;
