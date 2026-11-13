@@ -256,7 +256,7 @@ export function Turfe18({ vida, agir }: { vida: Vida; agir: Agir }) {
   return (
     <div className="apostas18">
       <Lei texto={lei.texto} />
-      {hips.length > 1 && <div className="apostas18__linha"><span>Hipódromo</span>{hips.map(h => <button key={h.id} type="button" className={`apostas18__chip${hip === h.id ? ' apostas18__chip--ativo' : ''}`} aria-pressed={hip === h.id} onClick={() => setHip(h.id)}>{h.nome.replace('Hipódromo d', '').replace(/^[oa] /, '')}</button>)}</div>}
+      {hips.length > 1 && <div className="apostas18__linha"><span>Hipódromo</span>{hips.map(h => <button key={h.id} type="button" className={`apostas18__chip${hip === h.id ? ' apostas18__chip--ativo' : ''}`} aria-pressed={hip === h.id} onClick={() => setHip(h.id)}>{h.nome.replace(/^Hipódromo d[aeo] /, '').replace(/^[oa] /, '')}</button>)}</div>}
       <div className="apostas18__pareo">
         <h4 className="apostas18__h">{p.grandePremio ? 'Grande Prêmio' : `Páreo ${p.numero.toLocaleString('pt-BR')}`} · {p.hipodromo.nome} · {p.distancia.toLocaleString('pt-BR')} m na {p.pista}</h4>
         <table className="apostas18__tabela apostas18__tabela--pareo">
@@ -325,7 +325,7 @@ export function Historico18({ vida }: { vida: Vida }) {
       <dl className="apostas18__balanco">
         <div><dt>Este ano (todas as apostas)</dt><dd>{e && e.ano.t === vida.t ? `${e.ano.recebido - e.ano.apostado >= 0 ? '+' : '−'}${dinheiroCurto(Math.abs(e.ano.recebido - e.ano.apostado))}` : '—'}</dd></div>
         <div><dt>Na vida inteira</dt><dd>{e ? `${e.total.recebido - e.total.apostado >= 0 ? '+' : '−'}${dinheiroCurto(Math.abs(e.total.recebido - e.total.apostado))}` : '—'}</dd></div>
-        <div><dt>Loterias, esportes, turfe e bingo neste ano</dt><dd>{doAno.length ? `${soma(doAno) >= 0 ? '+' : '−'}${dinheiroCurto(Math.abs(soma(doAno)))}` : '—'}</dd></div>
+        <div><dt>Loterias, esportes, turfe e bingo já conferidos neste ano</dt><dd>{doAno.length ? `${soma(doAno) >= 0 ? '+' : '−'}${dinheiroCurto(Math.abs(soma(doAno)))}` : '—'}</dd></div>
       </dl>
       {h.length ? (
         <ol className="apostas18__historico">{h.slice(0, 40).map((x, k) => <li key={k}><span className="apostas18__hist-ano">{anoDe(x.t)}</span><span>{x.texto}</span><span className={x.recebido - x.apostado >= 0 ? 'campo18__bom' : 'campo18__ruim'}>{x.recebido - x.apostado >= 0 ? '+' : '−'}{dinheiroCurto(Math.abs(x.recebido - x.apostado))}</span></li>)}</ol>

@@ -40,6 +40,8 @@
 /* Uma propriedade. */
 .campo18__prop { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-3); border: 1px solid var(--fio); border-radius: var(--radius-lg); background: var(--superficie-topo); box-shadow: var(--shadow-sm); min-width: 0; }
 .campo18__palco { position: relative; }
+.campo18__palco > .paisagem18 { aspect-ratio: 21 / 8; max-height: 340px; }
+.campo18__vazio > .paisagem18 { aspect-ratio: 21 / 8; max-height: 300px; }
 .campo18__placa { position: absolute; left: var(--space-3); bottom: var(--space-3); max-width: min(60%, 360px); padding: 10px 12px; border-radius: var(--radius-md); background: color-mix(in oklab, var(--superficie-topo) 90%, transparent); box-shadow: var(--shadow-md); backdrop-filter: blur(4px); }
 .campo18__placa h3 { margin: 2px 0; font: 700 20px/1.15 var(--font-display, var(--font-serif)); color: var(--tinta); }
 .campo18__placa p { margin: 0; font-size: 13px; color: var(--tinta-2); }
@@ -138,6 +140,7 @@
 .campo18__vazio p { margin: 0; color: var(--tinta-2); }
 
 @media (max-width: 640px) {
+  .campo18__palco > .paisagem18 { aspect-ratio: 16 / 9; }
   .campo18__placa { position: static; max-width: none; margin-top: -24px; margin-inline: 8px; }
   .campo18__oferta { grid-template-columns: 1fr; grid-template-areas: 'img' 'txt' 'bot'; }
   .campo18__talhao { grid-template-columns: 8px 1fr; }

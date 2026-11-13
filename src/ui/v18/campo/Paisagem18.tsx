@@ -89,7 +89,7 @@ export function Paisagem18({ p, pequena, vazia }: { p?: PropriedadeRural18; pequ
   const pasto = faixas.find(f => f.pasto);
   const vb = '0 0 320 180';
   return (
-    <svg className={`paisagem18${pequena ? ' paisagem18--pequena' : ''}`} viewBox={vb} role="img" aria-label={p ? `${p.nome}: ${p.talhoes.length ? `${p.talhoes.length} talhões` : 'sem lavoura'}${rebanho.length ? ', com rebanho' : ''}` : 'Campo aberto'} preserveAspectRatio="xMidYMid slice">
+    <svg className={`paisagem18${pequena ? ' paisagem18--pequena' : ''}`} viewBox={vb} role="img" aria-label={p ? `${p.nome}: ${p.talhoes.length ? `${p.talhoes.length} talhões` : 'sem lavoura'}${rebanho.length ? ', com rebanho' : ''}` : 'Campo aberto'} preserveAspectRatio={pequena ? "xMidYMid slice" : "xMidYMax slice"}>
       <defs>
         <linearGradient id={`ceu-${pequena ? 'p' : 'g'}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="var(--p18-ceu-alto)" /><stop offset="1" stopColor="var(--p18-ceu-baixo)" /></linearGradient>
       </defs>

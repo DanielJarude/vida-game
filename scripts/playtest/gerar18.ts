@@ -60,3 +60,11 @@ b = ex(b, { tipo: 'aposta18', oque: { jogo: 'esportiva', oque: 'abrir_mercado' }
 b = ex(b, { tipo: 'aposta18', oque: { jogo: 'turfe', oque: 'correr', hipodromo: 'cidade_jardim' } });
 b = ex(b, { tipo: 'aposta18', oque: { jogo: 'bingo', oque: 'jogar', cartelas: 2 } });
 salvar('apostador', b);
+// Estilo: chapéu e bolsa em uso (para a vista de costas na Aparência).
+for (const [nome, chapeu, modelo, bolsa, roupa] of [['estilo1', 'bone', 'bone_trucker', 'mochila', ['jeans', 'moletom_oversized', 'tenis_casual']], ['estilo2', 'chapeu', 'fedora', 'bolsa_transversal', ['saia_midi', 'blusa_seda', 'sapatilha']], ['estilo3', 'chapeu', 'chapeu_couro', 'pochete', ['calca_cargo', 'camisa_xadrez', 'botina']]] as const) {
+  const s = structuredClone(a);
+  s.eu.visual = { ...s.eu.visual, chapeu: chapeu as never, modeloChapeu: modelo };
+  const itens = [...roupa, bolsa, modelo];
+  s.eu.estilo = { ...(s.eu.estilo ?? { itens: [] }), itens: itens.map((itemId, k) => ({ id: `qa${k}`, itemId, t: s.t, preco: 100, usando: true })) };
+  salvar(nome, s);
+}

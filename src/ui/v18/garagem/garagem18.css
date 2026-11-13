@@ -1,0 +1,44 @@
+/* VIDA 18 · a garagem como showroom: o palco do destaque, a fileira de vagas, os cartões. */
+.gar18__palco {
+  --g18-fundo: #1f2227; --g18-fundo-2: #2b2f36; --g18-piso: #3a3f47; --g18-luz: rgba(255, 238, 200, .22); --g18-tinta: #f4efe6; --g18-tinta-2: #c9c3b8;
+  display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); align-items: stretch; border-radius: var(--radius-lg, 16px); overflow: hidden;
+  background: linear-gradient(180deg, var(--g18-fundo) 0%, var(--g18-fundo-2) 100%); color: var(--g18-tinta); box-shadow: 0 14px 30px -20px rgba(0,0,0,.6);
+}
+.gar18__palco--colecao { --g18-luz: rgba(232, 200, 120, .28); box-shadow: 0 0 0 1px color-mix(in oklab, #b8964a 55%, transparent), 0 14px 30px -20px rgba(0,0,0,.6); }
+.gar18__cena { position: relative; min-height: 230px; display: grid; place-items: end center; padding: var(--space-5, 28px) var(--space-3) var(--space-4); overflow: hidden; }
+.gar18__holofote { position: absolute; inset: -20% 10% 20% 10%; background: radial-gradient(50% 55% at 50% 20%, var(--g18-luz), transparent 70%); pointer-events: none; }
+.gar18__piso { position: absolute; left: 0; right: 0; bottom: 0; height: 34%; background: linear-gradient(180deg, color-mix(in oklab, var(--g18-piso) 90%, #000) 0%, var(--g18-piso) 100%); box-shadow: inset 0 1px 0 rgba(255,255,255,.06); z-index: 0; }
+.gar18__carro { position: relative; z-index: 1; width: 100%; display: flex; flex-direction: column; align-items: center; padding: 0; border: 0; background: none; cursor: zoom-in; line-height: 0; }
+.gar18__carro:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 8px; }
+.gar18__carro-desenho { display: block; max-width: 560px; filter: drop-shadow(0 10px 8px rgba(0,0,0,.45)); }
+.gar18__carro-desenho svg, .gar18__reflexo svg { width: 100%; height: auto; display: block; }
+.gar18__reflexo { display: block; max-width: 560px; transform: scaleY(-1); margin-top: -2px; opacity: .16; -webkit-mask-image: linear-gradient(0deg, #000 0%, transparent 45%); mask-image: linear-gradient(0deg, #000 0%, transparent 45%); max-height: 70px; overflow: hidden; }
+.gar18__ficha { display: flex; flex-direction: column; gap: 8px; padding: var(--space-4) var(--space-4) var(--space-4) var(--space-3); background: linear-gradient(90deg, transparent, rgba(0,0,0,.18)); }
+.gar18__kicker { margin: 0; font: 600 11px/1.3 var(--font-sans); letter-spacing: var(--tracking-meta, .06em); text-transform: uppercase; color: var(--g18-tinta-2); }
+.gar18__nome { margin: 0; font: 700 22px/1.15 var(--font-display, var(--font-serif)); color: var(--g18-tinta); overflow-wrap: anywhere; }
+.gar18__nome span { font-weight: 400; font-size: 16px; color: var(--g18-tinta-2); }
+.gar18__dados { margin: 4px 0 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 14px; }
+.gar18__dados div { padding-top: 6px; border-top: 1px solid rgba(255,255,255,.12); }
+.gar18__dados dt { font-size: 12px; color: var(--g18-tinta-2); }
+.gar18__dados dd { margin: 0; font: 700 15px/1.3 var(--font-sans); color: var(--g18-tinta); }
+.gar18__palco .gar129__mais { color: #8fd18f; }
+.gar18__palco .gar129__menos { color: var(--g18-tinta-2); }
+.gar18__acoes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; padding-top: 6px; }
+.gar18__palco .botao--discreto { color: var(--g18-tinta); }
+.gar18__fileira { list-style: none; margin: 0; padding: 4px 2px 8px; display: flex; gap: 8px; overflow-x: auto; scrollbar-width: thin; }
+.gar18__vaga { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; width: 116px; min-height: 84px; padding: 8px 6px 6px; border: 1px solid var(--fio); border-radius: var(--radius-md, 10px); background: linear-gradient(180deg, var(--bg-inset) 0 68%, color-mix(in oklab, var(--rule-strong) 40%, var(--bg-inset)) 68%); cursor: pointer; line-height: 1.2; }
+.gar18__vaga--ativa { border-color: var(--acao); box-shadow: 0 0 0 2px color-mix(in oklab, var(--acao) 35%, transparent); }
+.gar18__vaga--colecao { border-color: color-mix(in oklab, #b8964a 65%, var(--fio)); }
+.gar18__vaga-desenho { line-height: 0; }
+.gar18__vaga-desenho svg { max-width: 100%; height: auto; }
+.gar18__vaga-nome { font-size: 12px; color: var(--tinta-2); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 720px) {
+  .gar18__palco { grid-template-columns: 1fr; }
+  .gar18__cena { min-height: 170px; padding: var(--space-4) var(--space-2) var(--space-3); }
+  .gar18__ficha { padding: var(--space-3); background: rgba(0,0,0,.18); }
+  .gar18__nome { font-size: 19px; }
+}
+.gar18__palco .botao--secundario { color: var(--g18-tinta); background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.4); }
+.gar18__palco .botao--secundario:hover { background: rgba(255,255,255,.16); }
+.gar18__palco .pat-selo { color: var(--g18-tinta); background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.25); }
+.gar18__palco .pat-grau { color: #2a2112; background: #e3c77e; border-color: #e3c77e; }

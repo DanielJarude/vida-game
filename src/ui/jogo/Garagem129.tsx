@@ -22,6 +22,7 @@ import { DesenhoVeiculo } from './material/Desenhos';
 import { PersonalizarVeiculos } from './Personalizar';
 import { Folha } from '../comum';
 import '../garagem129.css';
+import '../v18/garagem/garagem18.css';
 
 interface Props { vida: Vida; agir: (a: Acao) => boolean }
 
@@ -59,6 +60,7 @@ export function GaragemVisual({ vida, agir }: Props) {
   const [personalizar, setPersonalizar] = useState<string | null>(null);
   const [tipo, setTipo] = useState<Tipo>('todos');
   const [ampliado, setAmpliado] = useState<string | null>(null);
+  const [destaque, setDestaque] = useState<string | null>(null);
   if (!lista.length) return null;
   const c = economiaLocal(vida.moradia.municipioId).custo;
   const custo = (b: Veiculo) => custosDeVeiculo(vida, b, c, vida.financas.veiculoPrincipal === b.id ? 1 : 0.7).reduce((s, x) => s + x.valor, 0);
@@ -71,24 +73,31 @@ export function GaragemVisual({ vida, agir }: Props) {
   const total = lista.reduce((s, b) => s + b.valor, 0);
   const mensal = lista.reduce((s, b) => s + custo(b), 0);
   const deColecao = lista.filter(b => b.papel === 'colecao').length;
+  const emDestaque = lista.find(x => x.id === destaque) ?? lista.find(x => x.id === vida.financas.veiculoPrincipal) ?? [...lista].sort((a, b2) => b2.valor - a.valor)[0];
   return (
     <div className="gar129" aria-label="Seus veículos, expostos" role="region">
       <p className="gar129__resumo nota">
         {lista.length} {lista.length === 1 ? 'veículo' : 'veículos'} · valem uns {dinheiroCurto(total)} · custam uns {dinheiroCurto(mensal)} por mês{deColecao ? ` · ${deColecao} de coleção` : ''}
       </p>
-      {/* A cena: todos lado a lado, no chão da garagem, na escala de verdade (os de coleção, à frente). Tocar abre de perto. */}
-      <div className="gar129__cena" role="group" aria-label="A garagem">
-        {[...lista].sort((a, b) => (b.papel === 'colecao' ? 1 : 0) - (a.papel === 'colecao' ? 1 : 0)).slice(0, 8).map(b => {
-          const forma = formaDaVersao(versaoVeiculo(b.versaoId), b.modeloId);
-          const base = lista.length > 4 ? 132 : 160;
-          return (
-            <button type="button" key={b.id} className={`gar129__vaga${b.papel === 'colecao' ? ' gar129__vaga--colecao' : ''}`} onClick={() => setAmpliado(b.id)} aria-label={`Ver de perto: ${nomeComCor(b)}`}>
-              <DesenhoVeiculo forma={forma} semente={b.id} versaoId={b.versaoId} cor={corDoVeiculo(b, modeloVeiculo(b.modeloId).categoria).cor} estado={b.estado} mods={b.mods} largura={Math.round(base * escalaDe(b))} />
-            </button>
-          );
-        })}
-        {lista.length > 8 && <span className="gar129__mais-vagas nota">+{lista.length - 8} na lista abaixo</span>}
-      </div>
+      {/* VIDA 18 · o showroom: o veículo escolhido no palco (holofote, piso com reflexo, a ficha ao lado); a fileira embaixo
+          troca o destaque. A cena antiga (todos lado a lado) virou essa fileira — na escala de verdade, os de coleção primeiro. */}
+      <Palco vida={vida} b={emDestaque} custo={custo} aoAmpliar={setAmpliado} aoPersonalizar={setPersonalizar} />
+      {lista.length > 1 && (
+        <ul className="gar18__fileira" aria-label="Escolher o veículo em destaque">
+          {[...lista].sort((a, b2) => (b2.papel === 'colecao' ? 1 : 0) - (a.papel === 'colecao' ? 1 : 0) || b2.valor - a.valor).map(b => {
+            const forma = formaDaVersao(versaoVeiculo(b.versaoId), b.modeloId);
+            const ativo = b.id === emDestaque.id;
+            return (
+              <li key={b.id}>
+                <button type="button" className={`gar18__vaga${ativo ? ' gar18__vaga--ativa' : ''}${b.papel === 'colecao' ? ' gar18__vaga--colecao' : ''}`} aria-pressed={ativo} onClick={() => setDestaque(b.id)} aria-label={`Destacar: ${nomeComCor(b)}`}>
+                  <span className="gar18__vaga-desenho"><DesenhoVeiculo forma={forma} semente={b.id} versaoId={b.versaoId} cor={corDoVeiculo(b, modeloVeiculo(b.modeloId).categoria).cor} estado={b.estado} mods={b.mods} largura={Math.round(96 * escalaDe(b))} /></span>
+                  <span className="gar18__vaga-nome">{cap(nomeComCor(b))}</span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
       {lista.length > 1 && (
         <div className="gar129__organizar">
           <div className="escolha" role="radiogroup" aria-label="Mostrar">
@@ -111,6 +120,50 @@ export function GaragemVisual({ vida, agir }: Props) {
       {personalizar && <PersonalizarVeiculos key={personalizar} vida={vida} agir={agir} inicial={personalizar} aoFechar={() => setPersonalizar(null)} />}
       {!personalizar && <PersonalizarVeiculos vida={vida} agir={agir} />}
     </div>
+  );
+}
+
+/** VIDA 18 · o palco do showroom: o veículo grande sob o holofote, o reflexo no piso, a ficha com o que importa. */
+function Palco({ vida, b, custo, aoAmpliar, aoPersonalizar }: { vida: Vida; b: Veiculo; custo: (b: Veiculo) => number; aoAmpliar: (id: string) => void; aoPersonalizar: (id: string) => void }) {
+  const m = modeloVeiculo(b.modeloId);
+  const x = versaoVeiculo(b.versaoId);
+  const forma = formaDaVersao(x, b.modeloId);
+  const cor = corDoVeiculo(b, m.categoria);
+  const grau = grauDe(b);
+  const pago = b.precoPago;
+  const variacao = pago ? (b.valor - pago) / pago : undefined;
+  const desenho = (largura: number) => <DesenhoVeiculo forma={forma} semente={b.id} versaoId={b.versaoId} cor={cor.cor} estado={b.estado} mods={b.mods} largura={largura} rotulo={`${NOME_FORMA[forma]}${cor.nome ? `, ${cor.nome}` : ''}`} />;
+  return (
+    <section className={`gar18__palco${b.papel === 'colecao' ? ' gar18__palco--colecao' : ''}`} aria-label={`Em destaque: ${nomeComCor(b)}`} data-veiculo={b.id}>
+      <div className="gar18__cena">
+        <span className="gar18__holofote" aria-hidden />
+        <button type="button" className="gar18__carro" onClick={() => aoAmpliar(b.id)} aria-label={`Ver de perto: ${nomeComCor(b)}`}>
+          <span className="gar18__carro-desenho" style={{ width: `${Math.round(escalaDe(b) * 100)}%` }}>{desenho(560)}</span>
+          <span className="gar18__reflexo" aria-hidden style={{ width: `${Math.round(escalaDe(b) * 100)}%` }}>{desenho(560)}</span>
+        </button>
+        <span className="gar18__piso" aria-hidden />
+      </div>
+      <div className="gar18__ficha">
+        <p className="gar18__kicker">{cap(NOME_FORMA[forma])}{b.anoFabricacao ? ` · ${b.anoFabricacao}` : ''}</p>
+        <h3 className="gar18__nome">{cap(nomeComCor(b))}{b.apelido ? <span> “{b.apelido}”</span> : null}</h3>
+        <p className="gar129__selos">
+          {vida.financas.veiculoPrincipal === b.id && <span className="pat-selo">principal</span>}
+          {b.papel === 'colecao' && <span className="pat-selo">de coleção</span>}
+          {m.segmento === 'classico' && <span className="pat-selo">clássico</span>}
+          {(grau !== 'comum' || !!m.segmento) && <span className={`pat-grau pat-grau--${grau}`}>{NOME_GRAU[grau]}</span>}
+        </p>
+        <dl className="gar18__dados">
+          <div><dt>Vale hoje</dt><dd>{dinheiroCurto(b.valor)}{variacao !== undefined && Math.abs(variacao) >= 0.01 ? <span className={variacao >= 0 ? 'gar129__mais' : 'gar129__menos'}> {variacao >= 0 ? '+' : '−'}{Math.round(Math.abs(variacao) * 100)}%</span> : null}</dd></div>
+          <div><dt>Por mês</dt><dd>{dinheiroCurto(custo(b))}</dd></div>
+          <div><dt>Estado</dt><dd>{estadoDoVeiculo(b)}</dd></div>
+          <div><dt>Onde</dt><dd>{guardadoLonge(vida, b) ? municipio(ondeEsta(vida, b)).nome : b.garagem ? 'outra garagem' : 'com você'}</dd></div>
+        </dl>
+        <div className="gar18__acoes">
+          <button type="button" className="botao botao--secundario" onClick={() => aoAmpliar(b.id)}>Ver de perto</button>
+          {idade(vida) >= 18 && <button type="button" className="botao botao--discreto" onClick={() => aoPersonalizar(b.id)}>Personalizar</button>}
+        </div>
+      </div>
+    </section>
   );
 }
 

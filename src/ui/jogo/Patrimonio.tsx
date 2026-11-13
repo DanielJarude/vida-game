@@ -226,7 +226,11 @@ function Garagem({ vida, agir, abrir }: Props) {
   const nomeLoja = { concessionaria: 'Concessionária', usados: 'Usados', motos: 'Motos e bicicletas', colecionador: 'Garagem de colecionador', nautica: 'Náutica', aeroclube: 'Aeroclube' } as const;
   return (
     <Secao titulo="Garagem">
-      {!lista.length && <p className="gar161-vazia">A garagem está vazia.<span>Carro dá mobilidade — e imposto, seguro, combustível e oficina.</span></p>}
+      {/* VIDA 18: o showroom vazio — as vagas pintadas no chão, esperando (e as lojas logo abaixo). */}
+      {!lista.length && <div className="gar161-vazia">
+        <svg viewBox="0 0 240 70" width="240" height="70" aria-hidden className="gar18__vazia-svg"><path d="M10 62 H230" stroke="rgba(255,255,255,.25)" strokeWidth="2" />{[0, 1, 2].map(k => <g key={k}><path d={`M${30 + k * 66} 62 L${42 + k * 66} 30 M${90 + k * 66} 62 L${78 + k * 66} 30`} stroke="rgba(255,255,255,.35)" strokeWidth="2" /><text x={60 + k * 66} y="54" textAnchor="middle" fill="rgba(255,255,255,.35)" fontSize="10" fontFamily="sans-serif">{k + 1}</text></g>)}<ellipse cx="120" cy="12" rx="80" ry="6" fill="rgba(255,240,200,.18)" /></svg>
+        <p>A garagem está vazia.<span>Carro dá mobilidade — e imposto, seguro, combustível e oficina. As lojas da cidade estão logo abaixo.</span></p>
+      </div>}
       {lista.length > 0 && <GaragemVisual vida={vida} agir={agir} />}
       {lista.filter(b => guardadoLonge(vida, b)).map(b => {
         const t = custoDeTrazer(vida, b);

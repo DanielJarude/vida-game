@@ -155,3 +155,6 @@ main .cracha15--atleta dt { color: color-mix(in oklab, #e8f5ea 70%, transparent)
 main .cracha15--atleta .cracha15__lista ul, main .cracha15--atleta .cracha15__lista p { color: #d6ecd9; opacity: 1; }
 main .cracha15--atleta .cracha15__lista { border-top-color: rgba(255,255,255,.18); }
 main .of16__escolha button { text-align: left; justify-content: flex-start; }
+/* VIDA 18: o showroom vazio desenhado (as vagas no chão). */
+.gar161-vazia p { margin: 0; }
+.gar161-vazia svg { max-width: 100%; height: auto; margin-bottom: 6px; }
