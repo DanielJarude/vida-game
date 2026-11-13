@@ -56,4 +56,7 @@ Todos abaixo de 800 kB: `motor-textos` 797,15 (era 797,10), `motor-dados` 781,7,
 - Propriedade rural em outro país: o valor fica na moeda do lugar da propriedade.
 
 ## Publicação
-Ver a seção ao final (preenchida depois do deploy).
+- Commit publicado: **`9fa7d7e`** — `main`, `claude/vida18-rural-apostas` e a produção `claude/fix-pos-rework3-playtest` no mesmo commit (fast-forward a partir de `27ae132`).
+- Cloudflare Pages: produção serve `index-Di-nlfib.js`; **`/` e os 122 arquivos JS/CSS sha256-idênticos** ao build validado localmente.
+- Conferido em produção: carregar save, Vida · Campo, Vida · Apostas, Você · Aparência, História, Patrimônio · Garagem — sem erro de console.
+- Este registro é um commit só de documentação em `main` e na branch da VIDA 18.
