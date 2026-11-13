@@ -14,7 +14,7 @@ import { decadaVisual } from './epoca';
 import './eras.css';
 
 const VITRINE = ['telefone_fixo', 'videocassete', 'computador', 'internet', 'celular', 'sms', 'mensageiro_pc', 'rede_comunidades', 'smartphone', 'mensageiro_app', 'redes_modernas', 'app_namoro', 'streaming', 'pix'];
-const MEIO: Record<string, string> = { fixo: 'telefone fixo, orelhão e carta', celular: 'celular de teclas', smartphone: 'smartphone' };
+const MEIO: Record<string, string> = { fixo: 'Telefone fixo, orelhão e carta', celular: 'Celular de teclas (e o telefone de casa)', smartphone: 'Smartphone' };
 
 const nominal = (valorReais: number, t: number) => {
   const p = padraoEm(t);

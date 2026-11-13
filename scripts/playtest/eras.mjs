@@ -47,8 +47,9 @@ for (const tema of TEMAS) for (const w of TAMANHOS) {
     await p.evaluate(t => { localStorage.clear(); localStorage.setItem('VIDA_APARENCIA', t); localStorage.setItem('VIDA_NOVIDADES_VISTAS', 'Eras (protótipo)'); }, tema);
     await p.goto(URL); await p.waitForTimeout(400);
     const novo = p.getByRole('button', { name: /Nascer de novo|Nova vida|Começar/ }).first();
-    if (await novo.count()) { await novo.click(); await p.waitForTimeout(700); }
-    await p.locator('.epoca__porta[data-era="1980"]').click(); await p.waitForTimeout(300);
+    if (await novo.count()) { await novo.click(); await p.waitForTimeout(700); if (!(await p.locator('.epoca').count())) { await novo.click().catch(() => {}); await p.waitForTimeout(1200); } }
+    try { await p.locator('.epoca__porta[data-era="1980"]').click({ timeout: 15000 }); } catch (e) { await p.screenshot({ path: `${OUT}/falha-nascer-${tag}.png` }); problemas.push(`nascer: porta 1980 não apareceu (${(await p.locator('button').allInnerTexts()).slice(0, 4).join(' / ')})`); relatorio.push(`${tag} PROBLEMAS: ${problemas.join(' ; ')}`); await ctx.close(); continue; }
+    await p.waitForTimeout(300);
     await p.getByRole('radio', { name: '1984' }).click(); await p.waitForTimeout(500);
     await p.locator('.epoca').scrollIntoViewIfNeeded();
     if (!(await p.locator('.epoca__previa').count())) problemas.push('nascer: sem prévia da época');
@@ -85,7 +86,7 @@ for (const tema of TEMAS) for (const w of TAMANHOS) {
     if (!(await p.locator('.painel-epoca').count())) problemas.push(`${save}: painel A época não apareceu`);
     else await p.locator('.painel-epoca').scrollIntoViewIfNeeded();
     await foto(p, `epoca-${save}-${tag}`, problemas);
-    await irArea(p, 'Vida');
+    await irArea(p, 'História');
     const linha = p.getByRole('tab', { name: /Biografia/ }).locator('visible=true').first();
     if (await linha.count()) { await linha.click(); await p.waitForTimeout(700); }
     const chip = p.getByRole('button', { name: 'A época' }).locator('visible=true').first();

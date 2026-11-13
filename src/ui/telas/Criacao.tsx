@@ -184,7 +184,7 @@ export function Criacao({ c }: { c: ControleVida }) {
           <p className="criacao__legenda">Você</p>
           <div className="criacao__fileira" aria-hidden>
             {([[1, 'bebê'], [9, 'aos 9'], [30, 'aos 30'], [75, 'aos 75']] as const).map(([i, r]) => (
-              <figure key={i} className="criacao__retrato"><Retrato visual={visualDoBebe} genero={genero} idade={i} semente="eu" tamanho={96} /><figcaption>{r}{historica ? ` · ${anoNasc + i}` : ''}</figcaption></figure>
+              <figure key={i} className="criacao__retrato"><Retrato visual={visualDoBebe} genero={genero} idade={i} semente="eu" tamanho={96} /><figcaption>{r}{historica ? ` · ${i === 1 ? anoNasc : anoNasc + i}` : ''}</figcaption></figure>
             ))}
           </div>
           {heranca && previa && (previa.mae || previa.pai) && (

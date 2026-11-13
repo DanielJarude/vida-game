@@ -51,21 +51,46 @@
   border: 1px solid color-mix(in srgb, var(--era-tom) 55%, transparent); white-space: nowrap;
 }
 
-/* ------------------------------------------------------------ O aparelho da época (o Celular reaproveitado) */
+/* ------------------------------------------------------------ O aparelho da época (o Celular reaproveitado)
+   O telefone de casa: corpo de baquelite na cor da década, sem entalhe de câmera, a "tela" é um bloco de recados pautado.
+   O celular de teclas: corpo grosso, tela de cristal líquido sem degradê, teclado desenhado embaixo. */
+.cel__aparelho[data-meio='fixo'],
+.cel__aparelho[data-meio='celular'] { --cel-fundo: color-mix(in srgb, var(--papel, var(--surface)) 92%, var(--era-tom)); }
+.cel__aparelho[data-meio='fixo']::before,
+.cel__aparelho[data-meio='celular']::before { display: none; }
 .cel__aparelho[data-meio='fixo'] {
-  border-radius: 28px 28px 18px 18px; background: color-mix(in srgb, #e9dcc3 70%, var(--surface));
-  box-shadow: 0 0 0 6px color-mix(in srgb, var(--era-tom) 65%, #3b2a1a), var(--shadow-lg);
+  border-width: 14px; border-color: color-mix(in srgb, var(--era-tom) 70%, #3b2a1a); border-radius: 26px 26px 34px 34px;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--era-tom) 40%, #000), inset 0 0 0 2px color-mix(in srgb, var(--era-tom) 30%, transparent), var(--shadow-lg, 0 30px 60px rgba(0,0,0,.35));
 }
-:root[data-tema='escuro'] .cel__aparelho[data-meio='fixo'] { background: color-mix(in srgb, #3b3226 80%, var(--surface)); }
-.cel__aparelho[data-meio='fixo'] .cel__status { justify-content: center; font-family: var(--font-serif); letter-spacing: .08em; }
-.cel__aparelho[data-meio='celular'] { border-radius: 36px; box-shadow: 0 0 0 7px color-mix(in srgb, var(--era-tom) 70%, #222), var(--shadow-lg); }
+.cel__aparelho[data-meio='fixo'] .cel__status {
+  justify-content: center; padding: 12px 16px 10px; font: 700 13px/1.2 var(--font-serif); letter-spacing: .08em; text-transform: uppercase;
+  background: color-mix(in srgb, var(--era-tom) 22%, var(--cel-fundo)); border-bottom: 2px solid color-mix(in srgb, var(--era-tom) 55%, transparent);
+}
+.cel__aparelho[data-meio='fixo'] .cel__inicio {
+  background: repeating-linear-gradient(to bottom, transparent 0 27px, color-mix(in srgb, var(--era-tom) 22%, transparent) 27px 28px), var(--cel-fundo);
+}
+.cel__aparelho[data-meio='fixo'] .cel__tile { border-radius: 50%; background: var(--era-tom); color: #fff; }
+.cel__aparelho[data-meio='fixo'] .cel__home { background: color-mix(in srgb, var(--era-tom) 22%, var(--cel-fundo)); }
+.cel__aparelho[data-meio='fixo'] .cel__home button { width: 56px; height: 8px; border-radius: 4px; }
+
+.cel__aparelho[data-meio='celular'] {
+  border-width: 16px 14px 0; border-color: color-mix(in srgb, var(--era-tom) 45%, #26272a); border-radius: 40px 40px 30px 30px;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--era-tom) 35%, #000), var(--shadow-lg, 0 30px 60px rgba(0,0,0,.35));
+}
+.cel__aparelho[data-meio='celular'] .cel__status { background: var(--cel-tela, color-mix(in srgb, var(--era-tela) 60%, var(--surface))); }
 .cel__aparelho[data-meio='celular'] .cel__inicio,
-.cel__aparelho[data-meio='celular'] .cel__app-topo { background: color-mix(in srgb, var(--era-tela) 55%, var(--surface)); }
+.cel__aparelho[data-meio='celular'] .cel__app-topo { background: color-mix(in srgb, var(--era-tela) 60%, var(--surface)); }
 :root[data-tema='escuro'] .cel__aparelho[data-meio='celular'] .cel__inicio,
-:root[data-tema='escuro'] .cel__aparelho[data-meio='celular'] .cel__app-topo { background: color-mix(in srgb, var(--era-tela) 18%, var(--surface)); }
+:root[data-tema='escuro'] .cel__aparelho[data-meio='celular'] .cel__app-topo,
+:root[data-tema='escuro'] .cel__aparelho[data-meio='celular'] .cel__status { background: color-mix(in srgb, var(--era-tela) 16%, var(--surface)); }
 .cel__aparelho[data-meio='celular'] .cel__tile { border-radius: 6px; }
-.cel__aparelho[data-meio='fixo'] .cel__tile { border-radius: 50%; }
-.cel__epoca { display: flex; align-items: center; gap: .6rem; padding: .5rem .75rem; margin: 0 0 .5rem; border-radius: var(--radius-md); background: color-mix(in srgb, var(--era-tom) 12%, var(--surface)); }
+.cel__aparelho[data-meio='celular'] .cel__home {
+  padding: 14px 0 18px; background:
+    radial-gradient(circle at center, color-mix(in srgb, var(--era-tom) 25%, #d9d6d0) 0 9px, transparent 10px) 0 0 / 33.33% 26px repeat-x,
+    color-mix(in srgb, var(--era-tom) 45%, #26272a);
+}
+.cel__aparelho[data-meio='celular'] .cel__home button { background: #d9d6d0; width: 64px; height: 10px; border-radius: 5px; opacity: .9; }
+.cel__epoca { display: flex; align-items: center; gap: .6rem; padding: .5rem .75rem; margin: 0 0 .5rem; border-radius: var(--radius-md); background: color-mix(in srgb, var(--era-tom) 12%, var(--surface)); border: 1px solid color-mix(in srgb, var(--era-tom) 35%, transparent); }
 .cel__epoca p { margin: 0; font-size: .82rem; color: var(--text-primary); line-height: 1.35; }
 
 /* ------------------------------------------------------------ A Linha da Vida: a marca da época */
@@ -94,3 +119,9 @@
 
 /* ------------------------------------------------------------ O jogo inteiro sabe a década (discreto: só o fio do cabeçalho) */
 .jogo[data-era] .cabecalho { box-shadow: inset 0 -3px 0 color-mix(in srgb, var(--era-tom) 70%, transparent); }
+
+/* No celular do jogador (tela cheia), o botão de fechar fica no alto e no meio: o título do telefone de casa desce. */
+@media (max-width: 520px) {
+  .cel__aparelho[data-meio='fixo'] .cel__status { padding-top: calc(44px + env(safe-area-inset-top)); }
+  .cel__aparelho[data-meio='fixo'], .cel__aparelho[data-meio='celular'] { border: 0; border-radius: 0; box-shadow: none; }
+}
