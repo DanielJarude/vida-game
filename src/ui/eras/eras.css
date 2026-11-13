@@ -91,3 +91,6 @@
 .painel-epoca__tec li[data-acesso='indisponivel'] { color: var(--text-muted); text-decoration: line-through; text-decoration-color: var(--text-muted); }
 .painel-epoca h3 { margin: .2rem 0 0; font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; color: var(--text-secondary); font-family: var(--font-sans); }
 .painel-epoca__nota { margin: 0; font-size: .78rem; color: var(--text-secondary); }
+
+/* ------------------------------------------------------------ O jogo inteiro sabe a década (discreto: só o fio do cabeçalho) */
+.jogo[data-era] .cabecalho { box-shadow: inset 0 -3px 0 color-mix(in srgb, var(--era-tom) 70%, transparent); }

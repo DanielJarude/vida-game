@@ -47,6 +47,13 @@ for (let i = 0; i < anos; i++) {
   linha(`${ano} · ${idade(v)} anos · ${meio}${meio !== meioAntes ? ' (MUDOU)' : ''} · conta ${formatarDinheiro(v.financas.conta)} [${moeda}] · fase ${v.economia.fase} infl ${(v.economia.inflacao * 100).toFixed(1)}%`);
   for (const n of novos) linha(`    ${n}`);
   meioAntes = meio;
+  if (process.env.SNAP?.split(',').includes(String(ano))) {
+    const { writeFileSync, mkdirSync } = await import('node:fs');
+    const dir = `${process.env.HOME}/vida-trabalho/eras/saves`;
+    mkdirSync(dir, { recursive: true });
+    const x = structuredClone(v); x.momento = null; delete x.fila; x.caminhos.pendente = undefined; x.desfecho13 = undefined;
+    writeFileSync(`${dir}/${qual}-${ano}.json`, JSON.stringify(x));
+  }
   // Anacronismos que não podem acontecer numa vida histórica
   if (v.era) {
     const i2 = idade(v);

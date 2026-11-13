@@ -201,6 +201,7 @@ describe('lojas, veículos, profissões e o texto da época', () => {
   it('o texto troca o que ainda não existe; na vida contemporânea, nada muda', () => {
     const v = adulta(historica(1984), 1999, 15);
     expect(textoDaEpoca(v, 'Mandou um Pix para o primo e estudou para o Enem.')).toBe('Mandou um depósito para o primo e estudou para o vestibular.');
+    expect(textoDaEpoca(v, 'Bora repetir? 😊')).toBe('Bora repetir?');
     const c = nova({ semente: 1, municipioId: 'sao-paulo-sp' });
     expect(textoDaEpoca(c, 'Mandou um Pix.')).toBe('Mandou um Pix.');
   });

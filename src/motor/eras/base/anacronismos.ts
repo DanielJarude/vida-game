@@ -36,7 +36,7 @@ const REGRAS: Regra[] = [
   { quando: antes(1996), trocas: [[/a TV a cabo/g, 'a assinatura do jornal'], [/TV a cabo/g, 'assinatura do jornal']] },
   { quando: antes(2009), trocas: [[/o Enem/g, 'o vestibular'], [/O Enem/g, 'O vestibular'], [/do Enem/g, 'do vestibular'], [/no Enem/g, 'no vestibular'], [/\bEnem\b/g, 'vestibular'], [/pelo Sisu/g, 'pelo vestibular'], [/no Sisu/g, 'no vestibular'], [/\bSisu\b/g, 'vestibular']] },
   { quando: antes(2014), trocas: [[/motorista de aplicativo/g, 'taxista'], [/[Dd]elivery/g, 'entrega']] },
-  { quando: sem('smartphone'), trocas: [[/pelo aplicativo/g, 'por telefone'], [/no aplicativo/g, 'por telefone'], [/um aplicativo/g, 'um serviço']] }
+  { quando: sem('smartphone'), trocas: [[/pelo aplicativo/g, 'por telefone'], [/no aplicativo/g, 'por telefone'], [/um aplicativo/g, 'um serviço'], [/\s?\p{Extended_Pictographic}\uFE0F?/gu, '']] }
 ];
 
 /** A frase como ela seria dita no ano corrente da vida (vida contemporânea: a mesma frase). */
