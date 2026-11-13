@@ -664,6 +664,8 @@ import type { ApostaNaRoleta, Carta } from '../tipos';
 
 const C = (v: number, n: Carta['n'] = 'copas'): Carta => ({ v, n });
 const rica = () => em(pessoa28(), x => { x.financas.conta = 1e9; x.apostas = undefined; });
+/** VIDA 18: no Brasil, cassino e caça-níquel são proibidos e a loteria é a da Caixa — a mesa e a "Seis de Quarenta" são de fora do país. */
+const foraDoBrasil = (v: Vida) => em(v, x => { x.moradia.municipioId = 'us:nova-york'; });
 const ap = (v: Vida, op: OpAposta) => executar(v, { tipo: 'aposta', op });
 
 describe('JOG-01 · blackjack', () => {
@@ -753,7 +755,7 @@ describe('JOG-01 · roleta, loteria e caça-níquel: as contas certas', () => {
     expect([0, 1, 2, 3, 4, 5, 6].reduce((s, k) => s + chanceLoteria(k), 0)).toBeCloseTo(1, 10);
     expect(rtpLoteria()).toBeCloseTo(0.4131, 3);
     for (let k = 0; k < 200; k++) { const s = sortearLoteria(criarRng(k)); expect(new Set(s).size).toBe(6); expect(s.every(n => n >= 1 && n <= 40)).toBe(true); }
-    let v = rica();
+    let v = foraDoBrasil(rica()); // VIDA 18: a "Seis de Quarenta" é a loteria de fora do Brasil
     let tres = 0;
     for (let k = 0; k < 600; k++) {
       v = ap(v, { jogo: 'loteria', numeros: [3, 8, 15, 22, 31, 40] }).vida;
@@ -788,7 +790,10 @@ describe('JOG-01 · roleta, loteria e caça-níquel: as contas certas', () => {
   it('as regras do lugar e do bolso: menor de idade não aposta; onde é proibido, não existe; autoexclusão e limite valem', () => {
     const jovem = em(pessoa28(), x => { x.eu.tNasc = x.t - 16 * 12; });
     expect(podeTentar(disponibilidade(jovem, { tipo: 'aposta', op: { jogo: 'niquel', valor: 10 } }))).toBe(false);
-    let v = rica();
+    // VIDA 18: no Brasil, o caça-níquel é proibido por lei (o motivo diz); fora do país, valem a autoexclusão e o limite.
+    expect(disponibilidade(rica(), { tipo: 'aposta', op: { jogo: 'niquel', valor: 10 } }).motivo).toMatch(/proibidos por lei/);
+    let v = foraDoBrasil(rica());
+    expect(podeTentar(disponibilidade(v, { tipo: 'aposta', op: { jogo: 'niquel', valor: 10 } }))).toBe(true);
     v = ap(v, { jogo: 'controle', oque: 'autoexcluir' }).vida;
     expect(podeTentar(disponibilidade(v, { tipo: 'aposta', op: { jogo: 'niquel', valor: 10 } }))).toBe(false);
     expect(disponibilidade(v, { tipo: 'aposta', op: { jogo: 'niquel', valor: 10 } }).motivo).toMatch(/autoexclusão/);

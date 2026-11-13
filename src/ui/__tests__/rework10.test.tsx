@@ -116,7 +116,8 @@ import { Apostas } from '../jogo/Apostas';
 
 describe('JOG-01 · as mesas', () => {
   it('a loteria: seis números marcados, a compra manda a ação com os números; as regras dizem as chances', () => {
-    const v = transacao(base(), x => { x.financas.conta = 5000; }).vida;
+    // VIDA 18: a "Seis de Quarenta" é a loteria de fora do Brasil (no Brasil, as da Caixa).
+    const v = transacao(base(), x => { x.financas.conta = 5000; x.moradia.municipioId = 'us:nova-york'; }).vida;
     const agir = vi.fn(() => true);
     render(<main><Apostas vida={v} agir={agir} /></main>);
     const grade = screen.getByRole('group', { name: 'Escolha seis números' });
@@ -127,8 +128,10 @@ describe('JOG-01 · as mesas', () => {
   });
 
   it('o blackjack: com a mão na mesa, só pedir, parar e dobrar (não há botão de divisão sem regra); a carta da banca fica virada', () => {
-    const v = transacao(base(), x => { x.financas.conta = 5000; x.apostas = { ultimas: [], ano: { t: x.t, apostado: 100, recebido: 0 }, total: { apostado: 100, recebido: 0 }, mao: { aposta: 100, voce: [{ v: 5, n: 'copas' }, { v: 6, n: 'paus' }], banca: [{ v: 10, n: 'ouros' }, { v: 7, n: 'espadas' }], baralho: [{ v: 2, n: 'copas' }], t: x.t } }; }).vida;
+    // VIDA 18: a mesa de blackjack é de fora do Brasil (aqui, cassino é proibido) e mora na aba Cassino.
+    const v = transacao(base(), x => { x.financas.conta = 5000; x.moradia.municipioId = 'us:nova-york'; x.apostas = { ultimas: [], ano: { t: x.t, apostado: 100, recebido: 0 }, total: { apostado: 100, recebido: 0 }, mao: { aposta: 100, voce: [{ v: 5, n: 'copas' }, { v: 6, n: 'paus' }], banca: [{ v: 10, n: 'ouros' }, { v: 7, n: 'espadas' }], baralho: [{ v: 2, n: 'copas' }], t: x.t } }; }).vida;
     render(<main><Apostas vida={v} agir={() => true} /></main>);
+    fireEvent.click(screen.getByRole('tab', { name: 'Cassino' }));
     fireEvent.click(screen.getByRole('tab', { name: 'Blackjack' }));
     expect(screen.getByRole('button', { name: 'Pedir carta' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Parar' })).toBeTruthy();

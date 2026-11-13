@@ -230,15 +230,18 @@ describe('a garagem', () => {
     return v;
   };
 
-  it('a cena na escala: a moto sai menor que o carro; cada vaga abre o veículo de perto', () => {
+  // VIDA 18: a cena virou o showroom — a fileira de vagas (na escala) escolhe o destaque, e o destaque no palco abre de perto.
+  it('a cena na escala: a moto sai menor que o carro; a vaga põe o veículo no palco, e o palco abre de perto', () => {
     const { container, getByRole } = render(<GaragemVisual vida={comVeiculos()} agir={() => true} />);
-    const vagas = [...container.querySelectorAll('.gar129__vaga')];
+    const vagas = [...container.querySelectorAll('.gar18__vaga')];
     expect(vagas.length).toBe(3);
     const larg = (i: number) => Number(vagas[i].querySelector('svg')!.getAttribute('width'));
     const iMoto = vagas.findIndex(x => x.querySelector('svg')!.getAttribute('data-modelo') === 'honda_cg160');
     const iCarro = vagas.findIndex(x => x.querySelector('svg')!.getAttribute('data-modelo') === 'toyota_hilux');
     expect(larg(iMoto)).toBeLessThan(larg(iCarro) * 0.6);
     fireEvent.click(vagas[iCarro]);
+    expect(container.querySelector('.gar18__palco')!.getAttribute('data-veiculo')).toBe('v3');
+    fireEvent.click(container.querySelector('.gar18__carro')!);
     const folha = getByRole('dialog');
     expect(folha.getAttribute('aria-label')).toMatch(/De perto/);
     expect(Number(folha.querySelector('svg')!.getAttribute('width'))).toBeGreaterThanOrEqual(600);

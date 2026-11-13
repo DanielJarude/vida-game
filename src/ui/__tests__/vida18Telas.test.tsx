@@ -68,7 +68,7 @@ describe('VIDA 18 · o personagem de costas e as silhuetas', () => {
       const costas = renderToStaticMarkup(<Figura visual={visual} genero="masculino" idade={30} corpo="mediano" pecas={[]} vista="costas" semente="s1" />);
       const frente = renderToStaticMarkup(<Retrato visual={visual} genero="masculino" idade={30} semente="s1" />);
       expect(costas).toContain(`data-chapeu-costas="${modelo}"`);
-      const cor = corDoChapeu(tipo, modelo, 0) && PALETAS_DO_CHAPEU[modelo];
+      const cor = PALETAS_DO_CHAPEU[modelo]; expect(cor).toContain(corDoChapeu(tipo, modelo, 0));
       // A cor da paleta que a frente usou é a mesma que aparece de costas (e é uma só).
       const naFrente = cor.filter(c => frente.includes(`fill="${c}"`));
       expect(naFrente.length, modelo).toBe(1);

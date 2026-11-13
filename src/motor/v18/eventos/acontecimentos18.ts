@@ -27,7 +27,12 @@ const ultimoDe = (p: { historico: { resultado: number }[] }) => p.historico[p.hi
 const deHoje = (c: Ctx, chave: string) => c.v.fatos[chave] === c.v.t;
 const premio = (c: Ctx) => c.v.apostas18?.premio;
 const familia = (c: Ctx) => vinculosVivos(c.v).filter(x => ['mae', 'pai', 'irmao', 'filho'].includes(x.vin.parentesco ?? '') && !x.p.especie);
-const quemPede = (v: Vida) => vinculosVivos(v).filter(x => (x.vin.parentesco || x.vin.proximidade >= 40) && !x.p.especie).map(x => x.p);
+/**
+ * Os papéis são `fixo` (já em ordem, sem gastar o gerador do ano: `conteudo/motor` só sorteia papel que não é fixo) e
+ * vazios fora do ano do fato — o catálogo inteiro passa por aqui todo ano, e nenhuma vida pode ter o acaso mexido por isso.
+ */
+const fixo = <T extends (v: Vida) => unknown[]>(f: T) => Object.assign(f, { fixo: true });
+const quemPede = fixo((v: Vida) => (v.fatos['premio18_pedido'] !== v.t ? [] : vinculosVivos(v).filter(x => (x.vin.parentesco || x.vin.proximidade >= 40) && !x.p.especie).sort((a, b) => b.vin.proximidade - a.vin.proximidade || a.p.id.localeCompare(b.p.id)).map(x => x.p)));
 const tirar = (c: Ctx, valor: number, rotulo: string) => { c.v.financas.conta -= valor; lancar(c.v, rotulo, 'escolha', -valor); };
 
 /** A terra herdada que ainda espera decisão. */
@@ -85,7 +90,7 @@ export const ACONTECIMENTOS_18: Conteudo[] = [
   },
   {
     id: 'premio18_bolao', tipo: 'decisao', idade: [18, 110], tema: 'amizade', prioritario: true, prioridade: 3, repetir: 1,
-    papeis: { quem: v => (v.apostas18?.premio?.pessoas ?? []).map(id => v.pessoas[id]).filter(p => p?.vivo) },
+    papeis: { quem: fixo((v: Vida) => (v.fatos['premio18_bolao'] !== v.t ? [] : (v.apostas18?.premio?.pessoas ?? []).map(id => v.pessoas[id]).filter(p => p?.vivo))) },
     quando: c => deHoje(c, 'premio18_bolao') && !!c.p.quem,
     titulo: 'A cota do bolão',
     texto: c => `${c.p.quem.nome} diz que entrou no bolão com mais duas cotas, pagas em dinheiro, "lembra?". Não está no papel. A parte que diz ser dela dá ${fmt(Math.round(premio(c)!.valor * 0.25 / 1000) * 1000)}.`,
