@@ -35,7 +35,9 @@ export const NOTAS: NotaDeVersao[] = [
       'O aparelho da época: o telefone de casa (recados e cartas), o celular de teclas (torpedos) e, só quando chega, o smartphone. Rede social, aplicativo de namoro, Pix e e-mail só existem a partir do ano em que chegaram ao Brasil.',
       'Os acontecimentos reais do Brasil, com data e fonte — das Diretas Já à COP30 —, lembrados conforme a sua idade e o seu estado. As lojas, os carros, as profissões e os estudos de cada ano.',
       'Você · No mundo · "A época": a presidência, a moeda, o salário mínimo, a inflação e a tecnologia do ano. Na Biografia, a marca de cada década e o fio "A época".'
-    ]
+    ],
+    melhorias: [],
+    correcoes: []
   },
   {
     versao: '18',
