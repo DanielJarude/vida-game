@@ -26,6 +26,26 @@ export interface NotaDeVersao {
 
 export const NOTAS: NotaDeVersao[] = [
   {
+    versao: '18',
+    data: '2026-11-13',
+    titulo: 'Vida rural, apostas e loterias',
+    novidades: [
+      'Vida · Campo: sítio, chácara, fazenda agrícola, de gado ou de café, haras, floresta plantada e piscicultura — cada uma com área, reserva legal, solo, água e vocação. Comprar à vista ou com crédito rural, arrendar de alguém, arrendar a sua, expandir, reduzir, morar nela ou guardar como investimento.',
+      'Lavoura em talhões com o calendário de plantio e colheita: soja (com a safrinha de milho), milho, arroz, feijão, algodão, cana, café, trigo, mandioca, pomar, hortaliças, cacau, açaí, uva, eucalipto e pínus. O clima da região, as pragas, a rotação, o orgânico certificado, a irrigação e a tecnologia mudam a safra.',
+      'Rebanhos: gado de corte e de leite, cavalos, ovelhas, cabras, porcos, galinhas, frangos, tilápia e tambaqui — genética, sanidade, alimentação, crias, perdas, vendas. Galpão, silo, estufa, pivô, curral, ordenha, cocheiras, aviário, tanques, poço, represa, energia solar e máquinas.',
+      'A terra da família: quem vem do campo tem um sítio (ou uma fazenda) na família, que passa adiante na herança; quem herda decide continuar, pôr um gerente, arrendar, vender ou guardar.',
+      'Festas do campo: festa junina, exposição agropecuária, rodeio, cavalgada, vaquejada, provas crioulas, feira do produtor — e temporadas na propriedade.',
+      'Loterias da Caixa com as regras de cada uma: Mega-Sena, Lotofácil, Quina, Lotomania, Dupla Sena e Loteca. Volante, surpresinha, apostas com mais dezenas, bolão da lotérica e bolão com os amigos; concursos numerados, rateio por faixa, acúmulo.',
+      'Apostas esportivas na rodada do futebol simulado (vencedor, placar, gols) e na temporada (campeão, G4, rebaixamento, copa); turfe nos hipódromos, com os cavalos do seu haras correndo; bingo; histórico de tudo. Um prêmio grande muda a vida — e traz pedidos, convites e escolhas.'
+    ],
+    melhorias: [
+      'O limite do ano, a autoexclusão e o acompanhamento do jogo que vira problema valem para todas as apostas.'
+    ],
+    correcoes: [
+      'No Brasil, cassino e caça-níquel deixaram de aparecer como legais (são proibidos por lei); fora do país, onde a lei permite, a mesa abre.'
+    ]
+  },
+  {
     versao: '17',
     data: '2026-11-12',
     titulo: 'Imersão, personalização, lojas e mundo vivo',

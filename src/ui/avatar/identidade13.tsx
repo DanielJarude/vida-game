@@ -142,6 +142,13 @@ const COMPRIMENTO: Record<string, number> = {
 export function CabeloDeCostas({ cabelo, cor, mechas }: { cabelo: string; cor: string; mechas?: string }): ReactElement | null {
   if (cabelo === 'raspado' || cabelo === 'calvo') return <path d="M 44 38 Q 44 20.5 60 20 Q 76 20.5 76 38 Q 70 44 60 44 Q 50 44 44 38 Z" fill={cor} opacity={0.55} />;
   const escuro = misturar(cor, '#000000', 0.22);
+  // VIDA 18: o black de costas é o mesmo volume redondo da frente (antes, um corte reto que não existia na frente).
+  if (cabelo === 'black') return (
+    <g data-costas="black">
+      <path d={Array.from({ length: 18 }, (_, k) => { const a = (k / 18) * Math.PI * 2, a2 = ((k + 0.5) / 18) * Math.PI * 2; const p = (r: number, t: number) => `${(60 + Math.cos(t) * r * 1.08).toFixed(1)} ${(34 + Math.sin(t) * r).toFixed(1)}`; return `${k === 0 ? 'M' : 'L'} ${p(21, a)} Q ${p(23.4, a2)} ${p(21, ((k + 1) / 18) * Math.PI * 2)}`; }).join(' ') + ' Z'} fill={cor} />
+      <path d="M 46 46 Q 60 54 74 46" fill="none" stroke={escuro} strokeWidth={0.8} opacity={0.6} />
+    </g>
+  );
   const n = COMPRIMENTO[cabelo] ?? 1;
   const fim = [52, 54, 60, 68, 76][n];
   const larg = cabelo === 'black' ? 23 : cabelo === 'cacheado' || cabelo === 'cacheado_longo' || cabelo === 'shag' ? 19.5 : 17.5;

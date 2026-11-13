@@ -20,6 +20,7 @@ import { caixaDaRegiao, TatuagensDoRosto, FundoNaPele, ladoNaTela, MapaDoCorpo, 
 import type { TatuagemParaFigura } from '../../motor/sistemas/tatuagens';
 import { REGIOES, type Lado, type LocalDeTatuagem, type RegiaoDeTatuagem } from '../../motor/dados/tatuagens';
 import { misturar } from './cores';
+import { BolsaDeCostas, ChapeuDeCostas, COBRE_O_ALTO_COSTAS } from './costas18';
 import { acessorioDoItem, pecasDoItem, type Conjunto, type Peca } from './pecas';
 
 type P<K extends Peca['parte']> = Extract<Peca, { parte: K }>;
@@ -103,6 +104,8 @@ function escalaDaIdade(i: number): number {
 }
 
 const lado = (g: Geo, s: 1 | -1, dx: number) => g.cx + s * dx;
+/** O mesmo hash do `Retrato` (a cor do chapéu de costas é a da frente). */
+function hashDoRetrato(s: string): number { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
 
 /** A altura da figura inteira (o viewBox), pela idade. */
 function alturaDaFigura(g: Geo, idade: number): number {
@@ -190,15 +193,27 @@ export function focoDaParte(genero: Genero, corpo: TipoDeCorpo, idade: number, l
 }
 
 /** O tronco (do pescoço ao quadril), com folga para a roupa. */
-function tronco(g: Geo, folga = 0, ate = g.yQuad, alarga = 1): string {
-  const o = g.ombro + folga, p = g.peito + folga, c = (g.cintura + folga) * alarga, q = (g.quadril + folga) * alarga;
+/**
+ * VIDA 18: `mod` muda a modelagem — `caixa` (a cintura quase na largura do peito: a camiseta reta), `ajustada` (marca a
+ * cintura), `ampla` (folgada no corpo todo), `tunica` (abre do peito para baixo) — e `curva` faz a barra da camisa (mais
+ * longa no meio, subindo nas laterais).
+ */
+function tronco(g: Geo, folga = 0, ate = g.yQuad, alarga = 1, mod?: { modelo?: string; curva?: boolean }): string {
+  const o = g.ombro + folga, p = g.peito + folga;
+  const m = mod?.modelo;
+  let c = (g.cintura + folga) * alarga, q = (g.quadril + folga) * alarga;
+  if (m === 'caixa') { c = Math.max(c, (p * 0.62 + q * 0.38)); q = Math.max(q, p * 0.98); }
+  else if (m === 'ajustada') { c = Math.max(g.cintura + folga * 0.4, c - 1.2); }
+  else if (m === 'ampla') { c = Math.max(c, p + 0.4); q = Math.max(q, p + 1.6); }
+  else if (m === 'tunica') { c = Math.max(c, p - 0.4); q = q * 1.12 + 1.5; }
+  else if (m === 'fluida') { c = Math.max(c, (p + c) / 2); q = q * 1.04 + 1; }
   const b = g.barriga;
   const yA = g.topo + 18;
   const ombro = (s: 1 | -1) => `${lado(g, s, o)} ${g.topo + 6}`;
   return `M ${lado(g, -1, g.pesc + 1)} ${g.topo} C ${lado(g, -1, o * 0.7)} ${g.topo + 0.5} ${lado(g, -1, o)} ${g.topo + 2} ${ombro(-1)}
     L ${lado(g, -1, p)} ${yA} C ${lado(g, -1, p - 0.6)} ${g.yCint - 12} ${lado(g, -1, c + b)} ${g.yCint - 6} ${lado(g, -1, c + b * 0.6)} ${g.yCint}
     C ${lado(g, -1, c)} ${g.yCint + 6} ${lado(g, -1, q)} ${g.yQuad - 8} ${lado(g, -1, q)} ${Math.min(ate, g.yQuad)}
-    L ${lado(g, -1, q)} ${ate} L ${lado(g, 1, q)} ${ate} L ${lado(g, 1, q)} ${Math.min(ate, g.yQuad)}
+    L ${lado(g, -1, q)} ${mod?.curva ? ate - 3 : ate} ${mod?.curva ? `Q ${g.cx} ${ate + 4.5} ${lado(g, 1, q)} ${ate - 3}` : `L ${lado(g, 1, q)} ${ate}`} L ${lado(g, 1, q)} ${Math.min(ate, g.yQuad)}
     C ${lado(g, 1, q)} ${g.yQuad - 8} ${lado(g, 1, c)} ${g.yCint + 6} ${lado(g, 1, c + b * 0.6)} ${g.yCint}
     C ${lado(g, 1, c + b)} ${g.yCint - 6} ${lado(g, 1, p - 0.6)} ${g.yCint - 12} ${lado(g, 1, p)} ${yA}
     L ${ombro(1)} C ${lado(g, 1, o)} ${g.topo + 2} ${lado(g, 1, o * 0.7)} ${g.topo + 0.5} ${lado(g, 1, g.pesc + 1)} ${g.topo} Z`;
@@ -299,15 +314,28 @@ function Cima({ g, p, ide, detalhe, pele }: { g: Geo; p: P<'cima'>; ide: string;
   const cor = p.cor as string, esc = sombraDe(cor);
   const folga = 0.8 + ((p.folga ?? 1) - 1) * 18;
   const curta = p.forma === 'blusa' && (p.folga ?? 1) < 1;
-  const ate = curta ? g.yCint - 2 : p.forma === 'moletom' || p.forma === 'agasalho' ? g.yQuad + 2 : p.forma === 'camisa' || p.forma === 'bata' ? g.yQuad + 4 : g.yQuad;
+  const ate = curta ? g.yCint - 2 : p.modelo === 'tunica' ? g.yQuad + 12 : p.forma === 'moletom' || p.forma === 'agasalho' ? g.yQuad + 2 : p.forma === 'camisa' || p.forma === 'bata' ? g.yQuad + 4 : g.yQuad;
   const fill = preenchimento(p, ide, detalhe);
-  const mangaAte = p.manga === 'curta' ? g.topo + 30 : 141;
+  // VIDA 18: a manga dobrada (linho) vai até o cotovelo; o ombro caído desce a costura e alarga a manga; a manga bispo abre no punho.
+  const mangaAte = p.manga === 'curta' ? g.topo + (p.ombroCaido ? 33 : 30) : p.dobrada ? 112 : 141;
+  const folgaManga = 1 + (folga - 0.8) * 0.4 + (p.ombroCaido ? 0.9 : 0) + (p.bispo ? 1.2 : 0);
+  const mod = { modelo: p.modelo, curva: p.barra === 'curva' };
   return (
     <g data-peca={p.forma} className="figura__cima">
-      {p.manga !== 'sem' && ([-1, 1] as const).map(s => <path key={s} d={braco(g, s, 1 + (folga - 0.8) * 0.4, mangaAte)} fill={fill} stroke={esc} strokeWidth={0.5} />)}
+      {p.manga !== 'sem' && ([-1, 1] as const).map(s => <path key={s} d={braco(g, s, folgaManga, mangaAte)} fill={fill} stroke={esc} strokeWidth={0.5} />)}
+      {/* VIDA 18: o acabamento da manga — o punho, a barra dobrada, a costura do ombro caído. */}
+      {p.manga !== 'sem' && p.punho && ([-1, 1] as const).map(s => { const x = lado(g, s, g.ombro + (p.manga === 'curta' ? 1.4 : 2.6)); const y = mangaAte - (p.manga === 'curta' ? 1.6 : 3.4); const hw = (p.manga === 'curta' ? g.braco : g.antebraco) + 1.2; return <rect key={`pu${s}`} x={x - hw} y={y} width={hw * 2} height={p.manga === 'curta' ? 1.6 : 3.4} rx={0.6} fill={sombraDe(cor, 0.1)} stroke={esc} strokeWidth={0.4} />; })}
+      {p.dobrada && ([-1, 1] as const).map(s => { const x = lado(g, s, g.ombro + 2.2); const hw = g.braco * 0.86 + 1.6; return <rect key={`do${s}`} x={x - hw} y={mangaAte - 4} width={hw * 2} height={4} rx={1} fill={misturar(cor, '#ffffff', 0.12)} stroke={esc} strokeWidth={0.45} />; })}
+      {p.ombroCaido && p.manga !== 'sem' && ([-1, 1] as const).map(s => <path key={`oc${s}`} d={`M ${lado(g, s, g.ombro - 1.4)} ${g.topo + 3} Q ${lado(g, s, g.ombro + 2.6)} ${g.topo + 9} ${lado(g, s, g.ombro + 0.4)} ${g.topo + 15}`} fill="none" stroke={esc} strokeWidth={0.45} opacity={0.75} />)}
+      {p.bispo && p.manga === 'longa' && ([-1, 1] as const).map(s => { const x = lado(g, s, g.ombro + 2.6); return <rect key={`bi${s}`} x={x - g.antebraco - 0.6} y={137.5} width={(g.antebraco + 0.6) * 2} height={3} rx={0.8} fill={sombraDe(cor, 0.12)} stroke={esc} strokeWidth={0.4} />; })}
       {p.forma === 'regata'
         ? <path d={`M ${lado(g, -1, g.pesc + 1.5)} ${g.topo} L ${lado(g, -1, g.ombro - 6)} ${g.topo + 1} Q ${lado(g, -1, g.peito - 2)} ${g.topo + 12} ${lado(g, -1, g.peito + 0.6)} ${g.topo + 20} L ${lado(g, -1, g.quadril + 0.8)} ${ate} L ${lado(g, 1, g.quadril + 0.8)} ${ate} L ${lado(g, 1, g.peito + 0.6)} ${g.topo + 20} Q ${lado(g, 1, g.peito - 2)} ${g.topo + 12} ${lado(g, 1, g.ombro - 6)} ${g.topo + 1} L ${lado(g, 1, g.pesc + 1.5)} ${g.topo} Q ${g.cx} ${g.topo + 9} ${lado(g, -1, g.pesc + 1.5)} ${g.topo} Z`} fill={fill} stroke={esc} strokeWidth={0.5} />
-        : <path d={tronco(g, folga, ate, p.forma === 'bata' ? 1.06 : 1)} fill={fill} stroke={esc} strokeWidth={0.5} />}
+        : <path d={tronco(g, folga, ate, p.forma === 'bata' ? 1.06 : 1, mod)} fill={fill} stroke={esc} strokeWidth={0.5} />}
+      {/* VIDA 18: a barra — canelada (o punho do moletom e do suéter, mais justa que o corpo), com fendas (polo, bata). */}
+      {p.barra === 'canelada' && (() => { const q = g.quadril + folga - 0.6; return <g><rect x={lado(g, -1, q)} y={ate - 4.2} width={q * 2} height={4.2} rx={0.8} fill={sombraDe(cor, 0.08)} stroke={esc} strokeWidth={0.45} />{detalhe && Array.from({ length: 13 }, (_, k) => <path key={k} d={`M ${lado(g, -1, q) + (q * 2) * (k + 0.5) / 13} ${ate - 3.8} v 3.4`} stroke={esc} strokeWidth={0.3} opacity={0.6} />)}</g>; })()}
+      {p.barra === 'fenda' && ([-1, 1] as const).map(s => <path key={`fe${s}`} d={`M ${lado(g, s, g.quadril + folga * (p.modelo === 'tunica' ? 1.5 : 1) + (p.modelo === 'tunica' ? 2 : 0))} ${ate} l ${-s * 0.8} -5`} stroke={esc} strokeWidth={0.7} />)}
+      {p.barra === 'reta' && detalhe && p.forma !== 'regata' && !curta && <path d={`M ${lado(g, -1, g.quadril + folga * 0.9)} ${ate - 1.4} L ${lado(g, 1, g.quadril + folga * 0.9)} ${ate - 1.4}`} stroke={esc} strokeWidth={0.35} strokeDasharray="1 0.7" opacity={0.7} />}
+      {p.bolsosPeito && ([-1, 1] as const).map(s => <g key={`bp${s}`}><rect x={lado(g, s, g.peito * 0.45) - 3.4} y={g.topo + 13} width={6.8} height={6.4} rx={0.6} fill="none" stroke={esc} strokeWidth={0.5} /><path d={`M ${lado(g, s, g.peito * 0.45) - 3.6} ${g.topo + 13} h 7.2 l -0.4 2.4 h -6.4 Z`} fill={sombraDe(cor, 0.08)} stroke={esc} strokeWidth={0.4} /></g>)}
       {/* A gola */}
       {p.gola === 'colarinho' && <path d={`M ${lado(g, -1, g.pesc + 1.6)} ${g.topo - 1.5} L ${g.cx - 1} ${g.topo + 7} L ${lado(g, -1, 1)} ${g.topo} Z M ${lado(g, 1, g.pesc + 1.6)} ${g.topo - 1.5} L ${g.cx + 1} ${g.topo + 7} L ${lado(g, 1, 1)} ${g.topo} Z`} fill={misturar(cor, '#ffffff', 0.15)} stroke={esc} strokeWidth={0.5} />}
       {p.gola === 'polo' && <path d={`M ${lado(g, -1, g.pesc + 2)} ${g.topo - 1} L ${g.cx - 1.4} ${g.topo + 5} L ${g.cx} ${g.topo + 2} L ${g.cx + 1.4} ${g.topo + 5} L ${lado(g, 1, g.pesc + 2)} ${g.topo - 1}`} fill={misturar(cor, '#ffffff', 0.1)} stroke={esc} strokeWidth={0.6} />}
@@ -355,6 +383,8 @@ function Baixo({ g, p, ide, detalhe, pele }: { g: Geo; p: P<'baixo'>; ide: strin
         <path d={`M ${lado(g, -1, g.cintura + 0.6)} ${g.yCint} C ${lado(g, -1, g.quadril + 1)} ${g.yQuad - 6} ${lado(g, -1, g.quadril + 1.2)} ${g.yQuad} ${lado(g, -1, g.quadril + abre)} ${fim} L ${lado(g, 1, g.quadril + abre)} ${fim} C ${lado(g, 1, g.quadril + 1.2)} ${g.yQuad} ${lado(g, 1, g.quadril + 1)} ${g.yQuad - 6} ${lado(g, 1, g.cintura + 0.6)} ${g.yCint} Z`} fill={fill} stroke={esc} strokeWidth={0.5} />
         {p.corte === 'midi' && detalhe && [-6, 0, 6].map(dx => <path key={dx} d={`M ${g.cx + dx * 0.6} ${g.yQuad + 4} L ${g.cx + dx * 1.4} ${fim - 1}`} stroke={esc} strokeWidth={0.5} opacity={0.6} />)}
         {p.corte === 'lapis' && <path d={`M ${g.cx} ${fim - 9} L ${g.cx} ${fim}`} stroke={esc} strokeWidth={0.7} />}
+        {/* VIDA 18: a saia pregueada (a do uniforme, a de xadrez): as pregas abrem da cintura à barra. */}
+        {p.pregas && Array.from({ length: 7 }, (_, k) => { const t = (k + 1) / 8; const x0 = lado(g, -1, g.cintura + 0.6) + (g.cintura + 0.6) * 2 * t; const x1 = lado(g, -1, g.quadril + abre) + (g.quadril + abre) * 2 * t; return <path key={k} d={`M ${x0} ${g.yCint + 3} L ${x1} ${fim}`} stroke={esc} strokeWidth={0.6} opacity={0.8} />; })}
         <path d={`M ${lado(g, -1, g.cintura + 0.6)} ${g.yCint + 1.5} L ${lado(g, 1, g.cintura + 0.6)} ${g.yCint + 1.5}`} stroke={esc} strokeWidth={0.8} />
       </g>
     );
@@ -374,7 +404,11 @@ function Baixo({ g, p, ide, detalhe, pele }: { g: Geo; p: P<'baixo'>; ide: strin
       {p.vinco && ([-1, 1] as const).map(s => <path key={s} d={`M ${lado(g, s, g.quadril * 0.5)} ${g.yQuad + 2} L ${lado(g, s, g.quadril * 0.43)} ${ate - 1}`} stroke={misturar(cor, '#ffffff', 0.18)} strokeWidth={0.6} />)}
       {p.bolsos && p.corte === 'larga' && ([-1, 1] as const).map(s => <rect key={s} x={lado(g, s, g.quadril * 0.5 + g.coxa * 1.1) - (s > 0 ? 6 : 0)} y={g.yVirilha + 14} width={6} height={9} rx={0.8} fill={sombraDe(cor, 0.1)} stroke={esc} strokeWidth={0.5} />)}
       {p.listra && ([-1, 1] as const).map(s => <path key={s} d={`M ${lado(g, s, g.quadril + 0.6)} ${g.yQuad} L ${lado(g, s, g.quadril * 0.42 + (g.tornozelo + 1) * larga)} ${ate - 1}`} stroke={p.listra} strokeWidth={1.2} />)}
-      {p.forma === 'short' && detalhe && ([-1, 1] as const).map(s => <path key={s} d={`M ${lado(g, s, g.quadril * 0.5 - g.coxa)} ${ate} l 1 1.4 l 1 -1.4 l 1 1.4 l 1 -1.4`} stroke={misturar(cor, '#ffffff', 0.5)} strokeWidth={0.5} fill="none" />)}
+      {p.forma === 'short' && detalhe && !p.fendaLateral && ([-1, 1] as const).map(s => <path key={s} d={`M ${lado(g, s, g.quadril * 0.5 - g.coxa)} ${ate} l 1 1.4 l 1 -1.4 l 1 1.4 l 1 -1.4`} stroke={misturar(cor, '#ffffff', 0.5)} strokeWidth={0.5} fill="none" />)}
+      {/* VIDA 18: o cordão do elástico (tactel, short de corrida), os passadores do cinto, a fenda do short de corrida. */}
+      {p.cordao && <path d={`M ${g.cx - 1.4} ${g.yCint + 2} q -0.8 4 -1.6 6 M ${g.cx + 1.4} ${g.yCint + 2} q 0.8 4 1.6 6`} stroke={misturar(cor, '#ffffff', 0.6)} strokeWidth={0.6} fill="none" strokeLinecap="round" />}
+      {p.passadores && [-0.8, -0.35, 0.35, 0.8].map(t => <rect key={t} x={g.cx + t * (g.cintura + 0.8) - 0.6} y={g.yCint - 0.2} width={1.2} height={3.6} fill={sombraDe(cor, 0.15)} />)}
+      {p.fendaLateral && ([-1, 1] as const).map(s => <path key={`fl${s}`} d={`M ${lado(g, s, g.quadril * 0.5 + g.coxa + 0.6)} ${ate} l ${-s * 1.6} -4 l ${-s * 1.6} 4`} fill={pele} stroke={esc} strokeWidth={0.4} />)}
       {pele && null}
     </g>
   );
@@ -403,17 +437,42 @@ function Inteira({ g, p, ide, detalhe, pele }: { g: Geo; p: P<'inteira'>; ide: s
     );
   }
   const fim = p.comprimento === 'curto' ? g.yVirilha + 18 : p.comprimento === 'joelho' ? g.yJoelho + 2 : p.comprimento === 'midi' ? g.yJoelho + 24 : g.yTorn + 6;
-  const abre = p.comprimento === 'longo' ? 11 : 9;
+  // VIDA 18: o molde do vestido — evasê (o de sempre), rodado (a saia de roda, franzida), coluna (reto, rente ao corpo),
+  // sereia (justo até o joelho, abre embaixo), de baile (a saia armada desde a cintura), império (a cintura alta, sob o busto).
+  const modelo = p.modelo ?? 'evase';
+  const abre = modelo === 'rodado' ? 17 : modelo === 'coluna' ? 2.2 : modelo === 'sereia' ? 13 : modelo === 'baile' ? 26 : modelo === 'imperio' ? 10 : p.comprimento === 'longo' ? 11 : 9;
+  const yCintura = modelo === 'imperio' ? g.topo + 21 : g.yCint;
+  // Os pontos da lateral da saia (da cintura até onde a curva termina; dali, reta até a barra).
+  const wx = modelo === 'imperio' ? g.peito - 0.6 : g.cintura + 0.7;
+  const lateral: Record<string, [number, number, number, number, number, number]> = {
+    sereia: [g.quadril + 1.6, g.yQuad + 6, g.quadril * 0.62, g.yJoelho - 4, g.quadril * 0.66, g.yJoelho + 4],
+    coluna: [g.quadril + 1.6, g.yQuad + 6, g.quadril + 1.8, g.yJoelho, g.quadril + 1.8, g.yJoelho + 6],
+    baile: [g.quadril + 9, g.yCint + 3, g.quadril + 16, g.yQuad + 10, g.quadril + 21, g.yJoelho],
+    rodado: [g.quadril + 5, g.yCint + 4, g.quadril + 9, g.yQuad + 6, g.quadril + 12, g.yQuad + 18],
+    imperio: [g.peito + 1, g.yCint - 2, g.quadril + 3, g.yQuad + 6, g.quadril + 4.5, g.yQuad + 12],
+    evase: [g.quadril + 2, g.yQuad - 4, g.quadril + 3, g.yQuad + 6, g.quadril + 4, g.yQuad + 10]
+  };
+  const [a1, b1, a2, b2, a3, b3] = lateral[modelo] ?? lateral.evase;
+  const fimLado = Math.min(b3, fim);
+  const ida = `M ${lado(g, -1, wx)} ${yCintura} C ${lado(g, -1, a1)} ${b1} ${lado(g, -1, a2)} ${b2} ${lado(g, -1, a3)} ${fimLado} L ${lado(g, -1, g.quadril + abre)} ${fim}`;
+  const barra = modelo === 'rodado'
+    ? Array.from({ length: 6 }, (_, k) => { const x0 = lado(g, -1, g.quadril + abre) + ((g.quadril + abre) * 2) * (k / 6), x1 = lado(g, -1, g.quadril + abre) + ((g.quadril + abre) * 2) * ((k + 1) / 6); return `Q ${(x0 + x1) / 2} ${fim + 3.4} ${x1} ${fim}`; }).join(' ')
+    : `Q ${g.cx} ${fim + 2.5} ${lado(g, 1, g.quadril + abre)} ${fim}`;
+  const volta = `L ${lado(g, 1, a3)} ${fimLado} C ${lado(g, 1, a2)} ${b2} ${lado(g, 1, a1)} ${b1} ${lado(g, 1, wx)} ${yCintura} Z`;
   return (
     <g data-peca={`vestido_${p.comprimento}`} className="figura__inteira">
       {p.manga !== 'sem' && ([-1, 1] as const).map(s => <path key={s} d={braco(g, s, 1.2, p.manga === 'curta' ? g.topo + 26 : 141)} fill={fill} stroke={esc} strokeWidth={0.5} />)}
-      <path d={`${tronco(g, 0.7, g.yCint + 2)}`} fill={fill} stroke={esc} strokeWidth={0.5} />
+      <path d={`${tronco(g, 0.7, yCintura + 2)}`} fill={fill} stroke={esc} strokeWidth={0.5} />
       {p.manga === 'sem' && <path d={`M ${lado(g, -1, g.pesc + 1)} ${g.topo} L ${lado(g, -1, g.ombro + 0.5)} ${g.topo + 4} L ${lado(g, -1, g.peito - 2.5)} ${g.topo + 14} M ${lado(g, 1, g.pesc + 1)} ${g.topo} L ${lado(g, 1, g.ombro + 0.5)} ${g.topo + 4} L ${lado(g, 1, g.peito - 2.5)} ${g.topo + 14}`} stroke={pele} strokeWidth={3.4} strokeLinecap="round" fill="none" />}
-      <path d={`M ${lado(g, -1, g.cintura + 0.7)} ${g.yCint} C ${lado(g, -1, g.quadril + 2)} ${g.yQuad - 4} ${lado(g, -1, g.quadril + 3)} ${g.yQuad + 6} ${lado(g, -1, g.quadril + abre)} ${fim} Q ${g.cx} ${fim + 2.5} ${lado(g, 1, g.quadril + abre)} ${fim} C ${lado(g, 1, g.quadril + 3)} ${g.yQuad + 6} ${lado(g, 1, g.quadril + 2)} ${g.yQuad - 4} ${lado(g, 1, g.cintura + 0.7)} ${g.yCint} Z`} fill={fill} stroke={esc} strokeWidth={0.5} />
+      <path data-modelo={modelo} d={`${ida} ${barra} ${volta}`} fill={fill} stroke={esc} strokeWidth={0.5} />
+      {modelo === 'rodado' && Array.from({ length: 9 }, (_, k) => <path key={`fr${k}`} d={`M ${lado(g, -1, g.cintura) + (g.cintura * 2) * (k + 0.5) / 9} ${g.yCint + 1} l 0 3`} stroke={esc} strokeWidth={0.4} opacity={0.6} />)}
+      {modelo === 'baile' && detalhe && [-14, -7, 0, 7, 14].map(dx => <path key={`bl${dx}`} d={`M ${g.cx + dx * 0.25} ${g.yCint + 3} Q ${g.cx + dx * 0.8} ${g.yQuad + 14} ${g.cx + dx * 1.6} ${fim - 1}`} stroke={esc} strokeWidth={0.5} opacity={0.5} fill="none" />)}
+      {p.fenda && <path d={`M ${lado(g, -1, g.quadril * 0.5)} ${fim} L ${lado(g, -1, g.quadril * 0.42)} ${g.yJoelho - 6}`} stroke={pele} strokeWidth={1.4} />}
       {p.gola === 'v' && <path d={`M ${lado(g, -1, g.pesc + 0.6)} ${g.topo} L ${g.cx} ${g.topo + 12} L ${lado(g, 1, g.pesc + 0.6)} ${g.topo}`} fill={pele} />}
       {(p.gola === 'redonda' || p.gola === 'canoa') && <path d={`M ${lado(g, -1, g.pesc + (p.gola === 'canoa' ? 5 : 1))} ${g.topo} Q ${g.cx} ${g.topo + 5} ${lado(g, 1, g.pesc + (p.gola === 'canoa' ? 5 : 1))} ${g.topo}`} fill={pele} />}
-      {p.cinto && <rect x={lado(g, -1, g.cintura + 0.8)} y={g.yCint - 1.4} width={(g.cintura + 0.8) * 2} height={2.4} fill={p.cinto} />}
-      {detalhe && p.comprimento !== 'curto' && [-1, 1].map(s => <path key={s} d={`M ${g.cx + s * 3} ${g.yQuad + 4} L ${g.cx + s * 8} ${fim - 2}`} stroke={esc} strokeWidth={0.5} opacity={0.5} />)}
+      {p.cinto && <rect x={lado(g, -1, (modelo === 'imperio' ? g.peito - 0.6 : g.cintura) + 0.8)} y={yCintura - 1.4} width={((modelo === 'imperio' ? g.peito - 0.6 : g.cintura) + 0.8) * 2} height={2.4} fill={p.cinto} />}
+      {modelo === 'imperio' && !p.cinto && <path d={`M ${lado(g, -1, g.peito - 0.6)} ${yCintura + 0.6} L ${lado(g, 1, g.peito - 0.6)} ${yCintura + 0.6}`} stroke={esc} strokeWidth={1} />}
+      {detalhe && p.comprimento !== 'curto' && (modelo === 'evase' || modelo === 'imperio') && [-1, 1].map(s => <path key={s} d={`M ${g.cx + s * 3} ${g.yQuad + 4} L ${g.cx + s * 8} ${fim - 2}`} stroke={esc} strokeWidth={0.5} opacity={0.5} />)}
     </g>
   );
 }
@@ -422,12 +481,14 @@ function Casaco({ g, p, detalhe, gravata, ide }: { g: Geo; p: P<'casaco'>; detal
   const cor = p.cor as string, esc = sombraDe(cor, 0.3);
   const tecido = ide ? preenchimento(p as { cor?: unknown; material?: string }, ide, detalhe) : cor;
   const fim = p.comprimento === 'cintura' ? g.yCint + 8 : p.comprimento === 'quadril' ? g.yQuad + 8 : g.yJoelho + 6;
+  // VIDA 18: a modelagem — o blazer acinturado marca a cintura; o trespassado cruza a frente (abre menos); o anoraque é largo.
+  const cint = p.modelo === 'acinturado' ? 0.6 : p.modelo === 'anoraque' ? 3.6 : p.modelo === 'trespassado' ? 1.4 : 2;
   const lado_ = (s: 1 | -1) => {
-    const o = g.ombro + 1.8, q = g.quadril + 2.4 + (p.comprimento === 'joelho' ? 4 : 0);
-    const abre = p.forma === 'jaqueta' || p.forma === 'corta_vento' ? 2.2 : 3.4;
+    const o = g.ombro + 1.8, q = g.quadril + 2.4 + (p.comprimento === 'joelho' ? (p.modelo === 'reto' ? 3 : 4) : 0) + (p.modelo === 'anoraque' ? 1.6 : 0);
+    const abre = p.modelo === 'trespassado' ? -1.8 : p.forma === 'jaqueta' || p.forma === 'corta_vento' ? 2.2 : 3.4;
     return `M ${lado(g, s, g.pesc + 1.4)} ${g.topo - 1} C ${lado(g, s, o * 0.7)} ${g.topo - 0.5} ${lado(g, s, o)} ${g.topo + 1.5} ${lado(g, s, o)} ${g.topo + 6}
-      L ${lado(g, s, g.peito + 1.8)} ${g.topo + 18} C ${lado(g, s, g.peito + 1.4)} ${g.yCint - 10} ${lado(g, s, g.cintura + g.barriga + 2)} ${g.yCint - 4} ${lado(g, s, g.cintura + g.barriga * 0.6 + 2)} ${g.yCint}
-      C ${lado(g, s, g.cintura + 2.2)} ${g.yCint + 6} ${lado(g, s, q)} ${Math.min(fim, g.yQuad) - 6} ${lado(g, s, q)} ${fim}
+      L ${lado(g, s, g.peito + 1.8)} ${g.topo + 18} C ${lado(g, s, g.peito + 1.4)} ${g.yCint - 10} ${lado(g, s, g.cintura + g.barriga + cint)} ${g.yCint - 4} ${lado(g, s, g.cintura + g.barriga * 0.6 + cint)} ${g.yCint}
+      C ${lado(g, s, g.cintura + cint + 0.2)} ${g.yCint + 6} ${lado(g, s, q)} ${Math.min(fim, g.yQuad) - 6} ${lado(g, s, q)} ${fim}
       L ${lado(g, s, abre * 0.4)} ${fim} L ${lado(g, s, abre)} ${g.topo + 22} L ${lado(g, s, g.pesc - 0.6)} ${g.topo + 3} Z`;
   };
   const claro = misturar(cor, '#ffffff', 0.4);
@@ -443,7 +504,23 @@ function Casaco({ g, p, detalhe, gravata, ide }: { g: Geo; p: P<'casaco'>; detal
       {p.forma === 'jaqueta_jeans' && detalhe && ([-1, 1] as const).map(s => <path key={`b${s}`} d={`M ${lado(g, s, 6)} ${g.topo + 17} l ${s * 8} 0 l 0 6 l ${-s * 8} 0 Z`} fill="none" stroke="#c99a4a" strokeWidth={0.6} />)}
       {p.forma === 'corta_vento' && p.cor2 && ([-1, 1] as const).map(s => <path key={`f${s}`} d={`M ${lado(g, s, g.ombro + 1.8)} ${g.topo + 10} L ${lado(g, s, g.peito + 1.8)} ${g.topo + 24}`} stroke={p.cor2} strokeWidth={2.2} />)}
       {(p.forma === 'blazer' || p.forma === 'sobretudo' || p.forma === 'casaco') && detalhe && <><circle cx={g.cx - 2.6} cy={g.yCint + 1} r={0.8} fill={esc} />{p.comprimento === 'joelho' && <circle cx={g.cx - 2.6} cy={g.yCint + 14} r={0.8} fill={esc} />}</>}
-      {p.forma === 'jaqueta' && detalhe && <path d={`M ${lado(g, -1, g.cintura + 2.2)} ${fim - 3} L ${lado(g, 1, g.cintura + 2.2)} ${fim - 3}`} stroke={claro} strokeWidth={0.6} opacity={0.6} />}
+      {p.forma === 'jaqueta' && detalhe && p.modelo !== 'perfecto' && <path d={`M ${lado(g, -1, g.cintura + 2.2)} ${fim - 3} L ${lado(g, 1, g.cintura + 2.2)} ${fim - 3}`} stroke={claro} strokeWidth={0.6} opacity={0.6} />}
+      {/* VIDA 18 · a perfecto: o zíper atravessado (do ombro esquerdo à barra do outro lado), a lapela larga com botões de pressão, o cinto na barra. */}
+      {p.modelo === 'perfecto' && <>
+        <path d={`M ${lado(g, 1, g.pesc + 4)} ${g.topo + 6} L ${lado(g, -1, 3.2)} ${fim - 1}`} stroke={claro} strokeWidth={0.9} />
+        {([-1, 1] as const).map(s => <path key={`pl${s}`} d={`M ${lado(g, s, g.pesc)} ${g.topo + 2} L ${lado(g, s, g.pesc + 7.5)} ${g.topo + 9} L ${lado(g, s, g.pesc + 4)} ${g.topo + 14}`} fill="none" stroke={esc} strokeWidth={1} strokeLinejoin="round" />)}
+        {([-1, 1] as const).map(s => <circle key={`ps${s}`} cx={lado(g, s, g.pesc + 6.2)} cy={g.topo + 9.4} r={0.6} fill={claro} />)}
+      </>}
+      {p.cinto && <g><rect x={lado(g, -1, (p.comprimento === 'joelho' ? g.cintura + cint + 0.6 : g.cintura + cint + 0.2))} y={(p.comprimento === 'joelho' ? g.yCint : fim - 3.4) - 1.2} width={(p.comprimento === 'joelho' ? g.cintura + cint + 0.6 : g.cintura + cint + 0.2) * 2} height={2.6} fill={sombraDe(cor, 0.12)} stroke={esc} strokeWidth={0.4} /><rect x={g.cx - 1.8} y={(p.comprimento === 'joelho' ? g.yCint : fim - 3.4) - 1.6} width={3.6} height={3.4} rx={0.4} fill="none" stroke={p.cor2 ?? '#c9ccd1'} strokeWidth={0.7} /></g>}
+      {/* O trespassado: duas fileiras de botões. */}
+      {p.modelo === 'trespassado' && [-1, 1].flatMap(s => [0, 1, 2].map(k => <circle key={`tb${s}${k}`} cx={g.cx + s * 4.4} cy={g.topo + 24 + k * 8} r={0.9} fill={p.cor2 ?? esc} />))}
+      {p.modelo === 'reto' && [0, 1, 2].map(k => <circle key={`rb${k}`} cx={g.cx - 2.6} cy={g.topo + 24 + k * 10} r={0.85} fill={esc} />)}
+      {p.bolsosFaca && ([-1, 1] as const).map(s => <path key={`bf${s}`} d={`M ${lado(g, s, g.cintura - 3)} ${g.yQuad - 4} l ${s * 7} 0 l ${-s * 0.3} 2 l ${-s * 7} 0 Z`} fill={sombraDe(cor, 0.12)} stroke={esc} strokeWidth={0.4} />)}
+      {/* O anoraque: o capuz atrás do pescoço, o punho de elástico, o cordão da barra. */}
+      {p.capuz && <path d={`M ${lado(g, -1, g.pesc + 6)} ${g.topo + 1} Q ${lado(g, -1, g.pesc + 7)} ${g.topo - 8} ${g.cx} ${g.topo - 9} Q ${lado(g, 1, g.pesc + 7)} ${g.topo - 8} ${lado(g, 1, g.pesc + 6)} ${g.topo + 1} Q ${g.cx} ${g.topo - 3} ${lado(g, -1, g.pesc + 6)} ${g.topo + 1} Z`} fill={sombraDe(cor, 0.1)} stroke={esc} strokeWidth={0.5} />}
+      {p.punhoElastico && ([-1, 1] as const).map(s => { const x = lado(g, s, g.ombro + 2.6); return <rect key={`pe${s}`} x={x - g.antebraco - 1.4} y={137} width={(g.antebraco + 1.4) * 2} height={3.6} rx={1.2} fill={sombraDe(cor, 0.15)} stroke={esc} strokeWidth={0.4} />; })}
+      {p.cordao && ([-1, 1] as const).map(s => <g key={`co${s}`}><path d={`M ${lado(g, s, 5)} ${fim - 1} q ${s * 0.6} 3 ${s * 0.2} 5`} stroke={p.cor2 ?? claro} strokeWidth={0.6} fill="none" /><rect x={lado(g, s, 5) + s * 0.2 - 0.8} y={fim + 3.6} width={1.6} height={2} rx={0.5} fill={esc} /></g>)}
+      {p.modelo === 'trucker' && <><path d={`M ${lado(g, -1, g.cintura + 2.2)} ${fim - 4} L ${lado(g, 1, g.cintura + 2.2)} ${fim - 4}`} stroke="#c99a4a" strokeWidth={0.6} />{[0, 1, 2, 3].map(k => <circle key={`tk${k}`} cx={g.cx + 1.4} cy={g.topo + 14 + k * 7} r={0.75} fill="#c9ccd1" />)}</>}
     </g>
   );
 }
@@ -690,6 +767,8 @@ export const Figura = memo(function Figura({ visual, genero, idade, semente = 'e
               <path d={`M ${m.x - 6.5} ${m.y + 1.4} L ${m.x} ${m.y + 3.4} L ${m.x + 6.5} ${m.y + 1.4}`} fill="none" stroke={esc2} strokeWidth={0.5} /><circle cx={m.x} cy={m.y + 3.2} r={0.9} fill={fer} />
             </g>);
         })()}
+        {/* VIDA 18: a bolsa de costas — a mochila nas costas, a transversal cruzando, a pochete atrás, a tote e a clutch na outra mão. */}
+        {bolsa && costas && idade >= 6 && <BolsaDeCostas g={g} bolsa={bolsa} lado={(s2, d) => lado(g, s2, d)} />}
         {anel && <g className="figura__anel" data-acessorio="anel"><circle cx={lado(g, -1, g.ombro + 2.7)} cy={149.5} r={1.2} fill="none" stroke={anel.cor} strokeWidth={0.9} />{anel.pedra && <circle cx={lado(g, -1, g.ombro + 2.7)} cy={148.4} r={0.7} fill={anel.pedra} />}</g>}
       </g>
       {/* A cabeça: o mesmo retrato (rosto, cabelo, barba, óculos, chapéu), sem o busto. */}
@@ -699,8 +778,10 @@ export const Figura = memo(function Figura({ visual, genero, idade, semente = 'e
           <ellipse cx={60} cy={40} rx={16.5} ry={19.5} fill={pele} stroke={contorno} strokeWidth={0.6} />
           {([-1, 1] as const).map(s => <ellipse key={s} cx={60 + s * 17} cy={42} rx={2.4} ry={4} fill={sombraPele} />)}
           {/* VIDA 13: o comprimento e o volume de cada corte de costas (o que fica preso, os cordões, as mechas); o chapéu. */}
-          <CabeloDeCostas cabelo={idade <= 2 ? 'raspado' : visual.cabelo} cor={corDoCabelo(visual.corCabelo)} mechas={visual.mechas && idade >= 13 ? corDoCabelo(visual.mechas) : undefined} />
-          {visual.chapeu && idade > 2 && <path data-chapeu-costas={visual.chapeu} d={visual.chapeu === 'bone' || visual.chapeu === 'gorro' ? 'M 43 33 Q 43 16 60 15.5 Q 77 16 77 33 Q 60 30 43 33 Z' : 'M 36 31 Q 44 29 46 20 Q 60 12 74 20 Q 76 29 84 31 Q 60 35 36 31 Z'} fill="#3d4650" />}
+          {/* VIDA 18: com chapéu, o coque e o moicano ficam presos por baixo (como na frente). */}
+          <CabeloDeCostas cabelo={idade <= 2 ? 'raspado' : visual.chapeu && COBRE_O_ALTO_COSTAS[visual.cabelo] ? COBRE_O_ALTO_COSTAS[visual.cabelo] : visual.cabelo} cor={corDoCabelo(visual.corCabelo)} mechas={visual.mechas && idade >= 13 ? corDoCabelo(visual.mechas) : undefined} />
+          {/* VIDA 18: o chapéu de cada modelo visto por trás, na cor da frente (antes: a mesma meia-lua cinza para todos). */}
+          {visual.chapeu && idade > 2 && <ChapeuDeCostas tipo={visual.chapeu} modelo={visual.modeloChapeu} semente={hashDoRetrato(semente || visual.pele + visual.cabelo)} cabelo={visual.cabelo} />}
         </g>
       ) : (
         <g transform="translate(20 0)" className="figura__cabeca">
