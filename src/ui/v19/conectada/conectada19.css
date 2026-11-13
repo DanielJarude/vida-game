@@ -1,0 +1,62 @@
+/* VIDA 19 · VIDA Conectada — o feed, as publicações e o perfil (dentro do app Rede; as cores vêm do celular). */
+.feed19__lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+.post19 { border: 1px solid var(--cel-fio); border-radius: 16px; padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+.post19__quem { display: flex; gap: 9px; align-items: center; background: none; border: 0; padding: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; min-width: 0; }
+.post19__quem svg { border-radius: 50%; flex: none; }
+.post19__quem > span { display: flex; flex-direction: column; min-width: 0; }
+.post19__quem > span > span { font-size: 12px; color: var(--cel-tinta-2); overflow-wrap: anywhere; }
+.post19__verificado { color: #2f7de1; font-weight: 700; }
+.post19__titulo { margin: 0; font: 700 17px/1.2 var(--font-display, var(--font-serif)); }
+.post19--filho .post19__titulo, .post19--amor .post19__titulo { color: #b8403a; }
+.post19--perda .post19__titulo, .post19--saude .post19__titulo { color: var(--cel-tinta-2); }
+.post19__legenda { margin: 0; font-size: 14px; line-height: 1.4; }
+.post19__origem { margin: 0; font-size: 12px; color: var(--cel-tinta-2); border-left: 2px solid var(--cel-fio); padding-left: 8px; }
+.post19__numeros { margin: 0; display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--cel-tinta-2); }
+.post19__comentarios { list-style: none; margin: 0; padding: 8px 10px; border-radius: 12px; background: color-mix(in oklab, var(--cel-tinta) 5%, var(--cel-fundo)); display: flex; flex-direction: column; gap: 5px; font-size: 13px; line-height: 1.35; }
+.post19__comentarios button { background: none; border: 0; padding: 0; font: 700 13px/1.35 var(--font-sans); color: inherit; cursor: pointer; }
+.post19__meu { color: var(--cel-tinta-2); }
+.post19__acoes { display: flex; flex-wrap: wrap; gap: 6px; }
+.post19__acoes button, .perfil19__botoes button, .post19__tons button, .feed19__alta button {
+  display: inline-flex; align-items: center; gap: 5px; background: none; border: 1px solid var(--cel-fio); border-radius: 999px; padding: 6px 11px;
+  font: 600 12.5px/1 var(--font-sans); color: inherit; cursor: pointer; min-height: 32px;
+}
+.post19__acoes button.feito { color: #c8463b; border-color: currentColor; }
+.post19__acoes button:disabled, .perfil19__botoes button:disabled, .post19__tons button:disabled { opacity: 0.5; cursor: default; }
+.post19__tons { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 2px; }
+.tom19--provocar, .tom19--discordar { border-style: dashed !important; }
+
+.midia19 { position: relative; border-radius: 12px; overflow: hidden; aspect-ratio: 4 / 3; display: grid; place-items: center;
+  background: linear-gradient(160deg, #e9dcc6, #cdb38c); }
+.midia19--story { aspect-ratio: 3 / 4; max-width: 240px; align-self: center; width: 70%; box-shadow: 0 0 0 3px #e0729a; }
+.midia19--video { aspect-ratio: 9 / 10; }
+.midia19--amor, .midia19--filho { background: linear-gradient(160deg, #f6dbe0, #e9b8c2); }
+.midia19--lugar, .midia19--casa { background: linear-gradient(170deg, #d6e9f5, #f3d9a8); }
+.midia19--trabalho, .midia19--promocao, .midia19--estudo { background: linear-gradient(160deg, #e6e3da, #cfc8b5); }
+.midia19--perda, .midia19--saude, .midia19--desemprego { background: linear-gradient(160deg, #e3e4e8, #b9bcc6); }
+.midia19__cena { display: flex; align-items: flex-end; justify-content: center; gap: 0; }
+.midia19__cena > * + * { margin-left: -18px; }
+.midia19__play { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; }
+.midia19__duracao, .midia19__selo { position: absolute; right: 8px; bottom: 8px; background: rgba(0, 0, 0, 0.6); color: #fff; font: 600 11px/1 var(--font-sans); padding: 4px 6px; border-radius: 6px; }
+.feed19__sem-rosto { display: inline-block; border-radius: 50%; background: var(--cel-fio); }
+
+.feed19__alta { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.feed19__alta li { display: flex; align-items: center; gap: 10px; border: 1px solid var(--cel-fio); border-radius: 14px; padding: 10px 12px; }
+.feed19__alta li > span:nth-child(2) { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; font-size: 14px; }
+.feed19__alta li > span:nth-child(2) span { font-size: 12px; color: var(--cel-tinta-2); }
+.feed19__pos { font: 700 20px/1 var(--font-display, var(--font-serif)); color: var(--cel-tinta-2); width: 22px; text-align: center; flex: none; }
+
+.perfil19 { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.perfil19__voltar { align-self: flex-start; background: none; border: 0; padding: 4px 0; font: 600 13px/1 var(--font-sans); color: inherit; cursor: pointer; }
+.perfil19__topo { display: flex; gap: 12px; align-items: center; min-width: 0; }
+.perfil19__topo svg { border-radius: 50%; flex: none; }
+.perfil19__topo h3 { margin: 0 0 3px; font: 700 19px/1.15 var(--font-display, var(--font-serif)); }
+.perfil19__topo p { margin: 0; font-size: 12.5px; color: var(--cel-tinta-2); line-height: 1.4; }
+.perfil19__botoes { display: flex; flex-wrap: wrap; gap: 6px; }
+.perfil19 h4 { margin: 4px 0 6px; font: 700 13px/1 var(--font-sans); text-transform: uppercase; letter-spacing: 0.04em; color: var(--cel-tinta-2); }
+.perfil19__marcos { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; font-size: 13.5px; }
+.perfil19__conexoes { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+.perfil19__conexoes button, .perfil19__fora { display: flex; gap: 8px; align-items: center; width: 100%; background: none; border: 1px solid var(--cel-fio); border-radius: 12px; padding: 6px 8px; color: inherit; font: inherit; text-align: left; cursor: pointer; min-width: 0; }
+.perfil19__fora { cursor: default; }
+.perfil19__conexoes svg { border-radius: 50%; flex: none; }
+.perfil19__conexoes span span { display: block; font-size: 11.5px; color: var(--cel-tinta-2); }
+.perfil19__conexoes strong { font-size: 13px; overflow-wrap: anywhere; }

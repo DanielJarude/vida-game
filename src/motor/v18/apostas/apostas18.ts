@@ -17,7 +17,7 @@ import { debitar, podeApostar, proibido, registrar } from '../../sistemas/aposta
 import { ligaDe } from '../../sistemas/ligas';
 import { LOTERIAS18, INSCRICAO_TURFE, PREMIOS_TURFE, type LoteriaId } from '../../dados18/apostas/loterias18';
 import { anotar18, estadoApostas18, type ApostaEsportiva18, type Bilhete18, type MercadoEsportivo } from './estado18';
-import { apurarConcurso, bolaoDaLoterica, precoDaAposta, precoDaLoteca, proximoConcurso, concursosDoAnoAcabaram, surpresinha, validarJogo, validarLoteca, primeiroDoAno } from './loterias18';
+import { apurarConcurso, bolaoDaLoterica, precoDaAposta, precoDaLoteca, proximoConcurso, concursosDoAnoAcabaram, surpresinha, validarJogo, validarLoteca, primeiroDoAno, viradaDoAno, ehVirada } from './loterias18';
 import { impedidoNoFutebol, liquidarTemporada, mercadoDaTemporada, odd, paisDoFutebol, probabilidades, gradeDePlacares, resultadoDoJogo, rodada } from './esportivas18';
 import { chancesDoPareo, chegada, hipodromosDaVida, oddTurfe, pareo } from './turfe18';
 import { bingoBeneficente, jogarBingo } from './bingo18';
@@ -40,8 +40,8 @@ export function leiDa(v: Vida, m: Modalidade18): { permitido: boolean; texto: st
 /* ================================================================== As operações */
 
 export type OqueAposta18 =
-  | { jogo: 'loteria'; oque: 'comprar'; loteria: LoteriaId; jogos?: number[][]; palpites?: ('1' | 'X' | '2')[][]; surpresinhas?: number; dezenas?: number }
-  | { jogo: 'loteria'; oque: 'bolao'; loteria: LoteriaId; cotas: number }
+  | { jogo: 'loteria'; oque: 'comprar'; loteria: LoteriaId; jogos?: number[][]; palpites?: ('1' | 'X' | '2')[][]; surpresinhas?: number; dezenas?: number; /** VIDA 19: no concurso especial da Mega da Virada. */ virada?: boolean }
+  | { jogo: 'loteria'; oque: 'bolao'; loteria: LoteriaId; cotas: number; virada?: boolean }
   | { jogo: 'loteria'; oque: 'bolao_conhecidos'; loteria: LoteriaId; pessoas: string[]; jogos: number }
   | { jogo: 'loteria'; oque: 'sorteio'; loteria: LoteriaId }
   | { jogo: 'esportiva'; oque: 'jogo'; jogoK: number; mercado: '1x2' | 'placar' | 'gols'; palpite: string; valor: number }
@@ -62,7 +62,7 @@ export function pareoAberto(v: Vida, hip: string): { numero: number; daCasa?: Ca
   const daCasa = insc ? cavalosDaCasa(v).find(c => c.id === insc) : undefined;
   return { numero, daCasa };
 }
-export const cavalosDaCasa = (v: Vida) => todasAsPropriedades(v).flatMap(x => x.p.cavalos ?? []).filter(c => !c.aposentado && anoDe(v.t) - c.nasc >= 2);
+export const cavalosDaCasa = (v: Vida) => todasAsPropriedades(v).flatMap(x => x.p.cavalos ?? []).filter(c => !c.aposentado && !c.prenhe && !c.reproducao && anoDe(v.t) - c.nasc >= 2); // VIDA 19: a égua prenhe e o reprodutor não correm
 export const pareoDe = (v: Vida, hip: string) => { const a = pareoAberto(v, hip); return pareo(v, hip, a.numero, a.daCasa); };
 
 /** A rodada aberta do futebol (a próxima numeração; uma por semana). */
@@ -80,7 +80,7 @@ export function custoDaOperacao(v: Vida, q: OqueAposta18): number {
       const jogos = q.jogos?.length ? q.jogos.map(j => j.length) : Array(q.surpresinhas ?? 1).fill(q.dezenas ?? LOTERIAS18[q.loteria].min);
       return Math.round(jogos.reduce((s, n) => s + precoDaAposta(q.loteria, n), 0) * 100) / 100;
     }
-    if (q.oque === 'bolao') return Math.round(bolaoDaLoterica(v, q.loteria).valorCota * q.cotas * 100) / 100;
+    if (q.oque === 'bolao') return Math.round(bolaoDaLoterica(v, q.loteria, !!q.virada).valorCota * q.cotas * 100) / 100;
     if (q.oque === 'bolao_conhecidos') return Math.round(precoDaAposta(q.loteria, LOTERIAS18[q.loteria].min + (q.loteria === 'lotomania' ? 0 : 1)) * q.jogos / (q.pessoas.length + 1) * 100) / 100;
     return 0;
   }
@@ -102,6 +102,7 @@ export function disponibilidadeAposta18(v: Vida, q: OqueAposta18): Veredito {
     case 'loteria': {
       if (q.oque === 'sorteio') return PERMITIDO;
       if (concursosDoAnoAcabaram(v, q.loteria)) return bloqueio('incompativel', 'Os concursos deste ano já correram: o próximo é no ano que vem.');
+      if ((q.oque === 'comprar' || q.oque === 'bolao') && q.virada && q.loteria !== 'mega') return bloqueio('impossivel', 'A Virada é da Mega-Sena.');
       if (q.oque === 'comprar') {
         if (q.loteria === 'loteca') { const e = validarLoteca(q.palpites ?? []); if (e) return bloqueio('impossivel', e); }
         else for (const j of q.jogos ?? []) { const e = validarJogo(q.loteria, j); if (e) return bloqueio('impossivel', e); }
@@ -109,7 +110,7 @@ export function disponibilidadeAposta18(v: Vida, q: OqueAposta18): Veredito {
         if (q.dezenas !== undefined && (q.dezenas < LOTERIAS18[q.loteria].min || q.dezenas > LOTERIAS18[q.loteria].max)) return bloqueio('impossivel', 'Quantidade de dezenas fora da regra.');
       }
       if (q.oque === 'bolao') {
-        const b = bolaoDaLoterica(v, q.loteria);
+        const b = bolaoDaLoterica(v, q.loteria, !!q.virada);
         const ja = (v.apostas18?.bilhetes ?? []).filter(x => x.loteria === q.loteria && x.concurso === b.concurso && x.bolao?.organizador === 'loterica').reduce((s, x) => s + x.bolao!.minhas, 0);
         if (!(q.cotas >= 1) || ja + q.cotas > b.cotas) return bloqueio('incompativel', `O bolão tem ${b.cotas} cotas${ja ? ` (você já tem ${ja})` : ''}.`);
       }
@@ -221,7 +222,7 @@ function loteria(v: Vida, rr: Rng, q: Extract<OqueAposta18, { jogo: 'loteria' }>
   const e = estadoApostas18(v);
   const l = q.loteria;
   const L = LOTERIAS18[l];
-  const n = proximoConcurso(v, l);
+  const n = (q.oque === 'comprar' || q.oque === 'bolao') && q.virada ? viradaDoAno(anoDe(v.t)) : proximoConcurso(v, l);
   if (q.oque === 'sorteio') {
     const a = apurarConcurso(v, l, n);
     e.proximo[l] = n + 1;
@@ -240,7 +241,7 @@ function loteria(v: Vida, rr: Rng, q: Extract<OqueAposta18, { jogo: 'loteria' }>
     const jogos = l === 'loteca' ? [[]] : q.jogos?.length ? q.jogos.map(j => [...j].sort((x, y) => x - y)) : Array.from({ length: q.surpresinhas ?? 1 }, () => surpresinha(rr, l, q.dezenas ?? L.min));
     b = { id: `bl${v.seq++}`, loteria: l, concurso: n, t: v.t, jogos, ...(l === 'loteca' ? { palpites: q.palpites } : {}), custo, ...(!q.jogos?.length && l !== 'loteca' ? { surpresinha: true } : {}) };
   } else if (q.oque === 'bolao') {
-    const bo = bolaoDaLoterica(v, l);
+    const bo = bolaoDaLoterica(v, l, !!q.virada);
     b = { id: `bl${v.seq++}`, loteria: l, concurso: n, t: v.t, jogos: bo.jogos, ...(bo.palpites ? { palpites: bo.palpites } : {}), custo, bolao: { minhas: q.cotas, cotas: bo.cotas, organizador: 'loterica' } };
   } else {
     const d = L.min + (l === 'lotomania' ? 0 : 1);
@@ -251,6 +252,7 @@ function loteria(v: Vida, rr: Rng, q: Extract<OqueAposta18, { jogo: 'loteria' }>
   registrar(v, { jogo: 'loteria18', t: v.t, apostado: custo, recebido: 0, texto: `${L.nome} ${n}` });
   e.bilhetes.push(b);
   if (e.bilhetes.length > 120) e.bilhetes.splice(0, e.bilhetes.length - 120);
+  if (ehVirada(l, n)) return { texto: `${q.oque === 'comprar' ? 'Aposta registrada' : 'Cotas do bolão registradas'} na Mega da Virada (concurso ${n}, ${fmt(custo)}). O sorteio é na noite de 31 de dezembro; o prêmio não acumula.` };
   return { texto: `${q.oque === 'comprar' ? 'Aposta registrada' : 'Cotas do bolão registradas'} no concurso ${n} da ${L.nome} (${fmt(custo)}). O sorteio é ${L.dias}.` };
 }
 

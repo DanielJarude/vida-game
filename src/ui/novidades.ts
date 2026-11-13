@@ -26,6 +26,26 @@ export interface NotaDeVersao {
 
 export const NOTAS: NotaDeVersao[] = [
   {
+    versao: '19',
+    data: '2026-11-13',
+    titulo: 'Pessoas com vida própria e a VIDA Conectada',
+    novidades: [
+      'As pessoas da sua vida vivem mesmo quando você não olha: amigos, irmãos, primos, ex e colegas trabalham, guardam ou se endividam, compram o carro e o apartamento, abrem (e fecham) negócios, namoram, casam, se separam, voltam, têm filhos, mudam de cidade — cada um pelo seu jeito e pelo momento da vida.',
+      'Quem importa também se conhece entre si: amizades do mesmo grupo, brigas, pazes — e a ficha de cada um mostra.',
+      'Celular · Rede: o feed com as publicações de quem está na sua vida (texto, foto, álbum, vídeo curto, story), na rede de cada um, com curtidas, comentários e quem comentou. Curtir, comentar no tom que você escolher, compartilhar, puxar conversa pela publicação (vai para Mensagens) e abrir o perfil da pessoa, com as conexões que ela mostra.',
+      'Mega da Virada: o concurso especial do fim do ano, com o prêmio que não acumula (sem sena, vai para a quina).',
+      'Haras: cobrir as éguas com garanhões da casa ou de fora; os potros nascem com a linhagem dos pais e o acaso deles.',
+      'Campo: CAR, georreferenciamento, outorga de água e o crédito de custeio do Plano Safra (Pronaf, Pronamp, demais), com a fiscalização ambiental e as ações de divisa pela Justiça. Empresas do campo: agroindústria e laticínio, que compram da sua própria terra.'
+    ],
+    melhorias: [
+      'O placar de cada jogo da rodada das apostas e da Loteca é o mesmo jogo da tabela do campeonato.',
+      'Salão, cozinha, obra, elétrica, estrada e balcão ganharam áreas, desafios e a saída por conta própria.'
+    ],
+    correcoes: [
+      'O amigo que se casava não tinha com quem: agora a parceria tem nome, e a história continua.'
+    ]
+  },
+  {
     versao: 'Eras (protótipo)',
     data: '2026-11-13',
     titulo: 'Eras históricas: nascer no Brasil de outra década',

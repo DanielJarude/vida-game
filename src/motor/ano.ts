@@ -8,6 +8,10 @@
  * Silêncio é permitido: nem todo ano precisa de uma história.
  */
 
+import { processarVidas19 } from './v19/npcs/vidas19';
+import { processarConectada19 } from './v19/conectada/conectada19';
+import { processarHaras19 } from './v19/haras/haras19';
+import { processarAgro19 } from './v19/agro/agro19';
 import { processarJeito } from './sistemas/convivio126';
 import { processarPersonalizacao } from './sistemas/personalizacao';
 import { fotografarEvolucao, praticandoPor } from './sistemas/progressao';
@@ -292,6 +296,8 @@ function viverAno(v: Vida, r: Rng): void {
   recalcularConvivio(v);
   processarOportunidades(v, r);
   processarMundoVivo(v);
+  processarVidas19(v); // VIDA 19: o bolso, a meta, a união, os filhos e os laços de quem importa e não é da casa
+  processarConectada19(v); // VIDA 19: o que se disse na rede (o apoio, a indireta) mexe nos laços entre as pessoas do mundo
   // REWORK 12.3 · E1: a equipe do trabalho (quem chefia, os colegas, o mentor, o rival, o reencontro, as sanções).
   processarEquipe(v);
   // VIDA 12.6: a reputação profissional anda com o que o ano mostrou.
@@ -321,7 +327,9 @@ function viverAno(v: Vida, r: Rng): void {
   processarVeiculos(v, r);
   processarImoveis(v, r, ec);
   if (v.fatos['rural18_familia'] === undefined) terraDaFamilia(v, rngDe(v.id, 'familia18')); // VIDA 18: a terra de quem vem do campo
+  processarHaras19(v); // VIDA 19: os potros que nascem das coberturas do ano passado (antes do ano da fazenda: entram no rebanho)
   processarFazendas18(v); // VIDA 18: o ano de cada propriedade rural (clima, safra, rebanho, custos) — uma vez, na conta
+  processarAgro19(v); // VIDA 19: o crédito de custeio que vence, a fiscalização ambiental, a divisa (pela Justiça de sempre)
   // REWORK 12: a coleção (o mercado das peças) e as empresas (o ano de cada uma; a distribuição cai na conta).
   processarColecao(v, r);
   processarParalelos(v, r);

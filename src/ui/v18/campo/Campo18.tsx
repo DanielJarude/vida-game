@@ -4,6 +4,8 @@
  * (receita e custo, linha a linha) e a previsão de um ano normal. Também as ofertas da região (comprar, financiar,
  * arrendar), a terra da família e as festas do campo. Carregada sob demanda (pacote próprio).
  */
+import { Haras19 } from '../../v19/haras/Haras19';
+import { Papelada19 } from '../../v19/agro/Papelada19';
 import { useMemo, useState } from 'react';
 import type { Vida } from '../../../motor/tipos';
 import type { Acao } from '../../../motor/acoes';
@@ -119,7 +121,7 @@ function Propriedade({ vida, agir, p, propria }: { vida: Vida; agir: Agir; p: Pr
         {parte === 'rebanho' && <Rebanho vida={vida} agir={agir} p={p} />}
         {parte === 'estrutura' && <Estrutura vida={vida} agir={agir} p={p} />}
         {parte === 'gestao' && <Gestao vida={vida} agir={agir} p={p} propria={propria} />}
-        {parte === 'contas' && <Contas p={p} r={r} />}
+        {parte === 'contas' && <><Contas p={p} r={r} /><Papelada19 vida={vida} agir={agir} p={p} /></>}
       </div>
     </article>
   );
@@ -273,10 +275,7 @@ function Rebanho({ vida, agir, p }: { vida: Vida; agir: Agir; p: PropriedadeRura
               <BotaoAcao vida={vida} agir={agir} acao={r18({ op: 'vender_animais', id: p.id, especie: rb.especie, fracao: 1 })}>Vender todos</BotaoAcao>
             </div>
             {rb.especie === 'cavalos' && (p.cavalos?.length ?? 0) > 0 && (
-              <ul className="campo18__cavalos" aria-label="Cavalos de corrida">
-                {p.cavalos!.map(c => <li key={c.id}><strong>{c.nome}</strong> <span>{anoDe(vida.t) - c.nasc} anos · velocidade {c.velocidade} · fundo {c.fundo} · {c.corridas} corridas, {c.vitorias} vitórias{c.aposentado ? ' · aposentado' : ''}</span></li>)}
-                <li className="nota">Correm no turfe: Vida · Apostas · Turfe → inscrever um cavalo da casa.</li>
-              </ul>
+              <Haras19 vida={vida} agir={agir} p={p} />
             )}
           </section>
         );

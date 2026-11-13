@@ -115,6 +115,22 @@ export const TIPOS_DE_EMPRESA: readonly TipoDeEmpresa[] = [
     capital: 22000000, ativos: 0.7, publico: 320000, capacidade: 700000, ticket: { popular: 20, medio: 35, alto: 70 }, procura: { popular: 1.35, medio: 1, alto: 0.55 },
     variavel: 0.06, outros: 0.08, ponto: 0, equipe: 110, salario: 4200, manutencao: 0.05, ciclo: 0.8, turismo: true, apoio: 0.12, obra: true, cidadeGrande: true,
     doRamo: /veterin|biolog|zootec|tratador/, publicoNome: ['visitante', 'visitantes']
+  },
+  // VIDA 19 — as empresas do campo. Compram a matéria-prima (o leite, o café, a fruta, a cana) e vendem o produto
+  // beneficiado; quem tem a terra que produz a matéria-prima vende para a própria empresa pelo preço de mercado (a fazenda
+  // conta a venda uma vez; a empresa conta a compra uma vez) e ganha no frete curto e na origem (`v19/agro`).
+  {
+    id: 'agroindustria', nome: 'uma agroindústria', rotulo: 'Agroindústria', artigo: 'a', descricao: 'Beneficia o que o campo colhe: café torrado, polpa de fruta, farinha, açúcar mascavo. A matéria-prima leva mais da metade de cada venda.',
+    capital: 950000, ativos: 0.7, publico: 260000, capacidade: 420000, ticket: { popular: 9, medio: 14, alto: 32 }, procura: { popular: 1.3, medio: 1, alto: 0.5 },
+    variavel: 0.56, outros: 0.12, ponto: 60000, equipe: 14, salario: 2800, manutencao: 0.06, ciclo: 0.8,
+    doRamo: /produtor|agron|agricult|zootec|tecnico_agro|engenheiro_alimentos|cafeic/, publicoNome: ['comprador', 'unidades vendidas']
+  },
+  {
+    id: 'laticinio', nome: 'um laticínio', rotulo: 'Laticínio', artigo: 'o', descricao: 'Leite que chega cedo vira queijo, iogurte e manteiga. Inspeção sanitária rígida, margem curta, giro diário.',
+    capital: 1300000, ativos: 0.75, publico: 300000, capacidade: 480000, ticket: { popular: 11, medio: 17, alto: 38 }, procura: { popular: 1.3, medio: 1, alto: 0.5 },
+    variavel: 0.6, outros: 0.11, ponto: 50000, equipe: 18, salario: 2900, manutencao: 0.07, ciclo: 0.6,
+    responsavel: { rotulo: 'responsável técnico (veterinário ou engenheiro de alimentos)', salario: 9000, ocupacao: /veterin|engenheiro_alimentos|zootec/ },
+    doRamo: /produtor|veterin|zootec|laticin|tecnico_agro|engenheiro_alimentos/, publicoNome: ['comprador', 'unidades vendidas']
   }
 ];
 
@@ -132,6 +148,8 @@ export const NOMES_DE_EMPRESA: Record<TipoEmpresa, string[]> = {
   loja: ['Loja {sobrenome}', 'Empório da Rua', 'Casa & Cia', 'Vitrine'],
   museu: ['Museu {sobrenome}', 'Instituto {sobrenome} de Arte', 'Museu da Cidade', 'Casa da Memória'],
   zoologico: ['Parque Zoológico {sobrenome}', 'Zoológico da Serra', 'Parque da Fauna', 'Bioparque'],
+  agroindustria: ['Agroindustrial {sobrenome}', 'Sabor do Campo', 'Grão de Ouro', 'Engenho {sobrenome}'],
+  laticinio: ['Laticínios {sobrenome}', 'Leite da Serra', 'Queijaria do Vale', 'Laticínio Boa Vista'],
   // VIDA 12.9: os ramos grandes (`dados/empresas129`).
   ...(NOMES_129 as Record<string, string[]>)
 } as Record<TipoEmpresa, string[]>;

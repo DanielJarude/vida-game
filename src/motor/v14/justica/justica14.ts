@@ -31,7 +31,9 @@ import { empresasAtivas } from '../../sistemas/empresas';
 import { desgastar } from '../../sistemas/desgastePolitico';
 import { marcar } from '../../sistemas/marcas';
 
-export type TipoCaso14 = 'trabalhista' | 'contrato' | 'consumidor' | 'indenizacao' | 'difamacao' | 'improbidade' | 'multa';
+export type TipoCaso14 = 'trabalhista' | 'contrato' | 'consumidor' | 'indenizacao' | 'difamacao' | 'improbidade' | 'multa'
+  /** VIDA 19: a divisa da terra (ação demarcatória ou possessória entre vizinhos rurais — `v19/agro`). */
+  | 'divisa';
 export type Advogado14 = 'nenhum' | 'defensoria' | 'proprio' | 'particular' | 'escritorio';
 
 export interface Caso14 {
@@ -63,10 +65,10 @@ export interface Justica14 { casos: Caso14[]; fechados?: CasoFechado14[]; n?: nu
 
 export const NOME_CASO14: Record<TipoCaso14, string> = {
   trabalhista: 'Ação trabalhista', contrato: 'Disputa de contrato', consumidor: 'Causa de consumidor', indenizacao: 'Pedido de indenização',
-  difamacao: 'Ação por danos morais', improbidade: 'Ação de improbidade', multa: 'Multa'
+  difamacao: 'Ação por danos morais', improbidade: 'Ação de improbidade', multa: 'Multa', divisa: 'Ação de divisa'
 };
 /** Meses até a sentença, por tipo (o juizado é rápido; a ação cível, não). */
-const DURACAO: Record<TipoCaso14, number> = { trabalhista: 14, contrato: 24, consumidor: 8, indenizacao: 20, difamacao: 18, improbidade: 30, multa: 6 };
+const DURACAO: Record<TipoCaso14, number> = { trabalhista: 14, contrato: 24, consumidor: 8, indenizacao: 20, difamacao: 18, improbidade: 30, multa: 6, divisa: 26 };
 const BONUS: Record<Advogado14, number> = { nenhum: -0.12, defensoria: 0, proprio: 0.06, particular: 0.08, escritorio: 0.15 };
 
 const estado = (v: Vida): Justica14 => (v.justica14 ??= { casos: [] });
@@ -84,6 +86,9 @@ export function honorarios14(v: Vida, c: Caso14, a: Advogado14): number {
   const base = a === 'escritorio' ? 18000 : 3500;
   return r100((base + c.valor * (a === 'escritorio' ? 0.05 : 0.02)) * custoLocal(v));
 }
+
+/** VIDA 19: outros sistemas (o campo) abrem causas pela mesma Justiça — nenhum sistema jurídico paralelo. */
+export const novoCaso14 = (v: Vida, x: Omit<Caso14, 'id' | 't'>): Caso14 => novoCaso(v, x);
 
 function novoCaso(v: Vida, x: Omit<Caso14, 'id' | 't'>): Caso14 {
   const j = estado(v);

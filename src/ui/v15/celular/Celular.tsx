@@ -22,7 +22,7 @@ import { municipio, nomeLugar } from '../../../motor/dados/lugares';
 import { rotulosDoChamado } from '../../../motor/sistemas/iniciativas';
 import { extratoAberto } from '../../../motor/sistemas/extrato';
 import { leituraDaFama13 } from '../../../motor/sistemas/reconhecimento13';
-import { feed15, matches15, naoLidas15, nivelDaFama15, opcoesDaMsg15, rotuloArea, rotuloDoLugar15, tituloDoPost17, disponibilidadeNamoro15 } from '../../../motor/v15/celular/celular15';
+import { matches15, naoLidas15, nivelDaFama15, opcoesDaMsg15, rotuloArea, rotuloDoLugar15, disponibilidadeNamoro15 } from '../../../motor/v15/celular/celular15';
 import { jornal15, ROTULO_EDITORIA15, type Editoria15 } from '../../../motor/v15/celular/noticias15';
 import type { Msg15, PerfilApp15 } from '../../../motor/dados15/celular/tipos';
 import { contatosAutorizados17, ligacoesRestantes17, limiteDeLigacoes17, MOTIVO_PRESO17 } from '../../../motor/v17/prisao/telefone17';
@@ -37,6 +37,7 @@ import { MapaDaCidade } from '../../v17/mapa/MapaDaCidade';
 import { temAcesso } from '../../../motor/eras/base/contexto';
 import { GUARDAR_O_APARELHO, meioDaVida, NOME_DO_APARELHO } from '../../eras/epoca';
 import { CelularDeTeclas, TelefoneDeDisco } from '../../eras/Aparelhos';
+import { Feed19 } from '../../v19/conectada/Feed19';
 
 const RedesSociais = lazy(() => import('../../jogo/Redes').then(m => ({ default: m.RedesSociais })));
 
@@ -389,40 +390,12 @@ function Namoro({ vida, agir, abrirPessoa }: { vida: Vida; agir: Props['agir']; 
 
 /* ------------------------------------------------------------------ Rede */
 
-/** O que não se "curte": deixa-se um abraço. */
-const DIFICIL = new Set(['perda', 'saude', 'desemprego']);
 
-function Rede({ vida, agir, abrirPessoa }: { vida: Vida; agir: Props['agir']; abrirPessoa: (id: string) => void }) {
-  const [aba, setAba] = useState<'amigos' | 'contas'>('amigos');
-  const posts = feed15(vida);
+/** VIDA 19: o app Rede é a VIDA Conectada (feed, em alta, perfis); "Minhas contas" segue sendo as redes de sempre. */
+function Rede({ vida, agir, abrirPessoa, abrirConversa }: { vida: Vida; agir: Props['agir']; abrirPessoa: (id: string) => void; abrirConversa: (id: string) => void }) {
   return (
-    <div className="rede15">
-      <div className="namoro__abas" role="tablist">
-        <button type="button" role="tab" aria-selected={aba === 'amigos'} className={aba === 'amigos' ? 'ativa' : ''} onClick={() => setAba('amigos')}>Amigos</button>
-        <button type="button" role="tab" aria-selected={aba === 'contas'} className={aba === 'contas' ? 'ativa' : ''} onClick={() => setAba('contas')}>Minhas contas</button>
-      </div>
-      {aba === 'amigos' && (posts.length ? (
-        <ol className="rede15__feed">
-          {posts.map(x => {
-            const p = vida.pessoas[x.pid];
-            const vin = vida.vinculos[x.pid];
-            return (
-              <li key={x.chave} className={`post15 post15--${x.tipo}`}>
-                <button type="button" className="post15__quem" onClick={() => abrirPessoa(x.pid)}>
-                  <Foto vida={vida} p={p} tamanho={36} />
-                  <span><strong>{p.nome}</strong><span>{vin ? rotuloDe(vida, p, vin) : ''} · {quando(vida, x.t)}</span></span>
-                </button>
-                <p className="post15__titulo">{tituloDoPost17(x.tipo, x.texto)}</p>
-                <p className="post15__texto">{x.texto}</p>
-                <button type="button" className={`post15__curtir${x.curtiu ? ' post15__curtir--sim' : ''}`} aria-pressed={x.curtiu} disabled={x.curtiu}
-                  onClick={() => agir({ tipo: 'celular15', oque: { op: 'curtir_post', chave: x.chave, pid: x.pid } })}>{DIFICIL.has(x.tipo) ? (x.curtiu ? '🤍 Abraço enviado' : '🤍 Deixar um abraço') : x.curtiu ? '♥ Curtiu' : '♡ Curtir'}</button>
-              </li>
-            );
-          })}
-        </ol>
-      ) : <p className="cel__vazio">Ninguém da sua vida postou nada de novo nos últimos dois anos.</p>)}
-      {aba === 'contas' && <Suspense fallback={<p className="cel__vazio">Abrindo…</p>}><div className="rede15__contas"><RedesSociais vida={vida} agir={agir} abrirPessoa={abrirPessoa} embutido /></div></Suspense>}
-    </div>
+    <Feed19 vida={vida} agir={agir} abrirPessoa={abrirPessoa} abrirConversa={abrirConversa}
+      contas={<Suspense fallback={<p className="cel__vazio">Abrindo…</p>}><div className="rede15__contas"><RedesSociais vida={vida} agir={agir} abrirPessoa={abrirPessoa} embutido /></div></Suspense>} />
   );
 }
 
@@ -661,7 +634,7 @@ export default function Celular({ vida, agir, aoFechar, irPara, irLugar, abrirPe
   let conteudo: ReactNode = null;
   if (atual === 'mensagens') conteudo = <Mensagens vida={vida} agir={agir} abrirPessoa={pessoa} inicial={fioInicial} />;
   else if (atual === 'namoro') conteudo = <Namoro vida={vida} agir={agir} abrirPessoa={pessoa} />;
-  else if (atual === 'rede') conteudo = <Rede vida={vida} agir={agir} abrirPessoa={pessoa} />;
+  else if (atual === 'rede') conteudo = <Rede vida={vida} agir={agir} abrirPessoa={pessoa} abrirConversa={id => abrirApp('mensagens', id)} />;
   else if (atual === 'noticias') conteudo = <Noticias vida={vida} />;
   else if (atual === 'agenda') conteudo = <Agenda vida={vida} sair={sair} />;
   else if (atual === 'mapas') conteudo = <Mapas vida={vida} sair={sair} />;

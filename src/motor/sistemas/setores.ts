@@ -35,12 +35,23 @@ import {
   PATROCINADORES, PRATOS, PUBLICOS_HOTEL, RECINTOS_INICIAIS_ZOO, RETENCAO, SEGMENTOS_LOJA, SERVICOS_ESTUDIO, SERVICOS_HOTEL, TEMAS_MUSEU, culinaria, especialidade,
   especieDeZoo, habitat, modalidade, segmentoLoja, servicoEstudio, servicoHotel, temaMuseu
 } from '../dados/setores';
-import { competenciaDaGestao, conversao, custoLocal, doRamo, gastar, salarioLocal } from './empresas';
+import { GANCHOS_EMPRESA, competenciaDaGestao, conversao, custoLocal, doRamo, gastar, salarioLocal } from './empresas';
 import { okDePagar } from './dinheiro';
 import { municipio } from '../dados/lugares';
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const mil = (x: number) => Math.round(x / 1000) * 1000;
+/** VIDA 19: o que a agroindústria e o laticínio fabricam (a procura, o preço e o quanto estraga). */
+export const PRODUTOS_CAMPO: Record<string, { nome: string; laticinio: boolean; procura: number; ticket: number; perdas: number; descricao: string }> = {
+  queijo: { nome: 'Queijos', laticinio: true, procura: 1, ticket: 1.25, perdas: 1, descricao: 'Maturação pede tempo e câmara; o queijo bom tem fila.' },
+  iogurte: { nome: 'Iogurtes e bebidas lácteas', laticinio: true, procura: 1.25, ticket: 0.8, perdas: 4, descricao: 'Giro rápido, validade curta.' },
+  manteiga: { nome: 'Manteiga e requeijão', laticinio: true, procura: 0.9, ticket: 1.05, perdas: 0, descricao: 'Margem estável, mercado disputado.' },
+  cafe: { nome: 'Café torrado e moído', laticinio: false, procura: 1, ticket: 1.1, perdas: 0, descricao: 'Do grão à xícara: torra, moagem, embalagem.' },
+  polpa: { nome: 'Polpas de fruta congeladas', laticinio: false, procura: 1.15, ticket: 0.85, perdas: 3, descricao: 'Pede frio da colheita até a entrega.' },
+  farinha: { nome: 'Farinhas e derivados de mandioca e milho', laticinio: false, procura: 1.1, ticket: 0.7, perdas: 1, descricao: 'Volume alto, preço baixo.' },
+  acucar: { nome: 'Açúcar mascavo e rapadura', laticinio: false, procura: 0.85, ticket: 1.2, perdas: 0, descricao: 'Nicho que paga melhor pelo artesanal.' }
+};
+
 const NOMES_CHAVE: [string, string][] = [['Rodrigo Albuquerque', 'Helena Duarte'], ['Thiago Fontana', 'Camila Rocha'], ['Marcos Vianna', 'Luísa Ferraz'], ['André Kato', 'Paula Nakamura'], ['Bruno Salles', 'Marina Couto'], ['Felipe Arantes', 'Isabela Teles']];
 
 /* ============================================================ o estado do ramo */
@@ -67,6 +78,10 @@ export function garantirSetor(v: Vida, e: Empresa): SetorDaEmpresa {
       break;
     case 'loja':
       s.loja ??= { segmento: r.pick(SEGMENTOS_LOJA).id, estoque: 2, fornecedor: 'nacional', variedade: 50, online: false, encalhe: 10 };
+      break;
+    case 'agroindustria':
+    case 'laticinio':
+      s.campo ??= { produto: e.tipo === 'laticinio' ? 'queijo' : 'cafe', inspecao: 'municipal', canal: 'varejo', selo: false, perdas: 12, conformidade: 60 };
       break;
     case 'museu':
       if (!s.museu) {
@@ -318,6 +333,17 @@ export function efeitosDoSetor(v: Vida, e: Empresa): EfeitosDoSetor {
     if (x.online) ef.fixos.push({ rotulo: 'Loja online (plataforma, fotos, frete)', valor: 120000 * c });
     if (x.encalhe > 12) ef.fixos.push({ rotulo: 'Estoque parado (capital empatado)', valor: (x.encalhe - 12) * 1500 * e.unidades * c });
     ef.reputacao = (x.variedade - 50) / 8 - x.encalhe / 12;
+  } else if (e.setor.campo) {
+    // VIDA 19: o selo de inspeção diz até onde o produto vai (SIM: só o município; SIE: o estado; SIF: o país); o canal
+    // troca volume por margem; o selo artesanal ou de origem vende mais caro; o que estraga ou volta sai da venda.
+    const x = e.setor.campo;
+    const prod = PRODUTOS_CAMPO[x.produto] ?? { procura: 1, ticket: 1, perdas: 0 };
+    const alcance = { municipal: 0.65, estadual: 0.9, federal: 1.15 }[x.inspecao];
+    const canal = { feira: { p: 0.75, t: 1.15 }, varejo: { p: 1, t: 1 }, rede: { p: 1.35, t: 0.86 } }[x.canal];
+    ef.procura *= alcance * canal.p * prod.procura * (x.selo ? 0.96 : 1) * (1 - x.perdas / 250);
+    ef.ticket = canal.t * prod.ticket * (x.selo ? 1.2 : 1);
+    if (x.inspecao !== 'municipal') ef.fixos.push({ rotulo: `Inspeção ${x.inspecao === 'federal' ? 'federal (SIF)' : 'estadual (SIE)'}: responsável técnico, laudos, análises`, valor: (x.inspecao === 'federal' ? 90000 : 40000) * c * e.unidades });
+    ef.reputacao = (x.conformidade - 60) / 5 + (x.selo ? 3 : 0) - x.perdas / 15;
   } else if (e.setor.museu) {
     const m = e.setor.museu;
     const lin = LINHAS_MUSEU[m.linha];
@@ -376,6 +402,7 @@ export function anoDoSetor(v: Vida, e: Empresa, publico: number): string | undef
   else if (s.academia) { s.academia.equipamentos = clamp(s.academia.equipamentos - 3); s.academia.evasao = Math.round(clamp(0.42 - e.qualidade / 400 + efeitosDoSetor(v, e).evasao, 0.12, 0.6) * 100) / 100; }
   else if (s.estudio) nota = anoDoEstudio(v, e, r);
   else if (s.loja) nota = anoDaLoja(v, e, r);
+  else if (s.campo) nota = anoDoCampo(v, e, r);
   else if (s.museu) nota = anoDoMuseu(v, e, r);
   else if (s.zoo) nota = anoDoZoo(v, e, r);
   return nota;
@@ -464,6 +491,20 @@ function anoDaLoja(v: Vida, e: Empresa, r: Rng): string | undefined {
     return 'O câmbio virou: a mercadoria importada chegou mais cara do que se vendia.';
   }
   return x.encalhe >= 55 ? 'O estoque encalhou: mercadoria parada, capital preso.' : undefined;
+}
+
+/** VIDA 19: o ano da agroindústria e do laticínio — as perdas andam com o canal e o cuidado; a fiscalização sanitária passa. */
+function anoDoCampo(v: Vida, e: Empresa, r: Rng): string | undefined {
+  const x = e.setor!.campo!;
+  const prod = PRODUTOS_CAMPO[x.produto] ?? { perdas: 0 };
+  x.perdas = clamp(Math.round(x.perdas * 0.7 + 4 + prod.perdas + (x.canal === 'rede' ? 3 : 0) - x.conformidade / 25 + r.normal() * 2));
+  x.conformidade = clamp(Math.round(x.conformidade - 3 + r.normal() * 2));
+  if (x.conformidade < 45 && r.chance(0.3)) {
+    e.caixa -= Math.round(capitalDaUnidadeLocal(e) * 0.05 * conversao(v, e));
+    x.conformidade = clamp(x.conformidade + 10);
+    return 'A fiscalização sanitária autuou a fábrica: lote apreendido, multa e uma semana parada para adequar.';
+  }
+  return x.perdas >= 30 ? 'As perdas subiram: produto vencendo na prateleira e devolvido pelos clientes.' : undefined;
 }
 
 const capitalDaUnidadeLocal = (e: Empresa) => tipoDeEmpresa(e.tipo).capital * Math.pow(custoLocal(e.municipioId), 1.2);
@@ -575,6 +616,9 @@ function decidirPeloGestor(v: Vida, e: Empresa, r: Rng): void {
     const x = s.loja;
     if (!fraco && x.encalhe >= 45) liquidar(v, e);
     if (fraco && r.chance(0.3)) x.estoque = 3;
+  } else if (s.campo) {
+    const x = s.campo;
+    if (!fraco && x.conformidade < 50 && pode(60000 * c)) { gasta(Math.round(60000 * c)); x.conformidade = clamp(x.conformidade + 25); }
   } else if (s.museu) {
     const m = s.museu;
     if (bom && !m.exposicao && pode(capitalDaUnidadeLocal(e) * 0.05 * k) && r.chance(0.5)) { const tema = temaComMaisObras(m); if (tema) montarExposicao(v, e, tema); }
@@ -670,6 +714,15 @@ export function decisoesDoSetor(v: Vida, e: Empresa): DecisaoDoSetor[] {
     add({ id: 'variedade', rotulo: 'Ampliar a variedade', grupo: 'Vitrine', custo: 60000 * c * e.unidades });
     add({ id: x.online ? 'online_tirar' : 'online', rotulo: x.online ? 'Fechar a loja online' : 'Abrir a venda online', grupo: 'Vitrine', custo: x.online ? 0 : 90000 * c });
     add({ id: 'liquidacao', rotulo: 'Fazer uma liquidação', grupo: 'Estoque', custo: 0, descricao: 'Limpa o encalhe; a margem vai embora junto.' });
+  } else if (s.campo) {
+    const x = s.campo;
+    const lat = e.tipo === 'laticinio';
+    for (const [id, pr] of Object.entries(PRODUTOS_CAMPO).filter(([, z]) => z.laticinio === lat)) add({ id: 'produto_campo', alvo: id, rotulo: pr.nome, grupo: 'Produto', custo: x.produto === id ? 0 : cap0 * 0.08, descricao: pr.descricao, atual: x.produto === id });
+    const ordem = ['municipal', 'estadual', 'federal'] as const;
+    for (const n of ordem) add({ id: 'inspecao', alvo: n, rotulo: { municipal: 'Inspeção municipal (SIM): vende no município', estadual: 'Inspeção estadual (SIE): vende no estado', federal: 'Inspeção federal (SIF): vende no país todo' }[n], grupo: 'Inspeção', custo: ordem.indexOf(n) > ordem.indexOf(x.inspecao) ? cap0 * (n === 'federal' ? 0.3 : 0.12) : 0, descricao: n === x.inspecao ? undefined : ordem.indexOf(n) > ordem.indexOf(x.inspecao) ? 'Obra de adequação, laboratório, responsável técnico; o mercado cresce.' : undefined, atual: x.inspecao === n });
+    for (const cn of ['feira', 'varejo', 'rede'] as const) add({ id: 'canal', alvo: cn, rotulo: { feira: 'Feiras e venda direta', varejo: 'Mercados e padarias da região', rede: 'Contrato com rede de supermercados' }[cn], grupo: 'Canal', custo: 0, descricao: { feira: 'Menos volume, preço cheio.', varejo: undefined, rede: 'Volume grande, preço apertado, devolução por conta da casa.' }[cn], atual: x.canal === cn });
+    add({ id: x.selo ? 'selo_tirar' : 'selo_campo', rotulo: x.selo ? 'Deixar o selo' : lat ? 'Selo Arte (queijo artesanal, Lei 13.680/2018)' : 'Selo de origem e produção artesanal', grupo: 'Selo', custo: x.selo ? 0 : 45000 * c, descricao: x.selo ? undefined : 'Processo artesanal comprovado: vende mais caro, um pouco menos.' });
+    add({ id: 'boas_praticas', rotulo: 'Programa de boas práticas de fabricação', grupo: 'Fábrica', custo: 60000 * c * e.unidades, descricao: 'Menos perda, menos autuação.' });
   } else if (s.museu) {
     const m = s.museu;
     for (const l of Object.keys(LINHAS_MUSEU) as (keyof typeof LINHAS_MUSEU)[]) add({ id: 'linha', alvo: l, rotulo: LINHAS_MUSEU[l].nome, grupo: 'Linha', custo: 0, descricao: LINHAS_MUSEU[l].descricao, atual: m.linha === l });
@@ -733,6 +786,7 @@ export function disponibilidadeSetor(v: Vida, e: Empresa | undefined, id: string
     case 'exposicao': if (s.museu?.exposicao && v.t < s.museu.exposicao.ate) return { ok: false, motivo: 'Há uma exposição em cartaz.' }; break;
     case 'liquidacao': if ((s.loja?.encalhe ?? 0) < 15) return { ok: false, motivo: 'Não há encalhe que justifique.' }; break;
     case 'veterinario': if (alvo === 'menos' && (s.zoo?.veterinarios ?? 0) <= 1) return { ok: false, motivo: 'Sem veterinário, a licença cai.' }; break;
+    case 'inspecao': { const o = ['municipal', 'estadual', 'federal']; if (s.campo && o.indexOf(alvo ?? '') < o.indexOf(s.campo.inspecao)) return { ok: false, motivo: 'O selo de inspeção não se devolve: descer é só deixar de vender fora.' }; break; }
   }
   if (d.custo > 0) {
     if (e.caixa >= d.custo) return { ok: true };
@@ -820,6 +874,13 @@ export function decidirSetor(v: Vida, e: Empresa, id: string, alvo?: string): st
     case 'online': s.loja!.online = true; return 'Venda online aberta: frete, fotos, devolução — e clientes de fora do bairro.';
     case 'online_tirar': s.loja!.online = false; return 'Loja online fechada.';
     case 'liquidacao': return liquidar(v, e);
+    /* VIDA 19: agroindústria e laticínio */
+    case 'produto_campo': s.campo!.produto = alvo!; hist(`Passou a produzir ${PRODUTOS_CAMPO[alvo!].nome.toLowerCase()}.`); return `Linha nova: ${PRODUTOS_CAMPO[alvo!].nome.toLowerCase()}. ${PRODUTOS_CAMPO[alvo!].descricao}`;
+    case 'inspecao': if (alvo !== s.campo!.inspecao) { s.campo!.inspecao = alvo as never; e.ativos += Math.round(d.custo * 0.6); hist(`Conseguiu a inspeção ${alvo}.`); } return alvo === 'federal' ? 'Selo federal (SIF): o produto pode ir para qualquer estado — e a fiscalização é a mais rígida.' : alvo === 'estadual' ? 'Selo estadual (SIE): o produto sai do município.' : 'Inspeção municipal.';
+    case 'canal': s.campo!.canal = alvo as never; return alvo === 'rede' ? 'Contrato com a rede: caminhão saindo todo dia, preço apertado e devolução por sua conta.' : alvo === 'feira' ? 'Feiras e venda direta: menos volume, o preço inteiro fica com você.' : 'Mercados e padarias da região.';
+    case 'selo_campo': s.campo!.selo = true; hist('Ganhou o selo artesanal.'); return 'Selo concedido: o rótulo conta a origem, e o preço acompanha.';
+    case 'selo_tirar': s.campo!.selo = false; return 'Sem o selo: o produto volta a ser vendido como industrial.';
+    case 'boas_praticas': s.campo!.conformidade = clamp(s.campo!.conformidade + 25); s.campo!.perdas = clamp(s.campo!.perdas - 8); return 'Boas práticas implantadas: menos perda, fábrica pronta para a fiscalização.';
     /* museu */
     case 'linha': s.museu!.linha = alvo as never; return LINHAS_MUSEU[alvo as keyof typeof LINHAS_MUSEU].descricao;
     case 'exposicao': return montarExposicao(v, e, alvo!);
@@ -1024,6 +1085,13 @@ export function indicadoresDoSetor(v: Vida, e: Empresa): Indicador[] {
     out.push({ rotulo: 'Segmento', valor: segmentoLoja(x.segmento).nome });
     out.push({ rotulo: 'Estoque', valor: `${({ 1: 'enxuto', 2: 'normal', 3: 'amplo' } as const)[x.estoque]} · encalhe ${x.encalhe}/100`, tom: tom(false, x.encalhe >= 45) });
     out.push({ rotulo: 'Variedade', valor: `${x.variedade}/100${x.online ? ' · vende online' : ''}` });
+  } else if (s.campo) {
+    const x = s.campo;
+    out.push({ rotulo: e.tipo === 'laticinio' ? 'Linha de laticínios' : 'Produto beneficiado', valor: `${PRODUTOS_CAMPO[x.produto]?.nome ?? x.produto}${x.selo ? ' · com selo' : ''}` });
+    out.push({ rotulo: 'Inspeção e canal', valor: `${{ municipal: 'SIM (município)', estadual: 'SIE (estado)', federal: 'SIF (país)' }[x.inspecao]} · ${{ feira: 'feiras', varejo: 'varejo da região', rede: 'rede de supermercados' }[x.canal]}` });
+    out.push({ rotulo: 'Perdas e boas práticas', valor: `perdas ${x.perdas}/100 · conformidade ${x.conformidade}/100`, tom: tom(x.perdas < 12 && x.conformidade >= 70, x.perdas >= 30 || x.conformidade < 45) });
+    const proprio = GANCHOS_EMPRESA.insumo?.(v, e);
+    out.push({ rotulo: 'Matéria-prima', valor: proprio ? `${Math.round((1 - proprio.variavel) / 0.12 * 100)}% da sua própria terra (pelo preço de mercado, sem atravessador)` : 'comprada no mercado' });
   } else if (s.museu) {
     const m = s.museu;
     out.push({ rotulo: 'Linha', valor: LINHAS_MUSEU[m.linha].nome });
@@ -1059,6 +1127,7 @@ export function alertasDaEmpresa(v: Vida, e: Empresa): string[] {
   if (s.estudio?.proposta) out.push('proposta de projeto esperando');
   if (s.estudio && s.estudio.equipamento < 45) out.push('equipamento velho');
   if (s.loja && s.loja.encalhe >= 45) out.push('estoque encalhado');
+  if (s.campo && (s.campo.perdas >= 30 || s.campo.conformidade < 45)) out.push(s.campo.perdas >= 30 ? 'perdas altas' : 'boas práticas atrasadas');
   if (s.museu && s.museu.obras.some(o => o.exposta && o.conservacao < 40)) out.push('obra exposta se deteriorando');
   if (s.zoo) {
     const bem = bemEstarDoZoo(e);

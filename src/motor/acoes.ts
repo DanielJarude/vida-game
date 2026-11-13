@@ -138,6 +138,9 @@ import { disponibilidadeCrenca14, executarCrenca14, type OpCrenca14 } from './v1
 import { disponibilidadeJustica14, executarJustica14, type OqueJustica14 } from './v14/justica/justica14';
 import { disponibilidadeConquistas14, executarConquistas14, linhaDoExtrato14, type OqueConquistas14 } from './v14/conquistas/conquistas';
 import { depoisDaAcao15, disponibilidadeCelular15, executarCelular15, type OqueCelular15 } from './v15/celular/celular15';
+import { disponibilidadeConectada19, executarConectada19, type OqueConectada19 } from './v19/conectada/conectada19';
+import { disponibilidadeHaras19, executarHaras19, type OqueHaras19 } from './v19/haras/haras19';
+import { disponibilidadeAgro19, executarAgro19, type OqueAgro19 } from './v19/agro/agro19';
 import { disponibilidadeOficio16, executarOficio16, type OqueOficio16 } from './v16/oficios/oficios16';
 import { disponibilidadeReligiao16, executarReligiao16, type OqueReligiao16 } from './v16/religiao/religiao16';
 import { disponibilidadeRural18, executarRural18, type OqueRural18 } from './v18/rural/acoes18';
@@ -336,6 +339,12 @@ export type Acao =
   | { tipo: 'moveis14'; oque: OqueMoveis14 }
   /** VIDA 15: o celular — responder mensagens, o aplicativo de namoro, curtir a rede dos amigos (`v15/celular`). */
   | { tipo: 'celular15'; oque: OqueCelular15 }
+  /** VIDA 19: a rede dos outros (curtir, comentar, compartilhar, conversar a partir da publicação, seguir). */
+  | { tipo: 'conectada19'; oque: OqueConectada19 }
+  /** VIDA 19: o haras que cria (cobertura, venda, reprodução). */
+  | { tipo: 'haras19'; oque: OqueHaras19 }
+  /** VIDA 19: a documentação e o crédito do campo (CAR, georreferenciamento, outorga, Plano Safra). */
+  | { tipo: 'agro19'; oque: OqueAgro19 }
   | { tipo: 'oficio16'; oque: OqueOficio16 }
   | { tipo: 'religiao16'; oque: OqueReligiao16 }
   /** VIDA 18: a propriedade rural (comprar, arrendar, plantar, criar, construir, festas). */
@@ -853,6 +862,9 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'futsal14': return disponibilidadeFutsal14(v, a.oque);
     case 'moveis14': return disponibilidadeMoveis14(v, a.oque);
     case 'celular15': return disponibilidadeCelular15(v, a.oque);
+    case 'conectada19': return disponibilidadeConectada19(v, a.oque);
+    case 'haras19': return disponibilidadeHaras19(v, a.oque);
+    case 'agro19': return disponibilidadeAgro19(v, a.oque);
     case 'oficio16': return disponibilidadeOficio16(v, a.oque);
     case 'religiao16': return disponibilidadeReligiao16(v, a.oque);
     case 'rural18': return disponibilidadeRural18(v, a.oque);
@@ -1722,6 +1734,9 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
     case 'futsal14': return ok(executarFutsal14(v, a.oque), 'neutro');
     case 'moveis14': return ok(executarMoveis14(v, a.oque), 'neutro');
     case 'celular15': { const x = executarCelular15(v, r, a.oque); return x.texto ? { aviso: { texto: x.texto, tom: x.tom ?? 'neutro' }, pessoaId: x.pessoaId } : {}; }
+    case 'agro19': { const x = executarAgro19(v, a.oque); return { aviso: { texto: x.texto, tom: x.tom ?? 'neutro' } }; }
+    case 'haras19': { const x = executarHaras19(v, a.oque); return { aviso: { texto: x.texto, tom: x.tom ?? 'neutro' } }; }
+    case 'conectada19': { const x = executarConectada19(v, r, a.oque); return x.texto ? { aviso: { texto: x.texto, tom: x.tom ?? 'neutro' }, pessoaId: x.pessoaId } : {}; }
     case 'oficio16': { const x = executarOficio16(v, r, a.oque); return x.texto ? { aviso: { texto: x.texto, tom: x.tom } } : {}; }
     case 'religiao16': { const x = executarReligiao16(v, r, a.oque); return x.texto ? { aviso: { texto: x.texto, tom: x.tom } } : {}; }
     case 'rural18': { const x = executarRural18(v, r, a.oque); return x.texto ? { aviso: { texto: x.texto, tom: x.tom ?? 'neutro' } } : {}; }

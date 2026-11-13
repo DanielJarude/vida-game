@@ -119,6 +119,8 @@ export interface Pessoa {
   ancestralidade?: Record<string, number>;
   /** REWORK 4: a tradição de nomes da família, quando veio de outro lugar (um país com lista de nomes). */
   tradicao?: string;
+  /** VIDA 19 (`motor/v19/npcs`): a vida própria de quem importa e não é da casa (meta, bolso, união, laços). Ausente: ainda não acompanhada. */
+  npc19?: import('./dados19/tipos').Npc19;
 }
 
 /** Uma condição de saúde de quem não é o protagonista: o id do catálogo e o estado (sem textos, sem lesões). */
@@ -1481,6 +1483,8 @@ export interface RegistroDePecaUnica {
 /* ---------------------------------------------------- REWORK 12 · empresas */
 
 export type TipoEmpresa = 'restaurante' | 'clinica' | 'academia' | 'estudio' | 'hotel' | 'loja' | 'museu' | 'zoologico'
+  /** VIDA 19: as empresas do campo (`motor/v19/agro`): beneficiam o que a terra produz. */
+  | 'agroindustria' | 'laticinio'
   /** VIDA 12.9: os ramos de porte médio, grande e bilionário (`dados/empresas129`, `sistemas/empresas129`). */
   | 'tecnologia' | 'construtora' | 'industria' | 'montadora' | 'banco' | 'aerea' | 'aeroespacial' | 'semicondutores' | 'energia' | 'infraestrutura';
 /** O que a pessoa É na empresa: dona (toda), sócia (uma parte, com voz) ou investidora (parte pequena, sem gestão). */
@@ -1786,6 +1790,11 @@ export interface SetorDaEmpresa {
   academia?: { modalidades: string[]; equipamentos: number; instrutores: number; retencao: string[]; evasao?: number };
   estudio?: { servicos: string[]; equipamento: number; tecnico?: ProfissionalChave; creditos: { t: number; texto: string }[]; proposta?: { t: number; artista: string; desconto: number } };
   loja?: { segmento: string; estoque: Nivel3; fornecedor: 'nacional' | 'importador' | 'direto'; variedade: number; online: boolean; encalhe: number };
+  /**
+   * VIDA 19: a agroindústria e o laticínio — o produto, o selo de inspeção (municipal, estadual, federal: onde se pode
+   * vender), o canal, o selo artesanal ou de origem, as perdas (o que estraga ou volta) e as boas práticas.
+   */
+  campo?: { produto: string; inspecao: 'municipal' | 'estadual' | 'federal'; canal: 'feira' | 'varejo' | 'rede'; selo: boolean; perdas: number; conformidade: number };
   museu?: {
     linha: 'cultural' | 'equilibrada' | 'comercial';
     obras: ObraDoMuseu[];
@@ -3017,6 +3026,11 @@ export interface LigaDoPais {
    * (a boa fase que se sustenta um tempo, a má que pesa). Nasce dos resultados, nunca do nome. Ausente: 0.
    */
   forma?: Record<string, number>;
+  /**
+   * VIDA 19: o começo das temporadas em curso (a divisão de cada clube e a forma), guardado ao fechar a anterior: as
+   * partidas da rodada, da Loteca e da tabela saem dele — o mesmo placar antes e depois de a temporada fechar. Até 2.
+   */
+  inicio19?: { ano: number; div: Record<string, 1 | 2 | 3 | 4>; forma?: Record<string, number> }[];
 }
 
 export interface Caminhos {
@@ -3962,6 +3976,8 @@ export interface Vida {
   rural18?: import('./v18/rural/fazenda18').Rural18;
   /** VIDA 18: loterias, apostas esportivas, turfe e bingo — os bilhetes, os concursos, o histórico (`motor/v18/apostas`). */
   apostas18?: import('./v18/apostas/estado18').Apostas18;
+  /** VIDA 19 (`motor/v19/conectada`): o que você fez na rede dos outros (curtidas, comentários, mensagens). Ausente: nada ainda. */
+  conectada19?: import('./dados19/tipos').Conectada19;
   morte?: {
     t: number; causa: string; heranca?: Heranca;
     /** O que o jogador decidiu sobre o patrimônio na tela do legado (guardado: recarregar mostra as mesmas escolhas). */

@@ -30,7 +30,8 @@ import { clubePorNome, clubesDoPais, type Clube } from '../dados/clubes';
 import { cidadesDoPais, paisDaCidade } from '../dados/lugares';
 import { PAIS_PADRAO, perfilDoPais, temPerfil } from '../mundo/registro';
 import { anoDe } from '../tempo';
-import { jogarTabela, nomeSemCatalogo, SEM_CATALOGO, type LinhaDaTabela } from './tabelaDaLiga';
+import { nomeSemCatalogo, SEM_CATALOGO, type LinhaDaTabela } from './tabelaDaLiga';
+import { jogarTemporada19, type Temporada19 } from './jogosDaLiga';
 
 export type Nivel = 1 | 2 | 3 | 4;
 export const VAGAS_POR_DIVISAO = 20;
@@ -205,13 +206,22 @@ function avancar(v: Vida, pais: string, liga: LigaDoPais, ate: number, fixo?: Fi
 function jogarTemporada(v: Vida, pais: string, liga: LigaDoPais, ano: number, fixo?: Fixo, comTabelas = true): void {
   const regras = regrasDeAcesso(pais);
   const nomes = Object.keys(liga.div).sort();
-  const { pos, campeoes } = sortearPosicoes(v, pais, liga.div, ano, fixo, liga);
-  // HOTFIX 11.5.1: a tabela de cada divisão (só a da temporada que alguém vai ler: a última jogada) e o campeão da elite.
+  // VIDA 19: a temporada é jogada partida a partida (`jogosDaLiga`) a partir do estado do começo dela (o mesmo que a rodada
+  // das apostas leu): a ordem de chegada, a tabela, o campeão, o acesso e a queda saem das mesmas partidas.
+  const { pos, campeoes, tabelas: jogadas } = sortearPosicoes(v, pais, liga.div, ano, fixo, liga);
   const div = liga.div;
-  const tabelas = comTabelas ? tabelasDaTemporada(v, pais, div, ano, pos, fixo) : undefined;
+  let tabelas: NonNullable<NonNullable<LigaDoPais['ultima']>['tabelas']> | undefined;
+  if (comTabelas) {
+    tabelas = {};
+    // Uma divisão sem nenhum clube conhecido ninguém vai abrir.
+    for (const n of [2, 3, 4] as const) if (jogadas[n] && Object.keys(div).some(c => div[c] === n)) tabelas[n] = jogadas[n]!.linhas;
+  }
   aplicarTrocas(v, pais, liga, ano, nomes, pos, campeoes, regras, fixo);
   if (tabelas) liga.ultima!.tabelas = tabelas;
-  const elite = campeoes[4] ?? tabelas?.[4]?.[0]?.[0] ?? (nomes.some(c => div[c] === 4) ? SEM_CATALOGO + nomeSemCatalogo(pais, nomesDeCidades(pais), 4, ano * 20, new Set(nomes)) : undefined);
+  // O começo da temporada seguinte fica guardado (a divisão de cada clube e a forma): a rodada das apostas e a Loteca
+  // leem as partidas dela daqui — antes e depois de ela fechar, o placar de cada jogo é o mesmo.
+  liga.inicio19 = [...(liga.inicio19 ?? []).filter(x => x.ano === ano), { ano: ano + 1, div: { ...liga.div }, ...(liga.forma ? { forma: { ...liga.forma } } : {}) }];
+  const elite = campeoes[4] ?? tabelas?.[4]?.[0]?.[0] ?? jogadas[4]?.linhas[0]?.[0] ?? (nomes.some(c => div[c] === 4) ? SEM_CATALOGO + nomeSemCatalogo(pais, nomesDeCidades(pais), 4, ano * 20, new Set(nomes)) : undefined);
   const h = (liga.historico ??= []);
   const ja = h.find(x => x.ano === ano);
   if (ja) ja.liga = elite; else h.push({ ano, ...(elite ? { liga: elite } : {}) });
@@ -220,26 +230,6 @@ function jogarTemporada(v: Vida, pais: string, liga: LigaDoPais, ano: number, fi
 }
 
 const nomesDeCidades = (pais: string) => cidadesDoPais(pais).map(m => m.nome);
-
-/**
- * HOTFIX 11.5.1 — as tabelas de uma temporada (divisões 2 a 4): a ordem de chegada que `sortearPosicoes` deu (os clubes
- * do catálogo e o da vida), as vagas restantes com clubes fora do catálogo, e os jogos (`tabelaDaLiga.jogarTabela`).
- */
-function tabelasDaTemporada(v: Vida, pais: string, div: Record<string, Nivel>, ano: number, pos: Map<string, number>, fixo?: Fixo): NonNullable<NonNullable<LigaDoPais['ultima']>['tabelas']> {
-  const out: NonNullable<NonNullable<LigaDoPais['ultima']>['tabelas']> = {};
-  const cidades = nomesDeCidades(pais);
-  const ocupados = new Set(Object.keys(div));
-  for (const n of [2, 3, 4] as const) {
-    const nomes: string[] = new Array(VAGAS_POR_DIVISAO).fill('');
-    for (const [c, p] of pos) if (div[c] === n && p >= 1 && p <= VAGAS_POR_DIVISAO && !nomes[p - 1]) nomes[p - 1] = c;
-    // Uma divisão sem nenhum clube conhecido ninguém vai abrir.
-    if (!nomes.some(Boolean)) continue;
-    for (let k = 0; k < nomes.length; k++) if (!nomes[k]) nomes[k] = SEM_CATALOGO + nomeSemCatalogo(pais, cidades, n, ano * 20 + k, ocupados);
-    const marca = fixo && div[fixo.clube] === n && (fixo.gp || fixo.gc) ? { clube: fixo.clube, gp: fixo.gp, gc: fixo.gc } : undefined;
-    out[n] = jogarTabela(rngDe(v.id, 'tabela', pais, ano, n), nomes, marca);
-  }
-  return out;
-}
 
 /** A tabela da última temporada fechada de uma divisão do país (ou nada, se ninguém a jogou nesta vida). */
 export function tabelaDaUltimaTemporada(v: Vida, pais: string, nivel: number): { ano: number; linhas: LinhaDaTabela[] } | undefined {
@@ -253,41 +243,84 @@ export function tabelaDaUltimaTemporada(v: Vida, pais: string, nivel: number): {
  * país e do ano (`rngDe`), e os sorteios dos outros clubes não dependem de como o clube da vida entra — por isso a
  * colocação que `colocacaoNaTabela` lê antes é a mesma que a temporada fechada grava depois.
  */
-function sortearPosicoes(v: Vida, pais: string, div: Record<string, Nivel>, ano: number, fixo?: Fixo, liga0?: LigaDoPais): { pos: Map<string, number>; campeoes: Partial<Record<Nivel, string>> } {
+function sortearPosicoes(v: Vida, pais: string, div: Record<string, Nivel>, ano: number, fixo?: Fixo, liga0?: Pick<LigaDoPais, 'forma'>): { pos: Map<string, number>; campeoes: Partial<Record<Nivel, string>>; tabelas: Partial<Record<2 | 3 | 4, Temporada19>> } {
   const r = rngDe(v.id, 'liga', pais, ano);
   const nomes = Object.keys(div).sort();
   const pos = new Map<string, number>();
   const campeoes: Partial<Record<Nivel, string>> = {};
+  const tabelas: Partial<Record<2 | 3 | 4, Temporada19>> = {};
   for (const n of [2, 3, 4] as const) {
-    const ocupadas = new Set<number>();
-    if (fixo && fixo.colocacao !== undefined && div[fixo.clube] === n) { const p = clamp(Math.round(fixo.colocacao), 1, VAGAS_POR_DIVISAO); pos.set(fixo.clube, p); ocupadas.add(p); }
-    const xs = nomes.filter(c => div[c] === n && c !== fixo?.clube)
-      // A força do elenco diante da divisão: um grande na segunda divisão briga pelo acesso (e costuma voltar logo); um
-      // tradicional que subiu briga contra a queda. (4 posições por degrau: com 3, os grandes ficavam anos embaixo.)
-      .map(c => ({ c, x: 11 - (forcaNaLiga(c, pais) + formaDe(liga0, c) - n) * 4 + r.normal() * RUIDO_DA_TEMPORADA }));
-    if (fixo && fixo.colocacao === undefined && fixo.x !== undefined && div[fixo.clube] === n) xs.push({ c: fixo.clube, x: fixo.x });
-    // REWORK 11 · ESP-11.1: as vagas que o catálogo não ocupa são de clubes sem nome no jogo, com a força média da
-    // divisão — e a tabela é a ORDEM das forças dos 20 (antes, cada clube pegava a vaga mais perto do seu número, e
-    // numa divisão cheia os dois mais fracos sobravam para o 1º e o 2º lugares: o campeão era o pior time).
-    const semNome = Math.max(0, VAGAS_POR_DIVISAO - xs.length - ocupadas.size);
-    for (let k = 0; k < semNome; k++) xs.push({ c: '', x: 11 + FORCA_SEM_NOME * 4 + r.normal() * RUIDO_DA_TEMPORADA });
-    xs.sort((a, b) => a.x - b.x);
-    let p = 1;
-    for (const { c } of xs) {
-      while (ocupadas.has(p)) p++;
-      if (p > VAGAS_POR_DIVISAO) break;
-      ocupadas.add(p);
-      if (c) pos.set(c, p);
-    }
-    // (Um catálogo maior que a divisão — não acontece com as vagas respeitadas — fica no fim da tabela.)
-    for (const { c } of xs) if (c && !pos.has(c)) pos.set(c, VAGAS_POR_DIVISAO);
-    const campeao = [...pos].find(([c, p]) => p === 1 && div[c] === n);
-    if (campeao) campeoes[n] = campeao[0];
+    const t = temporadaDaDivisao(v, pais, ano, n, div, liga0, fixo && div[fixo.clube] === n ? fixo : undefined);
+    tabelas[n] = t;
+    t.linhas.forEach((l, k) => { if (!l[0].startsWith(SEM_CATALOGO)) pos.set(l[0], k + 1); });
+    const c = t.linhas[0]?.[0];
+    if (c && !c.startsWith(SEM_CATALOGO)) campeoes[n] = c;
   }
   // A divisão 1 são os campeonatos regionais: cada clube tem a sua colocação no seu (1..12); sobe quem chega em cima.
   // (O clube da vida com força `x`: a colocação no regional dele já vem na escala 1..12 — `colocacaoNaTabela`.)
   for (const c of nomes.filter(c => div[c] === 1)) pos.set(c, c === fixo?.clube ? clamp(Math.round(fixo.colocacao ?? fixo.x ?? 6), 1, 12) : clamp(Math.round(6.5 - (forcaNaLiga(c, pais) - 1) * 2 + r.normal() * 3), 1, 12));
-  return { pos, campeoes };
+  return { pos, campeoes, tabelas };
+}
+
+/* ------------------------------------------------------------ VIDA 19: a temporada jogada partida a partida */
+
+/**
+ * O momento de cada clube no ano (em degraus de força): soma-se à força do elenco e à forma. Calibrado para que a
+ * temporada jogada partida a partida varie como a régua de antes (`RUIDO_DA_TEMPORADA`): os grandes brigam em cima,
+ * e o título não é sorteio.
+ */
+export const MOMENTO_DA_TEMPORADA = 0.3;
+
+/** O começo de uma temporada do país (a divisão de cada clube e a forma): guardado ao fechar a anterior. */
+export function inicioDaTemporada19(v: Vida, pais: string, ano: number): { div: Record<string, Nivel>; forma?: Record<string, number> } {
+  const liga = v.caminhos.ligas?.[pais];
+  const guardado = liga?.inicio19?.find(x => x.ano === ano);
+  if (guardado) return guardado as { div: Record<string, Nivel>; forma?: Record<string, number> };
+  if (liga) return { div: liga.div as Record<string, Nivel>, forma: liga.forma };
+  // A liga ainda não existe nesta vida: ela vai nascer exatamente assim (`ligaDe`).
+  return { div: distribuicaoInicial(v, pais) };
+}
+
+/** Os 20 clubes de uma divisão na temporada: os do catálogo e, nas vagas que sobram, os sem nome (estáveis no ano). */
+export function participantes19(v: Vida, pais: string, ano: number, n: number, div: Record<string, number>): string[] {
+  const nomes = Object.keys(div).filter(c => div[c] === n).sort();
+  const ocupados = new Set(Object.keys(div));
+  const cidades = nomesDeCidades(pais);
+  for (let j = 0; nomes.length < VAGAS_POR_DIVISAO; j++) nomes.push(SEM_CATALOGO + nomeSemCatalogo(pais, cidades, n, ano * 20 + j, ocupados));
+  void v;
+  return nomes.slice(0, Math.max(VAGAS_POR_DIVISAO, nomes.length));
+}
+
+/** A força de um clube na temporada: o elenco, a forma, o degrau da divisão e o momento do ano. */
+export function forcaNaTemporada19(v: Vida, pais: string, ano: number, n: number, c: string, forma?: Record<string, number>): number {
+  const base = c.startsWith(SEM_CATALOGO) ? -FORCA_SEM_NOME : forcaNaLiga(c, pais) + (forma?.[c] ?? 0) - n;
+  return base + rngDe(v.id, 'momento19', pais, ano, c).normal() * MOMENTO_DA_TEMPORADA;
+}
+
+/**
+ * A temporada de uma divisão jogada partida a partida. O clube da vida entra com a força da carreira (`x`, a mesma régua
+ * de `colocacaoNaTabela`) ou, quando a colocação já é sabida, com a força que o faz terminar nela (as partidas dele
+ * mudam; as dos outros, não).
+ */
+function temporadaDaDivisao(v: Vida, pais: string, ano: number, n: 2 | 3 | 4, div: Record<string, Nivel>, liga0: Pick<LigaDoPais, 'forma'> | undefined, fixo?: Fixo): Temporada19 {
+  const nomes = participantes19(v, pais, ano, n, div);
+  const marca = fixo && (fixo.gp || fixo.gc) ? { clube: fixo.clube, gp: fixo.gp, gc: fixo.gc } : undefined;
+  const jogar = (gFixo?: number) => jogarTemporada19(v.id, pais, ano, n, nomes, c => (fixo && c === fixo.clube && gFixo !== undefined ? gFixo : forcaNaTemporada19(v, pais, ano, n, c, liga0?.forma)), marca);
+  if (!fixo) return jogar();
+  if (fixo.colocacao === undefined) return jogar(fixo.x !== undefined ? (11 - fixo.x) / 4 : undefined);
+  // A colocação é sabida (a carreira fechou o ano): a força que leva até ela (a posição só melhora com a força).
+  const alvo = clamp(Math.round(fixo.colocacao), 1, nomes.length);
+  const posicao = (t: Temporada19) => t.linhas.findIndex(l => l[0] === fixo.clube) + 1;
+  let lo = -6, hi = 8, melhor = jogar(1), dist = Math.abs(posicao(melhor) - alvo);
+  for (let k = 0; k < 26 && dist > 0; k++) {
+    const meio = (lo + hi) / 2;
+    const t = jogar(meio);
+    const p = posicao(t);
+    const d = Math.abs(p - alvo);
+    if (d < dist) { melhor = t; dist = d; }
+    if (p > alvo) lo = meio; else if (p < alvo) hi = meio; else { melhor = t; dist = 0; }
+  }
+  return melhor;
 }
 
 /**
@@ -364,14 +397,16 @@ export function fecharTemporadaDaLiga(v: Vida, pais: string, ano: number, clube:
     }
     const u = liga.ultima;
     if (u?.ano === ano && antes === 4 && colocacao <= vagasContinentais(pais) && !(u.classificados ??= []).includes(clube)) u.classificados.push(clube);
-    // HOTFIX 11.5.1: a tabela já jogada passa a ter o clube da vida onde ele terminou (o resto da ordem fica).
+    // A tabela já jogada passa a ter o clube da vida onde ele terminou: a temporada da divisão é rejogada do mesmo começo,
+    // com a força que o leva a essa colocação (VIDA 19: as partidas dos outros clubes entre si não mudam).
     const tab = u?.ano === ano && antes >= 2 ? u.tabelas?.[antes as 2 | 3 | 4] : undefined;
     if (tab) {
-      const nomes = tab.map(l => l[0]).filter(c => c !== clube);
-      if (nomes.length >= tab.length) { const k = [...nomes].reverse().findIndex(c => c.startsWith(SEM_CATALOGO)); nomes.splice(k < 0 ? nomes.length - 1 : nomes.length - 1 - k, 1); }
-      nomes.splice(clamp(Math.round(colocacao), 1, nomes.length + 1) - 1, 0, clube);
-      u!.tabelas![antes as 2 | 3 | 4] = jogarTabela(rngDe(v.id, 'tabela', pais, ano, antes), nomes, marca && (marca.gp || marca.gc) ? { clube, ...marca } : undefined);
-      if (antes === 4) { const h = liga.historico?.find(x => x.ano === ano); if (h) h.liga = nomes[0]; }
+      const ini = inicioDaTemporada19(v, pais, ano);
+      const d = { ...ini.div };
+      fixar({ ano, div: d }, clube, antes, pais);
+      const t = temporadaDaDivisao(v, pais, ano, antes as 2 | 3 | 4, d, ini, { clube, colocacao, ...(marca ?? {}) });
+      u!.tabelas![antes as 2 | 3 | 4] = t.linhas;
+      if (antes === 4) { const h = liga.historico?.find(x => x.ano === ano); if (h) h.liga = t.linhas[0][0]; }
     }
   }
   const depois = liga.div[clube];

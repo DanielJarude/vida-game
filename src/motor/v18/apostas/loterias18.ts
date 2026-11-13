@@ -18,7 +18,7 @@ import type { Vida } from '../../tipos';
 import { rngDe, type Rng } from '../../rng';
 import { anoDe } from '../../tempo';
 import { dinheiro as fmt } from '../../texto';
-import { BOLOES18, LOTERIAS18, PREMIO_BRUTO, TARIFA_BOLAO, type LoteriaId } from '../../dados18/apostas/loterias18';
+import { BOLOES18, LOTERIAS18, PREMIO_BRUTO, TARIFA_BOLAO, VIRADA18, type LoteriaId } from '../../dados18/apostas/loterias18';
 import { estadoApostas18, type Bilhete18, type ResultadoDoBilhete } from './estado18';
 import { rodadaDoConcurso, resultadoDoJogo } from './esportivas18';
 
@@ -56,6 +56,26 @@ function poisson(r: Rng, lambda: number): number {
 /* ================================================================== O calendário de concursos */
 
 export const primeiroDoAno = (l: LoteriaId, ano: number) => (ano - 2000) * LOTERIAS18[l].porAno + 1;
+/** VIDA 19: a Mega da Virada é o último concurso da Mega-Sena de cada ano. */
+export const viradaDoAno = (ano: number) => primeiroDoAno('mega', ano + 1) - 1;
+export const ehVirada = (l: LoteriaId, n: number) => l === 'mega' && (n - 1) % LOTERIAS18.mega.porAno === LOTERIAS18.mega.porAno - 1;
+export const anoDoConcurso = (l: LoteriaId, n: number) => 2000 + Math.floor((n - 1) / LOTERIAS18[l].porAno);
+
+const cacheReserva = new Map<string, number>();
+/** A reserva da Virada do ano: 10% do prêmio bruto de cada concurso regular da Mega do ano (estável). */
+export function reservaDaVirada(v: Vida, ano: number): number {
+  const k = `${v.id}:${ano}`;
+  const ja = cacheReserva.get(k);
+  if (ja !== undefined) return ja;
+  let soma = 0;
+  const ini = primeiroDoAno('mega', ano);
+  // A arrecadação dos concursos regulares (sem refazer o acúmulo de cada um: a arrecadação pesa pelo acúmulo médio).
+  for (let n = ini; n < viradaDoAno(ano); n++) soma += LOTERIAS18.mega.arrecadacao * (0.85 + rngDe(v.id, 'nacional18', 'mega', n).next() * 0.3) * 1.6 * PREMIO_BRUTO * VIRADA18.reserva;
+  const x = Math.round(soma / 1000) * 1000;
+  if (cacheReserva.size > 200) cacheReserva.clear();
+  cacheReserva.set(k, x);
+  return x;
+}
 /** O próximo concurso para a vida: o que ela acompanha, mas nunca um de ano que já passou. */
 export function proximoConcurso(v: Vida, l: LoteriaId): number {
   const e = v.apostas18;
@@ -74,9 +94,12 @@ const chaveDaFaixa = (acertos: number, sorteio?: 1 | 2) => `${acertos}${sorteio 
 /** O acúmulo que o concurso N leva para a faixa principal (refeito a partir dos 24 anteriores). */
 export function acumulado(v: Vida, l: LoteriaId, n: number): number {
   const L = LOTERIAS18[l];
+  // A Virada não leva o acúmulo da Mega: leva a reserva do ano (e o seu prêmio não acumula para ninguém).
+  if (ehVirada(l, n)) return reservaDaVirada(v, anoDoConcurso(l, n));
   let j = L.inicial * (0.6 + rngDe(v.id, 'acum18', l, n - 24).next() * 0.8);
   const topo = new Set(v.apostas18?.topo[l] ?? []);
   for (let k = n - 24; k < n; k++) {
+    if (ehVirada(l, k)) continue;
     const nac = nacionalSem(v, l, k, j);
     const topoPct = L.faixas.find(f => f.acertos === L.acumula && (f.sorteio ?? 1) === 1)?.pct ?? 0;
     const saiu = (nac.ganhadores[chaveDaFaixa(L.acumula, L.duasVezes ? 1 : undefined)] ?? 0) > 0 || topo.has(k);
@@ -89,7 +112,8 @@ export function acumulado(v: Vida, l: LoteriaId, n: number): number {
 function nacionalSem(v: Vida, l: LoteriaId, n: number, acum: number): Nacional {
   const L = LOTERIAS18[l];
   const r = rngDe(v.id, 'nacional18', l, n);
-  const arrecadacao = Math.round(L.arrecadacao * (0.85 + r.next() * 0.3) * (1 + Math.min(4, acum / (L.arrecadacao * 2.5))));
+  const virada = ehVirada(l, n);
+  const arrecadacao = Math.round(L.arrecadacao * (0.85 + r.next() * 0.3) * (virada ? VIRADA18.arrecadacao : 1 + Math.min(4, acum / (L.arrecadacao * 2.5))));
   const apostas = arrecadacao / L.preco;
   const ganhadores: Record<string, number> = {};
   for (const f of L.faixas) {
@@ -106,6 +130,7 @@ export function nacional(v: Vida, l: LoteriaId, n: number): Nacional { return na
 export function premioEstimado(v: Vida, l: LoteriaId, n: number): number {
   const L = LOTERIAS18[l];
   const nac = nacional(v, l, n);
+  if (ehVirada(l, n)) return Math.round((nac.acumulado + nac.arrecadacao * PREMIO_BRUTO) * VIRADA18.sena / 1000) * 1000;
   const pct = L.faixas.find(f => f.acertos === L.acumula && (f.sorteio ?? 1) === 1)?.pct ?? 0;
   return Math.round((nac.acumulado + nac.arrecadacao * PREMIO_BRUTO * pct * (l === 'lotofacil' ? 0.35 : 1)) / 1000) * 1000;
 }
@@ -161,6 +186,18 @@ export function rateio(v: Vida, l: LoteriaId, n: number, daVida: Record<string, 
   const nac = nacional(v, l, n);
   const bruto = nac.arrecadacao * PREMIO_BRUTO;
   const out: Record<string, number> = {};
+  if (ehVirada(l, n)) {
+    // A Virada: 90/5/5 sobre a reserva + o prêmio bruto do concurso; sem ganhador numa faixa, o valor desce para a seguinte.
+    const total = nac.acumulado + bruto;
+    let desce = 0;
+    for (const [ac, pct] of [[6, VIRADA18.sena], [5, VIRADA18.quina], [4, VIRADA18.quadra]] as const) {
+      const k = chaveDaFaixa(ac);
+      const ganh = (nac.ganhadores[k] ?? 0) + (daVida[k] ?? 0);
+      const pool = total * pct + desce;
+      if (ganh > 0) { out[k] = Math.round(pool / ganh * 100) / 100; desce = 0; } else { out[k] = 0; desce = pool; }
+    }
+    return out;
+  }
   // As faixas de valor fixo (Lotofácil 11–13) saem primeiro; o resto do prêmio bruto vai para as de rateio.
   let fixos = 0;
   for (const f of L.faixas) if (f.fixo) { out[chaveDaFaixa(f.acertos)] = f.fixo; fixos += f.fixo * ((nac.ganhadores[chaveDaFaixa(f.acertos)] ?? 0) + (daVida[chaveDaFaixa(f.acertos)] ?? 0)); }
@@ -231,8 +268,8 @@ export function surpresinha(r: Rng, l: LoteriaId, n = LOTERIAS18[l].min): number
 export interface Bolao18 { loteria: LoteriaId; concurso: number; jogos: number[][]; palpites?: ('1' | 'X' | '2')[][]; cotas: number; valorCota: number; total: number }
 
 /** O bolão da lotérica para o próximo concurso (os jogos são fixos para o concurso: o mesmo bolão para quem olhar). */
-export function bolaoDaLoterica(v: Vida, l: LoteriaId): Bolao18 {
-  const n = proximoConcurso(v, l);
+export function bolaoDaLoterica(v: Vida, l: LoteriaId, virada = false): Bolao18 {
+  const n = virada && l === 'mega' ? viradaDoAno(anoDe(v.t)) : proximoConcurso(v, l);
   const cfg = BOLOES18[l];
   const r = rngDe(v.id, 'bolao18', l, n);
   if (l === 'loteca') {

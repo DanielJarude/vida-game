@@ -89,7 +89,9 @@ describe('EDU-05 · o boletim e o histórico na faculdade', () => {
   });
 
   it('reprovar conta: a matrícula guarda as disciplinas reprovadas e o histórico as mostra', () => {
-    let v = em(naFaculdade('direito', 11), x => { x.mente.cognicao = 10; x.educacao.postura = 'relaxada'; for (const f of Object.values(x.caminhos.frentes)) if (f) f.habilidade = 5; });
+    // VIDA 19: a vida da semente 11 passou a engravidar e trancar o curso no caminho (o mundo mais vivo mudou o sorteio
+    // dela); a regra testada é a da reprovação, numa vida que segue estudando.
+    let v = em(naFaculdade('direito', 12), x => { x.mente.cognicao = 10; x.educacao.postura = 'relaxada'; for (const f of Object.values(x.caminhos.frentes)) if (f) f.habilidade = 5; });
     const m = v.educacao.matricula!;
     v = viver(v, 4, x => (x.educacao.postura !== 'relaxada' ? [{ tipo: 'postura', valor: 'relaxada' }] : []));
     const regs = registrosDoCurso(v, 'direito', m.tInicio).filter(x => x.disciplinas.length);

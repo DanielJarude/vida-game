@@ -11,7 +11,7 @@ import { BotaoAcao, Subnav } from '../../comum';
 import { dinheiroCurto } from '../../leituraMaterial';
 import { anoDe } from '../../../motor/tempo';
 import { LOTERIAS18, BOLOES18, INSCRICAO_TURFE, type LoteriaId } from '../../../motor/dados18/apostas/loterias18';
-import { bolaoDaLoterica, chanceDaFaixa, comb, precoDaAposta, precoDaLoteca, premioEstimado, proximoConcurso } from '../../../motor/v18/apostas/loterias18';
+import { bolaoDaLoterica, chanceDaFaixa, comb, precoDaAposta, precoDaLoteca, premioEstimado, proximoConcurso, viradaDoAno } from '../../../motor/v18/apostas/loterias18';
 import { mercadoDaTemporada, mercadoPronto, odd, probabilidades, rodada, gradeDePlacares, paisDoFutebol } from '../../../motor/v18/apostas/esportivas18';
 import { chancesDoPareo, hipodromosDaVida, oddTurfe, desempenho } from '../../../motor/v18/apostas/turfe18';
 import { cavalosDaCasa, leiDa, pareoAberto, pareoDe, precoDaCartela, rodadaAberta, pendentesEsportivas, type OqueAposta18 } from '../../../motor/v18/apostas/apostas18';
@@ -58,6 +58,21 @@ function Cartaz({ vida, l }: { vida: Vida; l: LoteriaId }) {
   );
 }
 
+/** VIDA 19 · A Mega da Virada: o concurso especial do fim do ano (o prêmio não acumula; 90/5/5). */
+function Virada19({ vida, agir, dezenas, qtd }: { vida: Vida; agir: Agir; dezenas: number; qtd: number }) {
+  const n = viradaDoAno(anoDe(vida.t));
+  const est = premioEstimado(vida, 'mega', n);
+  const bolao = bolaoDaLoterica(vida, 'mega', true);
+  return (
+    <div className="apostas18__linha apostas18__virada">
+      <span><strong>Mega da Virada</strong> · concurso {n.toLocaleString('pt-BR')} · 31 de dezembro · prêmio estimado {dinheiroCurto(est)}</span>
+      <span className="nota">Não acumula: sem ganhador da sena, o prêmio vai para a quina; sem quina, para a quadra. Cada concurso do ano reservou parte do prêmio para ela.</span>
+      <BotaoAcao vida={vida} agir={agir} acao={a18({ jogo: 'loteria', oque: 'comprar', loteria: 'mega', surpresinhas: qtd, dezenas, virada: true })}>Apostar na Virada · {dinheiroCurto(precoDaAposta('mega', dezenas) * qtd)}</BotaoAcao>
+      <BotaoAcao vida={vida} agir={agir} acao={a18({ jogo: 'loteria', oque: 'bolao', loteria: 'mega', cotas: 1, virada: true })}>Uma cota do bolão da Virada · {dinheiroCurto(bolao.valorCota)}</BotaoAcao>
+    </div>
+  );
+}
+
 function Volante({ vida, agir, l }: { vida: Vida; agir: Agir; l: LoteriaId }) {
   const L = LOTERIAS18[l];
   const [marcados, setMarcados] = useState<number[]>([]);
@@ -93,6 +108,7 @@ function Volante({ vida, agir, l }: { vida: Vida; agir: Agir; l: LoteriaId }) {
         <label>jogos <select value={qtd} onChange={e => setQtd(Number(e.target.value))}>{[1, 2, 3, 5, 10].map(d => <option key={d} value={d}>{d}</option>)}</select></label>
         <BotaoAcao vida={vida} agir={agir} acao={a18({ jogo: 'loteria', oque: 'comprar', loteria: l, surpresinhas: qtd, dezenas })}>Registrar · {dinheiroCurto(precoDaAposta(l, dezenas) * qtd)}</BotaoAcao>
       </div>
+      {l === 'mega' && <Virada19 vida={vida} agir={agir} dezenas={dezenas} qtd={qtd} />}
       <div className="apostas18__linha">
         <span>Bolão da lotérica</span>
         <span className="nota">{bolao.jogos.length} jogos de {BOLOES18[l].dezenas} dezenas, {bolao.cotas} cotas de {dinheiroCurto(bolao.valorCota)} (com a tarifa de serviço)</span>

@@ -456,6 +456,9 @@ describe('I · situação de carreira: intenção ≠ resultado', () => {
     v = transacao(v, (x, r) => { contratar(x, r, ocupacao('vendedor')); }).vida;
     let anos = 0, com = 0;
     for (let k = 0; k < 12; k++) {
+      // VIDA 19: a vida de teste mudou com o mundo mais vivo e às vezes perde o emprego no caminho; o que se mede é o ano
+      // de quem está empregado num emprego comum — quem perdeu volta ao balcão.
+      if (v.trabalho.atual?.ocupacaoId !== 'vendedor') v = transacao(v, (x, r) => { contratar(x, r, ocupacao('vendedor')); }).vida;
       v = avancarAno(v).vida;
       anos++;
       if (v.momento?.situacaoId === 'car_situacao') com++;

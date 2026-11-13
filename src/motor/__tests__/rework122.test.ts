@@ -68,7 +68,8 @@ const ANO = (v: Vida) => { let x = avancarAno(v).vida; for (let k = 0; k < 12 &&
 
 describe('empresas vivas: cada ramo é um negócio diferente', () => {
   it('os oito tipos existem, têm estado próprio, indicadores próprios e pelo menos três decisões que não são as dos outros', () => {
-    expect(TIPOS_DE_EMPRESA.map(t => t.id).sort()).toEqual(['academia', 'clinica', 'estudio', 'hotel', 'loja', 'museu', 'restaurante', 'zoologico']);
+    // VIDA 19: as empresas do campo (agroindústria, laticínio) entram na mesma régua: estado, indicadores e decisões próprios.
+    expect(TIPOS_DE_EMPRESA.map(t => t.id).sort()).toEqual(['academia', 'agroindustria', 'clinica', 'estudio', 'hotel', 'laticinio', 'loja', 'museu', 'restaurante', 'zoologico']);
     const rotulos = new Map<string, string>();
     for (const t of TIPOS_DE_EMPRESA) {
       const v = operando(comEmpresa(t.id));
@@ -79,7 +80,7 @@ describe('empresas vivas: cada ramo é um negócio diferente', () => {
       expect(ids.size, t.id).toBeGreaterThanOrEqual(3);
       rotulos.set(t.id, indicadoresDoSetor(v, e).map(x => x.rotulo).join('|'));
     }
-    expect(new Set(rotulos.values()).size).toBe(8);
+    expect(new Set(rotulos.values()).size).toBe(TIPOS_DE_EMPRESA.length);
   });
 
   it('restaurante: cobrar caro e servir com insumo ruim derruba a nota e a procura; insumo excelente melhora a nota e come a margem', () => {
@@ -457,16 +458,17 @@ describe('Submundo: negócios por fora, fachada, organização', () => {
   });
 
   it('o negócio por fora gira, chama atenção (acelerar chama mais que a cautela) e, quando a Justiça chega, é desmantelado — com a história', () => {
-    const comRitmo = (ritmo: 'ritmo_0' | 'ritmo_2') => {
-      let w = envolvido();
+    // VIDA 19: a comparação é de média (quatro sementes): com um só caso, a apreensão ou a traição sorteadas no caminho
+    // decidiam sozinhas — o mundo mais vivo mudou a vida de teste e o sorteio de um caso deixou de dizer a regra.
+    const comRitmo = (ritmo: 'ritmo_0' | 'ritmo_2', k0 = 0) => {
+      let w = envolvido('mercado', 3 + k0);
       w = fazer(w, { tipo: 'clandestino', oque: 'abrir', alvo: 'mercadorias' });
       w = fazer(w, { tipo: 'clandestino', oque: ritmo, negocioId: negocios(w)[0].id });
       for (let k = 0; k < 5; k++) w = transacao(w, (x, r) => { x.t += 12; processarClandestinos(x, r); }).vida;
       return w;
     };
-    const acelerado = comRitmo('ritmo_2');
-    const cauteloso = comRitmo('ritmo_0');
-    expect(acelerado.caminhos.envolvimento!.exposicao).toBeGreaterThan(cauteloso.caminhos.envolvimento!.exposicao);
+    const expo = (ritmo: 'ritmo_0' | 'ritmo_2') => [0, 1, 2, 3].reduce((s, k) => s + comRitmo(ritmo, k).caminhos.envolvimento!.exposicao, 0);
+    expect(expo('ritmo_2')).toBeGreaterThan(expo('ritmo_0'));
     let v = envolvido();
     v = fazer(v, { tipo: 'clandestino', oque: 'abrir', alvo: 'mercadorias' });
     v = transacao(v, (x, r) => { x.t += 12; processarClandestinos(x, r); }).vida;

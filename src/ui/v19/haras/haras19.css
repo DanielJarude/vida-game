@@ -1,0 +1,5 @@
+/* VIDA 19 · o haras que cria (dentro do Campo). */
+.haras19 { display: flex; flex-direction: column; gap: 8px; }
+.haras19__cavalo { display: flex; flex-direction: column; gap: 4px; }
+.haras19__ficha { font-size: 12.5px; opacity: 0.85; }
+.haras19__garanhao select { max-width: 100%; }

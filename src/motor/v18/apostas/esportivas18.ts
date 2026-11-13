@@ -17,41 +17,49 @@ import type { Vida } from '../../tipos';
 import { clamp, rngDe } from '../../rng';
 import { clubesDoPais } from '../../dados/clubes';
 import { paisDaVida } from '../../mundo/vida';
-import { FORCA_SEM_NOME, RUIDO_DA_TEMPORADA, VAGAS_POR_DIVISAO, forcaNaLiga, ligaDe, temporadaCorrente } from '../../sistemas/ligas';
+import { FORCA_SEM_NOME, RUIDO_DA_TEMPORADA, VAGAS_POR_DIVISAO, forcaNaLiga, forcaNaTemporada19, inicioDaTemporada19, ligaDe, participantes19, temporadaCorrente } from '../../sistemas/ligas';
+import { calendario, mediasDaPartida, placarDaPartida, sorteioDaPartida } from '../../sistemas/jogosDaLiga';
 import { campeaoDaCopaNoAno } from '../../sistemas/competicoes';
-import { anoDe } from '../../tempo';
+import { anoDe, mesDe } from '../../tempo';
 import type { MercadoEsportivo } from './estado18';
 
 export const MARGEM_ESPORTIVA = 0.07;
 
 /* ================================================================== A rodada */
 
-export interface JogoDaRodada { casa: string; fora: string; fCasa: number; fFora: number }
-
-const formaDe = (v: Vida, pais: string, c: string) => v.caminhos.ligas?.[pais]?.forma?.[c] ?? 0;
-const forcaDoJogo = (v: Vida, pais: string, c: string) => forcaNaLiga(c, pais) + formaDe(v, pais, c);
+export interface JogoDaRodada { casa: string; fora: string; fCasa: number; fFora: number; /** VIDA 19: a temporada, a divisão e os nomes guardados dos clubes (os sem catálogo levam `~`). */ ano?: number; div?: number; idCasa?: string; idFora?: string }
 
 /** O país do futebol em que se aposta: o da vida (se ele tem clubes no catálogo); senão, o Brasil. */
 export function paisDoFutebol(v: Vida): string { const p = paisDaVida(v); return clubesDoPais(p).length >= 8 ? p : 'BR'; }
 
-/** Os jogos da rodada `n` (14, como na Loteca): os clubes mais fortes do catálogo, emparelhados pelo sorteio da rodada. */
+/**
+ * VIDA 19 — a rodada `n` (semanal, 52 por ano; a mesma numeração da Loteca) é uma rodada de VERDADE do campeonato
+ * nacional da temporada em curso (`ligas.temporadaCorrente`): as semanas 1 a 38 são as 38 rodadas da elite (10 jogos)
+ * e 4 jogos da mesma rodada da segunda divisão; as semanas 39 a 52 são rodadas da terceira divisão com outros 4 jogos
+ * da segunda. Cada partida é a do calendário da liga (`jogosDaLiga`): o mesmo placar na aposta, na Loteca e na tabela.
+ */
 export function rodada(v: Vida, n: number, pais = paisDoFutebol(v)): { n: number; pais: string; jogos: JogoDaRodada[] } {
-  const clubes = [...clubesDoPais(pais)].sort((a, b) => forcaNaLiga(b.nome, pais) - forcaNaLiga(a.nome, pais) || a.nome.localeCompare(b.nome)).slice(0, 40);
-  const r = rngDe(v.id, 'rodada18-jogos', pais, n);
-  const b = clubes.map(c => c.nome);
-  for (let i = b.length - 1; i > 0; i--) { const j = Math.floor(r.next() * (i + 1)); [b[i], b[j]] = [b[j], b[i]]; }
-  const jogos: JogoDaRodada[] = [];
-  for (let k = 0; k + 1 < b.length && jogos.length < 14; k += 2) jogos.push({ casa: b[k], fora: b[k + 1], fCasa: forcaDoJogo(v, pais, b[k]), fFora: forcaDoJogo(v, pais, b[k + 1]) });
+  // A temporada que corre no ano da rodada (a mesma régua de `ligas.temporadaCorrente`, que depende do mês da vida).
+  const ano = anoDe((2000 + Math.floor((n - 1) / 52)) * 12 + mesDe(v.t) - 6);
+  const w = (n - 1) % 52;
+  const ini = inicioDaTemporada19(v, pais, ano);
+  const forma = (c: string) => (c.startsWith('~') ? 0 : ini.forma?.[c] ?? 0);
+  const da = (div: number, k: number, de: number, ate: number): JogoDaRodada[] => {
+    const nomes = participantes19(v, pais, ano, div, ini.div);
+    const cal = calendario([...nomes].sort(), rngDe(v.id, 'calendario19', pais, ano, div));
+    const f = (c: string) => (c.startsWith('~') ? -FORCA_SEM_NOME : forcaNaLiga(c, pais) + forma(c) - div);
+    return (cal[k % cal.length] ?? []).slice(de, ate).map(([casa, fora]) => ({ casa: nomeDoClube(casa), fora: nomeDoClube(fora), idCasa: casa, idFora: fora, fCasa: f(casa), fFora: f(fora), ano, div }));
+  };
+  const jogos = w < 38 ? [...da(4, w, 0, 10), ...da(3, w, 0, 4)] : [...da(2, w - 38, 0, 10), ...da(3, w - 38, 4, 8)];
   return { n, pais, jogos };
 }
 /** A rodada que a Loteca do concurso `n` usa (a mesma numeração: um concurso por rodada). */
 export const rodadaDoConcurso = (v: Vida, n: number) => rodada(v, n, 'BR');
+/** O nome de um clube para a tela (os sem catálogo levam `~` guardado). */
+export const nomeDoClube = (c: string) => c.replace(/^~/, '');
 
-/** As médias de gols do jogo (o mesmo modelo da tabela: mando e diferença de força). */
-export function mediasDoJogo(j: JogoDaRodada): [number, number] {
-  const dif = (j.fCasa - j.fFora) * 0.5;
-  return [1.32 * Math.exp(0.45 * dif) + 0.12, 1.08 * Math.exp(-0.45 * dif)];
-}
+/** As médias de gols do jogo (o mesmo modelo das partidas da liga: mando e diferença de força). */
+export function mediasDoJogo(j: JogoDaRodada): [number, number] { return mediasDaPartida(j.fCasa, j.fFora); }
 const pmf = (l: number, k: number) => { let p = Math.exp(-l); for (let i = 1; i <= k; i++) p *= l / i; return p; };
 /** A grade de placares até 9×9 (a probabilidade de cada um). */
 export function gradeDePlacares(j: JogoDaRodada): number[][] {
@@ -68,13 +76,15 @@ export function probabilidades(j: JogoDaRodada): { '1': number; X: number; '2': 
 /** A odd decimal (o que volta por real apostado) de uma probabilidade, com a margem da casa. */
 export const odd = (p: number) => Math.max(1.01, Math.round(1 / (Math.max(0.0005, p) * (1 + MARGEM_ESPORTIVA)) * 100) / 100);
 
-/** O placar do jogo (do mundo: o mesmo para todos), sorteado pela mesma distribuição das odds. */
+/**
+ * O placar do jogo — a PARTIDA da liga (VIDA 19): a força de cada clube na temporada (com o momento do ano, que a casa
+ * de apostas não conhece) e o sorteio da partida. O mesmo número que entra na tabela quando a temporada fecha.
+ */
 export function resultadoDoJogo(v: Vida, n: number, k: number, pais = 'BR'): { gols: [number, number]; res: '1' | 'X' | '2' } {
   const j = rodada(v, n, pais).jogos[k];
-  const [a, b] = mediasDoJogo(j);
-  const r = rngDe(v.id, 'rodada18', pais, n, k);
-  const g = (l: number) => { let x = 0, p = Math.exp(-l), s = p; const u = r.next(); while (u > s && x < 12) { x++; p *= l / x; s += p; } return x; };
-  const gols: [number, number] = [g(a), g(b)];
+  const ano = j.ano!, div = j.div!;
+  const forma = inicioDaTemporada19(v, pais, ano).forma;
+  const gols = placarDaPartida(sorteioDaPartida(v.id, pais, ano, div, j.idCasa!, j.idFora!), forcaNaTemporada19(v, pais, ano, div, j.idCasa!, forma), forcaNaTemporada19(v, pais, ano, div, j.idFora!, forma));
   return { gols, res: gols[0] > gols[1] ? '1' : gols[0] === gols[1] ? 'X' : '2' };
 }
 

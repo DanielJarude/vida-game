@@ -110,7 +110,7 @@ export function registrarFaseTenis(v: Vida, fase: string, venceu: boolean): void
 const TITULO = /\bcampe(ã|a)o\b|\bcampeões\b|\bt[íi]tulos?\b|medalha de ouro|\bo ouro\b/i;
 const semEstatistica = (s: string) => s.replace(/\b\d+ t[íi]tulos?\b/gi, '');
 /** O que não é carreira (a escola, a faculdade, o xadrez, o bairro) e o que nega título ("sem título"). */
-const FORA = /escolar|escola|universit|xadrez|escolinha|amador|bairro|olimp[ií]ada|sem t[íi]tulo|o título ficou|título de eleitor|bodas|primeiro título de|bola de ouro|chuteira de ouro|luva de ouro|técnic|treinador|banco|estadual como técnico|comandou|dirigiu/i;
+const FORA = /escolar|escola|universit|xadrez|escolinha|amador|bairro|olimp[ií]ada|sem t[íi]tulo|o título ficou|título de eleitor|bodas|primeiro título de|bola de ouro|chuteira de ouro|luva de ouro|técnic|treinador|banco|estadual como técnico|comandou|dirigiu|anos do t[íi]tulo/i; // VIDA 19: o aniversário de um título é de outro ano (o título está no palmarés do ano dele)
 
 /** Há título de verdade (palmarés: título, ou campanha campeã/ouro pela seleção) daquela modalidade em torno do ano? */
 function temTituloNoPalmares(v: Vida, ano: number, d?: string): boolean {

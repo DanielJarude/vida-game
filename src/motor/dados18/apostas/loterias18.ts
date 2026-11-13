@@ -64,6 +64,18 @@ export const LOTERIAS18: Record<LoteriaId, Loteria18> = {
     faixas: [{ acertos: 14, nome: '14 acertos', pct: 0.70 }, { acertos: 13, nome: '13 acertos', pct: 0.10 }] }
 };
 
+/**
+ * VIDA 19 · A MEGA DA VIRADA — o concurso especial do fim do ano é o último concurso da Mega-Sena do ano (a mesma
+ * numeração, as mesmas dezenas e regras de aposta). O que muda (regras da Caixa a partir de 2025, conferidas em
+ * sbtnews.sbt.com.br "Mega da Virada 2025: novidades no rateio" e dci.com.br "Como funciona a Mega da Virada"):
+ *   - cada concurso regular do ano separa 10% do prêmio para a reserva da Virada (era 5% até 2024) — aqui, tirado da
+ *     parte do prêmio bruto que já não ia para as faixas do concurso regular (os prêmios regulares não mudam);
+ *   - o prêmio da Virada NÃO acumula: sem ganhador da sena, o valor vai para a quina; sem quina, para a quadra;
+ *   - divisão: 90% sena, 5% quina, 5% quadra;
+ *   - a arrecadação do concurso especial é dezenas de vezes a de um concurso comum (R$ 1 bilhão estimado em 2025).
+ */
+export const VIRADA18 = { sena: 0.90, quina: 0.05, quadra: 0.05, reserva: 0.10, arrecadacao: 40 } as const;
+
 /** O bolão da lotérica: quantos jogos, de quantas dezenas, divididos em quantas cotas (a tarifa de serviço é de até 35%). */
 export const BOLOES18: Record<LoteriaId, { jogos: number; dezenas: number; cotas: number }> = {
   mega: { jogos: 10, dezenas: 8, cotas: 25 },

@@ -143,6 +143,10 @@ export default defineConfig({
           // A base histórica (só dados e funções puras, sem import de nenhum pacote do motor): pacote próprio, embaixo de tudo.
           if (/[\\/]src[\\/]motor[\\/]eras[\\/]base[\\/]/.test(id)) return 'eras-base';
           if (/[\\/]src[\\/]motor[\\/]v18[\\/]/.test(id)) return 'motor18';
+          // VIDA 19: as vidas próprias dos NPCs e a VIDA Conectada (motor/v19/<frente> → motor19-<frente>); tipos em dados19.
+          const v19 = /[\\/]src[\\/]motor[\\/]v19[\\/]([a-z0-9]+)[\\/]/.exec(id);
+          if (v19) return `motor19-${v19[1]}`;
+          if (/[\\/]src[\\/]motor[\\/]dados19[\\/]/.test(id)) return 'dados19';
           if (/[\\/]src[\\/]motor[\\/]dados18[\\/]/.test(id)) return 'dados18';
           if (/[\\/]src[\\/]motor[\\/]sistemas[\\/]reconhecimento13\.ts/.test(id)) return 'motor-fama';
           if (/[\\/]src[\\/]motor[\\/]sistemas[\\/](redes|leituraDoEstresse|juntos|naFormacao|noOficio|microcenas|prisao|mundoVivo|agenda|avaliacaoDaRotina|convivio|apostas|ecos|seguroDesemprego|indiretos|afetos|fama|pedidosDaCrianca|afetosAdultos|casamento|convivio126|casaNoDia|viagens126)\.ts/.test(id)) return 'motor-vida';

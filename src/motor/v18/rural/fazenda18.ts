@@ -111,9 +111,23 @@ export interface PropriedadeRural18 {
   tRecuperacao?: number;
   /** Os cavalos de corrida da casa (individuais: são poucos e têm nome). */
   cavalos?: CavaloDeCorrida18[];
+  /** VIDA 19 (`v19/agro`): o ano do CAR (Cadastro Ambiental Rural), do georreferenciamento certificado e da outorga de água. */
+  car19?: number;
+  geo19?: number;
+  outorga19?: number;
+  /** VIDA 19: o crédito de custeio do Plano Safra em aberto (linha, taxa, valor, quando vence; prorrogado uma vez). */
+  safra19?: { ano: number; linha: 'pronaf' | 'pronamp' | 'demais'; taxa: number; valor: number; vence: number; prorrogado?: boolean };
 }
 
-export interface CavaloDeCorrida18 { id: string; nome: string; nasc: number; sexo: 'macho' | 'femea'; velocidade: number; fundo: number; forma: number; corridas: number; vitorias: number; premios: number; aposentado?: boolean }
+export interface CavaloDeCorrida18 {
+  id: string; nome: string; nasc: number; sexo: 'macho' | 'femea'; velocidade: number; fundo: number; forma: number; corridas: number; vitorias: number; premios: number; aposentado?: boolean;
+  /** VIDA 19 (`motor/v19/haras`): a filiação (nomes do pai e da mãe) — a linhagem do haras. */
+  pai?: string; mae?: string;
+  /** VIDA 19: a égua coberta — o ano em que o potro nasce e o garanhão. */
+  prenhe?: { ano: number; garanhao: string; velocidade: number; fundo: number };
+  /** VIDA 19: égua que deixou as pistas para a reprodução (matriz) ou garanhão no haras (reprodutor). */
+  reproducao?: boolean;
+}
 
 export interface Rural18 {
   arrendadas: PropriedadeRural18[];
@@ -506,7 +520,8 @@ export function custosFixos(v: Vida, p: PropriedadeRural18, ano: number): { oque
   const gestao = custoDeGestao(v, p);
   if (gestao > 0) out.push({ oque: p.ha < 40 ? 'Caseiro' : 'Gerente da fazenda', custo: gestao });
   if (p.cooperativa) out.push({ oque: 'Cooperativa (cota e mensalidade)', custo: Math.round(1200 * c + p.ha * 8 * c) });
-  if (p.seguro) out.push({ oque: 'Seguro rural', custo: Math.round(p.talhoes.reduce((s, t) => s + CULTURAS18[t.cultura].custoHa * t.ha, 0) * 0.04 * c) });
+  // VIDA 19: com o CAR em dia, o seguro tem a subvenção federal do prêmio (PSR, Lei 10.823/2003): o produtor paga ~70%.
+  if (p.seguro) out.push({ oque: p.car19 !== undefined ? 'Seguro rural (com subvenção do PSR)' : 'Seguro rural', custo: Math.round(p.talhoes.reduce((s, t) => s + CULTURAS18[t.cultura].custoHa * t.ha, 0) * 0.04 * c * (p.car19 !== undefined ? 0.7 : 1)) });
   if (p.manejo === 'organico') out.push({ oque: 'Certificação orgânica', custo: Math.round(3500 * c) });
   if (p.arrendamento?.sentido === 'pago') out.push({ oque: 'Arrendamento da terra', custo: p.arrendamento.valorAno });
   void ano;

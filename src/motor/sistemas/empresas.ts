@@ -46,8 +46,14 @@ export const GANCHOS_EMPRESA: {
   depois?: (v: Vida, e: Empresa, contas: ResultadoDoAno, caixaAntes: number) => void;
   /** Quantas unidades a empresa comporta (a rede pede diretoria). */
   unidades?: (e: Empresa) => number;
+  /** VIDA 19 (`v19/agro`): a matéria-prima que vem da terra da própria pessoa (a agroindústria, o laticínio). */
+  insumo?: (v: Vida, e: Empresa) => { procura: number; variavel: number } | undefined;
 } = {};
-const ajusteDe = (v: Vida, e: Empresa) => GANCHOS_EMPRESA.ajuste?.(v, e) ?? { procura: 1, variavel: 1, fixos: [] };
+const ajusteDe = (v: Vida, e: Empresa) => {
+  const a = GANCHOS_EMPRESA.ajuste?.(v, e) ?? { procura: 1, variavel: 1, fixos: [] };
+  const i = GANCHOS_EMPRESA.insumo?.(v, e);
+  return i ? { ...a, procura: a.procura * i.procura, variavel: a.variavel * i.variavel } : a;
+};
 export const empresasAtivas = (v: Vida) => empresas(v).filter(e => e.estado !== 'encerrada');
 export const empresa = (v: Vida, id: string) => empresas(v).find(e => e.id === id);
 

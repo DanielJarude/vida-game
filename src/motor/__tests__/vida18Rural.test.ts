@@ -53,6 +53,9 @@ describe('VIDA 18 · propriedades rurais', () => {
   it('comprar com crédito rural (produtor) ou financiamento comum: 20% de entrada e a dívida presa ao bem', () => {
     const v0 = rico();
     v0.financas.conta = 5_000_000;
+    // VIDA 19: a vida de teste (simulada desde o nascimento) mudou com o mundo mais vivo e pode chegar com o nome sujo;
+    // o que se testa aqui é o financiamento de quem tem crédito.
+    v0.financas.negativado = false;
     const o = ofertasRurais(v0).find(x => x.p.tipo === 'pecuaria')!;
     const v = executar(v0, { tipo: 'rural18', oque: { op: 'comprar', oferta: o.id, financiar: true } }).vida;
     const d = v.financas.dividas.find(d => d.descricao.includes(o.p.nome))!;

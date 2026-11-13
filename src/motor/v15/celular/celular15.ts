@@ -397,6 +397,8 @@ export function depoisDaAcao15(v: Vida, a: { tipo: string; [k: string]: unknown 
   if (c.ano !== anoDe(v.t)) return;
   const q = a.tipo === 'celular15' ? a.oque as { op?: string; escolha?: string; id?: string } : undefined;
   if (q && ['ler', 'passar', 'curtir', 'namoro_abrir', 'namoro_mais', 'curtir_post', 'desfazer'].includes(q.op ?? '')) return;
+  // VIDA 19: mexer na rede dos outros (curtir, comentar, conversar sobre um post) é como rolar o feed — não move o ano.
+  if (a.tipo === 'conectada19') return;
   c.acoesNoAno = (c.acoesNoAno ?? 0) + 1;
   const onda = c.ondas ?? 0;
   if ((c.acoesNoAno === 3 && onda === 0) || (c.acoesNoAno === 7 && onda <= 1)) {
