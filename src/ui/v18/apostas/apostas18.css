@@ -81,4 +81,9 @@
   .apostas18__cartaz strong { margin-left: 0; width: 100%; }
   .apostas18__time { max-width: 92px; }
   .apostas18__coluna { width: 28px; }
+  /* No celular, o páreo mostra o cavalo, os números e as odds (o jóquei e a idade/peso ficam para a tela larga). */
+  .apostas18__tabela--pareo th:nth-child(2), .apostas18__tabela--pareo td:nth-child(2), .apostas18__tabela--pareo th:nth-child(3), .apostas18__tabela--pareo td:nth-child(3) { display: none; }
+  .apostas18__tabela--pareo .acao { min-width: 0; }
+  .apostas18__tabela--pareo .acao, .apostas18__tabela--pareo button { white-space: nowrap; }
+  .apostas18__tabela--pareo td, .apostas18__tabela--pareo th { padding: 4px 2px; }
 }
