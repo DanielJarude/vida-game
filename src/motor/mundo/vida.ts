@@ -6,6 +6,7 @@
  * Ninguém deriva uma da outra fora daqui.
  */
 
+import { definirMesHistorico } from '../eras/base/moedas';
 import type { Pessoa, Vida } from '../tipos';
 import { existeMunicipio, paisDaCidade } from '../dados/lugares';
 import { PAIS_PADRAO, perfilDoPais, temPerfil } from './registro';
@@ -147,4 +148,6 @@ export function nacionalidadesDoBebe(municipioNatal: string, dosPais: string[][]
 /** O texto e as telas desta vida falam na moeda do país onde ela mora. Quem entra no motor chama. */
 export function entrarNaVida(v: Vida): void {
   definirPaisCorrente(paisDaVida(v));
+  // ERAS HISTÓRICAS: a moeda da época sai do mês corrente da vida (nada muda numa vida contemporânea).
+  definirMesHistorico(v.era ? v.t : null);
 }

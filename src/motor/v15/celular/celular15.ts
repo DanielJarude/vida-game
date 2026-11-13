@@ -33,6 +33,8 @@ import { arquivarMsgs16, disponibilidadeEscrever16, escrever16, type IntencaoMsg
 import { somarAoNome, origemDoNome } from '../../sistemas/notoriedade';
 import { flex } from '../../texto';
 import { anoDe } from '../../tempo';
+import { textoDaEpoca } from '../../eras/base/anacronismos';
+import { anoNoBrasil, existeNoBrasil, temAcesso } from '../../eras/base/contexto';
 import { municipio } from '../../dados/lugares';
 import { sortearNome, sortearSobrenome } from '../../dados/nomes';
 import { candidatos17, deixarFio17, ehTipo17, extrasDaVida15, opcoes17, responder17, semResposta17, aoChegar17 } from '../../v17/celular/mensagens17';
@@ -57,6 +59,8 @@ export function nivelDaFama15(v: Vida): number {
 
 /** A partir de quando há celular na vida (antes disso, a família liga para a casa). */
 export const IDADE_CELULAR15 = 10;
+/** ERAS HISTÓRICAS: numa vida histórica, o mesmo aparelho é o telefone de casa, o celular de teclas ou o smartphone
+ *  (`eras/base/contexto.meioDeComunicacao`) — as mensagens são as mesmas; a tela muda. */
 export const temCelular15 = (v: Vida) => idade(v) >= IDADE_CELULAR15 && !v.morte;
 
 export function celularDe(v: Vida): Celular15 {
@@ -291,6 +295,7 @@ function entregar(v: Vida, r: Rng, n: number, onda: number): Msg15[] {
     const base = x.montar(r);
     const m: Msg15 = { id: `m${anoDe(v.t)}_${onda}_${k}_${c.msgs.length}`, t: v.t, tipo: x.tipo, onda, mes17: mes, ...base };
     if (m.texto.includes('{o}')) m.texto = m.texto.replace(/\{o\}/g, flex(v.eu.genero, 'o', 'a', 'e'));
+    if (v.era) m.texto = textoDaEpoca(v, m.texto); // ERAS HISTÓRICAS: o recado fala do jeito da época
     c.msgs.push(m);
     aoChegar17(v, m);
     out.push(m);
@@ -408,7 +413,7 @@ export function depoisDaAcao15(v: Vida, a: { tipo: string; [k: string]: unknown 
   if (!r.chance(lugar === 'aeroporto' ? 0.3 : 0.2)) return;
   const m = encontroPorAcaso(v, r, lugar);
   // VIDA 17: o acaso também é mensagem — só chega se sobrar cota (prioridade baixa: precisa de duas vagas).
-  if (m) { const mes = receber17(v, 'baixa'); if (mes === undefined) return; m.mes17 = mes; c.msgs.push(m); c.encontrosNoAno = (c.encontrosNoAno ?? 0) + 1; }
+  if (m) { const mes = receber17(v, 'baixa'); if (mes === undefined) return; m.mes17 = mes; if (v.era) m.texto = textoDaEpoca(v, m.texto); c.msgs.push(m); c.encontrosNoAno = (c.encontrosNoAno ?? 0) + 1; }
 }
 
 const ONDE: Record<Lugar15, string> = {
@@ -760,6 +765,9 @@ const BIOS = [
 export function disponibilidadeNamoro15(v: Vida): Veredito {
   const i = idade(v);
   if (i < 18) return bloqueio('impossivel', 'Os aplicativos de namoro são a partir dos 18.');
+  // ERAS HISTÓRICAS: antes de existirem (e de chegarem à pessoa), não há aplicativo de namoro.
+  if (v.era && !existeNoBrasil(v, 'app_namoro')) return bloqueio('impossivel', `Ainda não existem aplicativos de namoro (chegam ao Brasil em ${anoNoBrasil('app_namoro')}).`);
+  if (v.era && !temAcesso(v, 'app_namoro')) return bloqueio('requisito', 'Precisa de um smartphone com internet.');
   if (v.justica?.prisao) return bloqueio('impossivel', 'Não daqui.');
   if (!v.eu.atracao) return bloqueio('requisito', 'Diga antes por quem você se interessa (em Pessoas).');
   // VIDA 16: o estado civil não bloqueia o aplicativo — o aviso diz o que está em jogo (`v16/romance/namoro16`).

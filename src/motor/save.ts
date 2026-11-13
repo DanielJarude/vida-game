@@ -18,6 +18,7 @@
  *     para não se repetirem.
  */
 
+import { normalizarEra } from './eras/base/contexto';
 import { normalizarLocais } from './sistemas/personalizacao';
 import { sincronizarVisual } from './sistemas/estilo';
 import { indiceDoBairro } from './sistemas/mercado';
@@ -156,6 +157,7 @@ export function interpretar(bruto: string): Leitura {
   if (r.tipo === 'ok') normalizarCelular15(r.vida);
   if (r.tipo === 'ok') { normalizarOficio16(r.vida); normalizarReligiao16(r.vida); }
   if (r.tipo === 'ok') { normalizarRural18(r.vida); normalizarApostas18(r.vida); }
+  if (r.tipo === 'ok') normalizarEra(r.vida); // ERAS HISTÓRICAS (só confere a forma; saves antigos não ganham época)
   return r;
 }
 

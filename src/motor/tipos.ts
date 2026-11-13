@@ -3843,6 +3843,19 @@ export interface Notoriedade {
 }
 export type FonteDoNome = 'esporte' | 'arte' | 'politica' | 'negocio' | 'rede';
 
+/** ERAS HISTÓRICAS: a época escolhida no nascimento (só o Brasil nesta primeira versão). */
+export interface EraDaVida {
+  pais: 'BR';
+  /** O ano de nascimento escolhido. */
+  ano: number;
+  /** A década escolhida na tela Nascer (1980, 1990, 2000, 2010, 2020). */
+  decada: number;
+  /** O que a vida já viu da época (ids de acontecimentos, chegadas de tecnologia, trocas de moeda): nunca duas vezes. */
+  vistos?: string[];
+  /** Plano Collor (1990): o que ficou retido no Banco Central e quando volta (unidades do motor). */
+  retido?: { valor: number; tVolta: number; parcelas: number };
+}
+
 export interface Vida {
   versao: 20;
   id: string;
@@ -3897,6 +3910,12 @@ export interface Vida {
    * a primeira vida, os testes).
    */
   memoriaDeVidas?: string[];
+  /**
+   * ERAS HISTÓRICAS (protótipo): a vida foi criada numa época escolhida (`motor/eras`). Gravada no nascimento e nunca
+   * mais mudada; o calendário anda normalmente a partir daí. Ausente: vida contemporânea (saves antigos inclusive) —
+   * nenhum portão histórico vale para ela.
+   */
+  era?: EraDaVida;
   /** O que já foi feito neste ano de vida (ações pontuais). */
   anoAtual: { acoes: string[] };
   /** Perdas recentes, ainda sendo atravessadas. */

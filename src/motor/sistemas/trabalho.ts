@@ -17,6 +17,7 @@
  * mudar de cargo. Não existe escada infinita.
  */
 
+import { ocupacaoAindaNaoExiste } from '../eras/base/profissoes';
 import { vocacaoDaVaga14 } from '../dados14/cidades/municipios14';
 import { EFEITO_DO_CHEFE, perfilDoChefe } from './jeito';
 import { nomeDoRegistro } from '../mundo/locais';
@@ -158,6 +159,9 @@ export function elegibilidade(v: Vida, oc: Ocupacao, via: ViaDeEntrada = 'curric
   const ano = anoDe(v.t);
 
   if (oc.surge && ano < oc.surge) return bloqueio('impossivel', 'Ainda não existe.');
+  // ERAS HISTÓRICAS: a profissão que só surgiu depois (motorista de aplicativo antes de 2014, cientista de dados antes de 2012...).
+  const desde = ocupacaoAindaNaoExiste(v, oc.id);
+  if (desde !== undefined) return bloqueio('impossivel', `Essa profissão ainda não existe (surge por volta de ${desde}).`);
   // A idade de trabalhar é a do lugar (`mundo/regras`): no Brasil, 16 — e o jovem aprendiz a partir dos 14.
   const lei = regrasDaVida(v).trabalho;
   const antes = lei.aprendiz?.idade ?? lei.minima;

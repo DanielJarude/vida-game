@@ -4,6 +4,8 @@
  * só mudam o preço e ficam registradas no objeto. Nenhuma logística: o mercado do país decide o que há nas lojas; a
  * cidade, se a loja cabe nela; o resto vem pela internet, com frete (e a importação, quando a marca não é vendida aqui).
  */
+import { fatorDePrecoDaEpoca, marcaExisteNoAno, motivoSemCoisa } from '../eras/base/coisas';
+import { temAcesso } from '../eras/base/contexto';
 import type { Vida } from '../tipos';
 import { economiaLocal, municipio, nivelDeOferta } from '../dados/lugares';
 import { paisDoCatalogo, existePais } from '../mundo/registro';
@@ -74,14 +76,16 @@ function marcaFaz(m: Marca, p: Produto, cat: CategoriaDeProduto): boolean {
 export function lojasDaVida(v: Vida): Estabelecimento[] {
   const mer = mercadoDe(v);
   const nivel = nivelDeOferta(v.moradia.municipioId);
-  return ESTABELECIMENTOS.filter(e => (!e.mercados || e.mercados.includes(mer)) && (e.tipo === 'online' || nivel >= (e.cidade ?? 0)));
+  // ERAS HISTÓRICAS: a loja precisa existir no ano; a da internet, também a internet na vida.
+  const online = !v.era || temAcesso(v, 'internet');
+  return ESTABELECIMENTOS.filter(e => (!e.mercados || e.mercados.includes(mer)) && (e.tipo === 'online' ? online : nivel >= (e.cidade ?? 0)) && marcaExisteNoAno(v, e.id));
 }
 
 export interface Oferta { produto: Produto; marca?: string; preco: number; importado?: boolean }
 
 /** O preço de um produto numa loja, de uma marca (sem loja nem marca: o preço de referência da cidade). */
 export function precoNaLoja(v: Vida, p: Produto, marcaId?: string, lojaId?: string): number {
-  const base = precoBase(p) * economiaLocal(v.moradia.municipioId).custo;
+  const base = precoBase(p) * economiaLocal(v.moradia.municipioId).custo * (p.tipo === 'coisa' ? fatorDePrecoDaEpoca(v, p.id) : 1);
   const m = marcaId ? marcaPorId(marcaId) : undefined;
   const e = lojaId ? estabelecimento(lojaId) : undefined;
   // VIDA 12.8: o ultraluxo (Hermès, Patek Philippe, Fendi Casa, Gaggenau, Fazioli) cobra acima do luxo.
@@ -104,7 +108,8 @@ export function ofertasDaLoja(v: Vida, lojaId: string): Oferta[] {
   for (const cat of e.categorias) {
     for (const p of produtosDaCategoria(cat)) {
       if (cat === 'livros') { if (e.faixas.includes(1) || e.faixas.includes(2)) out.push({ produto: p, preco: precoNaLoja(v, p, undefined, lojaId) }); continue; }
-      const marcas = MARCAS.filter(m => e.faixas.includes(m.faixa) && marcaFaz(m, p, cat) && (e.tipo === 'online' ? (m.online ? lojaId === 'aliexpress' || lojaId === 'amazon' : true) : !m.online && (!m.mercados || m.mercados.includes(mer))));
+      if (p.tipo === 'coisa' && motivoSemCoisa(v, p.id)) continue; // ERAS HISTÓRICAS: fora da vitrine no ano
+      const marcas = MARCAS.filter(m => marcaExisteNoAno(v, m.id) && e.faixas.includes(m.faixa) && marcaFaz(m, p, cat) && (e.tipo === 'online' ? (m.online ? lojaId === 'aliexpress' || lojaId === 'amazon' : true) : !m.online && (!m.mercados || m.mercados.includes(mer))));
       for (const m of marcas) out.push({ produto: p, marca: m.id, preco: precoNaLoja(v, p, m.id, lojaId), importado: e.tipo === 'online' && (m.online || (!!m.mercados && !m.mercados.includes(mer))) });
     }
   }

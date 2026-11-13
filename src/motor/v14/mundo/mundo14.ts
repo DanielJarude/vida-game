@@ -149,8 +149,10 @@ export function processarMundo14(v: Vida, ec?: Pick<AnoEconomico, 'virou' | 'fas
 
   // 3. O calendário dos torneios mundiais (o mesmo dos esportes), fora de ano de pandemia.
   const pandemiaAgora = novos.some(n => n.ev.tipo === 'pandemia' && !!n.ev.mods);
-  if (!pandemiaAgora && ano % 4 === 2) novos.push({ ev: evento(ano, 'mundial_selecoes', 'esporte', 'Torneio mundial de seleções', 'O torneio mundial de seleções parou o mundo por um mês: telão na praça, bar lotado em dia de jogo, escritório parado na hora da partida.', { mods: { ramos: { restaurante: 1.04 } } }), relevancia: 'cotidiano', tom: 'bom' });
-  if (!pandemiaAgora && ano % 4 === 0 && ano !== 2020) novos.push({ ev: evento(ano, 'jogos_mundiais', 'esporte', 'Jogos multiesportivos mundiais', 'Os jogos multiesportivos mundiais encheram a televisão por duas semanas. Depois deles, as academias e escolinhas ganharam fila.', { mods: { ramos: { academia: 1.05 } } }), relevancia: 'cotidiano', tom: 'bom' });
+  // ERAS HISTÓRICAS: até 2025, as Copas e os Jogos reais vêm da época (`eras/dados`), não os genéricos.
+  const reais = !!v.era && ano <= 2025;
+  if (!reais && !pandemiaAgora && ano % 4 === 2) novos.push({ ev: evento(ano, 'mundial_selecoes', 'esporte', 'Torneio mundial de seleções', 'O torneio mundial de seleções parou o mundo por um mês: telão na praça, bar lotado em dia de jogo, escritório parado na hora da partida.', { mods: { ramos: { restaurante: 1.04 } } }), relevancia: 'cotidiano', tom: 'bom' });
+  if (!reais && !pandemiaAgora && ano % 4 === 0 && ano !== 2020) novos.push({ ev: evento(ano, 'jogos_mundiais', 'esporte', 'Jogos multiesportivos mundiais', 'Os jogos multiesportivos mundiais encheram a televisão por duas semanas. Depois deles, as academias e escolinhas ganharam fila.', { mods: { ramos: { academia: 1.05 } } }), relevancia: 'cotidiano', tom: 'bom' });
 
   // 4. O que cada um faz agora (inflação, saúde, estragos, aparelhos, fronteiras).
   for (const n of novos) aplicarImediato(v, m, n, ec);
@@ -266,7 +268,8 @@ function aplicarImediato(v: Vida, m: Mundo14, n: Novo, ec?: Pick<AnoEconomico, '
   const ano = ev.ano;
   // Inflação de fora: a do ano sobe (e o dinheiro parado perde mais).
   const extra = INFLACAO[chave];
-  if (extra && v.economia) {
+  // ERAS HISTÓRICAS: até 2025, a inflação de uma vida histórica já é a da série real (o choque não se soma).
+  if (extra && v.economia && !(v.era && ano <= 2025)) {
     v.economia.inflacao += extra;
     v.economia.precos *= (1 + extra);
     const h = v.economia.historico[v.economia.historico.length - 1];

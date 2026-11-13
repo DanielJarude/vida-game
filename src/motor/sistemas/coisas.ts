@@ -17,6 +17,7 @@
  * ano — nunca do sorteio principal (que mudaria o acaso de todo o resto).
  */
 
+import { fatorDePrecoDaEpoca, motivoSemCoisa } from '../eras/base/coisas';
 import type { CoisaTida, Vida } from '../tipos';
 import { clamp, rngDe } from '../rng';
 import { escrever, idade, novoId } from '../nucleo';
@@ -53,7 +54,8 @@ export function precoDaCoisa(v: Vida, id: string): number {
   const c = coisa(id);
   if (!c) return 0;
   const frete = temLojaNaCidade(v, c.loja) ? 1 : 1.1;
-  return Math.round(c.preco * economiaLocal(v.moradia.municipioId).custo * frete / 10) * 10;
+  // ERAS HISTÓRICAS: a tecnologia nova custava proporcionalmente mais (vida contemporânea: fator 1).
+  return Math.round(c.preco * economiaLocal(v.moradia.municipioId).custo * frete * fatorDePrecoDaEpoca(v, id) / 10) * 10;
 }
 
 /** O que a coisa ainda vale, vendida usada: o que sobra da vida útil, o estado, e a metade que o mercado de usados paga. */
@@ -81,6 +83,9 @@ export function fazCalor(municipioId: string): boolean {
 export function disponibilidadeComprarCoisa(v: Vida, id: string, marca?: string, loja?: string, outra = false): Veredito {
   const c = coisa(id);
   if (!c) return bloqueio('impossivel', 'Isso não existe na loja.');
+  // ERAS HISTÓRICAS: o que ainda não existe (ou já saiu de linha, ou só os ricos têm) não se compra.
+  const daEpoca = motivoSemCoisa(v, id);
+  if (daEpoca) return bloqueio('impossivel', daEpoca);
   const i = idade(v);
   if (i < (c.idadeMin ?? 12)) return bloqueio('impossivel', i < 12 ? 'Com essa idade, quem compra são os adultos da casa.' : `A partir dos ${c.idadeMin} anos.`);
   // REWORK 10.5 · ECO-04: dos 8 aos 11, o que é próprio da idade (o violino, a chuteira, o tabuleiro) dá para comprar com

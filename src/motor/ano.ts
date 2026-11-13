@@ -74,6 +74,7 @@ import { processarExposicao } from './sistemas/exposicao';
 import { processarProcessos } from './sistemas/processos';
 import { fotografar, processarDinheiro } from './sistemas/dinheiro';
 import { avancarEconomia } from './sistemas/economia';
+import { processarEra } from './eras/ano';
 import { processarVeiculos } from './sistemas/veiculos';
 import { processarImoveis } from './sistemas/imoveis';
 import { processarColecao } from './sistemas/colecao';
@@ -165,8 +166,12 @@ export function avancarAno(vida: Vida): Retorno {
 function viverAno(v: Vida, r: Rng): void {
   const inicioBio = v.biografia.length;
   v.t += 12;
+  // ERAS HISTÓRICAS: a moeda e o salário mínimo do texto do ano são os do mês de agora.
+  if (v.era) entrarNaVida(v);
   // A economia do país anda antes de tudo (e não depende de nada que a pessoa fez).
   const ec = avancarEconomia(v.economia, v.t, paisDaVida(v));
+  // ERAS HISTÓRICAS: a série real da economia, as trocas de moeda e os acontecimentos do Brasil (antes do mundo).
+  if (v.era) processarEra(v, ec);
   processarMundo14(v, ec); // VIDA 14: os acontecimentos mundiais do ano (choques, pandemia, marcos) e os efeitos ativos
   processarMoveis14(v); // VIDA 14: o depósito cobra; a mobília do proprietário de um aluguel que acabou fica lá
   processarDependencias14(v); // VIDA 14: o uso que vira problema — progressão, custo, tratamento, recuperação, recaída

@@ -25,6 +25,16 @@
  */
 
 import { PAIS_PADRAO, paisDoCatalogo } from './registro';
+import { fatorNominal, mesHistoricoCorrente, padraoEm, PADROES_MONETARIOS_BR } from '../eras/base/moedas';
+
+/**
+ * ERAS HISTÓRICAS: numa vida histórica no Brasil (`eras/base/moedas`), o valor do motor aparece na moeda que circulava no
+ * mês corrente, pelo nível de preços do IPCA daquele mês. Fora disso (vida contemporânea, outro país), nada muda.
+ */
+const historico = (pais: string): number | null => {
+  const m = mesHistoricoCorrente();
+  return m !== null && pais === 'BR' ? m : null;
+};
 
 let corrente = PAIS_PADRAO;
 
@@ -54,11 +64,12 @@ export function converterEntrePaises(valor: number, de: string, para: string): n
 export const mesmaMoeda = (a: string, b: string) => a === b || moedaDoPais(a) === moedaDoPais(b);
 
 /** Valor do motor → moeda local. */
-export const emMoedaLocal = (valor: number, pais = corrente) => valor * fatorDoPais(pais);
+export const emMoedaLocal = (valor: number, pais = corrente) => { const h = historico(pais); return h !== null ? valor * fatorNominal(h) : valor * fatorDoPais(pais); };
 /** Moeda local → valor do motor (o que o jogador digita). */
-export const daMoedaLocal = (valor: number, pais = corrente) => valor / fatorDoPais(pais);
+export const daMoedaLocal = (valor: number, pais = corrente) => { const h = historico(pais); return h !== null ? valor / fatorNominal(h) : valor / fatorDoPais(pais); };
 
-const SIMBOLOS = new Map<string, string>();
+const SIMBOLOS = new Map<string, string>(PADROES_MONETARIOS_BR.map(p => [p.codigo, p.simbolo]));
+const NOMES_HISTORICOS = new Map<string, string>(PADROES_MONETARIOS_BR.filter(p => p.codigo !== 'BRL').map(p => [p.codigo, p.nome]));
 /** O símbolo da moeda como se escreve em português do Brasil (R$, US$, €, £, ARS, JP¥). */
 export function simboloDaMoeda(codigo: string): string {
   let s = SIMBOLOS.get(codigo);
@@ -73,13 +84,15 @@ export function simboloDaMoeda(codigo: string): string {
 
 /** O nome da moeda ("peso argentino", "euro"). */
 export function nomeDaMoeda(codigo: string): string {
+  const h = NOMES_HISTORICOS.get(codigo);
+  if (h) return h;
   try {
     const n = new Intl.DisplayNames(['pt-BR'], { type: 'currency' }).of(codigo);
     return n ? n.charAt(0).toLowerCase() + n.slice(1) : codigo;
   } catch { return codigo; }
 }
 
-export const moedaDoPais = (pais = corrente) => paisDoCatalogo(pais).moeda;
+export const moedaDoPais = (pais = corrente) => { const h = historico(pais); return h !== null ? padraoEm(h).codigo : paisDoCatalogo(pais).moeda; };
 
 /** Com o sinal de menos tipográfico ("−R$ 1.234"), para as telas. */
 export function formatarDinheiroCheio(valor: number, pais = corrente): string {

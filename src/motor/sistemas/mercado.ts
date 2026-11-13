@@ -11,6 +11,7 @@
  * (`sistemas/relevancia`); o resto fica em "ver outras".
  */
 
+import { versoesDoAno } from '../eras/base/veiculos';
 import { ACRESCIMO_DO_ALUGUEL, mobiliaDaOfertaPura14, type EstiloDeMovel, type NivelDeMobilia } from '../dados14/moveis/catalogo';
 import { paisCorrente } from '../mundo/moeda';
 import { textoLocal } from '../mundo/locais';
@@ -20,7 +21,7 @@ import { ANIMAIS, animal } from '../dados/animais';
 import type { Especie, Vida } from '../tipos';
 import { anoDe } from '../tempo';
 import { economiaLocal, municipio, pertoDaAgua } from '../dados/lugares';
-import { MORADIAS, VEICULOS, VERSOES_VEICULO, depreciacao, type CategoriaVeiculo, modeloMoradia, modeloVeiculo, versaoVeiculo, versoesDaClasse, type ModeloMoradia, type ModeloVeiculo, type VersaoVeiculo } from '../dados/bens';
+import { MORADIAS, VEICULOS, VERSOES_ATUAIS, depreciacao, type CategoriaVeiculo, modeloMoradia, modeloVeiculo, versaoVeiculo, versoesDaClasse, type ModeloMoradia, type ModeloVeiculo, type VersaoVeiculo } from '../dados/bens';
 import { converterEntrePaises } from '../mundo/moeda';
 import { paisDaCidade } from '../dados/lugares';
 import { paisDaVida } from '../mundo/vida';
@@ -198,7 +199,7 @@ export function lojaNaCidade(municipioId: string, loja: LojaDeVeiculo): boolean 
 export function versoesNoPais(pais: string): VersaoVeiculo[] {
   const regiao = paisDoCatalogo(pais).regiao;
   const aqui = (x: VersaoVeiculo) => !x.mercados || x.mercados.includes(regiao) || (pais === 'BR' && x.mercados.includes('BR'));
-  const out = VERSOES_VEICULO.filter(aqui);
+  const out = VERSOES_ATUAIS.filter(aqui);
   const classes = new Set(out.map(x => x.classe));
   for (const m of VEICULOS) if (!classes.has(m.id)) out.push(...versoesDaClasse(m.id));
   return out;
@@ -283,13 +284,15 @@ export function ofertasDeVeiculos(v: Vida, lugar: OfertaVeiculo['lugar']): Ofert
   const r = rngDe(v, `vei:${lugar}:${ano}:${v.moradia.municipioId}`);
   const pais = paisDaCidade(v.moradia.municipioId);
   const fatorUsado = precoNovoNoPais({ preco: 1000 }, v.moradia.municipioId) / 1000;
-  const locais = versoesNoPais(pais);
+  // ERAS HISTÓRICAS: a vida histórica vê o que se vendia no ano (`eras/base/veiculos`); a contemporânea, o de sempre.
+  const locais = v.era ? versoesDoAno(versoesNoPais(pais), ano) : versoesNoPais(pais);
   const daClasse = (id: string) => locais.filter(x => x.classe === id);
   const out: OfertaVeiculo[] = [];
   let k = 0;
   const novo = (x: VersaoVeiculo) => out.push({ id: `ve-${lugar}-${ano}-${k++}`, lugar, modeloId: x.classe, versaoId: x.id, usado: false, anoFabricacao: ano, preco: precoNovoNoPais(x, v.moradia.municipioId), estado: 100, cor: '', corNome: '' });
   const usado = (m: ModeloVeiculo) => {
     const x = r.weighted(daClasse(m.id), y => y.pesoUsado)!;
+    if (!x) return; // ERAS HISTÓRICAS: a classe pode não ter versão no ano (a bicicleta elétrica em 1985)
     if (m.segmento === 'classico') {
       const [historico, base] = r.pick(m.categoria === 'moto' ? HISTORICOS_MOTO_CLASSICA : HISTORICOS_CLASSICO);
       const estado = Math.round(Math.max(20, Math.min(97, base + r.normal() * 5)));

@@ -8,7 +8,7 @@ import type { Vida } from '../../../motor/tipos';
 import { resumoDoMundo14 } from '../../../motor/v14/mundo/mundo14';
 import '../politica/politica14.css';
 
-const TIPO: Record<string, string> = { economia: 'Economia', tecnologia: 'Tecnologia', ciencia: 'Ciência', desastre: 'Desastre', pandemia: 'Pandemia', cultura: 'Cultura', esporte: 'Esporte', internacional: 'Mundo', trabalho: 'Trabalho', produtos: 'Produtos' };
+const TIPO: Record<string, string> = { economia: 'Economia', tecnologia: 'Tecnologia', ciencia: 'Ciência', desastre: 'Desastre', pandemia: 'Pandemia', cultura: 'Cultura', esporte: 'Esporte', internacional: 'Mundo', trabalho: 'Trabalho', produtos: 'Produtos', politica: 'Política', sociedade: 'Sociedade' };
 
 export function Mundo14({ vida }: { vida: Vida }) {
   const [abertas, setAbertas] = useState(1);

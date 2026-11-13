@@ -12,6 +12,7 @@
  * Cidade de custo 1,0.
  */
 import { VERSOES_VEICULO_129 } from './veiculos129';
+import { VERSOES_DA_EPOCA } from '../eras/base/veiculos';
 import { CLASSE_MOTO_CLASSICA, VERSOES_MOTOS_CLASSICAS } from './motosClassicas1291';
 
 export type CategoriaVeiculo = 'bicicleta' | 'moto' | 'carro' | 'embarcacao' | 'aeronave';
@@ -162,6 +163,8 @@ export interface VersaoVeiculo {
   forma?: FormaVeiculo;
   /** REWORK 12: onde se vende (sem a lista, em todo lugar). */
   mercados?: readonly MercadoVeiculo[];
+  /** ERAS HISTÓRICAS: versão da época — [primeiro, último] ano de fabricação no Brasil (só a vida histórica a vê). */
+  epoca?: [number, number];
   /** REWORK 12: clássico — o ano em que foi feito (não existe zero). */
   ano?: number;
   /** REWORK 12: edição limitada — quantas unidades existem (a raridade sustenta o valor; não o garante). */
@@ -305,7 +308,10 @@ const VERSOES_DE_ANTES: readonly VersaoVeiculo[] = [
   { id: 'jaguar_etype', classe: 'classico', marca: 'Jaguar', modelo: 'E-Type Série 1', dica: 'clássico de 1963', faixa: 'alta', preco: 2400000, artigo: 'o', pesoUsado: 0.3, ano: 1963, forma: 'esportivo', lugares: 2 }
 ];
 /** VIDA 12.9: as versões novas (motos, esportivos, luxo, edições limitadas, clássicos) vêm do catálogo `veiculos129`. */
-export const VERSOES_VEICULO: readonly VersaoVeiculo[] = [...VERSOES_DE_ANTES, ...VERSOES_VEICULO_129, ...VERSOES_MOTOS_CLASSICAS];
+// ERAS HISTÓRICAS: as versões da época (`eras/base/veiculos`, com `epoca`) entram no catálogo para serem encontradas
+// pelo id (o carro guardado no save), mas NUNCA nas listas de sempre (`VERSOES_ATUAIS`): só a vida histórica as vê.
+export const VERSOES_VEICULO: readonly VersaoVeiculo[] = [...VERSOES_DE_ANTES, ...VERSOES_VEICULO_129, ...VERSOES_MOTOS_CLASSICAS, ...VERSOES_DA_EPOCA];
+export const VERSOES_ATUAIS: readonly VersaoVeiculo[] = VERSOES_VEICULO.filter(x => !x.epoca);
 
 /** A forma de uma versão (o desenho que a representa). */
 export function formaDaVersao(x: VersaoVeiculo | undefined, classe?: string): FormaVeiculo {
@@ -332,7 +338,7 @@ export const NOME_FORMA: Record<FormaVeiculo, string> = {
 };
 
 export const versaoVeiculo = (id: string | undefined) => (id ? VERSOES_VEICULO.find(x => x.id === id) : undefined);
-export const versoesDaClasse = (classe: string) => VERSOES_VEICULO.filter(x => x.classe === classe);
+export const versoesDaClasse = (classe: string) => VERSOES_ATUAIS.filter(x => x.classe === classe);
 /** "Fiat Mobi", "Honda CG 160 Fan", "Vela 2". */
 export const nomeDaVersao = (x: VersaoVeiculo) => `${x.marca} ${x.modelo}`;
 

@@ -1,3 +1,4 @@
+import { mesHistoricoCorrente, salarioMinimoReal } from '../eras/base/moedas';
 /**
  * A economia de cada país em unidades do motor (o real de poder de compra
  * brasileiro — `mundo/moeda`). O perfil escreve os números legais na moeda
@@ -35,6 +36,10 @@ const local = (pais: string, valor: number) => (pais === PAIS_PADRAO ? valor : d
  * piso de fato do mercado: metade da renda de um trabalhador comum do país.
  */
 export function salarioMinimoDoPais(pais: string): number {
+  // ERAS HISTÓRICAS: numa vida histórica no Brasil, o mínimo vigente no mês (série oficial, em poder de compra de hoje).
+  const mh = pais === 'BR' ? mesHistoricoCorrente() : null;
+  const real = mh !== null ? salarioMinimoReal(mh) : undefined;
+  if (real !== undefined) return Math.round(real);
   const m = perfil(pais).economia.salarioMinimo;
   return Math.round(m !== undefined ? local(pais, m) : rendaNoPais(pais, 1620) * 0.9);
 }

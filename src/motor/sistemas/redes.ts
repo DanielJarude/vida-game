@@ -34,6 +34,8 @@
  * (`rngDe`): a rede não mexe no acaso do resto da vida.
  */
 
+import { PLATAFORMAS_DESDE } from '../eras/base/tecnologias';
+import { temAcesso } from '../eras/base/contexto';
 import { desgastar } from './desgastePolitico';
 import type { ContaSocial, Pessoa, PlataformaId, Publicacao, TemaPublicacao, Vida } from '../tipos';
 import { PERMITIDO, bloqueio, type Veredito } from '../plausibilidade';
@@ -100,6 +102,7 @@ const conhecidosParaRede = (v: Vida) => Object.values(v.vinculos)
 export function usaPlataforma(v: Vida, p: Pessoa, pl: PlataformaId): boolean {
   const x = PLATAFORMAS[pl];
   if (pl === 'onlyfans') return false;
+  if (v.era && anoDe(v.t) < (PLATAFORMAS_DESDE[pl] ?? 0)) return false; // ERAS HISTÓRICAS: ninguém usa o que não existe
   const i = idadePessoa(v, p);
   const dentro = i >= x.quem[0] && i <= x.quem[1];
   return rngDe(p.id, 'usa', pl).next() < (dentro ? 0.75 : 0.12);
@@ -255,6 +258,12 @@ export function disponibilidadeRede(v: Vida, op: OpRede): Veredito {
     return PERMITIDO;
   }
   const pl = plat(op);
+  // ERAS HISTÓRICAS: a plataforma precisa existir no ano, e a pessoa precisa ter internet.
+  if (v.era) {
+    const desde = PLATAFORMAS_DESDE[pl.id];
+    if (desde !== undefined && anoDe(v.t) < desde) return bloqueio('impossivel', `O ${pl.nome} ainda não existe (chega ao Brasil por volta de ${desde}).`);
+    if (!temAcesso(v, 'internet')) return bloqueio('requisito', 'Sem acesso à internet: em casa ainda não tem.');
+  }
   const c = contaAtiva(v, pl.id);
   const guardada = v.redes?.contas[pl.id];
   if (op.oque === 'recorrer') return disponibilidadeRecurso(v, pl, guardada);

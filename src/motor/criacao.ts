@@ -24,6 +24,8 @@ import { economiaInicial } from './sistemas/economia';
 import { nomeDePet } from './sistemas/mercado';
 import { municipio, nomeLugar, grandesCentros, paisDaCidade, sortearMunicipio } from './dados/lugares';
 import { paisesVivenciaveis, perfilDoPais } from './mundo/registro';
+import { entrarNaVida } from './mundo/vida';
+import { definirMesHistorico } from './eras/base/moedas';
 import { sortearNome, sortearSobrenome } from './dados/nomes';
 import { estiloPara } from './sistemas/identidade';
 import { nacionalidadesAoNascer } from './mundo/cidadania';
@@ -54,7 +56,15 @@ export interface OpcoesCriacao {
   atributos?: Record<Atributo, number>;
   /** REWORK 10.5 · EVT-05: o que as duas vidas anteriores viveram (ids de acontecimentos e cenas) — pesa menos nesta. */
   memoria?: string[];
+  /**
+   * ERAS HISTÓRICAS (protótipo): nascer numa época escolhida (com `ano` entre 1980 e 2025, no Brasil). A vida fica
+   * marcada (`Vida.era`) e o calendário segue normalmente. Ausente: a vida contemporânea de sempre.
+   */
+  era?: boolean;
 }
+
+/** ERAS HISTÓRICAS: os anos de nascimento que a primeira versão oferece. */
+export const ANOS_HISTORICOS: readonly [number, number] = [1980, 2025];
 
 /**
  * "Tudo ao acaso" (FIX pós-playtest humano): o nascimento sorteado no MUNDO, não no Brasil.
@@ -272,8 +282,11 @@ export function criarVida(o: OpcoesCriacao): Vida {
     ...(o.memoria?.length ? { memoriaDeVidas: [...new Set(o.memoria)].slice(0, 300) } : {}),
     anoAtual: { acoes: [] },
     luto: [],
-    caminhos: caminhosVazios()
+    caminhos: caminhosVazios(),
+    ...(o.era && paisNatal === 'BR' && ano >= ANOS_HISTORICOS[0] && ano <= ANOS_HISTORICOS[1] ? { era: { pais: 'BR' as const, ano, decada: Math.floor(ano / 10) * 10 } } : {})
   };
+  // A moeda e o salário mínimo do texto de nascimento são os do mês em que se nasce (a vida contemporânea, a de sempre).
+  if (v.era) entrarNaVida(v); else definirMesHistorico(null);
   v.eu.visual = o.visual ?? v.eu.visual;
   v.corpo.aparenciaBase = v.corpo.aparencia;
 

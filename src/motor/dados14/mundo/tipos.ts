@@ -7,7 +7,9 @@
  */
 
 export type TipoEventoMundial =
-  | 'economia' | 'tecnologia' | 'ciencia' | 'desastre' | 'pandemia' | 'cultura' | 'esporte' | 'internacional' | 'trabalho' | 'produtos';
+  | 'economia' | 'tecnologia' | 'ciencia' | 'desastre' | 'pandemia' | 'cultura' | 'esporte' | 'internacional' | 'trabalho' | 'produtos'
+  // ERAS HISTÓRICAS: os fatos políticos e sociais do país (só nas vidas históricas).
+  | 'politica' | 'sociedade';
 
 /** Onde aconteceu, visto da vida: no mundo todo, no país onde se mora, na região (estado/província) de casa, ou longe. */
 export type EscopoEventoMundial = 'mundo' | 'pais' | 'regiao' | 'exterior';

@@ -10,6 +10,8 @@
  * disponível em Tarauacá.
  */
 
+import { COTAS_DESDE, cursoExiste, nomeDoCursoNoAno, viaExiste } from '../eras/base/profissoes';
+import { textoDaEpoca } from '../eras/base/anacronismos';
 import { esperadoNaSerie, MATERIAS } from '../dados/frentes';
 import { nomeDaMateria } from '../mundo/materias';
 import { quemOferece } from './ensinoTecnico';
@@ -553,7 +555,8 @@ export function opcoesDeCurso(v: Vida): OpcaoCurso[] {
   const aqui = v.moradia.municipioId;
   const oferta = nivelDeOferta(aqui);
   const local = economiaLocal(aqui);
-  const cota = temCota(v);
+  // ERAS HISTÓRICAS: a cota federal só a partir da Lei 12.711/2012 (vida contemporânea: como sempre).
+  const cota = temCota(v) && !(v.era && anoDe(v.t) < COTAS_DESDE);
   const pc = rendaPerCapita(v);
   const opcoes: OpcaoCurso[] = [];
   // A universidade do país onde se mora: como se entra (prova, acesso aberto, candidatura), quanto a pública
@@ -563,11 +566,17 @@ export function opcoesDeCurso(v: Vida): OpcaoCurso[] {
   const credito = ed.credito;
   const minimo = salarioMinimoDoPais(paisDaVida(v));
 
-  for (const c of CURSOS) {
+  for (const c0 of CURSOS) {
+    // ERAS HISTÓRICAS: o curso que ainda não existe fica de fora; o de nome recente aparece com o nome de então.
+    if (!cursoExiste(v, c0.id)) continue;
+    const nomeNoAno = nomeDoCursoNoAno(v, c0.id, c0.nome);
+    const c = nomeNoAno === c0.nome ? c0 : { ...c0, nome: nomeNoAno };
     const req = requisitoDoCurso(v, c);
     const mens = Math.round(c.mensalidade * local.custo / 10) * 10;
-    const add = (o: Omit<OpcaoCurso, 'curso' | 'municipioId'> & { municipioId?: string }) =>
-      opcoes.push({ curso: c, municipioId: o.municipioId ?? aqui, ...o, veredito: req ?? o.veredito });
+    const add = (o: Omit<OpcaoCurso, 'curso' | 'municipioId'> & { municipioId?: string }) => {
+      if (v.era && !viaExiste(v, o.via)) return; // ProUni, FIES e EAD só depois das leis que os criaram
+      opcoes.push({ curso: c, municipioId: o.municipioId ?? aqui, ...o, ...(v.era && o.observacao ? { observacao: textoDaEpoca(v, o.observacao) } : {}), veredito: req ?? (v.era && o.veredito.motivo ? { ...o.veredito, motivo: textoDaEpoca(v, o.veredito.motivo) } : o.veredito) });
+    };
 
     // FIX pós-playtest humano: o curso técnico existe onde uma ESCOLA técnica o oferece (`ensinoTecnico` — o catálogo
     // de cada escola da cidade); não havendo aqui, na capital; não havendo nem lá, não há essa porta presencial.

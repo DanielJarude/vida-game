@@ -12,6 +12,7 @@ import type {
   Entrada, EventoSocial, Genero, Marco, Parentesco, Pessoa, Relevancia, Tema, Temperamento, TipoMarco, Vida, Vinculo
 } from './tipos';
 import { idadeEm } from './tempo';
+import { textoDaEpoca } from './eras/base/anacronismos';
 
 export function transacao<T>(vida: Vida, fn: (v: Vida, r: Rng) => T): { vida: Vida; valor: T } {
   const v = structuredClone(vida);
@@ -156,7 +157,8 @@ export function escrever(v: Vida, e: NovaEntrada): Entrada {
     id: novoId(v, 'e'),
     t,
     idade: idadeEm(v.eu.tNasc, t),
-    texto: e.texto,
+    // ERAS HISTÓRICAS: numa vida histórica, a frase fala do jeito da época (vida contemporânea: a mesma frase).
+    texto: v.era ? textoDaEpoca(v, e.texto) : e.texto,
     relevancia: e.relevancia ?? 'biografia',
     tema: e.tema,
     tom: e.tom,

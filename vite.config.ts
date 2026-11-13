@@ -137,6 +137,9 @@ export default defineConfig({
           const d17 = /[\\/]src[\\/]motor[\\/]dados17[\\/]([a-z0-9]+)[\\/]/.exec(id);
           if (d17) return `dados17-${d17[1]}`;
           // VIDA 18: o campo, as apostas e os acontecimentos num pacote só (motor18) e os catálogos puros em dados18.
+          // ERAS HISTÓRICAS: os dados da época (acontecimentos, cultura) e o motor do ano histórico num pacote próprio, acima
+          // dos sistemas e do mundo; a base (`eras/base`: séries, moedas, tecnologias, o contexto) fica com quem a importa.
+          if (/[\\/]src[\\/]motor[\\/]eras[\\/](dados[\\/]|ano\.ts)/.test(id)) return 'motor-eras';
           if (/[\\/]src[\\/]motor[\\/]v18[\\/]/.test(id)) return 'motor18';
           if (/[\\/]src[\\/]motor[\\/]dados18[\\/]/.test(id)) return 'dados18';
           if (/[\\/]src[\\/]motor[\\/]sistemas[\\/]reconhecimento13\.ts/.test(id)) return 'motor-fama';

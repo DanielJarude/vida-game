@@ -19,6 +19,8 @@
 export type LojaDeCoisas = 'eletronicos' | 'casa' | 'instrumentos' | 'esportes' | 'livraria';
 
 import { COISAS_DE_EXPOR } from './colecao128';
+import { mesHistoricoCorrente } from '../eras/base/moedas';
+import { coisaNoAno } from '../eras/base/coisas';
 
 export interface Coisa {
   id: string;
@@ -218,7 +220,12 @@ export const COISAS: readonly Coisa[] = [
 ];
 
 const POR_ID = new Map(COISAS.map(c => [c.id, c]));
-export const coisa = (id: string): Coisa | undefined => POR_ID.get(id);
+/** ERAS HISTÓRICAS: numa vida histórica, a coisa vem com o nome e a descrição da época (`eras/base/coisas`). */
+export const coisa = (id: string): Coisa | undefined => {
+  const c = POR_ID.get(id);
+  const m = mesHistoricoCorrente();
+  return c && m !== null ? coisaNoAno(c, Math.floor(m / 12)) : c;
+};
 
 export const NOME_LOJA: Record<LojaDeCoisas, string> = {
   eletronicos: 'Loja de eletrônicos', casa: 'Móveis e eletrodomésticos', instrumentos: 'Loja de instrumentos musicais', esportes: 'Artigos esportivos', livraria: 'Livraria e papelaria'
