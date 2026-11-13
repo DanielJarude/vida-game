@@ -14,9 +14,10 @@ import { BotaoAcao, Subnav } from '../comum';
 import { idade } from '../../motor/nucleo';
 import { dinheiroCurto } from '../leituraMaterial';
 import {
-  balancoDasApostas, chanceLoteria, LOTERIA, PAGA_ROLETA, PAGA_TRES, precoDoBilhete, proibido, ROLO, rtpLoteria, rtpNiquel,
+  balancoDasApostas, cassinoProibido, chanceLoteria, LOTERIA, loteriaLocal, PAGA_ROLETA, PAGA_TRES, precoDoBilhete, proibido, ROLO, rtpLoteria, rtpNiquel,
   valorDaMao, valoresDeAposta, VERMELHOS
 } from '../../motor/sistemas/apostas';
+import { Bingo18, Esportes18, Historico18, Loterias18, Turfe18 } from '../v18/apostas/Apostas18';
 
 type Jogo = 'loteria' | 'blackjack' | 'roleta' | 'niquel';
 const JOGOS: { id: Jogo; rotulo: string; oque: string }[] = [
@@ -27,25 +28,50 @@ const JOGOS: { id: Jogo; rotulo: string; oque: string }[] = [
 ];
 const pct = (x: number) => `${(Math.round(x * 1000) / 10).toString().replace('.', ',')}%`;
 
+/** VIDA 18: as frentes das apostas — loterias, esportes, turfe, bingo, cassino (onde a lei permite) e o histórico. */
+type Frente = 'loterias' | 'esportes' | 'turfe' | 'bingo' | 'cassino' | 'historico';
+const FRENTES: { id: Frente; rotulo: string; oque: string }[] = [
+  { id: 'loterias', rotulo: 'Loterias', oque: 'Mega-Sena, Lotofácil, Quina, Lotomania, Dupla Sena, Loteca, bolões' },
+  { id: 'esportes', rotulo: 'Esportes', oque: 'A rodada do futebol e a temporada' },
+  { id: 'turfe', rotulo: 'Turfe', oque: 'O páreo, os cavalos, as odds da bolsa' },
+  { id: 'bingo', rotulo: 'Bingo', oque: 'Setenta e cinco bolas' },
+  { id: 'cassino', rotulo: 'Cassino', oque: 'Blackjack, roleta, caça-níquel — onde a lei permite' },
+  { id: 'historico', rotulo: 'Histórico', oque: 'O que se apostou e o que voltou' }
+];
+
 export function Apostas({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
-  const [jogo, setJogo] = useState<Jogo>('loteria');
+  const [frente, setFrente] = useState<Frente>('loterias');
+  const [jogo, setJogo] = useState<Jogo>('blackjack');
   const i = idade(vida);
   if (i < 18) return <p className="vazio">Aposta é coisa de maior de idade.</p>;
-  if (proibido(vida)) return <p className="vazio">Aqui, o jogo de azar é proibido por lei: não há loteria nem cassino.</p>;
+  if (proibido(vida)) return <p className="vazio">Aqui, o jogo de azar é proibido por lei: não há loteria, aposta nem cassino.</p>;
   const b = balancoDasApostas(vida);
   const ultima = vida.apostas?.ultimas[0];
+  const local = loteriaLocal(vida);
+  const jogosDoCassino = JOGOS.filter(j => j.id !== 'loteria');
   return (
     <div className="apostas">
       <header className="apostas__cabeca">
         <p className="apostas__aviso">Só com o dinheiro do jogo: na conta, <strong>{dinheiroCurto(Math.max(0, vida.financas.conta))}</strong>. Não se aposta o aplicado nem o emprestado.</p>
-        <p className="nota">{b.frase}{b.ano ? ` Este ano: ${b.ano >= 0 ? '+' : '−'}${dinheiroCurto(Math.abs(b.ano))}.` : ''} Em todo jogo daqui, a casa fica com uma parte de cada aposta, em média — as chances e o retorno estão nas regras de cada mesa.</p>
+        <p className="nota">{b.frase}{b.ano ? ` Este ano: ${b.ano >= 0 ? '+' : '−'}${dinheiroCurto(Math.abs(b.ano))}.` : ''} Em todo jogo daqui, a casa (ou a loteria) fica com uma parte de cada aposta, em média — as chances e o retorno estão nas regras de cada um.</p>
       </header>
-      <Subnav rotulo="Jogos" prefixo="apostas" itens={JOGOS} atual={jogo} aoMudar={setJogo} classe="subnav--apostas" />
-      <div role="tabpanel" id="apostas-painel" aria-labelledby={`apostas-aba-${jogo}`}>
-        {jogo === 'loteria' && <Loteria vida={vida} agir={agir} ultima={ultima?.jogo === 'loteria' ? ultima : undefined} />}
-        {jogo === 'blackjack' && <Blackjack vida={vida} agir={agir} ultima={ultima?.jogo === 'blackjack' ? ultima : undefined} />}
-        {jogo === 'roleta' && <Roleta vida={vida} agir={agir} ultima={ultima?.jogo === 'roleta' ? ultima : undefined} />}
-        {jogo === 'niquel' && <Niquel vida={vida} agir={agir} ultima={ultima?.jogo === 'niquel' ? ultima : undefined} />}
+      <Subnav rotulo="Apostas" prefixo="apostas-frente" itens={FRENTES} atual={frente} aoMudar={setFrente} classe="subnav--apostas" />
+      <div role="tabpanel" id="apostas-frente-painel" aria-labelledby={`apostas-frente-aba-${frente}`}>
+        {frente === 'loterias' && (local ? <Loteria vida={vida} agir={agir} ultima={ultima?.jogo === 'loteria' ? ultima : undefined} /> : <Loterias18 vida={vida} agir={agir} />)}
+        {frente === 'esportes' && <Esportes18 vida={vida} agir={agir} />}
+        {frente === 'turfe' && <Turfe18 vida={vida} agir={agir} />}
+        {frente === 'bingo' && <Bingo18 vida={vida} agir={agir} />}
+        {frente === 'cassino' && (cassinoProibido(vida) ? <p className="apostas18__lei">No Brasil, cassino e caça-níquel são proibidos por lei (Decreto-Lei 3.688/1941, art. 50): não há mesa nem máquina legal aqui. Fora do país, onde a lei permite, a mesa abre.</p> : (
+          <>
+            <Subnav rotulo="Jogos do cassino" prefixo="apostas" itens={jogosDoCassino} atual={jogo} aoMudar={setJogo} classe="subnav--apostas" />
+            <div role="tabpanel" id="apostas-painel" aria-labelledby={`apostas-aba-${jogo}`}>
+              {jogo === 'blackjack' && <Blackjack vida={vida} agir={agir} ultima={ultima?.jogo === 'blackjack' ? ultima : undefined} />}
+              {jogo === 'roleta' && <Roleta vida={vida} agir={agir} ultima={ultima?.jogo === 'roleta' ? ultima : undefined} />}
+              {jogo === 'niquel' && <Niquel vida={vida} agir={agir} ultima={ultima?.jogo === 'niquel' ? ultima : undefined} />}
+            </div>
+          </>
+        ))}
+        {frente === 'historico' && <Historico18 vida={vida} />}
       </div>
       <Controle vida={vida} agir={agir} />
     </div>

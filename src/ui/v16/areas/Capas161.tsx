@@ -25,6 +25,7 @@ const ICONES_VIDA: Record<SecaoVida, string> = {
   pertences: 'M4 9l8-5 8 5v10H4zM9 19v-5h6v5M4 9h16',
   cidade: 'M3 21V10l5-3v14M8 21V5l6 3v13M14 21v-9l7 3v6M2 21h20',
   viagens: 'M2.5 15.5l19-7-3.5-2-7 2.6L6 5 4 6l3.2 4.4-3.7 1.4-2-1.2L0 11.5zM3 20h18',
+  campo: 'M3 20h18M5 20V11l7-5 7 5v9M9 20v-5h6v5M2 11l10-7 10 7',
   apostas: 'M5 4h14v16H5zM9 8h.01M15 8h.01M12 12h.01M9 16h.01M15 16h.01'
 } as Record<SecaoVida, string>;
 

@@ -1,0 +1,84 @@
+/* VIDA 18 · as apostas novas: loterias da Caixa, esportes, turfe, bingo, histórico. */
+
+.apostas18 { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
+.apostas18__lei { margin: 0; padding: 8px 12px; border-left: 3px solid color-mix(in oklab, var(--info, var(--tinta-3)) 70%, transparent); background: color-mix(in oklab, var(--info, var(--tinta)) 6%, var(--superficie)); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; font-size: 13px; color: var(--tinta-2); }
+.apostas18__h { margin: var(--space-2) 0; font: 700 15px/1.3 var(--font-sans); color: var(--tinta); }
+.apostas18__linha { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-size: 13px; color: var(--tinta-2); }
+.apostas18__linha > span:first-child { font-weight: 700; color: var(--tinta); }
+.apostas18__linha select { min-height: 36px; padding: 4px 8px; border-radius: var(--radius-sm); border: 1px solid var(--fio-forte, var(--fio)); background: var(--superficie-topo); color: var(--tinta); font: inherit; }
+.apostas18__chip { min-height: 34px; padding: 4px 12px; border-radius: 99px; border: 1px solid var(--fio-forte, var(--fio)); background: var(--superficie-topo); color: var(--tinta); font: inherit; font-size: 13px; cursor: pointer; }
+.apostas18__chip--ativo { background: var(--acao); border-color: var(--acao); color: var(--acao-sobre); }
+
+/* O cartaz da lotérica. */
+.apostas18__cartaz { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; padding: 12px 14px; border-radius: var(--radius-md); color: #fff; background: #209869; }
+.apostas18__cartaz--lotofacil { background: #930089; }
+.apostas18__cartaz--quina { background: #260085; }
+.apostas18__cartaz--lotomania { background: #c9520c; }
+.apostas18__cartaz--duplasena { background: #a61324; }
+.apostas18__cartaz--loteca { background: #7a3f1d; }
+.apostas18__cartaz-nome { font: 800 18px/1.1 var(--font-display, var(--font-sans)); letter-spacing: 0.01em; }
+.apostas18__cartaz strong { margin-left: auto; font-size: 15px; }
+
+.apostas18__loteria { display: flex; flex-direction: column; gap: var(--space-3); }
+.apostas18__volante { display: flex; flex-direction: column; gap: var(--space-2); }
+.apostas18__grade { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 4px; }
+.apostas18__grade--lotofacil { grid-template-columns: repeat(5, minmax(0, 1fr)); max-width: 320px; }
+.apostas18__grade .bilhete__numero { min-height: 34px; min-width: 0; padding: 0; font-size: 13px; }
+.apostas18__bilhetes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.apostas18__bilhete { display: flex; flex-direction: column; gap: 3px; padding: 8px 10px; border: 1px solid var(--fio); border-radius: var(--radius-md); background: var(--superficie); font-size: 13px; color: var(--tinta-2); }
+.apostas18__bilhete--premiado { border-color: color-mix(in oklab, var(--bom) 55%, var(--fio)); background: color-mix(in oklab, var(--bom) 7%, var(--superficie)); }
+.apostas18__bilhete-cab { font-weight: 700; color: var(--tinta); }
+.apostas18__dezenas { display: flex; flex-direction: column; font-variant-numeric: tabular-nums; letter-spacing: 0.03em; }
+.apostas18__bolas { display: inline-flex; flex-wrap: wrap; gap: 3px; margin: 0; padding: 0; vertical-align: middle; }
+.apostas18__bolas .loteria__bola { width: 24px; height: 24px; font-size: 11px; }
+
+/* Loteca. */
+.apostas18__loteca { width: 100%; border-collapse: collapse; font-size: 13px; }
+.apostas18__loteca th, .apostas18__loteca td { padding: 3px 4px; border-bottom: 1px solid var(--fio); text-align: center; color: var(--tinta); }
+.apostas18__time { text-align: left !important; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.apostas18__coluna { width: 32px; height: 30px; border-radius: 6px; border: 1px solid var(--fio-forte, var(--fio)); background: var(--superficie-topo); color: var(--tinta); font: 700 13px var(--font-sans); cursor: pointer; }
+.apostas18__coluna--marcada { background: var(--acao); border-color: var(--acao); color: var(--acao-sobre); }
+
+/* Esportes. */
+.apostas18__jogos { list-style: none; margin: 0 0 var(--space-2); padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.apostas18__jogo { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; border: 1px solid var(--fio); border-radius: var(--radius-md); background: var(--superficie); }
+.apostas18__confronto { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; font-weight: 700; color: var(--tinta); font-size: 14px; }
+.apostas18__confronto > span:last-child { text-align: right; }
+.apostas18__x { color: var(--tinta-3); font-weight: 400; }
+.apostas18__odds, .apostas18__mais { display: flex; flex-wrap: wrap; gap: 6px; }
+.apostas18__odds .acao, .apostas18__mais .acao { flex: 1 1 90px; }
+.apostas18__tabela { width: 100%; border-collapse: collapse; font-size: 13px; }
+.apostas18__tabela th, .apostas18__tabela td { padding: 4px; border-bottom: 1px solid var(--fio); color: var(--tinta); text-align: center; }
+.apostas18__tabela th[scope='row'], .apostas18__tabela thead th:first-child { text-align: left; }
+.apostas18__tabela .acao { margin: 0; }
+.apostas18__temporada { display: flex; flex-direction: column; gap: 6px; overflow-x: auto; }
+
+/* Turfe. */
+.apostas18__pareo { display: flex; flex-direction: column; gap: var(--space-2); overflow-x: auto; }
+.apostas18__tabela--pareo td:nth-child(2), .apostas18__tabela--pareo td:nth-child(3), .apostas18__tabela--pareo td:nth-child(4) { color: var(--tinta-2); white-space: nowrap; }
+.apostas18__cavalo { padding: 4px 6px; border: 1px solid transparent; border-radius: 6px; background: none; color: var(--tinta); font: 700 13px var(--font-sans); text-align: left; cursor: pointer; }
+.apostas18__cavalo--marcado { border-color: var(--acao); background: color-mix(in oklab, var(--acao) 12%, transparent); }
+.apostas18__da-casa { background: color-mix(in oklab, var(--bom) 9%, transparent); }
+.apostas18__chegada { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.apostas18__chegada span { font-weight: 700; }
+
+/* Bingo, histórico. */
+.apostas18__bingo { display: flex; flex-direction: column; gap: var(--space-2); }
+.apostas18__globo { width: 160px; height: auto; color: var(--tinta-2); }
+.apostas18__balanco { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--space-2); margin: 0; }
+.apostas18__balanco div { padding: 8px 10px; border: 1px solid var(--fio); border-radius: var(--radius-md); background: var(--superficie); }
+.apostas18__balanco dt { font-size: 12px; color: var(--tinta-3); }
+.apostas18__balanco dd { margin: 0; font: 700 17px var(--font-sans); color: var(--tinta); }
+.apostas18__historico { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.apostas18__historico li { display: grid; grid-template-columns: 44px 1fr auto; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--fio); font-size: 13px; color: var(--tinta-2); }
+.apostas18__hist-ano { color: var(--tinta-3); }
+.apostas18 .campo18__bom { color: var(--bom); }
+.apostas18 .campo18__ruim { color: var(--ruim); }
+
+@media (max-width: 640px) {
+  .apostas18__grade { grid-template-columns: repeat(8, minmax(0, 1fr)); }
+  .apostas18__grade--lotofacil { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .apostas18__cartaz strong { margin-left: 0; width: 100%; }
+  .apostas18__time { max-width: 92px; }
+  .apostas18__coluna { width: 28px; }
+}

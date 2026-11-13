@@ -45,6 +45,8 @@ import { IconeDaSecao161 } from '../v16/areas/Capas161';
 
 /** REWORK 10 · JOG-01: os jogos num pacote à parte (só carregam quando se abre a seção; o service worker guarda para o offline). */
 const Apostas = sobDemanda(() => import('./Apostas').then(m => m.Apostas));
+/** VIDA 18: o campo (as propriedades rurais) num pacote à parte. */
+const Campo18 = sobDemanda(() => import('../v18/campo/Campo18').then(m => m.Campo18));
 /** REWORK 12.4: a personalização mora num pacote à parte (carrega quando a tela aparece). */
 const CasaPorDentro = sobDemanda(() => import('./Personalizar').then(m => m.CasaPorDentro));
 
@@ -95,6 +97,7 @@ export function VidaConcreta({ vida, agir, secao, irSecao, abrirPessoa }: Props)
         {secao === 'cidade' && <Cidade vida={vida} agir={agir} irCompras={() => irSecao('compras')} abrir={setLugar} />}
         {/* REWORK 9: as viagens são experiência material (destino, custo, com quem) — saíram de Tempo livre. */}
         {secao === 'viagens' && (i >= 12 ? <Experiencias vida={vida} agir={agir} /> : <p className="nota">Viajar, por enquanto, é com a família — quando ela decide ir.</p>)}
+        {secao === 'campo' && <Campo18 vida={vida} agir={agir} />}
         {secao === 'apostas' && <Apostas vida={vida} agir={agir} />}
       </div>
       {lugar && <Lugar vida={vida} agir={agir} qual={lugar} aoFechar={() => setLugar(null)} trocar={setLugar} verNoPatrimonio={p => { setLugar(null); setPartePat(p); irSecao('pertences'); }} />}

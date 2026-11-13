@@ -1,0 +1,149 @@
+/* VIDA 18 · Vida · Campo — as propriedades rurais (a paisagem 2.5D, as partes, as ofertas, as festas). */
+
+.campo18 {
+  --p18-ceu-alto: #bcd8e6; --p18-ceu-baixo: #f3e6c8; --p18-sol: #f6d27a;
+  --p18-morro-longe: #9fb98a; --p18-morro: #86a66d; --p18-mata: #5c8a4c; --p18-mata-escura: #3e6a36; --p18-mata-clara: #6f9c55;
+  --p18-pasto: #a9c47a; --p18-terra: #c9ad82; --p18-cerca: #7a5c3c; --p18-agua: #7fb6cf; --p18-agua-borda: #4f8fae; --p18-estrada: #d8c09a;
+  --c18-lavoura: #c9b75a; --c18-pasto: #a9c47a; --c18-agua: #7fb6cf; --c18-reserva: #4f7d42;
+  display: flex; flex-direction: column; gap: var(--space-4); min-width: 0;
+}
+:root[data-tema='escuro'] .campo18 {
+  --p18-ceu-alto: #233646; --p18-ceu-baixo: #4a4334; --p18-sol: #d9b660;
+  --p18-morro-longe: #3d5236; --p18-morro: #33492c; --p18-mata: #2d4a26; --p18-mata-escura: #22391d; --p18-mata-clara: #3c5e30;
+  --p18-pasto: #55693c; --p18-terra: #6b5a40; --p18-cerca: #b29572; --p18-agua: #2f5f78; --p18-agua-borda: #4f8fae; --p18-estrada: #7d6c52;
+  --c18-lavoura: #9a8b3f; --c18-pasto: #5f7a42; --c18-agua: #3a7896; --c18-reserva: #2f5428;
+}
+
+/* A cabeça. */
+.campo18__cabeca { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--space-3); }
+.campo18__kicker, .campo18__placa-tipo { margin: 0; font: 600 11px/1.3 var(--font-sans); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--tinta-3); }
+.campo18__titulo { margin: 2px 0 0; font: 700 var(--type-title, 22px)/1.2 var(--font-display, var(--font-serif)); color: var(--tinta); }
+.campo18__numeros { display: flex; gap: var(--space-4); margin: 0; }
+.campo18__numeros div { display: flex; flex-direction: column; }
+.campo18__numeros dt { font-size: 12px; color: var(--tinta-3); }
+.campo18__numeros dd { margin: 0; font: 700 18px/1.2 var(--font-sans); color: var(--tinta); }
+.campo18__bom { color: var(--bom); }
+.campo18__ruim { color: var(--ruim); }
+
+/* A paisagem. */
+.paisagem18 { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; border-radius: var(--radius-md); background: var(--p18-ceu-baixo); }
+.paisagem18--pequena { aspect-ratio: 16 / 10; border-radius: var(--radius-sm); }
+.paisagem18__vazio { font: 600 10px var(--font-sans); fill: color-mix(in oklab, var(--tinta) 70%, transparent); }
+
+/* As propriedades (várias). */
+.campo18__lista { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--space-2); }
+.campo18__ficha { width: 100%; display: flex; flex-direction: column; gap: 4px; padding: 6px; border: 1px solid var(--fio); border-radius: var(--radius-md); background: var(--superficie); color: var(--tinta); text-align: left; cursor: pointer; min-height: var(--touch-target, 44px); }
+.campo18__ficha--ativa { border-color: var(--acao); box-shadow: 0 0 0 2px color-mix(in oklab, var(--acao) 30%, transparent); }
+.campo18__ficha-nome { font-weight: 700; font-size: 14px; }
+.campo18__ficha-sub { font-size: 12px; color: var(--tinta-3); }
+
+/* Uma propriedade. */
+.campo18__prop { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-3); border: 1px solid var(--fio); border-radius: var(--radius-lg); background: var(--superficie-topo); box-shadow: var(--shadow-sm); min-width: 0; }
+.campo18__palco { position: relative; }
+.campo18__placa { position: absolute; left: var(--space-3); bottom: var(--space-3); max-width: min(60%, 360px); padding: 10px 12px; border-radius: var(--radius-md); background: color-mix(in oklab, var(--superficie-topo) 90%, transparent); box-shadow: var(--shadow-md); backdrop-filter: blur(4px); }
+.campo18__placa h3 { margin: 2px 0; font: 700 20px/1.15 var(--font-display, var(--font-serif)); color: var(--tinta); }
+.campo18__placa p { margin: 0; font-size: 13px; color: var(--tinta-2); }
+.campo18__placa .campo18__placa-valor { margin-top: 4px; color: var(--tinta); }
+.campo18__painel { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
+.campo18 h4 { margin: var(--space-2) 0 var(--space-1); font: 700 15px/1.3 var(--font-sans); color: var(--tinta); }
+
+/* A terra. */
+.campo18__mapa { display: flex; height: 26px; border-radius: var(--radius-sm); overflow: hidden; box-shadow: inset 0 0 0 1px var(--fio); }
+.campo18__faixa { display: block; min-width: 4px; }
+.campo18__faixa--lavoura { background: repeating-linear-gradient(90deg, var(--c18-lavoura) 0 6px, color-mix(in oklab, var(--c18-lavoura) 80%, #000) 6px 8px); }
+.campo18__faixa--pasto { background: var(--c18-pasto); }
+.campo18__faixa--agua { background: var(--c18-agua); }
+.campo18__faixa--reserva { background: repeating-linear-gradient(135deg, var(--c18-reserva) 0 5px, color-mix(in oklab, var(--c18-reserva) 75%, #000) 5px 7px); }
+.campo18__legenda { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; color: var(--tinta-2); }
+.campo18__legenda li { display: flex; align-items: center; gap: 6px; }
+.campo18__cor { display: inline-block; width: 14px; height: 14px; border-radius: 3px; box-shadow: inset 0 0 0 1px var(--fio); }
+.campo18__medidores { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--space-2) var(--space-4); }
+.campo18__medidor { display: grid; grid-template-columns: auto 1fr; grid-template-areas: 'r d' 'b b'; gap: 2px 8px; font-size: 13px; }
+.campo18__medidor-rotulo { grid-area: r; font-weight: 700; color: var(--tinta); }
+.campo18__medidor-dica { grid-area: d; justify-self: end; color: var(--tinta-3); }
+.campo18__medidor-barra { grid-area: b; height: 8px; border-radius: 99px; background: color-mix(in oklab, var(--tinta) 10%, transparent); overflow: hidden; }
+.campo18__medidor-barra > span { display: block; height: 100%; border-radius: inherit; background: color-mix(in oklab, var(--bom) 85%, var(--tinta)); }
+.campo18__dados { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 6px var(--space-4); margin: 0; }
+.campo18__dados div { display: flex; flex-direction: column; padding: 6px 0; border-top: 1px solid var(--fio); }
+.campo18__dados dt { font-size: 12px; color: var(--tinta-3); }
+.campo18__dados dd { margin: 0; font-size: 14px; color: var(--tinta); }
+
+/* Lavoura. */
+.campo18__talhoes, .campo18__itens, .campo18__ofertas, .campo18__festas, .campo18__familia, .campo18__cavalos { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.campo18__talhao { display: grid; grid-template-columns: 10px 1fr auto; gap: var(--space-2); align-items: center; padding: 8px 10px; border: 1px solid var(--fio); border-radius: var(--radius-md); background: var(--superficie); }
+.campo18__talhao-cor { align-self: stretch; border-radius: 4px; background: var(--c18-lavoura); }
+.campo18__talhao--cafe .campo18__talhao-cor, .campo18__talhao--cacau .campo18__talhao-cor { background: #4f7d3a; }
+.campo18__talhao--eucalipto .campo18__talhao-cor, .campo18__talhao--pinus .campo18__talhao-cor { background: #3f6a4c; }
+.campo18__talhao--horta .campo18__talhao-cor, .campo18__talhao--feijao .campo18__talhao-cor { background: #6fb35a; }
+.campo18__talhao-txt { display: flex; flex-direction: column; gap: 3px; min-width: 0; font-size: 13px; color: var(--tinta-2); }
+.campo18__talhao-txt strong { color: var(--tinta); font-size: 14px; }
+.campo18__talhao-acoes { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+.campo18__cal { display: inline-flex; gap: 2px; margin-top: 2px; vertical-align: middle; }
+.campo18__mes { display: inline-grid; place-items: center; width: 16px; height: 16px; border-radius: 3px; font: 600 9px var(--font-sans); color: var(--tinta-3); background: color-mix(in oklab, var(--tinta) 6%, transparent); }
+.campo18__mes--planta { background: color-mix(in oklab, var(--bom) 35%, transparent); color: var(--tinta); }
+.campo18__mes--colhe { background: color-mix(in oklab, #d9a441 55%, transparent); color: var(--tinta); }
+.campo18__mes--planta.campo18__mes--colhe { background: linear-gradient(135deg, color-mix(in oklab, var(--bom) 35%, transparent) 50%, color-mix(in oklab, #d9a441 55%, transparent) 50%); }
+.campo18__plantar { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3); border-radius: var(--radius-md); background: color-mix(in oklab, var(--tinta) 4%, var(--superficie)); }
+.campo18__plantar .nota { margin: 0; }
+.campo18__campo { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--tinta-2); max-width: 420px; }
+.campo18__campo select { min-height: 40px; padding: 6px 10px; border-radius: var(--radius-sm); border: 1px solid var(--fio-forte, var(--fio)); background: var(--superficie-topo); color: var(--tinta); font: inherit; font-size: 14px; }
+.campo18__botoes { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* Rebanho. */
+.campo18__rebanhos { display: flex; flex-direction: column; gap: var(--space-3); }
+.campo18__rebanho { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3); border: 1px solid var(--fio); border-radius: var(--radius-md); background: var(--superficie); }
+.campo18__rebanho header { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; font-size: 13px; color: var(--tinta-2); }
+.campo18__rebanho header strong { font-size: 15px; color: var(--tinta); }
+.campo18__escolhas { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 13px; }
+.campo18__escolhas > span { font-weight: 700; color: var(--tinta-2); margin-left: 4px; }
+.campo18__escolhas > span:first-child { margin-left: 0; }
+.campo18__chip { min-height: 32px; padding: 4px 12px; border-radius: 99px; border: 1px solid var(--fio-forte, var(--fio)); background: var(--superficie-topo); color: var(--tinta); font: inherit; font-size: 13px; cursor: pointer; }
+.campo18__chip--ativo { background: var(--acao); border-color: var(--acao); color: var(--acao-sobre); }
+.campo18__cavalos li { font-size: 13px; color: var(--tinta-2); }
+.campo18__cavalos strong { color: var(--tinta); }
+
+/* Estrutura, gestão. */
+.campo18__item { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--space-2); padding: 8px 10px; border: 1px solid var(--fio); border-radius: var(--radius-md); background: var(--superficie); }
+.campo18__item > div:first-child { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 260px; font-size: 13px; color: var(--tinta-2); }
+.campo18__item strong { color: var(--tinta); font-size: 14px; }
+.campo18__item--tem { border-color: color-mix(in oklab, var(--bom) 45%, var(--fio)); }
+
+/* Contas. */
+.campo18__contas { display: flex; flex-direction: column; gap: var(--space-3); }
+.campo18__tabela { width: 100%; border-collapse: collapse; font-size: 13px; }
+.campo18__tabela th, .campo18__tabela td { padding: 6px 4px; border-bottom: 1px solid var(--fio); text-align: right; color: var(--tinta); }
+.campo18__tabela th[scope='row'], .campo18__tabela thead th:first-child { text-align: left; font-weight: 500; }
+.campo18__tabela thead th { font-size: 12px; color: var(--tinta-3); font-weight: 600; }
+.campo18__nota { display: block; font-size: 12px; color: var(--ruim); }
+.campo18__anos { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.campo18__anos li { display: grid; grid-template-columns: 44px 1fr auto; align-items: center; gap: 8px; font-size: 13px; color: var(--tinta-2); }
+.campo18__barra { height: 10px; border-radius: 3px; background: color-mix(in oklab, var(--bom) 70%, transparent); }
+.campo18__barra--ruim { background: color-mix(in oklab, var(--ruim) 70%, transparent); }
+
+/* Ofertas, festas, família, vazio. */
+.campo18__oferta { display: grid; grid-template-columns: 180px 1fr; grid-template-areas: 'img txt' 'img bot'; gap: var(--space-2) var(--space-3); padding: var(--space-2); border: 1px solid var(--fio); border-radius: var(--radius-md); background: var(--superficie); }
+.campo18__oferta > .paisagem18 { grid-area: img; align-self: start; }
+.campo18__oferta-txt { grid-area: txt; display: flex; flex-direction: column; gap: 3px; font-size: 13px; color: var(--tinta-2); min-width: 0; }
+.campo18__oferta-txt strong { color: var(--tinta); font-size: 15px; }
+.campo18__oferta > .campo18__botoes { grid-area: bot; }
+.campo18__preco { margin-top: 2px; }
+.campo18__festa { display: grid; grid-template-columns: 44px 1fr auto; align-items: center; gap: var(--space-2); padding: 8px 10px; border: 1px solid var(--fio); border-radius: var(--radius-md); background: var(--superficie); }
+.campo18__festa > div { display: flex; flex-direction: column; gap: 2px; font-size: 13px; color: var(--tinta-2); min-width: 0; }
+.campo18__festa strong { color: var(--tinta); }
+.campo18__festa-mes { display: grid; place-items: center; height: 40px; border-radius: var(--radius-sm); background: color-mix(in oklab, #d9a441 30%, var(--superficie)); font: 700 12px var(--font-sans); text-transform: uppercase; color: var(--tinta); }
+.campo18__festa--foi { opacity: 0.75; }
+.campo18__familia li { display: grid; grid-template-columns: 120px 1fr; gap: var(--space-2); align-items: center; }
+.campo18__familia li > div { display: flex; flex-direction: column; gap: 2px; font-size: 13px; color: var(--tinta-2); }
+.campo18__vazio { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3); border: 1px dashed var(--fio-forte, var(--fio)); border-radius: var(--radius-lg); }
+.campo18__vazio p { margin: 0; color: var(--tinta-2); }
+
+@media (max-width: 640px) {
+  .campo18__placa { position: static; max-width: none; margin-top: -24px; margin-inline: 8px; }
+  .campo18__oferta { grid-template-columns: 1fr; grid-template-areas: 'img' 'txt' 'bot'; }
+  .campo18__talhao { grid-template-columns: 8px 1fr; }
+  .campo18__talhao-acoes { grid-column: 1 / -1; justify-content: flex-start; }
+  .campo18__numeros { width: 100%; justify-content: space-between; }
+  .campo18__festa { grid-template-columns: 40px 1fr; }
+  .campo18__festa .botao, .campo18__festa > :last-child { grid-column: 1 / -1; }
+  .campo18__mes { width: 13px; height: 14px; font-size: 8px; }
+}
