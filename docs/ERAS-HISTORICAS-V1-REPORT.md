@@ -147,7 +147,28 @@ A direção ilustrada do VIDA foi mantida: os objetos são desenhos SVG no mesmo
 
 ## 11. Resultado dos testes
 
-(preenchido abaixo, na seção 17)
+- **Testes novos** (`src/motor/__tests__/erasHistoricas.test.ts`, 22 testes, todos passam). Cobrem:
+  - cronologia: época gravada, intervalo e país, cada acontecimento no mês certo e uma vez só, nada do futuro;
+  - moedas: datas das trocas, ÷1000 e ÷2750 exatos, IPCA e salário mínimo das séries, moeda na tela, piso do salário;
+  - dinheiro: troca de moeda sem criar nem destruir dinheiro; Collor retém e devolve tudo; hiperinflação limitada;
+  - tecnologia: nada antes de existir; chegada gradual pela renda; dependências; aparelho por época; namoro e redes bloqueados;
+  - lojas, veículos e profissões: nomes e preços da época, carros da época na concessionária de 1990 e só os atuais na de hoje, profissão inexistente bloqueada;
+  - texto: a peneira, inclusive o emoji;
+  - save: salvar e reabrir, normalização idempotente e época malformada descartada.
+- **Suíte completa** (2767 testes, rodada no meio do trabalho): 2756 passaram e 10 falharam.
+  - **6 testes de veículos (regressão real, corrigida):** os modelos da época estavam sem desenho. Cada um ganhou desenho próprio pela ficha técnica, sem mudar os testes. Agora passam.
+  - **2 da nota de novidades:** faltavam as seções obrigatórias. Corrigido; passam.
+  - **`fechamentoMundo` teste 4:** estourou o tempo limite de 60 s com a máquina carregada. Rodado sozinho, passa.
+  - **Teste do emoji:** o arquivo foi editado enquanto a suíte rodava. Rodado de novo, passa.
+  - **`motor.test`, "regra de agência":** já falhava no VIDA 18 (registrado no relatório da 18). Não é regressão.
+- **Modo contemporâneo intacto, comprovado:** quatro vidas contemporâneas de 40 anos geradas no VIDA 18 publicado (`9fa7d7e`) e nesta branch têm biografia idêntica (mesmo hash sha256), mesmo saldo e mesmo número de entradas.
+- **Cenários A–D** (`scripts/sim/eras.ts`, avanço anual com salvar → fechar → reabrir a cada ano): "Sem problemas de cronologia, moeda ou save" nos quatro.
+  - **A (1984):** 50 anos, as seis moedas, telefone fixo → celular (2006) → smartphone (2016), 91 lembranças da época.
+  - **B (1995, Recife):** computador em 2001, internet discada em 2003, banda larga em 2007, rede de comunidades, smartphone aos 17.
+  - **C (2010, Porto Alegre):** pandemia aos 10, enchentes do RS aos 14, e a vida segue até 2053.
+  - **D (contemporâneo):** nenhuma lembrança da época, nenhum portão ativo.
+- **Interface** (`scripts/playtest/eras.mjs`): 1440, 390 e 360 px × claro e escuro, sem rolagem lateral e sem erros de console nas 6 combinações. Telas conferidas: tela Nascer com a época, cabeçalho com o selo da moeda, aparelho de 1996, 2006, 2021 e 2040 (contemporâneo), painel "A época" e Linha da Vida com o fio "A época".
+- **Typecheck e build:** sem erros.
 
 ## 12. Compatibilidade dos saves
 
@@ -159,8 +180,34 @@ A direção ilustrada do VIDA foi mantida: os objetos são desenhos SVG no mesmo
 
 ## 13. Tamanho dos pacotes
 
-(preenchido na seção 17)
+Limite de 800 kB, não alterado. `motor-textos` passou de 797,15 para 797,18 kB e `motor-dados` de 781,72 para 782,56 kB. Os demais grandes ficaram iguais: `motor-carreira` 749,06, `motor` 745,57 e `Jogo` 678,14 kB. Pacotes novos: `eras-base` 38,75 kB, `motor-eras` 40,11 kB e `eras` (interface) 14,47 kB, mais 27,82 kB de CSS. Uma primeira versão punha a base histórica dentro de `motor-dados` (820 kB). Ela ganhou pacote próprio, sem importar nada de cima, para não criar ciclo entre pacotes.
 
-## 14–16. Branch, commit, preview, limitações e próximos passos
+## 14. Branch e commit
 
-(preenchido na seção 17)
+Branch `claude/vida-eras-historicas`, a partir de `48f8eaf` (VIDA 18). Commit do protótipo: o último da branch (ver `git log`). A `main` e a branch de produção (`claude/fix-pos-rework3-playtest`) não foram tocadas.
+
+## 15. Preview
+
+Preview automático do Cloudflare Pages para a branch (não é a produção): ver a seção 17.
+
+## 16. Limitações conhecidas e próximos passos
+
+As limitações estão na seção 10. Próximos passos sugeridos, na ordem:
+1. Jogar o protótipo e dizer se o tom, a quantidade de acontecimentos e o aparelho da época estão certos.
+2. Renda real por época (salários pela série da PNAD/IBGE) e uma cesta de preços datada (DIEESE) para o painel.
+3. Moda e aparência por década: peças desenhadas, não recoloridas.
+4. A carreira política com os partidos e as regras de cada época.
+5. A camada urbana: transporte, metrô, shopping e comércio por década nas capitais.
+6. Antes de 1980 e outros países, reaproveitando a mesma camada: cada país com as suas séries, moedas e acontecimentos.
+
+## 17. Como experimentar
+
+- **No jogo:** Nascer de novo → "Quando você nasce" → uma década e um ano → Nascer. Depois, "Viver mais um ano" e acompanhar:
+  - o selo da moeda no cabeçalho;
+  - o aparelho (ícone no alto);
+  - Você → No mundo → "A época";
+  - História → Biografia → fio "A época".
+- **Cenários reproduzíveis:**
+  - Rodar: `npx esbuild scripts/sim/eras.ts --bundle --platform=node --format=esm --outfile=x.mjs && node x.mjs A 50` (A = 1984, B = 1995, C = 2010, D = contemporâneo).
+  - `SNAP=1996,2006` grava saves em `~/vida-trabalho/eras/saves` para abrir no jogo.
+- **Capturas** (seleção em `docs/eras/fotos/`): `node scripts/playtest/eras.mjs` (precisa de `npm run build` e `npx vite preview`).
