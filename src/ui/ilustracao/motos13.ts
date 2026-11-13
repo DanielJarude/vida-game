@@ -51,6 +51,11 @@ export interface PerfilModerna {
 
 /** As de hoje (as nakeds, as esportivas, as trails e as big trails). */
 export const MOTOS_MODERNAS_13: Record<string, PerfilModerna> = {
+  // ERAS HISTÓRICAS: as motos da época (`motor/eras/base/veiculos`).
+  ep_honda_twister: { tipo: 'naked', motor: 'mono', quadro: 'tubular', farol: 'redondo', escape: 'lateral', radiador: false, abas: false, mola: '#26272a', faixa: '#c8372d' },
+  ep_honda_cb300r: { tipo: 'naked', motor: 'mono', quadro: 'tubular', farol: 'anguloso', escape: 'lateral', radiador: false, abas: true, mola: '#26272a', faixa: '#c9c6c0' },
+  ep_honda_sahara: { tipo: 'trail', motor: 'mono', quadro: 'tubular', farol: 'redondo', escape: 'alto', rodas: 'raios', radiador: false, r: [23, 25], mola: '#26272a', faixa: '#c8372d' },
+  ep_honda_falcon: { tipo: 'trail', motor: 'mono', quadro: 'tubular', farol: 'duplo', escape: 'alto', rodas: 'raios', radiador: false, r: [22.5, 24.5], mola: '#c8372d', faixa: '#26272a' },
   // Nakeds.
   yamaha_fazer: { tipo: 'naked', motor: 'mono', quadro: 'tubular', farol: 'anguloso', escape: 'lateral', radiador: false, abas: true, mola: '#c8372d', faixa: '#26272a' },
   honda_cb300f: { tipo: 'naked', motor: 'mono', quadro: 'tubular', farol: 'anguloso', escape: 'curto', radiador: true, abas: true, mola: '#c8372d' },
@@ -81,6 +86,12 @@ export const MOTOS_MODERNAS_13: Record<string, PerfilModerna> = {
 
 /** As de linha clássica de hoje: o montador das clássicas, com o que é delas. */
 export const MOTOS_RETRO_13: Record<string, PerfilClassica & { disco?: boolean; asaDeMorcego?: boolean; alforjes?: boolean; bagageiro?: boolean }> = {
+  // ERAS HISTÓRICAS: as motos da época (`motor/eras/base/veiculos`).
+  ep_honda_cg125: { motor: 'mono', guidao: 'reto', tanque: 'gota', banco: 'duplo', escape: 'dois', rodas: 'raios', motorCor: ALU, faixa: '#ecebe6', r: 21, bagageiro: true },
+  ep_yamaha_ybr125: { motor: 'mono', guidao: 'reto', tanque: 'longo', banco: 'duplo', escape: 'dois', rodas: 'raios', motorCor: '#3a3633', faixa: '#ecebe6', r: 21.5 },
+  ep_honda_cg150: { motor: 'mono', guidao: 'reto', tanque: 'gota', banco: 'duplo', escape: 'dois', rodas: 'liga', motorCor: '#8c8882', faixa: '#c8372d', r: 21.5, bagageiro: true },
+  ep_honda_cb400: { motor: 'paralelo', guidao: 'reto', tanque: 'gota', banco: 'duplo', escape: 'dois', rodas: 'raios', motorCor: CROMO, faixa: '#26272a', r: 22 },
+  ep_honda_cb450: { motor: 'paralelo', guidao: 'reto', tanque: 'longo', banco: 'duplo', escape: 'dois', rodas: 'liga', motorCor: ALU, faixa: '#c8372d', r: 22 },
   honda_cg160: { motor: 'mono', guidao: 'reto', tanque: 'gota', banco: 'duplo', escape: 'dois', rodas: 'liga', motorCor: '#8c8882', faixa: '#26272a', r: 22, bagageiro: true },
   yamaha_factor: { motor: 'mono', guidao: 'reto', tanque: 'longo', banco: 'duplo', escape: 'dois', rodas: 'liga', motorCor: '#3a3633', faixa: '#c9c6c0', r: 22 },
   haojue_dk150: { motor: 'mono', guidao: 'reto', tanque: 'gota', banco: 'duplo', escape: 'dois', rodas: 'raios', motorCor: ALU, r: 22 },

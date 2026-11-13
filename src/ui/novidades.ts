@@ -36,8 +36,13 @@ export const NOTAS: NotaDeVersao[] = [
       'Os acontecimentos reais do Brasil, com data e fonte — das Diretas Já à COP30 —, lembrados conforme a sua idade e o seu estado. As lojas, os carros, as profissões e os estudos de cada ano.',
       'Você · No mundo · "A época": a presidência, a moeda, o salário mínimo, a inflação e a tecnologia do ano. Na Biografia, a marca de cada década e o fio "A época".'
     ],
-    melhorias: [],
-    correcoes: []
+    melhorias: [
+      'Os carros e as motos de cada época têm desenho próprio na garagem, pelas medidas de cada modelo.',
+      'O texto da vida fala do jeito da época: telefone, carta, depósito, vestibular — antes de existirem o celular, o e-mail, o Pix e o Enem.'
+    ],
+    correcoes: [
+      'A vida contemporânea não muda: as épocas só valem para quem escolhe nascer nelas.'
+    ]
   },
   {
     versao: '18',
