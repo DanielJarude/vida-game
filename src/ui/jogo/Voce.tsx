@@ -11,6 +11,7 @@
  * vêm das causas: sobrecarga pede tirar algo da semana; luto pede gente perto.
  */
 
+import { FormasDeReconhecimento } from '../v21/carreiras/FormasDeReconhecimento';
 import { sobDemanda } from '../util/sobDemanda';
 /** REWORK 12.4: os gostos (música e arte) e o que se faz com eles (pacote sob demanda). */
 const GostosECultura = sobDemanda(() => import('./Personalizar').then(m => m.GostosECultura));
@@ -215,6 +216,8 @@ export function Voce({ vida, agir, irPara, abrirPessoa, parte: parteDeFora, irPa
 
       <div className={fora('mundo')}>
       {fama.relevante && <button type="button" className="fama13-atalho" onClick={() => irA('fama')}>O seu nome público mora em Fama →</button>}
+      {/* VIDA 21: as formas de reconhecimento (fama, prestígio, onde você vive, redes, imagem). */}
+      <FormasDeReconhecimento vida={vida} />
       <div id="voce-mundo"><QuemNoMundo vida={vida} agir={agir} /></div>
       {parte === 'mundo' && <Mundo14 vida={vida} />}
       {i >= 14 && <OQueConstruiu vida={vida} />}

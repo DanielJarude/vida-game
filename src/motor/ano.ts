@@ -76,6 +76,7 @@ import { processarIniciativas } from './sistemas/iniciativas';
 import { processarCelular15 } from './v15/celular/celular15';
 import { processarEspolio21 } from './v21/crime/espolio21';
 import { processarOficio21 } from './v21/carreiras/oficio21';
+import { processarFama21 } from './v21/fama/fama21';
 import { processarOficio16 } from './v16/oficios/oficios16';
 import { processarReligiao16 } from './v16/religiao/religiao16';
 import { processarExposicao } from './sistemas/exposicao';
@@ -317,6 +318,8 @@ function viverAno(v: Vida, r: Rng): void {
   processarEspolio21(v);
   // VIDA 21: os números de cada ofício (os redondos viram lembrança).
   processarOficio21(v);
+  // VIDA 21: o reconhecimento de perto (a rádio, a escola, a moção, o jornal da cidade, a freguesia) — sem pedir.
+  processarFama21(v);
   processarClandestinos(v, r);
   // REWORK 12.25: o Submundo vivo — as pessoas do caminho, as organizações (que andam sozinhas), as encomendas, a carreira
   // (o patamar, os marcos, a família, a saída aos poucos) e o legado de quem herdou esse nome.
