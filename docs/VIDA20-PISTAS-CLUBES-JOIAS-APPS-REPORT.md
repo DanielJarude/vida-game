@@ -108,7 +108,12 @@ trabalho, estudos, amizades, parceria, dinheiro, sucessão. Joias ↔ lojas (cat
 inventário, retrato, figura, provador, save. Apps ↔ contas/publicações/seguidores/alcance/viral/renda (motor de redes),
 VIDA Conectada, Mensagens.
 
-## 8–9. Testes (ver seção final para os números da suíte)
+## 8–9. Testes e comparação com o baseline
+- **Baseline** (`c630645`, árvore limpa em `a20/base`): 2788 aprovados, **3 falhas preexistentes** (fechamentoMundo #4,
+  profissao "treinar dobrado", motor.test "regra de agência" — sensíveis a tempo/carga).
+- **Primeira suíte completa** sobre a VIDA 20: 2813 aprovados, 3 falhas — duas do baseline e **uma nova minha**
+  (`trajetorias`: a trilha nova `automobilismo` sem família de carreira) → corrigida (família "esporte").
+- **Suíte completa na árvore final** (ver §16): resultado abaixo. Typecheck limpo; build ok; smoke 28/28.
 Novos: `src/motor/__tests__/vida20.test.ts` (23) e `src/ui/__tests__/vida20Redes.test.tsx` (2). Ajustado:
 `vida15Celular.test.tsx` (a lista de apps: "Rede" → Instagram/TikTok/YouTube/X/Facebook — mudança pedida pelo complemento).
 
@@ -129,6 +134,9 @@ avançar 3 anos, salvar, reabrir: **0 falhas, nada perdido**.
   `motor20-automobilismo` 20,3, `motor20-clubes` 18,3, `dados20` 10,2, `AppSocial20` 20,1, `Celular` 53,5 (era 61,6).
 
 ## 12. Inspeção visual
+Apps sociais: Instagram, TikTok, YouTube, X e Facebook × 1440/390/360 × claro/escuro (início, perfil, criar): sem erro de
+console, sem rolagem lateral, nada vazando do aparelho (`a20/qa-apps.sh`).
+
 Build de produção + Playwright (`scripts/playtest/qa20.mjs`, `celular19.mjs`): cômodos (48 cenas), kart (1440 claro),
 F1 (390 escuro), clubes à venda (1440 claro), clube (1440 escuro, 390 claro: elenco, mercado, finanças), joias (360
 escuro, galeria de 94 peças), apps (Instagram 390, criar 390, TikTok 360 e perfil, YouTube canal 390 escuro, X publicar
