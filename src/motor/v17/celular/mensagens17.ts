@@ -29,6 +29,8 @@ import { anoDe } from '../../tempo';
 import { FALAS17, RESPOSTAS17, type Tom17 } from '../../dados17/celular/catalogo17';
 import type { Msg15, TipoMsg15 } from '../../dados15/celular/tipos';
 import type { Prioridade17 } from '../../sistemas/cotaDeMensagens';
+import { falaDaResposta21, falaDaSituacao21, lembrancaNatural, sabeDoFeito, trabalhaHoje } from '../../v21/celular/conversas21';
+import { noticiaDeApoio } from '../../dados21/celular/falas21';
 
 /* ------------------------------------------------------------------ Leitura */
 
@@ -73,6 +75,9 @@ export function semResposta17(v: Vida, saindo: Msg15[]): void {
 }
 
 function fala(sit: string, tom: Tom17, r: Rng, p: Pessoa | undefined, v: Vida, extra: Record<string, string> = {}): string {
+  // VIDA 21: onde quem manda importa mais do que o temperamento (o aniversário da mãe ≠ o da irmã de 10 anos).
+  const propria = falaDaSituacao21(v, r, sit, p);
+  if (propria) return propria;
   const f = FALAS17[sit];
   const lista = f[tom].length ? f[tom] : f.contido;
   let s = r.pick(lista);
@@ -86,19 +91,24 @@ function lembranca(vin: Vinculo, r: Rng): string | undefined {
   const bons: TipoMarco[] = ['amizade', 'antigo', 'ritual', 'reconciliacao', 'apoio', 'presente'];
   const ms = vin.historia.filter((h: Marco) => h.tipo && bons.includes(h.tipo) && h.texto.length < 110);
   if (!ms.length) return undefined;
-  const t = r.pick(ms).texto.trim();
-  return /[.!?]$/.test(t) ? t : `${t}.`;
+  // VIDA 21: a lembrança na voz de quem manda ("você ligou para…", "a gente saiu junto…"); o marco que não se deixa
+  // reescrever com a concordância certa não vira mensagem.
+  const naturais = ms.map(h => lembrancaNatural(h.texto)).filter((x): x is string => !!x);
+  if (!naturais.length) return undefined;
+  return r.pick(naturais);
 }
 
 /** Um feito recente da SUA vida (a biografia), que alguém próximo pode ter visto. */
-function feitoRecente(v: Vida): { id: string; texto: string } | undefined {
+function feitoRecente(v: Vida): { id: string; texto: string; tema: string } | undefined {
   for (let i = v.biografia.length - 1; i >= 0; i--) {
     const e = v.biografia[i];
     if (v.t - e.t > 12) break;
     if (e.relevancia !== 'biografia' || e.tom === 'ruim' || v.fatos[`cel17f_${e.id}`] !== undefined) continue;
     if (!['trabalho', 'estudo', 'casa', 'amor', 'filhos', 'escola'].includes(e.tema)) continue;
     if (/morr|demit|perd|separ|divórc|reprov|pres[oa]\b|conden|doen/i.test(e.texto)) continue;
-    return { id: e.id, texto: /[.!?]$/.test(e.texto) ? e.texto : `${e.texto}.` };
+    // VIDA 21: o esforço para pagar as contas não é conquista para parabenizar.
+    if (/(fechar|pagar) as contas|dívida|bico|aperto|apertad/i.test(e.texto)) continue;
+    return { id: e.id, texto: /[.!?]$/.test(e.texto) ? e.texto : `${e.texto}.`, tema: e.tema };
   }
   return undefined;
 }
@@ -159,8 +169,8 @@ export function candidatos17(v: Vida, excluir: Set<string>, fama: number): Candi
     // Desabafo: quem confia em você conta o que está passando (o motivo é o estado real da pessoa).
     if (eu >= 15 && ip >= 15 && vin.confianca >= 45 && (proximo || papel === 'amigo_proximo' || (papel === 'filho' && ip >= 18)) && !moraJunto(vin)) {
       const ap = p.aperto && !p.aperto.resolvido && v.t - p.aperto.t <= 18 ? p.aperto : undefined;
-      const sit = ap ? ({ separacao: 'desabafo_separacao', dinheiro: 'desabafo_dinheiro', desemprego: 'desabafo_trabalho', doenca: 'desabafo_saude', fase: 'desabafo_cansaco', luto: '' } as Record<string, string>)[ap.tipo]
-        : p.parceiroId && p.vivo ? 'desabafo_amor' : p.ocupacao && ip >= 18 ? 'desabafo_trabalho' : vin.confianca >= 60 ? 'desabafo_familia' : 'desabafo_cansaco';
+      const sit = ap ? ({ separacao: 'desabafo_separacao', dinheiro: 'desabafo_dinheiro', desemprego: 'desabafo_desemprego', doenca: 'desabafo_saude', fase: 'desabafo_cansaco', luto: '' } as Record<string, string>)[ap.tipo]
+        : p.parceiroId && p.vivo ? 'desabafo_amor' : trabalhaHoje(p, ip) && ip >= 18 ? 'desabafo_trabalho' : vin.confianca >= 60 ? 'desabafo_familia' : 'desabafo_cansaco';
       if (sit) out.push({ tipo: 'desabafo', p, prioridade: ap ? 'alta' : 'normal', peso: (ap ? 1.3 : 0.45) + vin.confianca / 250, montar: rr => ({ de: p.id, sit17: sit, texto: fala(sit, tom, rr, p, v), assunto: ap?.tipo }) });
     }
     // Brincadeira: a amizade sem motivo (a lembrança é da história de vocês dois).
@@ -196,7 +206,8 @@ export function candidatos17(v: Vida, excluir: Set<string>, fama: number): Candi
       out.push({ tipo: 'conflito', p, prioridade: 'normal', peso: 0.5 + vin.tensao / 120, montar: rr => { v.fatos[`cel17_conf_${p.id}`] = v.t; return { de: p.id, sit17: 'conflito_ciume', texto: fala('conflito_ciume', tom, rr, p, v) }; } });
     }
     // Comemoração: alguém próximo soube do que aconteceu na SUA vida (o feito é lido da biografia).
-    if (feito && (proximo || ['amigo_proximo', 'genitor', 'avo', 'irmao', 'filho'].includes(papel)) && ip >= 10) {
+    // VIDA 21: só quem tem como saber (o que foi na escola, quem é da escola ou de casa; o resto, a família e os próximos).
+    if (feito && (proximo || ['amigo_proximo', 'genitor', 'avo', 'irmao', 'filho'].includes(papel)) && ip >= 10 && sabeDoFeito(v, p, vin, feito.tema)) {
       out.push({ tipo: 'comemoracao', p, prioridade: 'normal', peso: 0.9, montar: rr => { v.fatos[`cel17f_${feito.id}`] = v.t; return { de: p.id, sit17: 'comemoracao_feito', texto: fala('comemoracao_feito', tom, rr, p, v, { feito: feito.texto.charAt(0).toLowerCase() + feito.texto.slice(1) }), cartao: feito.texto }; } });
     }
     // O seu aniversário (uma vez por ano, de quem é muito perto).
@@ -245,7 +256,7 @@ export function opcoes17(v: Vida, m: Msg15): OpcaoMsg17[] {
   if (sit.startsWith('desabafo')) return [
     op('apoio', 'Oferecer apoio de verdade'),
     op('conselho', 'Dar um conselho'),
-    ...(sit === 'desabafo_dinheiro' || sit === 'desabafo_separacao' ? [op('ajudar', 'Oferecer ajuda com dinheiro', pagar(500, 'Ajudar custa uns'))] : []),
+    ...(sit === 'desabafo_dinheiro' || sit === 'desabafo_separacao' || sit === 'desabafo_desemprego' ? [op('ajudar', 'Oferecer ajuda com dinheiro', pagar(500, 'Ajudar custa uns'))] : []),
     op('engracada', 'Tentar arrancar uma risada'),
     op('evasiva', 'Responder por alto')];
   if (sit === 'brincadeira_aposta') return [op('provocar', 'Aceitar a aposta'), op('engracada', 'Rir e devolver a provocação'), op('evasiva', 'Deixar no visto')];
@@ -283,7 +294,7 @@ export function extrasDaVida15(v: Vida, m: Msg15): OpcaoMsg17[] {
   switch (m.tipo) {
     case 'convite': return [op('engracada', 'Topar brincando: "só se tiver sobremesa"', m.custo ? vereditoDePagar(v, m.custo, 'O programa custa uns') : PERMITIDO), op('desinteresse', 'Dizer que não curte esse programa')];
     case 'saudade': return [op('carinhosa', 'Dizer que também sente falta'), op('evasiva', 'Responder por alto')];
-    case 'noticia': return m.assunto && /^(desemprego|perda|saude)/.test(m.assunto) ? [op('evasiva', 'Responder por alto')] : [op('engracada', 'Comemorar brincando')];
+    case 'noticia': return noticiaDeApoio(m.assunto) ? [op('evasiva', 'Responder por alto')] : [op('engracada', 'Comemorar brincando')];
     case 'ex': return [op('firme', 'Pedir para não procurar mais')];
     default: return [];
   }
@@ -474,7 +485,8 @@ export function responder17(v: Vida, r: Rng, m: Msg15, opc: string): Saida17 | u
   return fechar();
 
   function fechar(): Saida17 {
-    const minha = suaFala(v, p, falaChave, r);
+    // VIDA 21: a fala é a da situação e da opção, para aquela pessoa (`falaDaResposta21`); o tom só quando não há.
+    const minha = falaDaResposta21(v, r, m, opc) ?? suaFala(v, p, falaChave, r);
     m.resposta = { op: opc, t: v.t, texto, ...(minha ? { fala: minha } : {}) };
     m.lida = true;
     return { texto, titulo: nome, pessoaId: p?.id, tom };

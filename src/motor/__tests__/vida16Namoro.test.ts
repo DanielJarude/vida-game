@@ -145,6 +145,9 @@ describe('VIDA 16 · Mensagens e Pede atenção', () => {
     const p = pessoaNova(v, 30, 'masculino');
     const vin = vincular(v, p, { origem: 'escola', proximidade: 70, estagio: 'amigo_proximo' });
     vin.chamado = { tipo: 'reclamacao', t: v.t, texto: `"Você sumiu, hein? Nem lembra mais de mim."` };
+    // VIDA 21: a queixa de distância nasce de 2+ anos sem contato (`iniciativas`); o contato no mesmo mês a resolve e o
+    // Pede atenção a esconde. O cenário passa a ter a pré-condição real (o amigo recém-criado tinha contato "agora").
+    vin.tUltimoContato = v.t - 30;
     const s = sinaisSociais(v, 6).find(x => x.pessoaId === p.id)!;
     expect(s.texto).not.toBe(vin.chamado.texto);
     expect(s.texto).toMatch(/falta/);

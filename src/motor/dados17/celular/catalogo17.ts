@@ -23,9 +23,17 @@ export const FALAS17: Record<string, Falas17> = {
     carinhoso: ['"Desculpa vir com isso, mas você é quem eu sei que escuta: o trabalho tá me tirando o sono."', '"Oi, meu bem. Posso te contar uma coisa que tá me pesando? É o trabalho de novo."'],
     ironico: ['"Atualização da minha carreira brilhante: hoje fui culpad{po} por um erro do estagiário. Do estagiário de OUTRO setor."', '"Dica de vida: nunca diga \\"pode deixar comigo\\" numa reunião. Tô pagando até hoje."']
   },
+  /** VIDA 21: quem perdeu o emprego (antes caía em `desabafo_trabalho`, que é a queixa de quem tem chefe). */
+  desabafo_desemprego: {
+    expansivo: ['"Fui mandad{po} embora hoje. Assim, do nada. Tô sem chão!!"', '"Demitid{po}. Depois de tudo que eu fiz por aquela empresa. Me liga?"'],
+    contido: ['"Perdi o emprego. Tô bem, mas precisava contar pra alguém."', '"Tô procurando trabalho. Se souber de alguma coisa, me avisa."'],
+    carinhoso: ['"Não queria te preocupar, mas fui demitid{po}. Tô tentando não entrar em pânico."'],
+    ironico: ['"Boa notícia: agora tenho tempo livre. Má notícia: é porque me demitiram."']
+  },
   desabafo_amor: {
-    expansivo: ['"Amig{o}, senta que lá vem: brigamos DE NOVO. Eu não sei mais o que fazer!!"', '"Preciso da sua opinião sincera sobre o meu relacionamento. Sincera mesmo, hein!"'],
-    contido: ['"As coisas em casa não estão boas. Não sei se vai durar."', '"Terminei. Ainda tô processando."'],
+    expansivo: ['"{eu}, senta que lá vem: brigamos DE NOVO. Eu não sei mais o que fazer!!"', '"Preciso da sua opinião sincera sobre o meu relacionamento. Sincera mesmo, hein!"'],
+    // VIDA 21: "Terminei" saiu daqui — o desabafo de amor é de quem ainda está na relação (a separação tem a sua).
+    contido: ['"As coisas em casa não estão boas. Não sei se vai durar."', '"A gente não tá se entendendo. Só queria falar com alguém."'],
     carinhoso: ['"Você me conhece há tanto tempo... acha que eu tô errad{po} de querer mais do que tenho?"', '"Tô com o coração apertado. Posso te ligar mais tarde?"'],
     ironico: ['"Pergunta hipotética: quanto tempo é normal alguém demorar pra responder \\"te amo\\"? Pergunto por um amigo. O amigo sou eu."', '"Meu relacionamento virou série ruim: todo episódio a mesma briga."']
   },
@@ -56,7 +64,8 @@ export const FALAS17: Record<string, Falas17> = {
   desabafo_familia: {
     expansivo: ['"Almoço de família virou guerra de novo! Por que é tão difícil todo mundo se dar bem?!"'],
     contido: ['"Discussão feia em casa. Saí pra respirar."', '"As coisas com a minha família estão complicadas."'],
-    carinhoso: ['"Posso desabafar? Briguei com a minha mãe e tô me sentindo péssim{po}."'],
+    // VIDA 21: sem "a minha mãe" (a de quem? a mãe de quem manda pode ser a sua, ou já ter morrido).
+    carinhoso: ['"Posso desabafar? Briguei feio com alguém da família e tô me sentindo péssim{po}."'],
     ironico: ['"Grupo da família hoje: três brigas políticas, duas correntes e uma tia saindo. Dia normal."']
   },
 
@@ -67,12 +76,14 @@ export const FALAS17: Record<string, Falas17> = {
     carinhoso: ['"Vi uma coisa hoje que me fez rir e pensei: preciso mandar pra {eu}!"'],
     ironico: ['"Encontrei a prova definitiva de que você estava errad{o} naquela discussão de 2 anos atrás. Segue anexo."', '"Teste de amizade: se você não rir disso, a gente termina."']
   },
+  // VIDA 21: {marco} é uma oração na voz de quem manda ("você ligou para comemorar…", "a gente saiu junto…").
   brincadeira_lembranca: {
-    expansivo: ['"Acabei de lembrar daquele dia: {marco} — tô rindo sozinh{po} no meio da rua!"', '"Você lembra?! {marco} Que saudade da gente assim!"'],
-    contido: ['"Lembrei hoje: {marco} Bons tempos."'],
-    carinhoso: ['"Achei uma lembrança nossa guardada: {marco} Que sorte a minha de ter você."'],
-    ironico: ['"Fato histórico: {marco} E você ainda nega até hoje."']
+    expansivo: ['"Acabei de lembrar daquela vez que {marco} — tô rindo sozinh{po} no meio da rua!"', '"Você lembra quando {marco}?! Que saudade da gente assim!"'],
+    contido: ['"Lembrei hoje de quando {marco}. Bons tempos."', '"Lembra quando {marco}?"'],
+    carinhoso: ['"Tava aqui lembrando de quando {marco}. Que sorte a minha de ter você."'],
+    ironico: ['"Fato histórico: {marco}. E até hoje você finge que não."']
   },
+
   brincadeira_aposta: {
     expansivo: ['"Aposta valendo uma pizza: o seu time não ganha esse fim de semana! Aceita?"', '"Desafio: quem perder o jogo de domingo paga o açaí!"'],
     contido: ['"Aposto um café que eu acerto o placar de domingo."'],

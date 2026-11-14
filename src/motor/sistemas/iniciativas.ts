@@ -330,7 +330,8 @@ function apoioEspontaneo(v: Vida, r: Rng): void {
   lembrarCom(v, p.id, 'Apareceu quando você precisava.', 'apoio', 2);
   escrever(v, { texto, relevancia: 'biografia', tema: papelDe(p, vin) === 'amigo_proximo' || papelDe(p, vin) === 'amigo' ? 'amizade' : papelDe(p, vin) === 'parceiro' ? 'amor' : 'familia', tom: 'bom', pessoas: [p.id] });
   // VIDA 17: o apoio acontece de todo jeito; a mensagem só chega se houver cota no ano.
-  if (receber17(v, 'alta') !== undefined) vin.chamado = { tipo: 'apoio', t: v.t, texto };
+  // VIDA 21: o motivo vai junto (o "Pede atenção" diz por que a pessoa apareceu, não um "você não anda bem" genérico).
+  if (receber17(v, 'alta') !== undefined) vin.chamado = { tipo: 'apoio', t: v.t, texto, assunto: motivo };
 }
 
 interface Candidato { p: Pessoa; vin: Vinculo; tipo: TipoChamado; peso: number; texto: string; assunto?: string }

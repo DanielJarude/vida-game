@@ -42,6 +42,8 @@ import { podeReceber17, receber17, type Prioridade17 } from '../../sistemas/cota
 import { aindaEmRomance } from '../../sistemas/estadoConjugal';
 import { disponibilidadeLigacao17, ligarDaUnidade17, MOTIVO_PRESO17, preso17 } from '../../v17/prisao/telefone17';
 import type { AreaCelebridade15, Celular15, Lugar15, Molde15, Msg15, PerfilApp15, TipoMsg15 } from '../../dados15/celular/tipos';
+import { convite21, falaDaResposta21, marcas21, saudade21 } from '../../v21/celular/conversas21';
+import { noticia21, noticiaDeApoio } from '../../dados21/celular/falas21';
 
 /* ------------------------------------------------------------------ Leitura */
 
@@ -142,18 +144,15 @@ function candidatos(v: Vida, excluir: Set<string>): Candidato[] {
       const ops = PROGRAMAS.filter(x => eu >= x.idade[0] && eu <= x.idade[1] && ip >= x.idade[0] && ip <= x.idade[1] + 10);
       if (ops.length) out.push({ tipo: 'convite', p, peso: (papel === 'amigo_proximo' ? 1.4 : 0.8) + Math.max(0, p.temperamento.extroversao) * 0.6, montar: rr => {
         const pr = rr.pick(ops);
-        const frase = rr.pick(eu < 13 ? ['"Quer {v}? Minha mãe deixou!"', '"Bora {v}?"'] : ['"Bora {v}? Vai ser bom te ver."', '"Tô organizando {n}. Conto com você?"', '"Topa {v}? Faz tempo que a gente não sai."', '"Ei! Vai ter {n} — você vem, né?"']);
-        return { de: p.id, texto: frase.replace('{v}', pr.verbo).replace('{n}', pr.nome), assunto: pr.id, onde: pr.onde, custo: pr.custo };
+        // VIDA 21: o amigo, o irmão e o colega não chamam do mesmo jeito.
+        return { de: p.id, texto: convite21(v, rr, p, vin, pr), assunto: pr.id, onde: pr.onde, custo: pr.custo };
       } });
     }
     // Saudade: quem gosta de você e anda sem notícia (família longe, amigo de outra cidade, padrinho).
     const familiaPerto = papel === 'genitor' || papel === 'avo' || papel === 'filho';
     if (semContato >= (familiaPerto ? 1 : 2) && vin.proximidade >= 38 && !moraJunto(vin) && eu >= 10 && ip >= 10 && ['amigo', 'amigo_proximo', 'irmao', 'genitor', 'avo', 'filho', 'neto', 'parente', 'afastado'].includes(papel)) {
-      out.push({ tipo: 'saudade', p, peso: 0.35 + Math.min(0.8, semContato * 0.15) + (familiaPerto ? 0.4 : 0), montar: rr => ({
-        de: p.id, texto: rr.pick(papel === 'genitor' || papel === 'avo'
-          ? ['"Oi, meu bem. Tá tudo bem por aí? Liga quando puder."', '"Sonhei com você esta noite. Me dá notícia?"', '"Tô com saudade. Vem almoçar um domingo desses."']
-          : ['"E aí, sumid{o}! Como você tá?"', '"Lembrei de você hoje, do nada. Tudo bem por aí?"', '"Faz tanto tempo... me conta de você."', '"Vi uma foto antiga nossa e bateu saudade."'])
-      }) });
+      // VIDA 21: no jeito do vínculo (a avó não escreve "e aí, sumida"; o irmão não fala como a mãe).
+      out.push({ tipo: 'saudade', p, peso: 0.35 + Math.min(0.8, semContato * 0.15) + (familiaPerto ? 0.4 : 0), montar: rr => ({ de: p.id, texto: saudade21(v, rr, p, vin) }) });
     }
     // Notícia: a família (ou um amigo próximo) conta o que ACONTECEU na vida dela — lido da trajetória (nada inventado).
     const traj = p.vida?.trajetoria?.filter(x => x.t >= v.t - 12 && x.t <= v.t && x.tipo !== 'escola') ?? [];
@@ -161,7 +160,9 @@ function candidatos(v: Vida, excluir: Set<string>): Candidato[] {
       const ult = traj[traj.length - 1];
       // VIDA 17: "tô namorando" só de quem ainda está no romance que a trajetória anunciou (sem contradizer o estado).
       const romanceAcabou = ult.tipo === 'amor' && /namor|relacionamento/i.test(ult.texto) && !/termin|separ/i.test(ult.texto) && !aindaEmRomance(p);
-      if (!romanceAcabou && !RECENTE(v, `cel15n_${p.id}_${ult.t}`, 999)) out.push({ tipo: 'noticia', p, peso: 1.6, montar: () => ({ de: p.id, texto: falaDaNoticia(p, ult.tipo, ult.texto), cartao: ult.texto, assunto: `${ult.tipo}:${ult.t}` }) });
+      // VIDA 21: a fala e o assunto pelo que aconteceu (mudar para um lugar menor é aperto, não "casa nova").
+      const n21 = noticia21(ult.tipo, ult.texto, (m, f, n) => flex(p.genero, m, f, n));
+      if (!romanceAcabou && !RECENTE(v, `cel15n_${p.id}_${ult.t}`, 999)) out.push({ tipo: 'noticia', p, peso: 1.6, montar: () => ({ de: p.id, texto: n21 ? marcas21(v, p, n21.fala) : falaDaNoticia(p, ult.tipo, ult.texto), cartao: ult.texto, assunto: `${n21?.chave ?? ult.tipo}:${ult.t}` }) });
     }
     // O colega de anos atrás: da escola, da faculdade, de um trabalho antigo (sem convívio, sem contato há 5+ anos).
     if ((papel === 'conhecido' || papel === 'colega' || papel === 'afastado' || papel === 'amigo') && vin.convivio.length === 0 && semContato >= 5 && eu >= 20 && vin.tensao < 40 && vin.historia.length >= 2 && !RECENTE(v, `cel15r_${p.id}`, 120)) {
@@ -477,7 +478,7 @@ function opcoesDaMsg15Base(v: Vida, m: Msg15): OpcaoMsg15[] {
       { op: 'marcar', rotulo: 'Marcar de se ver', veredito: pagar(80, 'Encontrar custa uns') },
       { op: 'curto', rotulo: 'Responder rapidinho', veredito: ok }];
     case 'noticia': return [
-      { op: 'ligar', rotulo: m.assunto?.startsWith('desemprego') || m.assunto?.startsWith('perda') || m.assunto?.startsWith('saude') ? 'Ligar e oferecer apoio' : 'Ligar para comemorar', veredito: ok },
+      { op: 'ligar', rotulo: noticiaDeApoio(m.assunto) ? 'Ligar e oferecer apoio' : 'Ligar para comemorar', veredito: ok },
       { op: 'curto', rotulo: 'Mandar um coração', veredito: ok }];
     case 'parceiro': return [
       { op: 'aceitar', rotulo: 'Topar', veredito: pagar(m.custo, 'O programa custa uns') },
@@ -568,7 +569,8 @@ export function responderMsg15(v: Vida, r: Rng, m: Msg15, op: string): SaidaCelu
         perto(vin, 1, true, v.t);
         // VIDA 17: a promessa fica — e pode voltar como cobrança se ninguém marcar.
         deixarFio17(v, { pid: p!.id, tipo: 'promessa', t: v.t, dado: nomeDoAssunto(m) });
-        texto = `"Esse fim de semana não dá — mas a gente marca, prometo." ${p!.nome} mandou um "combinado!".`;
+        // VIDA 21: o "a gente marca, prometo" é o seu balão; aqui, só o que veio de volta.
+        texto = `${p!.nome} mandou um "combinado!" — e a promessa ficou no ar.`;
       } else if (op === 'adiar') {
         if (vin?.romance) vin.romance.envolvimento = clamp(vin.romance.envolvimento - 2);
         deixarFio17(v, { pid: p!.id, tipo: 'promessa', t: v.t, dado: nomeDoAssunto(m) });
@@ -580,7 +582,7 @@ export function responderMsg15(v: Vida, r: Rng, m: Msg15, op: string): SaidaCelu
       break;
     }
     case 'saudade': case 'noticia': {
-      const apoio = m.assunto?.startsWith('desemprego') || m.assunto?.startsWith('perda') || m.assunto?.startsWith('saude');
+      const apoio = noticiaDeApoio(m.assunto);
       if (op === 'ligar') {
         perto(vin, r.int(3, 6), true, v.t);
         if (vin) vin.confianca = clamp(vin.confianca + 2);
@@ -717,7 +719,9 @@ export function responderMsg15(v: Vida, r: Rng, m: Msg15, op: string): SaidaCelu
       break;
     }
   }
-  m.resposta = { op, t: v.t, texto };
+  // VIDA 21: o seu balão também nas mensagens da VIDA 15 (o "bora!", o "te ligo já, mãe").
+  const fala = falaDaResposta21(v, r, m, op);
+  m.resposta = { op, t: v.t, texto, ...(fala ? { fala } : {}) };
   m.lida = true;
   return { texto, titulo: nome, pessoaId, tom };
 }

@@ -385,7 +385,11 @@ function situacaoDoChamado(v: Vida, p: Pessoa, vin: Vinculo, ch: NonNullable<Vin
     case 'pedido_ajuda': return { texto: `${n} está num aperto e procurou você.`, porque: 'Pediu ajuda — e a resposta (ou o silêncio) fica na relação.' };
     case 'convite': return { texto: `${n} quer passar um tempo com você.`, porque: 'Um convite esperando resposta.' };
     case 'reclamacao': return { texto: `${n} sente a sua falta.`, porque: 'Já reclamou da distância: a amizade está esfriando.' };
-    case 'apoio': return { texto: `${n} reparou que você não anda bem.`, porque: 'Alguém se preocupa com você.' };
+    // VIDA 21: o motivo real de quem apareceu (o luto, o diagnóstico, a procura de emprego, a fase difícil).
+    case 'apoio': return ch.assunto === 'luto' ? { texto: `${n} tem estado por perto desde a perda.`, porque: 'Apareceu sem ser chamad' + flex(p.genero, 'o', 'a', 'e') + ' — e espera saber como você está.' }
+      : ch.assunto === 'doenca' ? { texto: `${n} se ofereceu para ir junto às consultas.`, porque: 'Soube do diagnóstico e quer ajudar.' }
+        : ch.assunto === 'desemprego' ? { texto: `${n} quer ajudar você a voltar a trabalhar.`, porque: 'Está mandando vagas e oferecendo ajuda.' }
+          : { texto: `${n} reparou que você não anda bem.`, porque: 'Alguém se preocupa com você.' };
     case 'interesse': return { texto: `${n} demonstrou interesse por você.`, porque: 'Algo pode começar — ou não. A resposta é sua.' };
     case 'conversa_casal': return ch.assunto === 'app16'
       ? { texto: `A confiança de ${n} em você está abalada.`, porque: 'Descobriu o aplicativo de namoro e quer conversar.' }
@@ -424,19 +428,25 @@ export function sinaisSociais(v: Vida, limite = MAX_SINAIS): Sinal[] {
   for (const { p, vin } of vinculosVivos(v)) {
     if (p.especie || !p.nome) continue;
     // Quem tomou uma iniciativa e espera uma reação vem primeiro (o silêncio também responde, no ano que vem).
-    if (vin.chamado) {
+    // VIDA 21 · Pede atenção ≠ caixa de entrada: o convite e a aproximação são só mensagens (moram no celular); a queixa
+    // de distância some quando vocês já voltaram a se falar depois dela; a mensagem de apoio, quando a fase passou.
+    const chamadoQuePede = !!vin.chamado && vin.chamado.tipo !== 'convite' && vin.chamado.tipo !== 'aproximacao'
+      && !(vin.chamado.tipo === 'reclamacao' && vin.tUltimoContato >= vin.chamado.t)
+      && !(vin.chamado.tipo === 'apoio' && (vin.chamado.assunto === 'fase' || !vin.chamado.assunto) && v.mente.felicidade >= 55);
+    if (vin.chamado && chamadoQuePede) {
       const urg = CHAMADO_URGENTE.has(vin.chamado.tipo) || vin.chamado.assunto === 'app16';
       const sit = situacaoDoChamado(v, p, vin, vin.chamado);
       out.push({ pessoaId: p.id, texto: sit.texto, porque: sit.porque, noCelular: true, peso: urg ? 96 : 62 + importancia(v, p, vin) / 5, escopo: urg ? 'global' : 'pessoas', tipo: urg ? 'urgente' : 'oportunidade' });
     }
     // VIDA 16: a mensagem sem resposta no celular vira a leitura do que ela diz sobre a relação (não a mensagem).
-    if (!vin.chamado) {
-      const msg = (v.celular15?.msgs ?? []).filter(m => m.de === p.id && !m.resposta && (m.tipo === 'saudade' || m.tipo === 'convite' || m.tipo === 'parceiro' || m.tipo === 'ex')).sort((a, b) => b.t - a.t)[0];
+    // VIDA 21: só o que a mensagem diz sobre a RELAÇÃO: a saudade de quem não vê você há mais de um ano (a distância é
+    // real), o par que pede tempo quando o envolvimento já esfria. O convite e o ex sem resposta ficam só no celular.
+    if (!chamadoQuePede) {
+      const anosSem = Math.floor((v.t - vin.tUltimoContato) / 12);
+      const msg = (v.celular15?.msgs ?? []).filter(m => m.de === p.id && !m.resposta && ((m.tipo === 'saudade' && anosSem >= 1) || (m.tipo === 'parceiro' && (vin.romance?.envolvimento ?? 60) < 50))).sort((a, b) => b.t - a.t)[0];
       if (msg && v.t - msg.t <= 12) {
-        const sit = msg.tipo === 'saudade' ? { texto: `${p.nome} sente a sua falta.`, porque: `Faz ${Math.max(1, Math.round((v.t - vin.tUltimoContato) / 12))} ${Math.round((v.t - vin.tUltimoContato) / 12) > 1 ? 'anos' : 'ano'} sem vocês se verem direito.`, tipo: 'oportunidade' as const }
-          : msg.tipo === 'parceiro' ? { texto: `${p.nome} quer um tempo a dois.`, porque: 'A sugestão ainda não teve resposta.', tipo: 'importante' as const }
-            : msg.tipo === 'ex' ? { texto: `${p.nome} voltou a procurar você.`, porque: 'Um romance que acabou, e uma mensagem sem resposta.', tipo: 'noticia' as const }
-              : { texto: `${p.nome} chamou você para sair.`, porque: 'O convite ainda não teve resposta.', tipo: 'oportunidade' as const };
+        const sit = msg.tipo === 'saudade' ? { texto: `${p.nome} sente a sua falta.`, porque: `Faz ${anos(anosSem)} sem vocês se verem direito.`, tipo: 'oportunidade' as const }
+          : { texto: `${p.nome} quer um tempo a dois.`, porque: 'O envolvimento anda esfriando, e a sugestão ainda não teve resposta.', tipo: 'importante' as const };
         out.push({ pessoaId: p.id, texto: sit.texto, porque: sit.porque, noCelular: true, peso: 40 + importancia(v, p, vin) / 5, escopo: 'pessoas', tipo: sit.tipo });
       }
     }
@@ -448,21 +458,26 @@ export function sinaisSociais(v: Vida, limite = MAX_SINAIS): Sinal[] {
     const nucleo = papel === 'parceiro' || ehDescendente(papel) || papel === 'genitor';
     // A gravidez de alguém é notícia, não problema: importante para o núcleo, notícia para o resto.
     if (p.gestacao && v.t < p.gestacao.tParto) out.push({ pessoaId: p.id, texto: `${p.nome} vai ter um bebê em ${MESES[mesDe(p.gestacao.tParto)]}.`, peso: (nucleo ? 64 : 30) + imp / 10, escopo: nucleo ? 'global' : 'pessoas', tipo: nucleo ? 'importante' : 'noticia' });
-    if (p.aperto && !p.aperto.resolvido && v.t - p.aperto.t <= 12 && !vin.chamado) {
+    if (p.aperto && !p.aperto.resolvido && v.t - p.aperto.t <= 12 && !chamadoQuePede) {
       const grave = p.aperto.tipo === 'doenca' || p.aperto.tipo === 'luto' || nucleo;
-      out.push({ pessoaId: p.id, texto: `${p.nome} — ${({ desemprego: 'perdeu o emprego', separacao: 'está se separando', doenca: 'a saúde piorou', luto: `está ${lutoDe(v, p) ?? 'de luto'}`, dinheiro: 'o dinheiro apertou', fase: 'passa por uma fase difícil' })[p.aperto.tipo]}.`, peso: (grave ? 58 : 38) + imp / 4, escopo: nucleo || papel === 'amigo_proximo' ? 'global' : 'pessoas', tipo: grave ? 'urgente' : 'noticia' });
+      // VIDA 21: o aperto do ano passado não é notícia nova ("perdeu o emprego" um ano depois): diz como a coisa segue.
+      const antigo = v.t - p.aperto.t >= 12;
+      const oque = antigo
+        ? ({ desemprego: 'continua sem emprego', separacao: '', doenca: 'segue tratando a saúde', luto: `ainda está ${lutoDe(v, p) ?? 'de luto'}`, dinheiro: 'o dinheiro continua apertado', fase: '' })[p.aperto.tipo]
+        : ({ desemprego: 'perdeu o emprego', separacao: 'está se separando', doenca: 'a saúde piorou', luto: `está ${lutoDe(v, p) ?? 'de luto'}`, dinheiro: 'o dinheiro apertou', fase: 'passa por uma fase difícil' })[p.aperto.tipo];
+      if (oque) out.push({ pessoaId: p.id, texto: `${p.nome} — ${oque}.`, peso: (grave ? 58 : 38) + imp / 4 - (antigo ? 10 : 0), escopo: (nucleo || papel === 'amigo_proximo') && !antigo ? 'global' : 'pessoas', tipo: grave && !antigo ? 'urgente' : 'noticia' });
     }
-    if (!vin.chamado && vin.tensao >= 55 && nucleo) out.push({ pessoaId: p.id, texto: `${p.nome} — vocês têm brigado.`, peso: 55 + imp / 5 + (vin.convivio.includes('casa') ? 8 : 0), escopo: vin.convivio.includes('casa') ? 'global' : 'pessoas', tipo: 'urgente' });
-    if (!vin.chamado && papel === 'parceiro' && (vin.romance?.envolvimento ?? 50) < 42 && vin.tensao < 55) out.push({ pessoaId: p.id, texto: `${p.nome} anda distante.`, porque: 'O envolvimento esfriou: a relação pede atitude.', peso: 50 + imp / 5, escopo: 'pessoas', tipo: 'importante' });
+    if (!chamadoQuePede && vin.tensao >= 55 && nucleo) out.push({ pessoaId: p.id, texto: `${p.nome} — vocês têm brigado.`, peso: 55 + imp / 5 + (vin.convivio.includes('casa') ? 8 : 0), escopo: vin.convivio.includes('casa') ? 'global' : 'pessoas', tipo: 'urgente' });
+    if (!chamadoQuePede && papel === 'parceiro' && (vin.romance?.envolvimento ?? 50) < 42 && vin.tensao < 55) out.push({ pessoaId: p.id, texto: `${p.nome} anda distante.`, porque: 'O envolvimento esfriou: a relação pede atitude.', peso: 50 + imp / 5, escopo: 'pessoas', tipo: 'importante' });
     // VIDA 16: a confiança abalada (uma descoberta, uma mentira) é crise mesmo sem briga à vista.
-    if (!vin.chamado && papel === 'parceiro' && vin.confianca < 38) out.push({ pessoaId: p.id, texto: `A confiança de ${p.nome} em você está abalada.`, porque: v.fatos['app16_descobertas'] ? 'Desde o aplicativo de namoro, as coisas não voltaram ao lugar.' : 'Algo quebrou entre vocês e ainda não foi consertado.', peso: 60 + imp / 5, escopo: 'pessoas', tipo: 'urgente' });
+    if (!chamadoQuePede && papel === 'parceiro' && vin.confianca < 38) out.push({ pessoaId: p.id, texto: `A confiança de ${p.nome} em você está abalada.`, porque: v.fatos['app16_descobertas'] ? 'Desde o aplicativo de namoro, as coisas não voltaram ao lugar.' : 'Algo quebrou entre vocês e ainda não foi consertado.', peso: 60 + imp / 5, escopo: 'pessoas', tipo: 'urgente' });
     // VIDA 16: a amizade que esfria antes de virar silêncio (1–2 anos sem contato, com quem era próximo).
-    if (!vin.chamado && (papel === 'amigo_proximo' || papel === 'amigo') && vin.proximidade >= 40) {
+    if (!chamadoQuePede && (papel === 'amigo_proximo' || papel === 'amigo') && vin.proximidade >= 40) {
       const anosSem = (v.t - vin.tUltimoContato) / 12;
       if (anosSem >= 1 && anosSem < 3) out.push({ pessoaId: p.id, texto: `A amizade com ${p.nome} está esfriando.`, porque: `A última conversa foi em ${anoDe(vin.tUltimoContato)}.`, peso: 30 + imp / 5, escopo: 'pessoas', tipo: 'oportunidade' });
     }
     const semContato = Math.floor((v.t - vin.tUltimoContato) / 12);
-    if (!vin.chamado && semContato >= 3 && semContato <= 15 && (papel === 'amigo_proximo' || papel === 'filho' || papel === 'genitor' || papel === 'irmao')) {
+    if (!chamadoQuePede && semContato >= 3 && semContato <= 15 && (papel === 'amigo_proximo' || papel === 'filho' || papel === 'genitor' || papel === 'irmao')) {
       // Contexto importa: o pai que nunca esteve por perto não é o amigo próximo esquecido.
       const nuncaProximos = (papel === 'genitor' || papel === 'irmao') && (vin.presenca ?? 50) < 30 && vin.proximidade < 45;
       if (!nuncaProximos) out.push({ pessoaId: p.id, texto: `${p.nome} — ${anos(semContato)} sem se falarem.`, porque: 'Dá para retomar: uma mensagem já é um começo.', peso: 26 + imp / 5 - semContato, escopo: 'pessoas', tipo: 'oportunidade' });
