@@ -88,7 +88,7 @@ function MeuClube({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
         <ul className="clube20__lista">
           {[...c.elenco].sort((a, b) => 'GOLDEFMEIATA'.indexOf(a.pos) - 'GOLDEFMEIATA'.indexOf(b.pos) || b.forca - a.forca).map(j => (
             <li key={j.id} className="clube20__item">
-              <div><strong>{j.pos}</strong> {j.nome} <span className="clube20__meta">{idadeJ(j.tNasc)} anos · força {j.forca} (até {j.potencial}) · {dinheiroCurto(j.salario)}/ano até {j.contratoAte}{j.daBase ? ' · da base' : ''}</span></div>
+              <div><strong>{j.pos}</strong> {j.nome} <span className="clube20__meta">{idadeJ(j.tNasc)} anos · força {j.forca}{j.potencial > j.forca ? ` (até ${j.potencial})` : ''} · {dinheiroCurto(j.salario)}/ano até {j.contratoAte}{j.daBase ? ' · da base' : ''}</span></div>
               <div className="clube20__botoes">
                 <BotaoAcao vida={vida} agir={agir} acao={C({ op: 'renovar', id: j.id })} ocultarBloqueado>Renovar</BotaoAcao>
                 <BotaoAcao vida={vida} agir={agir} acao={C({ op: 'vender', id: j.id })}>Vender · ~{dinheiroCurto(valorDoJogador(j, ano))}</BotaoAcao>
@@ -104,7 +104,7 @@ function MeuClube({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
           <ul className="clube20__lista">
             {mercado.map(j => (
               <li key={j.id} className="clube20__item">
-                <div><strong>{j.pos}</strong> {j.nome} <span className="clube20__meta">{idadeJ(j.tNasc)} anos · força {j.forca} (até {j.potencial}) · do {j.clube} · salário {dinheiroCurto(j.salario)}/ano</span></div>
+                <div><strong>{j.pos}</strong> {j.nome} <span className="clube20__meta">{idadeJ(j.tNasc)} anos · força {j.forca}{j.potencial > j.forca ? ` (até ${j.potencial})` : ''} · do {j.clube} · salário {dinheiroCurto(j.salario)}/ano</span></div>
                 <BotaoAcao vida={vida} agir={agir} acao={C({ op: 'contratar', id: j.id })}>Contratar · {dinheiroCurto(j.preco)}</BotaoAcao>
               </li>
             ))}

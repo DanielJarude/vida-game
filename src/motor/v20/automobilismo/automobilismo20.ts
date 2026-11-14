@@ -82,7 +82,13 @@ export function forcaDaEquipe(v: Vida, cat: Categoria20, equipe: string, ano: nu
 }
 
 /* ------------------------------------------------------------------ leitura */
+const pl = (n: number, s: string) => `${n} ${s}${n === 1 ? '' : 's'}`;
 export const nomeCategoria20 = (c: Categoria20) => CATEGORIAS20[c].nome;
+/** A categoria na frase: "o kart", "os monopostos de entrada", "a Fórmula 4" — e as contrações. */
+const ART20 = (c: Categoria20) => (c === 'kart' ? ['o', 'kart'] : c === 'entrada' ? ['os', 'monopostos de entrada'] : ['a', nomeCategoria20(c)]) as [string, string];
+export const daCat = (c: Categoria20) => { const [a, n] = ART20(c); return `${a === 'o' ? 'do' : a === 'os' ? 'dos' : 'da'} ${n}`; };
+export const naCat = (c: Categoria20) => { const [a, n] = ART20(c); return `${a === 'o' ? 'no' : a === 'os' ? 'nos' : 'na'} ${n}`; };
+export const aCat = (c: Categoria20) => ART20(c).join(' ');
 export function nivelDoPiloto(a: Auto20): number {
   const x = a.atributos;
   return x.pilotagem * 0.38 + x.consistencia * 0.16 + x.adaptacao * 0.1 + x.fisico * 0.1 + x.experiencia * 0.08 + x.pressao * 0.18;
@@ -92,7 +98,7 @@ export function tetoDoAtributo(a: Auto20, k: keyof Auto20['atributos']): number 
   const t = a.talento;
   return k === 'pilotagem' ? t + 12 : k === 'consistencia' ? 50 + t * 0.4 : k === 'adaptacao' ? 45 + t * 0.4 : k === 'pressao' ? 45 + t * 0.45 : 100;
 }
-function limitar(a: Auto20): void { for (const k of Object.keys(a.atributos) as (keyof Auto20['atributos'])[]) a.atributos[k] = Math.round(clamp(a.atributos[k], 0, tetoDoAtributo(a, k)) * 10) / 10; }
+function limitar(a: Auto20): void { for (const k of Object.keys(a.atributos) as (keyof Auto20['atributos'])[]) a.atributos[k] = Math.min(tetoDoAtributo(a, k), Math.round(clamp(a.atributos[k], 0, tetoDoAtributo(a, k)) * 10) / 10); }
 /** Os pontos de Superlicença válidos agora (o ano que fechou e os dois anteriores). */
 export function pontosDeSuperlicenca(a: Auto20, ano: number): number {
   return (a.temporadas ?? []).filter(t => t.ano >= ano - 2 && t.ano <= ano).reduce((s, t) => s + (t.sl ?? 0), 0);
@@ -169,7 +175,7 @@ export function executarAuto20(v: Vida, o: OqueAuto20): { texto: string; tom?: '
       const p = a.proposta!;
       a.proposta = undefined;
       mudarDeEquipe(v, a, p);
-      return { texto: p.categoria === a.fase && p.categoria === 'f1' ? `Assinou com a ${p.equipe}.` : `Acertou com a ${p.equipe} para a ${nomeCategoria20(p.categoria)}.`, tom: 'bom' };
+      return { texto: p.categoria === a.fase && p.categoria === 'f1' ? `Assinou com a equipe ${p.equipe}.` : `Acertou com a equipe ${p.equipe} para ${aCat(p.categoria)}.`, tom: 'bom' };
     }
     case 'recusar': { const p = a.proposta!; a.proposta = undefined; return { texto: `Recusou a proposta da ${p.equipe}.`, tom: 'neutro' }; }
     case 'parar': { encerrar(v, a, 'escolha'); return { texto: 'Pendurou o capacete.', tom: 'neutro' }; }
@@ -322,21 +328,21 @@ export function processarAutomobilismo20(v: Vida): void {
       const ja = ORDEM.filter(c => c !== 'f1' && CATEGORIAS20[c].ordem < CATEGORIAS20[cat].ordem && (a.temporadas ?? []).some(t => t.categoria === c) && !(c === 'kart' && idade(v) >= 17));
       const volta = ja.reverse().find(c => orcamentoDaTemporada(v, a, c).falta === 0);
       if (volta) {
-        escrever(v, { texto: `O orçamento da ${nomeCategoria20(cat)} não fechou: voltou para a ${nomeCategoria20(volta)}, mais barata, para não ficar parado.`, relevancia: 'biografia', tema: 'trabalho', tom: 'ruim' });
+        escrever(v, { texto: `O orçamento ${daCat(cat)} não fechou: voltou para ${aCat(volta)}, mais barat${volta === 'kart' ? 'o' : volta === 'entrada' ? 'os' : 'a'}, para não ficar parado.`, relevancia: 'biografia', tema: 'trabalho', tom: 'ruim' });
         a.fase = volta; a.equipe = EQUIPES[volta][Math.floor(r.next() * EQUIPES[volta].length)]; a.companheiro = undefined;
         o = orcamentoDaTemporada(v, a);
       }
     }
     if (o.falta > 0) {
       a.semOrcamento = (a.semOrcamento ?? 0) + 1;
-      escrever(v, { texto: `Faltaram ${fmt(o.falta)} para fechar o orçamento da temporada de ${nomeCategoria20(cat)}: o ano ficou sem corridas${a.semOrcamento >= 2 ? '' : ', à espera de patrocínio'}.`, relevancia: 'biografia', tema: 'trabalho', tom: 'ruim' });
+      escrever(v, { texto: `Faltaram ${fmt(o.falta)} para fechar o orçamento da temporada ${naCat(cat)}: o ano ficou sem corridas${a.semOrcamento >= 2 ? '' : ', à espera de patrocínio'}.`, relevancia: 'biografia', tema: 'trabalho', tom: 'ruim' });
       if (a.semOrcamento >= 2) encerrar(v, a, 'orcamento');
       return;
     }
     a.semOrcamento = 0;
     const doBolso = o.custo - o.patrocinio - o.academia - o.familia;
     if (o.familia > 0) pagarTemporada(v, o.familia, 'Automobilismo: temporada', true);
-    if (doBolso > 0) pagarTemporada(v, doBolso, `Automobilismo: temporada de ${nomeCategoria20(a.fase as Categoria20)}`);
+    if (doBolso > 0) pagarTemporada(v, doBolso, `Automobilismo: temporada ${naCat(a.fase as Categoria20)}`);
     if (o.familia > 0) a.familiaInvestiu = (a.familiaInvestiu ?? 0) + o.familia;
   }
   const t = correrTemporada(v, a, ano);
@@ -370,12 +376,11 @@ export function processarAutomobilismo20(v: Vida): void {
 }
 
 function contarTemporada(v: Vida, a: Auto20, t: Temporada20): void {
-  const nome = nomeCategoria20(t.categoria);
-  const pos = t.posicao;
+    const pos = t.posicao;
   const sl = pontosDeSuperlicenca(a, t.ano);
   const texto = t.titulo
-    ? `Campeão da ${nome} de ${t.ano}, pela ${t.equipe}: ${t.vitorias} vitória${t.vitorias === 1 ? '' : 's'} e ${t.podios} pódios em ${t.corridas} corridas.`
-    : `Temporada de ${t.ano} na ${nome}, pela ${t.equipe}: ${pos}º no campeonato, ${t.pontos} pontos${t.vitorias ? `, ${t.vitorias} vitória${t.vitorias === 1 ? '' : 's'}` : ''}${t.podios ? `, ${t.podios} pódio${t.podios === 1 ? '' : 's'}` : ''}.${t.companheiroPos ? ` O companheiro de equipe, ${a.companheiro}, terminou em ${t.companheiroPos}º.` : ''}`;
+    ? `Campeão ${daCat(t.categoria)} de ${t.ano}, pela equipe ${t.equipe}: ${pl(t.vitorias, 'vitória')} e ${pl(t.podios, 'pódio')} em ${t.corridas} corridas.`
+    : `Temporada de ${t.ano} ${naCat(t.categoria)}, pela equipe ${t.equipe}: ${pos}º no campeonato, ${t.pontos} pontos${t.vitorias ? `, ${t.vitorias} vitória${t.vitorias === 1 ? '' : 's'}` : ''}${t.podios ? `, ${t.podios} pódio${t.podios === 1 ? '' : 's'}` : ''}.${t.companheiroPos ? ` O companheiro de equipe, ${a.companheiro}, terminou em ${t.companheiroPos}º.` : ''}`;
   escrever(v, { texto: texto.replace(/^Campeão/, v.eu.genero === 'feminino' ? 'Campeã' : 'Campeão') + (t.sl && t.categoria !== 'f1' ? ` (${t.sl} pontos de Superlicença; ${sl} nos últimos três anos.)` : ''), relevancia: t.titulo || t.categoria === 'f1' ? 'marco' : 'biografia', tema: 'trabalho', tom: t.titulo || pos <= 3 ? 'bom' : pos > 15 ? 'ruim' : undefined });
   if (t.categoria === 'f1' && t.vitorias > 0 && a.vitorias === t.vitorias) escrever(v, { texto: `A primeira vitória na Fórmula 1. O hino no pódio, o champanhe, o telefone que não parou.`, relevancia: 'marco', tema: 'trabalho', tom: 'bom' });
 }
@@ -390,9 +395,9 @@ function depoisDaTemporada(v: Vida, a: Auto20, t: Temporada20, r: Rng): void {
   // A academia de pilotos de uma equipe de F1 olha os melhores jovens (paga boa parte do orçamento; corta quem cai).
   if (!a.academia && ((ordem >= 2 && ordem <= 4 && bom && i <= 19) || (ordem <= 1 && i >= 11 && (t.titulo ? r.chance(0.45) : t.posicao <= 3 && r.chance(0.15))))) {
     a.academia = EQUIPES.f1[Math.floor(r.next() * 5)];
-    escrever(v, { texto: `Entrou para a academia de pilotos da ${a.academia}: o programa de jovens paga boa parte das temporadas — e cobra resultado.`, relevancia: 'marco', tema: 'trabalho', tom: 'bom' });
+    escrever(v, { texto: `Entrou para a academia de pilotos da equipe ${a.academia}: o programa de jovens paga boa parte das temporadas — e cobra resultado.`, relevancia: 'marco', tema: 'trabalho', tom: 'bom' });
   } else if (a.academia && ordem < 6 && t.posicao > 10 && r.chance(0.6)) {
-    escrever(v, { texto: `A ${a.academia} não renovou o lugar na academia de pilotos.`, relevancia: 'biografia', tema: 'trabalho', tom: 'ruim' });
+    escrever(v, { texto: `A equipe ${a.academia} não renovou o lugar na academia de pilotos.`, relevancia: 'biografia', tema: 'trabalho', tom: 'ruim' });
     a.academia = undefined;
   }
   const valida = v.t + 11;
@@ -430,12 +435,13 @@ function depoisDaTemporada(v: Vida, a: Auto20, t: Temporada20, r: Rng): void {
 
 function escreverProposta(v: Vida, a: Auto20): void {
   const p = a.proposta!;
-  escrever(v, { texto: `Proposta da ${p.equipe} para correr a ${nomeCategoria20(p.categoria)} em ${anoDe(v.t) + 1}${p.salario ? `, salário de ${fmt(p.salario)} por ano` : ''}.`, relevancia: 'biografia', tema: 'trabalho', tom: 'bom' });
+  escrever(v, { texto: `Proposta da equipe ${p.equipe} para correr ${aCat(p.categoria)} em ${anoDe(v.t) + 1}${p.salario ? `, salário de ${fmt(p.salario)} por ano` : ''}.`, relevancia: 'biografia', tema: 'trabalho', tom: 'bom' });
 }
 
 export function salarioF1(v: Vida, a: Auto20, forca: number, t?: Temporada20): number {
   const nome = v.notoriedade?.valor ?? 0;
-  const base = 5000000 + Math.max(0, forca - 60) * 400000 + a.titulos * 1500000 + (t?.categoria === 'f1' ? (Math.max(0, 11 - t.posicao)) * 1800000 : 0) + nome * 150000;
+  // O estreante ganha perto do mínimo do grid; o nome, os títulos e o resultado na F1 fazem o salário.
+  const base = 4500000 + Math.max(0, forca - 60) * 150000 + (t?.categoria === 'f1' ? a.titulos * 4000000 + Math.max(0, 11 - t.posicao) * 2000000 + nome * 120000 : a.titulos * 300000);
   return Math.round(base / 100000) * 100000;
 }
 
@@ -448,7 +454,7 @@ function renovacaoF1(v: Vida, a: Auto20, t: Temporada20, r: Rng): void {
   const mal = t.posicao > esperado + 4 || contra > 6;
   if (fimDoContrato) {
     if (mal && r.chance(0.7)) {
-      escrever(v, { texto: `A ${a.equipe} não renovou: ${t.posicao}º no campeonato${contra > 0 ? `, atrás de ${a.companheiro}` : ''}.`, relevancia: 'marco', tema: 'trabalho', tom: 'ruim' });
+      escrever(v, { texto: `A equipe ${a.equipe} não renovou: ${t.posicao}º no campeonato${contra > 0 ? `, atrás de ${a.companheiro}` : ''}.`, relevancia: 'marco', tema: 'trabalho', tom: 'ruim' });
       // Outra equipe, pior, às vezes abre a porta; senão, fora do grid.
       if (r.chance(0.35)) { const eq = EQUIPES.f1[7 + Math.floor(r.next() * 4)]; a.proposta = { categoria: 'f1', equipe: eq, forca: forcaDaEquipe(v, 'f1', eq, t.ano + 1), validaAte: v.t + 11 }; a.proposta.salario = salarioF1(v, a, a.proposta.forca, t); escreverProposta(v, a); }
       else encerrar(v, a, 'sem_vaga');
@@ -457,7 +463,7 @@ function renovacaoF1(v: Vida, a: Auto20, t: Temporada20, r: Rng): void {
     a.contratoAte = t.ano + (t.posicao <= 5 ? 3 : 2);
     a.salario = salarioF1(v, a, forca, t);
     atualizarEmprego(v, a);
-    escrever(v, { texto: `Renovou com a ${a.equipe} até ${a.contratoAte}: ${fmt(a.salario)} por ano.`, relevancia: 'biografia', tema: 'trabalho', tom: 'bom' });
+    escrever(v, { texto: `Renovou com a equipe ${a.equipe} até ${a.contratoAte}: ${fmt(a.salario)} por ano.`, relevancia: 'biografia', tema: 'trabalho', tom: 'bom' });
   }
   // Os bons resultados atraem as equipes de ponta.
   if (t.posicao <= 6 && forca < 85 && r.chance(0.35)) {
@@ -478,7 +484,7 @@ function mudarDeEquipe(v: Vida, a: Auto20, p: Proposta20): void {
     a.contratoAte = anoDe(v.t) + 2;
     atualizarEmprego(v, a);
   }
-  escrever(v, { texto: subiu ? (p.categoria === 'f1' ? `A Fórmula 1. Contrato assinado com a ${p.equipe}: o sonho do kart virou um carro no grid.` : `Subiu para a ${nomeCategoria20(p.categoria)}, pela ${p.equipe}.`) : `Trocou de equipe: a partir da próxima temporada, ${p.equipe}.`, relevancia: p.categoria === 'f1' ? 'marco' : 'biografia', tema: 'trabalho', tom: 'bom', escolha: true });
+  escrever(v, { texto: subiu ? (p.categoria === 'f1' ? `A Fórmula 1. Contrato assinado com a equipe ${p.equipe}: o sonho do kart virou um carro no grid.` : `Subiu para ${aCat(p.categoria)}, pela equipe ${p.equipe}.`) : `Trocou de equipe: a partir da próxima temporada, ${p.equipe}.`, relevancia: p.categoria === 'f1' ? 'marco' : 'biografia', tema: 'trabalho', tom: 'bom', escolha: true });
 }
 
 function atualizarEmprego(v: Vida, a: Auto20): void {
@@ -499,7 +505,7 @@ function encerrar(v: Vida, a: Auto20, motivo: NonNullable<Auto20['motivoFim']>):
   const ult = a.temporadas?.[a.temporadas.length - 1];
   const chegou = (a.temporadas ?? []).some(x => x.categoria === 'f1');
   const texto = motivo === 'escolha' ? `Pendurou o capacete aos ${idade(v)}.` : motivo === 'orcamento' ? `Sem orçamento para seguir, a carreira nas pistas parou aos ${idade(v)}.` : motivo === 'sem_vaga' ? `Sem vaga no grid${chegou ? ' da Fórmula 1' : ''}, a carreira de piloto terminou aos ${idade(v)}.` : motivo === 'resultados' ? `Depois de temporadas sem resultado, desistiu da carreira de piloto aos ${idade(v)}.` : `Aposentou-se das pistas aos ${idade(v)}.`;
-  escrever(v, { texto: `${texto}${chegou ? ` Na Fórmula 1: ${a.largadas} largadas no total da carreira, ${a.vitorias} vitórias, ${a.titulos} títulos.` : ult ? ` A última categoria foi a ${nomeCategoria20(ult.categoria)}.` : ''}`, relevancia: 'marco', tema: 'trabalho' });
+  escrever(v, { texto: `${texto}${chegou ? ` Chegou à Fórmula 1. Na carreira inteira: ${pl(a.largadas, 'largada')}, ${pl(a.vitorias, 'vitória')}, ${pl(a.titulos, 'título')}.` : ult ? ` A última categoria foi ${aCat(ult.categoria)}.` : ''}`, relevancia: 'marco', tema: 'trabalho' });
 }
 
 /* ------------------------------------------------------------------ fama: o motivo do nome */

@@ -41,7 +41,7 @@ export function Automobilismo20({ vida, agir }: { vida: Vida; agir: (a: Acao) =>
           <div><dt>Equipe</dt><dd>{a.equipe}{l.forcaEquipe !== undefined && <small> · carro {l.forcaEquipe}/100</small>}</dd></div>
           {a.companheiro && <div><dt>Companheiro</dt><dd>{a.companheiro}</dd></div>}
           {a.rival && <div><dt>Rival</dt><dd>{a.rival}</dd></div>}
-          {a.academia && <div><dt>Academia</dt><dd>programa de jovens da {a.academia}</dd></div>}
+          {a.academia && <div><dt>Academia</dt><dd>programa de jovens da equipe {a.academia}</dd></div>}
           {cat === 'f1' && a.salario && <div><dt>Contrato</dt><dd>{dinheiroCurto(a.salario)}/ano até {a.contratoAte}</dd></div>}
           {cat !== 'f1' && <div><dt>Superlicença</dt><dd>{l.sl} de {l.slNecessario} pontos (três anos)</dd></div>}
         </dl>
@@ -50,9 +50,9 @@ export function Automobilismo20({ vida, agir }: { vida: Vida; agir: (a: Acao) =>
         {NOMES_ATRIBUTOS.map(([k, nome]) => <li key={k}><span>{nome}</span><meter min={0} max={100} value={a.atributos[k]} aria-label={nome} /><b>{Math.round(a.atributos[k])}</b></li>)}
       </ul>
       {ult && (
-        <p className="auto20__temporada">Última temporada ({ult.ano}, {ult.categoria === 'f1' ? 'Fórmula 1' : l.caminho.find(x => x.c === ult.categoria)?.nome}): <b>{ult.titulo ? 'campeão' : `${ult.posicao}º`}</b> · {ult.pontos} pts · {ult.vitorias} vitórias · {ult.podios} pódios · {ult.abandonos} abandonos{ult.campeao ? ` · campeão: ${ult.campeao}` : ''}</p>
+        <p className="auto20__temporada">Última temporada ({ult.ano}, {ult.categoria === 'f1' ? 'Fórmula 1' : l.caminho.find(x => x.c === ult.categoria)?.nome}): <b>{ult.titulo ? 'campeão' : `${ult.posicao}º`}</b> · {ult.pontos} pts · {ult.vitorias} vitória{ult.vitorias === 1 ? '' : 's'} · {ult.podios} pódio{ult.podios === 1 ? '' : 's'} · {ult.abandonos} abandono{ult.abandonos === 1 ? '' : 's'}{ult.campeao ? ` · campeão: ${ult.campeao}` : ''}</p>
       )}
-      {a.temporadas.length > 0 && <p className="nota">Na carreira: {a.largadas} largadas, {a.vitorias} vitórias, {a.podios} pódios, {a.titulos} títulos.</p>}
+      {a.temporadas.length > 0 && <p className="nota">Na carreira: {a.largadas} largada{a.largadas === 1 ? '' : 's'}, {a.vitorias} vitória{a.vitorias === 1 ? '' : 's'}, {a.podios} pódio{a.podios === 1 ? '' : 's'}, {a.titulos} título{a.titulos === 1 ? '' : 's'}.</p>}
       {l.orcamento && (
         <p className="auto20__orcamento">Orçamento da temporada: {dinheiroCurto(l.orcamento.custo)} — patrocínio {dinheiroCurto(l.orcamento.patrocinio)}, academia {dinheiroCurto(l.orcamento.academia)}, família {dinheiroCurto(l.orcamento.familia)}{l.orcamento.falta > 0 ? <strong> · faltam {dinheiroCurto(l.orcamento.falta)}</strong> : ' · fechado'}.</p>
       )}

@@ -70,6 +70,8 @@ export const valorDoJogador = (j: Jogador20, ano: number): number => {
 export interface ClubeAVenda { nome: string; pais: string; cidade: string; porte: Clube['porte']; divisao: number; receita: number; divida: number; valor: number; preco: number }
 
 const porteDe = (nome: string, pais: string): Clube['porte'] => clubePorNome(nome, pais)?.porte ?? 'regional';
+/** O tamanho da torcida de cada clube (estável, pelo nome — abstração de jogo, não pesquisa de torcida): o porte ± um pouco. */
+const torcidaDe = (nome: string, porte: Clube['porte']) => { let h = 0; for (const ch of nome) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return clamp(Math.round(TORCIDA_PORTE[porte] * (0.8 + (h % 1000) / 2500))); };
 
 /** O que um clube vale e custa agora (a divisão, a forma e a dívida desta vida). */
 export function avaliarClube(v: Vida, nome: string, pais: string): ClubeAVenda | undefined {
@@ -77,7 +79,7 @@ export function avaliarClube(v: Vida, nome: string, pais: string): ClubeAVenda |
   if (!c) return undefined;
   const div = divisaoDoClube(v, nome, pais);
   const porte = c.porte;
-  const receita = receitaDoAno(div, TORCIDA_PORTE[porte], porte === 'grande' ? 4 : porte === 'tradicional' ? 3 : 2, 50 + formaNaLiga(v, pais, nome) * 30, pais) * RECEITA_PORTE[porte];
+  const receita = receitaDoAno(div, torcidaDe(nome, porte), porte === 'grande' ? 4 : porte === 'tradicional' ? 3 : 2, 50 + formaNaLiga(v, pais, nome) * 30, pais) * RECEITA_PORTE[porte];
   const r = rngDe(v.id, 'clube20_divida', pais, nome);
   const divida = Math.round(receita * (0.25 + r.next() * 0.9) / 1e5) * 1e5;
   const valor = Math.round(receita * 1.6 / 1e5) * 1e5;
@@ -143,6 +145,9 @@ export function disponibilidadeClube20(v: Vida, o: OqueClube20): Veredito {
       const m = mercadoDoAno(v).find(j => j.id === o.id);
       if (!m) return bloqueio('impossivel', 'Esse jogador já não está no mercado.');
       if (c.elenco.length >= 30) return bloqueio('incompativel', 'O elenco está cheio (30).');
+      // Fair play financeiro (como nas ligas que o adotam): a folha não passa de 70% da receita do último ano.
+      const rec = c.historico.slice(-1)[0]?.receita ?? receitaDoAno(ligaDe(v, c.pais).div[c.nome] ?? 1, c.torcida, c.estadio, c.reputacao, c.pais);
+      if (c.elenco.reduce((s, j) => s + j.salario, 0) + m.salario > rec * 0.7) return bloqueio('incompativel', 'A folha passaria de 70% da receita do clube (fair play financeiro).');
       return c.caixa >= m.preco ? PERMITIDO : bloqueio('requisito', `O clube não tem ${fmt(m.preco)} em caixa (aporte ou venda alguém).`);
     }
     case 'vender': case 'dispensar': return c.elenco.some(j => j.id === o.id) ? (c.elenco.length <= 16 ? bloqueio('incompativel', 'O elenco ficaria curto demais (mínimo 16).') : PERMITIDO) : bloqueio('impossivel', '');
@@ -249,7 +254,7 @@ function comprar(v: Vida, nome: string, pais: string, financiar: boolean): { tex
   const media = mediaDaForca(FORCA_PORTE[porte] + formaNaLiga(v, pais, nome));
   const c: Clube20 = {
     nome, pais, cidade: x.cidade, desde: v.t, preco: x.preco, caixa: Math.round(x.receita * 0.05 / 1e5) * 1e5, divida: x.divida,
-    torcida: TORCIDA_PORTE[porte], reputacao: porte === 'grande' ? 75 : porte === 'tradicional' ? 55 : 30,
+    torcida: torcidaDe(nome, porte), reputacao: porte === 'grande' ? 75 : porte === 'tradicional' ? 55 : 30,
     estadio: porte === 'grande' ? 4 : porte === 'tradicional' ? 3 : 2, ct: porte === 'grande' ? 4 : porte === 'tradicional' ? 2 : 1, base: porte === 'grande' ? 3 : 2,
     investimentoBase: 1, elenco: [], juniores: [], historico: [], forcaPorAno: {}, seq: 0, comprados: [], vendas: [], valor: x.valor
   };
@@ -415,6 +420,8 @@ export function processarClube20(v: Vida): void {
     if (i <= 23) j.forca = clamp(Math.round(j.forca + Math.max(0, (j.potencial - j.forca) * (0.12 + c.ct * 0.03)) + r.normal() * 1.5), 30, j.potencial);
     else if (i <= 29) j.forca = clamp(Math.round(j.forca + Math.max(0, (j.potencial - j.forca) * 0.08) + r.normal()), 30, 97);
     else j.forca = clamp(Math.round(j.forca - (i - 29) * 0.9 + r.normal()), 30, 97);
+    // o que a carreira mostrou vira o novo teto (ninguém fica acima do próprio potencial)
+    if (j.forca > j.potencial) j.potencial = j.forca;
   };
   c.elenco.forEach(evoluir); c.juniores.forEach(evoluir);
   // A diretoria renova quem é útil e ainda tem lenha (o dono decide o resto); quem sobra sai no fim do contrato.
