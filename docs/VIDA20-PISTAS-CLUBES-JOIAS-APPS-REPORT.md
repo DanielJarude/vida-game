@@ -150,3 +150,16 @@ botão de conteúdo arriscado com estilo de link.
 - Os outros clubes da liga não têm elenco nominal (só força pelo porte, como antes); o mercado é gerado por ano.
 - Um grande clube bem administrado acumula caixa (o dono decide distribuir dividendos ou reinvestir).
 - A imagem anexada ao complemento não chegou à sessão; os problemas foram reproduzidos pelas capturas.
+
+## 14–17. Commit, integração, deploy e conferência em produção
+- **Suíte completa na árvore final** (idêntica, arquivo por arquivo, ao commit publicado): **2814 aprovados, 2 falhas — ambas
+  do conjunto preexistente do baseline** (fechamentoMundo #4, motor.test "regra de agência"); **0 regressões**.
+  Typecheck limpo; build ok (limite de 800 kB não alterado); smoke de distribuição 28/28.
+- Commit publicado: **`d33c449`** (branch `claude/vida20`; código `4ec2d67`…`d33c449`).
+- `main` e a branch de produção `claude/fix-pos-rework3-playtest` avançadas por **fast-forward** (de `c630645` e `fd5884d`).
+- Cloudflare Pages (vida-game.pages.dev) passou a servir `index-COa9MOPX.js` ~5 min depois do push.
+- Integridade: **`/` e os 138 arquivos JS/CSS sha256-idênticos** ao build validado localmente.
+- Conferido em produção (Playwright contra a URL publicada): automobilismo (1440 claro), clube · mercado (390 escuro),
+  joias no corpo (360 claro), TikTok — criar → publicar em 2 toques, com o resultado do motor (viral, +846 seguidores,
+  quem reagiu) no perfil (390). Sem erro de console, sem rolagem lateral.
+- Esta seção é um commit só de documentação (em `main` e na branch de trabalho; a produção continua em `d33c449`).
