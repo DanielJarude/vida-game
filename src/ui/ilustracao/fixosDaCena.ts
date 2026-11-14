@@ -29,8 +29,17 @@ export const FIXOS_DA_CENA: Record<string, (cor: string) => Amostra> = {
   _box: () => noChao([V(ret(10, 8, 100, 102, 1)), L('M10 8V110M110 8V110M10 8H110', 1.4, '#9fb3bb'), Mt('M30 8v10q0 6 8 6'), Mt(circulo(40, 28, 6)), P(ret(14, 106, 92, 4, 1), '#cfd6d8')], 52),
   /** A pia de coluna e o espelho simples. */
   _pia: () => noChao([M(ret(18, 52, 84, 12, 4), '#f4f4f2', 'pia'), M(ret(48, 64, 24, 46, 2), '#ecebe7'), Mt('M60 52v-8q5 -3 7 1')], 40),
-  /** O vaso sanitário (de frente), com a caixa acoplada. */
-  _vaso: () => noChao([M(ret(32, 30, 56, 34, 4), '#f4f4f2', 'caixa'), M(suave([[26, 66], [94, 66], [88, 94], [72, 110], [48, 110], [32, 94]]), '#f4f4f2', 'vaso'), L('M30 68H90', 0.8, '#b7b3aa')], 32),
+  /**
+   * O vaso sanitário (de frente), com a caixa acoplada. VIDA 20: nas medidas de catálogo (caixa de 42 cm de largura,
+   * 78 cm do chão ao topo; assento a 42 cm; o pé mais estreito que a bacia) — antes saía com 36 cm de altura, mais
+   * largo do que alto, e parecia um banquinho ao lado da pia.
+   */
+  _vaso: () => noChao([
+    M(ret(32, 6, 56, 7, 2.5), '#f7f7f5', 'tampa'), M(ret(35, 12, 50, 36, 3), '#f2f2ef', 'caixa'), P(circulo(60, 9.5, 2.2), '#c3c8cc'),
+    M(ret(33, 48, 54, 7, 3.5), '#fafaf8', 'assento'),
+    M(suave([[34, 55], [86, 55], [84, 68], [76, 82], [71, 97], [49, 97], [44, 82], [36, 68]]), '#f4f4f2', 'vaso'),
+    M(ret(44, 95, 32, 15, 3), '#ecebe7', 'pe'), L('M36 56H84', 0.8, '#b7b3aa'), P(elipse(47, 66, 5, 2.6), '#ffffff')
+  ], 30),
   /** A árvore do jardim: tronco e copa larga. */
   _arvore: () => noChao([M(ret(54, 54, 12, 56, 3), '#7a5a3a', 'tronco'), M(suave([[12, 60], [16, 28], [44, 10], [76, 8], [104, 26], [110, 56], [88, 70], [34, 72]]), '#5f8f4e', 'copa'), P(elipse(40, 34, 16, 10), clarear('#5f8f4e', 0.15))], 30),
   /** A churrasqueira de alvenaria, com a chaminé. */

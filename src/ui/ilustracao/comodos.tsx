@@ -21,6 +21,7 @@ import { comEstiloDaMarca } from './estiloDeMarca';
 import { estiloDaMarca } from '../../motor/sistemas/perfilDaMarca';
 import { chaoEm, disporComodo, escalaEm, ordemDeDesenho, tela, xEm, zDoDesenho, type Geometria, type Posto } from './disposicao';
 import { amostraDoObjeto } from './objetos';
+import { escalaVertical } from './medidas';
 import { blocosDe, corDoCorpo, fatias, partesDoDesenho, passosDoMovel, projetar, referencial, temVolume } from './volumes13';
 import { variantesDaCoisa } from '../../motor/dados/pertences';
 import { misturar } from '../avatar/cores';
@@ -240,14 +241,19 @@ function ObjetoPosto({ p, g, postoDe, prefixo, px, semCadeira }: { p: Posto; g: 
   const s = escalaEm(g, zc);
   const larguraTela = (p.x1 - p.x0) * g.k * s;
   const alturaMax = p.h * g.k * s * 1.3 + 2;
-  const { s: esc, c, bw } = enquadrar(a, larguraTela, alturaMax);
+  // VIDA 20: quem tem altura de catálogo no desenho (`medidas.ALTURA_NO_DESENHO`) usa a largura e a altura de catálogo.
+  const c0 = caixaDaAmostra(a);
+  const pxm = g.k * s;
+  const svm = escalaVertical(p.coisaId, p.h, c0, larguraTela / Math.max(1, c0.x1 - c0.x0) / pxm);
+  const { s: esc, c, bw } = svm === undefined ? enquadrar(a, larguraTela, alturaMax) : { s: larguraTela / Math.max(1, c0.x1 - c0.x0), c: c0, bw: c0.x1 - c0.x0 };
+  const escV = svm === undefined ? esc : svm * pxm;
   const xEsq = xEm(g, p.x0, zc) + (larguraTela - bw * esc) / 2;
   const yBase = p.montagem === 'parede' ? chaoEm(g, 0) - p.base * g.k : chaoEm(g, zc) - p.base * g.k * s;
-  const tx = xEsq - c.x0 * esc, ty = yBase - c.y1 * esc;
+  const tx = xEsq - c.x0 * esc, ty = yBase - c.y1 * escV;
   return (
     <g data-posto={p.id} {...comum}>
       {(p.montagem === 'chao') && <ellipse cx={(xEsq + bw * esc / 2).toFixed(1)} cy={(yBase + 0.5).toFixed(1)} rx={(bw * esc * 0.5).toFixed(1)} ry={(Math.max(1.2, 0.08 * g.k * s)).toFixed(1)} fill="#000000" opacity={0.16} />}
-      <g transform={`translate(${tx.toFixed(1)} ${ty.toFixed(1)}) scale(${esc.toFixed(4)})`}>
+      <g transform={`translate(${tx.toFixed(1)} ${ty.toFixed(1)}) scale(${esc.toFixed(4)} ${escV.toFixed(4)})`}>
         <Ilustracao a={a} largura={a.vb[0]} rotulo="" className="cena-comodo__objeto" />
       </g>
     </g>
@@ -310,7 +316,15 @@ function metadeDe(a: Amostra, lado: 'esq' | 'dir'): Amostra {
   let m = METADES.get(a);
   if (!m) {
     const meio = a.vb[0] / 2;
-    m = { esq: { ...a, vb: [meio, a.vb[1]], sombra: undefined }, dir: { ...a, vb: [meio, a.vb[1]], sombra: undefined, pecas: [{ tipo: 'grupo', t: `translate(${-meio} 0)`, pecas: a.pecas }] } };
+    // VIDA 20: cada metade leva só as peças dela (pelo centro de cada peça). Antes as duas levavam o desenho inteiro e a
+    // caixa do desenho cobria o par: cada mesa de cabeceira saía com um terço da largura (17 cm ao lado da cama king).
+    // (a linha não entra na caixa: vale o ponto onde o traço começa)
+    const centro = (q: Amostra['pecas'][number]) => {
+      if (q.tipo === 'linha') return Number(/M\s*(-?[\d.]+)/.exec(q.d)?.[1] ?? 0);
+      const c = caixaDaAmostra({ vb: a.vb, pecas: [q] }); return (c.x0 + c.x1) / 2;
+    };
+    const esq = a.pecas.filter(q => centro(q) < meio), dir = a.pecas.filter(q => centro(q) >= meio);
+    m = { esq: { ...a, vb: [meio, a.vb[1]], sombra: undefined, pecas: esq }, dir: { ...a, vb: [meio, a.vb[1]], sombra: undefined, pecas: [{ tipo: 'grupo', t: `translate(${-meio} 0)`, pecas: dir }] } };
     METADES.set(a, m);
   }
   return m[lado];

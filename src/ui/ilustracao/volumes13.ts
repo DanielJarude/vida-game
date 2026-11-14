@@ -17,7 +17,7 @@
  */
 import type { Amostra, Peca } from './nucleo';
 import { caixaDaAmostra, pontosDoCaminho, type Caixa } from './caixa';
-import { medidaDe } from './medidas';
+import { escalaVertical, medidaDe } from './medidas';
 import type { Geometria, Posto } from './disposicao';
 
 /** Um bloco do móvel: o retângulo no desenho (u, v no quadro do desenho) e a profundidade (0 = a frente, 1 = o fundo). */
@@ -179,7 +179,8 @@ export const VOLUMES: Record<string, (cor: string) => Bloco[]> = {
   ],
   _fogao: () => [b(16, 52, 88, 58, 0, 1, { cor: '#ece9e4' })],
   _pia: () => [b(18, 52, 84, 12, 0, 0.85, { cor: '#f4f4f2' }), b(48, 64, 24, 46, 0.25, 0.7, { cor: '#ecebe7' })],
-  _vaso: () => [b(32, 30, 56, 34, 0.72, 1, { cor: '#f4f4f2', pecas: [0, 1] }), b(30, 66, 60, 26, 0.04, 0.74, { cor: '#f4f4f2' })],
+  // VIDA 20: a caixa acoplada (18 cm de fundo, encostada) com a tampa e o botão; a bacia com o assento; o pé.
+  _vaso: () => [b(32, 6, 56, 42, 0.74, 1, { cor: '#f2f2ef', pecas: [0, 3] }), b(34, 48, 52, 49, 0.04, 0.76, { cor: '#f4f4f2' }), b(44, 95, 32, 15, 0.2, 0.74, { cor: '#ecebe7' })],
   _churrasqueira: () => [b(14, 52, 92, 58, 0, 1, { cor: '#b0654a' }), b(40, 6, 40, 48, 0.35, 1, { cor: '#9a5640', pecas: [2, 3] })]
 };
 
@@ -219,10 +220,12 @@ export function referencial(p: Posto, a: Amostra): Referencial {
   const prof = p.giro ? p.x1 - p.x0 : p.z1 - p.z0;
   // a largura real; sem passar de 1,3× a altura de catálogo (como a cena sempre fez)
   let sigma = larg / bw;
-  if (bh * sigma > p.h * 1.3) sigma = (p.h * 1.3) / bh;
+  // VIDA 20: quem tem altura de catálogo no desenho (`medidas.ALTURA_NO_DESENHO`) não é achatado pela largura.
+  const sv = escalaVertical(p.coisaId, p.h, c, sigma);
+  if (sv === undefined && bh * sigma > p.h * 1.3) sigma = (p.h * 1.3) / bh;
   const off = (larg - bw * sigma) / 2;
   const t = ALTURA_PELO_TAMPO[p.coisaId];
-  const sigmaV = t ? t[1] / Math.max(1, c.y1 - t[0]) : sigma;
+  const sigmaV = t ? t[1] / Math.max(1, c.y1 - t[0]) : sv ?? sigma;
   // Encostado na parede esquerda, a frente vira para a direita: quem olha de frente para ele tem o fundo do cômodo à
   // direita — a largura do desenho corre de perto de quem olha (z1) para o fundo (z0). Na direita, o contrário.
   if (p.giro === 'esq') return { o: [p.x1, 0, p.z1 - off], U: [0, 0, -1], D: [-1, 0, 0], sigma, sigmaV, prof, c };

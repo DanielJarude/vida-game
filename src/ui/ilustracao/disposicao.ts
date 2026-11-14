@@ -145,7 +145,7 @@ function fixosDe(tipo: string, g: Geometria, ids: Set<string>): Omit<Posto, 'id'
     let x = 0.02;
     if (tipo === 'banheiro' && !tem('ducha')) { out.push(f('_box', x, 0.9, 0.9, 2.0)); x += 0.92; }
     if (!tem('gabinete', 'bancada_marmore')) { out.push(f('_pia', x + 0.05, 0.55, 0.45, 0.85)); x += 0.62; }
-    out.push(f('_vaso', Math.min(g.Wm - 0.45, x + 0.12), 0.4, 0.65, 0.8));
+    out.push(f('_vaso', Math.min(g.Wm - 0.47, x + 0.12), 0.42, 0.68, 0.78));
     return out;
   }
   if (tipo === 'jardim') return [f('_arvore', 0.15, 1.7, 1.2, 4)];

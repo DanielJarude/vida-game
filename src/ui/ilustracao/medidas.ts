@@ -111,7 +111,8 @@ export const MEDIDAS: Record<string, Medida> = {
   guarda_roupa: chao(1.6, 0.6, 2.1, ['lado', 'fundo'], { gira: 'caixa' }),
   closet: chao(2.4, 0.62, 2.4, ['lado', 'fundo'], { gira: 'caixa' }),
   penteadeira: chao(1.0, 0.45, 1.45, ['lado', 'fundo'], { topo: 0.78, gira: 'frente' }),
-  criado_mudo: chao(0.48, 0.4, 0.55, ['junto'], { de: CAMAS, par: true, topo: 0.55 }),
+  // VIDA 20: a mesa de cabeceira de catálogo (50–60 cm de largura, 55–65 de altura, da altura do colchão).
+  criado_mudo: chao(0.52, 0.42, 0.6, ['junto'], { de: CAMAS, par: true, topo: 0.6 }),
   espelho_chao: parede(0.6, 1.7, 0.04, { paredeLado: true }), // 12.8.1: encostado numa parede (a lateral, de preferência), não solto no chão
   comoda: chao(1.2, 0.5, 0.9, ['lado', 'fundo'], { topo: 0.9, gira: 'caixa' }),
   ar_condicionado: parede(0.9, 0.3, 2.1),
@@ -220,6 +221,29 @@ export const MEDIDAS: Record<string, Medida> = {
 };
 
 /** O que não está na tabela: uma caixa de 50 cm, no chão, num canto (o desenho genérico). */
+/**
+ * VIDA 20 — A ALTURA DE CATÁLOGO NO DESENHO. A escala de um objeto vinha só da largura (o desenho de 120 × 120 posto na
+ * largura de catálogo): o desenho que saiu mais largo do que a peça de verdade ficava baixo — a geladeira de 1,85 m com
+ * 1,24, o fliperama de 1,85 com 0,88, a estante de 1,9 com 1,0, o box do banheiro com 0,9. Para estes, a altura vem da
+ * medida de catálogo (a largura continua a de catálogo): o valor é a linha `y` do desenho onde fica o topo do corpo
+ * (`'tudo'`: o desenho inteiro é o corpo). A correção tem teto (nada estica mais que 1,9× nem encolhe abaixo de 0,8×).
+ */
+export const ALTURA_NO_DESENHO: Record<string, number | 'tudo'> = {
+  geladeira: 'tudo', geladeira_inox: 'tudo', guarda_roupa: 'tudo', estante_escritorio: 'tudo', organizadores: 'tudo',
+  fliperama: 'tudo', beliche: 'tudo', _box: 'tudo', _fogao: 'tudo', _pia: 'tudo', ducha: 'tudo', churrasqueira: 'tudo',
+  forno_pizza: 'tudo', cooktop_forno: 'tudo', penteadeira: 'tudo', lavadora_pressao: 'tudo', espelho_chao: 'tudo',
+  _abajur: 'tudo', cavalete: 'tudo', saco_pancada: 'tudo', escultura_jardim: 'tudo', vasos_grandes: 'tudo', plantas: 'tudo',
+  prancha: 'tudo', cadeira_ergonomica: 'tudo', _vaso: 'tudo', criado_mudo: 64
+};
+/** A escala vertical (metros por unidade do desenho) de quem tem altura de catálogo; `undefined`: a mesma da largura. */
+export function escalaVertical(coisaId: string, h: number, caixa: { y0: number; y1: number }, sigma: number): number | undefined {
+  const a = ALTURA_NO_DESENHO[coisaId];
+  if (a === undefined) return undefined;
+  const topo = a === 'tudo' ? caixa.y0 : a;
+  const sv = h / Math.max(1, caixa.y1 - topo);
+  return Math.min(sigma * 1.9, Math.max(sigma * 0.8, sv));
+}
+
 export const MEDIDA_PADRAO: Medida = chao(0.5, 0.4, 0.5, ['canto', 'lado', 'frente']);
 export const medidaDe = (coisaId: string): Medida => MEDIDAS[coisaId] ?? MEDIDA_PADRAO;
 export const EXTERNOS = new Set(['jardim', 'piscina', 'lazer', 'garagem', 'quadra']);
