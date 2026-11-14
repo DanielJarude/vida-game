@@ -1,0 +1,20 @@
+/* VIDA 20 · o clube de que se é dono. */
+.clube20 { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.clube20__filtros { display: flex; flex-wrap: wrap; gap: 8px 14px; }
+.clube20__filtros select, .clube20__filtros input { max-width: 100%; }
+.clube20__lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; max-height: 520px; overflow-y: auto; }
+.clube20__item { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 6px; padding: 6px 0; border-bottom: 1px solid var(--linha, #e2dccf); min-width: 0; }
+.clube20__item > div:first-child { min-width: 0; overflow-wrap: anywhere; }
+.clube20__meta { font-size: 12.5px; opacity: 0.8; }
+.clube20__botoes { display: flex; flex-wrap: wrap; gap: 6px; }
+.clube20__ficha { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 6px 14px; margin: 0; }
+.clube20__ficha dt { font-size: 12px; opacity: 0.75; }
+.clube20__ficha dd { margin: 0; }
+.clube20__abas { display: flex; flex-wrap: wrap; gap: 4px; }
+.clube20__aba { border: 1px solid var(--linha, #c9c2b6); background: transparent; color: inherit; border-radius: 999px; padding: 4px 10px; font: inherit; font-size: 13px; cursor: pointer; }
+.clube20__aba--ativa { font-weight: 700; background: var(--destaque-fundo, #2f5d68); color: var(--destaque-texto, #fff); border-color: transparent; }
+.clube20__alerta { border-left: 3px solid #b0493c; padding: 4px 8px; }
+.clube20__clube { display: flex; flex-direction: column; gap: 8px; }
+.clube20__historico { overflow-x: auto; max-width: 100%; }
+.clube20__historico table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.clube20__historico th, .clube20__historico td { text-align: left; padding: 2px 4px; }

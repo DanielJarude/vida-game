@@ -24,6 +24,7 @@ import { idadePessoa, vinculosVivos } from '../../nucleo';
 import { flex } from '../../texto';
 import { exposicaoDe19 } from '../npcs/vidas19';
 import { municipio } from '../../dados/lugares';
+import { anoDe } from '../../tempo';
 
 export type Formato19 = 'texto' | 'foto' | 'album' | 'video' | 'story';
 export type TomNpc19 = 'apoio' | 'parabens' | 'carinho' | 'brincadeira' | 'saudade' | 'ironia' | 'ciume';
@@ -280,6 +281,11 @@ export function emAlta19(v: Vida): Tendencia19[] {
   if (minhas.length) out.push({ id: 'eu:viral', texto: 'Sua publicação está circulando', origem: 'Uma publicação sua viralizou neste ano.' });
   const liga = v.caminhos.ligas?.BR?.historico?.slice(-1)[0];
   if (liga?.liga) out.push({ id: `fut:${liga.ano}`, texto: `${liga.liga.replace(/^~/, '')}, campeão de ${liga.ano}`, origem: 'O campeonato nacional da temporada.' });
+  // VIDA 20: o seu clube (o título, o acesso, a queda) e a sua temporada nas pistas também viram assunto.
+  const h = v.clube20?.historico.slice(-1)[0];
+  if (h && anoDe(v.t) - h.ano <= 1 && (h.titulo || h.acesso || h.queda)) out.push({ id: `clube20:${h.ano}`, texto: `${v.clube20!.nome} ${h.titulo ? 'campeão' : h.acesso ? 'sobe de divisão' : 'rebaixado'}: a torcida fala do dono`, origem: `A temporada de ${h.ano} do clube de que você é dono.` });
+  const t = v.automobilismo20?.temporadas?.slice(-1)[0];
+  if (t && anoDe(v.t) - t.ano <= 1 && (t.titulo || t.vitorias > 0) && ['f2', 'f1'].includes(t.categoria)) out.push({ id: `auto20:${t.ano}`, texto: t.titulo ? `${v.eu.nome} ${v.eu.sobrenome}, campeão da ${t.categoria === 'f1' ? 'Fórmula 1' : 'Fórmula 2'}` : `${v.eu.nome} ${v.eu.sobrenome} vence na ${t.categoria === 'f1' ? 'Fórmula 1' : 'Fórmula 2'}`, origem: `A sua temporada de ${t.ano}.` });
   return out.slice(0, 6);
 }
 

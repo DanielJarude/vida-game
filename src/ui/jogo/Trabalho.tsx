@@ -25,6 +25,7 @@ const PremiosDoMundo = sobDemandaCampeonato(() => import('./Campeonato').then(m 
 const PainelPresidencial = sobDemandaCampeonato(() => import('./Presidencia129').then(m => m.PainelPresidencial));
 const Justica14 = sobDemandaCampeonato(() => import('../v14/justica/Justica14').then(m => m.Justica14));
 const Futsal14 = sobDemandaCampeonato(() => import('../v14/esportes/Futsal14').then(m => m.Futsal14));
+const Automobilismo20 = sobDemandaCampeonato(() => import('../v20/automobilismo/Automobilismo20').then(m => m.Automobilismo20));
 import { CampoDoAtleta, ClaqueteDoAtor, PalcoDoMusico, PlenarioDoPolitico, PranchetaDoTecnico } from './CarreirasEspeciais';
 import { habilitacaoDaVida } from '../../motor/sistemas/autoescola';
 import { regrasDaVida } from '../../motor/mundo/regras';
@@ -235,6 +236,8 @@ export function Trabalho({ vida, agir, irPara, parte, explorar: abaDeFora, aoExp
         {(modo === 'atleta' || espSemClube) && <PainelAtleta vida={vida} />}
         {(modo === 'atleta' || espSemClube) && vida.caminhos.esporte?.modalidade === 'futsal' && <Futsal14 vida={vida} agir={agir} />}
         {modo === 'tecnico' && <PainelComissao vida={vida} />}
+        {/* VIDA 20: o piloto contratado (a F1) vê a carreira inteira aqui também. */}
+        {vida.trabalho.atual?.ocupacaoId === 'piloto_corrida' && <Automobilismo20 vida={vida} agir={agir} />}
         {modo === 'base' && !div && <PainelBase vida={vida} />}
         {modo === 'base' && div && <p className="ligacao-caminho"><span>A base, os treinos e a peneira estão em Outros caminhos.</span> <button type="button" className="link" onClick={() => irPara('outros_caminhos')}>Ir para Outros caminhos →</button></p>}
         {modo === 'militar' && <PainelFarda vida={vida} />}

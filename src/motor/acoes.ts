@@ -141,6 +141,8 @@ import { depoisDaAcao15, disponibilidadeCelular15, executarCelular15, type OqueC
 import { disponibilidadeConectada19, executarConectada19, type OqueConectada19 } from './v19/conectada/conectada19';
 import { disponibilidadeHaras19, executarHaras19, type OqueHaras19 } from './v19/haras/haras19';
 import { disponibilidadeAgro19, executarAgro19, type OqueAgro19 } from './v19/agro/agro19';
+import { disponibilidadeAuto20, executarAuto20, type OqueAuto20 } from './v20/automobilismo/automobilismo20';
+import { disponibilidadeClube20, executarClube20, type OqueClube20 } from './v20/clubes/clubes20';
 import { disponibilidadeOficio16, executarOficio16, type OqueOficio16 } from './v16/oficios/oficios16';
 import { disponibilidadeReligiao16, executarReligiao16, type OqueReligiao16 } from './v16/religiao/religiao16';
 import { disponibilidadeRural18, executarRural18, type OqueRural18 } from './v18/rural/acoes18';
@@ -343,6 +345,8 @@ export type Acao =
   | { tipo: 'conectada19'; oque: OqueConectada19 }
   /** VIDA 19: o haras que cria (cobertura, venda, reprodução). */
   | { tipo: 'haras19'; oque: OqueHaras19 }
+  | { tipo: 'auto20'; oque: OqueAuto20 }
+  | { tipo: 'clube20'; oque: OqueClube20 }
   /** VIDA 19: a documentação e o crédito do campo (CAR, georreferenciamento, outorga, Plano Safra). */
   | { tipo: 'agro19'; oque: OqueAgro19 }
   | { tipo: 'oficio16'; oque: OqueOficio16 }
@@ -864,6 +868,8 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'celular15': return disponibilidadeCelular15(v, a.oque);
     case 'conectada19': return disponibilidadeConectada19(v, a.oque);
     case 'haras19': return disponibilidadeHaras19(v, a.oque);
+    case 'auto20': return disponibilidadeAuto20(v, a.oque);
+    case 'clube20': return disponibilidadeClube20(v, a.oque);
     case 'agro19': return disponibilidadeAgro19(v, a.oque);
     case 'oficio16': return disponibilidadeOficio16(v, a.oque);
     case 'religiao16': return disponibilidadeReligiao16(v, a.oque);
@@ -1121,6 +1127,8 @@ function linhaDoExtrato(a: Acao): [string, TipoMovimento] {
     case 'viagem14': return ['Viagens', 'escolha'];
     case 'justica14': return ['Justiça: advogados, acordos e custas', 'despesa'];
     case 'dep14': return ['Saúde: tratamento', 'despesa'];
+    case 'auto20': return ['Automobilismo: temporadas, treino e patrocínio', 'escolha'];
+    case 'clube20': return ['O clube: compra, aportes e venda', 'escolha'];
     case 'moveis14': return ['Coisas da casa e da vida: compra e venda', 'escolha'];
     default: return ['Compras, viagens e outras escolhas', 'escolha'];
   }
@@ -1736,6 +1744,8 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
     case 'celular15': { const x = executarCelular15(v, r, a.oque); return x.texto ? { aviso: { texto: x.texto, tom: x.tom ?? 'neutro' }, pessoaId: x.pessoaId } : {}; }
     case 'agro19': { const x = executarAgro19(v, a.oque); return { aviso: { texto: x.texto, tom: x.tom ?? 'neutro' } }; }
     case 'haras19': { const x = executarHaras19(v, a.oque); return { aviso: { texto: x.texto, tom: x.tom ?? 'neutro' } }; }
+    case 'auto20': { const x = executarAuto20(v, a.oque); return { aviso: { texto: x.texto, tom: x.tom ?? 'neutro' } }; }
+    case 'clube20': { const x = executarClube20(v, a.oque); return { aviso: { texto: x.texto, tom: x.tom ?? 'neutro' } }; }
     case 'conectada19': { const x = executarConectada19(v, r, a.oque); return x.texto ? { aviso: { texto: x.texto, tom: x.tom ?? 'neutro' }, pessoaId: x.pessoaId } : {}; }
     case 'oficio16': { const x = executarOficio16(v, r, a.oque); return x.texto ? { aviso: { texto: x.texto, tom: x.tom } } : {}; }
     case 'religiao16': { const x = executarReligiao16(v, r, a.oque); return x.texto ? { aviso: { texto: x.texto, tom: x.tom } } : {}; }

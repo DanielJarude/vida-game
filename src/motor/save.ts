@@ -42,7 +42,9 @@ import { normalizarVida14Viagens } from './v14/viagens/viagens14';
 import { normalizarVida14Conquistas } from './v14/conquistas/conquistas';
 import { normalizarVida14Justica } from './v14/justica/justica14';
 import { normalizarVida14Crencas } from './v14/crencas/crencas';
-import { normalizarVida14Dependencias } from './v14/crencas/dependencias14';
+import { normalizarVida14Dependencias, semVicioNaInfancia } from './v14/crencas/dependencias14';
+import { normalizarVida20Auto } from './v20/automobilismo/automobilismo20';
+import { normalizarVida20Clube } from './v20/clubes/clubes20';
 import { normalizarVida14Moveis } from './v14/moveis/moveis14';
 import { normalizarVida13Acoes } from './sistemas/desfecho13';
 import { normalizarVida13Aparencia } from './sistemas/aparencia13';
@@ -148,6 +150,8 @@ export function interpretar(bruto: string): Leitura {
   if (r.tipo === 'ok') normalizarVida14Justica(r.vida);
   if (r.tipo === 'ok') normalizarVida14Crencas(r.vida);
   if (r.tipo === 'ok') normalizarVida14Dependencias(r.vida);
+  // VIDA 20: os estados novos (a carreira nas pistas, o clube) e a regra dos vícios (nenhum antes dos 14).
+  if (r.tipo === 'ok') { normalizarVida20Auto(r.vida); normalizarVida20Clube(r.vida); semVicioNaInfancia(r.vida); }
   if (r.tipo === 'ok') normalizarVida14Moveis(r.vida);
   if (r.tipo === 'ok') normalizarVida13Acoes(r.vida);
   if (r.tipo === 'ok') normalizarVida13Aparencia(r.vida);

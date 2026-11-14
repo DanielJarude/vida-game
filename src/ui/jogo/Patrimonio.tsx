@@ -49,6 +49,7 @@ const GaragemVisual = sobDemanda(() => import('./Garagem129').then(m => m.Garage
 /** VIDA 12.9: a gestão ativa, o fundar/comprar das grandes e o raio-x financeiro (pacote à parte). */
 const PainelDaEmpresa129 = sobDemanda(() => import('./Empresas129').then(m => m.PainelDaEmpresa129));
 const FundarOuAdquirir129 = sobDemanda(() => import('./Empresas129').then(m => m.FundarOuAdquirir129));
+const Clube20 = sobDemanda(() => import('../v20/clubes/Clube20').then(m => m.Clube20));
 const RaioX129 = sobDemanda(() => import('./Empresas129').then(m => m.RaioX129));
 
 export type PartePatrimonio = 'resumo' | 'imoveis' | 'garagem' | 'colecao' | 'empresas' | 'objetos';
@@ -449,6 +450,8 @@ function Empresas({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
       <p className="nota">Empresa sua não é salário: o caixa é dela; o lucro só vira seu quando é distribuído. Dá para ter uma sem largar a profissão — com alguém contratado tocando, ou tocando você mesm{vida.eu.genero === 'feminino' ? 'a' : 'o'} (algumas noites e os sábados).</p>
       <VisaoGeralDasEmpresas vida={vida} />
       {lista.map(e => <CartaoEmpresa key={e.id} vida={vida} agir={agir} e={e} />)}
+      {/* VIDA 20: o clube esportivo (comprar qualquer clube em que se pode jogar; administrar o que é seu). */}
+      {(idade(vida) >= 18 || vida.clube20) && <Clube20 vida={vida} agir={agir} />}
       {idade(vida) >= 18 && (
         <div className="pat-abrir">
           <button type="button" className="botao botao--secundario" aria-expanded={abrindo} onClick={() => setAbrindo(x => !x)}>{abrindo ? 'Fechar' : 'Abrir uma empresa'}</button>

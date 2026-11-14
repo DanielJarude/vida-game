@@ -3958,6 +3958,10 @@ export interface Vida {
   crenca14?: import('./dados14/crencas/crencas').EstadoCrenca14;
   /** VIDA 14 · Dependências (`v14/dependencias`): o que virou dependência, o tratamento, a recuperação. Ausente: nada. */
   dependencias14?: import('./dados14/crencas/crencas').EstadoDependencias14;
+  /** VIDA 20 · a carreira no automobilismo, do kart à F1 (`v20/automobilismo`). Ausente: nunca correu. */
+  automobilismo20?: import('./dados20/tipos20').Auto20;
+  /** VIDA 20 · o clube esportivo de que é dono (`v20/clubes`). Ausente: nenhum. */
+  clube20?: import('./dados20/tipos20').Clube20;
   /** REWORK 4: as redes sociais do jogo (simulação interna, sem internet): `sistemas/redes`. Opcional. */
   redes?: { contas: Record<string, ContaSocial> };
   /** REWORK 4: as organizações onde a vida trabalhou (nome, setor, cidade) — `sistemas/organizacoes`. Opcional. */

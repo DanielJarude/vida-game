@@ -12,6 +12,8 @@ import { processarVidas19 } from './v19/npcs/vidas19';
 import { processarConectada19 } from './v19/conectada/conectada19';
 import { processarHaras19 } from './v19/haras/haras19';
 import { processarAgro19 } from './v19/agro/agro19';
+import { processarAutomobilismo20 } from './v20/automobilismo/automobilismo20';
+import { processarClube20 } from './v20/clubes/clubes20';
 import { processarJeito } from './sistemas/convivio126';
 import { processarPersonalizacao } from './sistemas/personalizacao';
 import { fotografarEvolucao, praticandoPor } from './sistemas/progressao';
@@ -334,6 +336,8 @@ function viverAno(v: Vida, r: Rng): void {
   processarColecao(v, r);
   processarParalelos(v, r);
   processarEmpresas(v, r);
+  processarClube20(v); // VIDA 20: o clube de que é dono (a temporada da liga, o caixa, o elenco, a base, as obras)
+  processarAutomobilismo20(v); // VIDA 20: a temporada nas pistas (do kart à F1), o orçamento, as propostas
   // REWORK 10 · JOG-01: a mão esquecida na mesa, e o jogo que virou assunto (antes das contas do ano).
   processarSeguroDesemprego(v);
   processarApostas(v);

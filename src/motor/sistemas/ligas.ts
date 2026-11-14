@@ -258,7 +258,7 @@ function sortearPosicoes(v: Vida, pais: string, div: Record<string, Nivel>, ano:
   }
   // A divisão 1 são os campeonatos regionais: cada clube tem a sua colocação no seu (1..12); sobe quem chega em cima.
   // (O clube da vida com força `x`: a colocação no regional dele já vem na escala 1..12 — `colocacaoNaTabela`.)
-  for (const c of nomes.filter(c => div[c] === 1)) pos.set(c, c === fixo?.clube ? clamp(Math.round(fixo.colocacao ?? fixo.x ?? 6), 1, 12) : clamp(Math.round(6.5 - (forcaNaLiga(c, pais) - 1) * 2 + r.normal() * 3), 1, 12));
+  for (const c of nomes.filter(c => div[c] === 1)) pos.set(c, c === fixo?.clube ? clamp(Math.round(fixo.colocacao ?? fixo.x ?? 6), 1, 12) : clamp(Math.round(6.5 - ((forcaDoElencoDoDono(v, pais, ano, c) ?? forcaNaLiga(c, pais)) - 1) * 2 + r.normal() * 3), 1, 12));
   return { pos, campeoes, tabelas };
 }
 
@@ -291,9 +291,17 @@ export function participantes19(v: Vida, pais: string, ano: number, n: number, d
   return nomes.slice(0, Math.max(VAGAS_POR_DIVISAO, nomes.length));
 }
 
+/**
+ * VIDA 20 — o clube que a vida comprou (`v20/clubes`): a força dele vem do ELENCO que o dono montou (registrado por quem
+ * conhece o clube, sem ciclo de pacotes), na mesma régua e na mesma temporada dos outros. Sem dono: o porte de sempre.
+ */
+export const FORCA_DO_DONO: { f?: (v: Vida, pais: string, ano: number, clube: string) => number | undefined } = {};
+const forcaDoElencoDoDono = (v: Vida, pais: string, ano: number, c: string) => FORCA_DO_DONO.f?.(v, pais, ano, c);
+
 /** A força de um clube na temporada: o elenco, a forma, o degrau da divisão e o momento do ano. */
 export function forcaNaTemporada19(v: Vida, pais: string, ano: number, n: number, c: string, forma?: Record<string, number>): number {
-  const base = c.startsWith(SEM_CATALOGO) ? -FORCA_SEM_NOME : forcaNaLiga(c, pais) + (forma?.[c] ?? 0) - n;
+  const dono = c.startsWith(SEM_CATALOGO) ? undefined : forcaDoElencoDoDono(v, pais, ano, c);
+  const base = c.startsWith(SEM_CATALOGO) ? -FORCA_SEM_NOME : (dono ?? forcaNaLiga(c, pais)) + (forma?.[c] ?? 0) - n;
   return base + rngDe(v.id, 'momento19', pais, ano, c).normal() * MOMENTO_DA_TEMPORADA;
 }
 
@@ -425,7 +433,7 @@ export function colocacaoNaTabela(v: Vida, pais: string, ano: number, clube: str
   const copia: LigaDoPais = { ano: liga.ano, div: { ...liga.div } };
   fixar(copia, clube, nivel, pais);
   const n = copia.div[clube];
-  const forca = forcaNaLiga(clube, pais, n) + formaDe(liga, clube) + ajuste;
+  const forca = (forcaDoElencoDoDono(v, pais, ano, clube) ?? forcaNaLiga(clube, pais, n)) + formaDe(liga, clube) + ajuste;
   const x = n === 1 ? 6.5 - (forca - 1) * 2 + ruido * 3 : 11 - (forca - n) * 4 + ruido * RUIDO_DA_TEMPORADA;
   return sortearPosicoes(v, pais, copia.div, ano, { clube, x }, liga).pos.get(clube) ?? clamp(Math.round(x), 1, n === 1 ? 12 : VAGAS_POR_DIVISAO);
 }

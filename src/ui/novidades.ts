@@ -26,6 +26,24 @@ export interface NotaDeVersao {
 
 export const NOTAS: NotaDeVersao[] = [
   {
+    versao: '20',
+    data: '2026-11-14',
+    titulo: 'Das pistas aos clubes: automobilismo, clubes à venda e joias',
+    novidades: [
+      'Automobilismo: comece no kart (a partir dos 7) e suba pelas categorias — monopostos de entrada, Fórmula 4, Fórmula Regional, Fórmula 3, Fórmula 2 e Fórmula 1. Cada temporada é corrida a corrida contra um grid inteiro: pilotagem, consistência, adaptação aos circuitos, preparo físico, experiência, cabeça sob pressão e o carro da equipe. Pontos de Superlicença (40 em três anos) e 18 anos para a F1, como manda a FIA.',
+      'O dinheiro das pistas: cada categoria custa uma temporada — a família, um patrocinador ou a academia de pilotos de uma equipe pagam; sem orçamento, não há temporada. Na F1, o contrato e o salário; resultado ruim perde a vaga. Acidentes, rivais, companheiros de equipe, fama e a temporada longe de casa.',
+      'Clubes à venda: todo clube em que se pode jogar pode ser comprado (Patrimônio · Empresas). Preço pela divisão, pelo porte, pela forma e pelas dívidas; à vista ou financiado. Elenco, mercado de transferências, renovações, categorias de base, estádio, centro de treinamento, objetivo da temporada, aportes e dividendos — na mesma liga, com a mesma tabela de sempre.',
+      'Joias de usar: 94 peças (correntes, gargantilhas, pingentes, colares de pedra, brincos e argolas, pulseiras e braceletes, anéis, alianças e tornozeleiras) em ouro amarelo, branco e rosé, prata, aço, platina, titânio, com diamante, rubi, esmeralda, safira, ametista, pérola e mais. A peça comprada aparece no corpo, no lugar certo.'
+    ],
+    melhorias: [
+      'Cômodos: o vaso sanitário nas medidas reais, as mesas de cabeceira do tamanho certo ao lado da cama, e a geladeira, o guarda-roupa, a estante, o box, a pia, o fogão, o fliperama, a luminária de pé e outros com a altura de catálogo.',
+      'Vícios: os efeitos chegam também aos estudos e às amizades.'
+    ],
+    correcoes: [
+      'Nenhum vício começa nem se desenvolve antes dos 14 anos — e quem continua a vida de alguém que morreu não herda os vícios dele.'
+    ]
+  },
+  {
     versao: '19',
     data: '2026-11-13',
     titulo: 'Pessoas com vida própria e a VIDA Conectada',

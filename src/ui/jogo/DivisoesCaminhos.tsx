@@ -14,6 +14,7 @@
 import { PlenarioDoPolitico } from './CarreirasEspeciais';
 import { lazy, Suspense, useMemo } from 'react';
 const VidaReligiosa16 = lazy(() => import('../v16/religiao/VidaReligiosa16'));
+const Automobilismo20 = lazy(() => import('../v20/automobilismo/Automobilismo20'));
 import type { Vida } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
 import { disponibilidade } from '../../motor/acoes';
@@ -107,6 +108,8 @@ export function OutrosCaminhosDaVida({ vida, agir, irPara }: { vida: Vida; agir:
       )}
       {/* VIDA 16.1: o placar do atleta logo no alto, onde o esporte mora (o mesmo crachá de Trabalho). */}
       {esp && esp.fase !== 'encerrada' && <Cracha15 vida={vida} />}
+      {/* VIDA 20: o automobilismo (o convite do kart para quem tem idade; a carreira, do kart à F1). */}
+      <Suspense fallback={null}><Automobilismo20 vida={vida} agir={agir} /></Suspense>
       <PortasAbertas vida={vida} agir={agir} filtro={o => ['peneira', 'seletiva', 'banda', 'grupo'].includes(o.tipo)} titulo="Portas do esporte e da arte" />
       {esp?.fase === 'base' && (
         <section className="divisao__secao paralelo" aria-label="A base">

@@ -638,6 +638,8 @@ export function processarTrabalho(v: Vida, r: Rng): void {
   if (eMilitar(oc)) v.corpo.forma = clamp(v.corpo.forma + 4);
   // O técnico no comando: contrato, salário, pressão e demissão são do clube (`sistemas/tecnico`), não da escada genérica.
   if (e.ocupacaoId === 'tecnico_futebol' && v.caminhos.tecnico?.passagens.some(p => p.ate === undefined)) return;
+  // VIDA 20: o piloto de F1 renova ou perde a vaga pelos resultados da temporada (`v20/automobilismo`).
+  if (e.ocupacaoId === 'piloto_corrida' && v.automobilismo20?.fase === 'f1') return;
 
   // Desempenho: disciplina, estresse, saúde, esforço, os anos no ofício — e o ofício, quando o trabalho é um.
   const oficio = oc.habilidade ? (habilidade(v, oc.habilidade.dominio) - oc.habilidade.minimo) * 0.25 : 0;
