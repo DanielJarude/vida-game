@@ -333,8 +333,12 @@ export function palmeira(v: Vista, x: number, z: number, alt = 7, inclina = 1): 
   ]);
 }
 /** A faixa livre do lote (entre a borda e a casa) onde cabe uma palmeira; sem espaço, nenhuma (não invade a casa). */
-export function palmeiraNoLote(v: Vista, faixa: [number, number], z: number, alt: number, inclina: 1 | -1 = 1, minimo = 0.9): Peca[] {
-  const [a, b] = faixa;
+export function palmeiraNoLote(v: Vista, faixa: [number, number], z: number, alt: number, inclina: 1 | -1 = 1, minimo = 0.9, ocupado: [number, number][] = []): Peca[] {
+  // VIDA 21: a faixa desconta o que já ocupa o lote naquela altura da cena (a piscina, a torre da caixa-d'água, a árvore
+  // do pomar) — antes a palmeira nascia dentro da piscina ou atravessava a torre. Fica a maior faixa livre.
+  let livres: [number, number][] = [faixa];
+  for (const [o0, o1] of ocupado) livres = livres.flatMap(([a, b]): [number, number][] => o1 <= a || o0 >= b ? [[a, b]] : [...(o0 > a ? [[a, o0] as [number, number]] : []), ...(o1 < b ? [[o1, b] as [number, number]] : [])]);
+  const [a, b] = livres.sort((x, y) => (y[1] - y[0]) - (x[1] - x[0]))[0] ?? [0, 0];
   if (b - a < minimo) return [];
   const x = (a + b) / 2;
   // A copa não passa do lote: a palmeira encolhe para caber no espaço que há.

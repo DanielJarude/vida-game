@@ -35,7 +35,12 @@ function vista(largura: number, altura: number, fundo: number): Vista {
   return { S, OX: (W - S * (largura + fundo * KX)) / 2, GY };
 }
 
-interface Cena { v: Vista; fundo: Peca[]; chao: Peca[]; corpo: Peca[]; frente: Peca[]; largura: number }
+/**
+ * VIDA 21: `muro` é a camada da divisa da frente (o muro, a grade, o portão, a cerca), desenhada por ÚLTIMO: tudo o que
+ * está em `frente` (o jardim, as luzes do caminho, o varal) fica atrás dela no lote (z > 0,18 m). Antes o muro ia antes
+ * e a palmeira, o balizador e o arbusto apareciam pintados por cima dele (a palmeira "nascia" no muro).
+ */
+interface Cena { v: Vista; fundo: Peca[]; chao: Peca[]; corpo: Peca[]; frente: Peca[]; muro?: Peca[]; largura: number }
 interface Ctx { acesas: number; tijolo: boolean; cor: string; externo?: LadoDeFora; usadas: number }
 /** A próxima janela (as primeiras `acesas` acendem: quem mora ali). */
 const acende = (c: Ctx) => c.usadas++ < c.acesas;
@@ -107,13 +112,13 @@ function caixaDagua(v: Vista, x: number, z: number, h: number, cor = '#4f7fa3'):
 }
 
 /** As árvores e os arbustos do terreno, pelo paisagismo escolhido (ou o de sempre da forma). */
-function jardim(v: Vista, largura: number, zCasa: number, x0Casa: number, x1Casa: number, p: string | undefined, base: 'arvore' | 'pouco' | 'nada'): { fundo: Peca[]; chao: Peca[]; frente: Peca[] } {
+function jardim(v: Vista, largura: number, zCasa: number, x0Casa: number, x1Casa: number, p: string | undefined, base: 'arvore' | 'pouco' | 'nada', ocupado: [number, number][] = []): { fundo: Peca[]; chao: Peca[]; frente: Peca[] } {
   const fundo: Peca[] = [], chao: Peca[] = [], frente: Peca[] = [];
   const meio = (x0Casa + x1Casa) / 2;
   if (p && p !== 'nenhum') chao.push(noChao(v, 0.2, largura - 0.2, 0.25, zCasa - 0.2, COR.grama, 'grama'));
   if (p === 'canteiros' || p === 'assinado' || p === 'botanico') { chao.push(...canteiro(v, x0Casa + 0.2, meio - 0.9, zCasa - 1.1, zCasa - 0.3, { flores: '#e05a6a', semente: 3 }), ...canteiro(v, meio + 0.9, x1Casa - 0.2, zCasa - 1.1, zCasa - 0.3, { flores: '#f2c14e', semente: 5 })); }
   // VIDA 16: as palmeiras ficam nas faixas livres do lote (antes, em x fixo: o tronco atravessava o telhado e a parede).
-  if (p === 'tropical' || p === 'botanico') { fundo.push(...palmeiraNoLote(v, [0.5, x0Casa - 0.6], zCasa + 1, 7, -1)); const naFrente = palmeiraNoLote(v, [x1Casa + 0.7, largura - 0.4], 1.6, 6.5, 1, 2.4); if (naFrente.length) frente.push(...naFrente); else fundo.push(...palmeiraNoLote(v, [x1Casa + 0.3, largura - 0.2], zCasa + 2.5, 6, 1, 1.2)); }
+  if (p === 'tropical' || p === 'botanico') { fundo.push(...palmeiraNoLote(v, [0.5, x0Casa - 0.6], zCasa + 1, 7, -1, 0.9, ocupado)); const naFrente = palmeiraNoLote(v, [x1Casa + 0.7, largura - 0.4], 1.6, 6.5, 1, 2.4, ocupado); if (naFrente.length) frente.push(...naFrente); else fundo.push(...palmeiraNoLote(v, [x1Casa + 0.3, largura - 0.2], zCasa + 2.5, 6, 1, 1.2, ocupado)); }
   if (p === 'pomar') { fundo.push(arvore(v, x1Casa + 1.8, zCasa + 2.5, { alt: 4.5, frutas: '#e8952a' }), arvore(v, x0Casa - 1.6, zCasa + 3, { alt: 4, frutas: '#d2452f', copa: '#5f8f4e' })); }
   if (p === 'zen') chao.push(planoDoChao(v, x0Casa, zCasa - 1.2, [{ tipo: 'massa', d: [0.4, 1.1, 1.9, 2.6].map((x, k) => `M${x} ${0.3 + (k % 2) * 0.3}a0.25 0.16 0 1 0 0.5 0a0.25 0.16 0 1 0 -0.5 0z`).join(''), cor: '#cfc8bb', marca: 'seixos' }, { tipo: 'linha', d: 'M0 0.95H3.2M0 1.05H3.2', larg: 0.4, cor: '#a8a092', fino: true }]));
   if (p === 'gramado' || p === 'assinado') frente.push(arbusto(v, x0Casa + 0.4, zCasa - 0.5, 0.5), arbusto(v, x1Casa - 0.5, zCasa - 0.5, 0.45));
@@ -183,13 +188,13 @@ function estado(v: Vista, b: Bloco, nivel: string, reforma: boolean): Peca[] {
 const parede = (c: Ctx, base: string, soclo = 0.35) => ({ cor: c.externo?.corFachada ?? c.cor ?? base, textura: c.tijolo ? 'tijolo' as Textura : texturaDe(c.externo), soclo, corSoclo: '#8f877a' });
 
 /** A casa térrea (a simples de laje, a de frontão, a da família, a de parentes, a de favor). */
-function terrea(c: Ctx, o: { l: number; d: number; telhado: 'laje' | 'frontao' | 'duas' | 'quatro'; muro: boolean; arvore: boolean; alpendre?: boolean; extra?: 'puxadinho' | 'edicula' | 'varal' | 'vasos'; largura: number }): Cena & { principal: Bloco } {
+function terrea(c: Ctx, o: { l: number; d: number; telhado: 'laje' | 'frontao' | 'duas' | 'quatro'; muro: boolean; arvore: boolean; alpendre?: boolean; extra?: 'puxadinho' | 'edicula' | 'varal' | 'vasos'; largura: number; ocupado?: [number, number][] }): Cena & { principal: Bloco } {
   const largura = o.largura, fundo = o.d + 8;
   const v = vista(largura, ANDAR + 3.4 + (o.extra === 'puxadinho' ? ANDAR : 0), fundo);
   const z0 = 3.2, x0 = (largura - o.l) / 2 - (o.extra === 'edicula' ? 1.2 : 0), b: Bloco = { x0, x1: x0 + o.l, z0, z1: z0 + o.d, h1: ANDAR };
   const p = parede(c, '#d8c6a8');
   const L = lote(v, largura, fundo, o.muro ? '#cbbf9f' : COR.terra, o.muro ? { cor: '#d6cdbd', vao: [x0 + o.l - 2.2, x0 + o.l - 0.4], portao: c.externo?.portao ?? 'simples', alt: 1.1 } : undefined);
-  const J = jardim(v, largura, z0, b.x0, b.x1, c.externo?.paisagismo, o.arvore ? 'arvore' : 'pouco');
+  const J = jardim(v, largura, z0, b.x0, b.x1, c.externo?.paisagismo, o.arvore ? 'arvore' : 'pouco', o.ocupado);
   const corpo: Peca[] = [sombraDoBloco(v, b, ANDAR + (o.telhado === 'laje' ? 0.3 : 1.6))];
   if (o.extra === 'edicula') { const e: Bloco = { x0: b.x1 + 1.2, x1: b.x1 + 4, z0: z0 + o.d - 1, z1: z0 + o.d + 2.2, h1: 2.5 }; corpo.push(sombraDoBloco(v, e), marcado(undefined, { 'data-detalhe': 'quartinho' }, [...bloco(v, e, { cor: escurecer(p.cor, 0.05), textura: 'blocos' }), ...platibanda(v, e, 0.3, escurecer(p.cor, 0.05)), janela(v, e.z0, e.x0 + 0.6, 1.1, 0.8, 0.8, { acesa: acende(c) }), porta(v, e.z0, e.x0 + 1.7, 0, { l: 0.8 })])); }
   corpo.push(...bloco(v, b, p));
@@ -216,9 +221,9 @@ function terrea(c: Ctx, o: { l: number; d: number; telhado: 'laje' | 'frontao' |
   corpo.push(...fileira(v, c, b.z0, xp + 1.2, b.x1 - 0.3, 0.95, Math.max(1, Math.round((b.x1 - xp - 1.2) / 2.6)), 1.2, 1.15, { grade: o.telhado === 'laje', venezianas: o.telhado === 'quatro' ? '#5f7f52' : undefined }));
   if (!o.alpendre) corpo.push(...degraus(v, b.z0, xp - 0.1, xp + 1, 0.15));
   if (o.extra === 'vasos') corpo.push(arbusto(v, xp - 0.5, zf - 0.2, 0.32, '#5f8a48', '#e05a6a'), arbusto(v, xp + 1.5, zf - 0.2, 0.32, '#5f8a48', '#f2c14e'));
-  const frente = [...L.frente, ...J.frente, ...luzDeFora(v, c.externo?.luz, b.z0, xp, 0.15, [xp + 0.45, 0])];
+  const frente = [...J.frente, ...luzDeFora(v, c.externo?.luz, b.z0, xp, 0.15, [xp + 0.45, 0])];
   if (o.extra === 'varal' || o.extra === 'edicula') frente.push(varal14(v, b.x1 + 0.6, b.x1 + 3.6, z0 + 1));
-  return { v, fundo: J.fundo, chao: [...L.chao, ...J.chao, ...caminho(v, xp + 0.45, zf, c.externo)], corpo, frente, largura, principal: b };
+  return { v, fundo: J.fundo, chao: [...L.chao, ...J.chao, ...caminho(v, xp + 0.45, zf, c.externo)], corpo, frente, muro: L.frente, largura, principal: b };
 }
 
 /** O varal (as roupas penduradas, no chão do quintal). */
@@ -275,9 +280,9 @@ function sobrado(c: Ctx, o: { l: number; d: number; andares: number; estilo: 'tr
     if (o.republica) corpo.push(marcado(undefined, { 'data-detalhe': 'campainhas' }, [grupo(frontal(v, b.x0 + o.l * 0.45 + 1.1, b.z0, 1.6), [{ tipo: 'massa', d: [0, 0.18, 0.36, 0.54].map(y => circulo(0.1, y, 0.05)).join(''), cor: '#4a4643', semVolume: true }])]));
   }
   const xp = o.estilo === 'contemporanea' ? b.x0 + o.l * 0.5 + 0.6 : b.x0 + o.l * 0.45 + 0.45;
-  const frente = [...L.frente, ...J.frente, ...luzDeFora(v, c.externo?.luz, b.z0, xp - 0.45, 0.15, [xp, 0])];
+  const frente = [...J.frente, ...luzDeFora(v, c.externo?.luz, b.z0, xp - 0.45, 0.15, [xp, 0])];
   if (o.republica) frente.push(varal14(v, b.x1 + 0.4, Math.min(largura - 0.3, b.x1 + 3.4), z0 + 1.2));
-  return { v, fundo: J.fundo, chao: [...L.chao, ...J.chao, ...caminho(v, xp, b.z0, c.externo)], corpo, frente, largura, principal: b };
+  return { v, fundo: J.fundo, chao: [...L.chao, ...J.chao, ...caminho(v, xp, b.z0, c.externo)], corpo, frente, muro: L.frente, largura, principal: b };
 }
 
 /** O prédio (de três a doze andares): a cinta por andar, a portaria, a marquise, as varandas, o topo. */
@@ -309,10 +314,10 @@ function predio(c: Ctx, o: { l: number; d: number; andares: number; tipo: 'baixo
     corpo.push(marcado(undefined, { 'data-detalhe': 'cobertura' }, [...bloco(v, cb, { cor: '#ece6da' }), janela(v, cb.z0, cb.x0 + 0.3, b.h1 + 0.1, (cb.x1 - cb.x0) - 0.6, ANDAR - 0.3, { acesa: acende(c), vidroClaro: true, moldura: COR.aluminioPreto, peitoril: false, folhas: 3 }), janela(v, cb.z0, cb.x0 + 0.3, b.h1 + ANDAR + 0.4, (cb.x1 - cb.x0) - 0.6, 1.6, { acesa: acende(c), vidroClaro: true, moldura: COR.aluminioPreto, peitoril: false }), ...platibanda(v, cb, 0.3, '#ece6da'),
       { tipo: 'linha', d: Array.from({ length: 6 }, (_, k) => { const a = pt(v, b.x0 + 0.2 + k * 0.5, b.z0 + 0.2, b.h1 + 2.4), q = pt(v, b.x0 + 0.2 + k * 0.5, b.z0 + 1.4, b.h1 + 2.4); return `M${num(a[0])} ${num(a[1])}L${num(q[0])} ${num(q[1])}`; }).join(''), larg: 1, cor: COR.madeira, marca: 'pergola' }]));
   }
-  const frente = [...L.frente];
+  const frente: Peca[] = [];
   if (o.tipo === 'torre') frente.push(...palmeiraNoLote(v, [b.x1 + 0.6, largura - 0.4], 1.4, 6), marcado(undefined, { 'data-detalhe': 'piscina' }, [noChao(v, b.x1 + 0.4, largura - 0.4, b.z0 + 1, b.z0 + 3.4, '#d9d4c9', 'deck', 0, true), noChao(v, b.x1 + 0.7, largura - 0.7, b.z0 + 1.3, b.z0 + 3.1, COR.agua, 'agua', 0.02)]), marcado(undefined, { 'data-detalhe': 'portaria' }, bloco(v, { x0: x0 + o.l * 0.66, x1: x0 + o.l * 0.66 + 1.4, z0: 0.6, z1: 1.8, h1: 2.4 }, { cor: '#cfe3ea' })));
   else frente.push(arvore(v, Math.min(largura - 1, b.x1 + 1.6), 1.6, { alt: 5 }));
-  return { v, fundo: [], chao: [...L.chao, ...caminho(v, x0 + o.l / 2, b.z0, c.externo)], corpo, frente, largura, principal: b };
+  return { v, fundo: [], chao: [...L.chao, ...caminho(v, x0 + o.l / 2, b.z0, c.externo)], corpo, frente, muro: L.frente, largura, principal: b };
 }
 
 /** A mansão clássica: o corpo central de dois andares com frontão e colunas, as alas de quatro águas, a piscina. */
@@ -325,7 +330,7 @@ function mansao(c: Ctx): Cena & { principal: Bloco } {
   const ad: Bloco = { x0: cx + 4, x1: cx + 10, z0: z0 + 1.2, z1: z0 + 8.5, h1: ANDAR * 2 - 0.4 };
   const p = parede(c, '#f1ebdf', 0.5);
   const L = lote(v, largura, fundo, '#cbbf9f', { cor: '#e6dfd2', vao: [cx - 1.8, cx + 1.8], alt: 1.4, grade: true, portao: c.externo?.portao ?? 'pivotante' });
-  const J = jardim(v, largura, z0, ae.x0, ad.x1, c.externo?.paisagismo ?? 'gramado', 'arvore');
+  const J = jardim(v, largura, z0, ae.x0, ad.x1, c.externo?.paisagismo ?? 'gramado', 'arvore', [[ad.x1 + 0.2, largura]]);
   const corpo: Peca[] = [sombraDoBloco(v, ae, ae.h1 + 1.5), sombraDoBloco(v, centro, centro.h1 + 2)];
   for (const a of [ae, ad]) corpo.push(...bloco(v, a, p), ...cinta(v, a.x0, a.x1, a.z0, ANDAR, p.cor), ...quatroAguas(v, a, 1.6, { cor: COR.telhaEscura }), sombraDoBeiral(v, a.x0, a.x1, a.z0, a.h1, 0.5));
   corpo.push(...bloco(v, centro, p), ...cinta(v, centro.x0, centro.x1, centro.z0, ANDAR, p.cor));
@@ -341,8 +346,11 @@ function mansao(c: Ctx): Cena & { principal: Bloco } {
     ...bloco(v, { x0: po.x0, x1: po.x1, z0: po.z0, z1: z0, h0: ANDAR * 2 - 0.4, h1: ANDAR * 2 }, { cor: '#efe9dc' }),
     ...frontao(v, { x0: po.x0, x1: po.x1, z0: po.z0, z1: centro.z1, h1: ANDAR * 2 }, 1.8, { cor: COR.telhaEscura }, '#efe9dc')
   ]));
-  const frente = [...L.frente, ...J.frente, ...luzDeFora(v, c.externo?.luz ?? 'arandelas', centro.z0, cx - 0.9, 0.45, [cx, 0], 1.8), ...palmeiraNoLote(v, [0.4, ae.x0 - 0.5], 2.2, 6.5, -1), marcado(undefined, { 'data-detalhe': 'piscina' }, [noChao(v, ad.x1 + 0.6, largura - 0.6, z0 + 1, z0 + 5, '#e3ddd0', 'deck', 0, true), noChao(v, ad.x1 + 1, largura - 1, z0 + 1.4, z0 + 4.6, COR.agua, 'agua', 0.02)])];
-  return { v, fundo: J.fundo, chao: [...L.chao, ...J.chao, ...caminho(v, cx, po.z0, c.externo)], corpo, frente, largura, principal: centro };
+  // VIDA 21: a palmeira própria da mansão só quando o paisagismo não plantou as dele (antes, com o tropical, eram duas no
+  // mesmo x, uma sobre a outra); a da direita do jardim não entra na piscina (`ocupado`).
+  const tropical = ['tropical', 'botanico'].includes(c.externo?.paisagismo ?? '');
+  const frente = [...J.frente, ...luzDeFora(v, c.externo?.luz ?? 'arandelas', centro.z0, cx - 0.9, 0.45, [cx, 0], 1.8), ...(tropical ? [] : palmeiraNoLote(v, [0.4, ae.x0 - 0.5], 2.2, 6.5, -1)), marcado(undefined, { 'data-detalhe': 'piscina' }, [noChao(v, ad.x1 + 0.6, largura - 0.6, z0 + 1, z0 + 5, '#e3ddd0', 'deck', 0, true), noChao(v, ad.x1 + 1, largura - 1, z0 + 1.4, z0 + 4.6, COR.agua, 'agua', 0.02)])];
+  return { v, fundo: J.fundo, chao: [...L.chao, ...J.chao, ...caminho(v, cx, po.z0, c.externo)], corpo, frente, muro: L.frente, largura, principal: centro };
 }
 
 /** O corredor de kitnets: dois pisos, portas iguais, a passarela com guarda-corpo, a escada de fora. */
@@ -360,16 +368,19 @@ function kitnet(c: Ctx): Cena & { principal: Bloco } {
   }
   corpo.push(marcado(undefined, { 'data-detalhe': 'corredor' }, [...bloco(v, { x0: b.x0, x1: b.x1, z0: b.z0 - 1.4, z1: b.z0, h0: ANDAR - 0.2, h1: ANDAR }, { cor: COR.laje }), grupo(frontal(v, b.x0, b.z0 - 1.4, ANDAR + 1), [{ tipo: 'linha', d: Array.from({ length: Math.floor(16 / 0.16) }, (_, k) => `M${num(0.08 + k * 0.16)} 0V1`).join('') + 'M0 0.03H16', larg: 0.5, cor: '#3d3a37', marca: 'gradil' }])]));
   corpo.push(marcado(undefined, { 'data-detalhe': 'escada' }, [{ tipo: 'massa', d: poli(v, [[b.x1, b.z0 - 1.4, ANDAR], [b.x1 + 2.6, b.z0 - 1.4, 0], [b.x1 + 2.6, b.z0 - 0.4, 0], [b.x1, b.z0 - 0.4, ANDAR]]), cor: COR.laje, marca: 'escada' }]));
-  return { v, fundo: [], chao: [...L.chao, noChao(v, b.x0, b.x1 + 2.6, 0.2, b.z0, '#bdb6aa', 'patio')], corpo, frente: [...L.frente, arbusto(v, b.x0 + 0.4, b.z0 - 1.6, 0.4)], largura, principal: b };
+  return { v, fundo: [], chao: [...L.chao, noChao(v, b.x0, b.x1 + 2.6, 0.2, b.z0, '#bdb6aa', 'patio')], corpo, frente: [arbusto(v, b.x0 + 0.4, b.z0 - 1.6, 0.4)], muro: L.frente, largura, principal: b };
 }
 
 /** O sítio: a casa com alpendre e quatro águas, a cerca, as árvores, a roça e a caixa-d'água na torre. */
 function sitio(c: Ctx): Cena & { principal: Bloco } {
-  const cena = terrea(c, { l: 9, d: 7, telhado: 'quatro', muro: false, arvore: true, alpendre: true, largura: 26 });
+  // VIDA 21: a torre da caixa-d'água e as árvores do pomar ocupam o lote — as palmeiras do paisagismo ficam fora delas.
+  const x1Casa = (26 - 9) / 2 + 9;
+  const cena = terrea(c, { l: 9, d: 7, telhado: 'quatro', muro: false, arvore: true, alpendre: true, largura: 26, ocupado: [[1.2, 3.6], [x1Casa + 1.6, x1Casa + 4.4]] });
   const v = cena.v, b = cena.principal;
   const cerca = (x0: number, x1: number): Peca => grupo(frontal(v, x0, 0.2, 1.1), [{ tipo: 'massa', d: Array.from({ length: Math.floor((x1 - x0) / 1.6) + 1 }, (_, k) => ret(k * 1.6, 0, 0.12, 1.1, 0.02)).join(''), cor: '#8a6a45', marca: 'mourao' }, { tipo: 'linha', d: `M0 0.25H${num(x1 - x0)}M0 0.65H${num(x1 - x0)}`, larg: 0.9, cor: '#7a5a38', marca: 'cerca' }]);
-  cena.frente.unshift(marcado(undefined, { 'data-detalhe': 'cerca' }, [cerca(0.2, b.x0 - 0.6), cerca(b.x0 + 2.4, 25.8)]));
-  cena.fundo.push(arvore(v, 2.4, 9, { alt: 6, copa: '#5f8f4e' }), arvore(v, 23.4, 11, { alt: 5, frutas: '#e8952a' }));
+  (cena.muro ??= []).push(marcado(undefined, { 'data-detalhe': 'cerca' }, [cerca(0.2, b.x0 - 0.6), cerca(b.x0 + 2.4, 25.8)]));
+  // As árvores do fundo (z 9–11) vêm antes do resto do fundo (as palmeiras do jardim ficam mais perto).
+  cena.fundo.unshift(arvore(v, 2.4, 9, { alt: 6, copa: '#5f8f4e' }), arvore(v, 23.4, 11, { alt: 5, frutas: '#e8952a' }));
   // A torre da caixa-d'água (estrutura de madeira) e a roça em fileiras.
   cena.corpo.unshift(marcado(undefined, { 'data-detalhe': 'torre-caixa' }, [
     ...[[b.x1 + 2.2, b.z0 + 4], [b.x1 + 3.6, b.z0 + 4], [b.x1 + 2.2, b.z0 + 5.4], [b.x1 + 3.6, b.z0 + 5.4]].flatMap(([x, z]) => bloco(v, { x0: x, x1: x + 0.18, z0: z, z1: z + 0.18, h1: 4 }, { cor: '#7a5a38' })),
@@ -393,8 +404,8 @@ function funcional(c: Ctx): Cena & { principal: Bloco } {
     corpo.push(janela(v, b.z0, b.x0 + 0.4, 0.95, 1.1, 1.1, { acesa: k === 1 && acende(c) }), porta(v, b.z0, x - 0.4, 0.1, { l: 0.85, cor: '#5d6b45' }), janela(v, b.z0, b.x1 - 1.5, 0.95, 1.1, 1.1, { acesa: k !== 1 && acende(c) }));
   });
   const m = pt(v, 1.4, 1.2, 0), t = pt(v, 1.4, 1.2, 7.5);
-  const frente = [...L.frente, marcado(undefined, { 'data-detalhe': 'mastro' }, [{ tipo: 'linha', d: `M${num(m[0])} ${num(m[1])}L${num(t[0])} ${num(t[1])}`, larg: 1.4, cor: COR.metal }, { tipo: 'massa', d: `M${num(t[0])} ${num(t[1])}l${num(v.S * 1.4)} ${num(v.S * 0.35)}l${num(-v.S * 1.4)} ${num(v.S * 0.35)}z`, cor: '#2f7a4a', marca: 'bandeira' }])];
-  return { v, fundo: [], chao: L.chao, corpo, frente, largura, principal };
+  const frente = [marcado(undefined, { 'data-detalhe': 'mastro' }, [{ tipo: 'linha', d: `M${num(m[0])} ${num(m[1])}L${num(t[0])} ${num(t[1])}`, larg: 1.4, cor: COR.metal }, { tipo: 'massa', d: `M${num(t[0])} ${num(t[1])}l${num(v.S * 1.4)} ${num(v.S * 0.35)}l${num(-v.S * 1.4)} ${num(v.S * 0.35)}z`, cor: '#2f7a4a', marca: 'bandeira' }])];
+  return { v, fundo: [], chao: L.chao, corpo, frente, muro: L.frente, largura, principal };
 }
 
 const FORMAS14: Record<FormaDaCasa, (c: Ctx) => Cena & { principal: Bloco }> = {
@@ -430,7 +441,8 @@ export function amostraDaCasa14(e: CenaEntrada): Amostra {
     { tipo: 'massa', d: ret(0, 0, W, H, 0), cor: '#b9ad98', opacidade: 0, semVolume: true, semContorno: true, marca: 'chao', classe: 'cena__chao' },
     ...cena.chao, ...cena.fundo, ...cena.corpo,
     ...estado(v, b, e.nivel, e.reforma),
-    ...cena.frente
+    ...cena.frente,
+    ...(cena.muro?.length ? [marcado(undefined, { 'data-detalhe': 'muro' }, cena.muro)] : [])
   ];
   // O veículo: estacionado junto ao meio-fio, na frente de casa (a mesma ilustração da garagem, na escala da cena).
   if (e.veiculo) {

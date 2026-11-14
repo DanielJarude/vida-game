@@ -182,6 +182,9 @@ const PARTES: { id: string; nome: string; lugares: string[] }[] = [
   { id: 'pulso', nome: 'Relógio', lugares: ['pulso'] }, { id: 'pulseira', nome: 'Pulseira', lugares: ['pulseira'] },
   { id: 'anel', nome: 'Anel', lugares: ['anel'] }, { id: 'alianca', nome: 'Aliança', lugares: ['alianca'] }, { id: 'joia', nome: 'No pescoço', lugares: ['joia'] }, { id: 'orelha', nome: 'Nas orelhas', lugares: ['orelha'] },
   { id: 'tornozelo', nome: 'No tornozelo', lugares: ['tornozelo'] },
+  // VIDA 21: as bolsas, mochilas, pochetes e clutches (lugar 'bolsa') eram compradas e usadas pelo motor, mas não tinham
+  // parte aqui — sumiam da Aparência. Uma de cada vez, como o resto (`usarItem` troca a que está em uso).
+  { id: 'bolsa', nome: 'Bolsa ou mochila', lugares: ['bolsa'] },
   // VIDA 13: os piercings saíram daqui (eram um cartão por furo): têm a seção própria, com a lupa (`Piercings13`).
 ];
 
@@ -210,6 +213,8 @@ function ParteDoCorpo({ vida, agir, parte }: { vida: Vida; agir: (a: Acao) => bo
   const alvo = outras.find(x => x.id === escolhida) ?? outras[0];
   const it = atual ? itemEstilo(atual.itemId)! : undefined;
   const inteira = !!it && it.lugar === 'corpo' && parte.id === 'pernas';
+  // Bolsa se leva, não se veste (VIDA 21).
+  const verbo = parte.id === 'bolsa' ? 'Levar' : 'Vestir';
   return (
     <li className="vestir__parte vestir__cartao" data-parte={parte.id}>
       <span className="vestir__miniatura" aria-hidden={!atual}>{atual ? <Miniatura vida={vida} itemId={atual.itemId} id={sementeDaPeca(atual)} largura={64} /> : <span className="vestir__vazio">—</span>}</span>
@@ -224,8 +229,8 @@ function ParteDoCorpo({ vida, agir, parte }: { vida: Vida; agir: (a: Acao) => bo
             <select value={alvo?.id ?? ''} onChange={e => setEscolhida(e.target.value)}>{outras.map(x => <option key={x.id} value={x.id}>{itemEstilo(x.itemId)!.nome}{x.marca ? ` (${nomeDaMarca(x.marca) ?? x.marca})` : ''}</option>)}</select>
           </label>
         )}
-        {alvo && <BotaoAcao vida={vida} acao={{ tipo: 'usar_item', itemId: alvo.itemId, id: alvo.id, usar: true }} agir={agir} variante="discreto">{outras.length > 1 ? 'Vestir' : `Vestir ${itemEstilo(alvo.itemId)!.nome.toLowerCase()}`}</BotaoAcao>}
-        {atual && <BotaoAcao vida={vida} acao={{ tipo: 'usar_item', itemId: atual.itemId, id: atual.id, usar: false }} agir={agir} variante="discreto">Tirar</BotaoAcao>}
+        {alvo && <BotaoAcao vida={vida} acao={{ tipo: 'usar_item', itemId: alvo.itemId, id: alvo.id, usar: true }} agir={agir} variante="discreto">{outras.length > 1 ? verbo : `${verbo} ${itemEstilo(alvo.itemId)!.nome.toLowerCase()}`}</BotaoAcao>}
+        {atual && <BotaoAcao vida={vida} acao={{ tipo: 'usar_item', itemId: atual.itemId, id: atual.id, usar: false }} agir={agir} variante="discreto">{parte.id === 'bolsa' ? 'Guardar' : 'Tirar'}</BotaoAcao>}
       </span>
     </li>
   );
