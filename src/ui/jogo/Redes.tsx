@@ -12,6 +12,7 @@
 
 import { useState } from 'react';
 import type { PlataformaId, Vida } from '../../motor/tipos';
+import { GLIFOS_REDE } from '../v20/redes/glifos20';
 import type { Acao } from '../../motor/acoes';
 import { idade } from '../../motor/nucleo';
 import { anoDe } from '../../motor/tempo';
@@ -31,10 +32,10 @@ const DESENHO_DO_TEMA: Record<TemaPublicacao, string> = {
   humor: 'mascaras', esporte: 'bola', musica: 'nota', jogo: 'controle', tutorial: 'estudo', bastidores: 'video', politica: 'bandeira', exclusivo: 'coracao',
   desculpas: 'conversa', rebater: 'conversa', divulgar: 'microfone', conversa: 'conversa', receita: 'panela', estilo: 'tesoura', estudo: 'livro', comunidade: 'maos'
 };
-const TemaDesenho = ({ tema, tamanho = 28 }: { tema: TemaPublicacao; tamanho?: number }) => <svg viewBox="0 0 24 24" width={tamanho} height={tamanho} aria-hidden fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d={DESENHOS[DESENHO_DO_TEMA[tema]] ?? DESENHOS.semana} /></svg>;
+export const TemaDesenho = ({ tema, tamanho = 28 }: { tema: TemaPublicacao; tamanho?: number }) => <svg viewBox="0 0 24 24" width={tamanho} height={tamanho} aria-hidden fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><path d={DESENHOS[DESENHO_DO_TEMA[tema]] ?? DESENHOS.semana} /></svg>;
 
 /** O que cada rede chama de "ver": viram, visualizações, espectadores, assinantes... */
-const VER: Record<PlataformaId, string> = { instagram: 'viram', tiktok: 'visualizações', youtube: 'visualizações', twitch: 'assistiram ao vivo', x: 'leram', facebook: 'viram', onlyfans: 'assinantes viram' };
+export const VER: Record<PlataformaId, string> = { instagram: 'viram', tiktok: 'visualizações', youtube: 'visualizações', twitch: 'assistiram ao vivo', x: 'leram', facebook: 'viram', onlyfans: 'assinantes viram' };
 
 /**
  * REWORK 7 — O QUE VOCÊ PUBLICOU, no formato de cada rede (não a mesma lista com outro nome): a grade quadrada do
@@ -42,7 +43,7 @@ const VER: Record<PlataformaId, string> = { instagram: 'viram', tiktok: 'visuali
  * X, o mural com quem reagiu do Facebook, o conteúdo trancado do OnlyFans. As publicações são as do motor (o tema, o
  * texto, o alcance, quem reagiu, a polêmica); só a forma muda.
  */
-function Feed({ vida, agir, id, lista }: { vida: Vida; agir: (a: Acao) => boolean; id: PlataformaId; lista: Publicacao[] }) {
+export function Feed({ vida, agir, id, lista }: { vida: Vida; agir: (a: Acao) => boolean; id: PlataformaId; lista: Publicacao[] }) {
   const nomes = (x: Publicacao) => (x.pessoas ?? []).map(p => vida.pessoas[p]?.nome).filter(Boolean).slice(0, 3) as string[];
   const apagar = (x: Publicacao) => x.polemica && <BotaoAcao vida={vida} acao={{ tipo: 'rede', op: { oque: 'apagar_publicacao', plataforma: id, id: x.id } }} agir={agir} variante="discreto">Apagar</BotaoAcao>;
   return (
@@ -82,17 +83,9 @@ function Feed({ vida, agir, id, lista }: { vida: Vida; agir: (a: Acao) => boolea
 }
 
 /** A marca de cada plataforma: uma forma simples e genérica (nada de logotipo), na cor que o mundo associa a ela. */
-const GLIFO: Record<PlataformaId, string> = {
-  instagram: 'M7 4h10a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3zM12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM16.8 7.2h.01',
-  youtube: 'M4 7.5c0-1.4 1-2.5 2.4-2.6C8.2 4.8 10 4.7 12 4.7s3.8.1 5.6.2c1.4.1 2.4 1.2 2.4 2.6v9c0 1.4-1 2.5-2.4 2.6-1.8.1-3.6.2-5.6.2s-3.8-.1-5.6-.2C5 19 4 17.9 4 16.5zM10 9v6l5-3z',
-  tiktok: 'M14 4v10.5a3.5 3.5 0 1 1-3.5-3.5M14 4c.6 2.4 2.2 3.8 5 4',
-  twitch: 'M5 4h15v10l-4 4h-4l-3 3v-3H5zM11 8v4M15 8v4',
-  x: 'M4 6h16v10H10l-4 3v-3H4zM8 10h8M8 13h5',
-  facebook: 'M8.5 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM3.5 19a5 5 0 0 1 10 0M16 11a2.5 2.5 0 1 0 0-5M15 13.6a4.5 4.5 0 0 1 5.5 5.4',
-  onlyfans: 'M7 11V8a5 5 0 0 1 10 0v3M5.5 11h13v9h-13zM12 14.5v2.5'
-};
+const GLIFO = GLIFOS_REDE; // VIDA 20: a mesma forma do ícone do celular (`v20/redes/glifos20`).
 
-function Glifo({ id, tamanho = 22 }: { id: PlataformaId; tamanho?: number }) {
+export function Glifo({ id, tamanho = 22 }: { id: PlataformaId; tamanho?: number }) {
   return <svg viewBox="0 0 24 24" width={tamanho} height={tamanho} aria-hidden fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round"><path d={GLIFO[id]} /></svg>;
 }
 
@@ -245,7 +238,7 @@ export function crescimentoNoAno(vida: Vida, c: ContaSocial): { valor: number; t
 }
 
 /** O que cada rede conta no perfil (o motor guarda o total de publicações, os virais, o maior alcance). */
-function perfilDaRede(id: PlataformaId, c: NonNullable<ReturnType<typeof contaAtiva>>): string {
+export function perfilDaRede(id: PlataformaId, c: NonNullable<ReturnType<typeof contaAtiva>>): string {
   const n = c.totais?.publicacoes ?? c.publicacoes.length;
   const virais = c.totais?.virais ?? 0;
   const maior = c.totais?.maior ? seguidoresEmPalavras(c.totais.maior) : undefined;
@@ -261,10 +254,10 @@ function perfilDaRede(id: PlataformaId, c: NonNullable<ReturnType<typeof contaAt
   }
 }
 
-interface Notificacao { id: string; app: PlataformaId; texto: string; tom: 'bom' | 'ruim' | 'neutro' }
+export interface Notificacao { id: string; app: PlataformaId; texto: string; tom: 'bom' | 'ruim' | 'neutro' }
 
 /** O que chegou no celular: só o que o motor registrou (a última publicação de cada conta, a renda, a verificação, a punição). */
-function notificacoes(vida: Vida): Notificacao[] {
+export function notificacoes(vida: Vida): Notificacao[] {
   const out: Notificacao[] = [];
   for (const id of ORDEM_PLATAFORMAS) {
     const guardada = vida.redes?.contas[id];
@@ -359,8 +352,6 @@ function Plataforma({ vida, agir, id, abrirPessoa }: { vida: Vida; agir: (a: Aca
   const [promover, setPromover] = useState(false);
   // REWORK 9 · UX-02: dentro do app, quatro telas curtas (como num aparelho de verdade) em vez de uma tira comprida.
   const [telaApp, setTelaApp] = useState<TelaDoApp>('publicar');
-  const [mais, setMais] = useState<null | 'celebridade' | 'provocar' | 'conta'>(null);
-  const [apagar, setApagar] = useState(false);
   const pl = PLATAFORMAS[id];
   const l = leituraDaConta(vida, id);
   const estilo = { ['--cor-plataforma' as string]: pl.cor };
@@ -388,8 +379,6 @@ function Plataforma({ vida, agir, id, abrirPessoa }: { vida: Vida; agir: (a: Aca
   const conteudos = conteudosPossiveis(vida, id);
   const conhecidos = seguidoresConhecidos(vida, id);
   const ultimas = c.publicacoes.filter(x => !x.apagada).slice(-6).reverse();
-  const celebridades = celebridadesDoPais(vida);
-  const provocaveis = conhecidos.slice(0, 4);
   // O aviso que vale para todas as publicações (o ano cheio, a semana apertada) é dito UMA vez, acima delas.
   const avisos = conteudos.map(t => disponibilidade(vida, { tipo: 'rede', op: { oque: 'publicar', plataforma: id, tema: t.tema, promover } })).filter(d => podeTentar(d) && d.motivo).map(d => d.motivo!);
   const avisoComum = avisos.length === conteudos.length && avisos.length > 0 && avisos.every(x => x === avisos[0]) ? avisos[0] : undefined;
@@ -438,6 +427,29 @@ function Plataforma({ vida, agir, id, abrirPessoa }: { vida: Vida; agir: (a: Aca
       </div>
 
       <div className={painel('conta')} role="tabpanel" aria-label="Conta">
+        <GestaoDaConta vida={vida} agir={agir} id={id} abrirPessoa={abrirPessoa} />
+      </div>
+    </section>
+  );
+}
+
+
+/**
+ * VIDA 20 — a gestão da conta (marcar celebridade, provocar, campanha, selo, monetizar, comprar público, apagar): a mesma
+ * de sempre, num componente só — o app de cada rede no celular e a tela de Redes usam este mesmo painel.
+ */
+export function GestaoDaConta({ vida, agir, id, abrirPessoa }: { vida: Vida; agir: (a: Acao) => boolean; id: PlataformaId; abrirPessoa?: (id: string) => void }) {
+  const [mais, setMais] = useState<null | 'celebridade' | 'provocar' | 'conta'>(null);
+  const [apagar, setApagar] = useState(false);
+  const pl = PLATAFORMAS[id];
+  const l = leituraDaConta(vida, id);
+  if (!l) return null;
+  const c = l.conta;
+  const conhecidos = seguidoresConhecidos(vida, id);
+  const celebridades = celebridadesDoPais(vida);
+  const provocaveis = conhecidos.slice(0, 4);
+  return (
+    <>
       <div className="plataforma-painel__mais" role="group" aria-label="Mais coisas para fazer">
         {id !== 'onlyfans' && <button type="button" className="botao botao--discreto" aria-expanded={mais === 'celebridade'} onClick={() => setMais(m => (m === 'celebridade' ? null : 'celebridade'))}>Marcar uma celebridade</button>}
         {id !== 'onlyfans' && <button type="button" className="botao botao--discreto" aria-expanded={mais === 'provocar'} onClick={() => setMais(m => (m === 'provocar' ? null : 'provocar'))}>Provocar, trollar</button>}
@@ -485,8 +497,7 @@ function Plataforma({ vida, agir, id, abrirPessoa }: { vida: Vida; agir: (a: Aca
         </div>
       )}
       {abrirPessoa && conhecidos.length > 0 && <p className="nota">Seguir, deixar de seguir ou bloquear alguém: na ficha da pessoa, em Pessoas.</p>}
-      </div>
-    </section>
+    </>
   );
 }
 

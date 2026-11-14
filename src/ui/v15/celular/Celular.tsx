@@ -12,6 +12,9 @@
  *   Fama        o nome público num relance (o painel completo continua em Você · Fama)
  */
 import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import type { PlataformaId } from '../../../motor/tipos';
+import { contaAtiva } from '../../../motor/sistemas/redesBase';
+import { GLIFOS_REDE } from '../../v20/redes/glifos20';
 import type { Pessoa, Vida } from '../../../motor/tipos';
 import type { Acao } from '../../../motor/acoes';
 import { disponibilidade } from '../../../motor/acoes';
@@ -37,11 +40,15 @@ import { MapaDaCidade } from '../../v17/mapa/MapaDaCidade';
 import { temAcesso } from '../../../motor/eras/base/contexto';
 import { GUARDAR_O_APARELHO, meioDaVida, NOME_DO_APARELHO } from '../../eras/epoca';
 import { CelularDeTeclas, TelefoneDeDisco } from '../../eras/Aparelhos';
-import { Feed19 } from '../../v19/conectada/Feed19';
+// VIDA 20: cada rede é um app próprio (o feed delas, publicar em um toque, o perfil, a conta) — `v20/redes/AppSocial20`.
+const AppSocial20 = lazy(() => import('../../v20/redes/AppSocial20'));
+const REDES20: PlataformaId[] = ['instagram', 'tiktok', 'youtube', 'x', 'facebook', 'twitch', 'onlyfans'];
+const NOME_REDE20: Record<PlataformaId, string> = { instagram: 'Instagram', tiktok: 'TikTok', youtube: 'YouTube', x: 'X', facebook: 'Facebook', twitch: 'Twitch', onlyfans: 'OnlyFans' };
+const COR_REDE20: Record<PlataformaId, string> = { instagram: 'linear-gradient(45deg, #f58529, #dd2a7b 55%, #8134af)', tiktok: '#111214', youtube: '#e02b2b', x: '#14171a', facebook: '#1877f2', twitch: '#9146ff', onlyfans: '#00aeef' };
+const GLIFO20 = GLIFOS_REDE;
+const ehRede20 = (a: string): a is PlataformaId => (REDES20 as string[]).includes(a);
 
-const RedesSociais = lazy(() => import('../../jogo/Redes').then(m => ({ default: m.RedesSociais })));
-
-export type App15 = 'inicio' | 'mensagens' | 'namoro' | 'rede' | 'noticias' | 'agenda' | 'mapas' | 'banco' | 'email' | 'fama';
+export type App15 = 'inicio' | 'mensagens' | 'namoro' | 'rede' | 'noticias' | 'agenda' | 'mapas' | 'banco' | 'email' | 'fama' | PlataformaId;
 
 interface Props {
   vida: Vida;
@@ -54,7 +61,7 @@ interface Props {
   appInicial?: App15;
 }
 
-const ICONES: Record<Exclude<App15, 'inicio'>, string> = {
+const ICONES: Record<Exclude<App15, 'inicio' | PlataformaId>, string> = {
   mensagens: 'M4 5h16v11H8l-4 4z',
   namoro: 'M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z',
   rede: 'M4 4h16v16H4zM8 12a4 4 0 1 0 8 0 4 4 0 0 0-8 0M17 7h.01',
@@ -65,7 +72,7 @@ const ICONES: Record<Exclude<App15, 'inicio'>, string> = {
   email: 'M4 6h16v12H4zM4 7l8 6 8-6',
   fama: 'M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6 6.6 19.5l1.2-6L3.3 9.3l6.1-.7z'
 };
-const NOMES: Record<Exclude<App15, 'inicio'>, string> = { mensagens: 'Mensagens', namoro: 'Namoro', rede: 'Rede', noticias: 'Notícias', agenda: 'Agenda', mapas: 'Mapas', banco: 'Banco', email: 'E-mail', fama: 'Fama' };
+const NOMES: Record<Exclude<App15, 'inicio' | PlataformaId>, string> = { mensagens: 'Mensagens', namoro: 'Namoro', rede: 'Rede', noticias: 'Notícias', agenda: 'Agenda', mapas: 'Mapas', banco: 'Banco', email: 'E-mail', fama: 'Fama' };
 
 function Icone({ d, className }: { d: string; className?: string }) {
   return <svg className={className ?? 'cel__icone'} viewBox="0 0 24 24" aria-hidden fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>;
@@ -392,13 +399,6 @@ function Namoro({ vida, agir, abrirPessoa }: { vida: Vida; agir: Props['agir']; 
 
 
 /** VIDA 19: o app Rede é a VIDA Conectada (feed, em alta, perfis); "Minhas contas" segue sendo as redes de sempre. */
-function Rede({ vida, agir, abrirPessoa, abrirConversa }: { vida: Vida; agir: Props['agir']; abrirPessoa: (id: string) => void; abrirConversa: (id: string) => void }) {
-  return (
-    <Feed19 vida={vida} agir={agir} abrirPessoa={abrirPessoa} abrirConversa={abrirConversa}
-      contas={<Suspense fallback={<p className="cel__vazio">Abrindo…</p>}><div className="rede15__contas"><RedesSociais vida={vida} agir={agir} abrirPessoa={abrirPessoa} embutido /></div></Suspense>} />
-  );
-}
-
 /* ------------------------------------------------------------------ Notícias */
 
 function Noticias({ vida }: { vida: Vida }) {
@@ -593,7 +593,8 @@ function Relogio() {
 }
 
 export default function Celular({ vida, agir, aoFechar, irPara, irLugar, abrirPessoa, abrirConvite, appInicial }: Props) {
-  const [app, setApp] = useState<App15>(appInicial ?? 'inicio');
+  // VIDA 20: o atalho antigo para "Rede" abre o app da rede em que a pessoa tem conta (ou o Instagram).
+  const [app, setApp] = useState<App15>(appInicial === 'rede' ? (REDES20.find(r => contaAtiva(vida, r)) ?? 'instagram') : appInicial ?? 'inicio');
   const [fioInicial, setFioInicial] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -617,14 +618,17 @@ export default function Celular({ vida, agir, aoFechar, irPara, irLugar, abrirPe
   const meio = vida.era ? meioDaVida(vida) : 'smartphone';
   const tem = (id: string) => !vida.era || temAcesso(vida, id);
   const smart = meio === 'smartphone';
-  const nomes: Record<Exclude<App15, 'inicio'>, string> = !vida.era ? NOMES : {
+  const nomes: Record<Exclude<App15, 'inicio' | PlataformaId>, string> = !vida.era ? NOMES : {
     ...NOMES,
     mensagens: meio === 'fixo' ? (tem('telefone_fixo') ? 'Recados' : 'Cartas') : meio === 'celular' ? (tem('sms') ? 'Torpedos' : 'Ligações') : NOMES.mensagens,
     noticias: smart ? NOMES.noticias : 'Jornal',
     agenda: meio === 'fixo' ? 'Caderneta' : NOMES.agenda
   };
+  // As redes (VIDA 20): as quatro grandes e o Facebook sempre; a Twitch e o OnlyFans, para quem tem conta lá.
+  const redes = tem('redes_modernas') ? REDES20.filter(r => (r !== 'twitch' && r !== 'onlyfans') || !!contaAtiva(vida, r)) : [];
+  const novidadesDa = (r: PlataformaId) => { const c = contaAtiva(vida, r); return c ? c.publicacoes.filter(x => !x.apagada && vida.t - x.t <= 12 && (x.viral || x.polemica || (x.pessoas?.length ?? 0) > 0)).length : 0; };
   const apps: { id: Exclude<App15, 'inicio'>; conta?: number }[] = [
-    { id: 'mensagens', conta: n }, ...(adulto && smart && tem('app_namoro') ? [{ id: 'namoro' as const, conta: matchesAbertos }] : []), ...(tem('redes_modernas') ? [{ id: 'rede' as const }] : []), { id: 'noticias' },
+    { id: 'mensagens', conta: n }, ...(adulto && smart && tem('app_namoro') ? [{ id: 'namoro' as const, conta: matchesAbertos }] : []), ...redes.map(r => ({ id: r, conta: novidadesDa(r) })), { id: 'noticias' },
     { id: 'agenda' }, ...(smart ? [{ id: 'mapas' as const }] : []), ...(smart && tem('banco_app') ? [{ id: 'banco' as const }] : []), ...(tem('email') ? [{ id: 'email' as const, conta: opsNovas }] : []), ...(temFama && smart ? [{ id: 'fama' as const }] : [])
   ];
   // Um app que não existe na época (aberto por um atalho de outra tela) cai na tela inicial.
@@ -634,7 +638,6 @@ export default function Celular({ vida, agir, aoFechar, irPara, irLugar, abrirPe
   let conteudo: ReactNode = null;
   if (atual === 'mensagens') conteudo = <Mensagens vida={vida} agir={agir} abrirPessoa={pessoa} inicial={fioInicial} />;
   else if (atual === 'namoro') conteudo = <Namoro vida={vida} agir={agir} abrirPessoa={pessoa} />;
-  else if (atual === 'rede') conteudo = <Rede vida={vida} agir={agir} abrirPessoa={pessoa} abrirConversa={id => abrirApp('mensagens', id)} />;
   else if (atual === 'noticias') conteudo = <Noticias vida={vida} />;
   else if (atual === 'agenda') conteudo = <Agenda vida={vida} sair={sair} />;
   else if (atual === 'mapas') conteudo = <Mapas vida={vida} sair={sair} />;
@@ -673,13 +676,19 @@ export default function Celular({ vida, agir, aoFechar, irPara, irLugar, abrirPe
             <ul className="cel__apps" aria-label="Aplicativos">
               {apps.map(a => (
                 <li key={a.id}>
-                  <button type="button" className={`cel__app-icone cel__app-icone--${a.id}`} onClick={() => abrirApp(a.id)} aria-label={`${nomes[a.id]}${a.conta ? `, ${a.conta} novidades` : ''}`}>
-                    <span className="cel__tile"><Icone d={ICONES[a.id]} />{a.conta ? <span className="cel__badge">{a.conta > 9 ? '9+' : a.conta}</span> : null}</span>
-                    <span className="cel__app-nome">{nomes[a.id]}</span>
+                  <button type="button" className={`cel__app-icone cel__app-icone--${a.id}`} onClick={() => abrirApp(a.id)} aria-label={`${ehRede20(a.id) ? NOME_REDE20[a.id] : nomes[a.id]}${a.conta ? `, ${a.conta} novidades` : ''}`}>
+                    <span className="cel__tile" style={ehRede20(a.id) ? { background: COR_REDE20[a.id], color: '#fff' } : undefined}><Icone d={ehRede20(a.id) ? GLIFO20[a.id] : ICONES[a.id]} />{a.conta ? <span className="cel__badge">{a.conta > 9 ? '9+' : a.conta}</span> : null}</span>
+                    <span className="cel__app-nome">{ehRede20(a.id) ? NOME_REDE20[a.id] : nomes[a.id]}</span>
                   </button>
                 </li>
               ))}
             </ul>
+          </div>
+        ) : ehRede20(atual) ? (
+          <div className="cel__app cel__app--rede20">
+            <div className="cel__app-corpo cel__app-corpo--rede20">
+              <Suspense fallback={<p className="cel__vazio">Abrindo…</p>}><AppSocial20 key={atual} vida={vida} agir={agir} id={atual} abrirPessoa={pessoa} abrirConversa={id => abrirApp('mensagens', id)} voltar={() => setApp('inicio')} /></Suspense>
+            </div>
           </div>
         ) : (
           <div className="cel__app">

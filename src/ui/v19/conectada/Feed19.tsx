@@ -163,6 +163,28 @@ function Perfil({ vida, pid, agir, abrirPessoa, abrirConversa, abrirPerfil, volt
   );
 }
 
+/**
+ * VIDA 20 — o feed de UMA rede (dentro do app dela, no celular): as mesmas publicações da VIDA Conectada (as pessoas da
+ * sua vida), só as que foram para esta rede, com os mesmos cartões (curtir, comentar, compartilhar, mensagem, perfil).
+ */
+export function FeedDaPlataforma19({ vida, agir, abrirPessoa, abrirConversa, plataforma, vazio }: Props & { plataforma: Post19['plataforma']; vazio: string }) {
+  const [perfil, setPerfil] = useState<string | null>(null);
+  const abrirPerfil = (id: string) => { if (vida.vinculos[id]) setPerfil(id); };
+  if (perfil) return <Perfil vida={vida} pid={perfil} agir={agir} abrirPessoa={abrirPessoa} abrirConversa={abrirConversa} abrirPerfil={abrirPerfil} voltar={() => setPerfil(null)} />;
+  const posts = feed19(vida).filter(x => x.plataforma === plataforma);
+  return posts.length
+    ? <ol className="feed19__lista" data-plataforma={plataforma}>{posts.map(x => <Cartao key={x.chave} vida={vida} post={x} agir={agir} abrirPerfil={abrirPerfil} abrirConversa={abrirConversa} />)}</ol>
+    : <p className="cel__vazio">{vazio}</p>;
+}
+
+/** VIDA 20 — o "Em alta" (com a origem de cada assunto), para o app que tem essa aba. */
+export function EmAlta19({ vida }: { vida: Vida }) {
+  const alta = emAlta19(vida);
+  return alta.length ? (
+    <ol className="feed19__alta">{alta.map((x, k) => <li key={x.id}><span className="feed19__pos">{k + 1}</span><span><strong>{x.texto}</strong><span>{x.origem}</span></span></li>)}</ol>
+  ) : <p className="cel__vazio">Nada da sua rede está circulando agora.</p>;
+}
+
 export function Feed19({ vida, agir, abrirPessoa, abrirConversa, contas }: Props & { contas: ReactNode }) {
   const [aba, setAba] = useState<'feed' | 'alta' | 'contas'>('feed');
   const [perfil, setPerfil] = useState<string | null>(null);

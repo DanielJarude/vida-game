@@ -245,3 +245,6 @@ body.com-celular { overflow: hidden; }
 .cel__intencoes { display: flex; flex-direction: column; gap: 8px; padding: 4px 0; }
 .cel__intencoes > * { width: 100%; }
 .cel__fio:disabled { opacity: 0.55; cursor: default; }
+/* VIDA 20: o app de cada rede ocupa o aparelho inteiro (o cabeçalho e a barra são dele); nada rola de lado. */
+.cel__app-corpo--rede20 { padding: 0; overflow-x: hidden; display: flex; flex-direction: column; }
+.cel__app-corpo--rede20 > .app20 { flex: 1; }

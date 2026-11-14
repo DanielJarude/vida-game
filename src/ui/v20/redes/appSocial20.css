@@ -1,0 +1,64 @@
+/* VIDA 20 · os apps sociais do celular: cada rede com a sua cara, todas dentro do aparelho (sem rolagem lateral). */
+.app20 { --app-fundo: var(--cel-fundo, #fbf8f2); --app-texto: inherit; --app-linha: var(--cel-fio, rgba(0, 0, 0, 0.12)); --app-destaque: var(--cor-plataforma);
+  display: flex; flex-direction: column; min-height: 100%; min-width: 0; max-width: 100%; overflow-x: hidden; background: var(--app-fundo); color: var(--app-texto); }
+.app20 * { box-sizing: border-box; min-width: 0; }
+.app20__topo { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; background: var(--app-fundo); border-bottom: 1px solid var(--app-linha); }
+.app20__voltar { border: 0; background: transparent; color: inherit; font-size: 24px; line-height: 1; padding: 0 6px 2px 0; cursor: pointer; }
+.app20__esq { display: inline-flex; align-items: center; gap: 2px; min-width: 0; }
+.app20__marca { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: 17px; color: var(--app-destaque); }
+.app20__acoes { display: inline-flex; gap: 6px; }
+.app20__icone, .app20__criar { position: relative; display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; border: 0; background: transparent; color: inherit; cursor: pointer; }
+.app20__criar { background: var(--app-destaque); color: #fff; border-radius: 999px; }
+.app20__ponto { position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; border-radius: 50%; background: #e0245e; }
+.app20__corpo { flex: 1; padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 10px; }
+.app20__nav { position: sticky; bottom: 0; z-index: 2; display: flex; justify-content: space-around; gap: 2px; padding: 6px 4px; background: var(--app-fundo); border-top: 1px solid var(--app-linha); }
+.app20__nav-item { flex: 1 1 0; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 2px; border: 0; background: transparent; color: inherit; font: inherit; font-size: 11px; opacity: 0.7; cursor: pointer; border-radius: 10px; }
+.app20__nav-item span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.app20__nav-item[aria-current='page'] { opacity: 1; font-weight: 700; color: var(--app-destaque); }
+.app20__nav-item--criar svg { background: var(--app-destaque); color: #fff; border-radius: 8px; padding: 2px; width: 30px; height: 22px; }
+.app20__compor { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border: 1px solid var(--app-linha); border-radius: 999px; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.app20__compor span { opacity: 0.75; }
+.app20__titulo { margin: 0; font-size: 16px; }
+.app20__nota { margin: 0; font-size: 12.5px; opacity: 0.8; }
+.app20__vazio { margin: 16px 0; text-align: center; opacity: 0.75; font-size: 13.5px; }
+.app20__impulso { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; }
+.app20__conteudos { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.app20__conteudos li > * { width: 100%; }
+.app20__conteudos button { width: 100%; justify-content: flex-start; text-align: left; }
+.app20__conteudo { display: flex; align-items: center; gap: 10px; }
+.app20__conteudo > span { display: flex; flex-direction: column; }
+.app20__conteudo small { font-weight: 400; opacity: 0.75; font-size: 12px; }
+.app20__boas-vindas { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; padding: 16px 4px; }
+.app20__logo { display: grid; place-items: center; width: 72px; height: 72px; border-radius: 20px; background: var(--app-destaque); color: #fff; }
+.app20__avisos { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.app20__aviso { padding: 8px 10px; border-radius: 10px; border: 1px solid var(--app-linha); font-size: 13px; overflow-wrap: anywhere; }
+.app20__aviso--bom { border-left: 3px solid #2f8a4e; }
+.app20__aviso--ruim { border-left: 3px solid #b0493c; }
+.app20__perfil { display: flex; flex-direction: column; gap: 10px; }
+.app20__perfil-cabeca { display: flex; gap: 12px; align-items: center; }
+.app20__arroba { font-size: 16px; overflow-wrap: anywhere; }
+.app20__numeros { display: grid; grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); gap: 6px; margin: 0; text-align: center; }
+.app20__numeros dt { font-size: 11.5px; opacity: 0.75; }
+.app20__numeros dd { margin: 0; font-weight: 700; font-size: 15px; }
+.app20__alerta { margin: 0; padding: 6px 8px; border-left: 3px solid #b0493c; font-size: 13px; }
+.app20__gestao summary { cursor: pointer; font-weight: 600; font-size: 13.5px; padding: 6px 0; }
+.app20__gestao .grupo-acoes { flex-wrap: wrap; }
+.app20 .rede__publicacoes { max-width: 100%; }
+/* As caras de cada rede (identidade, não logotipo). */
+.app20--tiktok { --app-fundo: #111214; --app-texto: #f2f2f2; --app-linha: rgba(255, 255, 255, 0.12); --app-destaque: #25c2c9; }
+.app20--x { --app-destaque: currentColor; }
+.app20--x .app20__voltar { border: 0; background: transparent; color: inherit; font-size: 24px; line-height: 1; padding: 0 6px 2px 0; cursor: pointer; }
+.app20__esq { display: inline-flex; align-items: center; gap: 2px; min-width: 0; }
+.app20__marca { font-weight: 800; letter-spacing: 0.2px; }
+.app20--x .app20__criar { background: #1d9bf0; }
+.app20--youtube { --app-destaque: #e02b2b; }
+.app20--instagram .app20__marca span { font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-weight: 600; font-size: 19px; background: linear-gradient(90deg, #f58529, #dd2a7b, #8134af); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.app20--facebook { --app-destaque: #1877f2; }
+.app20--twitch { --app-destaque: #9146ff; }
+.app20--onlyfans { --app-destaque: #00aeef; }
+.app20__compor-tela { display: flex; flex-direction: column; gap: 10px; }
+.app20__conteudos li { list-style: none; }
+.app20__conteudos small { color: inherit; }
+.app20--tiktok .publicacao__texto, .app20--tiktok .publicacao__alcance, .app20--tiktok .publicacao__reacao { color: #e6e6e6; }
+.app20--tiktok .publicacao__quadro { color: #f2f2f2; }
+.app20--tiktok .botao { color: #f2f2f2; border-color: rgba(255, 255, 255, 0.3); background: transparent; }

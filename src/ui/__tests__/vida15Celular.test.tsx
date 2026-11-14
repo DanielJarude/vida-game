@@ -35,7 +35,8 @@ describe('VIDA 15 · o celular na tela', () => {
     const v = vidaComMensagens();
     render(<Palco inicial={v} />);
     const apps = screen.getByRole('list', { name: 'Aplicativos' });
-    for (const n of ['Mensagens', 'Namoro', 'Rede', 'Notícias', 'Agenda', 'Mapas', 'Banco', 'E-mail']) expect(within(apps).getByRole('button', { name: new RegExp(`^${n}`) })).toBeTruthy();
+    // VIDA 20: o "Rede" virou um app por rede (Instagram, TikTok, YouTube, X, Facebook) — pedido do complemento de escopo.
+    for (const n of ['Mensagens', 'Namoro', 'Instagram', 'TikTok', 'YouTube', 'X', 'Facebook', 'Notícias', 'Agenda', 'Mapas', 'Banco', 'E-mail']) expect(within(apps).getByRole('button', { name: new RegExp(`^${n}`) })).toBeTruthy();
     expect(screen.getByRole('list', { name: 'Notificações' })).toBeTruthy();
     fireEvent.click(within(apps).getByRole('button', { name: /^Mensagens/ }));
     const conversas = await screen.findByRole('list', { name: 'Conversas' });

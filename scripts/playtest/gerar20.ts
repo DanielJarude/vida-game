@@ -44,3 +44,14 @@ for (const id of ['short_jeans', 'j20_ponto_de_luz_ouro_branco_diamante', 'j20_a
 }
 salvar('joias', j);
 console.log('ok', k.automobilismo20?.fase, f.automobilismo20?.fase, c.clube20?.nome, j.eu.visual.modeloJoia);
+
+// Redes: contas em quatro plataformas, publicações, alguns anos.
+let rd = ate(criarVida({ nome: 'Nina', sobrenome: 'Alves', genero: 'feminino', municipioId: 'rio-de-janeiro-rj', semente: 2005 }), 22);
+rd.financas.conta = 50000;
+for (const pl of ['instagram', 'tiktok', 'youtube', 'x']) rd = faz(rd, { tipo: 'rede', op: { oque: 'criar', plataforma: pl } });
+for (let a = 0; a < 3; a++) {
+  for (const [pl, tema] of [['instagram', 'viagem'], ['tiktok', 'humor'], ['youtube', 'tutorial'], ['x', 'opiniao']] as const) rd = faz(rd, { tipo: 'rede', op: { oque: 'publicar', plataforma: pl, tema } });
+  rd = ano(rd);
+}
+salvar('redes', rd);
+console.log('redes', Object.keys(rd.redes?.contas ?? {}).join(','));
