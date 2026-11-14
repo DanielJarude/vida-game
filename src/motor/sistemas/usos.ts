@@ -322,7 +322,7 @@ export const USOS_CASA: UsoCasa[] = ['festa', 'familia', 'reformar'];
 export function custoDaPista(v: Vida, b: Veiculo): number {
   const m = modeloVeiculo(b.modeloId);
   const base = !m.pista ? (m.id === 'hipercarro' ? 25000 : 6000)
-    : b.versaoId === 'kart_comp' ? 1500 : b.versaoId === 'f1_monoposto' ? 380000 : b.versaoId === 'porsche_gt3r' ? 45000 : 30000;
+    : b.versaoId === 'f1_monoposto' ? 380000 : b.versaoId === 'porsche_gt3r' ? 45000 : 30000;
   return Math.round(base * c(v) / 100) * 100;
 }
 
@@ -334,7 +334,7 @@ function diaDePista(v: Vida, r: Rng, b: Veiculo): string {
   v.mente.estresse = clamp(v.mente.estresse - 5);
   b.estado = clamp(b.estado - (m.pista ? 6 : 3));
   // O incidente: a rodada na curva, a zebra que quebra a suspensão, o motor que reclama.
-  const risco = b.versaoId === 'kart_comp' ? 0.05 : m.pista ? 0.1 : 0.06;
+  const risco = m.pista ? 0.1 : 0.06;
   let texto: string;
   if (r.chance(risco)) {
     const custo = Math.round(b.valor * (m.pista ? r.int(3, 9) : r.int(2, 6)) / 100 / 100) * 100;
@@ -345,7 +345,7 @@ function diaDePista(v: Vida, r: Rng, b: Veiculo): string {
     (b.historia ??= []).push({ t: v.t, texto: `Dia de pista: saiu da pista e voltou de caminhão.` });
   } else {
     texto = m.pista
-      ? (b.versaoId === 'f1_monoposto' ? 'O ronco no box vazio, os engenheiros com o laptop, o pescoço que doeu a semana inteira. Dez voltas que você vai lembrar para sempre.' : b.versaoId === 'kart_comp' ? 'Kartódromo, capacete e um tempo de volta que melhorou a cada sessão.' : 'O carro na pista, a equipe no rádio, o tempo de volta caindo. Cansa como um treino e vicia como uma corrida.')
+      ? (b.versaoId === 'f1_monoposto' ? 'O ronco no box vazio, os engenheiros com o laptop, o pescoço que doeu a semana inteira. Dez voltas que você vai lembrar para sempre.' : 'O carro na pista, a equipe no rádio, o tempo de volta caindo. Cansa como um treino e vicia como uma corrida.')
       : 'Instrutor do lado, cones na freada, a reta que finalmente cabe o carro inteiro. Na estrada nunca daria.';
     (b.historia ??= []).push({ t: v.t, texto: `Dia de pista${primeira ? ' (o primeiro)' : ''}.` });
   }

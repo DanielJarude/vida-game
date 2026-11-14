@@ -15,7 +15,7 @@ import type { Vida } from '../../motor/tipos';
 import { dinheiroCheio, leituraDoMes } from '../leituraMaterial';
 import { MAX_PRIMARIAS_MATERIAL } from '../../motor/sistemas/relevancia';
 import { Lugar } from '../jogo/material/Lugares';
-import { catalogoDeVeiculos } from '../../motor/sistemas/mercado';
+import { catalogoDeVeiculos, ofertaDeVeiculo } from '../../motor/sistemas/mercado';
 import { modeloVeiculo, nomeDaVersao, versaoVeiculo } from '../../motor/dados/bens';
 import { executar, type Acao } from '../../motor/acoes';
 
@@ -215,7 +215,10 @@ describe('Loja de veículos: marca e modelo, catálogo completo', () => {
     const a = acoes.find(x => x.tipo === 'comprar_veiculo')!;
     const depois = executar(v, a).vida;
     const b = depois.financas.bens.find(x => x.tipo === 'veiculo');
-    expect(b?.tipo === 'veiculo' && b.versaoId).toBe('toyota_hilux');
+    // VIDA 21: há duas Hilux (a de sempre e a GR-Sport): a compra guarda a versão da oferta clicada, seja qual for.
+    const escolhida = ofertaDeVeiculo(v, (a as Extract<typeof a, { tipo: 'comprar_veiculo' }>).ofertaId!)!;
+    expect(['toyota_hilux', 'hilux_grs']).toContain(escolhida.versaoId);
+    expect(b?.tipo === 'veiculo' && b.versaoId).toBe(escolhida.versaoId);
     expect(b?.nome).toBe('Toyota Hilux');
   });
 });

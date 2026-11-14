@@ -15,6 +15,7 @@
  *      da vida política. Cada coisa diz, antes, com o que ela conflitaria.
  */
 
+import { NumerosDoOficio } from '../v21/carreiras/NumerosDoOficio';
 import { GaleriaDeConquistas } from './Galeria';
 import { sobDemanda as sobDemandaCampeonato } from '../util/sobDemanda';
 /** HOTFIX 11.5.1: o campeonato por dentro (a tabela, os campeões, os prêmios do mundo) — pacote sob demanda. */
@@ -296,6 +297,8 @@ export function Trabalho({ vida, agir, irPara, parte, explorar: abaDeFora, aoExp
       {/* REWORK 10.6 · C3: Minha carreira — a experiência, os projetos e o reconhecimento de quem já tem uma (antes, na
           divisão, o currículo artístico e a carreira de técnico não apareciam aqui). */}
       {parte === 'historico' && <ExperienciaNaCarreira vida={vida} />}
+      {/* VIDA 21: o que a sua profissão conta (não um desempenho igual para todas). */}
+      {parte === 'historico' && <NumerosDoOficio vida={vida} />}
       {em('historico') && (!div || modo === 'artista') && <CurriculoArtistico vida={vida} agir={agir} />}
       {em('historico') && (!div || modo === 'atleta' || sp.carreira === 'esporte') && <CarreiraNoEsporte vida={vida} aberta={modo === 'atleta' || espSemClube || parte === 'historico'} />}
       {em('historico') && <CarreiraComoTecnico vida={vida} />}

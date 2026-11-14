@@ -39,9 +39,9 @@ describe('VIDA 21 · o catálogo novo', () => {
   it('concessionária vende picape grande e jipe; colecionador vende hipercarro e carro de competição', () => {
     const v = rico(100_000_000);
     const conc = ofertasDeVeiculos(v, 'concessionaria').map(o => o.versaoId);
-    for (const id of ['ram_1500_laramie', 'lr_defender', 'fiat_strada', 'amg_g63']) expect(conc).toContain(id);
+    for (const id of ['ram_1500_laramie', 'lr_defender', 'fiat_strada', 'jeep_wrangler']) expect(conc).toContain(id);
     const col = ofertasDeVeiculos(v, 'colecionador').map(o => o.versaoId);
-    for (const id of ['bugatti_chiron_ss', 'f1_monoposto', 'porsche_gt3r', 'kart_comp']) expect(col).toContain(id);
+    for (const id of ['bugatti_chiron_ss', 'f1_monoposto', 'porsche_gt3r', 'rali_r5']) expect(col).toContain(id);
     // A concessionária não vende carro de corrida.
     expect(conc).not.toContain('f1_monoposto');
   });

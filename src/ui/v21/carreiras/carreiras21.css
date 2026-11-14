@@ -1,0 +1,6 @@
+/* VIDA 21 · os números do ofício. */
+.numeros-oficio-bloco { display: flex; flex-direction: column; gap: var(--space-2); margin-block: var(--space-3); }
+.numeros-oficio { margin: 0; display: grid; gap: var(--space-2); grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); }
+.numeros-oficio > div { display: flex; flex-direction: column; gap: 2px; padding: var(--space-2) var(--space-3); border: 1px solid var(--fio, var(--tom-linha)); border-radius: var(--radius-md); min-width: 0; }
+.numeros-oficio dt { font-size: var(--type-caption); opacity: 0.85; overflow-wrap: anywhere; }
+.numeros-oficio dd { margin: 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
