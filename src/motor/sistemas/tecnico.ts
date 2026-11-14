@@ -209,7 +209,7 @@ export function processarTecnico(v: Vida, r: Rng): void {
 }
 
 /** O primeiro comando: um clube que caiba no nome (o passado de jogador ajuda a ser lembrado — só isso). */
-function iniciarComando(v: Vida, r: Rng): boolean {
+export function iniciarComando(v: Vida, r: Rng): boolean {
   const es = [v.caminhos.esporte, ...(v.caminhos.carreirasEsportivas ?? [])].filter(x => x?.modalidade === 'futebol' && x.fase !== 'base');
   const exAtleta = es.length > 0;
   const nomeDeJogador = Math.max(0, ...es.map(x => (x!.reputacao ?? 30) * 0.4 + x!.nivel * 3));

@@ -32,7 +32,7 @@ import { contratar } from '../sistemas/trabalho';
 import { ocupacao } from '../dados/ocupacoes';
 import { clubePorNome } from '../dados/clubes';
 import { converterEntrePaises, formatarDinheiro } from '../mundo/moeda';
-import { decidirFinal, passagemAtual, processarTecnico, trabalhoDoTecnico } from '../sistemas/tecnico';
+import { decidirFinal, passagemAtual, processarTecnico, trabalhoDoTecnico, iniciarComando } from '../sistemas/tecnico';
 import { avancarLicenca, nivelDaLicenca } from '../sistemas/oficioDoTecnico';
 import { exportarVida, importarVida } from '../save';
 import { habilidade } from '../sistemas/frentes';
@@ -410,7 +410,9 @@ describe('ESP-11.7 · a comissão técnica', () => {
     const ultimo = ultimoClubeDe(ex.caminhos.esporte!)?.clube ?? ex.caminhos.esporte!.clube;
     let v = transacao(ex, (x, r) => { contratar(x, r, ocupacao('auxiliar_tecnico')); }).vida;
     const casa = v.moradia.municipioId;
-    v = transacao(v, (x, r) => { const e = x.trabalho.atual!; e.postos = [{ ocupacaoId: 'auxiliar_tecnico', t: e.tInicio }] as never; e.ocupacaoId = 'tecnico_futebol'; processarTecnico(x, r); }).vida;
+    // VIDA 21: só o INÍCIO do comando (`iniciarComando`) — `processarTecnico` também joga a temporada, e o resultado dela
+    // (que pode demitir no mesmo ano) depende do acaso da vida-cenário, que muda quando o ano ganha passes novos.
+    v = transacao(v, (x, r) => { const e = x.trabalho.atual!; e.postos = [{ ocupacaoId: 'auxiliar_tecnico', t: e.tInicio }] as never; e.ocupacaoId = 'tecnico_futebol'; iniciarComando(x, r); }).vida;
     expect(passagemAtual(v)?.clube).toBe(ultimo);
     expect(v.moradia.municipioId).toBe(casa);
   });
@@ -431,7 +433,8 @@ describe('ESP-11.7 · a comissão técnica', () => {
   });
 
   it('o técnico no comando não vê ações de empresa — vê as do banco (licença, análise, elenco, diretoria)', () => {
-    let v = transacao(exJogador(), (x, r) => { contratar(x, r, ocupacao('tecnico_futebol')); processarTecnico(x, r); }).vida;
+    // VIDA 21: o comando recém-assumido (sem jogar a temporada, cujo resultado depende do acaso da vida-cenário).
+    let v = transacao(exJogador(), (x, r) => { contratar(x, r, ocupacao('tecnico_futebol')); iniciarComando(x, r); }).vida;
     expect(passagemAtual(v)).toBeDefined();
     expect(modoDoTrabalho(v)).toBe('tecnico');
     const a = acoesDoTrabalho(v, disponibilidade);

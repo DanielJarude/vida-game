@@ -402,7 +402,9 @@ describe('cuidado não remunerado', () => {
 
 describe('informal, MEI e ofícios', () => {
   it('formalizar como MEI: passa a contribuir, a guia entra no orçamento', () => {
-    const w0 = emTransacao(adulto(30, 32), x => { x.trabalho.experiencia['informal'] = 24; contratar(x, criarRng(1), ocupacao('feirante'), 'por_conta'); }).vida;
+    // VIDA 21: a vida-cenário (vivida pelo motor até os 30) pode ter aberto um negócio formal pelo caminho — e o MEI não
+    // cabe a quem já tem CNPJ (a regra é essa). O teste é sobre o feirante informal: o cenário fica sem o negócio.
+    const w0 = emTransacao(adulto(30, 32), x => { x.caminhos.negocio = undefined; x.trabalho.experiencia['informal'] = 24; contratar(x, criarRng(1), ocupacao('feirante'), 'por_conta'); }).vida;
     expect(w0.trabalho.atual!.contrato).toBe('informal');
     expect(podeTentar(disponibilidade(w0, { tipo: 'mei' }))).toBe(true);
     const w = emTransacao(w0, x => formalizar(x)).vida;

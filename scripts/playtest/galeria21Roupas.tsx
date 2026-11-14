@@ -12,7 +12,7 @@ const LOOKS: [string, string[]][] = [
   ['noite', ['body_canelado', 'jeans_skinny', 'salto_grife', 'clutch_pedraria']],
   ['gala', ['vestido_gala_grife', 'salto_grife', 'relogio_ouro_rose', 'bolsa_edicao_limitada']],
   ['smoking', ['smoking', 'sapato_social', 'relogio_ouro_rose']],
-  ['terno grife', ['terno_grife', 'mocassim', 'mochila_couro']],
+  ['terno', ['terno', 'mocassim', 'mochila_couro']],
   ['vestidos', ['vestido_tubinho', 'sapatilha', 'cardigan']],
   ['estampado', ['vestido_midi_estampado', 'sandalia', 'bolsa_tote']],
   ['urbano', ['moletom_grife', 'jeans_reto_premium', 'tenis_grife', 'puffer', 'pochete_grife']],
