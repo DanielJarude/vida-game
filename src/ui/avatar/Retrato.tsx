@@ -8,6 +8,7 @@
  * sobrancelha, cílios, lábios e o repertório de cabelo, sem caricatura.
  */
 
+import { BrincoDoRetrato, ColarDoRetrato } from './joias20';
 import { BrincoNovo, PiercingsDoRosto } from './piercings';
 import { Batom, Blush, Delineado, Mechas, SombraDosOlhos, temBigode } from './identidade13';
 import { misturar } from './cores';
@@ -258,7 +259,9 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
       )}
 
       {/* A joia no pescoço (a corrente), quando é o que está em uso. */}
-      {f !== 'bebe' && f !== 'crianca' && (v.joia === 'corrente' || v.joia === 'corrente_ouro') && (
+      {/* VIDA 20: o modelo comprado (a gargantilha, a grumet, o ponto de luz com a pedra) no metal dele. */}
+      {f !== 'bebe' && f !== 'crianca' && v.modeloJoia && (v.joia === 'corrente' || v.joia === 'corrente_ouro') && <ColarDoRetrato modelo={v.modeloJoia} cx={cx} y0={corpoTopo - 1.2} meia={pescocoW * 0.86} fundo={corpoTopo + 5.8} />}
+      {f !== 'bebe' && f !== 'crianca' && !v.modeloJoia && (v.joia === 'corrente' || v.joia === 'corrente_ouro') && (
         <path className="retrato__joia" d={`M ${cx - pescocoW * 0.72} ${corpoTopo + 3.6} Q ${cx} ${corpoTopo + 11.5} ${cx + pescocoW * 0.72} ${corpoTopo + 3.6}`} fill="none" stroke={v.joia === 'corrente_ouro' ? '#c9a14a' : '#c9ccd1'} strokeWidth={0.9} strokeLinecap="round" />
       )}
 
@@ -276,6 +279,8 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
         const x = cx + s * (w / 2 - 0.4 + orelhaFora), y = olhoY + 7.6;
         const m = v.modeloBrincos;
         // VIDA 13: os brincos novos (pérola, argola grande, gota, cruz, alargador).
+        const j20 = BrincoDoRetrato({ modelo: m, x, y, s });
+        if (j20) return <g key={s}>{j20}</g>;
         const novo = BrincoNovo({ modelo: m, x, y, s });
         if (novo) return <g key={s}>{novo}</g>;
         return m === 'brincos_diamante'

@@ -8,6 +8,7 @@
  * scarpin), traduzidas na linguagem do VIDA: formas chapadas, um tom de sombra, uma linha de costura — sem textura
  * fotográfica. Cada peça precisa se distinguir das vizinhas pela SILHUETA antes da cor (manga, gola, comprimento).
  */
+import { pecaDaJoia20, type PecaJoia20 } from './joias20';
 
 export type Estampa = 'listras' | 'xadrez' | 'floral' | 'wax' | 'chita' | 'banda' | 'time' | 'logo' | 'tachas';
 export type Manga = 'sem' | 'curta' | 'longa';
@@ -272,7 +273,9 @@ export function varianteDaCor(itemId: string, cor: string): string {
 }
 
 /** O acessório (pulso, pulseira, anel, pescoço) de um item. */
-export function acessorioDoItem(itemId: string): Extract<Peca, { parte: 'pulso' | 'pulseira' | 'anel' | 'pescoco' | 'bolsa' }> | undefined {
+export function acessorioDoItem(itemId: string): Extract<Peca, { parte: 'pulso' | 'pulseira' | 'anel' | 'pescoco' | 'bolsa' }> | PecaJoia20 | undefined {
+  // VIDA 20: as joias do catálogo novo (modelo × metal × pedra) descrevem-se a si mesmas.
+  if (itemId.startsWith('j20_')) return pecaDaJoia20(itemId);
   const x = PECAS[itemId];
   return x && ehPeca(x) && (x.parte === 'pulso' || x.parte === 'pulseira' || x.parte === 'anel' || x.parte === 'pescoco' || x.parte === 'bolsa') ? x : undefined;
 }

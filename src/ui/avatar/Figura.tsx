@@ -135,6 +135,8 @@ export function focoDaPeca(genero: Genero, corpo: TipoDeCorpo, idade: number, lu
     // O relógio no pulso esquerdo da pessoa (à direita de quem olha); a pulseira e o anel, no outro.
     pes: [g.cx, g.yTorn - 4, g.yChao + 4, 38], pulso: [g.cx + g.ombro + 2.6, 124, 150, 24], pulseira: [g.cx - g.ombro - 2.6, 124, 150, 24],
     anel: [g.cx - g.ombro - 2.7, 132, 158, 22], joia: [g.cx, g.topo - 8, g.topo + 30, 54],
+    // VIDA 20: a aliança (na outra mão) e a tornozeleira (o tornozelo esquerdo da pessoa).
+    alianca: [g.cx + g.ombro + 2.7, 132, 158, 22], tornozelo: [g.cx + g.quadril * 0.44, g.yTorn - 16, g.yTorn + 8, 30],
     // VIDA 17: a bolsa (o tronco e a mão: cabe a cruzada, a sacola e a de mão).
     bolsa: [g.cx, g.topo - 6, 166, (g.ombro + 18) * 2],
     // 12.9: o umbigo (o piercing), a barriga em volta.
@@ -667,6 +669,10 @@ export const Figura = memo(function Figura({ visual, genero, idade, semente = 'e
   }
   const relogio = acess.pulso as P<'pulso'> | undefined, pulseira = acess.pulseira as P<'pulseira'> | undefined, anel = acess.anel as P<'anel'> | undefined, colar = acess.pescoco as P<'pescoco'> | undefined;
   const bolsa = acess.bolsa as P<'bolsa'> | undefined;
+  // VIDA 20: a aliança (no anelar da esquerda) e a tornozeleira; a forma e a pedra das joias novas.
+  const alianca = acess.alianca as { cor: string; pedra?: string; brilho: string } | undefined, tornozelo = acess.tornozelo as { cor: string; forma: string; brilho: string } | undefined;
+  const fx = (x: unknown) => x as { forma?: string; pedra?: string; brilho?: string } | undefined;
+  const pernaAMostra = !!conj.inteira && ['curto', 'joelho', 'midi'].includes(String((conj.inteira as { comprimento?: string }).comprimento)) || ['short', 'bermuda', 'saia'].includes(String((conj.baixo as { forma?: string } | undefined)?.forma)) || semCima;
   // O pulso esquerdo da pessoa fica à direita de quem olha.
   const pulso = (s: 1 | -1) => ({ x: lado(g, s, g.ombro + 2.6), y: 137 });
   // A escala pela idade, a partir da base do pescoço (a cabeça não encolhe).
@@ -717,10 +723,12 @@ export const Figura = memo(function Figura({ visual, genero, idade, semente = 'e
         {tatuagens.some(t => NA_MAO.has(t.regiao)) && <Tatuagens g={g} lista={tatuagens.filter(t => NA_MAO.has(t.regiao))} comps={[]} pele={pele} ide={ide} costas={costas} detalhe={detalhe} idade={idade} />}
         {aoEscolherRegiao && <MapaDoCorpo g={g} costas={costas} escolhida={regiaoEscolhida} aoEscolher={aoEscolherRegiao} ocupadas={new Set(tatuagens.filter(t => t.id !== 'previa').map(t => `${t.regiao}:${t.lado ?? ''}`))} />}
         {colar && (idade >= 8) && <g className="figura__colar" data-acessorio="pescoco">
-          <path d={`M ${g.cx - g.pesc - 0.6} ${g.topo - 1} Q ${g.cx} ${g.topo + (colar.grossa ? 11 : 12.5)} ${g.cx + g.pesc + 0.6} ${g.topo - 1}`} fill="none" stroke={colar.cor} strokeWidth={colar.grossa ? 1.6 : 0.8} strokeLinecap="round" />
+          <path d={`M ${g.cx - g.pesc - 0.6} ${g.topo - 1} Q ${g.cx} ${g.topo + (fx(colar)?.forma === 'choker' ? 5 : colar.grossa ? 11 : 12.5)} ${g.cx + g.pesc + 0.6} ${g.topo - 1}`} fill="none" stroke={colar.cor} strokeWidth={colar.grossa ? 1.6 : 0.8} strokeLinecap="round" />
           {colar.contas && detalhe && [0, 1, 2, 3, 4, 5, 6].map(k => { const t = (k + 1) / 8; const x = g.cx - g.pesc + (2 * g.pesc) * t; const y = g.topo - 1 + Math.sin(Math.PI * t) * 12; return <circle key={k} cx={x} cy={y} r={0.9} fill={colar.contas![k % colar.contas!.length]} />; })}
-          {colar.pingente && !colar.cruz && <circle cx={g.cx} cy={g.topo + 11.4} r={1.3} fill={colar.pingente} />}
+          {colar.pingente && !colar.cruz && fx(colar)?.forma !== 'gota' && fx(colar)?.forma !== 'riviera' && <circle cx={g.cx} cy={g.topo + 11.4} r={1.3} fill={colar.pingente} />}
           {colar.cruz && <path d={`M ${g.cx} ${g.topo + 10.6} v 5.4 M ${g.cx - 1.7} ${g.topo + 12.2} h 3.4`} stroke={colar.pingente ?? colar.cor} strokeWidth={1.1} strokeLinecap="round" />}
+          {fx(colar)?.forma === 'riviera' && [0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8].map(t => <circle key={t} cx={g.cx - g.pesc + 2 * g.pesc * t} cy={g.topo - 1 + Math.sin(Math.PI * t) * 12.5} r={0.7} fill={fx(colar)!.pedra} stroke={colar.cor} strokeWidth={0.2} />)}
+          {fx(colar)?.forma === 'gota' && <path d={`M ${g.cx} ${g.topo + 11.4} q 1.6 2.4 0 3.6 q -1.6 -1.2 0 -3.6 z`} fill={fx(colar)!.pedra} stroke={colar.cor} strokeWidth={0.3} />}
         </g>}
         {relogio && (() => { const w = pulso(1); return (
           <g className="figura__relogio" data-acessorio="pulso" data-forma={relogio.forma}>
@@ -732,6 +740,9 @@ export const Figura = memo(function Figura({ visual, genero, idade, semente = 'e
           <g className="figura__pulseira" data-acessorio="pulseira">
             <path d={`M ${w.x - g.antebraco - 0.4} ${w.y} Q ${w.x} ${w.y + 1.6} ${w.x + g.antebraco + 0.4} ${w.y}`} fill="none" stroke={pulseira.cor} strokeWidth={pulseira.grossa ? 1.8 : 1.1} strokeLinecap="round" />
             {pulseira.contas && [-2, 0, 2].map((dx, k) => <circle key={k} cx={w.x + dx} cy={w.y + 0.9} r={0.9} fill={pulseira.contas![k]} />)}
+            {fx(pulseira)?.forma === 'riviera_pulso' && [-2.4, -1.2, 0, 1.2, 2.4].map(dx => <circle key={dx} cx={w.x + dx} cy={w.y + 0.8 - Math.abs(dx) * 0.12} r={0.55} fill={fx(pulseira)!.pedra} stroke={pulseira.cor} strokeWidth={0.2} />)}
+            {fx(pulseira)?.forma === 'berloques' && [-1.8, 0.2, 2].map((dx, k) => <circle key={dx} cx={w.x + dx} cy={w.y + 2.2} r={0.7} fill={k === 1 ? '#c84b6a' : pulseira.cor} />)}
+            {fx(pulseira)?.forma === 'rigida' && <path d={`M ${w.x - g.antebraco} ${w.y - 0.2} Q ${w.x} ${w.y + 1.2} ${w.x + g.antebraco} ${w.y - 0.2}`} fill="none" stroke={fx(pulseira)!.brilho} strokeWidth={0.4} />}
           </g>); })()}
         {/* VIDA 17: a bolsa — cruzada no peito, na mão, nas costas (as alças na frente), na cintura. */}
         {bolsa && !costas && (() => {
@@ -770,6 +781,14 @@ export const Figura = memo(function Figura({ visual, genero, idade, semente = 'e
         {/* VIDA 18: a bolsa de costas — a mochila nas costas, a transversal cruzando, a pochete atrás, a tote e a clutch na outra mão. */}
         {bolsa && costas && idade >= 6 && <BolsaDeCostas g={g} bolsa={bolsa} lado={(s2, d) => lado(g, s2, d)} />}
         {anel && <g className="figura__anel" data-acessorio="anel"><circle cx={lado(g, -1, g.ombro + 2.7)} cy={149.5} r={1.2} fill="none" stroke={anel.cor} strokeWidth={0.9} />{anel.pedra && <circle cx={lado(g, -1, g.ombro + 2.7)} cy={148.4} r={0.7} fill={anel.pedra} />}</g>}
+        {anel && fx(anel)?.forma && fx(anel)!.forma !== 'aro' && <g className="figura__anel-forma" data-forma={fx(anel)!.forma}>{fx(anel)!.forma === 'sinete' ? <rect x={lado(g, -1, g.ombro + 2.7) - 1} y={147.4} width={2} height={1.3} rx={0.3} fill={anel.cor} stroke={fx(anel)!.brilho} strokeWidth={0.2} /> : fx(anel)!.forma === 'aparador' ? [-0.8, 0, 0.8].map(dx => <circle key={dx} cx={lado(g, -1, g.ombro + 2.7) + dx} cy={148.5} r={0.35} fill={fx(anel)!.pedra} />) : fx(anel)!.forma === 'coquetel' ? <circle cx={lado(g, -1, g.ombro + 2.7)} cy={148.2} r={1.1} fill={fx(anel)!.pedra} stroke={anel.cor} strokeWidth={0.3} /> : null}</g>}
+        {alianca && <g className="figura__alianca" data-acessorio="alianca"><circle cx={lado(g, 1, g.ombro + 2.7) + 0.6} cy={149.8} r={1.15} fill="none" stroke={alianca.cor} strokeWidth={1} />{alianca.pedra && <circle cx={lado(g, 1, g.ombro + 2.7) + 0.6} cy={148.7} r={0.4} fill={alianca.pedra} />}</g>}
+        {tornozelo && pernaAMostra && !costas && (() => { const x = lado(g, 1, g.quadril * 0.44), y = g.yTorn - 1.5, w = g.tornozelo + 0.8; return (
+          <g className="figura__tornozeleira" data-acessorio="tornozelo" data-forma={tornozelo.forma}>
+            <path d={`M ${x - w} ${y} Q ${x} ${y + 1.8} ${x + w} ${y}`} fill="none" stroke={tornozelo.cor} strokeWidth={0.7} strokeLinecap="round" />
+            {tornozelo.forma === 'tornozeleira_bolinhas' && [-1.6, 0, 1.6].map(dx => <circle key={dx} cx={x + dx} cy={y + 0.9} r={0.55} fill={tornozelo.cor} stroke={tornozelo.brilho} strokeWidth={0.15} />)}
+            {tornozelo.forma === 'tornozeleira_contas' && [-2, -1, 0, 1, 2].map((dx, k) => <circle key={dx} cx={x + dx} cy={y + 0.9 - Math.abs(dx) * 0.15} r={0.5} fill={['#c84b31', '#f2c200', '#2f5a3c', '#3d6ab3', '#f4f1ea'][k]} />)}
+          </g>); })()}
       </g>
       {/* A cabeça: o mesmo retrato (rosto, cabelo, barba, óculos, chapéu), sem o busto. */}
       {costas ? (

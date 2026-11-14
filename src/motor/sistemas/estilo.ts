@@ -310,6 +310,8 @@ export function sincronizarVisual(v: Vida): void {
   const pescoco = usando.find(x => itemEstilo(x.itemId)?.lugar === 'joia');
   const joia = pescoco ? itemEstilo(pescoco.itemId)?.visual?.joia : undefined;
   if (joia) vis.joia = joia; else delete vis.joia;
+  // VIDA 20: o modelo da joia do pescoço (a gargantilha não é a grumet; o ponto de luz tem a pedra).
+  if (joia && pescoco!.itemId.startsWith('j20_')) vis.modeloJoia = pescoco!.itemId; else delete vis.modeloJoia;
   // 12.9: os piercings em uso (o retrato e a figura desenham cada um no seu furo).
   const furos = usando.filter(x => !!itemEstilo(x.itemId)?.piercing).map(x => x.itemId).sort();
   if (furos.length) vis.piercings = furos; else delete vis.piercings;

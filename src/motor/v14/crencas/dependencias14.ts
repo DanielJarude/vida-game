@@ -13,7 +13,7 @@
  */
 import { clamp, rngDe } from '../../rng';
 import type { Vida } from '../../tipos';
-import { escrever, idade, parceiro, vinculosVivos } from '../../nucleo';
+import { amigos, escrever, idade, parceiro, vinculosVivos } from '../../nucleo';
 import { anoDe } from '../../tempo';
 import { dinheiro as fmt } from '../../texto';
 import { bloqueio, PERMITIDO, type Veredito } from '../../plausibilidade';
@@ -86,9 +86,25 @@ function inicios(v: Vida): void {
   }
 }
 
+/**
+ * VIDA 20 · A IDADE MÍNIMA: nenhum vício começa nem se desenvolve antes dos 14 anos — nem no protagonista, nem em quem
+ * continua a vida (a sucessão), nem nas pessoas do mundo (`corpo.habitosDaPessoa`: o cigarro só a partir dos 16). Se um
+ * estado assim aparecer (save antigo, herança), ele é desfeito — não há vício de criança para tratar.
+ */
+export const IDADE_MINIMA_VICIO = 14;
+export function semVicioNaInfancia(v: Vida): void {
+  if (idade(v) >= IDADE_MINIMA_VICIO) return;
+  const h = v.corpo.habitos;
+  h.fuma = false;
+  h.bebe = 'nao';
+  delete v.dependencias14;
+  if (v.apostas) { v.apostas.anosPesados = 0; }
+}
+
 /** O ano das dependências: progressão, custo, consequências, tratamento, recuperação e recaída. */
 export function processarDependencias14(v: Vida): void {
-  if (v.morte || idade(v) < 12) return;
+  if (v.morte) return;
+  if (idade(v) < IDADE_MINIMA_VICIO) { semVicioNaInfancia(v); return; }
   sincronizar(v);
   inicios(v);
   const e = v.dependencias14;
@@ -135,6 +151,15 @@ export function processarDependencias14(v: Vida): void {
     if (k >= 2) {
       const emp = v.trabalho.atual;
       if (emp && t !== 'tabaco') emp.desempenho = clamp(emp.desempenho - (k === 3 ? 8 : 4));
+      // VIDA 20: os estudos e a vida social também sentem (as faltas, a cabeça longe, os amigos que se afastam).
+      if (t !== 'tabaco') {
+        const m = v.educacao.matricula;
+        if (m && !m.trancado) m.desempenho = clamp(m.desempenho - (k === 3 ? 6 : 3));
+        else if (v.educacao.basica) v.educacao.basica.desempenho = clamp(v.educacao.basica.desempenho - (k === 3 ? 6 : 3));
+        const lista = amigos(v).sort((a, b) => a.id.localeCompare(b.id));
+        const amigo = lista.length ? v.vinculos[lista[Math.floor(r.next() * lista.length)].id] : undefined;
+        if (amigo) amigo.proximidade = clamp(amigo.proximidade - (k === 3 ? 5 : 2));
+      }
       const par = parceiro(v);
       if (par && t !== 'tabaco') par.vin.tensao = clamp(par.vin.tensao + (k === 3 ? 8 : 4));
       v.mente.felicidade = clamp(v.mente.felicidade - k);

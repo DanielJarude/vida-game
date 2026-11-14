@@ -873,6 +873,10 @@ export function continuarComo(vida: Vida, herdeiroId: string): { vida: Vida; err
     v.luto = [{ pessoaId: oldId, t: tMorte, peso: pesoLuto }];
     v.justica = undefined;
     v.segredos = undefined;
+    // VIDA 20: os vícios de quem morreu não passam para quem continua (antes, a filha de 10 anos herdava a dependência
+    // do pai e o cigarro voltava aos hábitos dela). Os hábitos dela são os dela (acima); a dependência, se vier, é da vida dela.
+    v.dependencias14 = undefined;
+    v.apostas = undefined;
     v.deslocamento = undefined;
     // REWORK 12.25: o mundo do crime continua (as organizações existem sem ninguém); o nome da família no meio fica como
     // lembrança delas — nunca como cargo: quem herdou decide se quer ouvir (`sub125_legado`).

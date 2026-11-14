@@ -259,6 +259,8 @@ export interface Visual {
   modeloChapeu?: string;
   /** VIDA 12.7: o modelo dos brincos em uso (a argola simples, a de ouro, o diamante). */
   modeloBrincos?: string;
+  /** VIDA 20: o modelo da joia do pescoço em uso (id de `dados20/joias20`): o retrato desenha a corrente, o pingente, a pedra. */
+  modeloJoia?: string;
   /** VIDA 12.9: os piercings em uso (ids de item de `dados/piercings129`), um por furo — sincronizados por `sincronizarVisual`. */
   piercings?: string[];
   /** VIDA 13 (`dados/aparencia13`): as mechas (a cor e o jeito: luzes, ombré, uma na frente) e a maquiagem (o delineado,
@@ -327,7 +329,7 @@ export interface Visual {
  * visual É a genética, a não ser a tinta — `estilo.corNatural`). A herança lê `identidade.geneticaDe`, nunca o visual:
  * o filho de quem fez rinoplastia herda o nariz de antes.
  */
-export type Genes = Omit<Visual, 'cabelo' | 'barba' | 'bigode' | 'oculos' | 'chapeu' | 'roupa' | 'joia' | 'transplante' | 'lifting'> & { cabelo?: string };
+export type Genes = Omit<Visual, 'cabelo' | 'barba' | 'bigode' | 'oculos' | 'chapeu' | 'roupa' | 'joia' | 'modeloJoia' | 'transplante' | 'lifting'> & { cabelo?: string };
 
 export type EstiloRoupa = 'basica' | 'social' | 'esportiva' | 'alternativa' | 'elegante';
 

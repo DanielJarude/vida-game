@@ -18,14 +18,14 @@ import '../catalogo.css';
 export function visualComPecaDoRosto(base: Visual, itemId: string): Visual {
   const it = itemEstilo(itemId)!;
   const v: Visual = { ...base };
-  delete v.oculos; delete v.chapeu; delete v.modeloOculos; delete v.modeloChapeu; delete v.brincos; delete v.modeloBrincos; delete v.joia;
+  delete v.oculos; delete v.chapeu; delete v.modeloOculos; delete v.modeloChapeu; delete v.brincos; delete v.modeloBrincos; delete v.joia; delete v.modeloJoia;
   // 12.9: o piercing do produto no lugar dele (os outros furos ficam como estão; o mesmo furo troca de joia).
   if (it.piercing) { v.piercings = [...(base.piercings ?? []).filter(id => itemEstilo(id)?.lugar !== it.lugar), it.id]; if (zonaDoFuro(it.lugar!) === 'orelha' && cabeloCobreOrelha(v.cabelo)) v.cabelo = 'pixie'; }
   if (it.categoria === 'oculos' && it.visual?.oculos) { v.oculos = it.visual.oculos; v.modeloOculos = it.id; }
   if (it.categoria === 'chapeu' && it.visual?.chapeu) { v.chapeu = it.visual.chapeu; v.modeloChapeu = it.id; }
   // Os brincos: o cabelo comprido cobre a orelha — na vitrine, o cabelo vai para trás (só na miniatura).
   if (it.lugar === 'orelha') { v.brincos = true; v.modeloBrincos = it.id; if (cabeloCobreOrelha(v.cabelo)) v.cabelo = 'pixie'; }
-  if (it.lugar === 'joia' && it.visual?.joia) { v.joia = it.visual.joia; delete v.superior; }
+  if (it.lugar === 'joia' && it.visual?.joia) { v.joia = it.visual.joia; if (it.id.startsWith('j20_')) v.modeloJoia = it.id; delete v.superior; }
   return v;
 }
 
@@ -50,7 +50,7 @@ export function MiniaturaDaPeca({ vida, itemId, id, largura = 84, rotulo }: { vi
   delete visual.chapeu; delete visual.oculos; delete visual.superior;
   return (
     <span className="miniatura-peca" data-item={itemId}>
-      <Figura visual={visual} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} corpo={corpo} pecas={[{ itemId, id: id ?? `${itemId}-vitrine` }]} largura={largura} semFundo foco={focoDaPeca(vida.eu.genero, corpo, i, lugar)} rotulo={nome} />
+      <Figura visual={visual} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} corpo={corpo} pecas={it.lugar === 'tornozelo' ? [{ itemId: 'short_jeans', id: 'short-vitrine' }, { itemId, id: id ?? `${itemId}-vitrine` }] : [{ itemId, id: id ?? `${itemId}-vitrine` }]} largura={largura} semFundo foco={focoDaPeca(vida.eu.genero, corpo, i, lugar)} rotulo={nome} />
     </span>
   );
 }

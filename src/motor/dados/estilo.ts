@@ -9,6 +9,7 @@
 import type { EstiloRoupa, Ocasiao, Vida, Visual } from '../tipos';
 import { PIERCINGS, type Piercing, type RegiaoDePiercing } from './piercings129';
 import { BRINCOS_13 } from './piercings13';
+import { JOIAS20 } from '../dados20/joias20';
 import { BARBAS_13, BARBAS_COM_BIGODE_13, CORES_TINTA_13, CORTES_13, NOME_COR_13 } from './aparencia13';
 
 /** Cortes de cabelo (o retrato desenha todos). Nenhum é de um gênero só. */
@@ -86,7 +87,7 @@ export interface ItemEstilo {
    * pescoço ou nas orelhas. Sem `visual` (o relógio), usar e guardar é posse
    * de verdade — aparece em Você, não no retrato.
    */
-  lugar?: 'pulso' | 'joia' | 'orelha' | 'pulseira' | 'anel' | 'bolsa' | LugarDoCorpo | RegiaoDePiercing;
+  lugar?: 'pulso' | 'joia' | 'orelha' | 'pulseira' | 'anel' | 'bolsa' | 'alianca' | 'tornozelo' | LugarDoCorpo | RegiaoDePiercing;
   /** VIDA 12.9: a joia de um piercing (o lugar é a região do furo). */
   piercing?: Piercing;
   /** REWORK 12.4: os estilos a que a peça pertence (`ESTILOS`) — uma peça pode ser de vários. */
@@ -281,6 +282,12 @@ export const ITENS_ESTILO: readonly ItemEstilo[] = [
   ...PIERCINGS,
   // VIDA 13: os brincos novos (`dados/piercings13`).
   ...BRINCOS_13,
+  // VIDA 20: as joias de usar (modelo × metal × pedra; `dados20/joias20`) — o desenho de cada uma vem do mesmo catálogo.
+  ...JOIAS20.map((j): ItemEstilo => ({
+    id: j.id, nome: j.nome, categoria: 'acessorio', lugar: j.lugar, preco: j.preco, estilos: j.estilos, ocasioes: j.ocasioes, descricao: j.descricao,
+    ...(j.luxo ? { luxo: true } : {}),
+    ...(j.lugar === 'joia' ? { visual: { joia: j.metal.startsWith('ouro') || j.metal === 'folheado' ? 'corrente_ouro' as const : 'corrente' as const } } : j.lugar === 'orelha' ? { visual: { joia: 'brincos' as const } } : {})
+  })),
   // ---------------------------------------------------------------- VIDA 17: acessórios novos (cada um com desenho próprio)
   { id: 'bone_trucker', nome: 'Boné trucker', categoria: 'chapeu', preco: 95, visual: { chapeu: 'bone' }, estilos: ['streetwear', 'skate', 'casual'], ocasioes: ['dia', 'esporte'], descricao: 'Frente de espuma, a parte de trás em tela e o fecho de pressão.' },
   { id: 'bone_dad', nome: 'Boné de aba curva (dad hat)', categoria: 'chapeu', preco: 85, visual: { chapeu: 'bone' }, estilos: ['casual', 'minimalista', 'vintage'], ocasioes: ['dia', 'estudo'], descricao: 'Copa baixa e mole, sarja lavada, bordadinho pequeno e a fivela atrás.' },

@@ -107,8 +107,8 @@ export function guardarGenes(p: { visual: Visual; genes?: Genes; estilo?: { corN
 /** Os genes como dado (sem o que é escolha: corte, barba, óculos, roupa). */
 export function genesDe(p: { visual?: Visual; genes?: Genes; estilo?: { corNatural?: string } }): Genes {
   const g = geneticaDe(p)!;
-  const { cabelo: _c, barba: _b, bigode: _bi, oculos: _o, chapeu: _ch, roupa: _r, joia: _j, ...genes } = g;
-  void _c; void _b; void _bi; void _o; void _ch; void _r; void _j;
+  const { cabelo: _c, barba: _b, bigode: _bi, oculos: _o, chapeu: _ch, roupa: _r, joia: _j, modeloJoia: _mj, ...genes } = g;
+  void _c; void _b; void _bi; void _o; void _ch; void _r; void _j; void _mj;
   return genes;
 }
 

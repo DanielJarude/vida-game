@@ -180,7 +180,8 @@ const PARTES: { id: string; nome: string; lugares: string[] }[] = [
   { id: 'tronco', nome: 'Parte de cima', lugares: ['tronco'] }, { id: 'pernas', nome: 'Parte de baixo', lugares: ['pernas'] },
   { id: 'casaco', nome: 'Por cima', lugares: ['casaco'] }, { id: 'pes', nome: 'Nos pés', lugares: ['pes'] },
   { id: 'pulso', nome: 'Relógio', lugares: ['pulso'] }, { id: 'pulseira', nome: 'Pulseira', lugares: ['pulseira'] },
-  { id: 'anel', nome: 'Anel', lugares: ['anel'] }, { id: 'joia', nome: 'No pescoço', lugares: ['joia'] }, { id: 'orelha', nome: 'Nas orelhas', lugares: ['orelha'] },
+  { id: 'anel', nome: 'Anel', lugares: ['anel'] }, { id: 'alianca', nome: 'Aliança', lugares: ['alianca'] }, { id: 'joia', nome: 'No pescoço', lugares: ['joia'] }, { id: 'orelha', nome: 'Nas orelhas', lugares: ['orelha'] },
+  { id: 'tornozelo', nome: 'No tornozelo', lugares: ['tornozelo'] },
   // VIDA 13: os piercings saíram daqui (eram um cartão por furo): têm a seção própria, com a lupa (`Piercings13`).
 ];
 
