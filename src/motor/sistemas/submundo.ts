@@ -537,7 +537,7 @@ export function executarSubmundo(v: Vida, r: Rng, oque: OqueSubmundo, ramo?: Ram
       if (escala === 3) e.trabalhos = (e.trabalhos ?? 0) + 1;
       const levou = textoDaParte21(parte);
       anotar(v, `Um serviço ${escala === 3 ? 'grande' : 'pequeno'} deu certo: ${levou}.`, 'bom');
-      const destino = parte.bens.length ? ` ${parte.bens.length === 1 ? 'O bem está guardado' : 'Os bens estão guardados'} — em "O que veio dos serviços" você decide o que fazer.` : '';
+      const destino = parte.bens.length ? ` ${parte.bens.length === 1 ? 'O bem está guardado' : 'Os bens estão guardados'} — em "O que veio dos serviços" (Submundo · Visão geral) você decide o que fazer.` : '';
       return { texto: escala === 3 ? `Deu certo. Depois da parte de cada um, ficou com você: ${levou}.${destino}` : `Deu certo: ${levou}.${destino}` };
     }
     case 'comprar_lote': {

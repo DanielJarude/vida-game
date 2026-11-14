@@ -200,6 +200,8 @@ function VisaoGeral({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) 
     <>
       {j?.prisao && <PainelDaPena vida={vida} agir={agir} />}
       {procurado && <Procurado vida={vida} agir={agir} />}
+      {/* VIDA 21: o que veio dos serviços — os bens, o que fazer com cada um, o mercado paralelo (na Visão geral: é onde se cai). */}
+      <BensDoCrime vida={vida} agir={agir} />
       {m && (
         <section className="svivo-bloco" aria-labelledby="titulo-svivo-caminho">
           <h3 id="titulo-svivo-caminho" className="svivo-bloco__titulo">{m.titulo}</h3>
@@ -286,8 +288,6 @@ function Carreira({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
         <p className="svivo-nota">Neste ano: {feitosNoAno(vida)} de {capacidadeDoAno(vida)} trabalhos que cabem na sua semana{tempo ? ` · o caminho ocupa ${tempo.noites} ${tempo.noites === 1 ? 'noite' : 'noites'}${tempo.sabado ? ' e o sábado à tarde' : ''} (Minha semana)` : ''}.</p>
       </section>
       <div className="dossie svivo-dossie"><FrentesDoCaminho vida={vida} agir={agir} /></div>
-      {/* VIDA 21: o que veio dos serviços — os bens, o que fazer com cada um, o mercado paralelo. */}
-      <BensDoCrime vida={vida} agir={agir} />
       {c.marcos.length > 0 && (
         <section className="svivo-bloco" aria-labelledby="titulo-svivo-marcos">
           <h3 id="titulo-svivo-marcos" className="svivo-bloco__titulo">Os marcos</h3>

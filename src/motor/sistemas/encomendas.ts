@@ -328,7 +328,7 @@ function realizar(v: Vida, r: Rng, x: EncomendaCriminal): { texto: string; tom?:
     const reacao = ctx.pessoa ? reacaoAoSucesso(v, ctx.pessoa.id, liq) : ctx.org ? reacaoDaOrg(v, ctx.org, true) : '';
     if (bens) x.resultado = `${x.resultado} Além disso: ${bens}.`;
     const fecho = primeira ? ' Foi a primeira encomenda cumprida: o seu nome passou a circular.' : '';
-    const comBens = bens ? ` Em espécie, isso; e ficou com você: ${bens} (em "O que veio dos serviços").` : '';
+    const comBens = bens ? ` Em espécie, isso; e ficou com você: ${bens} (em "O que veio dos serviços", na Visão geral do Submundo).` : '';
     return { texto: `${ctx.frase} ${lugar}. ${resultado}${comBens} ${reacao}${fecho}`.replace(/\s+/g, ' ').trim(), tom: 'bom' };
   }
   x.estado = 'falhou';

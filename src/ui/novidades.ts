@@ -26,6 +26,28 @@ export interface NotaDeVersao {
 
 export const NOTAS: NotaDeVersao[] = [
   {
+    versao: '21',
+    data: '2026-11-14',
+    titulo: 'O que veio do roubo, a garagem completa e o reconhecimento de perto',
+    novidades: [
+      'Submundo: o serviço que dá certo diz o que rendeu — dinheiro em espécie (no saldo) e bens de verdade: celulares, notebooks, joias, relógios, bolsas e roupas de grife, obras de arte, colecionáveis, cargas e veículos. Em "O que veio dos serviços", cada bem tem o que faz sentido para ele: guardar, usar (joia, relógio, bolsa e roupa vão para a Aparência), vender ou se livrar.',
+      'Mercado paralelo: o receptador do bairro, a loja de usados, o comprador de ouro, o desmanche e o colecionador que não pergunta — cada um compra coisas diferentes, paga diferente e arrisca diferente. O nome no meio abre os melhores. A venda pode dar errado; o celular ligado e o carro sem documento podem ser achados; o processo traz a busca — e a investigação segue o caminho de sempre.',
+      'Garagem: utilitários e vans, jipes e off-road, picapes grandes e esportivas (RAM, Silverado, Raptor), hipercarros (Bugatti, Koenigsegg, Pagani, Rimac, Aston Martin Valkyrie) e carros de competição (rali, Stock Car, Porsche 911 GT3 R e um monoposto de Fórmula 1). Carro de corrida não vai para a rua: usa-se no dia de pista, com equipe, autódromo e o risco de uma rodada.',
+      'Guarda-roupa: 52 peças novas com desenho próprio — camisas, blusas, calças, saias, shorts, vestidos, smoking e terno sob medida, macacão de piloto, pijama cirúrgico, quimono, jaleco, jaquetas e casacos, tênis, botas, relógios e bolsas, do básico à alta-costura.',
+      'Os números do seu ofício (Trabalho · Minha carreira): cada profissão conta o que é dela — pacientes e plantões, audiências, obras, pratos servidos, quilômetros, ocorrências, safras —, e os números redondos viram lembrança.',
+      'Reconhecido de perto: a médica de vinte anos na cidade, o padeiro do bairro, a professora que deu aula para metade da cidade passam a ser conhecidos onde vivem — sem virar celebridade. A rádio comunitária, a escola, a câmara e o jornal da cidade reagem sozinhos. Em Você, as formas de reconhecimento lado a lado: fama, prestígio no ofício, reconhecimento local, influência e imagem.'
+    ],
+    melhorias: [
+      'Mensagens: a sua resposta é a da conversa e da pessoa (a mãe é "mãe", a avó é "a senhora", a criança responde como criança); as notícias dizem o que aconteceu (mudar para um lugar menor não é "casa nova"); quem perdeu o emprego desabafa como quem perdeu o emprego; só comenta um feito seu quem tinha como saber dele; o aniversário da irmã de dez anos não tem fala de mãe.',
+      'Pede atenção mostra situações, não mensagens: o convite fica no celular; a queixa de distância some quando vocês já voltaram a se falar; quem aparece para apoiar diz o motivo; o aperto do ano passado vira "continua sem emprego".'
+    ],
+    correcoes: [
+      'Bolsas, mochilas, pochetes e clutches compradas aparecem na Aparência (dá para levar, trocar e guardar).',
+      'Fachadas: o muro é desenhado na frente de tudo o que está atrás dele — palmeiras, luzes do caminho e arbustos não aparecem mais pintados por cima; a mansão tropical tem uma palmeira só, fora da piscina; no sítio, as palmeiras não atravessam a torre da caixa-d\'água.',
+      'A resposta romântica ("gosto de você como amiga") não aparece mais em convite de irmão ou de amigo.'
+    ]
+  },
+  {
     versao: '20',
     data: '2026-11-14',
     titulo: 'Das pistas aos clubes: automobilismo, clubes à venda e joias',
