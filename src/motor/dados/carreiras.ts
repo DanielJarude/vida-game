@@ -136,7 +136,7 @@ export const FAMILIAS: readonly FamiliaCarreira[] = [
   F({ id: 'palco', nome: 'música, cena e dança', trilhas: ['musica', 'orquestra', 'cena', 'danca'], progressao: 'arte',
     entrada: 'anos de prática, grupo, audição, convite — quase nunca currículo', degraus: ['tocar e atuar por gosto', 'cachês pequenos', 'temporadas e agenda', 'reconhecimento (que vem e vai)'], renda: 'projeto',
     desgaste: { noite: 0.5, cabeca: 0.3 }, sentido: ['musica', 'teatro', 'danca'], saidas: ['ensino_musica', 'ensino_danca', 'educacao', 'comercio'] }),
-  F({ id: 'esporte', nome: 'esporte', trilhas: ['atleta', 'treino', 'arbitragem', 'educacao_fisica'], progressao: 'esporte',
+  F({ id: 'esporte', nome: 'esporte', trilhas: ['atleta', 'treino', 'arbitragem', 'educacao_fisica', 'automobilismo'], progressao: 'esporte',
     entrada: 'peneira ou seletiva, na idade certa', degraus: ['base', 'primeiro contrato', 'auge curto', 'transição: treinar, preparar, ensinar'], renda: 'projeto', desgaste: { corpo: 0.6, longe: 0.3 },
     sentido: ['futebol', 'volei', 'natacao', 'atletismo', 'lutas', 'basquete', 'tenis'], saidas: ['treino', 'educacao_fisica', 'comercio', 'vigilancia'] }),
   F({ id: 'informal', nome: 'rua, feira e bicos', trilhas: ['informal', 'reciclagem'], progressao: 'informal', entrada: 'começar amanhã: mercadoria, ponto, gente conhecida',
