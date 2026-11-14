@@ -14,6 +14,7 @@
 import { VERSOES_VEICULO_129 } from './veiculos129';
 import { VERSOES_DA_EPOCA } from '../eras/base/veiculos';
 import { CLASSE_MOTO_CLASSICA, VERSOES_MOTOS_CLASSICAS } from './motosClassicas1291';
+import { CLASSES_21, VERSOES_21 } from './veiculos21';
 
 export type CategoriaVeiculo = 'bicicleta' | 'moto' | 'carro' | 'embarcacao' | 'aeronave';
 
@@ -82,7 +83,9 @@ export interface ModeloVeiculo {
    * colecionador, deprecia forte nos primeiros anos e a oficina é de marca. `classico`: só existe usado — o valor
    * segue o mercado de clássicos e o estado da peça (pode subir; não há garantia).
    */
-  segmento?: 'exotico' | 'classico';
+  segmento?: 'exotico' | 'classico' | 'competicao';
+  /** VIDA 21: só anda em autódromo (o carro de competição): não leva ninguém, não vira o do dia a dia, usa-se no dia de pista. */
+  pista?: boolean;
 }
 
 /**
@@ -122,7 +125,9 @@ export const VEICULOS: readonly ModeloVeiculo[] = [
   { id: 'iate', nome: 'iate', categoria: 'embarcacao', preco: 9500000, usoMensal: 38000, taxaAnual: 0.035, idadeMin: 18, cnh: false, raro: true, tripulacao: 32000, patrimonioMin: 25000000, lugares: 12, conforto: 5, fragilidade: 1.1, descricao: 'Cabines, cozinha, a tripulação na folha: uma casa que flutua e uma conta de marina de casa grande.', usado: true, fatorConserto: 3.4, pesoUsado: 0.15 },
   { id: 'helicoptero', nome: 'helicóptero', categoria: 'aeronave', preco: 5200000, usoMensal: 22000, taxaAnual: 0.045, idadeMin: 18, cnh: false, habilitacao: 'piloto', raro: true, patrimonioMin: 12000000, lugares: 4, conforto: 4, fragilidade: 1.25, descricao: 'Pousa no heliponto do prédio ou no gramado da fazenda. Hora de voo cara, inspeção rígida, piloto com licença de asas rotativas.', usado: true, fatorConserto: 3.8, pesoUsado: 0.2 },
   { id: 'jato', nome: 'jato executivo', categoria: 'aeronave', preco: 25000000, usoMensal: 65000, taxaAnual: 0.025, idadeMin: 18, cnh: false, raro: true, tripulacao: 70000, patrimonioMin: 40000000, lugares: 6, conforto: 5, fragilidade: 1, descricao: 'O país em duas horas, de qualquer aeroporto. Dois pilotos na folha, hangar, programa de manutenção por hora voada: uma empresa que só gasta.', usado: true, fatorConserto: 4, pesoUsado: 0.15 },
-  CLASSE_MOTO_CLASSICA
+  CLASSE_MOTO_CLASSICA,
+  // VIDA 21: utilitários, jipes, picapes grandes, hipercarros e carros de competição (`veiculos21`).
+  ...CLASSES_21
 ];
 
 /** Faixa de preço dentro da categoria (carros, motos, bicicletas). */
@@ -310,7 +315,7 @@ const VERSOES_DE_ANTES: readonly VersaoVeiculo[] = [
 /** VIDA 12.9: as versões novas (motos, esportivos, luxo, edições limitadas, clássicos) vêm do catálogo `veiculos129`. */
 // ERAS HISTÓRICAS: as versões da época (`eras/base/veiculos`, com `epoca`) entram no catálogo para serem encontradas
 // pelo id (o carro guardado no save), mas NUNCA nas listas de sempre (`VERSOES_ATUAIS`): só a vida histórica as vê.
-export const VERSOES_VEICULO: readonly VersaoVeiculo[] = [...VERSOES_DE_ANTES, ...VERSOES_VEICULO_129, ...VERSOES_MOTOS_CLASSICAS, ...VERSOES_DA_EPOCA];
+export const VERSOES_VEICULO: readonly VersaoVeiculo[] = [...VERSOES_DE_ANTES, ...VERSOES_VEICULO_129, ...VERSOES_MOTOS_CLASSICAS, ...VERSOES_DA_EPOCA, ...VERSOES_21];
 export const VERSOES_ATUAIS: readonly VersaoVeiculo[] = VERSOES_VEICULO.filter(x => !x.epoca);
 
 /** A forma de uma versão (o desenho que a representa). */
@@ -405,7 +410,7 @@ export function depreciacao(m: ModeloVeiculo, anos: number): number {
   // REWORK 12: o clássico não deprecia pela idade (o preço de catálogo já é o de um exemplar velho, em bom estado);
   // o exótico perde muito no começo (quem compra zero paga a exclusividade) e para num piso alto (a marca segura).
   if (m.segmento === 'classico') return 1;
-  if (m.segmento === 'exotico') return Math.max(0.38, 0.78 * Math.pow(0.93, anos - 1));
+  if (m.segmento === 'exotico' || m.segmento === 'competicao') return Math.max(0.38, 0.78 * Math.pow(0.93, anos - 1));
   const primeiro = m.categoria === 'bicicleta' ? 0.7 : 0.82;
   return Math.max(m.categoria === 'bicicleta' ? 0.15 : 0.18, primeiro * Math.pow(m.categoria === 'bicicleta' ? 0.85 : 0.91, anos - 1));
 }

@@ -877,6 +877,8 @@ export function continuarComo(vida: Vida, herdeiroId: string): { vida: Vida; err
     // do pai e o cigarro voltava aos hábitos dela). Os hábitos dela são os dela (acima); a dependência, se vier, é da vida dela.
     v.dependencias14 = undefined;
     v.apostas = undefined;
+    // VIDA 21: o que veio do crime de quem morreu não passa, escondido, para quem continua.
+    v.espolio21 = undefined;
     v.deslocamento = undefined;
     // REWORK 12.25: o mundo do crime continua (as organizações existem sem ninguém); o nome da família no meio fica como
     // lembrança delas — nunca como cargo: quem herdou decide se quer ouvir (`sub125_legado`).

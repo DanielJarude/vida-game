@@ -22,6 +22,7 @@ import type { Vida } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
 import { BotaoAcao, type ItemDeSubnav } from '../comum';
 import { NavDoSubmundo15 } from '../v15/submundo/NavDoSubmundo15';
+import { BensDoCrime } from '../v21/crime/BensDoCrime';
 import { dinheiroCurto } from '../leituraMaterial';
 import { anoDe } from '../../motor/tempo';
 import { contrair } from '../../motor/texto';
@@ -285,6 +286,8 @@ function Carreira({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
         <p className="svivo-nota">Neste ano: {feitosNoAno(vida)} de {capacidadeDoAno(vida)} trabalhos que cabem na sua semana{tempo ? ` · o caminho ocupa ${tempo.noites} ${tempo.noites === 1 ? 'noite' : 'noites'}${tempo.sabado ? ' e o sábado à tarde' : ''} (Minha semana)` : ''}.</p>
       </section>
       <div className="dossie svivo-dossie"><FrentesDoCaminho vida={vida} agir={agir} /></div>
+      {/* VIDA 21: o que veio dos serviços — os bens, o que fazer com cada um, o mercado paralelo. */}
+      <BensDoCrime vida={vida} agir={agir} />
       {c.marcos.length > 0 && (
         <section className="svivo-bloco" aria-labelledby="titulo-svivo-marcos">
           <h3 id="titulo-svivo-marcos" className="svivo-bloco__titulo">Os marcos</h3>

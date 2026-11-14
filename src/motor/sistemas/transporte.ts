@@ -110,6 +110,8 @@ function veiculosQueLevam(v: Vida): { b: Veiculo; modo: Modo }[] {
     const cat = categoriaDoVeiculo(b);
     // Barco e avião não levam ninguém ao trabalho (e não viram "bicicleta" por falta de caso).
     if (cat === 'embarcacao' || cat === 'aeronave') continue;
+    // VIDA 21: o carro de competição não tem placa: só anda em autódromo.
+    if (modeloVeiculo(b.modeloId).pista) continue;
     const modo: Modo = cat === 'carro' ? 'carro' : cat === 'moto' ? 'moto' : 'bicicleta';
     if ((modo === 'carro' || modo === 'moto') && !temCnh(v)) continue;
     out.push({ b, modo });

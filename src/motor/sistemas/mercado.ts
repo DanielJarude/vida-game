@@ -311,8 +311,9 @@ export function ofertasDeVeiculos(v: Vida, lugar: OfertaVeiculo['lugar']): Ofert
   if (lugar === 'concessionaria') for (const x of daCategoria(m => m.categoria === 'carro' && !m.segmento)) novo(x);
   else if (lugar === 'colecionador') {
     // Zero: os exóticos do mercado. Usados: um ou dois exóticos e uns clássicos (cada um com a sua história).
-    for (const x of daCategoria(m => m.segmento === 'exotico')) novo(x);
-    const exoticos = VEICULOS.filter(m => m.segmento === 'exotico');
+    // VIDA 21: e os de competição (zero, da preparadora). Os usados continuam sorteados só entre os que existem usados.
+    for (const x of daCategoria(m => m.segmento === 'exotico' || m.segmento === 'competicao')) novo(x);
+    const exoticos = VEICULOS.filter(m => m.segmento === 'exotico' && m.usado);
     for (let q = 0; q < 2; q++) usado(r.weighted(exoticos, m => m.preco > 5e6 ? 0.5 : 1)!);
     for (let q = 0; q < 4; q++) usado(modeloVeiculo('classico'));
     // VIDA 12.9.1: e umas motos clássicas (depois dos carros: os anúncios de antes não mudam).

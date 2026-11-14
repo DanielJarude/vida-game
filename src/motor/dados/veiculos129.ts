@@ -123,7 +123,7 @@ export const producaoDaVersao = (x: Pick<V, 'id' | 'producao'> | undefined): num
  * número fabricado (até mil: muito rara; até 15 mil: rara; até 100 mil: incomum; mais: comum — um Fusca é um clássico, não
  * uma raridade) e, sem número, a classe (o clássico sobrevivente é incomum; o exótico de série é incomum — caro, não raro).
  */
-export function grauDoVeiculo(x: Pick<V, 'id' | 'limitada' | 'producao' | 'historica'> | undefined, segmento?: 'exotico' | 'classico'): GrauDeRaridade {
+export function grauDoVeiculo(x: Pick<V, 'id' | 'limitada' | 'producao' | 'historica'> | undefined, segmento?: 'exotico' | 'classico' | 'competicao'): GrauDeRaridade {
   if (x?.limitada) return x.limitada <= 1 ? 'unica' : 'limitada';
   const p = producaoDaVersao(x);
   // VIDA 12.9.1: o marco da história (`historica`) sobe um grau — só com a produção conhecida, e nunca além de muito rara.
@@ -133,12 +133,12 @@ export function grauDoVeiculo(x: Pick<V, 'id' | 'limitada' | 'producao' | 'histo
 const GRAUS_POR_PRODUCAO: readonly GrauDeRaridade[] = ['comum', 'incomum', 'rara', 'muito_rara'];
 
 /** O que sustenta o grau, em palavras ("edição limitada de 799 unidades", "cerca de 351 fabricados"). */
-export function fundamentoDaRaridade(x: Pick<V, 'id' | 'limitada' | 'producao' | 'ano' | 'historica'> | undefined, segmento?: 'exotico' | 'classico'): string {
+export function fundamentoDaRaridade(x: Pick<V, 'id' | 'limitada' | 'producao' | 'ano' | 'historica'> | undefined, segmento?: 'exotico' | 'classico' | 'competicao'): string {
   if (x?.limitada) return x.limitada <= 1 ? 'exemplar único' : `edição limitada de ${x.limitada.toLocaleString('pt-BR')} unidades`;
   const p = producaoDaVersao(x);
   // VIDA 12.9.1: o milhar com ponto ("10.594"); antes a vírgula do "3,3 milhões" trocava também o ponto do milhar ("10,594").
   if (p !== undefined) return `${x?.historica ? 'marco da história; ' : ''}${p >= 100000 ? 'mais de' : 'cerca de'} ${p >= 1_000_000 ? `${(Math.round(p / 100_000) / 10).toLocaleString('pt-BR')} milhões` : p.toLocaleString('pt-BR')} fabricados`;
-  return segmento === 'classico' ? 'clássico de série' : segmento === 'exotico' ? 'produção em série' : 'carro de série';
+  return segmento === 'classico' ? 'clássico de série' : segmento === 'exotico' ? 'produção em série' : segmento === 'competicao' ? 'carro de corrida (sem placa)' : 'carro de série';
 }
 
 /** O nome de um veículo na coleção: marca, modelo e ano ("Jaguar E-Type Série 1, 1963"), nunca a classe. */

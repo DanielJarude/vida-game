@@ -74,6 +74,7 @@ import { conhecerGente, envelhecerConhecidos, limparApertos, processarSocial, re
 import { processarRomance, surgirInteresse } from './sistemas/romance';
 import { processarIniciativas } from './sistemas/iniciativas';
 import { processarCelular15 } from './v15/celular/celular15';
+import { processarEspolio21 } from './v21/crime/espolio21';
 import { processarOficio16 } from './v16/oficios/oficios16';
 import { processarReligiao16 } from './v16/religiao/religiao16';
 import { processarExposicao } from './sistemas/exposicao';
@@ -311,6 +312,8 @@ function viverAno(v: Vida, r: Rng): void {
   processarMargem(v);
   // REWORK 11.5 · SUB-11: os ramos do Submundo (a prática, o mercado, a organização, as pessoas com ficha, as cenas).
   processarSubmundo(v);
+  // VIDA 21: os bens que vieram do crime — esfriam, ou são achados (o que está em uso e é rastreável, a busca do processo).
+  processarEspolio21(v);
   processarClandestinos(v, r);
   // REWORK 12.25: o Submundo vivo — as pessoas do caminho, as organizações (que andam sozinhas), as encomendas, a carreira
   // (o patamar, os marcos, a família, a saída aos poucos) e o legado de quem herdou esse nome.

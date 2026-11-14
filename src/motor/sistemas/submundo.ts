@@ -31,6 +31,7 @@ import { ativo, parar, rendaDeReferencia, temAcesso } from './ilicito';
 import { categoriaDoRamo, chanceDeFalha, garantirRamos, NOME_DO_RAMO, novaEspecializacao, PERFIL, RAMOS, ramoPrincipal, ramosAtivos } from './ramos';
 import { machucarNaBriga } from './lesoes';
 import { movimentoPorFora, pagarPorFora } from './porFora';
+import { repartir21, textoDaParte21 } from '../v21/crime/espolio21';
 import { contrair, dinheiroCurto } from '../texto';
 import { anoDe } from '../tempo';
 
@@ -526,11 +527,18 @@ export function executarSubmundo(v: Vida, r: Rng, oque: OqueSubmundo, ramo?: Ram
         abalar(v, 'o serviço que deu errado', -5, 8);
         return { texto: escala === 3 ? 'Deu errado. Você saiu sem nada — e com mais gente sabendo.' : 'Deu errado. Nada veio, e o susto ficou.', tom: 'ruim' };
       }
-      const liq = ganhar(r.int(valorDaOperacao(v, 'furtos', escala === 3 ? 2 : 0.5), valorDaOperacao(v, 'furtos', escala === 3 ? 5 : 1.5)));
+      // VIDA 21: a parte de quem fez é a mesma de antes, agora dividida em dinheiro em espécie e bens concretos (que ficam
+      // com você até decidir o que fazer: guardar, usar, vestir, vender, se livrar — `v21/crime/espolio21`).
+      const bruto = r.int(valorDaOperacao(v, 'furtos', escala === 3 ? 2 : 0.5), valorDaOperacao(v, 'furtos', escala === 3 ? 5 : 1.5));
+      const parte = repartir21(v, Math.round(bruto * 0.7 / 100) * 100, escala, escala === 3 ? 'um serviço grande' : 'um serviço pequeno', e.nivel);
+      if (parte.dinheiro > 0) movimentoPorFora(v, 'ocasional', parte.dinheiro);
+      e.ganhos += bruto; if (s) s.ganhos += bruto;
       if (p && escala === 3) promessa(v, p.id, true);
       if (escala === 3) e.trabalhos = (e.trabalhos ?? 0) + 1;
-      anotar(v, `Um serviço ${escala === 3 ? 'grande' : 'pequeno'} deu certo: ${fmt(v, liq)} no bolso.`, 'bom');
-      return { texto: escala === 3 ? `Deu certo. ${fmt(v, liq)} ficaram com você, depois da parte de cada um.` : `Deu certo, e foi pouco: ${fmt(v, liq)}.` };
+      const levou = textoDaParte21(parte);
+      anotar(v, `Um serviço ${escala === 3 ? 'grande' : 'pequeno'} deu certo: ${levou}.`, 'bom');
+      const destino = parte.bens.length ? ` ${parte.bens.length === 1 ? 'O bem está guardado' : 'Os bens estão guardados'} — em "O que veio dos serviços" você decide o que fazer.` : '';
+      return { texto: escala === 3 ? `Deu certo. Depois da parte de cada um, ficou com você: ${levou}.${destino}` : `Deu certo: ${levou}.${destino}` };
     }
     case 'comprar_lote': {
       const custo = custoDoLote(v);

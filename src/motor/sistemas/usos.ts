@@ -28,7 +28,7 @@ import { podeComecarRotina } from './rotinas';
 import { gv, textoVeiculo, usoMensalDoVeiculo, veiculoUtil } from './veiculos';
 import { faltaHabilitacao } from './habilitacoes';
 
-export type UsoVeiculo = 'passear' | 'viajar' | 'app' | 'personalizar' | 'emprestar';
+export type UsoVeiculo = 'passear' | 'viajar' | 'app' | 'personalizar' | 'emprestar' | 'pista';
 export type UsoCasa = 'festa' | 'familia' | 'decorar' | 'reformar';
 
 const ja = (v: Vida, k: string) => v.anoAtual.acoes.includes(k);
@@ -61,6 +61,14 @@ function destino(v: Vida): string {
 export function disponibilidadeUsoVeiculo(v: Vida, b: Veiculo | undefined, oque: UsoVeiculo): { ok: boolean; motivo?: string; resgate?: Veredito['resgate'] } {
   if (!b) return { ok: false, motivo: 'Veículo não encontrado.' };
   const m = modeloVeiculo(b.modeloId);
+  // VIDA 21: o carro de competição só anda em autódromo; o dia de pista é de quem tem carro para isso (competição,
+  // superesportivo, hipercarro). Três por ano (o autódromo tem agenda; o carro, revisão a cada saída).
+  if (m.pista && oque !== 'pista') return { ok: false, motivo: 'Não se aplica.' };
+  if (oque === 'pista') {
+    if (!m.pista && m.segmento !== 'exotico') return { ok: false, motivo: 'Não se aplica.' };
+    if (idade(v) < 18) return { ok: false, motivo: 'A partir dos 18.' };
+    if (v.anoAtual.acoes.filter(x => x === `uso:pista:${b.id}`).length >= 3) return { ok: false, motivo: 'Três dias de pista por ano já é a agenda do autódromo.' };
+  }
   if (!veiculoUtil(b)) return { ok: false, motivo: b.parado ? 'Está parado na garagem.' : 'Precisa de conserto antes.' };
   if (m.cnh && !v.trabalho.licencas.includes('cnh')) return { ok: false, motivo: 'Sem carteira de motorista, não dá para dirigir.' };
   const custo = custoUso(v, b, oque);
@@ -70,6 +78,7 @@ export function disponibilidadeUsoVeiculo(v: Vida, b: Veiculo | undefined, oque:
   // Barco e avião: passeio e viagem, sim; aplicativo e empréstimo, não.
   if (m.raro && (oque === 'app' || oque === 'emprestar')) return { ok: false, motivo: 'Não se aplica.' };
   switch (oque) {
+    case 'pista': return { ok: true };
     case 'passear': return ja(v, `uso:passear:${b.id}`) ? { ok: false, motivo: 'Já passearam bastante este ano.' } : { ok: true };
     case 'viajar': if (m.categoria === 'bicicleta') return { ok: false, motivo: 'De bicicleta, a estrada é outra história.' }; return ja(v, `uso:viajar:${b.id}`) ? { ok: false, motivo: 'Uma viagem de estrada por ano já é bastante.' } : { ok: true };
     case 'app': {
@@ -85,6 +94,7 @@ export function disponibilidadeUsoVeiculo(v: Vida, b: Veiculo | undefined, oque:
 
 function custoUso(v: Vida, b: Veiculo, oque: UsoVeiculo): number {
   const m = modeloVeiculo(b.modeloId);
+  if (oque === 'pista') return custoDaPista(v, b);
   if (m.raro) {
     // Sem habilitação, vai quem conduza (marinheiro, piloto contratado): posse não é saber operar.
     const contratado = faltaHabilitacao(v, b.modeloId) ? (m.categoria === 'aeronave' ? (oque === 'viajar' ? 6000 : 2500) : (oque === 'viajar' ? 2500 : 900)) : 0;
@@ -99,6 +109,7 @@ function custoUso(v: Vida, b: Veiculo, oque: UsoVeiculo): number {
 
 export function rotuloUsoVeiculo(v: Vida, b: Veiculo, oque: UsoVeiculo): string {
   const m = modeloVeiculo(b.modeloId);
+  if (oque === 'pista') return m.pista ? `Um dia de pista com ${textoVeiculo(b)} (equipe, caminhão e autódromo: ${fmt(custoDaPista(v, b))})` : `Um track day no autódromo (${fmt(custoDaPista(v, b))})`;
   const com = companhia(v);
   const quem = m.tripulacao ? ' (com a tripulação)' : faltaHabilitacao(v, b.modeloId) ? (m.categoria === 'aeronave' ? ' (com um piloto contratado)' : ' (com um marinheiro contratado)') : '';
   if (m.categoria === 'embarcacao') { if (oque === 'passear') return `Um dia no mar${com.length ? ' com a família' : ''}${quem}`; if (oque === 'viajar') return `Uma travessia até uma ilha, com pernoite${quem}`; }
@@ -157,6 +168,7 @@ export function executarUsoVeiculo(v: Vida, r: Rng, b: Veiculo, oque: UsoVeiculo
       aplicarPersonalidade(v, 'acao:personalizar_veiculo', { independencia: 1 });
       return `${cap(textoVeiculo(b))} ficou com a sua cara. Quem compra usado, porém, paga menos por gosto dos outros.`;
     }
+    case 'pista': return diaDePista(v, r, b);
     case 'emprestar': {
       v.anoAtual.acoes.push(`uso:emprestar:${b.id}`);
       const a = amigoQuePede(v)!;
@@ -291,7 +303,7 @@ export function executarUsoCasa(v: Vida, r: Rng, oque: UsoCasa): string {
   }
 }
 
-export const USOS_VEICULO: UsoVeiculo[] = ['passear', 'viajar', 'app', 'personalizar', 'emprestar'];
+export const USOS_VEICULO: UsoVeiculo[] = ['passear', 'viajar', 'app', 'personalizar', 'emprestar', 'pista'];
 /**
  * 12.4.1: "deixar a casa com a sua cara" saiu da lista — era um botão genérico (+3 de humor) que repetia, sem mostrar
  * nada, o que a casa por dentro faz de verdade (o piso, a parede, a luz, os móveis de cada cômodo, desenhados). O uso
@@ -299,3 +311,44 @@ export const USOS_VEICULO: UsoVeiculo[] = ['passear', 'viajar', 'app', 'personal
  * função própria: conserta e renova o imóvel (o estado, o valor, o padrão) — não escolhe acabamento.
  */
 export const USOS_CASA: UsoCasa[] = ['festa', 'familia', 'reformar'];
+
+/* ================================================================ VIDA 21 · o dia de pista */
+
+/**
+ * O que custa um dia de autódromo (estimativas de jogo, reais de 2026): o track day de quem leva o superesportivo (a
+ * inscrição, o pneu, o freio); o dia do carro de competição (a equipe, o caminhão, o box, os pneus de corrida) — no
+ * monoposto de F1, a equipe especializada e o autódromo fechado custam mais do que muito carro.
+ */
+export function custoDaPista(v: Vida, b: Veiculo): number {
+  const m = modeloVeiculo(b.modeloId);
+  const base = !m.pista ? (m.id === 'hipercarro' ? 25000 : 6000)
+    : b.versaoId === 'kart_comp' ? 1500 : b.versaoId === 'f1_monoposto' ? 380000 : b.versaoId === 'porsche_gt3r' ? 45000 : 30000;
+  return Math.round(base * c(v) / 100) * 100;
+}
+
+function diaDePista(v: Vida, r: Rng, b: Veiculo): string {
+  const m = modeloVeiculo(b.modeloId);
+  const primeira = !(b.historia ?? []).some(h => h.texto.startsWith('Dia de pista'));
+  v.anoAtual.acoes.push(`uso:pista:${b.id}`);
+  v.mente.felicidade = clamp(v.mente.felicidade + (primeira ? 6 : 4));
+  v.mente.estresse = clamp(v.mente.estresse - 5);
+  b.estado = clamp(b.estado - (m.pista ? 6 : 3));
+  // O incidente: a rodada na curva, a zebra que quebra a suspensão, o motor que reclama.
+  const risco = b.versaoId === 'kart_comp' ? 0.05 : m.pista ? 0.1 : 0.06;
+  let texto: string;
+  if (r.chance(risco)) {
+    const custo = Math.round(b.valor * (m.pista ? r.int(3, 9) : r.int(2, 6)) / 100 / 100) * 100;
+    b.estado = clamp(b.estado - 15);
+    b.problema = { id: `pb${v.seq++}`, texto: m.pista ? 'o assoalho e a suspensão depois da rodada' : 'a frente e a suspensão depois da saída de pista', custo, desde: v.t, gravidade: 2, adiado: 0 };
+    if (r.chance(0.25)) v.corpo.saude = clamp(v.corpo.saude - 4);
+    texto = `${m.pista ? 'Na terceira volta' : 'No fim da sessão'}, a traseira escapou na freada. Ninguém se machucou de verdade — o carro, sim: ${fmt(custo)} de conserto.`;
+    (b.historia ??= []).push({ t: v.t, texto: `Dia de pista: saiu da pista e voltou de caminhão.` });
+  } else {
+    texto = m.pista
+      ? (b.versaoId === 'f1_monoposto' ? 'O ronco no box vazio, os engenheiros com o laptop, o pescoço que doeu a semana inteira. Dez voltas que você vai lembrar para sempre.' : b.versaoId === 'kart_comp' ? 'Kartódromo, capacete e um tempo de volta que melhorou a cada sessão.' : 'O carro na pista, a equipe no rádio, o tempo de volta caindo. Cansa como um treino e vicia como uma corrida.')
+      : 'Instrutor do lado, cones na freada, a reta que finalmente cabe o carro inteiro. Na estrada nunca daria.';
+    (b.historia ??= []).push({ t: v.t, texto: `Dia de pista${primeira ? ' (o primeiro)' : ''}.` });
+  }
+  if (primeira) escrever(v, { texto: `Levou ${textoVeiculo(b)} para o autódromo pela primeira vez.`, relevancia: 'biografia', tema: 'lazer', escolha: true });
+  return texto;
+}

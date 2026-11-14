@@ -24,6 +24,7 @@ import { ativo } from './ilicito';
 import { preso } from './justica';
 import { alcanceDoContato, anotar, contatosAtivos, criarContato, lembrarOrg, orgPorId, rivalDoRamo, valorDaOperacao } from './submundo';
 import { NOME_DO_RAMO, PERFIL, ramoPrincipal, ramosAtivos } from './ramos';
+import { repartir21, textoDaParte21 } from '../v21/crime/espolio21';
 import { escalaDe, ganharPratica, garantirCarreira, marco, movimentoPorFora, nivelNaOrganizacao, pagarPorFora, patamarAtual, temOrganizacaoPropria, temTempo, usarTempo } from './carreiraCriminal';
 import { dinheiroCurto, flex } from '../texto';
 import { abalar } from './abalo';
@@ -298,7 +299,14 @@ function realizar(v: Vida, r: Rng, x: EncomendaCriminal): { texto: string; tom?:
     x.estado = 'concluida';
     c.falhasSeguidas = 0;
     const fator = desfecho === 'inesperado' ? 1.3 + r.next() * 0.2 : desfecho === 'parcial' ? 0.55 + r.next() * 0.2 : 1;
-    const liq = Math.round(x.valor * 0.8 * fator / 100) * 100;
+    let liq = Math.round(x.valor * 0.8 * fator / 100) * 100;
+    // VIDA 21: no ramo de furtos e roubos, a parte vem em dinheiro e bens (a carga, o que estava no lugar). `liq` passa a
+    // ser só o dinheiro em espécie; os bens ficam com você para decidir (`v21/crime/espolio21`).
+    let bens = '';
+    if (x.ramo === 'furtos' && x.tipo !== 'furtos_vigiar' && x.tipo !== 'furtos_guardar') {
+      const parte = repartir21(v, liq, x.gravidade >= 3 ? 3 : 1, x.tipo === 'furtos_carga' ? 'a carga desviada' : x.tipo === 'furtos_desmonte' ? 'o desmonte' : 'uma encomenda', e.nivel);
+      if (parte.bens.length) { liq = parte.dinheiro; bens = textoDaParte21({ dinheiro: 0, bens: parte.bens }); }
+    }
     movimentoPorFora(v, 'encomendas', liq);
     e.ganhos += Math.round(x.valor * fator);
     if (s) s.ganhos += Math.round(x.valor * fator);
@@ -318,8 +326,10 @@ function realizar(v: Vida, r: Rng, x: EncomendaCriminal): { texto: string; tom?:
         ? variante(v, 'enc_parcial', [`Deu certo pela metade: pagaram menos que o combinado, e a sua parte ficou em ${dinheiroCurto(liq)}.`, `Uma parte se perdeu no caminho. Sobraram ${dinheiroCurto(liq)} para você — e mais gente do que devia viu.`], x.id)
         : variante(v, `enc_ok_${x.gravidade}`, [`Saiu como combinado: ${dinheiroCurto(liq)} para você depois das partes.`, `Ninguém viu, ninguém perguntou: ${dinheiroCurto(liq)} no seu bolso.`, `Foi limpo. A sua parte: ${dinheiroCurto(liq)}.`], x.id);
     const reacao = ctx.pessoa ? reacaoAoSucesso(v, ctx.pessoa.id, liq) : ctx.org ? reacaoDaOrg(v, ctx.org, true) : '';
+    if (bens) x.resultado = `${x.resultado} Além disso: ${bens}.`;
     const fecho = primeira ? ' Foi a primeira encomenda cumprida: o seu nome passou a circular.' : '';
-    return { texto: `${ctx.frase} ${lugar}. ${resultado} ${reacao}${fecho}`.replace(/\s+/g, ' ').trim(), tom: 'bom' };
+    const comBens = bens ? ` Em espécie, isso; e ficou com você: ${bens} (em "O que veio dos serviços").` : '';
+    return { texto: `${ctx.frase} ${lugar}. ${resultado}${comBens} ${reacao}${fecho}`.replace(/\s+/g, ' ').trim(), tom: 'bom' };
   }
   x.estado = 'falhou';
   c.falhasSeguidas = (c.falhasSeguidas ?? 0) + 1;

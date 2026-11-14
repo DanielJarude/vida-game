@@ -87,7 +87,9 @@ import { buscarAlguem, buscarAmizade, disponibilidadeAmizade, disponibilidadeBus
 import { disponibilidadeCasamento, executarCasamento, type OpCasamento } from './sistemas/casamento';
 import { disponibilidadePedirAjuda, pedirAjuda, principal as principalDaOrigem, type MotivoDeAjuda } from './sistemas/origem';
 import { autonomia } from './sistemas/autonomia';
-import { comprarItem, disponibilidadeAparencia, disponibilidadeComprarItem, disponibilidadeUsarItem, mudarAparencia, usarItem, vestirLook, type MudancaVisual } from './sistemas/estilo';
+import { comprarItem, disponibilidadeAparencia, disponibilidadeComprarItem, disponibilidadeUsarItem, mudarAparencia, sincronizarVisual, usarItem, vestirLook, type MudancaVisual } from './sistemas/estilo';
+import { disponibilidadeEspolio21, executarEspolio21, type OqueEspolio21 } from './v21/crime/espolio21';
+import type { Comprador21 } from './dados21/crime/espolio21';
 import { clamp, rngDe } from './rng';
 import { variantesDeVeiculo } from './dados/pertences';
 import { disponibilidadeParalela, encerrarParalela, encerrarPausada, trocarPrincipal } from './sistemas/paralelas';
@@ -402,6 +404,8 @@ export type Acao =
   | { tipo: 'submundo'; oque: OqueSubmundo; ramo?: Ramo; pessoaId?: string }
   /** REWORK 12.25: as encomendas, os contatos, as organizações, a Justiça e o rumo do Submundo (`acoesDoCrime`). */
   | { tipo: 'crime'; acao: AcaoDoCrime }
+  /** VIDA 21: o que fazer com um bem que veio do crime (`v21/crime/espolio21`). */
+  | { tipo: 'espolio21'; oque: OqueEspolio21; bemId: string; comprador?: Comprador21 }
   /** REWORK 11.5 · POL-05: as alianças e as promessas (formar, cumprir, romper, pedir apoio, prometer na campanha). */
   | { tipo: 'alianca'; oque: OqueAlianca; id?: string }
   /** REWORK 11.5 · ESP-05: a estratégia do time (a prancheta do técnico): muda o jeito de jogar lido em cada jogo. */
@@ -473,6 +477,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'margem': return disponibilidadeMargem(v, a.oque);
     case 'submundo': return disponibilidadeSubmundo(v, a.oque, a.ramo, a.pessoaId);
     case 'crime': return disponibilidadeCrime(v, a.acao);
+    case 'espolio21': return disponibilidadeEspolio21(v, a.oque, a.bemId, a.comprador);
     case 'alianca': return disponibilidadeAlianca(v, a.oque, a.id);
     case 'tatica': return disponibilidadeTatica(v, a.estilo);
     case 'crianca': return disponibilidadeCrianca(v, a.oque);
@@ -1120,7 +1125,7 @@ function linhaDoExtrato(a: Acao): [string, TipoMovimento] {
     case 'colecao_servico': case 'colecao_proposta': case 'paralelo': return ['Coleção: compra e venda de peças', 'escolha'];
     case 'exotico_comprar': case 'instalacao_comprar': case 'pet_cuidador': case 'pet_ao_zoo': case 'animal_por_fora': return ['Os bichos: compras e cuidados', 'escolha'];
     // REWORK 12.25 · FIN-12.25-01: o que é do caminho tem linha própria (antes, a ação do Submundo caía em "Compras, viagens").
-    case 'clandestino': case 'submundo': return ['Por fora: outros movimentos do caminho', 'por_fora'];
+    case 'clandestino': case 'submundo': case 'espolio21': return ['Por fora: outros movimentos do caminho', 'por_fora'];
     case 'crime': return a.acao.area === 'justica' ? ['Justiça: advogados, fianças e custas', 'despesa'] : a.acao.area === 'corrupcao' ? ['Por fora: dinheiro posto para influenciar a Justiça', 'por_fora'] : ['Por fora: outros movimentos do caminho', 'por_fora'];
     case 'margem': return ['Justiça: advogados, fianças e custas', 'despesa'];
     case 'conquistas14': return [linhaDoExtrato14(a.oque), 'escolha'];
@@ -1173,6 +1178,13 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       // O que a ação desencadeou agora (o parceiro pego depois do serviço que deu errado) vira a pergunta na hora.
       if (!v.momento) { const c = candidatos(v, r, k => k.tipo === 'decisao' && /^sub[a-z]?_/.test(k.id))[0]; if (c && c.c.tipo === 'decisao') abrirDecisao(v, c.c, c.ctx); }
       return { resultado: contrair(x.texto), titulo: a.ramo ? NOME_DO_RAMO[a.ramo] : 'O caminho' };
+    }
+    case 'espolio21': {
+      const x = executarEspolio21(v, a.oque, a.bemId, a.comprador);
+      // A peça vai para o guarda-roupa de sempre e é vestida pelo caminho de sempre; ao sair, a Aparência se redesenha.
+      if (x.vestir) usarItem(v, x.vestir.itemId, true, x.vestir.pecaId);
+      sincronizarVisual(v);
+      return { resultado: x.texto, titulo: x.titulo };
     }
     case 'crime': {
       const x = executarCrime(v, a.acao);

@@ -3984,6 +3984,8 @@ export interface Vida {
   apostas18?: import('./v18/apostas/estado18').Apostas18;
   /** VIDA 19 (`motor/v19/conectada`): o que você fez na rede dos outros (curtidas, comentários, mensagens). Ausente: nada ainda. */
   conectada19?: import('./dados19/tipos').Conectada19;
+  /** VIDA 21 (`motor/v21/crime/espolio21`): os bens que vieram do crime, o nome no mercado paralelo, o que se vendeu ou perdeu. */
+  espolio21?: import('./dados21/crime/espolio21').Espolio21;
   morte?: {
     t: number; causa: string; heranca?: Heranca;
     /** O que o jogador decidiu sobre o patrimônio na tela do legado (guardado: recarregar mostra as mesmas escolhas). */

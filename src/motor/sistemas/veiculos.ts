@@ -283,7 +283,7 @@ export function disponibilidadeVeiculo(v: Vida, b: Veiculo | undefined, oque: Ac
     case 'principal':
       if (v.financas.veiculoPrincipal === b.id) return { ok: false, motivo: 'Já é o principal.' };
       if (guardadoLonge(v, b)) return { ok: false, motivo: 'Está guardado longe.' };
-      if (['embarcacao', 'aeronave'].includes(modeloVeiculo(b.modeloId).categoria)) return { ok: false, motivo: 'Não é veículo do dia a dia.' };
+      if (['embarcacao', 'aeronave'].includes(modeloVeiculo(b.modeloId).categoria) || modeloVeiculo(b.modeloId).pista) return { ok: false, motivo: 'Não é veículo do dia a dia.' };
       return veiculos(v).filter(x => !['embarcacao', 'aeronave'].includes(modeloVeiculo(x.modeloId).categoria)).length > 1 ? { ok: true } : { ok: false, motivo: 'É o único.' };
     case 'restaurar':
       if (modeloVeiculo(b.modeloId).segmento !== 'classico') return { ok: false, motivo: 'Restauração é coisa de clássico.' };
