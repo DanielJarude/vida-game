@@ -1,7 +1,7 @@
 # VIDA 21 — Auditoria, correções e expansão · relatório
 
 Branch `claude/vida21` (a partir de `6423a98` = `origin/main`, VIDA 20 publicada). Data: 2026-11-14.
-**Não publicado** (nem push, nem deploy): ver §15.
+**Publicado** em 2026-11-14 (commit `9571459`): ver §15.
 
 Legenda de estado: **[T]** implementado e testado · **[V]** implementado, validação parcial · **[P]** parcial · **[N]** não implementado · **[B]** bloqueado.
 
@@ -41,7 +41,8 @@ Crime ↔ inventário ↔ Aparência ↔ economia/extrato ↔ Justiça; catálog
 ## 9. Testes
 Novos: `vida21Celular` (12, inclui 3 vidas × 50 anos com invariantes), `vida21Crime` (9), `vida21Crime.tsx` (2), `vida21Catalogo` (5), `vida21Carreiras` (4), `vida21Fama` (4), `vida21Aparencia.tsx` (4; falham os 3 originais com o código anterior), `vida21Fachadas` (3).
 Ajustados (com motivo no código): `vida16Namoro` (cenário com a pré-condição real da queixa: 2+ anos sem contato), `material.test` (há duas Hilux; confere a versão da oferta clicada).
-Regressões direcionadas: celular/mensagens 537/539, Submundo 794/795, veículos/garagem 1435/1439 antes dos ajustes (as falhas novas corrigidas; restantes = linha de base). Suíte completa: ver §9b.
+Regressões direcionadas: celular/mensagens 537/539, Submundo 794/795, veículos/garagem 1435/1439 antes dos ajustes.
+**Suíte completa na árvore exata do commit publicado (`git archive 9571459`): 2.856 aprovados, 3 falhas, 1 ignorado** — as três por tempo-limite (60–90 s) e da lista de instáveis da linha de base (`fechamentoMundo #4`, `motor.test agência`, `profissao treinar dobrado`). Uma rodada anterior acusou 6 falhas novas, todas corrigidas antes da publicação: 5 peças de roupa duplicavam produtos existentes (removidas), modelagem ausente em 4 peças, e 3 testes sensíveis à deriva das vidas-cenário (técnico, MEI) tornados robustos à intenção.
 Saves antigos: 18 saves (VIDA 18, 19, 20) abrem, avançam 3 anos, salvam e reabrem — **0 falhas**.
 Build: `tsc` limpo; `vite build` ok; maior pacote `motor-textos` 799.568 B (VIDA 20: 797.250 B) — **dentro do limite de 800 kB, sem folga**. Smoke de distribuição: **29/29**.
 
@@ -51,6 +52,7 @@ Fachadas (17 formas + combinações de lado de fora), roupas novas em 4 corpos, 
 ## 11. Pendências e limitações (honestas)
 - **[P] Desenho do monoposto de F1**: usa a silhueta de carro baixo com asa (sem roda descoberta/bico); o carro e as regras funcionam; desenho próprio pendente. O kart foi retirado da compra (o desenho saía com traços soltos); segue como carreira da VIDA 20.
 - **[P] Malas**: não entraram (não são vestíveis no desenho atual).
+- Corrigido antes de publicar: 6 peças duplicavam produtos que já existiam (short de corrida, camisa/moletom/calça/salto de grife, terno sob medida) e sobrescreviam o desenho original — removidas (45 peças novas no total).
 - **[P] Classes novas de veículos só como zero-quilômetro** (não entram no sorteio de usados, para não mudar o acaso de saves existentes).
 - **[P] Falas e eventos próprios por carreira**: os números são por trilha (~70); falas/cenas próprias seguem as da VIDA 12.5/16/16.1 — não ampliadas nesta versão.
 - **[P] Fama**: as "oportunidades" grandes (TV, campanhas, patrocínios, premiações) seguem as do núcleo VIDA 13; esta versão acrescentou o reconhecimento local e as formas lado a lado.
@@ -62,10 +64,14 @@ Fachadas (17 formas + combinações de lado de fora), roupas novas em 4 corpos, 
 Motor: `v21/{celular,crime,carreiras,fama}`, `dados21/{celular,crime,estilo,carreiras}`, `dados/veiculos21.ts`, `v15/celular/celular15.ts`, `v17/celular/mensagens17.ts`, `dados17/celular/catalogo17.ts`, `sistemas/{iniciativas,submundo,encomendas,usos,transporte,veiculos,mercado,sucessao}.ts`, `dados/{bens,estilo,veiculos129}.ts`, `acoes.ts`, `ano.ts`, `save.ts`, `tipos.ts`. UI: `jogo/{Aparencia,SubmundoVivo,Trabalho,Voce}.tsx`, `leitura.ts`, `v14/fachadas/{kit,casas14}.ts`, `ilustracao/carros13.ts`, `avatar/{pecas,pecas21}.ts`, `v21/{crime,carreiras}`, `novidades.ts`. `vite.config.ts` (pacotes `motor21-*`, `dados21-*`). Scripts: `playtest/{gerar21,qa21,galeria21Roupas}`.
 
 ## 13. Commits
-`83e2c94` bolsas + fachadas · `15b17ea` mensagens + Pede atenção · `b51cafc` crime + garagem · `ff424b1` guarda-roupa · `4dea98b` números do ofício + medidas · `5b1f042` reconhecimento · `79f7ff1` notas + QA · (este relatório).
+`83e2c94` bolsas + fachadas · `15b17ea` mensagens + Pede atenção · `b51cafc` crime + garagem · `ff424b1` guarda-roupa · `4dea98b` números do ofício + medidas · `5b1f042` reconhecimento · `79f7ff1` notas + QA · **`9571459`** sem duplicatas, testes robustos, relatório (commit publicado) · commit seguinte: esta seção (só documentação).
 
 ## 14. Branch
-`claude/vida21`, local em `~/vida-trabalho/r129`, à frente de `origin/main`. **Sem push.**
+`claude/vida21` enviada ao GitHub. `main` e a branch de produção `claude/fix-pos-rework3-playtest` avançadas por **fast-forward** (de `6423a98` e `d33c449`) até `9571459`.
 
-## 15. Publicação
-**Não publicado.** O pedido não autorizou o deploy explicitamente e o fluxo do projeto publica sob pedido ("Suba no site"). Para publicar: confirmar, fazer push do branch, avançar `main` e o branch de produção, e conferir em produção o `index` e os pacotes JS/CSS idênticos (sha256) ao build validado.
+## 15. Publicação — confirmada
+- Push às 22:15:45 UTC; o Cloudflare Pages (https://vida-game.pages.dev/) passou a servir o novo build às 22:18:53 UTC (`index-BwgQJgvv.js`).
+- Conferência byte a byte com o build local do mesmo commit (`npm run build` na árvore de `git archive 9571459`): **`/` + 146 JS/CSS = 147 arquivos idênticos (SHA-256)**. (`/index.html` responde 308 para `/` — por isso a comparação é feita em `/`.)
+- Smoke de distribuição no build publicado: 29/29.
+- Validação funcional no site oficial (Playwright): bens do Submundo com ofertas (1440, escuro), números do ofício (390), bolsa na Aparência (390), formas de reconhecimento (1440), jogo novo — sem erro de console, sem rolagem lateral.
+- Sem acesso ao painel do Cloudflare nesta máquina (nenhuma credencial/wrangler): o "deploy concluído" é confirmado pelo conteúdo servido em produção, não pelo painel.
