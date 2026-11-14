@@ -244,13 +244,14 @@ export function perfilDaRede(id: PlataformaId, c: NonNullable<ReturnType<typeof 
   const maior = c.totais?.maior ? seguidoresEmPalavras(c.totais.maior) : undefined;
   const pl = (um: string, varios: string) => `${n} ${n === 1 ? um : varios}`;
   switch (id) {
-    case 'youtube': return [pl('vídeo no canal', 'vídeos no canal'), maior && `o mais visto: ${maior} visualizações`].filter(Boolean).join(' · ');
+    // VIDA 20: `totais.maior` é o maior público que a conta já teve (não a publicação mais vista).
+    case 'youtube': return [pl('vídeo no canal', 'vídeos no canal'), maior && `já chegou a ${maior} inscritos`].filter(Boolean).join(' · ');
     case 'tiktok': return [pl('vídeo', 'vídeos'), virais ? `${virais} ${virais === 1 ? 'viralizou' : 'viralizaram'}` : undefined].filter(Boolean).join(' · ');
     case 'twitch': return [pl('live', 'lives'), maior && `o maior público: ${maior}`].filter(Boolean).join(' · ');
     case 'x': return [pl('post', 'posts'), (c.totais?.polemicas ?? 0) ? `${c.totais!.polemicas} ${c.totais!.polemicas === 1 ? 'polêmica' : 'polêmicas'}` : undefined].filter(Boolean).join(' · ');
     case 'facebook': return pl('publicação no mural', 'publicações no mural');
     case 'onlyfans': return [pl('conteúdo exclusivo', 'conteúdos exclusivos'), c.monetizada !== undefined ? 'assinatura ativa' : 'sem assinatura ainda'].join(' · ');
-    default: return [pl('publicação', 'publicações'), maior && `a mais vista: ${maior}`].filter(Boolean).join(' · ');
+    default: return [pl('publicação', 'publicações'), maior && `já chegou a ${maior} seguidores`].filter(Boolean).join(' · ');
   }
 }
 
