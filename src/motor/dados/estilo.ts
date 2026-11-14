@@ -10,6 +10,7 @@ import type { EstiloRoupa, Ocasiao, Vida, Visual } from '../tipos';
 import { PIERCINGS, type Piercing, type RegiaoDePiercing } from './piercings129';
 import { BRINCOS_13 } from './piercings13';
 import { JOIAS20 } from '../dados20/joias20';
+import { ITENS_ESTILO_21 } from '../dados21/estilo/estilo21';
 import { BARBAS_13, BARBAS_COM_BIGODE_13, CORES_TINTA_13, CORTES_13, NOME_COR_13 } from './aparencia13';
 
 /** Cortes de cabelo (o retrato desenha todos). Nenhum é de um gênero só. */
@@ -315,6 +316,8 @@ export const ITENS_ESTILO: readonly ItemEstilo[] = [
   { id: 'pochete', nome: 'Pochete', categoria: 'acessorio', lugar: 'bolsa', preco: 130, estilos: ['streetwear', 'baile', 'esportivo'], ocasioes: ['dia', 'festa', 'esporte'], descricao: 'Na cintura ou atravessada, náilon com fivela de plástico.' },
   { id: 'clutch', nome: 'Bolsa de mão (clutch)', categoria: 'acessorio', lugar: 'bolsa', preco: 450, estilos: ['elegante', 'social'], ocasioes: ['evento', 'festa', 'encontro'], descricao: 'Pequena, rígida, de cetim, fecho de metal: vai na mão.' },
   { id: 'bolsa_grife', nome: 'Bolsa de grife', categoria: 'acessorio', lugar: 'bolsa', preco: 26000, luxo: true, nivel: 5, estilos: ['luxuoso', 'elegante'], ocasioes: ['evento', 'encontro', 'trabalho'], descricao: 'Couro granulado, alça de corrente, o fecho que se reconhece.' },
+  // VIDA 21: o guarda-roupa que cresceu (`dados21/estilo/estilo21`): roupas, calçados, relógios, bolsas, uniformes e luxo.
+  ...ITENS_ESTILO_21
 ];
 
 /**

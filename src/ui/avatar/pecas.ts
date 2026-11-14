@@ -9,6 +9,7 @@
  * fotográfica. Cada peça precisa se distinguir das vizinhas pela SILHUETA antes da cor (manga, gola, comprimento).
  */
 import { pecaDaJoia20, type PecaJoia20 } from './joias20';
+import { PECAS_21 } from './pecas21';
 
 export type Estampa = 'listras' | 'xadrez' | 'floral' | 'wax' | 'chita' | 'banda' | 'time' | 'logo' | 'tachas';
 export type Manga = 'sem' | 'curta' | 'longa';
@@ -185,7 +186,9 @@ export const PECAS: Record<string, Peca | Conjunto> = {
   roupa_esportiva: { cima: { parte: 'cima', forma: 'agasalho', cor: ['#2f6f8f', '#b0493c', '#3f7a52'], cor2: '#f2efe8', manga: 'longa', gola: 'alta', barra: 'canelada', punho: true }, baixo: { parte: 'baixo', forma: 'calca', corte: 'reta', cor: ['#2b2f36', '#2f6f8f'], listra: '#f2efe8' }, pes: { parte: 'pes', forma: 'tenis_corrida', cor: '#3a3f45', sola: '#f4f4f2', detalhe: '#e8f04a' } },
   roupa_social: { cima: { parte: 'cima', forma: 'camisa', cor: ['#f4f6f8', '#cfe0f2'], manga: 'longa', gola: 'colarinho', botoes: true }, baixo: { parte: 'baixo', forma: 'calca', corte: 'reta', cor: ['#2b2f36', '#29384a'], vinco: true }, pes: { parte: 'pes', forma: 'sapato', cor: '#1b1515', sola: '#141010' } },
   roupa_alternativa: { cima: { parte: 'cima', forma: 'bata', cor: ['#8a5a2b', '#6b3f73', '#2f6b66'], cor2: '#f2c200', estampa: 'floral', manga: 'curta', gola: 'v', folga: 1.06 }, baixo: { parte: 'baixo', forma: 'calca', corte: 'larga', cor: ['#5d6b4f', '#4a3b2c'] }, pes: { parte: 'pes', forma: 'tenis_lona', cor: '#c8102e', sola: '#f4f1ea' } },
-  roupa_elegante: { cima: { parte: 'cima', forma: 'camisa', cor: ['#1d1f24', '#3a2430', '#f4f6f8'], manga: 'longa', gola: 'colarinho', botoes: true }, baixo: { parte: 'baixo', forma: 'calca', corte: 'reta', cor: '#1d1f24', vinco: true }, casaco: { parte: 'casaco', forma: 'blazer', comprimento: 'quadril', cor: ['#1d1f24', '#1f2d3a'], lapela: true }, pes: { parte: 'pes', forma: 'sapato', cor: '#1b1515', sola: '#141010' } }
+  roupa_elegante: { cima: { parte: 'cima', forma: 'camisa', cor: ['#1d1f24', '#3a2430', '#f4f6f8'], manga: 'longa', gola: 'colarinho', botoes: true }, baixo: { parte: 'baixo', forma: 'calca', corte: 'reta', cor: '#1d1f24', vinco: true }, casaco: { parte: 'casaco', forma: 'blazer', comprimento: 'quadril', cor: ['#1d1f24', '#1f2d3a'], lapela: true }, pes: { parte: 'pes', forma: 'sapato', cor: '#1b1515', sola: '#141010' } },
+  // VIDA 21: as peças novas (`pecas21`).
+  ...PECAS_21
 };
 
 const ehPeca = (x: Peca | Conjunto): x is Peca => 'parte' in x;

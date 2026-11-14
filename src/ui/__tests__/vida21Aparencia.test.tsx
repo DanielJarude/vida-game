@@ -11,7 +11,8 @@ import { executar, type Acao } from '../../motor/acoes';
 import { exportarVida, importarVida } from '../../motor/save';
 import { OQueVeste } from '../jogo/Aparencia';
 import { ITENS_ESTILO, itemEstilo, lugaresDoItem } from '../../motor/dados/estilo';
-import { acessorioDoItem } from '../avatar/pecas';
+import { acessorioDoItem, PECAS } from '../avatar/pecas';
+import { ITENS_ESTILO_21 } from '../../motor/dados21/estilo/estilo21';
 import { vinculosVivos } from '../../motor/nucleo';
 import type { Vida } from '../../motor/tipos';
 
@@ -89,5 +90,18 @@ describe('VIDA 21 · bolsas e mochilas na Aparência', () => {
     cleanup();
     const r2 = render(<OQueVeste vida={d} agir={() => true} />);
     expect(r2.container.querySelector('[data-parte="bolsa"]')).toBeNull();
+  });
+
+  it('VIDA 21 · cada peça nova tem desenho próprio, se compra e aparece na parte certa da Aparência', () => {
+    let v = transacao(rica(), x => { x.financas.conta = 2_000_000; }).vida;
+    for (const it of ITENS_ESTILO_21) expect(PECAS[it.id], `${it.id} sem desenho`).toBeTruthy();
+    for (const it of ITENS_ESTILO_21) {
+      const w = executar(v, { tipo: 'comprar_item', itemId: it.id });
+      expect(w.vida.eu.estilo!.itens.some(x => x.itemId === it.id), `${it.id} não foi comprado`).toBe(true);
+      v = w.vida;
+    }
+    const { container } = render(<OQueVeste vida={v} agir={() => true} />);
+    const texto = (container.textContent ?? '').toLowerCase();
+    for (const it of ITENS_ESTILO_21) expect(texto.includes(it.nome.toLowerCase()), `${it.id} não aparece na Aparência`).toBe(true);
   });
 });
