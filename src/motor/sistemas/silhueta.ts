@@ -8,6 +8,7 @@ import type { Vida } from '../tipos';
 import { idade } from '../nucleo';
 import { predisposicao } from './predisposicao';
 import { modeloRotina } from './rotinas';
+import { estaturaAdulta } from './modalidades';
 
 export type TipoDeCorpo = 'magro' | 'mediano' | 'atletico' | 'musculoso' | 'acima_do_peso';
 
@@ -39,4 +40,19 @@ function tipoDeCorpoBase(v: Vida): TipoDeCorpo {
   if (forma < 30) return 'acima_do_peso';
   if (nato < -0.3 && !parado && forma >= 40 && forma < 62) return 'magro';
   return 'mediano';
+}
+
+/**
+ * VIDA 23 — o corpo que a figura desenha: a CONDIÇÃO (`tipoDeCorpo`, a vida) e, para quem tem a constituição da VIDA 23
+ * (`Visual.corpo23`), a ESTATURA DE VERDADE — a mesma altura em centímetros que o motor já usa (a seletiva de vôlei, o
+ * basquete), lida como desvio da média do gênero. Sem a constituição (saves de antes), nada muda: a altura média de
+ * sempre. Nos outros (as pessoas do mundo), a estatura sai do eixo da constituição.
+ */
+export interface CorpoDaFigura { tipo: TipoDeCorpo; /** Desvios da média (≈ −2,2 a +2,2). */ estatura?: number; /** A constituição (`Visual.corpo23`). */ c?: string }
+export function corpoDaFigura(v: Vida): CorpoDaFigura {
+  const tipo = tipoDeCorpo(v);
+  if (!v.eu.visual.corpo23) return { tipo };
+  // A constituição vai junto (as lupas e as miniaturas montam o mesmo corpo da figura).
+  const media = v.eu.genero === 'feminino' ? 163 : v.eu.genero === 'masculino' ? 176 : 169.5;
+  return { tipo, c: v.eu.visual.corpo23, estatura: Math.max(-2.2, Math.min(2.2, Math.round(((estaturaAdulta(v) - media) / 7) * 100) / 100)) };
 }

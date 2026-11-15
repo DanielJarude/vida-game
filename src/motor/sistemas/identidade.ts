@@ -27,6 +27,7 @@ import { cabeloDaDecada } from '../eras/base/moda';
 import { mesHistoricoCorrente } from '../eras/base/moedas';
 import type { Genero, Genes, Pessoa, Visual } from '../tipos';
 import { criarRng, rngDe, type Rng } from '../rng';
+import { sortearCorpo23, sortearMarcas23, sortearPelos23 } from '../v23/corpo/corpo23';
 import { ORIGENS, PELE_MEDIA, POPULACOES, POPULACOES_POR_REGIAO, TRACOS, type Ancestralidade, type Origem, type PerfilPopulacional } from '../dados/populacoes';
 import { paisDoCatalogo, paisesVivenciaveis, existePais, perfilDoPais, temPerfil } from '../mundo/registro';
 
@@ -100,6 +101,8 @@ export function geneticaDe(p: { visual?: Visual; genes?: Genes; estilo?: { corNa
   delete base.transplante; delete base.lifting;
   // VIDA 13: mechas, maquiagem e piercings são escolha: nunca genética.
   delete base.mechas; delete base.mechasEstilo; delete base.delineado; delete base.sombraOlhos; delete base.batom; delete base.blush; delete base.piercings;
+  // VIDA 23: as marcas da pele (a cicatriz, a pinta) são da pessoa: não passam a ninguém.
+  delete base.marcas23;
   return base;
 }
 /** Guarda os genes antes da primeira mudança no corpo (idempotente): depois disso, o visual pode mudar à vontade. */
@@ -204,8 +207,24 @@ export function visualDaAncestralidade(r: Rng, genero: Genero, anc: Ancestralida
   } as Visual;
   if (base?.barba !== undefined) v.barba = base.barba;
   // Os universais saem de um gerador derivado do que já foi sorteado (os sorteios de antes ficam os mesmos).
-  Object.assign(v, universais(rngDe(v.pele, v.corCabelo, v.olhos, v.nariz ?? '', v.rosto ?? '', String(r.next())), v.pele));
+  const z = String(r.next());
+  Object.assign(v, universais(rngDe(v.pele, v.corCabelo, v.olhos, v.nariz ?? '', v.rosto ?? '', z), v.pele));
+  corpoENaturais(v, genero, z, base?.corpo23 ? [base.corpo23] : []);
   return compactar(v);
+}
+
+/**
+ * VIDA 23: a constituição, as marcas naturais e os pelos do corpo de quem aparece — de um gerador próprio, com chave nos
+ * traços já sorteados (nenhum sorteio do jogo muda). Com pais, a constituição puxa a média deles; marcas não se herdam.
+ */
+function corpoENaturais(v: Visual, genero: Genero, z: string, pais: (string | undefined)[]): void {
+  const chave = `${z}|${v.pele}|${v.corCabelo}|${v.olhos}|${v.nariz ?? ''}|${v.boca ?? ''}|${v.rosto ?? ''}|${v.olhosForma ?? ''}|${genero}`;
+  const c = sortearCorpo23(chave, pais);
+  if (c) v.corpo23 = c; else delete v.corpo23;
+  const m = sortearMarcas23(chave, v.pele, v.sardas);
+  if (m) v.marcas23 = m;
+  const p = sortearPelos23(chave, genero);
+  if (p) v.pelos23 = p;
 }
 
 /** A cor natural do cabelo (tinta não passa para filho). */
@@ -236,12 +255,14 @@ export function visualDosPais(r: Rng, genero: Genero, anc: Ancestralidade, a?: V
   const v: Visual = { pele, corCabelo: de('corCabelo'), olhos: de('olhos'), textura, olhosForma: de('olhosForma'), nariz: de('nariz'), boca: de('boca'), rosto: de('rosto'), sobrancelha: de('sobrancelha'), cabelo: estiloPara(r, genero, textura) } as Visual;
   if (genero === 'masculino' && r.chance(0.35)) v.barba = r.pick(['bigode', 'cavanhaque', 'curta', 'cheia']);
   // FIX pós-playtest humano: os universais também vêm de um dos pais (às vezes, de mais longe) — num gerador derivado.
-  const ru = rngDe(v.pele, v.nariz ?? '', v.boca ?? '', v.rosto ?? '', String(r.next()));
+  const zu = String(r.next());
+  const ru = rngDe(v.pele, v.nariz ?? '', v.boca ?? '', v.rosto ?? '', zu);
   for (const k of CHAVES_UNIVERSAIS) {
     const px = tracoUniversal(x, k), py = tracoUniversal(y, k);
     const z = ru.next();
     (v as unknown as Record<string, unknown>)[k] = z < 0.12 || (!px && !py) ? tracoUniversal(proprio, k) : z < 0.56 ? (px ?? py) : (py ?? px);
   }
+  corpoENaturais(v, genero, `f${zu}`, [x.corpo23, y.corpo23]);
   return compactar(variarBarba(v));
 }
 

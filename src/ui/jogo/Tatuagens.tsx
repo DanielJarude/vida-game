@@ -27,7 +27,7 @@ import {
   composicoesNaFigura, desgasteDaTinta, estadoDaTatuagem, fraseDoSignificado, historicoDeTatuagens, IDADE_PARA_TATUAR, nomeDaTatuagem, ondeEsta, precoDaRemocao, precoDoPedido,
   precoDoRetoque, previaDaComposicao, previaDoPedido, regiaoDe, tatuagensDe, tatuagensNaFigura, tamanhoDe, type PedidoDeTatuagem, type TatuagemParaFigura
 } from '../../motor/sistemas/tatuagens';
-import { tipoDeCorpo } from '../../motor/sistemas/silhueta';
+import { corpoDaFigura } from '../../motor/sistemas/silhueta';
 import { itensDaPessoa } from '../../motor/sistemas/estilo';
 import { Figura, focoDaParte, focoDaRegiao } from '../avatar/Figura';
 import { DesenhoDaTatuagem, caixaNativa } from '../avatar/tatuagens';
@@ -93,7 +93,7 @@ export function EstudioDeTatuagem({ vida, agir }: { vida: Vida; agir: (a: Acao) 
 
 /* ------------------------------------------------------------------ nova tatuagem */
 
-type Fig = { visual: Vida['eu']['visual']; genero: Vida['eu']['genero']; idade: number; semente: string; corpo: ReturnType<typeof tipoDeCorpo> };
+type Fig = { visual: Vida['eu']['visual']; genero: Vida['eu']['genero']; idade: number; semente: string; corpo: ReturnType<typeof corpoDaFigura> };
 
 function NovaTatuagem({ vida, agir, cobrindo, aoCancelarCobertura }: { vida: Vida; agir: (a: Acao) => boolean; cobrindo: string | null; aoCancelarCobertura: () => void }) {
   const i = idade(vida);
@@ -137,7 +137,7 @@ function NovaTatuagem({ vida, agir, cobrindo, aoCancelarCobertura }: { vida: Vid
   const tatuagens = previa ? [...naPele, previa] : naPele;
   const acao: Acao = { tipo: 'tatuar', ...pedido };
   const preco = precoDoPedido(vida, pedido);
-  const fig = useMemo<Fig>(() => ({ visual: vida.eu.visual, genero: vida.eu.genero, idade: i, semente: vida.eu.semente ?? 'eu', corpo: tipoDeCorpo(vida) }), [vida, i]);
+  const fig = useMemo<Fig>(() => ({ visual: vida.eu.visual, genero: vida.eu.genero, idade: i, semente: vida.eu.semente ?? 'eu', corpo: corpoDaFigura(vida) }), [vida, i]);
   const desenhos = desenhosDoFiltro({ estilo, tema, referencia: !estilo || estilo === 'cultura_pop' ? referencia : '', busca });
   const pecas = desenhos.filter(x => x.tamanhos.some(t => regioesDoDesenho(x, t).includes(regiao)));
   const fora = desenhos.filter(x => !pecas.includes(x));
@@ -381,7 +381,7 @@ function Projetos({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
   const m = modeloDeComposicao(modelo)!;
   const comLado = COMPOSICAO_TEM_LADO[m.tipo];
   const prev = previaDaComposicao(vida, modelo, comLado ? lado : undefined);
-  const fig = useMemo<Fig>(() => ({ visual: vida.eu.visual, genero: vida.eu.genero, idade: idade(vida), semente: vida.eu.semente ?? 'eu', corpo: tipoDeCorpo(vida) }), [vida]);
+  const fig = useMemo<Fig>(() => ({ visual: vida.eu.visual, genero: vida.eu.genero, idade: idade(vida), semente: vida.eu.semente ?? 'eu', corpo: corpoDaFigura(vida) }), [vida]);
   const pecas = itensDaPessoa(vida).filter(x => x.usando);
   const tipos = [...new Set(MODELOS_DE_COMPOSICAO.map(x => x.tipo))] as TipoDeComposicao[];
   const vista: 'frente' | 'costas' = m.tipo === 'costas' ? 'costas' : 'frente';

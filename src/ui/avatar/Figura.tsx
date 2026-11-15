@@ -15,6 +15,8 @@ import { CabeloDeCostas } from './identidade13';
 import { memo, useId, type ReactElement, type ReactNode } from 'react';
 import type { Genero, Visual } from '../../motor/tipos';
 import type { TipoDeCorpo } from '../../motor/sistemas/silhueta';
+import { lerCorpo23, REGIOES_DO_ROSTO23, type Constituicao } from '../../motor/v23/corpo/corpo23';
+import { MarcasNaPele, PelosEMusculo, VolumeDoPeito } from './corpo23';
 import { Retrato, contrasteEntre, corDaPele, corDoCabelo, fundoDaFigura } from './Retrato';
 import { ehDoRosto } from './rosto17';
 import { caixaDaRegiao, TatuagensDoRosto, FundoNaPele, ladoNaTela, MapaDoCorpo, TatuagemNaPele, visivelNaVista, type ComposicaoNaFigura } from './tatuagensNaPele';
@@ -41,7 +43,9 @@ interface Props {
   genero: Genero;
   idade: number;
   semente?: string;
-  corpo: TipoDeCorpo;
+  /** A condição (`silhueta.tipoDeCorpo`) — ou, VIDA 23, a condição com a estatura de verdade e a constituição
+   *  (`silhueta.corpoDaFigura`). Sem constituição aqui, vale a do `visual` (`corpo23`). */
+  corpo: CorpoFig;
   /** As peças em uso (do inventário). */
   pecas: PecaEmUso[];
   /** Largura em px (a altura é o dobro). */
@@ -77,26 +81,76 @@ interface Geo {
   cx: number; pesc: number; topo: number; ombro: number; peito: number; cintura: number; quadril: number;
   yCint: number; yQuad: number; yVirilha: number; yJoelho: number; yTorn: number; yChao: number;
   braco: number; antebraco: number; coxa: number; panturrilha: number; tornozelo: number; barriga: number; busto: number;
+  /** VIDA 23: a definição do músculo (0 a 2) — as linhas do braço, do peito e do abdômen na pele à mostra. */
+  def: number;
 }
 
-/** O corpo adulto, ajustado pelo gênero e pelo tipo de corpo. As crianças usam o mesmo corpo, em escala (abaixo). */
-function geometria(genero: Genero, tipo: TipoDeCorpo, idade: number): Geo {
+/**
+ * VIDA 23 — o corpo da figura: a condição (a vida), a estatura (desvios da média) e a constituição (`corpo23`, os doze
+ * eixos). Aceita só a condição (como antes da VIDA 23).
+ */
+export type CorpoFig = TipoDeCorpo | { tipo: TipoDeCorpo; estatura?: number; c?: string };
+interface CorpoLido { tipo: TipoDeCorpo; c: Constituicao; z: number }
+function lerCorpo(corpo: CorpoFig, visual?: Visual): CorpoLido {
+  const o = typeof corpo === 'string' ? { tipo: corpo } : corpo;
+  const c = lerCorpo23(o.c ?? visual?.corpo23);
+  return { tipo: o.tipo, c, z: o.estatura ?? c.estatura };
+}
+
+/**
+ * O corpo adulto: a base do gênero, a CONSTITUIÇÃO (VIDA 23: cada eixo soma na largura ou no comprimento certo — a
+ * estrutura alarga tudo um pouco; as pernas descem o joelho, o tornozelo e o chão), a CONDIÇÃO (magro, atlético...) e a
+ * idade. Depois, os limites que impedem deformação (a cintura nunca passa muito do peito e do quadril; nada fica fino
+ * demais). Constituição na base (tudo 0): exatamente o corpo de antes. As crianças usam o mesmo corpo, em escala.
+ */
+function geometria(genero: Genero, tipo: TipoDeCorpo, idade: number, c?: Constituicao): Geo {
   const fem = genero === 'feminino', masc = genero === 'masculino';
   const g: Geo = {
     cx: 60, pesc: masc ? 6.4 : 5.4, topo: 66, ombro: masc ? 23 : fem ? 19.5 : 21, peito: masc ? 21 : fem ? 18.5 : 19.5,
     cintura: masc ? 16.5 : fem ? 13.6 : 15, quadril: masc ? 18 : fem ? 20.5 : 19, yCint: 108, yQuad: 124, yVirilha: 133,
-    yJoelho: 178, yTorn: 222, yChao: 232, braco: masc ? 4.4 : 3.8, antebraco: masc ? 3.6 : 3.1, coxa: masc ? 8.6 : 9, panturrilha: masc ? 5.8 : 5.4, tornozelo: 3.2, barriga: 0, busto: fem ? 1 : 0
+    yJoelho: 178, yTorn: 222, yChao: 232, braco: masc ? 4.4 : 3.8, antebraco: masc ? 3.6 : 3.1, coxa: masc ? 8.6 : 9, panturrilha: masc ? 5.8 : 5.4, tornozelo: 3.2, barriga: 0, busto: fem ? 1 : 0, def: 0
   };
+  const neutra = !c || Object.values(c).every(x => x === 0);
+  if (c && !neutra) {
+    const f = 1 + 0.045 * c.estrutura;
+    for (const k of ['pesc', 'ombro', 'peito', 'cintura', 'quadril', 'braco', 'antebraco', 'coxa', 'panturrilha', 'tornozelo'] as const) g[k] *= f;
+    g.ombro += 1.6 * c.ombros; g.peito += 0.5 * c.ombros;
+    g.peito += 1.05 * c.peito; g.busto = Math.max(0, g.busto + (fem ? 0.5 : 0.3) * c.peito);
+    g.cintura += 1.4 * c.cintura;
+    g.quadril += 1.5 * c.quadril; g.coxa += 0.3 * c.quadril;
+    g.braco += 0.65 * c.bracos; g.antebraco += 0.4 * c.bracos;
+    g.coxa += 1.1 * c.coxas;
+    g.panturrilha += 0.7 * c.panturrilhas; g.tornozelo += 0.15 * c.panturrilhas;
+    if (c.barriga > 0) { g.barriga += 1.7 * c.barriga; g.cintura += 0.5 * c.barriga; } else g.cintura += 0.5 * c.barriga;
+    g.braco += 0.5 * c.musculo; g.antebraco += 0.3 * c.musculo; g.panturrilha += 0.35 * c.musculo; g.coxa += 0.45 * c.musculo; g.ombro += 0.5 * c.musculo;
+    g.def = Math.max(0, c.musculo);
+    // O comprimento das pernas: o joelho, o tornozelo e o chão descem (ou sobem); o tronco fica.
+    const L = c.pernas * 3.4;
+    g.yVirilha += L * 0.12; g.yJoelho += L * 0.55; g.yTorn += L; g.yChao += L;
+  }
   const ajuste: Record<TipoDeCorpo, Partial<Record<keyof Geo, number>>> = {
     magro: { ombro: -3, peito: -3.6, cintura: -3.6, quadril: -2.6, braco: -1.3, antebraco: -1, coxa: -2.8, panturrilha: -1.7, pesc: -0.6 },
     mediano: {},
-    atletico: { ombro: 3, peito: 2, cintura: -1.6, braco: 1.1, antebraco: 0.6, coxa: 1, panturrilha: 0.7 },
-    musculoso: { ombro: 6.6, peito: 5.2, cintura: 0.4, quadril: 0.6, braco: 3.2, antebraco: 1.9, coxa: 2.6, panturrilha: 1.5, pesc: 2 },
+    atletico: { ombro: 3, peito: 2, cintura: -1.6, braco: 1.1, antebraco: 0.6, coxa: 1, panturrilha: 0.7, def: 1 },
+    musculoso: { ombro: 6.6, peito: 5.2, cintura: 0.4, quadril: 0.6, braco: 3.2, antebraco: 1.9, coxa: 2.6, panturrilha: 1.5, pesc: 2, def: 2 },
     acima_do_peso: { ombro: 2.6, peito: 5.4, cintura: 9, quadril: 6.6, braco: 2.6, antebraco: 1.5, coxa: 4.4, panturrilha: 2.6, barriga: 5, pesc: 1.3 }
   };
   for (const [k, d] of Object.entries(ajuste[tipo]) as [keyof Geo, number][]) g[k] += d;
   // Na velhice os ombros caem um pouco e a cintura alarga.
   if (idade >= 65) { g.ombro -= 1; g.cintura += 1.4; g.barriga += 1; }
+  if (!neutra) {
+    // Os limites (só para a constituição nova — o corpo de antes fica idêntico): nada fino demais, a cintura nunca muito
+    // além do peito e do quadril, os ombros nunca dentro do peito, a barriga com um teto, o braço proporcional ao ombro.
+    g.def = Math.min(2, g.def);
+    g.peito = Math.max(14, g.peito); g.quadril = Math.max(13.5, g.quadril); g.ombro = Math.max(g.peito - 0.5, 15, g.ombro);
+    g.cintura = Math.min(Math.max(10.5, g.cintura), Math.max(g.peito, g.quadril) + 9);
+    g.barriga = Math.min(10, Math.max(0, g.barriga));
+    g.braco = Math.min(Math.max(2.6, g.braco), g.ombro * 0.38); g.antebraco = Math.min(Math.max(2.2, g.antebraco), g.braco);
+    g.coxa = Math.min(Math.max(5.6, g.coxa), g.quadril * 0.78); g.panturrilha = Math.min(Math.max(3.6, g.panturrilha), g.coxa * 0.86);
+    g.tornozelo = Math.min(Math.max(2.4, g.tornozelo), g.panturrilha * 0.7); g.pesc = Math.max(4.2, g.pesc);
+  }
+  // O corpo de antes (constituição na base) não ganha desenho novo: a definição só com a constituição da VIDA 23.
+  g.def = neutra ? 0 : Math.min(2, g.def);
   return g;
 }
 
@@ -108,14 +162,28 @@ function escalaDaIdade(i: number): number {
   if (i <= 16) return 0.88 + (i - 13) * 0.03;
   return 1;
 }
+/**
+ * VIDA 23: a escala do corpo (abaixo do pescoço) pela idade E pela estatura — cada desvio da média, uns 3,2% (a pessoa
+ * de 1,90 m é ~7% maior que a média; a cabeça é a mesma: o alto tem a cabeça menor para o corpo). Na criança, a
+ * estatura entra aos poucos, com o crescimento.
+ */
+function escalaDoCorpo(idade: number, z: number): number {
+  const cresce = Math.max(0, Math.min(1, (idade - 4) / 13));
+  return escalaDaIdade(idade) * (1 + 0.032 * Math.max(-2.2, Math.min(2.2, z)) * cresce);
+}
+/** O corpo montado (a geometria e a escala) — o mesmo para a figura, as lupas e as miniaturas. */
+function montar(genero: Genero, corpo: CorpoFig, idade: number, visual?: Visual): { g: Geo; esc: number; tipo: TipoDeCorpo } {
+  const k = lerCorpo(corpo, visual);
+  return { g: geometria(genero, k.tipo, idade, k.c), esc: escalaDoCorpo(idade, k.z), tipo: k.tipo };
+}
 
 const lado = (g: Geo, s: 1 | -1, dx: number) => g.cx + s * dx;
 /** O mesmo hash do `Retrato` (a cor do chapéu de costas é a da frente). */
 function hashDoRetrato(s: string): number { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
 
 /** A altura da figura inteira (o viewBox), pela idade. */
-function alturaDaFigura(g: Geo, idade: number): number {
-  return Math.max(150, Math.ceil(g.topo + (g.yChao + 4 - g.topo) * escalaDaIdade(idade) + 4));
+function alturaDaFigura(g: Geo, esc: number): number {
+  return Math.max(150, Math.ceil(g.topo + (g.yChao + 4 - g.topo) * esc + 4));
 }
 
 /**
@@ -130,10 +198,9 @@ function alturaDaFigura(g: Geo, idade: number): number {
  * vestido, o terno), os pés, o pulso e a mão, o pescoço. A mesma geometria da figura: a miniatura é a peça de verdade
  * no corpo de quem vai usar, só mais perto.
  */
-export function focoDaPeca(genero: Genero, corpo: TipoDeCorpo, idade: number, lugar: string): Foco {
-  const g = geometria(genero, corpo, idade);
-  const H = alturaDaFigura(g, idade);
-  const esc = escalaDaIdade(idade);
+export function focoDaPeca(genero: Genero, corpo: CorpoFig, idade: number, lugar: string): Foco {
+  const { g, esc } = montar(genero, corpo, idade);
+  const H = alturaDaFigura(g, esc);
   const ty = (y: number) => g.topo + (y - g.topo) * esc;
   const caixa: Record<string, [number, number, number, number]> = {
     tronco: [g.cx, g.topo - 14, g.yQuad + 8, (g.ombro + 14) * 2], casaco: [g.cx, g.topo - 14, g.yQuad + 26, (g.ombro + 16) * 2],
@@ -159,9 +226,9 @@ export function focoDaPeca(genero: Genero, corpo: TipoDeCorpo, idade: number, lu
   return { x: +x.toFixed(2), y: +y.toFixed(2), w: +w.toFixed(2), h: +h.toFixed(2) };
 }
 
-export function focoDaParte(genero: Genero, corpo: TipoDeCorpo, idade: number, local: LocalDeTatuagem | 'inteiro', ladoT: Lado | undefined, vista: 'frente' | 'costas', perto = 1): Foco {
-  const g = geometria(genero, corpo, idade);
-  const H = alturaDaFigura(g, idade);
+export function focoDaParte(genero: Genero, corpo: CorpoFig, idade: number, local: LocalDeTatuagem | 'inteiro', ladoT: Lado | undefined, vista: 'frente' | 'costas', perto = 1): Foco {
+  const { g, esc } = montar(genero, corpo, idade);
+  const H = alturaDaFigura(g, esc);
   // O corpo inteiro na mesma moldura 3 : 4 (a lupa não muda de tamanho ao afastar).
   if (local === 'inteiro') { const w = Math.max(120, H * 0.75); return { x: +((120 - w) / 2).toFixed(2), y: 0, w: +w.toFixed(2), h: +(w / 0.75).toFixed(2) }; }
   const s: 1 | -1 = (ladoT === 'e') !== (vista === 'costas') ? 1 : -1;
@@ -182,8 +249,7 @@ export function focoDaParte(genero: Genero, corpo: TipoDeCorpo, idade: number, l
       case 'panturrilha': return caixa(lado(g, s, g.quadril * 0.44), g.yJoelho - 14, g.yTorn + 10, 34);
     }
   })();
-  // Os membros e o tronco vivem no corpo escalado pela idade (a partir da base do pescoço); a cabeça, não.
-  const esc = escalaDaIdade(idade);
+  // Os membros e o tronco vivem no corpo escalado pela idade e pela estatura (a partir da base do pescoço); a cabeça, não.
   const cabeca = local === 'pescoco' || local === 'rosto';
   const ty = (y: number) => cabeca ? y : g.topo + (y - g.topo) * esc;
   const cy = ty(r.cy);
@@ -657,12 +723,11 @@ function Pes({ g, p, pele, detalhe }: { g: Geo; p: P<'pes'>; pele: string; detal
  * VIDA 12.6 — a lupa por REGIÃO: o recorte em volta da caixa da região (a mesma de `tatuagensNaPele.caixaDaRegiao`),
  * com folga para o entorno dar a referência; `perto` aproxima. A proporção é a da lupa (3 : 4).
  */
-export function focoDaRegiao(genero: Genero, corpo: TipoDeCorpo, idade: number, regiao: RegiaoDeTatuagem, ladoT: Lado | undefined, vista: 'frente' | 'costas', perto = 1): Foco {
-  const g = geometria(genero, corpo, idade);
-  const H = alturaDaFigura(g, idade);
+export function focoDaRegiao(genero: Genero, corpo: CorpoFig, idade: number, regiao: RegiaoDeTatuagem, ladoT: Lado | undefined, vista: 'frente' | 'costas', perto = 1): Foco {
+  const { g, esc } = montar(genero, corpo, idade);
+  const H = alturaDaFigura(g, esc);
   const s = REGIOES[regiao].lados ? ladoNaTela(ladoT, vista === 'costas') : 1;
   const k = caixaDaRegiao(g, regiao, s);
-  const esc = escalaDaIdade(idade);
   const naCabeca = regiao === 'pescoco' || regiao === 'nuca';
   const ty = (y: number) => (naCabeca ? y : g.topo + (y - g.topo) * esc);
   const cx = naCabeca ? k.x : g.cx + (k.x - g.cx) * esc, cy = ty(k.y);
@@ -695,12 +760,11 @@ const PADRAO_CIMA = ['#4b5a6b', '#6b4f5a', '#4f6b5a', '#7a6248', '#5a5470', '#3f
 
 export const Figura = memo(function Figura({ visual, genero, idade, semente = 'eu', corpo, pecas, largura = 160, rotulo, semFundo, tatuagens = [], vista = 'frente', semCima, foco, destaque, composicoes = [], descalco, aoEscolherRegiao, regiaoEscolhida }: Props) {
   const uid = useId().replace(/:/g, '');
-  const g = geometria(genero, corpo, idade);
+  const { g, esc, tipo: tipoDoCorpo } = montar(genero, corpo, idade, visual);
   // VIDA 17: o que as cirurgias do corpo mudam e se vê (a cintura da lipo, o abdômen, o volume do peito).
   if (visual.contorno17) { g.cintura -= 1.8; g.barriga = Math.max(0, g.barriga - 2); }
   if (visual.abdomen17) g.barriga = Math.max(0, g.barriga - 2.6);
   if (visual.busto17 === 'maior') { g.peito += 1.4; g.busto += 0.8; } else if (visual.busto17 === 'menor') { g.peito -= 1; g.busto = Math.max(0, g.busto - 0.6); }
-  const esc = escalaDaIdade(idade);
   const [pele, sombraPele] = corDaPele(visual.pele);
   const detalhe = largura >= 110;
   // As peças em uso, cada uma no seu lugar (a última que chegou, se houver duas).
@@ -738,6 +802,9 @@ export const Figura = memo(function Figura({ visual, genero, idade, semente = 'e
   const halo = semFundo ? (contrasteEntre(pele, '#f4efe6') < 1.9 ? '#6f7c88' : '#e7dfd2') : undefined;
   const contorno = misturar(sombraPele, '#2a1810', contrasteEntre(pele, '#ffffff') < 1.6 ? 0.55 : 0.4);
   const costas = vista === 'costas';
+  // VIDA 23: as marcas do corpo (as do rosto, o retrato desenha) que já apareceram nesta idade; os pelos depois da puberdade.
+  const marcasCorpo = (visual.marcas23 ?? []).filter(m => !REGIOES_DO_ROSTO23.has(m.r) && (m.d ?? 0) <= idade);
+  const pelos = idade >= 14 ? Math.max(0, Math.min(3, visual.pelos23 ?? 0)) : 0;
   const estampas: ReactNode[] = [];
   const ide = (k: string) => `${uid}-${k}`;
   for (const k of ['cima', 'baixo', 'inteira', 'casaco'] as const) {
@@ -761,10 +828,10 @@ export const Figura = memo(function Figura({ visual, genero, idade, semente = 'e
   const pecasRotulo = [conj.inteira, conj.cima, conj.baixo, conj.casaco, conj.pes].filter(Boolean).map(p => ('forma' in p! ? p!.forma : '')).join(', ');
   return (
     <svg className="figura" viewBox={foco ? `${foco.x} ${foco.y} ${foco.w} ${foco.h}` : `0 0 120 ${Math.max(150, Math.ceil(altura + 4))}`} width={largura} height={Math.round(largura * (foco ? foco.h / foco.w : Math.max(150, Math.ceil(altura + 4)) / 120))}
-      role="img" aria-label={rotulo ?? 'Corpo inteiro'} data-corpo={corpo} data-pecas={pecasRotulo} data-vista={vista} data-foco={foco ? 'sim' : undefined} data-tatuagens={tatuagens.length || undefined} style={fundo ? { background: fundo } : undefined}>
+      role="img" aria-label={rotulo ?? 'Corpo inteiro'} data-corpo={tipoDoCorpo} data-constituicao={visual.corpo23 ?? undefined} data-marcas={marcasCorpo.length || undefined} data-pecas={pecasRotulo} data-vista={vista} data-foco={foco ? 'sim' : undefined} data-tatuagens={tatuagens.length || undefined} style={fundo ? { background: fundo } : undefined}>
       <defs>
         {estampas}
-        {(tatuagens.length > 0 || descalco) && <>
+        {(tatuagens.length > 0 || descalco || marcasCorpo.length > 0 || pelos > 0 || g.def > 0) && <>
           {([-1, 1] as const).map(s => <clipPath key={`cb${s}`} id={ide(`cb${s}`)}><path d={braco(g, s, 0, 141)} /></clipPath>)}
           {([-1, 1] as const).map(s => <clipPath key={`cp${s}`} id={ide(`cp${s}`)}><path d={perna(g, s, 0, g.yTorn + 2)} /></clipPath>)}
           {([-1, 1] as const).map(s => <clipPath key={`cm${s}`} id={ide(`cm${s}`)}><ellipse cx={lado(g, s, g.ombro + 2.7)} cy={145.5} rx={g.antebraco * 0.95} ry={5.2} /></clipPath>)}
@@ -787,6 +854,10 @@ export const Figura = memo(function Figura({ visual, genero, idade, semente = 'e
         {([-1, 1] as const).map(s => <path key={`p${s}`} d={perna(g, s, 0, g.yTorn + 2)} fill={pele} stroke={contorno} strokeWidth={0.7} strokeLinejoin="round" />)}
         {/* HOTFIX 11.5.1: as tatuagens, na pele (a roupa vem por cima e cobre o que cobre). */}
         {tatuagens.length > 0 && <Tatuagens g={g} lista={tatuagens.filter(t => !NA_MAO.has(t.regiao) && t.regiao !== 'pe' && !ehDoRosto(t.regiao))} comps={composicoes} pele={pele} ide={ide} costas={costas} detalhe={detalhe} idade={idade} />}
+        {/* VIDA 23: as marcas naturais (pintas, sardas, manchas, cicatrizes, estrias), os pelos e o desenho do músculo — na
+            pele, por baixo da roupa (a roupa cobre o que cobre). */}
+        {marcasCorpo.length > 0 && <MarcasNaPele g={g} lista={marcasCorpo.filter(m => !NA_MAO.has(m.r) && (m.r !== 'pe' || !!descalco))} pele={pele} ide={ide} costas={costas} detalhe={detalhe} />}
+        {(pelos > 0 || g.def > 0) && <PelosEMusculo g={g} pelos={pelos} def={g.def} cabelo={corDoCabelo(visual.corCabelo)} pele={pele} sombra={sombraPele} ide={ide} costas={costas} detalhe={detalhe} semente={semente} />}
         {/* VIDA 12.9: o piercing do umbigo (só com o tronco à mostra; a roupa de cima cobre). */}
         {!costas && !conj.cima && !conj.inteira && idade >= 16 && <PiercingDoUmbigo ids={visual.piercings} x={g.cx} y={g.yCint - 3} />}
         {/* O que se veste, de dentro para fora. */}
@@ -794,12 +865,14 @@ export const Figura = memo(function Figura({ visual, genero, idade, semente = 'e
           <Baixo g={g} p={conj.baixo as P<'baixo'>} ide={ide('baixo')} detalhe={detalhe} pele={pele} />
           {conj.cima && <Cima g={g} p={conj.cima as P<'cima'>} ide={ide('cima')} detalhe={detalhe} pele={pele} />}
         </>}
+        {!costas && idade >= 12 && !!visual.corpo23 && <VolumeDoPeito g={g} coberto={!!(conj.cima || conj.inteira)} pele={sombraPele} />}
         {descalco ? <g className="figura__pes figura__pes--descalco">{([-1, 1] as const).map(s => <path key={s} d={peDescalco(g, s)} fill={pele} stroke={contorno} strokeWidth={0.6} strokeLinejoin="round" />)}
           {tatuagens.some(t => t.regiao === 'pe') && !costas && <Tatuagens g={g} lista={tatuagens.filter(t => t.regiao === 'pe')} comps={[]} pele={pele} ide={ide} costas={costas} detalhe={detalhe} idade={idade} />}</g>
           : <Pes g={g} p={conj.pes as P<'pes'>} pele={pele} detalhe={detalhe} />}
         {conj.casaco && <Casaco g={g} p={conj.casaco as P<'casaco'>} detalhe={detalhe} ide={ide('casaco')} />}
         {/* As mãos por cima das mangas longas (com o contorno, e a tatuagem da mão por cima delas). */}
         {([-1, 1] as const).map(s => <ellipse key={`mm${s}`} cx={lado(g, s, g.ombro + 2.7)} cy={145.5} rx={g.antebraco * 0.95} ry={5.2} fill={pele} stroke={contorno} strokeWidth={0.6} />)}
+        {marcasCorpo.some(m => NA_MAO.has(m.r)) && <MarcasNaPele g={g} lista={marcasCorpo.filter(m => NA_MAO.has(m.r))} pele={pele} ide={ide} costas={costas} detalhe={detalhe} />}
         {tatuagens.some(t => NA_MAO.has(t.regiao)) && <Tatuagens g={g} lista={tatuagens.filter(t => NA_MAO.has(t.regiao))} comps={[]} pele={pele} ide={ide} costas={costas} detalhe={detalhe} idade={idade} />}
         {aoEscolherRegiao && <MapaDoCorpo g={g} costas={costas} escolhida={regiaoEscolhida} aoEscolher={aoEscolherRegiao} ocupadas={new Set(tatuagens.filter(t => t.id !== 'previa').map(t => `${t.regiao}:${t.lado ?? ''}`))} />}
         {colar && (idade >= 8) && <g className="figura__colar" data-acessorio="pescoco">
@@ -893,4 +966,14 @@ export const Figura = memo(function Figura({ visual, genero, idade, semente = 'e
       {destaque && <rect className="figura__destaque" x={destaque.x} y={destaque.y} width={destaque.w} height={destaque.h} rx={2} fill="none" stroke="currentColor" strokeWidth={1.4} strokeDasharray="3 2" vectorEffect="non-scaling-stroke" />}
     </svg>
   );
-});
+}, iguaisNaFigura);
+
+/** O memo da figura: o `corpo` pode vir como objeto novo a cada desenho (`corpoDaFigura`) — compara pelo valor. */
+function iguaisNaFigura(a: Props, b: Props): boolean {
+  for (const k of Object.keys({ ...a, ...b }) as (keyof Props)[]) {
+    if (a[k] === b[k]) continue;
+    if (k === 'corpo' && typeof a.corpo === 'object' && typeof b.corpo === 'object' && a.corpo.tipo === b.corpo.tipo && a.corpo.estatura === b.corpo.estatura && a.corpo.c === b.corpo.c) continue;
+    return false;
+  }
+  return true;
+}

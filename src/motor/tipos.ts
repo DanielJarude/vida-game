@@ -321,6 +321,15 @@ export interface Visual {
   busto17?: 'menor' | 'maior';
   bochecha17?: 'fina';
   botox17?: number;
+  /** VIDA 23 (`v23/corpo/corpo23`): a CONSTITUIÇÃO — 12 dígitos de 0 a 4 (2 = a base), um por eixo do corpo (estatura,
+   *  ombros, estrutura, peito, cintura, quadril, braços, coxas, panturrilhas, pernas, barriga, músculo). Ausente: a base
+   *  (o corpo de antes da VIDA 23, sem mudança). A condição (`silhueta.tipoDeCorpo`) continua somando por cima. */
+  corpo23?: string;
+  /** VIDA 23: as marcas naturais na pele (pintas, sardas, marcas de nascença, manchas, cicatrizes, estrias, covinhas),
+   *  nas regiões do corpo das tatuagens. Ausente: nenhuma. Nunca vão para os filhos (a herança lê traços escolhidos). */
+  marcas23?: import('./v23/corpo/corpo23').MarcaNatural[];
+  /** VIDA 23: os pelos do corpo, de 1 (poucos) a 3 (muitos). Ausente: quase nenhum (o desenho de antes). */
+  pelos23?: number;
 }
 
 /**

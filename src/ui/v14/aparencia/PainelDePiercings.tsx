@@ -15,7 +15,7 @@ import { itemEstilo, type ItemEstilo } from '../../../motor/dados/estilo';
 import { COR_DO_METAL, IDADE_MINIMA_PIERCING } from '../../../motor/dados/piercings129';
 import { NOME_DO_FURO, ZONAS_DE_PIERCING, zonaDoFuro, type ZonaDePiercing } from '../../../motor/dados/piercings13';
 import { itensDaPessoa } from '../../../motor/sistemas/estilo';
-import { tipoDeCorpo } from '../../../motor/sistemas/silhueta';
+import { corpoDaFigura } from '../../../motor/sistemas/silhueta';
 import { tatuagensNaFigura } from '../../../motor/sistemas/tatuagens';
 import { CICATRIZACAO, estadoDoFuro, furoDaJoia, joiasDoFuro, precoNoPainel, type EstadoDoFuro } from '../../../motor/v14/aparencia/piercings14';
 import { Figura, focoDaPeca } from '../../avatar/Figura';
@@ -87,7 +87,7 @@ export function PainelDePiercings({ vida, agir }: { vida: Vida; agir: (a: Acao) 
   if (i < IDADE_MINIMA_PIERCING && !meus.some(x => !!itemEstilo(x.itemId)?.piercing)) return null;
 
   const vis = vida.eu.visual;
-  const corpo = tipoDeCorpo(vida);
+  const corpo = corpoDaFigura(vida);
   const umbigo = zona === 'umbigo';
   const previa = previaDoPainel(vis, prova, prender, perto === 'perto' && !umbigo);
   const foco = umbigo

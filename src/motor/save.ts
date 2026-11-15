@@ -32,6 +32,7 @@ import { derivarPredisposicoes } from './sistemas/pessoa';
 import { OCUPACOES_DE_ATLETA, posicaoSugerida } from './sistemas/esporte';
 import { clubePorNome } from './dados/clubes';
 import { fixarEstatura } from './sistemas/modalidades';
+import { corpo23Valido, marcasValidas } from './v23/corpo/corpo23';
 import { normalizarTatuagens } from './sistemas/tatuagens';
 import { normalizarVida129Economia } from './sistemas/empresas129';
 import { normalizarVida13Empresas } from './sistemas/empresas13';
@@ -140,7 +141,7 @@ export function ler(s: Armazenamento | null = armazenamentoPadrao()): Leitura {
  */
 export function interpretar(bruto: string): Leitura {
   const r = interpretarSemNormalizar(bruto);
-  if (r.tipo === 'ok') { normalizarRework75(r.vida); normalizarRework97(r.vida); normalizarRework106(r.vida); normalizarRework11Relacoes(r.vida); normalizarRework11Esportes(r.vida); normalizarRework11Artes(r.vida); normalizarRework115(r.vida); normalizarRework12(r.vida); normalizarRework122(r.vida); normalizarRework125(r.vida); normalizarRework123(r.vida); normalizarRework1235(r.vida); normalizarRework124(r.vida); normalizarHotfix1151(r.vida); normalizarVida126(r.vida); fixarEstatura(r.vida, true); }
+  if (r.tipo === 'ok') { normalizarRework75(r.vida); normalizarRework97(r.vida); normalizarRework106(r.vida); normalizarRework11Relacoes(r.vida); normalizarRework11Esportes(r.vida); normalizarRework11Artes(r.vida); normalizarRework115(r.vida); normalizarRework12(r.vida); normalizarRework122(r.vida); normalizarRework125(r.vida); normalizarRework123(r.vida); normalizarRework1235(r.vida); normalizarRework124(r.vida); normalizarHotfix1151(r.vida); normalizarVida126(r.vida); normalizarVida23(r.vida); fixarEstatura(r.vida, true); }
   if (r.tipo === 'ok') normalizarVida129Economia(r.vida);
   if (r.tipo === 'ok') normalizarVida13Empresas(r.vida);
   if (r.tipo === 'ok') normalizarVida14Empresas(r.vida);
@@ -1832,6 +1833,18 @@ export function normalizarRework124(v: Vida): void {
  * VIDA 12.6 — as tatuagens antigas (só a parte grande) ganham a região precisa e o lugar dentro dela, sem apagar nada
  * (`sistemas/tatuagens.normalizarTatuagens`). Idempotente; nenhum campo obrigatório novo.
  */
+/**
+ * VIDA 23: o corpo de quem joga (a constituição, as marcas, os pelos) saneado ao abrir — campo estranho some, nada se
+ * inventa: quem não tinha, continua sem (o corpo de antes, sem marcas).
+ */
+export function normalizarVida23(v: Vida): void {
+  const vis = v.eu?.visual;
+  if (!vis) return;
+  if (vis.corpo23 !== undefined && !corpo23Valido(vis.corpo23)) delete vis.corpo23;
+  if (vis.marcas23 !== undefined) { const m = marcasValidas(vis.marcas23); if (m) vis.marcas23 = m; else delete vis.marcas23; }
+  if (vis.pelos23 !== undefined) { const p = Math.round(Number(vis.pelos23)); if (p >= 1 && p <= 3) vis.pelos23 = p; else delete vis.pelos23; }
+}
+
 export function normalizarVida126(v: Vida): void {
   normalizarTatuagens(v);
 }

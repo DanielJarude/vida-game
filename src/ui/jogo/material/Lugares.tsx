@@ -42,7 +42,7 @@ export const LojaDaVida = sobDemanda(() => import('./Lojas').then(m => m.LojaDaV
 import { estabelecimento } from '../../../motor/dados/lojas';
 import { Retrato } from '../../avatar/Retrato';
 import { Figura } from '../../avatar/Figura';
-import { tipoDeCorpo } from '../../../motor/sistemas/silhueta';
+import { corpoDaFigura } from '../../../motor/sistemas/silhueta';
 import { DesenhoVeiculo, MiniaturaDaCasa } from './Desenhos';
 import { DesenhoObjeto } from './Objetos';
 import { chaveDaFachada, corConcordada, corDoVeiculo, fachadaDe, variantesDaCoisa } from '../../../motor/dados/pertences';
@@ -146,13 +146,13 @@ function ClinicaEstetica({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolea
           const alvos = rev ? [] : p.alvos?.(vida) ?? [{ id: '', rotulo: 'Fazer' }];
           const depois = (alvo?: string) => { const x = structuredClone(vida); p.aplicar(x, alvo); return x.eu.visual; };
           // VIDA 17: no corpo, a prévia é a figura inteira — e a da bariátrica mostra como deve estar em um ano e meio.
-          const corpoDepois = () => { const x = structuredClone(vida); p.aplicar(x); if (p.id === 'bariatrica') x.t += 18; return { visual: x.eu.visual, corpo: tipoDeCorpo(x) }; };
+          const corpoDepois = () => { const x = structuredClone(vida); p.aplicar(x); if (p.id === 'bariatrica') x.t += 18; return { visual: x.eu.visual, corpo: corpoDaFigura(x) }; };
           const cd = p.area === 'corpo' ? corpoDepois() : undefined;
           return (
             <li key={p.id} className="oferta oferta--estilo clinica__item">
               <span className="clinica__previa" aria-hidden>
                 {cd ? <>
-                  <Figura visual={eu.visual} genero={eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} corpo={tipoDeCorpo(vida)} pecas={(eu.estilo?.itens ?? []).filter(x => x.usando)} largura={52} semFundo />
+                  <Figura visual={eu.visual} genero={eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} corpo={corpoDaFigura(vida)} pecas={(eu.estilo?.itens ?? []).filter(x => x.usando)} largura={52} semFundo />
                   <span className="clinica__seta">{p.id === 'bariatrica' ? '→ 18 meses →' : '→'}</span>
                   <Figura visual={cd.visual} genero={eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} corpo={cd.corpo} pecas={(eu.estilo?.itens ?? []).filter(x => x.usando)} largura={52} semFundo />
                 </> : <>

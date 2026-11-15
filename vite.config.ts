@@ -161,6 +161,10 @@ export default defineConfig({
           if (v22) return `motor22-${v22[1]}`;
           const d22 = /[\\/]src[\\/]motor[\\/]dados22[\\/]([a-z0-9]+)[\\/]/.exec(id);
           if (d22) return `dados22-${d22[1]}`;
+          // VIDA 23: a mesma regra (motor/v23/<frente> → motor23-<frente>). `v23/corpo` é folha (sem importações): a identidade,
+          // o save, as ações e as telas o leem sem ciclo; `v23/acao` (a ação de mudar o corpo) fica acima do motor.
+          const v23 = /[\\/]src[\\/]motor[\\/]v23[\\/]([a-z0-9]+)[\\/]/.exec(id);
+          if (v23) return `motor23-${v23[1]}`;
           if (/[\\/]src[\\/]motor[\\/]dados18[\\/]/.test(id)) return 'dados18';
           if (/[\\/]src[\\/]motor[\\/]sistemas[\\/]reconhecimento13\.ts/.test(id)) return 'motor-fama';
           if (/[\\/]src[\\/]motor[\\/]sistemas[\\/](redes|leituraDoEstresse|juntos|naFormacao|noOficio|microcenas|prisao|mundoVivo|agenda|avaliacaoDaRotina|convivio|apostas|ecos|seguroDesemprego|indiretos|afetos|fama|pedidosDaCrianca|afetosAdultos|casamento|convivio126|casaNoDia|viagens126)\.ts/.test(id)) return 'motor-vida';

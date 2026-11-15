@@ -13,7 +13,7 @@ import { itemEstilo } from '../../motor/dados/estilo';
 import { COR_DO_METAL, IDADE_MINIMA_PIERCING, NOME_DA_REGIAO } from '../../motor/dados/piercings129';
 import { NOME_DO_FURO, ZONAS_DE_PIERCING, zonaDoFuro, type ZonaDePiercing } from '../../motor/dados/piercings13';
 import { itensDaPessoa } from '../../motor/sistemas/estilo';
-import { tipoDeCorpo } from '../../motor/sistemas/silhueta';
+import { corpoDaFigura } from '../../motor/sistemas/silhueta';
 import { tatuagensNaFigura } from '../../motor/sistemas/tatuagens';
 import { Figura, focoDaPeca } from '../avatar/Figura';
 import { cabeloCobreOrelha, focoDoRosto, temBigode } from '../avatar/identidade13';
@@ -66,7 +66,7 @@ export function PiercingsDaAparencia({ vida, agir, irPara }: { vida: Vida; agir:
   const [perto, setPerto] = useState<Perto>('perto');
   if (i < IDADE_MINIMA_PIERCING && !temPiercing) return null;
   const vis = vida.eu.visual;
-  const corpo = tipoDeCorpo(vida);
+  const corpo = corpoDaFigura(vida);
   const def = ZONAS_DE_PIERCING.find(z => z.id === zona)!;
   const previa = visualDaPrevia(vis, prova, prender);
   // Na lupa, o chapéu sai da cabeça (cobriria a orelha e a sobrancelha) — só na prévia; a figura de corpo inteiro mostra tudo.

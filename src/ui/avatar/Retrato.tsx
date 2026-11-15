@@ -12,6 +12,8 @@ import { BrincoDoRetrato, ColarDoRetrato } from './joias20';
 import { BrincoNovo, PiercingsDoRosto } from './piercings';
 import { Batom, Blush, Delineado, Mechas, SombraDosOlhos, temBigode } from './identidade13';
 import { misturar } from './cores';
+import { MarcasDoRosto } from './marcas23';
+import { lerCorpo23 } from '../../motor/v23/corpo/corpo23';
 import { Cilios14, Pinta14, Sobrancelhas14 } from '../v14/aparencia/sobrancelhas';
 import { desenharCabelo, estagioDaCalvicie } from './cabelos';
 import { memo, useId, type ReactElement } from 'react';
@@ -195,7 +197,9 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
   // "jeitos de vestir" com a mesma silhueta; camiseta, camisa e moletom saíam quase iguais.
   const sup = f !== 'bebe' && v.superior ? (() => { const [item, id] = v.superior.split('#'); const c = pecasDoItem(item, id ?? item); return c.casaco ?? c.inteira ?? c.cima; })() : undefined;
   const roupa = f === 'bebe' ? ['#c9d6e3', '#e3cdd6', '#d7e0c8', '#e6dcc4'][h % 4] : sup && 'cor' in sup ? (sup.cor as string) : v.roupa && ROUPA_ESTILO[v.roupa] ? ROUPA_ESTILO[v.roupa][h % ROUPA_ESTILO[v.roupa].length] : ROUPA[h % ROUPA.length];
-  const ombro = 30 * G.corpo * (adultoOuAdol && masc ? 1.12 : 1);
+  // VIDA 23: a constituição muda o busto também (os ombros e a estrutura, o pescoço) — de leve, para o rosto mandar.
+  const c23 = v.corpo23 && adultoOuAdol ? lerCorpo23(v.corpo23) : undefined;
+  const ombro = 30 * G.corpo * (adultoOuAdol && masc ? 1.12 : 1) * (c23 ? 1 + 0.035 * c23.ombros + 0.025 * c23.estrutura + 0.015 * c23.musculo : 1);
   const pescocoW = f === 'bebe' ? 0 : w * (masc && adultoOuAdol ? 0.36 : 0.3);
   const corpoTopo = queixo + (f === 'bebe' ? -2 : 4);
 
@@ -303,6 +307,8 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
         </g>
       )}
 
+      {/* VIDA 23: as marcas naturais do rosto (a pinta, as sardas, a cicatriz, a mancha, as covinhas), na pele. */}
+      {!bebe && v.marcas23 && <MarcasDoRosto lista={v.marcas23} g={{ cx, cy, w, hh, olhoY, esp, queixo }} pele={pele} rosto={rosto} uid={uid} idade={idade} />}
       {/* VIDA 17: as tatuagens do rosto, na pele (o olho, a sobrancelha, a barba e os óculos vêm por cima). */}
       {camadaDoRosto && f !== 'bebe' && f !== 'crianca' && camadaDoRosto({ cx, cy, w, hh, olhoY, esp, queixo }, pele, rosto, uid)}
       {/* VIDA 13: a maquiagem que vai por baixo — o blush nas maçãs e a sombra na pálpebra (o olho fica por cima). */}

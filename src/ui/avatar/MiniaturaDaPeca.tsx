@@ -7,7 +7,7 @@
 import type { Vida, Visual } from '../../motor/tipos';
 import { idade } from '../../motor/nucleo';
 import { itemEstilo, lugaresDoItem } from '../../motor/dados/estilo';
-import { tipoDeCorpo } from '../../motor/sistemas/silhueta';
+import { corpoDaFigura } from '../../motor/sistemas/silhueta';
 import { Retrato } from './Retrato';
 import { cabeloCobreOrelha } from './identidade13';
 import { zonaDoFuro } from '../../motor/dados/piercings13';
@@ -38,14 +38,14 @@ export function MiniaturaDaPeca({ vida, itemId, id, largura = 84, rotulo, marca 
   if (it.piercing?.regiao === 'umbigo') {
     // 12.9: o umbigo — a figura com o tronco à mostra, recortada na barriga.
     const visual: Visual = { ...vida.eu.visual, piercings: [...(vida.eu.visual.piercings ?? []).filter(x => x !== itemId && itemEstilo(x)?.lugar !== 'umbigo'), itemId] };
-    const corpo = tipoDeCorpo(vida);
+    const corpo = corpoDaFigura(vida);
     return <span className="miniatura-peca" data-item={itemId}><Figura visual={visual} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} corpo={corpo} pecas={[]} semCima largura={largura} semFundo foco={focoDaPeca(vida.eu.genero, corpo, i, 'umbigo')} rotulo={nome} /></span>;
   }
   if (it.categoria === 'oculos' || it.categoria === 'chapeu' || it.lugar === 'orelha' || it.piercing || (it.lugar === 'joia' && it.visual?.joia)) {
     // O colar se vê no busto (com o pescoço); óculos, chapéu e brincos, no rosto.
     return <span className="miniatura-peca miniatura-peca--rosto" data-item={itemId}><Retrato visual={visualComPecaDoRosto(vida.eu.visual, itemId)} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} tamanho={largura} rotulo={nome} soCabeca={it.lugar !== 'joia'} /></span>;
   }
-  const corpo = tipoDeCorpo(vida);
+  const corpo = corpoDaFigura(vida);
   const lugar = it.lugar === 'corpo' || (!it.lugar && it.categoria === 'roupa') ? 'corpo' : it.lugar ?? lugaresDoItem(it)[0];
   const visual: Visual = { ...vida.eu.visual };
   delete visual.chapeu; delete visual.oculos; delete visual.superior;

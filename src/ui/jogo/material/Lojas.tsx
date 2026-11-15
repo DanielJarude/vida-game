@@ -27,7 +27,7 @@ import { nivelDaCoisa } from '../../../motor/sistemas/lar';
 import type { CoisaTida } from '../../../motor/tipos';
 import { sementeDaPeca, temItem } from '../../../motor/sistemas/estilo';
 import { construcaoDaPeca, coresDoItem, corPrincipalDa, nomesDasCores, varianteDaCor, varianteDaVitrine } from '../../avatar/pecas';
-import { tipoDeCorpo } from '../../../motor/sistemas/silhueta';
+import { corpoDaFigura } from '../../../motor/sistemas/silhueta';
 import { variantesDaCoisa } from '../../../motor/dados/pertences';
 import { municipio } from '../../../motor/dados/lugares';
 import { BotaoAcao, Escolha } from '../../comum';
@@ -179,14 +179,14 @@ function Provador({ vida, itens, tirar, aoFechar }: { vida: Vida; itens: ItemDoP
     const visual = { ...visualComPecaDoRosto(vida.eu.visual, unico!.id), ...(unico!.categoria !== 'oculos' && vida.eu.visual.oculos ? { oculos: vida.eu.visual.oculos, modeloOculos: vida.eu.visual.modeloOculos } : {}), ...(unico!.categoria !== 'chapeu' && vida.eu.visual.chapeu ? { chapeu: vida.eu.visual.chapeu, modeloChapeu: vida.eu.visual.modeloChapeu } : {}) };
     return (
       <section className="provador" aria-label={`Provador: ${unico!.nome}`}>
-        <Figura visual={visual} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} corpo={tipoDeCorpo(vida)} pecas={meus} tatuagens={tatuagensNaFigura(vida)} largura={150} semFundo rotulo={`Você com ${unico!.nome.toLowerCase()}`} />
+        <Figura visual={visual} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} corpo={corpoDaFigura(vida)} pecas={meus} tatuagens={tatuagensNaFigura(vida)} largura={150} semFundo rotulo={`Você com ${unico!.nome.toLowerCase()}`} />
         <div className="provador__texto"><p className="provador__titulo">No provador: {unico!.nome.toLowerCase()}</p><button type="button" className="botao botao--discreto" onClick={aoFechar}>Sair do provador</button></div>
       </section>
     );
   }
   const umbigo = unico?.piercing?.regiao === 'umbigo';
   const alternativas = [...porLugar.values()].find(l => l.length > 1);
-  const fig = (pecas: ReturnType<typeof vestir>, rotulo: string, largura = 150) => <Figura visual={umbigo ? { ...vida.eu.visual, piercings: [...(vida.eu.visual.piercings ?? []), unico!.id] } : vida.eu.visual} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} corpo={tipoDeCorpo(vida)} pecas={umbigo ? [] : pecas} semCima={umbigo} tatuagens={tatuagensNaFigura(vida)} largura={largura} semFundo rotulo={rotulo} />;
+  const fig = (pecas: ReturnType<typeof vestir>, rotulo: string, largura = 150) => <Figura visual={umbigo ? { ...vida.eu.visual, piercings: [...(vida.eu.visual.piercings ?? []), unico!.id] } : vida.eu.visual} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} corpo={corpoDaFigura(vida)} pecas={umbigo ? [] : pecas} semCima={umbigo} tatuagens={tatuagensNaFigura(vida)} largura={largura} semFundo rotulo={rotulo} />;
   const nomeDe = (x: ItemDoProvador) => `${itemEstilo(x.itemId)!.nome}${x.marca ? ` (${marcaPorId(x.marca)?.nome ?? x.marca})` : ''}`;
   return (
     <section className="provador provador22" aria-label="Provador">

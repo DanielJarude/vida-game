@@ -15,7 +15,7 @@ import type { MudancaRosto14 } from '../../../motor/v14/aparencia/rosto14';
 import { Retrato } from '../../avatar/Retrato';
 import { Figura } from '../../avatar/Figura';
 import { focoDoRosto } from '../../avatar/identidade13';
-import { tipoDeCorpo } from '../../../motor/sistemas/silhueta';
+import { corpoDaFigura } from '../../../motor/sistemas/silhueta';
 import { BotaoAcao, Escolha } from '../../comum';
 import './aparencia14.css';
 
@@ -58,7 +58,7 @@ export function RostoDetalhes({ vida, agir }: { vida: Vida; agir: (a: Acao) => b
       <div className="a14-rosto__corpo">
         <div className="a14-rosto__previa">
           <Retrato visual={previa} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} tamanho={132} rotulo={mudou ? 'O rosto como ficaria' : 'O seu rosto hoje'} />
-          <Figura visual={(() => { const v = { ...previa }; delete v.chapeu; delete v.modeloChapeu; return v; })()} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} corpo={tipoDeCorpo(vida)}
+          <Figura visual={(() => { const v = { ...previa }; delete v.chapeu; delete v.modeloChapeu; return v; })()} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} corpo={corpoDaFigura(vida)}
             pecas={[]} largura={132} foco={focoDoRosto('sobrancelha', i)} rotulo="A sobrancelha de perto" />
           <span className="nota">{mudou ? 'Como ficaria' : 'Hoje'} · o rosto e a sobrancelha de perto</span>
         </div>
