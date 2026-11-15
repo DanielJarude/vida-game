@@ -136,9 +136,22 @@ Ferramentas: `scripts/playtest/galeria23.tsx`, `foto23.mjs`, `vida23.mjs`.
 `docs/vida23/`: 01–04 antes/depois do provador (roupa, joia; 390 escuro), 05–06 o painel, 10–13b formas, condição × estatura,
 compatibilidade e pessoas sorteadas, 14–15 marcas (corpo e rosto, peles p1–p6), 16–19 brincos, metais, colares/pulseiras/anéis, piercings.
 
-## 12–13. Publicação e pendências
+## 12. Commit e branch de produção — [OK]
 
-(seção completada na publicação, abaixo)
+Código publicado: `30f9cf1` (`git log e815edb..30f9cf1`, branch `claude/vida23-corpo-diversidade-joias`). `main` e a branch de
+produção do Cloudflare Pages (`claude/fix-pos-rework3-playtest`) avançadas por fast-forward (`e815edb`/`c336cd0` → `30f9cf1`),
+sem force-push. Este relatório final vai num commit de documentação só em `main` e na branch (a produção fica em `30f9cf1`).
+
+## 13. Deploy e versão servida — [OK]
+
+- 15/11/2026: https://vida-game.pages.dev/ passou a servir `assets/index-doCQhtul.js` ~5,5 min após o push. O `index.html` ("/") e os
+  **156 arquivos JS/CSS** são idênticos (sha256) ao build local de `30f9cf1` (0 diferentes).
+- Teste no site real (`URL=https://vida-game.pages.dev/ scripts/playtest/vida23.mjs`), 1440 px claro e 390 px escuro: provador de
+  roupa (132 × 132 px, mesmo viewBox), provador de brinco (com a peça · como você está · de perto, 132 px cada), Aparência 132 px,
+  painel Corpo e pele (antes/depois iguais), confirmar → recarregar → a constituição continua; sem rolagem lateral; 0 erros de
+  console. Capturas: `docs/vida23/20-producao-provador-brinco-1440.png`, `21-producao-provador-roupa-390-escuro.png`.
+
+## 14. Pendências e limitações reais
 
 Pendências reais: playtest humano não feito; marcas e constituição não entram no rosto lateral (não existe perfil) nem em
 animais; a estatura do jogador não é editável (é a do motor, de propósito); NPCs antigos continuam sem constituição.
