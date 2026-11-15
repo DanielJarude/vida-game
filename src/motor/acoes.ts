@@ -89,6 +89,7 @@ import { disponibilidadePedirAjuda, pedirAjuda, principal as principalDaOrigem, 
 import { autonomia } from './sistemas/autonomia';
 import { comprarItem, disponibilidadeAparencia, disponibilidadeComprarItem, disponibilidadeUsarItem, mudarAparencia, sincronizarVisual, usarItem, vestirLook, type MudancaVisual } from './sistemas/estilo';
 import { disponibilidadeEspolio21, executarEspolio21, type OqueEspolio21 } from './v21/crime/espolio21';
+import { disponibilidadeAgenda22, responderConvite22 } from './v22/fama/agenda22';
 import type { Comprador21 } from './dados21/crime/espolio21';
 import { clamp, rngDe } from './rng';
 import { variantesDeVeiculo } from './dados/pertences';
@@ -406,6 +407,8 @@ export type Acao =
   | { tipo: 'crime'; acao: AcaoDoCrime }
   /** VIDA 21: o que fazer com um bem que veio do crime (`v21/crime/espolio21`). */
   | { tipo: 'espolio21'; oque: OqueEspolio21; bemId: string; comprador?: Comprador21 }
+  /** VIDA 22: responder a um convite da agenda pública (`v22/fama/agenda22`). */
+  | { tipo: 'fama22'; oque: 'aceitar' | 'recusar'; id: string }
   /** REWORK 11.5 · POL-05: as alianças e as promessas (formar, cumprir, romper, pedir apoio, prometer na campanha). */
   | { tipo: 'alianca'; oque: OqueAlianca; id?: string }
   /** REWORK 11.5 · ESP-05: a estratégia do time (a prancheta do técnico): muda o jeito de jogar lido em cada jogo. */
@@ -478,6 +481,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'submundo': return disponibilidadeSubmundo(v, a.oque, a.ramo, a.pessoaId);
     case 'crime': return disponibilidadeCrime(v, a.acao);
     case 'espolio21': return disponibilidadeEspolio21(v, a.oque, a.bemId, a.comprador);
+    case 'fama22': return disponibilidadeAgenda22(v, a.oque, a.id);
     case 'alianca': return disponibilidadeAlianca(v, a.oque, a.id);
     case 'tatica': return disponibilidadeTatica(v, a.estilo);
     case 'crianca': return disponibilidadeCrianca(v, a.oque);
@@ -1111,6 +1115,7 @@ function linhaDoExtrato(a: Acao): [string, TipoMovimento] {
     case 'comprar_coisa': case 'vender_coisa': return ['Coisas da casa e da vida: compra e venda', 'escolha'];
     case 'personalizar': return a.op.o === 'cultural' || a.op.o === 'obra' || a.op.o === 'usar_comodo' ? ['Música, arte e programas culturais', 'escolha'] : a.op.o.startsWith('veiculo') ? ['Imóveis e veículos: compra, venda e reparo', 'escolha'] : ['A casa e os objetos: reformas, fretes e personalização', 'escolha'];
     case 'presentear': return ['Presentes', 'escolha'];
+    case 'fama22': return ['Fama: convites, eventos e cachês', 'escolha'];
     case 'encontro': return ['Receber gente e sair junto', 'escolha'];
     case 'instrumento': return ['Música, arte e programas culturais', 'escolha'];
     case 'rede': return ['Rede social', 'escolha'];
@@ -1179,6 +1184,7 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       if (!v.momento) { const c = candidatos(v, r, k => k.tipo === 'decisao' && /^sub[a-z]?_/.test(k.id))[0]; if (c && c.c.tipo === 'decisao') abrirDecisao(v, c.c, c.ctx); }
       return { resultado: contrair(x.texto), titulo: a.ramo ? NOME_DO_RAMO[a.ramo] : 'O caminho' };
     }
+    case 'fama22': { const x = responderConvite22(v, a.oque, a.id); return { resultado: x.texto, titulo: x.titulo }; }
     case 'espolio21': {
       const x = executarEspolio21(v, a.oque, a.bemId, a.comprador);
       // A peça vai para o guarda-roupa de sempre e é vestida pelo caminho de sempre; ao sair, a Aparência se redesenha.

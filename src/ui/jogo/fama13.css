@@ -75,3 +75,11 @@
   .fama13__origem { flex-direction: column; gap: 2px; }
   .fama13__barra { grid-template-columns: 5.2rem 1fr 2rem; }
 }
+/* VIDA 22 · a agenda pública (convites) e a imprensa do ano. */
+.fama22__convites, .fama22__notas { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.fama22__convite { display: flex; flex-wrap: wrap; gap: var(--space-2); justify-content: space-between; align-items: center; padding: var(--space-2) 0; border-bottom: 1px solid var(--rule); }
+.fama22__convite-texto { display: flex; flex-direction: column; gap: 2px; flex: 1 1 240px; min-width: 0; }
+.fama22__convite-acoes { display: flex; gap: var(--space-2); flex-wrap: wrap; }
+.fama22__nota { display: flex; gap: var(--space-2); align-items: baseline; color: var(--text-secondary); }
+.fama22__selo { flex: none; font-size: var(--type-caption, 12px); text-transform: uppercase; letter-spacing: var(--tracking-meta); color: var(--text-muted); min-width: 64px; }
+.fama22__nota--ruim { color: var(--danger); }

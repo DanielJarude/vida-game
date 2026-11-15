@@ -3953,6 +3953,8 @@ export interface Vida {
   notoriedade?: Notoriedade;
   /** VIDA 13 · Fama: os marcos do nome, a série anual, o que a fama pagou (`sistemas/reconhecimento13`). Ausente: nada ainda. */
   fama13?: import('./sistemas/reconhecimento13').Fama13;
+  /** VIDA 22: a agenda pública — os convites da fama respondidos (`v22/fama/agenda22`). Ausente em saves antigos. */
+  fama22?: import('./v22/fama/agenda22').Agenda22;
   /** VIDA 14 · Conquistas: objetivos pessoais, reconhecimento no meio, programas da cidade (`v14/conquistas`). Ausente: nada ainda. */
   conquistas14?: import('./dados14/conquistas/catalogo').Conquistas14;
   /** VIDA 14 · Crenças (`v14/crencas`): a crença, a prática, as mudanças. Ausente: refeita da família, sem história. */

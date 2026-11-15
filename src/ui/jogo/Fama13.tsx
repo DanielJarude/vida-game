@@ -16,6 +16,7 @@ import { dinheiroCurto } from '../apresentar';
 import { anoDe } from '../../motor/tempo';
 import './fama13.css';
 import { Manchete161 } from '../v16/areas/Capas161';
+import { convites22, imprensaDoAno22 } from '../../motor/v22/fama/agenda22';
 
 const CHEGA: Record<string, string> = { 'a cidade': 'à cidade', 'a região': 'à região', 'o país': 'ao país todo', 'fora do país': 'além das fronteiras' };
 const DEGRAUS = ['anônimo', 'local', 'reconhecido', 'famoso', 'muito famoso'];
@@ -118,6 +119,46 @@ export function Fama13({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean 
           {l.custos.length ? <ul className="fama13__lista">{l.custos.map(b => <li key={b}>{b}</li>)}</ul> : <p className="nota">Quase nada ainda: dá para ir à padaria em paz.</p>}
         </section>
       </div>
+
+      {/* VIDA 22: a agenda pública — os convites deste ano, pela trajetória (quem convida, o que pede, o que pode trazer). */}
+      {(() => {
+        const convites = convites22(vida);
+        const feitos = (vida.fama22?.feitos ?? []).filter(f => f.ano === anoDe(vida.t));
+        if (!convites.length && !feitos.length) return null;
+        return (
+          <section className="fama13__bloco fama22__agenda" aria-labelledby="fama22-agenda">
+            <h3 id="fama22-agenda" className="voce-subtitulo">Convites deste ano</h3>
+            {convites.length ? <ul className="fama22__convites">
+              {convites.map(c => (
+                <li key={c.id} className="fama22__convite" data-convite={c.tpl}>
+                  <span className="fama22__convite-texto">
+                    <strong>{c.rotulo.charAt(0).toUpperCase() + c.rotulo.slice(1)}</strong>
+                    <span className="nota">Chamaram você {c.porque}. Pede {c.pede}. Pode trazer {c.traz}.{c.cache ? ` Cachê: ${dinheiroCurto(c.cache)}.` : ''}</span>
+                  </span>
+                  <span className="fama22__convite-acoes">
+                    <BotaoAcao vida={vida} acao={{ tipo: 'fama22', oque: 'aceitar', id: c.id }} agir={agir} variante="secundario">Aceitar</BotaoAcao>
+                    <BotaoAcao vida={vida} acao={{ tipo: 'fama22', oque: 'recusar', id: c.id }} agir={agir} variante="discreto">Recusar</BotaoAcao>
+                  </span>
+                </li>
+              ))}
+            </ul> : <p className="nota">Os convites do ano já foram respondidos. Novos chegam no ano que vem — e dependem do que acontecer até lá.</p>}
+            {feitos.length > 0 && <p className="nota">Este ano: {Object.entries(feitos.reduce<Record<string, number>>((m, f) => { const k = f.aceitou ? (f.tom === 'bom' ? 'deram certo' : f.tom === 'ruim' ? 'deram errado' : 'passaram sem barulho') : 'recusados'; m[k] = (m[k] ?? 0) + 1; return m; }, {})).map(([k, n]) => `${n} ${k}`).join(', ')}.</p>}
+          </section>
+        );
+      })()}
+
+      {(() => {
+        const notas = imprensaDoAno22(vida);
+        if (!notas.length) return null;
+        return (
+          <section className="fama13__bloco fama22__imprensa" aria-labelledby="fama22-imprensa">
+            <h3 id="fama22-imprensa" className="voce-subtitulo">Na imprensa e nas ruas, este ano</h3>
+            <ul className="fama22__notas">
+              {notas.map((n, k) => <li key={k} className={`fama22__nota fama22__nota--${n.tipo}${n.tom ? ` fama22__nota--${n.tom}` : ''}`}><span className="fama22__selo">{n.tipo === 'imprensa' ? 'Imprensa' : n.tipo === 'marco' ? 'Notícia' : 'Na rua'}</span>{n.texto}</li>)}
+            </ul>
+          </section>
+        );
+      })()}
 
       {usos.length === 0 && l.valor < 25 && <p className="nota">Quando o público conhecer mais o seu nome, dá para usá-lo: entrevistas, causas, publicidade, recolhimento.</p>}
       {usos.length > 0 && (
