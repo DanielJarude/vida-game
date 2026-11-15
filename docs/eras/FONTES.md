@@ -117,3 +117,15 @@ Acontecimentos com lei ou data oficial **[F]** (Lei 5.379/1967 e Mobral, transmi
 Rio–Niterói, metrô de SP, LC 20/1974, Decreto 76.593/1975, Lei 6.515/1977, Lei 6.683/1979, Lei 6.767/1979); Copas de 1970,
 1974, 1978 e Jogos de 1972, 1976 e 1980 (FIFA, COI) **[F]**; lembranças culturais **[A]**. Moeda: cruzeiro novo
 (13/02/1967) → cruzeiro (15/05/1970, Res. BACEN 144/1970, sem corte de zeros) **[F]**.
+
+## 14. Rodada 2 (ERAS v2)
+
+- Regras eleitorais: Emenda Constitucional 16/1997 (reeleição); eleição presidencial direta de 15/11/1989 **[F]**.
+- Maioridade civil: Código Civil de 1916 (art. 9º) e Lei 10.406/2002, em vigor em 11/01/2003 **[F]**.
+- Saúde: Lei 8.080/1990 (SUS), Lei 9.313/1996 (antirretrovirais), Lei 9.656/1998 (planos), Lei 9.787/1999 (genéricos),
+  Portaria GM/MS 1.864/2003 (SAMU), Programa Nacional de Imunizações (Zé Gotinha, 1986) **[F]**.
+- Orelhão: projeto de Chu Ming Silveira, instalado a partir de 1972 **[F]**; o recuo depois de 2010 **[A]** (Anatel registra
+  a redução da planta de telefones públicos na década). Iluminação a vapor de sódio substituída por LED nas capitais ao longo
+  dos anos 2010 **[A]**.
+- Procura de emprego, cabelo da década, dinheiro do dia a dia (cheque, caixa 24 h, débito, banco pela internet, maquininha):
+  períodos **[A]**, lidos das mesmas fontes de costumes (Hemeroteca Digital, acervos de moda; Febraban para meios de pagamento).

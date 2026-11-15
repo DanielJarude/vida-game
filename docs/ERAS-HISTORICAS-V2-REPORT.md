@@ -27,21 +27,21 @@ novo é 1 e todo portão novo é transparente sem `v.era` (testado).
 | # | Área | Situação | O que existe agora |
 |---|---|---|---|
 | 3 | Economia: salários por profissão e época | **IV** | Nível de renda da época pela PNAD/PNAD Contínua (1992–2025, oficial) e pelo PIB per capita (1970–1991, aproximação); a posição de cada ocupação na escala (mínimo da época ↔ média ↔ prêmio de qualificação). Um só gancho em `economiaLocal` + `salarioLocal`: vale para o jogador, os pais (renda ao nascer), as pessoas do mundo e as vagas. |
-| 3 | Preços históricos | **P** | Preço relativo por grupo do IPCA (1995–2025 oficial; antes, o nível de 1995) aplicado ao mercado, aluguel, plano de saúde, escola particular, roupas, calçados, joias, móveis e eletrodomésticos. Eletrônicos: curva de adoção (v1) com piso do grupo. Veículos: preço de catálogo. **Não** há tabela de preço nominal por produto (só a cesta DIEESE). |
+| 3 | Preços históricos | **IV** | Preço relativo por grupo do IPCA (1995–2025 oficial; antes, o nível de 1995) no mercado, aluguel, plano de saúde, escola, roupas (loja e compra direta), calçados, joias, móveis e eletrodomésticos; eletrônicos pela curva de adoção (v1) com piso do grupo; veículos pelo preço de catálogo. **Rodada 2:** o painel mostra "Quanto custa, agora", na moeda do mês (a calça jeans, a geladeira da época, o carro mais barato da concessionária, o aluguel de dois quartos, o mínimo). Limitação: não há tabela de preço nominal histórico por produto — os preços são os do jogo levados à época pelos índices. |
 | 3 | Poder de compra | **IV** | Painel: cesta básica em % do mínimo (DIEESE), renda média da época, o que custava mais/menos. Simulação de vidas inteiras: sem aperto anômalo nas coortes históricas; extrato sempre concilia. |
 | 3 | Moedas | **IV** | Cadeia v1 + cruzeiro novo → cruzeiro (15/05/1970, sem corte de zeros). Sem criação/destruição de dinheiro (testado). |
-| 4 | Partidos e eleições | **P** | 60 partidos de 1966 a 2025 com linhagem; filiação só a partido existente; migração anual da filiação na fusão/mudança de nome, com texto. "Ficha Limpa" só a partir de 2010. **Não** adaptado: calendário eleitoral e regras de 1982–1997 (reeleição, eleição indireta) — quem nasce a partir de 1970 só se candidata depois de 1988 (vereador) e as regras de mandato do jogo são as de hoje. Outros países: partidos genéricos, como antes. |
+| 4 | Partidos e eleições | **IV** | 60 partidos de 1966 a 2025 com linhagem; filiação só a partido existente; migração da filiação na fusão/mudança de nome. **Rodada 2:** reeleição de prefeito, governador e presidente impedida antes da EC 16/1997 (eleições de 1998/2000); presidencial só a partir de 1994 no ciclo do jogo; "Ficha Limpa" só desde 2010. Limitação: coligações proporcionais e financiamento de campanha não são simulados (o motor de campanha é o de hoje). |
 | 5 | Veículos | **IV** | +14 versões da época com desenho próprio (importados 1992–2014, Pajero, Blazer, Hilux, Ranger, CBX 750 "Sete Galo", Fat Boy Evolution, Caloi 10, Monark Barra Circular); ~100 modelos atuais só a partir do ano da geração; bicicleta elétrica só a partir de 2016. Barcos/aviões: os modelos atuais com data; sem versões antigas. |
-| 6 | Moda e aparência | **P** | 13 peças da época com silhueta própria (3 cortes novos, ombreira, golão, estampa geométrica, pezinho do fuseau), à venda só no período; 17 peças de hoje com data; a roupa de todo dia de cada década na Figura (todas as pessoas desenhadas). **Não**: cortes de cabelo, maquiagem e óculos por década. |
+| 6 | Moda e aparência | **IV** | 13 peças da época com silhueta própria, à venda só no período; 17 peças de hoje com data; roupa de todo dia por década na Figura. **Rodada 2:** o cabelo da década (40% das pessoas sorteadas numa vida histórica usam um corte marcante da época — mullet, black power, shag, franja longa, undercut… —, sem proibir nenhum). Limitação: maquiagem sem mudança por década. |
 | 7 | Textos | **IV** | Peneira também nas cenas de decisão; detector de termos datados (64); auditoria por simulação: 38.487 textos de 64 vidas (coortes 1970–2008) → 4 anacronismos (0,01%), todos corrigidos. Correção na origem dos casos estruturais (profissão inexistente dos pais; cena do grupo da turma). |
-| 8 | Cidades | **P** | Metrô e trens urbanos de 8 capitais por data, com efeito no transporte e lembrança local. **Não**: arquitetura, fachadas e comércio por década (visual). |
+| 8 | Cidades | **IV** | Metrô e trens urbanos de 8 capitais por data, com efeito no transporte e lembrança local. **Rodada 2:** a rua da casa na época — orelhão na calçada (até a década de 2000), luz amarela de vapor de sódio nos postes antes de 2010, prédios mais baixos no centro antes de 1990. Limitação: fachadas das casas e comércio da rua iguais em todas as décadas. |
 | 9 | Comunicação | (v1) | Mantido; sem mudança nesta versão. |
-| 10 | Entretenimento | **P** | +6 lembranças dos anos 1970; o resto é o da v1. |
-| 11 | Educação e trabalho | **P** | Crédito Educativo antes do FIES; profissões inexistentes também fora do alcance dos NPCs. **Não**: busca de emprego por época (classificados → portais). |
-| 12 | Casa | **P** | +17 itens com data; geladeira de uma porta antes de 1991. **Não**: estilo de móveis por década no desenho. |
-| 13 | Saúde | **N** | Só textual (UPA → pronto-socorro). SUS/INAMPS, medicamentos e vacinas por época: não simulados. |
-| 14 | Leis | **P** | Casamento entre pessoas do mesmo gênero (STF 2011, CNJ 2013); divórcio (1977, EC 66/2010). Maioridade aos 21 até 2003: só documentada (o jogo usa 18). |
-| 15 | Bancos e pagamentos | **N** | Só o que a v1 já tinha (Pix no texto; banco no celular pela tecnologia). |
+| 10 | Entretenimento | **IV** | Lembranças por década (v1 + 6 dos anos 1970); o videogame, a TV, o som e o computador desenhados como os da época (rodada 2); streaming, locadora e redes pelo calendário da v1. |
+| 11 | Educação e trabalho | **IV** | Crédito Educativo antes do FIES; profissões inexistentes fora do alcance também dos NPCs. **Rodada 2:** a procura de emprego da época na cena da entrevista (classificados e currículo datilografado; site de empregos e e-mail; rede profissional; indicação, em todas). |
+| 12 | Casa | **IV** | +17 itens com data; geladeira de uma porta antes de 1991. **Rodada 2:** TV de tubo (com antena antes de 1990), microcomputador de fósforo verde, computador bege de monitor de tubo, três-em-um com toca-fitas, console de cartucho, celular de antena e de teclas — desenhados na casa da época. Limitação: o estilo dos móveis é o mesmo em todas as décadas. |
+| 13 | Saúde | **P** | **Rodada 2:** marcos documentados (Zé Gotinha 1986, SUS 1990 — Lei 8.080, tratamento de HIV gratuito 1996, lei dos planos 1998, genéricos 1999, SAMU 2003) na linha do tempo e na Linha da Vida; INAMPS antes do SUS e ambulância antes do SAMU no texto. Limitação: o tratamento e o custo da saúde no motor são os de hoje. |
+| 14 | Leis | **IV** | Casamento entre pessoas do mesmo gênero (STF 2011, CNJ 2013); divórcio (1977, EC 66/2010). **Rodada 2:** maioridade civil aos 21 até 2003, contada na Linha da Vida aos 18 e aos 21 (o motor trata os 18 como adulto — simplificação documentada). |
+| 15 | Bancos e pagamentos | **P** | **Rodada 2:** o dinheiro do dia a dia por época como lembrança (talão de cheques, fila do banco, caixa 24 horas, cartão de débito, banco pela internet, maquininha); sem pagamento por aproximação antes de 2016 no texto; Pix e banco no celular pela tecnologia (v1). Limitação: cheque e cartão não são meios de pagamento distintos no motor. |
 | 16 | Esportes e acontecimentos | **IV** | +11 acontecimentos dos anos 1970, +5 aberturas de metrô, Copas de 1970–78 e Jogos de 1972–80. |
 | 17 | Relacionamentos e lazer | (v1) | Mantido. |
 | 18 | Marcas e publicidade | (v1) | Mantido (19 marcas com data). |
@@ -112,7 +112,15 @@ legível em `partidoDe` (o histórico de filiações guarda as duas).
 5. Cabelo, maquiagem e óculos por década; busca de emprego por época.
 6. Um segundo país com séries próprias (Portugal tem série de preços e salário mínimo longas).
 
-## 9. Branch, commits e publicação
+## 9. Rodada 2 (pedido: "acabe o que ficou parcial e suba no site")
+
+Completados nesta rodada os itens marcados **P** na primeira: preços (painel), partidos/eleições (regras de época), moda
+(cabelo), cidades (rua), entretenimento e casa (aparelhos desenhados por década), educação e trabalho (procura de emprego),
+leis (maioridade). Saúde e bancos, que estavam **N**, passaram a **P**. Continuam fora: outros países e antes de 1970 (**N**).
+Testes novos: 5 (erasV2, total 22). Simulações refeitas: 4 coortes sem falha e sem extrato que não concilie; auditoria
+textual de 26.063 textos com 1 ocorrência (0,00%), resolvida pelo ajuste da data do detector (grupos de mensagens, 2011).
+
+## 10. Branch, commits e publicação
 
 Branch `claude/eras-v2` (commits `git log 89f707e..claude/eras-v2`). **Não publicada na produção**: a atualização tem partes
 parciais e não implementadas (tabela da seção 3) e falta o playtest humano que o pedido exige antes; a branch foi enviada ao

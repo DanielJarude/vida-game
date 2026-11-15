@@ -37,12 +37,17 @@ export const NOTAS: NotaDeVersao[] = [
       'Partidos da época: só se filia a partido que existe no mês; quem está filiado acompanha a mudança de nome ou a fusão (PFL → DEM → União Brasil, PMDB → MDB).',
       'Moda de cada década: a calça boca de sino, a camisa de golão, o blazer de ombreira, o jeans cenoura, o fuseau, o moletom geométrico, a camiseta fluorescente, o jeans baggy, a baby look e o jeans de cintura baixa — à venda só no tempo deles. As pessoas desenhadas vestem a roupa de todo dia da década.',
       'Veículos de cada época também entre os importados, as picapes e SUVs grandes, as motos grandes e as bicicletas; os modelos de hoje só depois de lançados.',
-      'O metrô e o trem urbano de cada capital chegam na data em que abriram; antes, o transporte é o de ônibus.'
+      'O metrô e o trem urbano de cada capital chegam na data em que abriram; antes, o transporte é o de ônibus.',
+      'A casa da época: a TV de tubo, o microcomputador, o computador bege, o três-em-um, o console de cartucho e o celular de antena desenhados como eram. Na rua, o orelhão e a luz amarela dos postes.',
+      'A época (Você · No mundo) mostra quanto custam agora a calça jeans, a geladeira, o carro mais barato e o aluguel, na moeda do mês.',
+      'Procurar emprego como se procurava: nos classificados do jornal, no site de empregos ou na rede profissional.',
+      'A saúde e o dinheiro de cada época: o SUS, os genéricos, o SAMU; o talão de cheques, o caixa 24 horas, o cartão de débito, a maquininha.'
     ],
     melhorias: [
       'As cenas de decisão também falam do jeito da época (antes, só a Linha da Vida e as mensagens).',
       'A casa da época: a geladeira de uma porta, e os móveis e aparelhos de hoje só depois de chegarem às lojas.',
-      'Antes do FIES, o Crédito Educativo. O casamento e o divórcio seguem a lei de cada ano.'
+      'Antes do FIES, o Crédito Educativo. O casamento, o divórcio, a maioridade e a reeleição seguem a lei de cada ano.',
+      'As pessoas da época usam, muitas vezes, o corte de cabelo que marcou a década.'
     ],
     correcoes: [
       'Os pais e as pessoas do mundo não têm mais profissão que ainda não existia (loja on-line em 1989).',
