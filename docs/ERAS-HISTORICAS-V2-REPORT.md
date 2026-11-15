@@ -73,7 +73,7 @@ Alterados: `eras/base/{series,moedas,contexto,coisas,veiculos,profissoes,anacron
   União, PMDB → MDB; vida histórica × contemporânea); moda (período, chegada, básico sempre); veículos (nada importado antes
   de 1990, importados da época, geração atual, bicicleta elétrica); leis; profissões dos NPCs; peneira e detector; metrô de BH;
   anos 1970 (moeda no mês, save reabre igual, nada se repete na biografia, normalização). Todos passam, com os 22 da v1.
-- **Suíte completa** (215 arquivos): na primeira rodada, 15 falhas — 5 por tempo esgotado sob carga (`fechamentoMundo` #4,
+- **Suíte completa** (215 arquivos, 2.899 testes): na primeira rodada, 2.883 passaram e 15 falharam — 5 por tempo esgotado sob carga (`fechamentoMundo` #4,
   `motor.test` "regra de agência", `profissao` clima, `fixPosPlaytestHumano` C, `rework115Esportes` copas: as mesmas
   intermitentes registradas nos relatórios da VIDA 19–22) e 10 causadas pela v2: 8 testes de catálogo de roupas que
   compravam *todas* as peças numa vida contemporânea (as de época, por regra, não se vendem nela — os testes passaram a
