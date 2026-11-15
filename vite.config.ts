@@ -156,6 +156,11 @@ export default defineConfig({
           if (v21) return `motor21-${v21[1]}`;
           const d21 = /[\\/]src[\\/]motor[\\/]dados21[\\/]([a-z0-9]+)[\\/]/.exec(id);
           if (d21) return `dados21-${d21[1]}`;
+          // VIDA 22: a mesma regra (motor/v22/<frente> → motor22-<frente>; os catálogos em dados22-<frente>).
+          const v22 = /[\\/]src[\\/]motor[\\/]v22[\\/]([a-z0-9]+)[\\/]/.exec(id);
+          if (v22) return `motor22-${v22[1]}`;
+          const d22 = /[\\/]src[\\/]motor[\\/]dados22[\\/]([a-z0-9]+)[\\/]/.exec(id);
+          if (d22) return `dados22-${d22[1]}`;
           if (/[\\/]src[\\/]motor[\\/]dados18[\\/]/.test(id)) return 'dados18';
           if (/[\\/]src[\\/]motor[\\/]sistemas[\\/]reconhecimento13\.ts/.test(id)) return 'motor-fama';
           if (/[\\/]src[\\/]motor[\\/]sistemas[\\/](redes|leituraDoEstresse|juntos|naFormacao|noOficio|microcenas|prisao|mundoVivo|agenda|avaliacaoDaRotina|convivio|apostas|ecos|seguroDesemprego|indiretos|afetos|fama|pedidosDaCrianca|afetosAdultos|casamento|convivio126|casaNoDia|viagens126)\.ts/.test(id)) return 'motor-vida';

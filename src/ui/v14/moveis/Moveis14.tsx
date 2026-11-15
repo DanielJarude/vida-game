@@ -14,6 +14,31 @@ import { CONJUNTOS, ESTILOS, NOME_DA_CENA, NOME_DA_MOBILIA } from '../../../moto
 import { encaixe14, leituraMoveis14, mobiliaDaOferta14, precoDoConjunto14 } from '../../../motor/v14/moveis/moveis14';
 import { vagaPara17 } from '../../../motor/v14/moveis/funcoes17';
 import './moveis14.css';
+import { CenaDoComodo } from '../../ilustracao/comodos';
+import { acabamentoDoComodo, areaDoComodo, coisasPorComodo, comodosDaCasa } from '../../../motor/sistemas/lar';
+import { opcaoDeAcabamento } from '../../../motor/dados/lar';
+import { variantesDaCoisa } from '../../../motor/dados/pertences';
+
+/**
+ * VIDA 22 · a PRÉVIA no cômodo de verdade: a cena do cômodo onde a peça iria (as paredes, o piso e a luz dele, o que já
+ * está lá), com a peça nova no meio — a mesma peça do cartão (o produto, a marca, a cor). Não compra nada. Quando não
+ * cabe, a cena mostra o cômodo como está e a frase diz o porquê (e para onde ela iria).
+ */
+function PreviaNoComodo22({ vida, comodoId, coisaId, marca, cor, cabe }: { vida: Vida; comodoId: string; coisaId: string; marca?: string; cor?: string; cabe: boolean }) {
+  const cm = comodosDaCasa(vida).find(x => x.id === comodoId);
+  if (!cm) return null;
+  const ja = (coisasPorComodo(vida).get(comodoId) ?? []).map(t => ({ coisaId: t.coisaId, cor: t.cor, id: t.id, marca: t.marca }));
+  const nova = { coisaId, cor: cor ?? variantesDaCoisa(coisaId)[0]?.cor, id: '_previa22', marca };
+  const asp = (a: 'parede' | 'piso' | 'luz' | 'rodape' | 'cortina') => { const id = acabamentoDoComodo(vida, comodoId, a); return { id, cor: opcaoDeAcabamento(a, id)?.cor }; };
+  const area = areaDoComodo(vida.moradia.modeloId, cm) * (['jardim', 'piscina', 'lazer', 'quadra'].includes(cm.tipo) ? 1.6 : 1);
+  return (
+    <span className="m14-previa22" data-previa={coisaId}>
+      <CenaDoComodo tipo={cm.tipo} parede={asp('parede')} piso={asp('piso')} luz={asp('luz').id} rodape={asp('rodape').id} cortina={asp('cortina').id} objetos={cabe ? [...ja, nova] : ja} area={area} largura={300}
+        rotulo={`Prévia: ${cm.nome}${cabe ? ` com ${coisa(coisaId)?.nome}` : ` como está (a peça não cabe)`}`} />
+      <span className="nota">{cabe ? `Assim ficaria n${cm.nome.startsWith('a') ? 'a' : 'o'} ${cm.nome} — a mesma peça, a mesma cor e a mesma marca do cartão.` : `Assim está ${cm.nome.startsWith('a') ? 'a' : 'o'} ${cm.nome} hoje: a peça não cabe aqui.`}</span>
+    </span>
+  );
+}
 
 const m2 = (x: number) => `${String(Math.round(x * 10) / 10).replace('.', ',')} m²`;
 const M = (oque: unknown) => ({ tipo: 'moveis14', oque } as unknown as Acao);
@@ -33,7 +58,7 @@ function Planta({ capacidade, pecas, nova, nomeNova }: { capacidade: number; pec
 }
 
 /** No cartão da loja: a área, o encaixe e a prévia (só para o que ocupa chão). */
-export function EncaixeNaLoja14({ vida, coisaId }: { vida: Vida; coisaId: string }) {
+export function EncaixeNaLoja14({ vida, coisaId, marca, cor }: { vida: Vida; coisaId: string; /** VIDA 22: a marca e a cor escolhidas no cartão (a prévia mostra a peça que se compraria). */ marca?: string; cor?: string }) {
   const [ver, setVer] = useState(false);
   const e = encaixe14(vida, coisaId);
   if (!e.ocupa) return null;
@@ -45,6 +70,7 @@ export function EncaixeNaLoja14({ vida, coisaId }: { vida: Vida; coisaId: string
         Ocupa {m2(e.ocupa)}. {e.semControle ? 'Na casa da família, quem decide o espaço é a família.' : e.cabe ? `Cabe ${e.comodo ? `n${e.comodo.nome.startsWith('a') ? 'a' : 'o'} ${e.comodo.nome} (${m2(e.comodo.livre)} livres)` : ''}.` : e.outro ? `Na ${e.comodo?.nome} não cabe; iria para ${e.outro.nome}.` : `Não cabe agora (${m2(e.comodo?.livre ?? 0)} livres): iria para o depósito${e.substituiveis.length ? `, ou substituiria ${coisa(e.substituiveis[0].coisaId)?.nome}` : ''}.`}
       </span>
       {!e.semControle && <button type="button" className="link" aria-expanded={ver} onClick={() => setVer(x => !x)}>{ver ? 'Fechar a prévia' : 'Ver no cômodo'}</button>}
+      {ver && e.comodo && <PreviaNoComodo22 vida={vida} comodoId={e.comodo.id} coisaId={coisaId} marca={marca} cor={cor} cabe={e.cabe} />}
       {ver && c && <Planta capacidade={c.capacidade} pecas={c.pecas} nova={e.ocupa} nomeNova={coisa(coisaId)?.nome} />}
     </span>
   );

@@ -13,6 +13,7 @@ import { itemEstilo, lugaresDoItem, nivelDoItem, TIPOS_DE_PECA, tipoDePeca } fro
 import { segmentoDoNivel } from '../../../motor/dados/lar';
 import { categoriaDaCasa, nomeDaCategoriaDaCasa } from '../../../motor/dados/categoriasDaCasa';
 import { TIPOS_DE_MOVEL, nomeDoTipoDeMovel, tipoDeMovel } from '../../../motor/dados14/moveis/catalogo';
+import { AMBIENTES22, ambientesDoProduto, nomeDoAmbiente } from '../../../motor/dados22/moveis/ambientes22';
 import { Conjuntos14, EncaixeNaLoja14, FuncaoNaLoja17 } from '../../v14/moveis/Moveis14';
 import { funcaoDe17 } from '../../../motor/v14/moveis/funcoes17';
 import { leituraDaMarca, segmentoDaMarca } from '../../../motor/sistemas/perfilDaMarca';
@@ -81,14 +82,23 @@ export function LojaDaVida({ vida, agir, lojaId }: { vida: Vida; agir: (a: Acao)
   // roupa): só as que têm produto nesta loja, nenhuma vazia, nenhum produto sem.
   // VIDA 14: agrupado pelo TIPO de móvel (todos os sofás juntos, todas as poltronas juntas...), não pelo cômodo.
   const ambienteDe = (l: Linha) => (l.produto.tipo === 'coisa' && (l.categoria === 'moveis' || l.categoria === 'eletrodomesticos') ? tipoDeMovel(l.produto.id, l.categoria === 'eletrodomesticos') as string : undefined);
-  const ambientes = TIPOS_DE_MOVEL.filter(a => linhas.some(l => ambienteDe(l) === a.id));
+  // VIDA 22: na loja da casa, o primeiro filtro é o AMBIENTE (sala de estar, quarto, banheiro, área externa…); o tipo de
+  // móvel vem depois, só com os tipos que existem no ambiente escolhido. Um produto pode estar em dois ambientes (a
+  // mesma linha, a mesma compra).
+  const daCasa = (l: Linha) => l.produto.tipo === 'coisa' && (l.categoria === 'moveis' || l.categoria === 'eletrodomesticos');
+  const amb22De = (l: Linha) => (daCasa(l) ? ambientesDoProduto(l.produto.id) : []);
+  const ambientes22 = AMBIENTES22.filter(a => linhas.some(l => amb22De(l).includes(a.id)));
+  const ambiente22 = ambientes22.some(a => a.id === m.ambiente22) ? m.ambiente22! : '';
+  const noAmbiente = (l: Linha) => !ambiente22 || amb22De(l).includes(ambiente22 as never);
+  const ambientes = TIPOS_DE_MOVEL.filter(a => linhas.some(l => noAmbiente(l) && ambienteDe(l) === a.id));
   const ambiente = ambientes.some(a => a.id === m.ambiente) ? m.ambiente! : '';
   // A roupa se escolhe pelo tipo de peça e a casa pela categoria; a seção fica para o resto (a loja de departamento:
   // eletrônicos, esporte…).
-  const secoes = cats.filter(c => !(tipos.length > 1 && ['vestuario', 'calcados', 'acessorios', 'otica', 'relogios', 'joias'].includes(c)) && !(ambientes.length > 1 && (c === 'moveis' || c === 'eletrodomesticos')));
+  const secoes = cats.filter(c => !(tipos.length > 1 && ['vestuario', 'calcados', 'acessorios', 'otica', 'relogios', 'joias'].includes(c)) && !((ambientes.length > 1 || ambientes22.length > 1) && (c === 'moveis' || c === 'eletrodomesticos')));
+  const nivelDe = (l: Linha) => { const o = l.ofertas.filter(passa)[0] ?? l.ofertas[0]; return l.produto.tipo === 'item' ? nivelDoItem(itemEstilo(l.produto.id)!) : nivelDaCoisa({ coisaId: l.produto.id, marca: o?.marca } as CoisaTida); };
   const visiveis = linhas
-    .filter(l => (!tipo || tipoDe(l) === tipo) && (!ambiente || ambienteDe(l) === ambiente) && (!cat || l.categoria === cat) && l.ofertas.some(passa) && (!q || q.split(/\s+/).every(t => normalizarBusca(nomeDoProduto(l.produto)).includes(t) || l.ofertas.some(o => o.marca && normalizarBusca(marcaPorId(o.marca)!.nome).includes(t)))))
-    .sort((a, b) => m.ordem === 'menor' ? Math.min(...a.ofertas.filter(passa).map(o => o.preco)) - Math.min(...b.ofertas.filter(passa).map(o => o.preco)) : m.ordem === 'maior' ? Math.max(...b.ofertas.filter(passa).map(o => o.preco)) - Math.max(...a.ofertas.filter(passa).map(o => o.preco)) : 0);
+    .filter(l => (!tipo || tipoDe(l) === tipo) && noAmbiente(l) && (!ambiente || ambienteDe(l) === ambiente) && (!cat || l.categoria === cat) && l.ofertas.some(passa) && (!q || q.split(/\s+/).every(t => normalizarBusca(nomeDoProduto(l.produto)).includes(t) || l.ofertas.some(o => o.marca && normalizarBusca(marcaPorId(o.marca)!.nome).includes(t)))))
+    .sort((a, b) => m.ordem === 'menor' ? Math.min(...a.ofertas.filter(passa).map(o => o.preco)) - Math.min(...b.ofertas.filter(passa).map(o => o.preco)) : m.ordem === 'maior' ? Math.max(...b.ofertas.filter(passa).map(o => o.preco)) - Math.max(...a.ofertas.filter(passa).map(o => o.preco)) : m.ordem === 'qualidade' ? nivelDe(b) - nivelDe(a) : 0);
   const i = idade(vida);
   return (
     <div className="loja-estilo loja-vida" data-loja={lojaId}>
@@ -103,7 +113,8 @@ export function LojaDaVida({ vida, agir, lojaId }: { vida: Vida; agir: (a: Acao)
         <input type="search" value={m.texto} onChange={ev => mudar({ texto: ev.target.value, quantos: POR_PAGINA })} placeholder="Produto ou marca" autoComplete="off" />
       </label>
       {tipos.length > 1 && <Escolha rotulo="Tipo de peça" valor={tipo} aoMudar={x => { mudar({ tipo: x, cat: '', marca: '', quantos: POR_PAGINA }); }} opcoes={[{ id: '', rotulo: 'Tudo' }, ...tipos.map(t => ({ id: t.id as string, rotulo: t.nome }))]} />}
-      {ambientes.length > 1 && !tipo && (!cat || cat === 'moveis' || cat === 'eletrodomesticos') && <Escolha rotulo="Tipo de móvel" valor={ambiente} aoMudar={x => { mudar({ ambiente: x, cat: '', marca: '', quantos: POR_PAGINA }); }} opcoes={[{ id: '', rotulo: 'Tudo' }, ...ambientes.map(a => ({ id: a.id as string, rotulo: a.nome }))]} />}
+      {ambientes22.length > 1 && !tipo && (!cat || cat === 'moveis' || cat === 'eletrodomesticos') && <Escolha rotulo="Ambiente" valor={ambiente22} aoMudar={x => { mudar({ ambiente22: x, ambiente: '', cat: '', marca: '', quantos: POR_PAGINA }); }} opcoes={[{ id: '', rotulo: 'Todos' }, ...ambientes22.map(a => ({ id: a.id as string, rotulo: a.nome }))]} />}
+      {ambientes.length > 1 && !tipo && (!cat || cat === 'moveis' || cat === 'eletrodomesticos') && <Escolha rotulo={ambiente22 ? `Em ${nomeDoAmbiente(ambiente22 as never).toLowerCase()}` : 'Tipo de móvel'} valor={ambiente} aoMudar={x => { mudar({ ambiente: x, cat: '', marca: '', quantos: POR_PAGINA }); }} opcoes={[{ id: '', rotulo: 'Tudo' }, ...ambientes.map(a => ({ id: a.id as string, rotulo: a.nome }))]} />}
       {secoes.length > 1 && !tipo && !ambiente && <Escolha rotulo="Seção" valor={cat} aoMudar={x => { mudar({ cat: x, marca: '', quantos: POR_PAGINA }); }} opcoes={[{ id: '' as const, rotulo: 'Tudo' }, ...secoes.map(c => ({ id: c, rotulo: NOME_CATEGORIA[c] }))]} />}
       {faixas.length > 1 && <Escolha rotulo="Segmento da marca" valor={faixa} aoMudar={x => { mudar({ faixa: x, quantos: POR_PAGINA }); }} opcoes={[{ id: '', rotulo: 'Todos' }, ...faixas.map(f => ({ id: String(f), rotulo: cap(NOME_SEGMENTO_DE_MARCA[f]) }))]} />}
       <div className="busca-compras__filtros">
@@ -116,11 +127,11 @@ export function LojaDaVida({ vida, agir, lojaId }: { vida: Vida; agir: (a: Acao)
           <select value={m.preco} onChange={ev => mudar({ preco: ev.target.value, quantos: POR_PAGINA })}>{FAIXAS_DE_PRECO.map(f => <option key={f.id} value={f.id}>{f.rotulo}</option>)}</select>
         </label>
         <label className="campo campo--compacto"><span className="campo__rotulo">Ordenar</span>
-          <select value={m.ordem} onChange={ev => mudar({ ordem: ev.target.value as OrdemDeCompras })}><option value="relevancia">Como na loja</option><option value="menor">Menor preço</option><option value="maior">Maior preço</option></select>
+          <select value={m.ordem} onChange={ev => mudar({ ordem: ev.target.value as OrdemDeCompras })}><option value="relevancia">Como na loja</option><option value="menor">Menor preço</option><option value="maior">Maior preço</option><option value="qualidade">Melhor qualidade</option></select>
         </label>
       </div>
       {ambientes.length > 1 && i >= 18 && !q && <Conjuntos14 vida={vida} agir={agir} />}
-      <p className="nota">{visiveis.length} {visiveis.length === 1 ? 'produto' : 'produtos'}{m.texto || m.marca || m.preco || cat || faixa || tipo || ambiente ? ' com esses filtros' : ''}.</p>
+      <p className="nota">{visiveis.length} {visiveis.length === 1 ? 'produto' : 'produtos'}{m.texto || m.marca || m.preco || cat || faixa || tipo || ambiente || ambiente22 ? ' com esses filtros' : ''}.</p>
       {provando && <Provador vida={vida} itemId={provando.itemId} variante={provando.variante} aoFechar={() => setProvando(null)} />}
       <ul className="catalogo-loja" data-loja={lojaId}>
         {visiveis.slice(0, quantos).map(l => <ProdutoNaLoja key={l.chave} vida={vida} agir={agir} linha={l} lojaId={lojaId} faixa={faixa} marca={m.marca} preco={preco} crianca={i < 12} provando={provando?.itemId === l.produto.id ? provando.variante : undefined} provar={(variante: string) => setProvando(p => (p?.itemId === l.produto.id && p.variante === variante ? null : { itemId: l.produto.id, variante }))} />)}
@@ -185,7 +196,7 @@ function ProdutoNaLoja({ vida, agir, linha, lojaId, faixa, marca, preco, crianca
   const segmento = segmentoDoNivel(nivel);
   const colecao = it?.colecao;
   const edicao = it?.edicao ?? c?.edicao;
-  const categoria = it ? TIPOS_DE_PECA.find(t => t.id === tipoDePeca(it))!.nome : c && (linha.categoria === 'moveis' || linha.categoria === 'eletrodomesticos') ? `${nomeDoTipoDeMovel(tipoDeMovel(c.id, linha.categoria === 'eletrodomesticos'))} · ${nomeDaCategoriaDaCasa(categoriaDaCasa(c.id, linha.categoria === 'eletrodomesticos')).toLowerCase()}` : NOME_CATEGORIA[linha.categoria];
+  const categoria = it ? TIPOS_DE_PECA.find(t => t.id === tipoDePeca(it))!.nome : c && (linha.categoria === 'moveis' || linha.categoria === 'eletrodomesticos') ? `${nomeDoTipoDeMovel(tipoDeMovel(c.id, linha.categoria === 'eletrodomesticos'))} · ${(ambientesDoProduto(c.id).length ? ambientesDoProduto(c.id).map(nomeDoAmbiente).join(', ') : nomeDaCategoriaDaCasa(categoriaDaCasa(c.id, linha.categoria === 'eletrodomesticos'))).toLowerCase()}` : NOME_CATEGORIA[linha.categoria];
   return (
     <li className={`catalogo-loja__cartao${nivel >= 4 ? ' catalogo-loja__cartao--luxo' : ''}${nivel >= 6 ? ' catalogo-loja__cartao--exclusivo' : ''}`} data-produto={p.id} data-nivel={nivel} data-estado={meu?.usando ? 'em-uso' : tem ? 'seu' : 'disponivel'}>
       {/* VIDA 17: o estado do produto, sempre no mesmo canto (em todas as lojas). */}
@@ -218,7 +229,7 @@ function ProdutoNaLoja({ vida, agir, linha, lojaId, faixa, marca, preco, crianca
           ))}
         </span>
       )}
-      {c?.daCasa && !tem && <EncaixeNaLoja14 vida={vida} coisaId={c.id} />}
+      {c?.daCasa && !tem && <EncaixeNaLoja14 vida={vida} coisaId={c.id} marca={o.marca} />}
       {/* VIDA 17: a função do móvel (a vaga, o que já é seu, a troca). */}
       {comFuncao && acao.tipo === 'comprar_coisa' && <FuncaoNaLoja17 vida={vida} agir={agir} coisaId={c!.id} acao={acao} />}
       <span className="catalogo-loja__preco">{dinheiroCurto(o.preco)}</span>

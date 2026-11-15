@@ -190,7 +190,8 @@ export function indiceDeCompras(v: Vida): ProdutoNasLojas[] {
 /** Sem acento, sem maiúscula: "Óculos" acha "oculos". */
 export const normalizarBusca = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 
-export type OrdemDeCompras = 'relevancia' | 'menor' | 'maior';
+/** VIDA 22: 'qualidade' — o segmento do produto com a marca (do melhor para o mais simples). */
+export type OrdemDeCompras = 'relevancia' | 'menor' | 'maior' | 'qualidade';
 export interface FiltroDeCompras { texto?: string; categoria?: CategoriaDeProduto | ''; marca?: string; precoMin?: number; precoMax?: number; ordem?: OrdemDeCompras; segmento?: SegmentoDeCompras | '' }
 /** As faixas de preço do filtro (no dinheiro da cidade: o limite é sobre o preço daqui). */
 export const FAIXAS_DE_PRECO: { id: string; rotulo: string; min?: number; max?: number }[] = [
