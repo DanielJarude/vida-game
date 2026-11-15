@@ -26,6 +26,27 @@ export interface NotaDeVersao {
 
 export const NOTAS: NotaDeVersao[] = [
   {
+    versao: '22',
+    data: '2026-11-14',
+    titulo: 'A casa no lugar dela, a fazenda organizada, a vida pública e roupas que não são iguais',
+    novidades: [
+      'Propriedades rurais: a sede fica num quintal próprio, gramado e cercado, com jardim e árvores de sombra — fora da lavoura. O terreiro reúne o que a propriedade tem (galpão com as máquinas, silos, curral, estábulo, cocheiras, granja, aviário, terreiro de café, viveiro, estufas, placas solares), o carreador sai da porteira e entra nas glebas, e cada uso aparece como é: o pivô em círculo, o café em curvas de nível, a horta em canteiros, a floresta plantada em fileiras, os tanques em quadras, a pista oval do haras, a reserva de mata no fundo.',
+      'A casa no lugar dela: vizinhos dos lados, postes, fiação, árvores da calçada e carros parados, conforme o bairro e a cidade (a periferia, o bairro de casas, o centro com prédios, o bairro nobre, o condomínio, a cidade pequena, a zona rural). O que a casa tem do lado de fora aparece no desenho: a garagem, a piscina com deck, a área de lazer com churrasqueira e pergolado, a quadra, a varanda — e no quintal o gazebo, a fonte, o playground, a cama elástica, as espreguiçadeiras.',
+      'Sobre o imóvel (Vida · Casa): tipo, onde fica, situação, área e terreno livre, quartos, banheiros e suítes, vagas, o que há do lado de fora, as melhorias feitas, quantos moram, conforto, conservação e custos fixos — e o valor estimado separado do dinheiro na conta e do patrimônio.',
+      'Fama: a agenda pública. Os convites chegam pela sua trajetória — o programa de auditório, o talk show (depois de um auditório que deu certo), o podcast, a entrevista, o encontro com fãs, a sessão de autógrafos, a premiação (com uma conquista recente), a homenagem, a festa de gala, a campanha e o contrato de embaixador; e, pela origem do nome, a mesa-redonda e a coletiva do atleta, a apresentação especial e a rádio de quem canta, o festival de quem atua, o fórum e a inauguração do empresário, o debate e a cerimônia do político, a publi e o encontro com seguidores de quem vive das redes. Cada um diz quem convida, o que pede e o que pode trazer; o resultado é incerto e mexe no nome, na imagem, no cachê e na carreira. Em "Na imprensa e nas ruas", o que se disse do seu nome no ano.',
+      'Guarda-roupa: as peças lisas deixaram de ser a mesma peça em outra cor — tecido leve, médio, encorpado, técnico ou canelado; comprimento cropped ou longline; gola de ribana larga ou estreita; manga raglan; recortes laterais; carcela de botões; bolso no peito; barra de costura dupla; alças finas ou nadador. Sete básicas novas (oversized, algodão pima, henley, com bolso, manga longa, raglan de beisebol, regata de alcinha). A marca aparece no desenho: o premium e o luxo têm pesponto de contraste e etiqueta, e caem mais justos.',
+      'Provador: experimente várias peças — uma de cada parte monta a combinação; duas da mesma parte aparecem lado a lado, com a construção de cada uma em palavras. Os looks salvos ganham ocasião (casual, trabalho, formal, esporte, festa, noite, casa) e avisam quando uma peça não é mais sua.',
+      'Loja de móveis e decoração por ambiente: sala de estar, quarto, cozinha e jantar, banheiro, iluminação, decoração, closet e organização, escritório, área externa e jardim, piscina e lazer, lavanderia e serviço, garagem e oficina — com o tipo de móvel dentro de cada um e a ordem por qualidade. "Ver no cômodo" mostra a peça (com a marca e a cor escolhidas) no cômodo de verdade, e diz quando ela não cabe.'
+    ],
+    melhorias: [
+      'As peças que eram idênticas no desenho ficaram diferentes: o terno de vicunha é trespassado, com lapela de bico e lenço; a polo premium tem bordado e friso; a bomber tem ribana e bolso na manga; a jaqueta de corrida, as faixas; o jeans de denim japonês, a barra dobrada.'
+    ],
+    correcoes: [
+      'Na propriedade rural, a casa-sede não aparece mais desenhada em cima da plantação.',
+      'A casa de dois quartos mostra a garagem que já tinha na planta.'
+    ]
+  },
+  {
     versao: '21',
     data: '2026-11-14',
     titulo: 'O que veio do roubo, a garagem completa e o reconhecimento de perto',

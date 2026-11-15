@@ -189,10 +189,11 @@ function Provador({ vida, itens, tirar, aoFechar }: { vida: Vida; itens: ItemDoP
   return (
     <section className="provador provador22" aria-label="Provador">
       <div className="provador22__figuras">
-        <figure className="provador22__fig provador22__fig--agora">{fig(meus, 'Você como está agora', 96)}<figcaption>Como você está</figcaption></figure>
         {alternativas
-          ? alternativas.slice(-3).map(alt => <figure key={alt.itemId + alt.variante} className="provador22__fig" data-alternativa={alt.itemId}>{fig(vestir([...combinacao.filter(c => !lugares(c.itemId).some(l => lugares(alt.itemId).includes(l))), alt]), `Você com ${nomeDe(alt)}`, 130)}<figcaption><strong>{itemEstilo(alt.itemId)!.nome}</strong><span className="nota">{construcaoDaPeca(alt.itemId).join(' · ')}</span></figcaption></figure>)
-          : <figure className="provador22__fig" data-combinacao={combinacao.length}>{fig(vestir(combinacao), `Você com ${combinacao.map(nomeDe).join(', ')}`)}<figcaption>Com {combinacao.length === 1 ? 'a peça' : `as ${combinacao.length} peças`}</figcaption></figure>}
+          ? alternativas.slice(-3).map(alt => <figure key={alt.itemId + alt.variante} className="provador22__fig" data-alternativa={alt.itemId}>{fig(vestir([...combinacao.filter(c => !lugares(c.itemId).some(l => lugares(alt.itemId).includes(l))), alt]), `Você com ${itemEstilo(alt.itemId)!.nome.toLowerCase()}`, 130)}<figcaption><strong>{itemEstilo(alt.itemId)!.nome}</strong><span className="nota">{construcaoDaPeca(alt.itemId).join(' · ')}</span></figcaption></figure>)
+          : <figure className="provador22__fig" data-combinacao={combinacao.length}>{fig(vestir(combinacao), `Você com ${combinacao.map(x => itemEstilo(x.itemId)!.nome.toLowerCase()).join(', ')}`)}<figcaption>Com {combinacao.length === 1 ? 'a peça' : `as ${combinacao.length} peças`}</figcaption></figure>}
+        {/* Ao lado (depois): como você está agora, para comparar. */}
+        <figure className="provador22__fig provador22__fig--agora">{fig(meus, 'Você como está agora', 96)}<figcaption>Como você está</figcaption></figure>
       </div>
       <div className="provador__texto">
         <p className="provador__titulo">No provador{alternativas ? ': comparando' : ''}</p>
