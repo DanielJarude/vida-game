@@ -44,7 +44,7 @@
 .campo18__palco { position: relative; }
 .campo18__palco > .paisagem18 { aspect-ratio: 21 / 8; max-height: 340px; }
 .campo18__vazio > .paisagem18 { aspect-ratio: 21 / 8; max-height: 300px; }
-.campo18__placa { position: absolute; left: var(--space-3); bottom: var(--space-3); max-width: min(60%, 360px); padding: 10px 12px; border-radius: var(--radius-md); background: color-mix(in oklab, var(--superficie-topo) 90%, transparent); box-shadow: var(--shadow-md); backdrop-filter: blur(4px); }
+.campo18__placa { position: absolute; left: var(--space-3); top: var(--space-3); /* VIDA 22: no alto, sobre o céu — embaixo à esquerda fica a sede */ max-width: min(60%, 360px); padding: 10px 12px; border-radius: var(--radius-md); background: color-mix(in oklab, var(--superficie-topo) 90%, transparent); box-shadow: var(--shadow-md); backdrop-filter: blur(4px); }
 .campo18__placa h3 { margin: 2px 0; font: 700 20px/1.15 var(--font-display, var(--font-serif)); color: var(--tinta); }
 .campo18__placa p { margin: 0; font-size: 13px; color: var(--tinta-2); }
 .campo18__placa .campo18__placa-valor { margin-top: 4px; color: var(--tinta); }

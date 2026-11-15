@@ -546,7 +546,7 @@ export function Paisagem18({ p, pequena, vazia }: { p?: PropriedadeRural18; pequ
       {cascalho && <path d={estrada} fill="none" stroke="#efe6d2" strokeWidth={1} strokeDasharray="1.5 2.5" opacity={0.7} />}
       {objetos.map(o => o.el)}
       {porteira}
-      {p && !p.talhoes.length && !rebanho.length && !vazia && !servico.length && <text x="160" y="150" textAnchor="middle" className="paisagem18__vazio">terra sem produção</text>}
+      {p && !p.talhoes.length && !rebanho.length && !vazia && !servico.length && <text x="160" y={(92 + ((vReserva + vFrente) / 2) * 80).toFixed(1)} textAnchor="middle" className="paisagem18__vazio">terra sem produção</text>}
     </svg>
   );
 }

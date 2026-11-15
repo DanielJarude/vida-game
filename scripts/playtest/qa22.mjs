@@ -23,6 +23,7 @@ for (const passo of (process.env.PASSOS ?? '').split('|').filter(Boolean)) {
     else if (k === 'botao') await p.getByRole('button', { name: new RegExp(v) }).locator('visible=true').first().click();
     else if (k === 'tab') await p.getByRole('tab', { name: new RegExp(v) }).locator('visible=true').first().click();
     else if (k === 'clique') await p.locator(v).locator('visible=true').first().click();
+    else if (k === 'digitar') { const [sel, txt] = v.split('=>'); await p.locator(sel).locator('visible=true').first().fill(txt); }
     else if (k === 'esperar') await p.locator(v).first().waitFor({ state: 'visible', timeout: 15000 });
     else if (k === 'rolar') await p.locator(v).locator('visible=true').first().scrollIntoViewIfNeeded();
     else if (k === 'foto') { const el = SEL ? p.locator(SEL).locator('visible=true').first() : null; if (el && await el.count()) await el.screenshot({ path: `${OUT}/${v}.png` }); else await p.screenshot({ path: `${OUT}/${v}.png` }); }

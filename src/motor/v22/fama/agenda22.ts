@@ -113,7 +113,7 @@ export const MODELOS22: Modelo22[] = [
   { id: 'homenagem', rotulo: 'Receber {de}', de: ['o título de cidadão honorário da câmara municipal', 'uma homenagem da escola onde estudou', 'a medalha de mérito da cidade natal'], origens: ['qualquer'], min: 45, nome: 1, exige: v => idade(v) >= 30,
     pede: 'uma cerimônia e um discurso', traz: 'reconhecimento de onde você veio',
     texto: { bom: ['A professora do primário estava na primeira fila. Você não conseguiu terminar o discurso sem chorar.'], neutro: ['Uma cerimônia bonita e protocolar.'], ruim: ['Um grupo protestou na porta da cerimônia contra a homenagem.'] } },
-  { id: 'gala', rotulo: 'Ir a {de}', de: ['um jantar de gala em um hotel cinco estrelas', 'a festa exclusiva de uma grife', 'a estreia fechada para convidados'], origens: ['qualquer'], min: 55, nome: 1, imagemBoa: true, risco: 0.06,
+  { id: 'gala', rotulo: 'Ir a {de}', de: ['um jantar de gala em um hotel cinco estrelas', 'uma festa exclusiva de uma grife', 'uma estreia fechada para convidados'], origens: ['qualquer'], min: 55, nome: 1, imagemBoa: true, risco: 0.06,
     pede: 'uma noite, a roupa e a disposição para conversar com estranhos importantes', traz: 'contatos e fotos nas colunas sociais',
     texto: { bom: ['Uma conversa no canto da festa virou convite para outro projeto.', 'A foto na coluna social saiu com a roupa certa.'], neutro: ['Muito brilho, pouca conversa de verdade.'], ruim: ['Uma foto tirada na hora errada, com a pessoa errada, rendeu fofoca.'] } },
   { id: 'campanha', rotulo: 'Estrelar uma campanha publicitária de {de}', de: ['uma rede de supermercados', 'um banco digital', 'uma marca de refrigerantes', 'uma operadora de telefonia'], origens: ['esportiva', 'artistica', 'musical', 'digital', 'feito'], min: 35, nome: 2, cache: 1, imagemBoa: true, abre: 'embaixador',
@@ -138,7 +138,7 @@ export const MODELOS22: Modelo22[] = [
   { id: 'radio', rotulo: 'Ir ao {de} falar do trabalho novo', de: ['programa da manhã da rádio mais ouvida', 'programa musical da rádio pública', 'estúdio ao vivo de uma rádio jovem'], origens: ['musical'], min: 22, nome: 2, carreira: 'arte',
     pede: 'uma manhã e um violão', traz: 'a música tocando mais; pouca exposição de risco',
     texto: { bom: ['Tocou ao vivo; a rádio passou a música na programação.'], neutro: ['Uma boa conversa, numa manhã comum.'], ruim: ['O locutor errou o seu nome duas vezes. Ninguém riu.'] } },
-  { id: 'estreia', rotulo: 'Ir à estreia no {de}', de: ['festival de cinema', 'tapete vermelho da pré-estreia', 'festival de teatro'], origens: ['artistica'], min: 30, nome: 2, carreira: 'arte', risco: 0.06,
+  { id: 'estreia', rotulo: 'Ir à estreia no {de}', de: ['festival de cinema', 'festival de teatro', 'circuito de pré-estreias da capital'], origens: ['artistica'], min: 30, nome: 2, carreira: 'arte', risco: 0.06,
     pede: 'uma noite de tapete vermelho e entrevistas rápidas', traz: 'o trabalho em destaque; fotos em todo lugar',
     texto: { bom: ['A crítica falou bem — e citou você pelo nome.'], neutro: ['Uma estreia bonita, que passou rápido.'], ruim: ['A crítica foi dura com o trabalho; a sua foto ilustrava a resenha.'] } },
   { id: 'forum', rotulo: 'Palestrar no {de}', de: ['fórum de negócios da capital', 'congresso do setor', 'encontro de empreendedores'], origens: ['empresarial'], min: 25, nome: 2, cache: 0.3, carreira: 'negocio', risco: 0.06,
@@ -147,7 +147,7 @@ export const MODELOS22: Modelo22[] = [
   { id: 'economica', rotulo: 'Dar uma entrevista para {de}', de: ['a revista de negócios mais lida', 'o programa de economia da TV', 'o caderno de economia do jornal'], origens: ['empresarial'], min: 30, nome: 2, carreira: 'negocio', risco: 0.1,
     pede: 'uma conversa sobre números e futuro', traz: 'o negócio conhecido por mais gente; uma previsão errada fica registrada',
     texto: { bom: ['A capa da revista trouxe a sua empresa como exemplo.'], neutro: ['Uma entrevista técnica, lida por quem é do ramo.'], ruim: ['Uma resposta sobre os funcionários pegou mal.'] } },
-  { id: 'inauguracao', rotulo: 'Fazer a inauguração {de}', de: ['da nova unidade com festa aberta', 'da reforma da loja com imprensa', 'do lançamento do produto novo'], origens: ['empresarial'], min: 25, nome: 1, carreira: 'negocio', exige: v => !!negocioAtivo(v) || (v.financas.empresas ?? []).some(e => e.estado !== 'encerrada'),
+  { id: 'inauguracao', rotulo: 'Fazer a inauguração {de}', de: ['da nova unidade com festa aberta', 'da segunda unidade', 'da loja reformada, com imprensa'], origens: ['empresarial'], min: 25, nome: 1, carreira: 'negocio', exige: v => !!negocioAtivo(v) || (v.financas.empresas ?? []).some(e => e.estado !== 'encerrada'),
     pede: 'um dia de festa e o dinheiro da festa', traz: 'freguesia nova e o nome do negócio no jornal',
     texto: { bom: ['Fila na porta na inauguração; o movimento das semanas seguintes confirmou.'], neutro: ['Uma festa boa, para os conhecidos de sempre.'], ruim: ['Choveu, a festa esvaziou e a foto no jornal foi a da loja vazia.'] } },
   { id: 'debate', rotulo: 'Participar do {de}', de: ['debate da TV', 'debate da rádio', 'debate promovido pela universidade'], origens: ['politica'], min: 20, nome: 3, carreira: 'politica', risco: 0.22, exige: v => naPolitica(v),
@@ -169,6 +169,9 @@ export const MODELOS22: Modelo22[] = [
 export interface Convite22 { id: string; tpl: string; rotulo: string; de: string; pede: string; traz: string; cache?: number; porque: string }
 
 const ROTULO_ORIGEM22: Record<string, string> = { esportiva: 'pelo esporte', artistica: 'pela arte', musical: 'pela música', empresarial: 'pelos negócios', politica: 'pela política', digital: 'pelas redes', feito: 'pelo feito', controversia: 'pela polêmica' };
+
+/** "em o" → "no", "em a" → "na" (o nome de quem convida vem com o artigo). */
+const contrair22 = (t: string) => t.replace(/\bem o /g, 'no ').replace(/\bem a /g, 'na ').replace(/\bem os /g, 'nos ').replace(/\bem as /g, 'nas ');
 
 /** Quantos convites cabem no tamanho do nome (anônimo: nenhum). */
 const quantos = (nivel: number) => [0, 2, 3, 4, 5][nivel] ?? 0;
@@ -201,7 +204,7 @@ export function convites22(v: Vida): Convite22[] {
     const id = `${ano}:${m.id}`;
     const origem = m.origens.find(o => o !== 'qualquer' && origens.includes(o as OrigemDaFama13));
     const porque = m.depoisDe ? 'porque a última aparição na TV deu certo' : m.exige && m.id === 'premiacao' ? 'pela conquista recente' : origem ? `${ROTULO_ORIGEM22[origem]}` : 'porque o público conhece o seu nome';
-    return { id, tpl: m.id, rotulo: m.rotulo.replace('{de}', de), de, pede: m.pede, traz: m.traz, cache: m.cache ? Math.max(0, Math.round(valorDaCampanha13(v, m.cache) / 100) * 100) || undefined : undefined, porque };
+    return { id, tpl: m.id, rotulo: contrair22(m.rotulo.replace('{de}', de)), de, pede: m.pede, traz: m.traz, cache: m.cache ? Math.max(0, Math.round(valorDaCampanha13(v, m.cache) / 100) * 100) || undefined : undefined, porque };
   }).filter(c => !respondidos.has(c.id));
 }
 

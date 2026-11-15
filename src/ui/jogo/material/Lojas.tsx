@@ -167,8 +167,10 @@ function Provador({ vida, itens, tirar, aoFechar }: { vida: Vida; itens: ItemDoP
   const porLugar = new Map<string, ItemDoProvador[]>();
   for (const x of itens) { const k = lugares(x.itemId).join('+'); porLugar.set(k, [...(porLugar.get(k) ?? []), x]); }
   const combinacao = [...porLugar.values()].map(l => l[l.length - 1]);
+  // A peça de cima experimentada aparece sem o casaco que se está usando por cima (senão o casaco a esconde).
+  const semCasaco = itens.some(x => lugares(x.itemId).some(l => l === 'tronco' || l === 'corpo')) && !itens.some(x => lugares(x.itemId).includes('casaco')) && meus.some(x => lugares(x.itemId).includes('casaco'));
   const vestir = (escolhidas: ItemDoProvador[]) => {
-    const la = escolhidas.flatMap(x => lugares(x.itemId));
+    const la = [...escolhidas.flatMap(x => lugares(x.itemId)), ...(semCasaco ? ['casaco'] : [])];
     return [...meus.filter(x => !lugares(x.itemId).some(l => la.includes(l))), ...escolhidas.map(x => ({ itemId: x.itemId, id: x.variante, variante: x.variante, marca: x.marca }))];
   };
   const unico = itens.length === 1 ? itemEstilo(itens[0].itemId) : undefined;
@@ -200,6 +202,7 @@ function Provador({ vida, itens, tirar, aoFechar }: { vida: Vida; itens: ItemDoP
         <ul className="provador22__lista">
           {itens.map((x, k) => <li key={x.itemId + x.variante}><span><strong>{nomeDe(x)}</strong>{!alternativas && construcaoDaPeca(x.itemId).length > 0 && <span className="nota"> — {construcaoDaPeca(x.itemId).join(' · ')}</span>}</span><button type="button" className="link" onClick={() => tirar(k)}>Tirar</button></li>)}
         </ul>
+        {semCasaco && <p className="nota">Sem o casaco que você está usando, para a peça aparecer inteira.</p>}
         <p className="nota">Experimente outra peça para montar a combinação; duas do mesmo lugar (duas camisetas) aparecem lado a lado. Nada foi comprado — e o que você está usando continua seu.</p>
         <button type="button" className="botao botao--discreto" onClick={aoFechar}>Sair do provador</button>
       </div>

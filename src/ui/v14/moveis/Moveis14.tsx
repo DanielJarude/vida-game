@@ -35,11 +35,13 @@ function PreviaNoComodo22({ vida, comodoId, coisaId, marca, cor, cabe }: { vida:
     <span className="m14-previa22" data-previa={coisaId}>
       <CenaDoComodo tipo={cm.tipo} parede={asp('parede')} piso={asp('piso')} luz={asp('luz').id} rodape={asp('rodape').id} cortina={asp('cortina').id} objetos={cabe ? [...ja, nova] : ja} area={area} largura={300}
         rotulo={`Prévia: ${cm.nome}${cabe ? ` com ${coisa(coisaId)?.nome}` : ` como está (a peça não cabe)`}`} />
-      <span className="nota">{cabe ? `Assim ficaria n${cm.nome.startsWith('a') ? 'a' : 'o'} ${cm.nome} — a mesma peça, a mesma cor e a mesma marca do cartão.` : `Assim está ${cm.nome.startsWith('a') ? 'a' : 'o'} ${cm.nome} hoje: a peça não cabe aqui.`}</span>
+      <span className="nota">{cabe ? `Assim ficaria n${artigoDoComodo22(cm.nome)} ${cm.nome} — a mesma peça, a mesma cor e a mesma marca do cartão.` : `Assim está ${artigoDoComodo22(cm.nome)} ${cm.nome} hoje: a peça não cabe aqui.`}</span>
     </span>
   );
 }
 
+/** VIDA 22: o artigo do cômodo pelo nome (antes, "começa com a" dava "o sala"). */
+const artigoDoComodo22 = (n: string) => (/^(sala|cozinha|su[íi]te|varanda|piscina|[áa]rea|garagem|adega|quadra|biblioteca|academia|lavanderia|despensa|copa)/i.test(n) ? 'a' : 'o');
 const m2 = (x: number) => `${String(Math.round(x * 10) / 10).replace('.', ',')} m²`;
 const M = (oque: unknown) => ({ tipo: 'moveis14', oque } as unknown as Acao);
 
@@ -67,7 +69,7 @@ export function EncaixeNaLoja14({ vida, coisaId, marca, cor }: { vida: Vida; coi
   return (
     <span className="m14-encaixe">
       <span className={`nota m14-encaixe__linha${e.semControle ? '' : e.cabe ? ' m14-ok' : ' m14-falta'}`}>
-        Ocupa {m2(e.ocupa)}. {e.semControle ? 'Na casa da família, quem decide o espaço é a família.' : e.cabe ? `Cabe ${e.comodo ? `n${e.comodo.nome.startsWith('a') ? 'a' : 'o'} ${e.comodo.nome} (${m2(e.comodo.livre)} livres)` : ''}.` : e.outro ? `Na ${e.comodo?.nome} não cabe; iria para ${e.outro.nome}.` : `Não cabe agora (${m2(e.comodo?.livre ?? 0)} livres): iria para o depósito${e.substituiveis.length ? `, ou substituiria ${coisa(e.substituiveis[0].coisaId)?.nome}` : ''}.`}
+        Ocupa {m2(e.ocupa)}. {e.semControle ? 'Na casa da família, quem decide o espaço é a família.' : e.cabe ? `Cabe ${e.comodo ? `n${artigoDoComodo22(e.comodo.nome)} ${e.comodo.nome} (${m2(e.comodo.livre)} livres)` : ''}.` : e.outro ? `Na ${e.comodo?.nome} não cabe; iria para ${e.outro.nome}.` : `Não cabe agora (${m2(e.comodo?.livre ?? 0)} livres): iria para o depósito${e.substituiveis.length ? `, ou substituiria ${coisa(e.substituiveis[0].coisaId)?.nome}` : ''}.`}
       </span>
       {!e.semControle && <button type="button" className="link" aria-expanded={ver} onClick={() => setVer(x => !x)}>{ver ? 'Fechar a prévia' : 'Ver no cômodo'}</button>}
       {ver && e.comodo && <PreviaNoComodo22 vida={vida} comodoId={e.comodo.id} coisaId={coisaId} marca={marca} cor={cor} cabe={e.cabe} />}
@@ -96,7 +98,7 @@ export function FuncaoNaLoja17({ vida, agir, coisaId, acao }: { vida: Vida; agir
       )}
       {vg.livre ? (
         <>
-          <span className="nota m14-ok">{vg.ocupantes.length ? `Mais ${vg.funcao.artigo === 'a' ? 'uma' : 'um'}: iria para ${vg.livre.nome.startsWith('a') ? 'a' : 'o'} ${vg.livre.nome}.` : `Iria para ${vg.livre.nome.startsWith('a') ? 'a' : 'o'} ${vg.livre.nome}.`}</span>
+          <span className="nota m14-ok">{vg.ocupantes.length ? `Mais ${vg.funcao.artigo === 'a' ? 'uma' : 'um'}: iria para ${artigoDoComodo22(vg.livre.nome)} ${vg.livre.nome}.` : `Iria para ${artigoDoComodo22(vg.livre.nome)} ${vg.livre.nome}.`}</span>
           <BotaoAcao vida={vida} acao={acao} agir={agir} variante="secundario">Comprar</BotaoAcao>
         </>
       ) : (
