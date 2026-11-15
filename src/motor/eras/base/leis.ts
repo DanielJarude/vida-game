@@ -35,3 +35,21 @@ export function divorcioNaEpoca(v: Vida): string {
   if (v.t < DIVORCIO_DIRETO) return ' Pela lei da época, o divórcio só saía depois de um ano de separação judicial (ou dois de separação de fato): começou pela separação, e o divórcio veio depois.';
   return '';
 }
+
+/**
+ * ERAS v2 · AS REGRAS ELEITORAIS DA ÉPOCA (só o que difere da regra de hoje, que o motor já aplica):
+ *   - a reeleição de prefeito, governador e presidente para o mandato seguinte só passou a valer com a Emenda
+ *     Constitucional 16/1997 — a partir das eleições de 1998 (presidente e governador) e de 2000 (prefeito);
+ *   - a primeira eleição direta para presidente depois de 1960 foi em novembro de 1989, sozinha no calendário; no jogo, que
+ *     segue o ciclo das eleições gerais, a primeira presidencial disputável é a de 1994 (quem nasce a partir de 1970 só tem
+ *     os 35 anos exigidos depois de 2005 — a regra é de coerência, não muda nenhuma vida possível).
+ * Devolve o motivo do impedimento, ou undefined.
+ */
+export function regraEleitoralDaEpoca(v: Vida, cargo: string, anoEleicao: number, mesmoCargoNoMandato: boolean): string | undefined {
+  if (!v.era) return undefined;
+  if (cargo === 'presidente' && anoEleicao < 1994) return 'A eleição direta para presidente voltou só em 1989, fora do calendário das eleições gerais.';
+  const executivo = cargo === 'prefeito' || cargo === 'governador' || cargo === 'presidente';
+  const desde = cargo === 'prefeito' ? 2000 : 1998;
+  if (executivo && mesmoCargoNoMandato && anoEleicao < desde) return `Em ${anoEleicao}, prefeito, governador e presidente não podiam se reeleger para o mandato seguinte: a reeleição só veio com a Emenda Constitucional 16/1997.`;
+  return undefined;
+}

@@ -39,6 +39,10 @@ const REGRAS: Regra[] = [
   { quando: antes(1999), trocas: [[/do FIES/g, 'do Crédito Educativo'], [/o FIES/g, 'o Crédito Educativo'], [/pelo FIES/g, 'pelo Crédito Educativo'], [/\bFIES\b/g, 'Crédito Educativo']] },
   { quando: antes(2005), trocas: [[/ \(e o podcast dele\)/g, ''], [/um podcast/g, 'um programa de rádio'], [/o podcast/g, 'o programa de rádio'], [/\bpodcasts?\b/g, 'programa de rádio']] },
   { quando: antes(2014), trocas: [[/entregas por aplicativo/g, 'entregas de bicicleta'], [/entrega por aplicativo/g, 'entrega de bicicleta']] },
+  // ERAS v2 · saúde e dinheiro: o INAMPS antes do SUS (1990), a ambulância antes do SAMU (2003), o cartão sem aproximação.
+  { quando: antes(1990), trocas: [[/pelo SUS/g, 'pelo INAMPS'], [/do SUS/g, 'do INAMPS'], [/no SUS/g, 'no INAMPS'], [/o SUS/g, 'o INAMPS'], [/\bSUS\b/g, 'INAMPS']] },
+  { quando: antes(2003), trocas: [[/chamou o SAMU/g, 'chamou a ambulância'], [/o SAMU/g, 'a ambulância'], [/do SAMU/g, 'da ambulância'], [/\bSAMU\b/g, 'ambulância']] },
+  { quando: antes(2016), trocas: [[/ por aproximação/g, ''], [/cartão por aproximação/g, 'cartão']] },
   // ERAS v2 (auditoria textual): a UPA (2008), o meme (anos 2000), o print de tela (smartphone).
   { quando: antes(2008), trocas: [[/para a UPA/g, 'para o pronto-socorro'], [/na UPA/g, 'no pronto-socorro'], [/da UPA/g, 'do pronto-socorro'], [/a UPA/g, 'o pronto-socorro'], [/\bUPA\b/g, 'pronto-socorro']] },
   { quando: antes(2006), trocas: [[/esse meme/g, 'essa piada'], [/um meme/g, 'uma piada'], [/Um meme/g, 'Uma piada'], [/o meme/g, 'a piada'], [/memes/g, 'piadas'], [/\bmeme\b/g, 'piada']] },
@@ -112,6 +116,7 @@ export const TERMOS_DATADOS: readonly { re: RegExp; desde: number; nome: string 
   { re: /\bUPA\b/, desde: 2008, nome: 'UPA' },
   { re: /\bSAMU\b/, desde: 2003, nome: 'SAMU' },
   { re: /\bSUS\b/, desde: 1990, nome: 'SUS' },
+  { re: /por aproximação/, desde: 2016, nome: 'pagamento por aproximação' },
   { re: /\bAirbnb\b/i, desde: 2012, nome: 'Airbnb' },
   { re: /\bcoworking\b/i, desde: 2010, nome: 'coworking' },
   { re: /\bstartups?\b/i, desde: 2008, nome: 'startup' },

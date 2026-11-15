@@ -35,6 +35,7 @@
 
 import { fatorDasAliancas, liderancaRompida } from './aliancas';
 import { partidosNoMes } from '../eras/base/partidos';
+import { regraEleitoralDaEpoca } from '../eras/base/leis';
 import { mesHistoricoCorrente } from '../eras/base/moedas';
 import { aliviar, causasDoDesgaste, desgastar, esfriarNoAno } from './desgastePolitico';
 import type { Rng } from '../rng';
@@ -470,6 +471,8 @@ export function podeConcorrer(v: Vida, cargo: CargoEletivo, tEleicao: number): V
   const chegou = v.fatos['chegou_cidade'];
   if (chegou !== undefined && tEleicao - chegou < 6 && c.escopo !== 'pais' && (c.escopo === 'municipio' || v.fatos['chegou_uf'] === chegou)) return bloqueio('requisito', 'O domicílio eleitoral precisa ter pelo menos seis meses na circunscrição.');
   const mand = p.mandato;
+  // ERAS v2: as regras eleitorais da época (reeleição antes da EC 16/1997; a volta da eleição direta para presidente).
+  { const x = regraEleitoralDaEpoca(v, cargo, ano, !!mand && p.fase === 'mandato' && mand.cargo === cargo); if (x) return bloqueio('ilegal', x); }
   if (mand && p.fase === 'mandato') {
     if (mand.cargo === cargo && c.executivo && p.consecutivos >= 2) return bloqueio('ilegal', 'Para prefeito e governador, só uma reeleição seguida.');
     if (!mandatoAcabaNaEleicao(mand, ano) && mand.cargo === cargo) return bloqueio('impossivel', 'O mandato atual ainda não termina nessa eleição.');

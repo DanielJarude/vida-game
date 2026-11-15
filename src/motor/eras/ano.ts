@@ -283,6 +283,25 @@ function partidoMuda(v: Vida, tFim: number): void {
   p.partido = s.id;
 }
 
+/* ------------------------------------------------------------------ 7. A maioridade da época */
+
+/**
+ * Até o Código Civil de 2002 (em vigor em 11/01/2003), a maioridade civil era aos 21 (Código Civil de 1916, art. 9º); o
+ * voto (16 facultativo desde 1988; 18 obrigatório), a habilitação e o trabalho já vinham antes. O jogo trata os 18 como a
+ * idade adulta (simplificação documentada); a Linha da Vida conta a regra do tempo.
+ */
+function maioridade(v: Vida): void {
+  const i = idade(v), ano = anoDe(v.t);
+  if (i === 18 && ano < 2003 && !visto(v, 'lei:maioridade18')) {
+    marcar(v, 'lei:maioridade18');
+    escrever(v, { texto: 'Dezoito anos: já dava para votar, tirar carteira de motorista e responder pelos próprios atos. Mas, pela lei da época, a maioridade civil era aos 21 — assinar contrato ou casar sem a autorização dos pais, só depois.', relevancia: 'cotidiano', tema: 'escolha', fato: { tipo: 'era', dados: { categoria: 'direitos', evento: 'maioridade18' } } });
+  }
+  if (i === 21 && ano <= 2003 && ano >= 1970 && !visto(v, 'lei:maioridade21')) {
+    marcar(v, 'lei:maioridade21');
+    escrever(v, { texto: ano < 2003 ? 'Vinte e um anos: a maioridade civil, pela lei da época. Dali em diante, a assinatura bastava sozinha.' : 'Vinte e um anos — e, com o Código Civil novo, a maioridade já tinha chegado aos 18.', relevancia: 'cotidiano', tema: 'escolha', fato: { tipo: 'era', dados: { categoria: 'direitos', evento: 'maioridade21' } } });
+  }
+}
+
 /* ------------------------------------------------------------------ O ano */
 
 export function processarEra(v: Vida, ec: AnoEconomico): void {
@@ -295,6 +314,7 @@ export function processarEra(v: Vida, ec: AnoEconomico): void {
   }
   devolverCollor(v, tFim);
   partidoMuda(v, tFim);
+  maioridade(v);
   chegadas(v);
   oficio(v);
   if (anoDe(v.t) <= 2025) lembranca(v);

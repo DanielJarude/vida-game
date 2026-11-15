@@ -13,6 +13,7 @@
  */
 
 import { itemDeEstiloAVenda } from '../eras/base/moda';
+import { precoDaCategoriaNaEpoca } from '../eras/base/economia';
 import type { ItemDeEstilo, Vida, Visual } from '../tipos';
 import { rngDe } from '../rng';
 import { escrever, idade, marcarFato, novoId, temFato } from '../nucleo';
@@ -48,7 +49,8 @@ export function precisaDeOculos(v: Vida): boolean {
 }
 
 /** O preço de um item nesta cidade. */
-export const precoDoItem = (v: Vida, id: string) => Math.round((itemEstilo(id)?.preco ?? 0) * economiaLocal(v.moradia.municipioId).custo / 10) * 10;
+// ERAS v2: na vida histórica, o preço relativo do vestuário (ou das joias) da época (IPCA por grupo).
+export const precoDoItem = (v: Vida, id: string) => Math.round((itemEstilo(id)?.preco ?? 0) * economiaLocal(v.moradia.municipioId).custo * (v.era ? precoDaCategoriaNaEpoca(itemEstilo(id)?.categoria === 'acessorio' ? 'joias' : 'vestuario') : 1) / 10) * 10;
 
 export const itensDaPessoa = (v: Vida): ItemDeEstilo[] => v.eu.estilo?.itens ?? [];
 export const temItem = (v: Vida, id: string) => itensDaPessoa(v).some(x => x.itemId === id);

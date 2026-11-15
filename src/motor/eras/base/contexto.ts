@@ -121,3 +121,21 @@ export function normalizarEra(v: Vida): void {
   const r = v.era!.retido;
   if (r && !(typeof r.valor === 'number' && Number.isFinite(r.valor) && r.valor >= 0 && typeof r.tVolta === 'number' && typeof r.parcelas === 'number')) delete v.era!.retido;
 }
+
+/**
+ * ERAS v2 · COMO SE PROCURAVA EMPREGO (a moldura da vaga na vida histórica): os classificados do jornal e o currículo
+ * datilografado; o site de empregos e o e-mail (com a internet em casa); a rede profissional e o formulário on-line (com o
+ * smartphone). Os meios antigos continuam vivos por um tempo (a escolha entre eles é da semente da vida, por ano).
+ * Vida contemporânea: nada (a cena é a de sempre).
+ */
+export function comoAchouAVaga(v: Vida, ocupacaoId: string): string | undefined {
+  if (!v.era) return undefined;
+  const ano = anoDe(v.t);
+  if (ano > 2025) return undefined;
+  const h = hashUnit(`${v.id}:vaga:${ocupacaoId}:${ano}`);
+  if (h < 0.18) return 'A vaga veio por indicação: alguém conhecia alguém lá dentro.';
+  if (temAcesso(v, 'smartphone') && ano >= 2012 && h < 0.75) return 'A vaga apareceu numa rede profissional; o currículo foi pelo formulário on-line.';
+  if (temAcesso(v, 'internet') && ano >= 1999 && h < 0.7) return 'Achou a vaga num site de empregos e mandou o currículo por e-mail.';
+  if (ano < 1990) return 'Viu o anúncio nos classificados do jornal de domingo e levou pessoalmente o currículo, datilografado.';
+  return 'Viu o anúncio nos classificados do jornal e levou o currículo impresso até lá.';
+}

@@ -23,6 +23,8 @@
  * testes antigos seguem iguais no resto.
  */
 
+import { cabeloDaDecada } from '../eras/base/moda';
+import { mesHistoricoCorrente } from '../eras/base/moedas';
 import type { Genero, Genes, Pessoa, Visual } from '../tipos';
 import { criarRng, rngDe, type Rng } from '../rng';
 import { ORIGENS, PELE_MEDIA, POPULACOES, POPULACOES_POR_REGIAO, TRACOS, type Ancestralidade, type Origem, type PerfilPopulacional } from '../dados/populacoes';
@@ -180,6 +182,10 @@ function peleDa(r: Rng, anc: Ancestralidade): string {
   return PELES[Math.max(0, Math.min(5, k))];
 }
 export function estiloPara(r: Rng, genero: Genero, textura: string): string {
+  // ERAS v2: numa vida histórica, parte das pessoas usa o corte que marcou a década (`eras/base/moda`). Vida contemporânea:
+  // nenhum sorteio a mais (o acaso segue o de sempre).
+  const mh = mesHistoricoCorrente();
+  if (mh !== null && mh < 2026 * 12) { const d = cabeloDaDecada(Math.floor(mh / 12), textura); if (d.length && r.chance(0.4)) return r.pick(d); }
   // "encaracolado" (HOTFIX dos cabelos: o tipo que se escolhe ao nascer sem puxar os pais) combina com os cortes do cacheado.
   return r.pick(ESTILOS[genero][textura as (typeof TEXTURAS)[number]] ?? ESTILOS[genero][textura === 'encaracolado' ? 'cacheado' : 'liso']);
 }

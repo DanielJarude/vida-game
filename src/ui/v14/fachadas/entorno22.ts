@@ -20,6 +20,7 @@
  *             no quintal, a churrasqueira avulsa, o gazebo, a fonte, o playground, a cama elástica, as
  *             espreguiçadeiras, o guarda-sol. Nada inventado: sem o cômodo ou a coisa, não aparece.
  */
+import { decadaDaFigura } from '../../eras/modaDaDecada';
 import { clarear, escurecer, num, ret, type Peca } from '../../ilustracao/nucleo';
 import { COR, arvore, bloco, quatroAguas, frontal, grupo, janela, marcado, noChao, planoDoChao, platibanda, pt, sombraDoBloco, type Bloco, type Vista } from './kit';
 
@@ -70,9 +71,25 @@ function poste(v: Vista, x: number, tipo: TipoDeEntorno): Peca {
   const braco = pt(v, x + (jardim ? 0 : 1.2), z, alt - 0.1);
   return marcado('cena__poste', { 'data-entorno': 'poste' }, [
     { tipo: 'linha', d: `M${num(a0[0])} ${num(a0[1])}L${num(a1[0])} ${num(a1[1])}${jardim ? '' : `L${num(braco[0])} ${num(braco[1])}`}`, larg: jardim ? 0.9 : 1.3, cor: jardim ? '#3a3633' : tipo === 'centro' ? '#4a4d50' : '#9a948a' },
-    { tipo: 'massa', d: ret(braco[0] - v.S * 0.25, braco[1] - v.S * 0.1, v.S * 0.5, v.S * 0.22, 0.4), cor: '#f2e3b0', semVolume: true, marca: 'luminaria' }
+    { tipo: 'massa', d: ret(braco[0] - v.S * 0.25, braco[1] - v.S * 0.1, v.S * 0.5, v.S * 0.22, 0.4), cor: (decadaDaFigura() ?? 9999) < 2010 && !jardim ? LUZ_DE_SODIO : '#f2e3b0', semVolume: true, marca: 'luminaria' }
   ]);
 }
+/**
+ * ERAS v2 · a rua da época (vida histórica; `ui/eras/modaDaDecada` guarda a década da vida na tela): o orelhão na calçada
+ * (o desenho de Chu Ming Silveira, 1972, comum até a década de 2010); a luz amarela do vapor de sódio antes da troca por
+ * LED; prédios mais baixos no centro dos anos 1970–1980. Vida contemporânea: a rua de sempre.
+ */
+function orelhao(v: Vista, x: number): Peca {
+  const z = -0.75;
+  const [a0, a1] = [pt(v, x, z, 0), pt(v, x, z, 1.95)];
+  const w = v.S * 0.55, h = v.S * 0.5;
+  return marcado('cena__orelhao', { 'data-entorno': 'orelhao' }, [
+    { tipo: 'linha', d: `M${num(a0[0])} ${num(a0[1])}L${num(a1[0])} ${num(a1[1])}`, larg: 1.1, cor: '#5d5e60' },
+    { tipo: 'massa', d: `M${num(a1[0] - w)} ${num(a1[1] + h * 0.35)}Q${num(a1[0] - w)} ${num(a1[1] - h * 1.3)} ${num(a1[0])} ${num(a1[1] - h * 1.3)}Q${num(a1[0] + w)} ${num(a1[1] - h * 1.3)} ${num(a1[0] + w)} ${num(a1[1] + h * 0.35)}Z`, cor: '#e8742a', semVolume: true, marca: 'orelhao' }
+  ]);
+}
+const LUZ_DE_SODIO = '#f2b25a';
+
 /** A fiação (periferia e bairro): dois fios atravessando o quadro, presos nos postes. */
 function fiacao(v: Vista, xs: number[]): Peca {
   const ps = xs.map(x => pt(v, x, -0.35, 7.3));
@@ -97,7 +114,7 @@ export function entornoDaCasa(v: Vista, largura: number, m: number, tipo: TipoDe
   }
   for (const [k, [a, b]] of lados.entries()) {
     const l = b - a;
-    if (tipo === 'centro') fundo.push(...predioVizinho(v, a + 0.2, l - 0.4, 4.2, 5 + Math.floor(s(`p${k}`) * 6), s(`c${k}`)));
+    if (tipo === 'centro') fundo.push(...predioVizinho(v, a + 0.2, l - 0.4, 4.2, ((decadaDaFigura() ?? 9999) < 1990 ? 3 : 5) + Math.floor(s(`p${k}`) * ((decadaDaFigura() ?? 9999) < 1990 ? 4 : 6)), s(`c${k}`)));
     else if (tipo === 'periferia') { fundo.push(...casaVizinha(v, a + 0.1, l * 0.55, 4.4, 'laje', s(`a${k}`)), ...casaVizinha(v, a + l * 0.58, l * 0.4, 4, s(`b${k}`) > 0.5 ? 'laje' : 'telha', s(`d${k}`))); }
     else if (tipo === 'nobre' || tipo === 'condominio') fundo.push(...casaVizinha(v, k === 0 ? b - Math.min(l, 9) : a + 1.5, Math.min(l - 1.5, 9), 7, 'grande', s(`g${k}`)), arvore(v, k === 0 ? a + 0.8 : b - 0.8, 2.6, { alt: 6, copa: '#4f7f42' }));
     else if (tipo === 'pequena') fundo.push(...casaVizinha(v, k === 0 ? b - Math.min(l, 7.5) - 0.8 : a + 0.8, Math.min(l - 0.8, 7.5), 5, 'telha', s(`t${k}`)));
@@ -109,6 +126,8 @@ export function entornoDaCasa(v: Vista, largura: number, m: number, tipo: TipoDe
   if (tipo === 'nobre' || tipo === 'condominio') rua.push(noChao(v, -m - 1, largura + m + 1, -1.5, -0.8, COR.grama, 'grama-calcada'));
   for (const x of xsPoste) rua.push(poste(v, x, tipo));
   if (tipo === 'periferia' || tipo === 'bairro' || tipo === 'pequena') rua.push(fiacao(v, [-m - 2, ...xsPoste, largura + m + 2]));
+  const dec = decadaDaFigura();
+  if (dec !== null && dec < 2010 && tipo !== 'nobre' && tipo !== 'condominio') rua.push(orelhao(v, largura + m * 0.25));
   const arvores = tipo === 'periferia' ? [] : tipo === 'centro' ? [largura + m * 0.4] : tipo === 'pequena' ? [-m * 0.3] : [-m * 0.25, largura + m * 0.6];
   for (const x of arvores) rua.push(marcado('cena__arvore-calcada', { 'data-entorno': 'arvore-calcada' }, [arvore(v, x, -1.05, { alt: tipo === 'nobre' || tipo === 'condominio' ? 6 : 5, copa: tipo === 'pequena' ? '#5f8f4e' : '#4f7f42' })]));
   return { fundo, rua };

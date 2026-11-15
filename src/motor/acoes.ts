@@ -6,6 +6,7 @@
  * para mostrar o motivo de um bloqueio; o motor revalida na execução.
  */
 
+import { comoAchouAVaga } from './eras/base/contexto';
 import { disponibilidadePersonalizar, normalizarLocais, personalizar, type OpPersonalizar } from './sistemas/personalizacao';
 import { disponibilidadeCrianca, executarCrianca, type OqueCrianca } from './sistemas/dinheiroDaCrianca';
 import { adultoPaga, aQuemPedir, dependeDosResponsaveis, disponibilidadePedidoDeCompra, executarPedidoDeCompra, respostaDoResponsavel } from './sistemas/pedidosDaCrianca';
@@ -1392,7 +1393,10 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
         if (propor(v, r, { tipo: 'emprego', ocupacaoId: oc.id, via: 'por_conta' }) !== 'feito') return {};
         return { resultado: `Você começou a pegar trabalho como ${nomeOcupacao(v, oc)}. No começo, a freguesia é pouca.` };
       }
-      return abrirEntrevista(v, r, oc.id, 0, 'curriculo');
+      const ent = abrirEntrevista(v, r, oc.id, 0, 'curriculo');
+      // ERAS v2: como se achava a vaga na época (os classificados, o site, a rede profissional).
+      { const como = comoAchouAVaga(v, oc.id); if (como && v.momento) v.momento.texto = `${como} ${v.momento.texto}`; }
+      return ent;
     }
     case 'pedir_demissao': {
       if (eDasForcas(ocupacao(v.trabalho.atual!.ocupacaoId))) { const ind = sairDasForcas(v); if (ind) pagarComGuardado(v, Math.min(ind, disponivel(v))); return ok(ind ? 'Você saiu da Força — e indenizou a formação.' : 'Você saiu da Força.'); }

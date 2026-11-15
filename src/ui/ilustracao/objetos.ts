@@ -10,6 +10,7 @@
 import { cantos, circulo, clarear, elipse, escurecer, lembrar, luminancia, membro, num as f, ret, suave, type Amostra, type Peca } from './nucleo';
 import { OBJETOS_DA_CASA } from './objetosDaCasa';
 import { FIXOS_DA_CENA } from './fixosDaCena';
+import { decadaDaFigura } from '../eras/modaDaDecada';
 
 const CHAO = 110;
 const TELA = '#26303a', PRETO = '#2b2826', METAL = '#b8b4ad', BRANCO = '#ece9e4', MADEIRA = '#b9773f';
@@ -116,6 +117,81 @@ function som(cor: string): Amostra {
     { tipo: 'massa', d: ret(64, 76, 13, 26, 6), cor, marca: 'fone' },
     { tipo: 'massa', d: ret(103, 76, 13, 26, 6), cor }
   ], 48);
+}
+
+/* ---------------------------------------------------------- ERAS v2: os aparelhos da época */
+// Numa vida histórica, o objeto desenhado é o da década (`ui/eras/modaDaDecada` guarda a década da vida na tela): a TV de
+// tubo no móvel de madeira, o microcomputador de fósforo verde, o computador bege de monitor de tubo, o três-em-um com o
+// toca-fitas, o console de cartucho, o celular de antena e o de teclas. O nome e a descrição da época vêm de
+// `motor/eras/base/coisas`.
+
+function tvDeTubo(cor: string, antena: boolean): Amostra {
+  return noChao([
+    { tipo: 'massa', d: ret(14, 70, 92, 36, 2), cor: MADEIRA, marca: 'movel' },
+    { tipo: 'linha', d: 'M60 70v36', larg: 1 },
+    { tipo: 'massa', d: ret(22, 22, 76, 50, 6), cor: antena ? '#6b4a2b' : cor, marca: 'gabinete' },
+    { tipo: 'vidro', d: ret(28, 27, 52, 40, 9), marca: 'tela-de-tubo' },
+    { tipo: 'massa', d: circulo(89, 36, 3) + circulo(89, 48, 3), cor: METAL, semVolume: true, marca: 'botoes' },
+    ...(antena ? [{ tipo: 'linha' as const, d: 'M56 22L40 4M64 22L82 6', larg: 1.2, marca: 'antena' }] : [])
+  ], 50);
+}
+function microcomputador(): Amostra {
+  return noChao([
+    { tipo: 'massa', d: ret(22, 16, 70, 52, 5), cor: '#d9cfb8', marca: 'monitor' },
+    { tipo: 'massa', d: ret(28, 22, 58, 38, 6), cor: '#123a1e', marca: 'tela' },
+    { tipo: 'linha', d: 'M33 30h30M33 37h22M33 44h36M33 51h14', larg: 1.1, cor: '#5ff07a', fino: true, marca: 'fosforo' },
+    { tipo: 'massa', d: cantos([[10, 80, 2], [110, 80, 2], [114, 102, 3], [6, 102, 3]]), cor: '#d9cfb8', marca: 'teclado-integrado' },
+    { tipo: 'linha', d: 'M16 88H104M14 94H106', larg: 0.7, fino: true },
+    { tipo: 'massa', d: ret(96, 72, 14, 6, 1), cor: PRETO, semVolume: true, marca: 'disquete' }
+  ], 54);
+}
+function computadorBege(): Amostra {
+  return noChao([
+    { tipo: 'massa', d: ret(10, 14, 64, 58, 5), cor: '#e3dccb', marca: 'monitor-de-tubo' },
+    { tipo: 'vidro', d: ret(16, 20, 52, 42, 5), marca: 'tela' },
+    { tipo: 'massa', d: ret(24, 72, 36, 10, 2), cor: '#d4ccba' },
+    { tipo: 'massa', d: ret(80, 30, 30, 76, 2), cor: '#e3dccb', marca: 'gabinete-bege' },
+    { tipo: 'massa', d: ret(84, 40, 22, 5, 1) + ret(84, 50, 22, 5, 1), cor: '#bfb7a5', semVolume: true, marca: 'drives' },
+    { tipo: 'massa', d: cantos([[4, 92, 2], [70, 92, 2], [74, 102, 2], [0, 102, 2]]), cor: '#e3dccb', marca: 'teclado' }
+  ], 54);
+}
+function tresEmUm(cor: string): Amostra {
+  return noChao([
+    { tipo: 'massa', d: ret(6, 40, 26, 66, 2), cor: PRETO, marca: 'caixa' }, { tipo: 'massa', d: ret(88, 40, 26, 66, 2), cor: PRETO },
+    { tipo: 'metal', d: circulo(19, 60, 8) + circulo(19, 86, 10) + circulo(101, 60, 8) + circulo(101, 86, 10), cor: '#4a4643' },
+    { tipo: 'massa', d: ret(36, 50, 48, 56, 2), cor: cor === BRANCO ? '#3a3a3c' : '#3a3a3c', marca: 'tres-em-um' },
+    { tipo: 'massa', d: ret(40, 56, 18, 12, 1) + ret(62, 56, 18, 12, 1), cor: '#202022', semVolume: true, marca: 'toca-fitas' },
+    { tipo: 'luz', d: ret(42, 78, 36, 5, 1), cor: '#7cc0d6', fino: true, marca: 'radio' },
+    { tipo: 'massa', d: circulo(48, 96, 3) + circulo(72, 96, 3), cor: METAL, semVolume: true }
+  ], 52);
+}
+function consoleDeCartucho(cor: string): Amostra {
+  return noChao([
+    { tipo: 'massa', d: ret(18, 62, 72, 30, 4), cor: '#2b2b2e', marca: 'console' },
+    { tipo: 'massa', d: ret(36, 48, 36, 18, 2), cor: cor === BRANCO ? '#7d7d80' : '#6d6d70', marca: 'cartucho' },
+    { tipo: 'massa', d: ret(24, 80, 10, 4, 1) + ret(76, 80, 8, 4, 1), cor: '#c8372d', semVolume: true },
+    { tipo: 'massa', d: ret(92, 84, 22, 12, 3), cor: '#2b2b2e', marca: 'controle' },
+    { tipo: 'linha', d: 'M90 90C80 96 70 98 62 92', larg: 1, marca: 'fio' }
+  ], 46);
+}
+function celularAntigo(cor: string, antena: boolean): Amostra {
+  return naParede([
+    { tipo: 'massa', d: ret(44, antena ? 26 : 20, 32, antena ? 72 : 64, 6), cor: antena ? '#2b2b2e' : cor, marca: 'corpo' },
+    { tipo: 'luz', d: ret(49, antena ? 32 : 26, 22, 14, 1), cor: '#a9c2a4', fino: true, marca: 'visor' },
+    { tipo: 'massa', d: Array.from({ length: 12 }, (_, k) => ret(50 + (k % 3) * 7, (antena ? 54 : 48) + Math.floor(k / 3) * 7, 5, 4, 1)).join(''), cor: METAL, semVolume: true, marca: 'teclas' },
+    ...(antena ? [{ tipo: 'massa' as const, d: ret(68, 8, 4, 20, 2), cor: '#2b2b2e', marca: 'antena' }] : [])
+  ]);
+}
+
+/** O desenho da época para a coisa (undefined: o de hoje). */
+function daDecada(id: string, cor: string, d: number | null): Amostra | undefined {
+  if (d === null || d >= 2020) return undefined;
+  if (id === 'tv' && d < 2010) return tvDeTubo(cor, d < 1990);
+  if (id === 'computador') return d < 1990 ? microcomputador() : d < 2010 ? computadorBege() : undefined;
+  if (id === 'caixa_som' && d < 2000) return tresEmUm(cor);
+  if (id === 'videogame' && d < 2000) return consoleDeCartucho(cor);
+  if (id === 'celular_simples' && d < 2010) return celularAntigo(cor, d < 2000);
+  return undefined;
 }
 
 /* ---------------------------------------------------------- Casa */
@@ -631,6 +707,9 @@ export const OBJETOS: Record<string, (cor: string, variante?: number) => Amostra
 /** O desenho de uma coisa (quem não está no catálogo cai numa caixa genérica, com o nome no rótulo). */
 const DESENHADOS = lembrar<Amostra>();
 export function amostraDoObjeto(coisaId: string, cor: string): Amostra {
+  const d = decadaDaFigura();
+  const era = d !== null ? daDecada(coisaId.split('#')[0], cor, d) : undefined;
+  if (era) return DESENHADOS(`${coisaId}|${cor}|${d}`, () => era);
   return DESENHADOS(`${coisaId}|${cor}`, () => desenharObjeto(coisaId, cor));
 }
 function desenharObjeto(coisaId: string, cor: string): Amostra {

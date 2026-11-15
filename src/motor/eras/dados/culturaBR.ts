@@ -29,6 +29,13 @@ export const LEMBRANCAS_CULTURAIS: readonly LembrancaCultural[] = [
   { id: 'festival_cancao', tipo: 'musica', de: 1970, ate: 1975, idade: [14, 40], texto: 'Os festivais da canção na televisão ainda paravam o país: torcida, vaia e música nova.' },
   { id: 'fila_telefone', tipo: 'costume', de: 1970, ate: 1985, idade: [18, 90], texto: 'Linha de telefone era coisa que se comprava, se declarava no imposto de renda e se esperava anos para instalar.' },
   { id: 'figurinhas_70', tipo: 'brincadeira', de: 1970, ate: 1979, idade: [5, 13], texto: 'Bafo de figurinha, pião, pipa e carrinho de rolimã descendo a ladeira.' },
+  // ------------------------------------------------------------------ ERAS v2 · o dinheiro do dia a dia
+  { id: 'talao_cheque', tipo: 'costume', de: 1975, ate: 2005, idade: [20, 90], texto: 'O talão de cheques ia na bolsa: cheque pré-datado para o dia 15, com o número do RG e o telefone escritos atrás.' },
+  { id: 'fila_banco', tipo: 'costume', de: 1980, ate: 1996, idade: [16, 90], texto: 'Dia de pagamento era dia de fila no banco: o salário era sacado e gasto logo, antes que os preços subissem de novo.' },
+  { id: 'caixa_24h', tipo: 'costume', de: 1990, ate: 2005, idade: [18, 80], texto: 'O caixa eletrônico 24 horas mudou o fim de semana: sacar dinheiro sem depender do horário do banco.' },
+  { id: 'cartao_debito', tipo: 'costume', de: 1996, ate: 2010, idade: [18, 80], texto: 'O cartão de débito chegou ao supermercado e à padaria; a carteira foi ficando com menos notas.' },
+  { id: 'banco_internet', tipo: 'costume', de: 2001, ate: 2012, idade: [20, 75], texto: 'Pagar conta pelo banco na internet, com o código de barras digitado número por número e o cartão de senhas ao lado.', exige: 'internet_banking' },
+  { id: 'maquininha', tipo: 'costume', de: 2013, ate: 2025, idade: [16, 80], texto: 'A maquininha de cartão apareceu na feira, no salão e no ambulante: quase tudo passou a ser no cartão.' },
   // ------------------------------------------------------------------ anos 1980
   { id: 'rock_nacional', tipo: 'musica', de: 1982, ate: 1990, idade: [12, 35], texto: 'O rock nacional tomou as rádios FM: bandas de garagem de Brasília, do Rio e de São Paulo viraram trilha das festas.', exige: 'radio' },
   { id: 'programa_infantil', tipo: 'tv', de: 1983, ate: 1993, idade: [3, 11], texto: 'As manhãs eram dos programas infantis de auditório na TV, com desenho, música e a plateia de crianças gritando.' },

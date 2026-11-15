@@ -72,3 +72,20 @@ export function itemDeEstiloAVenda(v: Vida, id: string, ano = anoDe(v.t)): boole
 
 /** A década visual de um ano (o que a Figura veste por padrão). */
 export const decadaDaModa = (ano: number) => Math.floor(ano / 10) * 10;
+
+/**
+ * ERAS v2 · O CABELO DA DÉCADA — os cortes que marcaram cada época, por textura (APROXIMAÇÃO lida dos mesmos acervos da
+ * moda). Uma parte das pessoas sorteadas numa vida histórica usa um deles; o resto, o corte de sempre. Nenhum corte é
+ * proibido em época nenhuma: a pessoa escolhe o que quiser.
+ */
+const CABELO_DA_DECADA: Record<number, Record<string, string[]>> = {
+  1970: { liso: ['longo_liso', 'shag', 'longo_franja'], ondulado: ['shag', 'longo_ondulado'], cacheado: ['black', 'cacheado_longo'], crespo: ['black'] },
+  1980: { liso: ['mullet', 'topete', 'longo_franja'], ondulado: ['mullet', 'cacheado'], cacheado: ['cacheado_longo', 'cacheado'], crespo: ['black', 'crespo_curto'] },
+  1990: { liso: ['curto_lado', 'chanel', 'longo_liso'], ondulado: ['curto_lado', 'chanel'], cacheado: ['cacheado', 'trancas'], crespo: ['trancas', 'raspado'] },
+  2000: { liso: ['longo_franja', 'moicano', 'longo_liso'], ondulado: ['longo_franja', 'moicano'], cacheado: ['cacheado', 'cacheado_longo'], crespo: ['trancas', 'crespo_curto'] },
+  2010: { liso: ['undercut', 'degrade', 'coque', 'meio_preso'], ondulado: ['undercut', 'meio_preso'], cacheado: ['cacheado_longo', 'degrade'], crespo: ['black', 'degrade', 'locs'] }
+};
+export function cabeloDaDecada(ano: number, textura: string): string[] {
+  const d = Math.max(1970, Math.min(2010, decadaDaModa(ano)));
+  return CABELO_DA_DECADA[d]?.[textura === 'encaracolado' ? 'cacheado' : textura] ?? [];
+}

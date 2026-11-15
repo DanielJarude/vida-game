@@ -12,6 +12,15 @@ import { PIB_BR, PRESIDENTES_BR } from '../../motor/eras/dados/acontecimentosBR'
 import { ObjetosDaEpoca } from './Aparelhos';
 import { poderDeCompra, rendaDaEpoca } from '../../motor/eras/base/economia';
 import { partidosNoMes } from '../../motor/eras/base/partidos';
+import { ofertasDeVeiculos } from '../../motor/sistemas/mercado';
+import { VERSOES_VEICULO } from '../../motor/dados/bens';
+import { precoDoItem } from '../../motor/sistemas/estilo';
+import { precoDaCoisa } from '../../motor/sistemas/coisas';
+import { coisa } from '../../motor/dados/coisas';
+import { coisaNoAno } from '../../motor/eras/base/coisas';
+import { economiaLocal } from '../../motor/dados/lugares';
+import { formatarDinheiro } from '../../motor/mundo/moeda';
+import { salarioMinimoDoPais } from '../../motor/mundo/economia';
 import { decadaVisual } from './epoca';
 import './eras.css';
 
@@ -64,6 +73,24 @@ export function PainelDaEpoca({ vida }: { vida: Vida }) {
               <li>Quem trabalha ganha, em média, <strong>{Math.round(renda * 100)}% do que se ganha em 2025</strong> (rendimento médio real, PNAD/IBGE).</li>
               {pc.destaques.length > 0 && <li>Preço em relação a hoje — {pc.destaques.map(d => `${d.nome}: ${d.fator > 1 ? (d.fator >= 1.95 ? `${String(Math.round(d.fator * 10) / 10).replace('.', ',')} vezes o de hoje` : `${Math.round((d.fator - 1) * 100)}% a mais`) : `${Math.round((1 - d.fator) * 100)}% a menos`}`).join('; ')} (IPCA por grupo, em poder de compra).</li>}
             </ul>
+          </>
+        );
+      })()}
+      {dentro && (() => {
+        // ERAS v2: quanto custa, no jogo, agora — na moeda do mês (os preços que as lojas cobram nesta vida).
+        const carro = ofertasDeVeiculos(vida, 'concessionaria').filter(o => !o.usado && o.modeloId === 'carro_compacto').sort((a, b) => a.preco - b.preco)[0];
+        const nomeCarro = carro ? VERSOES_VEICULO.find(x => x.id === carro.versaoId) : undefined;
+        const itens: [string, number][] = [
+          ['Uma calça jeans', precoDoItem(vida, 'jeans')],
+          [`A ${coisa('geladeira') ? coisaNoAno(coisa('geladeira')!, ano).nome : 'geladeira'}`, precoDaCoisa(vida, 'geladeira')],
+          ...(carro && nomeCarro ? [[`O carro mais barato da concessionária (${nomeCarro.marca} ${nomeCarro.modelo})`, carro.preco] as [string, number]] : []),
+          ['O aluguel de dois quartos na sua cidade', economiaLocal(vida.moradia.municipioId).aluguel],
+          ['O salário mínimo', Math.round(salarioMinimoDoPais('BR'))]
+        ];
+        return (
+          <>
+            <h3>Quanto custa, agora</h3>
+            <ul className="painel-epoca__lista">{itens.map(([n, x]) => <li key={n}>{n}: <strong>{formatarDinheiro(x)}</strong></li>)}</ul>
           </>
         );
       })()}
