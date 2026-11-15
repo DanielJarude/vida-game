@@ -25,7 +25,7 @@ export function MarcasNaPele({ g, lista, pele, ide, costas, detalhe }: { g: GeoD
         // No meio do corpo, de costas, o lado da marca vira (a mesma pessoa vista por trás).
         const mx = REGIOES[m.r].lados ? s * m.x : costas ? -m.x : m.x;
         const x = c.x + mx * c.w * 0.4, y = c.y + m.y * c.h * 0.4;
-        return <g key={k} clipPath={`url(#${ide(c.clip)})`}><DesenhoDaMarca m={m} x={x} y={y} u={1} w={c.w} h={c.h} pele={pele} detalhe={detalhe} /></g>;
+        return <g key={k} clipPath={`url(#${ide(c.clip)})`}><DesenhoDaMarca m={m} x={x} y={y} u={1.45} w={c.w} h={c.h} pele={pele} detalhe={detalhe} /></g>;
       })}
     </g>
   );

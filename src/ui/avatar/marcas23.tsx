@@ -27,7 +27,7 @@ export function corDaMarca(m: MarcaNatural, pele: string): string {
   const i = m.i ?? 2, escura = claridade(pele) < 0.38;
   switch (m.t) {
     case 'pinta': case 'pintas': return misturar(pele, escura ? '#0d0604' : '#2e180d', 0.55 + i * 0.1);
-    case 'sardas': return misturar(pele, escura ? '#24120a' : '#8a4522', 0.22 + i * 0.1);
+    case 'sardas': return misturar(pele, escura ? '#1a0c06' : '#7a3a1a', 0.34 + i * 0.12);
     case 'marca_nascenca': return misturar(pele, m.f === 'vinho' ? '#7a1830' : m.f === 'rosada' ? '#d2606e' : m.f === 'azulada' ? '#3f5272' : escura ? '#2a160c' : '#9a6a44', escura ? 0.32 : 0.4);
     case 'mancha': return m.f === 'escura' ? misturar(pele, '#1e0f08', 0.14 + i * 0.07) : misturar(pele, '#f8f0e8', escura ? 0.32 + i * 0.12 : 0.2 + i * 0.1);
     case 'estrias': return m.f === 'rosadas' ? misturar(pele, '#d47f88', 0.4) : m.f === 'escuras' ? misturar(pele, '#2a150c', 0.25) : misturar(pele, '#f6efe9', escura ? 0.3 : 0.38);
@@ -72,7 +72,7 @@ export function DesenhoDaMarca({ m, x, y, u, w, h, pele, detalhe }: { m: MarcaNa
           {Array.from({ length: total }, (_, k) => {
             const a = r() * Math.PI * 2, d = Math.sqrt(r());
             const px = x + Math.cos(a) * d * w * 0.42, py = y + Math.sin(a) * d * h * 0.42;
-            const raio = (sard ? 0.16 + r() * 0.16 : 0.28 + r() * 0.3) * u;
+            const raio = (sard ? 0.2 + r() * 0.18 : 0.3 + r() * 0.3) * u;
             return <circle key={k} cx={n2(px)} cy={n2(py)} r={n2(raio)} />;
           })}
         </g>
@@ -100,7 +100,7 @@ export function DesenhoDaMarca({ m, x, y, u, w, h, pele, detalhe }: { m: MarcaNa
     case 'estrias': {
       const L = [2.6, 4, 5.6][m.s - 1] * u, q = 3 + (m.k ?? 0) % 3;
       return (
-        <g {...marca} transform={rot} fill="none" stroke={cor} strokeWidth={n2((0.26 + (m.i ?? 2) * 0.06) * u)} strokeLinecap="round" opacity={0.8}>
+        <g {...marca} transform={rot} fill="none" stroke={cor} strokeWidth={n2((0.26 + (m.i ?? 2) * 0.06) * u)} strokeLinecap="round" opacity={0.92}>
           {Array.from({ length: q }, (_, k) => { const dy = (k - (q - 1) / 2) * 0.75 * u, l = L * (0.7 + r() * 0.3), dx = (r() - 0.5) * u; return <path key={k} d={`M ${n2(x - l / 2 + dx)} ${n2(y + dy)} q ${n2(l * 0.25)} ${n2(-0.3 * u)} ${n2(l * 0.5)} 0 t ${n2(l * 0.5)} 0`} />; })}
         </g>
       );
@@ -117,17 +117,17 @@ export function MarcasDoRosto({ lista, g, pele, rosto, uid, idade }: { lista: Ma
   const doRosto = lista.filter(m => REGIOES_DO_ROSTO23.has(m.r) && (m.d ?? 0) <= idade);
   if (!doRosto.length) return null;
   const clip = `${uid}-marcas23`;
-  const u = 0.62;
+  const u = 0.95;
   return (
     <g className="retrato__marcas">
       <defs><clipPath id={clip}><path d={rosto} /></clipPath></defs>
       <g clipPath={`url(#${clip})`}>
         {doRosto.map((m, k) => {
           if (m.t === 'covinhas') {
-            const cor = misturar(pele, '#3a1c10', claridade(pele) < 0.38 ? 0.32 : 0.26);
-            if (m.r === 'queixo') return <path key={k} data-marca="covinhas" data-regiao="queixo" d={`M ${n2(g.cx)} ${n2(g.queixo - 3.4)} q 0.35 1.1 0 2.1`} fill="none" stroke={cor} strokeWidth={0.5} strokeLinecap="round" />;
+            const cor = misturar(pele, '#2a1208', claridade(pele) < 0.38 ? 0.5 : 0.42);
+            if (m.r === 'queixo') return <path key={k} data-marca="covinhas" data-regiao="queixo" d={`M ${n2(g.cx)} ${n2(g.queixo - 3.4)} q 0.35 1.1 0 2.1`} fill="none" stroke={cor} strokeWidth={0.62} strokeLinecap="round" />;
             const lados: (1 | -1)[] = m.l ? [m.l === 'e' ? 1 : -1] : [-1, 1];
-            return <g key={k} data-marca="covinhas" data-regiao="bochecha">{lados.map(s => <path key={s} d={`M ${n2(g.cx + s * g.w * 0.25)} ${n2(g.olhoY + 11.2)} q ${n2(s * 0.7)} 0.9 ${n2(s * 0.1)} 1.9`} fill="none" stroke={cor} strokeWidth={0.48} strokeLinecap="round" />)}</g>;
+            return <g key={k} data-marca="covinhas" data-regiao="bochecha">{lados.map(s => <path key={s} d={`M ${n2(g.cx + s * g.w * 0.25)} ${n2(g.olhoY + 11.2)} q ${n2(s * 0.7)} 0.9 ${n2(s * 0.1)} 1.9`} fill="none" stroke={cor} strokeWidth={0.62} strokeLinecap="round" />)}</g>;
           }
           const s: 1 | -1 = m.l === 'd' ? -1 : 1;
           const c = caixaNoRosto(g, m.r, s);

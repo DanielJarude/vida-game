@@ -71,10 +71,13 @@ export function CorpoEPele({ vida, agir }: { vida: Vida; agir: (a: Acao) => bool
   const corpoPrevia = corpoDaFigura({ ...vida, eu: { ...vida.eu, visual: previa } } as Vida);
   const corpoAgora = corpoDaFigura(vida);
   const soPele = pele === 'pele';
-  const pecas = soPele ? [] : (vida.eu.estilo?.itens ?? []).filter(x => x.usando);
+  // "Só a pele": o tronco à mostra como no estúdio (quem não é homem, de top e short — a pele dos braços, da barriga e das pernas à vista).
+  const masc = vida.eu.genero === 'masculino';
+  const roupaDePele = masc ? [] : [{ itemId: 'top_esportivo', id: 'c23-top' }, { itemId: 'short_jeans', id: 'c23-short' }];
+  const pecas = soPele ? roupaDePele : (vida.eu.estilo?.itens ?? []).filter(x => x.usando);
   const tatuagens = tatuagensNaFigura(vida);
   const fig = (visual: typeof vis, corpo: typeof corpoAgora, rotulo: string) => (
-    <Figura visual={visual} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} corpo={corpo} pecas={pecas} tatuagens={tatuagens} largura={LARGURA_DE_REFERENCIA} semFundo vista={vista} semCima={soPele} descalco={soPele} rotulo={rotulo} />
+    <Figura visual={visual} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} corpo={corpo} pecas={pecas} tatuagens={tatuagens} largura={LARGURA_DE_REFERENCIA} semFundo vista={vista} semCima={soPele && masc} descalco={soPele} rotulo={rotulo} />
   );
   const marcaSel = sel !== null ? marcas[sel] : undefined;
   const mudarMarca = (k: number, p: Partial<MarcaNatural>) => setMarcas(ms => ms.map((m, j) => (j === k ? marcaValida({ ...m, ...p }) ?? m : m)));
@@ -93,7 +96,7 @@ export function CorpoEPele({ vida, agir }: { vida: Vida; agir: (a: Acao) => bool
             <figure className="c23__fig" data-c23="previa">{fig(previa, corpoPrevia, mudou ? 'Como ficaria' : 'Como você está')}<figcaption>{mudou ? 'Como ficaria' : 'Como você está'}</figcaption></figure>
             {marcaSel && !(marcaSel.t === 'covinhas') && (
               <figure className="c23__fig c23__fig--perto" data-c23="perto">
-                <Figura visual={previa} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} corpo={corpoPrevia} pecas={[]} semCima descalco largura={LARGURA_DE_REFERENCIA}
+                <Figura visual={previa} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} corpo={corpoPrevia} pecas={roupaDePele} semCima={masc} descalco largura={LARGURA_DE_REFERENCIA}
                   vista={REGIOES[marcaSel.r].frente ? 'frente' : 'costas'} foco={focoDaRegiao(vida.eu.genero, corpoPrevia, i, marcaSel.r, marcaSel.l, REGIOES[marcaSel.r].frente ? 'frente' : 'costas', 1.3)} rotulo={`De perto: ${nomeDaRegiao(marcaSel.r)}`} />
                 <figcaption>De perto</figcaption>
               </figure>

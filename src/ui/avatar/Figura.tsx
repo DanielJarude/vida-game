@@ -113,20 +113,20 @@ function geometria(genero: Genero, tipo: TipoDeCorpo, idade: number, c?: Constit
   };
   const neutra = !c || Object.values(c).every(x => x === 0);
   if (c && !neutra) {
-    const f = 1 + 0.045 * c.estrutura;
+    const f = 1 + 0.06 * c.estrutura;
     for (const k of ['pesc', 'ombro', 'peito', 'cintura', 'quadril', 'braco', 'antebraco', 'coxa', 'panturrilha', 'tornozelo'] as const) g[k] *= f;
-    g.ombro += 1.6 * c.ombros; g.peito += 0.5 * c.ombros;
-    g.peito += 1.05 * c.peito; g.busto = Math.max(0, g.busto + (fem ? 0.5 : 0.3) * c.peito);
-    g.cintura += 1.4 * c.cintura;
-    g.quadril += 1.5 * c.quadril; g.coxa += 0.3 * c.quadril;
-    g.braco += 0.65 * c.bracos; g.antebraco += 0.4 * c.bracos;
-    g.coxa += 1.1 * c.coxas;
-    g.panturrilha += 0.7 * c.panturrilhas; g.tornozelo += 0.15 * c.panturrilhas;
-    if (c.barriga > 0) { g.barriga += 1.7 * c.barriga; g.cintura += 0.5 * c.barriga; } else g.cintura += 0.5 * c.barriga;
+    g.ombro += 2.4 * c.ombros; g.peito += 0.7 * c.ombros;
+    g.peito += 1.5 * c.peito; g.busto = Math.max(0, g.busto + (fem ? 0.6 : 0.35) * c.peito);
+    g.cintura += 2.1 * c.cintura;
+    g.quadril += 2.3 * c.quadril; g.coxa += 0.45 * c.quadril;
+    g.braco += 0.95 * c.bracos; g.antebraco += 0.55 * c.bracos;
+    g.coxa += 1.6 * c.coxas;
+    g.panturrilha += 1.0 * c.panturrilhas; g.tornozelo += 0.2 * c.panturrilhas;
+    if (c.barriga > 0) { g.barriga += 2.6 * c.barriga; g.cintura += 0.8 * c.barriga; } else g.cintura += 0.6 * c.barriga;
     g.braco += 0.5 * c.musculo; g.antebraco += 0.3 * c.musculo; g.panturrilha += 0.35 * c.musculo; g.coxa += 0.45 * c.musculo; g.ombro += 0.5 * c.musculo;
     g.def = Math.max(0, c.musculo);
     // O comprimento das pernas: o joelho, o tornozelo e o chão descem (ou sobem); o tronco fica.
-    const L = c.pernas * 3.4;
+    const L = c.pernas * 5;
     g.yVirilha += L * 0.12; g.yJoelho += L * 0.55; g.yTorn += L; g.yChao += L;
   }
   const ajuste: Record<TipoDeCorpo, Partial<Record<keyof Geo, number>>> = {
@@ -170,7 +170,7 @@ function escalaDaIdade(i: number): number {
  */
 function escalaDoCorpo(idade: number, z: number): number {
   const cresce = Math.max(0, Math.min(1, (idade - 4) / 13));
-  return escalaDaIdade(idade) * (1 + 0.032 * Math.max(-2.2, Math.min(2.2, z)) * cresce);
+  return escalaDaIdade(idade) * (1 + 0.042 * Math.max(-2.2, Math.min(2.2, z)) * cresce);
 }
 /** O corpo montado (a geometria e a escala) — o mesmo para a figura, as lupas e as miniaturas. */
 function montar(genero: Genero, corpo: CorpoFig, idade: number, visual?: Visual): { g: Geo; esc: number; tipo: TipoDeCorpo } {
