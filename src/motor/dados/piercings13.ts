@@ -93,6 +93,9 @@ export const PIERCINGS_13: ItemDePiercing[] = [
   p('pc_medusa_titanio', 'Medusa — ponto de titânio', 160, { regiao: 'medusa', forma: 'ponto', metal: 'titanio' }, 'O ponto no meio do lábio de cima, onde o arco do cupido faz a curva.', { estilos: ['alternativo', 'casual'] }),
   p('pc_medusa_zirconia', 'Medusa — ponto de luz', 220, { regiao: 'medusa', forma: 'ponto', metal: 'prata', pedra: ZIRC }, 'Prata com uma zircônia.', { estilos: ['elegante', 'alternativo'] }),
   p('pc_medusa_ouro', 'Medusa — ponto de ouro', 820, { regiao: 'medusa', forma: 'ponto', metal: 'ouro', acabamento: 'polido' }, 'Ouro dezoito, bolinha polida.', { estilos: ['elegante'], nivel: 4, luxo: true }),
+  // VIDA 23: mais joias nas regiões que tinham pouca variedade (cada uma com o desenho do seu lugar).
+  p('pc_medusa_espeto', 'Medusa — espeto de titânio', 180, { regiao: 'medusa', forma: 'spike', metal: 'titanio', acabamento: 'fosco' }, 'Um cone curto de titânio fosco no meio do lábio de cima.', { estilos: ['punk', 'alternativo'] }),
+  p('pc_medusa_diamante', 'Medusa — diamante em ouro branco', 5900, { regiao: 'medusa', forma: 'ponto', metal: 'ouro_branco', pedra: DIAM }, 'Um diamante pequeno em garra de ouro branco, acima do lábio.', { estilos: ['luxuoso', 'elegante'], luxo: true, nivel: 5 }),
   // Umbigo (mais modelos)
   p('pc_umbigo_lua', 'Umbigo — pingente de meia-lua', 480, { regiao: 'umbigo', forma: 'pingente', metal: 'ouro', simbolo: 'lua' }, 'Barra de ouro com uma meia-lua pendurada.', { estilos: ['elegante', 'vintage'], nivel: 3 }),
   p('pc_umbigo_titanio_azul', 'Umbigo — barra de titânio azul', 190, { regiao: 'umbigo', forma: 'barra', metal: 'titanio_azul', pedra: '#7fb4ff' }, 'Titânio anodizado azul, pedra azul.', { estilos: ['alternativo', 'casual'] }),

@@ -58,10 +58,15 @@ export const PIERCINGS: ItemDePiercing[] = [
   // Sobrancelha
   p('pc_sobrancelha_barra', 'Sobrancelha — barra curva de titânio', 150, { regiao: 'sobrancelha', forma: 'barra', metal: 'titanio' }, 'A barra curva no canto de fora da sobrancelha.', { estilos: ['alternativo', 'rock', 'punk'] }),
   p('pc_sobrancelha_argola', 'Sobrancelha — argola preta', 140, { regiao: 'sobrancelha', forma: 'argola', metal: 'preto' }, 'Argola fina no canto da sobrancelha.', { estilos: ['punk', 'streetwear'] }),
+  // VIDA 23: a barra curva com espetos, a de ouro rosé com pedra, a argola de titânio azul.
+  p('pc_sobrancelha_espetos', 'Sobrancelha — barra curva com espetos', 170, { regiao: 'sobrancelha', forma: 'barra', metal: 'preto', simbolo: 'espetos' }, 'A barra curva de aço preto com as pontas em espeto.', { estilos: ['punk', 'rock'] }),
+  p('pc_sobrancelha_rose', 'Sobrancelha — barra de ouro rosé', 980, { regiao: 'sobrancelha', forma: 'barra', metal: 'ouro_rose', pedra: '#f6c1cf' }, 'Ouro rosé com uma pedra rosada na ponta de cima.', { estilos: ['elegante', 'alternativo'], nivel: 4, luxo: true }),
+  p('pc_sobrancelha_azul', 'Sobrancelha — argola de titânio azul', 170, { regiao: 'sobrancelha', forma: 'argola', metal: 'titanio_azul' }, 'Titânio anodizado azul: a cor vem da luz no metal.', { estilos: ['alternativo', 'streetwear'] }),
   // Lábio
   p('pc_labio_labret', 'Lábio — labret de titânio', 150, { regiao: 'labio', forma: 'ponto', metal: 'titanio' }, 'O ponto embaixo do lábio (labret), com a base lisa por dentro.', { estilos: ['alternativo', 'rock'] }),
   p('pc_labio_argola', 'Lábio — argola lateral', 150, { regiao: 'labio', forma: 'argola', metal: 'aco' }, 'Argola no canto do lábio de baixo.', { estilos: ['punk', 'alternativo'] }),
   p('pc_labio_rose', 'Lábio — ponto de ouro rosé', 1100, { regiao: 'labio', forma: 'ponto', metal: 'ouro_rose', pedra: '#f6c1cf' }, 'Ouro rosé com uma pedra cor-de-rosa.', { estilos: ['elegante'], nivel: 4, luxo: true }),
+  p('pc_labio_clicker', 'Lábio — argola cravejada de ouro', 1900, { regiao: 'labio', forma: 'clicker', metal: 'ouro', pedra: '#e9f6ff' }, 'Argola articulada de ouro com zircônias na frente, no canto do lábio.', { estilos: ['elegante', 'alternativo'], nivel: 4, luxo: true }),
   // Helix
   p('pc_helix_argola', 'Helix — argola de prata', 130, { regiao: 'helix', forma: 'argola', metal: 'prata' }, 'Argola no alto da orelha, na cartilagem.', { estilos: ['casual', 'alternativo'] }),
   p('pc_helix_trio', 'Helix — trio de pontos', 260, { regiao: 'helix', forma: 'trio', metal: 'titanio', pedra: '#e9f6ff' }, 'Três furos em fila subindo a orelha, três pontos de luz.', { estilos: ['alternativo', 'elegante'] }),

@@ -17,7 +17,8 @@ const igual = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.str
 /** A mudança já saneada (o que fica guardado de fato). */
 function normal(m: MudancaCorpo23): { corpo23?: string; marcas23?: MarcaNatural[]; pelos23?: number } {
   const out: { corpo23?: string; marcas23?: MarcaNatural[]; pelos23?: number } = {};
-  if ('corpo23' in m && m.corpo23) out.corpo23 = gravarCorpo23(lerCorpo23(m.corpo23));
+  // A base gravada (12 × "2") marca o corpo da VIDA 23 (a altura de verdade na figura): não some ao confirmar.
+  if ('corpo23' in m && m.corpo23) out.corpo23 = gravarCorpo23(lerCorpo23(m.corpo23)) ?? '222222222222';
   if ('marcas23' in m && m.marcas23) out.marcas23 = marcasValidas(m.marcas23);
   if ('pelos23' in m && m.pelos23) out.pelos23 = Math.max(1, Math.min(3, Math.round(m.pelos23)));
   return out;
@@ -33,7 +34,7 @@ export function disponibilidadeCorpo23(v: Vida, m: MudancaCorpo23): Veredito {
   if (m.marcas23 && (!Array.isArray(m.marcas23) || m.marcas23.length > MAXIMO_DE_MARCAS)) return bloqueio('impossivel', `No máximo ${MAXIMO_DE_MARCAS} marcas.`);
   if (m.marcas23 && (marcasValidas(m.marcas23)?.length ?? 0) !== m.marcas23.length) return bloqueio('impossivel', 'Essa marca não existe nesse lugar.');
   const n = normal(m), vis = v.eu.visual;
-  if (campos.every(k => igual(vis[k], n[k]))) return bloqueio('incompativel', 'Já está assim.');
+  if (campos.every(k => igual(k === 'corpo23' && vis.corpo23 ? gravarCorpo23(lerCorpo23(vis.corpo23)) ?? '222222222222' : vis[k], n[k]))) return bloqueio('incompativel', 'Já está assim.');
   return PERMITIDO;
 }
 

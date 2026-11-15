@@ -16,6 +16,8 @@ const EstudioDeTatuagem = sobDemanda(() => import('./Tatuagens').then(m => m.Est
 /** VIDA 13: os piercings (a lupa por zona do corpo) — pacote sob demanda, como o estúdio de tatuagem. */
 const PainelDePiercings = sobDemanda(() => import('../v14/aparencia/PainelDePiercings').then(m => m.PainelDePiercings));
 const RostoDetalhes = sobDemanda(() => import('../v14/aparencia/RostoDetalhes').then(m => m.RostoDetalhes));
+/** VIDA 23: o corpo e a pele (as proporções, as marcas naturais, os pelos) — pacote sob demanda. */
+const CorpoEPele = sobDemanda(() => import('../v23/CorpoEPele').then(m => m.CorpoEPele));
 import { useState } from 'react';
 import type { Vida, Visual } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
@@ -160,6 +162,7 @@ export function AparenciaEEstilo({ vida, agir, irPara }: Props) {
       )}
       {/* VIDA 14: os riscos na sobrancelha, o desenho dela, a pinta e os cílios (pacote sob demanda). */}
       {fase !== 'familia_decide' && <RostoDetalhes vida={vida} agir={agir} />}
+      {fase !== 'familia_decide' && <CorpoEPele vida={vida} agir={agir} />}
       {i >= 3 && <OQueVeste vida={vida} agir={agir} />}
       <GuardaRoupa vida={vida} agir={agir} />
       {(i >= 16 || (vida.eu.tatuagens?.length ?? 0) > 0) && <EstudioDeTatuagem vida={vida} agir={agir} />}

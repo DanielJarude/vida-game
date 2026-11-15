@@ -12,6 +12,7 @@
  */
 import type { ReactElement } from 'react';
 import { COR_DO_METAL, piercingDoItem, type Piercing } from '../../motor/dados/piercings129';
+import { acabamento, TracoDeMetal } from './joias23';
 
 export interface GeometriaDoRosto {
   cx: number; olhoY: number; esp: number; w: number; orelhaFora: number; orelhaRx: number;
@@ -25,18 +26,19 @@ const ARCO_IRIS = '#d9b44a';
 const cores = (p: Piercing): [string, string] => COR_DO_METAL[p.metal] ?? COR_DO_METAL.aco;
 
 function Ponto({ x, y, r, p }: { x: number; y: number; r: number; p: Piercing }) {
-  const [c, s] = cores(p);
-  const fosco = p.acabamento === 'fosco';
+  // VIDA 23: o acabamento do metal (o ouro polido, a prata espelhada, o aço escovado, o titânio fosco) — não só a cor.
+  const a = acabamento(p.metal);
+  const fosco = p.acabamento === 'fosco' || a.tipo === 'fosco';
   return (
-    <g>
-      {p.pedra ? <circle cx={x} cy={y} r={r * 1.15} fill={p.pedra} stroke={s} strokeWidth={0.25} /> : <circle cx={x} cy={y} r={r} fill={c} stroke={s} strokeWidth={0.25} />}
+    <g data-acabamento={fosco ? 'fosco' : a.tipo}>
+      {p.pedra ? <circle cx={x} cy={y} r={r * 1.15} fill={p.pedra} stroke={a.borda} strokeWidth={0.25} /> : <circle cx={x} cy={y} r={r} fill={a.base} stroke={a.borda} strokeWidth={0.25} />}
       {p.metal === 'titanio_arco' && !p.pedra && <path d={`M ${x - r * 0.8} ${y + r * 0.3} A ${r} ${r} 0 0 0 ${x + r * 0.8} ${y + r * 0.3}`} fill="none" stroke={ARCO_IRIS} strokeWidth={r * 0.45} />}
-      {!fosco && <circle cx={x - r * 0.35} cy={y - r * 0.35} r={r * 0.35} fill="#ffffff" opacity={0.8} />}
+      {!fosco && <circle cx={x - r * 0.35} cy={y - r * 0.35} r={r * (a.tipo === 'escovado' ? 0.22 : 0.35)} fill={p.pedra ? '#ffffff' : a.brilho} opacity={a.tipo === 'acetinado' ? 0.55 : 0.9} />}
     </g>
   );
 }
 const Aro = ({ x, y, r, p, abre = 'cima', grosso }: { x: number; y: number; r: number; p: Piercing; abre?: 'cima' | 'esq' | 'dir'; grosso?: boolean }) => {
-  const [c, s] = cores(p);
+  const [, s] = cores(p);
   // O aro passa por dentro do furo: o pedaço de dentro some (fica uma abertura do lado do furo).
   const d = abre === 'cima' ? `M ${x - r * 0.75} ${y - r * 0.65} A ${r} ${r} 0 1 0 ${x + r * 0.75} ${y - r * 0.65}`
     : abre === 'esq' ? `M ${x - r * 0.65} ${y - r * 0.75} A ${r} ${r} 0 1 1 ${x - r * 0.65} ${y + r * 0.75}`
@@ -48,8 +50,8 @@ const Aro = ({ x, y, r, p, abre = 'cima', grosso }: { x: number; y: number; r: n
       : [-0.55, -0.2, 0.2, 0.55].map(a => [x - Math.cos(a) * r, y + Math.sin(a) * r]);
   return (
     <g>
-      <path d={d} fill="none" stroke={s} strokeWidth={0.75 * k} strokeLinecap="round" />
-      <path d={d} fill="none" stroke={c} strokeWidth={0.45 * k} strokeLinecap="round" />
+      {/* VIDA 23: a borda, o corpo e o brilho do acabamento do metal. */}
+      <TracoDeMetal d={d} w={0.5 * k} metal={p.metal} comp={r * 3} />
       {p.metal === 'titanio_arco' && <path d={d} fill="none" stroke={ARCO_IRIS} strokeWidth={0.3 * k} strokeDasharray={`${(r * 0.7).toFixed(2)} ${(r * 0.9).toFixed(2)}`} strokeLinecap="round" />}
       {p.acabamento === 'martelado' && <path d={d} fill="none" stroke="#ffffff" strokeWidth={0.18} strokeDasharray="0.15 0.45" opacity={0.85} />}
       {p.forma === 'clicker' ? frente.map(([a, b], i) => <circle key={i} cx={a} cy={b} r={0.3} fill={p.pedra ?? '#f4fbff'} stroke={s} strokeWidth={0.1} />)
@@ -168,7 +170,7 @@ export function PiercingsDoRosto({ ids, g }: { ids?: string[]; g: GeometriaDoRos
           if (p.forma === 'spike') return <Espeto x={cx} y={g.cantos + 2.7} r={0.45} p={p} ang={180} />;
           return <Ponto x={cx} y={g.cantos + 2.6} r={0.5} p={p} />;
         }
-        case 'medusa': return g.bigode ? null : <Ponto x={cx} y={g.cantos - 1.35} r={0.45} p={p} />;
+        case 'medusa': return g.bigode ? null : p.forma === 'spike' ? <Espeto x={cx} y={g.cantos - 1.1} r={0.38} p={p} ang={0} /> : <Ponto x={cx} y={g.cantos - 1.35} r={0.45} p={p} />;
         // A orelha (do lado de lá): o furo de cima (helix), o industrial atravessando o alto, o tragus na frente, o daith na
         // dobra de dentro, a concha no meio, o 2º furo do lóbulo acima do brinco.
         case 'helix': {

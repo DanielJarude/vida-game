@@ -1,0 +1,32 @@
+/* VIDA 23 — Você · Aparência · "Corpo e pele" (c23): a prévia lado a lado na mesma escala, os eixos e as marcas. */
+.c23 { margin-top: var(--space-5); display: grid; gap: var(--space-2); }
+.c23__corpo { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-4); align-items: start; }
+.c23__previa { display: grid; gap: var(--space-2); justify-items: center; position: sticky; top: 72px; }
+.c23__quadros { display: flex; flex-wrap: wrap; gap: var(--space-2); justify-content: center; align-items: flex-end; }
+.c23__fig { margin: 0; display: grid; gap: 2px; justify-items: center; width: 132px; font-size: var(--type-caption, 12px); }
+.c23__fig svg { display: block; width: 100%; height: auto; }
+.c23__fig--perto svg { border-radius: var(--radius-md); border: 1px solid var(--rule); }
+.c23__escolhas { display: grid; gap: var(--space-2); min-width: 0; }
+.c23__grupo { display: grid; gap: var(--space-2); border: 1px solid var(--rule); border-radius: var(--radius-md); padding: var(--space-2) var(--space-3) var(--space-3); margin: 0; min-width: 0; }
+.c23__grupo legend { padding: 0 var(--space-1); }
+.c23__formas { display: flex; flex-wrap: wrap; gap: 6px; }
+.c23__eixos { display: grid; gap: 4px; padding-top: var(--space-1); border-top: 1px solid var(--rule); }
+.c23__grupo-nome { font-weight: 600; font-size: 0.92em; }
+.c23__eixo { display: grid; grid-template-columns: minmax(7.5rem, 10rem) minmax(0, 1fr) minmax(6.5rem, 8.5rem); gap: var(--space-2); align-items: center; min-height: var(--touch-target, 40px); }
+.c23__eixo input[type="range"] { width: 100%; min-width: 0; accent-color: var(--acao); }
+.c23__eixo-nome { font-size: 0.92em; }
+.c23__eixo-valor { font-size: 0.88em; color: var(--tinta-2, inherit); }
+.c23__eixo-nota { grid-column: 1 / -1; }
+.c23__marcas { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.c23__marca { display: flex; justify-content: space-between; align-items: center; gap: var(--space-2); padding: 4px 8px; border: 1px solid var(--rule); border-radius: var(--radius-md); }
+.c23__marca .link { text-align: left; }
+.c23__marca--ativa { border-color: currentColor; background: var(--veu-2); }
+.c23__editor { display: grid; gap: var(--space-1); border-top: 1px solid var(--rule); padding-top: var(--space-2); }
+
+@media (max-width: 640px) {
+  .c23__corpo { grid-template-columns: minmax(0, 1fr); }
+  .c23__previa { position: static; }
+  .c23__fig { width: min(132px, 30vw); }
+  .c23__eixo { grid-template-columns: minmax(0, 1fr) minmax(6rem, auto); }
+  .c23__eixo input[type="range"] { grid-column: 1 / -1; grid-row: 2; }
+}
