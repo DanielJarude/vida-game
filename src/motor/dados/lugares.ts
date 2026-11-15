@@ -15,6 +15,7 @@ import type { PerfilDePais, PerfilUrbano } from '../mundo/tipos';
 import { MUNICIPIOS_1291 } from './municipios1291';
 import { AJUSTE_LOCAL_14 as AJ14 } from '../dados14/cidades/municipios14';
 import { precoDaEpoca, rendaDaEpocaCorrente } from '../eras/base/economia';
+import { trilhoAindaNaoAbriu } from '../eras/base/cidades';
 import { aoRegistrar, idDaCidade, indiceNoCatalogo, PAIS_PADRAO, paisDoCatalogo, paisDoId, paisPeloIndice, perfilDoPais, temPerfil } from '../mundo/registro';
 
 /*
@@ -273,7 +274,8 @@ export function economiaLocal(id: string) {
       salario: p.salario * r.salario * brasilia * ks * renda,
       /** Aluguel de referência (padrão 3, dois quartos). */
       aluguel: Math.round(p.aluguel * r.custo * brasilia * kc * precoDaEpoca('aluguel')),
-      transporte: p.transporte,
+      // ERAS v2: antes do metrô (ou do trem metropolitano), o transporte da metrópole é o de ônibus.
+      transporte: p.transporte === 'bom' && trilhoAindaNaoAbriu(m.id) !== undefined ? 'medio' as const : p.transporte,
       rotulo: p.rotulo
     };
   }

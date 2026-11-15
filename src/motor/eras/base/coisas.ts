@@ -53,7 +53,12 @@ export const COISAS_NA_EPOCA: Readonly<Record<string, CoisaNaEpoca>> = {
   controladora_dj: { desde: 2006 },
   home_studio: { desde: 2000 },
   lareira: { desde: 2008 },
-  adega: { desde: 2000 }
+  adega: { desde: 2000 },
+  // ERAS v2 · a casa: o que só chega às lojas brasileiras depois (APROXIMAÇÃO do ano de venda corrente no varejo).
+  carregador_ev: { desde: 2016 }, espelho_led: { desde: 2012 }, monitores: { desde: 2005, tec: 'computador' }, impressora: { desde: 1998, tec: 'computador' },
+  sofa_retratil: { desde: 2000 }, ilha_cozinha: { desde: 2000 }, armarios_planejados: { desde: 1995 }, ducha: { desde: 2005 }, espaco_gourmet: { desde: 2005 },
+  toalheiro: { desde: 2005 }, closet: { desde: 1995 }, colchao_hotel: { desde: 1995 }, poltronas_cinema: { desde: 2005 }, geladeira: { fases: [{ ate: 1990, nome: 'geladeira de uma porta', descricao: 'Congelador pequeno lá dentro, gelo nas paredes e o degelo de vez em quando, com a bacia embaixo.' }] },
+  microondas: { desde: 1984 }, cama_king: { desde: 1995 }, mesa_centro_marmore: { desde: 1980 }
 };
 
 function fase(c: CoisaNaEpoca, ano: number): Fase | undefined {

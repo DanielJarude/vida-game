@@ -4,6 +4,7 @@
  * As lojas (imobiliária, concessionária, banco, óticas) moram em Compras.
  */
 
+import { trilhoDaCidade, trilhoAindaNaoAbriu } from '../../motor/eras/base/cidades';
 import { type QualLugar } from './material/Lugares';
 import { lojasDaVida } from '../../motor/sistemas/lojas';
 import { fachadaDoLugar } from './Compras';
@@ -44,7 +45,7 @@ export function Cidade({ vida, agir, irCompras, abrir }: Props & { irCompras?: (
         <div className="dado"><dt>Custo de vida</dt><dd>{ec.custo > 1.15 ? 'alto' : ec.custo < 0.9 ? 'baixo' : 'médio'}</dd></div>
         <div className="dado"><dt>Salários</dt><dd>{ec.salario > 1.1 ? 'acima da média' : ec.salario < 0.9 ? 'abaixo da média' : 'na média'}</dd></div>
         <div className="dado"><dt>Aluguel de referência</dt><dd>{dinheiroCurto(ec.aluguel)}/mês</dd></div>
-        <div className="dado"><dt>Transporte público</dt><dd>{ec.transporte === 'bom' ? 'bom: dá para viver sem carro' : ec.transporte === 'ruim' ? 'fraco: o ônibus demora' : 'razoável'}</dd></div>
+        <div className="dado"><dt>Transporte público</dt><dd>{ec.transporte === 'bom' ? 'bom: dá para viver sem carro' : ec.transporte === 'ruim' ? 'fraco: o ônibus demora' : 'razoável'}{(() => { const tr = vida.era ? trilhoDaCidade(vida.moradia.municipioId) : undefined; if (!tr) return null; const a = trilhoAindaNaoAbriu(vida.moradia.municipioId); return <small> · {a !== undefined ? `${tr.nome} ainda não existe (abre em ${a})` : `com ${tr.nome} (desde ${tr.de[0]})`}</small>; })()}</dd></div>
         {vocacoesEmPalavras14(m.id).length > 0 && <div className="dado"><dt>O que a cidade faz</dt><dd>{vocacoesEmPalavras14(m.id).join(', ')} — vagas mais comuns nessas áreas</dd></div>}
         {desl && <div className="dado"><dt>O seu trajeto</dt><dd>{NOME_MODO[desl.modo]}{desl.nomeVeiculo ? ` (${desl.nomeVeiculo})` : ''} · {tempoEmPalavras(desl.minutos)}</dd></div>}
       </dl>
