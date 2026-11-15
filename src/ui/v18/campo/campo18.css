@@ -4,6 +4,7 @@
   --p18-ceu-alto: #bcd8e6; --p18-ceu-baixo: #f3e6c8; --p18-sol: #f6d27a;
   --p18-morro-longe: #9fb98a; --p18-morro: #86a66d; --p18-mata: #5c8a4c; --p18-mata-escura: #3e6a36; --p18-mata-clara: #6f9c55;
   --p18-pasto: #a9c47a; --p18-terra: #c9ad82; --p18-cerca: #7a5c3c; --p18-agua: #7fb6cf; --p18-agua-borda: #4f8fae; --p18-estrada: #d8c09a;
+  --p18-grama: #9cc46a; --p18-terreiro: #cdb68e;
   --c18-lavoura: #c9b75a; --c18-pasto: #a9c47a; --c18-agua: #7fb6cf; --c18-reserva: #4f7d42;
   display: flex; flex-direction: column; gap: var(--space-4); min-width: 0;
 }
@@ -11,6 +12,7 @@
   --p18-ceu-alto: #233646; --p18-ceu-baixo: #4a4334; --p18-sol: #d9b660;
   --p18-morro-longe: #3d5236; --p18-morro: #33492c; --p18-mata: #2d4a26; --p18-mata-escura: #22391d; --p18-mata-clara: #3c5e30;
   --p18-pasto: #55693c; --p18-terra: #6b5a40; --p18-cerca: #b29572; --p18-agua: #2f5f78; --p18-agua-borda: #4f8fae; --p18-estrada: #7d6c52;
+  --p18-grama: #4f6a36; --p18-terreiro: #6e5e44;
   --c18-lavoura: #9a8b3f; --c18-pasto: #5f7a42; --c18-agua: #3a7896; --c18-reserva: #2f5428;
 }
 
