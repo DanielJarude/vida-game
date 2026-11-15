@@ -34,6 +34,7 @@ import { anoDe, MESES, mesDe } from '../../motor/tempo';
 import { municipio, nomeLugar } from '../../motor/dados/lugares';
 import { entrarNaVida } from '../../motor/mundo/vida';
 import { decadaVisual, ICONE_DO_APARELHO, meioDaVida, NOME_DO_APARELHO, simboloDaEpoca } from '../eras/epoca';
+import { definirDecadaDaFigura } from '../eras/modaDaDecada';
 import '../eras/eras.css';
 import { seguranca } from '../../motor/sistemas/dinheiro';
 import { leituraDaSeguranca } from '../leituraMaterial';
@@ -162,6 +163,8 @@ export function Jogo({ c }: { c: ControleVida }) {
   entrarNaVida(vida);
   const m = municipio(vida.moradia.municipioId);
 
+  // ERAS v2: a roupa de todo dia das pessoas desenhadas é a da década da vida na tela (`ui/eras/modaDaDecada`).
+  definirDecadaDaFigura(decadaVisual(vida) ?? null);
   return (
     <div className="jogo" data-clima={climaDe(vida)} {...(decadaVisual(vida) ? { 'data-era': decadaVisual(vida) } : {})}>
       <header className="cabecalho">

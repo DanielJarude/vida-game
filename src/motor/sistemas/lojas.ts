@@ -6,6 +6,7 @@
  */
 import { fatorDePrecoDaEpoca, marcaExisteNoAno, motivoSemCoisa } from '../eras/base/coisas';
 import { precoDaCategoriaNaEpoca } from '../eras/base/economia';
+import { itemDeEstiloAVenda } from '../eras/base/moda';
 import { temAcesso } from '../eras/base/contexto';
 import type { Vida } from '../tipos';
 import { economiaLocal, municipio, nivelDeOferta } from '../dados/lugares';
@@ -113,6 +114,7 @@ export function ofertasDaLoja(v: Vida, lojaId: string): Oferta[] {
     for (const p of produtosDaCategoria(cat)) {
       if (cat === 'livros') { if (e.faixas.includes(1) || e.faixas.includes(2)) out.push({ produto: p, preco: precoNaLoja(v, p, undefined, lojaId) }); continue; }
       if (p.tipo === 'coisa' && motivoSemCoisa(v, p.id)) continue; // ERAS HISTÓRICAS: fora da vitrine no ano
+      if (p.tipo === 'item' && !itemDeEstiloAVenda(v, p.id)) continue; // ERAS v2: a moda do ano (e as peças da época só na vida histórica)
       const marcas = MARCAS.filter(m => marcaExisteNoAno(v, m.id) && e.faixas.includes(m.faixa) && marcaFaz(m, p, cat) && (e.tipo === 'online' ? (m.online ? lojaId === 'aliexpress' || lojaId === 'amazon' : true) : !m.online && (!m.mercados || m.mercados.includes(mer))));
       for (const m of marcas) out.push({ produto: p, marca: m.id, preco: precoNaLoja(v, p, m.id, lojaId), importado: e.tipo === 'online' && (m.online || (!!m.mercados && !m.mercados.includes(mer))) });
     }

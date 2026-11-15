@@ -9,6 +9,7 @@
  * só silhueta e cor, que é o que se lê numa miniatura.
  */
 
+import { roupaDaDecada } from '../eras/modaDaDecada';
 import { PiercingDoUmbigo } from './piercings';
 import { CabeloDeCostas } from './identidade13';
 import { memo, useId, type ReactElement, type ReactNode } from 'react';
@@ -278,6 +279,8 @@ function Estampa({ id, tipo, cor, cor2 }: { id: string; tipo: string; cor: strin
       {tipo === 'chita' && <><circle cx={4} cy={4} r={2.8} fill={cor2} /><circle cx={4} cy={4} r={1.1} fill="#1d4fa3" /><circle cx={11} cy={11} r={2} fill="#f4f1ea" /><path d="M 9 4 q 2 -2 4 0" stroke="#2f7a3c" strokeWidth={0.9} fill="none" /></>}
       {tipo === 'wax' && <><circle cx={4.5} cy={4.5} r={3.2} fill={cor2} /><circle cx={4.5} cy={4.5} r={1.6} fill="#f2c200" /><path d={`M 0 ${W} L ${W / 2} ${W - 2} L ${W} ${W}`} fill="#7a2d1a" /></>}
       {tipo === 'tachas' && <circle cx={W / 2} cy={W / 2} r={0.7} fill="#d0d4d8" />}
+      {/* ERAS v2: a estampa geométrica dos anos 1980–1990 (triângulo, ziguezague, ponto). */}
+      {tipo === 'geometrica' && <><path d={`M 1 ${W - 1} L 3.5 1.5 L 6 ${W - 1} Z`} fill={cor2} /><path d={`M 0 3 l 2 -2 l 2 2 l 2 -2 l 2 2 l 1 -1`} stroke="#2bd4e6" strokeWidth={0.7} fill="none" transform={`translate(0 ${W / 2})`} /><circle cx={W - 1.5} cy={1.8} r={0.9} fill="#f2c200" /></>}
     </pattern>
   );
 }
@@ -314,7 +317,7 @@ function preenchimento(p: { cor?: unknown; estampa?: string; material?: string }
   // VIDA 17: sem estampa, o tecido (o padrão do material, definido junto das estampas).
   if (!p.estampa && p.material && detalhe) return `url(#${idEstampa}-mat)`;
   if (p.estampa === 'time') return camisaListrada(cor) ? `url(#${idEstampa})` : cor;
-  return detalhe && p.estampa && ['listras', 'xadrez', 'floral', 'chita', 'wax', 'tachas'].includes(p.estampa) ? `url(#${idEstampa})` : cor;
+  return detalhe && p.estampa && ['listras', 'xadrez', 'floral', 'chita', 'wax', 'tachas', 'geometrica'].includes(p.estampa) ? `url(#${idEstampa})` : cor;
 }
 
 /**
@@ -394,7 +397,9 @@ function Cima({ g, p, ide, detalhe, pele }: { g: Geo; p: P<'cima'>; ide: string;
       {p.barra === 'reta' && detalhe && p.forma !== 'regata' && !curta && <path d={`M ${lado(g, -1, g.quadril + folga * 0.9)} ${ate - 1.4} L ${lado(g, 1, g.quadril + folga * 0.9)} ${ate - 1.4}`} stroke={esc} strokeWidth={0.35} strokeDasharray="1 0.7" opacity={0.7} />}
       {p.bolsosPeito && ([-1, 1] as const).map(s => <g key={`bp${s}`}><rect x={lado(g, s, g.peito * 0.45) - 3.4} y={g.topo + 13} width={6.8} height={6.4} rx={0.6} fill="none" stroke={esc} strokeWidth={0.5} /><path d={`M ${lado(g, s, g.peito * 0.45) - 3.6} ${g.topo + 13} h 7.2 l -0.4 2.4 h -6.4 Z`} fill={sombraDe(cor, 0.08)} stroke={esc} strokeWidth={0.4} /></g>)}
       {/* A gola */}
-      {p.gola === 'colarinho' && <path d={`M ${lado(g, -1, g.pesc + 1.6)} ${g.topo - 1.5} L ${g.cx - 1} ${g.topo + 7} L ${lado(g, -1, 1)} ${g.topo} Z M ${lado(g, 1, g.pesc + 1.6)} ${g.topo - 1.5} L ${g.cx + 1} ${g.topo + 7} L ${lado(g, 1, 1)} ${g.topo} Z`} fill={misturar(cor, '#ffffff', 0.15)} stroke={esc} strokeWidth={0.5} />}
+      {p.gola === 'colarinho' && !p.golao && <path d={`M ${lado(g, -1, g.pesc + 1.6)} ${g.topo - 1.5} L ${g.cx - 1} ${g.topo + 7} L ${lado(g, -1, 1)} ${g.topo} Z M ${lado(g, 1, g.pesc + 1.6)} ${g.topo - 1.5} L ${g.cx + 1} ${g.topo + 7} L ${lado(g, 1, 1)} ${g.topo} Z`} fill={misturar(cor, '#ffffff', 0.15)} stroke={esc} strokeWidth={0.5} />}
+      {/* ERAS v2: o golão dos anos 1970 — as pontas do colarinho descem compridas, abertas sobre o peito. */}
+      {p.gola === 'colarinho' && p.golao && <path d={`M ${lado(g, -1, g.pesc + 2.2)} ${g.topo - 1.5} L ${lado(g, -1, g.pesc + 6)} ${g.topo + 15} L ${g.cx - 0.6} ${g.topo + 6} Z M ${lado(g, 1, g.pesc + 2.2)} ${g.topo - 1.5} L ${lado(g, 1, g.pesc + 6)} ${g.topo + 15} L ${g.cx + 0.6} ${g.topo + 6} Z`} fill={p.cor2 ?? misturar(cor, '#ffffff', 0.35)} stroke={esc} strokeWidth={0.5} data-golao />}
       {p.gola === 'polo' && <path d={`M ${lado(g, -1, g.pesc + 2)} ${g.topo - 1} L ${g.cx - 1.4} ${g.topo + 5} L ${g.cx} ${g.topo + 2} L ${g.cx + 1.4} ${g.topo + 5} L ${lado(g, 1, g.pesc + 2)} ${g.topo - 1}`} fill={misturar(cor, '#ffffff', 0.1)} stroke={esc} strokeWidth={0.6} />}
       {p.gola === 'v' && <path d={`M ${lado(g, -1, g.pesc + 0.6)} ${g.topo} L ${g.cx} ${g.topo + 10} L ${lado(g, 1, g.pesc + 0.6)} ${g.topo}`} fill={pele} stroke={esc} strokeWidth={0.6} />}
       {(p.gola === 'redonda' || p.gola === 'canoa') && p.forma !== 'regata' && <path d={`M ${lado(g, -1, g.pesc + (p.gola === 'canoa' ? 4 : 0.8))} ${g.topo} Q ${g.cx} ${g.topo + (p.gola === 'canoa' ? 4 : 5.5)} ${lado(g, 1, g.pesc + (p.gola === 'canoa' ? 4 : 0.8))} ${g.topo}`} fill={pele} stroke={esc} strokeWidth={0.8} />}
@@ -446,14 +451,18 @@ function Baixo({ g, p, ide, detalhe, pele }: { g: Geo; p: P<'baixo'>; ide: strin
       </g>
     );
   }
-  const ate = p.forma === 'short' ? g.yVirilha + 8 : p.forma === 'bermuda' ? g.yJoelho - 4 : p.corte === 'bombacha' ? g.yTorn - 6 : g.yTorn;
-  const larga = p.corte === 'larga' ? 1.3 : p.corte === 'bombacha' ? 1.55 : p.corte === 'justa' ? 0.86 : 1.06;
-  const barra = p.corte === 'bombacha' ? g.tornozelo + 0.8 : p.forma === 'legging' ? g.tornozelo + 0.1 : undefined;
+  // ERAS v2: a boca de sino (justa até o joelho, abrindo até cobrir o sapato), a cenoura (larga no quadril, afunilando),
+  // o baggy (largo até a barra, que embola sobre o tênis).
+  const ate = p.forma === 'short' ? g.yVirilha + 8 : p.forma === 'bermuda' ? g.yJoelho - 4 : p.corte === 'bombacha' ? g.yTorn - 6 : p.corte === 'flare' || p.corte === 'baggy' ? g.yTorn + 2.5 : g.yTorn;
+  const larga = p.corte === 'larga' ? 1.3 : p.corte === 'bombacha' ? 1.55 : p.corte === 'justa' ? 0.86 : p.corte === 'flare' ? 0.82 : p.corte === 'cenoura' ? 1.75 : p.corte === 'baggy' ? 1.8 : 1.06;
+  const barra = p.corte === 'bombacha' ? g.tornozelo + 0.8 : p.forma === 'legging' ? g.tornozelo + 0.1 : p.corte === 'flare' ? (g.tornozelo + 1) * 3.3 : p.corte === 'cenoura' ? g.tornozelo + 0.5 : p.corte === 'baggy' ? (g.tornozelo + 1) * 2.3 : undefined;
+  const cos = p.cos === 'alto' ? -4.5 : p.cos === 'baixo' ? 3 : 0;
   return (
     <g data-peca={`${p.forma}_${p.corte}`} className="figura__baixo">
-      <path d={`M ${lado(g, -1, g.cintura + 0.8)} ${g.yCint} L ${lado(g, 1, g.cintura + 0.8)} ${g.yCint} L ${lado(g, 1, g.quadril + 1)} ${g.yQuad} L ${lado(g, -1, g.quadril + 1)} ${g.yQuad} Z`} fill={fill} />
-      {([-1, 1] as const).map(s => <path key={s} d={perna(g, s, 1, ate, larga, barra)} fill={fill} stroke={esc} strokeWidth={0.5} />)}
-      <path d={`M ${lado(g, -1, g.cintura + 0.8)} ${g.yCint + 2} L ${lado(g, 1, g.cintura + 0.8)} ${g.yCint + 2}`} stroke={esc} strokeWidth={1} />
+      <path d={`M ${lado(g, -1, g.cintura + 0.8 - cos * 0.12)} ${g.yCint + cos} L ${lado(g, 1, g.cintura + 0.8 - cos * 0.12)} ${g.yCint + cos} L ${lado(g, 1, g.quadril + 1)} ${g.yQuad} L ${lado(g, -1, g.quadril + 1)} ${g.yQuad} Z`} fill={fill} />
+      {([-1, 1] as const).map(s => <path key={s} d={perna(g, s, p.corte === 'cenoura' || p.corte === 'baggy' ? 3.2 : 1, ate, larga, barra)} fill={fill} stroke={esc} strokeWidth={0.5} />)}
+      <path d={`M ${lado(g, -1, g.cintura + 0.8 - cos * 0.12)} ${g.yCint + 2 + cos} L ${lado(g, 1, g.cintura + 0.8 - cos * 0.12)} ${g.yCint + 2 + cos}`} stroke={esc} strokeWidth={cos < 0 ? 1.6 : 1} data-cos={p.cos} />
+      {p.estribo && ([-1, 1] as const).map(s => <path key={`es${s}`} d={`M ${lado(g, s, g.quadril * 0.42 - g.tornozelo)} ${g.yTorn} q ${s * g.tornozelo} 4 ${s * g.tornozelo * 2} 0`} stroke={fill.startsWith('url') ? esc : fill} strokeWidth={1.1} fill="none" data-estribo />)}
       {detalhe && p.costura && <>
         {([-1, 1] as const).map(s => <path key={s} d={`M ${lado(g, s, g.cintura - 5)} ${g.yCint + 3} Q ${lado(g, s, g.cintura - 1)} ${g.yCint + 10} ${lado(g, s, g.quadril)} ${g.yCint + 9}`} fill="none" stroke={p.costura} strokeWidth={0.5} />)}
         <path d={`M ${g.cx} ${g.yCint + 3} L ${g.cx} ${g.yVirilha - 2}`} stroke={p.costura} strokeWidth={0.5} />
@@ -548,7 +557,7 @@ function Casaco({ g, p, detalhe, gravata, ide }: { g: Geo; p: P<'casaco'>; detal
   // VIDA 18: a modelagem — o blazer acinturado marca a cintura; o trespassado cruza a frente (abre menos); o anoraque é largo.
   const cint = p.modelo === 'acinturado' ? 0.6 : p.modelo === 'anoraque' ? 3.6 : p.modelo === 'trespassado' ? 1.4 : 2;
   const lado_ = (s: 1 | -1) => {
-    const o = g.ombro + 1.8, q = g.quadril + 2.4 + (p.comprimento === 'joelho' ? (p.modelo === 'reto' ? 3 : 4) : 0) + (p.modelo === 'anoraque' ? 1.6 : 0);
+    const o = g.ombro + (p.ombreira ? 4.2 : 1.8), q = g.quadril + 2.4 + (p.comprimento === 'joelho' ? (p.modelo === 'reto' ? 3 : 4) : 0) + (p.modelo === 'anoraque' ? 1.6 : 0);
     const abre = p.modelo === 'trespassado' ? -1.8 : p.forma === 'jaqueta' || p.forma === 'corta_vento' ? 2.2 : 3.4;
     return `M ${lado(g, s, g.pesc + 1.4)} ${g.topo - 1} C ${lado(g, s, o * 0.7)} ${g.topo - 0.5} ${lado(g, s, o)} ${g.topo + 1.5} ${lado(g, s, o)} ${g.topo + 6}
       L ${lado(g, s, g.peito + 1.8)} ${g.topo + 18} C ${lado(g, s, g.peito + 1.4)} ${g.yCint - 10} ${lado(g, s, g.cintura + g.barriga + cint)} ${g.yCint - 4} ${lado(g, s, g.cintura + g.barriga * 0.6 + cint)} ${g.yCint}
@@ -708,6 +717,9 @@ export const Figura = memo(function Figura({ visual, genero, idade, semente = 'e
   // Sem nada comprado: a roupa de sempre (a camiseta numa cor da semente, a calça, o tênis — a criança, bermuda).
   let h = 0;
   for (let k = 0; k < semente.length; k++) h = (h * 31 + semente.charCodeAt(k)) >>> 0;
+  // ERAS v2: numa vida histórica, a roupa de todo dia da década (`ui/eras/modaDaDecada`).
+  const daDecada = !conj.inteira ? roupaDaDecada(h, idade) : undefined;
+  if (daDecada) { if (!conj.cima) conj.cima = daDecada.cima; if (!conj.baixo) conj.baixo = daDecada.baixo; if (!conj.pes) conj.pes = daDecada.pes; }
   if (!conj.inteira && !conj.cima) conj.cima = { parte: 'cima', forma: 'camiseta', cor: PADRAO_CIMA[h % PADRAO_CIMA.length], manga: 'curta', gola: 'redonda' };
   if (!conj.inteira && !conj.baixo) conj.baixo = idade < 12 ? { parte: 'baixo', forma: 'bermuda', corte: 'reta', cor: ['#3d5a80', '#5d6b4f', '#7a6248'][h % 3] } : { parte: 'baixo', forma: 'calca', corte: 'reta', cor: ['#3d5a80', '#2b2f36', '#5b6470'][h % 3], bolsos: true, costura: h % 3 === 0 ? '#c99a4a' : undefined };
   if (!conj.pes) conj.pes = { parte: 'pes', forma: idade >= 70 ? 'sapato' : 'tenis', cor: idade >= 70 ? '#3a2a20' : ['#f4f4f2', '#2b2f36', '#7d8590'][h % 3], sola: idade >= 70 ? '#1b1515' : '#f4f4f2' };

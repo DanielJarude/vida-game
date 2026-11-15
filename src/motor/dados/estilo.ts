@@ -12,6 +12,7 @@ import { BRINCOS_13 } from './piercings13';
 import { JOIAS20 } from '../dados20/joias20';
 import { ITENS_ESTILO_21 } from '../dados21/estilo/estilo21';
 import { ITENS_ESTILO_22 } from '../dados22/estilo/estilo22';
+import { ITENS_ESTILO_ERAS } from '../eras/base/moda';
 import { BARBAS_13, BARBAS_COM_BIGODE_13, CORES_TINTA_13, CORTES_13, NOME_COR_13 } from './aparencia13';
 
 /** Cortes de cabelo (o retrato desenha todos). Nenhum é de um gênero só. */
@@ -320,7 +321,9 @@ export const ITENS_ESTILO: readonly ItemEstilo[] = [
   // VIDA 21: o guarda-roupa que cresceu (`dados21/estilo/estilo21`): roupas, calçados, relógios, bolsas, uniformes e luxo.
   ...ITENS_ESTILO_21,
   // VIDA 22: a família das peças básicas (cada uma com construção própria).
-  ...ITENS_ESTILO_22
+  ...ITENS_ESTILO_22,
+  // ERAS v2: as peças da época (à venda só numa vida histórica, no período delas: `eras/base/moda`).
+  ...ITENS_ESTILO_ERAS
 ];
 
 /**

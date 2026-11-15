@@ -49,6 +49,7 @@ import { chaveDaFachada, corConcordada, corDoVeiculo, fachadaDe, variantesDaCois
 import { animal, palavraDoBicho } from '../../../motor/dados/animais';
 import { CATEGORIAS_DA_LOJA, catalogoDeVeiculos, ofertasDePets, type OfertaDePet } from '../../../motor/sistemas/mercado';
 import { BALCOES, ESTILOS, ITENS_ESTILO, type CategoriaItem } from '../../../motor/dados/estilo';
+import { itemDeEstiloAVenda } from '../../../motor/eras/base/moda';
 import { precoDoItem, temItem } from '../../../motor/sistemas/estilo';
 
 const capitalizar = (x: string) => x.charAt(0).toUpperCase() + x.slice(1);
@@ -286,7 +287,7 @@ function LojaDeEstilo({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }
         <section key={g.cat} className="loja-estilo__grupo" aria-label={g.titulo}>
           <h3 className="subtitulo">{g.titulo}</h3>
           <ul className="ofertas">
-            {ITENS_ESTILO.filter(x => x.categoria === g.cat && doEstilo(x)).map(x => {
+            {ITENS_ESTILO.filter(x => x.categoria === g.cat && doEstilo(x) && (itemDeEstiloAVenda(vida, x.id) || temItem(vida, x.id))).map(x => {
               const tem = temItem(vida, x.id);
               return (
                 <li key={x.id} className="oferta oferta--estilo">

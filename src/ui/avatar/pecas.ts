@@ -11,8 +11,9 @@
 import { pecaDaJoia20, type PecaJoia20 } from './joias20';
 import { PECAS_21 } from './pecas21';
 import { PECAS_22 } from './pecas22';
+import { PECAS_ERAS } from '../eras/pecasEras';
 
-export type Estampa = 'listras' | 'xadrez' | 'floral' | 'wax' | 'chita' | 'banda' | 'time' | 'logo' | 'tachas';
+export type Estampa = 'listras' | 'xadrez' | 'floral' | 'wax' | 'chita' | 'banda' | 'time' | 'logo' | 'tachas' | 'geometrica';
 export type Manga = 'sem' | 'curta' | 'longa';
 export type Gola = 'redonda' | 'v' | 'colarinho' | 'capuz' | 'polo' | 'canoa' | 'alta';
 
@@ -45,10 +46,10 @@ export interface ModelagemCasaco { modelo?: 'perfecto' | 'trucker' | 'acinturado
 type Cor = string | string[];
 
 export type Peca =
-  | { parte: 'cima'; forma: 'camiseta' | 'regata' | 'camisa' | 'moletom' | 'bata' | 'polo' | 'sueter' | 'blusa' | 'agasalho'; cor: Cor; cor2?: string; estampa?: Estampa; manga: Manga; gola: Gola; folga?: number; bolso?: boolean; botoes?: boolean; manga34?: boolean } & ModelagemCima & Acabamento
-  | { parte: 'baixo'; forma: 'calca' | 'bermuda' | 'saia' | 'short' | 'legging'; corte: 'reta' | 'larga' | 'justa' | 'bombacha' | 'midi' | 'curta' | 'lapis'; cor: Cor; cor2?: string; estampa?: Estampa; bolsos?: boolean; vinco?: boolean; costura?: string; listra?: string; pregas?: boolean; cordao?: boolean; passadores?: boolean; fendaLateral?: boolean; /** VIDA 22: a barra italiana (dobrada), o rasgado do jeans. */ barraDobrada?: boolean; rasgado?: boolean } & Acabamento
+  | { parte: 'cima'; forma: 'camiseta' | 'regata' | 'camisa' | 'moletom' | 'bata' | 'polo' | 'sueter' | 'blusa' | 'agasalho'; cor: Cor; cor2?: string; estampa?: Estampa; manga: Manga; gola: Gola; folga?: number; bolso?: boolean; botoes?: boolean; manga34?: boolean; /** ERAS v2: o golão de pontas compridas (anos 1970). */ golao?: boolean } & ModelagemCima & Acabamento
+  | { parte: 'baixo'; forma: 'calca' | 'bermuda' | 'saia' | 'short' | 'legging'; corte: 'reta' | 'larga' | 'justa' | 'bombacha' | 'midi' | 'curta' | 'lapis' | 'flare' | 'cenoura' | 'baggy'; cor: Cor; cor2?: string; estampa?: Estampa; bolsos?: boolean; vinco?: boolean; costura?: string; listra?: string; pregas?: boolean; cordao?: boolean; passadores?: boolean; fendaLateral?: boolean; /** VIDA 22: a barra italiana (dobrada), o rasgado do jeans. */ barraDobrada?: boolean; rasgado?: boolean; /** ERAS v2: o cós alto (anos 1980), o baixo (anos 2000), o pezinho do fuseau. */ cos?: 'alto' | 'baixo'; estribo?: boolean } & Acabamento
   | { parte: 'inteira'; forma: 'vestido' | 'macacao' | 'terno'; comprimento: 'curto' | 'joelho' | 'midi' | 'longo' | 'calca'; cor: Cor; cor2?: string; estampa?: Estampa; manga: Manga; gola: Gola; cinto?: string; modelo?: ModeloDeVestido; fenda?: boolean; /** VIDA 22 (terno): o paletó trespassado, a lapela de bico, o lenço no bolso, o colete. */ trespassado?: boolean; lapelaBico?: boolean; lenco?: string; colete?: boolean } & Acabamento
-  | { parte: 'casaco'; forma: 'jaqueta' | 'blazer' | 'sobretudo' | 'corta_vento' | 'casaco' | 'jaqueta_jeans'; comprimento: 'cintura' | 'quadril' | 'joelho'; cor: Cor; cor2?: string; ziper?: boolean; lapela?: boolean; gola?: 'alta' | 'pelo' | 'camisa'; /** VIDA 22: as faixas de corrida, a ribana (gola e barra da bomber), o bolso de manga, a lapela de bico. */ faixas?: boolean; ribana?: boolean; bolsoManga?: boolean; lapelaBico?: boolean } & ModelagemCasaco & Acabamento
+  | { parte: 'casaco'; forma: 'jaqueta' | 'blazer' | 'sobretudo' | 'corta_vento' | 'casaco' | 'jaqueta_jeans'; comprimento: 'cintura' | 'quadril' | 'joelho'; cor: Cor; cor2?: string; ziper?: boolean; lapela?: boolean; gola?: 'alta' | 'pelo' | 'camisa'; /** VIDA 22: as faixas de corrida, a ribana (gola e barra da bomber), o bolso de manga, a lapela de bico. */ faixas?: boolean; ribana?: boolean; bolsoManga?: boolean; lapelaBico?: boolean; /** ERAS v2: a ombreira (o ombro quadrado dos anos 1980). */ ombreira?: boolean } & ModelagemCasaco & Acabamento
   | { parte: 'pes'; forma: 'tenis' | 'tenis_corrida' | 'tenis_cano' | 'tenis_lona' | 'sapato' | 'coturno' | 'chinelo' | 'botina' | 'salto' | 'sandalia' | 'sapatilha' | 'mocassim'; cor: Cor; sola: string; detalhe?: string }
   | { parte: 'pulso'; forma: 'analogico' | 'digital' | 'smart'; pulseira: string; caixa: string; mostrador: string }
   | { parte: 'pulseira'; cor: string; grossa?: boolean; contas?: string[] }
@@ -204,7 +205,9 @@ export const PECAS: Record<string, Peca | Conjunto> = {
   // VIDA 21: as peças novas (`pecas21`).
   ...PECAS_21,
   // VIDA 22: as básicas novas (`pecas22`).
-  ...PECAS_22
+  ...PECAS_22,
+  // ERAS v2: as peças da época (`motor/eras/base/moda`).
+  ...PECAS_ERAS
 };
 
 const ehPeca = (x: Peca | Conjunto): x is Peca => 'parte' in x;
