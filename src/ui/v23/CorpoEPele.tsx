@@ -105,6 +105,7 @@ export function CorpoEPele({ vida, agir }: { vida: Vida; agir: (a: Acao) => bool
           <Escolha rotulo="Ângulo do corpo" valor={vista} aoMudar={setVista} opcoes={[{ id: 'frente', rotulo: 'De frente' }, { id: 'costas', rotulo: 'De costas' }]} />
           <Escolha rotulo="Com ou sem roupa" valor={pele} aoMudar={setPele} opcoes={[{ id: 'vestido', rotulo: 'Com a roupa' }, { id: 'pele', rotulo: 'Só a pele' }]} />
           <span className="nota">{descr === 'proporções médias' ? 'Proporções médias' : descr}</span>
+          {!vis.corpo23 && 'corpo23' in mudanca && <span className="nota" data-c23="altura">Ao confirmar, a figura passa a ter a sua altura de verdade ({estaturaEmPalavras(cm)}) — por isso "como ficaria" pode sair mais alto ou mais baixo.</span>}
         </div>
 
         <div className="c23__escolhas">

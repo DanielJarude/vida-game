@@ -31,7 +31,13 @@ async function abrirCompras() {
 async function provar(loja, busca, nome) {
   await abrirCompras();
   await p.locator('main button', { hasText: loja }).locator('visible=true').first().click(); await p.waitForTimeout(1200);
-  if (busca) { const i = p.locator('.loja-vida__busca input, input[type=search]').locator('visible=true'); if (await i.count()) { await i.first().fill(busca); await p.waitForTimeout(700); } }
+  if (busca) {
+    // A loja especializada abre a lista das marcas: entra na primeira e busca o produto.
+    let i = p.locator('.loja-vida__busca input, input[type=search]').locator('visible=true');
+    if (!(await i.count())) { const m = p.locator('main .vitrine, main [class*=loja] button').locator('visible=true'); if (await m.count()) { await m.first().click(); await p.waitForTimeout(900); } i = p.locator('.loja-vida__busca input, input[type=search]').locator('visible=true'); }
+    rel.passos.push({ nome: `${nome}-busca`, campos: await i.count() });
+    if (await i.count()) { await i.last().fill(busca); await p.waitForTimeout(900); }
+  }
   const exp = p.getByRole('button', { name: 'Experimentar' }).locator('visible=true');
   if (!(await exp.count())) { rel.passos.push({ nome, erro: 'nenhum Experimentar' }); return; }
   await exp.first().click(); await p.waitForTimeout(1000);
@@ -41,7 +47,7 @@ async function provar(loja, busca, nome) {
   rel.passos.push({ nome, figuras: await medir('.provador svg.figura'), semRolagem: await semRolagem() });
 }
 await provar(/Loja de roupas/, '', 'provador-roupa');
-await provar(/Joalheria/, 'argola', 'provador-brinco');
+await provar(/Joalheria/, 'Argola grande fina', 'provador-brinco');
 // 2. A Aparência e o painel novo.
 await entrar();
 await area('Você');
@@ -62,10 +68,11 @@ if (await c23.count()) {
   await c23.getByRole('radio', { name: 'Só a pele' }).click(); await p.waitForTimeout(300);
   await c23.screenshot({ path: `${OUT}/${TAG}-marcas.png` });
   await c23.getByRole('button', { name: 'Confirmar' }).click(); await p.waitForTimeout(700);
-  rel.passos.push({ nome: 'confirmou', salvo: await p.evaluate(() => { const v = JSON.parse(localStorage.getItem('VIDA_GAME_SAVE_V1') ?? '{}'); return { corpo23: v.eu?.visual?.corpo23, marcas: v.eu?.visual?.marcas23?.length }; }) });
-  // Recarregar: a escolha continua.
-  await p.reload(); await p.waitForTimeout(600); await p.getByRole('button', { name: /Continuar a vida/ }).click(); await p.waitForTimeout(800);
-  rel.passos.push({ nome: 'depois-de-recarregar', salvo: await p.evaluate(() => { const v = JSON.parse(localStorage.getItem('VIDA_GAME_SAVE_V1') ?? '{}'); return { corpo23: v.eu?.visual?.corpo23, marcas: v.eu?.visual?.marcas23?.length }; }) });
+  const naTela = async () => { await area('Você'); const t = p.getByRole('tab', { name: /Aparência/ }).locator('visible=true'); if (await t.count()) { await t.first().click(); await p.waitForTimeout(900); } return p.locator('.aparencia__previa svg.figura').first().evaluate(e => ({ constituicao: e.getAttribute('data-constituicao'), marcas: e.getAttribute('data-marcas'), vb: e.getAttribute('viewBox') })); };
+  rel.passos.push({ nome: 'confirmou', naTela: await naTela() });
+  // Recarregar a página (o save vem do IndexedDB): a escolha continua.
+  await entrar();
+  rel.passos.push({ nome: 'depois-de-recarregar', naTela: await naTela() });
 }
 rel.erros = erros;
 writeFileSync(`${OUT}/${TAG}.json`, JSON.stringify(rel, null, 1));

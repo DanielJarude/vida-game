@@ -186,12 +186,14 @@ function Provador({ vida, itens, tirar, aoFechar }: { vida: Vida; itens: ItemDoP
     const visual = { ...visualComPecaDoRosto(vida.eu.visual, unico!.id), ...(unico!.categoria !== 'oculos' && vida.eu.visual.oculos ? { oculos: vida.eu.visual.oculos, modeloOculos: vida.eu.visual.modeloOculos } : {}), ...(unico!.categoria !== 'chapeu' && vida.eu.visual.chapeu ? { chapeu: vida.eu.visual.chapeu, modeloChapeu: vida.eu.visual.modeloChapeu } : {}) };
     // Brinco e piercing: a lupa no lugar da joia (a orelha, o nariz, a boca, a sobrancelha) — a peça do catálogo, de perto, no seu rosto.
     const zona = unico!.lugar === 'orelha' ? 'orelha' : unico!.piercing ? zonaDoFuro(unico!.lugar!) : undefined;
+    // A figura inteira é a pessoa como ela é (o cabelo dela); só a lupa prende o cabelo atrás da orelha para a joia aparecer.
+    const inteira = { ...visual, cabelo: vida.eu.visual.cabelo };
     return (
       <section className="provador provador22" aria-label={`Provador: ${unico!.nome}`}>
         <div className="provador22__figuras">
-          <figure className="provador22__fig" data-provador="com"><Figura visual={visual} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} corpo={corpo} pecas={meus} tatuagens={tatuagensNaFigura(vida)} largura={L} semFundo rotulo={`Você com ${unico!.nome.toLowerCase()}`} /><figcaption>Com a peça</figcaption></figure>
-          {zona && zona !== 'umbigo' && <figure className="provador22__fig" data-provador="perto"><Figura visual={visual} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} corpo={corpo} pecas={[]} largura={L} foco={focoDaJoiaNoRosto(zona, i)} rotulo={`${unico!.nome}, de perto`} /><figcaption>De perto</figcaption></figure>}
+          <figure className="provador22__fig" data-provador="com"><Figura visual={inteira} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} corpo={corpo} pecas={meus} tatuagens={tatuagensNaFigura(vida)} largura={L} semFundo rotulo={`Você com ${unico!.nome.toLowerCase()}`} /><figcaption>Com a peça</figcaption></figure>
           <figure className="provador22__fig provador22__fig--agora" data-provador="agora"><Figura visual={vida.eu.visual} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} corpo={corpo} pecas={meus} tatuagens={tatuagensNaFigura(vida)} largura={L} semFundo rotulo="Você como está agora" /><figcaption>Como você está</figcaption></figure>
+          {zona && zona !== 'umbigo' && <figure className="provador22__fig" data-provador="perto"><Figura visual={visual} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} corpo={corpo} pecas={[]} largura={L} foco={focoDaJoiaNoRosto(zona, i)} rotulo={`${unico!.nome}, de perto`} /><figcaption>De perto</figcaption></figure>}
         </div>
         <div className="provador__texto"><p className="provador__titulo">No provador: {unico!.nome.toLowerCase()}</p><button type="button" className="botao botao--discreto" onClick={aoFechar}>Sair do provador</button></div>
       </section>
