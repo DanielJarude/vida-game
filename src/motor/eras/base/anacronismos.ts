@@ -107,7 +107,7 @@ export const TERMOS_DATADOS: readonly { re: RegExp; desde: number; nome: string 
   { re: /\bhome office\b/i, desde: 2000, nome: 'home office' },
   { re: /\bcrush\b/i, desde: 2012, nome: 'crush' },
   { re: /\bchamadas? de vídeo\b|\bvideochamadas?\b/i, desde: 2010, nome: 'chamada de vídeo' },
-  { re: /\bgrupo da família\b/i, desde: 2014, nome: 'grupo da família' },
+  { re: /\bgrupo da família\b/i, desde: 2011, nome: 'grupo da família' },
   { re: /\bmatch\b/i, desde: 2013, nome: 'match' },
   { re: /\bpostou\b|\bpostar\b|\bpostagem|\bposts?\b/i, desde: 2004, nome: 'postar' },
   { re: /\bseguidores\b/i, desde: 2009, nome: 'seguidores' },

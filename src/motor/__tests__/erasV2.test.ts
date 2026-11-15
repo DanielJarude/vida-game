@@ -182,3 +182,39 @@ describe('anos 1970', () => {
     expect(v.era).toBeUndefined();
   });
 });
+
+describe('ERAS v2 · os parciais completados', () => {
+  it('reeleição de prefeito antes de 2000 é impedida; depois, não; presidencial antes de 1994 não existe', async () => {
+    const { regraEleitoralDaEpoca } = await import('../eras/base/leis');
+    const v = historica(1970);
+    expect(regraEleitoralDaEpoca(v, 'prefeito', 1996, true)).toMatch(/Emenda Constitucional 16\/1997/);
+    expect(regraEleitoralDaEpoca(v, 'prefeito', 2000, true)).toBeUndefined();
+    expect(regraEleitoralDaEpoca(v, 'prefeito', 1996, false)).toBeUndefined();
+    expect(regraEleitoralDaEpoca(v, 'presidente', 1990, false)).toBeDefined();
+    expect(regraEleitoralDaEpoca(nova({ semente: 5 }), 'prefeito', 1996, true)).toBeUndefined();
+  });
+  it('a vaga de emprego chega pelo meio da época', async () => {
+    const { comoAchouAVaga } = await import('../eras/base/contexto');
+    const v = historica(1960 + 20); noAno(v, 1985);
+    const textos = new Set(['caixa', 'vendedor', 'aux_adm', 'porteiro', 'garcom', 'cozinheiro'].map(id => comoAchouAVaga(v, id)));
+    for (const t of textos) expect(t).toMatch(/classificados|indicação/);
+    expect(comoAchouAVaga(nova({ semente: 6 }), 'caixa')).toBeUndefined();
+  });
+  it('a maioridade aos 21 na Linha da Vida de quem fez 18 antes de 2003', () => {
+    const v = viver(historica(1975), 22);
+    const ids = v.biografia.filter(e => e.fato?.tipo === 'era').map(e => String((e.fato!.dados as Record<string, string>).evento));
+    expect(ids).toEqual(expect.arrayContaining(['maioridade18', 'maioridade21']));
+  });
+  it('o cabelo da década existe no catálogo de cortes', async () => {
+    const { cabeloDaDecada } = await import('../eras/base/moda');
+    const { CORTES } = await import('../dados/estilo');
+    const ids = new Set(CORTES.map(c => c.id));
+    for (const a of [1975, 1985, 1995, 2005, 2015]) for (const t of ['liso', 'ondulado', 'cacheado', 'crespo']) for (const c of cabeloDaDecada(a, t)) expect(ids.has(c), `${c}`).toBe(true);
+  });
+  it('a peneira de saúde e dinheiro', () => {
+    const v = historica(1980); noAno(v, 1985);
+    expect(textoDaEpoca(v, 'Foi atendido pelo SUS.')).toBe('Foi atendido pelo INAMPS.');
+    noAno(v, 1999);
+    expect(textoDaEpoca(v, 'Chamou o SAMU.')).toBe('Chamou a ambulância.');
+  });
+});
