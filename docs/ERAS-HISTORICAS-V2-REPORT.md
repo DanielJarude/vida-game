@@ -1,0 +1,87 @@
+# VIDA · ERAS HISTÓRICAS v2 — a época no salário, na loja, no partido, na roupa e na cidade
+
+Branch `claude/eras-v2`, a partir da `main` em `89f707e` (VIDA 22 + docs). Documentos irmãos: `docs/ERAS-HISTORICAS-V1-REPORT.md`
+(a primeira versão), `docs/eras/AUDITORIA-E-PROPOSTA.md` (auditoria de retomada e arquitetura v2, no fim do arquivo) e
+`docs/eras/FONTES.md` (fontes 8–13, novas).
+
+Legenda de situação: **IV** implementado e validado · **IN** implementado, não validado · **P** parcial · **N** não
+implementado · **B** bloqueado · **D** com defeito.
+
+## 1. Estado encontrado
+
+- A v1 já estava na produção desde 13/11/2026: a branch antiga (`claude/vida-eras-historicas`, `e719fbd`) é ancestral da
+  `main` — 29 commits atrás e nada exclusivo. Nada foi reaplicado por cima da VIDA 22; a v2 continua o código da `main`.
+- Funcionando: moeda e cadeia oficial, IPCA/PIB até 2025, Plano Collor, 53 acontecimentos + Copas/Olimpíadas, 39
+  tecnologias, aparelho por época, portões de redes/namoro/lojas/coisas/veículos (5 classes)/profissões/estudos, peneira de
+  texto, painel "A época", Linha da Vida, save opcional. Testes da v1: 22/22.
+- Lacunas e defeitos achados: ver a lista curta em `docs/eras/AUDITORIA-E-PROPOSTA.md` (v2).
+
+## 2. O que foi preservado
+
+Todo o desenho da v1: o campo opcional `Vida.era`, a unidade interna em reais de hoje, a moeda só na apresentação, os
+portões de uma linha, os normalizadores idempotentes. Nenhum motor paralelo. A vida contemporânea segue igual: todo fator
+novo é 1 e todo portão novo é transparente sem `v.era` (testado).
+
+## 3. O que foi feito, por área
+
+| # | Área | Situação | O que existe agora |
+|---|---|---|---|
+| 3 | Economia: salários por profissão e época | **IV** | Nível de renda da época pela PNAD/PNAD Contínua (1992–2025, oficial) e pelo PIB per capita (1970–1991, aproximação); a posição de cada ocupação na escala (mínimo da época ↔ média ↔ prêmio de qualificação). Um só gancho em `economiaLocal` + `salarioLocal`: vale para o jogador, os pais (renda ao nascer), as pessoas do mundo e as vagas. |
+| 3 | Preços históricos | **P** | Preço relativo por grupo do IPCA (1995–2025 oficial; antes, o nível de 1995) aplicado ao mercado, aluguel, plano de saúde, escola particular, roupas, calçados, joias, móveis e eletrodomésticos. Eletrônicos: curva de adoção (v1) com piso do grupo. Veículos: preço de catálogo. **Não** há tabela de preço nominal por produto (só a cesta DIEESE). |
+| 3 | Poder de compra | **IV** | Painel: cesta básica em % do mínimo (DIEESE), renda média da época, o que custava mais/menos. Simulação de vidas inteiras: sem aperto anômalo nas coortes históricas; extrato sempre concilia. |
+| 3 | Moedas | **IV** | Cadeia v1 + cruzeiro novo → cruzeiro (15/05/1970, sem corte de zeros). Sem criação/destruição de dinheiro (testado). |
+| 4 | Partidos e eleições | **P** | 60 partidos de 1966 a 2025 com linhagem; filiação só a partido existente; migração anual da filiação na fusão/mudança de nome, com texto. "Ficha Limpa" só a partir de 2010. **Não** adaptado: calendário eleitoral e regras de 1982–1997 (reeleição, eleição indireta) — quem nasce a partir de 1970 só se candidata depois de 1988 (vereador) e as regras de mandato do jogo são as de hoje. Outros países: partidos genéricos, como antes. |
+| 5 | Veículos | **IV** | +14 versões da época com desenho próprio (importados 1992–2014, Pajero, Blazer, Hilux, Ranger, CBX 750 "Sete Galo", Fat Boy Evolution, Caloi 10, Monark Barra Circular); ~100 modelos atuais só a partir do ano da geração; bicicleta elétrica só a partir de 2016. Barcos/aviões: os modelos atuais com data; sem versões antigas. |
+| 6 | Moda e aparência | **P** | 13 peças da época com silhueta própria (3 cortes novos, ombreira, golão, estampa geométrica, pezinho do fuseau), à venda só no período; 17 peças de hoje com data; a roupa de todo dia de cada década na Figura (todas as pessoas desenhadas). **Não**: cortes de cabelo, maquiagem e óculos por década. |
+| 7 | Textos | **IV** | Peneira também nas cenas de decisão; detector de termos datados (64); auditoria por simulação: 38.487 textos de 64 vidas (coortes 1970–2008) → 4 anacronismos (0,01%), todos corrigidos. Correção na origem dos casos estruturais (profissão inexistente dos pais; cena do grupo da turma). |
+| 8 | Cidades | **P** | Metrô e trens urbanos de 8 capitais por data, com efeito no transporte e lembrança local. **Não**: arquitetura, fachadas e comércio por década (visual). |
+| 9 | Comunicação | (v1) | Mantido; sem mudança nesta versão. |
+| 10 | Entretenimento | **P** | +6 lembranças dos anos 1970; o resto é o da v1. |
+| 11 | Educação e trabalho | **P** | Crédito Educativo antes do FIES; profissões inexistentes também fora do alcance dos NPCs. **Não**: busca de emprego por época (classificados → portais). |
+| 12 | Casa | **P** | +17 itens com data; geladeira de uma porta antes de 1991. **Não**: estilo de móveis por década no desenho. |
+| 13 | Saúde | **N** | Só textual (UPA → pronto-socorro). SUS/INAMPS, medicamentos e vacinas por época: não simulados. |
+| 14 | Leis | **P** | Casamento entre pessoas do mesmo gênero (STF 2011, CNJ 2013); divórcio (1977, EC 66/2010). Maioridade aos 21 até 2003: só documentada (o jogo usa 18). |
+| 15 | Bancos e pagamentos | **N** | Só o que a v1 já tinha (Pix no texto; banco no celular pela tecnologia). |
+| 16 | Esportes e acontecimentos | **IV** | +11 acontecimentos dos anos 1970, +5 aberturas de metrô, Copas de 1970–78 e Jogos de 1972–80. |
+| 17 | Relacionamentos e lazer | (v1) | Mantido. |
+| 18 | Marcas e publicidade | (v1) | Mantido (19 marcas com data). |
+| 19 | Antes de 1980 | **IV** (1970–1979) | Década de 1970 jogável. Antes de 1970: **N** (sem série de preços, moedas e acontecimentos minimamente consistentes nesta versão). |
+| 20 | Outros países | **N** | A arquitetura separa por país e só aplica os dados no Brasil; nenhum país novo. |
+| 21 | Camada central | **IV** | Um módulo por pergunta em `eras/base` (economia, partidos, moda, leis, cidades + os da v1), cada um com um gancho. |
+
+## 4. Fontes, aproximações e limitações
+
+Ver `docs/eras/FONTES.md`, seções 8–13 (cada dado com fonte, período, classe S/F/A e método). As principais aproximações:
+o prêmio de qualificação; a renda de 1970–1991 pelo PIB per capita; os preços relativos antes de 1995; o nível de preços
+antes de 1980 pelo IGP-DI; os períodos de venda de roupas e veículos; os meses marcados `aproximado` nos partidos e nos
+metrôs. A unidade de renda é o rendimento médio de quem tem rendimento (não o domiciliar per capita).
+
+## 5. Arquivos e sistemas alterados
+
+Novos: `src/motor/eras/base/{economia,economiaSeries,partidos,moda,leis,cidades}.ts`, `src/ui/eras/{pecasEras,modaDaDecada}.ts`,
+`src/motor/__tests__/erasV2.test.ts`, `scripts/sim/{economiaEras2,vidasEras2,textosEras2}.ts`,
+`scripts/playtest/{galeriaEras2Moda.tsx,erasV2.mjs,fotoHtml.mjs}`, `scripts/eras2/*.py`.
+Alterados: `eras/base/{series,moedas,contexto,coisas,veiculos,profissoes,anacronismos}`, `eras/ano`, `eras/dados/*`,
+`dados/{lugares,ocupacoes,partidos,estilo}`, `sistemas/{renda,dinheiro,lojas,coisas,politica,estilo,familia,interacoes,escola}`,
+`conteudo/motor`, `v15/eventos/acontecimentos15`, `criacao`, `ui/avatar/{Figura,pecas}`, `ui/ilustracao/{carros13,motos13,duasRodas}`,
+`ui/eras/*`, `ui/jogo/{Cidade,material/Lugares}`, `ui/telas/Jogo`, `ui/novidades`.
+
+## 6. Testes e cenários
+
+(preenchido na conclusão — ver seção 9)
+
+## 7. Compatibilidade
+
+Saves antigos e vidas contemporâneas: sem `era`, todo fator é 1 (teste `erasV2` "na vida contemporânea, nada muda"). O
+intervalo aceito pelo normalizador passou de 1980–2025 para 1970–2025 (idempotente, testado); nenhum save existente tem
+época fora disso. A filiação partidária de uma vida histórica pode mudar de chave (PFL → DEM) — a chave antiga continua
+legível em `partidoDe` (o histórico de filiações guarda as duas).
+
+## 8. Próximas etapas recomendadas
+
+1. Playtest humano de uma vida de 1975 e uma de 1990 (tom, quantidade, preços percebidos).
+2. Calendário eleitoral e regras de 1982–1997 (para vidas que começam em 1970).
+3. Cidades visuais por década (fachadas, comércio, orelhão e carros da época na rua).
+4. Saúde (INAMPS → SUS) e bancos (cheque, caderneta, caixa eletrônico, cartão) com efeito no motor.
+5. Cabelo, maquiagem e óculos por década; busca de emprego por época.
+6. Um segundo país com séries próprias (Portugal tem série de preços e salário mínimo longas).

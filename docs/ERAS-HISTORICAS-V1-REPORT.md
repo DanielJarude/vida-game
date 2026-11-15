@@ -1,5 +1,7 @@
 # VIDA · ERAS HISTÓRICAS — primeira versão jogável (protótipo)
 
+> **Atualização (15/11/2026):** a v1 foi publicada em 13/11/2026 e continuada pela **v2** (`docs/ERAS-HISTORICAS-V2-REPORT.md`): salários e preços da época, partidos no tempo, moda por década, mais veículos, leis, metrô por data e os anos 1970. Várias limitações da seção 10 abaixo foram resolvidas lá (ver a tabela da v2).
+
 Branch `claude/vida-eras-historicas` (a partir do VIDA 18 publicado, `48f8eaf`). **Não integrado à `main` nem à produção**, aguardando avaliação. Auditoria e proposta: `docs/eras/AUDITORIA-E-PROPOSTA.md`. Fontes: `docs/eras/FONTES.md`.
 
 ## 1. O que já existia e foi aproveitado

@@ -44,3 +44,46 @@ Base: VIDA 18 publicado (`9fa7d7e`, docs `48f8eaf`). Branch do protótipo: `clau
 **Pacotes**: `eras/dados/**` → `eras-dados`; `eras/**` → `motor-eras`; o módulo de moeda (dados mensais pequenos) fica na base porque `formatarDinheiro` está na base.
 
 **Fora da v1** (documentado): outros países, antes de 1980, política simulada do jogador com partidos de época, remodelagem visual das cidades, renda real por época além do salário mínimo.
+
+---
+
+# v2 · Auditoria de retomada (2026-11-15) e arquitetura
+
+## Estado encontrado
+
+- GitHub: `main` em `89f707e` (docs da VIDA 22); produção (`claude/fix-pos-rework3-playtest`) em `aa985fd` (VIDA 22).
+- A branch `claude/vida-eras-historicas` (`e719fbd`) é **ancestral** da `main` (29 commits atrás, nada exclusivo): a v1 foi
+  publicada em 13/11/2026 e está inteira na VIDA 22. A v2 parte da `main` (branch `claude/eras-v2`); nada antigo foi
+  reaplicado por cima.
+- Código v1 presente e funcionando: `src/motor/eras/` (base: séries, moedas, tecnologias, contexto, peneira, coisas,
+  veículos, profissões; `ano.ts`; dados: acontecimentos e cultura) e `src/ui/eras/`. Testes `erasHistoricas.test.ts`: 22/22.
+
+## Lista curta (antes da v2)
+
+| Situação | Itens |
+|---|---|
+| Concluído (v1) | moeda e cadeia oficial; IPCA/PIB reais até 2025; Plano Collor; 53 acontecimentos + Copas/Olimpíadas; 39 tecnologias com 4 datas; aparelho por época; portões de redes, namoro, lojas, coisas, 42 veículos de 5 classes, 14 profissões, ProUni/FIES/EAD/cotas; peneira na Linha da Vida e no celular; painel "A época"; save opcional |
+| Parcial | peneira só na Linha da Vida e nas mensagens (não nas cenas de decisão); veículos só em 5 classes; marcas: 19 |
+| Ausente | salários e preços da época (só o mínimo); política/partidos da época; moda; cidades; leis; anos 1970; outros países |
+| Com defeito | pais e pessoas do mundo podiam ter profissão inexistente no ano ("dona de loja on-line" em 1989); UPA antes de 2008; a cena do "print no grupo da turma" em 1992 (achados pela auditoria textual da v2) |
+| Sistemas posteriores à v1 (VIDA 19–22) sem portão | roupas e provador (VIDA 21–22), móveis da casa (12.8/22), classes de veículos da VIDA 21, fama/agenda (22), clubes/automobilismo (20), NPCs autônomos (19) |
+
+## Arquitetura v2 — a mesma pergunta central, mais módulos
+
+Tudo continua em `src/motor/eras/base` (pacote `eras-base`, sem importar nada de cima) e responde pela **vida em
+processamento** (`mesHistoricoCorrente`, definido ao entrar na vida): ausência de época = 1/igual/permitido.
+
+| Pergunta | Módulo | Ganchos (um ponto cada) |
+|---|---|---|
+| Quanto se ganha e quanto custa? | `economia.ts` + `economiaSeries.ts` (gerado) | `lugares.economiaLocal` (renda, aluguel), `renda.salarioLocal` (distribuição), `dinheiro.orcamento` (mercado, plano, escola), `lojas.precoNaLoja` e `coisas.precoDaCoisa` (categoria) |
+| Este partido existe? | `partidos.ts` | `politica.partidosDoPais`, `partidos.partidoDe`, `eras/ano.partidoMuda` |
+| Esta peça se vende? | `moda.ts` | `estilo.disponibilidadeComprarItem`, `lojas.ofertasDaLoja`, `Lugares.tsx`; desenho `ui/eras/pecasEras` e `modaDaDecada` → `Figura` |
+| Este veículo existe? | `veiculos.ts` (ampliado) | `mercado` (já existia) |
+| A lei permite? | `leis.ts` | `interacoes` (pedir casamento, terminar) |
+| A cidade tem metrô? | `cidades.ts` | `economiaLocal.transporte`, `Cidade.tsx` |
+| Esta frase faz sentido no ano? | `anacronismos.ts` (+ detector `TERMOS_DATADOS`) | `nucleo.escrever`, `celular15`, `conteudo/motor` (cenas), `escola` |
+| Esta profissão existe? | `profissoes.ts` (+ `ocupacaoExisteAgora`) | `ocupacoesDaClasse`, `familia` (pais e irmãos) |
+
+**Outros países**: os dados históricos ficam por país (`pais: 'BR'` na época; séries e listas nomeadas `_BR`); os portões
+só valem no Brasil (`salarioLocal` e `economiaLocal` conferem o país do município). Nenhum dado brasileiro é aplicado fora.
+Um país novo exige as suas séries, moedas, partidos, acontecimentos e tecnologias — não foi feito nesta versão.

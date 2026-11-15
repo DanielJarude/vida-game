@@ -19,7 +19,7 @@ export const PECAS_ERAS: Record<string, Peca> = {
   ep_moletom_geometrico: { parte: 'cima', forma: 'moletom', cor: ['#f2efe8', '#1b1b1d', '#2d3e5c'], cor2: '#e8358a', estampa: 'geometrica', manga: 'longa', gola: 'redonda', folga: 1.1, modelo: 'ampla', barra: 'canelada', punho: true, ombroCaido: true },
   ep_camiseta_fluor: { parte: 'cima', forma: 'camiseta', cor: ['#c8e62b', '#ff5fa2', '#ff9f1a', '#2bd4e6'], manga: 'curta', gola: 'redonda', modelo: 'caixa', barra: 'reta', folga: 1.06 },
   ep_bermuda_surf: { parte: 'baixo', forma: 'bermuda', corte: 'larga', cor: ['#1d6fa3', '#e0642b', '#2a8a6a'], cor2: '#f2d23a', estampa: 'floral', cordao: true },
-  ep_jaqueta_nailon: { parte: 'casaco', forma: 'corta_vento', comprimento: 'quadril', cor: ['#6b2d8a', '#1d4fa3', '#0f7a6b', '#c8102e'], cor2: '#f2d23a', ziper: true, punhoElastico: true, gola: 'alta' },
+  ep_jaqueta_nailon: { parte: 'casaco', forma: 'corta_vento', comprimento: 'cintura', modelo: 'reto', cor: ['#6b2d8a', '#1d4fa3', '#0f7a6b', '#c8102e'], cor2: '#f2d23a', ziper: true, punhoElastico: true, gola: 'alta' },
   ep_jeans_baggy: { parte: 'baixo', forma: 'calca', corte: 'baggy', cor: JEANS_MEDIO, bolsos: true, costura: '#c99a4a' },
   ep_camiseta_estampada90: { parte: 'cima', forma: 'camiseta', cor: ['#1d4fa3', '#f2efe8', '#2a8a6a'], cor2: '#f2c200', estampa: 'geometrica', manga: 'curta', gola: 'redonda', modelo: 'ampla', barra: 'reta', folga: 1.15, ombroCaido: true },
   ep_jeans_flare_baixa: { parte: 'baixo', forma: 'calca', corte: 'flare', cor: JEANS_MEDIO, bolsos: true, costura: '#c99a4a', cos: 'baixo' },

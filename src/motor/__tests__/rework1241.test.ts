@@ -12,6 +12,7 @@
  *   eventos     cada fase tem os seus; os da vida adulta só aparecem na trajetória certa.
  *   saves       o save antigo carrega; o novo persiste.
  */
+import { ehItemDaEpoca } from '../eras/base/moda';
 import { describe, expect, it } from 'vitest';
 import { adulto, comFilho, comParceiro } from './cenarios';
 import { disponibilidade, executar, type Acao } from '../acoes';
@@ -150,7 +151,8 @@ describe('as lojas', () => {
     for (const mun of ['sao-paulo-sp', roma()]) {
       const v = adulto(30, { municipioId: mun });
       const vendidos = new Set(lojasDaVida(v).flatMap(e => ofertasDaLoja(v, e.id).map(o => o.produto.id)));
-      for (const it of ITENS_ESTILO) expect(vendidos.has(it.id), `${it.id} em ${mun}`).toBe(true);
+      // ERAS v2: as peças da época só se vendem numa vida histórica, no período delas (`eras/base/moda`; testadas em erasV2).
+      for (const it of ITENS_ESTILO) if (!ehItemDaEpoca(it.id)) expect(vendidos.has(it.id), `${it.id} em ${mun}`).toBe(true);
     }
     expect(new Set(MARCAS.map(m => m.id)).size).toBe(MARCAS.length);
     expect(new Set(ESTABELECIMENTOS.map(e => e.id)).size).toBe(ESTABELECIMENTOS.length);

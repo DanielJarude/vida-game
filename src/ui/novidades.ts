@@ -26,6 +26,30 @@ export interface NotaDeVersao {
 
 export const NOTAS: NotaDeVersao[] = [
   {
+    versao: 'Eras 2',
+    data: '2026-11-15',
+    titulo: 'Eras históricas: a época no salário, na loja, no partido, na roupa e na cidade',
+    novidades: [
+      'Nascer nos anos 1970: cruzeiro novo e cruzeiro, o tri no México, a TV em cores, a Ponte Rio–Niterói, o metrô de São Paulo, a Lei do Divórcio, a anistia e o fim da Arena e do MDB.',
+      'Salários da época: cada profissão ganha o que se ganhava no ano (rendimento real da PNAD); perto do mínimo, bem menos que hoje nos anos 1990; com diploma, perto de hoje.',
+      'Preços da época: roupa, móvel e eletrodoméstico custavam proporcionalmente mais; a comida do mercado, o aluguel, o plano de saúde e a escola seguem o preço relativo do ano (IPCA).',
+      'A época (Você · No mundo) mostra quanto rende o salário: a cesta básica no salário mínimo, a renda média e o que custava mais ou menos que hoje.',
+      'Partidos da época: só se filia a partido que existe no mês; quem está filiado acompanha a mudança de nome ou a fusão (PFL → DEM → União Brasil, PMDB → MDB).',
+      'Moda de cada década: a calça boca de sino, a camisa de golão, o blazer de ombreira, o jeans cenoura, o fuseau, o moletom geométrico, a camiseta fluorescente, o jeans baggy, a baby look e o jeans de cintura baixa — à venda só no tempo deles. As pessoas desenhadas vestem a roupa de todo dia da década.',
+      'Veículos de cada época também entre os importados, as picapes e SUVs grandes, as motos grandes e as bicicletas; os modelos de hoje só depois de lançados.',
+      'O metrô e o trem urbano de cada capital chegam na data em que abriram; antes, o transporte é o de ônibus.'
+    ],
+    melhorias: [
+      'As cenas de decisão também falam do jeito da época (antes, só a Linha da Vida e as mensagens).',
+      'A casa da época: a geladeira de uma porta, e os móveis e aparelhos de hoje só depois de chegarem às lojas.',
+      'Antes do FIES, o Crédito Educativo. O casamento e o divórcio seguem a lei de cada ano.'
+    ],
+    correcoes: [
+      'Os pais e as pessoas do mundo não têm mais profissão que ainda não existia (loja on-line em 1989).',
+      'Sem UPA antes de 2008, sem grupo da turma no aplicativo antes do aplicativo, sem meme, podcast ou entrega por aplicativo antes do tempo.'
+    ]
+  },
+  {
     versao: '22',
     data: '2026-11-14',
     titulo: 'A casa no lugar dela, a fazenda organizada, a vida pública e roupas que não são iguais',

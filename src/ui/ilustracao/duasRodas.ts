@@ -240,7 +240,7 @@ export const MODELOS_BIKE: Record<string, PerfilBike> = {
   giant_escape: { semCesta: true }, trek_marlin: { garrafa: true }, rockrider_st100: { semDisco: true, garrafa: true },
   rad_city: { base: 'urbana', eletrica: true, semCesta: true }, gazelle_ultimate: { base: 'cruiser', eletrica: true, garrafa: true },
   // ERAS v2: a de dez marchas (estrada) e a de barra circular (passeio, sem disco).
-  ep_caloi_10: { semDisco: true, semCesta: true }, ep_monark_barra_circular: { base: 'cruiser', semDisco: true }
+  ep_caloi_10: { semDisco: true, semCesta: true }, ep_monark_barra_circular: { base: 'cruiser', semDisco: true, semCesta: true, garrafa: true }
 };
 
 export function bicicleta(forma: 'urbana' | 'estrada' | 'mtb' | 'eletrica', cor: string, versaoId?: string): Amostra {

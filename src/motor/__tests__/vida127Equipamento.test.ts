@@ -3,6 +3,7 @@
  * "em uso" TODAS as peças com o mesmo desenho do retrato (os quatro óculos escuros, as sete roupas "básicas"), e o
  * retrato mostrava a primeira do inventário; a figura de corpo inteiro, a última.
  */
+import { ehItemDaEpoca } from '../eras/base/moda';
 import { describe, expect, it } from 'vitest';
 import { adulto } from './cenarios';
 import { disponibilidade, executar, type Acao } from '../acoes';
@@ -22,7 +23,8 @@ const vestir = (v: Vida, itemId: string) => (meu(v, itemId).usando ? v : fazer(v
 function comTudo(genero: 'feminino' | 'masculino' = 'feminino'): Vida {
   let v = adulto(45, { semente: 9, genero });
   v.financas.conta = 5_000_000;
-  for (const it of ITENS_ESTILO) if (!v.eu.estilo?.itens.some(x => x.itemId === it.id)) v = fazer(v, { tipo: 'comprar_item', itemId: it.id });
+  // ERAS v2: as peças da época não se vendem na vida contemporânea (`eras/base/moda`).
+  for (const it of ITENS_ESTILO) if (!ehItemDaEpoca(it.id) && !v.eu.estilo?.itens.some(x => x.itemId === it.id)) v = fazer(v, { tipo: 'comprar_item', itemId: it.id });
   return v;
 }
 
@@ -49,7 +51,8 @@ describe('12.7 · o produto escolhido é o vestido', () => {
     for (const genero of ['feminino', 'masculino'] as const) {
       let v = comTudo(genero);
       // Em duas ordens: a do catálogo e a inversa (o que estava antes não pode decidir).
-      for (const ordem of [ITENS_ESTILO, [...ITENS_ESTILO].reverse()]) for (const it of ordem) {
+      const aVenda = ITENS_ESTILO.filter(it => !ehItemDaEpoca(it.id));
+      for (const ordem of [aVenda, [...aVenda].reverse()]) for (const it of ordem) {
         const x = meu(v, it.id);
         if (!x.usando) v = fazer(v, { tipo: 'usar_item', itemId: it.id, id: x.id, usar: true });
         conferir(v, meu(v, it.id));
