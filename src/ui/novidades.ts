@@ -26,6 +26,26 @@ export interface NotaDeVersao {
 
 export const NOTAS: NotaDeVersao[] = [
   {
+    versao: '23',
+    data: '2026-11-15',
+    titulo: 'Corpos diferentes, marcas da pele e joias com forma própria',
+    novidades: [
+      'Corpo e pele (Você · Aparência): doze proporções — ombros, estrutura, peito, cintura, barriga, quadril, braços, coxas, panturrilhas, comprimento das pernas, músculo — e treze formas de partida para ajustar depois.',
+      'A figura usa a sua altura de verdade (a mesma que o esporte mede), e quem aparece no mundo tem corpo, altura e proporções próprias; filhos puxam os pais.',
+      'Marcas da pele: pintas, pintas espalhadas, sardas, marca de nascença, manchas, cicatrizes (reta, curva, de cirurgia, de queimadura, de acne), estrias e covinhas — com lugar, lado, tamanho, posição, ângulo e intensidade. Muita gente não tem nenhuma.',
+      'Pelos do corpo (de quase nenhum a muitos), nos antebraços, nas pernas e no peito à mostra.',
+      'Brincos novos: argola grande fina, argola grossa, argolinha cravejada, geométrico, corrente passante, pendente longo, candelabro, bolinha, flor, argola com pérola, par assimétrico, barra, meia-lua e ear climber.',
+      'Colar cubano, de pérolas, em camadas, longo com barra e cordão de couro; bracelete largo, pulseira de pérolas e de corrente dupla; anel largo, duplo e de pérola; e piercings novos na sobrancelha, no lábio e na medusa.'
+    ],
+    melhorias: [
+      'Cada metal tem o seu acabamento no desenho: ouro polido, folheado acetinado, ouro branco e prata espelhados, aço escovado, titânio fosco.',
+      'Na vitrine, brincos e piercings aparecem de perto (a orelha, o nariz, a boca); no provador, a lupa da joia ao lado.'
+    ],
+    correcoes: [
+      'O provador mostrava "com a peça" e "como você está" em tamanhos diferentes (e a Aparência num terceiro): agora todas as figuras usam a mesma escala.'
+    ]
+  },
+  {
     versao: 'Eras 2',
     data: '2026-11-15',
     titulo: 'Eras históricas: a época no salário, na loja, no partido, na roupa e na cidade',

@@ -222,16 +222,16 @@ export function sortearMarcas23(chave: string, pele: string, sardasNoRosto?: str
     const v = marcaValida(m);
     if (v) out.push(v);
   };
-  if (r() < 0.34) com('pinta', r() < 0.4 ? ['bochecha', 'queixo', 'testa', 'tempora'] : TODAS.filter(x => !ROSTO.includes(x)), { f: r() < 0.3 ? 'relevo' : 'plana', i: pesado(r, [1, 2, 3] as const, [0.3, 0.5, 0.2]) });
-  if (r() < 0.2) com('pintas', MARCAS23.pintas.regioes.filter(x => !ROSTO.includes(x)), { n: 2 + Math.floor(r() * 6), s: 1 });
+  if (r() < 0.26) com('pinta', r() < 0.4 ? ['bochecha', 'queixo', 'testa', 'tempora'] : TODAS.filter(x => !ROSTO.includes(x)), { f: r() < 0.3 ? 'relevo' : 'plana', i: pesado(r, [1, 2, 3] as const, [0.3, 0.5, 0.2]) });
+  if (r() < 0.13) com('pintas', MARCAS23.pintas.regioes.filter(x => !ROSTO.includes(x)), { n: 2 + Math.floor(r() * 6), s: 1 });
   const clara = pele === 'p1' || pele === 'p2';
   const pSardas = sardasNoRosto && sardasNoRosto !== 'nao' ? 0.6 : clara ? 0.28 : 0.03;
   if (r() < pSardas) com('sardas', ['ombro', 'costas_alta', 'biceps', 'antebraco', 'peitoral'], { n: 10 + Math.floor(r() * 22), s: 1, i: pesado(r, [1, 2, 3] as const, [0.4, 0.4, 0.2]), l: undefined });
   if (r() < 0.08) com('marca_nascenca', TODAS.filter(x => x !== 'mao'), { f: pesado(r, ['cafe', 'vinho', 'rosada', 'azulada'], [0.55, 0.15, 0.2, 0.1]), a: Math.floor(r() * 180) });
   if (r() < 0.04) com('mancha', TODAS, { f: r() < 0.6 ? 'clara' : 'escura', a: Math.floor(r() * 180), i: 2 });
-  if (r() < 0.2) com('cicatriz', TODAS, { f: pesado(r, ['reta', 'curva', 'cirurgica', 'queimadura', 'acne'], [0.4, 0.25, 0.12, 0.08, 0.15]), a: Math.floor(r() * 180), i: pesado(r, [1, 2, 3] as const, [0.45, 0.4, 0.15]), d: 3 + Math.floor(r() * 32) });
-  if (r() < 0.15) com('estrias', ['coxa', 'abdomen', 'costelas', 'biceps', 'costas_baixa', 'ombro'], { f: pesado(r, ['claras', 'rosadas', 'escuras'], [0.6, 0.25, 0.15]), a: 60 + Math.floor(r() * 60), i: pesado(r, [1, 2, 3] as const, [0.5, 0.35, 0.15]), d: 12 + Math.floor(r() * 18) });
-  if (r() < 0.13) com('covinhas', r() < 0.8 ? ['bochecha'] : ['queixo'], r() < 0.75 ? { l: undefined } : {});
+  if (r() < 0.15) com('cicatriz', TODAS, { f: pesado(r, ['reta', 'curva', 'cirurgica', 'queimadura', 'acne'], [0.4, 0.25, 0.12, 0.08, 0.15]), a: Math.floor(r() * 180), i: pesado(r, [1, 2, 3] as const, [0.45, 0.4, 0.15]), d: 3 + Math.floor(r() * 32) });
+  if (r() < 0.11) com('estrias', ['coxa', 'abdomen', 'costelas', 'biceps', 'costas_baixa', 'ombro'], { f: pesado(r, ['claras', 'rosadas', 'escuras'], [0.6, 0.25, 0.15]), a: 60 + Math.floor(r() * 60), i: pesado(r, [1, 2, 3] as const, [0.5, 0.35, 0.15]), d: 12 + Math.floor(r() * 18) });
+  if (r() < 0.1) com('covinhas', r() < 0.8 ? ['bochecha'] : ['queixo'], r() < 0.75 ? { l: undefined } : {});
   return out.length ? out : undefined;
 }
 /** As regiões que têm lado (as outras são do meio do corpo). */

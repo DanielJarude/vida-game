@@ -105,7 +105,7 @@ for (const j of JOIAS20.filter(x => ['cubana', 'perolas', 'camadas', 'colar_long
 for (const j of JOIAS20.filter(x => (x.lugar === 'pulseira' || x.lugar === 'anel') && (x.metal === 'ouro_amarelo' || x.metal === 'prata' || x.metal === 'aco'))) html.push(fig(base({ pele: 'p2' }), 'feminino', { pecas: [{ itemId: j.id, id: j.id }], foco: focoDaPeca('feminino', 'mediano', 30, j.lugar === 'anel' ? 'anel' : 'pulseira'), largura: 100 }, j.nome));
 fim();
 secao('Piercings novos e o acabamento (aço × titânio × prata × ouro branco)');
-for (const ids of [['pc_sobrancelha_espetos'], ['pc_sobrancelha_rose'], ['pc_sobrancelha_azul'], ['pc_medusa_espeto'], ['pc_medusa_diamante'], ['pc_labio_clicker'], ['pc_nariz_ponto_aco'], ['pc_nariz_ponto_zirconia'], ['pc_helix_argola', 'pc_tragus_ponto', 'pc_lobulo2_ponto_aco']]) {
+for (const ids of [['pc_sobrancelha_rose'], ['pc_sobrancelha_argola_azul'], ['pc_medusa_espeto'], ['pc_medusa_diamante'], ['pc_labio_clicker'], ['pc_nariz_ponto_aco'], ['pc_nariz_ponto_zirconia'], ['pc_helix_argola', 'pc_tragus_ponto', 'pc_lobulo2_ponto_aco']]) {
   const p = PIERCINGS.find(x => x.id === ids[0])!;
   const zona = p.lugar === 'sobrancelha' ? 'sobrancelha' : p.lugar.startsWith('labio') || p.lugar === 'medusa' ? 'boca' : p.lugar.startsWith('nariz') ? 'nariz' : 'orelha';
   html.push(fig(base({ cabelo: 'raspado', piercings: ids }), 'feminino', { foco: focoDaJoiaNoRosto(zona, 30), largura: 110 }, ids.join(' + ')));
