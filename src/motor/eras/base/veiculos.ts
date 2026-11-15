@@ -63,13 +63,48 @@ export const VERSOES_DA_EPOCA: readonly V[] = [
   { id: 'ep_honda_sahara', classe: 'moto_media', marca: 'Honda', modelo: 'NX 350 Sahara', dica: 'moto 350 cc trail', faixa: 'alta', preco: 30000, artigo: 'a', pesoUsado: 1, usoMensal: 280, forma: 'trail', mercados: BR, epoca: [1991, 1999] },
   { id: 'ep_honda_falcon', classe: 'moto_media', marca: 'Honda', modelo: 'NX4 Falcon', dica: 'moto 400 cc trail', faixa: 'alta', preco: 31000, artigo: 'a', pesoUsado: 1, usoMensal: 290, forma: 'trail', mercados: BR, epoca: [2000, 2008] },
   { id: 'ep_honda_twister', classe: 'moto_media', marca: 'Honda', modelo: 'CBX 250 Twister', dica: 'moto 250 cc', faixa: 'intermediaria', preco: 24000, artigo: 'a', pesoUsado: 2, usoMensal: 260, forma: 'street', mercados: BR, epoca: [2001, 2008] },
+  // ---------------------------------------------------------------- ERAS v2: importados (depois da abertura de 1990), SUVs e picapes grandes, motos grandes, bicicletas
+  { id: 'ep_mb_c280_w202', classe: 'carro_luxo', marca: 'Mercedes-Benz', modelo: 'C 280', acabamento: 'W202', dica: 'sedã de luxo importado', faixa: 'alta', preco: 290000, artigo: 'o', pesoUsado: 1, forma: 'seda', mercados: BR, epoca: [1993, 2000] },
+  { id: 'ep_bmw_325i_e36', classe: 'carro_luxo', marca: 'BMW', modelo: '325i', acabamento: 'E36', dica: 'sedã esportivo importado', faixa: 'alta', preco: 260000, artigo: 'o', pesoUsado: 1, forma: 'seda', mercados: BR, epoca: [1992, 1998] },
+  { id: 'ep_bmw_320i_e46', classe: 'carro_luxo', marca: 'BMW', modelo: '320i', acabamento: 'E46', dica: 'sedã esportivo importado', faixa: 'alta', preco: 250000, artigo: 'o', pesoUsado: 1, forma: 'seda', mercados: BR, epoca: [1999, 2005] },
+  { id: 'ep_mb_c200_w204', classe: 'carro_luxo', marca: 'Mercedes-Benz', modelo: 'C 200', acabamento: 'W204', dica: 'sedã de luxo importado', faixa: 'alta', preco: 260000, artigo: 'o', pesoUsado: 1.5, forma: 'seda', mercados: BR, epoca: [2007, 2014] },
+  { id: 'ep_porsche_911_993', classe: 'superesportivo', marca: 'Porsche', modelo: '911 Carrera', acabamento: '993', dica: 'esportivo importado', faixa: 'alta', preco: 850000, artigo: 'o', pesoUsado: 0.5, forma: 'esportivo', mercados: BR, epoca: [1994, 1998] },
+  { id: 'ep_ferrari_f355', classe: 'superesportivo', marca: 'Ferrari', modelo: 'F355', acabamento: 'Berlinetta', dica: 'esportivo de motor central', faixa: 'alta', preco: 1500000, artigo: 'a', pesoUsado: 0.3, forma: 'esportivo', mercados: BR, epoca: [1995, 1999] },
+  { id: 'ep_mitsubishi_pajero', classe: 'carro_suv_grande', marca: 'Mitsubishi', modelo: 'Pajero', acabamento: 'GLS 2.8 diesel', dica: 'utilitário 4x4 grande', faixa: 'alta', preco: 330000, artigo: 'o', pesoUsado: 1.5, forma: 'suv', usoMensal: 900, mercados: BR, epoca: [1992, 2006] },
+  { id: 'ep_gm_blazer', classe: 'carro_suv_grande', marca: 'Chevrolet', modelo: 'Blazer', acabamento: 'DLX 4.3 V6', dica: 'utilitário grande', faixa: 'alta', preco: 240000, artigo: 'a', pesoUsado: 1.5, forma: 'suv', usoMensal: 950, mercados: BR, epoca: [1995, 2011] },
+  { id: 'ep_toyota_hilux_90', classe: 'carro_suv_grande', marca: 'Toyota', modelo: 'Hilux', acabamento: 'SR5 cabine dupla', dica: 'picape média 4x4', faixa: 'alta', preco: 260000, artigo: 'a', pesoUsado: 1.5, forma: 'picape', usoMensal: 800, mercados: BR, epoca: [1992, 2004] },
+  { id: 'ep_ford_ranger_98', classe: 'carro_suv_grande', marca: 'Ford', modelo: 'Ranger', acabamento: 'XLT cabine dupla', dica: 'picape média', faixa: 'alta', preco: 230000, artigo: 'a', pesoUsado: 1.5, forma: 'picape', usoMensal: 800, mercados: BR, epoca: [1998, 2011] },
+  { id: 'ep_honda_cbx750', classe: 'moto_grande', marca: 'Honda', modelo: 'CBX 750F', acabamento: '"Sete Galo"', dica: 'moto 750 cc nacional', faixa: 'alta', preco: 90000, artigo: 'a', pesoUsado: 1, usoMensal: 400, forma: 'street', mercados: BR, epoca: [1986, 1994] },
+  { id: 'ep_harley_fatboy_90', classe: 'moto_grande', marca: 'Harley-Davidson', modelo: 'Fat Boy', acabamento: 'Evolution', dica: 'custom importada', faixa: 'alta', preco: 140000, artigo: 'a', pesoUsado: 0.5, usoMensal: 450, forma: 'cruiser', mercados: BR, epoca: [1993, 2006] },
+  { id: 'ep_caloi_10', classe: 'bike', marca: 'Caloi', modelo: '10', acabamento: 'dez marchas', dica: 'bicicleta de estrada', faixa: 'economica', preco: 2200, artigo: 'a', pesoUsado: 2, forma: 'estrada', mercados: BR, epoca: [1972, 1992] },
+  { id: 'ep_monark_barra_circular', classe: 'bike', marca: 'Monark', modelo: 'Barra Circular', dica: 'bicicleta de passeio', faixa: 'economica', preco: 1400, artigo: 'a', pesoUsado: 3, forma: 'urbana', mercados: BR, epoca: [1970, 2004] },
   { id: 'ep_honda_cb300r', classe: 'moto_media', marca: 'Honda', modelo: 'CB 300R', dica: 'moto 300 cc', faixa: 'intermediaria', preco: 25000, artigo: 'a', pesoUsado: 2, usoMensal: 260, forma: 'street', mercados: BR, epoca: [2009, 2015] }
 ];
 
 /** As versões atuais do catálogo nas classes cobertas: o ano em que chegaram (vida histórica antes disso: fora). */
 export const ATUAIS_DESDE: Readonly<Record<string, number>> = {
   fiat_mobi: 2016, renault_kwid: 2017, fiat_argo: 2017, citroen_c3: 2012, honda_biz: 1998, honda_pop: 2015, honda_cg160: 2015,
-  yamaha_factor: 2016, honda_bros: 2015, yamaha_fazer: 2018, honda_cb300f: 2023, royal_enfield_hunter: 2023, honda_sahara: 2024, yamaha_mt03: 2016
+  yamaha_factor: 2016, honda_bros: 2015, yamaha_fazer: 2018, honda_cb300f: 2023, royal_enfield_hunter: 2023, honda_sahara: 2024, yamaha_mt03: 2016,
+  // ERAS v2: a geração ATUAL de cada modelo das outras classes (lançamento da geração; chegada ao Brasil quando conhecida).
+  // APROXIMAÇÃO: o ano da geração vendida hoje — antes dele, o modelo existia em outra forma (as versões da época acima).
+  bmw_320i: 2019, mercedes_c300: 2022, volvo_xc60: 2017, porsche_macan: 2014, ford_mustang: 2018, porsche_911: 2019, jeep_commander: 2021,
+  chevrolet_s10: 2012, toyota_hilux: 2016, toyota_sw4: 2016, caloi_andes: 2015, caloi_vulcan: 2015, oggi_hacker: 2012, sense_fun: 2016, caloi_strada: 2015,
+  seadoo_spark: 2014, yamaha_vx: 2015, focker_242: 2010, schaefer_303: 2010, inpaer_excel: 2005, paradise_p1: 2001, piper_seneca: 1997,
+  azimut_60: 2016, schaefer_v66: 2018, robinson_r44: 1993, bell_505: 2017, embraer_phenom100: 2017, cessna_citation_m2: 2013, trek_marlin: 2015,
+  giant_escape: 2015, rockrider_st100: 2018, triumph_bonneville: 2016, bmw_r1300gs: 2024, harley_street_glide: 2014, ducati_panigale: 2018,
+  ford_f150: 2023, chevrolet_tahoe: 2021, ford_ranger: 2024, toyota_land_cruiser: 2022, porsche_911_turbo: 2020, ferrari_roma: 2020,
+  mclaren_artura: 2022, lamborghini_huracan: 2019, mclaren_765lt: 2020, bentley_continental: 2018, maybach_s680: 2021, rolls_ghost: 2020,
+  rolls_cullinan: 2018, kawasaki_z900: 2017, yamaha_mt09: 2015, triumph_street_triple: 2017, honda_africa_twin: 2020, ducati_multistrada: 2021,
+  harley_fat_boy: 2018, indian_scout: 2015, bmw_s1000rr: 2019, honda_fireblade: 2020, ducati_superleggera: 2020, toyota_supra: 2019,
+  chevrolet_corvette: 2020, porsche_718_cayman: 2016, bmw_m4: 2021, porsche_taycan: 2020, porsche_cayenne: 2018, bmw_x5: 2019, mercedes_s500: 2021,
+  range_rover: 2022, mercedes_g63: 2018, cadillac_escalade: 2021, ferrari_296: 2022, ferrari_purosangue: 2023, lamborghini_urus: 2024,
+  lamborghini_revuelto: 2024, aston_db12: 2023, mercedes_amg_gt: 2024, porsche_911_dakar: 2023, porsche_911_st: 2024, lamborghini_sterrato: 2023,
+  ferrari_sf90_xx: 2024, bentley_bentayga: 2016, rolls_spectre: 2024, rolls_phantom: 2018, bentley_bacalar: 2021, fiat_strada: 2020,
+  vw_saveiro: 2010, fiat_toro: 2016, fiat_fiorino: 2014, renault_master: 2013, mb_sprinter: 2019, suzuki_jimny: 2019, ford_bronco_sport: 2021,
+  jeep_wrangler: 2018, lr_defender: 2020, ram_1500_bighorn: 2020, ram_1500_laramie: 2020, ram_2500: 2018, silverado: 2023, ranger_raptor: 2024,
+  hilux_grs: 2023, f150_raptor: 2024, rimac_nevera: 2022, pagani_utopia: 2023, koenigsegg_jesko: 2022, am_valkyrie: 2022, bugatti_chiron_ss: 2021,
+  rali_r5: 2015, stock_car: 2020, porsche_gt3r: 2019, f1_monoposto: 2022,
+  vela_2: 2018, caloi_evibe: 2016, sense_impulse: 2019, rad_city: 2018, gazelle_ultimate: 2018
 };
 
 const COBERTAS = new Set(['carro_compacto', 'carro_sedan', 'carro_suv', 'moto_pequena', 'moto_media']);
@@ -86,9 +121,9 @@ export function versoesDoAno(atuais: VersaoVeiculo[], ano: number): VersaoVeicul
   const daEpoca = VERSOES_DA_EPOCA.filter(x => x.epoca[0] <= ano && ano <= x.epoca[1]);
   const out = atuais.filter(x => {
     if (x.ano !== undefined) return x.ano <= ano - 20;
-    if (IMPORTADOS.has(x.classe)) return ano >= IMPORTACAO_LIBERADA;
-    if (!COBERTAS.has(x.classe)) return true;
+    if (IMPORTADOS.has(x.classe) && ano < IMPORTACAO_LIBERADA) return false;
     const d = ATUAIS_DESDE[x.id];
+    if (!COBERTAS.has(x.classe)) return d === undefined || ano >= d;
     return d !== undefined && ano >= d;
   });
   return [...out, ...daEpoca];

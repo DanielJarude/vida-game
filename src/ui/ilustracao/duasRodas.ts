@@ -238,7 +238,9 @@ export const MODELOS_BIKE: Record<string, PerfilBike> = {
   caloi_andes: { base: 'urbana' }, caloi_strada: {}, caloi_vulcan: { semDisco: true }, oggi_hacker: {}, sense_fun: { amortecedor: true },
   vela_2: { base: 'urbana', eletrica: true }, caloi_evibe: { base: 'cruiser', eletrica: true }, sense_impulse: { base: 'mtb', eletrica: true },
   giant_escape: { semCesta: true }, trek_marlin: { garrafa: true }, rockrider_st100: { semDisco: true, garrafa: true },
-  rad_city: { base: 'urbana', eletrica: true, semCesta: true }, gazelle_ultimate: { base: 'cruiser', eletrica: true, garrafa: true }
+  rad_city: { base: 'urbana', eletrica: true, semCesta: true }, gazelle_ultimate: { base: 'cruiser', eletrica: true, garrafa: true },
+  // ERAS v2: a de dez marchas (estrada) e a de barra circular (passeio, sem disco).
+  ep_caloi_10: { semDisco: true, semCesta: true }, ep_monark_barra_circular: { base: 'cruiser', semDisco: true }
 };
 
 export function bicicleta(forma: 'urbana' | 'estrada' | 'mtb' | 'eletrica', cor: string, versaoId?: string): Amostra {

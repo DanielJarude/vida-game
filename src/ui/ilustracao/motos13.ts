@@ -91,6 +91,8 @@ export const MOTOS_RETRO_13: Record<string, PerfilClassica & { disco?: boolean; 
   ep_yamaha_ybr125: { motor: 'mono', guidao: 'reto', tanque: 'longo', banco: 'duplo', escape: 'dois', rodas: 'raios', motorCor: '#3a3633', faixa: '#ecebe6', r: 21.5 },
   ep_honda_cg150: { motor: 'mono', guidao: 'reto', tanque: 'gota', banco: 'duplo', escape: 'dois', rodas: 'liga', motorCor: '#8c8882', faixa: '#c8372d', r: 21.5, bagageiro: true },
   ep_honda_cb400: { motor: 'paralelo', guidao: 'reto', tanque: 'gota', banco: 'duplo', escape: 'dois', rodas: 'raios', motorCor: CROMO, faixa: '#26272a', r: 22 },
+  ep_honda_cbx750: { motor: 'paralelo', guidao: 'reto', tanque: 'longo', banco: 'duplo', escape: 'dois', rodas: 'liga', motorCor: '#26272a', faixa: '#c8372d', r: 23, disco: true },
+  ep_harley_fatboy_90: { motor: 'vtwin', cabeca: 'panela', guidao: 'puxado', tanque: 'harley', banco: 'duplo', escape: 'dois', motorCor: ALU, paralama: 'fundo', disco: true },
   ep_honda_cb450: { motor: 'paralelo', guidao: 'reto', tanque: 'longo', banco: 'duplo', escape: 'dois', rodas: 'liga', motorCor: ALU, faixa: '#c8372d', r: 22 },
   honda_cg160: { motor: 'mono', guidao: 'reto', tanque: 'gota', banco: 'duplo', escape: 'dois', rodas: 'liga', motorCor: '#8c8882', faixa: '#26272a', r: 22, bagageiro: true },
   yamaha_factor: { motor: 'mono', guidao: 'reto', tanque: 'longo', banco: 'duplo', escape: 'dois', rodas: 'liga', motorCor: '#3a3633', faixa: '#c9c6c0', r: 22 },
