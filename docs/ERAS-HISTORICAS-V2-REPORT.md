@@ -122,6 +122,16 @@ textual de 26.063 textos com 1 ocorrência (0,00%), resolvida pelo ajuste da dat
 
 ## 10. Branch, commits e publicação
 
-Branch `claude/eras-v2` (commits `git log 89f707e..claude/eras-v2`). **Não publicada na produção**: a atualização tem partes
-parciais e não implementadas (tabela da seção 3) e falta o playtest humano que o pedido exige antes; a branch foi enviada ao
-GitHub para a prévia automática do Cloudflare Pages (não é a produção). A `main` e a branch de produção não foram tocadas.
+- Branch `claude/eras-v2` (de `89f707e`). Código publicado: `c336cd0` (`git log 89f707e..c336cd0`).
+- **Publicado em 15/11/2026**, a pedido ("acabe o que ficou parcial e suba no site"): `main` e a branch de produção
+  (`claude/fix-pos-rework3-playtest`) avançadas por fast-forward de `89f707e`/`aa985fd` para `c336cd0`. Configuração do
+  Cloudflare não foi tocada.
+- Conferência em https://vida-game.pages.dev/: serve `assets/index-Db5YcOjK.js`; "/" e os 150 arquivos JS/CSS idênticos (sha256)
+  ao build local validado. Teste no site real em 1440 e 390 px: nascer em 1975 (porta 1970), cabeçalho "1975 Cr$", viver um
+  ano (1976, Cr$), sem rolagem lateral e sem erro de console.
+- Antes de publicar: suíte completa (2.904 testes) com 2.898 passando, 1 pulado e 5 falhas, todas por tempo esgotado sob
+  carga (as mesmas intermitentes das versões anteriores); as 3 que passam sozinhas foram rodadas isoladas e passaram;
+  `fechamentoMundo` #4 (limite fixo de 60 s) e `motor.test` "regra de agência" já falhavam na base. Build sem erros;
+  `motor-textos` 799.881 bytes (limite de 800 kB respeitado, com pouca folga). Smoke de produção local 30/30. QA visual em
+  6 combinações (1440/390/360 × claro/escuro): nenhum problema.
+- Playtest humano: **ainda não feito** — recomendado (seção 8).
