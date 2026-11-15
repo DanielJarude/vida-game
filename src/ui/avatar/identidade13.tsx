@@ -127,6 +127,17 @@ export function focoDoRosto(zona: ZonaDoRosto, idade: number): { x: number; y: n
   return { x: +(cx - w / 2).toFixed(2), y: +(cy - h / 2).toFixed(2), w, h: +h.toFixed(2) };
 }
 
+/**
+ * VIDA 23 — a lupa de uma JOIA no rosto (o provador e a vitrine): a orelha inteira com o que pende do lóbulo (o brinco
+ * comprido, o candelabro, a corrente cabem), o nariz, a boca, a sobrancelha. A mesma geometria do retrato.
+ */
+export function focoDaJoiaNoRosto(zona: string, idade: number): { x: number; y: number; w: number; h: number } {
+  if (zona !== 'orelha') return focoDoRosto(zona === 'boca' || zona === 'nariz' || zona === 'sobrancelha' ? zona : 'rosto', idade);
+  const oy = (idade <= 17 || idade >= 65 ? 44.5 : 43) - 8;
+  const w = 21, h = w / 0.75;
+  return { x: 67.5, y: +(oy - 7).toFixed(2), w, h: +h.toFixed(2) };
+}
+
 /* ------------------------------------------------------------ De costas */
 
 /** O comprimento de cada corte visto de trás (a nuca): curto, até o queixo, até o ombro, comprido; e o que fica preso. */

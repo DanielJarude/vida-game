@@ -9,7 +9,7 @@ import { idade } from '../../motor/nucleo';
 import { itemEstilo, lugaresDoItem } from '../../motor/dados/estilo';
 import { corpoDaFigura } from '../../motor/sistemas/silhueta';
 import { Retrato } from './Retrato';
-import { cabeloCobreOrelha } from './identidade13';
+import { cabeloCobreOrelha, focoDaJoiaNoRosto } from './identidade13';
 import { zonaDoFuro } from '../../motor/dados/piercings13';
 import { Figura, focoDaPeca } from './Figura';
 import '../catalogo.css';
@@ -40,6 +40,13 @@ export function MiniaturaDaPeca({ vida, itemId, id, largura = 84, rotulo, marca 
     const visual: Visual = { ...vida.eu.visual, piercings: [...(vida.eu.visual.piercings ?? []).filter(x => x !== itemId && itemEstilo(x)?.lugar !== 'umbigo'), itemId] };
     const corpo = corpoDaFigura(vida);
     return <span className="miniatura-peca" data-item={itemId}><Figura visual={visual} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} corpo={corpo} pecas={[]} semCima largura={largura} semFundo foco={focoDaPeca(vida.eu.genero, corpo, i, 'umbigo')} rotulo={nome} /></span>;
+  }
+  // VIDA 23: brincos e piercings do rosto aparecem DE PERTO (a orelha, o nariz, a boca, a sobrancelha) — no retrato
+  // inteiro a joia tinha 1 a 3 px e todas viravam o mesmo ponto. A mesma geometria do retrato: o que se vê é o que se usa.
+  const zona = it.lugar === 'orelha' ? 'orelha' : it.piercing ? zonaDoFuro(it.lugar!) : undefined;
+  if (zona && zona !== 'umbigo') {
+    const corpo = corpoDaFigura(vida);
+    return <span className="miniatura-peca miniatura-peca--rosto" data-item={itemId} data-zona={zona}><Figura visual={visualComPecaDoRosto(vida.eu.visual, itemId)} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} corpo={corpo} pecas={[]} largura={largura} foco={focoDaJoiaNoRosto(zona, i)} rotulo={nome} /></span>;
   }
   if (it.categoria === 'oculos' || it.categoria === 'chapeu' || it.lugar === 'orelha' || it.piercing || (it.lugar === 'joia' && it.visual?.joia)) {
     // O colar se vê no busto (com o pescoço); óculos, chapéu e brincos, no rosto.

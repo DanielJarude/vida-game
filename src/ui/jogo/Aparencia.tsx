@@ -25,6 +25,7 @@ import { itensDaPessoa, sementeDaPeca, podeTerBarba, precisaDeOculos, texturaNat
 import { BARBAS, BARBAS_COM_BIGODE, CORES_NATURAIS, CORES_TINTA, CORTES, NOME_COR, TIPOS_DE_CABELO, itemEstilo } from '../../motor/dados/estilo';
 import { texturaDe } from '../avatar/cabelos';
 import { FiguraSobDemanda as Figura } from '../avatar/figuraSobDemanda';
+import { LARGURA_DE_REFERENCIA } from '../avatar/referencia';
 import { NOME_DO_CORPO, tipoDeCorpo, corpoDaFigura } from '../../motor/sistemas/silhueta';
 import { lugaresDoItem } from '../../motor/dados/estilo';
 import { BotaoAcao, Escolha } from '../comum';
@@ -92,7 +93,7 @@ export function AparenciaEEstilo({ vida, agir, irPara }: Props) {
                 {mudou && <span className="aparencia13__antes"><Retrato visual={vis} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} tamanho={52} rotulo="Antes" /><span className="nota">antes</span></span>}
               </figure>
               {/* 12.4.1: o corpo inteiro (o tipo de corpo vem do condicionamento, dos hábitos e do que se pratica). */}
-              <Figura visual={previa} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} corpo={corpoDaFigura(vida)} pecas={itens.filter(x => x.usando)} tatuagens={tatuagensNaFigura(vida)} composicoes={composicoesNaFigura(vida)} largura={112} vista={vista} rotulo={`${mudou ? 'Como ficaria' : 'Como você está'}${vista === 'costas' ? ' (de costas)' : ''}`} />
+              <Figura visual={previa} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} corpo={corpoDaFigura(vida)} pecas={itens.filter(x => x.usando)} tatuagens={tatuagensNaFigura(vida)} composicoes={composicoesNaFigura(vida)} largura={LARGURA_DE_REFERENCIA} vista={vista} rotulo={`${mudou ? 'Como ficaria' : 'Como você está'}${vista === 'costas' ? ' (de costas)' : ''}`} />
             </div>
             <Escolha rotulo="Ângulo do corpo" valor={vista} aoMudar={setVista} opcoes={[{ id: 'frente', rotulo: 'De frente' }, { id: 'costas', rotulo: 'De costas' }]} />
             <span className="nota">{mudou ? 'Como ficaria' : 'Hoje'} · corpo {NOME_DO_CORPO[tipoDeCorpo(vida)]}</span>

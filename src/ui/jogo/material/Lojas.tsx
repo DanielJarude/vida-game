@@ -34,6 +34,9 @@ import { BotaoAcao, Escolha } from '../../comum';
 import { dinheiroCurto } from '../../leituraMaterial';
 import { DesenhoObjeto } from './Objetos';
 import { Figura } from '../../avatar/Figura';
+import { LARGURA_DE_REFERENCIA } from '../../avatar/referencia';
+import { focoDaJoiaNoRosto } from '../../avatar/identidade13';
+import { zonaDoFuro } from '../../../motor/dados/piercings13';
 import { tatuagensNaFigura } from '../../../motor/sistemas/tatuagens';
 import '../../catalogo.css';
 import { furoDaJoia, furoFeito } from '../../../motor/v14/aparencia/piercings14';
@@ -174,28 +177,38 @@ function Provador({ vida, itens, tirar, aoFechar }: { vida: Vida; itens: ItemDoP
     return [...meus.filter(x => !lugares(x.itemId).some(l => la.includes(l))), ...escolhidas.map(x => ({ itemId: x.itemId, id: x.variante, variante: x.variante, marca: x.marca }))];
   };
   const unico = itens.length === 1 ? itemEstilo(itens[0].itemId) : undefined;
-  const rosto = !!unico && (unico.categoria === 'oculos' || unico.categoria === 'chapeu' || unico.lugar === 'orelha' || !!unico.piercing);
+  const rosto = !!unico && (unico.categoria === 'oculos' || unico.categoria === 'chapeu' || unico.lugar === 'orelha' || !!unico.piercing) && unico.piercing?.regiao !== 'umbigo';
+  // VIDA 23: todas as figuras do provador na MESMA escala (a de referência, a mesma da Aparência) — a peça nova e o "como
+  // você está" comparáveis: a mesma pessoa, o mesmo tamanho, o mesmo nível de detalhe.
+  const L = LARGURA_DE_REFERENCIA;
+  const corpo = corpoDaFigura(vida);
   if (rosto) {
     const visual = { ...visualComPecaDoRosto(vida.eu.visual, unico!.id), ...(unico!.categoria !== 'oculos' && vida.eu.visual.oculos ? { oculos: vida.eu.visual.oculos, modeloOculos: vida.eu.visual.modeloOculos } : {}), ...(unico!.categoria !== 'chapeu' && vida.eu.visual.chapeu ? { chapeu: vida.eu.visual.chapeu, modeloChapeu: vida.eu.visual.modeloChapeu } : {}) };
+    // Brinco e piercing: a lupa no lugar da joia (a orelha, o nariz, a boca, a sobrancelha) — a peça do catálogo, de perto, no seu rosto.
+    const zona = unico!.lugar === 'orelha' ? 'orelha' : unico!.piercing ? zonaDoFuro(unico!.lugar!) : undefined;
     return (
-      <section className="provador" aria-label={`Provador: ${unico!.nome}`}>
-        <Figura visual={visual} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} corpo={corpoDaFigura(vida)} pecas={meus} tatuagens={tatuagensNaFigura(vida)} largura={150} semFundo rotulo={`Você com ${unico!.nome.toLowerCase()}`} />
+      <section className="provador provador22" aria-label={`Provador: ${unico!.nome}`}>
+        <div className="provador22__figuras">
+          <figure className="provador22__fig" data-provador="com"><Figura visual={visual} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} corpo={corpo} pecas={meus} tatuagens={tatuagensNaFigura(vida)} largura={L} semFundo rotulo={`Você com ${unico!.nome.toLowerCase()}`} /><figcaption>Com a peça</figcaption></figure>
+          {zona && zona !== 'umbigo' && <figure className="provador22__fig" data-provador="perto"><Figura visual={visual} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} corpo={corpo} pecas={[]} largura={L} foco={focoDaJoiaNoRosto(zona, i)} rotulo={`${unico!.nome}, de perto`} /><figcaption>De perto</figcaption></figure>}
+          <figure className="provador22__fig provador22__fig--agora" data-provador="agora"><Figura visual={vida.eu.visual} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} corpo={corpo} pecas={meus} tatuagens={tatuagensNaFigura(vida)} largura={L} semFundo rotulo="Você como está agora" /><figcaption>Como você está</figcaption></figure>
+        </div>
         <div className="provador__texto"><p className="provador__titulo">No provador: {unico!.nome.toLowerCase()}</p><button type="button" className="botao botao--discreto" onClick={aoFechar}>Sair do provador</button></div>
       </section>
     );
   }
   const umbigo = unico?.piercing?.regiao === 'umbigo';
   const alternativas = [...porLugar.values()].find(l => l.length > 1);
-  const fig = (pecas: ReturnType<typeof vestir>, rotulo: string, largura = 150) => <Figura visual={umbigo ? { ...vida.eu.visual, piercings: [...(vida.eu.visual.piercings ?? []), unico!.id] } : vida.eu.visual} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} corpo={corpoDaFigura(vida)} pecas={umbigo ? [] : pecas} semCima={umbigo} tatuagens={tatuagensNaFigura(vida)} largura={largura} semFundo rotulo={rotulo} />;
+  const fig = (pecas: ReturnType<typeof vestir>, rotulo: string, comPeca = true) => <Figura visual={umbigo && comPeca ? { ...vida.eu.visual, piercings: [...(vida.eu.visual.piercings ?? []), unico!.id] } : vida.eu.visual} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} corpo={corpo} pecas={umbigo ? [] : pecas} semCima={umbigo} tatuagens={tatuagensNaFigura(vida)} largura={L} semFundo rotulo={rotulo} />;
   const nomeDe = (x: ItemDoProvador) => `${itemEstilo(x.itemId)!.nome}${x.marca ? ` (${marcaPorId(x.marca)?.nome ?? x.marca})` : ''}`;
   return (
     <section className="provador provador22" aria-label="Provador">
       <div className="provador22__figuras">
         {alternativas
-          ? alternativas.slice(-3).map(alt => <figure key={alt.itemId + alt.variante} className="provador22__fig" data-alternativa={alt.itemId}>{fig(vestir([...combinacao.filter(c => !lugares(c.itemId).some(l => lugares(alt.itemId).includes(l))), alt]), `Você com ${itemEstilo(alt.itemId)!.nome.toLowerCase()}`, 130)}<figcaption><strong>{itemEstilo(alt.itemId)!.nome}</strong><span className="nota">{construcaoDaPeca(alt.itemId).join(' · ')}</span></figcaption></figure>)
-          : <figure className="provador22__fig" data-combinacao={combinacao.length}>{fig(vestir(combinacao), `Você com ${combinacao.map(x => itemEstilo(x.itemId)!.nome.toLowerCase()).join(', ')}`)}<figcaption>Com {combinacao.length === 1 ? 'a peça' : `as ${combinacao.length} peças`}</figcaption></figure>}
-        {/* Ao lado (depois): como você está agora, para comparar. */}
-        <figure className="provador22__fig provador22__fig--agora">{fig(meus, 'Você como está agora', 96)}<figcaption>Como você está</figcaption></figure>
+          ? alternativas.slice(-3).map(alt => <figure key={alt.itemId + alt.variante} className="provador22__fig" data-alternativa={alt.itemId}>{fig(vestir([...combinacao.filter(c => !lugares(c.itemId).some(l => lugares(alt.itemId).includes(l))), alt]), `Você com ${itemEstilo(alt.itemId)!.nome.toLowerCase()}`)}<figcaption><strong>{itemEstilo(alt.itemId)!.nome}</strong><span className="nota">{construcaoDaPeca(alt.itemId).join(' · ')}</span></figcaption></figure>)
+          : <figure className="provador22__fig" data-combinacao={combinacao.length} data-provador="com">{fig(vestir(combinacao), `Você com ${combinacao.map(x => itemEstilo(x.itemId)!.nome.toLowerCase()).join(', ')}`)}<figcaption>Com {combinacao.length === 1 ? 'a peça' : `as ${combinacao.length} peças`}</figcaption></figure>}
+        {/* Ao lado (depois): como você está agora, para comparar — na mesma escala. */}
+        <figure className="provador22__fig provador22__fig--agora" data-provador="agora">{fig(meus, 'Você como está agora', false)}<figcaption>Como você está</figcaption></figure>
       </div>
       <div className="provador__texto">
         <p className="provador__titulo">No provador{alternativas ? ': comparando' : ''}</p>

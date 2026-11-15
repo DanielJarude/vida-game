@@ -17,6 +17,7 @@ import type { Genero, Visual } from '../../motor/tipos';
 import type { TipoDeCorpo } from '../../motor/sistemas/silhueta';
 import { lerCorpo23, REGIOES_DO_ROSTO23, type Constituicao } from '../../motor/v23/corpo/corpo23';
 import { MarcasNaPele, PelosEMusculo, VolumeDoPeito } from './corpo23';
+import { AnelNoCorpo23, ColarNoCorpo23, PulseiraNoCorpo23 } from './joias23';
 import { Retrato, contrasteEntre, corDaPele, corDoCabelo, fundoDaFigura } from './Retrato';
 import { ehDoRosto } from './rosto17';
 import { caixaDaRegiao, TatuagensDoRosto, FundoNaPele, ladoNaTela, MapaDoCorpo, TatuagemNaPele, visivelNaVista, type ComposicaoNaFigura } from './tatuagensNaPele';
@@ -822,6 +823,10 @@ export const Figura = memo(function Figura({ visual, genero, idade, semente = 'e
   const pernaAMostra = !!conj.inteira && ['curto', 'joelho', 'midi'].includes(String((conj.inteira as { comprimento?: string }).comprimento)) || ['short', 'bermuda', 'saia'].includes(String((conj.baixo as { forma?: string } | undefined)?.forma)) || semCima;
   // O pulso esquerdo da pessoa fica à direita de quem olha.
   const pulso = (s: 1 | -1) => ({ x: lado(g, s, g.ombro + 2.6), y: 137 });
+  const metalDe = (x: unknown) => (x as { metal?: string } | undefined)?.metal;
+  const colar23 = colar && metalDe(colar) ? ColarNoCorpo23({ forma: fx(colar)!.forma!, metal: metalDe(colar)!, pedra: (colar as { pedraId?: string }).pedraId, cx: g.cx, y0: g.topo, meia: g.pesc }) : null;
+  const pulseira23 = pulseira && metalDe(pulseira) ? PulseiraNoCorpo23({ forma: fx(pulseira)!.forma!, metal: metalDe(pulseira)!, x: pulso(-1).x, y: pulso(-1).y, hw: g.antebraco }) : null;
+  const anel23 = anel && metalDe(anel) ? AnelNoCorpo23({ forma: fx(anel)!.forma!, metal: metalDe(anel)!, pedra: (anel as { pedraId?: string }).pedraId, x: lado(g, -1, g.ombro + 2.7), y: 149.5 }) : null;
   // A escala pela idade, a partir da base do pescoço (a cabeça não encolhe).
   const corpoT = esc === 1 ? undefined : `translate(${g.cx} ${g.topo}) scale(${esc}) translate(${-g.cx} ${-g.topo})`;
   const altura = (g.topo + (g.yChao + 4 - g.topo) * esc);
@@ -875,7 +880,9 @@ export const Figura = memo(function Figura({ visual, genero, idade, semente = 'e
         {marcasCorpo.some(m => NA_MAO.has(m.r)) && <MarcasNaPele g={g} lista={marcasCorpo.filter(m => NA_MAO.has(m.r))} pele={pele} ide={ide} costas={costas} detalhe={detalhe} />}
         {tatuagens.some(t => NA_MAO.has(t.regiao)) && <Tatuagens g={g} lista={tatuagens.filter(t => NA_MAO.has(t.regiao))} comps={[]} pele={pele} ide={ide} costas={costas} detalhe={detalhe} idade={idade} />}
         {aoEscolherRegiao && <MapaDoCorpo g={g} costas={costas} escolhida={regiaoEscolhida} aoEscolher={aoEscolherRegiao} ocupadas={new Set(tatuagens.filter(t => t.id !== 'previa').map(t => `${t.regiao}:${t.lado ?? ''}`))} />}
-        {colar && (idade >= 8) && <g className="figura__colar" data-acessorio="pescoco">
+        {/* VIDA 23: as formas novas (cubana, pérolas, camadas, colar longo, cordão; bracelete largo, pérolas, corrente dupla;
+            bandão, anel duplo, pérola) com o acabamento do metal; as de antes, como eram. */}
+        {colar23 && idade >= 8 ? colar23 : colar && (idade >= 8) && <g className="figura__colar" data-acessorio="pescoco">
           <path d={`M ${g.cx - g.pesc - 0.6} ${g.topo - 1} Q ${g.cx} ${g.topo + (fx(colar)?.forma === 'choker' ? 5 : colar.grossa ? 11 : 12.5)} ${g.cx + g.pesc + 0.6} ${g.topo - 1}`} fill="none" stroke={colar.cor} strokeWidth={colar.grossa ? 1.6 : 0.8} strokeLinecap="round" />
           {colar.contas && detalhe && [0, 1, 2, 3, 4, 5, 6].map(k => { const t = (k + 1) / 8; const x = g.cx - g.pesc + (2 * g.pesc) * t; const y = g.topo - 1 + Math.sin(Math.PI * t) * 12; return <circle key={k} cx={x} cy={y} r={0.9} fill={colar.contas![k % colar.contas!.length]} />; })}
           {colar.pingente && !colar.cruz && fx(colar)?.forma !== 'gota' && fx(colar)?.forma !== 'riviera' && <circle cx={g.cx} cy={g.topo + 11.4} r={1.3} fill={colar.pingente} />}
@@ -889,7 +896,7 @@ export const Figura = memo(function Figura({ visual, genero, idade, semente = 'e
             {relogio.forma === 'analogico' ? <><circle cx={w.x} cy={w.y} r={2.6} fill={relogio.caixa} /><circle cx={w.x} cy={w.y} r={1.9} fill={relogio.mostrador} />{detalhe && <path d={`M ${w.x} ${w.y} l 0 -1.3 M ${w.x} ${w.y} l 1 0.4`} stroke={relogio.mostrador === '#f4f1ea' ? '#1b1b1d' : '#f4f1ea'} strokeWidth={0.35} />}</>
               : <><rect x={w.x - 2.4} y={w.y - 2.6} width={4.8} height={5.2} rx={relogio.forma === 'smart' ? 1.4 : 0.8} fill={relogio.caixa} /><rect x={w.x - 1.7} y={w.y - 1.9} width={3.4} height={3.8} rx={0.8} fill={relogio.mostrador} /></>}
           </g>); })()}
-        {pulseira && (() => { const w = pulso(-1); return (
+        {pulseira && pulseira23 ? pulseira23 : pulseira && (() => { const w = pulso(-1); return (
           <g className="figura__pulseira" data-acessorio="pulseira">
             <path d={`M ${w.x - g.antebraco - 0.4} ${w.y} Q ${w.x} ${w.y + 1.6} ${w.x + g.antebraco + 0.4} ${w.y}`} fill="none" stroke={pulseira.cor} strokeWidth={pulseira.grossa ? 1.8 : 1.1} strokeLinecap="round" />
             {pulseira.contas && [-2, 0, 2].map((dx, k) => <circle key={k} cx={w.x + dx} cy={w.y + 0.9} r={0.9} fill={pulseira.contas![k]} />)}
@@ -933,8 +940,8 @@ export const Figura = memo(function Figura({ visual, genero, idade, semente = 'e
         })()}
         {/* VIDA 18: a bolsa de costas — a mochila nas costas, a transversal cruzando, a pochete atrás, a tote e a clutch na outra mão. */}
         {bolsa && costas && idade >= 6 && <BolsaDeCostas g={g} bolsa={bolsa} lado={(s2, d) => lado(g, s2, d)} />}
-        {anel && <g className="figura__anel" data-acessorio="anel"><circle cx={lado(g, -1, g.ombro + 2.7)} cy={149.5} r={1.2} fill="none" stroke={anel.cor} strokeWidth={0.9} />{anel.pedra && <circle cx={lado(g, -1, g.ombro + 2.7)} cy={148.4} r={0.7} fill={anel.pedra} />}</g>}
-        {anel && fx(anel)?.forma && fx(anel)!.forma !== 'aro' && <g className="figura__anel-forma" data-forma={fx(anel)!.forma}>{fx(anel)!.forma === 'sinete' ? <rect x={lado(g, -1, g.ombro + 2.7) - 1} y={147.4} width={2} height={1.3} rx={0.3} fill={anel.cor} stroke={fx(anel)!.brilho} strokeWidth={0.2} /> : fx(anel)!.forma === 'aparador' ? [-0.8, 0, 0.8].map(dx => <circle key={dx} cx={lado(g, -1, g.ombro + 2.7) + dx} cy={148.5} r={0.35} fill={fx(anel)!.pedra} />) : fx(anel)!.forma === 'coquetel' ? <circle cx={lado(g, -1, g.ombro + 2.7)} cy={148.2} r={1.1} fill={fx(anel)!.pedra} stroke={anel.cor} strokeWidth={0.3} /> : null}</g>}
+        {anel && anel23 ? anel23 : anel && <g className="figura__anel" data-acessorio="anel"><circle cx={lado(g, -1, g.ombro + 2.7)} cy={149.5} r={1.2} fill="none" stroke={anel.cor} strokeWidth={0.9} />{anel.pedra && <circle cx={lado(g, -1, g.ombro + 2.7)} cy={148.4} r={0.7} fill={anel.pedra} />}</g>}
+        {anel && !anel23 && fx(anel)?.forma && fx(anel)!.forma !== 'aro' && <g className="figura__anel-forma" data-forma={fx(anel)!.forma}>{fx(anel)!.forma === 'sinete' ? <rect x={lado(g, -1, g.ombro + 2.7) - 1} y={147.4} width={2} height={1.3} rx={0.3} fill={anel.cor} stroke={fx(anel)!.brilho} strokeWidth={0.2} /> : fx(anel)!.forma === 'aparador' ? [-0.8, 0, 0.8].map(dx => <circle key={dx} cx={lado(g, -1, g.ombro + 2.7) + dx} cy={148.5} r={0.35} fill={fx(anel)!.pedra} />) : fx(anel)!.forma === 'coquetel' ? <circle cx={lado(g, -1, g.ombro + 2.7)} cy={148.2} r={1.1} fill={fx(anel)!.pedra} stroke={anel.cor} strokeWidth={0.3} /> : null}</g>}
         {alianca && <g className="figura__alianca" data-acessorio="alianca"><circle cx={lado(g, 1, g.ombro + 2.7) + 0.6} cy={149.8} r={1.15} fill="none" stroke={alianca.cor} strokeWidth={1} />{alianca.pedra && <circle cx={lado(g, 1, g.ombro + 2.7) + 0.6} cy={148.7} r={0.4} fill={alianca.pedra} />}</g>}
         {tornozelo && pernaAMostra && !costas && (() => { const x = lado(g, 1, g.quadril * 0.44), y = g.yTorn - 1.5, w = g.tornozelo + 0.8; return (
           <g className="figura__tornozeleira" data-acessorio="tornozelo" data-forma={tornozelo.forma}>

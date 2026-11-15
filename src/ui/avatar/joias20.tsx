@@ -5,6 +5,7 @@
  */
 import type { ReactElement } from 'react';
 import { joia20, METAIS20, PEDRAS20, type Joia20 } from '../../motor/dados20/joias20';
+import { Brinco23, Colar23, Pedra, TracoDeMetal } from './joias23';
 
 const cores = (j: Joia20) => ({ metal: METAIS20[j.metal].cor, brilho: METAIS20[j.metal].brilho, pedra: j.pedra ? PEDRAS20[j.pedra].cor : undefined });
 
@@ -12,11 +13,15 @@ const cores = (j: Joia20) => ({ metal: METAIS20[j.metal].cor, brilho: METAIS20[j
 export function ColarDoRetrato({ modelo, cx, y0, meia, fundo }: { modelo: string; cx: number; y0: number; meia: number; fundo: number }): ReactElement | null {
   const j = joia20(modelo);
   if (!j) return null;
+  // VIDA 23: as formas novas (a cubana, as pérolas, as camadas, o colar longo, o cordão) — e o acabamento do metal.
+  const novo = Colar23({ forma: j.forma, metal: j.metal, pedra: j.pedra, cx, y0, meia, fundo });
+  if (novo) return novo;
   const { metal, brilho, pedra } = cores(j);
   const choker = j.forma === 'choker';
   const yf = choker ? y0 + (fundo - y0) * 0.45 : j.forma === 'grumet' ? fundo + 1.5 : fundo;
   const d = `M ${cx - meia} ${y0} Q ${cx} ${yf + (yf - y0)} ${cx + meia} ${y0}`;
-  const base = (largura: number, extra: Record<string, string | number> = {}) => <path d={d} fill="none" stroke={metal} strokeWidth={largura} strokeLinecap="round" {...extra} />;
+  // VIDA 23: a corrente com a borda e o brilho do acabamento (o ouro polido, a prata espelhada, o aço escovado).
+  const base = (largura: number, extra: Record<string, string | number> = {}) => extra.strokeDasharray ? <path d={d} fill="none" stroke={metal} strokeWidth={largura} strokeLinecap="round" {...extra} /> : <TracoDeMetal d={d} w={largura} metal={j.metal} comp={meia * 2} />;
   const ponta = { x: cx, y: yf };
   let corpo: ReactElement;
   switch (j.forma) {
@@ -38,25 +43,29 @@ export function ColarDoRetrato({ modelo, cx, y0, meia, fundo }: { modelo: string
 export function BrincoDoRetrato({ modelo, x, y, s }: { modelo?: string; x: number; y: number; s: number }): ReactElement | null {
   const j = modelo ? joia20(modelo) : undefined;
   if (!j || j.lugar !== 'orelha') return null;
-  const { metal, brilho, pedra } = cores(j);
+  // VIDA 23: as formas novas e o acabamento do metal (as argolas de antes também: a borda e o brilho do metal).
+  const novo = Brinco23({ forma: j.forma, metal: j.metal, pedra: j.pedra, x, y, s });
+  if (novo) return novo;
+  const { metal, pedra } = cores(j);
   const marca = { className: 'retrato__joia', 'data-brinco': j.forma, 'data-metal': j.metal };
+  const aro = (cx: number, cy: number, r: number, w: number) => <TracoDeMetal d={`M ${cx} ${cy - r} A ${r} ${r} 0 1 1 ${cx - 0.01} ${cy - r}`} w={w} metal={j.metal} comp={r * 3} />;
   switch (j.forma) {
-    case 'brinco_ponto': return <g {...marca}><circle cx={x} cy={y + 0.4} r={1.1} fill={pedra} stroke={metal} strokeWidth={0.4} /><circle cx={x - 0.3} cy={y + 0.1} r={0.28} fill="#ffffff" /></g>;
-    case 'argola_p': return <circle {...marca} cx={x + s * 0.2} cy={y + 1.3} r={1.4} fill="none" stroke={metal} strokeWidth={0.7} />;
-    case 'argola_m': return <circle {...marca} cx={x + s * 0.4} cy={y + 2.1} r={2.2} fill="none" stroke={metal} strokeWidth={0.75} />;
-    case 'argola_g': return <g {...marca}><circle cx={x + s * 0.6} cy={y + 3.4} r={3.5} fill="none" stroke={metal} strokeWidth={0.8} /><path d={`M ${x + s * 0.6 - 2.4} ${y + 1.2} A 3.5 3.5 0 0 1 ${x + s * 0.6} ${y - 0.1}`} fill="none" stroke={brilho} strokeWidth={0.35} /></g>;
-    case 'brinco_gota': return <g {...marca}><path d={`M ${x} ${y - 0.2} V ${y + 1.4}`} stroke={metal} strokeWidth={0.5} /><path d={`M ${x} ${y + 1.2} Q ${x + 1.5} ${y + 3.4} ${x} ${y + 4.4} Q ${x - 1.5} ${y + 3.4} ${x} ${y + 1.2} Z`} fill={pedra} stroke={metal} strokeWidth={0.35} /></g>;
-    case 'brinco_perola': return <g {...marca}><circle cx={x} cy={y + 0.5} r={1.3} fill={pedra} stroke="#b9b1a2" strokeWidth={0.3} /><circle cx={x - 0.4} cy={y + 0.1} r={0.35} fill="#ffffff" /></g>;
-    case 'ear_cuff': return <path {...marca} d={`M ${x + s * 0.2} ${y - 6.4} q ${s * 1.6} 1.2 0 2.6`} fill="none" stroke={metal} strokeWidth={0.7} strokeLinecap="round" />;
-    default: return <circle {...marca} cx={x} cy={y + 0.8} r={1.2} fill="none" stroke={metal} strokeWidth={0.7} />;
+    case 'brinco_ponto': return <g {...marca}><Pedra x={x} y={y + 0.4} r={1.05} pedra={j.pedra} metal={j.metal} /></g>;
+    case 'argola_p': return <g {...marca}>{aro(x + s * 0.2, y + 1.3, 1.4, 0.6)}</g>;
+    case 'argola_m': return <g {...marca}>{aro(x + s * 0.4, y + 2.1, 2.2, 0.65)}</g>;
+    case 'argola_g': return <g {...marca}>{aro(x + s * 0.6, y + 3.4, 3.5, 0.7)}</g>;
+    case 'brinco_gota': return <g {...marca}><TracoDeMetal d={`M ${x} ${y - 0.2} V ${y + 1.4}`} w={0.4} metal={j.metal} /><path d={`M ${x} ${y + 1.2} Q ${x + 1.5} ${y + 3.4} ${x} ${y + 4.4} Q ${x - 1.5} ${y + 3.4} ${x} ${y + 1.2} Z`} fill={pedra} stroke={metal} strokeWidth={0.35} /><path d={`M ${x - 0.35} ${y + 2.4} q 0.1 -0.6 0.45 -0.9`} stroke="#ffffff" strokeWidth={0.25} fill="none" opacity={0.8} /></g>;
+    case 'brinco_perola': return <g {...marca}><Pedra x={x} y={y + 0.5} r={1.3} pedra="perola" metal={j.metal} /></g>;
+    case 'ear_cuff': return <g {...marca}><TracoDeMetal d={`M ${x + s * 0.2} ${y - 6.4} q ${s * 1.6} 1.2 0 2.6`} w={0.6} metal={j.metal} comp={3} /></g>;
+    default: return <g {...marca}>{aro(x, y + 0.8, 1.2, 0.6)}</g>;
   }
 }
 
 /** A peça na figura de corpo inteiro (a mesma forma do catálogo de `pecas.ts`, com a forma e a pedra). */
 export type PecaJoia20 =
-  | { parte: 'pescoco'; cor: string; grossa?: boolean; pingente?: string; forma: string; pedra?: string; brilho: string }
-  | { parte: 'pulseira'; cor: string; grossa?: boolean; forma: string; pedra?: string; brilho: string }
-  | { parte: 'anel'; cor: string; pedra?: string; forma: string; brilho: string }
+  | { parte: 'pescoco'; cor: string; grossa?: boolean; pingente?: string; forma: string; pedra?: string; brilho: string; metal?: string; pedraId?: string }
+  | { parte: 'pulseira'; cor: string; grossa?: boolean; forma: string; pedra?: string; brilho: string; metal?: string }
+  | { parte: 'anel'; cor: string; pedra?: string; forma: string; brilho: string; metal?: string; pedraId?: string }
   | { parte: 'alianca'; cor: string; pedra?: string; brilho: string }
   | { parte: 'tornozelo'; cor: string; forma: string; brilho: string };
 
@@ -65,9 +74,9 @@ export function pecaDaJoia20(itemId: string): PecaJoia20 | undefined {
   if (!j) return undefined;
   const { metal: cor, brilho, pedra } = cores(j);
   switch (j.lugar) {
-    case 'joia': return { parte: 'pescoco', cor, brilho, forma: j.forma, pedra, grossa: j.forma === 'grumet' || j.forma === 'choker', ...(pedra || ['medalha', 'coracao', 'letra'].includes(j.forma) ? { pingente: pedra ?? cor } : {}) };
-    case 'pulseira': return { parte: 'pulseira', cor, brilho, forma: j.forma, pedra, grossa: j.forma === 'elos' || j.forma === 'rigida' };
-    case 'anel': return { parte: 'anel', cor, brilho, forma: j.forma, pedra };
+    case 'joia': return { parte: 'pescoco', cor, brilho, forma: j.forma, pedra, metal: j.metal, pedraId: j.pedra, grossa: j.forma === 'grumet' || j.forma === 'choker', ...(pedra || ['medalha', 'coracao', 'letra'].includes(j.forma) ? { pingente: pedra ?? cor } : {}) };
+    case 'pulseira': return { parte: 'pulseira', cor, brilho, forma: j.forma, pedra, metal: j.metal, grossa: j.forma === 'elos' || j.forma === 'rigida' };
+    case 'anel': return { parte: 'anel', cor, brilho, forma: j.forma, pedra, metal: j.metal, pedraId: j.pedra };
     case 'alianca': return { parte: 'alianca', cor, brilho, pedra };
     case 'tornozelo': return { parte: 'tornozelo', cor, brilho, forma: j.forma };
     default: return undefined;
