@@ -15,6 +15,7 @@
  * (`.cena__janela--acesa`, `.cena__veiculo`, `.cena__bicho`, `data-condicao`, `data-detalhe`).
  */
 import type { FormaDaCasa } from '../../leituraMaterial';
+import { anexosDaCasa, coisaDoQuintal, entornoDaCasa, LARGURA_DO_ANEXO } from './entorno22';
 import { circulo, clarear, escurecer, num, ret, type Amostra, type Peca } from '../../ilustracao/nucleo';
 import { amostraDoVeiculo } from '../../ilustracao/veiculos';
 import { cachorro, gato, PLANTAS, type CenaEntrada, type LadoDeFora } from '../../ilustracao/casas';
@@ -28,11 +29,17 @@ const W = 312, H = 140;
 const ANDAR = 2.9;
 const RUA = 2.6, CALCADA = 1.5;
 
+/**
+ * VIDA 22: a margem (m) que se vê de cada lado do lote — os vizinhos e a rua. Zero sem entorno (as galerias e os testes
+ * antigos). Lida por `vista` durante a montagem de uma cena (uma de cada vez, síncrona).
+ */
+let MARGEM = 0;
 /** A vista que cabe a cena (largura × altura × fundo, em metros) no quadro. */
 function vista(largura: number, altura: number, fundo: number): Vista {
-  const S = Math.min(W / (largura + fundo * KX), (H - 6) / (altura + fundo * KY + RUA * KY));
+  const L = largura + 2 * MARGEM;
+  const S = Math.min(W / (L + fundo * KX), (H - 6) / (altura + fundo * KY + RUA * KY));
   const GY = H - 1 - RUA * KY * S;
-  return { S, OX: (W - S * (largura + fundo * KX)) / 2, GY };
+  return { S, OX: (W - S * (L + fundo * KX)) / 2 + MARGEM * S, GY };
 }
 
 /**
@@ -41,7 +48,8 @@ function vista(largura: number, altura: number, fundo: number): Vista {
  * e a palmeira, o balizador e o arbusto apareciam pintados por cima dele (a palmeira "nascia" no muro).
  */
 interface Cena { v: Vista; fundo: Peca[]; chao: Peca[]; corpo: Peca[]; frente: Peca[]; muro?: Peca[]; largura: number }
-interface Ctx { acesas: number; tijolo: boolean; cor: string; externo?: LadoDeFora; usadas: number }
+/** VIDA 22: `anexo` = metros a mais no lote, à direita da casa, para os anexos (garagem, piscina, lazer, quadra); `varanda` = a casa tem varanda. */
+interface Ctx { acesas: number; tijolo: boolean; cor: string; externo?: LadoDeFora; usadas: number; anexo?: number; varanda?: boolean }
 /** A próxima janela (as primeiras `acesas` acendem: quem mora ali). */
 const acende = (c: Ctx) => c.usadas++ < c.acesas;
 const texturaDe = (x?: LadoDeFora): Textura | undefined => (x?.fachada === 'tijolo' ? 'tijolo' : x?.fachada === 'ripado' ? 'ripado' : x?.fachada === 'pedra' ? 'pedra' : x?.fachada === 'placas' ? 'placas' : x?.fachada === 'textura' ? 'textura' : undefined);
@@ -189,9 +197,9 @@ const parede = (c: Ctx, base: string, soclo = 0.35) => ({ cor: c.externo?.corFac
 
 /** A casa térrea (a simples de laje, a de frontão, a da família, a de parentes, a de favor). */
 function terrea(c: Ctx, o: { l: number; d: number; telhado: 'laje' | 'frontao' | 'duas' | 'quatro'; muro: boolean; arvore: boolean; alpendre?: boolean; extra?: 'puxadinho' | 'edicula' | 'varal' | 'vasos'; largura: number; ocupado?: [number, number][] }): Cena & { principal: Bloco } {
-  const largura = o.largura, fundo = o.d + 8;
+  const largura = o.largura + (c.anexo ?? 0), fundo = o.d + 8;
   const v = vista(largura, ANDAR + 3.4 + (o.extra === 'puxadinho' ? ANDAR : 0), fundo);
-  const z0 = 3.2, x0 = (largura - o.l) / 2 - (o.extra === 'edicula' ? 1.2 : 0), b: Bloco = { x0, x1: x0 + o.l, z0, z1: z0 + o.d, h1: ANDAR };
+  const z0 = 3.2, x0 = (o.largura - o.l) / 2 - (o.extra === 'edicula' ? 1.2 : 0), b: Bloco = { x0, x1: x0 + o.l, z0, z1: z0 + o.d, h1: ANDAR };
   const p = parede(c, '#d8c6a8');
   const L = lote(v, largura, fundo, o.muro ? '#cbbf9f' : COR.terra, o.muro ? { cor: '#d6cdbd', vao: [x0 + o.l - 2.2, x0 + o.l - 0.4], portao: c.externo?.portao ?? 'simples', alt: 1.1 } : undefined);
   const J = jardim(v, largura, z0, b.x0, b.x1, c.externo?.paisagismo, o.arvore ? 'arvore' : 'pouco', o.ocupado);
@@ -205,6 +213,8 @@ function terrea(c: Ctx, o: { l: number; d: number; telhado: 'laje' | 'frontao' |
   else corpo.push(...duasAguas(v, b, 1.6, { cor: COR.telha }, p.cor), sombraDoBeiral(v, b.x0, b.x1, b.z0, ANDAR, 0.5));
   if (o.extra === 'puxadinho') { const pu: Bloco = { x0: b.x0 + 0.6, x1: b.x0 + o.l * 0.6, z0: b.z0 + 0.8, z1: b.z1 - 0.5, h0: ANDAR + 0.35, h1: ANDAR * 2 }; corpo.push(marcado(undefined, { 'data-detalhe': 'puxadinho' }, [...bloco(v, pu, { cor: '#b9a99a', textura: 'blocos' }), ...platibanda(v, pu, 0.2, '#b9a99a'), janela(v, pu.z0, pu.x0 + 0.8, ANDAR + 1.2, 0.9, 0.9, { acesa: acende(c) }), { tipo: 'linha', d: Array.from({ length: 12 }, (_, k) => { const a = pt(v, b.x1 + 0.3 + k * 0.05, b.z0 + 0.5 + k * 0.2, k * 0.27); return `M${num(a[0] - 3)} ${num(a[1])}h${num(v.S * 0.8)}`; }).join('') + (() => { const a = pt(v, b.x1 + 0.3, b.z0 + 0.5, 0), q = pt(v, b.x1 + 0.9, b.z0 + 2.9, ANDAR + 0.35); return `M${num(a[0] - 3)} ${num(a[1])}L${num(q[0] - 3)} ${num(q[1])}M${num(a[0] + v.S * 0.8 - 3)} ${num(a[1])}L${num(q[0] + v.S * 0.8 - 3)} ${num(q[1])}`; })(), larg: 1, cor: '#4a4643', marca: 'escada' }])); }
   // Alpendre: a varanda coberta na frente (pilares de madeira, piso elevado).
+  // VIDA 22: a varanda construída (ou da planta) aparece como o alpendre na frente.
+  if (c.varanda) o = { ...o, alpendre: true };
   const zf = o.alpendre ? b.z0 - 1.8 : b.z0;
   if (o.alpendre) {
     const ap: Bloco = { x0: b.x0, x1: b.x1, z0: b.z0 - 1.8, z1: b.z0, h0: 0, h1: 0.3 };
@@ -235,11 +245,11 @@ function varal14(v: Vista, x0: number, x1: number, z: number): Peca {
 
 /** O sobrado (a república, a casa de três quartos com garagem, a casa grande contemporânea). */
 function sobrado(c: Ctx, o: { l: number; d: number; andares: number; estilo: 'tradicional' | 'contemporanea'; garagem?: 1 | 2; largura: number; republica?: boolean }): Cena & { principal: Bloco } {
-  const largura = o.largura, fundo = o.d + 8, A = o.andares * ANDAR;
+  const largura = o.largura + (c.anexo ?? 0), fundo = o.d + 8, A = o.andares * ANDAR;
   const v = vista(largura, A + 2.4, fundo);
   const z0 = 3.4;
   const gl = o.garagem ? o.garagem * 3.1 : 0;
-  const x0 = (largura - o.l - gl) / 2 + gl;
+  const x0 = (o.largura - o.l - gl) / 2 + gl;
   const b: Bloco = { x0, x1: x0 + o.l, z0, z1: z0 + o.d, h1: A };
   const p = parede(c, o.estilo === 'contemporanea' ? '#ece4d4' : '#d6c8ae');
   const L = lote(v, largura, fundo, o.estilo === 'contemporanea' ? '#c9c2b3' : '#cbbf9f', { cor: o.estilo === 'contemporanea' ? '#cfc9be' : '#d6cdbd', vao: o.garagem ? [x0 - gl + 0.2, x0 - 0.2] : [x0 + 0.8, x0 + 2.4], portao: c.externo?.portao ?? (o.garagem ? 'basculante' : 'simples'), alt: o.estilo === 'contemporanea' ? 1.6 : 1.1, grade: o.estilo !== 'contemporanea' });
@@ -280,6 +290,11 @@ function sobrado(c: Ctx, o: { l: number; d: number; andares: number; estilo: 'tr
     if (o.republica) corpo.push(marcado(undefined, { 'data-detalhe': 'campainhas' }, [grupo(frontal(v, b.x0 + o.l * 0.45 + 1.1, b.z0, 1.6), [{ tipo: 'massa', d: [0, 0.18, 0.36, 0.54].map(y => circulo(0.1, y, 0.05)).join(''), cor: '#4a4643', semVolume: true }])]));
   }
   const xp = o.estilo === 'contemporanea' ? b.x0 + o.l * 0.5 + 0.6 : b.x0 + o.l * 0.45 + 0.45;
+  // VIDA 22: a varanda do sobrado — a laje coberta sobre a porta, com dois pilares.
+  if (c.varanda && o.estilo !== 'contemporanea') corpo.push(marcado(undefined, { 'data-detalhe': 'varanda' }, [
+    ...[xp - 1.5, xp + 1.3].flatMap(x => bloco(v, { x0: x, x1: x + 0.2, z0: b.z0 - 1.6, z1: b.z0 - 1.4, h1: 2.7 }, { cor: COR.branco })),
+    ...lajeEmBalanco(v, { x0: xp - 1.7, x1: xp + 1.7, z0: b.z0 - 1.7, z1: b.z0, h1: 2.85 }, 0, 0.18)
+  ]));
   const frente = [...J.frente, ...luzDeFora(v, c.externo?.luz, b.z0, xp - 0.45, 0.15, [xp, 0])];
   if (o.republica) frente.push(varal14(v, b.x1 + 0.4, Math.min(largura - 0.3, b.x1 + 3.4), z0 + 1.2));
   return { v, fundo: J.fundo, chao: [...L.chao, ...J.chao, ...caminho(v, xp, b.z0, c.externo)], corpo, frente, muro: L.frente, largura, principal: b };
@@ -322,7 +337,7 @@ function predio(c: Ctx, o: { l: number; d: number; andares: number; tipo: 'baixo
 
 /** A mansão clássica: o corpo central de dois andares com frontão e colunas, as alas de quatro águas, a piscina. */
 function mansao(c: Ctx): Cena & { principal: Bloco } {
-  const largura = 30, fundo = 18;
+  const largura = 30 + (c.anexo ?? 0), fundo = 18;
   const v = vista(largura, ANDAR * 2 + 2.6, fundo);
   const z0 = 5.5, cx = 13;
   const centro: Bloco = { x0: cx - 4, x1: cx + 4, z0, z1: z0 + 9, h1: ANDAR * 2 };
@@ -330,7 +345,7 @@ function mansao(c: Ctx): Cena & { principal: Bloco } {
   const ad: Bloco = { x0: cx + 4, x1: cx + 10, z0: z0 + 1.2, z1: z0 + 8.5, h1: ANDAR * 2 - 0.4 };
   const p = parede(c, '#f1ebdf', 0.5);
   const L = lote(v, largura, fundo, '#cbbf9f', { cor: '#e6dfd2', vao: [cx - 1.8, cx + 1.8], alt: 1.4, grade: true, portao: c.externo?.portao ?? 'pivotante' });
-  const J = jardim(v, largura, z0, ae.x0, ad.x1, c.externo?.paisagismo ?? 'gramado', 'arvore', [[ad.x1 + 0.2, largura]]);
+  const J = jardim(v, 30, z0, ae.x0, ad.x1, c.externo?.paisagismo ?? 'gramado', 'arvore', [[ad.x1 + 0.2, largura]]);
   const corpo: Peca[] = [sombraDoBloco(v, ae, ae.h1 + 1.5), sombraDoBloco(v, centro, centro.h1 + 2)];
   for (const a of [ae, ad]) corpo.push(...bloco(v, a, p), ...cinta(v, a.x0, a.x1, a.z0, ANDAR, p.cor), ...quatroAguas(v, a, 1.6, { cor: COR.telhaEscura }), sombraDoBeiral(v, a.x0, a.x1, a.z0, a.h1, 0.5));
   corpo.push(...bloco(v, centro, p), ...cinta(v, centro.x0, centro.x1, centro.z0, ANDAR, p.cor));
@@ -349,7 +364,7 @@ function mansao(c: Ctx): Cena & { principal: Bloco } {
   // VIDA 21: a palmeira própria da mansão só quando o paisagismo não plantou as dele (antes, com o tropical, eram duas no
   // mesmo x, uma sobre a outra); a da direita do jardim não entra na piscina (`ocupado`).
   const tropical = ['tropical', 'botanico'].includes(c.externo?.paisagismo ?? '');
-  const frente = [...J.frente, ...luzDeFora(v, c.externo?.luz ?? 'arandelas', centro.z0, cx - 0.9, 0.45, [cx, 0], 1.8), ...(tropical ? [] : palmeiraNoLote(v, [0.4, ae.x0 - 0.5], 2.2, 6.5, -1)), marcado(undefined, { 'data-detalhe': 'piscina' }, [noChao(v, ad.x1 + 0.6, largura - 0.6, z0 + 1, z0 + 5, '#e3ddd0', 'deck', 0, true), noChao(v, ad.x1 + 1, largura - 1, z0 + 1.4, z0 + 4.6, COR.agua, 'agua', 0.02)])];
+  const frente = [...J.frente, ...luzDeFora(v, c.externo?.luz ?? 'arandelas', centro.z0, cx - 0.9, 0.45, [cx, 0], 1.8), ...(tropical ? [] : palmeiraNoLote(v, [0.4, ae.x0 - 0.5], 2.2, 6.5, -1)), marcado(undefined, { 'data-detalhe': 'piscina' }, [noChao(v, ad.x1 + 0.6, 30 - 0.6, z0 + 1, z0 + 5, '#e3ddd0', 'deck', 0, true), noChao(v, ad.x1 + 1, 30 - 1, z0 + 1.4, z0 + 4.6, COR.agua, 'agua', 0.02)])];
   return { v, fundo: J.fundo, chao: [...L.chao, ...J.chao, ...caminho(v, cx, po.z0, c.externo)], corpo, frente, muro: L.frente, largura, principal: centro };
 }
 
@@ -378,7 +393,7 @@ function sitio(c: Ctx): Cena & { principal: Bloco } {
   const cena = terrea(c, { l: 9, d: 7, telhado: 'quatro', muro: false, arvore: true, alpendre: true, largura: 26, ocupado: [[1.2, 3.6], [x1Casa + 1.6, x1Casa + 4.4]] });
   const v = cena.v, b = cena.principal;
   const cerca = (x0: number, x1: number): Peca => grupo(frontal(v, x0, 0.2, 1.1), [{ tipo: 'massa', d: Array.from({ length: Math.floor((x1 - x0) / 1.6) + 1 }, (_, k) => ret(k * 1.6, 0, 0.12, 1.1, 0.02)).join(''), cor: '#8a6a45', marca: 'mourao' }, { tipo: 'linha', d: `M0 0.25H${num(x1 - x0)}M0 0.65H${num(x1 - x0)}`, larg: 0.9, cor: '#7a5a38', marca: 'cerca' }]);
-  (cena.muro ??= []).push(marcado(undefined, { 'data-detalhe': 'cerca' }, [cerca(0.2, b.x0 - 0.6), cerca(b.x0 + 2.4, 25.8)]));
+  (cena.muro ??= []).push(marcado(undefined, { 'data-detalhe': 'cerca' }, [cerca(0.2, b.x0 - 0.6), cerca(b.x0 + 2.4, cena.largura - 0.2)]));
   // As árvores do fundo (z 9–11) vêm antes do resto do fundo (as palmeiras do jardim ficam mais perto).
   cena.fundo.unshift(arvore(v, 2.4, 9, { alt: 6, copa: '#5f8f4e' }), arvore(v, 23.4, 11, { alt: 5, frutas: '#e8952a' }));
   // A torre da caixa-d'água (estrutura de madeira) e a roça em fileiras.
@@ -432,17 +447,45 @@ const FORMAS14: Record<FormaDaCasa, (c: Ctx) => Cena & { principal: Bloco }> = {
 
 const COMPRIMENTO = { carro: 4.2, moto: 2.1, bicicleta: 1.75 } as const;
 
+/** VIDA 22: o que cada forma já desenha por conta própria (não se repete como anexo). */
+const JA_DESENHA: Partial<Record<FormaDaCasa, string[]>> = { casa_3q: ['garagem'], casa_grande: ['garagem'], mansao: ['piscina', 'garagem'], sitio: ['garagem'] };
+/** VIDA 22: as formas que têm lote com quintal (as outras — prédios, kitnet, vila — não ganham anexo). */
+const COM_QUINTAL: FormaDaCasa[] = ['casa_simples', 'casa_2q', 'casa_3q', 'casa_grande', 'mansao', 'sitio', 'familia', 'parente', 'favor'];
+const ORDEM_DOS_ANEXOS = ['garagem', 'piscina', 'lazer', 'quadra'];
+
 export function amostraDaCasa14(e: CenaEntrada): Amostra {
   const pl = PLANTAS[e.forma];
-  const ctx: Ctx = { acesas: Math.max(1, e.acesas), tijolo: e.tijolo, cor: e.fachada ?? pl.cor, externo: e.externo, usadas: 0 };
-  const cena = FORMAS14[e.forma](ctx);
+  // VIDA 22: os anexos (os cômodos de fora que a casa tem e que a forma ainda não desenha) alargam o lote à direita.
+  const quintal = COM_QUINTAL.includes(e.forma);
+  const anexos = quintal ? ORDEM_DOS_ANEXOS.filter(a => (e.extras ?? []).includes(a) && !(JA_DESENHA[e.forma] ?? []).includes(a)) : [];
+  const anexo = anexos.reduce((s, a) => s + (LARGURA_DO_ANEXO[a] ?? 0), 0);
+  const jardimSemProjeto = quintal && (e.extras ?? []).includes('jardim') && (!e.externo?.paisagismo || e.externo.paisagismo === 'nenhum');
+  const externo: LadoDeFora | undefined = jardimSemProjeto ? { ...e.externo, paisagismo: 'gramado' } : e.externo;
+  const ctx: Ctx = { acesas: Math.max(1, e.acesas), tijolo: e.tijolo, cor: e.fachada ?? pl.cor, externo, usadas: 0, anexo, varanda: quintal && (e.extras ?? []).includes('varanda') };
+  MARGEM = e.entorno ? 3.6 : 0;
+  let cena: Cena & { principal: Bloco };
+  try { cena = FORMAS14[e.forma](ctx); } finally { MARGEM = 0; }
   const v = cena.v, b = cena.principal;
+  const ent = e.entorno ? entornoDaCasa(v, cena.largura, 3.6, e.entorno.tipo, e.entorno.semente) : undefined;
+  // Os anexos ficam na faixa nova do lote (à direita da casa); as coisas do quintal, nas faixas livres ao lado da casa.
+  const base = cena.largura - anexo;
+  const corAnexo = e.fachada ?? pl.cor;
+  const anexosPecas = anexos.length ? anexosDaCasa(v, base - (e.forma === 'mansao' ? 0 : 0.3), b.z0, anexos, corAnexo, e.coisasFora ?? []) : [];
+  const quintalPecas: Peca[] = [];
+  if (quintal && e.coisasFora?.length) {
+    const lista = e.coisasFora.filter(id => !(anexos.includes('lazer') && ['churrasqueira', 'espaco_gourmet'].includes(id)) && !(anexos.includes('piscina') && id.startsWith('espreguicadeira'))).slice(0, 3);
+    const vagas: number[] = [];
+    for (let x = 0.5; x + 2.6 < b.x0 - 0.3 && vagas.length < 3; x += 3) vagas.push(x);
+    for (let x = b.x1 + 0.6; x + 2.6 < base - 0.2 && vagas.length < 3; x += 3) vagas.push(x);
+    lista.forEach((id, k) => { if (vagas[k] !== undefined) quintalPecas.push(...coisaDoQuintal(v, id, vagas[k], b.z0 + 1.2)); });
+  }
   const pecas: Peca[] = [
     { tipo: 'massa', d: ret(0, 0, W, H, 0), cor: '#b9ad98', opacidade: 0, semVolume: true, semContorno: true, marca: 'chao', classe: 'cena__chao' },
-    ...cena.chao, ...cena.fundo, ...cena.corpo,
+    ...cena.chao, ...(ent?.fundo ?? []), ...cena.fundo, ...quintalPecas, ...anexosPecas, ...cena.corpo,
     ...estado(v, b, e.nivel, e.reforma),
     ...cena.frente,
-    ...(cena.muro?.length ? [marcado(undefined, { 'data-detalhe': 'muro' }, cena.muro)] : [])
+    ...(cena.muro?.length ? [marcado(undefined, { 'data-detalhe': 'muro' }, cena.muro)] : []),
+    ...(ent?.rua ?? [])
   ];
   // O veículo: estacionado junto ao meio-fio, na frente de casa (a mesma ilustração da garagem, na escala da cena).
   if (e.veiculo) {

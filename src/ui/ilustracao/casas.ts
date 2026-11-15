@@ -422,6 +422,12 @@ export interface CenaEntrada {
   bichos: { id: string; especie: string }[];
   /** VIDA 12.8: o lado de fora escolhido (o desenho da fachada, o jardim, o caminho, a luz, o portão). */
   externo?: LadoDeFora;
+  /** VIDA 22: o lugar em volta (vizinhos e rua) — o tipo do entorno e a semente estável dos vizinhos. */
+  entorno?: { tipo: import('../v14/fachadas/entorno22').TipoDeEntorno; semente: string };
+  /** VIDA 22: os cômodos de fora que a casa tem (garagem, piscina, lazer, quadra, varanda, jardim). */
+  extras?: string[];
+  /** VIDA 22: as coisas da área externa que a pessoa tem em casa (churrasqueira, gazebo, fonte...). */
+  coisasFora?: string[];
 }
 
 export interface LadoDeFora { fachada?: string; corFachada?: string; cor2Fachada?: string; paisagismo?: string; caminho?: string; corCaminho?: string; luz?: string; portao?: string }

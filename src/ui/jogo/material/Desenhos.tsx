@@ -16,6 +16,7 @@ import { IlustracaoVeiculo } from '../../ilustracao/veiculos';
 import { Ilustracao } from '../../ilustracao/nucleo';
 import { amostraDaMiniatura, PLANTAS } from '../../ilustracao/casas';
 import { amostraDaCasa14 } from '../../v14/fachadas/casas14';
+import { tipoDeEntorno } from '../../v14/fachadas/entorno22';
 import { NOME_FORMA, type FormaVeiculo } from '../../../motor/dados/bens';
 
 const DESCRICAO: Record<FormaDaCasa, string> = {
@@ -69,7 +70,10 @@ export function CenaDaCasa({ l, externo }: { l: LeituraLar; externo?: LadoDeFora
     externo,
     forma: l.forma, acesas, tijolo: tijolo && !externo?.fachada, fachada: externo?.corFachada ?? l.fachada?.cor, nivel: c.nivel, reforma: !!c.reformaRecente,
     veiculo: l.veiculo && formaV ? { tipo: l.veiculo, forma: formaV, cor: l.corVeiculo, versaoId: l.versaoVeiculo, estado: l.estadoVeiculo } : undefined,
-    bichos: l.bichos.filter(b => b.especie === 'gato' || b.especie === 'cachorro')
+    bichos: l.bichos.filter(b => b.especie === 'gato' || b.especie === 'cachorro'),
+    // VIDA 22: o lugar em volta e o que a casa tem do lado de fora.
+    entorno: l.entorno ? { tipo: tipoDeEntorno({ bairro: l.entorno.bairro, perfil: l.entorno.perfil, forma: l.forma, padrao: l.padrao }), semente: l.entorno.semente } : undefined,
+    extras: l.extras, coisasFora: l.coisasFora
   });
   return <Ilustracao a={a} largura={312} rotulo={rotulo} className={`cena cena--${l.forma} cena--${c.nivel}${l.fachada ? ' cena--colorida' : ''}`} dados={{ 'data-forma': l.forma }} />;
 }

@@ -18,6 +18,8 @@ import { petsDaCasa, estadoDoPet } from '../motor/sistemas/pets';
 import { estadoDoVeiculo, anosDoVeiculo, nomeComCor, versaoDoVeiculo } from '../motor/sistemas/veiculos';
 import { casaApertada } from '../motor/sistemas/imoveis';
 import { anoDe } from '../motor/tempo';
+import { comodosDe, donoDoLar } from '../motor/sistemas/lar';
+import { COISAS_DO_QUINTAL } from './v14/fachadas/entorno22';
 
 /** Na moeda do país onde a vida está (`motor/mundo/moeda`). */
 export const dinheiroCheio = (v: number) => formatarDinheiroCheio(v);
@@ -75,6 +77,12 @@ export interface LeituraLar {
   estadoVeiculo?: number;
   fachada?: { cor: string; nome: string };
   janelasAcesas: number;
+  /** VIDA 22: o lugar em volta — o bairro (as palavras do mercado) e o porte da cidade. */
+  entorno: { bairro?: string; perfil: string; semente: string };
+  /** VIDA 22: os cômodos de fora que a casa tem (da planta e construídos): garagem, piscina, lazer, quadra, varanda, jardim. */
+  extras: string[];
+  /** VIDA 22: as coisas da área externa que estão em casa (não guardadas no depósito). */
+  coisasFora: string[];
 }
 
 const FORMAS_DE_MODELO: readonly FormaDaCasa[] = ['republica', 'kitnet', 'apto_1q', 'apto_2q', 'apto_3q', 'alto_padrao', 'casa_simples', 'casa_2q', 'casa_3q', 'casa_grande', 'sitio', 'cobertura', 'mansao'];
@@ -174,9 +182,13 @@ export function leituraDoLar(v: Vida): LeituraLar {
     versaoVeiculo: vei?.versaoId,
     estadoVeiculo: vei?.estado,
     fachada: fachadaDe(chaveDaCasa(v), forma),
-    janelasAcesas: 1 + junto.length
+    janelasAcesas: 1 + junto.length,
+    entorno: { bairro: m.tipo === 'pais' || m.tipo === 'parente' ? undefined : m.bairro, perfil: mun.perfil, semente: chaveDaCasa(v) },
+    extras: m.tipo === 'pais' || m.tipo === 'parente' || m.tipo === 'cedida' ? [] : comodosDe(m.modeloId, donoDoLar(v)?.lar).map(c => c.tipo).filter(t => EXTRAS_DE_FORA.includes(t)),
+    coisasFora: (v.financas.coisas ?? []).filter(c => !c.local && (COISAS_DO_QUINTAL as readonly string[]).includes(c.coisaId)).map(c => c.coisaId)
   };
 }
+const EXTRAS_DE_FORA: string[] = ['garagem', 'piscina', 'lazer', 'quadra', 'varanda', 'jardim'];
 
 /* ------------------------------------------------------------------ Mês */
 
