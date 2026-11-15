@@ -11,6 +11,7 @@ import { economiaLocal, paisDaCidade } from '../dados/lugares';
 import type { Ocupacao } from '../dados/ocupacoes';
 import { PAIS_PADRAO, perfilDoPais, temPerfil } from '../mundo/registro';
 import { parametrosFiscais, salarioMinimoDoPais } from '../mundo/economia';
+import { ajusteDaDistribuicao } from '../eras/base/economia';
 
 /*
  * MUNDO: os números legais (o mínimo, a previdência, o imposto, o 13º) são
@@ -61,7 +62,10 @@ export const contribui = (c: Contrato) => c === 'clt' || c === 'servidor' || c =
 export function salarioLocal(oc: Ocupacao, municipioId: string, variacao = 1): number {
   const local = economiaLocal(municipioId).salario;
   // Salário mínimo (do país) é piso para contrato formal de jornada integral.
-  const bruto = oc.salario * local * variacao;
+  // ERAS HISTÓRICAS: a posição da ocupação na escala de salários da época (o mínimo, a média, o prêmio do diploma);
+  // o nível de renda já veio em `economiaLocal`. Só no Brasil (os outros países ainda não têm série histórica).
+  const daEpoca = paisDaCidade(municipioId) === PAIS_PADRAO ? ajusteDaDistribuicao(oc.salario) : 1;
+  const bruto = oc.salario * local * variacao * daEpoca;
   const piso = oc.contrato === 'clt' && oc.carga === 'integral' ? salarioMinimoDoPais(paisDaCidade(municipioId)) : 0;
   return Math.round(Math.max(piso, bruto) / 10) * 10;
 }

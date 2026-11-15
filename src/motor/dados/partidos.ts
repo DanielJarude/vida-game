@@ -12,6 +12,9 @@
  * personagem — nada disso é atribuído a partido real.
  */
 
+import { PARTIDO_NO_TEMPO, nomeNoAno } from '../eras/base/partidos';
+import { mesHistoricoCorrente } from '../eras/base/moedas';
+
 export interface Partido {
   sigla: string;
   nome: string;
@@ -70,7 +73,18 @@ export const PARTIDOS_GENERICOS: readonly Partido[] = [
 ];
 
 /** O partido pelo que está guardado na vida (sigla; saves antigos guardam o nome fictício, que continua valendo como está). */
-export const partidoDe = (x: string | undefined): Partido | undefined => (x ? PARTIDOS_REAIS.find(p => p.sigla === x) ?? PARTIDOS_GENERICOS.find(p => p.sigla === x) ?? { sigla: x, nome: x, chamado: x, artigo: 'o' } : undefined);
+export const partidoDe = (x: string | undefined): Partido | undefined => (x ? (emVidaHistorica() ? daHistoria(x) : undefined) ?? PARTIDOS_REAIS.find(p => p.sigla === x) ?? daHistoria(x) ?? PARTIDOS_GENERICOS.find(p => p.sigla === x) ?? { sigla: x, nome: x, chamado: x, artigo: 'o' } : undefined);
+
+const emVidaHistorica = () => { const mh = mesHistoricoCorrente(); return mh !== null && mh < 2026 * 12; };
+
+/** ERAS HISTÓRICAS: um partido que já não existe com esse nome (o PFL, o PMDB), com o nome que tinha no ano corrente. */
+function daHistoria(id: string): Partido | undefined {
+  const p = PARTIDO_NO_TEMPO.get(id);
+  if (!p) return undefined;
+  const mh = mesHistoricoCorrente();
+  const n = nomeNoAno(p, mh !== null ? Math.floor(mh / 12) : 2026);
+  return { sigla: p.sigla, nome: n.nome, chamado: n.chamado, artigo: p.artigo };
+}
 
 /** "o PT", "a Rede". */
 export const oPartido = (x: string | undefined) => { const p = partidoDe(x); return p ? `${p.artigo} ${p.chamado}` : 'o partido'; };

@@ -10,6 +10,7 @@
  * gesta. Adoção é um processo de anos.
  */
 
+import { ocupacaoExisteAgora } from '../eras/base/profissoes';
 import { paisCorrente } from '../mundo/moeda';
 import { sobrenomeDeQuemNasce } from '../dados/nomes';
 import { anosNoPais, nacionalidadesDaPessoa, nacionalidadesDaVida, nacionalidadesDoBebe } from '../mundo/vida';
@@ -227,7 +228,7 @@ export function processarFamiliaDeOrigem(v: Vida, r: Rng): void {
       // Recoloca-se na mesma área, quase sempre; às vezes num degrau abaixo.
       const mesmaArea = ocAtual ? OCUPACOES.filter(o => o.trilha === ocAtual.trilha && Math.abs(o.nivel - ocAtual.nivel) <= 1 && !o.concurso && o.contrato !== 'estagio' && o.contrato !== 'aprendiz' && o.contrato !== 'militar') : [];
       const oc = mesmaArea.length && r.chance(0.8) ? (r.chance(0.6) && !ocAtual!.concurso && ocAtual!.contrato !== 'militar' && ocAtual!.contrato !== 'servidor' ? ocAtual! : r.pick(mesmaArea)) : ocupacao(r.pick(ocupacoesDaClasse(v.origem.classe, paisDaCidade(p.municipioId))));
-      if (oc.idadeMin <= ip) {
+      if (oc.idadeMin <= ip && ocupacaoExisteAgora(oc.id)) {
         p.ocupacaoId = oc.id;
         p.ocupacao = p.genero === 'feminino' ? oc.nome[1] : oc.nome[0];
         p.renda = liquido(salarioLocal(oc, p.municipioId, 0.85 + r.next() * 0.3), oc.contrato, paisDaCidade(p.municipioId));

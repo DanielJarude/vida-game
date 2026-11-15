@@ -34,6 +34,8 @@
  */
 
 import { fatorDasAliancas, liderancaRompida } from './aliancas';
+import { partidosNoMes } from '../eras/base/partidos';
+import { mesHistoricoCorrente } from '../eras/base/moedas';
 import { aliviar, causasDoDesgaste, desgastar, esfriarNoAno } from './desgastePolitico';
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
@@ -93,7 +95,12 @@ export const PRESIDENCIA: GanchosPresidencia = {};
 /** Os partidos (siglas) que podem convidar alguém: os registrados no TSE. */
 export const PARTIDOS = PARTIDOS_REAIS.map(p => p.sigla);
 /** Os partidos do país onde a pessoa mora: os reais no Brasil; fora, os do espectro, sem nome próprio (`dados/partidos`). */
-export const partidosDoPais = (pais: string): string[] => (politicaDo(pais).partidosReais ? PARTIDOS : PARTIDOS_GENERICOS.map(p => p.sigla));
+export const partidosDoPais = (pais: string): string[] => {
+  if (!politicaDo(pais).partidosReais) return PARTIDOS_GENERICOS.map(p => p.sigla);
+  // ERAS HISTÓRICAS: numa vida histórica no Brasil, só os partidos que existiam no mês (`eras/base/partidos`).
+  const mh = pais === 'BR' ? mesHistoricoCorrente() : null;
+  return mh !== null && mh < 2026 * 12 ? partidosNoMes(mh) : PARTIDOS;
+};
 
 export const NOME_PRIORIDADE: Record<Prioridade, string> = {
   saude: 'saúde: posto, fila, remédio', educacao: 'escola e creche', mobilidade: 'transporte e ruas', emprego: 'trabalho e renda',
@@ -451,7 +458,7 @@ export function podeConcorrer(v: Vida, cargo: CargoEletivo, tEleicao: number): V
   // Disputar eleição é direito de quem tem a NACIONALIDADE do país (a residência não basta): `mundo/vida`.
   if (!temNacionalidade(v, paisDaVida(v))) return bloqueio('ilegal', `Para disputar uma eleição ${noPais(paisDaVida(v))}, é preciso ter a nacionalidade ${gentilico(paisDaVida(v), true)}.`);
   const inel = inelegivelAte(v);
-  if (inel && inel > tEleicao) return bloqueio('ilegal', `Inelegível até ${anoDe(inel)}${politicaDo(paisDaVida(v)).partidosReais ? ' (Lei da Ficha Limpa)' : ', pela condenação'}.`);
+  if (inel && inel > tEleicao) return bloqueio('ilegal', `Inelegível até ${anoDe(inel)}${politicaDo(paisDaVida(v)).partidosReais && !(v.era && anoDe(v.t) < 2010) ? ' (Lei da Ficha Limpa)' : ', pela condenação'}.`);
   const m = v.caminhos.militar;
   if (m && v.trabalho.atual?.contrato === 'militar' && m.quadro === 'temporario' && v.t - m.tIngresso < 12) return bloqueio('ilegal', 'Durante o serviço militar obrigatório, conscrito não se candidata.');
   if (cargo === 'presidente') { const x = PRESIDENCIA.elegivel?.(v, tEleicao); if (x) return x; }

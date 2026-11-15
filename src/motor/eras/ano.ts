@@ -31,6 +31,7 @@ import { ACONTECIMENTOS_BR, ESPORTE_MUNDIAL_BR, PIB_BR, type AcontecimentoBR } f
 const TODOS = [...ACONTECIMENTOS_BR, ...ESPORTE_MUNDIAL_BR].sort((a, b) => a.data[0] * 12 + a.data[1] - (b.data[0] * 12 + b.data[1]));
 import { CHEGADAS, LEMBRANCAS_CULTURAIS } from './dados/culturaBR';
 import { FERRAMENTAS } from './base/profissoes';
+import { PARTIDO_NO_TEMPO, sucessorNoMes, mesDaMudanca } from './base/partidos';
 import type { EventoMundial14, TipoEventoMundial } from '../dados14/mundo/tipos';
 import type { FaseEconomica } from '../tipos';
 
@@ -247,6 +248,41 @@ function oficio(v: Vida): void {
   escrever(v, { texto: f.texto, relevancia: 'cotidiano', tema: 'trabalho', fato: { tipo: 'era', dados: { categoria: 'trabalho', evento: k } } });
 }
 
+/* ------------------------------------------------------------------ 6. O partido muda (nome, fusão, incorporação) */
+
+const COMO: Record<string, string> = { nome: 'mudou de nome', fusao: 'se fundiu com outro', incorporacao: 'foi incorporado por outro', extincao: 'foi extinto' };
+
+/**
+ * Quem está filiado a um partido que muda de nome, se funde ou é incorporado passa a constar no sucessor (Lei 9.096/1995,
+ * art. 29: a filiação acompanha a fusão e a incorporação). A Linha da Vida conta, no mês da mudança.
+ */
+function partidoMuda(v: Vida, tFim: number): void {
+  const p = v.caminhos.politica;
+  if (!p?.partido || !PARTIDO_NO_TEMPO.has(p.partido)) return;
+  const s = sucessorNoMes(p.partido, tFim);
+  if (!s || s.id === p.partido) {
+    if (!s && p.fase !== 'encerrada') {
+      // Extinto sem sucessor (não há caso na lista atual): a filiação acaba.
+      p.partido = undefined; p.tFiliacao = undefined;
+    }
+    return;
+  }
+  for (const passo of s.passos) {
+    const novo = PARTIDO_NO_TEMPO.get(passo.vira!)!;
+    const t = mesDaMudanca(passo) ?? tFim;
+    const hist = p.partidos ??= [];
+    const aberto = hist.find(h => h.sigla === passo.id && h.tFim === undefined);
+    if (aberto) aberto.tFim = t;
+    hist.push({ sigla: novo.id, tInicio: t });
+    const verbo = COMO[passo.como ?? 'nome'];
+    const texto = passo.como === 'nome'
+      ? `O ${passo.sigla}, o seu partido, ${verbo}: passou a ser ${novo.artigo} ${novo.chamado} (${novo.nome}). A ficha de filiação seguiu a mesma.`
+      : `O ${passo.sigla}, o seu partido, ${verbo}${passo.como === 'extincao' ? '' : ''}: a sua filiação passou para ${novo.artigo} ${novo.chamado} (${novo.nome}).`;
+    escrever(v, { t: Math.min(t, tFim), texto, relevancia: 'cotidiano', tema: 'lugar', fato: { tipo: 'era', dados: { categoria: 'politica', evento: `partido:${passo.id}` } } });
+  }
+  p.partido = s.id;
+}
+
 /* ------------------------------------------------------------------ O ano */
 
 export function processarEra(v: Vida, ec: AnoEconomico): void {
@@ -258,6 +294,7 @@ export function processarEra(v: Vida, ec: AnoEconomico): void {
     acontecimentos(v, tIni, tFim);
   }
   devolverCollor(v, tFim);
+  partidoMuda(v, tFim);
   chegadas(v);
   oficio(v);
   if (anoDe(v.t) <= 2025) lembranca(v);

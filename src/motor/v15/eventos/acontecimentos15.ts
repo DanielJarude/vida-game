@@ -8,6 +8,7 @@
  * (a carta escrita aos 11 aberta aos 30, a foto de um marco de verdade, o colega de escola que ficou famoso, a volta à
  * cidade onde se cresceu). Regras da casa: papéis `fixo`, `quando` não sorteia, variações por sorteio derivado.
  */
+import { temAcesso } from '../../eras/base/contexto';
 import type { Conteudo, Ctx, Papel } from '../../conteudo/base';
 import type { Vida } from '../../tipos';
 import * as P from '../../conteudo/papeis';
@@ -158,7 +159,8 @@ export const ACONTECIMENTOS_15: Conteudo[] = [
   /* ============================================================ ADOLESCÊNCIA */
   {
     id: 'ado15_grupo', manual: true, tipo: 'decisao', idade: [12, 16], tema: 'escola', peso: 1.6, repetir: 0,
-    quando: c => naEscola(c),
+    // ERAS v2: o grupo da turma no aplicativo só existe quando o aplicativo de mensagens já chegou à vida.
+    quando: c => naEscola(c) && temAcesso(c.v, 'mensageiro_app'),
     papeis: { amigo: fixo(P.qualquer(P.amigo, P.colegaDe('escola'))) },
     titulo: 'O print no grupo',
     texto: c => `Alguém mandou no grupo da turma um print de uma conversa de ${nome(c, 'amigo')} — tirado do contexto, e todo mundo está rindo.`,

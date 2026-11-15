@@ -41,6 +41,7 @@ import { clamp } from '../rng';
 import type { Divida, EstiloDeVida, LinhaRazao, Pessoa, Rotina, Vida } from '../tipos';
 import { escrever, filhos, idade, idadePessoa, lembrarCom, marcarFato, moraCom, parceiro, temFato, vinculosVivos } from '../nucleo';
 import { economiaLocal } from '../dados/lugares';
+import { precoDaEpoca } from '../eras/base/economia';
 import { modeloMoradia } from '../dados/bens';
 import { curso } from '../dados/cursos';
 import { SALARIO_MINIMO } from './renda';
@@ -73,7 +74,8 @@ const CONTAS_DA_CASA = 340;
  * O plano de saúde custa o que custa no país onde se mora (`perfil.saude.custoPlano`,
  * relativo ao brasileiro): onde a saúde depende de seguro, bem mais.
  */
-const custoDoPlano = (v: Vida) => perfilDaVida(v).saude.custoPlano;
+// ERAS HISTÓRICAS: o preço relativo do plano de saúde na época (IPCA, item plano de saúde; 1 na vida contemporânea).
+const custoDoPlano = (v: Vida) => perfilDaVida(v).saude.custoPlano * (v.era ? precoDaEpoca('plano_saude') : 1);
 /** Onde se diz "nome sujo" (`perfil.cotidiano`); fora, o cadastro de devedores, sem gíria. */
 const nomeSujo = (v: Vida) => !!perfilDaVida(v).cotidiano?.nomeSujo;
 /** "Benefício assistencial (BPC)": o nome curto do benefício do país, quando há. */
@@ -246,7 +248,8 @@ export function orcamento(v: Vida, estiloForcado?: EstiloDeVida): Orcamento {
   const adultos = 1 + junto.filter(p => idadePessoa(v, p) >= 18).length;
   const criancas = junto.filter(p => idadePessoa(v, p) < 18).length;
   const contas = CONTAS_DA_CASA * Math.sqrt(estilo.basico) * (mor.tipo === 'republica' ? 0.4 : parte);
-  sai('Mercado, luz, água e internet', (MERCADO_POR_ADULTO * estilo.basico * (adultos + criancas * 0.6) + contas) * c, 'casa');
+  // ERAS HISTÓRICAS: a comida do mercado pelo preço relativo da época (IPCA, alimentação e bebidas; 1 na contemporânea).
+  sai('Mercado, luz, água e internet', (MERCADO_POR_ADULTO * estilo.basico * (adultos + criancas * 0.6) * (v.era ? precoDaEpoca('alimentacao') : 1) + contas) * c, 'casa');
 
   // Filhos: a criação aparece como parte da casa, não como preço de alguém.
   let criacao = 0;
@@ -255,7 +258,7 @@ export function orcamento(v: Vida, estiloForcado?: EstiloDeVida): Orcamento {
     const idF = idadePessoa(v, fl);
     if (idF >= 18 || !v.vinculos[fl.id].convivio.includes('casa')) continue;
     criacao += (idF < 3 ? 700 : idF < 6 ? 480 : idF < 15 ? 430 : 560) * c;
-    if (idF >= 2 && temFato(v, 'filhos_escola_privada')) escola += 1300 * c;
+    if (idF >= 2 && temFato(v, 'filhos_escola_privada')) escola += 1300 * c * (v.era ? precoDaEpoca('educacao') : 1);
   }
   sai('Criação dos filhos: roupa, material, remédio, o que crescer pede', criacao, 'filhos');
   sai('Escola particular', escola, 'filhos');

@@ -31,6 +31,7 @@
  * Salários: bruto mensal de referência (reais de 2026); o município multiplica.
  */
 
+import { ocupacaoExisteAgora } from '../eras/base/profissoes';
 import { paisCorrente } from '../mundo/moeda';
 import type { Contrato, Dominio, Escolaridade, NivelCurso } from '../tipos';
 import type { AreaFormacao } from './cursos';
@@ -541,7 +542,7 @@ export const ROTULO_SETOR: Record<Setor, string> = {
 /** Ocupações típicas dos pais por classe — para gerar a família de origem. */
 /** As ocupações de uma classe que existem no país (a Polícia Militar é do Brasil: um pai em Lisboa não é "soldado da PM"). */
 export const ocupacoesDaClasse = (classe: string, pais: string): string[] =>
-  (OCUPACOES_POR_CLASSE[classe] ?? []).filter(id => { const oc = ocupacao(id); return !oc.paises || oc.paises.includes(pais); });
+  (OCUPACOES_POR_CLASSE[classe] ?? []).filter(id => { const oc = ocupacao(id); return (!oc.paises || oc.paises.includes(pais)) && ocupacaoExisteAgora(id); });
 
 export const OCUPACOES_POR_CLASSE: Record<string, string[]> = {
   vulneravel: ['ambulante', 'diarista', 'ajudante_obras', 'trabalhador_rural', 'manicure', 'aux_cozinha', 'entregador_app', 'cuidador', 'estoquista', 'catador', 'trabalhador_domestico', 'aux_limpeza', 'feirante', 'pescador', 'costureiro'],

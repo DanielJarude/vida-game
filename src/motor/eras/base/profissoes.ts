@@ -10,6 +10,7 @@
 import type { Vida } from '../../tipos';
 /** O ano civil de um instante (sem importar `tempo`: a base histórica não depende de nenhum pacote de cima). */
 const anoDe = (t: number) => Math.floor(t / 12);
+import { mesHistoricoCorrente } from './moedas';
 
 /** Ocupação → ano em que passa a existir no Brasil. */
 export const OCUPACOES_DESDE: Readonly<Record<string, { desde: number; fonte: string }>> = {
@@ -34,6 +35,16 @@ export function ocupacaoAindaNaoExiste(v: Vida, id: string): number | undefined 
   if (!v.era) return undefined;
   const d = OCUPACOES_DESDE[id]?.desde;
   return d !== undefined && anoDe(v.t) < d ? d : undefined;
+}
+
+/**
+ * ERAS v2: a ocupação existe no mês da vida histórica que o motor está processando (para quem sorteia a profissão dos
+ * pais, dos irmãos, dos filhos e das pessoas do mundo — elas também não podem ser motorista de aplicativo em 1990).
+ */
+export function ocupacaoExisteAgora(id: string): boolean {
+  const t = mesHistoricoCorrente();
+  const d = OCUPACOES_DESDE[id]?.desde;
+  return t === null || d === undefined || anoDe(t) >= d;
 }
 
 /** Cursos de nome ou existência recentes: o ano em que passam a ser oferecidos (e o nome de antes, quando havia). */

@@ -18,6 +18,7 @@
  */
 
 import { fatorDePrecoDaEpoca, motivoSemCoisa } from '../eras/base/coisas';
+import { precoDaCategoriaNaEpoca } from '../eras/base/economia';
 import type { CoisaTida, Vida } from '../tipos';
 import { clamp, rngDe } from '../rng';
 import { escrever, idade, novoId } from '../nucleo';
@@ -55,7 +56,9 @@ export function precoDaCoisa(v: Vida, id: string): number {
   if (!c) return 0;
   const frete = temLojaNaCidade(v, c.loja) ? 1 : 1.1;
   // ERAS HISTÓRICAS: a tecnologia nova custava proporcionalmente mais (vida contemporânea: fator 1).
-  return Math.round(c.preco * economiaLocal(v.moradia.municipioId).custo * frete * fatorDePrecoDaEpoca(v, id) / 10) * 10;
+  // ERAS v2: e, no mínimo, o preço relativo da categoria (eletrônicos e casa: IPCA, eletrodomésticos e equipamentos).
+  const epoca = v.era ? Math.max(fatorDePrecoDaEpoca(v, id), c.loja === 'eletronicos' || c.loja === 'casa' ? precoDaCategoriaNaEpoca('eletrodomesticos') : 1) : 1;
+  return Math.round(c.preco * economiaLocal(v.moradia.municipioId).custo * frete * epoca / 10) * 10;
 }
 
 /** O que a coisa ainda vale, vendida usada: o que sobra da vida útil, o estado, e a metade que o mercado de usados paga. */

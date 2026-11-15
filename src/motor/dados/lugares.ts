@@ -14,6 +14,7 @@ import type { Regiao } from '../tipos';
 import type { PerfilDePais, PerfilUrbano } from '../mundo/tipos';
 import { MUNICIPIOS_1291 } from './municipios1291';
 import { AJUSTE_LOCAL_14 as AJ14 } from '../dados14/cidades/municipios14';
+import { precoDaEpoca, rendaDaEpocaCorrente } from '../eras/base/economia';
 import { aoRegistrar, idDaCidade, indiceNoCatalogo, PAIS_PADRAO, paisDoCatalogo, paisDoId, paisPeloIndice, perfilDoPais, temPerfil } from '../mundo/registro';
 
 /*
@@ -264,11 +265,14 @@ export function economiaLocal(id: string) {
     const r = REGIAO[m.regiao!];
     const brasilia = m.id === 'brasilia-df' ? 1.12 : 1;
     const [kc, ks] = AJ14[m.id] ?? [1, 1]; // VIDA 14: o ajuste fino das cidades novas
+    // ERAS HISTÓRICAS: numa vida histórica no Brasil, o nível de renda da época e o preço relativo do aluguel
+    // (`eras/base/economia`; 1 na vida contemporânea).
+    const renda = rendaDaEpocaCorrente();
     return {
       custo: p.custo * r.custo * brasilia * kc,
-      salario: p.salario * r.salario * brasilia * ks,
+      salario: p.salario * r.salario * brasilia * ks * renda,
       /** Aluguel de referência (padrão 3, dois quartos). */
-      aluguel: Math.round(p.aluguel * r.custo * brasilia * kc),
+      aluguel: Math.round(p.aluguel * r.custo * brasilia * kc * precoDaEpoca('aluguel')),
       transporte: p.transporte,
       rotulo: p.rotulo
     };

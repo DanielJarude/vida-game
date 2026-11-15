@@ -5,6 +5,7 @@
  * cidade, se a loja cabe nela; o resto vem pela internet, com frete (e a importação, quando a marca não é vendida aqui).
  */
 import { fatorDePrecoDaEpoca, marcaExisteNoAno, motivoSemCoisa } from '../eras/base/coisas';
+import { precoDaCategoriaNaEpoca } from '../eras/base/economia';
 import { temAcesso } from '../eras/base/contexto';
 import type { Vida } from '../tipos';
 import { economiaLocal, municipio, nivelDeOferta } from '../dados/lugares';
@@ -85,7 +86,10 @@ export interface Oferta { produto: Produto; marca?: string; preco: number; impor
 
 /** O preço de um produto numa loja, de uma marca (sem loja nem marca: o preço de referência da cidade). */
 export function precoNaLoja(v: Vida, p: Produto, marcaId?: string, lojaId?: string): number {
-  const base = precoBase(p) * economiaLocal(v.moradia.municipioId).custo * (p.tipo === 'coisa' ? fatorDePrecoDaEpoca(v, p.id) : 1);
+  // ERAS HISTÓRICAS: a tecnologia nova (a curva de adoção) e o preço relativo da categoria na época (roupa, móvel,
+  // eletrodoméstico, joia; IPCA por grupo). Vida contemporânea: 1.
+  const epoca = v.era ? Math.max(p.tipo === 'coisa' ? fatorDePrecoDaEpoca(v, p.id) : 1, precoDaCategoriaNaEpoca(categoriaDoProduto(p))) : 1;
+  const base = precoBase(p) * economiaLocal(v.moradia.municipioId).custo * epoca;
   const m = marcaId ? marcaPorId(marcaId) : undefined;
   const e = lojaId ? estabelecimento(lojaId) : undefined;
   // VIDA 12.8: o ultraluxo (Hermès, Patek Philippe, Fendi Casa, Gaggenau, Fazioli) cobra acima do luxo.
