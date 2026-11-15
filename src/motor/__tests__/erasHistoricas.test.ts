@@ -41,8 +41,10 @@ describe('cronologia', () => {
     expect(c.era).toBeUndefined();
     expect(anoDe(c.eu.tNasc)).toBe(2026);
   });
-  it('fora do Brasil ou fora do intervalo, não há época (a primeira versão é brasileira, de 1980 a 2025)', () => {
-    expect(nova({ semente: 1, municipioId: 'sao-paulo-sp', ano: 1979, era: true }).era).toBeUndefined();
+  // ERAS v2: o intervalo passou a começar em 1970 (a década de 1970 ganhou séries, moedas, acontecimentos e cultura).
+  it('fora do Brasil ou fora do intervalo, não há época (brasileira, de 1970 a 2025)', () => {
+    expect(nova({ semente: 1, municipioId: 'sao-paulo-sp', ano: 1969, era: true }).era).toBeUndefined();
+    expect(nova({ semente: 1, municipioId: 'sao-paulo-sp', ano: 1970, era: true }).era).toBeDefined();
     expect(nova({ semente: 1, municipioId: 'sao-paulo-sp', ano: 2026, era: true }).era).toBeUndefined();
   });
   it('o calendário segue depois da década escolhida e os acontecimentos caem no mês em que aconteceram, uma vez só', () => {

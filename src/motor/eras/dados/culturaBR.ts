@@ -22,6 +22,13 @@ export interface LembrancaCultural {
 }
 
 export const LEMBRANCAS_CULTURAIS: readonly LembrancaCultural[] = [
+  // ------------------------------------------------------------------ anos 1970 (ERAS v2)
+  { id: 'radio_de_pilha', tipo: 'costume', de: 1970, ate: 1982, idade: [6, 80], texto: 'O rádio de pilha ia junto para todo lado: o jogo de domingo, a novela do rádio, a notícia antes da televisão.', exige: 'radio' },
+  { id: 'tv_preto_branco', tipo: 'tv', de: 1970, ate: 1978, idade: [4, 80], texto: 'A televisão era em preto e branco, de botão de girar, e a vizinhança se juntava na casa de quem tinha uma.' },
+  { id: 'discoteca', tipo: 'musica', de: 1977, ate: 1981, idade: [15, 35], texto: 'A discoteca tomou conta das noites: globo espelhado, pista iluminada e a novela que levou a moda para a rua.' },
+  { id: 'festival_cancao', tipo: 'musica', de: 1970, ate: 1975, idade: [14, 40], texto: 'Os festivais da canção na televisão ainda paravam o país: torcida, vaia e música nova.' },
+  { id: 'fila_telefone', tipo: 'costume', de: 1970, ate: 1985, idade: [18, 90], texto: 'Linha de telefone era coisa que se comprava, se declarava no imposto de renda e se esperava anos para instalar.' },
+  { id: 'figurinhas_70', tipo: 'brincadeira', de: 1970, ate: 1979, idade: [5, 13], texto: 'Bafo de figurinha, pião, pipa e carrinho de rolimã descendo a ladeira.' },
   // ------------------------------------------------------------------ anos 1980
   { id: 'rock_nacional', tipo: 'musica', de: 1982, ate: 1990, idade: [12, 35], texto: 'O rock nacional tomou as rádios FM: bandas de garagem de Brasília, do Rio e de São Paulo viraram trilha das festas.', exige: 'radio' },
   { id: 'programa_infantil', tipo: 'tv', de: 1983, ate: 1993, idade: [3, 11], texto: 'As manhãs eram dos programas infantis de auditório na TV, com desenho, música e a plateia de crianças gritando.' },
@@ -93,6 +100,7 @@ export interface DecadaHistorica {
 }
 
 export const DECADAS: readonly DecadaHistorica[] = [
+  { decada: 1970, rotulo: 'Anos 1970', anos: [1970, 1979], contexto: 'O regime militar, o "milagre econômico" e a crise do petróleo; no fim da década, a anistia e a volta dos partidos.', tecnologia: 'Rádio de pilha, TV em preto e branco (a cores a partir de 1972), telefone com fila de espera, orelhão.', cultura: 'O tri no México, a novela, os festivais e a discoteca, a calça boca de sino.', marcos: ['copa_1970', 'tv_cores', 'ponte_rio_niteroi', 'anistia'], moedas: 'Cruzeiro novo e cruzeiro (o mesmo dinheiro, com outro nome a partir de maio de 1970).' },
   { decada: 1980, rotulo: 'Anos 1980', anos: [1980, 1989], contexto: 'O fim do regime militar, a volta das eleições diretas e uma inflação que mudava os preços toda semana.', tecnologia: 'Telefone fixo para poucos, orelhão, rádio, TV, toca-fitas, videocassete chegando.', cultura: 'Rock nacional, programas infantis, novela das oito, bolinha de gude na rua.', marcos: ['diretas_ja', 'plano_cruzado', 'constituicao_1988', 'eleicao_1989'], moedas: 'Cruzeiro, cruzado, cruzado novo, cruzeiro, cruzeiro real e real.' },
   { decada: 1990, rotulo: 'Anos 1990', anos: [1990, 1999], contexto: 'Plano Collor, impeachment, a chegada do real e o fim da hiperinflação.', tecnologia: 'Bipe, primeiros celulares, CD, videogame de cartucho, internet discada no fim da década.', cultura: 'Axé, pagode, sertanejo, calça larga, o tetra.', marcos: ['plano_collor', 'impeachment_collor', 'tetra', 'telebras'], moedas: 'Cruzeiro, cruzeiro real e real.' },
   { decada: 2000, rotulo: 'Anos 2000', anos: [2000, 2009], contexto: 'Racionamento de energia, o penta, a moeda estável e o crédito chegando a mais gente.', tecnologia: 'Celular de teclas e torpedo, lan house, mensageiro no computador, rede de comunidades, DVD.', cultura: 'Funk, emo, sertanejo universitário, cintura baixa.', marcos: ['apagao', 'penta', 'bolsa_familia', 'tv_digital'], moedas: 'Real.' },

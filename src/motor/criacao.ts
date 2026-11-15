@@ -64,7 +64,7 @@ export interface OpcoesCriacao {
 }
 
 /** ERAS HISTÓRICAS: os anos de nascimento que a primeira versão oferece. */
-export const ANOS_HISTORICOS: readonly [number, number] = [1980, 2025];
+export const ANOS_HISTORICOS: readonly [number, number] = [1970, 2025];
 
 /**
  * "Tudo ao acaso" (FIX pós-playtest humano): o nascimento sorteado no MUNDO, não no Brasil.

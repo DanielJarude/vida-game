@@ -2,6 +2,7 @@
    líquido do celular); tudo o mais vem dos tokens do VIDA (claro e escuro). Nada aqui muda a vida contemporânea. */
 
 [data-era] { --era-tom: var(--accent); --era-tela: var(--bg-inset); --era-fonte: var(--font-serif); }
+[data-era='1970'] { --era-tom: #a0662a; --era-tela: #c9b98f; }
 [data-era='1980'] { --era-tom: #c47a3d; --era-tela: #a9c2a4; }
 [data-era='1990'] { --era-tom: #8a6bb8; --era-tela: #b9cba3; }
 [data-era='2000'] { --era-tom: #6d8fb8; --era-tela: #c8d6b2; }
@@ -14,7 +15,7 @@
 /* ------------------------------------------------------------ Nascer: a escolha da época */
 .epoca { display: grid; gap: .75rem; min-width: 0; }
 .epoca__portas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem; }
-@media (min-width: 720px) { .epoca__portas { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+@media (min-width: 720px) { .epoca__portas { grid-template-columns: repeat(7, minmax(0, 1fr)); } }
 .epoca__porta {
   display: grid; gap: .15rem; text-align: left; padding: .6rem .7rem; min-height: var(--touch-target, 44px);
   border: 1px solid var(--rule); border-radius: var(--radius-md); background: var(--surface); color: var(--text-primary);

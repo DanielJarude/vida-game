@@ -114,7 +114,7 @@ export const nomeDaTecnologia = (id: string) => TECNOLOGIA_POR_ID.get(id)?.nome 
 export function normalizarEra(v: Vida): void {
   const e = v.era as unknown as Record<string, unknown> | undefined;
   if (e === undefined) return;
-  const ok = !!e && typeof e === 'object' && e.pais === 'BR' && typeof e.ano === 'number' && Number.isFinite(e.ano) && e.ano >= 1980 && e.ano <= 2025 && typeof e.decada === 'number';
+  const ok = !!e && typeof e === 'object' && e.pais === 'BR' && typeof e.ano === 'number' && Number.isFinite(e.ano) && e.ano >= 1970 && e.ano <= 2025 && typeof e.decada === 'number';
   if (!ok) { delete v.era; return; }
   if (!Array.isArray(v.era!.vistos)) v.era!.vistos = [];
   else v.era!.vistos = v.era!.vistos.filter(x => typeof x === 'string');

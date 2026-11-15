@@ -24,7 +24,7 @@
 import { IPCA, IPCA_T0, SALARIO_MINIMO_BR } from './series';
 
 export interface PadraoMonetario {
-  id: 'cruzeiro70' | 'cruzado' | 'cruzado_novo' | 'cruzeiro90' | 'cruzeiro_real' | 'real';
+  id: 'cruzeiro_novo' | 'cruzeiro70' | 'cruzado' | 'cruzado_novo' | 'cruzeiro90' | 'cruzeiro_real' | 'real';
   nome: string;
   /** Plural ("cruzados novos"). */
   plural: string;
@@ -44,7 +44,10 @@ export interface PadraoMonetario {
 const t = (ano: number, mes: number) => ano * 12 + mes;
 
 export const PADROES_MONETARIOS_BR: readonly PadraoMonetario[] = [
-  { id: 'cruzeiro70', nome: 'cruzeiro', plural: 'cruzeiros', simbolo: 'Cr$', codigo: 'BRB', desde: -Infinity, dataOficial: '15 de maio de 1970', porReal: 2750 * 1000 * 1 * 1000 * 1000 },
+  // ERAS v2 (anos 1970): o cruzeiro novo (Decreto-Lei 1/1965, em circulação desde 13/02/1967) voltou a se chamar cruzeiro em
+  // 15/05/1970 (Resolução BACEN 144/1970), sem corte de zeros: NCr$ 1 = Cr$ 1.
+  { id: 'cruzeiro_novo', nome: 'cruzeiro novo', plural: 'cruzeiros novos', simbolo: 'NCr$', codigo: 'BRB', desde: -Infinity, dataOficial: '13 de fevereiro de 1967', porReal: 2750 * 1000 * 1 * 1000 * 1000 },
+  { id: 'cruzeiro70', nome: 'cruzeiro', plural: 'cruzeiros', simbolo: 'Cr$', codigo: 'BRB', desde: t(1970, 4), dataOficial: '15 de maio de 1970', porReal: 2750 * 1000 * 1 * 1000 * 1000, troca: 'Cr$ 1 = NCr$ 1' },
   { id: 'cruzado', nome: 'cruzado', plural: 'cruzados', simbolo: 'Cz$', codigo: 'BRC', desde: t(1986, 2), dataOficial: '28 de fevereiro de 1986', porReal: 2750 * 1000 * 1 * 1000, troca: 'Cz$ 1 = Cr$ 1.000' },
   { id: 'cruzado_novo', nome: 'cruzado novo', plural: 'cruzados novos', simbolo: 'NCz$', codigo: 'BRN', desde: t(1989, 1), dataOficial: '16 de janeiro de 1989', porReal: 2750 * 1000 * 1, troca: 'NCz$ 1 = Cz$ 1.000' },
   { id: 'cruzeiro90', nome: 'cruzeiro', plural: 'cruzeiros', simbolo: 'Cr$', codigo: 'BRE', desde: t(1990, 3), dataOficial: '16 de março de 1990', porReal: 2750 * 1000, troca: 'Cr$ 1 = NCz$ 1' },

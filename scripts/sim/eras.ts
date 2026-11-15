@@ -18,6 +18,7 @@ import type { Vida } from '../../src/motor/tipos';
 await carregarMundo();
 const CEN: Record<string, { ano?: number; cidade: string; semente: number }> = {
   A: { ano: 1984, cidade: 'sao-paulo-sp', semente: 19840 },
+  E: { ano: 1972, cidade: 'rio-de-janeiro-rj', semente: 19720 },
   B: { ano: 1995, cidade: 'recife-pe', semente: 19950 },
   C: { ano: 2010, cidade: 'porto-alegre-rs', semente: 20100 },
   D: { cidade: 'belo-horizonte-mg', semente: 20260 }

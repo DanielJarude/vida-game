@@ -1,7 +1,7 @@
 /**
  * ERAS HISTÓRICAS · "Quando você nasce" — a primeira escolha da tela Nascer.
  *
- * Seis portas: hoje (o VIDA de sempre, em qualquer país) ou uma década brasileira (1980–2020). Escolhida a década, o
+ * Seis portas: hoje (o VIDA de sempre, em qualquer país) ou uma década brasileira (1970–2020). Escolhida a década, o
  * ano; a prévia diz em poucas linhas o país, a tecnologia, a cultura, as moedas e o que a infância vai atravessar — sem
  * enciclopédia: o resto se vive.
  */
@@ -10,7 +10,7 @@ import { ACONTECIMENTOS_BR } from '../../motor/eras/dados/acontecimentosBR';
 import { ObjetosDaEpoca } from './Aparelhos';
 import './eras.css';
 
-export type Epoca = 'hoje' | 1980 | 1990 | 2000 | 2010 | 2020;
+export type Epoca = 'hoje' | 1970 | 1980 | 1990 | 2000 | 2010 | 2020;
 
 const ANO_HOJE = 2026;
 

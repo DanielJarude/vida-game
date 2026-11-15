@@ -4,7 +4,7 @@
  * ao painel "A época". Cores pelos tokens (claro e escuro).
  */
 
-type Decada = 1980 | 1990 | 2000 | 2010 | 2020 | 2026;
+type Decada = 1970 | 1980 | 1990 | 2000 | 2010 | 2020 | 2026;
 
 export function TelefoneDeDisco({ tamanho = 64 }: { tamanho?: number }) {
   return (
@@ -78,7 +78,7 @@ export function MonitorDeTubo({ tamanho = 64 }: { tamanho?: number }) {
 
 /** Os dois objetos que resumem a época (a comunicação e a tela da casa). */
 export function ObjetosDaEpoca({ decada, tamanho = 64 }: { decada: Decada; tamanho?: number }) {
-  if (decada === 1980) return <><TelefoneDeDisco tamanho={tamanho} /><TvDeTubo tamanho={tamanho} /></>;
+  if (decada === 1970 || decada === 1980) return <><TelefoneDeDisco tamanho={tamanho} /><TvDeTubo tamanho={tamanho} /></>;
   if (decada === 1990) return <><Tijolao tamanho={tamanho} /><MonitorDeTubo tamanho={tamanho} /></>;
   if (decada === 2000) return <><CelularDeTeclas tamanho={tamanho} /><MonitorDeTubo tamanho={tamanho} /></>;
   return <><Smartphone tamanho={tamanho} /></>;

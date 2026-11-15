@@ -151,7 +151,7 @@ export function ehDoLugar(v: Vida, a: AcontecimentoBR): boolean {
 function comoChegou(v: Vida, a: AcontecimentoBR, ano: number): string {
   const i = idade(v);
   if (i < 12) {
-    if (a.id === 'tetra' || a.id === 'penta') return 'Você era criança e lembra da rua inteira em festa, buzina e bandeira na janela. ';
+    if (a.id === 'tetra' || a.id === 'penta' || a.id === 'copa_1970') return 'Você era criança e lembra da rua inteira em festa, buzina e bandeira na janela. ';
     if (a.id === 'senna' || a.categoria === 'desastre') return 'Você era criança, mas lembra do silêncio dos adultos diante da televisão. ';
     if (a.categoria === 'esporte') return 'Você era criança e lembra da televisão ligada o dia inteiro. ';
     return 'Você era criança, mas lembra dos adultos falando disso na sala. ';
@@ -203,7 +203,7 @@ function acontecimentos(v: Vida, tIni: number, tFim: number): void {
     if (a.especial === 'covid_br') pessoal = i < 18 ? ' A escola fechou; as aulas, quando houve, foram por uma tela.' : v.trabalho.atual ? ' O trabalho mudou de um dia para o outro.' : '';
     const efeito = a.efeito && a.mods ? ` ${a.efeito}` : '';
     const peso = a.peso === 'biografia' ? 'biografia' : 'cotidiano';
-    escrever(v, { t, texto: `${comoChegou(v, a, ano)}${a.fato}${efeito}${pessoal}`, relevancia: peso, tema: a.categoria === 'economia' ? 'dinheiro' : a.categoria === 'saude' ? 'saude' : 'lugar', tom: a.categoria === 'desastre' ? 'ruim' : a.id === 'tetra' || a.id === 'penta' || a.id.startsWith('jogos_') ? 'bom' : 'neutro', fato: { tipo: 'era', dados: { categoria: a.categoria, evento: a.id } } });
+    escrever(v, { t, texto: `${comoChegou(v, a, ano)}${a.fato}${efeito}${pessoal}`, relevancia: peso, tema: a.categoria === 'economia' ? 'dinheiro' : a.categoria === 'saude' ? 'saude' : 'lugar', tom: a.categoria === 'desastre' ? 'ruim' : a.id === 'tetra' || a.id === 'penta' || a.id === 'copa_1970' || a.id.startsWith('jogos_') ? 'bom' : 'neutro', fato: { tipo: 'era', dados: { categoria: a.categoria, evento: a.id } } });
   }
 }
 

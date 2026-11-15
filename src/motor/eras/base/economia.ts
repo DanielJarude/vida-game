@@ -23,7 +23,7 @@ import { RENDA_REAL, PRECO_RELATIVO, CESTA_SP } from './economiaSeries';
 import { mesHistoricoCorrente, salarioMinimoReal, FIM_DA_SERIE } from './moedas';
 
 const anoDe = (t: number) => Math.floor(t / 12);
-const PRIMEIRO = 1980;
+const PRIMEIRO = 1970;
 const ULTIMO = 2025;
 
 /** O mínimo real de 2025 (o último da série) e a posição da renda média e do topo na escala de mínimos de hoje. */

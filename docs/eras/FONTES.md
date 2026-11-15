@@ -54,3 +54,66 @@ Lembranças de gêneros, formatos, objetos e modas, sem obra, personagem ou marc
 3. **Plano Collor**: a devolução preserva o poder de compra (a correção oficial perdeu para a inflação; a perda real variou e não é simulada).
 4. **Preço relativo da tecnologia**: 2,5× a referência enquanto é novidade de renda alta e 1,5× até virar coisa de todo mundo. É a curva de adoção, não uma tabela de preços.
 5. **Renda real por época**: só o salário mínimo segue a série oficial; os demais salários continuam na escala de hoje (limitação desta versão).
+
+---
+
+# ERAS v2 (2026-11-15) · fontes novas
+
+Classificação, como na v1: **[S]** série oficial · **[F]** fato documentado · **[A]** aproximação de jogo. Os dados brutos
+baixados ficam fora do repositório (`~/vida-trabalho/eras2/fontes`); os scripts que geram os arquivos estão em
+`scripts/eras2/` (cópia dos usados).
+
+## 8. Economia histórica (`eras/base/economiaSeries.ts`, gerado; `eras/base/economia.ts`)
+
+| Dado | Fonte | Período | Classe | Método / limitação |
+|---|---|---|---|---|
+| Rendimento médio real do trabalho | PNAD Contínua, Ipeadata `PNADC12_RRTH12` | 2012–2025 | S | média anual dos meses; 2025 = 1 |
+| idem | PNAD (15+ com rendimento), SIDRA 5797 | 2004–2011 | S | emendada em 2012 (razão PNAD Contínua ÷ PNAD) |
+| idem | PNAD (10+ com rendimento), SIDRA 1172 | 1992–2003 | S | emendada em 2004; 1994, 2000 e 2010 (sem PNAD): média geométrica dos vizinhos [A] |
+| idem | PIB real (IBGE) ÷ população | 1970–1991 | A | população a 2,48% a.a. (1970–80) e 1,93% (1980–91), médias intercensitárias |
+| Salário mínimo nominal | Ipeadata `MTE12_SALMIN12` (MTE/legislação) | 1969–2025 | S | já usado na v1 a partir de 1979; estendido |
+| Prêmio de qualificação | literatura sobre a queda do diferencial de salário por escolaridade no Brasil (PNAD, meados 1990 → meados 2010) | — | A | 1,25 até 1995 → 1,0 em 2015, em linha reta |
+| Distribuição dos salários por ocupação | composição dos três acima | — | A | interpolação log entre mínimo (≤ 1 SM de hoje), média (2,25 SM) e topo (≥ 10 SM) |
+| Preços relativos por grupo/item | IPCA, SIDRA 1692, 58, 655, 2938, 1419 e 7060 (variação mensal por grupo e item) | jul/1989–dez/2025 | S | índice do grupo ÷ índice geral, média anual, dez/2025 = 1 |
+| idem, antes de 1995 | — | 1970–1994 | A | o nível de 1995 (na hiperinflação a média anual de um índice relativo oscila com o calendário dos reajustes) |
+| Itens tecnológicos (TV, celular, computador) | — | — | A | NÃO se usa o índice relativo do item (viés de qualidade constante e de encadeamento na hiperinflação: daria a TV de 1990 a 40× o preço de hoje); fica a curva de adoção da v1 com o piso do grupo "eletrodomésticos e equipamentos" |
+| Automóvel | — | — | A | NÃO se usa o item "automóvel novo" (qualidade constante); os carros da época têm preço de catálogo em reais de hoje |
+| Cesta básica de São Paulo | DIEESE, Ipeadata `DIEESE12_CBSP12` (nominal) | 1970–2025 | S | convertida pela cadeia oficial das moedas e pelo nível de preços do mês |
+| Nível de preços antes do IPCA | IGP-DI (FGV), Ipeadata `IGP12_IGPDI12` | jan/1970–nov/1979 | A | encadeado no IPCA de dez/1979 (outro índice) |
+| PIB 1970–1979 | IBGE (Contas Nacionais; Ipeadata) | 1970–1979 | S | taxa real anual |
+
+Resultado (São Paulo, salário bruto em reais de hoje): caixa — 1990: 700; 1995: 830; 2010: 1.710; hoje: 2.140. Médico —
+1985: 14.190; 1995: 18.860; 2004: 14.200; hoje: 18.790. A cesta básica custava 99% do mínimo em 1995 e 57% em 2025.
+
+## 9. Partidos (`eras/base/partidos.ts`)
+
+TSE (partidos registrados; históricos de fusões, incorporações e mudanças de nome), Lei 6.767/1979, EC 25/1985, CPDOC/FGV
+(verbetes). 60 entradas de 1966 a 2025, com linhagem (`vira`). **[F]** para as datas marcadas `documentado`; **[A]** para as
+marcadas `aproximado` (o ano é seguro; o mês, estimado). Lista não exaustiva: legendas de vida curta e sem representação
+ficaram de fora. Conferência automática: em dez/2025 a lista histórica coincide com a de 2026 (`dados/partidos`).
+
+## 10. Moda (`eras/base/moda.ts`, `ui/eras/pecasEras.ts`, `ui/eras/modaDaDecada.ts`)
+
+Períodos de venda das peças **[A]**, lidos de acervos de moda (Museu da Moda/MIMo), revistas e catálogos de varejo da
+Hemeroteca Digital da Biblioteca Nacional. Nenhuma marca real associada a peça. Cartelas de cor por década **[A]**.
+
+## 11. Veículos (ERAS v2)
+
+Medidas (comprimento, altura, entre-eixos) dos importados e grandes da época: fichas técnicas dos fabricantes **[F]**;
+períodos de venda no Brasil **[A]** (abertura das importações em 1990 **[F]**). Ano da geração atual dos ~100 modelos de
+hoje: lançamento da geração **[A]**. Preços em reais de hoje pela faixa equivalente **[A]**.
+
+## 12. Leis, educação, cidades
+
+- Casamento entre pessoas do mesmo gênero: STF, ADI 4277/ADPF 132 (05/05/2011); CNJ, Resolução 175 (14/05/2013) **[F]**.
+- Divórcio: EC 9/1977 e Lei 6.515/1977; EC 66/2010 **[F]**.
+- Crédito Educativo (CREDUC, 1976; Lei 8.436/1992) → FIES (MP 1.827/1999) **[F]**; no jogo, a mesma via com o nome da época.
+- Metrô e trens urbanos: históricos institucionais das operadoras (Metrô-SP, MetrôRio, Trensurb, CBTU, Metrô-DF, CCR Metrô
+  Bahia, Metrofor) **[F]**; meses marcados `aproximado` no código **[A]**.
+
+## 13. Anos 1970
+
+Acontecimentos com lei ou data oficial **[F]** (Lei 5.379/1967 e Mobral, transmissão em cores de 19/02/1972, Ponte
+Rio–Niterói, metrô de SP, LC 20/1974, Decreto 76.593/1975, Lei 6.515/1977, Lei 6.683/1979, Lei 6.767/1979); Copas de 1970,
+1974, 1978 e Jogos de 1972, 1976 e 1980 (FIFA, COI) **[F]**; lembranças culturais **[A]**. Moeda: cruzeiro novo
+(13/02/1967) → cruzeiro (15/05/1970, Res. BACEN 144/1970, sem corte de zeros) **[F]**.

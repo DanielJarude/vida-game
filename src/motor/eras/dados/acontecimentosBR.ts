@@ -38,6 +38,18 @@ export interface AcontecimentoBR {
 }
 
 export const ACONTECIMENTOS_BR: readonly AcontecimentoBR[] = [
+  // ERAS v2 · os anos 1970 (fatos documentados; política sem adjetivo, como no resto da lista).
+  { id: 'mobral', data: [1970, 9], categoria: 'sociedade', titulo: 'O Mobral começa a alfabetizar adultos', fato: 'Em setembro de 1970, o Movimento Brasileiro de Alfabetização (Mobral), criado por lei em 1967, começou as campanhas de alfabetização de adultos pelo país.', fonte: 'Lei 5.379/1967; Ministério da Educação', idadeMin: 10, peso: 'cotidiano' },
+  { id: 'tv_cores', data: [1972, 2], categoria: 'tecnologia', titulo: 'A primeira transmissão oficial em cores', fato: 'Em 19 de fevereiro de 1972, a Festa da Uva de Caxias do Sul foi a primeira transmissão oficial da televisão brasileira em cores.', fonte: 'Ministério das Comunicações; acervos das emissoras', idadeMin: 6, peso: 'cotidiano' },
+  { id: 'crise_petroleo', data: [1973, 11], categoria: 'economia', titulo: 'O preço do petróleo dispara', fato: 'No fim de 1973, o embargo dos países exportadores quadruplicou o preço do petróleo; o Brasil, que importava a maior parte do que consumia, passou a pagar muito mais pela gasolina.', fonte: 'Banco Central; Petrobras (histórico)', idadeMin: 14 },
+  { id: 'ponte_rio_niteroi', data: [1974, 3], categoria: 'sociedade', titulo: 'A Ponte Rio–Niterói é inaugurada', fato: 'Em 4 de março de 1974, foi inaugurada a Ponte Presidente Costa e Silva, ligando o Rio de Janeiro a Niterói sobre a Baía de Guanabara.', fonte: 'DNIT (histórico)', ufs: ['RJ'], idadeMin: 6 },
+  { id: 'metro_sp', data: [1974, 9], categoria: 'sociedade', titulo: 'O metrô de São Paulo começa a operar', fato: 'Em 14 de setembro de 1974, o metrô de São Paulo começou a operação comercial, entre Jabaquara e Vila Mariana.', fonte: 'Companhia do Metropolitano de São Paulo (histórico)', ufs: ['SP'], idadeMin: 6 },
+  { id: 'fusao_rj', data: [1975, 3], categoria: 'politica', titulo: 'A fusão da Guanabara com o Rio de Janeiro', fato: 'Em 15 de março de 1975, o estado da Guanabara e o antigo estado do Rio de Janeiro se fundiram num estado só, com capital na cidade do Rio.', fonte: 'Lei Complementar 20/1974', ufs: ['RJ'], idadeMin: 10, peso: 'cotidiano' },
+  { id: 'proalcool', data: [1975, 11], categoria: 'economia', titulo: 'Nasce o Proálcool', fato: 'Em 14 de novembro de 1975, o governo criou o Programa Nacional do Álcool, para substituir parte da gasolina pelo álcool da cana.', fonte: 'Decreto 76.593/1975', idadeMin: 16, peso: 'cotidiano' },
+  { id: 'lei_divorcio', data: [1977, 12], categoria: 'direitos', titulo: 'A Lei do Divórcio', fato: 'Em 26 de dezembro de 1977, a Lei 6.515 instituiu o divórcio no Brasil; antes, havia só o desquite, que não permitia casar de novo.', fonte: 'Emenda Constitucional 9/1977; Lei 6.515/1977', idadeMin: 16 },
+  { id: 'greves_abc', data: [1978, 5], categoria: 'sociedade', titulo: 'As greves do ABC', fato: 'Em maio de 1978, metalúrgicos de São Bernardo do Campo pararam as fábricas; foram as primeiras grandes greves desde 1968.', fonte: 'CPDOC/FGV', ufs: ['SP'], idadeMin: 12 },
+  { id: 'anistia', data: [1979, 8], categoria: 'politica', titulo: 'A Lei da Anistia', fato: 'Em 28 de agosto de 1979, foi sancionada a Lei da Anistia (Lei 6.683); exilados políticos começaram a voltar ao país.', fonte: 'Lei 6.683/1979', idadeMin: 10 },
+  { id: 'fim_bipartidarismo', data: [1979, 12], categoria: 'politica', titulo: 'O fim da Arena e do MDB', fato: 'Em 20 de dezembro de 1979, a Lei 6.767 extinguiu a Arena e o MDB e permitiu a criação de novos partidos.', fonte: 'Lei 6.767/1979', idadeMin: 14, peso: 'cotidiano' },
   // ERAS v2 · as cidades: a abertura do transporte sobre trilhos (lembrança de quem mora no estado; `eras/base/cidades`).
   { id: 'trensurb', data: [1985, 3], categoria: 'sociedade', titulo: 'O trem metropolitano começa a rodar em Porto Alegre', fato: 'Em março de 1985, o Trensurb começou a operar entre Porto Alegre e Sapucaia do Sul: o trem elétrico chegou à região metropolitana.', fonte: 'Trensurb (histórico institucional)', ufs: ['RS'], idadeMin: 6 },
   { id: 'metro_recife', data: [1985, 3], categoria: 'sociedade', titulo: 'O metrô do Recife começa a operar', fato: 'Em 1985, o metrô do Recife entrou em operação comercial, ligando o centro aos subúrbios do oeste.', fonte: 'CBTU/Metrorec (histórico institucional); mês aproximado', ufs: ['PE'], idadeMin: 6 },
@@ -106,6 +118,8 @@ export const ACONTECIMENTOS_BR: readonly AcontecimentoBR[] = [
 
 /** As posses presidenciais (para o painel da época: quem governa o país no mês). Fonte: Biblioteca da Presidência da República. */
 export const PRESIDENTES_BR: readonly { nome: string; desde: [number, number]; nota?: string }[] = [
+  { nome: 'Emílio Garrastazu Médici', desde: [1969, 10], nota: 'eleito pelo Congresso, no regime militar' },
+  { nome: 'Ernesto Geisel', desde: [1974, 3], nota: 'eleito pelo Colégio Eleitoral, no regime militar' },
   { nome: 'João Figueiredo', desde: [1979, 3] },
   { nome: 'José Sarney', desde: [1985, 3], nota: 'vice de Tancredo Neves, que morreu antes da posse' },
   { nome: 'Fernando Collor de Mello', desde: [1990, 3] },
@@ -120,6 +134,7 @@ export const PRESIDENTES_BR: readonly { nome: string; desde: [number, number]; n
 
 /** PIB real, variação anual (%), Ipeadata SCN10_PIBG10 (fonte primária: IBGE, Contas Nacionais). 2025: preliminar. */
 export const PIB_BR: Readonly<Record<number, number>> = {
+  1970: 10.4, 1971: 11.34, 1972: 11.94, 1973: 13.97, 1974: 8.15, 1975: 5.17, 1976: 10.26, 1977: 4.93, 1978: 4.97, 1979: 6.76,
   1980: 9.2, 1981: -4.25, 1982: 0.83, 1983: -2.93, 1984: 5.4, 1985: 7.85, 1986: 7.49, 1987: 3.53, 1988: -0.06, 1989: 3.16,
   1990: -4.35, 1991: 1.03, 1992: -0.54, 1993: 4.92, 1994: 5.85, 1995: 4.22, 1996: 2.21, 1997: 3.39, 1998: 0.34, 1999: 0.47,
   2000: 4.39, 2001: 1.39, 2002: 3.05, 2003: 1.14, 2004: 5.76, 2005: 3.2, 2006: 3.96, 2007: 6.07, 2008: 5.09, 2009: -0.13,
@@ -133,6 +148,9 @@ export const PIB_BR: Readonly<Record<number, number>> = {
  * Copa de 2014 e os Jogos do Rio têm acontecimento próprio acima.
  */
 const COPAS: [number, number, string, string][] = [
+  [1970, 6, 'no México', 'O Brasil foi tricampeão, com 4 a 1 sobre a Itália na final, e ficou com a Taça Jules Rimet.'],
+  [1974, 7, 'na Alemanha Ocidental', 'O Brasil terminou em quarto lugar.'],
+  [1978, 6, 'na Argentina', 'O Brasil terminou em terceiro lugar, sem perder nenhum jogo.'],
   [1982, 7, 'na Espanha', 'A seleção encantou e caiu na segunda fase, diante da Itália.'],
   [1986, 6, 'no México', 'O Brasil caiu nas quartas de final, nos pênaltis, diante da França.'],
   [1990, 6, 'na Itália', 'O Brasil caiu nas oitavas de final, diante da Argentina.'],
@@ -143,7 +161,7 @@ const COPAS: [number, number, string, string][] = [
   [2022, 12, 'no Catar, em novembro e dezembro', 'O Brasil caiu nas quartas de final, nos pênaltis, diante da Croácia.']
 ];
 const OLIMPIADAS: [number, number, string][] = [
-  [1984, 8, 'Los Angeles'], [1988, 9, 'Seul'], [1992, 7, 'Barcelona'], [1996, 7, 'Atlanta'], [2000, 9, 'Sydney'],
+  [1972, 8, 'Munique'], [1976, 7, 'Montreal'], [1980, 7, 'Moscou'], [1984, 8, 'Los Angeles'], [1988, 9, 'Seul'], [1992, 7, 'Barcelona'], [1996, 7, 'Atlanta'], [2000, 9, 'Sydney'],
   [2004, 8, 'Atenas'], [2008, 8, 'Pequim'], [2012, 8, 'Londres'], [2021, 7, 'Tóquio (adiados de 2020 pela pandemia)'], [2024, 8, 'Paris']
 ];
 export const ESPORTE_MUNDIAL_BR: readonly AcontecimentoBR[] = [
