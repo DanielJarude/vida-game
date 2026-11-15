@@ -10,6 +10,7 @@
  */
 
 import { EspacoDaCasa14 } from '../v14/moveis/Moveis14';
+import { FichaDoImovel22 } from '../v22/casa/FichaDoImovel22';
 import { Estrela } from './Atalhos';
 import { FAZERES_EM_CASA, rotuloFazerEmCasa } from '../../motor/sistemas/casaNoDia';
 import { disponibilidade } from '../../motor/acoes';
@@ -39,6 +40,8 @@ export function Casa({ vida, agir }: Props) {
   return (
     <div className="casa material">
       <Lar vida={vida} agir={agir} abrir={setLugar} />
+      {/* VIDA 22: a ficha do imóvel (tipo, onde, valor estimado × conta × patrimônio, área, cômodos, melhorias, ocupação, conservação). */}
+      {i >= 16 && <FichaDoImovel22 vida={vida} />}
       {i >= 18 && <ViverACasa vida={vida} agir={agir} />}
       {i >= 16 && <OQueTem vida={vida} agir={agir} abrir={setLugar} />}
       {lugar && <Lugar vida={vida} agir={agir} qual={lugar} aoFechar={() => setLugar(null)} trocar={setLugar} />}

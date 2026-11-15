@@ -7,6 +7,7 @@
  * que dá para fazer — e o porquê, quando ainda não dá).
  */
 
+import { FichaDoImovel22 } from '../v22/casa/FichaDoImovel22';
 import { Compras } from './Compras';
 import { emCasa } from '../leitura';
 import { rotuloDe } from '../apresentar';
@@ -74,6 +75,8 @@ export function VidaConcreta({ vida, agir, secao, irSecao, abrirPessoa }: Props)
         {secao === 'casa' && (
           <div className="casa">
             <Lar vida={vida} agir={agir} abrir={setLugar} />
+            {/* VIDA 22: a ficha do imóvel. */}
+            {i >= 16 && <FichaDoImovel22 vida={vida} />}
             {i >= 16 && <CasaPorDentro vida={vida} agir={agir} />}
             <QuemMoraAqui vida={vida} abrirPessoa={abrirPessoa} />
             <NaCasa vida={vida} irSecao={irSecao} />

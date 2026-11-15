@@ -1,0 +1,15 @@
+/* VIDA 22 · a ficha do imóvel (Vida · Casa). */
+.ficha22 { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-3) 0; border-top: 1px solid var(--rule); min-width: 0; }
+.ficha22__titulo { margin: 0; font: var(--weight-bold, 700) 17px/1.3 var(--font-sans); color: var(--text-primary); }
+.ficha22__grade { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--space-3); }
+.ficha22__bloco { margin: 0; display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3); border-radius: var(--radius-sm); background: var(--veu-1); min-width: 0; }
+.ficha22__bloco > div { display: flex; flex-direction: column; gap: 2px; }
+.ficha22__bloco dt { font-size: var(--type-caption, 12px); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); }
+.ficha22__bloco dd { margin: 0; color: var(--text-primary); overflow-wrap: anywhere; }
+.ficha22__bloco dd .nota { display: inline; }
+.ficha22__dinheiro dd strong { font-size: 18px; }
+.ficha22__dinheiro dd .nota { display: block; }
+.ficha22__alerta, .ficha22__atencao { color: var(--text-secondary); font-weight: 600; }
+.ficha22__ruim { color: var(--danger); }
+.ficha22__sub { margin: 0 0 var(--space-2); font: 600 14px/1.3 var(--font-sans); color: var(--text-primary); }
+.ficha22__melhorias ul { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 2px; color: var(--text-secondary); }
