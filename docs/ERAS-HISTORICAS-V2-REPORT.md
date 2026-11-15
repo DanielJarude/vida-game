@@ -68,7 +68,33 @@ Alterados: `eras/base/{series,moedas,contexto,coisas,veiculos,profissoes,anacron
 
 ## 6. Testes e cenários
 
-(preenchido na conclusão — ver seção 9)
+- **Testes novos** `src/motor/__tests__/erasV2.test.ts` (17): vida contemporânea intacta; renda e distribuição salarial;
+  preços relativos e cesta; orçamento finito; partidos (lista de dez/2025 = lista de 2026; 1990 e 1975; linhagem PFL → DEM →
+  União, PMDB → MDB; vida histórica × contemporânea); moda (período, chegada, básico sempre); veículos (nada importado antes
+  de 1990, importados da época, geração atual, bicicleta elétrica); leis; profissões dos NPCs; peneira e detector; metrô de BH;
+  anos 1970 (moeda no mês, save reabre igual, nada se repete na biografia, normalização). Todos passam, com os 22 da v1.
+- **Suíte completa** (215 arquivos): na primeira rodada, 15 falhas — 5 por tempo esgotado sob carga (`fechamentoMundo` #4,
+  `motor.test` "regra de agência", `profissao` clima, `fixPosPlaytestHumano` C, `rework115Esportes` copas: as mesmas
+  intermitentes registradas nos relatórios da VIDA 19–22) e 10 causadas pela v2: 8 testes de catálogo de roupas que
+  compravam *todas* as peças numa vida contemporânea (as de época, por regra, não se vendem nela — os testes passaram a
+  pular só essas peças, com comentário) e 2 de desenho que pegaram defeitos reais (a jaqueta de náilon com a silhueta do
+  corta-vento; a Monark igual a outra bicicleta) — corrigidos no desenho. Rodados de novo, os arquivos afetados passam
+  (98/98) e os de tempo esgotado passam isolados, exceto `fechamentoMundo` #4, que tem limite fixo de 60 s no próprio
+  teste e já falhava na base. A suíte inteira **não** foi rodada de novo depois dessas correções.
+- **Simulações** (`scripts/sim/vidasEras2.ts`, vidas jogadas pelas estratégias do simulador, até 50–55 anos): coortes 1972,
+  1976, 1982, 1992, 2002 e contemporânea — nenhuma falha, nenhum extrato que não concilia, sem aperto financeiro anômalo nas
+  históricas (salário mediano aos 20 da coorte de 1982, em 2002: R$ 1.010 de hoje; contemporânea: R$ 2.450).
+- **Auditoria textual** (`scripts/sim/textosEras2.ts`): 38.487 textos de 64 vidas (coortes 1970–2008) → 4 anacronismos
+  (0,01%), corrigidos; a rodada anterior (5 coortes, 20.696 textos) achou 22 (0,11%), também corrigidos.
+- **Cenário E** (`scripts/sim/eras.ts E 56`, 1972, Rio): sete moedas, fixo → celular → smartphone, 110 lembranças; "sem
+  problemas de cronologia, moeda ou save" (salvar → fechar → reabrir a cada ano). Cenários A–D da v1: mantidos.
+- **Interface** (`scripts/playtest/erasV2.mjs`, build de produção): 1440, 390 e 360 px × claro e escuro — nascer em 1975
+  (porta 1970), cabeçalho com Cr$, aparelho de 1996/2006/2021/2040, painel "A época" com o poder de compra em 1978, 1987,
+  1996, 2003 e 2013, Linha da Vida com o fio "A época": **nenhum problema**, sem rolagem lateral, sem erro de console. Galeria
+  das roupas (`scripts/playtest/galeriaEras2Moda.tsx`) conferida em captura ampliada. Smoke de produção
+  (`scripts/itch/smoke.mjs`): 30/30.
+- **Build**: sem erros; limite de 800 kB respeitado (`motor-textos` 799,90 kB; `motor-dados` 792,04 kB).
+- **Playtest humano**: **não feito** (recomendado antes de publicar — seção 8).
 
 ## 7. Compatibilidade
 
@@ -85,3 +111,9 @@ legível em `partidoDe` (o histórico de filiações guarda as duas).
 4. Saúde (INAMPS → SUS) e bancos (cheque, caderneta, caixa eletrônico, cartão) com efeito no motor.
 5. Cabelo, maquiagem e óculos por década; busca de emprego por época.
 6. Um segundo país com séries próprias (Portugal tem série de preços e salário mínimo longas).
+
+## 9. Branch, commits e publicação
+
+Branch `claude/eras-v2` (commits `git log 89f707e..claude/eras-v2`). **Não publicada na produção**: a atualização tem partes
+parciais e não implementadas (tabela da seção 3) e falta o playtest humano que o pedido exige antes; a branch foi enviada ao
+GitHub para a prévia automática do Cloudflare Pages (não é a produção). A `main` e a branch de produção não foram tocadas.

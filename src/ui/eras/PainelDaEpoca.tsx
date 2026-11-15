@@ -62,7 +62,7 @@ export function PainelDaEpoca({ vida }: { vida: Vida }) {
             <ul className="painel-epoca__lista">
               {pc.cestaNoMinimo !== undefined && <li>A cesta básica (DIEESE, São Paulo) custa <strong>{pc.cestaNoMinimo}% do salário mínimo</strong>{pc.cestaNoMinimo >= 80 ? ': sobra pouco para o resto' : pc.cestaNoMinimo <= 55 ? '' : ''}.</li>}
               <li>Quem trabalha ganha, em média, <strong>{Math.round(renda * 100)}% do que se ganha em 2025</strong> (rendimento médio real, PNAD/IBGE).</li>
-              {pc.destaques.length > 0 && <li>Em relação a hoje, {pc.destaques.map(d => `${d.nome} ${d.fator > 1 ? `custa ${d.fator >= 1.95 ? `${Math.round(d.fator * 10) / 10} vezes` : `${Math.round((d.fator - 1) * 100)}% a mais`}` : `custa ${Math.round((1 - d.fator) * 100)}% a menos`}`).join('; ')} (IPCA por grupo, em poder de compra).</li>}
+              {pc.destaques.length > 0 && <li>Preço em relação a hoje — {pc.destaques.map(d => `${d.nome}: ${d.fator > 1 ? (d.fator >= 1.95 ? `${String(Math.round(d.fator * 10) / 10).replace('.', ',')} vezes o de hoje` : `${Math.round((d.fator - 1) * 100)}% a mais`) : `${Math.round((1 - d.fator) * 100)}% a menos`}`).join('; ')} (IPCA por grupo, em poder de compra).</li>}
             </ul>
           </>
         );

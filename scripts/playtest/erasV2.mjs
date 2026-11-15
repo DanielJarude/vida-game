@@ -48,7 +48,7 @@ for (const tema of TEMAS) for (const w of TAMANHOS) {
     await p.evaluate(([t, NOVIDADES_]) => { localStorage.clear(); localStorage.setItem('VIDA_APARENCIA', t); localStorage.setItem('VIDA_NOVIDADES_VISTAS', NOVIDADES_); }, [tema, NOVIDADES]);
     await p.goto(URL); await p.waitForTimeout(400);
     const novo = p.getByRole('button', { name: /Nascer de novo|Nova vida|Começar/ }).first();
-    if (await novo.count()) { await novo.click(); await p.waitForTimeout(700); if (!(await p.locator('.epoca').count())) { await novo.click().catch(() => {}); await p.waitForTimeout(1200); } }
+    for (let k = 0; k < 4 && !(await p.locator('.epoca').count()); k++) { if (await novo.count()) await novo.click().catch(() => {}); await p.locator('.epoca').waitFor({ timeout: 6000 }).catch(() => {}); }
     try { await p.locator('.epoca__porta[data-era="1970"]').click({ timeout: 15000 }); } catch (e) { await p.screenshot({ path: `${OUT}/falha-nascer-${tag}.png` }); problemas.push(`nascer: porta 1970 não apareceu (${(await p.locator('button').allInnerTexts()).slice(0, 4).join(' / ')})`); relatorio.push(`${tag} PROBLEMAS: ${problemas.join(' ; ')}`); await ctx.close(); continue; }
     await p.waitForTimeout(300);
     await p.getByRole('radio', { name: '1975' }).click(); await p.waitForTimeout(500);
@@ -85,7 +85,7 @@ for (const tema of TEMAS) for (const w of TAMANHOS) {
     if (await mundo.count()) { await mundo.click(); await p.waitForTimeout(800); }
     else { const bm = p.getByRole('button', { name: /No mundo/ }).locator('visible=true').first(); if (await bm.count()) { await bm.click(); await p.waitForTimeout(800); } }
     if (!(await p.locator('.painel-epoca').count())) problemas.push(`${save}: painel A época não apareceu`);
-    else { await p.locator('.painel-epoca').scrollIntoViewIfNeeded(); const tx = await p.locator('.painel-epoca').innerText(); if (!/Quanto rende o salário/.test(tx)) problemas.push(`${save}: painel sem poder de compra`); }
+    else { await p.locator('.painel-epoca').scrollIntoViewIfNeeded(); const tx = await p.locator('.painel-epoca').innerText(); if (!/Quanto rende o salário/i.test(tx)) problemas.push(`${save}: painel sem poder de compra`); }
     await foto(p, `epoca-${save}-${tag}`, problemas);
     await irArea(p, 'História');
     const linha = p.getByRole('tab', { name: /Biografia/ }).locator('visible=true').first();
