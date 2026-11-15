@@ -29,7 +29,8 @@ export function visualComPecaDoRosto(base: Visual, itemId: string): Visual {
   return v;
 }
 
-export function MiniaturaDaPeca({ vida, itemId, id, largura = 84, rotulo }: { vida: Vida; itemId: string; id?: string; largura?: number; rotulo?: string }) {
+/** VIDA 22: `marca` — a peça com o acabamento da marca escolhida (a mesma que se compra). */
+export function MiniaturaDaPeca({ vida, itemId, id, largura = 84, rotulo, marca }: { vida: Vida; itemId: string; id?: string; largura?: number; rotulo?: string; marca?: string }) {
   const it = itemEstilo(itemId);
   if (!it) return null;
   const i = idade(vida);
@@ -50,7 +51,7 @@ export function MiniaturaDaPeca({ vida, itemId, id, largura = 84, rotulo }: { vi
   delete visual.chapeu; delete visual.oculos; delete visual.superior;
   return (
     <span className="miniatura-peca" data-item={itemId}>
-      <Figura visual={visual} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} corpo={corpo} pecas={it.lugar === 'tornozelo' ? [{ itemId: 'short_jeans', id: 'short-vitrine' }, { itemId, id: id ?? `${itemId}-vitrine` }] : [{ itemId, id: id ?? `${itemId}-vitrine` }]} largura={largura} semFundo foco={focoDaPeca(vida.eu.genero, corpo, i, lugar)} rotulo={nome} />
+      <Figura visual={visual} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} corpo={corpo} pecas={it.lugar === 'tornozelo' ? [{ itemId: 'short_jeans', id: 'short-vitrine' }, { itemId, id: id ?? `${itemId}-vitrine` }] : [{ itemId, id: id ?? `${itemId}-vitrine`, marca }]} largura={largura} semFundo foco={focoDaPeca(vida.eu.genero, corpo, i, lugar)} rotulo={nome} />
     </span>
   );
 }

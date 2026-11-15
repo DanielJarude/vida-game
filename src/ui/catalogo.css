@@ -27,3 +27,13 @@
 
 /* VIDA 12.8 — o posicionamento da marca no cartão (econômico a ultraluxo, aquilo pelo que é conhecida). */
 .catalogo-loja__marca-perfil { font-size: var(--type-caption); color: var(--text-secondary); line-height: 1.35; }
+/* VIDA 22 · o provador com a combinação e as alternativas lado a lado; a construção da peça no cartão. */
+.provador22 { flex-wrap: wrap; }
+.provador22__figuras { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: flex-end; min-width: 0; }
+.provador22__fig { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; max-width: 160px; text-align: center; font-size: var(--type-caption, 12px); }
+.provador22__fig svg { max-width: 100%; height: auto; }
+.provador22__fig--agora { opacity: 0.85; }
+.provador22__fig figcaption { display: flex; flex-direction: column; gap: 2px; }
+.provador22__lista { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
+.provador22__lista li { display: flex; justify-content: space-between; gap: var(--space-2); align-items: baseline; }
+.catalogo-loja__construcao { font-size: var(--type-caption, 12px); }

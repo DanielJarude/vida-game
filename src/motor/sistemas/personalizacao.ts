@@ -66,7 +66,9 @@ export type OpPersonalizar =
   | { o: 'veiculo_garagem'; bem: string; imovel: string | null }
   | { o: 'look'; ocasiao: Ocasiao; itens: string[] }
   /** VIDA 12.9: os looks com nome (o que se está usando agora, guardado; `id` = substituir um que já existe). */
-  | { o: 'look_salvar'; nome: string; id?: string }
+  /** VIDA 22: `ocasiao` — a ocasião do look (casual, trabalho, formal, esporte, festa, noite), para organizar a lista. */
+  | { o: 'look_salvar'; nome: string; id?: string; ocasiao?: string }
+  | { o: 'look_ocasiao'; id: string; ocasiao: string }
   | { o: 'look_vestir'; id: string }
   | { o: 'look_renomear'; id: string; nome: string }
   | { o: 'look_excluir'; id: string }
@@ -327,6 +329,7 @@ export function disponibilidadePersonalizar(v: Vida, op: OpPersonalizar): Veredi
       return PERMITIDO;
     }
     case 'look_salvar': case 'look_vestir': case 'look_renomear': case 'look_excluir': return disponibilidadeLookSalvo(v, op);
+    case 'look_ocasiao': return (v.eu.estilo?.looksSalvos ?? []).some(l => l.id === op.id) && OCASIOES_DE_LOOK.includes(op.ocasiao) ? PERMITIDO : bloqueio('impossivel', 'Esse look não existe mais.');
     case 'cultural': return disponibilidadeCultural(v, op.oque, op.genero, op.pessoaId);
     case 'obra': return disponibilidadeObra(v, op.linguagem);
     case 'usar_comodo': return disponibilidadeUsarComodo(v, op.comodo, op.uso, op.pessoaId);
@@ -578,6 +581,7 @@ export function personalizar(v: Vida, op: OpPersonalizar): string {
       return op.itens.length ? 'Separado: é isso que vai.' : 'Sem roupa separada: vai a de todo dia.';
     }
     case 'look_salvar': case 'look_vestir': case 'look_renomear': case 'look_excluir': return aplicarLookSalvo(v, op);
+    case 'look_ocasiao': { const l = v.eu.estilo!.looksSalvos!.find(x => x.id === op.id)!; l.ocasiao = op.ocasiao; return `“${l.nome}” agora fica em ${op.ocasiao}.`; }
     case 'cultural': return fazerCultural(v, op.oque, op.genero, op.pessoaId);
     case 'obra': return produzirObra(v, op.linguagem);
     case 'usar_comodo': return usarComodo(v, op.comodo, op.uso, op.pessoaId);
@@ -710,6 +714,9 @@ function disponibilidadeLookSalvo(v: Vida, op: Extract<OpPersonalizar, { o: `loo
   }
   return PERMITIDO;
 }
+/** VIDA 22: as ocasiões em que se organizam os looks salvos. */
+export const OCASIOES_DE_LOOK = ['casual', 'trabalho', 'formal', 'esporte', 'festa', 'noite', 'casa'];
+
 function aplicarLookSalvo(v: Vida, op: Extract<OpPersonalizar, { o: `look_${string}` }>): string {
   const e = (v.eu.estilo ??= { itens: [] });
   const salvos = (e.looksSalvos ??= []);
@@ -718,12 +725,14 @@ function aplicarLookSalvo(v: Vida, op: Extract<OpPersonalizar, { o: `look_${stri
       const itens = pecasDoLookAtual(v);
       const nome = nomeLimpo(op.nome);
       const ja = op.id ? salvos.find(l => l.id === op.id) : undefined;
-      if (ja) { ja.nome = nome; ja.itens = itens; ja.t = v.t; return `“${nome}” agora é o que você está usando (${itens.length} ${itens.length === 1 ? 'peça' : 'peças'}).`; }
-      salvos.push({ id: novoId(v, 'look'), nome, itens, t: v.t });
+      const ocasiao = op.ocasiao && OCASIOES_DE_LOOK.includes(op.ocasiao) ? op.ocasiao : undefined;
+      if (ja) { ja.nome = nome; ja.itens = itens; ja.t = v.t; if (ocasiao) ja.ocasiao = ocasiao; return `“${nome}” agora é o que você está usando (${itens.length} ${itens.length === 1 ? 'peça' : 'peças'}).`; }
+      salvos.push({ id: novoId(v, 'look'), nome, itens, t: v.t, ...(ocasiao ? { ocasiao } : {}) });
       return `Guardou o look “${nome}” (${itens.length} ${itens.length === 1 ? 'peça' : 'peças'}).`;
     }
     // Vestir um look é das ações (`acoes` chama `estilo.vestirLook`): o guarda-roupa mora num pacote de cima.
     case 'look_vestir': return '';
+    case 'look_ocasiao': return '';
     case 'look_renomear': { const look = salvos.find(l => l.id === op.id)!; const antes = look.nome; look.nome = nomeLimpo(op.nome); return `“${antes}” agora se chama “${look.nome}”.`; }
     case 'look_excluir': { const i = salvos.findIndex(l => l.id === op.id); const [l] = salvos.splice(i, 1); if (!salvos.length) delete e.looksSalvos; return `Apagou o look “${l.nome}”. As peças continuam suas.`; }
   }

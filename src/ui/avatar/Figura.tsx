@@ -22,11 +22,16 @@ import { REGIOES, type Lado, type LocalDeTatuagem, type RegiaoDeTatuagem } from 
 import { misturar } from './cores';
 import { BolsaDeCostas, ChapeuDeCostas, COBRE_O_ALTO_COSTAS } from './costas18';
 import { acessorioDoItem, pecasDoItem, type Conjunto, type Peca } from './pecas';
+import { segmentoDaMarca } from '../../motor/sistemas/perfilDaMarca';
+
+/** VIDA 22: o acabamento (1 econômico … 5 ultraluxo) que a marca dá ao desenho da peça; sem marca, o de sempre. */
+export const acabamentoDaMarca = (marca?: string): number | undefined => (marca ? segmentoDaMarca(marca) : undefined);
 
 type P<K extends Peca['parte']> = Extract<Peca, { parte: K }>;
 
 /** A peça em uso: `variante` (12.9) é a semente das cores escolhida na loja; sem ela, o id. */
-export interface PecaEmUso { itemId: string; id: string; variante?: string }
+/** VIDA 22: `marca` — a marca da peça (o acabamento que ela dá aparece no desenho: a vitrine, o provador e o corpo iguais). */
+export interface PecaEmUso { itemId: string; id: string; variante?: string; marca?: string }
 /** HOTFIX 11.5.1 / VIDA 12.6: uma tatuagem na figura (`sistemas/tatuagens.tatuagensNaFigura`). */
 export type TatuagemNaFigura = TatuagemParaFigura;
 
@@ -312,27 +317,77 @@ function preenchimento(p: { cor?: unknown; estampa?: string; material?: string }
   return detalhe && p.estampa && ['listras', 'xadrez', 'floral', 'chita', 'wax', 'tachas'].includes(p.estampa) ? `url(#${idEstampa})` : cor;
 }
 
+/**
+ * VIDA 22 · A CONSTRUÇÃO DA PEÇA DE CIMA — os detalhes que fazem duas peças lisas da mesma cor serem peças diferentes:
+ * a ribana da gola (larga no algodão encorpado, fina na malha leve), a costura do ombro (o encorpado), a dobra do caimento
+ * (o leve), as costuras da manga raglan, os recortes laterais (o técnico), a carcela de botões (henley), o bolso no peito,
+ * a barra de costura dupla, o bordado pequeno, o friso de contraste e — pelo acabamento da marca — o pesponto de
+ * contraste e a etiqueta na barra (premium em diante). Só com detalhe (figura ≥ 110 px); a miniatura fica na silhueta.
+ */
+function ConstrucaoDaPeca({ g, p, cor, esc, ate, folga, detalhe }: { g: Geo; p: P<'cima'>; cor: string; esc: string; ate: number; folga: number; detalhe: boolean }) {
+  const q = g.quadril + folga * 0.9;
+  const claro = misturar(cor, '#ffffff', 0.35);
+  const ac = p.acabamento ?? 0;
+  const pesponto = ac >= 4 ? (ac >= 5 ? '#c9a14a' : misturar(cor, ac >= 4 && parseInt(cor.slice(1, 3), 16) < 100 ? '#ffffff' : '#000000', 0.35)) : undefined;
+  return (
+    <g className="figura__construcao">
+      {p.golaRib && (p.gola === 'redonda' || p.gola === 'v') && (p.gola === 'redonda'
+        ? <path d={`M ${lado(g, -1, g.pesc + 0.8)} ${g.topo} Q ${g.cx} ${g.topo + 5.5} ${lado(g, 1, g.pesc + 0.8)} ${g.topo}`} fill="none" stroke={sombraDe(cor, 0.12)} strokeWidth={p.golaRib} data-gola-rib={p.golaRib} />
+        : <path d={`M ${lado(g, -1, g.pesc + 0.6)} ${g.topo} L ${g.cx} ${g.topo + 10} L ${lado(g, 1, g.pesc + 0.6)} ${g.topo}`} fill="none" stroke={sombraDe(cor, 0.12)} strokeWidth={p.golaRib} strokeLinejoin="miter" data-gola-rib={p.golaRib} />)}
+      {p.tecido === 'encorpado' && p.manga !== 'sem' && ([-1, 1] as const).map(s => <path key={`co${s}`} d={`M ${lado(g, s, g.pesc + 1.4)} ${g.topo + 0.4} L ${lado(g, s, g.ombro - 0.6)} ${g.topo + 3.2}`} stroke={esc} strokeWidth={0.45} opacity={0.8} />)}
+      {p.tecido === 'leve' && detalhe && <path d={`M ${lado(g, -1, g.cintura * 0.4)} ${g.yCint - 6} q 3 5 1 11 M ${lado(g, 1, g.cintura * 0.55)} ${g.yCint - 2} q -2 4 0 8`} stroke={esc} strokeWidth={0.35} opacity={0.55} fill="none" data-caimento="leve" />}
+      {p.tecido === 'canelado' && detalhe && Array.from({ length: 9 }, (_, k) => <path key={`cn${k}`} d={`M ${lado(g, -1, g.peito * 0.8) + (g.peito * 1.6) * (k + 0.5) / 9} ${g.topo + 8} L ${lado(g, -1, g.cintura * 0.85) + (g.cintura * 1.7) * (k + 0.5) / 9} ${ate - 1}`} stroke={esc} strokeWidth={0.3} opacity={0.5} />)}
+      {p.raglan && ([-1, 1] as const).map(s => <path key={`rg${s}`} d={`M ${lado(g, s, g.pesc + 1.2)} ${g.topo + 0.6} L ${lado(g, s, g.peito - 0.6)} ${g.topo + 17}`} stroke={esc} strokeWidth={0.6} data-raglan />)}
+      {p.recorte === 'lateral' && ([-1, 1] as const).map(s => <path key={`rl${s}`} d={`M ${lado(g, s, g.peito - 0.4)} ${g.topo + 18} C ${lado(g, s, g.peito - 2.4)} ${g.yCint - 8} ${lado(g, s, g.cintura - 1.4)} ${g.yCint} ${lado(g, s, q - 2.6)} ${ate} L ${lado(g, s, q)} ${ate} L ${lado(g, s, g.peito + 0.6)} ${g.topo + 18} Z`} fill={p.cor2 ?? sombraDe(cor, 0.2)} opacity={0.9} data-recorte />)}
+      {p.carcela && <g data-carcela={p.carcela}><path d={`M ${g.cx - 1.1} ${g.topo + 1} L ${g.cx - 1.1} ${g.topo + 4 + p.carcela * 3.4} L ${g.cx + 1.1} ${g.topo + 4 + p.carcela * 3.4} L ${g.cx + 1.1} ${g.topo + 1}`} fill="none" stroke={esc} strokeWidth={0.55} />{Array.from({ length: p.carcela }, (_, k) => <circle key={k} cx={g.cx} cy={g.topo + 3.6 + k * 3.4} r={0.55} fill={claro} stroke={esc} strokeWidth={0.2} />)}</g>}
+      {p.bolsoPeito && <g data-bolso-peito><rect x={lado(g, 1, g.peito * 0.45) - 3} y={g.topo + 12} width={6} height={6.2} rx={0.5} fill={sombraDe(cor, 0.06)} stroke={esc} strokeWidth={0.5} /><path d={`M ${lado(g, 1, g.peito * 0.45) - 3} ${g.topo + 13.2} h 6`} stroke={esc} strokeWidth={0.35} /></g>}
+      {p.logoPeito && <path d={`M ${lado(g, 1, g.peito * 0.45) - 1.6} ${g.topo + 14} q 1.6 -1.8 3.2 0 q -1.6 1.8 -3.2 0 Z`} fill={p.cor2 ?? claro} data-logo-peito />}
+      {p.friso && p.gola === 'polo' && <path d={`M ${lado(g, -1, g.pesc + 2)} ${g.topo - 0.2} L ${g.cx - 1.4} ${g.topo + 5} M ${lado(g, 1, g.pesc + 2)} ${g.topo - 0.2} L ${g.cx + 1.4} ${g.topo + 5}`} stroke={p.friso} strokeWidth={0.7} data-friso />}
+      {p.friso && p.manga === 'curta' && ([-1, 1] as const).map(s => { const x = lado(g, s, g.ombro + 1.4); const hw = g.braco + 1.2; return <path key={`fr${s}`} d={`M ${x - hw} ${g.topo + 29.2} h ${hw * 2}`} stroke={p.friso} strokeWidth={0.6} />; })}
+      {p.barraDupla && detalhe && <path d={`M ${lado(g, -1, q)} ${ate - 1.1} L ${lado(g, 1, q)} ${ate - 1.1} M ${lado(g, -1, q)} ${ate - 2} L ${lado(g, 1, q)} ${ate - 2}`} stroke={esc} strokeWidth={0.3} strokeDasharray="0.9 0.6" opacity={0.85} data-barra-dupla />}
+      {/* O acabamento da marca: o pesponto de contraste na barra e no ombro, e a etiqueta tecida na lateral da barra. */}
+      {pesponto && detalhe && <g data-acabamento={ac}>
+        <path d={`M ${lado(g, -1, q - 0.3)} ${ate - 0.8} L ${lado(g, 1, q - 0.3)} ${ate - 0.8}`} stroke={pesponto} strokeWidth={0.35} strokeDasharray="0.8 0.5" />
+        {p.manga !== 'sem' && ([-1, 1] as const).map(s => <path key={`ps${s}`} d={`M ${lado(g, s, g.pesc + 1.6)} ${g.topo + 1.2} L ${lado(g, s, g.ombro - 0.8)} ${g.topo + 4}`} stroke={pesponto} strokeWidth={0.3} strokeDasharray="0.8 0.5" />)}
+        <rect x={lado(g, 1, q - 3.4)} y={ate - 3.4} width={1.8} height={2.4} fill={ac >= 5 ? '#1b1b1d' : '#f2efe8'} stroke={pesponto} strokeWidth={0.2} />
+      </g>}
+    </g>
+  );
+}
+
 function Cima({ g, p, ide, detalhe, pele }: { g: Geo; p: P<'cima'>; ide: string; detalhe: boolean; pele: string }) {
   const cor = p.cor as string, esc = sombraDe(cor);
-  const folga = 0.8 + ((p.folga ?? 1) - 1) * 18;
-  const curta = p.forma === 'blusa' && (p.folga ?? 1) < 1;
-  const ate = curta ? g.yCint - 2 : p.modelo === 'tunica' ? g.yQuad + 12 : p.forma === 'moletom' || p.forma === 'agasalho' ? g.yQuad + 2 : p.forma === 'camisa' || p.forma === 'bata' ? g.yQuad + 4 : g.yQuad;
+  // VIDA 22: o acabamento da marca mexe no caimento (o econômico mais solto, o premium e o luxo mais justos).
+  const ac = p.acabamento ?? 0;
+  const folga = 0.8 + ((p.folga ?? 1) - 1) * 18 + (ac && ac <= 1 ? 0.35 : ac >= 4 ? -0.25 : 0);
+  const curta = (p.forma === 'blusa' && (p.folga ?? 1) < 1) || p.comprimentoCima === 'curto';
+  const ate = curta ? g.yCint - 2 : p.comprimentoCima === 'longo' ? g.yQuad + 8 : p.modelo === 'tunica' ? g.yQuad + 12 : p.forma === 'moletom' || p.forma === 'agasalho' ? g.yQuad + 2 : p.forma === 'camisa' || p.forma === 'bata' ? g.yQuad + 4 : g.yQuad;
   const fill = preenchimento(p, ide, detalhe);
+  // VIDA 22: o peso do tecido no traço (o encorpado tem contorno firme; o leve, fino).
+  const traco = p.tecido === 'encorpado' ? 0.85 : p.tecido === 'leve' ? 0.38 : 0.5;
+  const corManga = p.raglan && p.cor2 ? p.cor2 : fill;
   // VIDA 18: a manga dobrada (linho) vai até o cotovelo; o ombro caído desce a costura e alarga a manga; a manga bispo abre no punho.
-  const mangaAte = p.manga === 'curta' ? g.topo + (p.ombroCaido ? 33 : 30) : p.dobrada ? 112 : 141;
+  const mangaAte = p.manga === 'curta' ? g.topo + (p.ombroCaido ? 33 : 30) + (p.comprimentoCima === 'longo' ? 3 : 0) : p.manga34 ? 122 : p.dobrada ? 112 : 141;
   const folgaManga = 1 + (folga - 0.8) * 0.4 + (p.ombroCaido ? 0.9 : 0) + (p.bispo ? 1.2 : 0);
   const mod = { modelo: p.modelo, curva: p.barra === 'curva' };
   return (
     <g data-peca={p.forma} className="figura__cima">
-      {p.manga !== 'sem' && ([-1, 1] as const).map(s => <path key={s} d={braco(g, s, folgaManga, mangaAte)} fill={fill} stroke={esc} strokeWidth={0.5} />)}
+      {p.manga !== 'sem' && ([-1, 1] as const).map(s => <path key={s} d={braco(g, s, folgaManga, mangaAte)} fill={corManga} stroke={esc} strokeWidth={traco} />)}
       {/* VIDA 18: o acabamento da manga — o punho, a barra dobrada, a costura do ombro caído. */}
       {p.manga !== 'sem' && p.punho && ([-1, 1] as const).map(s => { const x = lado(g, s, g.ombro + (p.manga === 'curta' ? 1.4 : 2.6)); const y = mangaAte - (p.manga === 'curta' ? 1.6 : 3.4); const hw = (p.manga === 'curta' ? g.braco : g.antebraco) + 1.2; return <rect key={`pu${s}`} x={x - hw} y={y} width={hw * 2} height={p.manga === 'curta' ? 1.6 : 3.4} rx={0.6} fill={sombraDe(cor, 0.1)} stroke={esc} strokeWidth={0.4} />; })}
       {p.dobrada && ([-1, 1] as const).map(s => { const x = lado(g, s, g.ombro + 2.2); const hw = g.braco * 0.86 + 1.6; return <rect key={`do${s}`} x={x - hw} y={mangaAte - 4} width={hw * 2} height={4} rx={1} fill={misturar(cor, '#ffffff', 0.12)} stroke={esc} strokeWidth={0.45} />; })}
       {p.ombroCaido && p.manga !== 'sem' && ([-1, 1] as const).map(s => <path key={`oc${s}`} d={`M ${lado(g, s, g.ombro - 1.4)} ${g.topo + 3} Q ${lado(g, s, g.ombro + 2.6)} ${g.topo + 9} ${lado(g, s, g.ombro + 0.4)} ${g.topo + 15}`} fill="none" stroke={esc} strokeWidth={0.45} opacity={0.75} />)}
       {p.bispo && p.manga === 'longa' && ([-1, 1] as const).map(s => { const x = lado(g, s, g.ombro + 2.6); return <rect key={`bi${s}`} x={x - g.antebraco - 0.6} y={137.5} width={(g.antebraco + 0.6) * 2} height={3} rx={0.8} fill={sombraDe(cor, 0.12)} stroke={esc} strokeWidth={0.4} />; })}
-      {p.forma === 'regata'
-        ? <path d={`M ${lado(g, -1, g.pesc + 1.5)} ${g.topo} L ${lado(g, -1, g.ombro - 6)} ${g.topo + 1} Q ${lado(g, -1, g.peito - 2)} ${g.topo + 12} ${lado(g, -1, g.peito + 0.6)} ${g.topo + 20} L ${lado(g, -1, g.quadril + 0.8)} ${ate} L ${lado(g, 1, g.quadril + 0.8)} ${ate} L ${lado(g, 1, g.peito + 0.6)} ${g.topo + 20} Q ${lado(g, 1, g.peito - 2)} ${g.topo + 12} ${lado(g, 1, g.ombro - 6)} ${g.topo + 1} L ${lado(g, 1, g.pesc + 1.5)} ${g.topo} Q ${g.cx} ${g.topo + 9} ${lado(g, -1, g.pesc + 1.5)} ${g.topo} Z`} fill={fill} stroke={esc} strokeWidth={0.5} />
-        : <path d={tronco(g, folga, ate, p.forma === 'bata' ? 1.06 : 1, mod)} fill={fill} stroke={esc} strokeWidth={0.5} />}
+      {p.forma === 'regata' && p.alcas
+        // VIDA 22: o top de alças (finas: o corpo começa no busto; nadador: as alças se juntam nas costas, abertas na frente).
+        ? <g data-alcas={p.alcas}>
+            <path d={`M ${lado(g, -1, g.peito - 0.4)} ${g.topo + (p.alcas === 'finas' ? 11 : 8)} Q ${g.cx} ${g.topo + (p.alcas === 'finas' ? 13 : 9)} ${lado(g, 1, g.peito - 0.4)} ${g.topo + (p.alcas === 'finas' ? 11 : 8)} L ${lado(g, 1, g.peito + 0.4)} ${g.topo + 20} L ${lado(g, 1, g.quadril + 0.6)} ${ate} L ${lado(g, -1, g.quadril + 0.6)} ${ate} L ${lado(g, -1, g.peito + 0.4)} ${g.topo + 20} Z`} fill={fill} stroke={esc} strokeWidth={traco} />
+            {([-1, 1] as const).map(s => <path key={`al${s}`} d={p.alcas === 'finas' ? `M ${lado(g, s, g.peito - 2.2)} ${g.topo + 11} L ${lado(g, s, g.pesc + 2.6)} ${g.topo + 0.5}` : `M ${lado(g, s, g.peito - 1.6)} ${g.topo + 8.5} Q ${lado(g, s, g.pesc + 3)} ${g.topo + 4} ${lado(g, s, g.pesc + 1.2)} ${g.topo}`} stroke={p.alcas === 'finas' ? esc : fill} strokeWidth={p.alcas === 'finas' ? 0.8 : 3} strokeLinecap="round" fill="none" />)}
+          </g>
+        : p.forma === 'regata'
+        ? <path d={`M ${lado(g, -1, g.pesc + 1.5)} ${g.topo} L ${lado(g, -1, g.ombro - (p.cava === 'funda' ? 8 : 6))} ${g.topo + 1} Q ${lado(g, -1, g.peito - (p.cava === 'funda' ? 5 : 2))} ${g.topo + (p.cava === 'funda' ? 18 : 12)} ${lado(g, -1, g.peito + 0.6)} ${g.topo + (p.cava === 'funda' ? 27 : 20)} L ${lado(g, -1, g.quadril + 0.8 + (folga - 0.8) * 0.5)} ${ate} L ${lado(g, 1, g.quadril + 0.8 + (folga - 0.8) * 0.5)} ${ate} L ${lado(g, 1, g.peito + 0.6)} ${g.topo + (p.cava === 'funda' ? 27 : 20)} Q ${lado(g, 1, g.peito - (p.cava === 'funda' ? 5 : 2))} ${g.topo + (p.cava === 'funda' ? 18 : 12)} ${lado(g, 1, g.ombro - (p.cava === 'funda' ? 8 : 6))} ${g.topo + 1} L ${lado(g, 1, g.pesc + 1.5)} ${g.topo} Q ${g.cx} ${g.topo + 9} ${lado(g, -1, g.pesc + 1.5)} ${g.topo} Z`} fill={fill} stroke={esc} strokeWidth={traco} data-cava={p.cava} />
+        : <path d={tronco(g, folga, ate, p.forma === 'bata' ? 1.06 : 1, mod)} fill={fill} stroke={esc} strokeWidth={traco} />}
+      <ConstrucaoDaPeca g={g} p={p} cor={cor} esc={esc} ate={ate} folga={folga} detalhe={detalhe} />
       {/* VIDA 18: a barra — canelada (o punho do moletom e do suéter, mais justa que o corpo), com fendas (polo, bata). */}
       {p.barra === 'canelada' && (() => { const q = g.quadril + folga - 0.6; return <g><rect x={lado(g, -1, q)} y={ate - 4.2} width={q * 2} height={4.2} rx={0.8} fill={sombraDe(cor, 0.08)} stroke={esc} strokeWidth={0.45} />{detalhe && Array.from({ length: 13 }, (_, k) => <path key={k} d={`M ${lado(g, -1, q) + (q * 2) * (k + 0.5) / 13} ${ate - 3.8} v 3.4`} stroke={esc} strokeWidth={0.3} opacity={0.6} />)}</g>; })()}
       {p.barra === 'fenda' && ([-1, 1] as const).map(s => <path key={`fe${s}`} d={`M ${lado(g, s, g.quadril + folga * (p.modelo === 'tunica' ? 1.5 : 1) + (p.modelo === 'tunica' ? 2 : 0))} ${ate} l ${-s * 0.8} -5`} stroke={esc} strokeWidth={0.7} />)}
@@ -411,6 +466,10 @@ function Baixo({ g, p, ide, detalhe, pele }: { g: Geo; p: P<'baixo'>; ide: strin
       {p.cordao && <path d={`M ${g.cx - 1.4} ${g.yCint + 2} q -0.8 4 -1.6 6 M ${g.cx + 1.4} ${g.yCint + 2} q 0.8 4 1.6 6`} stroke={misturar(cor, '#ffffff', 0.6)} strokeWidth={0.6} fill="none" strokeLinecap="round" />}
       {p.passadores && [-0.8, -0.35, 0.35, 0.8].map(t => <rect key={t} x={g.cx + t * (g.cintura + 0.8) - 0.6} y={g.yCint - 0.2} width={1.2} height={3.6} fill={sombraDe(cor, 0.15)} />)}
       {p.fendaLateral && ([-1, 1] as const).map(s => <path key={`fl${s}`} d={`M ${lado(g, s, g.quadril * 0.5 + g.coxa + 0.6)} ${ate} l ${-s * 1.6} -4 l ${-s * 1.6} 4`} fill={pele} stroke={esc} strokeWidth={0.4} />)}
+      {/* VIDA 22: a barra dobrada (italiana), o jeans rasgado no joelho, o pesponto de contraste do acabamento premium. */}
+      {p.barraDobrada && ate > g.yJoelho && ([-1, 1] as const).map(s => { const w = (g.tornozelo + 1) * larga + 0.6; return <rect key={`bd${s}`} x={lado(g, s, g.quadril * 0.42) - w} y={ate - 3} width={w * 2} height={3} rx={0.5} fill={misturar(cor, '#ffffff', 0.1)} stroke={esc} strokeWidth={0.4} data-barra-dobrada />; })}
+      {p.rasgado && ([-1, 1] as const).map(s => <path key={`rs${s}`} d={`M ${lado(g, s, g.quadril * 0.45) - 2} ${g.yJoelho - 2} h 4 M ${lado(g, s, g.quadril * 0.45) - 1.6} ${g.yJoelho} h 3.4 M ${lado(g, s, g.quadril * 0.45) - 1.8} ${g.yJoelho + 2} h 3.6`} stroke="#f2efe8" strokeWidth={0.7} data-rasgado />)}
+      {(p.acabamento ?? 0) >= 4 && detalhe && ([-1, 1] as const).map(s => <path key={`pb${s}`} d={`M ${lado(g, s, g.quadril + 0.4)} ${g.yQuad} L ${lado(g, s, g.quadril * 0.42 + (g.tornozelo + 1) * larga - 0.4)} ${ate - 1}`} stroke={(p.acabamento ?? 0) >= 5 ? '#c9a14a' : misturar(cor, '#ffffff', 0.4)} strokeWidth={0.3} strokeDasharray="0.8 0.5" data-acabamento={p.acabamento} />)}
       {pele && null}
     </g>
   );
@@ -424,7 +483,10 @@ function Inteira({ g, p, ide, detalhe, pele }: { g: Geo; p: P<'inteira'>; ide: s
       <g data-peca="terno" className="figura__inteira">
         <Baixo g={g} p={{ parte: 'baixo', forma: 'calca', corte: 'reta', cor, vinco: true }} ide={ide} detalhe={detalhe} pele={pele} />
         <Cima g={g} p={{ parte: 'cima', forma: 'camisa', cor: p.cor2 ?? '#f4f6f8', manga: 'longa', gola: 'colarinho' }} ide={ide} detalhe={detalhe} pele={pele} />
-        <Casaco g={g} p={{ parte: 'casaco', forma: 'blazer', comprimento: 'quadril', cor, lapela: true }} detalhe={detalhe} gravata />
+        {/* VIDA 22: o colete por baixo (o três-peças) e o paletó do terno (trespassado, lapela de bico, lenço no bolso). */}
+        {p.colete && <path d={`M ${lado(g, -1, g.peito - 1)} ${g.topo + 8} L ${g.cx} ${g.topo + 20} L ${lado(g, 1, g.peito - 1)} ${g.topo + 8} L ${lado(g, 1, g.cintura + 1)} ${g.yCint + 4} L ${g.cx} ${g.yCint + 7} L ${lado(g, -1, g.cintura + 1)} ${g.yCint + 4} Z`} fill={sombraDe(cor, 0.1)} stroke={sombraDe(cor)} strokeWidth={0.5} data-colete />}
+        <Casaco g={g} p={{ parte: 'casaco', forma: 'blazer', comprimento: 'quadril', cor, lapela: true, ...(p.trespassado ? { modelo: 'trespassado', cor2: sombraDe(cor, 0.35) } : {}), lapelaBico: p.lapelaBico, acabamento: p.acabamento }} detalhe={detalhe} gravata />
+        {p.lenco && <path d={`M ${lado(g, 1, g.peito * 0.5) - 2.6} ${g.topo + 15} l 1.3 -2.2 l 1.3 1.4 l 1.3 -1.8 l 0.8 2.6 Z`} fill={p.lenco} data-lenco />}
       </g>
     );
   }
@@ -523,6 +585,12 @@ function Casaco({ g, p, detalhe, gravata, ide }: { g: Geo; p: P<'casaco'>; detal
       {p.punhoElastico && ([-1, 1] as const).map(s => { const x = lado(g, s, g.ombro + 2.6); return <rect key={`pe${s}`} x={x - g.antebraco - 1.4} y={137} width={(g.antebraco + 1.4) * 2} height={3.6} rx={1.2} fill={sombraDe(cor, 0.15)} stroke={esc} strokeWidth={0.4} />; })}
       {p.cordao && ([-1, 1] as const).map(s => <g key={`co${s}`}><path d={`M ${lado(g, s, 5)} ${fim - 1} q ${s * 0.6} 3 ${s * 0.2} 5`} stroke={p.cor2 ?? claro} strokeWidth={0.6} fill="none" /><rect x={lado(g, s, 5) + s * 0.2 - 0.8} y={fim + 3.6} width={1.6} height={2} rx={0.5} fill={esc} /></g>)}
       {p.modelo === 'trucker' && <><path d={`M ${lado(g, -1, g.cintura + 2.2)} ${fim - 4} L ${lado(g, 1, g.cintura + 2.2)} ${fim - 4}`} stroke="#c99a4a" strokeWidth={0.6} />{[0, 1, 2, 3].map(k => <circle key={`tk${k}`} cx={g.cx + 1.4} cy={g.topo + 14 + k * 7} r={0.75} fill="#c9ccd1" />)}</>}
+      {/* VIDA 22: a bomber (a ribana na gola e na barra, o bolso de zíper na manga); a jaqueta de corrida (as faixas nos braços e no peito); a lapela de bico. */}
+      {p.ribana && <g data-ribana><rect x={lado(g, -1, g.cintura + cint + 0.6)} y={fim - 3.6} width={(g.cintura + cint + 0.6) * 2} height={3.6} rx={0.8} fill={p.cor2 && !p.faixas ? p.cor2 : sombraDe(cor, 0.12)} stroke={esc} strokeWidth={0.4} />{detalhe && Array.from({ length: 14 }, (_, k) => <path key={k} d={`M ${lado(g, -1, g.cintura + cint + 0.6) + (g.cintura + cint + 0.6) * 2 * (k + 0.5) / 14} ${fim - 3.2} v 2.8`} stroke={esc} strokeWidth={0.25} opacity={0.6} />)}</g>}
+      {p.bolsoManga && <g data-bolso-manga><rect x={lado(g, 1, g.ombro + 2.4) - 2} y={g.topo + 14} width={4} height={5} rx={0.5} fill={sombraDe(cor, 0.08)} stroke={esc} strokeWidth={0.4} /><path d={`M ${lado(g, 1, g.ombro + 2.4) - 1.6} ${g.topo + 15} h 3.2`} stroke={claro} strokeWidth={0.5} /></g>}
+      {p.faixas && p.cor2 && <g data-faixas>{([-1, 1] as const).map(s => <path key={`fx${s}`} d={`M ${lado(g, s, g.ombro + 2.6)} ${g.topo + 3} L ${lado(g, s, g.ombro + 4.4)} 138`} stroke={p.cor2} strokeWidth={1.6} />)}<path d={`M ${lado(g, -1, g.peito + 1)} ${g.topo + 16} L ${lado(g, 1, g.peito + 1)} ${g.topo + 16}`} stroke={p.cor2} strokeWidth={2.4} /><path d={`M ${lado(g, -1, g.peito + 1)} ${g.topo + 19} L ${lado(g, 1, g.peito + 1)} ${g.topo + 19}`} stroke={misturar(p.cor2, '#ffffff', 0.5)} strokeWidth={0.8} /></g>}
+      {p.lapelaBico && ([-1, 1] as const).map(s => <path key={`lb${s}`} d={`M ${lado(g, s, g.pesc + 5.5)} ${g.topo + 10} L ${lado(g, s, g.pesc + 7.6)} ${g.topo + 7.4} L ${lado(g, s, g.pesc + 6.6)} ${g.topo + 11.4}`} fill={sombraDe(cor, 0.06)} stroke={esc} strokeWidth={0.7} strokeLinejoin="round" data-lapela="bico" />)}
+      {(p.acabamento ?? 0) >= 4 && p.lapela && detalhe && ([-1, 1] as const).map(s => <path key={`pp${s}`} d={`M ${lado(g, s, g.pesc + 0.4)} ${g.topo + 4} L ${lado(g, s, g.pesc + 4.8)} ${g.topo + 10.2} L ${lado(g, s, 3.9)} ${g.topo + 21}`} fill="none" stroke={(p.acabamento ?? 0) >= 5 ? '#c9a14a' : claro} strokeWidth={0.3} strokeDasharray="0.8 0.5" data-acabamento={p.acabamento} />)}
     </g>
   );
 }
@@ -630,7 +698,7 @@ export const Figura = memo(function Figura({ visual, genero, idade, semente = 'e
   const conj: Conjunto = {};
   const acess: Record<string, ReturnType<typeof acessorioDoItem>> = {};
   for (const x of pecas) {
-    const c = pecasDoItem(x.itemId, x.variante ?? x.id);
+    const c = pecasDoItem(x.itemId, x.variante ?? x.id, acabamentoDaMarca(x.marca));
     for (const k of ['cima', 'baixo', 'inteira', 'casaco', 'pes'] as const) if (c[k]) conj[k] = c[k];
     if (c.inteira) { delete conj.cima; delete conj.baixo; }
     if ((c.cima || c.baixo) && !c.inteira) delete conj.inteira;

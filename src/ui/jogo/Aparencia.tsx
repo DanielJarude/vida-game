@@ -5,6 +5,7 @@
  * rosto antes de mudar. Nada disso é moral, e nada disso dá fama.
  */
 
+import { OCASIOES_DE_LOOK } from '../../motor/sistemas/personalizacao';
 import { sobDemanda } from '../util/sobDemanda';
 /** REWORK 12.4: o guarda-roupa por estilo e ocasião (pacote sob demanda). */
 const GuardaRoupa = sobDemanda(() => import('./Personalizar').then(m => m.GuardaRoupa));
@@ -217,7 +218,7 @@ function ParteDoCorpo({ vida, agir, parte }: { vida: Vida; agir: (a: Acao) => bo
   const verbo = parte.id === 'bolsa' ? 'Levar' : 'Vestir';
   return (
     <li className="vestir__parte vestir__cartao" data-parte={parte.id}>
-      <span className="vestir__miniatura" aria-hidden={!atual}>{atual ? <Miniatura vida={vida} itemId={atual.itemId} id={sementeDaPeca(atual)} largura={64} /> : <span className="vestir__vazio">—</span>}</span>
+      <span className="vestir__miniatura" aria-hidden={!atual}>{atual ? <Miniatura vida={vida} itemId={atual.itemId} id={sementeDaPeca(atual)} largura={64} marca={atual.marca} /> : <span className="vestir__vazio">—</span>}</span>
       <span className="vestir__info">
         <span className="vestir__nome">{parte.nome}</span>
         <span className="vestir__atual">{it ? it.nome : <span className="nota">nada</span>}{inteira ? <span className="nota"> (a peça inteira)</span> : null}</span>
@@ -247,6 +248,10 @@ function LooksSalvos({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean })
   const meus = new Map((vida.eu.estilo?.itens ?? []).map(x => [x.id, x]));
   const livre = SUGESTOES_DE_LOOK.find(n => !salvos.some(l => l.nome.toLowerCase() === n.toLowerCase())) ?? '';
   const [nome, setNome] = useState(livre);
+  // VIDA 22: a ocasião do look (para organizar a lista); "todos" mostra tudo.
+  const [ocasiao, setOcasiao] = useState('casual');
+  const [filtro, setFiltro] = useState('');
+  const ocasioesUsadas = OCASIOES_DE_LOOK.filter(o => salvos.some(l => l.ocasiao === o));
   const [renomeando, setRenomeando] = useState<{ id: string; nome: string } | null>(null);
   const op = (o: Extract<Acao, { tipo: 'personalizar' }>['op']): Acao => ({ tipo: 'personalizar', op: o });
   const i = idade(vida);
@@ -257,11 +262,19 @@ function LooksSalvos({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean })
         <label className="campo campo--compacto"><span className="campo__rotulo">Guardar o que estou usando como</span>
           <input type="text" value={nome} maxLength={32} onChange={e => setNome(e.target.value)} list="looks-sugestoes" placeholder="Ex.: Casual" /></label>
         <datalist id="looks-sugestoes">{SUGESTOES_DE_LOOK.map(n => <option key={n} value={n} />)}</datalist>
-        <BotaoAcao vida={vida} agir={a => { const ok = agir(a); if (ok) setNome(''); return ok; }} acao={op({ o: 'look_salvar', nome })} variante="secundario">Guardar look</BotaoAcao>
+        <label className="campo campo--compacto"><span className="campo__rotulo">Ocasião</span>
+          <select value={ocasiao} onChange={e => setOcasiao(e.target.value)}>{OCASIOES_DE_LOOK.map(o => <option key={o} value={o}>{o.charAt(0).toUpperCase() + o.slice(1)}</option>)}</select></label>
+        <BotaoAcao vida={vida} agir={a => { const ok = agir(a); if (ok) setNome(''); return ok; }} acao={op({ o: 'look_salvar', nome, ocasiao })} variante="secundario">Guardar look</BotaoAcao>
       </div>
       {salvos.length === 0 ? <p className="nota">Monte a roupa acima e guarde com um nome: depois é só vestir de novo.</p> : (
+        <>
+        {ocasioesUsadas.length > 1 && (
+          <div className="looks__filtro" role="group" aria-label="Organizar por ocasião">
+            {['', ...ocasioesUsadas].map(o => <button key={o || 'todos'} type="button" className={`filtro${filtro === o ? ' filtro--ativo' : ''}`} aria-pressed={filtro === o} onClick={() => setFiltro(o)}>{o ? o.charAt(0).toUpperCase() + o.slice(1) : 'Todos'}</button>)}
+          </div>
+        )}
         <ul className="looks__lista">
-          {salvos.map(l => {
+          {salvos.filter(l => !filtro || l.ocasiao === filtro).map(l => {
             const pecas = l.itens.map(id => meus.get(id)).filter((x): x is NonNullable<typeof x> => !!x);
             const emUso = pecas.length > 0 && pecas.every(x => x.usando);
             return (
@@ -276,7 +289,9 @@ function LooksSalvos({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean })
                       <BotaoAcao vida={vida} agir={a => { const ok = agir(a); if (ok) setRenomeando(null); return ok; }} acao={op({ o: 'look_renomear', id: l.id, nome: renomeando.nome })} variante="discreto">Salvar nome</BotaoAcao>
                     </span>
                   ) : <strong>{l.nome}</strong>}
-                  <span className="nota">{pecas.length ? pecas.map(x => itemEstilo(x.itemId)?.nome ?? x.itemId).join(' · ') : 'As peças deste look não são mais suas.'}{emUso ? ' · em uso' : ''}</span>
+                  <span className="nota">{pecas.length ? pecas.map(x => itemEstilo(x.itemId)?.nome ?? x.itemId).join(' · ') : 'As peças deste look não são mais suas.'}{emUso ? ' · em uso' : ''}{pecas.length && pecas.length < l.itens.length ? ` · ${l.itens.length - pecas.length === 1 ? 'uma peça não é mais sua' : `${l.itens.length - pecas.length} peças não são mais suas`} (fica de fora ao vestir)` : ''}</span>
+                  <label className="campo campo--compacto looks__ocasiao"><span className="campo__rotulo">Ocasião</span>
+                    <select value={l.ocasiao ?? ''} onChange={e => { if (e.target.value) agir(op({ o: 'look_ocasiao', id: l.id, ocasiao: e.target.value })); }}><option value="">—</option>{OCASIOES_DE_LOOK.map(o => <option key={o} value={o}>{o.charAt(0).toUpperCase() + o.slice(1)}</option>)}</select></label>
                   <span className="looks__acoes">
                     <BotaoAcao vida={vida} agir={agir} acao={op({ o: 'look_vestir', id: l.id })} variante="secundario" ocultarImpossivel>Vestir</BotaoAcao>
                     <BotaoAcao vida={vida} agir={agir} acao={op({ o: 'look_salvar', id: l.id, nome: l.nome })} variante="discreto">Trocar pelo que estou usando</BotaoAcao>
@@ -288,6 +303,7 @@ function LooksSalvos({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean })
             );
           })}
         </ul>
+        </>
       )}
     </section>
   );

@@ -350,7 +350,8 @@ export interface EstiloPessoal {
    */
   looks?: Partial<Record<Ocasiao, string[]>>;
   /** VIDA 12.9: looks com nome (casual, trabalho, festa...): ids reais de `ItemDeEstilo`, não precisa ter todas as partes. */
-  looksSalvos?: { id: string; nome: string; itens: string[]; t: number }[];
+  /** VIDA 22: `ocasiao` (opcional) — onde o look se organiza (casual, trabalho, formal...). */
+  looksSalvos?: { id: string; nome: string; itens: string[]; t: number; ocasiao?: string }[];
   /** REWORK 12.4: as fases do estilo (quando o jeito de se vestir mudou de cara), para a história. */
   fases?: { t: number; estilo: string }[];
   /** VIDA 14: os furos de piercing feitos (o lugar → quando furou). O furo fica mesmo sem joia (`v14/aparencia/piercings14`). */

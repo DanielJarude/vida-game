@@ -10,6 +10,7 @@
  */
 import { pecaDaJoia20, type PecaJoia20 } from './joias20';
 import { PECAS_21 } from './pecas21';
+import { PECAS_22 } from './pecas22';
 
 export type Estampa = 'listras' | 'xadrez' | 'floral' | 'wax' | 'chita' | 'banda' | 'time' | 'logo' | 'tachas';
 export type Manga = 'sem' | 'curta' | 'longa';
@@ -23,7 +24,20 @@ export type Gola = 'redonda' | 'v' | 'colarinho' | 'capuz' | 'polo' | 'canoa' | 
  * perfecto (zíper atravessado, cinto na barra), o corta-vento tem capuz e cordão, o sobretudo é trespassado com cinto, o
  * blazer marca a cintura.
  */
-export interface ModelagemCima { modelo?: 'caixa' | 'ajustada' | 'ampla' | 'tunica' | 'fluida'; barra?: 'reta' | 'curva' | 'canelada' | 'fenda'; punho?: boolean; ombroCaido?: boolean; dobrada?: boolean; bolsosPeito?: boolean; bispo?: boolean }
+export interface ModelagemCima {
+  modelo?: 'caixa' | 'ajustada' | 'ampla' | 'tunica' | 'fluida'; barra?: 'reta' | 'curva' | 'canelada' | 'fenda'; punho?: boolean; ombroCaido?: boolean; dobrada?: boolean; bolsosPeito?: boolean; bispo?: boolean;
+  /**
+   * VIDA 22 · A CONSTRUÇÃO da peça (o que distingue duas camisetas lisas da mesma cor): o peso do tecido (o leve cai e
+   * marca uma dobra; o encorpado tem costura de ombro, gola mais grossa e contorno firme; o técnico tem recortes), o
+   * comprimento (cropped, regular, longline), a ribana da gola, a manga raglan (com a cor da manga), os recortes
+   * laterais, a carcela de botões (henley), o bolso no peito, a barra de costura dupla, a cava funda da regata, as alças
+   * (finas, nadador), o bordado pequeno no peito, o friso de contraste na gola e no punho.
+   */
+  tecido?: 'leve' | 'medio' | 'encorpado' | 'tecnico' | 'canelado'; comprimentoCima?: 'curto' | 'longo'; golaRib?: number; raglan?: boolean; recorte?: 'lateral';
+  carcela?: number; bolsoPeito?: boolean; barraDupla?: boolean; cava?: 'funda'; alcas?: 'finas' | 'nadador'; logoPeito?: boolean; friso?: string;
+}
+/** VIDA 22 · o ACABAMENTO que a marca dá (1 econômico … 6 exclusivo): o premium e o luxo têm pesponto de contraste, etiqueta e caimento mais justo; o econômico, caimento mais solto e sem arremate. */
+export interface Acabamento { acabamento?: number }
 export type ModeloDeVestido = 'evase' | 'rodado' | 'coluna' | 'sereia' | 'baile' | 'imperio';
 export interface ModelagemCasaco { modelo?: 'perfecto' | 'trucker' | 'acinturado' | 'trespassado' | 'reto' | 'anoraque'; capuz?: boolean; cinto?: boolean; punhoElastico?: boolean; cordao?: boolean; bolsosFaca?: boolean }
 
@@ -31,10 +45,10 @@ export interface ModelagemCasaco { modelo?: 'perfecto' | 'trucker' | 'acinturado
 type Cor = string | string[];
 
 export type Peca =
-  | { parte: 'cima'; forma: 'camiseta' | 'regata' | 'camisa' | 'moletom' | 'bata' | 'polo' | 'sueter' | 'blusa' | 'agasalho'; cor: Cor; cor2?: string; estampa?: Estampa; manga: Manga; gola: Gola; folga?: number; bolso?: boolean; botoes?: boolean } & ModelagemCima
-  | { parte: 'baixo'; forma: 'calca' | 'bermuda' | 'saia' | 'short' | 'legging'; corte: 'reta' | 'larga' | 'justa' | 'bombacha' | 'midi' | 'curta' | 'lapis'; cor: Cor; cor2?: string; estampa?: Estampa; bolsos?: boolean; vinco?: boolean; costura?: string; listra?: string; pregas?: boolean; cordao?: boolean; passadores?: boolean; fendaLateral?: boolean }
-  | { parte: 'inteira'; forma: 'vestido' | 'macacao' | 'terno'; comprimento: 'curto' | 'joelho' | 'midi' | 'longo' | 'calca'; cor: Cor; cor2?: string; estampa?: Estampa; manga: Manga; gola: Gola; cinto?: string; modelo?: ModeloDeVestido; fenda?: boolean }
-  | { parte: 'casaco'; forma: 'jaqueta' | 'blazer' | 'sobretudo' | 'corta_vento' | 'casaco' | 'jaqueta_jeans'; comprimento: 'cintura' | 'quadril' | 'joelho'; cor: Cor; cor2?: string; ziper?: boolean; lapela?: boolean; gola?: 'alta' | 'pelo' | 'camisa' } & ModelagemCasaco
+  | { parte: 'cima'; forma: 'camiseta' | 'regata' | 'camisa' | 'moletom' | 'bata' | 'polo' | 'sueter' | 'blusa' | 'agasalho'; cor: Cor; cor2?: string; estampa?: Estampa; manga: Manga; gola: Gola; folga?: number; bolso?: boolean; botoes?: boolean; manga34?: boolean } & ModelagemCima & Acabamento
+  | { parte: 'baixo'; forma: 'calca' | 'bermuda' | 'saia' | 'short' | 'legging'; corte: 'reta' | 'larga' | 'justa' | 'bombacha' | 'midi' | 'curta' | 'lapis'; cor: Cor; cor2?: string; estampa?: Estampa; bolsos?: boolean; vinco?: boolean; costura?: string; listra?: string; pregas?: boolean; cordao?: boolean; passadores?: boolean; fendaLateral?: boolean; /** VIDA 22: a barra italiana (dobrada), o rasgado do jeans. */ barraDobrada?: boolean; rasgado?: boolean } & Acabamento
+  | { parte: 'inteira'; forma: 'vestido' | 'macacao' | 'terno'; comprimento: 'curto' | 'joelho' | 'midi' | 'longo' | 'calca'; cor: Cor; cor2?: string; estampa?: Estampa; manga: Manga; gola: Gola; cinto?: string; modelo?: ModeloDeVestido; fenda?: boolean; /** VIDA 22 (terno): o paletó trespassado, a lapela de bico, o lenço no bolso, o colete. */ trespassado?: boolean; lapelaBico?: boolean; lenco?: string; colete?: boolean } & Acabamento
+  | { parte: 'casaco'; forma: 'jaqueta' | 'blazer' | 'sobretudo' | 'corta_vento' | 'casaco' | 'jaqueta_jeans'; comprimento: 'cintura' | 'quadril' | 'joelho'; cor: Cor; cor2?: string; ziper?: boolean; lapela?: boolean; gola?: 'alta' | 'pelo' | 'camisa'; /** VIDA 22: as faixas de corrida, a ribana (gola e barra da bomber), o bolso de manga, a lapela de bico. */ faixas?: boolean; ribana?: boolean; bolsoManga?: boolean; lapelaBico?: boolean } & ModelagemCasaco & Acabamento
   | { parte: 'pes'; forma: 'tenis' | 'tenis_corrida' | 'tenis_cano' | 'tenis_lona' | 'sapato' | 'coturno' | 'chinelo' | 'botina' | 'salto' | 'sandalia' | 'sapatilha' | 'mocassim'; cor: Cor; sola: string; detalhe?: string }
   | { parte: 'pulso'; forma: 'analogico' | 'digital' | 'smart'; pulseira: string; caixa: string; mostrador: string }
   | { parte: 'pulseira'; cor: string; grossa?: boolean; contas?: string[] }
@@ -70,21 +84,21 @@ const NEUTRAS = ['#f2efe8', '#22262b', '#7d8590', '#2d3e5c', '#b9a58a', '#5d6b4f
 /** O desenho de cada item que se veste (os ids de `dados/estilo.ITENS_ESTILO`). */
 export const PECAS: Record<string, Peca | Conjunto> = {
   // ------------------------------------------------------------ a parte de cima
-  camiseta_lisa: { parte: 'cima', forma: 'camiseta', cor: NEUTRAS, manga: 'curta', gola: 'redonda', modelo: 'caixa', barra: 'reta' },
+  camiseta_lisa: { parte: 'cima', forma: 'camiseta', cor: NEUTRAS, manga: 'curta', gola: 'redonda', modelo: 'caixa', barra: 'reta', tecido: 'medio', golaRib: 1 },
   camiseta_banda: { parte: 'cima', forma: 'camiseta', cor: ['#1b1b1d', '#2a2a2e'], cor2: '#e8e2d4', estampa: 'banda', manga: 'curta', gola: 'redonda', modelo: 'caixa', barra: 'reta', ombroCaido: true },
   camisa_time: { parte: 'cima', forma: 'camiseta', cor: ['#c8102e', '#0b5d2a', '#f2c200', '#1d4fa3', '#111214', '#7a1e2b'], cor2: '#f4f4f2', estampa: 'time', manga: 'curta', gola: 'v', folga: 1.03 },
   camisa_social: { parte: 'cima', forma: 'camisa', cor: ['#f4f6f8', '#cfe0f2', '#f3ece3'], manga: 'longa', gola: 'colarinho', botoes: true, modelo: 'ajustada', barra: 'curva', punho: true },
   camisa_linho: { parte: 'cima', forma: 'camisa', cor: ['#ece4d4', '#d9e2dc', '#f6f1e7'], manga: 'longa', gola: 'colarinho', botoes: true, folga: 1.05, modelo: 'ampla', barra: 'curva', dobrada: true },
   moletom_oversized: { parte: 'cima', forma: 'moletom', cor: ['#8d9399', '#3b3f45', '#5d6b4f', '#b65d3a'], manga: 'longa', gola: 'capuz', folga: 1.14, bolso: true, modelo: 'ampla', barra: 'canelada', punho: true, ombroCaido: true },
-  camiseta_grife: { parte: 'cima', forma: 'camiseta', cor: ['#f4f2ee', '#111214'], cor2: '#c9a14a', estampa: 'logo', manga: 'curta', gola: 'redonda', folga: 1.1, modelo: 'caixa', barra: 'reta', ombroCaido: true },
-  regata: { parte: 'cima', forma: 'regata', cor: ['#f2efe8', '#1f2328', '#c8102e', '#2b5d8a'], manga: 'sem', gola: 'redonda' },
+  camiseta_grife: { parte: 'cima', forma: 'camiseta', cor: ['#f4f2ee', '#111214'], cor2: '#c9a14a', estampa: 'logo', manga: 'curta', gola: 'redonda', folga: 1.1, modelo: 'caixa', barra: 'reta', ombroCaido: true, tecido: 'encorpado', golaRib: 1.6 },
+  regata: { parte: 'cima', forma: 'regata', cor: ['#f2efe8', '#1f2328', '#c8102e', '#2b5d8a'], manga: 'sem', gola: 'redonda', tecido: 'medio' },
   bata_wax: { parte: 'cima', forma: 'bata', cor: '#d9822b', cor2: '#1f5c7a', estampa: 'wax', manga: 'curta', gola: 'v', folga: 1.08, modelo: 'tunica', barra: 'fenda', bispo: true },
   camisa_xadrez: { parte: 'cima', forma: 'camisa', cor: ['#a3302c', '#2f6a44', '#2b4a7b'], cor2: '#151515', estampa: 'xadrez', manga: 'longa', gola: 'colarinho', botoes: true, modelo: 'caixa', barra: 'curva', punho: true, bolsosPeito: true },
-  camisa_polo: { parte: 'cima', forma: 'polo', cor: ['#1f3a5f', '#f2efe8', '#2f5a3c', '#8a1e2b'], manga: 'curta', gola: 'polo', modelo: 'ajustada', barra: 'fenda', punho: true },
+  camisa_polo: { parte: 'cima', forma: 'polo', cor: ['#1f3a5f', '#f2efe8', '#2f5a3c', '#8a1e2b'], manga: 'curta', gola: 'polo', modelo: 'caixa', barra: 'reta', punho: true, tecido: 'medio' },
   camiseta_listrada: { parte: 'cima', forma: 'camiseta', cor: '#f4f1ea', cor2: '#1f3a5f', estampa: 'listras', manga: 'longa', gola: 'canoa', modelo: 'ajustada', barra: 'reta' },
   sueter_tricot: { parte: 'cima', forma: 'sueter', cor: ['#b9a58a', '#5a3d2b', '#2d3e5c', '#7b2d3a'], manga: 'longa', gola: 'redonda', folga: 1.04, modelo: 'caixa', barra: 'canelada', punho: true, ombroCaido: true },
   blusa_seda: { parte: 'cima', forma: 'blusa', cor: ['#f3e7dc', '#1e2a3a', '#9c3b4a', '#2f5a52'], manga: 'longa', gola: 'v', modelo: 'fluida', barra: 'curva', bispo: true },
-  cropped: { parte: 'cima', forma: 'blusa', cor: ['#f2efe8', '#1b1b1d', '#d97a8a'], manga: 'curta', gola: 'redonda', folga: 0.96, modelo: 'ajustada', barra: 'reta' },
+  cropped: { parte: 'cima', forma: 'blusa', cor: ['#f2efe8', '#1b1b1d', '#d97a8a'], manga: 'curta', gola: 'redonda', folga: 0.96, modelo: 'ajustada', barra: 'reta', comprimentoCima: 'curto', golaRib: 0.8 },
 
   // ------------------------------------------------------------ a parte de baixo
   jeans: { parte: 'baixo', forma: 'calca', corte: 'reta', cor: JEANS, bolsos: true, costura: '#c99a4a' },
@@ -161,7 +175,7 @@ export const PECAS: Record<string, Peca | Conjunto> = {
   guias: { parte: 'pescoco', cor: '#f4f1ea', contas: ['#f4f1ea', '#c8102e', '#1d4fa3', '#f2c200'] },
 
   // ------------------------------------------------------------ 12.7 · esporte, grife, alta-costura e alta joalheria
-  top_esportivo: { parte: 'cima', forma: 'regata', cor: ['#1b1b1d', '#5a4a6b', '#2b5d8a', '#c84b31'], manga: 'sem', gola: 'redonda', folga: 0.94 },
+  top_esportivo: { parte: 'cima', forma: 'regata', cor: ['#1b1b1d', '#5a4a6b', '#2b5d8a', '#c84b31'], manga: 'sem', gola: 'redonda', folga: 0.94, alcas: 'nadador', comprimentoCima: 'curto', tecido: 'tecnico' },
   short_corrida: { parte: 'baixo', forma: 'short', corte: 'curta', cor: ['#1b1b1d', '#2b5d8a', '#3a3f45'], listra: '#e8f04a', fendaLateral: true, cordao: true },
   camisa_seda_grife: { parte: 'cima', forma: 'camisa', cor: ['#f3e7dc', '#14213d'], cor2: '#c9a14a', estampa: 'floral', manga: 'longa', gola: 'colarinho', botoes: true, folga: 1.04, modelo: 'fluida', barra: 'curva', punho: true },
   moletom_grife: { parte: 'cima', forma: 'moletom', cor: ['#111214', '#f4f2ee', '#6b6a4e'], cor2: '#c9a14a', estampa: 'logo', manga: 'longa', gola: 'capuz', folga: 1.12, bolso: true, modelo: 'ampla', barra: 'canelada', punho: true, ombroCaido: true },
@@ -169,7 +183,7 @@ export const PECAS: Record<string, Peca | Conjunto> = {
   saia_couro_grife: { parte: 'baixo', forma: 'saia', corte: 'lapis', cor: ['#151313', '#4a1e24'], costura: '#c9a14a' },
   vestido_grife: { parte: 'inteira', forma: 'vestido', comprimento: 'longo', cor: ['#7b1e2b', '#0f1a2e', '#f2ece2'], manga: 'sem', gola: 'canoa', cinto: '#d8b45a', modelo: 'coluna', fenda: true },
   vestido_alta_costura: { parte: 'inteira', forma: 'vestido', comprimento: 'longo', cor: ['#e9dcc4', '#1a1630', '#5a1630'], cor2: '#e8d48a', estampa: 'floral', manga: 'sem', gola: 'v', cinto: '#e8d48a', modelo: 'baile' },
-  terno_vicunha: { parte: 'inteira', forma: 'terno', comprimento: 'calca', cor: ['#8a6e4e', '#3a3530', '#1c2230'], cor2: '#f6f1e7', manga: 'longa', gola: 'colarinho' },
+  terno_vicunha: { parte: 'inteira', forma: 'terno', comprimento: 'calca', cor: ['#8a6e4e', '#3a3530', '#1c2230'], cor2: '#f6f1e7', manga: 'longa', gola: 'colarinho', trespassado: true, lapelaBico: true, lenco: '#f6f1e7' },
   blazer_grife: { parte: 'casaco', forma: 'blazer', comprimento: 'quadril', cor: ['#14213d', '#f2ece2', '#1b1b1d'], cor2: '#c9a14a', lapela: true, modelo: 'trespassado' },
   jaqueta_couro_grife: { parte: 'casaco', forma: 'jaqueta', comprimento: 'cintura', cor: ['#5a3a24', '#151313'], cor2: '#c9a14a', ziper: true, lapela: true, modelo: 'perfecto' },
   casaco_cashmere_bordado: { parte: 'casaco', forma: 'sobretudo', comprimento: 'joelho', cor: ['#2a1f3a', '#efe6d6', '#1f2b26'], cor2: '#d8b45a', lapela: true, gola: 'pelo', modelo: 'reto' },
@@ -188,7 +202,9 @@ export const PECAS: Record<string, Peca | Conjunto> = {
   roupa_alternativa: { cima: { parte: 'cima', forma: 'bata', cor: ['#8a5a2b', '#6b3f73', '#2f6b66'], cor2: '#f2c200', estampa: 'floral', manga: 'curta', gola: 'v', folga: 1.06 }, baixo: { parte: 'baixo', forma: 'calca', corte: 'larga', cor: ['#5d6b4f', '#4a3b2c'] }, pes: { parte: 'pes', forma: 'tenis_lona', cor: '#c8102e', sola: '#f4f1ea' } },
   roupa_elegante: { cima: { parte: 'cima', forma: 'camisa', cor: ['#1d1f24', '#3a2430', '#f4f6f8'], manga: 'longa', gola: 'colarinho', botoes: true }, baixo: { parte: 'baixo', forma: 'calca', corte: 'reta', cor: '#1d1f24', vinco: true }, casaco: { parte: 'casaco', forma: 'blazer', comprimento: 'quadril', cor: ['#1d1f24', '#1f2d3a'], lapela: true }, pes: { parte: 'pes', forma: 'sapato', cor: '#1b1515', sola: '#141010' } },
   // VIDA 21: as peças novas (`pecas21`).
-  ...PECAS_21
+  ...PECAS_21,
+  // VIDA 22: as básicas novas (`pecas22`).
+  ...PECAS_22
 };
 
 const ehPeca = (x: Peca | Conjunto): x is Peca => 'parte' in x;
@@ -204,11 +220,12 @@ export function corDe(c: Cor, semente: string): string {
 
 /** A peça (ou o conjunto) de um item, com as cores resolvidas pela semente. */
 export type PecaResolvida = Peca & { cor?: string };
-export function pecasDoItem(itemId: string, semente: string): Conjunto {
+export function pecasDoItem(itemId: string, semente: string, acabamento?: number): Conjunto {
   const x = PECAS[itemId];
   if (!x) return {};
   const mat = materialDe(itemId);
-  const resolver = (p: Peca): Peca => ('cor' in p ? { ...p, cor: corDe(p.cor as Cor, semente + p.parte), ...(mat && p.parte !== 'pes' ? { material: mat } : {}) } as Peca : p);
+  // VIDA 22: o acabamento da marca (o segmento dela) vai junto da peça — a vitrine, o provador e o corpo mostram o mesmo.
+  const resolver = (p: Peca): Peca => ('cor' in p ? { ...p, cor: corDe(p.cor as Cor, semente + p.parte), ...(mat && p.parte !== 'pes' ? { material: mat } : {}), ...(acabamento ? { acabamento } : {}) } as Peca : p);
   if (ehPeca(x)) {
     const p = resolver(x);
     const chave = p.parte === 'cima' ? 'cima' : p.parte === 'baixo' ? 'baixo' : p.parte === 'inteira' ? 'inteira' : p.parte === 'casaco' ? 'casaco' : p.parte === 'pes' ? 'pes' : undefined;
@@ -281,4 +298,40 @@ export function acessorioDoItem(itemId: string): Extract<Peca, { parte: 'pulso' 
   if (itemId.startsWith('j20_')) return pecaDaJoia20(itemId);
   const x = PECAS[itemId];
   return x && ehPeca(x) && (x.parte === 'pulso' || x.parte === 'pulseira' || x.parte === 'anel' || x.parte === 'pescoco' || x.parte === 'bolsa') ? x : undefined;
+}
+
+/**
+ * VIDA 22 · A CONSTRUÇÃO EM PALAVRAS — o que o desenho mostra, para comparar duas peças parecidas na loja e no provador:
+ * a modelagem, o tecido, o comprimento, a gola, a manga e os detalhes (lidos da própria peça, nunca inventados).
+ */
+export function construcaoDaPeca(itemId: string): string[] {
+  const x = PECAS[itemId];
+  if (!x || !ehPeca(x)) return [];
+  const p = x as Peca & Record<string, unknown>;
+  const out: string[] = [];
+  const MOD: Record<string, string> = { caixa: 'corte reto', ajustada: 'corte ajustado', ampla: 'modelagem ampla', tunica: 'túnica', fluida: 'caimento fluido' };
+  const TEC: Record<string, string> = { leve: 'malha leve', medio: 'malha média', encorpado: 'tecido encorpado', tecnico: 'tecido técnico', canelado: 'malha canelada' };
+  if (p.parte === 'cima') {
+    if (p.modelo) out.push(MOD[p.modelo as string] ?? '');
+    if (p.tecido) out.push(TEC[p.tecido as string]);
+    if (p.comprimentoCima === 'longo') out.push('comprimento longo'); else if (p.comprimentoCima === 'curto') out.push('cropped');
+    if (p.ombroCaido) out.push('ombro caído');
+    const GOLA: Record<string, string> = { redonda: 'gola careca', v: 'decote V', colarinho: 'colarinho', capuz: 'capuz', polo: 'gola polo', canoa: 'decote canoa', alta: 'gola alta' };
+    if (p.alcas) out.push(p.alcas === 'finas' ? 'alças finas' : 'costas nadador'); else out.push(GOLA[p.gola as string] + (p.golaRib && (p.golaRib as number) >= 1.4 ? ' de ribana larga' : p.golaRib && (p.golaRib as number) <= 0.7 ? ' estreita' : ''));
+    out.push(p.manga === 'sem' ? (p.cava === 'funda' ? 'cava funda' : 'sem manga') : p.manga === 'curta' ? (p.dobrada ? 'manga curta dobrada' : 'manga curta') : p.manga34 ? 'manga três quartos' : 'manga longa');
+    if (p.raglan) out.push('manga raglan'); if (p.recorte) out.push('recortes laterais'); if (p.carcela) out.push(`carcela de ${p.carcela} botões`);
+    if (p.bolsoPeito || p.bolsosPeito) out.push(p.bolsosPeito ? 'dois bolsos no peito' : 'bolso no peito'); if (p.barraDupla) out.push('barra de costura dupla');
+    if (p.logoPeito) out.push('bordado no peito'); if (p.friso) out.push('friso de contraste');
+  } else if (p.parte === 'baixo') {
+    const C: Record<string, string> = { reta: 'perna reta', larga: 'perna larga', justa: 'justa', bombacha: 'bombacha com punho', midi: 'midi', curta: 'curta', lapis: 'lápis' };
+    out.push(C[p.corte as string]); if (p.vinco) out.push('vinco marcado'); if (p.pregas) out.push('pregas'); if (p.barraDobrada) out.push('barra dobrada'); if (p.cordao) out.push('cós de cordão'); if (p.passadores) out.push('passantes de cinto'); if (p.bolsos) out.push('bolsos');
+  } else if (p.parte === 'casaco') {
+    const M: Record<string, string> = { perfecto: 'perfecto (zíper atravessado)', trucker: 'trucker', acinturado: 'acinturado', trespassado: 'trespassado', reto: 'corte reto', anoraque: 'anoraque' };
+    if (p.modelo) out.push(M[p.modelo as string]); out.push(p.comprimento === 'cintura' ? 'na cintura' : p.comprimento === 'quadril' ? 'no quadril' : 'até o joelho');
+    if (p.ribana) out.push('ribana na gola e na barra'); if (p.faixas) out.push('faixas de contraste'); if (p.capuz) out.push('capuz'); if (p.cinto) out.push('cinto'); if (p.lapelaBico) out.push('lapela de bico');
+  } else if (p.parte === 'inteira') {
+    if (p.forma === 'terno') { out.push(p.trespassado ? 'paletó trespassado' : 'paletó de um botão'); if (p.lapelaBico) out.push('lapela de bico'); if (p.lenco) out.push('lenço no bolso'); }
+    else { const MV: Record<string, string> = { evase: 'evasê', rodado: 'saia rodada', coluna: 'reto (coluna)', sereia: 'sereia', baile: 'saia armada', imperio: 'cintura império' }; if (p.modelo) out.push(MV[p.modelo as string]); out.push(String(p.comprimento)); }
+  }
+  return out.filter(Boolean);
 }
