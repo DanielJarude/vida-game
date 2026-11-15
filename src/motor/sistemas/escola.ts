@@ -947,7 +947,7 @@ function concluirCurso(v: Vida, r: Rng, m: Matricula, c: Curso): void {
   // FIES vira dívida.
   if (m.financiamento === 'fies') {
     const total = Math.round(m.mensalidade * c.meses * 0.85) + (m.fiesAnterior129 ?? 0);
-    v.financas.dividas.push({ id: `fies${v.seq++}`, tipo: 'fies', saldo: total, jurosMes: 0.001, parcela: Math.round(total / 120), descricao: `${educacaoDaVida(v).credito?.nome ?? 'Crédito estudantil'} de ${c.nome}` });
+    v.financas.dividas.push({ id: `fies${v.seq++}`, tipo: 'fies', saldo: total, jurosMes: 0.001, parcela: Math.round(total / 120), descricao: textoDaEpoca(v, `${educacaoDaVida(v).credito?.nome ?? 'Crédito estudantil'} de ${c.nome}`) });
     escrever(v, { texto: `A conta ${doPrograma(educacaoDaVida(v).credito?.nome ?? 'crédito estudantil')} chegou: ${moedaCurta(total)} a pagar nos próximos dez anos.`, relevancia: 'cotidiano', tema: 'dinheiro' });
   }
   void g; void r;

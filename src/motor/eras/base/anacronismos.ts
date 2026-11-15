@@ -36,6 +36,7 @@ const REGRAS: Regra[] = [
   { quando: antes(1996), trocas: [[/a TV a cabo/g, 'a assinatura do jornal'], [/TV a cabo/g, 'assinatura do jornal']] },
   { quando: antes(2009), trocas: [[/o Enem/g, 'o vestibular'], [/O Enem/g, 'O vestibular'], [/do Enem/g, 'do vestibular'], [/no Enem/g, 'no vestibular'], [/\bEnem\b/g, 'vestibular'], [/pelo Sisu/g, 'pelo vestibular'], [/no Sisu/g, 'no vestibular'], [/\bSisu\b/g, 'vestibular']] },
   { quando: antes(2014), trocas: [[/motorista de aplicativo/g, 'taxista'], [/[Dd]elivery/g, 'entrega'], [/táxi ou aplicativo/g, 'táxi ou ônibus'], [/carro de aplicativo/g, 'táxi'], [/um aplicativo de transporte/g, 'um táxi']] },
+  { quando: antes(1999), trocas: [[/do FIES/g, 'do Crédito Educativo'], [/o FIES/g, 'o Crédito Educativo'], [/pelo FIES/g, 'pelo Crédito Educativo'], [/\bFIES\b/g, 'Crédito Educativo']] },
   // ERAS v2 (auditoria textual): a UPA (2008), o meme (anos 2000), o print de tela (smartphone).
   { quando: antes(2008), trocas: [[/para a UPA/g, 'para o pronto-socorro'], [/na UPA/g, 'no pronto-socorro'], [/da UPA/g, 'do pronto-socorro'], [/a UPA/g, 'o pronto-socorro'], [/\bUPA\b/g, 'pronto-socorro']] },
   { quando: antes(2006), trocas: [[/esse meme/g, 'essa piada'], [/um meme/g, 'uma piada'], [/Um meme/g, 'Uma piada'], [/o meme/g, 'a piada'], [/memes/g, 'piadas'], [/\bmeme\b/g, 'piada']] },
@@ -89,6 +90,7 @@ export const TERMOS_DATADOS: readonly { re: RegExp; desde: number; nome: string 
   { re: /\bEnem\b/, desde: 1998, nome: 'Enem' },
   { re: /\bSisu\b/, desde: 2010, nome: 'Sisu' },
   { re: /\bProUni\b/i, desde: 2005, nome: 'ProUni' },
+  { re: /\bFIES\b/, desde: 1999, nome: 'FIES' },
   { re: /\bBolsa Família\b/, desde: 2003, nome: 'Bolsa Família' },
   { re: /\bMaria da Penha\b/, desde: 2006, nome: 'Lei Maria da Penha' },
   { re: /\bDVDs?\b/, desde: 1998, nome: 'DVD' },

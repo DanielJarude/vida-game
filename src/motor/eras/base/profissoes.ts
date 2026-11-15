@@ -59,7 +59,8 @@ export const CURSOS_NO_TEMPO: Readonly<Record<string, { desde?: number; antes?: 
 /** As vias de entrada que dependem de lei: o ano de início. */
 export const VIAS_DESDE: Readonly<Record<string, { desde: number; fonte: string }>> = {
   prouni: { desde: 2005, fonte: 'MP 213/2004 → Lei 11.096/2005 (primeiras bolsas em 2005).' },
-  fies: { desde: 1999, fonte: 'MP 1.827/1999 → Lei 10.260/2001 (FIES). Antes, o Crédito Educativo (não simulado nesta versão).' },
+  // ERAS v2: antes do FIES, a mesma via é o Crédito Educativo (CREDUC, 1976; Lei 8.436/1992), com o nome da época (`anacronismos`).
+  fies: { desde: 1976, fonte: 'Crédito Educativo (CREDUC, 1976; Lei 8.436/1992), substituído pelo FIES (MP 1.827/1999 → Lei 10.260/2001).' },
   ead: { desde: 2000, fonte: 'LDB (Lei 9.394/1996, art. 80) e Decreto 2.494/1998; as graduações a distância se espalham a partir de 2000 (aproximação).' }
 };
 

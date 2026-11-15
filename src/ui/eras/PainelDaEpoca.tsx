@@ -10,6 +10,8 @@ import { tecnologia, meioDeComunicacao } from '../../motor/eras/base/contexto';
 import { TECNOLOGIAS_BR } from '../../motor/eras/base/tecnologias';
 import { PIB_BR, PRESIDENTES_BR } from '../../motor/eras/dados/acontecimentosBR';
 import { ObjetosDaEpoca } from './Aparelhos';
+import { poderDeCompra, rendaDaEpoca } from '../../motor/eras/base/economia';
+import { partidosNoMes } from '../../motor/eras/base/partidos';
 import { decadaVisual } from './epoca';
 import './eras.css';
 
@@ -50,6 +52,22 @@ export function PainelDaEpoca({ vida }: { vida: Vida }) {
         {pib !== undefined && <div className="painel-epoca__dado"><dt>Economia em {ano - 1}</dt><dd>{pib >= 0 ? '+' : '−'}{Math.abs(pib).toLocaleString('pt-BR')}%<small>PIB, IBGE</small></dd></div>}
         {dentro && <div className="painel-epoca__dado"><dt>Poder de compra</dt><dd>{nominal(nivelDePrecos(t), t)}<small>compram o que R$ 1,00 compra hoje</small></dd></div>}
       </dl>
+      {dentro && (() => {
+        // ERAS v2: o poder de compra da época (PNAD, DIEESE e IPCA por grupo: `motor/eras/base/economia`).
+        const pc = poderDeCompra(ano);
+        const renda = rendaDaEpoca(ano);
+        return (
+          <>
+            <h3>Quanto rende o salário</h3>
+            <ul className="painel-epoca__lista">
+              {pc.cestaNoMinimo !== undefined && <li>A cesta básica (DIEESE, São Paulo) custa <strong>{pc.cestaNoMinimo}% do salário mínimo</strong>{pc.cestaNoMinimo >= 80 ? ': sobra pouco para o resto' : pc.cestaNoMinimo <= 55 ? '' : ''}.</li>}
+              <li>Quem trabalha ganha, em média, <strong>{Math.round(renda * 100)}% do que se ganha em 2025</strong> (rendimento médio real, PNAD/IBGE).</li>
+              {pc.destaques.length > 0 && <li>Em relação a hoje, {pc.destaques.map(d => `${d.nome} ${d.fator > 1 ? `custa ${d.fator >= 1.95 ? `${Math.round(d.fator * 10) / 10} vezes` : `${Math.round((d.fator - 1) * 100)}% a mais`}` : `custa ${Math.round((1 - d.fator) * 100)}% a menos`}`).join('; ')} (IPCA por grupo, em poder de compra).</li>}
+            </ul>
+          </>
+        );
+      })()}
+      {dentro && <p className="painel-epoca__nota">Partidos em atividade: {partidosNoMes(t).length}{t < 1980 * 12 ? ' (só a Arena e o MDB: o bipartidarismo)' : ''}.</p>}
       <h3>Como você fala com as pessoas</h3>
       <p className="painel-epoca__nota">{MEIO[meioDeComunicacao(vida)]}.</p>
       <h3>A tecnologia na sua vida</h3>
@@ -60,7 +78,7 @@ export function PainelDaEpoca({ vida }: { vida: Vida }) {
         })}
       </ul>
       {proximas.length > 0 && <p className="painel-epoca__nota">Ainda não existe no Brasil: {proximas.map(x => `${x.nome} (${x.brasil})`).join(', ')}.</p>}
-      <p className="painel-epoca__nota">Fontes: IBGE (IPCA, PIB), Ipeadata (salário mínimo), Banco Central (moedas). O jogo guarda o dinheiro em poder de compra de hoje e mostra cada valor na moeda do mês — {fatorNominal(t) > 1e6 ? 'por isso os zeros' : 'por isso os números mudam com o tempo'}.</p>
+      <p className="painel-epoca__nota">Fontes: IBGE (IPCA, PIB, PNAD), Ipeadata (salário mínimo), DIEESE (cesta básica), Banco Central (moedas), TSE (partidos). O jogo guarda o dinheiro em poder de compra de hoje e mostra cada valor na moeda do mês — {fatorNominal(t) > 1e6 ? 'por isso os zeros' : 'por isso os números mudam com o tempo'}.</p>
     </section>
   );
 }

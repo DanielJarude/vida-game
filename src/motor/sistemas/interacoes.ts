@@ -11,6 +11,7 @@
  * antes de dormir entra na história dos dois. Nada disso vira número na tela.
  */
 
+import { casamentoImpedidoPelaLei, divorcioNaEpoca } from '../eras/base/leis';
 import { aplicarDimensoes, GRUPOS_DE_AFETO, INTERACOES_DE_AFETO } from './afetos';
 import { GRUPOS_ADULTOS, INTERACOES_ADULTAS } from './afetosAdultos';
 import { registrarTentativa, sincronizarMagoa } from './magoas';
@@ -1022,6 +1023,8 @@ export const INTERACOES: Interacao[] = [
     quando: c => parceriaAtiva(c) && c.vin.romance!.estagio !== 'casamento',
     disponivel: c => {
       if (c.eu < 18 || c.ip < 18) return bloqueio('ilegal', 'Casamento exige maioridade (16 com autorização dos pais, na lei; no jogo, 18).');
+      // ERAS v2: a lei da época (`eras/base/leis`).
+      { const lei = casamentoImpedidoPelaLei(c.v, c.v.eu.genero, c.p.genero); if (lei) return bloqueio('ilegal', lei); }
       if (c.v.t - (c.vin.romance!.tInicio ?? c.vin.tInicio) < 18) return bloqueio('requisito', 'Estão juntos há pouco tempo.');
       if (estaNoivo(c.v, c.vin)) return bloqueio('incompativel', 'Vocês já estão noivos.');
       // REWORK 11 · REL-16: quem pediu um tempo para pensar responde depois — perguntar de novo antes é insistir.
@@ -1046,8 +1049,10 @@ export const INTERACOES: Interacao[] = [
     rotulo: c => (c.vin.romance?.estagio === 'casamento' ? 'Pedir o divórcio' : c.vin.romance?.estagio === 'morando_junto' ? 'Separar' : 'Terminar'),
     executar: c => {
       aplicarPersonalidade(c.v, 'acao:terminar', { independencia: 1 });
+      const casados = c.vin.romance?.estagio === 'casamento';
       terminar(c.v, c.p, c.vin, 'jogador');
-      return { resultado: `Acabou com ${c.p.nome}.` };
+      const lei = casados ? divorcioNaEpoca(c.v) : undefined;
+      return { resultado: `Acabou com ${c.p.nome}.${lei ? ` ${lei}` : ''}` };
     }
   },
 
