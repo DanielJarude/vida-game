@@ -23,6 +23,7 @@
 
 import type { ItemEstilo } from '../../dados/estilo';
 import type { Vida } from '../../tipos';
+import { precoDaCategoriaNaEpoca } from './economia';
 
 const anoDe = (t: number) => Math.floor(t / 12);
 
@@ -89,3 +90,8 @@ export function cabeloDaDecada(ano: number, textura: string): string[] {
   const d = Math.max(1970, Math.min(2010, decadaDaModa(ano)));
   return CABELO_DA_DECADA[d]?.[textura === 'encaracolado' ? 'cacheado' : textura] ?? [];
 }
+
+/** O preço relativo da época para uma peça (vestuário; acessório = joias). Vida contemporânea: 1. */
+export const fatorDoItem = (v: Vida, categoria?: string) => (v.era ? precoDaCategoriaNaEpoca(categoria === 'acessorio' ? 'joias' : 'vestuario') : 1);
+/** Por que a peça não se vende (a época, na vida histórica). */
+export const foraDeVenda = (v: Vida) => (v.era ? 'Essa peça não se vende nas lojas neste ano.' : 'Esse item não está à venda.');

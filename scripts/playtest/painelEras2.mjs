@@ -1,0 +1,11 @@
+import { chromium } from 'playwright';
+import { readFileSync } from 'node:fs';
+const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 1440, height: 1000 } });
+await p.goto('http://localhost:4173/');
+await p.evaluate(s => { localStorage.clear(); localStorage.setItem('VIDA_NOVIDADES_VISTAS', 'Eras 2'); localStorage.setItem('VIDA_GAME_SAVE_V1', s); }, readFileSync(process.env.HOME + '/vida-trabalho/eras/saves/A-1987.json', 'utf8'));
+await p.goto('http://localhost:4173/'); await p.waitForTimeout(600);
+await p.getByRole('button', { name: /Continuar a vida/ }).click(); await p.waitForTimeout(900);
+await p.getByRole('button', { name: 'Você', exact: true }).first().click(); await p.waitForTimeout(600);
+await p.getByRole('tab', { name: /No mundo/ }).first().click(); await p.waitForTimeout(800);
+await p.locator('.painel-epoca').screenshot({ path: process.env.HOME + '/vida-trabalho/eras2/qa/painel87.png' });
+await b.close();

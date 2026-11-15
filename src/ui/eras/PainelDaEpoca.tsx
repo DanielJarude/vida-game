@@ -20,7 +20,6 @@ import { coisa } from '../../motor/dados/coisas';
 import { coisaNoAno } from '../../motor/eras/base/coisas';
 import { economiaLocal } from '../../motor/dados/lugares';
 import { formatarDinheiro } from '../../motor/mundo/moeda';
-import { salarioMinimoDoPais } from '../../motor/mundo/economia';
 import { decadaVisual } from './epoca';
 import './eras.css';
 
@@ -84,8 +83,7 @@ export function PainelDaEpoca({ vida }: { vida: Vida }) {
           ['Uma calça jeans', precoDoItem(vida, 'jeans')],
           [`A ${coisa('geladeira') ? coisaNoAno(coisa('geladeira')!, ano).nome : 'geladeira'}`, precoDaCoisa(vida, 'geladeira')],
           ...(carro && nomeCarro ? [[`O carro mais barato da concessionária (${nomeCarro.marca} ${nomeCarro.modelo})`, carro.preco] as [string, number]] : []),
-          ['O aluguel de dois quartos na sua cidade', economiaLocal(vida.moradia.municipioId).aluguel],
-          ['O salário mínimo', Math.round(salarioMinimoDoPais('BR'))]
+          ['O aluguel de dois quartos na sua cidade', economiaLocal(vida.moradia.municipioId).aluguel]
         ];
         return (
           <>

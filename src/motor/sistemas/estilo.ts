@@ -12,8 +12,7 @@
  *     colorir essa imagem (marcante), nunca criá-la.
  */
 
-import { itemDeEstiloAVenda } from '../eras/base/moda';
-import { precoDaCategoriaNaEpoca } from '../eras/base/economia';
+import { itemDeEstiloAVenda, fatorDoItem, foraDeVenda } from '../eras/base/moda';
 import type { ItemDeEstilo, Vida, Visual } from '../tipos';
 import { rngDe } from '../rng';
 import { escrever, idade, marcarFato, novoId, temFato } from '../nucleo';
@@ -49,8 +48,7 @@ export function precisaDeOculos(v: Vida): boolean {
 }
 
 /** O preço de um item nesta cidade. */
-// ERAS v2: na vida histórica, o preço relativo do vestuário (ou das joias) da época (IPCA por grupo).
-export const precoDoItem = (v: Vida, id: string) => Math.round((itemEstilo(id)?.preco ?? 0) * economiaLocal(v.moradia.municipioId).custo * (v.era ? precoDaCategoriaNaEpoca(itemEstilo(id)?.categoria === 'acessorio' ? 'joias' : 'vestuario') : 1) / 10) * 10;
+export const precoDoItem = (v: Vida, id: string) => Math.round((itemEstilo(id)?.preco ?? 0) * economiaLocal(v.moradia.municipioId).custo * fatorDoItem(v, itemEstilo(id)?.categoria) / 10) * 10;
 
 export const itensDaPessoa = (v: Vida): ItemDeEstilo[] => v.eu.estilo?.itens ?? [];
 export const temItem = (v: Vida, id: string) => itensDaPessoa(v).some(x => x.itemId === id);
@@ -214,8 +212,7 @@ export function disponibilidadeComprarItem(v: Vida, itemId: string, marca?: stri
   const a = autonomia(v, 'compra_pessoal');
   if (a.grau !== 'permitido') return a;
   if (temItem(v, itemId)) return bloqueio('incompativel', 'Você já tem.');
-  // ERAS HISTÓRICAS: a peça precisa estar à venda no ano (a da época, no período; a de hoje, depois de chegar).
-  if (!itemDeEstiloAVenda(v, itemId)) return bloqueio('impossivel', v.era ? 'Essa peça não se vende nas lojas neste ano.' : 'Esse item não está à venda.');
+  if (!itemDeEstiloAVenda(v, itemId)) return bloqueio('impossivel', foraDeVenda(v));
   if (it.receita && !precisaDeOculos(v)) return bloqueio('requisito', 'Óculos de grau pedem receita: a sua vista não pediu (ainda).');
   // 12.9: o piercing — o estúdio não fura menor de 16 (e, até os 18, só com a autorização dos responsáveis).
   if (it.piercing && idade(v) < IDADE_MINIMA_PIERCING) return bloqueio('impossivel', 'O estúdio não fura quem tem menos de 16 anos.');
