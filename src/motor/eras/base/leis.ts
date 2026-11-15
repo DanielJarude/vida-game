@@ -29,9 +29,9 @@ export function casamentoImpedidoPelaLei(v: Vida, generoA: string, generoB: stri
 }
 
 /** O que a lei da época pedia para desfazer um casamento (texto; o efeito no jogo é o mesmo). */
-export function divorcioNaEpoca(v: Vida): string | undefined {
-  if (!v.era) return undefined;
-  if (v.t < DIVORCIO_INSTITUIDO) return 'Ainda não havia divórcio no Brasil: só o desquite, que separava os bens e a casa, mas não permitia casar de novo.';
-  if (v.t < DIVORCIO_DIRETO) return 'Pela lei da época, o divórcio só saía depois de um ano de separação judicial (ou dois de separação de fato): começou pela separação, e o divórcio veio depois.';
-  return undefined;
+export function divorcioNaEpoca(v: Vida): string {
+  if (!v.era) return '';
+  if (v.t < DIVORCIO_INSTITUIDO) return ' Ainda não havia divórcio no Brasil: só o desquite, que separava os bens e a casa, mas não permitia casar de novo.';
+  if (v.t < DIVORCIO_DIRETO) return ' Pela lei da época, o divórcio só saía depois de um ano de separação judicial (ou dois de separação de fato): começou pela separação, e o divórcio veio depois.';
+  return '';
 }

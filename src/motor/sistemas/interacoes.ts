@@ -1049,10 +1049,9 @@ export const INTERACOES: Interacao[] = [
     rotulo: c => (c.vin.romance?.estagio === 'casamento' ? 'Pedir o divórcio' : c.vin.romance?.estagio === 'morando_junto' ? 'Separar' : 'Terminar'),
     executar: c => {
       aplicarPersonalidade(c.v, 'acao:terminar', { independencia: 1 });
-      const casados = c.vin.romance?.estagio === 'casamento';
+      const lei = c.vin.romance?.estagio === 'casamento' ? divorcioNaEpoca(c.v) : '';
       terminar(c.v, c.p, c.vin, 'jogador');
-      const lei = casados ? divorcioNaEpoca(c.v) : undefined;
-      return { resultado: `Acabou com ${c.p.nome}.${lei ? ` ${lei}` : ''}` };
+      return { resultado: `Acabou com ${c.p.nome}.${lei}` };
     }
   },
 

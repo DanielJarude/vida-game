@@ -2,7 +2,7 @@
  * Seleção e aplicação de conteúdo.
  */
 
-import { textoDaEpoca } from '../eras/base/anacronismos';
+import { momentoDaEpoca } from '../eras/base/anacronismos';
 import { lugarDe, noEscopo } from '../mundo/escopo';
 import type { Rng } from '../rng';
 import type { DecisaoNaFila, Momento, Pessoa, Vida } from '../tipos';
@@ -138,11 +138,7 @@ export function abrirDecisao(v: Vida, d: Decisao, ctx: Ctx): Momento {
     opcoes,
     ...((d.origem?.(ctx) ?? origemDosPapeis(v, ctx)) ? { segue: d.origem?.(ctx) ?? origemDosPapeis(v, ctx) } : {})
   };
-  // ERAS HISTÓRICAS: a cena fala do jeito da época (a peneira de `eras/base/anacronismos`; vida contemporânea: igual).
-  if (v.era) {
-    m.titulo = textoDaEpoca(v, m.titulo); m.texto = textoDaEpoca(v, m.texto);
-    m.opcoes = m.opcoes.map(o => ({ ...o, texto: textoDaEpoca(v, o.texto), ...(o.detalhe ? { detalhe: textoDaEpoca(v, o.detalhe) } : {}), ...(o.bloqueio ? { bloqueio: textoDaEpoca(v, o.bloqueio) } : {}) }));
-  }
+  momentoDaEpoca(v, m); // ERAS: a cena fala do jeito da época
   v.momento = m;
   if (d.id === 'comp_conflito' && v.caminhos.pendente) v.caminhos.pendente.perguntado = true;
   return m;

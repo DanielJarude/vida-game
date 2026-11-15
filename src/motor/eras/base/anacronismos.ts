@@ -24,12 +24,12 @@ const REGRAS: Regra[] = [
     [/do celular/g, 'do telefone'], [/o celular/g, 'o telefone'], [/O celular/g, 'O telefone'], [/um celular/g, 'um telefone'], [/celular/g, 'telefone']
   ] },
   { quando: sem('mensageiro_app'), trocas: [
-    [/grupo da família/g, 'almoço de domingo da família'], [/um áudio/g, 'um recado'], [/áudios/g, 'recados'], [/aplicativo de mensagens/g, 'telefone'],
+    [/grupo da família/g, 'almoço de domingo da família'], [/Grupo da família/g, 'Almoço de domingo da família'], [/um áudio/g, 'um recado'], [/áudios/g, 'recados'], [/aplicativo de mensagens/g, 'telefone'],
     [/chamada de vídeo/g, 'ligação'], [/Mandou mensagem/g, 'Ligou'], [/mandou mensagem/g, 'ligou']
   ] },
   { quando: sem('internet'), trocas: [
     [/pela internet/g, 'pelo correio'], [/na internet/g, 'nos jornais'], [/um e-mail/g, 'uma carta'], [/Um e-mail/g, 'Uma carta'], [/e-mails/g, 'cartas'], [/e-mail/g, 'carta'],
-    [/nas redes sociais/g, 'nas conversas do bairro'], [/redes sociais/g, 'conversas de bairro'], [/\bonline\b/g, 'por telefone']
+    [/nas redes sociais/g, 'nas conversas do bairro'], [/redes sociais/g, 'conversas de bairro'], [/\bonline\b/g, 'por telefone'], [/[Vv]endas on-line/g, 'Vendas por catálogo'], [/\bon-line\b/g, 'por telefone']
   ] },
   { quando: sem('pix'), trocas: [[/um Pix/g, 'um depósito'], [/o Pix/g, 'o depósito'], [/via Pix/g, 'por depósito'], [/por Pix/g, 'por depósito'], [/\bPix\b/g, 'depósito']] },
   { quando: sem('streaming'), trocas: [[/de streaming/g, 'da locadora'], [/streaming/g, 'locadora']] },
@@ -37,6 +37,8 @@ const REGRAS: Regra[] = [
   { quando: antes(2009), trocas: [[/o Enem/g, 'o vestibular'], [/O Enem/g, 'O vestibular'], [/do Enem/g, 'do vestibular'], [/no Enem/g, 'no vestibular'], [/\bEnem\b/g, 'vestibular'], [/pelo Sisu/g, 'pelo vestibular'], [/no Sisu/g, 'no vestibular'], [/\bSisu\b/g, 'vestibular']] },
   { quando: antes(2014), trocas: [[/motorista de aplicativo/g, 'taxista'], [/[Dd]elivery/g, 'entrega'], [/táxi ou aplicativo/g, 'táxi ou ônibus'], [/carro de aplicativo/g, 'táxi'], [/um aplicativo de transporte/g, 'um táxi']] },
   { quando: antes(1999), trocas: [[/do FIES/g, 'do Crédito Educativo'], [/o FIES/g, 'o Crédito Educativo'], [/pelo FIES/g, 'pelo Crédito Educativo'], [/\bFIES\b/g, 'Crédito Educativo']] },
+  { quando: antes(2005), trocas: [[/ \(e o podcast dele\)/g, ''], [/um podcast/g, 'um programa de rádio'], [/o podcast/g, 'o programa de rádio'], [/\bpodcasts?\b/g, 'programa de rádio']] },
+  { quando: antes(2014), trocas: [[/entregas por aplicativo/g, 'entregas de bicicleta'], [/entrega por aplicativo/g, 'entrega de bicicleta']] },
   // ERAS v2 (auditoria textual): a UPA (2008), o meme (anos 2000), o print de tela (smartphone).
   { quando: antes(2008), trocas: [[/para a UPA/g, 'para o pronto-socorro'], [/na UPA/g, 'no pronto-socorro'], [/da UPA/g, 'do pronto-socorro'], [/a UPA/g, 'o pronto-socorro'], [/\bUPA\b/g, 'pronto-socorro']] },
   { quando: antes(2006), trocas: [[/esse meme/g, 'essa piada'], [/um meme/g, 'uma piada'], [/Um meme/g, 'Uma piada'], [/o meme/g, 'a piada'], [/memes/g, 'piadas'], [/\bmeme\b/g, 'piada']] },
@@ -131,4 +133,15 @@ export function anacronismosNoTexto(texto: string, ano: number): string[] {
   const out: string[] = [];
   for (const t of TERMOS_DATADOS) if (ano < t.desde && t.re.test(texto)) out.push(t.nome);
   return out;
+}
+
+/** ERAS v2: a cena de decisão inteira (título, texto, opções) do jeito da época. Vida contemporânea: igual. */
+export function momentoDaEpoca(v: Vida, m: { titulo: string; texto: string; opcoes: { texto: string; detalhe?: string; bloqueio?: string }[] }): void {
+  if (!v.era) return;
+  m.titulo = textoDaEpoca(v, m.titulo); m.texto = textoDaEpoca(v, m.texto);
+  for (const o of m.opcoes) {
+    o.texto = textoDaEpoca(v, o.texto);
+    if (o.detalhe) o.detalhe = textoDaEpoca(v, o.detalhe);
+    if (o.bloqueio) o.bloqueio = textoDaEpoca(v, o.bloqueio);
+  }
 }
