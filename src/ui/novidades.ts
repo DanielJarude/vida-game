@@ -26,6 +26,26 @@ export interface NotaDeVersao {
 
 export const NOTAS: NotaDeVersao[] = [
   {
+    versao: '24',
+    data: '2026-11-15',
+    titulo: 'Um corpo que nasce, cresce e muda com a vida',
+    novidades: [
+      'Nascer: escolha o corpo de nascença antes de nascer — puxar dos pais (com variação), escolher as tendências (estrutura, onde o corpo acumula, facilidade para ganhar músculo, altura, pelos) ou ao acaso —, com a prévia aos 6, aos 16 e aos 30 com e sem treino. Não é o atributo Físico.',
+      'O corpo muda aos poucos, ano a ano: academia, esporte, sedentarismo, alimentação, bebida, idade e saúde mexem na gordura e no músculo; parar de treinar também. As proporções de nascença não se editam mais na Aparência.',
+      'Objetivos físicos (ganhar massa, definição, força, condicionamento, resistência, reduzir gordura, ganhar peso, desenvolver uma região) e a alimentação (equilibrada, comer mais, comer menos): direcionam a rotina, com a projeção de cinco anos — nada muda de uma vez.',
+      'Aparência organizada por categorias: Corpo, Pele e marcas, Pelos, Cabelo e rosto, Piercings e joias, Roupas e estilo, Tatuagens. A categoria escolhida fica lembrada.',
+      'Pelos do corpo em fios de verdade, que aparecem na puberdade; e os cuidados: aparar, raspar, cera e laser, por região.'
+    ],
+    melhorias: [
+      'A gordura no desenho tem volume arredondado (cintura, barriga, quadril, coxas, braços), sem a ponta triangular; quem acumula na barriga, no quadril ou nos braços tem silhueta diferente. Crianças têm corpo de criança.',
+      'Relógios, correntes, pulseiras, anéis e piercings que eram o mesmo desenho em cores diferentes ganharam construção própria (caixa, pulseira, luneta, elos, gargantilha, guias, pérolas, cabochão, solitário em garras, calibre); os pingentes aparecem também no corpo.'
+    ],
+    correcoes: [
+      'Corpos mais volumosos não têm mais a forma triangular nas laterais da cintura.',
+      'Pelos do corpo deixam de ser pontinhos: são fios na direção em que crescem, visíveis no nível "muitos".'
+    ]
+  },
+  {
     versao: '23',
     data: '2026-11-15',
     titulo: 'Corpos diferentes, marcas da pele e joias com forma própria',

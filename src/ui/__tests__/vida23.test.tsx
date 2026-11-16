@@ -18,7 +18,8 @@ import { JOIAS20 } from '../../motor/dados20/joias20';
 import { LojaDaVida } from '../jogo/material/Lojas';
 import { memoriaDasLojas } from '../jogo/memoriaDeCompras';
 import { lojasDaVida } from '../../motor/sistemas/lojas';
-import { CorpoEPele } from '../v23/CorpoEPele';
+import { PeleEMarcas } from '../v23/CorpoEPele';
+import { disponibilidade } from '../../motor/acoes';
 import type { Genero, Visual, Vida } from '../../motor/tipos';
 
 afterEach(() => { cleanup(); memoriaDasLojas.clear(); try { localStorage.clear(); sessionStorage.clear(); } catch { /* */ } });
@@ -103,28 +104,28 @@ describe('VIDA 23 · o provador na mesma escala', () => {
   });
 });
 
-describe('VIDA 23 · Corpo e pele', () => {
-  it('mexer num eixo mostra antes e depois na mesma escala; confirmar grava a constituição', () => {
-    let v = transacao(adulto(25, { semente: 2305 }), x => { x.momento = null; }).vida;
-    const acoes: Acao[] = [];
-    const agir = (a: Acao) => { acoes.push(a); v = executar(v, a).vida; return true; };
-    const { container } = render(<CorpoEPele vida={v} agir={agir} />);
-    const ombros = container.querySelector('[data-eixo="ombros"] input') as HTMLInputElement;
-    fireEvent.change(ombros, { target: { value: String(Number(ombros.value) === 2 ? 1 : 2) } });
-    const figs = [...container.querySelectorAll('.c23__fig svg.figura')];
-    expect(figs.length).toBe(2);
-    expect(new Set(figs.map(f => f.getAttribute('width')))).toEqual(new Set([String(LARGURA_DE_REFERENCIA)]));
-    fireEvent.click(within(container).getByRole('button', { name: 'Confirmar' }));
-    expect(acoes[0]?.tipo).toBe('corpo23');
-    expect(v.eu.visual.corpo23).toMatch(/^[0-4]{12}$/);
+describe('VIDA 23/24 · Pele e marcas (as proporções são de nascença)', () => {
+  it('a ação de mudar as proporções ou os pelos naturais é recusada; as marcas continuam editáveis', () => {
+    const v = transacao(adulto(25, { semente: 2305 }), x => { x.momento = null; }).vida;
+    expect(disponibilidade(v, { tipo: 'corpo23', mudanca: { corpo23: '242222222222' } }).grau).toBe('impossivel');
+    expect(disponibilidade(v, { tipo: 'corpo23', mudanca: { pelos23: 3 } }).grau).toBe('impossivel');
+    const m = [{ t: 'pinta' as const, r: 'antebraco' as const, l: 'e' as const, x: 0, y: 0, s: 1 as const, f: 'plana' }];
+    expect(disponibilidade(v, { tipo: 'corpo23', mudanca: { marcas23: m } }).grau).toBe('permitido');
   });
 
-  it('acrescentar uma marca e escolher o lugar mostra a lupa da região', () => {
-    const v = transacao(adulto(25, { semente: 2306 }), x => { x.momento = null; delete x.eu.visual.marcas23; }).vida;
-    const { container } = render(<CorpoEPele vida={v} agir={() => true} />);
-    fireEvent.click(within(container).getByRole('radio', { name: /Marcas da pele/ }));
+  it('acrescentar uma marca mostra antes e depois na mesma escala e a lupa da região; confirmar grava', () => {
+    let v = transacao(adulto(25, { semente: 2306 }), x => { x.momento = null; delete x.eu.visual.marcas23; }).vida;
+    const acoes: Acao[] = [];
+    const agir = (a: Acao) => { acoes.push(a); v = executar(v, a).vida; return true; };
+    const { container } = render(<PeleEMarcas vida={v} agir={agir} />);
+    expect(container.querySelector('[data-eixo]')).toBeNull();
     fireEvent.change(container.querySelector('.c23__grupo select') as HTMLSelectElement, { target: { value: 'cicatriz' } });
     expect(container.querySelector('[data-c23="perto"] svg')).toBeTruthy();
     expect(container.querySelector('[data-c23="previa"]')!.innerHTML).toContain('data-marca="cicatriz"');
+    const figs = [...container.querySelectorAll('.c23__fig svg.figura')];
+    expect(new Set(figs.map(f => f.getAttribute('width')))).toEqual(new Set([String(LARGURA_DE_REFERENCIA)]));
+    fireEvent.click(within(container).getByRole('button', { name: 'Confirmar' }));
+    expect(acoes[0]?.tipo).toBe('corpo23');
+    expect(v.eu.visual.marcas23?.[0]?.t).toBe('cicatriz');
   });
 });

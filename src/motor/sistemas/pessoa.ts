@@ -153,6 +153,12 @@ export function fatoresCondicionamento(v: Vida): Fator[] {
     const ft = fatorDeTreino(v);
     const comLesao = ft < 0.95 && est.fontes.some(f => !NAO_E_TREINO.has(f.id) && f.id !== 'farda' && f.id !== 'obra') ? (ft <= 0.6 ? ' (bem reduzido pela lesão)' : ' (reduzido pela lesão)') : '';
     out.push({ id: 'treino', texto: (nomes.length > 1 ? `${nomes[0]} e ${nomes[1]}` : nomes[0]) + comLesao, efeito: efetivo(est.total) * 40 * fatorIdadeTreino(i) });
+    // VIDA 24: o objetivo físico direciona o treino que já existe (sem a atividade que ele pede, não pesa).
+    const obj = c.plano24?.objetivo;
+    const aerobico = est.fontes.filter(f => !['academia', 'obra', 'farda', 'bico'].includes(f.id)).reduce((s, f) => s + f.carga, 0);
+    const deForca = est.fontes.filter(f => f.id === 'academia' || f.id === 'lutas').reduce((s, f) => s + f.carga, 0);
+    if ((obj === 'condicionamento' || obj === 'resistencia') && aerobico >= 0.3 && i >= 13) out.push({ id: 'objetivo', texto: obj === 'condicionamento' ? 'o treino focado no condicionamento' : 'os treinos longos de resistência', efeito: 3 });
+    else if (obj === 'forca' && deForca >= 0.3 && i >= 13) out.push({ id: 'objetivo', texto: 'o treino focado em força', efeito: 2 });
     if (Math.abs(fis) >= 0.25) out.push({ id: 'predisposicao', texto: fis > 0 ? 'um corpo que responde rápido ao treino' : 'um corpo que custa a responder ao treino', efeito: fis * 4 * Math.min(1, est.total) });
   }
   if (i >= 14) {

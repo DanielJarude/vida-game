@@ -27,6 +27,10 @@ function normal(m: MudancaCorpo23): { corpo23?: string; marcas23?: MarcaNatural[
 export function disponibilidadeCorpo23(v: Vida, m: MudancaCorpo23): Veredito {
   const campos = (['corpo23', 'marcas23', 'pelos23'] as const).filter(k => k in (m ?? {}));
   if (!campos.length) return bloqueio('impossivel', 'Nada a mudar.');
+  // VIDA 24: as proporções e os pelos naturais são de nascença (escolhidos antes de nascer); depois, o corpo muda com a
+  // vida (`silhueta.evoluirCorpo24`) e os pelos com os cuidados (`v24/acao`). Aqui ficam só as marcas da pele.
+  if ('corpo23' in (m ?? {})) return bloqueio('impossivel', 'As proporções do corpo são de nascença: o que muda com a vida é a composição — treino, alimentação, hábitos, tempo.');
+  if ('pelos23' in (m ?? {})) return bloqueio('impossivel', 'Os pelos naturais são de nascença: dá para aparar ou remover (Aparência · Pelos).');
   const base = autonomia(v, 'aparencia_basica');
   if (base.grau !== 'permitido') return base;
   if (idade(v) < AUTONOMIA.aparencia.idade) return bloqueio('impossivel', 'Com essa idade, o corpo ainda está se formando — e quem decide o resto é a família.');

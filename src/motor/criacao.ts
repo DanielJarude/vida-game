@@ -32,6 +32,9 @@ import { nacionalidadesAoNascer } from './mundo/cidadania';
 import { rendaNoPais } from './mundo/economia';
 import { NOMES_PET_CACHORRO, NOMES_PET_GATO } from './dados/nomes';
 import { flex, listaNatural, artigo } from './texto';
+import { corpo23Valido, sortearCorpo23 } from './v23/corpo/corpo23';
+import { estaturaAdulta } from './sistemas/modalidades';
+import type { ModoDoCorpo24 } from './v24/corpo/corpo24';
 
 export interface OpcoesCriacao {
   nome: string;
@@ -54,6 +57,12 @@ export interface OpcoesCriacao {
    * família, a cidade, a aparência) é o mesmo da mesma semente ao acaso.
    */
   atributos?: Record<Atributo, number>;
+  /**
+   * VIDA 24: a constituição de nascença (as predisposições do corpo) — dos pais com variação (`heranca`, o padrão),
+   * escolhida eixo a eixo (`escolher`, com `c` = os 12 dígitos) ou ao acaso sem olhar os pais (`acaso`); e a tendência
+   * dos pelos do corpo (0 a 3). Ausente: o nascimento de antes (a constituição dos pais, sem marcar a vida).
+   */
+  corpo24?: { modo: ModoDoCorpo24; c?: string; pelos?: number };
   /** REWORK 10.5 · EVT-05: o que as duas vidas anteriores viveram (ids de acontecimentos e cenas) — pesa menos nesta. */
   memoria?: string[];
   /**
@@ -88,13 +97,14 @@ export function sortearNascimento(r: Rng, ano = 2026): NascimentoSorteado {
 
 /** A prévia de quem nasce: o MESMO nascimento que `criarVida` fará com estas opções (o bebê e os pais), para a tela
  *  mostrar de onde os traços vêm. Não guarda nada. */
-export function previaDoNascimento(o: OpcoesCriacao): { eu: Visual; mae?: Visual; pai?: Visual; atributos: Record<Atributo, number> } {
+export function previaDoNascimento(o: OpcoesCriacao): { eu: Visual; mae?: Visual; pai?: Visual; atributos: Record<Atributo, number>; estatura: number } {
   const v = criarVida(o);
   const de = (k: string) => Object.entries(v.vinculos).find(([, x]) => x.parentesco === k)?.[0];
   const mae = de('mae'), pai = de('pai');
   // REWORK 9.6: os atributos com que esta vida nasce (o que a tela Nascer mostra é o que será gravado).
   const atributos = { saude: v.corpo.saude, fisico: v.corpo.forma, felicidade: v.mente.felicidade, beleza: v.corpo.aparencia, inteligencia: v.mente.cognicao };
-  return { eu: v.eu.visual, mae: mae ? v.pessoas[mae].visual : undefined, pai: pai ? v.pessoas[pai].visual : undefined, atributos };
+  // VIDA 24: a altura adulta prevista (a tendência de nascença; a vida não a muda).
+  return { eu: v.eu.visual, mae: mae ? v.pessoas[mae].visual : undefined, pai: pai ? v.pessoas[pai].visual : undefined, atributos, estatura: estaturaAdulta(v) };
 }
 /** O corte que combina com a textura que veio dos pais (o acaso não põe "black" em cabelo liso). */
 export function corteCoerente(r: Rng, genero: Genero, textura: string | undefined, atual: string): string {
@@ -314,6 +324,18 @@ export function criarVida(o: OpcoesCriacao): Vida {
     const { cabelo: _corte, barba: _barba, bigode: _bigode, ...geneticos } = herd;
     void _corte; void _barba; void _bigode;
     v.eu.visual = { ...v.eu.visual, ...geneticos, ...(o.visual ? {} : { cabelo: herd.cabelo }) };
+  }
+
+  // VIDA 24: a constituição de nascença (as predisposições) — herdada, escolhida ou ao acaso. Um gerador próprio (da
+  // semente): escolher o corpo não muda a família nem o resto do nascimento.
+  if (o.corpo24) {
+    const q = o.corpo24;
+    const vis = v.eu.visual;
+    if (q.modo === 'escolher' && corpo23Valido(q.c)) vis.corpo23 = q.c;
+    else if (q.modo === 'acaso') vis.corpo23 = sortearCorpo23(`acaso24:${o.semente}`) ?? '222222222222';
+    else if (!vis.corpo23) vis.corpo23 = sortearCorpo23(`heranca24:${o.semente}`, [mae.visual?.corpo23, pai?.visual?.corpo23]) ?? '222222222222';
+    if (q.pelos !== undefined) { const n = Math.round(q.pelos); if (n >= 1 && n <= 3) vis.pelos23 = n; else delete vis.pelos23; }
+    v.corpo.nasc24 = q.modo;
   }
 
   const comMae = arranjo === 'pais_juntos' || arranjo === 'mae_solo';

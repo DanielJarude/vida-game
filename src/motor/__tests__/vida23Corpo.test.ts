@@ -120,25 +120,23 @@ describe('VIDA 23 · gente do mundo, herança e saves', () => {
     expect(r2.vida.eu.visual.pelos23).toBeUndefined();
   });
 
-  it('a ação de definir o corpo: a família decide antes dos 13; depois, grava, persiste e a altura de verdade entra na figura', () => {
+  it('a ação do corpo (VIDA 24: só as marcas): a família decide antes dos 13; as proporções e os pelos naturais são de nascença; as marcas gravam e persistem', () => {
     const crianca = adulto(10, { semente: 2302 });
-    expect(disponibilidade(crianca, { tipo: 'corpo23', mudanca: { corpo23: '402222222222' } }).grau).not.toBe('permitido');
-    let v = transacao(adulto(28, { semente: 2303 }), x => { delete x.eu.visual.corpo23; x.momento = null; }).vida;
     const marcas = [{ t: 'sardas' as const, r: 'ombro' as const, l: 'd' as const, x: 0.2, y: -0.1, s: 1 as const, n: 20, i: 2 as const, k: 5 }];
-    expect(disponibilidade(v, { tipo: 'corpo23', mudanca: { corpo23: '402222222222', marcas23: marcas, pelos23: 2 } }).grau).toBe('permitido');
-    v = executar(v, { tipo: 'corpo23', mudanca: { corpo23: '402222222222', marcas23: marcas, pelos23: 2 } }).vida;
-    expect(v.eu.visual.corpo23).toBe('402222222222');
+    expect(disponibilidade(crianca, { tipo: 'corpo23', mudanca: { marcas23: marcas } }).grau).not.toBe('permitido');
+    let v = transacao(adulto(28, { semente: 2303 }), x => { x.eu.visual.corpo23 = '312222222222'; delete x.eu.visual.marcas23; x.momento = null; }).vida;
+    expect(disponibilidade(v, { tipo: 'corpo23', mudanca: { corpo23: '402222222222' } }).grau).toBe('impossivel');
+    expect(disponibilidade(v, { tipo: 'corpo23', mudanca: { pelos23: 2 } }).grau).toBe('impossivel');
+    expect(disponibilidade(v, { tipo: 'corpo23', mudanca: { marcas23: marcas } }).grau).toBe('permitido');
+    v = executar(v, { tipo: 'corpo23', mudanca: { marcas23: marcas } }).vida;
+    expect(v.eu.visual.corpo23).toBe('312222222222');
     expect(v.eu.visual.marcas23).toEqual(marcas);
-    expect(v.eu.visual.pelos23).toBe(2);
     expect(typeof corpoDaFigura(v).estatura).toBe('number');
     const r = interpretar(JSON.stringify(v));
     if (r.tipo !== 'ok') throw new Error('save');
-    expect(r.vida.eu.visual.corpo23).toBe('402222222222');
     expect(r.vida.eu.visual.marcas23).toEqual(marcas);
-    // A base escolhida fica gravada (marca o corpo da VIDA 23), e "já está assim" bloqueia a repetição.
-    v = executar(v, { tipo: 'corpo23', mudanca: { corpo23: '222222222222', marcas23: null, pelos23: null } }).vida;
-    expect(v.eu.visual.corpo23).toBe('222222222222');
+    v = executar(v, { tipo: 'corpo23', mudanca: { marcas23: null } }).vida;
     expect(v.eu.visual.marcas23).toBeUndefined();
-    expect(disponibilidade(v, { tipo: 'corpo23', mudanca: { corpo23: '222222222222' } }).grau).not.toBe('permitido');
+    expect(disponibilidade(v, { tipo: 'corpo23', mudanca: { marcas23: null } }).grau).not.toBe('permitido');
   });
 });

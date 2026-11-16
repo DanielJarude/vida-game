@@ -22,6 +22,8 @@ export interface Piercing {
   regiao: RegiaoDePiercing; forma: FormaDePiercing; metal: MetalDePiercing; /** A pedra (cor), quando tem. */ pedra?: string;
   /** VIDA 13: o acabamento do metal (ausente: polido). */ acabamento?: 'polido' | 'fosco' | 'martelado';
   /** VIDA 13: o desenho do pingente ou do detalhe (a lua, a estrela, o coração, as pontas em espeto, a cascata). */ simbolo?: 'lua' | 'estrela' | 'coracao' | 'espetos' | 'cascata';
+  /** VIDA 24: a espessura do aro (o "calibre"): a argola delicada e a grossa não são a mesma peça. Ausente: a média. */ calibre?: 'fino' | 'grosso';
+  /** VIDA 24: a pedra cravada em garras (as quatro pontas de metal em volta) — maior que o ponto simples. */ cravacao?: 'garra';
 }
 
 export const COR_DO_METAL: Record<MetalDePiercing, [string, string]> = {
@@ -49,18 +51,18 @@ export const PIERCINGS: ItemDePiercing[] = [
   p('pc_nariz_ponto_aco', 'Piercing no nariz — ponto de aço', 120, { regiao: 'nariz', forma: 'ponto', metal: 'aco' }, 'O furo e um ponto de aço cirúrgico. Discreto, o primeiro de muita gente.', { estilos: ['casual', 'alternativo'] }),
   p('pc_nariz_ponto_zirconia', 'Piercing no nariz — ponto de luz', 180, { regiao: 'nariz', forma: 'ponto', metal: 'titanio', pedra: '#e9f6ff' }, 'Titânio com uma zircônia que pega a luz.', { estilos: ['casual', 'elegante'] }),
   p('pc_nariz_argola_prata', 'Argola no nariz — prata', 160, { regiao: 'nariz', forma: 'argola', metal: 'prata' }, 'Argola fina de prata, depois de cicatrizado.', { estilos: ['alternativo', 'rock', 'vintage'] }),
-  p('pc_nariz_argola_ouro', 'Argola no nariz — ouro 18k', 1400, { regiao: 'nariz', forma: 'argola', metal: 'ouro' }, 'Ouro dezoito, argola delicada.', { estilos: ['elegante'], luxo: true, nivel: 4 }),
+  p('pc_nariz_argola_ouro', 'Argola no nariz — ouro 18k', 1400, { regiao: 'nariz', forma: 'argola', metal: 'ouro', calibre: 'fino' }, 'Ouro dezoito, argola delicada.', { estilos: ['elegante'], luxo: true, nivel: 4 }),
   p('pc_nariz_diamante', 'Ponto de diamante no nariz', 9800, { regiao: 'nariz', forma: 'ponto', metal: 'ouro_branco', pedra: '#f4fbff' }, 'Um diamante pequeno em ouro branco. Brilha sem fazer barulho.', { estilos: ['luxuoso', 'elegante'], luxo: true, nivel: 5 }),
   // Septo
   p('pc_septo_ferradura', 'Septo — ferradura de aço', 140, { regiao: 'septo', forma: 'ferradura', metal: 'aco' }, 'A ferradura de aço: dá para virar para dentro quando precisa.', { estilos: ['alternativo', 'punk', 'rock'] }),
-  p('pc_septo_clicker_ouro', 'Septo — argola dourada', 900, { regiao: 'septo', forma: 'argola', metal: 'ouro' }, 'Argola clicker banhada a ouro, fecho escondido.', { estilos: ['alternativo', 'elegante'], nivel: 3 }),
+  p('pc_septo_clicker_ouro', 'Septo — argola dourada', 900, { regiao: 'septo', forma: 'argola', metal: 'ouro', calibre: 'grosso' }, 'Argola clicker banhada a ouro, encorpada, fecho escondido.', { estilos: ['alternativo', 'elegante'], nivel: 3 }),
   p('pc_septo_preto', 'Septo — argola preta', 150, { regiao: 'septo', forma: 'argola', metal: 'preto' }, 'Aço com PVD preto. Some na foto em preto e branco, aparece no resto.', { estilos: ['punk', 'rock', 'streetwear'] }),
   // Sobrancelha
   p('pc_sobrancelha_barra', 'Sobrancelha — barra curva de titânio', 150, { regiao: 'sobrancelha', forma: 'barra', metal: 'titanio' }, 'A barra curva no canto de fora da sobrancelha.', { estilos: ['alternativo', 'rock', 'punk'] }),
   p('pc_sobrancelha_argola', 'Sobrancelha — argola preta', 140, { regiao: 'sobrancelha', forma: 'argola', metal: 'preto' }, 'Argola fina no canto da sobrancelha.', { estilos: ['punk', 'streetwear'] }),
   // VIDA 23: a barra de ouro rosé com pedra rosada e a argola de titânio azul (a barra azul e a de espetos já existiam).
-  p('pc_sobrancelha_rose', 'Sobrancelha — barra de ouro rosé', 980, { regiao: 'sobrancelha', forma: 'barra', metal: 'ouro_rose', pedra: '#f6c1cf' }, 'Ouro rosé com uma pedra rosada na ponta de cima.', { estilos: ['elegante', 'alternativo'], nivel: 4, luxo: true }),
-  p('pc_sobrancelha_argola_azul', 'Sobrancelha — argola de titânio azul', 170, { regiao: 'sobrancelha', forma: 'argola', metal: 'titanio_azul' }, 'Titânio anodizado azul: a cor vem da luz no metal.', { estilos: ['alternativo', 'streetwear'] }),
+  p('pc_sobrancelha_rose', 'Sobrancelha — barra de ouro rosé com coração', 980, { regiao: 'sobrancelha', forma: 'barra', metal: 'ouro_rose', pedra: '#f6c1cf', simbolo: 'coracao' }, 'Ouro rosé com um coração de pedra rosada na ponta de cima.', { estilos: ['elegante', 'alternativo'], nivel: 4, luxo: true }),
+  p('pc_sobrancelha_argola_azul', 'Sobrancelha — ferradura de titânio azul', 170, { regiao: 'sobrancelha', forma: 'ferradura', metal: 'titanio_azul' }, 'Ferradura de titânio anodizado azul, com uma bolinha em cada ponta: a cor vem da luz no metal.', { estilos: ['alternativo', 'streetwear'] }),
   // Lábio
   p('pc_labio_labret', 'Lábio — labret de titânio', 150, { regiao: 'labio', forma: 'ponto', metal: 'titanio' }, 'O ponto embaixo do lábio (labret), com a base lisa por dentro.', { estilos: ['alternativo', 'rock'] }),
   p('pc_labio_argola', 'Lábio — argola lateral', 150, { regiao: 'labio', forma: 'argola', metal: 'aco' }, 'Argola no canto do lábio de baixo.', { estilos: ['punk', 'alternativo'] }),
@@ -77,7 +79,7 @@ export const PIERCINGS: ItemDePiercing[] = [
   // Umbigo
   p('pc_umbigo_barra', 'Umbigo — barra com pedra', 160, { regiao: 'umbigo', forma: 'barra', metal: 'aco', pedra: '#7fd0e8' }, 'A barra curva com uma pedra azul em cima.', { estilos: ['casual'] }),
   p('pc_umbigo_pingente', 'Umbigo — pingente de prata', 240, { regiao: 'umbigo', forma: 'pingente', metal: 'prata', pedra: '#c6a7e8' }, 'Barra de prata com um pingente pequeno.', { estilos: ['alternativo'] }),
-  p('pc_umbigo_ouro', 'Umbigo — barra de ouro', 1500, { regiao: 'umbigo', forma: 'barra', metal: 'ouro', pedra: '#f4fbff' }, 'Ouro dezoito com zircônia.', { estilos: ['elegante'], luxo: true, nivel: 4 }),
+  p('pc_umbigo_ouro', 'Umbigo — barra de ouro com zircônia em garras', 1500, { regiao: 'umbigo', forma: 'barra', metal: 'ouro', pedra: '#f4fbff', cravacao: 'garra' }, 'Ouro dezoito com uma zircônia grande, cravada em garras.', { estilos: ['elegante'], luxo: true, nivel: 4 }),
   // VIDA 13: os furos e as joias novas.
   ...PIERCINGS_13
 ];

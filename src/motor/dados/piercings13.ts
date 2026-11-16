@@ -64,7 +64,7 @@ export const PIERCINGS_13: ItemDePiercing[] = [
   p('pc_daith_clicker_branco', 'Daith — clicker cravejado de ouro branco', 4200, { regiao: 'daith', forma: 'clicker', metal: 'ouro_branco', pedra: DIAM }, 'Fecho articulado, diamantes na frente.', { estilos: ['luxuoso'], luxo: true, nivel: 5 }),
   // Nariz — narina esquerda (mais modelos)
   p('pc_nariz_cluster_ouro', 'Nariz — flor de ouro', 1250, { regiao: 'nariz', forma: 'cluster', metal: 'ouro', pedra: ZIRC }, 'Uma flor de cinco pedras em ouro: aparece sem gritar.', { estilos: ['elegante'], nivel: 4, luxo: true }),
-  p('pc_nariz_argola_preta', 'Nariz — argola preta', 120, { regiao: 'nariz', forma: 'argola', metal: 'preto' }, 'Argola fina de aço preto.', { estilos: ['punk', 'rock', 'streetwear'] }),
+  p('pc_nariz_argola_preta', 'Nariz — argola preta', 120, { regiao: 'nariz', forma: 'argola', metal: 'preto', calibre: 'grosso' }, 'Argola de aço preto, de calibre grosso.', { estilos: ['punk', 'rock', 'streetwear'] }),
   p('pc_nariz_titanio_azul', 'Nariz — ponto de titânio azul', 150, { regiao: 'nariz', forma: 'ponto', metal: 'titanio_azul' }, 'Titânio anodizado azul: a cor vem da luz no metal, não de tinta.', { estilos: ['alternativo'] }),
   p('pc_nariz_clicker_branco', 'Nariz — argola cravejada de ouro branco', 5200, { regiao: 'nariz', forma: 'clicker', metal: 'ouro_branco', pedra: DIAM }, 'Argola articulada com diamantes pequenos na frente.', { estilos: ['luxuoso'], luxo: true, nivel: 5 }),
   // Nariz — narina direita
@@ -95,7 +95,7 @@ export const PIERCINGS_13: ItemDePiercing[] = [
   p('pc_medusa_ouro', 'Medusa — ponto de ouro', 820, { regiao: 'medusa', forma: 'ponto', metal: 'ouro', acabamento: 'polido' }, 'Ouro dezoito, bolinha polida.', { estilos: ['elegante'], nivel: 4, luxo: true }),
   // VIDA 23: mais joias nas regiões que tinham pouca variedade (cada uma com o desenho do seu lugar).
   p('pc_medusa_espeto', 'Medusa — espeto de titânio', 180, { regiao: 'medusa', forma: 'spike', metal: 'titanio', acabamento: 'fosco' }, 'Um cone curto de titânio fosco no meio do lábio de cima.', { estilos: ['punk', 'alternativo'] }),
-  p('pc_medusa_diamante', 'Medusa — diamante em ouro branco', 5900, { regiao: 'medusa', forma: 'ponto', metal: 'ouro_branco', pedra: DIAM }, 'Um diamante pequeno em garra de ouro branco, acima do lábio.', { estilos: ['luxuoso', 'elegante'], luxo: true, nivel: 5 }),
+  p('pc_medusa_diamante', 'Medusa — diamante em ouro branco', 5900, { regiao: 'medusa', forma: 'ponto', metal: 'ouro_branco', pedra: DIAM, cravacao: 'garra' }, 'Um diamante pequeno em garra de ouro branco, acima do lábio.', { estilos: ['luxuoso', 'elegante'], luxo: true, nivel: 5 }),
   // Umbigo (mais modelos)
   p('pc_umbigo_lua', 'Umbigo — pingente de meia-lua', 480, { regiao: 'umbigo', forma: 'pingente', metal: 'ouro', simbolo: 'lua' }, 'Barra de ouro com uma meia-lua pendurada.', { estilos: ['elegante', 'vintage'], nivel: 3 }),
   p('pc_umbigo_titanio_azul', 'Umbigo — barra de titânio azul', 190, { regiao: 'umbigo', forma: 'barra', metal: 'titanio_azul', pedra: '#7fb4ff' }, 'Titânio anodizado azul, pedra azul.', { estilos: ['alternativo', 'casual'] }),

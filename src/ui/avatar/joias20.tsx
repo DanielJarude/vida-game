@@ -3,6 +3,8 @@
  * corpo inteiro (`Figura`: o anel na mão direita, a aliança no anelar da esquerda, a pulseira, a tornozeleira). A cor é a
  * do metal anunciado (ouro amarelo, branco, rosé, prata, aço...) e a pedra tem a cor dela — o que se compra é o que se vê.
  */
+import { ColarAntigo24 } from './joiasAntigas24';
+import { acessorioDoItem } from './pecas';
 import type { ReactElement } from 'react';
 import { joia20, METAIS20, PEDRAS20, type Joia20 } from '../../motor/dados20/joias20';
 import { Brinco23, Colar23, Pedra, TracoDeMetal } from './joias23';
@@ -12,7 +14,11 @@ const cores = (j: Joia20) => ({ metal: METAIS20[j.metal].cor, brilho: METAIS20[j
 /** O colar no retrato: a curva da corrente (de `x0` a `x1`, descendo até `yFundo`) e o que pende dela. */
 export function ColarDoRetrato({ modelo, cx, y0, meia, fundo }: { modelo: string; cx: number; y0: number; meia: number; fundo: number }): ReactElement | null {
   const j = joia20(modelo);
-  if (!j) return null;
+  if (!j) {
+    // VIDA 24: as correntes de antes (a mesma construção do corpo, no busto da vitrine e do retrato).
+    const antiga = acessorioDoItem(modelo);
+    return antiga && antiga.parte === 'pescoco' && !('metal' in antiga) ? <ColarAntigo24 p={antiga} cx={cx} y0={y0} meia={meia} yf={fundo} k={0.8} /> : null;
+  }
   // VIDA 23: as formas novas (a cubana, as pérolas, as camadas, o colar longo, o cordão) — e o acabamento do metal.
   const novo = Colar23({ forma: j.forma, metal: j.metal, pedra: j.pedra, cx, y0, meia, fundo });
   if (novo) return novo;

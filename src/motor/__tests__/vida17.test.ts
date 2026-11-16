@@ -304,6 +304,8 @@ describe('VIDA 17 · cirurgias com consequência', () => {
     const v = novo();
     v.corpo.forma = 20; v.corpo.habitos.sedentario = true; v.corpo.saude = 70;
     v.rotinas = v.rotinas.filter(r => r.id !== 'academia');
+    // VIDA 24: o corpo acima do peso é a composição de quem já está assim (o corpo não muda na hora).
+    v.corpo.composicao24 = { g: 2.2, m: 0, t: v.t };
     return v;
   }
   it('bariátrica: só para obesidade grave; o corpo muda aos poucos; suplementos todo ano; repouso bloqueia academia', () => {

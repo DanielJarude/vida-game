@@ -17,7 +17,10 @@ import type { Genero, Visual } from '../../motor/tipos';
 import type { TipoDeCorpo } from '../../motor/sistemas/silhueta';
 import { lerCorpo23, REGIOES_DO_ROSTO23, type Constituicao } from '../../motor/v23/corpo/corpo23';
 import { MarcasNaPele, PelosEMusculo, VolumeDoPeito } from './corpo23';
+import { fatorDosPelos24, pelosDaIdade24, type RegiaoDePelo24 } from '../../motor/v24/corpo/corpo24';
 import { AnelNoCorpo23, ColarNoCorpo23, PulseiraNoCorpo23 } from './joias23';
+import { ColarDoRetrato } from './joias20';
+import { AnelAntigo24, ColarAntigo24, PulseiraAntiga24, RelogioNoCorpo24 } from './joiasAntigas24';
 import { Retrato, contrasteEntre, corDaPele, corDoCabelo, fundoDaFigura } from './Retrato';
 import { ehDoRosto } from './rosto17';
 import { caixaDaRegiao, TatuagensDoRosto, FundoNaPele, ladoNaTela, MapaDoCorpo, TatuagemNaPele, visivelNaVista, type ComposicaoNaFigura } from './tatuagensNaPele';
@@ -90,21 +93,59 @@ interface Geo {
  * VIDA 23 — o corpo da figura: a condição (a vida), a estatura (desvios da média) e a constituição (`corpo23`, os doze
  * eixos). Aceita só a condição (como antes da VIDA 23).
  */
-export type CorpoFig = TipoDeCorpo | { tipo: TipoDeCorpo; estatura?: number; c?: string };
-interface CorpoLido { tipo: TipoDeCorpo; c: Constituicao; z: number }
+export type CorpoFig = TipoDeCorpo | { tipo: TipoDeCorpo; estatura?: number; c?: string; comp?: CompDaFigura };
+/** VIDA 24: a composição (gordura `g`, músculo `m`, as regiões treinadas `r`) — a figura desenha o corpo contínuo. */
+export interface CompDaFigura { g: number; m: number; r?: Partial<Record<string, number>> }
+interface CorpoLido { tipo: TipoDeCorpo; c: Constituicao; z: number; comp?: CompDaFigura }
 function lerCorpo(corpo: CorpoFig, visual?: Visual): CorpoLido {
   const o = typeof corpo === 'string' ? { tipo: corpo } : corpo;
   const c = lerCorpo23(o.c ?? visual?.corpo23);
-  return { tipo: o.tipo, c, z: o.estatura ?? c.estatura };
+  return { tipo: o.tipo, c, z: o.estatura ?? c.estatura, comp: 'comp' in o ? o.comp : undefined };
 }
+
+type Delta = Partial<Record<keyof Geo, number>>;
+/** As cinco condições de antes, como deltas sobre a base (as âncoras da composição — `v24/corpo.ANCORAS24`). */
+const AJUSTE: Record<TipoDeCorpo, Delta> = {
+  magro: { ombro: -3, peito: -3.6, cintura: -3.6, quadril: -2.6, braco: -1.3, antebraco: -1, coxa: -2.8, panturrilha: -1.7, pesc: -0.6 },
+  mediano: {},
+  atletico: { ombro: 3, peito: 2, cintura: -1.6, braco: 1.1, antebraco: 0.6, coxa: 1, panturrilha: 0.7, def: 1 },
+  musculoso: { ombro: 6.6, peito: 5.2, cintura: 0.4, quadril: 0.6, braco: 3.2, antebraco: 1.9, coxa: 2.6, panturrilha: 1.5, pesc: 2, def: 2 },
+  acima_do_peso: { ombro: 2.6, peito: 5.4, cintura: 9, quadril: 6.6, braco: 2.6, antebraco: 1.5, coxa: 4.4, panturrilha: 2.6, barriga: 5, pesc: 1.3 }
+};
+const somar = (a: Delta, b: Delta, k = 1): Delta => { const o: Delta = { ...a }; for (const [x, y] of Object.entries(b) as [keyof Geo, number][]) o[x] = (o[x] ?? 0) + y * k; return o; };
+/** A gordura: abaixo da média, o "magro" proporcional; acima, o "acima do peso" — distribuído pela constituição. */
+function deltaDaGordura(gord: number, c?: Constituicao): Delta {
+  if (gord <= 0) return somar({}, AJUSTE.magro, -gord / 1.5);
+  const d = somar({}, AJUSTE.acima_do_peso, gord / 2.2);
+  if (!c) return d;
+  // Onde acumula: a "maçã" (barriga e cintura), a "pera" (quadril e coxas), os braços, as panturrilhas.
+  const maca = 1 + 0.2 * (c.barriga + c.cintura * 0.6), pera = 1 + 0.2 * (c.coxas + c.quadril * 0.4);
+  return { ...d, cintura: d.cintura! * maca, barriga: d.barriga! * maca, quadril: d.quadril! * pera, coxa: d.coxa! * pera, braco: d.braco! * (1 + 0.2 * c.bracos), antebraco: d.antebraco! * (1 + 0.15 * c.bracos), panturrilha: d.panturrilha! * (1 + 0.15 * c.panturrilhas) };
+}
+const M1 = somar(AJUSTE.atletico, deltaDaGordura(-0.5), -1), M2 = somar(AJUSTE.musculoso, deltaDaGordura(-0.3), -1);
+/** O músculo: até 1, o "atlético" (sem a parte da gordura); de 1 a 2,2, até o "musculoso". Abaixo de 0, mais fino. */
+function deltaDoMusculo(m: number): Delta {
+  if (m <= 0) { const d = somar({}, M1, m * 0.6); d.def = 0; return d; }
+  if (m <= 1) return somar({}, M1, m);
+  return somar(somar({}, M1), somar(M2, M1, -1), (m - 1) / 1.2);
+}
+/** O músculo a mais de cada região treinada com foco. */
+const REGIAO_DO_MUSCULO: Record<string, Delta> = {
+  bracos: { braco: 1, antebraco: 0.5 }, ombros: { ombro: 1.8 }, peito: { peito: 1.4 }, costas: { ombro: 1, peito: 0.5 },
+  abdomen: { def: 0.6 }, pernas: { coxa: 1.3, panturrilha: 0.8 }, gluteos: { quadril: 1.1, coxa: 0.3 }
+};
 
 /**
  * O corpo adulto: a base do gênero, a CONSTITUIÇÃO (VIDA 23: cada eixo soma na largura ou no comprimento certo — a
- * estrutura alarga tudo um pouco; as pernas descem o joelho, o tornozelo e o chão), a CONDIÇÃO (magro, atlético...) e a
- * idade. Depois, os limites que impedem deformação (a cintura nunca passa muito do peito e do quadril; nada fica fino
- * demais). Constituição na base (tudo 0): exatamente o corpo de antes. As crianças usam o mesmo corpo, em escala.
+ * estrutura alarga tudo um pouco; as pernas descem o joelho, o tornozelo e o chão), a CONDIÇÃO e a idade. Depois, os
+ * limites que impedem deformação. Constituição na base e condição sem composição: exatamente o corpo de antes.
+ *
+ * VIDA 24: com a COMPOSIÇÃO (`comp`), a condição é contínua — a gordura (com a distribuição da constituição: os eixos de
+ * cintura, barriga, coxas, braços e panturrilhas pesam mais quanto mais gordura houver) e o músculo (o eixo do músculo
+ * não desenha músculo pronto: é a facilidade de ganhar; o músculo é o da composição). E a CRIANÇA tem corpo de criança:
+ * até a puberdade, a constituição e a composição aparecem só em parte, sem cintura marcada nem músculo desenhado.
  */
-function geometria(genero: Genero, tipo: TipoDeCorpo, idade: number, c?: Constituicao): Geo {
+function geometria(genero: Genero, tipo: TipoDeCorpo, idade: number, c?: Constituicao, comp?: CompDaFigura): Geo {
   const fem = genero === 'feminino', masc = genero === 'masculino';
   const g: Geo = {
     cx: 60, pesc: masc ? 6.4 : 5.4, topo: 66, ombro: masc ? 23 : fem ? 19.5 : 21, peito: masc ? 21 : fem ? 18.5 : 19.5,
@@ -112,47 +153,69 @@ function geometria(genero: Genero, tipo: TipoDeCorpo, idade: number, c?: Constit
     yJoelho: 178, yTorn: 222, yChao: 232, braco: masc ? 4.4 : 3.8, antebraco: masc ? 3.6 : 3.1, coxa: masc ? 8.6 : 9, panturrilha: masc ? 5.8 : 5.4, tornozelo: 3.2, barriga: 0, busto: fem ? 1 : 0, def: 0
   };
   const neutra = !c || Object.values(c).every(x => x === 0);
+  const novo = !!comp;
+  // A gordura da composição pesa a distribuição de nascença (com pouca gordura, quase não aparece).
+  const kd = novo ? Math.max(0.25, Math.min(1.4, 0.55 + 0.35 * comp!.g)) : 1;
   if (c && !neutra) {
     const f = 1 + 0.06 * c.estrutura;
     for (const k of ['pesc', 'ombro', 'peito', 'cintura', 'quadril', 'braco', 'antebraco', 'coxa', 'panturrilha', 'tornozelo'] as const) g[k] *= f;
     g.ombro += 2.4 * c.ombros; g.peito += 0.7 * c.ombros;
     g.peito += 1.5 * c.peito; g.busto = Math.max(0, g.busto + (fem ? 0.6 : 0.35) * c.peito);
-    g.cintura += 2.1 * c.cintura;
+    g.cintura += 2.1 * c.cintura * kd;
     g.quadril += 2.3 * c.quadril; g.coxa += 0.45 * c.quadril;
-    g.braco += 0.95 * c.bracos; g.antebraco += 0.55 * c.bracos;
-    g.coxa += 1.6 * c.coxas;
-    g.panturrilha += 1.0 * c.panturrilhas; g.tornozelo += 0.2 * c.panturrilhas;
-    if (c.barriga > 0) { g.barriga += 2.6 * c.barriga; g.cintura += 0.8 * c.barriga; } else g.cintura += 0.6 * c.barriga;
-    g.braco += 0.5 * c.musculo; g.antebraco += 0.3 * c.musculo; g.panturrilha += 0.35 * c.musculo; g.coxa += 0.45 * c.musculo; g.ombro += 0.5 * c.musculo;
-    g.def = Math.max(0, c.musculo);
+    g.braco += 0.95 * c.bracos * kd; g.antebraco += 0.55 * c.bracos * kd;
+    g.coxa += 1.6 * c.coxas * kd;
+    g.panturrilha += 1.0 * c.panturrilhas * (novo ? 0.8 : 1); g.tornozelo += 0.2 * c.panturrilhas;
+    if (c.barriga > 0) { g.barriga += 2.6 * c.barriga * kd; g.cintura += 0.8 * c.barriga * kd; } else g.cintura += 0.6 * c.barriga * kd;
+    if (!novo) { g.braco += 0.5 * c.musculo; g.antebraco += 0.3 * c.musculo; g.panturrilha += 0.35 * c.musculo; g.coxa += 0.45 * c.musculo; g.ombro += 0.5 * c.musculo; g.def = Math.max(0, c.musculo); }
     // O comprimento das pernas: o joelho, o tornozelo e o chão descem (ou sobem); o tronco fica.
     const L = c.pernas * 5;
     g.yVirilha += L * 0.12; g.yJoelho += L * 0.55; g.yTorn += L; g.yChao += L;
   }
-  const ajuste: Record<TipoDeCorpo, Partial<Record<keyof Geo, number>>> = {
-    magro: { ombro: -3, peito: -3.6, cintura: -3.6, quadril: -2.6, braco: -1.3, antebraco: -1, coxa: -2.8, panturrilha: -1.7, pesc: -0.6 },
-    mediano: {},
-    atletico: { ombro: 3, peito: 2, cintura: -1.6, braco: 1.1, antebraco: 0.6, coxa: 1, panturrilha: 0.7, def: 1 },
-    musculoso: { ombro: 6.6, peito: 5.2, cintura: 0.4, quadril: 0.6, braco: 3.2, antebraco: 1.9, coxa: 2.6, panturrilha: 1.5, pesc: 2, def: 2 },
-    acima_do_peso: { ombro: 2.6, peito: 5.4, cintura: 9, quadril: 6.6, braco: 2.6, antebraco: 1.5, coxa: 4.4, panturrilha: 2.6, barriga: 5, pesc: 1.3 }
-  };
-  for (const [k, d] of Object.entries(ajuste[tipo]) as [keyof Geo, number][]) g[k] += d;
+  let d: Delta;
+  if (novo) {
+    d = somar(deltaDaGordura(comp!.g, c && !neutra ? c : undefined), deltaDoMusculo(comp!.m));
+    for (const [reg, x] of Object.entries(comp!.r ?? {})) if (REGIAO_DO_MUSCULO[reg] && x) d = somar(d, REGIAO_DO_MUSCULO[reg], x);
+    // A definição aparece com pouca gordura (a mesma conta de `v24/corpo.definicao24`).
+    d.def = Math.max(0, (d.def ?? 0) * (comp!.g <= 0 ? 1 : Math.max(0, 1 - comp!.g * 0.8)));
+  } else d = AJUSTE[tipo];
+  for (const [k, x] of Object.entries(d) as [keyof Geo, number][]) g[k] += x;
   // Na velhice os ombros caem um pouco e a cintura alarga.
   if (idade >= 65) { g.ombro -= 1; g.cintura += 1.4; g.barriga += 1; }
-  if (!neutra) {
-    // Os limites (só para a constituição nova — o corpo de antes fica idêntico): nada fino demais, a cintura nunca muito
-    // além do peito e do quadril, os ombros nunca dentro do peito, a barriga com um teto, o braço proporcional ao ombro.
+  if (!neutra || novo) {
+    // Os limites (só para a constituição/composição novas — o corpo de antes fica idêntico): nada fino demais, a cintura
+    // nunca muito além do peito e do quadril, os ombros nunca dentro do peito, a barriga com um teto, o braço proporcional.
     g.def = Math.min(2, g.def);
     g.peito = Math.max(14, g.peito); g.quadril = Math.max(13.5, g.quadril); g.ombro = Math.max(g.peito - 0.5, 15, g.ombro);
-    g.cintura = Math.min(Math.max(10.5, g.cintura), Math.max(g.peito, g.quadril) + 9);
+    g.cintura = Math.min(Math.max(10.5, g.cintura), Math.max(g.peito, g.quadril) + (novo ? 3.5 : 9));
     g.barriga = Math.min(10, Math.max(0, g.barriga));
     g.braco = Math.min(Math.max(2.6, g.braco), g.ombro * 0.38); g.antebraco = Math.min(Math.max(2.2, g.antebraco), g.braco);
     g.coxa = Math.min(Math.max(5.6, g.coxa), g.quadril * 0.78); g.panturrilha = Math.min(Math.max(3.6, g.panturrilha), g.coxa * 0.86);
     g.tornozelo = Math.min(Math.max(2.4, g.tornozelo), g.panturrilha * 0.7); g.pesc = Math.max(4.2, g.pesc);
   }
-  // O corpo de antes (constituição na base) não ganha desenho novo: a definição só com a constituição da VIDA 23.
-  g.def = neutra ? 0 : Math.min(2, g.def);
+  // O corpo de antes (constituição na base, sem composição) não ganha desenho novo: a definição só com a VIDA 23/24.
+  g.def = neutra && !novo ? 0 : Math.min(2, g.def);
+  if (idade < 15 && (novo || !neutra)) corpoDeCrianca(g, genero, idade);
   return g;
+}
+
+/**
+ * VIDA 24 — a criança não é um adulto pequeno: até a puberdade o tronco é mais reto (a cintura quase na largura do
+ * peito e do quadril), ombros e quadril quase iguais nos gêneros, sem busto nem músculo desenhado; o que a constituição
+ * e a composição pedem aparece aos poucos, inteiro aos 15.
+ */
+function corpoDeCrianca(g: Geo, genero: Genero, idade: number): void {
+  const k = Math.max(0, Math.min(1, (idade - 6) / 9));
+  const base = geometria(genero, 'mediano', 30);
+  const media = { ombro: 20.5, peito: 19.4, cintura: 16.6, quadril: 18.6, braco: 3.7, antebraco: 3.1, coxa: 8, panturrilha: 5.4, pesc: 5.4 } as const;
+  for (const key of Object.keys(media) as (keyof typeof media)[]) {
+    const crianca = media[key] + (base[key] - media[key]) * k * 0.6;
+    g[key] = crianca + (g[key] - base[key]) * (0.35 + 0.65 * k);
+  }
+  g.cintura = Math.max(g.cintura, Math.min(g.peito, g.quadril) - 2.5 * k);
+  g.barriga *= 0.35 + 0.65 * k;
+  g.busto = idade >= 12 ? g.busto * Math.min(1, (idade - 11) / 4) : 0;
+  g.def = idade >= 13 ? g.def * Math.min(1, (idade - 12) / 3) : 0;
 }
 
 /** A escala do corpo pela idade (a cabeça fica do mesmo tamanho: a criança tem cabeça grande para o corpo). */
@@ -175,7 +238,7 @@ function escalaDoCorpo(idade: number, z: number): number {
 /** O corpo montado (a geometria e a escala) — o mesmo para a figura, as lupas e as miniaturas. */
 function montar(genero: Genero, corpo: CorpoFig, idade: number, visual?: Visual): { g: Geo; esc: number; tipo: TipoDeCorpo } {
   const k = lerCorpo(corpo, visual);
-  return { g: geometria(genero, k.tipo, idade, k.c), esc: escalaDoCorpo(idade, k.z), tipo: k.tipo };
+  return { g: geometria(genero, k.tipo, idade, k.c, k.comp), esc: escalaDoCorpo(idade, k.z), tipo: k.tipo };
 }
 
 const lado = (g: Geo, s: 1 | -1, dx: number) => g.cx + s * dx;
@@ -282,16 +345,56 @@ function tronco(g: Geo, folga = 0, ate = g.yQuad, alarga = 1, mod?: { modelo?: s
   else if (m === 'ampla') { c = Math.max(c, p + 0.4); q = Math.max(q, p + 1.6); }
   else if (m === 'tunica') { c = Math.max(c, p - 0.4); q = q * 1.12 + 1.5; }
   else if (m === 'fluida') { c = Math.max(c, (p + c) / 2); q = q * 1.04 + 1; }
-  const b = g.barriga;
   const yA = g.topo + 18;
   const ombro = (s: 1 | -1) => `${lado(g, s, o)} ${g.topo + 6}`;
+  const fimLado = Math.min(ate, g.yQuad);
+  const perf = perfilDoTronco(g, p, c, q, g.barriga, fimLado);
+  // A barra: na largura em que o lado parou (a peça curta para antes do quadril).
+  const wb = perf[perf.length - 1][0];
+  const esq = perf.map(([w, y]) => [lado(g, -1, w), y] as [number, number]);
+  const dir = perf.map(([w, y]) => [lado(g, 1, w), y] as [number, number]).reverse();
   return `M ${lado(g, -1, g.pesc + 1)} ${g.topo} C ${lado(g, -1, o * 0.7)} ${g.topo + 0.5} ${lado(g, -1, o)} ${g.topo + 2} ${ombro(-1)}
-    L ${lado(g, -1, p)} ${yA} C ${lado(g, -1, p - 0.6)} ${g.yCint - 12} ${lado(g, -1, c + b)} ${g.yCint - 6} ${lado(g, -1, c + b * 0.6)} ${g.yCint}
-    C ${lado(g, -1, c)} ${g.yCint + 6} ${lado(g, -1, q)} ${g.yQuad - 8} ${lado(g, -1, q)} ${Math.min(ate, g.yQuad)}
-    L ${lado(g, -1, q)} ${mod?.curva ? ate - 3 : ate} ${mod?.curva ? `Q ${g.cx} ${ate + 4.5} ${lado(g, 1, q)} ${ate - 3}` : `L ${lado(g, 1, q)} ${ate}`} L ${lado(g, 1, q)} ${Math.min(ate, g.yQuad)}
-    C ${lado(g, 1, q)} ${g.yQuad - 8} ${lado(g, 1, c)} ${g.yCint + 6} ${lado(g, 1, c + b * 0.6)} ${g.yCint}
-    C ${lado(g, 1, c + b)} ${g.yCint - 6} ${lado(g, 1, p - 0.6)} ${g.yCint - 12} ${lado(g, 1, p)} ${yA}
+    L ${lado(g, -1, p)} ${yA}${curva(esq)}
+    L ${lado(g, -1, wb)} ${mod?.curva ? ate - 3 : ate} ${mod?.curva ? `Q ${g.cx} ${ate + 4.5} ${lado(g, 1, wb)} ${ate - 3}` : `L ${lado(g, 1, wb)} ${ate}`} L ${lado(g, 1, wb)} ${fimLado}${curva(dir)}
     L ${ombro(1)} C ${lado(g, 1, o)} ${g.topo + 2} ${lado(g, 1, o * 0.7)} ${g.topo + 0.5} ${lado(g, 1, g.pesc + 1)} ${g.topo} Z`;
+}
+
+const n2f = (x: number) => Math.round(x * 100) / 100;
+/** VIDA 24: uma curva suave (Catmull-Rom em Bézier) pelos pontos — as transições do corpo sem quinas nem pontas. Começa no
+ *  primeiro ponto (que já é o ponto atual do caminho). */
+function curva(pts: [number, number][]): string {
+  let d = '';
+  for (let k = 0; k < pts.length - 1; k++) {
+    const p0 = pts[Math.max(0, k - 1)], p1 = pts[k], p2 = pts[k + 1], p3 = pts[Math.min(pts.length - 1, k + 2)];
+    d += ` C ${n2f(p1[0] + (p2[0] - p0[0]) / 6)} ${n2f(p1[1] + (p2[1] - p0[1]) / 6)} ${n2f(p2[0] - (p3[0] - p1[0]) / 6)} ${n2f(p2[1] - (p3[1] - p1[1]) / 6)} ${n2f(p2[0])} ${n2f(p2[1])}`;
+  }
+  return d;
+}
+
+/**
+ * VIDA 24 — o lado do tronco, da axila ao quadril (meia-largura × altura): as costelas, a cintura, a barriga (a gordura
+ * da barriga e dos flancos é mais larga em volta do umbigo e desce suave até o quadril — um volume arredondado, nunca a
+ * ponta que a curva antiga fazia na cintura), o alto do quadril e o quadril. Para no `ate` (a barra de uma peça curta).
+ */
+function perfilDoTronco(g: Geo, p: number, c: number, q: number, b: number, ate: number): [number, number][] {
+  const yA = g.topo + 18;
+  const pts: [number, number][] = [
+    [p, yA],
+    [Math.max(c, p - 0.6 - Math.max(0, p - c) * 0.3) + b * 0.15, (yA + g.yCint) / 2],
+    [Math.min(c + b * 0.32, Math.max(p, q) + 3.5), g.yCint - 1],
+    [Math.min(c + (q - c) * 0.55 + b * 0.22, Math.max(p, q) + 3), g.yCint + 8],
+    [q + b * 0.08, g.yQuad - 1.5],
+    [q, g.yQuad]
+  ];
+  const out: [number, number][] = [];
+  for (let k = 0; k < pts.length; k++) {
+    const [w, y] = pts[k];
+    if (y < ate - 0.01) { out.push([w, y]); continue; }
+    const [w0, y0] = pts[k - 1] ?? pts[0];
+    out.push([y === y0 ? w : w0 + (w - w0) * (ate - y0) / (y - y0), ate]);
+    break;
+  }
+  return out;
 }
 
 /** Um braço (do ombro ao pulso) com folga; `ate` corta (a manga curta). */
@@ -309,9 +412,9 @@ function braco(g: Geo, s: 1 | -1, folga = 0, ate = 140): string {
     return [pts[2][1], pts[2][2]];
   };
   const ys = [g.topo + 5, Math.min(yE, corte), corte].filter((y, k, a) => k === 0 || y > a[k - 1]);
-  const fora = ys.map(y => { const [x, w] = em(y); return `${lado(g, s, x + w)} ${y}`; });
-  const dentro = ys.map(y => { const [x, w] = em(y); return `${lado(g, s, x - w)} ${y}`; }).reverse();
-  return `M ${lado(g, s, g.ombro - 3)} ${g.topo + 1} Q ${lado(g, s, g.ombro + b * 0.9)} ${g.topo + 1.5} ${fora[0]} L ${fora.slice(1).join(' L ')} L ${dentro.join(' L ')} L ${lado(g, s, g.peito - 1)} ${g.topo + 18} Z`;
+  const fora = ys.map(y => { const [x, w] = em(y); return [lado(g, s, x + w), y] as [number, number]; });
+  const dentro = ys.map(y => { const [x, w] = em(y); return [lado(g, s, x - w), y] as [number, number]; }).reverse();
+  return `M ${lado(g, s, g.ombro - 3)} ${g.topo + 1} Q ${lado(g, s, g.ombro + b * 0.9)} ${g.topo + 1.5} ${fora[0][0]} ${fora[0][1]}${curva(fora)} L ${dentro[0][0]} ${dentro[0][1]}${curva(dentro)} L ${lado(g, s, g.peito - 1)} ${g.topo + 18} Z`;
 }
 
 /** Uma perna (do quadril até `ate`), com largura de calça (`larga` multiplica a coxa e a barra). */
@@ -327,9 +430,10 @@ function perna(g: Geo, s: 1 | -1, folga = 0, ate = g.yTorn, larga = 1, barra?: n
     return [pts[3][1], pts[3][2]];
   };
   const ys = [g.yQuad - 2, g.yVirilha + 6, g.yJoelho, g.yTorn].filter(y => y < ate).concat([ate]);
-  const fora = ys.map(y => { const [x, w] = em(y); return `${lado(g, s, x + w)} ${y}`; });
-  const dentro = ys.map(y => { const [x, w] = em(y); return `${lado(g, s, Math.max(0.4, x - w))} ${y}`; }).reverse();
-  return `M ${fora.join(' L ')} L ${dentro.join(' L ')} Z`;
+  // VIDA 24: os lados em curva suave (o volume da coxa vira no joelho sem quina).
+  const fora = ys.map(y => { const [x, w] = em(y); return [lado(g, s, x + w), y] as [number, number]; });
+  const dentro = ys.map(y => { const [x, w] = em(y); return [lado(g, s, Math.max(0.4, x - w)), y] as [number, number]; }).reverse();
+  return `M ${fora[0][0]} ${fora[0][1]}${curva(fora)} L ${dentro[0][0]} ${dentro[0][1]}${curva(dentro)} Z`;
 }
 
 /* ------------------------------------------------------------------ peças */
@@ -627,8 +731,8 @@ function Casaco({ g, p, detalhe, gravata, ide }: { g: Geo; p: P<'casaco'>; detal
     const o = g.ombro + (p.ombreira ? 4.2 : 1.8), q = g.quadril + 2.4 + (p.comprimento === 'joelho' ? (p.modelo === 'reto' ? 3 : 4) : 0) + (p.modelo === 'anoraque' ? 1.6 : 0);
     const abre = p.modelo === 'trespassado' ? -1.8 : p.forma === 'jaqueta' || p.forma === 'corta_vento' ? 2.2 : 3.4;
     return `M ${lado(g, s, g.pesc + 1.4)} ${g.topo - 1} C ${lado(g, s, o * 0.7)} ${g.topo - 0.5} ${lado(g, s, o)} ${g.topo + 1.5} ${lado(g, s, o)} ${g.topo + 6}
-      L ${lado(g, s, g.peito + 1.8)} ${g.topo + 18} C ${lado(g, s, g.peito + 1.4)} ${g.yCint - 10} ${lado(g, s, g.cintura + g.barriga + cint)} ${g.yCint - 4} ${lado(g, s, g.cintura + g.barriga * 0.6 + cint)} ${g.yCint}
-      C ${lado(g, s, g.cintura + cint + 0.2)} ${g.yCint + 6} ${lado(g, s, q)} ${Math.min(fim, g.yQuad) - 6} ${lado(g, s, q)} ${fim}
+      L ${lado(g, s, g.peito + 1.8)} ${g.topo + 18}${curva(perfilDoTronco(g, g.peito + 1.8, g.cintura + cint, q, g.barriga, Math.min(fim, g.yQuad)).map(([w, y]) => [lado(g, s, w), y] as [number, number]))}
+      ${fim > g.yQuad ? `L ${lado(g, s, q)} ${fim}` : ''}
       L ${lado(g, s, abre * 0.4)} ${fim} L ${lado(g, s, abre)} ${g.topo + 22} L ${lado(g, s, g.pesc - 0.6)} ${g.topo + 3} Z`;
   };
   const claro = misturar(cor, '#ffffff', 0.4);
@@ -771,13 +875,14 @@ export const Figura = memo(function Figura({ visual, genero, idade, semente = 'e
   // As peças em uso, cada uma no seu lugar (a última que chegou, se houver duas).
   const conj: Conjunto = {};
   const acess: Record<string, ReturnType<typeof acessorioDoItem>> = {};
+  const idDoAcessorio: Record<string, string> = {};
   for (const x of pecas) {
     const c = pecasDoItem(x.itemId, x.variante ?? x.id, acabamentoDaMarca(x.marca));
     for (const k of ['cima', 'baixo', 'inteira', 'casaco', 'pes'] as const) if (c[k]) conj[k] = c[k];
     if (c.inteira) { delete conj.cima; delete conj.baixo; }
     if ((c.cima || c.baixo) && !c.inteira) delete conj.inteira;
     const a = acessorioDoItem(x.itemId);
-    if (a) acess[a.parte] = a;
+    if (a) { acess[a.parte] = a; idDoAcessorio[a.parte] = x.itemId; }
   }
   // Sem nada comprado: a roupa de sempre (a camiseta numa cor da semente, a calça, o tênis — a criança, bermuda).
   let h = 0;
@@ -805,7 +910,11 @@ export const Figura = memo(function Figura({ visual, genero, idade, semente = 'e
   const costas = vista === 'costas';
   // VIDA 23: as marcas do corpo (as do rosto, o retrato desenha) que já apareceram nesta idade; os pelos depois da puberdade.
   const marcasCorpo = (visual.marcas23 ?? []).filter(m => !REGIOES_DO_ROSTO23.has(m.r) && (m.d ?? 0) <= idade);
-  const pelos = idade >= 14 ? Math.max(0, Math.min(3, visual.pelos23 ?? 0)) : 0;
+  // VIDA 24: os pelos aparecem com a puberdade (nada antes dos 11, inteiros aos 19) e seguem os cuidados (aparar, raspar, laser).
+  const idadeDosPelos = pelosDaIdade24(idade);
+  const pelos = idadeDosPelos > 0 ? Math.max(0, Math.min(3, visual.pelos23 ?? 0)) : 0;
+  const fatorDePelo = (r: RegiaoDePelo24) => fatorDosPelos24(visual.pelos24, visual.laser24, r, visual.pelos24?.desde ?? 0);
+  const barrigaNaPele = g.barriga >= 3 && !costas;
   const estampas: ReactNode[] = [];
   const ide = (k: string) => `${uid}-${k}`;
   for (const k of ['cima', 'baixo', 'inteira', 'casaco'] as const) {
@@ -836,7 +945,7 @@ export const Figura = memo(function Figura({ visual, genero, idade, semente = 'e
       role="img" aria-label={rotulo ?? 'Corpo inteiro'} data-corpo={tipoDoCorpo} data-constituicao={visual.corpo23 ?? undefined} data-marcas={marcasCorpo.length || undefined} data-pecas={pecasRotulo} data-vista={vista} data-foco={foco ? 'sim' : undefined} data-tatuagens={tatuagens.length || undefined} style={fundo ? { background: fundo } : undefined}>
       <defs>
         {estampas}
-        {(tatuagens.length > 0 || descalco || marcasCorpo.length > 0 || pelos > 0 || g.def > 0) && <>
+        {(tatuagens.length > 0 || descalco || marcasCorpo.length > 0 || pelos > 0 || g.def > 0 || barrigaNaPele) && <>
           {([-1, 1] as const).map(s => <clipPath key={`cb${s}`} id={ide(`cb${s}`)}><path d={braco(g, s, 0, 141)} /></clipPath>)}
           {([-1, 1] as const).map(s => <clipPath key={`cp${s}`} id={ide(`cp${s}`)}><path d={perna(g, s, 0, g.yTorn + 2)} /></clipPath>)}
           {([-1, 1] as const).map(s => <clipPath key={`cm${s}`} id={ide(`cm${s}`)}><ellipse cx={lado(g, s, g.ombro + 2.7)} cy={145.5} rx={g.antebraco * 0.95} ry={5.2} /></clipPath>)}
@@ -855,14 +964,14 @@ export const Figura = memo(function Figura({ visual, genero, idade, semente = 'e
         {([-1, 1] as const).map(s => <ellipse key={`m${s}`} cx={lado(g, s, g.ombro + 2.7)} cy={145.5} rx={g.antebraco * 0.95} ry={5.2} fill={pele} stroke={contorno} strokeWidth={0.6} />)}
         <path d={tronco(g, 0, g.yQuad)} fill={pele} stroke={contorno} strokeWidth={0.7} strokeLinejoin="round" />
         {/* A sombra da axila e do lado do tronco: o braço não se funde ao corpo. */}
-        {([-1, 1] as const).map(s => <path key={`ax${s}`} d={`M ${lado(g, s, g.peito - 0.6)} ${g.topo + 14} Q ${lado(g, s, g.peito - 1.6)} ${g.yCint - 14} ${lado(g, s, g.cintura + g.barriga * 0.6 - 0.4)} ${g.yCint - 2}`} fill="none" stroke={sombraPele} strokeWidth={1.6} opacity={0.7} />)}
+        {([-1, 1] as const).map(s => <path key={`ax${s}`} d={`M ${lado(g, s, g.peito - 0.6)} ${g.topo + 14} Q ${lado(g, s, g.peito - 1.6)} ${g.yCint - 14} ${lado(g, s, Math.min(g.cintura + g.barriga * 0.32, Math.max(g.peito, g.quadril) + 3.5) - 0.6)} ${g.yCint - 2}`} fill="none" stroke={sombraPele} strokeWidth={1.6} opacity={0.7} />)}
         {([-1, 1] as const).map(s => <path key={`p${s}`} d={perna(g, s, 0, g.yTorn + 2)} fill={pele} stroke={contorno} strokeWidth={0.7} strokeLinejoin="round" />)}
         {/* HOTFIX 11.5.1: as tatuagens, na pele (a roupa vem por cima e cobre o que cobre). */}
         {tatuagens.length > 0 && <Tatuagens g={g} lista={tatuagens.filter(t => !NA_MAO.has(t.regiao) && t.regiao !== 'pe' && !ehDoRosto(t.regiao))} comps={composicoes} pele={pele} ide={ide} costas={costas} detalhe={detalhe} idade={idade} />}
         {/* VIDA 23: as marcas naturais (pintas, sardas, manchas, cicatrizes, estrias), os pelos e o desenho do músculo — na
             pele, por baixo da roupa (a roupa cobre o que cobre). */}
         {marcasCorpo.length > 0 && <MarcasNaPele g={g} lista={marcasCorpo.filter(m => !NA_MAO.has(m.r) && (m.r !== 'pe' || !!descalco))} pele={pele} ide={ide} costas={costas} detalhe={detalhe} />}
-        {(pelos > 0 || g.def > 0) && <PelosEMusculo g={g} pelos={pelos} def={g.def} cabelo={corDoCabelo(visual.corCabelo)} pele={pele} sombra={sombraPele} ide={ide} costas={costas} detalhe={detalhe} semente={semente} />}
+        {(pelos > 0 || g.def > 0 || barrigaNaPele) && <PelosEMusculo g={g} pelos={pelos} def={g.def} cabelo={corDoCabelo(visual.corCabelo)} pele={pele} sombra={sombraPele} ide={ide} costas={costas} detalhe={detalhe} semente={semente} idadeK={idadeDosPelos} fator={fatorDePelo} />}
         {/* VIDA 12.9: o piercing do umbigo (só com o tronco à mostra; a roupa de cima cobre). */}
         {!costas && !conj.cima && !conj.inteira && idade >= 16 && <PiercingDoUmbigo ids={visual.piercings} x={g.cx} y={g.yCint - 3} />}
         {/* O que se veste, de dentro para fora. */}
@@ -882,7 +991,11 @@ export const Figura = memo(function Figura({ visual, genero, idade, semente = 'e
         {aoEscolherRegiao && <MapaDoCorpo g={g} costas={costas} escolhida={regiaoEscolhida} aoEscolher={aoEscolherRegiao} ocupadas={new Set(tatuagens.filter(t => t.id !== 'previa').map(t => `${t.regiao}:${t.lado ?? ''}`))} />}
         {/* VIDA 23: as formas novas (cubana, pérolas, camadas, colar longo, cordão; bracelete largo, pérolas, corrente dupla;
             bandão, anel duplo, pérola) com o acabamento do metal; as de antes, como eram. */}
-        {colar23 && idade >= 8 ? colar23 : colar && (idade >= 8) && <g className="figura__colar" data-acessorio="pescoco">
+        {/* VIDA 24: as correntes de antes com a construção de cada uma (elos, gargantilha, guias, pérolas, riviera, medalha). */}
+        {!colar23 && colar && idade >= 8 && !metalDe(colar) && <ColarAntigo24 p={colar} cx={g.cx} y0={g.topo - 1} meia={g.pesc + 0.6} yf={g.topo + 5.8} detalhe={detalhe} />}
+        {/* VIDA 24: os pingentes do catálogo novo (coração, inicial, medalha, gota, ponto de luz) com o mesmo desenho da vitrine. */}
+        {!colar23 && colar && idade >= 8 && !!metalDe(colar) && idDoAcessorio.pescoco?.startsWith('j20_') && <g className="figura__colar" data-acessorio="pescoco" data-forma={fx(colar)?.forma}><ColarDoRetrato modelo={idDoAcessorio.pescoco} cx={g.cx} y0={g.topo - 1} meia={g.pesc + 0.6} fundo={g.topo + 5.8} /></g>}
+        {colar23 && idade >= 8 ? colar23 : colar && (idade >= 8) && !!metalDe(colar) && !idDoAcessorio.pescoco?.startsWith('j20_') && <g className="figura__colar" data-acessorio="pescoco">
           <path d={`M ${g.cx - g.pesc - 0.6} ${g.topo - 1} Q ${g.cx} ${g.topo + (fx(colar)?.forma === 'choker' ? 5 : colar.grossa ? 11 : 12.5)} ${g.cx + g.pesc + 0.6} ${g.topo - 1}`} fill="none" stroke={colar.cor} strokeWidth={colar.grossa ? 1.6 : 0.8} strokeLinecap="round" />
           {colar.contas && detalhe && [0, 1, 2, 3, 4, 5, 6].map(k => { const t = (k + 1) / 8; const x = g.cx - g.pesc + (2 * g.pesc) * t; const y = g.topo - 1 + Math.sin(Math.PI * t) * 12; return <circle key={k} cx={x} cy={y} r={0.9} fill={colar.contas![k % colar.contas!.length]} />; })}
           {colar.pingente && !colar.cruz && fx(colar)?.forma !== 'gota' && fx(colar)?.forma !== 'riviera' && <circle cx={g.cx} cy={g.topo + 11.4} r={1.3} fill={colar.pingente} />}
@@ -890,13 +1003,9 @@ export const Figura = memo(function Figura({ visual, genero, idade, semente = 'e
           {fx(colar)?.forma === 'riviera' && [0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8].map(t => <circle key={t} cx={g.cx - g.pesc + 2 * g.pesc * t} cy={g.topo - 1 + Math.sin(Math.PI * t) * 12.5} r={0.7} fill={fx(colar)!.pedra} stroke={colar.cor} strokeWidth={0.2} />)}
           {fx(colar)?.forma === 'gota' && <path d={`M ${g.cx} ${g.topo + 11.4} q 1.6 2.4 0 3.6 q -1.6 -1.2 0 -3.6 z`} fill={fx(colar)!.pedra} stroke={colar.cor} strokeWidth={0.3} />}
         </g>}
-        {relogio && (() => { const w = pulso(1); return (
-          <g className="figura__relogio" data-acessorio="pulso" data-forma={relogio.forma}>
-            <rect x={w.x - g.antebraco - 0.6} y={w.y - 1.6} width={(g.antebraco + 0.6) * 2} height={3.2} rx={0.8} fill={relogio.pulseira} />
-            {relogio.forma === 'analogico' ? <><circle cx={w.x} cy={w.y} r={2.6} fill={relogio.caixa} /><circle cx={w.x} cy={w.y} r={1.9} fill={relogio.mostrador} />{detalhe && <path d={`M ${w.x} ${w.y} l 0 -1.3 M ${w.x} ${w.y} l 1 0.4`} stroke={relogio.mostrador === '#f4f1ea' ? '#1b1b1d' : '#f4f1ea'} strokeWidth={0.35} />}</>
-              : <><rect x={w.x - 2.4} y={w.y - 2.6} width={4.8} height={5.2} rx={relogio.forma === 'smart' ? 1.4 : 0.8} fill={relogio.caixa} /><rect x={w.x - 1.7} y={w.y - 1.9} width={3.4} height={3.8} rx={0.8} fill={relogio.mostrador} /></>}
-          </g>); })()}
-        {pulseira && pulseira23 ? pulseira23 : pulseira && (() => { const w = pulso(-1); return (
+        {relogio && <RelogioNoCorpo24 r={relogio} x={pulso(1).x} y={pulso(1).y} hw={g.antebraco} detalhe={detalhe} />}
+        {pulseira && !pulseira23 && pulseira.tipo && <PulseiraAntiga24 p={pulseira} x={pulso(-1).x} y={pulso(-1).y} hw={g.antebraco} />}
+        {pulseira && pulseira23 ? pulseira23 : pulseira && !pulseira.tipo && (() => { const w = pulso(-1); return (
           <g className="figura__pulseira" data-acessorio="pulseira">
             <path d={`M ${w.x - g.antebraco - 0.4} ${w.y} Q ${w.x} ${w.y + 1.6} ${w.x + g.antebraco + 0.4} ${w.y}`} fill="none" stroke={pulseira.cor} strokeWidth={pulseira.grossa ? 1.8 : 1.1} strokeLinecap="round" />
             {pulseira.contas && [-2, 0, 2].map((dx, k) => <circle key={k} cx={w.x + dx} cy={w.y + 0.9} r={0.9} fill={pulseira.contas![k]} />)}
@@ -940,7 +1049,8 @@ export const Figura = memo(function Figura({ visual, genero, idade, semente = 'e
         })()}
         {/* VIDA 18: a bolsa de costas — a mochila nas costas, a transversal cruzando, a pochete atrás, a tote e a clutch na outra mão. */}
         {bolsa && costas && idade >= 6 && <BolsaDeCostas g={g} bolsa={bolsa} lado={(s2, d) => lado(g, s2, d)} />}
-        {anel && anel23 ? anel23 : anel && <g className="figura__anel" data-acessorio="anel"><circle cx={lado(g, -1, g.ombro + 2.7)} cy={149.5} r={1.2} fill="none" stroke={anel.cor} strokeWidth={0.9} />{anel.pedra && <circle cx={lado(g, -1, g.ombro + 2.7)} cy={148.4} r={0.7} fill={anel.pedra} />}</g>}
+        {anel && !anel23 && anel.tipo && <AnelAntigo24 p={anel} x={lado(g, -1, g.ombro + 2.7)} y={149.5} />}
+        {anel && anel23 ? anel23 : anel && !anel.tipo && <g className="figura__anel" data-acessorio="anel"><circle cx={lado(g, -1, g.ombro + 2.7)} cy={149.5} r={1.2} fill="none" stroke={anel.cor} strokeWidth={0.9} />{anel.pedra && <circle cx={lado(g, -1, g.ombro + 2.7)} cy={148.4} r={0.7} fill={anel.pedra} />}</g>}
         {anel && !anel23 && fx(anel)?.forma && fx(anel)!.forma !== 'aro' && <g className="figura__anel-forma" data-forma={fx(anel)!.forma}>{fx(anel)!.forma === 'sinete' ? <rect x={lado(g, -1, g.ombro + 2.7) - 1} y={147.4} width={2} height={1.3} rx={0.3} fill={anel.cor} stroke={fx(anel)!.brilho} strokeWidth={0.2} /> : fx(anel)!.forma === 'aparador' ? [-0.8, 0, 0.8].map(dx => <circle key={dx} cx={lado(g, -1, g.ombro + 2.7) + dx} cy={148.5} r={0.35} fill={fx(anel)!.pedra} />) : fx(anel)!.forma === 'coquetel' ? <circle cx={lado(g, -1, g.ombro + 2.7)} cy={148.2} r={1.1} fill={fx(anel)!.pedra} stroke={anel.cor} strokeWidth={0.3} /> : null}</g>}
         {alianca && <g className="figura__alianca" data-acessorio="alianca"><circle cx={lado(g, 1, g.ombro + 2.7) + 0.6} cy={149.8} r={1.15} fill="none" stroke={alianca.cor} strokeWidth={1} />{alianca.pedra && <circle cx={lado(g, 1, g.ombro + 2.7) + 0.6} cy={148.7} r={0.4} fill={alianca.pedra} />}</g>}
         {tornozelo && pernaAMostra && !costas && (() => { const x = lado(g, 1, g.quadril * 0.44), y = g.yTorn - 1.5, w = g.tornozelo + 0.8; return (
@@ -979,7 +1089,7 @@ export const Figura = memo(function Figura({ visual, genero, idade, semente = 'e
 function iguaisNaFigura(a: Props, b: Props): boolean {
   for (const k of Object.keys({ ...a, ...b }) as (keyof Props)[]) {
     if (a[k] === b[k]) continue;
-    if (k === 'corpo' && typeof a.corpo === 'object' && typeof b.corpo === 'object' && a.corpo.tipo === b.corpo.tipo && a.corpo.estatura === b.corpo.estatura && a.corpo.c === b.corpo.c) continue;
+    if (k === 'corpo' && typeof a.corpo === 'object' && typeof b.corpo === 'object' && a.corpo.tipo === b.corpo.tipo && a.corpo.estatura === b.corpo.estatura && a.corpo.c === b.corpo.c && JSON.stringify(a.corpo.comp ?? null) === JSON.stringify(b.corpo.comp ?? null)) continue;
     return false;
   }
   return true;

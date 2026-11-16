@@ -21,6 +21,8 @@
  * ano (`rankingPorPontos`).
  */
 
+import { lerCorpo23 } from '../v23/corpo/corpo23';
+import { desvioDeAltura24 } from '../v24/corpo/corpo24';
 import type { Rng } from '../rng';
 import { clamp, hashMisturado } from '../rng';
 import type { CarreiraEsportiva, Dominio, Temporada, Vida } from '../tipos';
@@ -64,7 +66,9 @@ function estaturaDaSemente(v: Vida): number {
   // REWORK 9.7: as três parcelas com a mistura final — sem ela, andavam juntas (correlação 0,97): o desvio triplicava e
   // 20% dos homens passavam de 1,90 m (o esperado é ~4%).
   const z = (hashMisturado(`${v.id}:alt:a`) + hashMisturado(`${v.id}:alt:b`) + hashMisturado(`${v.id}:alt:c`) - 1.5) * 2;
-  return Math.round(media + z * (f ? 7 : 8) + (v.predisposicoes?.fisica ?? 0) * 2);
+  // VIDA 24: quem nasceu com a constituição escolhida ou herdada tem a altura puxada por ela (a tendência de altura).
+  const zz = v.corpo?.nasc24 ? desvioDeAltura24(z, lerCorpo23(v.eu.visual.corpo23).estatura) : z;
+  return Math.round(media + zz * (f ? 7 : 8) + (v.predisposicoes?.fisica ?? 0) * 2);
 }
 
 export function estatura(v: Vida): number {

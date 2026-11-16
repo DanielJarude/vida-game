@@ -32,6 +32,7 @@ import type { Retorno, Vida } from './tipos';
 import { escrever, idade, transacao } from './nucleo';
 import { morreEsteAno, processarCorpo } from './sistemas/corpo';
 import { desenvolverPessoa } from './sistemas/pessoa';
+import { evoluirCorpo24 } from './sistemas/silhueta';
 import { processarOrigem } from './sistemas/origem';
 import { processarFormacao } from './sistemas/formacao';
 import { processarIndependencia } from './sistemas/independencia';
@@ -188,6 +189,8 @@ function viverAno(v: Vida, r: Rng): void {
 
   // O que a semana do ano faz pela pessoa (treino, leitura) vale no MESMO ano: vem antes do corpo e da escola.
   praticandoPor('vida', () => desenvolverPessoa(v, r));
+  // VIDA 24: o corpo (gordura, músculo) anda um pouco na direção do que a vida pede — depois do condicionamento do ano.
+  evoluirCorpo24(v);
   processarCorpo(v, r);
   // A vista que pede óculos (a família compra, na infância).
   processarEstilo(v);

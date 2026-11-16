@@ -161,11 +161,16 @@ describe('as lojas', () => {
 
 describe('a aparência', () => {
   it('o corpo vem do condicionamento, dos hábitos e do que se pratica — e muda com a vida', () => {
+    // Sem a composição (save de antes da VIDA 24), o tipo é lido na hora, como sempre.
     const v = adulto(30, { semente: 2 });
+    delete v.corpo.composicao24;
     v.rotinas = []; v.corpo.habitos.sedentario = true; v.corpo.forma = 25;
     expect(tipoDeCorpo(v)).toBe('acima_do_peso');
     v.corpo.habitos.sedentario = false; v.corpo.forma = 80; v.rotinas = [{ id: 'academia', tInicio: v.t - 48, nivel: 2 }];
     expect(tipoDeCorpo(v)).toBe('musculoso');
+    // VIDA 24: com a composição, muda com os anos — a academia não faz o musculoso de um dia para o outro.
+    v.corpo.composicao24 = { g: 0, m: 0, t: v.t };
+    expect(tipoDeCorpo(v)).toBe('mediano');
   });
   it('a corrente e os brincos vão juntos; a peça de cima vai para o retrato', () => {
     const v = adulto(25, { semente: 4, genero: 'feminino' });

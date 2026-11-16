@@ -16,9 +16,13 @@ const EstudioDeTatuagem = sobDemanda(() => import('./Tatuagens').then(m => m.Est
 /** VIDA 13: os piercings (a lupa por zona do corpo) — pacote sob demanda, como o estúdio de tatuagem. */
 const PainelDePiercings = sobDemanda(() => import('../v14/aparencia/PainelDePiercings').then(m => m.PainelDePiercings));
 const RostoDetalhes = sobDemanda(() => import('../v14/aparencia/RostoDetalhes').then(m => m.RostoDetalhes));
-/** VIDA 23: o corpo e a pele (as proporções, as marcas naturais, os pelos) — pacote sob demanda. */
-const CorpoEPele = sobDemanda(() => import('../v23/CorpoEPele').then(m => m.CorpoEPele));
-import { useState } from 'react';
+/** VIDA 23/24: as marcas da pele — pacote sob demanda. */
+const PeleEMarcas = sobDemanda(() => import('../v23/CorpoEPele').then(m => m.PeleEMarcas));
+/** VIDA 24: o corpo (a condição, a evolução, o objetivo, a constituição de nascença) e os pelos (os cuidados). */
+const CorpoPainel = sobDemanda(() => import('../v24/Corpo24').then(m => m.CorpoPainel));
+const PelosPainel = sobDemanda(() => import('../v24/Corpo24').then(m => m.PelosPainel));
+import { useState, type ReactNode } from 'react';
+import '../v24/corpo24.css';
 import type { Vida, Visual } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
 import { idade } from '../../motor/nucleo';
@@ -46,6 +50,8 @@ export function AparenciaEEstilo({ vida, agir, irPara }: Props) {
   const vis = vida.eu.visual;
   const [m, setM] = useState<MudancaVisual>({});
   const [vista, setVista] = useState<'frente' | 'costas'>('frente');
+  const [cat, setCatEstado] = useState<Categoria>(lerCategoria);
+  const setCat = (c: Categoria) => { setCatEstado(c); guardarCategoria(c); };
   if (i < 3) return null;
   const fase = faseDeAutonomia(i);
   const previa: Visual = { ...vis, ...m, ...(m.barba === 'nenhuma' ? { barba: undefined } : {}) };
@@ -81,9 +87,36 @@ export function AparenciaEEstilo({ vida, agir, irPara }: Props) {
     );
   };
   const comMechas = ((m.mechas as string | undefined) ?? vis.mechas ?? 'nenhum') !== 'nenhum';
+  const categorias = CATEGORIAS.filter(c => c.id !== 'tatuagens' || i >= 16 || (vida.eu.tatuagens?.length ?? 0) > 0);
+  const atual = categorias.some(c => c.id === cat) ? cat : 'corpo';
+  const familia = fase === 'familia_decide';
+  const compras = i >= AUTONOMIA.compra_pessoal.idade && (
+    <p className="nota">{precisaDeOculos(vida) && !itens.some(x => x.itemId === 'oculos_grau') ? 'A vista anda pedindo óculos de grau. ' : ''}Óculos, chapéus, roupas, joias: <button type="button" className="link" onClick={() => irPara('compras')}>Vida · Compras →</button></p>
+  );
+  const vitrine = (conteudo: ReactNode) => (
+    <div className="ap24__vitrine">
+      <div className="ap24__vitrine-fig">
+        <figure><Figura visual={vis} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} corpo={corpoDaFigura(vida)} pecas={itens.filter(x => x.usando)} tatuagens={tatuagensNaFigura(vida)} composicoes={composicoesNaFigura(vida)} largura={LARGURA_DE_REFERENCIA} vista={vista} rotulo={`Como você está${vista === 'costas' ? ' (de costas)' : ''}`} /><figcaption>Como você está</figcaption></figure>
+        <Escolha rotulo="Ângulo do corpo" valor={vista} aoMudar={setVista} opcoes={[{ id: 'frente', rotulo: 'De frente' }, { id: 'costas', rotulo: 'De costas' }]} />
+      </div>
+      <div>{conteudo}</div>
+    </div>
+  );
   return (
     <section className="aparencia" aria-labelledby="aparencia-titulo">
       <h2 id="aparencia-titulo" className="voce-subtitulo">Aparência e estilo</h2>
+      {/* VIDA 24: uma categoria por vez (a escolhida fica lembrada ao sair e voltar). */}
+      <div className="ap24__nav" role="tablist" aria-label="Categorias da aparência">
+        {categorias.map(c => <button key={c.id} type="button" role="tab" id={`ap24-${c.id}`} aria-selected={atual === c.id} aria-controls="ap24-painel" className={`filtro${atual === c.id ? ' filtro--ativo' : ''}`} onClick={() => setCat(c.id)}>{c.nome}</button>)}
+      </div>
+      <div className="ap24__painel" role="tabpanel" id="ap24-painel" aria-labelledby={`ap24-${atual}`} data-categoria={atual}>
+      {atual === 'corpo' && <CorpoPainel vida={vida} agir={agir} irPara={irPara} />}
+      {atual === 'pele' && (familia ? <p className="nota">{AUTONOMIA.aparencia_basica.antes}</p> : <PeleEMarcas vida={vida} agir={agir} />)}
+      {atual === 'pelos' && <PelosPainel vida={vida} agir={agir} />}
+      {atual === 'joias' && <><PainelDePiercings vida={vida} agir={agir} />{vitrine(<><OQueVeste vida={vida} agir={agir} so="joias" />{compras}</>)}</>}
+      {atual === 'roupas' && vitrine(<>{i >= 3 && <OQueVeste vida={vida} agir={agir} so="roupas" />}<GuardaRoupa vida={vida} agir={agir} />{compras}</>)}
+      {atual === 'tatuagens' && <EstudioDeTatuagem vida={vida} agir={agir} />}
+      {atual === 'cabelo' && <>
       {fase === 'familia_decide' ? <p className="nota">{AUTONOMIA.aparencia_basica.antes}</p> : (
         <div className="aparencia__corpo">
           {/* VIDA 13: a prévia em dois enquadramentos — o rosto de perto e o corpo inteiro (de frente ou de costas) —, e o
@@ -161,16 +194,9 @@ export function AparenciaEEstilo({ vida, agir, irPara }: Props) {
         </div>
       )}
       {/* VIDA 14: os riscos na sobrancelha, o desenho dela, a pinta e os cílios (pacote sob demanda). */}
-      {fase !== 'familia_decide' && <RostoDetalhes vida={vida} agir={agir} />}
-      {fase !== 'familia_decide' && <CorpoEPele vida={vida} agir={agir} />}
-      {i >= 3 && <OQueVeste vida={vida} agir={agir} />}
-      <GuardaRoupa vida={vida} agir={agir} />
-      {(i >= 16 || (vida.eu.tatuagens?.length ?? 0) > 0) && <EstudioDeTatuagem vida={vida} agir={agir} />}
-      {/* VIDA 14: os piercings inteiros aqui — o furo, as joias que cabem, o preço, comprar, usar e tirar (`v14/aparencia`). */}
-      <PainelDePiercings vida={vida} agir={agir} />
-      {i >= AUTONOMIA.compra_pessoal.idade && (
-        <p className="nota">{precisaDeOculos(vida) && !itens.some(x => x.itemId === 'oculos_grau') ? 'A vista anda pedindo óculos de grau. ' : ''}Óculos, chapéus, roupas, joias: <button type="button" className="link" onClick={() => irPara('compras')}>Vida · Compras →</button></p>
-      )}
+      {!familia && <RostoDetalhes vida={vida} agir={agir} />}
+      </>}
+      </div>
     </section>
   );
 }
@@ -193,20 +219,23 @@ const PARTES: { id: string; nome: string; lugares: string[] }[] = [
   // VIDA 13: os piercings saíram daqui (eram um cartão por furo): têm a seção própria, com a lupa (`Piercings13`).
 ];
 
-export function OQueVeste({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
+/** VIDA 24: as partes das joias (o resto é roupa e estilo). */
+const PARTES_DE_JOIA = new Set(['pulso', 'pulseira', 'anel', 'alianca', 'joia', 'orelha', 'tornozelo']);
+export function OQueVeste({ vida, agir, so }: { vida: Vida; agir: (a: Acao) => boolean; so?: 'joias' | 'roupas' }) {
   const itens = itensDaPessoa(vida);
   if (!itens.length) return null;
   const daParte = (l: string[]) => itens.filter(x => { const it = itemEstilo(x.itemId); return !!it && lugaresDoItem(it).some(y => l.includes(y)) && (it.lugar === 'casaco') === l.includes('casaco'); });
-  const partes = PARTES.map(p => ({ ...p, itens: daParte(p.lugares) })).filter(p => p.itens.length);
+  const partes = PARTES.filter(p => !so || (so === 'joias') === PARTES_DE_JOIA.has(p.id)).map(p => ({ ...p, itens: daParte(p.lugares) })).filter(p => p.itens.length);
+  if (!partes.length && so === 'joias') return <p className="nota">Nenhuma joia sua ainda (brincos, colares, pulseiras, anéis e relógios ficam aqui).</p>;
   return (
     <div className="aparencia__itens">
-      <h3 className="subtitulo">O que você está usando</h3>
+      <h3 className="subtitulo">{so === 'joias' ? 'Joias e relógio' : 'O que você está usando'}</h3>
       {/* 12.7: um cartão por parte do corpo — a peça (o desenho dela), a marca, trocar por outra sua ou tirar. */}
       <ul className="vestir vestir--cartoes">
         {partes.map(p => <ParteDoCorpo key={p.id} vida={vida} agir={agir} parte={p} />)}
       </ul>
       <p className="nota">A peça que sai fica guardada: é sua, dá para voltar a usar quando quiser.</p>
-      {idade(vida) >= 10 && <LooksSalvos vida={vida} agir={agir} />}
+      {idade(vida) >= 10 && so !== 'joias' && <LooksSalvos vida={vida} agir={agir} />}
     </div>
   );
 }
@@ -311,4 +340,22 @@ function LooksSalvos({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean })
       )}
     </section>
   );
+}
+
+/* ------------------------------------------------------------------ VIDA 24: as categorias */
+
+type Categoria = 'corpo' | 'pele' | 'pelos' | 'cabelo' | 'joias' | 'roupas' | 'tatuagens';
+const CATEGORIAS: { id: Categoria; nome: string }[] = [
+  { id: 'corpo', nome: 'Corpo' }, { id: 'pele', nome: 'Pele e marcas' }, { id: 'pelos', nome: 'Pelos' }, { id: 'cabelo', nome: 'Cabelo e rosto' },
+  { id: 'joias', nome: 'Piercings e joias' }, { id: 'roupas', nome: 'Roupas e estilo' }, { id: 'tatuagens', nome: 'Tatuagens' }
+];
+const CHAVE_CATEGORIA = 'vida.aparencia.categoria';
+let categoriaNaMemoria: Categoria | undefined;
+function lerCategoria(): Categoria {
+  try { const x = sessionStorage.getItem(CHAVE_CATEGORIA) as Categoria | null; if (x && CATEGORIAS.some(c => c.id === x)) return x; } catch { /* sem armazenamento: fica na memória */ }
+  return categoriaNaMemoria ?? 'cabelo';
+}
+function guardarCategoria(c: Categoria): void {
+  categoriaNaMemoria = c;
+  try { sessionStorage.setItem(CHAVE_CATEGORIA, c); } catch { /* idem */ }
 }

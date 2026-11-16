@@ -1,0 +1,63 @@
+/* VIDA 24 — Você · Aparência: Corpo, Pelos, Pele e marcas (c24) e a navegação por categorias (ap24). */
+.c24 { display: grid; gap: var(--space-2); }
+.c24__corpo { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: var(--space-4); align-items: start; }
+.c24__previa { display: grid; gap: var(--space-2); justify-items: center; position: sticky; top: 72px; }
+.c24__quadros { display: flex; flex-wrap: wrap; gap: var(--space-2); justify-content: center; align-items: flex-end; }
+.c24__fig { margin: 0; display: grid; gap: 2px; justify-items: center; width: 132px; font-size: var(--type-caption, 12px); text-align: center; }
+.c24__fig > svg { display: block; width: 100%; height: auto; }
+.c24__fig--projecao > svg { border-radius: var(--radius-md); outline: 1px dashed var(--rule-strong); outline-offset: 2px; }
+.c24__selo { display: inline-block; margin-left: 4px; padding: 0 6px; border-radius: var(--radius-pill); border: 1px solid var(--rule-strong); font-size: 0.85em; color: var(--text-secondary); }
+.c24__escolhas { display: grid; gap: var(--space-2); min-width: 0; }
+.c24__bloco { display: grid; gap: var(--space-2); border: 1px solid var(--rule); border-radius: var(--radius-md); padding: var(--space-2) var(--space-3) var(--space-3); margin: 0; min-width: 0; }
+.c24__bloco legend { padding: 0 var(--space-1); }
+.c24__medidas { display: grid; gap: 6px; margin: 0; }
+.c24__medidas > div { display: grid; grid-template-columns: minmax(7rem, 9rem) minmax(0, 1fr) minmax(4rem, 7rem); gap: var(--space-2); align-items: center; }
+.c24__medidas dt { font-weight: 600; font-size: 0.92em; }
+.c24__medidas dd { margin: 0; font-size: 0.92em; }
+.c24__barra { display: block; height: 6px; border-radius: 3px; background: var(--bg-inset, var(--veu-1)); overflow: hidden; }
+.c24__barra > span { display: block; height: 100%; background: var(--acao); }
+.c24__titulo { margin: var(--space-2) 0 0; font-size: 0.95em; }
+.c24__fatores { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.c24__fatores li { display: flex; justify-content: space-between; gap: var(--space-2); flex-wrap: wrap; padding: 4px 8px; border: 1px solid var(--rule); border-radius: var(--radius-md); font-size: 0.92em; }
+.c24__efeitos { display: inline-flex; gap: 8px; color: var(--text-secondary); }
+.c24__sobe, .c24__desce { white-space: nowrap; }
+.c24__chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.c24__grupo { display: grid; gap: 4px; padding-top: var(--space-1); border-top: 1px solid var(--rule); }
+.c24__grupo-nome { font-weight: 600; font-size: 0.92em; }
+.c24__nascenca { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); gap: 4px var(--space-3); }
+.c24__nascenca li { display: flex; justify-content: space-between; gap: var(--space-2); font-size: 0.92em; border-bottom: 1px dotted var(--rule); padding: 2px 0; }
+.c24__nascenca strong { font-weight: 600; text-align: right; }
+.c24__evolucao { margin: var(--space-2) 0 0; }
+.c24__evolucao svg { width: 100%; max-width: 320px; height: auto; display: block; border: 1px solid var(--rule); border-radius: var(--radius-sm); }
+.c24__linha-g { stroke: #c0703a; stroke-width: 2; }
+.c24__linha-m { stroke: #3d7aa8; stroke-width: 2; }
+.c24__leg-g { color: #b0632f; font-weight: 600; }
+.c24__leg-m { color: #346d97; font-weight: 600; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .c24__leg-g { color: #e39a66; }
+  :root:not([data-theme="light"]) .c24__leg-m { color: #7fb4dc; }
+}
+:root[data-theme="dark"] .c24__leg-g { color: #e39a66; }
+:root[data-theme="dark"] .c24__leg-m { color: #7fb4dc; }
+
+/* A navegação da Aparência por categorias. */
+.ap24__nav { display: flex; flex-wrap: wrap; gap: 6px; margin: var(--space-2) 0 var(--space-3); }
+.ap24__nav .filtro { min-height: var(--touch-target, 40px); }
+.ap24__painel { display: grid; gap: var(--space-4); min-width: 0; }
+.ap24__vitrine { display: grid; grid-template-columns: minmax(0, 220px) minmax(0, 1fr); gap: var(--space-4); align-items: start; }
+.ap24__vitrine-fig { position: sticky; top: 72px; display: grid; justify-items: center; gap: 4px; }
+.ap24__vitrine-fig figure { margin: 0; width: 132px; text-align: center; font-size: var(--type-caption, 12px); }
+.ap24__vitrine-fig figure > svg { display: block; width: 100%; height: auto; }
+.ap24__vitrine > div:last-child { min-width: 0; display: grid; gap: var(--space-4); }
+
+@media (max-width: 900px) {
+  .c24__corpo, .ap24__vitrine { grid-template-columns: minmax(0, 1fr); }
+  .c24__previa, .ap24__vitrine-fig { position: static; }
+}
+@media (max-width: 640px) {
+  .c24__fig { width: min(132px, 42vw); }
+  .c24__medidas > div { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .c24__medidas .c24__barra { grid-column: 1 / -1; }
+  .ap24__nav { gap: 6px 4px; }
+  .ap24__nav .filtro { padding-inline: 12px; }
+}

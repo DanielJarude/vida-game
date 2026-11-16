@@ -25,7 +25,7 @@ export function visualComPecaDoRosto(base: Visual, itemId: string): Visual {
   if (it.categoria === 'chapeu' && it.visual?.chapeu) { v.chapeu = it.visual.chapeu; v.modeloChapeu = it.id; }
   // Os brincos: o cabelo comprido cobre a orelha — na vitrine, o cabelo vai para trás (só na miniatura).
   if (it.lugar === 'orelha') { v.brincos = true; v.modeloBrincos = it.id; if (cabeloCobreOrelha(v.cabelo)) v.cabelo = 'pixie'; }
-  if (it.lugar === 'joia' && it.visual?.joia) { v.joia = it.visual.joia; if (it.id.startsWith('j20_')) v.modeloJoia = it.id; delete v.superior; }
+  if (it.lugar === 'joia' && it.visual?.joia) { v.joia = it.visual.joia; v.modeloJoia = it.id; delete v.superior; }
   return v;
 }
 

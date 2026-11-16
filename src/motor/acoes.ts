@@ -6,6 +6,7 @@
  * para mostrar o motivo de um bloqueio; o motor revalida na execução.
  */
 
+import { disponibilidade24, executar24, type Op24 } from './v24/acao/acao24';
 import { comoAchouAVaga } from './eras/base/contexto';
 import { disponibilidadePersonalizar, normalizarLocais, personalizar, type OpPersonalizar } from './sistemas/personalizacao';
 import { disponibilidadeCrianca, executarCrianca, type OqueCrianca } from './sistemas/dinheiroDaCrianca';
@@ -331,6 +332,7 @@ export type Acao =
   | { tipo: 'rosto14'; mudanca: MudancaRosto14 }
   /** VIDA 23: o corpo — a constituição, as marcas naturais da pele e os pelos (`v23/acao/acao23`). */
   | { tipo: 'corpo23'; mudanca: MudancaCorpo23 }
+  | { tipo: 'corpo24'; op: Op24 }
   | { tipo: 'piercing14'; oque: OquePiercing14 }
   /** VIDA 14: as viagens de negócios, culturais, de evento, aos lugares conhecidos e de luxo (`v14/viagens`). */
   | ({ tipo: 'viagem14' } & OquaViagem14)
@@ -870,6 +872,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'aparencia': return disponibilidadeAparencia(v, a.mudanca);
     case 'rosto14': return disponibilidadeRosto14(v, a.mudanca);
     case 'corpo23': return disponibilidadeCorpo23(v, a.mudanca);
+    case 'corpo24': return disponibilidade24(v, a.op);
     case 'piercing14': return disponibilidadePiercing14(v, a.oque);
     case 'viagem14': if (emRepouso17(v)) return bloqueio('incompativel', `${emRepouso17(v)!} Viagem longa, também não.`);
       return fronteirasFechadas(v) && !a.destino.startsWith('neg_sao_paulo') ? bloqueio('impossivel', fronteirasFechadas(v)!) : disponibilidadeViagem14(v, a);
@@ -1760,6 +1763,7 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
     case 'aparencia': return ok(mudarAparencia(v, a.mudanca), 'neutro');
     case 'rosto14': return ok(mudarRosto14(v, a.mudanca), 'neutro');
     case 'corpo23': return ok(mudarCorpo23(v, a.mudanca), 'neutro');
+    case 'corpo24': return ok(executar24(v, a.op), 'neutro');
     case 'piercing14': return ok(executarPiercing14(v, a.oque), 'bom');
     case 'viagem14': { const x = executarViagem14(v, r, a); return ok(x.texto, x.tom); }
     case 'conquistas14': { const x = executarConquistas14(v, r, a.oque); return ok(x.texto, 'bom'); }

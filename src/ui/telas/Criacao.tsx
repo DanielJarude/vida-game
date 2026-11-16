@@ -19,6 +19,7 @@ import { ATRIBUTOS, type Atributo } from '../../motor/sistemas/predisposicao';
 import { AO_NASCER, NOME_ATRIBUTO, O_QUE_E } from '../atributos';
 import { EscolhaDaEpoca, type Epoca } from '../eras/EscolhaDaEpoca';
 import { sortearMunicipio } from '../../motor/dados/lugares';
+import { CorpoDeNascenca, type EscolhaDoCorpo } from './CorpoDeNascenca';
 
 const ROTULO_CABELO: Record<string, string> = {
   raspado: 'Raspado', curto: 'Curto', curto_lado: 'Curto de lado', ondulado: 'Ondulado', crespo_curto: 'Crespo curto', cacheado: 'Cacheado',
@@ -95,6 +96,8 @@ export function Criacao({ c }: { c: ControleVida }) {
   // REWORK 9.6 · ATR-01: os atributos iniciais — ao acaso (da semente) ou escolhidos um a um, sem orçamento de pontos.
   const [modoAtributos, setModoAtributos] = useState<'acaso' | 'escolher'>('acaso');
   const [atributos, setAtributos] = useState<Record<Atributo, number> | null>(null);
+  // VIDA 24: a constituição de nascença (as predisposições do corpo): dos pais, escolhida ou ao acaso.
+  const [corpo, setCorpo] = useState<EscolhaDoCorpo>({ modo: 'heranca' });
   const opcoes = {
     nome: nome.trim() || 'Ana', sobrenome: sobrenome.trim() || 'Silva', genero, municipioId: cidade,
     classe: classe === 'sorte' ? undefined : classe,
@@ -104,12 +107,13 @@ export function Criacao({ c }: { c: ControleVida }) {
     herdarCores: heranca,
     semente,
     atributos: modoAtributos === 'escolher' && atributos ? atributos : undefined,
+    corpo24: corpo.modo === 'escolher' ? { modo: 'escolher' as const, c: corpo.c, pelos: corpo.pelos } : { modo: corpo.modo },
     ...(historica ? { ano: anoNasc, era: true } : {})
   };
   const previa = useMemo(() => {
     try { return previaDoNascimento(opcoes); } catch { return null; }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [opcoes.nome, opcoes.sobrenome, genero, cidade, classe, podeGestar, tratamento, visual, heranca, semente, modoAtributos, atributos, historica, anoNasc]);
+  }, [opcoes.nome, opcoes.sobrenome, genero, cidade, classe, podeGestar, tratamento, visual, heranca, semente, modoAtributos, atributos, historica, anoNasc, corpo]);
   const visualDoBebe = previa?.eu ?? visual;
 
   // O mundo inteiro chega depois da tela (os pacotes de países): se o sorteio inicial só pôde escolher entre os países
@@ -162,6 +166,7 @@ export function Criacao({ c }: { c: ControleVida }) {
     setPodeGestar(false);
     setModoAtributos('acaso');
     setAtributos(null);
+    setCorpo({ modo: 'heranca' });
   };
   const escolherAtributos = (m: 'acaso' | 'escolher') => {
     tocado.current = true;
@@ -283,6 +288,8 @@ export function Criacao({ c }: { c: ControleVida }) {
               </label>
             )}
           </fieldset>
+
+          <CorpoDeNascenca escolha={corpo} aoMudar={x => { tocado.current = true; setCorpo(x); }} genero={genero} previa={previa ?? undefined} visual={visualDoBebe} />
 
           <fieldset className="campo atributos-iniciais">
             <legend className="campo__rotulo">Atributos iniciais</legend>

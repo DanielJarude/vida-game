@@ -57,6 +57,8 @@ describe('a aparência', () => {
     x = executar(x, { tipo: 'comprar_item', itemId: 'bermuda_sarja' }).vida;
     x = executar(x, { tipo: 'comprar_item', itemId: 'relogio' }).vida;
     render(<Ligado v0={x} tela={(vv, agir) => <AparenciaEEstilo vida={vv} agir={agir} irPara={() => {}} />} />);
+    // VIDA 24: a Aparência é por categorias — o que se veste fica em "Roupas e estilo".
+    fireEvent.click(screen.getByRole('tab', { name: 'Roupas e estilo' }));
     const fig = document.querySelector('svg.figura')!;
     expect(fig.getAttribute('data-pecas')).toMatch(/bermuda/);
     expect(fig.querySelector('[data-acessorio="pulso"]')).toBeTruthy();

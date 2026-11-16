@@ -18,6 +18,7 @@
  *     para não se repetirem.
  */
 
+import { ALIMENTACOES24, composicaoValida, METODOS24, OBJETIVOS24, REGIOES24, REGIOES_DE_PELO24 } from './v24/corpo/corpo24';
 import { normalizarEra } from './eras/base/contexto';
 import { normalizarLocais } from './sistemas/personalizacao';
 import { sincronizarVisual } from './sistemas/estilo';
@@ -1843,6 +1844,31 @@ export function normalizarVida23(v: Vida): void {
   if (vis.corpo23 !== undefined && !corpo23Valido(vis.corpo23)) delete vis.corpo23;
   if (vis.marcas23 !== undefined) { const m = marcasValidas(vis.marcas23); if (m) vis.marcas23 = m; else delete vis.marcas23; }
   if (vis.pelos23 !== undefined) { const p = Math.round(Number(vis.pelos23)); if (p >= 1 && p <= 3) vis.pelos23 = p; else delete vis.pelos23; }
+  normalizarVida24(v);
+}
+
+/** VIDA 24: os campos novos só se conferem (nada é criado ao abrir: a composição nasce no primeiro ano jogado). */
+export function normalizarVida24(v: Vida): void {
+  const c = v.corpo, vis = v.eu?.visual;
+  if (c?.composicao24 !== undefined && !composicaoValida(c.composicao24)) delete c.composicao24;
+  if (c?.composicao24?.h && !Array.isArray(c.composicao24.h)) delete c.composicao24.h;
+  if (c?.plano24 !== undefined) {
+    const p = c.plano24;
+    if (!p || typeof p !== 'object') delete c.plano24;
+    else {
+      if (p.objetivo && !(p.objetivo in OBJETIVOS24)) delete p.objetivo;
+      if (p.regiao && !(p.regiao in REGIOES24)) delete p.regiao;
+      if (p.alimentacao && !(p.alimentacao in ALIMENTACOES24)) delete p.alimentacao;
+      if (!p.objetivo && !p.alimentacao) delete c.plano24;
+    }
+  }
+  if (c?.nasc24 !== undefined && !['heranca', 'escolher', 'acaso'].includes(c.nasc24)) delete c.nasc24;
+  if (vis?.pelos24 !== undefined) {
+    const q = vis.pelos24;
+    const regs = Array.isArray(q?.regioes) ? q.regioes.filter(x => x in REGIOES_DE_PELO24) : [];
+    if (!q || !(q.metodo in METODOS24) || !regs.length || !Number.isFinite(q.desde)) delete vis.pelos24; else q.regioes = regs;
+  }
+  if (vis?.laser24 !== undefined) { const l = Array.isArray(vis.laser24) ? vis.laser24.filter(x => x in REGIOES_DE_PELO24) : []; if (l.length) vis.laser24 = l; else delete vis.laser24; }
 }
 
 export function normalizarVida126(v: Vida): void {

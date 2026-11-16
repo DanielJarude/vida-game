@@ -330,6 +330,10 @@ export interface Visual {
   marcas23?: import('./v23/corpo/corpo23').MarcaNatural[];
   /** VIDA 23: os pelos do corpo, de 1 (poucos) a 3 (muitos). Ausente: quase nenhum (o desenho de antes). */
   pelos23?: number;
+  /** VIDA 24: como a pessoa cuida dos pelos (aparar, lâmina, cera, laser) e onde. Ausente: natural. */
+  pelos24?: import('./v24/corpo/corpo24').CuidadoDosPelos24;
+  /** VIDA 24: as regiões em que o laser já terminou (quase nada volta). */
+  laser24?: import('./v24/corpo/corpo24').RegiaoDePelo24[];
 }
 
 /**
@@ -720,6 +724,13 @@ export interface Corpo {
   podeGestar: boolean;
   /** REWORK 10 · SAVE-01: a estatura adulta (cm), guardada quando fica estabelecida (`modalidades.fixarEstatura`). Opcional. */
   estaturaAdulta?: number;
+  /** VIDA 24: a composição do corpo agora (gordura, músculo, regiões treinadas) — anda um pouco por ano. Ausente: a da
+   *  condição de antes (`silhueta`), até o primeiro ano depois da atualização. */
+  composicao24?: import('./v24/corpo/corpo24').Composicao24;
+  /** VIDA 24: o objetivo físico e a alimentação escolhidos (direcionam a evolução; nada muda de uma vez). */
+  plano24?: import('./v24/corpo/corpo24').Plano24;
+  /** VIDA 24: a constituição de nascença foi escolhida/herdada no nascimento (e a altura adulta a segue). */
+  nasc24?: import('./v24/corpo/corpo24').ModoDoCorpo24;
 }
 
 export interface Mente {

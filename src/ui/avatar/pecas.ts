@@ -51,10 +51,12 @@ export type Peca =
   | { parte: 'inteira'; forma: 'vestido' | 'macacao' | 'terno'; comprimento: 'curto' | 'joelho' | 'midi' | 'longo' | 'calca'; cor: Cor; cor2?: string; estampa?: Estampa; manga: Manga; gola: Gola; cinto?: string; modelo?: ModeloDeVestido; fenda?: boolean; /** VIDA 22 (terno): o paletó trespassado, a lapela de bico, o lenço no bolso, o colete. */ trespassado?: boolean; lapelaBico?: boolean; lenco?: string; colete?: boolean } & Acabamento
   | { parte: 'casaco'; forma: 'jaqueta' | 'blazer' | 'sobretudo' | 'corta_vento' | 'casaco' | 'jaqueta_jeans'; comprimento: 'cintura' | 'quadril' | 'joelho'; cor: Cor; cor2?: string; ziper?: boolean; lapela?: boolean; gola?: 'alta' | 'pelo' | 'camisa'; /** VIDA 22: as faixas de corrida, a ribana (gola e barra da bomber), o bolso de manga, a lapela de bico. */ faixas?: boolean; ribana?: boolean; bolsoManga?: boolean; lapelaBico?: boolean; /** ERAS v2: a ombreira (o ombro quadrado dos anos 1980). */ ombreira?: boolean } & ModelagemCasaco & Acabamento
   | { parte: 'pes'; forma: 'tenis' | 'tenis_corrida' | 'tenis_cano' | 'tenis_lona' | 'sapato' | 'coturno' | 'chinelo' | 'botina' | 'salto' | 'sandalia' | 'sapatilha' | 'mocassim'; cor: Cor; sola: string; detalhe?: string }
-  | { parte: 'pulso'; forma: 'analogico' | 'digital' | 'smart'; pulseira: string; caixa: string; mostrador: string }
-  | { parte: 'pulseira'; cor: string; grossa?: boolean; contas?: string[] }
-  | { parte: 'anel'; cor: string; pedra?: string }
-  | { parte: 'pescoco'; cor: string; grossa?: boolean; contas?: string[]; pingente?: string; cruz?: boolean }
+  // VIDA 24: a construção de cada relógio (a caixa, o tamanho, a pulseira, a luneta, os submostradores, os botões), de
+  // cada pulseira, anel e corrente de antes — antes, nove relógios eram o mesmo desenho em cores diferentes.
+  | { parte: 'pulso'; forma: 'analogico' | 'digital' | 'smart'; pulseira: string; caixa: string; mostrador: string; caixaForma?: 'redonda' | 'quadrada' | 'tonel'; raio?: number; correia?: 'couro' | 'metal' | 'borracha' | 'malha'; luneta?: string; sub?: number; botoes?: boolean; indices?: boolean }
+  | { parte: 'pulseira'; cor: string; grossa?: boolean; contas?: string[]; tipo?: 'couro_trancado' | 'elos_finos' | 'grumet' }
+  | { parte: 'anel'; cor: string; pedra?: string; tipo?: 'largo_polido' | 'largo_escovado' | 'cabochao' | 'solitario' }
+  | { parte: 'pescoco'; cor: string; grossa?: boolean; contas?: string[]; pingente?: string; cruz?: boolean; tipo?: 'fina' | 'grossa' | 'gargantilha' | 'guias' | 'perolas' | 'diamantes' | 'medalha' }
   /** VIDA 17: a bolsa (cruzada no peito, na mão, nas costas, na cintura). */
   | { parte: 'bolsa'; forma: 'transversal' | 'tote' | 'mochila' | 'pochete' | 'clutch'; cor: string; alca?: string; ferragem?: string };
 
@@ -147,33 +149,33 @@ export const PECAS: Record<string, Peca | Conjunto> = {
   mocassim: { parte: 'pes', forma: 'mocassim', cor: ['#6b4428', '#2b2f36'], sola: '#2a1d14' },
 
   // ------------------------------------------------------------ pulso, mãos, pescoço
-  relogio: { parte: 'pulso', forma: 'analogico', pulseira: '#5a3d2b', caixa: '#c9ccd1', mostrador: '#f4f1ea' },
+  relogio: { parte: 'pulso', forma: 'analogico', pulseira: '#5a3d2b', caixa: '#c9ccd1', mostrador: '#f4f1ea', caixaForma: 'redonda', raio: 2.5, correia: 'couro' },
   // VIDA 17: os relógios, as joias e as bolsas novas.
-  relogio_mergulho: { parte: 'pulso', forma: 'analogico', pulseira: '#b9bec5', caixa: '#2d5fa8', mostrador: '#14213d' },
-  relogio_couro_classico: { parte: 'pulso', forma: 'analogico', pulseira: '#6b3f22', caixa: '#d8b45a', mostrador: '#f3ead2' },
-  relogio_digital_retro: { parte: 'pulso', forma: 'digital', pulseira: '#c9a14a', caixa: '#d8b45a', mostrador: '#9fb58a' },
+  relogio_mergulho: { parte: 'pulso', forma: 'analogico', pulseira: '#b9bec5', caixa: '#c9ccd1', mostrador: '#14213d', caixaForma: 'redonda', raio: 3.1, correia: 'metal', luneta: '#2d5fa8', indices: true },
+  relogio_couro_classico: { parte: 'pulso', forma: 'analogico', pulseira: '#6b3f22', caixa: '#d8b45a', mostrador: '#f3ead2', caixaForma: 'redonda', raio: 2.1, correia: 'couro', indices: true },
+  relogio_digital_retro: { parte: 'pulso', forma: 'digital', pulseira: '#c9a14a', caixa: '#d8b45a', mostrador: '#9fb58a', correia: 'metal', botoes: true },
   corrente_cruz: { parte: 'pescoco', cor: '#c9ccd1', grossa: true, pingente: '#c9ccd1', cruz: true },
-  colar_perolas: { parte: 'pescoco', cor: '#f1ece0', contas: ['#f4efe4', '#f4efe4', '#f4efe4', '#f4efe4', '#f4efe4', '#f4efe4', '#f4efe4'] },
-  anel_grafite: { parte: 'anel', cor: '#7d838a' },
+  colar_perolas: { parte: 'pescoco', cor: '#f1ece0', contas: ['#f4efe4'], tipo: 'perolas' },
+  anel_grafite: { parte: 'anel', cor: '#7d838a', tipo: 'largo_escovado' },
   bolsa_transversal: { parte: 'bolsa', forma: 'transversal', cor: '#2b2f36', alca: '#1b1b1d', ferragem: '#c9ccd1' },
   bolsa_tote: { parte: 'bolsa', forma: 'tote', cor: '#c9a46a', alca: '#6b4a2a' },
   mochila: { parte: 'bolsa', forma: 'mochila', cor: '#2f4f7a', alca: '#1f2f4a' },
   pochete: { parte: 'bolsa', forma: 'pochete', cor: '#1b1b1d', alca: '#3b3f45', ferragem: '#e0b43c' },
   clutch: { parte: 'bolsa', forma: 'clutch', cor: '#7b1e2b', ferragem: '#d8b45a' },
   bolsa_grife: { parte: 'bolsa', forma: 'transversal', cor: '#5a2a1e', alca: '#d8b45a', ferragem: '#d8b45a' },
-  relogio_luxo: { parte: 'pulso', forma: 'analogico', pulseira: '#c9a14a', caixa: '#d8b45a', mostrador: '#1a2a44' },
-  relogio_digital: { parte: 'pulso', forma: 'digital', pulseira: '#1b1b1d', caixa: '#2a2a2e', mostrador: '#9fb3a0' },
+  relogio_luxo: { parte: 'pulso', forma: 'analogico', pulseira: '#c9a14a', caixa: '#d8b45a', mostrador: '#1a2a44', caixaForma: 'redonda', raio: 2.8, correia: 'metal', indices: true },
+  relogio_digital: { parte: 'pulso', forma: 'digital', pulseira: '#1b1b1d', caixa: '#2a2a2e', mostrador: '#9fb3a0', correia: 'borracha' },
   smartwatch: { parte: 'pulso', forma: 'smart', pulseira: '#3a3f45', caixa: '#1b1b1d', mostrador: '#0d1520' },
-  pulseira_couro: { parte: 'pulseira', cor: '#5a3d2b' },
-  pulseira_prata: { parte: 'pulseira', cor: '#c9ccd1' },
-  pulseira_ouro: { parte: 'pulseira', cor: '#d8b45a', grossa: true },
+  pulseira_couro: { parte: 'pulseira', cor: '#5a3d2b', tipo: 'couro_trancado' },
+  pulseira_prata: { parte: 'pulseira', cor: '#c9ccd1', tipo: 'elos_finos' },
+  pulseira_ouro: { parte: 'pulseira', cor: '#d8b45a', grossa: true, tipo: 'grumet' },
   pulseira_contas: { parte: 'pulseira', cor: '#7a4a2a', contas: ['#c84b31', '#f2c200', '#2f5a3c', '#f4f1ea'] },
-  anel_prata: { parte: 'anel', cor: '#c9ccd1' },
-  anel_ouro: { parte: 'anel', cor: '#d8b45a', pedra: '#b8323c' },
-  joia: { parte: 'pescoco', cor: '#c9a14a', pingente: '#c9a14a' },
-  corrente_prata: { parte: 'pescoco', cor: '#c9ccd1' },
-  corrente_grossa: { parte: 'pescoco', cor: '#d8b45a', grossa: true },
-  guias: { parte: 'pescoco', cor: '#f4f1ea', contas: ['#f4f1ea', '#c8102e', '#1d4fa3', '#f2c200'] },
+  anel_prata: { parte: 'anel', cor: '#c9ccd1', tipo: 'largo_polido' },
+  anel_ouro: { parte: 'anel', cor: '#d8b45a', pedra: '#b8323c', tipo: 'cabochao' },
+  joia: { parte: 'pescoco', cor: '#c9a14a', pingente: '#c9a14a', tipo: 'medalha' },
+  corrente_prata: { parte: 'pescoco', cor: '#c9ccd1', tipo: 'fina' },
+  corrente_grossa: { parte: 'pescoco', cor: '#d8b45a', grossa: true, tipo: 'grossa' },
+  guias: { parte: 'pescoco', cor: '#f4f1ea', contas: ['#f4f1ea', '#c8102e', '#1d4fa3', '#f2c200'], tipo: 'guias' },
 
   // ------------------------------------------------------------ 12.7 · esporte, grife, alta-costura e alta joalheria
   top_esportivo: { parte: 'cima', forma: 'regata', cor: ['#1b1b1d', '#5a4a6b', '#2b5d8a', '#c84b31'], manga: 'sem', gola: 'redonda', folga: 0.94, alcas: 'nadador', comprimentoCima: 'curto', tecido: 'tecnico' },
@@ -191,10 +193,10 @@ export const PECAS: Record<string, Peca | Conjunto> = {
   sapato_bespoke: { parte: 'pes', forma: 'sapato', cor: ['#5a2f1c', '#2a1a14'], sola: '#141010', detalhe: '#c9a14a' },
   salto_grife: { parte: 'pes', forma: 'salto', cor: ['#1b1b1d', '#c9a46a', '#f2ece2'], sola: '#c8102e' },
   tenis_colab_raro: { parte: 'pes', forma: 'tenis_cano', cor: '#f2ece2', sola: '#e0c36a', detalhe: '#3a6fd1' },
-  relogio_ouro: { parte: 'pulso', forma: 'analogico', pulseira: '#d8b45a', caixa: '#e4c56a', mostrador: '#f4ecd8' },
-  relogio_complicacao: { parte: 'pulso', forma: 'analogico', pulseira: '#2a1a14', caixa: '#e5e4e2', mostrador: '#0f1a30' },
-  colar_diamantes: { parte: 'pescoco', cor: '#e5e4e2', grossa: true, pingente: '#dff3ff' },
-  anel_diamante: { parte: 'anel', cor: '#e5e4e2', pedra: '#dff3ff' },
+  relogio_ouro: { parte: 'pulso', forma: 'analogico', pulseira: '#d8b45a', caixa: '#e4c56a', mostrador: '#f4ecd8', caixaForma: 'quadrada', raio: 2.4, correia: 'metal', indices: true },
+  relogio_complicacao: { parte: 'pulso', forma: 'analogico', pulseira: '#2a1a14', caixa: '#e5e4e2', mostrador: '#0f1a30', caixaForma: 'redonda', raio: 3, correia: 'couro', sub: 3 },
+  colar_diamantes: { parte: 'pescoco', cor: '#e5e4e2', grossa: true, pingente: '#dff3ff', tipo: 'diamantes' },
+  anel_diamante: { parte: 'anel', cor: '#e5e4e2', pedra: '#dff3ff', tipo: 'solitario' },
 
   // ------------------------------------------------------------ os conjuntos de antes (cima + baixo)
   roupa_basica_boa: { cima: { parte: 'cima', forma: 'camiseta', cor: NEUTRAS, manga: 'curta', gola: 'redonda' }, baixo: { parte: 'baixo', forma: 'calca', corte: 'reta', cor: JEANS, bolsos: true, costura: '#c99a4a' }, pes: { parte: 'pes', forma: 'tenis', cor: '#f4f4f2', sola: '#f4f4f2' } },

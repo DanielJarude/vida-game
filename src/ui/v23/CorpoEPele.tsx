@@ -1,11 +1,10 @@
 /**
- * VIDA 23 — Você · Aparência · "Corpo e pele": as PROPORÇÕES (as formas de partida e os doze eixos, agrupados pela parte
- * do corpo), as MARCAS DA PELE (pintas, sardas, marca de nascença, mancha, cicatriz, estrias, covinhas — o tipo, o lugar,
- * o lado, o tamanho, a posição, o ângulo, a intensidade, quantas) e os PELOS do corpo.
+ * VIDA 23/24 — Você · Aparência · PELE E MARCAS: as marcas naturais (pintas, sardas, marca de nascença, mancha, cicatriz,
+ * estrias, covinhas — o tipo, o lugar, o lado, o tamanho, a posição, o ângulo, a intensidade, quantas).
  *
- * A prévia é imediata e lado a lado, NA MESMA ESCALA (`avatar/referencia`): como você está e como ficaria. "Só a pele"
- * mostra o corpo sem a roupa de cima (como o estúdio de tatuagem), e a marca escolhida aparece também de perto (a lupa
- * da região). Nada muda até confirmar (a ação `corpo23`). A altura do jogador não se escolhe aqui: é a de verdade.
+ * VIDA 24: as proporções saíram daqui (são de nascença: consulta em Aparência · Corpo · De nascença) e os pelos ganharam
+ * o painel próprio (Aparência · Pelos, com os cuidados). A prévia é lado a lado, NA MESMA ESCALA (`avatar/referencia`):
+ * como você está e como ficaria; a marca escolhida aparece também de perto. Nada muda até confirmar (a ação `corpo23`).
  */
 import { useMemo, useState } from 'react';
 import type { Vida } from '../../motor/tipos';
@@ -13,19 +12,14 @@ import type { Acao } from '../../motor/acoes';
 import { idade } from '../../motor/nucleo';
 import { AUTONOMIA, faseDeAutonomia } from '../../motor/sistemas/autonomia';
 import { corpoDaFigura } from '../../motor/sistemas/silhueta';
-import { estaturaAdulta, estaturaEmPalavras } from '../../motor/sistemas/modalidades';
 import { REGIOES, type RegiaoDeTatuagem } from '../../motor/dados/tatuagens';
-import {
-  descreverCorpo23, descreverMarca, EIXOS23, EIXOS_DO_CORPO, formaDe, FORMAS23, gravarCorpo23, GRUPOS23, lerCorpo23, MARCAS23, marcaValida, MAXIMO_DE_MARCAS,
-  NEUTRA23, PELOS23, regiaoTemLado, TIPOS_DE_MARCA, type Constituicao, type EixoDoCorpo, type MarcaNatural, type TipoDeMarca
-} from '../../motor/v23/corpo/corpo23';
+import { descreverMarca, MARCAS23, marcaValida, MAXIMO_DE_MARCAS, regiaoTemLado, TIPOS_DE_MARCA, type MarcaNatural, type TipoDeMarca } from '../../motor/v23/corpo/corpo23';
 import { Figura, focoDaRegiao } from '../avatar/Figura';
 import { LARGURA_DE_REFERENCIA } from '../avatar/referencia';
 import { BotaoAcao, Escolha } from '../comum';
 import { tatuagensNaFigura } from '../../motor/sistemas/tatuagens';
 import './corpo23.css';
 
-const NEUTRA_GRAVADA = '222222222222';
 const nomeDaRegiao = (r: RegiaoDeTatuagem) => REGIOES[r].nome;
 const GRUPO_DA_REGIAO: Record<string, string> = { cabeca: 'Rosto e pescoço', tronco: 'Tronco', bracos: 'Braços e mãos', pernas: 'Pernas e pés' };
 const igual = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
@@ -43,33 +37,27 @@ function marcaNova(t: TipoDeMarca, base?: MarcaNatural): MarcaNatural {
   return marcaValida(m)!;
 }
 
-export function CorpoEPele({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
+export function PeleEMarcas({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
   const i = idade(vida);
   const vis = vida.eu.visual;
-  const [c, setC] = useState<Constituicao>(() => lerCorpo23(vis.corpo23));
   const [marcas, setMarcas] = useState<MarcaNatural[]>(() => vis.marcas23 ?? []);
-  const [pelos, setPelos] = useState<number>(vis.pelos23 ?? 0);
-  const [aba, setAba] = useState<'proporcoes' | 'marcas' | 'pelos'>('proporcoes');
   const [sel, setSel] = useState<number | null>(null);
   const [vista, setVista] = useState<'frente' | 'costas'>('frente');
   const [pele, setPele] = useState<'vestido' | 'pele'>('vestido');
   const decide = i >= AUTONOMIA.aparencia.idade;
 
-  // A mudança: só o que difere do que já é (a constituição na base vira o marcador da VIDA 23 — a altura de verdade).
-  const corpoNovo = gravarCorpo23(c) ?? NEUTRA_GRAVADA;
+  // A mudança: só as marcas (o resto do corpo não se edita aqui).
   const mudanca = useMemo(() => {
-    const m: { corpo23?: string | null; marcas23?: MarcaNatural[] | null; pelos23?: number | null } = {};
-    if (vis.corpo23 === undefined ? corpoNovo !== NEUTRA_GRAVADA : corpoNovo !== (gravarCorpo23(lerCorpo23(vis.corpo23)) ?? NEUTRA_GRAVADA)) m.corpo23 = corpoNovo;
+    const m: { marcas23?: MarcaNatural[] | null } = {};
     if (!igual(marcas.length ? marcas : undefined, vis.marcas23)) m.marcas23 = marcas.length ? marcas : null;
-    if ((vis.pelos23 ?? 0) !== pelos) m.pelos23 = pelos || null;
     return m;
-  }, [c, corpoNovo, marcas, pelos, vis.corpo23, vis.marcas23, vis.pelos23]);
+  }, [marcas, vis.marcas23]);
   const mudou = Object.keys(mudanca).length > 0;
   if (i < 3 || faseDeAutonomia(i) === 'familia_decide') return null;
 
-  const previa = { ...vis, corpo23: corpoNovo, marcas23: marcas.length ? marcas : undefined, pelos23: pelos || undefined };
-  const corpoPrevia = corpoDaFigura({ ...vida, eu: { ...vida.eu, visual: previa } } as Vida);
+  const previa = { ...vis, marcas23: marcas.length ? marcas : undefined };
   const corpoAgora = corpoDaFigura(vida);
+  const corpoPrevia = corpoAgora;
   const soPele = pele === 'pele';
   // "Só a pele": o tronco à mostra como no estúdio (quem não é homem, de top e short — a pele dos braços, da barriga e das pernas à vista).
   const masc = vida.eu.genero === 'masculino';
@@ -81,14 +69,11 @@ export function CorpoEPele({ vida, agir }: { vida: Vida; agir: (a: Acao) => bool
   );
   const marcaSel = sel !== null ? marcas[sel] : undefined;
   const mudarMarca = (k: number, p: Partial<MarcaNatural>) => setMarcas(ms => ms.map((m, j) => (j === k ? marcaValida({ ...m, ...p }) ?? m : m)));
-  const forma = formaDe(c);
-  const cm = estaturaAdulta(vida);
-  const descr = descreverCorpo23(c);
 
   return (
     <section className="c23" aria-labelledby="c23-titulo">
-      <h3 id="c23-titulo" className="subtitulo">Corpo e pele</h3>
-      <p className="nota">As proporções do seu corpo, as marcas da pele e os pelos. A condição — academia, esporte, hábitos, idade — continua mudando o corpo por cima disto. A prévia muda na hora; nada muda até confirmar.</p>
+      <h3 id="c23-titulo" className="subtitulo">Pele e marcas</h3>
+      <p className="nota">Pintas, sardas, marcas de nascença, cicatrizes, estrias, covinhas — o que faz a pele ser a sua. A prévia muda na hora; nada muda até confirmar.</p>
       <div className="c23__corpo">
         <div className="c23__previa">
           <div className="c23__quadros">
@@ -104,47 +89,11 @@ export function CorpoEPele({ vida, agir }: { vida: Vida; agir: (a: Acao) => bool
           </div>
           <Escolha rotulo="Ângulo do corpo" valor={vista} aoMudar={setVista} opcoes={[{ id: 'frente', rotulo: 'De frente' }, { id: 'costas', rotulo: 'De costas' }]} />
           <Escolha rotulo="Com ou sem roupa" valor={pele} aoMudar={setPele} opcoes={[{ id: 'vestido', rotulo: 'Com a roupa' }, { id: 'pele', rotulo: 'Só a pele' }]} />
-          <span className="nota">{descr === 'proporções médias' ? 'Proporções médias' : descr}</span>
-          {!vis.corpo23 && 'corpo23' in mudanca && <span className="nota" data-c23="altura">Ao confirmar, a figura passa a ter a sua altura de verdade ({estaturaEmPalavras(cm)}) — por isso "como ficaria" pode sair mais alto ou mais baixo.</span>}
         </div>
 
         <div className="c23__escolhas">
-          {!decide && <p className="nota">Com essa idade, o corpo ainda está se formando — mexer nisso é a partir dos {AUTONOMIA.aparencia.idade}.</p>}
-          <Escolha rotulo="O que ajustar" valor={aba} aoMudar={x => { setAba(x); setSel(null); }} opcoes={[{ id: 'proporcoes', rotulo: 'Proporções' }, { id: 'marcas', rotulo: `Marcas da pele${marcas.length ? ` (${marcas.length})` : ''}` }, { id: 'pelos', rotulo: 'Pelos' }]} />
-
-          {aba === 'proporcoes' && (
-            <fieldset className="c23__grupo" disabled={!decide}>
-              <legend className="campo__rotulo">Forma de partida</legend>
-              <div className="c23__formas" role="group" aria-label="Formas de partida">
-                {FORMAS23.map(f => (
-                  <button key={f.id} type="button" className={`filtro${forma === f.id ? ' filtro--ativo' : ''}`} aria-pressed={forma === f.id} title={f.nota}
-                    onClick={() => setC({ ...NEUTRA23, ...f.c })}>{f.nome}</button>
-                ))}
-              </div>
-              <span className="campo__nota">{FORMAS23.find(f => f.id === forma)?.nota ?? 'Combinação sua — ajuste cada parte abaixo.'}</span>
-              {GRUPOS23.map(gr => (
-                <div key={gr.id} className="c23__eixos" role="group" aria-label={gr.nome}>
-                  <span className="c23__grupo-nome">{gr.nome}</span>
-                  {EIXOS_DO_CORPO.filter(e => EIXOS23[e].grupo === gr.id).map(e => e === 'estatura' ? (
-                    <div key={e} className="c23__eixo" data-eixo={e}>
-                      <span className="c23__eixo-nome">Altura</span>
-                      <span className="c23__eixo-valor">{i >= 17 ? estaturaEmPalavras(cm) : `deve chegar a ${estaturaEmPalavras(cm)}`}</span>
-                      <span className="campo__nota c23__eixo-nota">A sua altura de verdade (a mesma que o esporte mede): a figura a usa.</span>
-                    </div>
-                  ) : (
-                    <label key={e} className="c23__eixo" data-eixo={e}>
-                      <span className="c23__eixo-nome">{EIXOS23[e].nome}</span>
-                      <input type="range" min={-2} max={2} step={1} value={c[e]} aria-valuetext={EIXOS23[e].niveis[c[e] + 2]}
-                        onChange={ev => setC(o => ({ ...o, [e as EixoDoCorpo]: Number(ev.target.value) }))} />
-                      <span className="c23__eixo-valor">{EIXOS23[e].niveis[c[e] + 2]}</span>
-                    </label>
-                  ))}
-                </div>
-              ))}
-            </fieldset>
-          )}
-
-          {aba === 'marcas' && (
+          {!decide && <p className="nota">Com essa idade, quem decide é a família — mexer nisso é a partir dos {AUTONOMIA.aparencia.idade}.</p>}
+          {(
             <fieldset className="c23__grupo" disabled={!decide}>
               <legend className="campo__rotulo">Marcas da pele</legend>
               {marcas.length === 0 && <p className="nota">Nenhuma marca. Muita gente é assim — e muita gente tem uma pinta, sardas, uma cicatriz de criança.</p>}
@@ -169,18 +118,10 @@ export function CorpoEPele({ vida, agir }: { vida: Vida; agir: (a: Acao) => bool
             </fieldset>
           )}
 
-          {aba === 'pelos' && (
-            <fieldset className="c23__grupo" disabled={!decide}>
-              <legend className="campo__rotulo">Pelos do corpo</legend>
-              <Escolha rotulo="Pelos do corpo" valor={String(pelos)} aoMudar={x => setPelos(Number(x))} opcoes={PELOS23.map((n, k) => ({ id: String(k), rotulo: n.charAt(0).toUpperCase() + n.slice(1) }))} />
-              <span className="campo__nota">Nos antebraços, nas pernas e, com mais pelos, no peito — onde a pele está à vista (a partir da adolescência).</span>
-            </fieldset>
-          )}
-
           {mudou && decide && (
             <div className="grupo-acoes grupo-acoes--linha">
               <BotaoAcao vida={vida} acao={{ tipo: 'corpo23', mudanca }} agir={agir} variante="principal" aoAgir={() => setSel(null)}>Confirmar</BotaoAcao>
-              <button type="button" className="botao botao--discreto" onClick={() => { setC(lerCorpo23(vis.corpo23)); setMarcas(vis.marcas23 ?? []); setPelos(vis.pelos23 ?? 0); setSel(null); }}>Deixar como está</button>
+              <button type="button" className="botao botao--discreto" onClick={() => { setMarcas(vis.marcas23 ?? []); setSel(null); }}>Deixar como está</button>
             </div>
           )}
         </div>

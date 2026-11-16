@@ -29,9 +29,13 @@ function Ponto({ x, y, r, p }: { x: number; y: number; r: number; p: Piercing })
   // VIDA 23: o acabamento do metal (o ouro polido, a prata espelhada, o aço escovado, o titânio fosco) — não só a cor.
   const a = acabamento(p.metal);
   const fosco = p.acabamento === 'fosco' || a.tipo === 'fosco';
+  // VIDA 24: a pedra em garras — maior, com as quatro pontas de metal em volta.
+  const garra = p.cravacao === 'garra' && !!p.pedra;
+  const rp = r * (garra ? 1.4 : 1.15);
   return (
-    <g data-acabamento={fosco ? 'fosco' : a.tipo}>
-      {p.pedra ? <circle cx={x} cy={y} r={r * 1.15} fill={p.pedra} stroke={a.borda} strokeWidth={0.25} /> : <circle cx={x} cy={y} r={r} fill={a.base} stroke={a.borda} strokeWidth={0.25} />}
+    <g data-acabamento={fosco ? 'fosco' : a.tipo} data-cravacao={garra ? 'garra' : undefined}>
+      {garra && [45, 135, 225, 315].map(g => <circle key={g} cx={x + Math.cos(g * Math.PI / 180) * rp * 0.95} cy={y + Math.sin(g * Math.PI / 180) * rp * 0.95} r={rp * 0.24} fill={a.base} stroke={a.borda} strokeWidth={0.1} />)}
+      {p.pedra ? <circle cx={x} cy={y} r={rp} fill={p.pedra} stroke={a.borda} strokeWidth={0.25} /> : <circle cx={x} cy={y} r={r} fill={a.base} stroke={a.borda} strokeWidth={0.25} />}
       {p.metal === 'titanio_arco' && !p.pedra && <path d={`M ${x - r * 0.8} ${y + r * 0.3} A ${r} ${r} 0 0 0 ${x + r * 0.8} ${y + r * 0.3}`} fill="none" stroke={ARCO_IRIS} strokeWidth={r * 0.45} />}
       {!fosco && <circle cx={x - r * 0.35} cy={y - r * 0.35} r={r * (a.tipo === 'escovado' ? 0.22 : 0.35)} fill={p.pedra ? '#ffffff' : a.brilho} opacity={a.tipo === 'acetinado' ? 0.55 : 0.9} />}
     </g>
@@ -43,7 +47,8 @@ const Aro = ({ x, y, r, p, abre = 'cima', grosso }: { x: number; y: number; r: n
   const d = abre === 'cima' ? `M ${x - r * 0.75} ${y - r * 0.65} A ${r} ${r} 0 1 0 ${x + r * 0.75} ${y - r * 0.65}`
     : abre === 'esq' ? `M ${x - r * 0.65} ${y - r * 0.75} A ${r} ${r} 0 1 1 ${x - r * 0.65} ${y + r * 0.75}`
       : `M ${x + r * 0.65} ${y - r * 0.75} A ${r} ${r} 0 1 0 ${x + r * 0.65} ${y + r * 0.75}`;
-  const k = grosso ? 1.6 : 1;
+  // VIDA 24: o calibre (a argola delicada é mais fina; a grossa, bem mais).
+  const k = grosso || p.calibre === 'grosso' ? 1.7 : p.calibre === 'fino' ? 0.65 : 1;
   // A frente do aro (do lado oposto à abertura): a fileira de pedras do clicker, a pedra da argola.
   const frente: [number, number][] = abre === 'cima' ? [-0.55, -0.2, 0.2, 0.55].map(a => [x + Math.sin(a) * r, y + Math.cos(a) * r])
     : abre === 'esq' ? [-0.55, -0.2, 0.2, 0.55].map(a => [x + Math.cos(a) * r, y + Math.sin(a) * r])
@@ -136,7 +141,7 @@ export function PiercingsDoRosto({ ids, g }: { ids?: string[]; g: GeometriaDoRos
         case 'nariz': case 'nariz2': {
           const lado = p.regiao === 'nariz' ? 1 : -1;
           const x = cx + lado * 2.1, y = olhoY + 7.6;
-          if (p.forma === 'argola' || p.forma === 'clicker') return <Aro x={x + lado * 0.3} y={y + 0.6} r={1.1} p={p} abre={lado === 1 ? 'esq' : 'dir'} grosso={p.forma === 'clicker'} />;
+          if (p.forma === 'argola' || p.forma === 'clicker') return <Aro x={x + lado * 0.3} y={y + 0.6} r={p.calibre === 'fino' ? 0.95 : 1.1} p={p} abre={lado === 1 ? 'esq' : 'dir'} grosso={p.forma === 'clicker'} />;
           if (p.forma === 'cluster') return <Flor x={x} y={y} r={0.75} p={p} />;
           return <Ponto x={x} y={y} r={0.55} p={p} />;
         }
@@ -144,7 +149,7 @@ export function PiercingsDoRosto({ ids, g }: { ids?: string[]; g: GeometriaDoRos
           const [c, s] = cores(p);
           const y = olhoY + 9.1;
           const d = p.forma === 'ferradura' ? `M ${cx - 1.3} ${y - 0.2} Q ${cx} ${y + 2.1} ${cx + 1.3} ${y - 0.2}` : `M ${cx - 1.15} ${y - 0.4} A 1.3 1.3 0 1 0 ${cx + 1.15} ${y - 0.4}`;
-          const k = p.forma === 'clicker' ? 1.5 : 1;
+          const k = p.forma === 'clicker' ? 1.5 : p.calibre === 'grosso' ? 1.7 : p.calibre === 'fino' ? 0.65 : 1;
           return (
             <>
               <path d={d} fill="none" stroke={s} strokeWidth={0.8 * k} strokeLinecap="round" /><path d={d} fill="none" stroke={c} strokeWidth={0.48 * k} strokeLinecap="round" />
@@ -160,6 +165,9 @@ export function PiercingsDoRosto({ ids, g }: { ids?: string[]; g: GeometriaDoRos
         case 'sobrancelha': {
           const x = cx + esp + 3.1, y = olhoY - 5.1;
           if (p.forma === 'argola' || p.forma === 'clicker') return <Aro x={x + 0.4} y={y} r={1.0} p={p} abre="esq" />;
+          // VIDA 24: a ferradura (o arco aberto com uma bolinha em cada ponta) e a barra com o coração em cima.
+          if (p.forma === 'ferradura') { const [c, sc] = cores(p); const d = `M ${x - 0.1} ${y - 1.1} Q ${x + 1.9} ${y} ${x - 0.1} ${y + 1.1}`; return <g data-forma="ferradura"><path d={d} fill="none" stroke={sc} strokeWidth={0.62} strokeLinecap="round" /><path d={d} fill="none" stroke={c} strokeWidth={0.36} strokeLinecap="round" /><Ponto x={x - 0.15} y={y - 1.15} r={0.36} p={{ ...p, pedra: undefined }} /><Ponto x={x - 0.15} y={y + 1.15} r={0.36} p={{ ...p, pedra: undefined }} /></g>; }
+          if (p.simbolo === 'coracao') return <><Simbolo x={x} y={y - 1.1} r={0.6} p={p} /><Ponto x={x + 0.5} y={y + 1.0} r={0.42} p={{ ...p, pedra: undefined }} /></>;
           if (p.simbolo === 'espetos') return <><Espeto x={x} y={y - 1.0} r={0.4} p={p} ang={-20} /><Espeto x={x + 0.5} y={y + 1.0} r={0.4} p={p} ang={160} /></>;
           return <><Ponto x={x} y={y - 1.0} r={0.45} p={p} /><Ponto x={x + 0.5} y={y + 1.0} r={0.45} p={{ ...p, pedra: undefined }} /></>;
         }
@@ -230,7 +238,7 @@ export function PiercingDoUmbigo({ ids, x, y }: { ids?: string[]; x: number; y: 
           : p.simbolo === 'lua'
             ? <><path d={`M ${x} ${y + 0.6} V ${y + 1.6}`} stroke={c} strokeWidth={0.35} /><Simbolo x={x} y={y + 2.5} r={0.9} p={p} /></>
             : <><path d={`M ${x} ${y + 0.6} V ${y + 2.2}`} stroke={c} strokeWidth={0.35} /><circle cx={x} cy={y + 2.8} r={0.8} fill={p.pedra ?? c} /></>
-        : <circle cx={x} cy={y + 1.1} r={0.75} fill={p.pedra ?? c} />}
+        : p.cravacao === 'garra' ? <Ponto x={x} y={y + 1.2} r={0.62} p={p} /> : <circle cx={x} cy={y + 1.1} r={0.75} fill={p.pedra ?? c} />}
     </g>
   );
 }
