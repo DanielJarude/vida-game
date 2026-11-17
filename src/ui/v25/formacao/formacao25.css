@@ -1,0 +1,21 @@
+/* VIDA 25 · a formação do atleta. */
+.form25 { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; padding: var(--space-3); border-radius: var(--radius-md); background: var(--superficie); box-shadow: 0 0 0 1px var(--fio), var(--shadow-sm); }
+.form25__titulo { margin: 0; font-family: var(--font-display); font-size: var(--type-subheading); }
+.form25__inicio, .form25__pro, .form25__avaliacao { margin: 0; }
+.form25__vazio { margin: 0; }
+.form25__caminho { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; list-style: none; margin: 0; padding: 0; }
+.form25__degrau { font-size: var(--type-caption); padding: 3px 10px; border-radius: var(--radius-pill); border: 1px solid var(--fio-forte, var(--fio)); }
+.form25__degrau + .form25__degrau::before { content: '→ '; color: var(--text-muted); }
+.form25__degrau--atual { font-weight: var(--weight-bold); background: color-mix(in oklab, var(--tom, var(--accent)) 18%, transparent); }
+.form25__degrau--pro { font-weight: var(--weight-bold); background: var(--tom, var(--accent)); color: var(--tom-sobre, #fff); border-color: transparent; }
+.form25__resumo { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 6px 14px; margin: 0; }
+.form25__resumo dt { font-size: var(--type-caption); color: var(--text-muted); }
+.form25__resumo dd { margin: 0; font-variant-numeric: tabular-nums; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.form25__evolucao { color: var(--tom, var(--accent)); }
+.form25__tabela { overflow-x: auto; max-width: 100%; }
+.form25__tabela table { width: 100%; border-collapse: collapse; font-size: var(--type-caption); font-variant-numeric: tabular-nums; }
+.form25__tabela th, .form25__tabela td { text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--fio); white-space: nowrap; }
+.form25__tabela th { color: var(--text-muted); font-weight: var(--weight-medium); }
+.form25__linha--titulo td { background: color-mix(in oklab, var(--bom) 10%, transparent); }
+.form25__rotulo { color: var(--text-muted); }
+.form25__titulos { margin: 0; padding-left: 1.2em; }

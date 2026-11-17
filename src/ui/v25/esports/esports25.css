@@ -1,0 +1,41 @@
+/* VIDA 25 · a carreira de e-sports. */
+.esp25 { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
+.esp25__cabeca { display: flex; flex-direction: column; gap: 2px; }
+.esp25__placar { margin: 0; color: var(--text-secondary); overflow-wrap: anywhere; }
+.esp25__estado { font-weight: var(--weight-semibold); color: var(--text-primary); }
+.esp25__estado--profissional { color: var(--bom); }
+.esp25__caminho { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; margin: 0; padding: 0; counter-reset: d; }
+.esp25__degrau { font-size: var(--type-caption); padding: 3px 10px 3px 4px; border-radius: var(--radius-pill); border: 1px solid var(--fio); color: var(--text-muted); display: inline-flex; align-items: center; gap: 6px; }
+.esp25__degrau-n { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: var(--veu-2, var(--fio)); font-size: 11px; font-weight: var(--weight-bold); }
+.esp25__degrau--feito { color: var(--text-primary); border-color: var(--fio-forte, var(--fio)); }
+.esp25__degrau--atual { color: var(--tom-sobre, #fff); background: var(--tom, var(--accent)); border-color: transparent; font-weight: var(--weight-semibold); }
+.esp25__degrau--atual .esp25__degrau-n { background: color-mix(in oklab, #fff 30%, transparent); }
+.esp25__ficha { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px 16px; margin: 0; }
+.esp25__ficha dt { font-size: var(--type-caption); color: var(--text-muted); }
+.esp25__ficha dd { margin: 0; overflow-wrap: anywhere; }
+.esp25__temporada { display: flex; flex-direction: column; gap: 6px; padding: var(--space-3); border-radius: var(--radius-md); background: var(--superficie); box-shadow: 0 0 0 1px var(--fio); }
+.esp25__temporada-titulo { margin: 0; font-weight: var(--weight-semibold); }
+.esp25__competicoes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.esp25__comp { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; gap: 10px; align-items: baseline; font-size: 0.95rem; padding: 3px 0; border-bottom: 1px dashed var(--fio); }
+.esp25__comp-nome { min-width: 0; overflow-wrap: anywhere; }
+.esp25__comp-pos, .esp25__comp-vd, .esp25__comp-premio { font-variant-numeric: tabular-nums; white-space: nowrap; font-size: var(--type-caption); color: var(--text-secondary); }
+.esp25__comp--titulo .esp25__comp-nome { font-weight: var(--weight-semibold); }
+.esp25__proposta { border: 1px solid var(--fio-forte, var(--fio)); border-radius: var(--radius-md); padding: var(--space-3); display: flex; flex-direction: column; gap: 8px; background: color-mix(in oklab, var(--bom) 8%, transparent); }
+.esp25__proposta p { margin: 0; }
+.esp25__acoes { display: flex; flex-direction: column; gap: 8px; }
+.esp25__rotulo { margin: 0; font-size: var(--type-caption); color: var(--text-muted); text-transform: uppercase; letter-spacing: var(--tracking-meta); }
+.esp25__botoes { display: flex; flex-wrap: wrap; gap: 6px; }
+.esp25__funcoes ul, .esp25__passagens { margin: 6px 0 0; padding-left: 1.1em; display: flex; flex-direction: column; gap: 4px; }
+.esp25__historico summary, .esp25__funcoes summary { cursor: pointer; }
+.esp25__tabela { overflow-x: auto; max-width: 100%; margin-top: 6px; }
+.esp25__tabela table { width: 100%; border-collapse: collapse; font-size: var(--type-caption); font-variant-numeric: tabular-nums; }
+.esp25__tabela th, .esp25__tabela td { text-align: left; padding: 3px 6px; border-bottom: 1px solid var(--fio); white-space: nowrap; }
+.esp25__jogos { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--space-3); }
+.esp25__jogo { display: flex; flex-direction: column; gap: 6px; padding: var(--space-3); border-radius: var(--radius-md); background: var(--superficie); box-shadow: 0 0 0 1px var(--fio); min-width: 0; }
+.esp25__jogo-nome { margin: 0; font-weight: var(--weight-semibold); }
+.esp25__jogo .nota { margin: 0; }
+.esp25__fonte { margin: 0; }
+@media (max-width: 520px) {
+  .esp25__comp { grid-template-columns: minmax(0, 1fr) auto; }
+  .esp25__comp-vd, .esp25__comp-premio { grid-column: 2; }
+}

@@ -27,6 +27,9 @@ const PainelPresidencial = sobDemandaCampeonato(() => import('./Presidencia129')
 const Justica14 = sobDemandaCampeonato(() => import('../v14/justica/Justica14').then(m => m.Justica14));
 const Futsal14 = sobDemandaCampeonato(() => import('../v14/esportes/Futsal14').then(m => m.Futsal14));
 const Automobilismo20 = sobDemandaCampeonato(() => import('../v20/automobilismo/Automobilismo20').then(m => m.Automobilismo20));
+const Esports25 = sobDemandaCampeonato(() => import('../v25/esports/Esports25').then(m => m.Esports25));
+const FichaDoEsporte25 = sobDemandaCampeonato(() => import('../v25/ficha/FichaDoEsporte25').then(m => m.FichaDoEsporte25));
+const Formacao25 = sobDemandaCampeonato(() => import('../v25/formacao/Formacao25').then(m => m.Formacao25));
 import { CampoDoAtleta, ClaqueteDoAtor, PalcoDoMusico, PlenarioDoPolitico, PranchetaDoTecnico } from './CarreirasEspeciais';
 import { habilitacaoDaVida } from '../../motor/sistemas/autoescola';
 import { regrasDaVida } from '../../motor/mundo/regras';
@@ -68,11 +71,9 @@ import { analisarEntrada, notaDaBaseCom } from '../../motor/sistemas/compromisso
 import { modeloRotina } from '../../motor/sistemas/rotinas';
 import { divisaoDoNivel, doClube } from '../../motor/dados/clubes';
 import { nomeLugar, paisDaCidade } from '../../motor/dados/lugares';
-import { augeDe, carreirasEsportivas, categoriaDaBase, clubeAtual, divisaoDe, NOME_MOD, linhaDaTemporada, nivelQueOMercadoOferece, nomePosicao, palavraDaNota, palavraDaReputacao, posicaoDe, ultimoClubeDe } from '../../motor/sistemas/esporte';
-import { NOME_ATRIBUTO, perfilDeAtributos } from '../../motor/sistemas/atributosEsportivos';
+import { augeDe, carreirasEsportivas, categoriaDaBase, clubeAtual, divisaoDe, NOME_MOD, linhaDaTemporada, nivelQueOMercadoOferece, nomePosicao, palavraDaNota, palavraDaReputacao, ultimoClubeDe } from '../../motor/sistemas/esporte';
 import { NIVEIS_DE_LICENCA, licencaDe } from '../../motor/sistemas/oficioDoTecnico';
 import { formatarDinheiroCurto } from '../../motor/mundo/moeda';
-import { habilidade } from '../../motor/sistemas/frentes';
 import { capitalizar as cap, dinheiro as fmtDinheiro } from '../../motor/texto';
 import { circuitoPeloRanking, estatura, estaturaEmPalavras, funcaoBasquete, NOME_FUNCAO } from '../../motor/sistemas/modalidades';
 import { categoriaDeLuta, funcaoVolei, NOME_FUNCAO_VOLEI, provaDe } from '../../motor/sistemas/provas';
@@ -236,9 +237,13 @@ export function Trabalho({ vida, agir, irPara, parte, explorar: abaDeFora, aoExp
         {(modo === 'rural' || modo === 'pesca') && <PainelCampo vida={vida} />}
         {(modo === 'atleta' || espSemClube) && <PainelAtleta vida={vida} />}
         {(modo === 'atleta' || espSemClube) && vida.caminhos.esporte?.modalidade === 'futsal' && <Futsal14 vida={vida} agir={agir} />}
+        {/* VIDA 25: a ficha do atleta (os atributos agrupados, o antes e o agora, a evolução) — em toda modalidade. */}
+        {(modo === 'atleta' || espSemClube) && vida.caminhos.esporte && <FichaDoEsporte25 vida={vida} e={vida.caminhos.esporte} />}
         {modo === 'tecnico' && <PainelComissao vida={vida} />}
         {/* VIDA 20: o piloto contratado (a F1) vê a carreira inteira aqui também. */}
         {vida.trabalho.atual?.ocupacaoId === 'piloto_corrida' && <Automobilismo20 vida={vida} agir={agir} />}
+        {/* VIDA 25: o jogador profissional de e-sports vê a carreira inteira aqui também. */}
+        {vida.trabalho.atual?.ocupacaoId === 'jogador_esports' && <Esports25 vida={vida} agir={agir} />}
         {modo === 'base' && !div && <PainelBase vida={vida} />}
         {modo === 'base' && div && <p className="ligacao-caminho"><span>A base, os treinos e a peneira estão em Outros caminhos.</span> <button type="button" className="link" onClick={() => irPara('outros_caminhos')}>Ir para Outros caminhos →</button></p>}
         {modo === 'militar' && <PainelFarda vida={vida} />}
@@ -629,7 +634,6 @@ export function PainelAtleta({ vida }: { vida: Vida }) {
   // REWORK 11: sem clube, o placar diz "sem clube" e o último clube — nunca o antigo como atual.
   const atual = clubeAtual(vida, es);
   const ultimo = atual ? undefined : ultimoClubeDe(es);
-  const atributos = es.modalidade === 'futebol' || es.modalidade === 'basquete' ? perfilDeAtributos(vida, es, habilidade(vida, es.modalidade), es.modalidade === 'futebol' ? posicaoDe(vida, es) : undefined, es.modalidade === 'basquete' ? funcaoBasquete(vida) : undefined) : [];
   const papel = es.modalidade === 'basquete' ? ` · ${NOME_FUNCAO[funcaoBasquete(vida)]}, ${estaturaEmPalavras(estatura(vida))}`
     : es.modalidade === 'volei' ? ` · ${NOME_FUNCAO_VOLEI[funcaoVolei(vida)]}, ${estaturaEmPalavras(estatura(vida))}`
       : es.modalidade === 'lutas' ? ` · categoria ${categoriaDeLuta(vida)}` : prova ? ` · ${prova.nome}` : '';
@@ -639,7 +643,6 @@ export function PainelAtleta({ vida }: { vida: Vida }) {
         <span className={`placar__espaco placar__espaco--${es.espaco ?? 'reserva'}`}>{tenis ? 'No circuito' : es.espaco === 'titular' ? 'Titular' : es.espaco === 'reserva' ? 'Reserva' : cap(semVinculo(es.modalidade))}</span>
         <span className="placar__clube">{tenis ? `ranking ${t?.ranking ?? '—'}º` : comContrato ? es.clube : ultimo ? `sem clube · último: ${ultimo.clube} (até ${anoDe(ultimo.ate)})` : sp.ultimoOnde ? `último clube: ${sp.ultimoOnde.nome}` : 'sem clube'}{es.posicao ? ` · ${nomePosicao(vida, es.posicao)}` : ''}{papel}</span>
       </div>
-      {atributos.length > 0 && <p className="nota atributos-da-posicao">Na {es.modalidade === 'futebol' ? 'posição' : 'função'}: {atributos.map(a => `${NOME_ATRIBUTO[a.id]} ${Math.round(a.valor)}`).join(' · ')} <small>(o perfil da técnica: pesa na nota e no que a temporada produz)</small></p>}
       {t && (
         <div className="temporada" aria-label="A última temporada">
           <p className="temporada__titulo">Temporada {t.ano} — {t.clube}</p>
@@ -1426,6 +1429,8 @@ export function CarreiraNoEsporte({ vida, aberta }: { vida: Vida; aberta: boolea
         </>;
       })()}
       {p.marcos.length > 0 && <div className="palmares__grupo"><h4>Marcos</h4><ul className="marcos-caminho marcos-caminho--glifos">{p.marcos.slice(-8).reverse().map((x, k) => <li key={k}><GlifoDaLinha palmares={pal} linha={x} padrao="marco" /><span>{x}</span></li>)}</ul></div>}
+      {/* VIDA 25: como chegou ao profissional — a formação de cada carreira (as categorias, os anos, os títulos). */}
+      {carreiras.filter(c => (c.formacao?.length ?? 0) > 0).map((c, k) => <details key={`f${k}`} className="palmares__grupo"><summary>A formação{carreiras.length > 1 ? ` · ${NOME_MOD[c.modalidade] ?? c.modalidade}` : ''}</summary><Formacao25 vida={vida} e={c} /></details>)}
       {carreiras.map((c, k) => {
         const h = historicoDaCarreira(c);
         if (!h.linhas.length) return null;

@@ -15,6 +15,9 @@ import { PlenarioDoPolitico } from './CarreirasEspeciais';
 import { lazy, Suspense, useMemo } from 'react';
 const VidaReligiosa16 = lazy(() => import('../v16/religiao/VidaReligiosa16'));
 const Automobilismo20 = lazy(() => import('../v20/automobilismo/Automobilismo20'));
+const Esports25 = lazy(() => import('../v25/esports/Esports25'));
+const Formacao25 = lazy(() => import('../v25/formacao/Formacao25').then(m => ({ default: m.Formacao25 })));
+const FichaDoEsporte25 = lazy(() => import('../v25/ficha/FichaDoEsporte25').then(m => ({ default: m.FichaDoEsporte25 })));
 import type { Vida } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
 import { disponibilidade } from '../../motor/acoes';
@@ -110,11 +113,15 @@ export function OutrosCaminhosDaVida({ vida, agir, irPara }: { vida: Vida; agir:
       {esp && esp.fase !== 'encerrada' && <Cracha15 vida={vida} />}
       {/* VIDA 20: o automobilismo (o convite do kart para quem tem idade; a carreira, do kart à F1). */}
       <Suspense fallback={null}><Automobilismo20 vida={vida} agir={agir} /></Suspense>
+      {/* VIDA 25: os e-sports (a porta para quem tem idade; a carreira, do ranqueado ao mundial). */}
+      {i >= 12 && <Suspense fallback={null}><Esports25 vida={vida} agir={agir} /></Suspense>}
       <PortasAbertas vida={vida} agir={agir} filtro={o => ['peneira', 'seletiva', 'banda', 'grupo'].includes(o.tipo)} titulo="Portas do esporte e da arte" />
       {esp?.fase === 'base' && (
         <section className="divisao__secao paralelo" aria-label="A base">
           <h2 className="secao-fio">{esp.modalidade === 'futebol' ? 'A base' : 'A equipe'}</h2>
           <PainelBase vida={vida} />
+          {/* VIDA 25: a formação ano a ano e a ficha de atributos (o que a base registra e o que o atleta é hoje). */}
+          <Suspense fallback={null}><Formacao25 vida={vida} e={esp} /><FichaDoEsporte25 vida={vida} e={esp} /></Suspense>
         </section>
       )}
       {arte?.ativo && modo !== 'artista' && (
