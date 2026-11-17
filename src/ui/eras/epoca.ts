@@ -29,3 +29,11 @@ export function simboloDaEpoca(v: Vida): string | undefined {
   if (!v.era || anoDe(v.t) > 2025) return undefined;
   return padraoEm(v.t).simbolo;
 }
+
+/**
+ * ERAS MODERNAS: o nome curto de uma rede no ano da vida — o X se chamava Twitter até julho de 2023 (a mudança de nome).
+ * Vida contemporânea, ou depois disso: o nome de sempre.
+ */
+export function nomeDaRedeNaEpoca(v: Vida, id: string, nome: string): string {
+  return id === 'x' && v.era && v.t < 2023 * 12 + 6 ? 'Twitter' : nome;
+}

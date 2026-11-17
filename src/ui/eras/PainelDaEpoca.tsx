@@ -103,7 +103,7 @@ export function PainelDaEpoca({ vida }: { vida: Vida }) {
         })}
       </ul>
       {proximas.length > 0 && <p className="painel-epoca__nota">Ainda não existe no Brasil: {proximas.map(x => `${x.nome} (${x.brasil})`).join(', ')}.</p>}
-      <p className="painel-epoca__nota">Fontes: IBGE (IPCA, PIB, PNAD), Ipeadata (salário mínimo), DIEESE (cesta básica), Banco Central (moedas), TSE (partidos). O jogo guarda o dinheiro em poder de compra de hoje e mostra cada valor na moeda do mês — {fatorNominal(t) > 1e6 ? 'por isso os zeros' : 'por isso os números mudam com o tempo'}.</p>
+      <p className="painel-epoca__nota">Fontes: IBGE (IPCA, PIB, PNAD), Ipeadata (salário mínimo), DIEESE (cesta básica), Banco Central (moedas), TSE (partidos). O jogo guarda o dinheiro em poder de compra de hoje e {dentro ? <>mostra cada valor na moeda do mês — {fatorNominal(t) > 1e6 ? 'por isso os zeros' : 'por isso os números mudam com o tempo'}</> : 'as séries históricas vão até 2025: daqui em diante, os valores são em reais de hoje, como numa vida que começa agora'}.</p>
     </section>
   );
 }

@@ -20,6 +20,7 @@ import { emAlta19, feed19, perfil19, type Post19 } from '../../../motor/v19/cone
 import { ROTULO_TOM19, tonsPara19 } from '../../../motor/v19/conectada/conectada19';
 import { Retrato } from '../../avatar/Retrato';
 import { rotuloDe } from '../../apresentar';
+import { nomeDaRedeNaEpoca } from '../../eras/epoca';
 import './conectada19.css';
 
 interface Props {
@@ -85,7 +86,7 @@ function Cartao({ vida, post, agir, abrirPerfil, abrirConversa }: { vida: Vida; 
         <Rosto vida={vida} p={p} tamanho={38} />
         <span>
           <strong>{p?.nome}{post.famoso && <span className="post19__verificado" title="Pessoa pública" aria-label="pessoa pública"> ✓</span>}</strong>
-          <span>{vin ? rotuloDe(vida, p, vin) : ''} · {quando19(vida, post.t)} · {NOME_REDE[post.plataforma]}{post.publico === 'amigos' ? ' · só amigos' : ''}</span>
+          <span>{vin ? rotuloDe(vida, p, vin) : ''} · {quando19(vida, post.t)} · {nomeDaRedeNaEpoca(vida, post.plataforma, NOME_REDE[post.plataforma])}{post.publico === 'amigos' ? ' · só amigos' : ''}</span>
         </span>
       </button>
       <Midia vida={vida} post={post} />

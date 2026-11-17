@@ -83,6 +83,13 @@ export const VERSOES_DA_EPOCA: readonly V[] = [
 
 /** As versões atuais do catálogo nas classes cobertas: o ano em que chegaram (vida histórica antes disso: fora). */
 export const ATUAIS_DESDE: Readonly<Record<string, number>> = {
+  // ERAS MODERNAS (auditoria): modelos de hoje vendidos no Brasil antes de 2026 que não têm versão da época acima — sem a
+  // data, sumiam do mercado das vidas de 2010–2025 e apareciam todos de uma vez em 2026. Ano de chegada ao Brasil (APROXIMAÇÃO
+  // pela geração quando ela mudou o carro). Os que têm versão da época (Onix, HB20, Corolla, Renegade) seguem por ela até 2025.
+  vw_polo: 2017, chevrolet_onix_plus: 2019, honda_city: 2021, vw_virtus: 2018, honda_civic: 2023, vw_nivus: 2020, hyundai_creta: 2017,
+  chevrolet_tracker: 2020, toyota_corolla_cross: 2021, jeep_compass: 2016, hyundai_tucson: 2022, toyota_yaris: 2018, kia_picanto: 2017,
+  nissan_versa: 2020, honda_pcx: 2013, honda_cb500f: 2013, kawasaki_ninja400: 2018, yamaha_nmax: 2016, honda_xre190: 2016, yamaha_lander: 2006,
+  royal_enfield_interceptor: 2019, royal_enfield_himalayan: 2024, vespa_primavera: 2019, haojue_dk150: 2018, vw_golf_gti: 2013, honda_civic_type_r: 2023,
   fiat_mobi: 2016, renault_kwid: 2017, fiat_argo: 2017, citroen_c3: 2012, honda_biz: 1998, honda_pop: 2015, honda_cg160: 2015,
   yamaha_factor: 2016, honda_bros: 2015, yamaha_fazer: 2018, honda_cb300f: 2023, royal_enfield_hunter: 2023, honda_sahara: 2024, yamaha_mt03: 2016,
   // ERAS v2: a geração ATUAL de cada modelo das outras classes (lançamento da geração; chegada ao Brasil quando conhecida).

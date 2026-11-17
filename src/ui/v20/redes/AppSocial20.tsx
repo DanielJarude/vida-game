@@ -20,6 +20,7 @@ import { dinheiroCurto } from '../../apresentar';
 import { Retrato } from '../../avatar/Retrato';
 import { BalancoDoPublico, Feed, GestaoDaConta, Glifo, notificacoes, perfilDaRede, TemaDesenho, crescimentoNoAno } from '../../jogo/Redes';
 import { EmAlta19, FeedDaPlataforma19 } from '../../v19/conectada/Feed19';
+import { nomeDaRedeNaEpoca } from '../../eras/epoca';
 import './appSocial20.css';
 
 type Tela = 'inicio' | 'alta' | 'criar' | 'avisos' | 'perfil';
@@ -48,7 +49,8 @@ const ICONE_NAV: Record<Tela, string> = {
 const Ico = ({ d }: { d: string }) => <svg viewBox="0 0 24 24" width={20} height={20} aria-hidden fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>;
 
 export function AppSocial20({ vida, agir, id, abrirPessoa, abrirConversa, voltar }: Props) {
-  const pl = PLATAFORMAS[id];
+  // ERAS MODERNAS: numa vida histórica, o nome da rede é o do ano (o X era Twitter até julho de 2023).
+  const pl = { ...PLATAFORMAS[id], nome: nomeDaRedeNaEpoca(vida, id, PLATAFORMAS[id].nome) };
   const l = leituraDaConta(vida, id);
   const [tela, setTela] = useState<Tela>('inicio');
   const nav = NAV[id];

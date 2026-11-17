@@ -6,7 +6,7 @@
  * enciclopédia: o resto se vive.
  */
 import { DECADAS } from '../../motor/eras/dados/culturaBR';
-import { ACONTECIMENTOS_BR } from '../../motor/eras/dados/acontecimentosBR';
+import { ACONTECIMENTOS_BR, type AcontecimentoBR } from '../../motor/eras/dados/acontecimentosBR';
 import { ObjetosDaEpoca } from './Aparelhos';
 import './eras.css';
 
@@ -19,6 +19,17 @@ export function anosDaDecada(d: Exclude<Epoca, 'hoje'>): number[] {
   const out: number[] = [];
   for (let a = x.anos[0]; a <= x.anos[1]; a++) out.push(a);
   return out;
+}
+
+/**
+ * O que a infância de quem nasce em `ano` atravessa: os marcos da década que vêm depois do nascimento e, quando eles já
+ * passaram (quem nasce no fim da década), os acontecimentos nacionais dos anos seguintes — nunca um fato de antes de nascer.
+ */
+export function marcosDaInfancia(marcos: readonly string[], ano: number): AcontecimentoBR[] {
+  const daDecada = marcos.map(id => ACONTECIMENTOS_BR.find(a => a.id === id)).filter((a): a is AcontecimentoBR => !!a && a.data[0] >= ano);
+  if (daDecada.length >= 3) return daDecada.slice(0, 4);
+  const seguintes = ACONTECIMENTOS_BR.filter(a => !a.ufs && a.peso === 'biografia' && a.data[0] >= ano && a.data[0] <= ano + 14 && !daDecada.includes(a));
+  return [...daDecada, ...seguintes].sort((a, b) => a.data[0] - b.data[0] || a.data[1] - b.data[1]).slice(0, 4);
 }
 
 export function EscolhaDaEpoca({ epoca, ano, aoMudar }: { epoca: Epoca; ano: number; aoMudar: (e: Epoca, ano: number) => void }) {
@@ -59,8 +70,8 @@ export function EscolhaDaEpoca({ epoca, ano, aoMudar }: { epoca: Epoca; ano: num
           </div>
           <p className="epoca__rotulo">O que a sua infância atravessa</p>
           <ul className="epoca__marcos">
-            {d.marcos.map(id => ACONTECIMENTOS_BR.find(a => a.id === id)).filter(a => a && a.data[0] >= ano - 1).slice(0, 4).map(a => (
-              <li key={a!.id}><span className="epoca__marco-ano">{a!.data[0]}</span>{a!.titulo}</li>
+            {marcosDaInfancia(d.marcos, ano).map(a => (
+              <li key={a.id}><span className="epoca__marco-ano">{a.data[0]}</span>{a.titulo}</li>
             ))}
             <li><span className="epoca__marco-ano">→</span>E depois, as décadas seguintes, até hoje e além: a vida não fica presa ao ano em que começou.</li>
           </ul>

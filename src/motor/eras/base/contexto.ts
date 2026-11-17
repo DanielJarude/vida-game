@@ -74,6 +74,10 @@ function tecnologiaSozinha(v: Vida, id: string, ano: number): Acesso {
   if (!x) return 'comum';
   if (x.fim !== undefined && ano >= x.fim) return 'indisponivel';
   if (ano < x.brasil) return 'indisponivel';
+  // ERAS MODERNAS: depois da série (2026 em diante) a vida histórica vive o mundo de hoje — o que ainda existe é de todos,
+  // como na vida contemporânea (sem isso, o tablet e o videogame atual, que nunca "viram massa", ficavam fora do alcance
+  // de quem tem pouca renda para sempre, mesmo em 2040).
+  if (ano > 2025) return 'comum';
   const d = deslocamento(v, id);
   const nivel = nivelEconomico(v);
   if (ano >= x.massa + d) return 'comum';

@@ -38,7 +38,7 @@ import type { Aba, Lugar } from '../../navegacao';
 import './celular15.css';
 import { MapaDaCidade } from '../../v17/mapa/MapaDaCidade';
 import { temAcesso } from '../../../motor/eras/base/contexto';
-import { GUARDAR_O_APARELHO, meioDaVida, NOME_DO_APARELHO } from '../../eras/epoca';
+import { GUARDAR_O_APARELHO, meioDaVida, NOME_DO_APARELHO, nomeDaRedeNaEpoca } from '../../eras/epoca';
 import { CelularDeTeclas, TelefoneDeDisco } from '../../eras/Aparelhos';
 // VIDA 20: cada rede é um app próprio (o feed delas, publicar em um toque, o perfil, a conta) — `v20/redes/AppSocial20`.
 const AppSocial20 = lazy(() => import('../../v20/redes/AppSocial20'));
@@ -676,9 +676,9 @@ export default function Celular({ vida, agir, aoFechar, irPara, irLugar, abrirPe
             <ul className="cel__apps" aria-label="Aplicativos">
               {apps.map(a => (
                 <li key={a.id}>
-                  <button type="button" className={`cel__app-icone cel__app-icone--${a.id}`} onClick={() => abrirApp(a.id)} aria-label={`${ehRede20(a.id) ? NOME_REDE20[a.id] : nomes[a.id]}${a.conta ? `, ${a.conta} novidades` : ''}`}>
+                  <button type="button" className={`cel__app-icone cel__app-icone--${a.id}`} onClick={() => abrirApp(a.id)} aria-label={`${ehRede20(a.id) ? nomeDaRedeNaEpoca(vida, a.id, NOME_REDE20[a.id]) : nomes[a.id]}${a.conta ? `, ${a.conta} novidades` : ''}`}>
                     <span className="cel__tile" style={ehRede20(a.id) ? { background: COR_REDE20[a.id], color: '#fff' } : undefined}><Icone d={ehRede20(a.id) ? GLIFO20[a.id] : ICONES[a.id]} />{a.conta ? <span className="cel__badge">{a.conta > 9 ? '9+' : a.conta}</span> : null}</span>
-                    <span className="cel__app-nome">{ehRede20(a.id) ? NOME_REDE20[a.id] : nomes[a.id]}</span>
+                    <span className="cel__app-nome">{ehRede20(a.id) ? nomeDaRedeNaEpoca(vida, a.id, NOME_REDE20[a.id]) : nomes[a.id]}</span>
                   </button>
                 </li>
               ))}

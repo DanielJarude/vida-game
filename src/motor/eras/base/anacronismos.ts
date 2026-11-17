@@ -46,7 +46,11 @@ const REGRAS: Regra[] = [
   // ERAS v2 (auditoria textual): a UPA (2008), o meme (anos 2000), o print de tela (smartphone).
   { quando: antes(2008), trocas: [[/para a UPA/g, 'para o pronto-socorro'], [/na UPA/g, 'no pronto-socorro'], [/da UPA/g, 'do pronto-socorro'], [/a UPA/g, 'o pronto-socorro'], [/\bUPA\b/g, 'pronto-socorro']] },
   { quando: antes(2006), trocas: [[/esse meme/g, 'essa piada'], [/um meme/g, 'uma piada'], [/Um meme/g, 'Uma piada'], [/o meme/g, 'a piada'], [/memes/g, 'piadas'], [/\bmeme\b/g, 'piada']] },
-  { quando: sem('smartphone'), trocas: [[/pelo aplicativo/g, 'por telefone'], [/no aplicativo/g, 'por telefone'], [/um aplicativo/g, 'um serviço'], [/\s?\p{Extended_Pictographic}\uFE0F?/gu, '']] }
+  { quando: sem('smartphone'), trocas: [
+    // ERAS MODERNAS: as brincadeiras de amigo que pressupõem vídeo, meme e foto de perfil no bolso (recados do aparelho).
+    [/OLHA ESSE VÍDEO E ME DIZ QUE NÃO É VOCÊ/g, 'VI ALGUÉM NA RUA HOJE IGUALZINHO A VOCÊ'], [/Achei a sua foto de perfil ideal: um gato caindo do sofá\./g, 'Vi um gato caindo do sofá e lembrei de você.'],
+    [/Mandei esse meme pra você/g, 'Guardei essa piada pra você'], [/Segue anexo\./g, 'Te mostro quando a gente se encontrar.'],
+    [/pelo aplicativo/g, 'por telefone'], [/no aplicativo/g, 'por telefone'], [/um aplicativo/g, 'um serviço'], [/\s?\p{Extended_Pictographic}\uFE0F?/gu, '']] }
 ];
 
 /** A frase como ela seria dita no ano corrente da vida (vida contemporânea: a mesma frase). */

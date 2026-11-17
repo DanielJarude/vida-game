@@ -26,6 +26,22 @@ export interface NotaDeVersao {
 
 export const NOTAS: NotaDeVersao[] = [
   {
+    versao: 'Eras modernas',
+    data: '2026-11-16',
+    titulo: 'Revisão das épocas modernas (anos 1990 a 2020)',
+    novidades: [],
+    melhorias: [
+      'Vidas dos anos 2010 e 2020: o mercado de carros e motos passa a ter os modelos que já se vendiam no Brasil (Polo, Virtus, Compass, Creta, Tracker, Corolla Cross, PCX, NMax e outros), cada um a partir do ano em que chegou — em vez de surgirem todos de uma vez em 2026.',
+      'Depois de 2025, uma vida que começou numa década passada vive o mundo de hoje por inteiro: a tecnologia que ainda existe fica ao alcance de todos, como numa vida que começa agora.',
+      'Na escolha da época, "o que a sua infância atravessa" nunca lista um fato de antes do nascimento; quem nasce no fim da década vê os acontecimentos dos anos seguintes.'
+    ],
+    correcoes: [
+      'Antes de julho de 2023, numa vida histórica, a rede de frases curtas se chama Twitter (no celular, no feed e no aplicativo).',
+      'Antes do smartphone, os recados de amigos no celular de teclas não falam mais de vídeo, meme e foto de perfil.',
+      'O painel "A época" depois de 2025 deixa de dizer que os valores aparecem na moeda do mês: daí em diante, são reais de hoje.'
+    ]
+  },
+  {
     versao: '24',
     data: '2026-11-15',
     titulo: 'Um corpo que nasce, cresce e muda com a vida',
