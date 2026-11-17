@@ -26,6 +26,29 @@ export interface NotaDeVersao {
 
 export const NOTAS: NotaDeVersao[] = [
   {
+    versao: '25',
+    data: '2026-11-17',
+    titulo: 'Esportes, e-sports e formação de atletas',
+    novidades: [
+      'Carreira de e-sports em seis jogos (Counter-Strike, VALORANT, League of Legends, Rainbow Six Siege, Fortnite e Rocket League): do ranqueado ao mundial, com peneiras, equipes, contratos, temporadas e títulos — em Caminhos · Outros caminhos.',
+      'Cada jogo tem os seus atributos e funções na equipe, e os circuitos têm os nomes reais da época; as equipes são do universo do jogo.',
+      'A formação do atleta, ano a ano: as categorias, os jogos, a titularidade, a nota, a colocação, os títulos de base e a chegada ao profissional.'
+    ],
+    melhorias: [
+      'Ficha do atleta nova em todas as modalidades: atributos por grupo, o valor do ano anterior marcado na régua, a evolução, os pontos fortes e as limitações.',
+      'Vôlei, futsal, tênis, natação, atletismo e luta ganharam atributos próprios, que pesam na temporada e mudam com o treino e a idade.',
+      'Futebol mais disputado: subir para a elite pede regularidade, os grandes clubes e as grandes ligas europeias pedem nome firmado, e os prêmios mundiais comparam a temporada com o mundo. Mercados alternativos abrem outras carreiras lá fora.',
+      'A carteira de motorista é lembrada na hora certa (a idade, o veículo sem carteira), uma vez por motivo.',
+      'O corpo em quatro partes: condição atual, evolução, objetivo e constituição — cada medida explicada.'
+    ],
+    correcoes: [
+      'Mulheres não recebem mais o alistamento militar antes de 2025 (o alistamento feminino voluntário começou em 2025).',
+      'Depois de uma transferência, as cenas do clube anterior não aparecem mais como se fossem do clube novo.',
+      'O aviso de veículo parado na oficina diz qual é o veículo e só vale para o que é seu e está com você.',
+      'Nas épocas históricas, as eleições existem nos anos certos (1988, 1990, 1992...) e a candidatura volta a ser possível.'
+    ]
+  },
+  {
     versao: 'Eras modernas',
     data: '2026-11-16',
     titulo: 'Revisão das épocas modernas (anos 1990 a 2020)',

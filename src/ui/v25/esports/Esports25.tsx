@@ -92,7 +92,7 @@ export function Esports25({ vida, agir }: { vida: Vida; agir: (a: Acao) => boole
           <ul className="esp25__competicoes">
             {ult.competicoes.map((c, k) => (
               <li key={k} className={c.titulo ? 'esp25__comp esp25__comp--titulo' : 'esp25__comp'}>
-                <span className="esp25__comp-nome">{c.titulo ? '🏆 ' : ''}{c.nome}</span>
+                <span className="esp25__comp-nome">{c.titulo && <b className="esp25__selo">campeão</b>}{c.nome}</span>
                 <span className="esp25__comp-pos">{c.colocacao}º de {c.participantes}</span>
                 <span className="esp25__comp-vd">{c.vitorias}V {c.derrotas}D</span>
                 {c.premio > 0 && <span className="esp25__comp-premio">{dinheiroCurto(c.premio)}</span>}

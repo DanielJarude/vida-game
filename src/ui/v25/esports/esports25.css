@@ -36,6 +36,8 @@
 .esp25__jogo .nota { margin: 0; }
 .esp25__fonte { margin: 0; }
 @media (max-width: 520px) {
-  .esp25__comp { grid-template-columns: minmax(0, 1fr) auto; }
-  .esp25__comp-vd, .esp25__comp-premio { grid-column: 2; }
+  .esp25__comp { grid-template-columns: auto auto 1fr; row-gap: 2px; }
+  .esp25__comp-nome { grid-column: 1 / -1; }
+  .esp25__comp-premio { text-align: right; }
 }
+.esp25__selo { display: inline-block; margin-right: 6px; padding: 0 7px; border-radius: var(--radius-pill); font-size: 11px; letter-spacing: var(--tracking-meta); text-transform: uppercase; background: color-mix(in oklab, var(--bom) 22%, transparent); color: var(--text-primary); vertical-align: 1px; }

@@ -19,3 +19,4 @@
 .form25__linha--titulo td { background: color-mix(in oklab, var(--bom) 10%, transparent); }
 .form25__rotulo { color: var(--text-muted); }
 .form25__titulos { margin: 0; padding-left: 1.2em; }
+.form25__selo { display: inline-block; margin-right: 6px; padding: 0 6px; border-radius: var(--radius-pill); font-size: 10.5px; text-transform: uppercase; background: color-mix(in oklab, var(--bom) 22%, transparent); }

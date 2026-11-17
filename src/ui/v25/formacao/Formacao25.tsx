@@ -62,7 +62,7 @@ export function Formacao25({ vida, e }: { vida: Vida; e: CarreiraEsportiva }) {
                 <td>{individual ? a.jogos : `${a.jogos} (${a.titular})`}</td>
                 <td>{e.modalidade === 'basquete' ? num(a.pontos ?? 0) : individual ? (a.podios ?? '—') : `${a.gols ?? 0} · ${a.assistencias ?? 0}`}</td>
                 <td>{num(a.nota)}</td>
-                <td>{a.titulo ? '🏆 ' : ''}{a.colocacao}º de {a.participantes}</td>
+                <td>{a.titulo && <b className="form25__selo">campeão</b>}{a.colocacao}º de {a.participantes}</td>
               </tr>
             ))}
           </tbody>

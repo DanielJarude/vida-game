@@ -22,7 +22,7 @@ export function LembreteCnh25({ vida, agir }: { vida: Vida; agir: (a: Acao) => b
   const h = habilitacaoDaVida(vida);
   return (
     <section className="lembrete-cnh" aria-label={`Tirar ${h.a}`} data-motivo={l.motivo}>
-      <p className="lembrete-cnh__texto"><span aria-hidden>🚗 </span>{l.texto}</p>
+      <p className="lembrete-cnh__texto"><b className="lembrete-cnh__rotulo">Carteira de motorista</b> {l.texto}</p>
       <div className="lembrete-cnh__botoes">
         <BotaoAcao vida={vida} agir={agir} acao={{ tipo: 'cnh' }} variante="secundario" ocultarImpossivel>{`Começar ${h.naEscola}`}</BotaoAcao>
         <button type="button" className="botao botao--discreto" onClick={() => { dispensar(vida.id, l.motivo); setCalado(l.motivo); }}>Agora não</button>
