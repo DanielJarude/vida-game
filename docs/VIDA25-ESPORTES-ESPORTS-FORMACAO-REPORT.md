@@ -142,7 +142,11 @@ Corrigido na QA: emoji de troféu (não renderiza em algumas fontes) → selo "c
 
 ## 12. Publicação
 
-Ver a seção acrescentada após o deploy.
+Verificado em 2026-11-17: commit de código `f37f28a` em `origin/main`, `origin/claude/fix-pos-rework3-playtest`
+(produção do Cloudflare Pages) e `origin/claude/vida25-esportes-esports`. O site https://vida-game.pages.dev/ serve
+`index-D6qD_bjS.js`; `/` e os 166 arquivos JS/CSS são sha256-idênticos ao build local. A QA visual (`vida25.mjs`) rodou
+contra o site de produção (1440 e 390, tema escuro, 16 capturas + persistência): sem problemas. Este parágrafo é um
+commit de documentação posterior, só em main e no branch da versão (a produção fica no commit de código).
 
 Fontes (e-sports e alistamento, consultadas em nov/2026): lolesports.com (CBLOL/LCS 2026), ubisoft.com (R6 Esports Circuit
 2026), valorantesports.com (VCT 2026; Challengers Brazil 2026), rocketleague.com (RLCS 2026), fortnite.com (FNCS 2026
