@@ -24,7 +24,7 @@ import { paisDaVida } from '../mundo/vida';
 import { lancar } from './extrato';
 import type { Rng } from '../rng';
 import { clamp, hashMisturado, rngDe } from '../rng';
-import type { CarreiraEsportiva, Dominio, Posicao, PropostaDeClube, Temporada, Vida } from '../tipos';
+import type { AnoDeFormacao, CarreiraEsportiva, Dominio, Posicao, PropostaDeClube, Temporada, Vida } from '../tipos';
 import { escrever, idade, lembrarCom, marcarFato, pais, temFato } from '../nucleo';
 import { cidadesDoPais, municipio, municipioDoCodigo, MUNICIPIOS, paisDaCidade } from '../dados/lugares';
 import { estruturaEsportiva } from '../dados/mercado';
@@ -49,13 +49,13 @@ import { mudarAgora } from './processos';
 import { registrarTemporada, registrarConquista } from './palmares';
 import { clubesNaDivisao, colocacaoNaTabela, divisaoDoClube } from './ligas';
 import { copaContinental, copaNacional, copasDeQuadra, idDaLiga, nomeDaCompeticao } from './competicoes';
-import { desvio, efeitoNaNota, envelhecerAtributos, perfilDeAtributos, type AtributoId } from './atributosEsportivos';
+import { desvio, efeitoNaNota, envelhecerAtributos, fotografarAtributos, perfilDeAtributos, type AtributoId } from './atributosEsportivos';
 import { avancarLicenca } from './oficioDoTecnico';
 import { processarSelecao } from './selecao';
 import { premiosDoMundo } from './premiosDoFutebol';
 import { nomePor } from './notoriedade';
 import { daPorta, individualComEquipe, perfilDe, portaAmadora, semVinculo } from './perfisEsportivos';
-import { formatarMarca, jogarLutas, jogarProvas, jogarTemporadaVolei, NOME_FUNCAO_VOLEI, numeroDaFuncao, podiosDe, type FuncaoVolei } from './provas';
+import { categoriaDeLuta, formatarMarca, funcaoVolei, jogarLutas, jogarProvas, jogarTemporadaVolei, NOME_FUNCAO_VOLEI, numeroDaFuncao, podiosDe, provaDe, type FuncaoVolei } from './provas';
 import { BASE_FUTSAL, CONTRATO_FUTSAL, divisaoFutsal, funcaoFutsalPorSorteio, JOGOS_FUTSAL, PRODUCAO_FUTSAL, type FuncaoFutsal } from '../dados14/esportes/futsal';
 
 export const MODALIDADES: Dominio[] = ['futebol', 'volei', 'natacao', 'atletismo', 'lutas', 'basquete', 'tenis', 'futsal'];
@@ -687,7 +687,12 @@ export function fecharTemporada(v: Vida, r: Rng, e: CarreiraEsportiva): Temporad
   e.reputacao = Math.round(clamp((e.reputacao ?? 30) * 0.55 + alvoRep * 0.45));
   if (e.modalidade === 'tenis') t.ranking = rankingPorPontos(t.pontosRanking ?? 0);
   // O perfil envelhece com o ano (o que não se treina esfria; depois do auge, o corpo dá lugar à leitura).
-  if (futebol || e.modalidade === 'basquete') envelhecerAtributos(e, i, augeDe(v, e));
+  // VIDA 25: toda modalidade tem perfil agora (vôlei, futsal, tênis, natação, atletismo, luta) — todas envelhecem e são
+  // fotografadas no fim do ano (a ficha compara e desenha a evolução com estes números).
+  if (perfil.length) {
+    envelhecerAtributos(e, i, augeDe(v, e));
+    fotografarAtributos(e, ano, perfilDeAtributos(v, e, habilidade(v, e.modalidade), futebol ? pos : undefined, funcaoB), habilidade(v, e.modalidade));
+  }
   return t;
 }
 
@@ -1028,10 +1033,91 @@ export function entrarNaBase(v: Vida, d: Dominio, municipioId: string, clube: st
   for (const p of pais(v)) lembrarCom(v, p.id, `${d === 'futebol' ? 'A base' : 'A equipe'} ${doClube(clube)}.`, 'escola', 2);
 }
 
+/** VIDA 25 · o nome da competição da categoria (o estadual da categoria no Brasil; o regional fora; o circuito juvenil). */
+function competicaoDaBase(e: CarreiraEsportiva, categoria: string): string {
+  const br = paisDaCidade(e.municipioId) === 'BR';
+  if (e.modalidade === 'tenis') return 'circuito juvenil de tênis';
+  if (e.modalidade === 'futebol' || e.modalidade === 'futsal') return `${br ? 'campeonato estadual' : 'campeonato regional'} ${categoria}${e.modalidade === 'futsal' ? ' de futsal' : ''}`;
+  return `${br ? 'campeonato estadual' : 'campeonato regional'} de base de ${NOME_MOD[e.modalidade] ?? e.modalidade}`;
+}
+
+/**
+ * VIDA 25 · O ANO NA FORMAÇÃO, registrado: a categoria, a competição, os jogos (titular ou não), o que se produziu, a
+ * nota, a técnica no fim do ano, onde a equipe (ou o atleta) terminou, o título e a avaliação da comissão. É a mesma
+ * conta da técnica contra a régua do contrato que decide contrato e dispensa — a tela da formação mostra estes números.
+ * Sorteio derivado (`rngDe`): o ano da base não muda a sequência do resto da vida.
+ */
+function registrarAnoDeFormacao(v: Vida, e: CarreiraEsportiva, h: number, presenca: number): AnoDeFormacao {
+  const i = idade(v);
+  const ano = anoDe(v.t - 6);
+  const rr = rngDe(v.id, 'formacao25', e.modalidade, ano);
+  const categoria = categoriaDaBase(v, e);
+  const { tecnica: limiar } = contratoDaBase(e.modalidade);
+  // A régua da base é a do contrato, mais baixa nos mais novos (o sub-15 não é cobrado como o sub-20).
+  const regua = limiar - Math.max(0, 18 - i) * 2.2;
+  const nota = Math.round(clamp(6 + (h - regua) / 4 + (v.corpo.forma - 65) / 25 + rr.normal() * 0.6, 2.5, 9.6) * 10) / 10;
+  const individual = individualComEquipe(e.modalidade) || e.modalidade === 'tenis';
+  const max = e.modalidade === 'futebol' ? (i <= 15 ? 18 : i <= 17 ? 22 : 26) : e.modalidade === 'futsal' ? 20 : e.modalidade === 'tenis' ? 10 : individual ? 8 : 16;
+  const fora = mesesForaNoAno(v);
+  const disp = clamp((12 - fora) / 12 * presenca, 0, 1);
+  const espacoBom = h >= regua - 3;
+  const jogos = Math.max(0, Math.round(max * disp * (espacoBom ? 0.9 : 0.55) * (0.9 + rr.next() * 0.15)));
+  const titular = individual ? jogos : Math.min(jogos, Math.round(jogos * clamp(0.25 + (h - regua + 6) / 14, 0.1, 0.95)));
+  const peso = (titular + (jogos - titular) * 0.35) * Math.max(0.25, nota / 6.5);
+  const a: AnoDeFormacao = { ano, idade: i, categoria, clube: e.clube, competicao: competicaoDaBase(e, categoria), jogos, titular, nota, tecnica: Math.round(h * 10) / 10, colocacao: 0, participantes: 0, avaliacao: '' };
+  if (e.modalidade === 'futebol') {
+    const pos = e.posicao ?? posicaoSugerida(v);
+    a.papel = nomePosicao(v, pos);
+    a.gols = Math.round(peso * GOL[pos] * (0.75 + rr.next() * 0.5));
+    a.assistencias = Math.round(peso * ASSIST[pos] * (0.75 + rr.next() * 0.5));
+  } else if (e.modalidade === 'futsal') {
+    a.gols = Math.round(peso * 0.4 * (0.75 + rr.next() * 0.5));
+    a.assistencias = Math.round(peso * 0.25 * (0.75 + rr.next() * 0.5));
+  } else if (e.modalidade === 'basquete') {
+    a.papel = NOME_FUNCAO[funcaoBasquete(v)];
+    a.pontos = Math.round(clamp((nota - 3) / 5, 0.1, 1.4) * 11 * (0.85 + rr.next() * 0.3) * 10) / 10;
+  } else if (e.modalidade === 'volei') a.papel = NOME_FUNCAO_VOLEI[funcaoVolei(v)];
+  else if (e.modalidade === 'lutas') a.papel = `categoria ${categoriaDeLuta(v)}`;
+  else if (e.modalidade === 'natacao' || e.modalidade === 'atletismo') a.papel = provaDe(v, e.modalidade)?.nome;
+  if (individual) {
+    a.participantes = e.modalidade === 'tenis' ? 32 : 12;
+    a.colocacao = Math.round(clamp(9 - (nota - 5) * 2.2 + rr.normal() * 1.3, 1, a.participantes));
+    if (e.modalidade !== 'tenis') a.podios = jogos ? Math.max(0, Math.round(jogos * clamp((nota - 5.5) / 5, 0, 0.8))) : 0;
+  } else {
+    a.participantes = e.modalidade === 'futebol' ? 16 : 10;
+    // A força da equipe de base: a do clube (o grande forma mais) e a contribuição de quem joga.
+    const porte = e.modalidade === 'futebol' ? divisaoDoClube(v, e.clube, paisDaCidade(e.municipioId)) : 2;
+    const contrib = (nota - 6) * (titular / Math.max(1, max));
+    a.colocacao = Math.round(clamp(a.participantes / 2 + 0.5 - (porte - 2) * 2.2 - contrib * 2.5 + rr.normal() * 2.6, 1, a.participantes));
+  }
+  a.titulo = a.colocacao === 1 && jogos > 0;
+  const forte = nota >= 7.5 ? 'destacou-se na categoria' : nota >= 6.4 ? 'evoluiu dentro do esperado' : nota >= 5.4 ? 'oscilou' : 'ficou abaixo do que a categoria pede';
+  const espaco = individual ? '' : titular >= jogos * 0.6 ? ', titular na maior parte dos jogos' : jogos > 0 ? ', mais vezes no banco do que em campo' : ', quase sem jogar';
+  a.avaliacao = `${cap(forte)}${espaco}${h >= limiar ? '; já tem o nível que o contrato profissional pede' : h >= limiar - 5 ? '; perto da régua do contrato profissional' : ''}.`;
+  const lista = (e.formacao ??= []);
+  const anterior = lista[lista.length - 1];
+  lista.push(a);
+  if (lista.length > 15) lista.splice(0, lista.length - 15);
+  // A promoção de categoria (o sub-15 que vira sub-17) é um acontecimento da formação — dito uma vez.
+  if (anterior && anterior.categoria !== categoria && anterior.clube === e.clube && (e.modalidade === 'futebol' || e.modalidade === 'futsal')) {
+    escrever(v, { texto: `Subiu para o ${categoria} ${doClube(e.clube)}${a.titular >= a.jogos * 0.6 ? ', direto para o time titular da categoria' : ''}.`, relevancia: 'biografia', tema: 'lazer', tom: 'bom' });
+  }
+  if (a.titulo) {
+    const texto = individual ? `Venceu ${e.modalidade === 'tenis' ? 'o ranking do circuito juvenil' : `o ${a.competicao}`} em ${ano}` : `Campeão do ${a.competicao}, ${peloClube(e.clube)}`;
+    escrever(v, { texto: `${texto}${individual ? '' : `: ${a.titular >= a.jogos * 0.6 ? 'titular no time campeão' : 'no elenco campeão'}`}.`, relevancia: 'biografia', tema: 'lazer', tom: 'bom' });
+    registrarConquista(v, { tipo: 'titulo', modalidade: e.modalidade, ano, competicao: a.competicao, clube: individual ? undefined : e.clube, papel: individual || a.titular >= a.jogos * 0.6 ? 'protagonista' : 'elenco', texto: `${texto} (formação)` });
+  }
+  // A fotografia do perfil também no fim de cada ano de base: a ficha mostra a evolução desde a formação.
+  fotografarAtributos(e, ano, perfilDeAtributos(v, e, h, e.modalidade === 'futebol' ? (e.posicao ?? posicaoSugerida(v)) : undefined, e.modalidade === 'basquete' ? funcaoBasquete(v) : undefined), h);
+  return a;
+}
+
 function anoNaBase(v: Vida, r: Rng, e: CarreiraEsportiva, presenca = 1): void {
   const i = idade(v);
   const h = habilidade(v, e.modalidade);
   const anos = (v.t - e.tFase) / 12;
+  // VIDA 25: o ano da formação fica registrado (jogos, titularidade, números, nota, colocação, título, avaliação).
+  registrarAnoDeFormacao(v, e, h, presenca);
   // REWORK 10 · ROT-05: quem concilia a base com a faculdade ou o trabalho e perde treinos (a agenda diz quantos) é visto
   // faltando — o treino que não aconteceu não treinou (`rotinas`), e a comissão repara: a dispensa fica mais provável.
   const faltas = Math.max(0, 1 - presenca);

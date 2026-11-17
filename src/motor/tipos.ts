@@ -2377,6 +2377,43 @@ export interface CarreiraEsportiva {
   capitao?: { clube: string; desde: number };
   /** VIDA 14 · futsal: a posição na quadra (goleiro, fixo, ala, pivô) e se o técnico usa você como goleiro-linha. Ausente: a do corpo. */
   futsal?: { funcao?: 'goleiro' | 'fixo' | 'ala_esquerda' | 'ala_direita' | 'pivo'; goleiroLinha?: boolean };
+  /** VIDA 25: a fotografia do perfil no fim de cada ano (`atributosEsportivos.fotografarAtributos`). Ausente: anos antes da 25. */
+  serieAtributos?: { ano: number; tecnica: number; a: Partial<Record<string, number>> }[];
+  /** VIDA 25: os anos de formação (a base), registrados ano a ano (`esporte.anoNaBase`). Ausente: vidas anteriores. */
+  formacao?: AnoDeFormacao[];
+}
+
+/**
+ * VIDA 25 · um ano na formação (a base do futebol e do futsal por categoria; as equipes de base das outras modalidades; o
+ * circuito juvenil do tênis). O que o motor simulou naquele ano — nada estimado para a tela.
+ */
+export interface AnoDeFormacao {
+  ano: number;
+  idade: number;
+  /** "sub-15", "sub-17", "equipe de base", "circuito juvenil". */
+  categoria: string;
+  clube: string;
+  /** A competição da categoria naquele ano ("campeonato estadual sub-17"). */
+  competicao: string;
+  jogos: number;
+  titular: number;
+  /** Futebol e futsal: gols e assistências; basquete: pontos; individuais: provas/lutas/torneios (em `jogos`) e pódios. */
+  gols?: number;
+  assistencias?: number;
+  pontos?: number;
+  podios?: number;
+  /** A nota do ano (0–10), da mesma conta da técnica contra a régua do contrato profissional. */
+  nota: number;
+  /** A técnica no fim do ano (o número que o motor usa). */
+  tecnica: number;
+  /** A colocação da equipe (coletivas) ou do atleta (individuais) na competição. */
+  colocacao: number;
+  participantes: number;
+  titulo?: boolean;
+  /** O que a comissão disse do ano (a avaliação, a partir dos números acima). */
+  avaliacao: string;
+  /** A posição/função/prova do ano, quando há. */
+  papel?: string;
 }
 
 /** Uma proposta concreta de clube (ou de empréstimo): o que se viu é o que se assina. */
@@ -3983,6 +4020,8 @@ export interface Vida {
   dependencias14?: import('./dados14/crencas/crencas').EstadoDependencias14;
   /** VIDA 20 · a carreira no automobilismo, do kart à F1 (`v20/automobilismo`). Ausente: nunca correu. */
   automobilismo20?: import('./dados20/tipos20').Auto20;
+  /** VIDA 25 · a carreira de e-sports, do ranqueado ao mundial (`v25/esports`). Ausente: nunca competiu. */
+  esports25?: import('./v25/esports/tipos25').Esports25;
   /** VIDA 20 · o clube esportivo de que é dono (`v20/clubes`). Ausente: nenhum. */
   clube20?: import('./dados20/tipos20').Clube20;
   /** REWORK 4: as redes sociais do jogo (simulação interna, sem internet): `sistemas/redes`. Opcional. */

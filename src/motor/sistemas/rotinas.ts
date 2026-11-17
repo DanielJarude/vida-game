@@ -511,6 +511,19 @@ export const ROTINAS: readonly ModeloRotina[] = [
     }
   },
   {
+    // VIDA 25: o treino de quem compete em e-sports (`v25/esports`): horas de verdade na semana — e a evolução do ano lê o
+    // nível desta atividade (sem treino, a mão esfria). Só aparece para quem está na carreira (fora do profissional, em que
+    // o treino é o trabalho).
+    id: 'esports', nome: 'Treinar para competir (e-sports)', descricao: 'Ranqueadas, treino de mira e de mão, as partidas revistas, os treinos com a equipe.', categoria: 'lazer', idadeMin: 12,
+    oferta: v => !!v.esports25 && v.esports25.fase !== 'encerrada' && v.esports25.fase !== 'profissional',
+    niveis: [
+      { rotulo: 'Umas horas por dia, nos dias livres', tempo: 0.75, custo: 60 },
+      { rotulo: 'Todo dia, com horário', tempo: 1.5, custo: 90 },
+      { rotulo: 'Como profissão: o dia inteiro', tempo: 2.5, custo: 120 }
+    ],
+    social: { onde: 'no cenário competitivo', fluxo: 0.6, amplitude: 5 }
+  },
+  {
     id: 'videogame', nome: 'Jogar videogame', descricao: 'Horas no console, no PC ou no celular.', categoria: 'lazer', idadeMin: 6,
     niveis: [{ rotulo: 'Umas horas por semana', tempo: 0.5, custo: 50 }],
     social: { onde: 'jogando online', fluxo: 0.4, amplitude: 6 }

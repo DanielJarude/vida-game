@@ -168,6 +168,9 @@ export default defineConfig({
           // VIDA 24: idem (motor/v24/<frente> → motor24-<frente>); `v24/corpo` é folha como `v23/corpo`.
           const v24 = /[\\/]src[\\/]motor[\\/]v24[\\/]([a-z0-9]+)[\\/]/.exec(id);
           if (v24) return `motor24-${v24[1]}`;
+          // VIDA 25: idem (motor/v25/<frente> → motor25-<frente>): os e-sports.
+          const v25 = /[\\/]src[\\/]motor[\\/]v25[\\/]([a-z0-9]+)[\\/]/.exec(id);
+          if (v25) return `motor25-${v25[1]}`;
           if (/[\\/]src[\\/]motor[\\/]dados18[\\/]/.test(id)) return 'dados18';
           if (/[\\/]src[\\/]motor[\\/]sistemas[\\/]reconhecimento13\.ts/.test(id)) return 'motor-fama';
           if (/[\\/]src[\\/]motor[\\/]sistemas[\\/](redes|leituraDoEstresse|juntos|naFormacao|noOficio|microcenas|prisao|mundoVivo|agenda|avaliacaoDaRotina|convivio|apostas|ecos|seguroDesemprego|indiretos|afetos|fama|pedidosDaCrianca|afetosAdultos|casamento|convivio126|casaNoDia|viagens126)\.ts/.test(id)) return 'motor-vida';

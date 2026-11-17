@@ -24,14 +24,88 @@ export type AtributoId =
   | 'marcacao' | 'antecipacao' | 'aereo'
   | 'passe' | 'visao' | 'resistencia'
   | 'finalizacao' | 'movimentacao' | 'velocidade'
-  | 'arremesso' | 'rebote' | 'conducao';
+  | 'arremesso' | 'rebote' | 'conducao'
+  // VIDA 25: as outras modalidades (vôlei, futsal, tênis, natação, atletismo, luta) — cada uma com os seus.
+  | 'ataque' | 'bloqueio' | 'recepcao' | 'saque'
+  | 'devolucao' | 'fundo' | 'rede'
+  | 'largada' | 'bracada' | 'explosao' | 'tecnica_prova'
+  | 'golpes' | 'solo' | 'defesa';
 
 export const NOME_ATRIBUTO: Record<AtributoId, string> = {
   reflexos: 'reflexos', posicionamento: 'posicionamento', saidas: 'saídas do gol', pes: 'jogo com os pés',
   marcacao: 'marcação', antecipacao: 'antecipação', aereo: 'jogo aéreo',
   passe: 'passe', visao: 'visão de jogo', resistencia: 'resistência',
   finalizacao: 'finalização', movimentacao: 'movimentação', velocidade: 'velocidade',
-  arremesso: 'arremesso', rebote: 'rebote', conducao: 'condução de bola'
+  arremesso: 'arremesso', rebote: 'rebote', conducao: 'condução de bola',
+  ataque: 'ataque', bloqueio: 'bloqueio', recepcao: 'recepção e defesa', saque: 'saque',
+  devolucao: 'devolução', fundo: 'jogo de fundo', rede: 'jogo de rede',
+  largada: 'largada e viradas', bracada: 'técnica de nado', explosao: 'explosão', tecnica_prova: 'técnica da prova',
+  golpes: 'golpes em pé', solo: 'luta no chão', defesa: 'defesa'
+};
+
+/**
+ * VIDA 25 · os atributos das modalidades que não têm posição nem função com perfil próprio (o peso de cada um na nota
+ * da temporada; somam 1). Não são enfeite: entram em `efeitoNaNota` como os do futebol e do basquete, sobem com o treino
+ * extra (`treinarAtributos`) e envelhecem (`envelhecerAtributos`).
+ */
+export const ATRIBUTOS_DA_MODALIDADE: Partial<Record<string, [AtributoId, number][]>> = {
+  volei: [['ataque', 0.3], ['recepcao', 0.25], ['bloqueio', 0.2], ['saque', 0.25]],
+  futsal: [['conducao', 0.3], ['passe', 0.25], ['finalizacao', 0.25], ['marcacao', 0.2]],
+  tenis: [['saque', 0.3], ['devolucao', 0.25], ['fundo', 0.3], ['resistencia', 0.15]],
+  natacao: [['bracada', 0.35], ['largada', 0.2], ['resistencia', 0.25], ['velocidade', 0.2]],
+  atletismo: [['velocidade', 0.3], ['explosao', 0.25], ['resistencia', 0.25], ['tecnica_prova', 0.2]],
+  lutas: [['golpes', 0.3], ['solo', 0.25], ['defesa', 0.25], ['resistencia', 0.2]]
+};
+
+/** O que cada atributo é, em uma frase (a ficha explica; nunca o número interno). */
+export const SOBRE_ATRIBUTO: Record<AtributoId, string> = {
+  reflexos: 'A reação no lance que ninguém espera: a bola desviada, o chute à queima-roupa.',
+  posicionamento: 'Estar no lugar certo antes da jogada acontecer.',
+  saidas: 'Sair do gol na hora certa: o cruzamento, o um contra um.',
+  pes: 'Jogar com os pés: o passe de saída, a reposição longa.',
+  marcacao: 'Tirar a bola sem falta e acompanhar quem ataca.',
+  antecipacao: 'Ler o passe antes dele sair.',
+  aereo: 'Ganhar a bola pelo alto, na defesa e no ataque.',
+  passe: 'Pôr a bola onde o companheiro precisa, no tempo certo.',
+  visao: 'Enxergar a jogada que os outros não viram.',
+  resistencia: 'Aguentar o jogo inteiro — e a temporada inteira — no mesmo ritmo.',
+  finalizacao: 'Transformar a chance em gol.',
+  movimentacao: 'Aparecer livre: a diagonal, o espaço entre os zagueiros.',
+  velocidade: 'Chegar antes: arrancada e velocidade final.',
+  arremesso: 'Converter de média e de longa distância.',
+  rebote: 'Ganhar a bola que sobra no garrafão.',
+  conducao: 'Carregar a bola com controle, sob marcação.',
+  ataque: 'Pôr a bola no chão do outro lado, contra o bloqueio.',
+  bloqueio: 'Fechar a rede: tempo de salto e leitura do levantamento.',
+  recepcao: 'Receber o saque e defender o ataque: a bola na mão do levantador.',
+  saque: 'Começar o ponto com vantagem: força, direção, o ace.',
+  devolucao: 'Neutralizar o saque do outro lado.',
+  fundo: 'Construir o ponto da linha de base: profundidade, ângulo, regularidade.',
+  rede: 'Fechar o ponto no voleio.',
+  largada: 'A saída do bloco e as viradas: o tempo que se ganha (ou perde) nas paredes.',
+  bracada: 'A eficiência do nado: cada braçada levando mais longe.',
+  explosao: 'A força em pouco tempo: a saída, o salto, o arremesso.',
+  tecnica_prova: 'O gesto da prova: a passada, a barreira, a impulsão.',
+  golpes: 'Acertar em pé: socos, chutes, a distância certa.',
+  solo: 'A luta no chão: quedas, controle, finalização.',
+  defesa: 'Não ser atingido nem finalizado: a guarda, a esquiva, a saída.'
+};
+
+/**
+ * VIDA 25 · o GRUPO de cada atributo na ficha (técnico, físico, tático; cada modalidade mostra só os grupos que tem).
+ * Não há atributo "mental" nas modalidades tradicionais: a cabeça do atleta é a pessoa (o estresse, a confiança) — não
+ * se inventa um número para a tela.
+ */
+export const GRUPO_DO_ATRIBUTO: Record<AtributoId, 'tecnico' | 'fisico' | 'tatico'> = {
+  reflexos: 'fisico', posicionamento: 'tatico', saidas: 'tecnico', pes: 'tecnico',
+  marcacao: 'tatico', antecipacao: 'tatico', aereo: 'fisico',
+  passe: 'tecnico', visao: 'tatico', resistencia: 'fisico',
+  finalizacao: 'tecnico', movimentacao: 'tatico', velocidade: 'fisico',
+  arremesso: 'tecnico', rebote: 'fisico', conducao: 'tecnico',
+  ataque: 'tecnico', bloqueio: 'fisico', recepcao: 'tecnico', saque: 'tecnico',
+  devolucao: 'tecnico', fundo: 'tecnico', rede: 'tecnico',
+  largada: 'tecnico', bracada: 'tecnico', explosao: 'fisico', tecnica_prova: 'tecnico',
+  golpes: 'tecnico', solo: 'tecnico', defesa: 'tatico'
 };
 
 /** Os atributos de cada grupo, com o peso de cada um NA NOTA da temporada (somam 1). */
@@ -49,8 +123,8 @@ export const ATRIBUTOS_BASQUETE: Record<'armador' | 'ala' | 'pivo', [AtributoId,
 };
 
 /** Os atributos do CORPO (o tempo cobra depois do auge) e os da LEITURA (o tempo ensina). */
-const DO_CORPO = new Set<AtributoId>(['reflexos', 'velocidade', 'resistencia', 'saidas', 'aereo']);
-const DA_LEITURA = new Set<AtributoId>(['posicionamento', 'antecipacao', 'visao', 'movimentacao']);
+const DO_CORPO = new Set<AtributoId>(['reflexos', 'velocidade', 'resistencia', 'saidas', 'aereo', 'explosao', 'bloqueio', 'largada']);
+const DA_LEITURA = new Set<AtributoId>(['posicionamento', 'antecipacao', 'visao', 'movimentacao', 'recepcao', 'devolucao', 'defesa']);
 
 /** O traço de nascença de um atributo (−4..+4, estável pela semente da vida). */
 export const tracoDoAtributo = (v: Vida, id: AtributoId) => Math.round((hashMisturado(`${v.id}:atributo:${id}`) * 8 - 4) * 10) / 10;
@@ -59,7 +133,7 @@ export const tracoDoAtributo = (v: Vida, id: AtributoId) => Math.round((hashMist
 export function atributosDaCarreira(e: CarreiraEsportiva, posicao: Posicao | undefined, funcao?: 'armador' | 'ala' | 'pivo'): [AtributoId, number][] {
   if (e.modalidade === 'futebol' && posicao) return ATRIBUTOS_DO_GRUPO[GRUPO_DA_POSICAO[posicao]];
   if (e.modalidade === 'basquete' && funcao) return ATRIBUTOS_BASQUETE[funcao];
-  return [];
+  return ATRIBUTOS_DA_MODALIDADE[e.modalidade] ?? [];
 }
 
 /** O valor de um atributo (0..100): a técnica de hoje + o traço + o que a carreira guardou. */
@@ -106,4 +180,18 @@ export function envelhecerAtributos(e: CarreiraEsportiva, idade: number, auge: n
   for (const id of Object.keys(a ?? {}) as AtributoId[]) a![id] = Math.round(a![id]! * 0.9 * 10) / 10;
   if (idade > auge) for (const id of DO_CORPO) mexerNoAtributo(e, id, -0.5);
   if (idade >= 24 && idade <= auge + 4) for (const id of DA_LEITURA) mexerNoAtributo(e, id, 0.4);
+}
+
+/**
+ * VIDA 25 · a FOTOGRAFIA do perfil no fim de cada ano de esporte (a base e o profissional): o valor de cada atributo e a
+ * técnica. É o que a ficha compara (antes → agora) e desenha (a evolução). Só existe a partir da VIDA 25 — os anos
+ * anteriores não têm fotografia, e a tela diz isso em vez de inventar.
+ */
+export function fotografarAtributos(e: CarreiraEsportiva, ano: number, perfil: { id: AtributoId; valor: number }[], tecnica: number): void {
+  if (!perfil.length) return;
+  const serie = (e.serieAtributos ??= []);
+  const foto = { ano, tecnica: Math.round(tecnica * 10) / 10, a: Object.fromEntries(perfil.map(x => [x.id, x.valor])) };
+  const k = serie.findIndex(x => x.ano === ano);
+  if (k >= 0) serie[k] = foto; else serie.push(foto);
+  if (serie.length > 25) serie.splice(0, serie.length - 25);
 }
