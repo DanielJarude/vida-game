@@ -51,7 +51,7 @@ import { paisDaVida, perfilDaVida, temNacionalidade } from '../mundo/vida';
 import { doPais, noPais } from '../mundo/registro';
 import { modeloRotina, podeComecarRotina } from '../sistemas/rotinas';
 import { anoDe } from '../tempo';
-import type { Vida } from '../tipos';
+import { chamadoAoAlistamento } from '../sistemas/militar';
 import { clamp } from '../rng';
 import { editaisAbertos } from '../sistemas/concurso';
 import { noTrabalho } from '../sistemas/ambiente';
@@ -605,13 +605,6 @@ function selecaoIf(c: Ctx, k: number) {
     };
   }
   return { texto: 'A lista saiu e seu nome não estava. O médio seguiu na escola de sempre.', memoria: `Não passou na seleção ${doNome(escolha.inst.nome)} (${nomeCurto(cc)}).`, relevancia: 'biografia' as const, tom: 'ruim' as const };
-}
-
-/** VIDA 25 · BUG-01: a lei do lugar e do ANO chama esta pessoa ao alistamento? */
-export function chamadoAoAlistamento(v: Vida): boolean {
-  if (v.eu.genero === 'masculino') return true;
-  const desde = perfilDaVida(v).militar.femininoDesde;
-  return desde !== undefined && anoDe(v.t) >= desde;
 }
 
 function alistar(c: Ctx, chance: number) {

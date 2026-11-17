@@ -42,6 +42,7 @@ import { contratar, encerrarEmprego, nomeOcupacao, registrarPosto, salarioLiquid
 import { salarioLocal } from './renda';
 import { praticar } from './frentes';
 import { anoDe } from '../tempo';
+import { perfilDaVida } from '../mundo/vida';
 import { flex, ge } from '../texto';
 import { capitalDoEstado } from './escola';
 import { abalar } from './abalo';
@@ -516,3 +517,11 @@ export function escadaMilitar(v: Vida): { nome: string; estado: 'foi' | 'agora' 
   const k = ids.indexOf(e.ocupacaoId);
   return ids.map((id, i) => ({ nome: nomeOcupacao(v, ocupacao(id)), estado: k < 0 ? 'acima' : i < k ? 'foi' : i === k ? 'agora' : 'acima' }));
 }
+
+/** VIDA 25 · BUG-01: a lei do lugar e do ANO chama esta pessoa ao alistamento? */
+export function chamadoAoAlistamento(v: Vida): boolean {
+  if (v.eu.genero === 'masculino') return true;
+  const desde = perfilDaVida(v).militar.femininoDesde;
+  return desde !== undefined && anoDe(v.t) >= desde;
+}
+

@@ -104,7 +104,9 @@ export function praticar(v: Vida, r: Rng, d: Dominio, peso: number, qualidade = 
   // Rende menos perto do topo. O topo de cada um sobe com a facilidade e com
   // os anos de prática intensa: sem facilidade, a raça leva longe (70 e
   // poucos); com facilidade e anos de treino, chega-se ao que é raro.
-  const topo = Math.min(97, 70 + apt * 18 + pred * 4 + Math.min(12, f.meses / 24));
+  // VIDA 25 · BAL (futebol): os anos de prática somam menos ao topo (até 7, não 12) — antes, quase todo atleta dedicado
+  // chegava à técnica de elite (85–100) e a elite nacional era garantida para 96% dos profissionais simulados.
+  const topo = Math.min(97, 70 + apt * 18 + pred * 4 + Math.min(d === 'futebol' ? 7 : 12, f.meses / 24));
   const teto = Math.max(0.03, 1 - f.habilidade / (topo + 4));
   const ganho = 7.2 * peso * velocidade * aprende * vontade * fatorIdade(d, i) * qualidade * corpo * teto * (0.8 + r.next() * 0.4);
   f.habilidade = clamp(Math.round((f.habilidade + ganho) * 10) / 10);

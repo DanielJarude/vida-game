@@ -63,6 +63,8 @@ describe('VIDA 24 · Corpo', () => {
   it('o que está mudando o corpo é a conta de verdade (o sedentarismo aparece; a constituição de nascença é só consulta)', () => {
     const v = vida(2412, x => { x.rotinas = []; x.corpo.habitos.sedentario = true; });
     const { container } = render(<CorpoPainel vida={v} agir={() => true} />);
+    // VIDA 25: as causas da mudança moram na parte Evolução (a condição atual mostra as medidas e o que cada uma é).
+    fireEvent.click(within(container).getByRole('radio', { name: 'Evolução' }));
     expect(container.textContent).toMatch(/O sedentarismo/);
     fireEvent.click(within(container).getByRole('radio', { name: 'Constituição' }));
     expect(container.querySelectorAll('[data-c24-parte="nascenca"] [data-eixo]').length).toBe(12);

@@ -9,7 +9,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { nova } from './ajuda';
 import { carregarMundo } from '../mundo/carregar';
 import { conteudoPorId, preparar } from '../conteudo/motor';
-import { chamadoAoAlistamento } from '../conteudo/caminhos';
+import { chamadoAoAlistamento } from '../sistemas/militar';
 import { criarRng } from '../rng';
 import { tDe } from '../tempo';
 import type { Vida, Veiculo } from '../tipos';
