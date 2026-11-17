@@ -249,6 +249,12 @@ export interface PerfilMilitar {
    * Ausente: uma descrição genérica do serviço do país.
    */
   alistamento?: { masculino: string; feminino: string; dispensa: [texto: string, memoria: string] };
+  /**
+   * VIDA 25 · BUG-01: o ano a partir do qual as mulheres podem se ALISTAR (a janela do alistamento, voluntária) no ano em
+   * que fazem a idade. Ausente: o alistamento não chama mulheres (a farda, para elas, é concurso). Brasil: Decreto
+   * 12.154/2024 — a primeira janela foi a de janeiro a junho de 2025, para as nascidas em 2007.
+   */
+  femininoDesde?: number;
 }
 
 export interface ClubeDoPais {

@@ -207,7 +207,10 @@ export const nomeCargo = (v: Vida, c: CargoEletivo) => {
 /** Os tipos de eleição que caem num ano (num país em que coincidem, os dois). */
 export function tiposDeEleicao(ano: number, pais = paisCorrente()): ('municipal' | 'geral')[] {
   const { local, geral } = politicaDo(pais).eleicoes;
-  const cai = ([base, cada]: [number, number]) => ano >= base && (ano - base) % cada === 0;
+  // VIDA 25 · BUG-04: o ciclo vale para TRÁS do ano de referência também (as eleições de 1988, 1990... das vidas
+  // históricas). Antes, `ano >= base`: no Brasil, nenhuma eleição existia antes de 2028 — e a candidatura de quem vivia
+  // nas Eras históricas nunca tinha eleição a disputar. Fora do Brasil (só vidas de hoje), o ciclo de trás é abstração.
+  const cai = ([base, cada]: [number, number]) => (((ano - base) % cada) + cada) % cada === 0;
   return [...(cai(local) ? ['municipal' as const] : []), ...(cai(geral) ? ['geral' as const] : [])];
 }
 export const tipoDeEleicao = (ano: number, pais = paisCorrente()): 'municipal' | 'geral' | undefined => {

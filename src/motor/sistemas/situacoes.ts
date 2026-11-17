@@ -167,13 +167,27 @@ export function sortearDesfecho(v: Vida, r: Rng, it: Intencao, d: Dados): Desfec
 export const intencoesDe = (m: ModeloSituacao, v: Vida, d: Dados) => (typeof m.intencoes === 'function' ? m.intencoes(v, d) : m.intencoes);
 export const modeloDaSituacao = (id: string) => MODELOS.find(m => m.id === id);
 
+/**
+ * VIDA 25 · o clube de agora da trajetória da cena (o do atleta; o do banco, para o técnico). A cena guarda, ao nascer, o
+ * clube em que acontece (`dados.clube`): depois de uma transferência, de um empréstimo ou da volta dele, ela é do clube
+ * ANTERIOR — e não pode mais ser apresentada como se fosse da carreira de agora.
+ */
+function clubeDaCena(v: Vida, tr: Trajetoria): string | undefined {
+  if (tr === 'tecnico') return passagemAtual(v)?.clube;
+  if (tr === 'futebol' || tr === 'basquete' || tr === 'tenis' || tr === 'atleta') return v.caminhos.esporte?.clube;
+  return undefined;
+}
+/** A cena é de um clube que já não é o seu? (a que não guarda clube nunca é). */
+export const cenaDeOutroClube = (v: Vida, m: ModeloSituacao, d: Dados): boolean => d.clube !== undefined && String(d.clube) !== clubeDaCena(v, m.trajetoria);
+
 /** A situação aberta deste ano (se ainda cabe). */
 export function situacaoAberta(v: Vida): { m: ModeloSituacao; d: Dados } | undefined {
   const s = v.caminhos.situacao;
   // REWORK 11 · CAR-11.9: a cena sorteada num ano já ocupado (a renovação, a proposta) espera o ano seguinte.
   if (!s || s.t !== v.t || s.dados._ocupado !== undefined) return undefined;
   const m = modeloDaSituacao(s.id);
-  return m && m.cabe(v) ? { m, d: s.dados } : undefined;
+  // VIDA 25 · BUG-02: a cena do clube anterior (a transferência veio depois que ela nasceu) não abre.
+  return m && m.cabe(v) && !cenaDeOutroClube(v, m, s.dados) ? { m, d: s.dados } : undefined;
 }
 
 /** O texto da cena — e, quando o tema volta anos depois, a lembrança do que aconteceu da outra vez. */
@@ -372,7 +386,9 @@ export function processarSituacoes(v: Vida, r: Rng): void {
   // A cena do ano passado que outra decisão tirou da frente volta, uma vez — se ainda couber. A que esperou um ano
   // ocupado pode esperar mais um, se este também estiver (no máximo dois).
   const pm = anterior && anterior.t === v.t - 12 && anterior.dados._adiada === undefined ? modeloDaSituacao(anterior.id) : undefined;
-  if (anterior && pm && pm.trajetoria === tr && !COMUNS.has(tr) && pm.cabe(v)) {
+  // VIDA 25 · BUG-02: a cena adiada de um clube que você deixou (a proposta aceita era justamente a decisão que a
+  // empurrou) não volta no clube novo: o minuto, o placar e a torcida eram de lá. Fica no passado, sem decisão.
+  if (anterior && pm && pm.trajetoria === tr && !COMUNS.has(tr) && pm.cabe(v) && !cenaDeOutroClube(v, pm, anterior.dados)) {
     const { _ocupado, ...dados } = anterior.dados;
     if (!ocupado) { v.caminhos.situacao = { id: anterior.id, t: v.t, dados: { ...dados, _adiada: 1 } }; return; }
     if (Number(_ocupado ?? 0) < 2) { v.caminhos.situacao = { id: anterior.id, t: v.t, dados: { ...dados, _ocupado: Number(_ocupado ?? 0) + 1 } }; return; }

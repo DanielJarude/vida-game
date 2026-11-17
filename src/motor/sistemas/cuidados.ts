@@ -9,6 +9,7 @@
  * gente por perto, sedentarismo pede movimento — em vez de um cardápio fixo.
  */
 
+import { textoVeiculo, veiculoNaOficina } from './veiculos';
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
 import type { Dominio, Vida } from '../tipos';
@@ -230,7 +231,7 @@ export function sugestoes(v: Vida, d: 'humor' | 'cabeca' | 'saude', disp: (v: Vi
     // Quando é o dinheiro que pesa, o cuidado é olhar para ele (renegociar, cortar, vender).
     if (pesa('dividas') || pesa('aperto')) out.push({ id: 'dinheiro', texto: pesa('dividas') ? 'Encarar as dívidas: renegociar, cortar, vender' : 'Rever o padrão de vida', motivo: 'O que pesa aqui tem nome e número.', aba: 'casa' });
     if (pesa('casa_pequena')) out.push({ id: 'casa_maior', texto: 'Procurar uma casa que caiba a família', aba: 'casa' });
-    if (pesa('carro_parado')) out.push({ id: 'oficina', texto: 'Resolver o carro parado', aba: 'casa' });
+    if (pesa('carro_parado')) { const b = veiculoNaOficina(v); if (b) out.push({ id: 'oficina', texto: `Resolver ${textoVeiculo(b)} na oficina`, aba: 'casa' }); }
     if (junto({ tipo: 'cuidar', cuidado: 'descansar' })) out.push({ id: 'descansar', texto: 'Tirar uns dias de descanso', motivo: v.trabalho.atual ? 'Um respiro não resolve a causa, mas ajuda a atravessar.' : undefined, acao: { tipo: 'cuidar', cuidado: 'descansar' } });
     const quem = desabafo(v);
     if (quem) out.push({ id: 'desabafar', texto: `Desabafar com ${quem.nome}`, motivo: 'Falar do que pesa, com quem escuta.', acao: { tipo: 'pessoa', pessoaId: quem.id, interacao: 'desabafar' } });

@@ -169,7 +169,10 @@ export function processarVeiculos(v: Vida, r: Rng): void {
     const revisado = b.tRevisao !== undefined && v.t - b.tRevisao <= 12;
     // O clássico roda pouco (é passeio de domingo): gasta devagar.
     const gasto = m.segmento === 'classico' ? 2 : (m.categoria === 'bicicleta' ? 4 : 5) + (anos > 8 ? 2 : 0);
-    if (!b.parado) b.estado = clamp(Math.round(b.estado - gasto + (revisado ? 3 : 0) + r.normal()));
+    // VIDA 25 · BUG-03: o veículo guardado em outra cidade (`local`) não está rodando com você: gasta como o parado e não
+    // "deixa você na mão" — antes, quebrava e mandava você à oficina a centenas de quilômetros dele.
+    const longe = !!b.local;
+    if (!b.parado && !longe) b.estado = clamp(Math.round(b.estado - gasto + (revisado ? 3 : 0) + r.normal()));
     else b.estado = clamp(b.estado - 1);
 
     if (b.problema) {
@@ -180,7 +183,7 @@ export function processarVeiculos(v: Vida, r: Rng): void {
         // Bicicleta não "quebra de vez": o problema fica, mas não vira motor fundido.
         const teto = m.categoria === 'bicicleta' ? 2 : 3;
         p.custo = Math.min(p.custo, Math.round(novo * 0.45 / 10) * 10);
-        if (p.gravidade < teto && !b.parado && r.chance(p.gravidade === 1 ? 0.35 : 0.4)) {
+        if (p.gravidade < teto && !b.parado && !longe && r.chance(p.gravidade === 1 ? 0.35 : 0.4)) {
           p.gravidade = (p.gravidade + 1) as 1 | 2 | 3;
           if (p.gravidade === 3) {
             p.custo = Math.round(Math.min(Math.max(p.custo * 1.6, novo * 0.05), novo * 0.45) / 10) * 10;
@@ -191,7 +194,7 @@ export function processarVeiculos(v: Vida, r: Rng): void {
       }
       continue;
     }
-    if (b.parado) continue;
+    if (b.parado || longe) continue;
     // REWORK 12.4: o que foi feito nele (o pneu bom, o motor preparado) muda o quanto ele dá problema.
     const chance = m.fragilidade * efeitoDasMods(m.categoria, b.mods).fragilidade * (0.07 + (100 - b.estado) / 260 + anos * 0.006) * (revisado ? 0.55 : 1) * (b.usado ? 1.1 : 1);
     if (r.chance(Math.min(0.75, chance))) {
@@ -206,6 +209,12 @@ export function processarVeiculos(v: Vida, r: Rng): void {
     }
   }
 }
+
+/**
+ * VIDA 25 · BUG-03: o veículo SEU, com você, parado na oficina (o problema grave sem conserto) — a fonte única do peso na
+ * cabeça e do cuidado sugerido. Nunca o de outra pessoa, nunca o guardado em outra cidade, nunca um que foi vendido.
+ */
+export const veiculoNaOficina = (v: Vida): Veiculo | undefined => veiculos(v).find(b => (b.problema?.gravidade ?? 0) >= 3 && !b.parado && !b.local);
 
 /** "o Fiat Mobi", "a Honda CG 160 Fan"; sem versão, "o carro compacto", "a moto pequena". */
 export function textoVeiculo(b: Veiculo): string {

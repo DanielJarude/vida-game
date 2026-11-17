@@ -51,6 +51,7 @@ import { paisDaVida, perfilDaVida, temNacionalidade } from '../mundo/vida';
 import { doPais, noPais } from '../mundo/registro';
 import { modeloRotina, podeComecarRotina } from '../sistemas/rotinas';
 import { anoDe } from '../tempo';
+import type { Vida } from '../tipos';
 import { clamp } from '../rng';
 import { editaisAbertos } from '../sistemas/concurso';
 import { noTrabalho } from '../sistemas/ambiente';
@@ -287,7 +288,10 @@ export const CAMINHOS: Conteudo[] = [
     id: 'mil_alistamento', tipo: 'decisao', idade: [16, 21], tema: 'lugar', garantido: true,
     // Só onde o serviço é obrigatório (o alistamento de todos) ou seletivo (o registro, e a convocação por sorteio); onde é voluntário, a farda é concurso.
     // O alistamento é de quem tem a NACIONALIDADE do país onde mora (o estrangeiro residente não é convocado), na idade do país.
-    quando: c => !c.v.justica?.prisao && perfilDaVida(c.v).militar.servico !== 'voluntario' && idade(c.v) === perfilDaVida(c.v).militar.idade && temNacionalidade(c.v, paisDaVida(c.v)),
+    // VIDA 25 · BUG-01: o alistamento só chama quem a lei chama — os homens; as mulheres, só onde e desde quando a janela
+    // voluntária existe (Brasil: 2025). Antes, toda mulher de 18 recebia a decisão, em qualquer ano (até em 1988, com o
+    // texto "Desde 2025...").
+    quando: c => !c.v.justica?.prisao && perfilDaVida(c.v).militar.servico !== 'voluntario' && idade(c.v) === perfilDaVida(c.v).militar.idade && temNacionalidade(c.v, paisDaVida(c.v)) && chamadoAoAlistamento(c.v),
     titulo: 'O alistamento',
     texto: c => {
       const m = perfilDaVida(c.v).militar;
@@ -601,6 +605,13 @@ function selecaoIf(c: Ctx, k: number) {
     };
   }
   return { texto: 'A lista saiu e seu nome não estava. O médio seguiu na escola de sempre.', memoria: `Não passou na seleção ${doNome(escolha.inst.nome)} (${nomeCurto(cc)}).`, relevancia: 'biografia' as const, tom: 'ruim' as const };
+}
+
+/** VIDA 25 · BUG-01: a lei do lugar e do ANO chama esta pessoa ao alistamento? */
+export function chamadoAoAlistamento(v: Vida): boolean {
+  if (v.eu.genero === 'masculino') return true;
+  const desde = perfilDaVida(v).militar.femininoDesde;
+  return desde !== undefined && anoDe(v.t) >= desde;
 }
 
 function alistar(c: Ctx, chance: number) {

@@ -22,6 +22,7 @@
  * diz o que a pessoa sente nem como reagiu.
  */
 
+import { textoVeiculo, veiculoNaOficina } from './veiculos';
 import { textoLocal } from '../mundo/locais';
 import { predisposicao } from './predisposicao';
 import type { Pessoa, Vida, Vinculo } from '../tipos';
@@ -393,8 +394,10 @@ export function fatoresCabeca(v: Vida): Fator[] {
   else if (i >= 25 && (seg.nivel === 'seguro' || seg.nivel === 'folgado') && !moraComFamiliaDeOrigem(v)) out.push({ id: 'reserva', texto: 'saber que há uma reserva', efeito: -3 });
   const apertada = casaApertada(v);
   if (apertada) out.push({ id: 'casa_pequena', texto: apertada, efeito: 4 });
-  const quebrado = v.financas.bens.find(b => b.tipo === 'veiculo' && (b.problema?.gravidade ?? 0) >= 3 && !b.parado);
-  if (quebrado && (v.trabalho.atual || filhos(v).some(f => v.vinculos[f.id]?.convivio.includes('casa')))) out.push({ id: 'carro_parado', texto: 'o carro parado na oficina', efeito: 3 });
+  // VIDA 25 · BUG-03: o veículo é o que você tem (a moto, o barco), dito pelo nome — antes, sempre "o carro", até para
+  // quem só tinha uma moto; e só o que está com você (o guardado em outra cidade não pesa no dia a dia).
+  const quebrado = veiculoNaOficina(v);
+  if (quebrado && (v.trabalho.atual || filhos(v).some(f => v.vinculos[f.id]?.convivio.includes('casa')))) out.push({ id: 'carro_parado', texto: `${textoVeiculo(quebrado)} ${/^a /.test(textoVeiculo(quebrado)) ? 'parada' : 'parado'} na oficina`, efeito: 3 });
   if (moraComFamiliaDeOrigem(v) && i < 18 && rendaPerCapita(v) < 500) out.push({ id: 'aperto_casa', texto: 'o dinheiro curto em casa', efeito: 7 });
   // A procura longa enche a cabeça de quem PROCURA — e só dela (`intencao`): quem vive do patrimônio por escolha
   // não "procura há tanto tempo"; quem tem patrimônio e quer voltar a trabalhar, sim (a frustração não é de dinheiro).

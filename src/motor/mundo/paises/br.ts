@@ -81,6 +81,7 @@ export const BRASIL: PerfilDePais = {
     idade: 18,
     forcas: { exercito: 'o Exército', marinha: 'a Marinha', aeronautica: 'a Aeronáutica' },
     policia: 'a Polícia Militar',
+    femininoDesde: 2025,
     alistamento: {
       masculino: 'Fila na junta militar, formulário, exame. Na ficha, uma pergunta: você deseja servir?',
       feminino: 'Desde 2025, mulheres podem se alistar voluntariamente no ano em que fazem 18. O site abre em janeiro; as vagas são poucas e há seleção.',
