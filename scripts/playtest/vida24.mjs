@@ -54,7 +54,7 @@ await p.getByRole('radio', { name: 'Ganhar massa muscular' }).click(); await p.g
 await p.locator('.c24').first().screenshot({ path: `${OUT}/${TAG}-corpo-objetivo.png` });
 await p.getByRole('button', { name: 'Seguir esse plano' }).click(); await p.waitForTimeout(800);
 rel.passos.push({ nome: 'objetivo-confirmado', hojeIgual: antes === (await hoje()), aviso: await p.locator('[role=status], .aviso, .toast').allTextContents().catch(() => []) });
-await p.getByRole('radio', { name: 'De nascença' }).click(); await p.waitForTimeout(400);
+await p.getByRole('radio', { name: 'Constituição' }).click(); await p.waitForTimeout(400);
 await p.locator('.c24').first().screenshot({ path: `${OUT}/${TAG}-corpo-nascenca.png` });
 await cat('Pele e marcas', 'pele');
 await cat('Pelos', 'pelos');

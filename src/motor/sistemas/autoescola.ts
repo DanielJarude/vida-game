@@ -242,3 +242,27 @@ export function leituraDaAutoescola(v: Vida): string | undefined {
   const espera = p.teoricaOk && idade(v) < h.sozinho ? `teórica aprovada; a prática fica para os ${h.sozinho}` : p.teoricaOk ? 'teórica aprovada; falta a prática' : 'aulas em andamento';
   return `${Escola}: ${espera} — ${p.teoricaOk ? mao : `${prep}, ${mao}`}.`;
 }
+
+/**
+ * VIDA 25 · QUANDO LEMBRAR DA CARTEIRA — o jogador esquecia que podia tirá-la (a porta morava só em Compras · Veículos).
+ * A lembrança aparece no painel "Agora" só quando a pessoa PODE começar (a idade do lugar, sem carteira, sem processo em
+ * andamento, fora da prisão) e há um MOTIVO de agora, em ordem de força:
+ *   'veiculo'  tem carro ou moto e não pode dirigir;
+ *   'idade'    acabou de chegar à idade (o ano em que pode começar e o seguinte);
+ *   'trabalho' trabalha e o trajeto de todo dia é de transporte público (ou procura emprego), até os 35.
+ * O motivo é a chave da dispensa: dispensar "agora não" cala aquele motivo; um motivo novo (comprou um carro) volta a
+ * aparecer uma vez. Nenhum motivo: nada aparece (sem lembrete perpétuo).
+ */
+export type MotivoCnh = 'veiculo' | 'idade' | 'trabalho';
+export function lembrarDaCnh(v: Vida): { motivo: MotivoCnh; texto: string } | undefined {
+  const h = habilitacaoDaVida(v);
+  const i = idade(v);
+  if (v.morte || v.justica?.prisao || v.trabalho.licencas.includes('cnh') || v.processos.some(p => p.tipo === 'cnh')) return undefined;
+  if (podeComecarCnh(v).grau !== 'permitido' || i > 70) return undefined;
+  const motor = v.financas.bens.some(b => b.tipo === 'veiculo' && ['carro', 'moto'].includes(categoriaSimples(b.modeloId)));
+  if (motor) return { motivo: 'veiculo', texto: `Você tem um veículo e não pode dirigi-lo: falta ${h.a}.` };
+  if (i <= h.comeca + 1) return { motivo: 'idade', texto: `Você já tem idade para tirar ${h.a}. ${h.frase}` };
+  if (i <= 35 && i >= 18 && !v.financas.bens.some(b => b.tipo === 'veiculo')) return { motivo: 'trabalho', texto: `Sem ${h.a}, o carro e a moto ficam fora das opções — no trajeto, nas vagas que pedem, nas viagens.` };
+  return undefined;
+}
+const categoriaSimples = (modeloId: string) => (/moto|scooter|bike|bicicleta/.test(modeloId) ? (/bicicleta|bike/.test(modeloId) ? 'bicicleta' : 'moto') : /barco|lancha|veleiro|jet|aviao|aeronave|helicoptero|iate/.test(modeloId) ? 'outro' : 'carro');

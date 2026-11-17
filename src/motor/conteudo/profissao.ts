@@ -393,7 +393,9 @@ export const PROFISSAO: Conteudo[] = [
           const chance = clamp((valorDeMercado(c.v, es) - 20) / 60, 0.08, 0.8);
           if (oferta >= 1 && c.r.chance(chance)) {
             // A proposta que veio é concreta (clube, cidade, salário) e vai para a mesa: aceitar ou não é a próxima pergunta.
-            const nivel = Math.min(4, Math.max(1, oferta)) as 1 | 2 | 3 | 4;
+            // VIDA 25 · BAL: o mercado não pula divisões — de onde se está, no máximo a de cima (antes, da Série D direto
+            // para a Série A, quando o nome bastava).
+            const nivel = Math.min(4, es.nivel + 1, Math.max(1, oferta)) as 1 | 2 | 3 | 4;
             es.proposta = undefined;
             criarProposta(c.v, es, nivel, nivel > es.nivel ? 'maior' : 'menor');
             const m = mercadoEsportivo(es.modalidade);

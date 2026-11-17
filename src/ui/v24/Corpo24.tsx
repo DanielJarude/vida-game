@@ -26,6 +26,7 @@ import { Figura } from '../avatar/Figura';
 import { LARGURA_DE_REFERENCIA } from '../avatar/referencia';
 import { BotaoAcao, Escolha } from '../comum';
 import { tatuagensNaFigura } from '../../motor/sistemas/tatuagens';
+import { predisposicaoEmPalavras } from '../jogo/FichaDeAtributos';
 import './corpo24.css';
 
 const ANOS_DE_PROJECAO = 5;
@@ -42,7 +43,7 @@ function useRoupa(vida: Vida, pele: 'vestido' | 'pele') {
 export function CorpoPainel({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao) => boolean; irPara?: (a: 'semana') => void }) {
   const i = idade(vida);
   const plano = vida.corpo.plano24 ?? {};
-  const [parte, setParte] = useState<'agora' | 'objetivo' | 'nascenca'>('agora');
+  const [parte, setParte] = useState<'agora' | 'evolucao' | 'objetivo' | 'nascenca'>('agora');
   const [obj, setObj] = useState<Objetivo24 | ''>(plano.objetivo ?? '');
   const [reg, setReg] = useState<Regiao24>(plano.regiao ?? 'bracos');
   const [ali, setAli] = useState<Alimentacao24>(plano.alimentacao ?? 'habitual');
@@ -81,7 +82,9 @@ export function CorpoPainel({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao
   return (
     <section className="c24" aria-labelledby="c24-titulo" data-c24="corpo">
       <h3 id="c24-titulo" className="subtitulo">Corpo</h3>
-      <p className="nota">O corpo muda com a vida — treino, alimentação, hábitos, idade, saúde — um pouco por ano. Aqui você vê como ele está, para onde está indo e escolhe um objetivo; as proporções de nascença não se editam.</p>
+      {/* VIDA 25: três camadas, sem misturar — a CONDIÇÃO de agora (o que muda com a vida), a EVOLUÇÃO (como mudou e por
+          quê) e a CONSTITUIÇÃO (o que veio de nascença: tendências, não destino). O objetivo é a escolha que direciona. */}
+      <p className="nota">Três coisas diferentes: a <b>condição atual</b> (gordura, músculo, condicionamento — muda com treino, comida, sono e idade, um pouco por ano), a <b>evolução</b> (como o corpo mudou e o que o está mudando) e a <b>constituição</b> (o que veio de nascença: tendências que a vida puxa para um lado ou outro, sem apagar).</p>
       <div className="c24__corpo">
         <div className="c24__previa">
           <div className="c24__quadros">
@@ -95,18 +98,25 @@ export function CorpoPainel({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao
         </div>
 
         <div className="c24__escolhas">
-          <Escolha rotulo="Parte do corpo" valor={parte} aoMudar={setParte} opcoes={[{ id: 'agora', rotulo: 'Como está' }, { id: 'objetivo', rotulo: `Objetivo${plano.objetivo ? ' ✓' : ''}` }, { id: 'nascenca', rotulo: 'De nascença' }]} />
+          <Escolha rotulo="Parte do corpo" valor={parte} aoMudar={setParte} opcoes={[{ id: 'agora', rotulo: 'Condição atual' }, { id: 'evolucao', rotulo: 'Evolução' }, { id: 'objetivo', rotulo: `Objetivo${plano.objetivo ? ' ✓' : ''}` }, { id: 'nascenca', rotulo: 'Constituição' }]} />
 
           {parte === 'agora' && (
             <div className="c24__bloco" data-c24-parte="agora">
               <dl className="c24__medidas">
-                <div><dt>Gordura</dt><dd>{cap(leituraDaGordura(comp.g))}</dd><Barra x={comp.g} min={-1.8} max={3} /></div>
-                <div><dt>Músculo</dt><dd>{cap(leituraDoMusculo(comp.m))}</dd><Barra x={comp.m} min={-0.8} max={2.6} /></div>
-                <div><dt>Definição</dt><dd>{cap(leituraDaDefinicao(definicao24(comp)))}</dd><Barra x={definicao24(comp)} min={0} max={2} /></div>
-                <div><dt>Condicionamento</dt><dd>{vida.corpo.forma} de 100</dd><Barra x={vida.corpo.forma} min={0} max={100} /></div>
-                <div><dt>Altura</dt><dd>{i >= 17 ? estaturaEmPalavras(cm) : `deve chegar a ${estaturaEmPalavras(cm)}`}</dd></div>
+                <div><dt>Gordura</dt><dd>{cap(leituraDaGordura(comp.g))}</dd><Barra x={comp.g} min={-1.8} max={3} /><small className="c24__explica">A reserva de energia do corpo. Sobe com comida a mais e pouco movimento; desce com déficit e treino.</small></div>
+                <div><dt>Músculo</dt><dd>{cap(leituraDoMusculo(comp.m))}</dd><Barra x={comp.m} min={-0.8} max={2.6} /><small className="c24__explica">Cresce com treino de força e proteína; sem estímulo, e com a idade, vai embora devagar.</small></div>
+                <div><dt>Definição</dt><dd>{cap(leituraDaDefinicao(definicao24(comp)))}</dd><Barra x={definicao24(comp)} min={0} max={2} /><small className="c24__explica">O quanto o músculo aparece: não é uma medida à parte, sai da gordura e do músculo juntos.</small></div>
+                <div><dt>Condicionamento</dt><dd>{vida.corpo.forma} de 100</dd><Barra x={vida.corpo.forma} min={0} max={100} /><small className="c24__explica">O fôlego e o preparo — é o mesmo número do atributo Físico, em Você. Responde rápido ao treino e cai rápido sem ele.</small></div>
+                {i < 17 && <div><dt>Altura</dt><dd>{estaturaEmPalavras(Math.round(cm * (i >= 17 ? 1 : 0.68 + Math.max(0, i - 6) / 11 * 0.32)))} hoje</dd><small className="c24__explica">Ainda crescendo; a altura adulta é da constituição (deve chegar a {estaturaEmPalavras(cm)}).</small></div>}
                 {comp.r && Object.keys(comp.r).length > 0 && <div><dt>Regiões treinadas</dt><dd>{Object.entries(comp.r).map(([k, x]) => `${REGIOES24[k as Regiao24]} (${x! >= 0.8 ? 'bem' : 'um pouco'} mais)`).join(', ')}</dd></div>}
               </dl>
+              <p className="nota">Tudo nesta parte pode mudar. O que está puxando agora, e como o corpo vem mudando, está em Evolução.</p>
+            </div>
+          )}
+
+          {parte === 'evolucao' && (
+            <div className="c24__bloco" data-c24-parte="evolucao">
+              <Comparacao vida={vida} />
               <h4 className="c24__titulo">O que está mudando o seu corpo</h4>
               {fatores.length ? (
                 <ul className="c24__fatores">
@@ -155,6 +165,10 @@ export function CorpoPainel({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao
           {parte === 'nascenca' && (
             <div className="c24__bloco" data-c24-parte="nascenca">
               <p className="nota">{modo === 'escolher' ? 'Escolhidas antes de nascer.' : modo === 'acaso' ? 'Sorteadas ao nascer.' : modo === 'heranca' ? 'Herdadas dos pais, com variação.' : 'As proporções de nascença.'} São tendências: a estrutura aparece com o crescimento e não muda depois de adulto; o resto é a vida que decide.</p>
+              <dl className="c24__medidas">
+                <div><dt>Altura adulta</dt><dd>{estaturaEmPalavras(cm)}{i < 17 ? ' (prevista)' : ''}</dd><small className="c24__explica">Da herança e da tendência de nascença; não muda depois do crescimento.</small></div>
+                <div><dt>Resposta ao treino</dt><dd>{cap(predisposicaoEmPalavras(vida, 'fisico'))}</dd><small className="c24__explica">A predisposição física: quanto o condicionamento sobe com o mesmo treino. Não é o condicionamento de hoje.</small></div>
+              </dl>
               {GRUPOS24.map(gr => (
                 <div key={gr.id} className="c24__grupo" role="group" aria-label={gr.nome}>
                   <span className="c24__grupo-nome">{gr.nome}</span>
@@ -175,6 +189,18 @@ export function CorpoPainel({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao
 function Barra({ x, min, max }: { x: number; min: number; max: number }) {
   const p = Math.max(0, Math.min(100, ((x - min) / (max - min)) * 100));
   return <span className="c24__barra" aria-hidden><span style={{ width: `${p.toFixed(0)}%` }} /></span>;
+}
+
+/** VIDA 25: como o corpo mudou — o primeiro registro guardado contra hoje, em palavras (do histórico do motor). */
+function Comparacao({ vida }: { vida: Vida }) {
+  const h = vida.corpo.composicao24?.h ?? [];
+  if (h.length < 2) return <p className="nota">O corpo ainda não tem anos registrados para comparar: a evolução aparece aqui a cada aniversário.</p>;
+  const [t0, g0, m0] = h[0];
+  const [, g1, m1] = h[h.length - 1];
+  const anos = Math.max(1, Math.round((vida.t - t0) / 12));
+  const dg = g1 - g0, dm = m1 - m0;
+  const frase = (d: number, sobe: string, desce: string) => (Math.abs(d) < 0.15 ? 'ficou parecida' : d > 0 ? sobe : desce);
+  return <p className="c24__comparacao">Em {anos} {anos === 1 ? 'ano' : 'anos'}: a gordura {frase(dg, 'aumentou', 'diminuiu')} ({leituraDaGordura(g0)} → {leituraDaGordura(g1)}); o músculo {frase(dm, 'aumentou', 'diminuiu').replace('parecida', 'parecido')} ({leituraDoMusculo(m0)} → {leituraDoMusculo(m1)}).</p>;
 }
 
 /** A evolução: gordura e músculo por idade, os últimos anos (do histórico que o motor guarda). */

@@ -332,15 +332,29 @@ function clubeDeFora(v: Vida, e: CarreiraEsportiva, origem: PropostaDeClube['ori
   if (e.modalidade !== 'futebol' || origem !== 'exterior' || idade(v) < 18) return undefined;
   const rep = e.reputacao ?? 30;
   const aqui = paisDaCidade(e.municipioId);
-  const mercados = Object.entries(MERCADOS).filter(([p]) => p !== aqui && clubesDoPais(p).length > 0 && (MERCADOS[p].paga >= (MERCADOS[aqui]?.paga ?? 1) * 0.9 || rep >= 75));
+  // VIDA 25 · BAL: as cinco grandes ligas europeias olham quem tem nome firmado (reputação 62+); abaixo disso, quem compra
+  // são os mercados alternativos (Portugal, México, EUA, Japão, China...) — uma carreira lá fora sem ser a Europa de cima.
+  const BIG5 = ['GB', 'ES', 'IT', 'DE', 'FR'];
+  const mercados = Object.entries(MERCADOS).filter(([p]) => p !== aqui && clubesDoPais(p).length > 0 && (MERCADOS[p].paga >= (MERCADOS[aqui]?.paga ?? 1) * 0.9 || rep >= 75) && (rep >= 68 || !BIG5.includes(p)));
   if (!mercados.length) return undefined;
   const total = mercados.reduce((s, [, m]) => s + m.peso, 0);
   let alvo = hash(`${v.id}:${v.t}:liga`) * total;
   const pais = (mercados.find(([, m]) => (alvo -= m.peso) < 0) ?? mercados[0])[0];
-  const lista = clubesDoPais(pais).filter(c => (rep >= 75 ? c.porte === 'grande' : c.porte !== 'regional'));
+  // O grande de fora quer quem está entre os melhores (78+); o resto, os tradicionais e os regionais da liga.
+  const lista = clubesDoPais(pais).filter(c => (rep >= 82 ? c.porte === 'grande' : BIG5.includes(pais) ? c.porte !== 'grande' : c.porte !== 'regional'));
   const c = (lista.length ? lista : clubesDoPais(pais))[Math.floor(hash(`${v.id}:${v.t}:clube_fora`) * 1000) % (lista.length || clubesDoPais(pais).length)];
   return c ? { nome: c.nome, cidade: c.cidade } : undefined;
 }
+
+/** VIDA 25 · BAL: provou para um clube grande? Nome firmado (65+) e as duas últimas temporadas boas (nota 6,8+), ou uma excepcional (7,8+). */
+export function provouParaGrande(e: CarreiraEsportiva): boolean {
+  const ts = (e.temporadas ?? []).slice(-2);
+  const ult = ts[ts.length - 1];
+  return (e.reputacao ?? 0) >= 70 && !!ult && (ult.nota >= 7.8 || (ts.length === 2 && ts.every(t => t.nota >= 6.8)));
+}
+
+/** VIDA 25 · BAL: regularidade — as duas últimas temporadas acima de `nota` (o mercado de cima não compra um ano só). */
+export const temporadasBoas = (e: CarreiraEsportiva, nota: number) => { const ts = (e.temporadas ?? []).slice(-2); return ts.length === 2 && ts.every(t => t.nota >= nota); };
 
 export function criarProposta(v: Vida, e: CarreiraEsportiva, nivelPedido: 1 | 2 | 3 | 4, origem: PropostaDeClube['origem']): PropostaDeClube | undefined {
   let nivel = nivelPedido;
@@ -362,7 +376,10 @@ export function criarProposta(v: Vida, e: CarreiraEsportiva, nivelPedido: 1 | 2 
   }
   else if (futebol) {
     const pais = paisDaCidade(e.municipioId);
-    const doNivel = clubesNaDivisao(v, nivel, e.emprestimo?.clube ?? e.clube, pais).filter(c => c.nome !== e.clube);
+    let doNivel = clubesNaDivisao(v, nivel, e.emprestimo?.clube ?? e.clube, pais).filter(c => c.nome !== e.clube);
+    // VIDA 25 · BAL: o clube GRANDE da elite contrata quem já provou: nome firmado e duas temporadas boas seguidas. Sem
+    // isso, quem chama da elite são os clubes tradicionais e os regionais (a vaga existe, o tamanho do clube é outro).
+    if (nivel === 4 && (origem === 'mercado' || origem === 'maior') && !provouParaGrande(e)) { const sem = doNivel.filter(c => clubePorNome(c.nome, pais)?.porte !== 'grande'); if (sem.length) doNivel = sem; }
     const uf = municipio(v.moradia.municipioId).uf;
     const pertos = origem === 'liberacao' || origem === 'emprestimo' ? doNivel.filter(c => municipio(c.cidade).uf === uf) : [];
     const lista = pertos.length ? pertos : doNivel;
@@ -1312,12 +1329,21 @@ function anoProfissional(v: Vida, r: Rng, e: CarreiraEsportiva): void {
   }
   // MUNDO: quem brilha na elite chama a atenção de fora — uma liga de outro país (a Europa, a volta para casa). A decisão
   // sai de um hash do ano (sem gastar o gerador: quem não está na elite vive igual), pela reputação e pela temporada.
-  if (e.modalidade === 'futebol' && e.nivel === 4 && !propostaNaMesa(v) && t.nota >= 6.3 && hash(`${v.id}:${v.t}:exterior`) < Math.min(0.35, Math.max(0, ((e.reputacao ?? 30) - 48) / 70))
+  // VIDA 25 · BAL: a liga de fora pede regularidade (duas temporadas boas) e idade de quem ainda tem anos pela frente; a
+  // chance é menor (antes, 35% ao ano com uma temporada de 6,3). Da segunda divisão nacional, só os mercados
+  // alternativos olham — e só quem se destaca.
+  const foraOk = e.modalidade === 'futebol' && !propostaNaMesa(v) && i <= 31 && (e.nivel === 4 ? temporadasBoas(e, 6.6) : e.nivel === 3 && t.nota >= 7.6 && (e.reputacao ?? 0) >= 45);
+  if (foraOk && hash(`${v.id}:${v.t}:exterior`) < Math.min(0.16, Math.max(0, ((e.reputacao ?? 30) - 48) / 110))
     && criarProposta(v, e, 4, 'exterior')) { v.fatos['esp_proposta_hoje'] = v.t; return; }
   // O mercado reage à temporada: um clube maior pergunta (a resposta é sua: `esp_proposta`).
   const oferta = nivelQueOMercadoOferece(v, e);
   // A proposta nasce aqui, concreta (clube, cidade, salário), e fica na mesa até a resposta (`criarProposta`).
-  if (oferta > e.nivel && e.nivel < 4 && t.nota >= 6.6 && r.chance(0.45) && criarProposta(v, e, (e.nivel + 1) as 1 | 2 | 3 | 4, 'mercado')) v.fatos['esp_proposta_hoje'] = v.t;
+  // VIDA 25 · BAL (futebol): subir para a elite pede regularidade (duas temporadas de 6,8 ou uma de 7,8), não um ano
+  // bom; a idade pesa (o clube de cima aposta menos em quem passou dos 30); e a vaga é de uma posição — nem todo clube que
+  // olha precisa da sua (o sorteio derivado da posição e do ano).
+  const subirOk = e.modalidade !== 'futebol' || e.nivel + 1 < 4 || t.nota >= 7.8 || temporadasBoas(e, 6.8);
+  const vagaNaPosicao = e.modalidade !== 'futebol' || hash(`${v.id}:${v.t}:vaga:${posicaoDe(v, e)}`) < 0.7;
+  if (oferta > e.nivel && e.nivel < 4 && t.nota >= 6.6 && subirOk && vagaNaPosicao && r.chance(e.modalidade === 'futebol' && e.nivel + 1 === 4 ? (i >= 30 ? 0.15 : 0.3) : i >= 30 ? 0.25 : 0.45) && criarProposta(v, e, (e.nivel + 1) as 1 | 2 | 3 | 4, 'mercado')) v.fatos['esp_proposta_hoje'] = v.t;
   // Reserva de novo, temporada fraca: o clube quer liberar você para um menor (a ideia é do clube; ir ou ficar brigando é você quem diz).
   const ultimas = (e.temporadas ?? []).slice(-2);
   if (e.espaco === 'reserva' && ultimas.length === 2 && ultimas.every(x => x.nota < 5.6 && x.titular < 8) && e.nivel > 1 && oferta < e.nivel && r.chance(0.5)

@@ -1,0 +1,4 @@
+/* VIDA 25 · a carteira lembrada no painel "Agora". */
+.lembrete-cnh { display: flex; flex-direction: column; gap: 8px; margin: 0 0 var(--space-3); padding: var(--space-3); border-radius: var(--radius-md); background: color-mix(in oklab, var(--tom, var(--accent)) 9%, var(--superficie)); box-shadow: 0 0 0 1px var(--fio); }
+.lembrete-cnh__texto { margin: 0; font-size: 0.95rem; overflow-wrap: anywhere; }
+.lembrete-cnh__botoes { display: flex; flex-wrap: wrap; gap: 6px; }

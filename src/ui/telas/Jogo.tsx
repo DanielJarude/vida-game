@@ -21,6 +21,7 @@ import { BaixarApp } from './BaixarApp';
 import { SeletorTema } from '../SeletorTema';
 import { Folha, useEstreito } from '../comum';
 import { habilitacaoDaVida } from '../../motor/sistemas/autoescola';
+import { LembreteCnh25 } from '../v25/cnh/LembreteCnh25';
 import { redeDeSaude } from '../../motor/sistemas/saude';
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { naoLidas15, temCelular15 } from '../../motor/v15/celular/celular15';
@@ -351,6 +352,8 @@ function Agora({ vida, area, irPara, abrirPessoa, abrirConvite, agir }: { vida: 
   return (
     <div className="painel-agora">
       {agir && <SeusAtalhos vida={vida} agir={agir} />}
+      {/* VIDA 25: a carteira de motorista, lembrada quando há motivo (idade, veículo sem carteira) — uma vez por motivo. */}
+      {agir && <LembreteCnh25 vida={vida} agir={agir} />}
       {pessoal && area !== 'voce' && (
         <button type="button" className="agora-voce" onClick={() => irPara(sinalDeSaude(vida) ? 'prontuario' : 'voce')}>
           <Retrato visual={vida.eu.visual} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? "eu"} tamanho={34} rotulo="Você" expressao={expressaoDe(vida)} />

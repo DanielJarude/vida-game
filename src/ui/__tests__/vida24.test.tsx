@@ -64,7 +64,7 @@ describe('VIDA 24 · Corpo', () => {
     const v = vida(2412, x => { x.rotinas = []; x.corpo.habitos.sedentario = true; });
     const { container } = render(<CorpoPainel vida={v} agir={() => true} />);
     expect(container.textContent).toMatch(/O sedentarismo/);
-    fireEvent.click(within(container).getByRole('radio', { name: 'De nascença' }));
+    fireEvent.click(within(container).getByRole('radio', { name: 'Constituição' }));
     expect(container.querySelectorAll('[data-c24-parte="nascenca"] [data-eixo]').length).toBe(12);
     expect(container.querySelector('[data-c24-parte="nascenca"] input')).toBeNull();
   });

@@ -217,9 +217,17 @@ function temporadaDaVida(v: Vida, e: CarreiraEsportiva, t: Temporada): Candidato
   const pal = palmaresDe(v).filter(x => x.ano === t.ano && x.modalidade === 'futebol');
   const titulo = (pre: string) => pal.some(x => x.tipo === 'titulo' && (x.competicaoId ?? '').startsWith(pre));
   const max = Math.max(1, t.campanha?.[0] ?? 38);
+  // VIDA 25 · BAL: a nota da vida é medida contra a PRÓPRIA divisão (8,5 no Brasileirão é ser o melhor do Brasileirão);
+  // a das estrelas, contra o mundo. Antes, as duas iam para a mesma urna — e um destaque da liga brasileira levava a Bola
+  // de Ouro (10 Bolas em 24 carreiras simuladas). Agora a temporada da vida entra na escala do mundo: a qualidade
+  // equivalente pela nota e pela força da liga (`forcaDaLigaDoPais`); a produção, pesada pela liga em que saiu.
+  const peso = forcaDaLigaDoPais(pais);
+  const qEquivalente = 77 + (t.nota - 6) * 2.6 + peso * 12;
+  const notaMundo = Math.round(clamp(6.1 + (qEquivalente - 80) / 6.5, 4.5, 9.6) * 10) / 10;
+  const fProd = clamp(0.72 + peso * 0.45, 0.45, 1);
   return {
     nome: `${v.eu.nome} ${v.eu.sobrenome}`.trim(), clube: t.clube, nac: e.selecao?.pais ?? pais, liga: pais, grupo: t.posicao ? GRUPO_DA_POSICAO[t.posicao] : 'meio',
-    idade: idade(v), nota: t.nota, gols: t.gols, golsLiga: Math.round(t.gols * 0.82), assist: Math.round(t.assistencias), titularidade: clamp(t.titular / max, 0, 1), voce: true, elite: t.nivel === 4,
+    idade: idade(v), nota: notaMundo, gols: Math.round(t.gols * fProd), golsLiga: Math.round(t.gols * 0.82), assist: Math.round(t.assistencias * fProd), titularidade: clamp(t.titular / max, 0, 1), voce: true, elite: t.nivel === 4,
     titulos: { liga: t.nivel === 4 && t.colocacao === 1, cont: titulo('cont:'), copa: titulo('copa:'), mundial: pal.some(x => x.tipo === 'selecao' && x.competicaoId === 'sel:mundial' && /^Campe/.test(x.texto) && x.papel === 'protagonista'), continentalSel: pal.some(x => x.tipo === 'selecao' && x.competicaoId !== 'sel:mundial' && x.competicaoId?.startsWith('sel:') && /^Campe/.test(x.texto) && x.papel === 'protagonista') }
   };
 }
