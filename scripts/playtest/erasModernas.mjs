@@ -28,6 +28,7 @@ for (const w of (process.env.W ?? '1440,390').split(',').map(Number)) for (const
   await p.evaluate(([s, n]) => { localStorage.clear(); sessionStorage.clear(); localStorage.setItem('VIDA_NOVIDADES_VISTAS', n); localStorage.setItem('VIDA_GAME_SAVE_V1', s); }, [readFileSync(`${SP}/${save}.json`, 'utf8'), NOVID]);
   await p.goto(URL); await p.waitForTimeout(800);
   const cont = p.getByRole('button', { name: /Continuar a vida/ });
+  await cont.waitFor({ timeout: 20000 }).catch(() => {});
   if (!(await cont.count())) { problemas.push(`${tag}: sem "Continuar a vida"`); await ctx.close(); continue; }
   await cont.click(); await p.waitForTimeout(1500);
   for (let k = 0; k < 8; k++) { const op = p.locator('.momento button, .decisao button, .resultado button').first(); if (await op.count()) { await op.click().catch(() => {}); await p.waitForTimeout(400); } else break; }
