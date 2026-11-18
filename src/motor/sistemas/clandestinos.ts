@@ -219,7 +219,7 @@ function anoDoNegocio(v: Vida, e: NonNullable<Vida['caminhos']['envolvimento']>,
       e.exposicao = clamp(e.exposicao + 12);
       n.socios = n.socios.filter(x => x !== sc);
       const org = f.organizacao ? orgPorId(v, f.organizacao) : undefined;
-      if (org) lembrarOrg(org, v.t, 'traicao', -10);
+      if (org) lembrarOrg(org, v.t, 'traido');
       nota = `${v.pessoas[sc.pessoaId].nome} saiu levando ${fmt(levou)} — e falou mais do que devia.`;
       escrever(v, { texto: `${v.pessoas[sc.pessoaId].nome}, sócio em ${n.nome}, sumiu com o caixa e falou o seu nome. A conta e o medo ficaram.`, relevancia: 'biografia', tema: 'trabalho', tom: 'ruim' });
       lembrarCom(v, sc.pessoaId, 'Traiu você no negócio por fora.', 'conflito', 3);
@@ -248,7 +248,7 @@ function anoDaOrganizacaoPropria(v: Vida, o: RelacaoComOrganizacao): void {
       f.traiu = v.t;
       e.traicoes = (e.traicoes ?? 0) + 1;
       e.exposicao = clamp(e.exposicao + 15);
-      lembrarOrg(o, v.t, 'traicao', -6);
+      lembrarOrg(o, v.t, 'traido', -6);
       p.tenentes = p.tenentes.filter(x => x !== id);
       anotar(v, `${v.pessoas[id].nome} desafiou o comando, levou gente junto e falou com quem não devia.`, 'ruim');
       escrever(v, { texto: `${v.pessoas[id].nome}, de dentro do seu grupo, rompeu e falou com quem não devia.`, relevancia: 'biografia', tema: 'trabalho', tom: 'ruim' });
@@ -385,7 +385,7 @@ export function decidirClandestino(v: Vida, oque: OqueClandestino, negocioId?: s
     case 'romper_socio': {
       n!.socios = n!.socios.filter(s => s.pessoaId !== alvo);
       const f = e.fichas?.[alvo!];
-      if (f) { f.confianca = clamp(f.confianca - 30); f.quebradas++; const o = f.organizacao ? orgPorId(v, f.organizacao) : undefined; if (o) lembrarOrg(o, v.t, 'conflito', -8); }
+      if (f) { f.confianca = clamp(f.confianca - 30); f.quebradas++; const o = f.organizacao ? orgPorId(v, f.organizacao) : undefined; if (o) lembrarOrg(o, v.t, 'conflito', -8, 'rompeu a sociedade com gente dela'); }
       lembrarCom(v, alvo!, 'Você rompeu a sociedade.', 'conflito', 2);
       hist(`Rompeu com ${v.pessoas[alvo!].nome}.`, 'ruim');
       return `Sociedade desfeita com ${v.pessoas[alvo!].nome}. Ele não vai esquecer — nem quem está com ele.`;

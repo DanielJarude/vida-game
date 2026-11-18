@@ -3666,7 +3666,17 @@ export interface RelacaoComOrganizacao {
   /** A lealdade que ela lê em você (0..100). */
   lealdade: number;
   /** O que ela lembra: promessas, alianças, conflitos, saídas (o ano e o fato). */
-  memoria: { t: number; fato: 'promessa' | 'promessa_quebrada' | 'alianca' | 'conflito' | 'traicao' | 'saida' | 'favor' | 'reconciliacao' }[];
+  memoria: { t: number; fato: 'promessa' | 'promessa_quebrada' | 'alianca' | 'conflito' | 'traicao' | 'saida' | 'favor' | 'reconciliacao' | 'traido' }[];
+  /**
+   * VIDA 27 · §3: o que pesou contra você, com o motivo em palavras (as últimas doze). `traicao` é o que VOCÊ fez
+   * contra ela; `falta` é a cobrança (recusa, sumiço, pedido mal recebido); `distancia`, o vínculo que esfria longe.
+   * A expulsão só acontece com motivo registrado aqui — e a mensagem diz qual. Ausente em saves antigos.
+   */
+  queixas?: { t: number; motivo: string; peso: number; tipo: 'traicao' | 'falta' | 'distancia' }[];
+  /** VIDA 27 · §3: quando o comando mandou o recado (a lealdade no limite), antes de qualquer expulsão por ela. */
+  avisado?: number;
+  /** VIDA 27 · §3: por que saiu ou foi expulso, em palavras (o que a ficha mostra). */
+  motivoDaSaida?: string;
   desde: number;
   /** Saiu (e quando): a organização lembra de quem saiu. */
   saiu?: number;

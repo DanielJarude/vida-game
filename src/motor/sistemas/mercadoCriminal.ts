@@ -149,7 +149,7 @@ export function agirNaOportunidade(v: Vida, id: string, oque: 'aceitar' | 'recus
     e.exposicao = clamp(e.exposicao + o.risco);
     marcarFalhaGrave(v, 2);
     o.resultado = 'deu errado';
-    if (o.tipo === 'rival_fraco' && mo) lembrarOrg(mo.rel, v.t, 'conflito', -3);
+    if (o.tipo === 'rival_fraco' && mo) lembrarOrg(mo.rel, v.t, 'conflito', -3, 'uma ação contra a rival deu errado');
     anotar(v, `Uma oportunidade que deu errado: ${descricaoDaOportunidade(v, o).toLowerCase()}.`, 'ruim');
     return { texto: `Não deu certo. Ficou o rastro (exposição +${o.risco}) — e nada no bolso.`, tom: 'ruim' };
   }
@@ -178,7 +178,7 @@ export function agirNaOportunidade(v: Vida, id: string, oque: 'aceitar' | 'recus
     case 'parceria': {
       const b = orgViva(v, o.orgId!);
       if (b) { const rel = relacaoCom(v, b); rel.lealdade = clamp(rel.lealdade + 8); lembrarOrg(rel, v.t, 'favor', 0); extra = ` ${cap(b.nome)} lembra de quem cumpriu.`; }
-      if (b && mo && estadoEntre(mo.o, b) === 'concorrencia') { lembrarOrg(mo.rel, v.t, 'conflito', -4); extra += ` Em ${mo.o.nome}, não gostaram de ver você trabalhando para a concorrência.`; }
+      if (b && mo && estadoEntre(mo.o, b) === 'concorrencia') { lembrarOrg(mo.rel, v.t, 'conflito', -4, `trabalhou para a concorrente ${b.nome}`); extra += ` Em ${mo.o.nome}, não gostaram de ver você trabalhando para a concorrência.`; }
       break;
     }
     case 'vazio': rl[v.moradia.municipioId] = clamp((rl[v.moradia.municipioId] ?? 0) + 6); extra = ' O seu nome passou a ocupar parte do espaço que ficou.'; break;

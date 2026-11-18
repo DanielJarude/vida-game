@@ -22,7 +22,7 @@ import { bloqueio, PERMITIDO, type Veredito } from '../plausibilidade';
 import { balanco, vereditoDePagar } from './dinheiro';
 import { ativo } from './ilicito';
 import { preso } from './justica';
-import { alcanceDoContato, anotar, contatosAtivos, criarContato, lembrarOrg, orgPorId, rivalDoRamo, valorDaOperacao } from './submundo';
+import { alcanceDoContato, anotar, contatosAtivos, criarContato, lembrarOrg, queixar, orgPorId, rivalDoRamo, valorDaOperacao } from './submundo';
 import { NOME_DO_RAMO, PERFIL, ramoPrincipal, ramosAtivos } from './ramos';
 import { repartir21, textoDaParte21 } from '../v21/crime/espolio21';
 import { escalaDe, ganharPratica, garantirCarreira, marco, movimentoPorFora, nivelNaOrganizacao, pagarPorFora, patamarAtual, temOrganizacaoPropria, temTempo, usarTempo } from './carreiraCriminal';
@@ -247,7 +247,7 @@ export function executarEncomenda(v: Vida, oque: OqueEncomenda, id?: string, pes
   if (oque === 'recusar') {
     x.estado = 'recusada'; x.tFim = v.t;
     if (x.pessoaId) { mudarConfianca(v, x.pessoaId, -2); historiaDoContato(v, x.pessoaId, `Você recusou um trabalho ${flex(v.pessoas[x.pessoaId]?.genero ?? 'masculino', 'dele', 'dela', 'delu')}.`); }
-    if (x.orgId) { const o = orgPorId(v, x.orgId); if (o) o.lealdade = clamp(o.lealdade - (o.relacao === 'membro' ? 4 : 1)); }
+    if (x.orgId) { const o = orgPorId(v, x.orgId); if (o) queixar(o, v.t, o.relacao === 'membro' ? 4 : 1, 'recusou um trabalho do comando', 'falta', true); }
     const reac = x.pessoaId ? ({ leal: 'entendeu, e disse que a porta continua aberta', desconfiado: 'anotou a recusa — e vai lembrar', pragmatico: 'levou a proposta para outra pessoa no mesmo dia', esquentado: 'não gostou e deixou isso claro', caloroso: 'disse que não tem problema, e pareceu sincero' } as const)[vozDe(v, x.pessoaId)] : x.orgId ? (orgPorId(v, x.orgId)?.relacao === 'membro' ? 'anotou: de quem é de dentro, recusa pesa' : 'seguiu em frente sem você') : undefined;
     return { texto: `Você recusou ${nome}.${quem && reac ? ` ${cap(quem)} ${reac}.` : ''}` };
   }
@@ -383,7 +383,7 @@ export function falhaInteressante(v: Vida, r: Rng, x: EncomendaCriminal): { text
     }
     case 'conflito': {
       const o = x.orgId ? orgPorId(v, x.orgId) : rivalDoRamo(v, x.ramo);
-      if (o) lembrarOrg(o, v.t, 'conflito', -6);
+      if (o) lembrarOrg(o, v.t, 'conflito', -6, 'um trabalho virou briga com ela');
       e.atritos = (e.atritos ?? 0) + 1;
       anotar(v, `${cap(nome)} deu errado e virou assunto com ${o?.nome ?? 'gente do meio'}.`, 'ruim');
       return { texto: variante(v, 'falha_conflito', [`Deu errado, e ${o ? o.nome : 'gente do meio'} pôs a culpa em você. Vai ter conversa.`, `Não deu certo — e, para ${o ? o.nome : 'quem estava em volta'}, o culpado tem nome: o seu.`], x.id), tom: 'ruim' };

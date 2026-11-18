@@ -99,7 +99,7 @@ function deposto(v: Vida, r: Rng, o: OrgViva, rel: RelacaoComOrganizacao, porque
   } else {
     definirNivel(v, rel, 5);
     if (quem) { quem.nivel = 6; quem.comVoce = clamp((quem.comVoce ?? 0) - 10, -100, 100); }
-    lembrarOrg(rel, v.t, 'conflito', -6);
+    lembrarOrg(rel, v.t, 'conflito', -6, 'perdeu o comando para outro');
     texto = `Você perdeu o comando de ${o.nome}${quem ? `: agora quem manda é ${quem.nome}` : ''}. Você ficou como ${nomeDoNivel(o, 5)}.`;
   }
   historia(o, v.t, `O comando mudou de mãos (${porque}).`);
@@ -338,7 +338,7 @@ export function resolverSuspeita(v: Vida, casoId: string, x: EscolhaDaSuspeita):
       break;
     case 'avisar':
       if (verdade) { sai(); lembrarOrg(rel, v.t, 'favor', 6); res.push(`O comando apurou: era verdade. ${m.nome} saiu, e lembraram de quem avisou.`); tom = 'bom'; }
-      else { m.estado = 'saiu'; m.causa = 'afastad' + (m.genero === 'feminino' ? 'a' : 'o') + ' por um boato'; o.coesao = clamp(o.coesao - 5); lembrarOrg(rel, v.t, 'conflito', -3); res.push(`O comando afastou ${m.nome} — e depois ficou claro que era só boato. Um inocente pagou; a casa sabe quem levou o assunto.`); tom = 'ruim'; }
+      else { m.estado = 'saiu'; m.causa = 'afastad' + (m.genero === 'feminino' ? 'a' : 'o') + ' por um boato'; o.coesao = clamp(o.coesao - 5); lembrarOrg(rel, v.t, 'conflito', -3, 'afastou alguém do quadro por um boato'); res.push(`O comando afastou ${m.nome} — e depois ficou claro que era só boato. Um inocente pagou; a casa sabe quem levou o assunto.`); tom = 'ruim'; }
       break;
     case 'ignorar':
       if (verdade) { o.pressao = clamp(o.pressao + 8); e.exposicao = clamp(e.exposicao + 6); res.push('Você deixou para lá. A polícia continuou sabendo mais do que devia.'); tom = 'ruim'; }

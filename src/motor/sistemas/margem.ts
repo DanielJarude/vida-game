@@ -90,7 +90,9 @@ function traicao(v: Vida): void {
   if (ficha) {
     ficha.traiu = v.t;
     const org = ficha.organizacao ? env.organizacoes?.find(o => o.id === ficha.organizacao) : undefined;
-    if (org) { org.memoria.push({ t: v.t, fato: 'traicao' }); org.lealdade = clamp(org.lealdade - 10); }
+    // VIDA 27 · §3: quem traiu foi o contato (não você): a organização lembra disso como 'traido' — antes era
+    // 'traicao' na SUA relação, e o ano seguinte expulsava você pela traição que sofreu.
+    if (org) org.memoria.push({ t: v.t, fato: 'traido' });
     anotar(v, `${v.pessoas[id].nome} falou o seu nome para quem não devia.`, 'ruim');
   }
   env.exposicao = clamp(env.exposicao + 15);

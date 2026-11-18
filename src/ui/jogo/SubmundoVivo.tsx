@@ -443,6 +443,8 @@ function Organizacoes({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }
             <li key={o.id} className={`svivo-cartao svivo-cartao--org${dentro ? ' svivo-cartao--dentro' : ''}`}>
               <p className="svivo-cartao__titulo">{cap(o.nome)}</p>
               <p className="svivo-nota">{o.estilo} · {o.ramo.toLowerCase()}{o.daqui ? '' : ` · ${o.cidade}`} · <strong>{o.nomeVinculo}</strong>{o.estado !== 'ativa' ? ` · ${o.estado === 'extinta' ? 'deixou de existir' : 'enfraquecida'}` : ''}</p>
+              {o.motivoDaSaida && <p className="svivo-nota">Por que saiu: {o.motivoDaSaida}.</p>}
+              {o.avisado && <p className="svivo-nota svivo-nota--alerta" role="status">O comando já mandou recado: a paciência está no fim.</p>}
               <p className="svivo-nota">Jeito: <strong>{o.perfil}</strong> — {o.perfilFrase}.</p>
               {(dentro || o.conhecida) && o.esteAno.length > 0 && (
                 <div className="svivo-bloco" role="group" aria-label={contrair(`Este ano em ${o.nome}`)}>
@@ -526,6 +528,7 @@ function Organizacoes({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }
                 </table>
                 <p className="svivo-nota">A voz de quem mora lá é a dos moradores e do comércio: quando sobe, cobram o poder público — e quem quer mandar perde espaço.</p>
                 {o.lembra.length > 0 && <p className="svivo-nota">Lembram de você: {o.lembra.join('; ')}.</p>}
+                {o.pesa.length > 0 && <p className="svivo-nota">Pesa contra você: {o.pesa.join('; ')}.</p>}
                 {o.historia.length > 0 && <ol className="sub-diario">{o.historia.map((h, k) => <li key={k}><span className="margem__ano">{h.ano}</span> {h.texto}</li>)}</ol>}
               </details>
             </li>

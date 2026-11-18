@@ -148,7 +148,7 @@ export function executarParalelo(v: Vida, id: string, oque: OqueParalelo): { tex
     if (o.mercado === 'por_fora') {
       const e = v.caminhos.envolvimento;
       const c = contatosAtivos(v)[0];
-      if (e && c) { const f = e.fichas![c.id]; f.confianca = clamp(f.confianca - 25); const org = f.organizacao ? orgPorId(v, f.organizacao) : undefined; if (org) lembrarOrg(org, v.t, 'traicao', -15); anotar(v, `Denunciou o mercado por fora: ${v.pessoas[c.id].nome} desconfia.`, 'ruim'); }
+      if (e && c) { const f = e.fichas![c.id]; f.confianca = clamp(f.confianca - 25); const org = f.organizacao ? orgPorId(v, f.organizacao) : undefined; if (org) lembrarOrg(org, v.t, 'traicao', -15, 'denunciou à polícia o mercado por fora'); anotar(v, `Denunciou o mercado por fora: ${v.pessoas[c.id].nome} desconfia.`, 'ruim'); }
     }
     marcarFato(v, 'denunciou_mercado');
     return { texto: tinha ? `A denúncia foi adiante: dias depois, a polícia apreendeu ${o.nome} e outras peças. Você não ganhou nada — a não ser saber.` : 'A polícia foi ver e não achou nada de errado: a peça era o que dizia ser. Fica o registro.', tom: tinha ? 'bom' : undefined };

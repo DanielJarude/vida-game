@@ -33,7 +33,7 @@ import { contrair } from '../texto';
 import { vereditoDePagar } from './dinheiro';
 import { ativo } from './ilicito';
 import { preso } from './justica';
-import { anotar, lembrarOrg, NOME_DO_PAPEL } from './submundo';
+import { anotar, lembrarOrg, NOME_DO_PAPEL, queixar } from './submundo';
 import { NOME_DO_RAMO } from './ramos';
 import { ganharPratica, marco, movimentoPorFora, pagarPorFora, pedirRumo } from './carreiraCriminal';
 import { abalar } from './abalo';
@@ -626,12 +626,12 @@ function resolverDisputa(v: Vida, o: OrgViva, r: Rng): void {
   const n = nivelDe(v, rel);
   if (d.candidatos.includes('jogador')) {
     // Perder a disputa não é o fim: depende de como se perdeu (o racha leva gente com você).
-    if (jeito.includes('racha') || r.chance(0.3)) { lembrarOrg(rel, v.t, 'conflito', -12); anotar(v, `Perdeu a disputa em ${o.nome} — e quem ganhou não esquece.`, 'ruim'); }
+    if (jeito.includes('racha') || r.chance(0.3)) { lembrarOrg(rel, v.t, 'conflito', -12, 'disputou o comando e perdeu'); anotar(v, `Perdeu a disputa em ${o.nome} — e quem ganhou não esquece.`, 'ruim'); }
     else { lembrarOrg(rel, v.t, 'reconciliacao', 2); anotar(v, `Perdeu a disputa em ${o.nome}, e ficou no posto de antes.`); }
     return;
   }
   if (d.apoio === vencedor) { lembrarOrg(rel, v.t, 'alianca', 10); if (n < 5) definirNivel(v, rel, n + 1); anotar(v, `Apoiou ${m?.nome} na disputa de ${o.nome}, e ${m?.nome} lembrou: você subiu.`, 'bom'); }
-  else if (d.apoio && d.apoio !== vencedor) { lembrarOrg(rel, v.t, 'conflito', -10); if (n > 0 && r.chance(0.5)) definirNivel(v, rel, n - 1); anotar(v, `Apoiou quem perdeu a disputa de ${o.nome}. O novo comando sabe.`, 'ruim'); }
+  else if (d.apoio && d.apoio !== vencedor) { lembrarOrg(rel, v.t, 'conflito', -10, `apoiou quem perdeu a disputa (o comando agora é de ${m?.nome ?? 'outro'})`); if (n > 0 && r.chance(0.5)) definirNivel(v, rel, n - 1); anotar(v, `Apoiou quem perdeu a disputa de ${o.nome}. O novo comando sabe.`, 'ruim'); }
 }
 
 /** O racha: o candidato que perdeu leva uma parte do quadro e funda uma organização nova, rival da de origem. */
@@ -670,6 +670,64 @@ export function parteDoAno(_v: Vida, o: OrgViva, nivel: number): number {
   return Math.round(base * (o.forca / 50) * (1 + infl / 150) * pr * jeitoDe(o).paga * economiaLocal(o.municipioId).custo / 100) * 100;
 }
 
+/* ---------------------------------------------------------------- VIDA 27 · §3: por que alguém é posto para fora */
+
+/** As queixas que ainda pesam (os últimos cinco anos), da mais pesada para a mais leve. */
+export function queixasVivas(v: Vida, rel: RelacaoComOrganizacao, tipo?: 'traicao' | 'falta' | 'distancia') {
+  return (rel.queixas ?? []).filter(q => v.t - q.t <= 60 && (!tipo || q.tipo === tipo)).sort((a, b) => b.peso - a.peso || b.t - a.t);
+}
+/** O que pesou, em palavras (até dois motivos), sem a distância. */
+export function motivosDaQueixa(v: Vida, rel: RelacaoComOrganizacao): string {
+  const qs = queixasVivas(v, rel).filter(q => q.tipo !== 'distancia').slice(0, 2);
+  return qs.map(q => q.motivo).join('; e ');
+}
+
+export type VereditoDaOrg = { tipo: 'fica' } | { tipo: 'avisar' | 'rebaixar' | 'expulsar'; motivo: string };
+
+/**
+ * A decisão do comando sobre quem é de dentro, a cada ano. Expulsa por TRAIÇÃO sua recente (o motivo é o que você
+ * fez) ou pela lealdade perdida de vez — mas só com queixas registradas que expliquem a perda, depois de um recado
+ * e, para quem tem posto alto, depois de perder o posto. Sem motivo registrado (saves antigos), não expulsa.
+ */
+export function julgarPermanencia(v: Vida, rel: RelacaoComOrganizacao, n = nivelDe(v, rel)): VereditoDaOrg {
+  const traicaoRecente = rel.memoria.some(m => m.fato === 'traicao' && v.t - m.t < 24);
+  if (traicaoRecente) {
+    const q = queixasVivas(v, rel, 'traicao').find(x => v.t - x.t < 24);
+    // Save antigo (traição sem texto): o fato aconteceu e é do jogador (as traições SOFRIDAS agora são `traido`).
+    return { tipo: 'expulsar', motivo: q?.motivo ?? 'o que o comando viu como traição sua' };
+  }
+  if (rel.lealdade >= 25) return { tipo: 'fica' };
+  const motivo = motivosDaQueixa(v, rel);
+  if (!motivo) return { tipo: 'fica' };
+  if (rel.avisado === undefined || v.t - rel.avisado > 36) return { tipo: 'avisar', motivo };
+  if (rel.lealdade >= 12) return { tipo: 'fica' };
+  // Quem tem posto alto perde o posto antes de perder o lugar.
+  if (n >= 4) return { tipo: 'rebaixar', motivo };
+  return { tipo: 'expulsar', motivo };
+}
+
+function expulsarPor(v: Vida, o: OrgViva, rel: RelacaoComOrganizacao, motivo: string): void {
+  rel.expulso = v.t;
+  rel.saiu = v.t;
+  rel.motivoDaSaida = `expulsão: ${motivo}`;
+  lembrarOrg(rel, v.t, 'saida', -10);
+  v.fatos['pressao_grupo'] = v.t;
+  const g = v.eu.genero === 'feminino' ? 'a' : v.eu.genero === 'nao_binario' ? 'e' : 'o';
+  anotar(v, `Foi post${g} para fora de ${o.nome}. O motivo: ${motivo}.`, 'ruim');
+  escrever(v, { texto: contrair(`Foi expuls${g} de ${o.nome} — ${motivo}. Quem sai assim não sai em paz.`), relevancia: 'marco', tema: 'trabalho', tom: 'ruim' });
+  abalar(v, 'a expulsão', -8, 12);
+  pedirRumo(v, 'perda');
+}
+
+function desligarPelaDistancia(v: Vida, o: OrgViva, rel: RelacaoComOrganizacao): void {
+  rel.saiu = v.t;
+  rel.motivoDaSaida = 'o vínculo se desfez com a distância';
+  lembrarOrg(rel, v.t, 'saida', 0);
+  const txt = `Longe demais por tempo demais: o vínculo com ${o.nome} se desfez. Não houve briga — só ninguém mais conta com você lá.`;
+  anotar(v, txt);
+  escrever(v, { texto: contrair(txt), relevancia: 'biografia', tema: 'trabalho' });
+}
+
 function anoDoJogadorNasOrgs(v: Vida): void {
   const e = env(v)!;
   if (preso(v)) {
@@ -692,7 +750,12 @@ function anoDoJogadorNasOrgs(v: Vida): void {
     const n = nivelDe(v, rel);
     if (rel.nivel === undefined && !rel.propria) definirNivel(v, rel, n);
     // REWORK 12.3 · A6: de fora do alcance, o vínculo não se apaga — mas não rende, e a confiança esfria.
-    if (rel.distancia === 'fora') { rel.lealdade = clamp(rel.lealdade - 5); continue; }
+    if (rel.distancia === 'fora') {
+      queixar(rel, v.t, 5, 'longe demais, fora do alcance dela', 'distancia', true);
+      // VIDA 27 · §3: o vínculo que esfriou SÓ pela distância se desfaz (não é expulsão: ninguém foi traído).
+      if (rel.lealdade < 12 && !rel.propria) desligarPelaDistancia(v, o, rel);
+      continue;
+    }
     const longe = rel.distancia === 'longe' ? 0.5 : 1;
     // A parte do ano (a organização própria já paga pelos negócios dela: `clandestinos`).
     if (!rel.propria) {
@@ -714,24 +777,30 @@ function anoDoJogadorNasOrgs(v: Vida): void {
       const pessoal = n <= 3 ? n * 1.5 : Math.max(0, 4.5 - (n - 3) * 1.5);
       e.exposicao = clamp(e.exposicao + 2 + Math.round(pessoal) + Math.round(o.pressao / 30));
       ganharPratica(v, 2 + n);
-      rel.lealdade = clamp(rel.lealdade + (e.cautela ? -3 : 1));
+      if (e.cautela) queixar(rel, v.t, 3, 'sumiu das tarefas para ficar discreto', 'falta', true); else rel.lealdade = clamp(rel.lealdade + 1);
     }
-    // A lealdade perdida: o rebaixamento; a perdida de vez (ou a traição): a expulsão.
-    const traiu = rel.memoria.some(m => m.fato === 'traicao' && v.t - m.t < 24);
-    if (!rel.propria && (rel.lealdade < 12 || traiu)) {
-      rel.expulso = v.t;
-      rel.saiu = v.t;
-      lembrarOrg(rel, v.t, 'saida', -10);
-      v.fatos['pressao_grupo'] = v.t;
-      anotar(v, `Foi posto para fora de ${o.nome}.`, 'ruim');
-      escrever(v, { texto: contrair(`Foi expuls${v.eu.genero === 'feminino' ? 'a' : v.eu.genero === 'nao_binario' ? 'e' : 'o'} de ${o.nome}. Quem sai assim não sai em paz.`), relevancia: 'marco', tema: 'trabalho', tom: 'ruim' });
-      abalar(v, 'a expulsão', -8, 12);
-      pedirRumo(v, 'perda');
-      continue;
+    // A lealdade perdida: o recado, o rebaixamento; a perdida de vez (ou a traição): a expulsão — sempre por um motivo
+    // que aconteceu e ficou registrado (VIDA 27 · §3), nunca por um número que caiu sem explicação.
+    if (!rel.propria) {
+      const veredito = julgarPermanencia(v, rel, n);
+      if (veredito.tipo === 'expulsar') { expulsarPor(v, o, rel, veredito.motivo); continue; }
+      if (veredito.tipo === 'rebaixar') {
+        definirNivel(v, rel, n - 1);
+        anotar(v, `Rebaixado em ${o.nome}: ${nomeDoNivel(o, n - 1)}. O comando cobrou: ${veredito.motivo}.`, 'ruim');
+        continue;
+      }
+      if (veredito.tipo === 'avisar') {
+        rel.avisado = v.t;
+        const txt = `${cap(o.nome)} mandou recado: a paciência acabando — ${veredito.motivo}. Mais uma, e é rua.`;
+        anotar(v, txt, 'ruim');
+        escrever(v, { texto: contrair(txt), relevancia: 'cotidiano', tema: 'trabalho', tom: 'ruim' });
+        continue;
+      }
     }
     if (!rel.propria && rel.lealdade < 25 && n > 0 && r.chance(0.4)) {
       definirNivel(v, rel, n - 1);
-      anotar(v, `Rebaixado em ${o.nome}: ${nomeDoNivel(o, n - 1)}.`, 'ruim');
+      const m = motivosDaQueixa(v, rel);
+      anotar(v, `Rebaixado em ${o.nome}: ${nomeDoNivel(o, n - 1)}${m ? ` (pesou: ${m})` : ''}.`, 'ruim');
       continue;
     }
     // A promoção que chega (sem pedir) para quem é leal, presente e já tem prática.
@@ -806,7 +875,7 @@ function vigiarDuplaLealdade(v: Vida): void {
     for (const [rel, outra] of [[ra, rb], [rb, ra]] as const) {
       if (!outra.secreto) {
         // Aberto: quem é de dentro de uma rival declarada perde confiança todo ano.
-        if (peso >= 15) rel.lealdade = clamp(rel.lealdade - 6);
+        if (peso >= 15) queixar(rel, v.t, 6, `segue de dentro de ${(rel === ra ? b : a).nome}, rival declarada`, 'falta', true);
         continue;
       }
       rel.suspeita = clamp((rel.suspeita ?? 0) + peso / 3 + e.exposicao / 20 + r.int(0, 4));
@@ -835,15 +904,15 @@ export function resolverDupla(v: Vida, fica: string | undefined, sai: string | u
   if (como === 'escolher') {
     const rival = ['rivalidade', 'conflito', 'ruptura'].includes(estadoEntre(a, b));
     rb.saiu = v.t;
-    if (rival) { rb.expulso = v.t; lembrarOrg(rb, v.t, 'traicao', -20); v.fatos['pressao_grupo'] = v.t; }
-    else lembrarOrg(rb, v.t, 'saida', -6);
+    if (rival) { rb.expulso = v.t; rb.motivoDaSaida = `expulsão: foi para o lado de ${a.nome}, rival`; lembrarOrg(rb, v.t, 'traicao', -20); v.fatos['pressao_grupo'] = v.t; }
+    else { rb.motivoDaSaida = `escolheu ficar com ${a.nome}`; lembrarOrg(rb, v.t, 'saida', -6); }
     lembrarOrg(ra, v.t, 'alianca', 8);
     return rival ? `Você ficou com ${a.nome}. Em ${b.nome}, o seu nome virou o de quem foi embora para o outro lado — e isso não se esquece.` : `Você ficou com ${a.nome} e saiu de ${b.nome} sem briga.`;
   }
   if (como === 'negar') {
-    if (r.chance(clamp(0.25 + (e.reputacao ?? 0) / 300, 0.15, 0.55))) { ra.lealdade = clamp(ra.lealdade - 4); rb.lealdade = clamp(rb.lealdade - 4); return 'Você negou, olhando nos olhos. Por enquanto, aceitaram — mas agora alguém observa.'; }
+    if (r.chance(clamp(0.25 + (e.reputacao ?? 0) / 300, 0.15, 0.55))) { queixar(ra, v.t, 4, 'negou ser de dentro de outra casa', 'falta', true); queixar(rb, v.t, 4, 'negou ser de dentro de outra casa', 'falta', true); return 'Você negou, olhando nos olhos. Por enquanto, aceitaram — mas agora alguém observa.'; }
     const perde = ra.lealdade < rb.lealdade ? ra : rb;
-    perde.expulso = v.t; perde.saiu = v.t; lembrarOrg(perde, v.t, 'traicao', -20);
+    perde.expulso = v.t; perde.saiu = v.t; perde.motivoDaSaida = 'expulsão: era de dentro de outra organização e negou'; lembrarOrg(perde, v.t, 'traicao', -20);
     e.exposicao = clamp(e.exposicao + 6);
     return `Ninguém acreditou. ${cap(perde.nome)} pôs você para fora — e quem é expulso por isso fica marcado no meio.`;
   }
@@ -854,7 +923,7 @@ export function resolverDupla(v: Vida, fica: string | undefined, sai: string | u
     historia(a, v.t, `${cap(a.nome)} e ${b.nome} passaram a fazer negócio por meio de você.`);
     return `Você propôs ser a ponte entre ${a.nome} e ${b.nome} — e as duas toparam fazer negócio por meio de você. Por enquanto.`;
   }
-  ra.lealdade = clamp(ra.lealdade - 8); rb.lealdade = clamp(rb.lealdade - 8);
+  queixar(ra, v.t, 8, `quis servir às duas (${b.nome} também)`, 'falta', true); queixar(rb, v.t, 8, `quis servir às duas (${a.nome} também)`, 'falta', true);
   return `A ideia de ser a ponte não colou: ${a.nome} e ${b.nome} querem saber de que lado você está.`;
 }
 
@@ -1021,15 +1090,16 @@ export function executarOrg(v: Vida, orgId: string, oque: OqueOrg, alvo?: string
     case 'promocao': {
       const chance = clamp(0.25 + rel.lealdade / 200 + garantirXp(v) / 400 - n * 0.07, 0.1, 0.85);
       if (r.chance(chance)) return { texto: promover(v, o, rel, 'O pedido foi aceito.'), tom: 'bom' };
-      lembrarOrg(rel, v.t, 'conflito', -4);
+      lembrarOrg(rel, v.t, 'conflito', -4, 'pediu para subir antes da hora');
       return { texto: '"Ainda não." O pedido ficou lembrado — volte a pedir daqui a um ano, com mais para mostrar.', tom: 'ruim' };
     }
     case 'sair': {
       const negociado = r.chance(clamp(0.55 + rel.lealdade / 200 - n * 0.08, 0.15, 0.9));
       rel.saiu = v.t;
       if (o.ramo === 'organizado' && e.especializacoes?.organizado) e.especializacoes.organizado.largou = v.t;
-      if (negociado) { lembrarOrg(rel, v.t, 'saida', -3); anotar(v, `Saiu de ${o.nome} sem guerra.`, 'bom'); return { texto: `Aceitaram a sua saída. Ninguém sai de verdade — mas ninguém vai bater na sua porta.` }; }
+      if (negociado) { rel.motivoDaSaida = 'saída negociada'; lembrarOrg(rel, v.t, 'saida', -3); anotar(v, `Saiu de ${o.nome} sem guerra.`, 'bom'); return { texto: `Aceitaram a sua saída. Ninguém sai de verdade — mas ninguém vai bater na sua porta.` }; }
       lembrarOrg(rel, v.t, 'traicao', -20);
+      rel.motivoDaSaida = 'saiu sem a aceitação do comando';
       v.fatos['pressao_grupo'] = v.t;
       abalar(v, 'a saída mal recebida', -6, 10);
       anotar(v, `${cap(o.nome)} não aceitou a sua saída.`, 'ruim');
@@ -1078,7 +1148,7 @@ export function executarOrg(v: Vida, orgId: string, oque: OqueOrg, alvo?: string
     }
     case 'filiar_secreto': {
       const chance = clamp(0.3 + (rel.lealdade - 45) / 80 + (e.reputacao ?? 0) / 300, 0.15, 0.85);
-      if (!r.chance(chance)) { lembrarOrg(rel, v.t, 'conflito', -2); return { texto: 'Ouviram a proposta e disseram que não: quem já é de outra casa, eles não querem escondido.', tom: 'ruim' }; }
+      if (!r.chance(chance)) { lembrarOrg(rel, v.t, 'conflito', -2, 'pediu para entrar escondido, sendo de outra casa'); return { texto: 'Ouviram a proposta e disseram que não: quem já é de outra casa, eles não querem escondido.', tom: 'ruim' }; }
       rel.relacao = 'membro'; rel.secreto = true; rel.suspeita = 0;
       delete rel.saiu;
       definirNivel(v, rel, 0);
@@ -1126,7 +1196,7 @@ export function leituraDasOrganizacoes(v: Vida) {
   if (!e) return [];
   const minhaRegiao = regiaoDaPessoa(v);
   const ids = new Set([...(e.organizacoes ?? []).map(x => x.id), ...orgsDaCidade(v).map(x => x.id)]);
-  const LEMBRA: Record<string, string> = { promessa: 'promessa cumprida', promessa_quebrada: 'promessa quebrada', alianca: 'aliança', conflito: 'conflito', traicao: 'traição', saida: 'saída', favor: 'favor', reconciliacao: 'reconciliação' };
+  const LEMBRA: Record<string, string> = { promessa: 'promessa cumprida', promessa_quebrada: 'promessa quebrada', alianca: 'aliança', conflito: 'conflito', traicao: 'traição sua', saida: 'saída', favor: 'favor', reconciliacao: 'reconciliação', traido: 'gente dela traiu você' };
   return [...ids].map(id => {
     const o = orgViva(v, id);
     const rel = e.organizacoes?.find(x => x.id === id);
@@ -1145,6 +1215,10 @@ export function leituraDasOrganizacoes(v: Vida) {
       disputa: o.disputa ? { motivo: o.disputa.motivo, candidatos: o.disputa.candidatos.map(c => ({ id: c, nome: c === 'jogador' ? 'você' : o.quadro.find(x => x.id === c)?.nome ?? 'alguém' })), apoio: o.disputa.apoio } : undefined,
       prioridade: o.prioridade, parte: n >= 0 && !rel?.propria && rel?.relacao === 'membro' ? parteDoAno(v, o, n) : undefined,
       lembra: rel ? [...new Set(rel.memoria.slice(-6))].map(m => `${anoDe(m.t)} · ${LEMBRA[m.fato]}`) : [],
+      // VIDA 27 · §3: o que pesa contra você (com o motivo) e, se saiu, por quê.
+      pesa: rel ? queixasVivas(v, rel).slice(0, 3).map(q => `${anoDe(q.t)} · ${q.motivo}`) : [],
+      motivoDaSaida: rel?.motivoDaSaida,
+      avisado: rel?.avisado !== undefined && v.t - rel.avisado <= 36 && rel.saiu === undefined,
       historia: o.historia.slice(-6).reverse().map(h => ({ ano: anoDe(h.t), texto: h.texto })),
       cidade: municipio(o.municipioId).nome, daqui: o.municipioId === v.moradia.municipioId,
       // REWORK 12.3: as relações com cada outra organização (A2), o alcance e a distância (A6), o segredo (A1), o que o posto permite (A3).

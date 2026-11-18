@@ -138,9 +138,9 @@ export const SUBMUNDO: Conteudo[] = ([
       { id: 'mudar', texto: 'Apostar em quem quer o lugar', comportamento: { coragem: 1, impulsividade: 1 },
         consequencia: () => 'Se ganhar, você sobe junto. Se perder, cai junto.',
         resolver: c => { const ganhou = c.r.chance(0.42); return { texto: ganhou ? 'Quem você apoiou ganhou. Você subiu junto.' : 'Quem você apoiou perdeu. Agora há gente que não confia mais em você — de nenhum lado.', memoria: ganhou ? 'Ficou do lado que venceu uma disputa no grupo.' : 'Ficou do lado errado numa disputa do grupo.', relevancia: 'biografia', tom: ganhou ? 'bom' : 'ruim',
-          efeito: () => { const o = org(c, 'subo_disputa')!; const s = esp(c, 'organizado'); if (ganhou) { void s; if (o.relacao === 'membro') definirNivel(c.v, o, Math.min(5, (o.nivel ?? 0) + 1)); lembrarOrg(o, c.v.t, 'alianca', 10); promessa(c.v, quem(c).id, true); } else { lembrarOrg(o, c.v.t, 'traicao', -30); for (const x of contatosAtivos(c.v, 'organizado', 'chefe')) x.f.confianca = clamp(x.f.confianca - 25); estresse(c, 8); } } }; } },
+          efeito: () => { const o = org(c, 'subo_disputa')!; const s = esp(c, 'organizado'); if (ganhou) { void s; if (o.relacao === 'membro') definirNivel(c.v, o, Math.min(5, (o.nivel ?? 0) + 1)); lembrarOrg(o, c.v.t, 'alianca', 10); promessa(c.v, quem(c).id, true); } else { lembrarOrg(o, c.v.t, 'traicao', -30, 'apoiou quem perdeu a disputa pelo comando'); for (const x of contatosAtivos(c.v, 'organizado', 'chefe')) x.f.confianca = clamp(x.f.confianca - 25); estresse(c, 8); } } }; } },
       { id: 'neutro', texto: 'Não se meter',
-        resolver: c => ({ texto: 'Você ficou de fora. Ninguém agradeceu, ninguém cobrou — por enquanto.', memoria: null, efeito: () => lembrarOrg(org(c, 'subo_disputa')!, c.v.t, 'conflito', -4) }) },
+        resolver: c => ({ texto: 'Você ficou de fora. Ninguém agradeceu, ninguém cobrou — por enquanto.', memoria: null, efeito: () => lembrarOrg(org(c, 'subo_disputa')!, c.v.t, 'conflito', -4, 'ficou de fora quando o comando precisou') }) },
       { id: 'sair', texto: 'Aproveitar a confusão para sair', comportamento: { disciplina: 1, coragem: 1 },
         resolver: c => { const deixam = c.r.chance(0.55); return { texto: deixam ? 'No meio da confusão, ninguém teve tempo de segurar você. Você saiu.' : 'Você saiu — e a disputa terminou com os dois lados achando que você traiu.', memoria: null, tom: deixam ? 'bom' : 'ruim',
           efeito: () => { const o = org(c, 'subo_disputa')!; o.saiu = c.v.t; lembrarOrg(o, c.v.t, deixam ? 'saida' : 'traicao', deixam ? -5 : -30); esp(c, 'organizado').largou = c.v.t; if (!deixam) c.v.fatos['pressao_grupo'] = c.v.t; if (!ramosAtivos(env(c)).length) parar(c.v, `saiu de ${o.nome} no meio de uma disputa`); } }; } }
@@ -158,7 +158,7 @@ export const SUBMUNDO: Conteudo[] = ([
         consequencia: () => 'Mais renda e mais poder; mais exposição — e sair fica mais difícil.',
         resolver: c => ({ texto: 'Você aceitou. Agora há quem espere ordens suas.', memoria: 'Subiu dentro do grupo criminoso.', relevancia: 'marco', tom: 'ruim', efeito: () => { const s = esp(c, 'organizado'); s.posto = Math.min(4, (s.posto ?? 1) + 1) as 1 | 2 | 3 | 4; e(c).exposicao = clamp(e(c).exposicao + 8); e(c).reputacao = clamp((e(c).reputacao ?? 0) + 8); lembrarOrg(org(c, 'subo_promocao')!, c.v.t, 'alianca', 8); if (s.posto === 4) criarContato(c.v, 'organizado', 'protegido', 2); anotar(c.v, `Passou a ser ${POSTO[s.posto]}.`, 'bom'); } }) },
       { id: 'recusar', texto: 'Recusar e ficar onde está', comportamento: { disciplina: 1 },
-        resolver: c => ({ texto: '"Ainda não." Aceitaram — e anotaram.', memoria: null, efeito: () => lembrarOrg(org(c, 'subo_promocao')!, c.v.t, 'conflito', -5) }) }
+        resolver: c => ({ texto: '"Ainda não." Aceitaram — e anotaram.', memoria: null, efeito: () => lembrarOrg(org(c, 'subo_promocao')!, c.v.t, 'conflito', -5, 'recusou subir quando o comando chamou') }) }
     ]
   },
   /* ------------------------------------------------------------- crimes digitais: a encomenda grande */

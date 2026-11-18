@@ -314,7 +314,7 @@ export function ficarComDefesaPublica(v: Vida): string {
   const orgPagava = p.pagaPor === 'organizacao';
   Object.assign(p, { defesa: 'publica', defensorId: d.id, defesaEscolhida: true });
   delete p.pagaPor;
-  if (orgPagava) for (const o of v.caminhos.envolvimento?.organizacoes ?? []) if (o.relacao === 'membro' && o.saiu === undefined) o.lealdade = clamp(o.lealdade - 4);
+  if (orgPagava) for (const o of v.caminhos.envolvimento?.organizacoes ?? []) if (o.relacao === 'membro' && o.saiu === undefined) { o.lealdade = clamp(o.lealdade - 4); (o.queixas ??= []).push({ t: v.t, motivo: 'dispensou o advogado que a organização pagava', peso: 4, tipo: 'falta' }); } // VIDA 27 · §3 (sem importar submundo: chunk)
   return tinha
     ? `Você dispensou ${tinha.nome}${orgPagava ? ' — e, com ele, o favor da organização (quem manda reparou)' : ''}. ${d.nome}, ${quemE(d).split(' ')[1] === 'defensora' ? 'a defensora' : 'o defensor'} designado, tem uma pilha de processos e cinco minutos para o seu.`
     : `${d.nome} ficou com o seu caso: ${perfilDaVida(v).defensoria}, com uma pilha de processos na mesa e pouco tempo para cada um. Fez o que pôde.`;

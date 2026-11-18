@@ -29,7 +29,7 @@ import { lembrarCom } from '../nucleo';
 import { dinheiroCurto as fmt } from '../texto';
 import { disponivel } from '../sistemas/dinheiro';
 import { entrar, parar } from '../sistemas/ilicito';
-import { afastar, anotar, lembrarOrg, orgPorId } from '../sistemas/submundo';
+import { afastar, anotar, lembrarOrg, queixar, orgPorId } from '../sistemas/submundo';
 import { comecarASair, garantirCarreira } from '../sistemas/carreiraCriminal';
 import { pagarPorFora, pedirRumo } from '../sistemas/porFora';
 import { historiaDoContato, mudarConfianca, valorDeFavor } from '../sistemas/redeCriminal';
@@ -120,7 +120,7 @@ export const ACONTECIMENTOS_125: Conteudo[] = ([
     texto: c => `${quem(c).nome} agora é de ${orgPorId(c.v, ficha(c)!.organizacao!)?.nome ?? 'outra organização'}. Leva o que sabe — inclusive de você. E traz o que sabe de lá.`,
     opcoes: [
       { id: 'manter', texto: 'Manter a amizade, longe dos negócios',
-        resolver: c => ({ texto: 'Vocês combinaram não falar de trabalho. Sabem que vão falar.', memoria: null, efeito: () => { const m = (env(c).organizacoes ?? []).find(o => o.relacao === 'membro' && o.saiu === undefined); if (m) lembrarOrg(m, c.v.t, 'conflito', -2); } }) },
+        resolver: c => ({ texto: 'Vocês combinaram não falar de trabalho. Sabem que vão falar.', memoria: null, efeito: () => { const m = (env(c).organizacoes ?? []).find(o => o.relacao === 'membro' && o.saiu === undefined); if (m) lembrarOrg(m, c.v.t, 'conflito', -2, 'combinou trégua com gente de outra organização'); } }) },
       { id: 'informar', texto: 'Pedir que conte como é do outro lado',
         consequencia: () => 'O que se sabe vale — e o que se pede, também.',
         resolver: c => ({ texto: `${quem(c).nome} contou o que pôde. Agora você deve uma a ${gp(c, 'quem', 'ele', 'ela', 'elu')}.`, memoria: null, efeito: () => { const f = ficha(c)!; f.favores = (f.favores ?? 0) - 1; const m = (env(c).organizacoes ?? []).find(o => o.relacao === 'membro' && o.saiu === undefined); if (m) lembrarOrg(m, c.v.t, 'favor', 4); } }) },
@@ -169,7 +169,7 @@ export const ACONTECIMENTOS_125: Conteudo[] = ([
         consequencia: () => 'A organização lembra de quem ficou firme; a Justiça e o bairro também reparam.',
         resolver: c => { const [a, b] = env(c).cenas125!['sub125_rivalidade'].split('|').map(x => orgViva(c.v, x)!); const reg = regiaoDaPessoa(c.v); return { texto: 'Vocês não recuaram. O pedaço continua de quem estava — com mais gente olhando.', memoria: null, efeito: () => { a.influencia[reg] = clamp((a.influencia[reg] ?? 0) + 6); b.influencia[reg] = clamp((b.influencia[reg] ?? 0) - 6); a.pressao = clamp(a.pressao + 8); env(c).exposicao = clamp(env(c).exposicao + 6); const rel = env(c).organizacoes?.find(x => x.id === a.id); if (rel) lembrarOrg(rel, c.v.t, 'favor', 6); estresse(c, 4); } }; } },
       { id: 'recuar', texto: 'Recuar: não vale a briga', comportamento: { disciplina: 1 },
-        resolver: c => { const [a, b] = env(c).cenas125!['sub125_rivalidade'].split('|').map(x => orgViva(c.v, x)!); const reg = regiaoDaPessoa(c.v); return { texto: 'Vocês cederam um pedaço. Menos dinheiro ali — e menos risco.', memoria: null, efeito: () => { a.influencia[reg] = clamp((a.influencia[reg] ?? 0) - 8); b.influencia[reg] = clamp((b.influencia[reg] ?? 0) + 6); const rel = env(c).organizacoes?.find(x => x.id === a.id); if (rel && rel.relacao === 'membro') lembrarOrg(rel, c.v.t, 'conflito', -4); } }; } }
+        resolver: c => { const [a, b] = env(c).cenas125!['sub125_rivalidade'].split('|').map(x => orgViva(c.v, x)!); const reg = regiaoDaPessoa(c.v); return { texto: 'Vocês cederam um pedaço. Menos dinheiro ali — e menos risco.', memoria: null, efeito: () => { a.influencia[reg] = clamp((a.influencia[reg] ?? 0) - 8); b.influencia[reg] = clamp((b.influencia[reg] ?? 0) + 6); const rel = env(c).organizacoes?.find(x => x.id === a.id); if (rel && rel.relacao === 'membro') lembrarOrg(rel, c.v.t, 'conflito', -4, 'cedeu território para a rival'); } }; } }
     ]
   },
   /* ------------------------------------------------------------- REWORK 12.3 · A1: de dentro de duas, e as duas sabem */
@@ -202,7 +202,7 @@ export const ACONTECIMENTOS_125: Conteudo[] = ([
     opcoes: [
       { id: 'aceitar', texto: 'Aceitar a aliança', resolver: c => ({ texto: 'Fechado. Agora há um nome a mais do seu lado — e um a mais esperando algo de você.', memoria: null, efeito: () => { const o = orgDaCena(c, 'sub125_alianca')!; const rel = relacaoCom(c.v, o); rel.relacao = 'aliada'; rel.lealdade = Math.max(rel.lealdade, 50); lembrarOrg(rel, c.v.t, 'alianca', 0); } }) },
       { id: 'ouvir', texto: 'Ouvir, sem compromisso', resolver: c => ({ texto: 'Você ouviu e não prometeu nada. Eles anotaram o seu nome.', memoria: null, efeito: () => { relacaoCom(c.v, orgDaCena(c, 'sub125_alianca')!); } }) },
-      { id: 'recusar', texto: 'Recusar', comportamento: { independencia: 1 }, resolver: c => ({ texto: 'Você agradeceu e recusou. Ninguém gostou, ninguém reclamou.', memoria: null, efeito: () => { const rel = relacaoCom(c.v, orgDaCena(c, 'sub125_alianca')!); rel.lealdade = clamp(rel.lealdade - 5); } }) }
+      { id: 'recusar', texto: 'Recusar', comportamento: { independencia: 1 }, resolver: c => ({ texto: 'Você agradeceu e recusou. Ninguém gostou, ninguém reclamou.', memoria: null, efeito: () => { const rel = relacaoCom(c.v, orgDaCena(c, 'sub125_alianca')!); queixar(rel, c.v.t, 5, 'recusou a aliança proposta', 'falta', true); } }) }
     ]
   },
   /* ------------------------------------------------------------- o parceiro antigo que reaparece */
@@ -271,7 +271,7 @@ export const ACONTECIMENTOS_125: Conteudo[] = ([
       { id: 'aceitar', texto: 'Ficar com eles', consequencia: () => 'Proteção agora; a disciplina sente, e a organização lembra.',
         resolver: c => ({ texto: 'Ninguém mais encara você no pátio. Em troca, você passou a fazer parte do que acontece ali dentro.', memoria: null, efeito: () => { const p = c.v.justica!.prisao!; p.faccao = 'dentro'; p.disciplina = clamp((p.disciplina ?? 70) - 8); const o = (env(c).organizacoes ?? []).find(x => x.relacao === 'membro' && x.saiu === undefined && x.especialidade === 'organizado'); if (o) lembrarOrg(o, c.v.t, 'favor', 5); } }) },
       { id: 'distancia', texto: 'Manter distância e cumprir a pena', comportamento: { disciplina: 1 },
-        resolver: c => ({ texto: 'Você agradeceu e ficou na sua. Eles não gostaram — mas respeitaram.', memoria: null, efeito: () => { const p = c.v.justica!.prisao!; p.faccao = 'recusou'; p.disciplina = clamp((p.disciplina ?? 70) + 4); const o = (env(c).organizacoes ?? []).find(x => x.relacao === 'membro' && x.saiu === undefined && x.especialidade === 'organizado'); if (o) lembrarOrg(o, c.v.t, 'conflito', -4); } }) },
+        resolver: c => ({ texto: 'Você agradeceu e ficou na sua. Eles não gostaram — mas respeitaram.', memoria: null, efeito: () => { const p = c.v.justica!.prisao!; p.faccao = 'recusou'; p.disciplina = clamp((p.disciplina ?? 70) + 4); const o = (env(c).organizacoes ?? []).find(x => x.relacao === 'membro' && x.saiu === undefined && x.especialidade === 'organizado'); if (o) lembrarOrg(o, c.v.t, 'conflito', -4, 'recusou a proteção da facção na prisão'); } }) },
       { id: 'sair', texto: 'Dizer que, quando sair, está fora', comportamento: { coragem: 1 },
         resolver: c => ({ texto: 'Você disse com calma: quando a pena acabar, acabou tudo. Ninguém respondeu.', memoria: 'Na prisão, avisou à organização que estava fora.', efeito: () => { const o = (env(c).organizacoes ?? []).find(x => x.relacao === 'membro' && x.saiu === undefined && x.especialidade === 'organizado'); if (o) { o.saiu = c.v.t; lembrarOrg(o, c.v.t, 'saida', -8); } if (env(c).parou === undefined) parar(c.v, 'decidiu, na prisão, que estava fora'); abalar(c.v, 'a decisão', 2, 4); } }) }
     ]

@@ -215,8 +215,20 @@ export function rivalDoRamo(v: Vida, ramo: Ramo): RelacaoComOrganizacao {
 
 const GRAVE = new Set(['traicao', 'promessa_quebrada', 'conflito', 'saida']);
 
-export function lembrarOrg(o: RelacaoComOrganizacao, t: number, fato: RelacaoComOrganizacao['memoria'][number]['fato'], lealdade = 0): void {
+/** VIDA 27 · §3: registra o que pesou contra você numa organização (e tira da lealdade, se `tirar`). */
+export function queixar(o: RelacaoComOrganizacao, t: number, peso: number, motivo: string, tipo: 'traicao' | 'falta' | 'distancia', tirar = false): void {
+  const q = (o.queixas ??= []);
+  // O mesmo motivo no mesmo ano soma (não vira lista de repetições).
+  const igual = q.find(x => x.motivo === motivo && t - x.t < 12);
+  if (igual) { igual.peso += peso; igual.t = t; } else q.push({ t, motivo, peso, tipo });
+  if (q.length > 12) q.splice(0, q.length - 12);
+  if (tirar) o.lealdade = clamp(o.lealdade - peso);
+}
+
+export function lembrarOrg(o: RelacaoComOrganizacao, t: number, fato: RelacaoComOrganizacao['memoria'][number]['fato'], lealdade = 0, motivo?: string): void {
   o.memoria.push({ t, fato });
+  // VIDA 27 · §3: a perda de confiança com motivo fica registrada (é o que uma expulsão pode citar).
+  if (motivo && lealdade < 0) queixar(o, t, -lealdade, motivo, fato === 'traicao' ? 'traicao' : 'falta');
   // REWORK 12.2: o que é grave (a traição, a promessa quebrada, o conflito) não sai da memória para dar lugar ao miúdo:
   // quando a lista enche, esquece-se primeiro o favor e a promessa cumprida mais antigos.
   while (o.memoria.length > 20) {
@@ -264,7 +276,7 @@ export function processarSubmundo(v: Vida): void {
     }
     // O membro de uma organização que atua por fora dela, no ramo de outra, vira assunto.
     const membro = (e.organizacoes ?? []).find(o => o.relacao === 'membro' && o.saiu === undefined);
-    if (membro && ativos.some(x => x !== membro.especialidade && x !== 'furtos') && r.chance(0.2)) lembrarOrg(membro, v.t, 'conflito', -6);
+    if (membro && ativos.some(x => x !== membro.especialidade && x !== 'furtos') && r.chance(0.2)) lembrarOrg(membro, v.t, 'conflito', -6, 'atua por fora, no ramo de outros');
   }
   // As pessoas: a confiança anda com o que se cumpriu; quem não confia mais se afasta.
   for (const { id, f } of contatosAtivos(v)) {
@@ -576,7 +588,7 @@ export function executarSubmundo(v: Vida, r: Rng, oque: OqueSubmundo, ramo?: Ram
       const falha = r.chance(chanceDeFalha(e, 'organizado', 1, !!parceiro()));
       operou(falha);
       e.exposicao = clamp(e.exposicao + 5 + (falha ? 6 : 0));
-      if (falha) { lembrarOrg(org, v.t, 'conflito', -6); anotar(v, `Uma tarefa de ${org.nome} saiu errada.`, 'ruim'); return { texto: 'A tarefa saiu errada, e quem manda reparou.', tom: 'ruim' }; }
+      if (falha) { lembrarOrg(org, v.t, 'conflito', -6, 'uma tarefa do grupo saiu errada'); anotar(v, `Uma tarefa de ${org.nome} saiu errada.`, 'ruim'); return { texto: 'A tarefa saiu errada, e quem manda reparou.', tom: 'ruim' }; }
       lembrarOrg(org, v.t, 'favor', 6);
       const liq = ganhar(r.int(valorDaOperacao(v, 'organizado', 1), valorDaOperacao(v, 'organizado', 2)));
       return { texto: `Você fez o que pediram. ${cap(org.nome)} lembra de quem cumpre — e pagou ${fmt(v, liq)}.` };
@@ -595,7 +607,7 @@ export function executarSubmundo(v: Vida, r: Rng, oque: OqueSubmundo, ramo?: Ram
         escrever(v, { texto: contrair(`Subiu dentro de ${org.nome}.`), relevancia: 'biografia', tema: 'trabalho', tom: 'ruim', escolha: true });
         return { texto: `Agora você é ${POSTO[s!.posto!]}. Mais dinheiro, mais responsabilidade — e mais olhos em você.` };
       }
-      lembrarOrg(org, v.t, 'conflito', -8);
+      lembrarOrg(org, v.t, 'conflito', -8, 'pediu para subir antes da hora');
       e.atritos = (e.atritos ?? 0) + 1;
       return { texto: '"Ainda não." O pedido ficou lembrado — e não do jeito que você queria.', tom: 'ruim' };
     }
@@ -726,7 +738,7 @@ export function leituraDoSubmundo(v: Vida): {
     estado: (!v.pessoas[id].vivo ? 'morto' : f.traiu !== undefined ? 'traiu' : f.afastado !== undefined ? 'afastado' : 'ativo') as 'ativo' | 'afastado' | 'traiu' | 'morto',
     ...(f.organizacao ? { organizacao: orgs.find(o => o.id === f.organizacao)?.nome } : {})
   })).sort((a, b) => Number(b.estado === 'ativo') - Number(a.estado === 'ativo') || b.confianca - a.confianca);
-  const LEMBRA: Record<string, string> = { promessa: 'promessa cumprida', promessa_quebrada: 'promessa quebrada', alianca: 'aliança', conflito: 'conflito', traicao: 'traição', saida: 'saída', favor: 'favor', reconciliacao: 'reconciliação' };
+  const LEMBRA: Record<string, string> = { promessa: 'promessa cumprida', promessa_quebrada: 'promessa quebrada', alianca: 'aliança', conflito: 'conflito', traicao: 'traição', saida: 'saída', favor: 'favor', reconciliacao: 'reconciliação', traido: 'gente dela traiu você' };
   return {
     ramos,
     contatos,

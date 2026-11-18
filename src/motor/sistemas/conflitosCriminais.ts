@@ -533,7 +533,7 @@ export function resolverOperacao(v: Vida, casoId: string, x: EscolhaDaOperacao):
       moita(v, true);
       e.exposicao = clamp(e.exposicao - 10);
       for (const y of e.encomendas ?? []) if (y.direcao === 'recebida' && y.estado === 'aberta') { y.estado = 'recusada'; y.tFim = v.t; }
-      if (rel) lembrarOrg(rel, v.t, 'conflito', jeitoDe(o!).traicao === 'cobra' ? -6 : -2);
+      if (rel) lembrarOrg(rel, v.t, 'conflito', jeitoDe(o!).traicao === 'cobra' ? -6 : -2, 'parou tudo e sumiu das tarefas');
       res.push('Você parou tudo: telefone desligado, nenhuma proposta aceita. A exposição esfriou; o dinheiro também.');
       break;
     case 'colaborar': {
@@ -542,7 +542,7 @@ export function resolverOperacao(v: Vida, casoId: string, x: EscolhaDaOperacao):
       else res.push('O que você contou vai pesar a seu favor se houver processo.');
       v.fatos['colaborou'] = v.t;
       if (o) { o.pressao = clamp(o.pressao + 20); o.forca = clamp(o.forca - 8); }
-      if (rel) { rel.expulso = v.t; rel.saiu = v.t; lembrarOrg(rel, v.t, 'traicao', -40); }
+      if (rel) { rel.expulso = v.t; rel.saiu = v.t; rel.motivoDaSaida = 'expulsão: colaborou com a polícia'; lembrarOrg(rel, v.t, 'traicao', -40); }
       v.fatos['pressao_grupo'] = v.t;
       res.push(`Em ${o?.nome ?? 'sua organização'}, o seu nome virou o de quem colaborou. Você está fora — e há quem não esqueça.`);
       if (r.chance(jeitoDe(o!).traicao === 'cobra' ? 0.5 : 0.2)) res.push(...ameacarFamilia(v, o?.nome ?? 'gente de antes'));
@@ -629,7 +629,7 @@ export function resolverPerseguicao(v: Vida, casoId: string, x: EscolhaDaPersegu
       if (quem && r.chance(0.65)) {
         const c = contatosAtivos(v).find(y => v.pessoas[y.id].nome === quem);
         if (c) { c.f.favores = (c.f.favores ?? 0) - 1; historiaDoContato(v, c.id, 'Tirou você de uma enrascada.', 'bom'); }
-        else { const m = minhaOrg(v); if (m) lembrarOrg(m.rel, v.t, 'favor', -3); }
+        else { const m = minhaOrg(v); if (m) lembrarOrg(m.rel, v.t, 'favor', -3, 'deve a ajuda numa enrascada'); }
         res.push(`${quem} tirou você dali. Agora você deve essa.`);
         tom = 'bom';
       } else { pego(cat); res.push('A ajuda não chegou a tempo. Você foi levad' + flex(ge(v), 'o', 'a', 'e') + ', e um processo começa.'); tom = 'ruim'; }

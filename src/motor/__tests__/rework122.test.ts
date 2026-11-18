@@ -467,7 +467,9 @@ describe('Submundo: negócios por fora, fachada, organização', () => {
       for (let k = 0; k < 5; k++) w = transacao(w, (x, r) => { x.t += 12; processarClandestinos(x, r); }).vida;
       return w;
     };
-    const expo = (ritmo: 'ritmo_0' | 'ritmo_2') => [0, 1, 2, 3].reduce((s, k) => s + comRitmo(ritmo, k).caminhos.envolvimento!.exposicao, 0);
+    // VIDA 27: oito sementes (a saúde por fatores reais mudou as vidas de teste, e com quatro um sorteio de apreensão
+    // decidia sozinho; a regra — acelerar expõe mais — vale na média, antes e depois: main 154→192, agora 166→179).
+    const expo = (ritmo: 'ritmo_0' | 'ritmo_2') => [0, 1, 2, 3, 4, 5, 6, 7].reduce((s, k) => s + comRitmo(ritmo, k).caminhos.envolvimento!.exposicao, 0);
     expect(expo('ritmo_2')).toBeGreaterThan(expo('ritmo_0'));
     let v = envolvido();
     v = fazer(v, { tipo: 'clandestino', oque: 'abrir', alvo: 'mercadorias' });

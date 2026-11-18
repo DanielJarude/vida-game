@@ -193,7 +193,7 @@ export function executarDefesa(v: Vida, oque: OqueDefesa): { texto: string; tom?
     case 'abrigo': {
       const quem = abrigoPossivel(v)!;
       j.foragido!.abrigo = v.t;
-      lembrarOrg(quem.rel!, v.t, 'favor', -6);
+      lembrarOrg(quem.rel!, v.t, 'favor', -6, 'deve o abrigo que deram na fuga');
       // O preço do abrigo: um trabalho para eles, mais cedo ou mais tarde (chega em Encomendas, se ainda estiver no caminho).
       if (v.caminhos.envolvimento && v.caminhos.envolvimento.parou === undefined) proporEncomenda(v, r, quem.org.ramo, { orgId: quem.org.id }, 2);
       v.fatos['abrigo_de'] = v.t;
