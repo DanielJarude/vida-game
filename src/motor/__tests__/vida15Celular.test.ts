@@ -7,7 +7,7 @@ import { podeTentar } from '../plausibilidade';
 import { interpretar } from '../save';
 import { vincular } from '../pessoas';
 import { anoDe } from '../tempo';
-import { feed15, matches15, opcoesDaMsg15, processarCelular15, depoisDaAcao15, naoLidas15 } from '../v15/celular/celular15';
+import { feed15, matches15, processarCelular15, depoisDaAcao15, naoLidas15 } from '../v15/celular/celular15';
 import type { Vida } from '../tipos';
 
 function comAmigos(v: Vida, n: number): string[] {

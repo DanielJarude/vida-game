@@ -90,7 +90,7 @@ describe('VIDA 27 · conversas que cabem na idade e na relação', () => {
   it('entre adultos, ajudar com dinheiro continua possível (a escolha é de quem pode)', () => {
     const v = jovem(35);
     const p = pessoaNova(v, 34, 'masculino');
-    vincular(v, p, { origem: 'amizade', proximidade: 80 });
+    vincular(v, p, { origem: 'escola', proximidade: 80 });
     const m = { id: 'y', t: v.t, tipo: 'desabafo', onda: 1, de: p.id, sit17: 'desabafo_desemprego', texto: '"Fui demitido."' } as unknown as Msg15;
     expect(opcoes17(v, m).map(o => o.op)).toEqual(expect.arrayContaining(['apoio', 'conselho', 'ajudar']));
   });
