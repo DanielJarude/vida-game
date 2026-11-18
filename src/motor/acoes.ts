@@ -149,6 +149,7 @@ import { disponibilidadeHaras19, executarHaras19, type OqueHaras19 } from './v19
 import { disponibilidadeAgro19, executarAgro19, type OqueAgro19 } from './v19/agro/agro19';
 import { disponibilidadeAuto20, executarAuto20, type OqueAuto20 } from './v20/automobilismo/automobilismo20';
 import { disponibilidadeEsports25, executarEsports25, type OqueEsports25 } from './v25/esports/esports25';
+import { disponibilidadePos26, executarPos26 } from './v26/carreira/posCarreira26';
 import { disponibilidadeClube20, executarClube20, type OqueClube20 } from './v20/clubes/clubes20';
 import { disponibilidadeOficio16, executarOficio16, type OqueOficio16 } from './v16/oficios/oficios16';
 import { disponibilidadeReligiao16, executarReligiao16, type OqueReligiao16 } from './v16/religiao/religiao16';
@@ -358,6 +359,8 @@ export type Acao =
   | { tipo: 'auto20'; oque: OqueAuto20 }
   /** VIDA 25 · e-sports: começar, o foco do treino, a função, a peneira, a proposta, sair, parar. */
   | { tipo: 'esports25'; oque: OqueEsports25 }
+  /** VIDA 26: procurar uma profissão do depois da competição (`v26/carreira/posCarreira26`). */
+  | { tipo: 'pos26'; ocupacaoId: string }
   | { tipo: 'clube20'; oque: OqueClube20 }
   /** VIDA 19: a documentação e o crédito do campo (CAR, georreferenciamento, outorga, Plano Safra). */
   | { tipo: 'agro19'; oque: OqueAgro19 }
@@ -890,6 +893,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'haras19': return disponibilidadeHaras19(v, a.oque);
     case 'auto20': return disponibilidadeAuto20(v, a.oque);
     case 'esports25': return disponibilidadeEsports25(v, a.oque);
+    case 'pos26': return disponibilidadePos26(v, a.ocupacaoId);
     case 'clube20': return disponibilidadeClube20(v, a.oque);
     case 'agro19': return disponibilidadeAgro19(v, a.oque);
     case 'oficio16': return disponibilidadeOficio16(v, a.oque);
@@ -1151,6 +1155,7 @@ function linhaDoExtrato(a: Acao): [string, TipoMovimento] {
     case 'dep14': return ['Saúde: tratamento', 'despesa'];
     case 'auto20': return ['Automobilismo: temporadas, treino e patrocínio', 'escolha'];
     case 'esports25': return ['E-sports: treino, peneiras, equipes e propostas', 'escolha'];
+    case 'pos26': return ['Trabalho: procurar emprego', 'escolha'];
     case 'clube20': return ['O clube: compra, aportes e venda', 'escolha'];
     case 'moveis14': return ['Coisas da casa e da vida: compra e venda', 'escolha'];
     default: return ['Compras, viagens e outras escolhas', 'escolha'];
@@ -1782,6 +1787,7 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
     case 'haras19': { const x = executarHaras19(v, a.oque); return { aviso: { texto: x.texto, tom: x.tom ?? 'neutro' } }; }
     case 'auto20': { const x = executarAuto20(v, a.oque); return { aviso: { texto: x.texto, tom: x.tom ?? 'neutro' } }; }
     case 'esports25': { const x = executarEsports25(v, a.oque); return { aviso: { texto: x.texto, tom: x.tom ?? 'neutro' } }; }
+    case 'pos26': { const x = executarPos26(v, r, a.ocupacaoId); return { aviso: { texto: x.texto, tom: x.tom } }; }
     case 'clube20': { const x = executarClube20(v, a.oque); return { aviso: { texto: x.texto, tom: x.tom ?? 'neutro' } }; }
     case 'conectada19': { const x = executarConectada19(v, r, a.oque); return x.texto ? { aviso: { texto: x.texto, tom: x.tom ?? 'neutro' }, pessoaId: x.pessoaId } : {}; }
     case 'oficio16': { const x = executarOficio16(v, r, a.oque); return x.texto ? { aviso: { texto: x.texto, tom: x.tom } } : {}; }

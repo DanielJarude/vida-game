@@ -130,12 +130,16 @@ type O = Ocupacao;
 const o = (x: O) => x;
 
 /** A comissão técnica de cada modalidade fora do futebol: [modalidade, "de basquete", salário do auxiliar, do técnico]. */
+import { OCUPACOES26 } from '../v26/dados/ocupacoes26';
+
 const COMISSOES: [Dominio, string, number, number][] = [
   ['basquete', 'de basquete', 5500, 12000],
   ['volei', 'de vôlei', 5500, 12000],
   ['natacao', 'de natação', 4200, 8500],
   ['atletismo', 'de atletismo', 4200, 8500],
-  ['lutas', 'de lutas', 3800, 7500]
+  ['lutas', 'de lutas', 3800, 7500],
+  // VIDA 26: o futsal também tem comissão técnica (LNF e estaduais; salários de referência abaixo do vôlei).
+  ['futsal', 'de futsal', 4500, 9000]
 ];
 
 export const OCUPACOES: readonly Ocupacao[] = [
@@ -425,6 +429,7 @@ export const OCUPACOES: readonly Ocupacao[] = [
     o({ id: `auxiliar_tecnico_${m}`, nome: [`auxiliar técnico ${de}`, `auxiliar técnica ${de}`], trilha: 'treino', modalidade: m, setor: 'esporte', nivel: 4, salario: aux, contrato: 'clt', carga: 'integral', idadeMin: 25, entrada: 'oportunidade', oferta: 1, estresse: 4, jornada: 'fora' }),
     o({ id: `tecnico_${m}`, nome: [`técnico ${de}`, `técnica ${de}`], trilha: 'treino', modalidade: m, setor: 'esporte', nivel: 5, salario: tec, contrato: 'clt', carga: 'integral', idadeMin: 30, experiencia: 36, entrada: 'oportunidade', oferta: 1, estresse: 5, jornada: 'fora', fundamento: 'O comando da equipe: acima do auxiliar técnico da mesma modalidade.' })
   ]),
+  ...OCUPACOES26,
   o({ id: 'arbitro', nome: ['árbitro de futebol', 'árbitra de futebol'], trilha: 'arbitragem', setor: 'esporte', nivel: 2, salario: 1800, contrato: 'autonomo', carga: 'parcial', idadeMin: 18, area: ['arbitragem'], nivelCurso: 'livre', escolaridade: 'medio', forma: 55, oferta: 1, estresse: 4 }),
   o({ id: 'personal', nome: ['personal trainer', 'personal trainer'], trilha: 'educacao_fisica', setor: 'esporte', nivel: 3, salario: 3800, contrato: 'autonomo', carga: 'integral', idadeMin: 22, area: ['educacao_fisica'], nivelCurso: 'superior', oferta: 0, estresse: 2, promocao: 'clientela', fundamento: 'Lei 9.696/1998: profissional de Educação Física exige graduação e CREF.' }),
   o({ id: 'coordenador_academia', nome: ['coordenador técnico de academia', 'coordenadora técnica de academia'], trilha: 'educacao_fisica', setor: 'esporte', nivel: 4, salario: 5600, contrato: 'clt', carga: 'integral', idadeMin: 25, area: ['educacao_fisica'], nivelCurso: 'superior', experiencia: 48, oferta: 1, estresse: 3 }),
@@ -500,7 +505,9 @@ export const AFINS: Record<string, string[]> = {
   administrativo: ['publico', 'logistica', 'contabil', 'financas'], logistica: ['administrativo', 'industria'],
   industria: ['tecnico_industrial', 'manutencao', 'logistica'], tecnico_industrial: ['industria', 'manutencao', 'eletrica', 'mecanica'],
   manutencao: ['eletrica', 'mecanica', 'construcao'], eletrica: ['manutencao', 'tecnico_industrial'], mecanica: ['manutencao', 'tecnico_industrial'],
-  construcao: ['manutencao'], atleta: ['treino'], treino: ['atleta', 'educacao_fisica'],
+  construcao: ['manutencao'], atleta: ['treino', 'midia_esportiva', 'analise_esportiva'], treino: ['atleta', 'educacao_fisica'],
+  midia_esportiva: ['comunicacao', 'atleta'], analise_esportiva: ['treino', 'atleta'], gestao_esportiva: ['treino', 'administrativo'],
+  esports: ['comissao_esports', 'midia_esports'], comissao_esports: ['esports'], midia_esports: ['esports', 'conteudo'],
   enfermagem: ['cuidado', 'saude_publica'], cuidado: ['enfermagem'], ti: ['dados'], dados: ['ti', 'financas'],
   design: ['ilustracao', 'imagem'], ilustracao: ['design'], imagem: ['design', 'conteudo'], conteudo: ['imagem', 'comunicacao'],
   comunicacao: ['conteudo', 'literatura'], musica: ['orquestra', 'ensino_musica'], orquestra: ['musica', 'ensino_musica'], ensino_musica: ['musica'], danca: ['ensino_danca'], ensino_danca: ['danca'],
@@ -526,7 +533,7 @@ export const ROTULO_TRILHA: Record<string, string> = {
   seguranca_trabalho: 'segurança do trabalho', agro: 'agropecuária', campo: 'produção rural', design: 'design', ilustracao: 'ilustração',
   artesanato: 'artesanato', imagem: 'fotografia e vídeo', comunicacao: 'comunicação', conteudo: 'internet', literatura: 'literatura',
   docencia_superior: 'ensino superior', musica: 'música', orquestra: 'música de orquestra', ensino_musica: 'ensino de música', cena: 'teatro e audiovisual', danca: 'dança', ensino_danca: 'ensino de dança', atleta: 'esporte profissional',
-  treino: 'treino esportivo', arbitragem: 'arbitragem', vigilancia: 'segurança privada', exercito_praca: 'serviço militar',
+  treino: 'treino esportivo', arbitragem: 'arbitragem', midia_esportiva: 'mídia esportiva', analise_esportiva: 'análise de desempenho', gestao_esportiva: 'gestão esportiva', comissao_esports: 'comissão técnica de e-sports', midia_esports: 'transmissões de e-sports', pilotagem: 'pilotagem', vigilancia: 'segurança privada', exercito_praca: 'serviço militar',
   exercito_sargento: 'carreira militar', exercito_oficial: 'carreira militar (oficial)', pm: 'Polícia Militar', bombeiro: 'Corpo de Bombeiros', guarda: 'guarda municipal',
   policia_civil: 'Polícia Civil', financas: 'finanças', publico: 'serviço público', judiciario: 'Judiciário', fiscal: 'fiscalização',
   domestico: 'trabalho doméstico', limpeza: 'limpeza', predial: 'portaria e zeladoria', posto: 'posto de combustível', atendimento: 'atendimento',

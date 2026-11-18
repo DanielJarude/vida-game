@@ -39,6 +39,8 @@ import { anoDe } from '../../motor/tempo';
 import { ocupacaoOuNula } from '../../motor/dados/ocupacoes';
 import { Cracha15 } from '../v15/carreira/Cracha15';
 import { lazy as lazy16, Suspense as Suspense16 } from 'react';
+const Guia26 = lazy16(() => import('../v26/guia/Guia26'));
+const PosCarreira26 = lazy16(() => import('../v26/guia/Guia26').then(m => ({ default: m.PosCarreira26 })));
 const Oficio16 = lazy16(() => import('../v16/oficios/Oficio16'));
 import { doClube } from '../../motor/dados/clubes';
 import { nomeOcupacao } from '../../motor/sistemas/trabalho';
@@ -176,6 +178,7 @@ export function estadoDaDivisao(v: Vida, d: Exclude<DivisaoCaminhos, 'inicio'>):
     return [estudando ? 'Estudando para concurso' : '', n ? `${n} ${n === 1 ? 'edital aberto' : 'editais abertos'} para você` : 'Nenhum edital para você este ano'].filter(Boolean).join(' · ');
   }
   if (d === 'submundo') return situacaoNoSubmundo(v);
+  if (d === 'guia') return 'Do hobby ao profissional e ao depois da competição: as etapas de cada esporte, jogo e categoria';
   const esp = v.caminhos.esporte;
   const portas = oportunidadesAbertas(v).filter(o => ['peneira', 'seletiva', 'banda', 'grupo'].includes(o.tipo)).length;
   const partes = [
@@ -289,6 +292,8 @@ export function PaginaCaminhos({ vida, agir, irPara, abrirPessoa, divisao = 'ini
             {/* VIDA 16: a pasta do ofício (direito, docência, tecnologia) — os casos, as turmas, o projeto do ano. */}
             {divisao === 'trabalho' && parte === 'agora' && <Suspense16 fallback={null}><Oficio16 vida={vida} agir={agir} /></Suspense16>}
             {divisao === 'trabalho' && parte === 'desenvolvimento' && <DesenvolvimentoReal vida={vida} lado="trabalho" />}
+            {/* VIDA 26: as portas do depois da competição também moram onde se procura trabalho. */}
+            {divisao === 'trabalho' && parte === 'oportunidades' && <Suspense16 fallback={null}><PosCarreira26 vida={vida} agir={agir} /></Suspense16>}
             {divisao === 'estudos'
               ? <div className="lado-caminho lado-caminho--formacao" data-lado="formacao"><Estudos vida={vida} agir={agir} irPara={irPara} abrirPessoa={abrirPessoa} parte={parte} divisao explorar={explorar} aoExplorar={aoExplorar} /></div>
               : <div className="lado-caminho lado-caminho--trabalho" data-lado="trabalho">{i >= 14 || vida.trabalho.historico.length > 0
@@ -301,6 +306,7 @@ export function PaginaCaminhos({ vida, agir, irPara, abrirPessoa, divisao = 'ini
       )}
       {divisao === 'publica' && <div className="caminhos__painel caminhos__painel--publica caminhos__painel--ativo" data-divisao="publica"><VidaPublica vida={vida} agir={agir} irPara={irPara} /></div>}
       {divisao === 'outros' && <div className="caminhos__painel caminhos__painel--outros caminhos__painel--ativo" data-divisao="outros"><OutrosCaminhosDaVida vida={vida} agir={agir} irPara={irPara} /></div>}
+      {divisao === 'guia' && <div className="caminhos__painel caminhos__painel--guia caminhos__painel--ativo" data-divisao="guia"><Suspense16 fallback={null}><Guia26 vida={vida} agir={agir} /></Suspense16></div>}
       {divisao === 'submundo' && <div className="caminhos__painel caminhos__painel--submundo caminhos__painel--ativo" data-divisao="submundo"><Submundo vida={vida} agir={agir} irPara={irPara} /></div>}
     </div>
   );

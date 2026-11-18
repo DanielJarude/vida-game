@@ -22,6 +22,10 @@ export interface LinhaFicha25 {
   sobre: string;
   /** O peso na função/posição (0–1), quando a modalidade pesa. */
   peso?: number;
+  /** VIDA 26: de onde vem o valor (o corpo, a personalidade, a idade), quando não é só a técnica. */
+  fonte?: string;
+  /** VIDA 26: deficiência grave para a posição (a nota cobra a mais). */
+  grave?: boolean;
 }
 
 const num = (x: number) => (Math.round(x * 10) / 10).toLocaleString('pt-BR', { maximumFractionDigits: 1 });
@@ -39,9 +43,10 @@ function Linha({ serie, rotulo }: { serie: number[]; rotulo: string }) {
 function Atributo({ l }: { l: LinhaFicha25 }) {
   const d = l.antes === undefined ? undefined : Math.round((l.valor - l.antes) * 10) / 10;
   const dir = d === undefined ? 'novo' : d >= 0.5 ? 'sobe' : d <= -0.5 ? 'cai' : 'igual';
-  const peso = l.peso === undefined ? undefined : l.peso >= 0.22 ? 'pesa muito' : l.peso >= 0.12 ? 'pesa' : 'pesa pouco';
+  // VIDA 26: os conjuntos têm 7–13 atributos (antes, 3–4): a régua do peso acompanha.
+  const peso = l.peso === undefined ? undefined : l.peso >= 0.15 ? 'pesa muito' : l.peso >= 0.08 ? 'pesa' : 'pesa pouco';
   return (
-    <li className={`f25-attr f25-attr--${dir}`} data-atributo={l.id}>
+    <li className={`f25-attr f25-attr--${dir}${l.grave ? ' f25-attr--grave' : ''}`} data-atributo={l.id} data-grave={l.grave ? '' : undefined}>
       <details>
         <summary className="f25-attr__linha">
           <span className="f25-attr__nome">{cap(l.nome)}{peso && <small className="f25-attr__peso"> · {peso}</small>}</span>
@@ -54,6 +59,8 @@ function Atributo({ l }: { l: LinhaFicha25 }) {
         </summary>
         <div className="f25-attr__mais">
           <p>{l.sobre}</p>
+          {l.fonte && <p className="f25-attr__fonte">{l.fonte}</p>}
+          {l.grave && <p className="f25-attr__grave">Limitação séria para esta função: está bem abaixo do seu nível, e a nota da temporada cobra por isso.</p>}
           <p className="f25-attr__dados">Agora: <b>{num(l.valor)}</b> ({palavraDoValor25(l.valor)}){l.antes !== undefined ? <> · no ano anterior: {num(l.antes)}</> : <> · sem fotografia do ano anterior</>}</p>
           {l.serie.length >= 2 && <p className="f25-attr__evolucao">Evolução <Linha serie={l.serie} rotulo={l.nome} /> <small>{l.serie.map(num).join(' → ')}</small></p>}
         </div>
@@ -62,9 +69,11 @@ function Atributo({ l }: { l: LinhaFicha25 }) {
   );
 }
 
-export function FichaDeAtleta25({ titulo, nivel, nivelRotulo, nivelSerie, grupos, linhas, fortes, fracos, rodape }: {
+export function FichaDeAtleta25({ titulo, nivel, nivelRotulo, nivelSerie, grupos, linhas, fortes, fracos, rodape, explica }: {
   titulo: string; nivel?: number; nivelRotulo?: string; nivelSerie?: number[];
   grupos: { id: string; nome: string }[]; linhas: LinhaFicha25[]; fortes: string[]; fracos: string[]; rodape?: string;
+  /** VIDA 26: como o nível se forma (a técnica, o nível na posição e o que puxa para cima ou para baixo). */
+  explica?: string;
 }) {
   const id = useId();
   if (!linhas.length) return null;
@@ -78,10 +87,11 @@ export function FichaDeAtleta25({ titulo, nivel, nivelRotulo, nivelSerie, grupos
           <p className="f25__nivel"><span className="f25__nivel-num">{Math.round(nivel)}</span><span className="f25__nivel-rot">{nivelRotulo ?? 'nível'} · {palavraDoValor25(nivel)}</span>{nivelSerie && <Linha serie={nivelSerie} rotulo={nivelRotulo ?? 'nível'} />}</p>
         )}
       </header>
+      {explica && <p className="f25__explica">{explica}</p>}
       {(fortes.length > 0 || fracos.length > 0) && (
         <ul className="f25__resumo" aria-label="Pontos fortes e limitações">
           {fortes.map(x => <li key={`f${x}`} className="f25__forte"><span aria-hidden>▲ </span><span className="sr-only">Ponto forte: </span>{cap(nomeDe(x))}</li>)}
-          {fracos.map(x => <li key={`c${x}`} className="f25__fraco"><span aria-hidden>▼ </span><span className="sr-only">Limitação: </span>{cap(nomeDe(x))}</li>)}
+          {fracos.map(x => <li key={`c${x}`} className={`f25__fraco${linhas.find(l => l.id === x)?.grave ? ' f25__fraco--grave' : ''}`}><span aria-hidden>▼ </span><span className="sr-only">Limitação: </span>{cap(nomeDe(x))}{linhas.find(l => l.id === x)?.grave ? ' (séria)' : ''}</li>)}
         </ul>
       )}
       {grupos.map(g => {

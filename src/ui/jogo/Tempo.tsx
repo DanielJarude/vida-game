@@ -69,7 +69,9 @@ const DE_TEMPO = new Set<string>(SECOES_TEMPO.map(x => x.id));
 const GRUPOS: { id: CategoriaAtividade; rotulo: string }[] = [
   { id: 'esporte', rotulo: 'Esporte' }, { id: 'arte', rotulo: 'Arte' }, { id: 'estudo', rotulo: 'Estudo' },
   { id: 'oficio', rotulo: 'Ofício' }, { id: 'social', rotulo: 'Gente e comunidade' }, { id: 'corpo', rotulo: 'Corpo' },
-  { id: 'renda', rotulo: 'Dinheiro por fora' }, { id: 'cuidado', rotulo: 'Cuidado' }, { id: 'lazer', rotulo: 'Lazer' }
+  { id: 'cuidado', rotulo: 'Cuidado' }, { id: 'lazer', rotulo: 'Lazer' },
+  // VIDA 26: o dinheiro por fora não é hobby (é trabalho por conta): vem por último, dito pelo que é.
+  { id: 'renda', rotulo: 'Dinheiro por fora — trabalho por conta, não hobby' }
 ];
 
 /** Para onde leva cada causa do estresse (a causa mora em outra área). */

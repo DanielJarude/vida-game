@@ -31,14 +31,16 @@ export type SecaoTempo = 'semana' | 'corpo' | 'atividades' | 'gente' | 'redes';
  * (o emprego, as vagas, as candidaturas, o negócio, o histórico profissional); Vida pública (concursos, política,
  * serviço público); Outros caminhos (esporte, arte, a universidade como carreira, os projetos).
  */
-export type DivisaoCaminhos = 'inicio' | 'estudos' | 'trabalho' | 'publica' | 'outros' | 'submundo';
+export type DivisaoCaminhos = 'inicio' | 'estudos' | 'trabalho' | 'publica' | 'outros' | 'guia' | 'submundo';
 /** As partes de Estudos e de Trabalho: o que ocupa agora, como venho me saindo, o que está ao alcance, por onde passei. */
 export type ParteCaminhos = 'agora' | 'desenvolvimento' | 'oportunidades' | 'historico';
 
 /** Um destino: uma área, uma seção de Vida, uma aba de Minha Semana, uma parte de Caminhos — ou um nome antigo que continua aceito. */
 export type Aba = Area | SecaoVida | SecaoTempo | ParteCaminhos | 'estudos' | 'formacao' | 'trabalho' | 'cursos' | 'vagas' | 'concursos' | 'negocio' | 'vida_publica' | 'outros_caminhos' | 'inicio_caminhos' | 'prontuario' | 'submundo'
   /** REWORK 10.6 · C2/C3: os destinos das ações principais (entrar na faculdade, as bolsas, o histórico acadêmico, a carreira). */
-  | 'faculdade' | 'bolsas' | 'historico_academico' | 'minha_carreira' | 'conquistas';
+  | 'faculdade' | 'bolsas' | 'historico_academico' | 'minha_carreira' | 'conquistas'
+  /** VIDA 26: o guia dos caminhos profissionais (Caminhos · Guia de carreiras). */
+  | 'guia_carreiras';
 
 export interface Lugar {
   area: Area;
@@ -76,6 +78,7 @@ export function resolverDestino(d: Aba): Lugar {
   // Os concursos são vida pública (antes, uma pasta da procura de emprego).
   if (d === 'concursos' || d === 'vida_publica') return { area: 'caminhos', divisao: 'publica' };
   if (d === 'outros_caminhos') return { area: 'caminhos', divisao: 'outros' };
+  if (d === 'guia_carreiras') return { area: 'caminhos', divisao: 'guia' };
   if (d === 'inicio_caminhos') return { area: 'caminhos', divisao: 'inicio' };
   // REWORK 10.5 · CRI-02: o crime que existe (a trajetória, os contatos, o processo, a ficha) tem porta própria.
   if (d === 'submundo') return { area: 'caminhos', divisao: 'submundo' };
@@ -90,7 +93,7 @@ export function resolverDestino(d: Aba): Lugar {
 export const SECOES_TEMPO: { id: SecaoTempo; rotulo: string; oque: string }[] = [
   { id: 'semana', rotulo: 'Agenda', oque: 'A semana em horários: cada compromisso, os conflitos, o tempo livre — e o estresse' },
   { id: 'corpo', rotulo: 'Corpo e mente', oque: 'Esporte, academia, corrida, terapia, descanso' },
-  { id: 'atividades', rotulo: 'Hobbies', oque: 'Arte, música, leitura, estudo, ofícios, dinheiro por fora' },
+  { id: 'atividades', rotulo: 'Hobbies', oque: 'Arte, música, leitura, estudo, ofícios, videogame — e, à parte, o dinheiro por fora' },
   { id: 'gente', rotulo: 'Sair e ver gente', oque: 'Comunidade, noite, família, voluntariado — e com quem fazer' },
   { id: 'redes', rotulo: 'Redes sociais', oque: 'As redes sociais: Instagram, TikTok, YouTube, X, Facebook, Twitch, OnlyFans (o celular, com mensagens, namoro e notícias, fica no topo da tela)' }
 ];
@@ -101,6 +104,8 @@ export const DIVISOES_CAMINHOS: { id: DivisaoCaminhos; rotulo: string; oque: str
   { id: 'trabalho', rotulo: 'Trabalho', oque: 'O emprego de agora, vagas, candidaturas, promoções, experiência, o próprio negócio, histórico profissional' },
   { id: 'publica', rotulo: 'Vida pública', oque: 'Concursos, política, serviço público, farda' },
   { id: 'outros', rotulo: 'Outros caminhos', oque: 'Esporte, arte, a universidade como carreira, os projetos' },
+  // VIDA 26: a consulta dos caminhos profissionais (esporte, e-sports, pistas): do hobby ao profissional e ao depois.
+  { id: 'guia', rotulo: 'Guia de carreiras', oque: 'Os caminhos profissionais do esporte, dos e-sports e das pistas: como começam, as etapas, os destinos e o depois da competição' },
   // REWORK 10.5 · CRI-02: antes, a vida à margem era a primeira seção de "Outros caminhos" (e só para quem já estava nela).
   { id: 'submundo', rotulo: 'Submundo', oque: 'O crime: o que você faz por fora, quem sabe o seu nome, a confiança do meio, investigações, processos, a ficha' }
 ];

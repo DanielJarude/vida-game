@@ -22,7 +22,7 @@
  * Fora do escopo, por decisão: empresários, agentes e patrocinadores pessoais (a organização paga salário; o prêmio é
  * dividido com ela — nada além disso).
  */
-import { clamp, rngDe, type Rng } from '../../rng';
+import { clamp, hashMisturado, rngDe, type Rng } from '../../rng';
 import type { Vida } from '../../tipos';
 import { escrever, idade, pais as paisDe } from '../../nucleo';
 import { anoDe } from '../../tempo';
@@ -126,6 +126,9 @@ export function podeComecar25(v: Vida, jogo?: JogoId): Veredito {
   return PERMITIDO;
 }
 
+/** VIDA 26: um time amador chamou nos últimos dois anos (o fato vem do hobby de videogame). */
+export const conviteAmador26 = (v: Vida) => v.fatos['esports_convite26'] !== undefined && v.t - v.fatos['esports_convite26'] <= 24;
+
 /** O degrau que a peneira tenta (o de cima; no ranqueado, o cenário aberto). */
 export function alvoDaPeneira(e: Esports25): number { return Math.min(5, e.equipe ? e.nivel + 1 : Math.max(2, e.nivel)); }
 
@@ -194,14 +197,17 @@ function comecar(v: Vida, jogo: JogoId): { texto: string; tom: 'bom' } {
   const j = JOGOS25[jogo];
   const dom = rngDe(v.id, 'esp25_talento');
   // O talento (estável pela semente) e o que a vida já deu: a cabeça (cognição), quem já jogava muito.
-  const jogava = v.rotinas.some(x => x.id === 'videogame') ? 5 : 0;
+  // VIDA 26: o hobby conta pelo tempo — quem joga há anos começa com mais mão (até 8), não só "quem joga".
+  const vg = v.rotinas.find(x => x.id === 'videogame');
+  const jogava = vg ? Math.round(clamp(3 + (v.t - vg.tInicio) / 12 * 1.2, 3, 8)) : 0;
   const talento = Math.round(clamp(52 + dom.normal() * 12 + (v.mente.cognicao - 55) * 0.15 + jogava, 25, 92));
   const r = rngDe(v.id, 'esp25_inicio', jogo);
   const atributos: Partial<Record<AtributoEsports, number>> = {};
   for (const [id] of j.atributos) atributos[id] = Math.round(clamp(talento * 0.5 + 4 + jogava + r.normal() * 5 + (id === 'mental' ? (v.personalidade.tracos.coragem ?? 0) / 10 : 0), 5, 70));
   const i = idade(v);
   v.esports25 = {
-    jogo, fase: 'amador', inicio: v.t, talento, funcao: j.funcoes[0]?.id, atributos, nivel: 1, passagens: [], temporadas: [], serie: [],
+    // VIDA 26: o convite de um time amador (que nasceu do hobby: `hobbyCaminho26`) põe direto no competitivo amador.
+    jogo, fase: 'amador', inicio: v.t, talento, funcao: j.funcoes[0]?.id, atributos, nivel: conviteAmador26(v) ? 2 : 1, passagens: [], temporadas: [], serie: [],
     totais: { disputas: 0, vencidas: 0, titulos: 0, premios: 0, temporadas: 0 }, reputacao: 3
   };
   v.anoAtual.acoes.push('esp25:comecar');
@@ -393,6 +399,7 @@ function jogarTemporada(v: Vida, e: Esports25, r: Rng, ano: number): Temporada25
 export function processarEsports25(v: Vida): void {
   const e = v.esports25;
   if (!ativa25(e) || v.morte) return;
+  garantirAtributos26(e);
   const ano = anoDaTemporada25(v);
   if (e.temporadas.some(t => t.ano === ano)) return;
   const r = rngDe(v.id, 'esp25_ano', ano);
@@ -595,4 +602,17 @@ export function normalizarVida25Esports(v: Vida): void {
   e.totais ??= { disputas: 0, vencidas: 0, titulos: 0, premios: 0, temporadas: 0 };
   e.nivel = clamp(Math.round(e.nivel ?? 1), 1, 5);
   e.reputacao = clamp(e.reputacao ?? 0, 0, 100);
+  garantirAtributos26(e);
+}
+
+/**
+ * VIDA 26 · os atributos específicos de cada jogo (spray, construção, aéreo, mapas...) nas carreiras de antes: começam
+ * na média dos que a pessoa já tinha (± um traço estável) — nada se perde, e o nível de jogo fica onde estava.
+ */
+export function garantirAtributos26(e: Esports25): void {
+  const j = JOGOS25[e.jogo];
+  const tem = Object.values(e.atributos).filter((x): x is number => typeof x === 'number');
+  if (!tem.length) return;
+  const media = tem.reduce((a, b) => a + b, 0) / tem.length;
+  for (const [id] of j.atributos) if (e.atributos[id] === undefined) e.atributos[id] = Math.round(clamp(media + (hashMisturado(`${e.inicio}:${id}`) - 0.5) * 4, 1, 99) * 10) / 10;
 }

@@ -18,6 +18,8 @@ const Automobilismo20 = lazy(() => import('../v20/automobilismo/Automobilismo20'
 const Esports25 = lazy(() => import('../v25/esports/Esports25'));
 const Formacao25 = lazy(() => import('../v25/formacao/Formacao25').then(m => ({ default: m.Formacao25 })));
 const FichaDoEsporte25 = lazy(() => import('../v25/ficha/FichaDoEsporte25').then(m => ({ default: m.FichaDoEsporte25 })));
+import { HobbiesQueAbrem26 } from '../v26/hobby/HobbyPorta26';
+const PosCarreira26 = lazy(() => import('../v26/guia/Guia26').then(m => ({ default: m.PosCarreira26 })));
 import type { Vida } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
 import { disponibilidade } from '../../motor/acoes';
@@ -109,6 +111,8 @@ export function OutrosCaminhosDaVida({ vida, agir, irPara }: { vida: Vida; agir:
           <p className="ligacao-caminho"><span>{sp.semVinculo ? 'Sem contrato agora: a situação da carreira e o que dá para fazer estão em Trabalho.' : naCarreira ? 'O clube, o contrato, os treinos extras e o dia a dia estão em Trabalho.' : 'Os trabalhos, as propostas e o dinheiro estão em Trabalho.'}</span> <button type="button" className="link" onClick={() => irPara('trabalho')}>Ir para Trabalho →</button></p>
         </section>
       )}
+      {/* VIDA 26: as portas que os hobbies de agora podem abrir (possibilidade, não obrigação). */}
+      {i >= 6 && <HobbiesQueAbrem26 vida={vida} irPara={irPara} />}
       {/* VIDA 16.1: o placar do atleta logo no alto, onde o esporte mora (o mesmo crachá de Trabalho). */}
       {esp && esp.fase !== 'encerrada' && <Cracha15 vida={vida} />}
       {/* VIDA 20: o automobilismo (o convite do kart para quem tem idade; a carreira, do kart à F1). */}
@@ -135,6 +139,8 @@ export function OutrosCaminhosDaVida({ vida, agir, irPara }: { vida: Vida; agir:
       {esp && <DesenvolvimentoReal vida={vida} lado="esporte" />}
       <Devolutivas vida={vida} tipos={['peneira', 'arte']} />
       {i >= 6 && <OutrosCaminhos vida={vida} agir={agir} irPara={irPara} ir={ir} ids={['esporte', 'arte', 'academia']} titulo="Esporte, arte, universidade: como cada um começa" />}
+      {/* VIDA 26: o depois da competição (as portas reais de quem encerrou uma carreira). */}
+      <Suspense fallback={null}><PosCarreira26 vida={vida} agir={agir} /></Suspense>
       <CarreiraNoEsporte vida={vida} aberta={modo === 'atleta'} />
       <CarreiraComoTecnico vida={vida} />
       <CurriculoArtistico vida={vida} agir={agir} />

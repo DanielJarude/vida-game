@@ -50,6 +50,7 @@ import { registrarTemporada, registrarConquista } from './palmares';
 import { clubesNaDivisao, colocacaoNaTabela, divisaoDoClube } from './ligas';
 import { copaContinental, copaNacional, copasDeQuadra, idDaLiga, nomeDaCompeticao } from './competicoes';
 import { desvio, efeitoNaNota, envelhecerAtributos, fotografarAtributos, perfilDeAtributos, type AtributoId } from './atributosEsportivos';
+import { avaliacaoDaComissao, lerJovem, prontoParaContrato, type LeituraDoJovem } from './jovemAtleta';
 import { avancarLicenca } from './oficioDoTecnico';
 import { processarSelecao } from './selecao';
 import { premiosDoMundo } from './premiosDoFutebol';
@@ -114,7 +115,9 @@ export function conviteDaBase(v: Vida): { dominio: Dominio; municipioId: string;
 export function categoriaDaBase(v: Vida, e: CarreiraEsportiva): string {
   const i = idade(v);
   // VIDA 14: o futsal de base também é por categoria (sub-15, sub-17, sub-20).
-  return e.modalidade === 'tenis' ? 'circuito juvenil' : e.modalidade !== 'futebol' && e.modalidade !== 'futsal' ? 'equipe de base' : i <= 15 ? 'sub-15' : i <= 17 ? 'sub-17' : 'sub-20';
+  // VIDA 26: quem foi promovido antes da idade joga na categoria de cima (o sub-15 de 14 anos que sobe ao sub-17).
+  const j = e.adiantado26 !== undefined && (e.modalidade === 'futebol' || e.modalidade === 'futsal') ? i + 2 : i;
+  return e.modalidade === 'tenis' ? 'circuito juvenil' : e.modalidade !== 'futebol' && e.modalidade !== 'futsal' ? 'equipe de base' : j <= 15 ? 'sub-15' : j <= 17 ? 'sub-17' : 'sub-20';
 }
 
 /** O contrato profissional: a idade em que chega e a técnica que o clube pede (a mesma conta do ano na base). */
@@ -1064,14 +1067,16 @@ function competicaoDaBase(e: CarreiraEsportiva, categoria: string): string {
  * conta da técnica contra a régua do contrato que decide contrato e dispensa — a tela da formação mostra estes números.
  * Sorteio derivado (`rngDe`): o ano da base não muda a sequência do resto da vida.
  */
-function registrarAnoDeFormacao(v: Vida, e: CarreiraEsportiva, h: number, presenca: number): AnoDeFormacao {
+function registrarAnoDeFormacao(v: Vida, e: CarreiraEsportiva, h: number, presenca: number): { a: AnoDeFormacao; leitura: LeituraDoJovem; podeContrato: boolean } {
   const i = idade(v);
   const ano = anoDe(v.t - 6);
   const rr = rngDe(v.id, 'formacao25', e.modalidade, ano);
   const categoria = categoriaDaBase(v, e);
   const { tecnica: limiar } = contratoDaBase(e.modalidade);
   // A régua da base é a do contrato, mais baixa nos mais novos (o sub-15 não é cobrado como o sub-20).
-  const regua = limiar - Math.max(0, 18 - i) * 2.2;
+  // VIDA 26: quem joga acima da idade é medido contra a categoria em que joga (dois anos a mais).
+  const iCat = e.adiantado26 !== undefined && (e.modalidade === 'futebol' || e.modalidade === 'futsal') ? i + 2 : i;
+  const regua = limiar - Math.max(0, 18 - iCat) * 2.2;
   const nota = Math.round(clamp(6 + (h - regua) / 4 + (v.corpo.forma - 65) / 25 + rr.normal() * 0.6, 2.5, 9.6) * 10) / 10;
   const individual = individualComEquipe(e.modalidade) || e.modalidade === 'tenis';
   const max = e.modalidade === 'futebol' ? (i <= 15 ? 18 : i <= 17 ? 22 : 26) : e.modalidade === 'futsal' ? 20 : e.modalidade === 'tenis' ? 10 : individual ? 8 : 16;
@@ -1108,12 +1113,35 @@ function registrarAnoDeFormacao(v: Vida, e: CarreiraEsportiva, h: number, presen
     a.colocacao = Math.round(clamp(a.participantes / 2 + 0.5 - (porte - 2) * 2.2 - contrib * 2.5 + rr.normal() * 2.6, 1, a.participantes));
   }
   a.titulo = a.colocacao === 1 && jogos > 0;
-  const forte = nota >= 7.5 ? 'destacou-se na categoria' : nota >= 6.4 ? 'evoluiu dentro do esperado' : nota >= 5.4 ? 'oscilou' : 'ficou abaixo do que a categoria pede';
-  const espaco = individual ? '' : titular >= jogos * 0.6 ? ', titular na maior parte dos jogos' : jogos > 0 ? ', mais vezes no banco do que em campo' : ', quase sem jogar';
-  a.avaliacao = `${cap(forte)}${espaco}${h >= limiar ? '; já tem o nível que o contrato profissional pede' : h >= limiar - 5 ? '; perto da régua do contrato profissional' : ''}.`;
+  // VIDA 26 · a comissão separa capacidade atual, potencial e prontidão (`jovemAtleta`) — e as etapas: jogar acima da
+  // idade, treinar com o elenco profissional, o contrato. Nada disso sai do sorteio principal (`rr`).
+  const pos26 = e.modalidade === 'futebol' ? (e.posicao ?? posicaoSugerida(v)) : undefined;
+  const perfil = perfilDeAtributos(v, e, h, pos26, e.modalidade === 'basquete' ? funcaoBasquete(v) : undefined);
   const lista = (e.formacao ??= []);
   const anterior = lista[lista.length - 1];
   lista.push(a);
+  const leitura = lerJovem(v, e, h, perfil, limiar);
+  const { idade: idadeContrato } = contratoDaBase(e.modalidade);
+  const porCategoria = e.modalidade === 'futebol' || e.modalidade === 'futsal';
+  // A promoção antecipada (rara): destaque claro na categoria, técnica para a régua de quem tem dois anos a mais e o
+  // corpo não muito atrás. Fica para os anos seguintes (a categoria de cima); o físico é cobrado lá.
+  if (porCategoria && e.adiantado26 === undefined && i <= 16 && nota >= 7.8 && h >= limiar - Math.max(0, 16 - i) * 2.2 && leitura.partes.fisico >= 40 && rr.chance(0.55)) {
+    e.adiantado26 = v.t;
+    a.acima = categoriaDaBase(v, e);
+    escrever(v, { texto: `Aos ${i}, subiu para o ${a.acima} ${doClube(e.clube)}: a comissão quis ver o que fazia contra quem tem dois anos a mais.`, relevancia: 'biografia', tema: 'lazer', tom: 'bom' });
+  }
+  // A integração gradual: treinar com o elenco profissional (16+), antes de qualquer contrato.
+  const comElenco = perfilDe(e.modalidade).estrutura === 'clube';
+  if (comElenco && e.integracao26 === undefined && i >= 16 && h >= limiar - 3 && leitura.prontidao >= 62 && rr.chance(0.6)) {
+    e.integracao26 = v.t;
+    a.acima ??= 'profissional';
+    escrever(v, { texto: `Começou a treinar com o elenco profissional ${doClube(e.clube)}, ainda sem contrato: alguns treinos por semana, o resto na categoria.`, relevancia: 'biografia', tema: 'lazer', tom: 'bom' });
+  }
+  const podeContrato = prontoParaContrato(i, idadeContrato, h, limiar, leitura);
+  a.capacidade = leitura.capacidade;
+  a.prontidao = leitura.prontidao;
+  a.potencial = leitura.potencial;
+  a.avaliacao = avaliacaoDaComissao(a, leitura, h, limiar, podeContrato, anterior, individual);
   if (lista.length > 15) lista.splice(0, lista.length - 15);
   // A promoção de categoria (o sub-15 que vira sub-17) é um acontecimento da formação — dito uma vez.
   if (anterior && anterior.categoria !== categoria && anterior.clube === e.clube && (e.modalidade === 'futebol' || e.modalidade === 'futsal')) {
@@ -1125,8 +1153,8 @@ function registrarAnoDeFormacao(v: Vida, e: CarreiraEsportiva, h: number, presen
     registrarConquista(v, { tipo: 'titulo', modalidade: e.modalidade, ano, competicao: a.competicao, clube: individual ? undefined : e.clube, papel: individual || a.titular >= a.jogos * 0.6 ? 'protagonista' : 'elenco', texto: `${texto} (formação)` });
   }
   // A fotografia do perfil também no fim de cada ano de base: a ficha mostra a evolução desde a formação.
-  fotografarAtributos(e, ano, perfilDeAtributos(v, e, h, e.modalidade === 'futebol' ? (e.posicao ?? posicaoSugerida(v)) : undefined, e.modalidade === 'basquete' ? funcaoBasquete(v) : undefined), h);
-  return a;
+  fotografarAtributos(e, ano, perfil, h);
+  return { a, leitura, podeContrato };
 }
 
 function anoNaBase(v: Vida, r: Rng, e: CarreiraEsportiva, presenca = 1): void {
@@ -1134,7 +1162,7 @@ function anoNaBase(v: Vida, r: Rng, e: CarreiraEsportiva, presenca = 1): void {
   const h = habilidade(v, e.modalidade);
   const anos = (v.t - e.tFase) / 12;
   // VIDA 25: o ano da formação fica registrado (jogos, titularidade, números, nota, colocação, título, avaliação).
-  registrarAnoDeFormacao(v, e, h, presenca);
+  const { leitura, podeContrato } = registrarAnoDeFormacao(v, e, h, presenca);
   // REWORK 10 · ROT-05: quem concilia a base com a faculdade ou o trabalho e perde treinos (a agenda diz quantos) é visto
   // faltando — o treino que não aconteceu não treinou (`rotinas`), e a comissão repara: a dispensa fica mais provável.
   const faltas = Math.max(0, 1 - presenca);
@@ -1165,7 +1193,12 @@ function anoNaBase(v: Vida, r: Rng, e: CarreiraEsportiva, presenca = 1): void {
   // contrato — curto, de divisão de baixo (o clube do tamanho do jogo dele, `profissionalizar`). Antes, abaixo da régua,
   // a porta era nenhuma: o bom jogador de 76 aos 20 só tinha a dispensa. A chance é pequena e cresce com a técnica.
   const quaseLa = e.modalidade === 'futebol' && i >= idadeContrato[1] - 1 && i <= idadeContrato[1] && h < limiar && h >= limiar - 5;
-  if (i >= idadeContrato[0] && i <= idadeContrato[1] && (h >= limiar ? r.chance(clamp((h - limiar + 2) / 16, 0.08, 0.6)) : quaseLa && r.chance(clamp((h - limiar + 6) / 30, 0.03, 0.2)))) {
+  // VIDA 26: a técnica sozinha não basta — a prontidão (físico, experiência, cabeça) e a idade (Lei 14.597/2023, art. 99:
+  // contrato a partir dos 16; aos 16, só o excepcional) decidem se a proposta pode vir. Quem já treina com o elenco
+  // profissional está mais perto dela.
+  const integrado = e.integracao26 !== undefined ? 1.35 : 1;
+  const prontidaoPesa = clamp(0.6 + (leitura.prontidao - 55) / 60, 0.5, 1.3);
+  if (podeContrato ? r.chance(clamp((h - limiar + 2) / 16 * integrado * prontidaoPesa, 0.08, 0.7)) : quaseLa && r.chance(clamp((h - limiar + 6) / 30, 0.03, 0.2))) {
     // O tenista sem ranking não entra direto nos torneios grandes: começa no nacional ou na entrada internacional.
     const nivel = e.modalidade === 'tenis' ? circuitoDeEstreia(h) : nivelPelaHabilidade(h);
     novaOportunidade(v, {

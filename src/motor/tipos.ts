@@ -2381,6 +2381,10 @@ export interface CarreiraEsportiva {
   serieAtributos?: { ano: number; tecnica: number; a: Partial<Record<string, number>> }[];
   /** VIDA 25: os anos de formação (a base), registrados ano a ano (`esporte.anoNaBase`). Ausente: vidas anteriores. */
   formacao?: AnoDeFormacao[];
+  /** VIDA 26: quando passou a jogar acima da categoria da idade (promoção antecipada). Ausente: a categoria da idade. */
+  adiantado26?: number;
+  /** VIDA 26: quando passou a treinar com o elenco profissional (a integração gradual, antes do contrato). */
+  integracao26?: number;
 }
 
 /**
@@ -2414,6 +2418,12 @@ export interface AnoDeFormacao {
   avaliacao: string;
   /** A posição/função/prova do ano, quando há. */
   papel?: string;
+  /** VIDA 26: jogou acima da idade ('sub-17', 'sub-20') ou treinou com o elenco profissional ('profissional') no ano. */
+  acima?: string;
+  /** VIDA 26: a leitura da comissão no fim do ano (`jovemAtleta`): o nível na posição, a prontidão (0–100) e o potencial estimado. */
+  capacidade?: number;
+  prontidao?: number;
+  potencial?: [number, number];
 }
 
 /** Uma proposta concreta de clube (ou de empréstimo): o que se viu é o que se assina. */

@@ -34,3 +34,11 @@
 @media (max-width: 520px) {
   .f25-attr__linha { grid-template-columns: minmax(0, 1fr) 64px 26px 52px; gap: 6px; }
 }
+
+/* VIDA 26 · como o nível se forma, de onde vem cada valor, a limitação séria. */
+.f25__explica { margin: 0; font-size: var(--type-caption); color: var(--text-secondary); max-width: 72ch; }
+.f25-attr__fonte { color: var(--text-muted); font-style: italic; }
+.f25-attr__grave { color: var(--ruim); font-weight: var(--weight-semibold); }
+.f25-attr--grave .f25-attr__nome::after { content: ' !'; color: var(--ruim); font-weight: var(--weight-semibold); }
+.f25-attr--grave .f25-attr__barra { background: var(--ruim); }
+.f25__fraco--grave { font-weight: var(--weight-semibold); }

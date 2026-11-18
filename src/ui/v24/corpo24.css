@@ -64,3 +64,12 @@
 /* VIDA 25: a explicação de cada medida e a comparação da evolução. */
 .c24__explica { display: block; grid-column: 1 / -1; color: var(--text-muted); font-size: var(--type-caption); line-height: var(--leading-snug); }
 .c24__comparacao { margin: 0; }
+
+/* VIDA 26 · as capacidades físicas de hoje (Condição atual). */
+.c26cap { display: grid; gap: 4px; margin-top: var(--space-2); }
+.c26cap__titulo { margin: 0; font-weight: 600; }
+.c26cap__titulo small { font-weight: normal; color: var(--text-muted); }
+.c26cap ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 2px 16px; }
+.c26cap summary { display: grid; grid-template-columns: 7rem minmax(50px, 1fr) 7.5rem; gap: 8px; align-items: center; cursor: pointer; list-style: none; min-height: 30px; }
+.c26cap summary::-webkit-details-marker { display: none; }
+.c26cap summary b { font-weight: 600; font-size: 0.9em; }

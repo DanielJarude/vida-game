@@ -7,6 +7,8 @@
 import type { CarreiraEsportiva, Vida } from '../../../motor/tipos';
 import { anoDe } from '../../../motor/tempo';
 import { NOME_MOD } from '../../../motor/sistemas/esporte';
+import { IDADE_LEGAL_CONTRATO } from '../../../motor/sistemas/jovemAtleta';
+import { palavraDoValor25 } from '../ficha/FichaDeAtleta25';
 import './formacao25.css';
 
 const num = (x: number) => x.toLocaleString('pt-BR', { maximumFractionDigits: 1 });
@@ -58,7 +60,7 @@ export function Formacao25({ vida, e }: { vida: Vida; e: CarreiraEsportiva }) {
             {anos.map(a => (
               <tr key={a.ano} className={a.titulo ? 'form25__linha--titulo' : undefined}>
                 <td>{a.ano}<small> · {a.idade}a</small></td>
-                <td>{a.categoria}{a.papel ? <small> · {a.papel}</small> : null}</td>
+                <td>{a.categoria}{a.papel ? <small> · {a.papel}</small> : null}{a.acima ? <small className="form26__acima"> · {a.acima === 'profissional' ? 'treinou com o profissional' : `subiu ao ${a.acima}`}</small> : null}</td>
                 <td>{individual ? a.jogos : `${a.jogos} (${a.titular})`}</td>
                 <td>{e.modalidade === 'basquete' ? num(a.pontos ?? 0) : individual ? (a.podios ?? '—') : `${a.gols ?? 0} · ${a.assistencias ?? 0}`}</td>
                 <td>{num(a.nota)}</td>
@@ -69,8 +71,40 @@ export function Formacao25({ vida, e }: { vida: Vida; e: CarreiraEsportiva }) {
         </table>
       </div>
       <p className="form25__avaliacao"><span className="form25__rotulo">A comissão, sobre {ultimo.ano}:</span> {ultimo.avaliacao}</p>
+      {ultimo.prontidao !== undefined && <LeituraDaComissao a={ultimo} base={e.fase === 'base'} />}
       {titulos.length > 0 && <ul className="form25__titulos" aria-label="Títulos na formação">{titulos.map(a => <li key={a.ano}>{a.ano} · {cap(a.competicao)} ({a.clube})</li>)}</ul>}
       {chegou && <p className="form25__pro">Profissionalizou-se em {anoPro}, {e.temporadas?.[0]?.clube ? `${e.temporadas[0].clube === anos[anos.length - 1].clube ? 'no mesmo clube que o formou' : `por ${e.temporadas[0].clube}`}` : ''}{vida.caminhos.palmares?.some(x => x.tipo === 'marco' && /Primeiro contrato profissional/.test(x.texto)) ? ' — o primeiro contrato está entre os marcos da carreira' : ''}.</p>}
     </section>
+  );
+}
+
+/**
+ * VIDA 26 · a leitura da comissão no fim do ano, em três coisas que não se confundem: o que o atleta faz HOJE (capacidade
+ * atual), até onde PODE chegar (potencial — estimativa, com a margem de quem ainda cresce) e o quanto está PRONTO para um
+ * ambiente mais exigente (a prontidão e as suas quatro partes). E as etapas, cada uma com o seu nome.
+ */
+function LeituraDaComissao({ a, base }: { a: NonNullable<CarreiraEsportiva['formacao']>[number]; base: boolean }) {
+  const p = a.prontidao ?? 0;
+  const [lo, hi] = a.potencial ?? [0, 0];
+  const palavraProntidao = p >= 75 ? 'pronto para um ambiente mais exigente' : p >= 55 ? 'perto de estar pronto' : p >= 40 ? 'ainda em preparação' : 'longe de estar pronto';
+  return (
+    <div className="form26" aria-label="A leitura da comissão">
+      <div className="form26__cartao" data-leitura="capacidade">
+        <span className="form26__rot">Capacidade atual</span>
+        <b className="form26__num">{Math.round(a.capacidade ?? a.tecnica)}</b>
+        <span className="form26__nota">{palavraDoValor25(a.capacidade ?? a.tecnica)} — o que faz hoje, com o corpo e a cabeça que tem aos {a.idade}.</span>
+      </div>
+      <div className="form26__cartao" data-leitura="potencial">
+        <span className="form26__rot">Potencial (estimativa)</span>
+        <b className="form26__num">{lo}–{hi}</b>
+        <span className="form26__nota">Até onde a comissão acha que pode chegar. Não é habilidade: depende de treino, saúde e oportunidade{a.idade < 17 ? ' — e quanto mais novo, mais larga a margem' : ''}.</span>
+      </div>
+      <div className="form26__cartao" data-leitura="prontidao">
+        <span className="form26__rot">Prontidão para o profissional</span>
+        <b className="form26__num">{p}<small>/100</small></b>
+        <span className="form26__nota">{palavraProntidao}. Técnica, físico, experiência e maturidade — não só o talento.</span>
+      </div>
+      <p className="form26__etapas">{base ? `As etapas são diferentes: destacar-se na categoria, subir de categoria, treinar com o elenco profissional, o primeiro contrato (a lei permite a partir dos ${IDADE_LEGAL_CONTRATO} anos — aqui, aos ${IDADE_LEGAL_CONTRATO} só o excepcional) e, depois, a estreia. Uma não garante a outra.` : 'A leitura do último ano de formação, antes do profissional.'}</p>
+    </div>
   );
 }

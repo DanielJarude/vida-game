@@ -27,6 +27,8 @@ import { LARGURA_DE_REFERENCIA } from '../avatar/referencia';
 import { BotaoAcao, Escolha } from '../comum';
 import { tatuagensNaFigura } from '../../motor/sistemas/tatuagens';
 import { predisposicaoEmPalavras } from '../jogo/FichaDeAtributos';
+import { capacidadesDe } from '../../motor/sistemas/capacidadesFisicas';
+import { leituraCapacidade26, NOME_CAPACIDADE26, RELACOES26, type Capacidade26 } from '../../motor/v26/corpo/capacidades26';
 import './corpo24.css';
 
 const ANOS_DE_PROJECAO = 5;
@@ -111,6 +113,14 @@ export function CorpoPainel({ vida, agir, irPara }: { vida: Vida; agir: (a: Acao
                 {comp.r && Object.keys(comp.r).length > 0 && <div><dt>Regiões treinadas</dt><dd>{Object.entries(comp.r).map(([k, x]) => `${REGIOES24[k as Regiao24]} (${x! >= 0.8 ? 'bem' : 'um pouco'} mais)`).join(', ')}</dd></div>}
               </dl>
               <p className="nota">Tudo nesta parte pode mudar. O que está puxando agora, e como o corpo vem mudando, está em Evolução.</p>
+              {/* VIDA 26: as capacidades físicas de hoje — a constituição herdada + esta condição + a idade (a conta que o esporte lê). */}
+              <div className="c26cap" aria-label="Capacidades físicas">
+                <p className="c26cap__titulo">Capacidades físicas <small>o corpo herdado + o que a vida fez dele, nesta idade</small></p>
+                <ul>{(Object.entries(capacidadesDe(vida)) as [Capacidade26, number][]).map(([k, x]) => (
+                  <li key={k} data-capacidade={k}><details><summary><span>{NOME_CAPACIDADE26[k]}</span><Barra x={x} min={0} max={100} /><b>{leituraCapacidade26(x)}</b></summary><small className="c24__explica">{RELACOES26[k]}</small></details></li>
+                ))}</ul>
+                <p className="nota">É o que os atributos físicos do esporte leem. {i < 18 ? 'Ainda crescendo: força e fôlego de adulto chegam com a idade, por mais que se treine.' : ''}</p>
+              </div>
             </div>
           )}
 

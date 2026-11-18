@@ -13,6 +13,8 @@ import { processarConectada19 } from './v19/conectada/conectada19';
 import { processarHaras19 } from './v19/haras/haras19';
 import { processarAgro19 } from './v19/agro/agro19';
 import { processarAutomobilismo20 } from './v20/automobilismo/automobilismo20';
+import { processarPosCarreira26 } from './v26/carreira/posCarreira26';
+import { processarHobbies26 } from './v26/hobby/hobbyCaminho26';
 import { processarEsports25 } from './v25/esports/esports25';
 import { processarClube20 } from './v20/clubes/clubes20';
 import { processarJeito } from './sistemas/convivio126';
@@ -352,6 +354,8 @@ function viverAno(v: Vida, r: Rng): void {
   processarClube20(v); // VIDA 20: o clube de que é dono (a temporada da liga, o caixa, o elenco, a base, as obras)
   processarAutomobilismo20(v); // VIDA 20: a temporada nas pistas (do kart à F1), o orçamento, as propostas
   processarEsports25(v); // VIDA 25: a temporada de e-sports (o treino, as competições, as equipes, as propostas)
+  processarPosCarreira26(v); // VIDA 26: depois de competir — os convites do ano seguinte ao fim de uma carreira
+  processarHobbies26(v); // VIDA 26: o hobby que abre porta (o time amador que chama quem joga videogame há anos)
   // REWORK 10 · JOG-01: a mão esquecida na mesa, e o jogo que virou assunto (antes das contas do ano).
   processarSeguroDesemprego(v);
   processarApostas(v);

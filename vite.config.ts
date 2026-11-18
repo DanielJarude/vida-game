@@ -171,6 +171,10 @@ export default defineConfig({
           // VIDA 25: idem (motor/v25/<frente> → motor25-<frente>): os e-sports.
           const v25 = /[\\/]src[\\/]motor[\\/]v25[\\/]([a-z0-9]+)[\\/]/.exec(id);
           if (v25) return `motor25-${v25[1]}`;
+          // VIDA 26: idem (motor/v26/<frente> → motor26-<frente>): o corpo (capacidades, folha), o catálogo dos atributos
+          // esportivos (folha), as ocupações do pós-carreira (folha) e os caminhos (pós-carreira e trajetórias).
+          const v26 = /[\\/]src[\\/]motor[\\/]v26[\\/]([a-z0-9]+)[\\/]/.exec(id);
+          if (v26) return `motor26-${v26[1]}`;
           if (/[\\/]src[\\/]motor[\\/]dados18[\\/]/.test(id)) return 'dados18';
           if (/[\\/]src[\\/]motor[\\/]sistemas[\\/]reconhecimento13\.ts/.test(id)) return 'motor-fama';
           if (/[\\/]src[\\/]motor[\\/]sistemas[\\/](redes|leituraDoEstresse|juntos|naFormacao|noOficio|microcenas|prisao|mundoVivo|agenda|avaliacaoDaRotina|convivio|apostas|ecos|seguroDesemprego|indiretos|afetos|fama|pedidosDaCrianca|afetosAdultos|casamento|convivio126|casaNoDia|viagens126)\.ts/.test(id)) return 'motor-vida';

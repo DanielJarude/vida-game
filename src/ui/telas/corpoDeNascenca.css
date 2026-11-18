@@ -15,3 +15,38 @@
   .corpo-nascenca__eixo { grid-template-columns: minmax(0, 1fr) minmax(0, auto); }
   .corpo-nascenca__eixo input[type="range"] { grid-column: 1 / -1; grid-row: 2; }
 }
+/* VIDA 26 — a natureza de cada coisa, os degraus com nome, o que cada eixo faz, o que o corpo favorece. */
+.cn26-legenda { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; margin: 0; padding: 0; }
+.cn26-selo { font-size: var(--type-caption, 12px); padding: 2px 10px; border-radius: var(--radius-pill, 999px); box-shadow: inset 0 0 0 1px var(--rule); color: var(--text-secondary); }
+.cn26-selo b { color: var(--text-primary); margin-right: 4px; }
+.cn26-selo--herdado { background: color-mix(in oklab, var(--acao) 10%, transparent); }
+.cn26-selo--tendencia, .cn26-selo--vida { background: color-mix(in oklab, var(--bom, #3a7) 12%, transparent); }
+.cn26-selo--facilidade, .cn26-selo--capacidade { background: color-mix(in oklab, var(--acao) 18%, transparent); }
+.cn26-previa { display: grid; grid-template-columns: minmax(0, auto) minmax(240px, 1fr); gap: var(--space-3); align-items: start; }
+.cn26-caps { display: grid; gap: 4px; min-width: 0; }
+.cn26-caps__titulo { margin: 0; font-weight: 600; font-size: 0.92em; }
+.cn26-caps__titulo small { font-weight: normal; color: var(--text-muted); }
+.cn26-caps ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; }
+.cn26-cap { display: grid; grid-template-columns: 6.5rem minmax(60px, 1fr) minmax(0, 10.5rem); gap: 8px; align-items: center; font-size: 0.88em; }
+.cn26-cap__barra { position: relative; height: 7px; border-radius: 999px; background: var(--rule); overflow: hidden; }
+.cn26-cap__barra i { position: absolute; top: 0; bottom: 0; left: 0; background: color-mix(in oklab, var(--acao) 55%, transparent); }
+.cn26-cap__barra i.cn26-cap__com { background: var(--acao); }
+.cn26-cap__valor { color: var(--text-muted); font-size: 0.9em; }
+.cn26-grupo__cabeca { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.cn26-eixo { grid-template-columns: minmax(9rem, 14rem) auto minmax(0, 1fr); }
+.cn26-eixo__nome { font-size: 0.92em; }
+.cn26-eixo__efeito { font-size: var(--type-caption, 12px); color: var(--text-muted); }
+.cn26-degraus { display: inline-flex; gap: 4px; }
+.cn26-degrau { position: relative; display: inline-grid; place-items: center; width: 30px; height: 30px; cursor: pointer; }
+.cn26-degrau input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+.cn26-degrau span { width: 18px; height: 18px; border-radius: 50%; box-shadow: inset 0 0 0 2px var(--rule); background: var(--superficie, transparent); transition: transform .12s; }
+.cn26-degrau:nth-child(1) span { width: 12px; height: 12px; } .cn26-degrau:nth-child(2) span { width: 15px; height: 15px; }
+.cn26-degrau:nth-child(4) span { width: 21px; height: 21px; } .cn26-degrau:nth-child(5) span { width: 24px; height: 24px; }
+.cn26-degrau--ativo span { background: var(--acao); box-shadow: none; }
+.cn26-degrau input:focus-visible + span { outline: 2px solid var(--acao); outline-offset: 2px; }
+@media (max-width: 640px) {
+  .cn26-previa { grid-template-columns: minmax(0, 1fr); }
+  .cn26-eixo { grid-template-columns: minmax(0, 1fr) auto; }
+  .cn26-eixo__efeito { grid-column: 1 / -1; }
+  .cn26-cap { grid-template-columns: 5.5rem minmax(40px, 1fr) minmax(0, 8.5rem); }
+}

@@ -103,8 +103,8 @@ describe('VIDA 24 · corpo de nascença', () => {
     fireEvent.click(within(container).getByRole('radio', { name: 'Escolher' }));
     expect(e.modo).toBe('escolher');
     rerender(<CorpoDeNascenca escolha={e} aoMudar={x => { e = x; }} genero="feminino" visual={base({ corpo23: '222222222222' })} />);
-    const ombros = container.querySelector('[data-eixo="ombros"] input') as HTMLInputElement;
-    fireEvent.change(ombros, { target: { value: '2' } });
+    // VIDA 26: os eixos são degraus com nome (rádios), não um slider — escolher "bem largos" dá o mesmo +2.
+    fireEvent.click(within(container.querySelector('[data-eixo="ombros"]') as HTMLElement).getByRole('radio', { name: 'bem largos' }));
     expect(e.c?.charAt(1)).toBe('4');
     expect(container.textContent).toMatch(/Não é o atributo Físico/);
   });

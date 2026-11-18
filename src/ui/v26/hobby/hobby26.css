@@ -1,0 +1,13 @@
+/* VIDA 26 · a natureza da atividade e a porta que o hobby pode abrir (no cartão da prática). */
+.h26 { display: flex; flex-direction: column; gap: 4px; min-width: 0; font-size: var(--type-caption); }
+.h26__natureza { align-self: flex-start; padding: 1px 8px; border-radius: var(--radius-pill); box-shadow: inset 0 0 0 1px var(--fio); color: var(--text-secondary); }
+.h26__natureza--renda { background: color-mix(in oklab, var(--accent) 10%, transparent); }
+.h26__natureza--caminho { background: color-mix(in oklab, var(--bom) 12%, transparent); }
+.h26__porta > summary { cursor: pointer; color: var(--text-secondary); overflow-wrap: anywhere; }
+.h26__rot { font-weight: var(--weight-semibold); color: var(--accent); }
+.h26__porta p { margin: 4px 0 0; color: var(--text-secondary); }
+.h26__pesa { color: var(--text-muted) !important; }
+.h26-lista ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.h26-lista__item { padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); box-shadow: inset 0 0 0 1px var(--fio); background: var(--superficie); min-width: 0; }
+.h26-lista__seq { font-size: var(--type-caption); color: var(--text-muted); overflow-wrap: anywhere; }
+.h26-lista__item p { margin: 4px 0 0; font-size: var(--type-caption); color: var(--text-secondary); }

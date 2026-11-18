@@ -36,24 +36,29 @@ export type GeneroJogo = 'tatico' | 'battle_royale' | 'moba' | 'carros';
 /** Os atributos possíveis (cada jogo usa só os que fazem sentido nele). */
 export type AtributoEsports =
   | 'mira' | 'reflexos' | 'mecanica' | 'posicionamento' | 'utilitarios' | 'estrategia'
-  | 'conhecimento' | 'comunicacao' | 'decisao' | 'consistencia' | 'mental';
+  | 'conhecimento' | 'comunicacao' | 'decisao' | 'consistencia' | 'mental'
+  // VIDA 26: os específicos de cada jogo (o spray do CS, a construção do Fortnite, o aéreo do Rocket, o repertório do LoL).
+  | 'spray' | 'movimentacao' | 'construcao' | 'aereo' | 'mapas' | 'leitura' | 'repertorio' | 'equipe';
 
 export const NOME_ATRIBUTO25: Record<AtributoEsports, string> = {
   mira: 'mira', reflexos: 'reflexos', mecanica: 'mecânica', posicionamento: 'posicionamento', utilitarios: 'utilitários',
   estrategia: 'estratégia', conhecimento: 'conhecimento do jogo', comunicacao: 'comunicação', decisao: 'tomada de decisão',
-  consistencia: 'consistência', mental: 'controle emocional'
+  consistencia: 'consistência', mental: 'controle emocional',
+  spray: 'controle de spray', movimentacao: 'movimentação', construcao: 'construção e edição', aereo: 'controle aéreo', mapas: 'conhecimento de mapas',
+  leitura: 'leitura do adversário', repertorio: 'repertório de campeões', equipe: 'trabalho em equipe'
 };
 
 /** O grupo de cada atributo na ficha. */
 export const GRUPO25: Record<AtributoEsports, 'mecanico' | 'tatico' | 'equipe' | 'mental'> = {
   mira: 'mecanico', reflexos: 'mecanico', mecanica: 'mecanico', posicionamento: 'tatico', utilitarios: 'tatico',
-  estrategia: 'tatico', conhecimento: 'tatico', decisao: 'tatico', comunicacao: 'equipe', consistencia: 'mental', mental: 'mental'
+  estrategia: 'tatico', conhecimento: 'tatico', decisao: 'tatico', comunicacao: 'equipe', consistencia: 'mental', mental: 'mental',
+  spray: 'mecanico', movimentacao: 'mecanico', construcao: 'mecanico', aereo: 'mecanico', mapas: 'tatico', leitura: 'tatico', repertorio: 'tatico', equipe: 'equipe'
 };
 export const NOME_GRUPO25 = { mecanico: 'Mecânicos', tatico: 'Táticos', equipe: 'Equipe', mental: 'Mentais' } as const;
 
 /** Os atributos que a IDADE cobra (reação, mão) e os que a EXPERIÊNCIA ensina (leitura, conversa). */
-export const DA_MAO25 = new Set<AtributoEsports>(['mira', 'reflexos', 'mecanica']);
-export const DA_LEITURA25 = new Set<AtributoEsports>(['estrategia', 'conhecimento', 'decisao', 'comunicacao', 'posicionamento']);
+export const DA_MAO25 = new Set<AtributoEsports>(['mira', 'reflexos', 'mecanica', 'spray', 'movimentacao', 'construcao', 'aereo']);
+export const DA_LEITURA25 = new Set<AtributoEsports>(['estrategia', 'conhecimento', 'decisao', 'comunicacao', 'posicionamento', 'mapas', 'leitura', 'repertorio', 'equipe']);
 
 export interface Funcao25 { id: string; nome: string; sobre: string; /** Multiplica o peso de atributos (o AWPer vive da mira). */ pesa: Partial<Record<AtributoEsports, number>> }
 
@@ -104,13 +109,13 @@ export const JOGOS25: Record<JogoId, Jogo25> = {
     nome: a => (a >= 2023 ? 'Counter-Strike 2' : a >= 2012 ? 'Counter-Strike: Global Offensive' : 'Counter-Strike 1.6'),
     porEquipe: () => 5,
     sobre: 'Tático, cinco contra cinco, terroristas contra contraterroristas. A mira decide o duelo; a granada certa e a chamada do capitão decidem o round.',
-    atributos: [['mira', 0.22], ['reflexos', 0.12], ['posicionamento', 0.14], ['utilitarios', 0.12], ['comunicacao', 0.12], ['consistencia', 0.14], ['mental', 0.14]],
+    atributos: [['mira', 0.15], ['spray', 0.09], ['reflexos', 0.08], ['movimentacao', 0.06], ['posicionamento', 0.11], ['utilitarios', 0.1], ['mapas', 0.08], ['comunicacao', 0.08], ['decisao', 0.06], ['leitura', 0.05], ['consistencia', 0.07], ['mental', 0.07]],
     funcoes: [
-      { id: 'entry', nome: 'entry fragger', sobre: 'O primeiro a entrar no bomb: abre o round ou morre tentando.', pesa: { reflexos: 1.5, mental: 1.2, utilitarios: 0.7 } },
-      { id: 'awper', nome: 'AWPer', sobre: 'A arma mais cara do jogo: um tiro, uma morte. Vive da mira.', pesa: { mira: 1.6, reflexos: 1.2, comunicacao: 0.7 } },
-      { id: 'suporte', nome: 'suporte', sobre: 'As granadas que abrem caminho para os outros brilharem.', pesa: { utilitarios: 1.7, comunicacao: 1.3, mira: 0.8 } },
-      { id: 'lurker', nome: 'lurker', sobre: 'Sozinho do outro lado do mapa, esperando o momento.', pesa: { posicionamento: 1.6, mental: 1.2 } },
-      { id: 'igl', nome: 'capitão (IGL)', sobre: 'Quem chama a estratégia de cada round — e paga com a própria mira.', pesa: { comunicacao: 2, posicionamento: 1.2, mira: 0.6, reflexos: 0.7 } }
+      { id: 'entry', nome: 'entry fragger', sobre: 'O primeiro a entrar no bomb: abre o round ou morre tentando.', pesa: { reflexos: 1.5, mental: 1.2, utilitarios: 0.7, movimentacao: 1.4 } },
+      { id: 'awper', nome: 'AWPer', sobre: 'A arma mais cara do jogo: um tiro, uma morte. Vive da mira.', pesa: { mira: 1.6, reflexos: 1.2, comunicacao: 0.7, spray: 0.5 } },
+      { id: 'suporte', nome: 'suporte', sobre: 'As granadas que abrem caminho para os outros brilharem.', pesa: { utilitarios: 1.7, comunicacao: 1.3, mira: 0.8, mapas: 1.2 } },
+      { id: 'lurker', nome: 'lurker', sobre: 'Sozinho do outro lado do mapa, esperando o momento.', pesa: { posicionamento: 1.6, mental: 1.2, leitura: 1.3 } },
+      { id: 'igl', nome: 'capitão (IGL)', sobre: 'Quem chama a estratégia de cada round — e paga com a própria mira.', pesa: { comunicacao: 2, posicionamento: 1.2, mira: 0.6, reflexos: 0.7, mapas: 1.4, leitura: 1.3, decisao: 1.3 } }
     ],
     metrica: { nome: 'rating', media: 1, sd: 0.12, casas: 2, sobre: 'o impacto por round (1,00 é a média de quem joga no mesmo nível)' },
     disputa: ['mapa', 'mapas'],
@@ -127,11 +132,11 @@ export const JOGOS25: Record<JogoId, Jogo25> = {
     nome: () => 'Rainbow Six Siege',
     porEquipe: () => 5,
     sobre: 'Tático, cinco contra cinco, ataque contra defesa num prédio que se destrói. Drones, paredes reforçadas, operadores com aparelhos próprios: quem conhece o mapa joga um round antes.',
-    atributos: [['mira', 0.16], ['reflexos', 0.1], ['conhecimento', 0.16], ['utilitarios', 0.16], ['comunicacao', 0.14], ['posicionamento', 0.14], ['mental', 0.14]],
+    atributos: [['mira', 0.12], ['reflexos', 0.08], ['conhecimento', 0.12], ['mapas', 0.1], ['utilitarios', 0.14], ['comunicacao', 0.12], ['posicionamento', 0.1], ['decisao', 0.07], ['leitura', 0.05], ['mental', 0.1]],
     funcoes: [
       { id: 'entry', nome: 'entry', sobre: 'Abre o caminho no ataque: o primeiro a cruzar a porta.', pesa: { reflexos: 1.5, mira: 1.2 } },
       { id: 'suporte', nome: 'suporte', sobre: 'Drones, gadgets, a parede aberta na hora certa.', pesa: { utilitarios: 1.6, comunicacao: 1.3 } },
-      { id: 'flex', nome: 'flex', sobre: 'Joga o operador que o mapa pedir.', pesa: { conhecimento: 1.4 } },
+      { id: 'flex', nome: 'flex', sobre: 'Joga o operador que o mapa pedir.', pesa: { conhecimento: 1.4, mapas: 1.3 } },
       { id: 'ancora', nome: 'âncora', sobre: 'Segura o objetivo na defesa até o último segundo.', pesa: { posicionamento: 1.6, mental: 1.3 } },
       { id: 'igl', nome: 'capitão (IGL)', sobre: 'Chama a estratégia, escolhe os banimentos de operador.', pesa: { comunicacao: 2, conhecimento: 1.3, mira: 0.7 } }
     ],
@@ -152,10 +157,10 @@ export const JOGOS25: Record<JogoId, Jogo25> = {
     // 2025 e de volta às duplas em 2026.
     porEquipe: a => (a >= 2026 ? 2 : a === 2025 ? 3 : a >= 2023 ? 2 : a >= 2020 ? 3 : 2),
     sobre: 'Battle royale: cem jogadores numa ilha que encolhe, construção e edição em fração de segundo. Ninguém ganha a queda sozinho: decide-se onde estar quando a zona fecha.',
-    atributos: [['mecanica', 0.26], ['mira', 0.16], ['decisao', 0.2], ['consistencia', 0.14], ['mental', 0.14], ['comunicacao', 0.1]],
+    atributos: [['mecanica', 0.14], ['construcao', 0.14], ['mira', 0.14], ['decisao', 0.16], ['movimentacao', 0.08], ['consistencia', 0.1], ['mental', 0.12], ['comunicacao', 0.06], ['leitura', 0.06]],
     funcoes: [
-      { id: 'fragger', nome: 'quem elimina', sobre: 'Busca as eliminações; os pontos do duo vêm com ele.', pesa: { mira: 1.4, mecanica: 1.2 } },
-      { id: 'igl', nome: 'quem chama a rotação', sobre: 'Lê a zona e decide para onde ir — e quando ficar quieto.', pesa: { decisao: 1.7, comunicacao: 1.4 } }
+      { id: 'fragger', nome: 'quem elimina', sobre: 'Busca as eliminações; os pontos do duo vêm com ele.', pesa: { mira: 1.4, mecanica: 1.2, construcao: 1.3 } },
+      { id: 'igl', nome: 'quem chama a rotação', sobre: 'Lê a zona e decide para onde ir — e quando ficar quieto.', pesa: { decisao: 1.7, comunicacao: 1.4, leitura: 1.3 } }
     ],
     metrica: { nome: 'eliminações por queda', media: 2.2, sd: 0.7, casas: 1, sobre: 'quantas eliminações, em média, cada queda rende' },
     disputa: ['queda', 'quedas'],
@@ -172,9 +177,9 @@ export const JOGOS25: Record<JogoId, Jogo25> = {
     nome: () => 'VALORANT',
     porEquipe: () => 5,
     sobre: 'Tático, cinco contra cinco, com agentes de habilidades próprias. A mira é a do Counter-Strike; a fumaça, o flash e o reconhecimento de cada agente decidem quem vê primeiro.',
-    atributos: [['mira', 0.2], ['reflexos', 0.14], ['utilitarios', 0.16], ['comunicacao', 0.12], ['posicionamento', 0.12], ['consistencia', 0.12], ['mental', 0.14]],
+    atributos: [['mira', 0.16], ['reflexos', 0.1], ['spray', 0.04], ['movimentacao', 0.07], ['utilitarios', 0.14], ['mapas', 0.07], ['comunicacao', 0.1], ['posicionamento', 0.1], ['decisao', 0.06], ['consistencia', 0.08], ['mental', 0.08]],
     funcoes: [
-      { id: 'duelista', nome: 'duelista', sobre: 'Entra primeiro e busca o abate.', pesa: { mira: 1.4, reflexos: 1.5 } },
+      { id: 'duelista', nome: 'duelista', sobre: 'Entra primeiro e busca o abate.', pesa: { mira: 1.4, reflexos: 1.5, movimentacao: 1.3 } },
       { id: 'iniciador', nome: 'iniciador', sobre: 'Revela e cega o adversário para o time entrar.', pesa: { utilitarios: 1.5, comunicacao: 1.2 } },
       { id: 'controlador', nome: 'controlador', sobre: 'As fumaças que cortam o mapa — muitas vezes, o capitão.', pesa: { utilitarios: 1.4, comunicacao: 1.5, posicionamento: 1.1 } },
       { id: 'sentinela', nome: 'sentinela', sobre: 'Segura o flanco e o bomb com armadilhas.', pesa: { posicionamento: 1.5, mental: 1.2 } }
@@ -194,13 +199,13 @@ export const JOGOS25: Record<JogoId, Jogo25> = {
     nome: () => 'League of Legends',
     porEquipe: () => 5,
     sobre: 'MOBA, cinco contra cinco, duas bases e três rotas. A mecânica ganha a rota; o macro — os objetivos, o tempo do dragão, a visão — ganha o jogo.',
-    atributos: [['mecanica', 0.2], ['estrategia', 0.18], ['conhecimento', 0.14], ['decisao', 0.14], ['comunicacao', 0.12], ['consistencia', 0.1], ['mental', 0.12]],
+    atributos: [['mecanica', 0.16], ['repertorio', 0.08], ['estrategia', 0.15], ['conhecimento', 0.1], ['decisao', 0.12], ['comunicacao', 0.1], ['equipe', 0.07], ['leitura', 0.06], ['consistencia', 0.08], ['mental', 0.08]],
     funcoes: [
       { id: 'top', nome: 'top', sobre: 'A rota isolada: o duelo de um contra um.', pesa: { mecanica: 1.3, mental: 1.3 } },
-      { id: 'jungle', nome: 'caçador', sobre: 'Anda o mapa inteiro: os objetivos e as emboscadas.', pesa: { estrategia: 1.6, decisao: 1.4 } },
-      { id: 'mid', nome: 'meio', sobre: 'O centro do mapa: o maior repertório de campeões.', pesa: { mecanica: 1.5, conhecimento: 1.2 } },
+      { id: 'jungle', nome: 'caçador', sobre: 'Anda o mapa inteiro: os objetivos e as emboscadas.', pesa: { estrategia: 1.6, decisao: 1.4, leitura: 1.3 } },
+      { id: 'mid', nome: 'meio', sobre: 'O centro do mapa: o maior repertório de campeões.', pesa: { mecanica: 1.5, conhecimento: 1.2, repertorio: 1.4 } },
       { id: 'adc', nome: 'atirador', sobre: 'O dano de longe no fim do jogo — e quem mais precisa sobreviver.', pesa: { mecanica: 1.5, posicionamento: 1, consistencia: 1.3 } },
-      { id: 'suporte', nome: 'suporte', sobre: 'A visão do mapa e a chamada da luta.', pesa: { comunicacao: 1.8, estrategia: 1.3, mecanica: 0.7 } }
+      { id: 'suporte', nome: 'suporte', sobre: 'A visão do mapa e a chamada da luta.', pesa: { comunicacao: 1.8, estrategia: 1.3, mecanica: 0.7, equipe: 1.4 } }
     ],
     metrica: { nome: 'KDA', media: 3.2, sd: 0.9, casas: 1, sobre: '(abates + assistências) por morte' },
     disputa: ['partida', 'partidas'],
@@ -217,10 +222,10 @@ export const JOGOS25: Record<JogoId, Jogo25> = {
     nome: () => 'Rocket League',
     porEquipe: () => 3,
     sobre: 'Futebol de carros, três contra três: aéreos, ricochetes na parede, rotação constante entre ataque e defesa. Mecânica que impressiona ganha lance; rotação que ninguém vê ganha série.',
-    atributos: [['mecanica', 0.26], ['reflexos', 0.12], ['posicionamento', 0.18], ['decisao', 0.14], ['comunicacao', 0.1], ['consistencia', 0.1], ['mental', 0.1]],
+    atributos: [['mecanica', 0.18], ['aereo', 0.12], ['reflexos', 0.1], ['posicionamento', 0.16], ['decisao', 0.12], ['comunicacao', 0.08], ['equipe', 0.06], ['consistencia', 0.08], ['mental', 0.1]],
     funcoes: [
-      { id: 'ataque', nome: 'primeiro no ataque', sobre: 'Pressiona e finaliza: os aéreos e o gol.', pesa: { mecanica: 1.4, reflexos: 1.2 } },
-      { id: 'rotacao', nome: 'meio da rotação', sobre: 'O elo: chega na sobra, mantém a pressão.', pesa: { posicionamento: 1.4, decisao: 1.3 } },
+      { id: 'ataque', nome: 'primeiro no ataque', sobre: 'Pressiona e finaliza: os aéreos e o gol.', pesa: { mecanica: 1.4, reflexos: 1.2, aereo: 1.5 } },
+      { id: 'rotacao', nome: 'meio da rotação', sobre: 'O elo: chega na sobra, mantém a pressão.', pesa: { posicionamento: 1.4, decisao: 1.3, equipe: 1.2 } },
       { id: 'defesa', nome: 'último homem', sobre: 'O que não pode errar: a defesa e a saída.', pesa: { posicionamento: 1.6, consistencia: 1.4, mental: 1.2 } }
     ],
     metrica: { nome: 'gols por série', media: 1.6, sd: 0.5, casas: 1, sobre: 'quantos gols, em média, cada série rende' },
@@ -249,5 +254,13 @@ export const SOBRE_ATRIBUTO25: Record<AtributoEsports, string> = {
   comunicacao: 'Falar o que importa, curto, na hora: a informação e a chamada.',
   decisao: 'Escolher bem sob pressão: arriscar, recuar, rodar.',
   consistencia: 'Render igual na série inteira e na temporada inteira — sem a partida que some.',
-  mental: 'O controle quando o placar aperta: a final, o round decisivo, a derrota que não vira duas.'
+  mental: 'O controle quando o placar aperta: a final, o round decisivo, a derrota que não vira duas.',
+  spray: 'Segurar a rajada no alvo: o recuo da arma controlado pela mão.',
+  movimentacao: 'Andar, parar e atirar no tempo certo; o pico e o reposicionamento.',
+  construcao: 'Construir e editar em segundos: a parede que salva, a rampa que dá a altura.',
+  aereo: 'O carro no ar: o toque aéreo, a recuperação, o drible de parede.',
+  mapas: 'Cada canto de cada mapa: os ângulos, os tempos de rotação, os lugares de granada.',
+  leitura: 'Adivinhar o que o outro time vai fazer — e chegar antes.',
+  repertorio: 'Os campeões que se joga bem: quanto maior, mais difícil de banir.',
+  equipe: 'Jogar para os outros: a troca, o sacrifício, o tempo do grupo.'
 };
