@@ -428,7 +428,9 @@ describe('REL-03 · conflitos: a escada sobe, desce, termina', () => {
   it('separação: o fim fica na história com peso; reconciliar é possível depois (a porta não fecha para sempre)', () => {
     let id = '';
     const v = em(adulto(35, { semente: 46 }), x => { id = comParceiro(x, { estagio: 'casamento', anos: 6 }).p.id; });
-    const w = executar(v, { tipo: 'pessoa', pessoaId: id, interacao: 'terminar' }).vida;
+    // VIDA 27 · §5: pedir o divórcio abre antes o resumo da partilha (`rel27_separacao`); seguir é que separa.
+    const pedido = executar(v, { tipo: 'pessoa', pessoaId: id, interacao: 'terminar' }).vida;
+    const w = executar(pedido, { tipo: 'decidir', opcaoId: 'seguir' }).vida;
     expect(w.vinculos[id].romance?.estagio).toBe('ex');
     expect(w.vinculos[id].historia.some(h => (h.peso ?? 1) >= 3 && h.tipo === 'conflito')).toBe(true);
   });

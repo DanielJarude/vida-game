@@ -482,7 +482,12 @@ export interface Romance {
   /** REWORK 11 · REL-16: o noivado como estado (desde quando) e o casamento planejado (quando houver). */
   /** REWORK 11.5 · REL-20: `anel` e `lugar` — como foi o pedido (a cena escolhida; a biografia e o casamento lembram). */
   noivado?: { t: number; plano?: PlanoDeCasamento; anel?: 'simples' | 'classico' | 'caro' | 'nenhum'; lugar?: 'casa' | 'jantar' | 'publico' };
+  /** VIDA 27 · §5: o regime de bens da união (escolhido no casamento; a união estável segue a comunhão parcial). Ausente = comunhão parcial. */
+  regime?: RegimeDeBens;
 }
+
+/** VIDA 27 · §5: o regime de bens (simplificação do Código Civil brasileiro, arts. 1.658–1.688). */
+export type RegimeDeBens = 'comunhao_parcial' | 'separacao_total' | 'comunhao_universal';
 
 /** REWORK 11 · REL-16: o casamento planejado (`sistemas/casamento`). Os custos saem dos preços locais na hora. */
 export interface PlanoDeCasamento {
@@ -496,6 +501,8 @@ export interface PlanoDeCasamento {
   /** Quando foi combinado, e se a outra pessoa preferia outra coisa (e disse). */
   t: number;
   discorda?: boolean;
+  /** VIDA 27 · §5: o regime de bens combinado (ausente = comunhão parcial, o padrão legal). */
+  regime?: RegimeDeBens;
 }
 
 /** Um marco da história compartilhada. Só o que importa — nunca "um ano normal". */

@@ -170,8 +170,11 @@ export function executarCasamento(v: Vida, pessoaId: string, o: OpCasamento): st
  */
 export function casar(v: Vida, p: Pessoa, custo: number, descricao?: string): { parcelou: boolean; parcela: number } {
   const vin = v.vinculos[p.id];
+  // VIDA 27 · §5: o regime de bens combinado no plano vale para a união (ausente: comunhão parcial).
+  const regime = vin.romance?.noivado?.plano?.regime;
   mudarEstagio(v, vin, 'casamento');
   desfazerNoivado(v, vin);
+  if (vin.romance && regime) vin.romance.regime = regime;
   if (!vin.convivio.includes('casa')) morarJuntos(v, p);
   const pg = pagamentoDoCasamento(v, p, custo);
   pagar(v, Math.min(pg.parte, pg.tem));

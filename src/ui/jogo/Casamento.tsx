@@ -7,7 +7,7 @@
 
 import { useState } from 'react';
 import type { Acao } from '../../motor/acoes';
-import type { Pessoa, PlanoDeCasamento, Vida, Vinculo } from '../../motor/tipos';
+import type { Pessoa, PlanoDeCasamento, RegimeDeBens, Vida, Vinculo } from '../../motor/tipos';
 import { CENARIOS_AR_LIVRE, CERIMONIAS, CONVIDADOS, rotuloDoLocal, custoDoCasamento, discordaDoPlano, ESTILOS, LOCAIS, luaDeMelPendente, pagamentoDoCasamento, preferenciaDoPar, PRAZO_DA_FESTA } from '../../motor/sistemas/casamento';
 import { estaNoivo } from '../../motor/sistemas/romance';
 import { BotaoAcao, Escolha } from '../comum';
@@ -17,9 +17,16 @@ import { EscolherViagem } from './Viagem';
 type Plano = Omit<PlanoDeCasamento, 't' | 'discorda'>;
 const PADRAO: Plano = { local: 'salao', cerimonia: 'civil', convidados: 60, estilo: 'classico', luaDeMel: true };
 
+const REGIMES: [RegimeDeBens, string][] = [['comunhao_parcial', 'Comunhão parcial'], ['separacao_total', 'Separação total'], ['comunhao_universal', 'Comunhão universal']];
+const NOTA_DO_REGIME: Record<RegimeDeBens, string> = {
+  comunhao_parcial: 'O padrão: numa separação, divide-se o que os dois construíram durante a união; o de antes e as heranças ficam com cada um.',
+  separacao_total: 'Cada um fica com o que é seu, antes e depois (pacto antenupcial no cartório).',
+  comunhao_universal: 'Tudo dos dois vira dos dois, inclusive o de antes (pacto antenupcial no cartório).'
+};
+
 export function PlanejarCasamento({ vida, p, vin, agir }: { vida: Vida; p: Pessoa; vin: Vinculo; agir: (a: Acao) => boolean }) {
   const salvo = vin.romance?.noivado?.plano;
-  const [plano, setPlano] = useState<Plano>(salvo ? { local: salvo.local, ...(salvo.cenario ? { cenario: salvo.cenario } : {}), cerimonia: salvo.cerimonia, convidados: salvo.convidados, estilo: salvo.estilo, luaDeMel: salvo.luaDeMel } : PADRAO);
+  const [plano, setPlano] = useState<Plano>(salvo ? { local: salvo.local, ...(salvo.cenario ? { cenario: salvo.cenario } : {}), cerimonia: salvo.cerimonia, convidados: salvo.convidados, estilo: salvo.estilo, luaDeMel: salvo.luaDeMel, ...(salvo.regime ? { regime: salvo.regime } : {}) } : PADRAO);
   if (!estaNoivo(vida, vin)) return null;
   const mudar = <K extends keyof Plano>(k: K, x: Plano[K]) => setPlano(s => ({ ...s, [k]: x }));
   const maxLocal = LOCAIS[plano.local].max;
@@ -27,7 +34,7 @@ export function PlanejarCasamento({ vida, p, vin, agir }: { vida: Vida; p: Pesso
   const pg = pagamentoDoCasamento(vida, p, custo);
   const pref = preferenciaDoPar(vida, p);
   const discorda = discordaDoPlano(vida, p, plano);
-  const igualAoSalvo = !!salvo && salvo.local === plano.local && salvo.cenario === plano.cenario && salvo.cerimonia === plano.cerimonia && salvo.convidados === plano.convidados && salvo.estilo === plano.estilo && salvo.luaDeMel === plano.luaDeMel;
+  const igualAoSalvo = !!salvo && salvo.local === plano.local && salvo.cenario === plano.cenario && salvo.cerimonia === plano.cerimonia && salvo.convidados === plano.convidados && salvo.estilo === plano.estilo && salvo.luaDeMel === plano.luaDeMel && (salvo.regime ?? 'comunhao_parcial') === (plano.regime ?? 'comunhao_parcial');
   return (
     <section className="casamento" aria-label="O planejamento do casamento">
       <h3 className="ficha__subtitulo">O casamento</h3>
@@ -58,6 +65,11 @@ export function PlanejarCasamento({ vida, p, vin, agir }: { vida: Vida; p: Pesso
       </div>
       <div className="campo"><span className="campo__rotulo">O estilo</span>
         <Escolha rotulo="O estilo" opcoes={Object.entries(ESTILOS).map(([id, e]) => ({ id: id as Plano['estilo'], rotulo: e.rotulo }))} valor={plano.estilo} aoMudar={x => mudar('estilo', x)} />
+      </div>
+      {/* VIDA 27 · §5: o regime de bens (o que se divide numa separação). */}
+      <div className="campo"><span className="campo__rotulo">O regime de bens</span>
+        <Escolha rotulo="O regime de bens" opcoes={REGIMES.map(([id, r]) => ({ id, rotulo: r }))} valor={plano.regime ?? 'comunhao_parcial'} aoMudar={x => mudar('regime', x)} />
+        <span className="campo__nota">{NOTA_DO_REGIME[plano.regime ?? 'comunhao_parcial']}</span>
       </div>
       <label className="rede__promover"><input type="checkbox" checked={plano.luaDeMel} onChange={e => mudar('luaDeMel', e.target.checked)} /> Lua de mel depois (uma viagem a dois, escolhida depois do casamento)</label>
       <dl className="casamento__conta" aria-label="O orçamento">

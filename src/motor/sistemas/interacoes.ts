@@ -11,7 +11,7 @@
  * antes de dormir entra na história dos dois. Nada disso vira número na tela.
  */
 
-import { casamentoImpedidoPelaLei, divorcioNaEpoca } from '../eras/base/leis';
+import { casamentoImpedidoPelaLei } from '../eras/base/leis';
 import { aplicarDimensoes, GRUPOS_DE_AFETO, INTERACOES_DE_AFETO } from './afetos';
 import { GRUPOS_ADULTOS, INTERACOES_ADULTAS } from './afetosAdultos';
 import { registrarTentativa, sincronizarMagoa } from './magoas';
@@ -1049,9 +1049,13 @@ export const INTERACOES: Interacao[] = [
     rotulo: c => (c.vin.romance?.estagio === 'casamento' ? 'Pedir o divórcio' : c.vin.romance?.estagio === 'morando_junto' ? 'Separar' : 'Terminar'),
     executar: c => {
       aplicarPersonalidade(c.v, 'acao:terminar', { independencia: 1 });
-      const lei = c.vin.romance?.estagio === 'casamento' ? divorcioNaEpoca(c.v) : '';
+      // VIDA 27 · §5: quem mora junto vê a partilha ANTES de assinar (a decisão `rel27_separacao` mostra o resumo).
+      if (c.vin.romance?.estagio === 'casamento' || c.vin.romance?.estagio === 'morando_junto') {
+        c.v.fatos['separacao_cena'] = c.v.t;
+        return { resultado: `Você decidiu ${c.vin.romance.estagio === 'casamento' ? 'pedir o divórcio' : 'se separar'} de ${c.p.nome}. Antes, a conta do que fica com cada um.`, decisao: 'rel27_separacao', papeis: { pessoa: c.p.id } };
+      }
       terminar(c.v, c.p, c.vin, 'jogador');
-      return { resultado: `Acabou com ${c.p.nome}.${lei}` };
+      return { resultado: `Acabou com ${c.p.nome}.` };
     }
   },
 
