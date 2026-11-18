@@ -136,9 +136,9 @@ export const FAMILIAS: readonly FamiliaCarreira[] = [
   F({ id: 'palco', nome: 'música, cena e dança', trilhas: ['musica', 'orquestra', 'cena', 'danca'], progressao: 'arte',
     entrada: 'anos de prática, grupo, audição, convite — quase nunca currículo', degraus: ['tocar e atuar por gosto', 'cachês pequenos', 'temporadas e agenda', 'reconhecimento (que vem e vai)'], renda: 'projeto',
     desgaste: { noite: 0.5, cabeca: 0.3 }, sentido: ['musica', 'teatro', 'danca'], saidas: ['ensino_musica', 'ensino_danca', 'educacao', 'comercio'] }),
-  F({ id: 'esporte', nome: 'esporte', trilhas: ['atleta', 'treino', 'arbitragem', 'educacao_fisica', 'automobilismo', 'esports'], progressao: 'esporte',
+  F({ id: 'esporte', nome: 'esporte', trilhas: ['atleta', 'treino', 'arbitragem', 'educacao_fisica', 'automobilismo', 'esports', 'midia_esportiva', 'analise_esportiva', 'gestao_esportiva', 'comissao_esports', 'midia_esports', 'pilotagem'], progressao: 'esporte',
     entrada: 'peneira ou seletiva, na idade certa', degraus: ['base', 'primeiro contrato', 'auge curto', 'transição: treinar, preparar, ensinar'], renda: 'projeto', desgaste: { corpo: 0.6, longe: 0.3 },
-    sentido: ['futebol', 'volei', 'natacao', 'atletismo', 'lutas', 'basquete', 'tenis'], saidas: ['treino', 'educacao_fisica', 'comercio', 'vigilancia'] }),
+    sentido: ['futebol', 'volei', 'natacao', 'atletismo', 'lutas', 'basquete', 'tenis'], saidas: ['treino', 'educacao_fisica', 'midia_esportiva', 'analise_esportiva', 'comercio', 'vigilancia'] }),
   F({ id: 'informal', nome: 'rua, feira e bicos', trilhas: ['informal', 'reciclagem'], progressao: 'informal', entrada: 'começar amanhã: mercadoria, ponto, gente conhecida',
     degraus: ['ponto incerto', 'freguesia', 'banca fixa', 'formalizar o negócio ou abrir um comércio'], renda: 'variavel', desgaste: { corpo: 0.45, cabeca: 0.35 }, sentido: ['vendas'],
     custoAutonomo: { valor: 90, rotulo: 'Mercadoria que encalha e transporte' }, saidas: ['comercio', 'limpeza', 'alimentacao'] })

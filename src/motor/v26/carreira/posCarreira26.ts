@@ -21,6 +21,7 @@ import { contratar, elegibilidade, nomeOcupacao } from '../../sistemas/trabalho'
 import { novaOportunidade } from '../../sistemas/oportunidades';
 import { marcar } from '../../sistemas/marcas';
 import { carreirasEsportivas, NOME_MOD } from '../../sistemas/esporte';
+import { registrarMotivoDoNome } from '../../sistemas/notoriedade';
 import { podeTentar, bloqueio, PERMITIDO, type Veredito } from '../../plausibilidade';
 
 export type OrigemPos26 = Dominio | 'esports' | 'automobilismo';
@@ -229,3 +230,14 @@ function textoDoConvite(id: string, t: Trajetoria26): string {
   if (/professor|instrutor|escolinha/.test(id)) return 'Um clube do bairro quer abrir turmas com quem competiu de verdade.';
   return `Uma comissão técnica de ${t.nome} lembrou de você.`;
 }
+
+/**
+ * A fama do depois: quem comenta na TV, narra os campeonatos ou dirige um departamento continua conhecido — o nome vem
+ * da função (e se soma ao legado da carreira, que `notoriedade` já guarda). Quem dá aula no bairro, não.
+ */
+const NOME_DA_FUNCAO: Record<string, number> = { comentarista_tv: 30, comentarista_esportivo: 12, caster_esports_principal: 22, caster_esports: 9, diretor_esportivo: 16, gerente_esportivo: 9, gestor_esports: 10, tecnico_esports: 8 };
+registrarMotivoDoNome(v => {
+  const id = v.trabalho.atual?.ocupacaoId;
+  const valor = id ? NOME_DA_FUNCAO[id] : undefined;
+  return valor ? { valor, fonte: 'esporte' } : undefined;
+});

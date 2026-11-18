@@ -83,6 +83,7 @@ function portaDoVideogame(v: Vida): Porta26 {
 }
 
 const ARTE: Partial<Record<string, string>> = { musica: 'Banda', danca: 'Grupo de dança', teatro: 'Grupo de teatro' };
+const NOME_ARTE26: Record<string, string> = { musica: 'Música', danca: 'Dança', teatro: 'Teatro' };
 
 /** Para onde a atividade pode levar (ou nada: um hobby que é só hobby também é um bom destino). */
 export function portaDoHobby26(v: Vida, id: string, pratica?: Partial<Record<Dominio, number>>): Porta26 | undefined {
@@ -90,7 +91,7 @@ export function portaDoHobby26(v: Vida, id: string, pratica?: Partial<Record<Dom
   if (id === 'videogame') return portaDoVideogame(v);
   if (ARTE[id]) {
     const dentro = !!v.caminhos.arte?.ativo;
-    return { sequencia: [`${cap(NOME_MOD[id as Dominio] ?? id)} por gosto`, ARTE[id]!, 'Público e editais', 'Viver de arte'], passo: dentro ? `Você já está em ${v.caminhos.arte!.nome}.` : `Montar ${ARTE[id] === 'Banda' ? 'uma banda' : 'um grupo'} (Caminhos · Outros caminhos) quando a prática estiver firme.`, pesa: [`prática: ${palavraAnos(anosDe(v, id))}`, `técnica ${Math.round(habilidade(v, id as Dominio))}`], dentro };
+    return { sequencia: [`${NOME_ARTE26[id] ?? cap(id)} por gosto`, ARTE[id]!, 'Público e editais', 'Viver de arte'], passo: dentro ? `Você já está em ${v.caminhos.arte!.nome}.` : `Montar ${ARTE[id] === 'Banda' ? 'uma banda' : 'um grupo'} (Caminhos · Outros caminhos) quando a prática estiver firme.`, pesa: [`prática: ${palavraAnos(anosDe(v, id))}`, `técnica ${Math.round(habilidade(v, id as Dominio))}`], dentro };
   }
   // O hobby que é um ofício: as profissões que pedem a técnica que ele treina (o mesmo número que a vaga cobra).
   const d = pratica ? (Object.entries(pratica).sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0))[0]?.[0] as Dominio | undefined) : undefined;

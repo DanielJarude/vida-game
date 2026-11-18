@@ -99,7 +99,7 @@ export function avaliacaoDaComissao(a: AnoDeFormacao, l: LeituraDoJovem, h: numb
   const [lo, hi] = l.potencial;
   if (hi >= limiar + 6 && l.capacidade < limiar - 6) frases.push('tem potencial, mas ainda não o nível que se pede adiante');
   if (h >= limiar && !podeContrato) {
-    const falta = [l.partes.fisico < 60 && 'físico', l.partes.experiencia < 50 && 'experiência', l.partes.maturidade < 55 && 'maturidade'].filter(Boolean).join(' e ') || 'regularidade';
+    const falta = [l.partes.fisico < 60 && 'físico', l.partes.experiencia < 50 && 'experiência', l.partes.maturidade < 55 && 'maturidade'].filter((x): x is string => !!x).reduce((a, x, k, l) => (k === 0 ? x : `${a}${k === l.length - 1 ? ' e ' : ', '}${x}`), '') || 'regularidade';
     frases.push(a.idade < IDADE_LEGAL_CONTRATO ? `tem técnica acima da idade, mas ainda precisa de ${falta} antes de uma oportunidade profissional (e o contrato só vem a partir dos 16)` : `tem a técnica, mas ainda precisa de ${falta} antes de uma oportunidade profissional`);
   }
   else if (podeContrato) frases.push('a comissão vê condições de oferecer um contrato profissional');

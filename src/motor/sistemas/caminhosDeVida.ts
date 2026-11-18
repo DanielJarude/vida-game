@@ -101,7 +101,12 @@ export function emConstrucao(v: Vida, disp: Disp): CaminhoEmConstrucao[] {
     const t = lerTecnica(v, es.modalidade);
     const h = habilidade(v, es.modalidade);
     const ct = contratoDaBase(es.modalidade);
-    const palavra = h >= ct.tecnica ? 'no nível de um contrato profissional' : h >= ct.tecnica - 3 ? 'perto do que o contrato pede' : h >= ct.tecnica - 8 ? 'a caminho do que o contrato pede' : 'ainda longe do que o contrato pede';
+    // VIDA 26: técnica não é prontidão. Quem tem a técnica e não tem a idade (o contrato vem a partir dos 16, Lei
+    // 14.597/2023) ou a prontidão (físico, experiência, maturidade — a leitura da comissão no fim do ano) não ouve que
+    // "está no nível do contrato".
+    const leitura = es.formacao?.[es.formacao.length - 1];
+    const pronto = leitura?.prontidao === undefined || leitura.prontidao >= 55;
+    const palavra = h >= ct.tecnica ? (i < 16 ? 'acima do que a idade pede — o contrato só vem a partir dos 16' : pronto ? 'no nível de um contrato profissional' : 'no nível técnico do contrato — falta prontidão') : h >= ct.tecnica - 3 ? 'perto do que o contrato pede' : h >= ct.tecnica - 8 ? 'a caminho do que o contrato pede' : 'ainda longe do que o contrato pede';
     const equipe = aEquipe(es.modalidade, es.clube);
     out.push({
       id: 'esporte', titulo: `Se firmar ${equipe.replace(/^a /, 'na ').replace(/^o /, 'no ')}`,
@@ -110,6 +115,7 @@ export function emConstrucao(v: Vida, disp: Disp): CaminhoEmConstrucao[] {
       falta: [h < ct.tecnica ? 'Técnica para o contrato: seguir evoluindo a cada ano — quem para de evoluir é dispensado.' : '',
         i < ct.idade[0] ? `Idade: o contrato profissional chega entre os ${ct.idade[0]} e os ${ct.idade[1]} anos.` : '',
         v.corpo.forma < 55 ? 'Físico: o ritmo da base cobra fôlego nos jogos.' : '',
+        leitura?.prontidao !== undefined && leitura.prontidao < 55 ? `Prontidão: ${leitura.prontidao} de 100 na última avaliação — físico, experiência e maturidade também contam, não só a técnica.` : '',
         es.modalidade === 'futebol' && !es.posicao ? 'Posição: a comissão ainda vai perguntar onde você joga.' : ''].filter(Boolean),
       proximo: { rotulo: 'Treinar firme e disputar os jogos da base', ir: 'tempo', porque: 'O contrato vem para quem segue evoluindo; a dispensa, para quem para.' }
     });
