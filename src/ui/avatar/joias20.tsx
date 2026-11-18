@@ -61,7 +61,8 @@ export function BrincoDoRetrato({ modelo, x, y, s }: { modelo?: string; x: numbe
     case 'argola_m': return <g {...marca}>{aro(x + s * 0.4, y + 2.1, 2.2, 0.65)}</g>;
     case 'argola_g': return <g {...marca}>{aro(x + s * 0.6, y + 3.4, 3.5, 0.7)}</g>;
     case 'brinco_gota': return <g {...marca}><TracoDeMetal d={`M ${x} ${y - 0.2} V ${y + 1.4}`} w={0.4} metal={j.metal} /><path d={`M ${x} ${y + 1.2} Q ${x + 1.5} ${y + 3.4} ${x} ${y + 4.4} Q ${x - 1.5} ${y + 3.4} ${x} ${y + 1.2} Z`} fill={pedra} stroke={metal} strokeWidth={0.35} /><path d={`M ${x - 0.35} ${y + 2.4} q 0.1 -0.6 0.45 -0.9`} stroke="#ffffff" strokeWidth={0.25} fill="none" opacity={0.8} /></g>;
-    case 'brinco_perola': return <g {...marca}><Pedra x={x} y={y + 0.5} r={1.3} pedra="perola" metal={j.metal} /></g>;
+    // VIDA 27 · §8: o pino e a tarraxa no metal (antes, a pérola de ouro e a de prata eram o mesmo desenho).
+    case 'brinco_perola': return <g {...marca}><TracoDeMetal d={`M ${x} ${y - 0.9} V ${y - 0.2}`} w={0.55} metal={j.metal} comp={2} /><Pedra x={x} y={y + 0.5} r={1.3} pedra="perola" metal={j.metal} /></g>;
     case 'ear_cuff': return <g {...marca}><TracoDeMetal d={`M ${x + s * 0.2} ${y - 6.4} q ${s * 1.6} 1.2 0 2.6`} w={0.6} metal={j.metal} comp={3} /></g>;
     default: return <g {...marca}>{aro(x, y + 0.8, 1.2, 0.6)}</g>;
   }

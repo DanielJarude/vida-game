@@ -25,6 +25,8 @@ const rica = (): Vida => transacao(adulto(45, { semente: 1273, municipioId: 'sao
 describe('12.7 · o guarda-roupa veste a peça escolhida', () => {
   it('trocar pelos óculos de grife veste os de grife (não os escuros comuns)', () => {
     let v = rica();
+    // VIDA 27 · §13: sem encontro por acaso nesta sequência de compras (na loja, o encontro agora é uma cena presencial que interrompe).
+    v.celular15 = { ...(v.celular15 ?? { ano: 0, msgs: [] }), encontrosNoAno: 99 };
     for (const id of ['oculos_sol', 'oculos_aviador', 'oculos_juliet', 'oculos_grife']) v = executar(v, { tipo: 'comprar_item', itemId: id }).vida;
     v = executar(v, { tipo: 'usar_item', itemId: 'oculos_sol', usar: true }).vida;
     const agir = (a: Acao) => { v = executar(v, a).vida; rerender(<OQueVeste vida={v} agir={agir} />); return true; };

@@ -4,7 +4,9 @@
  * linha ("É seu"): a lista não se reordena, os filtros e a página continuam onde estavam (as escolhas de cada linha
  * moram na linha, chaveada pelo produto).
  */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { joia20, METAIS20, PEDRAS20 } from '../../../motor/dados20/joias20';
+import { leituraDoMetal } from '../../avatar/joias23';
 import type { Vida } from '../../../motor/tipos';
 import type { Acao } from '../../../motor/acoes';
 import { idade } from '../../../motor/nucleo';
@@ -82,6 +84,12 @@ export function LojaDaVida({ vida, agir, lojaId }: { vida: Vida; agir: (a: Acao)
   // 12.7: o tipo de peça (só nas lojas que vendem roupa): uma escolha, sem subcategoria.
   const tipoDe = (l: Linha) => (l.produto.tipo === 'item' ? tipoDePeca(itemEstilo(l.produto.id)!) : undefined);
   const tipos = TIPOS_DE_PECA.filter(t => linhas.some(l => tipoDe(l) === t.id));
+  // VIDA 27 · §9: na joalheria (e onde houver joia), o material e a pedra — só os que existem nesta loja.
+  const joiaDe = (l: Linha) => (l.produto.tipo === 'item' ? joia20(l.produto.id) : undefined);
+  const metais = [...new Set(linhas.map(l => joiaDe(l)?.metal).filter((x): x is NonNullable<typeof x> => !!x))];
+  const pedras = [...new Set(linhas.map(l => joiaDe(l)?.pedra).filter((x): x is NonNullable<typeof x> => !!x))];
+  const nomeDaMarcaDe = (l: Linha) => { const o = l.ofertas.filter(passa)[0] ?? l.ofertas[0]; return o?.marca ? marcaPorId(o.marca)?.nome ?? '' : '~'; };
+  const ehMeu = (l: Linha) => (l.produto.tipo === 'item' ? temItem(vida, l.produto.id) : temCoisa(vida, l.produto.id));
   // 12.8.1: na loja da casa, a categoria do móvel (sala e estar, quarto, cozinha e jantar… — como o tipo de peça da
   // roupa): só as que têm produto nesta loja, nenhuma vazia, nenhum produto sem.
   // VIDA 14: agrupado pelo TIPO de móvel (todos os sofás juntos, todas as poltronas juntas...), não pelo cômodo.
@@ -101,9 +109,19 @@ export function LojaDaVida({ vida, agir, lojaId }: { vida: Vida; agir: (a: Acao)
   const secoes = cats.filter(c => !(tipos.length > 1 && ['vestuario', 'calcados', 'acessorios', 'otica', 'relogios', 'joias'].includes(c)) && !((ambientes.length > 1 || ambientes22.length > 1) && (c === 'moveis' || c === 'eletrodomesticos')));
   const nivelDe = (l: Linha) => { const o = l.ofertas.filter(passa)[0] ?? l.ofertas[0]; return l.produto.tipo === 'item' ? nivelDoItem(itemEstilo(l.produto.id)!) : nivelDaCoisa({ coisaId: l.produto.id, marca: o?.marca } as CoisaTida); };
   const visiveis = linhas
-    .filter(l => (!tipo || tipoDe(l) === tipo) && noAmbiente(l) && (!ambiente || ambienteDe(l) === ambiente) && (!cat || l.categoria === cat) && l.ofertas.some(passa) && (!q || q.split(/\s+/).every(t => normalizarBusca(nomeDoProduto(l.produto)).includes(t) || l.ofertas.some(o => o.marca && normalizarBusca(marcaPorId(o.marca)!.nome).includes(t)))))
-    .sort((a, b) => m.ordem === 'menor' ? Math.min(...a.ofertas.filter(passa).map(o => o.preco)) - Math.min(...b.ofertas.filter(passa).map(o => o.preco)) : m.ordem === 'maior' ? Math.max(...b.ofertas.filter(passa).map(o => o.preco)) - Math.max(...a.ofertas.filter(passa).map(o => o.preco)) : m.ordem === 'qualidade' ? nivelDe(b) - nivelDe(a) : 0);
+    .filter(l => (!m.metal || joiaDe(l)?.metal === m.metal) && (!m.pedra || (m.pedra === 'sem' ? !joiaDe(l)?.pedra : joiaDe(l)?.pedra === m.pedra)) && (!m.meus || ehMeu(l)) && (!tipo || tipoDe(l) === tipo) && noAmbiente(l) && (!ambiente || ambienteDe(l) === ambiente) && (!cat || l.categoria === cat) && l.ofertas.some(passa) && (!q || q.split(/\s+/).every(t => normalizarBusca(nomeDoProduto(l.produto)).includes(t) || l.ofertas.some(o => o.marca && normalizarBusca(marcaPorId(o.marca)!.nome).includes(t)))))
+    .sort((a, b) => m.ordem === 'menor' ? Math.min(...a.ofertas.filter(passa).map(o => o.preco)) - Math.min(...b.ofertas.filter(passa).map(o => o.preco)) : m.ordem === 'maior' ? Math.max(...b.ofertas.filter(passa).map(o => o.preco)) - Math.max(...a.ofertas.filter(passa).map(o => o.preco)) : m.ordem === 'qualidade' ? nivelDe(b) - nivelDe(a) : m.ordem === 'nome' ? nomeDoProduto(a.produto).localeCompare(nomeDoProduto(b.produto)) : m.ordem === 'marca' ? nomeDaMarcaDe(a).localeCompare(nomeDaMarcaDe(b)) || Math.min(...a.ofertas.filter(passa).map(o => o.preco)) - Math.min(...b.ofertas.filter(passa).map(o => o.preco)) : 0);
   const i = idade(vida);
+  // VIDA 27 · §9: a rolagem da lista volta para onde estava (comprar, experimentar, sair e voltar).
+  const lista = useRef<HTMLUListElement>(null);
+  useEffect(() => {
+    const y = memoriaDasLojas.get(lojaId)?.rolagem;
+    if (y && typeof window !== 'undefined' && typeof window.scrollTo === 'function') { try { window.scrollTo({ top: y }); } catch { /* jsdom */ } }
+    const guardar = () => { const atual = memoriaDasLojas.get(lojaId); if (atual && typeof window !== 'undefined') memoriaDasLojas.set(lojaId, { ...atual, rolagem: window.scrollY }); };
+    if (typeof window !== 'undefined') window.addEventListener('scroll', guardar, { passive: true });
+    return () => { guardar(); if (typeof window !== 'undefined') window.removeEventListener('scroll', guardar); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lojaId]);
   return (
     <div className="loja-estilo loja-vida" data-loja={lojaId}>
       <p className="nota">
@@ -130,14 +148,25 @@ export function LojaDaVida({ vida, agir, lojaId }: { vida: Vida; agir: (a: Acao)
         <label className="campo campo--compacto"><span className="campo__rotulo">Preço</span>
           <select value={m.preco} onChange={ev => mudar({ preco: ev.target.value, quantos: POR_PAGINA })}>{FAIXAS_DE_PRECO.map(f => <option key={f.id} value={f.id}>{f.rotulo}</option>)}</select>
         </label>
+        {metais.length > 1 && (
+          <label className="campo campo--compacto"><span className="campo__rotulo">Material</span>
+            <select value={m.metal ?? ''} onChange={ev => mudar({ metal: ev.target.value, quantos: POR_PAGINA })}><option value="">Todos</option>{metais.map(x => <option key={x} value={x}>{METAIS20[x].nome}</option>)}</select>
+          </label>
+        )}
+        {pedras.length > 1 && (
+          <label className="campo campo--compacto"><span className="campo__rotulo">Pedra</span>
+            <select value={m.pedra ?? ''} onChange={ev => mudar({ pedra: ev.target.value, quantos: POR_PAGINA })}><option value="">Todas</option><option value="sem">Sem pedra</option>{pedras.map(x => <option key={x} value={x}>{PEDRAS20[x].nome}</option>)}</select>
+          </label>
+        )}
         <label className="campo campo--compacto"><span className="campo__rotulo">Ordenar</span>
-          <select value={m.ordem} onChange={ev => mudar({ ordem: ev.target.value as OrdemDeCompras })}><option value="relevancia">Como na loja</option><option value="menor">Menor preço</option><option value="maior">Maior preço</option><option value="qualidade">Melhor qualidade</option></select>
+          <select value={m.ordem} onChange={ev => mudar({ ordem: ev.target.value as OrdemDeCompras })}><option value="relevancia">Como na loja</option><option value="menor">Menor preço</option><option value="maior">Maior preço</option><option value="qualidade">Melhor qualidade</option><option value="nome">Nome (A–Z)</option><option value="marca">Marca (A–Z)</option></select>
         </label>
       </div>
       {ambientes.length > 1 && i >= 18 && !q && <Conjuntos14 vida={vida} agir={agir} />}
-      <p className="nota">{visiveis.length} {visiveis.length === 1 ? 'produto' : 'produtos'}{m.texto || m.marca || m.preco || cat || faixa || tipo || ambiente || ambiente22 ? ' com esses filtros' : ''}.</p>
+      <label className="loja27-meus"><input type="checkbox" checked={!!m.meus} onChange={ev => mudar({ meus: ev.target.checked, quantos: POR_PAGINA })} /> Só o que já é meu</label>
+      <p className="nota">{visiveis.length} {visiveis.length === 1 ? 'produto' : 'produtos'}{m.texto || m.marca || m.preco || cat || faixa || tipo || ambiente || ambiente22 || m.metal || m.pedra || m.meus ? ' com esses filtros' : ''}.{(m.texto || m.marca || m.preco || faixa || tipo || m.metal || m.pedra || m.meus) ? ' ' : ''}{(m.texto || m.marca || m.preco || faixa || tipo || m.metal || m.pedra || m.meus) && <button type="button" className="link" onClick={() => mudar({ texto: '', marca: '', preco: '', faixa: '', tipo: '', metal: '', pedra: '', meus: false, cat: '', quantos: POR_PAGINA })}>Limpar os filtros</button>}</p>
       {provador.length > 0 && <Provador vida={vida} itens={provador} tirar={k => setProvador(l => l.filter((_, j) => j !== k))} aoFechar={() => setProvador([])} />}
-      <ul className="catalogo-loja" data-loja={lojaId}>
+      <ul className="catalogo-loja" data-loja={lojaId} ref={lista}>
         {visiveis.slice(0, quantos).map(l => <ProdutoNaLoja key={l.chave} vida={vida} agir={agir} linha={l} lojaId={lojaId} faixa={faixa} marca={m.marca} preco={preco} crianca={i < 12} provando={provador.find(x => x.itemId === l.produto.id)?.variante} provar={(variante: string, marca?: string) => setProvador(lista => { const ja = lista.findIndex(x => x.itemId === l.produto.id); if (ja >= 0 && lista[ja].variante === variante && lista[ja].marca === marca) return lista.filter((_, k) => k !== ja); const sem = ja >= 0 ? lista.filter((_, k) => k !== ja) : lista; return [...sem, { itemId: l.produto.id, variante, marca }].slice(-6); })} />)}
       </ul>
       {visiveis.length > quantos && <button type="button" className="botao botao--discreto" onClick={() => setQuantos(q => q + POR_PAGINA)}>Ver mais ({visiveis.length - quantos})</button>}
@@ -273,6 +302,8 @@ function ProdutoNaLoja({ vida, agir, linha, lojaId, faixa, marca, preco, crianca
       <span className="catalogo-loja__categoria nota">{categoria}{o.marca ? ` · ${marcaPorId(o.marca)!.nome}` : ''}{o.importado ? ' · importado' : ''}</span>
       <span className="catalogo-loja__descricao">{descricao}{edicao ? ` (${edicao}.)` : ''}</span>
       {it && construcaoDaPeca(p.id).length > 0 && <span className="catalogo-loja__construcao nota" data-construcao>{construcaoDaPeca(p.id).join(' · ')}</span>}
+      {/* VIDA 27 · §9: o material e a pedra à vista, para comparar sem abrir o produto. */}
+      {joia20(p.id) && <span className="catalogo-loja__material nota" data-material={joia20(p.id)!.metal}>{cap(leituraDoMetal(joia20(p.id)!.metal))}{joia20(p.id)!.pedra ? ` · ${PEDRAS20[joia20(p.id)!.pedra!].nome}` : ''}</span>}
       {lm && <span className="catalogo-loja__marca-perfil nota" data-segmento-marca={lm.segmento}>{marcaPorId(o.marca!)!.nome}, {lm.segmento}{lm.fama ? ` — conhecida por ${NOME_QUALIDADE[lm.fama]}` : ''}.{lm.frase ? ` ${lm.frase}` : ''}{efeitoDaMarca(lm.notas, c?.id)}</span>}
       {linha.ofertas.length > 1 && !tem && (
         <label className="campo campo--compacto catalogo-loja__marca"><span className="campo__rotulo">Marca</span>

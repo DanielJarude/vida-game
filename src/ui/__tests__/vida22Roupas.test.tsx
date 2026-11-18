@@ -66,6 +66,8 @@ describe('VIDA 22 · provador e looks', () => {
   });
   it('guarda o look com a ocasião e muda a ocasião depois', () => {
     let v = base();
+    // VIDA 27 · §13: sem encontro por acaso nesta sequência de compras (na loja, o encontro agora é uma cena presencial que interrompe).
+    v.celular15 = { ...(v.celular15 ?? { ano: 0, msgs: [] }), encontrosNoAno: 99 };
     for (const id of ['camiseta_pima', 'jeans', 'tenis_casual']) v = executar(v, { tipo: 'comprar_item', itemId: id }).vida;
     v = executar(v, P({ o: 'look_salvar', nome: 'Dia a dia', ocasiao: 'casual' })).vida;
     const l = v.eu.estilo!.looksSalvos![0];
