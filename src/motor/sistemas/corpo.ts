@@ -37,6 +37,31 @@ export interface FatoresDeRisco {
   municipioId: string;
   /** Pai ou mãe com a mesma condição (com nome: a família sabe). */
   naFamilia: (id: string) => boolean;
+  /** VIDA 27: gordura corporal em desvios da média (`Corpo.composicao24.g`; ausente: não se sabe — neutro). */
+  gordura?: number;
+  /** VIDA 27: condicionamento (`Corpo.forma`; ausente: neutro). */
+  forma?: number;
+  /** VIDA 27: bebe muito (o hábito, não o gole social). */
+  bebeMuito?: boolean;
+  /** VIDA 27: a alimentação escolhida no plano do corpo (`Plano24.alimentacao`). */
+  alimentacao?: string;
+}
+
+/**
+ * VIDA 27 · §2: o peso de cada fator nas condições metabólicas (pressão alta, diabetes). Antes, a idade sozinha
+ * levava quase todo mundo à pressão alta (perfil sem fator nenhum: 56% aos 60, 81% aos 75) e só sedentarismo,
+ * estresse e família mexiam. Agora a curva da idade é mais baixa e o que de fato pesa — gordura corporal,
+ * sedentarismo, bebida, família, estresse — separa quem tem risco de quem não tem; o condicionamento e a comida
+ * equilibrada protegem. Medido em `scripts/sim/saude27.ts`.
+ */
+function pesoMetabolico(f: FatoresDeRisco, forte: number): number {
+  const g = f.gordura;
+  let x = g === undefined ? 1 : g >= 2.5 ? 1 + forte : g >= 1.2 ? 1 + forte * 0.5 : g >= 0.45 ? 1 + forte * 0.15 : g <= -0.5 ? 0.8 : 1;
+  if (f.sedentario) x *= 1.4;
+  else if ((f.forma ?? 0) >= 70) x *= 0.75;
+  if (f.alimentacao === 'equilibrada') x *= 0.85;
+  else if (f.alimentacao === 'superavit') x *= 1.1;
+  return x;
 }
 
 const PESADO = ['construcao', 'agro', 'cuidado'];
@@ -47,7 +72,8 @@ export function fatoresDoProtagonista(v: Vida): FatoresDeRisco {
     sedentario: v.corpo.habitos.sedentario, fuma: v.corpo.habitos.fuma, estresse: v.mente.estresse, felicidade: v.mente.felicidade,
     trabalhoPesado: !!v.trabalho.atual && PESADO.some(t => v.trabalho.atual!.ocupacaoId.includes(t)),
     municipioId: v.moradia.municipioId,
-    naFamilia: temNaFamilia(pais(v).map(p => p.condicoes ?? []))
+    naFamilia: temNaFamilia(pais(v).map(p => p.condicoes ?? [])),
+    gordura: v.corpo.composicao24?.g, forma: v.corpo.forma, bebeMuito: v.corpo.habitos.bebe === 'muito', alimentacao: v.corpo.plano24?.alimentacao
   };
 }
 
@@ -67,12 +93,15 @@ export interface ModeloCondicao {
 const MODELOS: ModeloCondicao[] = [
   {
     id: 'hipertensao', nome: 'pressão alta', cronica: true, gravidade: 1, perda: [1, 0.2],
-    risco: (f, i) => i < 28 ? 0 : (0.004 + (i - 28) * 0.0012) * (f.sedentario ? 1.5 : 1) * (f.estresse > 60 ? 1.4 : 1) * (f.naFamilia('hipertensao') ? 1.4 : 1),
+    // Sem fator nenhum: ~20% aos 60, ~40% aos 75; com vários fatores, a maioria. (A idade pesa sem tornar inevitável.)
+    risco: (f, i) => (i < 18 ? 0 : i < 25 ? 0.0005 : 0.0022 * Math.exp(0.05 * (i - 25)))
+      * pesoMetabolico(f, 1) * (f.bebeMuito ? 1.4 : 1) * (f.fuma ? 1.1 : 1) * (f.estresse > 60 ? 1.3 : 1) * (f.naFamilia('hipertensao') ? 1.8 : 1),
     descoberta: 'Uma medição de pressão num posto de saúde deu alta. O médico falou em remédio para o resto da vida.'
   },
   {
     id: 'diabetes', nome: 'diabetes', cronica: true, gravidade: 2, perda: [1.5, 0.4],
-    risco: (f, i) => i < 35 ? 0 : (0.002 + (i - 35) * 0.0006) * (f.sedentario ? 1.8 : 1) * (f.naFamilia('diabetes') ? 1.5 : 1),
+    // Sem fator: ~6% aos 60, ~14% aos 75; a obesidade, o sedentarismo e a família multiplicam.
+    risco: (f, i) => (i < 30 ? 0 : 0.0009 * Math.exp(0.05 * (i - 30))) * pesoMetabolico(f, 2) * (f.sedentario ? 1.15 : 1) * (f.naFamilia('diabetes') ? 1.8 : 1),
     descoberta: 'Um exame de sangue apontou diabetes. A comida da casa precisou mudar.'
   },
   {
@@ -110,6 +139,33 @@ export const modeloCondicao = (id: string) => MODELOS.find(m => m.id === id);
 /** A chance de a condição surgir neste ano para o protagonista. */
 // REWORK 9.6 · ATR-01: a constituição muda um pouco o risco das doenças do corpo (±25%); as da cabeça, não.
 export const riscoNoAno = (v: Vida, m: ModeloCondicao, i = idade(v)) => m.risco(fatoresDoProtagonista(v), i) * (m.id === 'depressao' || m.id === 'ansiedade' ? 1 : 1 - predisposicao(v, 'saude') * 0.25);
+
+/**
+ * VIDA 27 · §2: o que um check-up enxerga ANTES de a condição existir — o risco de agora comparado ao de alguém da
+ * mesma idade sem fator nenhum. Não cria doença (antes o check-up criava pressão alta/diabetes por sorteio, somando
+ * à incidência natural: quem fazia exame todo ano adoecia mais). Devolve a condição no limite e o que mais pesa.
+ */
+export function limiteNoCheckup(v: Vida, i = idade(v)): { id: 'hipertensao' | 'diabetes'; nome: string; pesa: string[] } | null {
+  const f = fatoresDoProtagonista(v);
+  const neutro: FatoresDeRisco = { ...f, sedentario: false, fuma: false, estresse: 35, gordura: 0, forma: 50, bebeMuito: false, alimentacao: 'habitual', naFamilia: () => false };
+  let melhor: { id: 'hipertensao' | 'diabetes'; rel: number } | null = null;
+  for (const id of ['hipertensao', 'diabetes'] as const) {
+    if (v.corpo.condicoes.some(c => c.id === id)) continue;
+    const m = modeloCondicao(id)!;
+    const base = m.risco(neutro, i);
+    if (base <= 0) continue;
+    const rel = m.risco(f, i) / base;
+    if (rel >= 2 && (!melhor || rel > melhor.rel)) melhor = { id, rel };
+  }
+  if (!melhor) return null;
+  const pesa: string[] = [];
+  if ((f.gordura ?? 0) >= 1.2) pesa.push('o peso');
+  if (f.sedentario) pesa.push('a falta de movimento');
+  if (f.bebeMuito && melhor.id === 'hipertensao') pesa.push('a bebida');
+  if (f.estresse > 60 && melhor.id === 'hipertensao') pesa.push('o estresse');
+  if (f.naFamilia(melhor.id)) pesa.push('a história da família');
+  return { id: melhor.id, nome: melhor.id === 'hipertensao' ? 'a pressão' : 'a glicemia', pesa };
+}
 
 /** Envelhecimento e condições do ano. Devolve se algo marcante aconteceu. */
 export function processarCorpo(v: Vida, r: Rng): void {

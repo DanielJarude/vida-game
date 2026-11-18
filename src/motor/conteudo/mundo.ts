@@ -37,6 +37,9 @@ import { anoDe } from '../tempo';
 import { curso } from '../dados/cursos';
 import { em } from '../sistemas/escola';
 import { categoriaDoVeiculo, textoVeiculo } from '../sistemas/veiculos';
+import { limiteNoCheckup } from '../sistemas/corpo';
+import { diagnosticar } from '../sistemas/saude';
+import { listaNatural } from '../texto';
 
 
 /** O pai ou a mãe que mora em casa e tem um ofício qualificado — quem um empregador de fora patrocina e leva a família junto. */
@@ -350,14 +353,22 @@ export const MUNDO: Conteudo[] = [
   },
   {
     id: 'adu_check_up', tipo: 'decisao', idade: [40, 90], tema: 'saude', repetir: 5,
-    quando: c => c.v.corpo.condicoes.length === 0,
+    quando: c => c.v.corpo.condicoes.every(x => x.diagnosticada === false),
     titulo: 'O check-up',
     texto: c => `${P.parceiro(c.v)[0] ? `${P.parceiro(c.v)[0].nome} insiste` : 'O posto de saúde mandou uma carta insistindo'}: faz anos que você não faz exame nenhum.`,
     opcoes: [
       { id: 'fazer', texto: 'Marcar os exames', comportamento: { disciplina: 1 },
+        // VIDA 27 · §2: antes, 25% fixos de "acharam pressão alta" a cada check-up, sem olhar risco nenhum (somava à
+        // incidência natural). Agora o exame acha o que JÁ existe sem nome, ou avisa do limite pelo risco real.
         resolver: c => {
-          const achou = c.r.chance(0.25);
-          return { texto: achou ? 'Os exames acharam uma pressão alta no começo. Remédio barato, dieta, caminhada.' : 'Tudo em ordem, disse o médico — por enquanto.', memoria: achou ? 'Descobriu pressão alta num check-up, a tempo de tratar.' : null, efeito: () => { if (achou) c.v.corpo.condicoes.push({ id: 'hipertensao', nome: 'pressão alta', tInicio: c.v.t, cronica: true, gravidade: 1, tratando: true }); } };
+          const semNome = c.v.corpo.condicoes.find(x => x.diagnosticada === false && x.cronica);
+          if (semNome) {
+            return { texto: `Os exames acharam ${semNome.nome}, que vinha dando sinais. Melhor saber agora: o tratamento começa já.`, memoria: `Descobriu ${semNome.nome} num check-up.`,
+              efeito: () => { diagnosticar(c.v, semNome, 'checkup'); semNome.tratando = true; } };
+          }
+          const limite = limiteNoCheckup(c.v);
+          if (limite) return { texto: `Nada fechado como doença, mas ${limite.nome} no limite${limite.pesa.length ? ` — e pesa ${listaNatural(limite.pesa)}` : ''}. Dieta, caminhada, voltar daqui a um ano.`, memoria: null, efeito: () => { c.v.fatos[`limite_${limite.id}`] = c.v.t; } };
+          return { texto: 'Tudo em ordem, disse o médico — por enquanto.', memoria: null };
         } },
       { id: 'adiar', texto: 'Deixar para depois', resolver: () => ({ texto: 'A carta foi para a gaveta.', memoria: null }) }
     ]

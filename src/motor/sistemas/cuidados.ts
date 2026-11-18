@@ -19,7 +19,7 @@ import { bloqueio, PERMITIDO, podeTentar, type Veredito } from '../plausibilidad
 import { aplicarPersonalidade } from '../personalidade';
 import { abalar } from './abalo';
 import { apoios, fatoresCabeca, fatoresHumor, fatoresSaude, sobrecargaDaSemana } from './estado';
-import { modeloCondicao, riscoNoAno } from './corpo';
+import { limiteNoCheckup } from './corpo';
 import { diagnosticar, encaminhado, MENTAIS, redeDeSaude, registrarDiagnostico, semNome, SINAIS } from './saude';
 import { perfilDaVida } from '../mundo/vida';
 import { modeloRotina, podeComecarRotina } from './rotinas';
@@ -123,20 +123,13 @@ function consulta(v: Vida, r: Rng): SaidaCuidado {
     if (v.processos.some(p => p.tipo === 'tratamento')) return { resultado: `O médico olhou o encaminhamento: a fila ${redeDeSaude(v).do} para ${semTratar.nome} continua andando. Mandou não parar de se cuidar enquanto isso.` };
     return { decisao: 'sau_tratamento' };
   }
-  // Um check-up pega cedo o que o corpo ainda não mostrou.
-  const riscos: { id: 'hipertensao' | 'diabetes'; chance: number }[] = [];
-  const hip = modeloCondicao('hipertensao');
-  const dia = modeloCondicao('diabetes');
-  if (hip && !v.corpo.condicoes.some(x => x.id === 'hipertensao')) riscos.push({ id: 'hipertensao', chance: Math.min(0.35, riscoNoAno(v, hip, i) * 3) });
-  if (dia && !v.corpo.condicoes.some(x => x.id === 'diabetes')) riscos.push({ id: 'diabetes', chance: Math.min(0.25, riscoNoAno(v, dia, i) * 3) });
-  for (const x of riscos) {
-    if (r.chance(x.chance)) {
-      const m = modeloCondicao(x.id)!;
-      v.corpo.condicoes.push({ id: m.id, nome: m.nome, tInicio: v.t, cronica: true, gravidade: m.gravidade, tratando: true });
-      v.fatos[`teve_${m.id}`] = (v.fatos[`teve_${m.id}`] ?? 0) + 1;
-      escrever(v, { texto: `Um check-up pegou cedo: ${m.nome}. O tratamento começou antes de o corpo reclamar.`, relevancia: 'biografia', tema: 'saude', tom: 'neutro', escolha: true });
-      return { resultado: `O exame pegou ${m.nome} ainda no começo. Remédio desde já — é bem melhor descobrir assim do que por um susto.` };
-    }
+  // VIDA 27 · §2: o check-up não sorteia doença nova (isso somava à incidência natural: quem fazia exame todo ano
+  // adoecia mais). O que ele enxerga antes de existir é o RISCO: pressão ou glicemia no limite, e o que pesa nelas.
+  const limite = limiteNoCheckup(v, i);
+  if (limite) {
+    v.fatos[`limite_${limite.id}`] = v.t;
+    escrever(v, { texto: `Um check-up mostrou ${limite.nome} no limite. Ainda não é doença — é aviso.`, relevancia: 'cotidiano', tema: 'saude', tom: 'neutro', escolha: true });
+    return { resultado: `Os exames não fecharam doença nenhuma, mas ${limite.nome} está no limite${limite.pesa.length ? `: pesa ${listaNatural(limite.pesa)}` : ''}. O médico foi claro — mexer nisso agora evita o remédio depois.` };
   }
   const contra = fatoresSaude(v).filter(f => f.efeito <= -0.5 && f.id !== 'idade').sort((a, b) => a.efeito - b.efeito).slice(0, 2);
   const tratando = v.corpo.condicoes.filter(x => x.tratando);
