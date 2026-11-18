@@ -11,6 +11,7 @@
  * vêm das causas: sobrecarga pede tirar algo da semana; luto pede gente perto.
  */
 
+import { SaudeMental27 } from '../v27/SaudeMental27';
 import { FormasDeReconhecimento } from '../v21/carreiras/FormasDeReconhecimento';
 import { sobDemanda } from '../util/sobDemanda';
 /** REWORK 12.4: os gostos (música e arte) e o que se faz com eles (pacote sob demanda). */
@@ -161,6 +162,8 @@ export function Voce({ vida, agir, irPara, abrirPessoa, parte: parteDeFora, irPa
 
       <div className={fora('saude')}>
       {parte === 'saude' && vida.dependencias14 && <Dependencias14 vida={vida} agir={agir} />}
+      {/* VIDA 27 · §15: a saúde mental como processo (a fase, o que pesa, o que ajuda, a recuperação). */}
+      <SaudeMental27 vida={vida} />
       {!(sinais.length > 0 || condicoes.length > 0) && (
         <div id="voce-saude" className="voce-saude prontuario papel papel--sem-dobra">
           <p className="prontuario__cabeca"><span>Prontuário</span><span>{vida.eu.nome} {vida.eu.sobrenome} · {i} anos</span></p>

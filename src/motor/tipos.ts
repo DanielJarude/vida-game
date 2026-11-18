@@ -759,6 +759,8 @@ export interface Mente {
    * corpo junto com o resto (`corpo.fatorDoEstresseProlongado`: condição, idade, saúde). Ausente = 0.
    */
   estresseAlto?: { anos: number; t: number };
+  /** VIDA 27 · §15: o sofrimento psicológico como processo (fase difícil, crise, recuperação) — `v27/mente/mente27`. Ausente: nunca houve. */
+  crise27?: import('./v27/mente/mente27').Crise27;
 }
 
 /**

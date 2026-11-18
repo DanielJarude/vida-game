@@ -171,6 +171,9 @@ export default defineConfig({
           // VIDA 25: idem (motor/v25/<frente> → motor25-<frente>): os e-sports.
           const v25 = /[\\/]src[\\/]motor[\\/]v25[\\/]([a-z0-9]+)[\\/]/.exec(id);
           if (v25) return `motor25-${v25[1]}`;
+          // VIDA 27: idem (motor/v27/<frente> → motor27-<frente>): a saúde mental.
+          const v27 = /[\\/]src[\\/]motor[\\/]v27[\\/]([a-z0-9]+)[\\/]/.exec(id);
+          if (v27) return `motor27-${v27[1]}`;
           // VIDA 26: idem (motor/v26/<frente> → motor26-<frente>): o corpo (capacidades, folha), o catálogo dos atributos
           // esportivos (folha), as ocupações do pós-carreira (folha) e os caminhos (pós-carreira e trajetórias).
           const v26 = /[\\/]src[\\/]motor[\\/]v26[\\/]([a-z0-9]+)[\\/]/.exec(id);

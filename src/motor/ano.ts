@@ -47,6 +47,7 @@ import { alvoCabeca, alvoHumor, registrarEstado } from './sistemas/estado';
 import { processarCurso, processarEscola, processarOab } from './sistemas/escola';
 import { depoisDoCurso129 } from './sistemas/estudos129';
 import { processarParalelas, tempoParaAObra } from './sistemas/paralelas';
+import { processarMente27 } from './v27/mente/mente27';
 import { processarAcademia } from './sistemas/academia';
 import { processarHabilitacoes } from './sistemas/habilitacoes';
 import { processarTrabalho } from './sistemas/trabalho';
@@ -233,6 +234,8 @@ function viverAno(v: Vida, r: Rng): void {
   praticandoPor('trabalho', () => processarTrabalho(v, r));
   // A segunda trajetória (a paralela) e as pausadas: experiência, freguesia, prazo (`paralelas`).
   praticandoPor('paralela', () => processarParalelas(v));
+  // VIDA 27 · §15: a saúde mental como processo (o que pesa, o que protege, quem percebe, a crise e a recuperação).
+  praticandoPor('mente27', () => processarMente27(v));
   // A vida acadêmica: projetos que terminam em artigo, orientandos que defendem (`academia`).
   processarAcademia(v);
   // Os cursos de habilitação rara (barco, avião) que terminam no ano (`habilitacoes`).
