@@ -415,8 +415,51 @@ export function depoisDaAcao15(v: Vida, a: { tipo: string; [k: string]: unknown 
   const r = rngDe(v.id, 'celular15_acaso', v.t, c.acoesNoAno);
   if (!r.chance(lugar === 'aeroporto' ? 0.3 : 0.2)) return;
   const m = encontroPorAcaso(v, r, lugar);
-  // VIDA 17: o acaso também é mensagem — só chega se sobrar cota (prioridade baixa: precisa de duas vagas).
-  if (m) { const mes = receber17(v, 'baixa'); if (mes === undefined) return; m.mes17 = mes; if (v.era) m.texto = textoDaEpoca(v, m.texto); c.msgs.push(m); c.encontrosNoAno = (c.encontrosNoAno ?? 0) + 1; }
+  // VIDA 27 · §13: o encontro por acaso é PRESENCIAL — acontece no lugar (uma cena, aberta pela ação: `enc27_*`), não
+  // chega como notificação do celular. Antes, "na fila do shopping, alguém chamou o seu nome" virava mensagem.
+  if (m) { c.encontro27 = { t: v.t, lugar, ...(m.de ? { pid: m.de } : {}), ...(m.tipo === 'fa' ? { fa: true } : {}) }; c.encontrosNoAno = (c.encontrosNoAno ?? 0) + 1; }
+}
+
+/** VIDA 27 · §13: o texto da cena presencial do encontro (o mesmo de antes, agora no lugar). */
+export function textoDoEncontro27(v: Vida): string | undefined {
+  const e = v.celular15?.encontro27;
+  if (!e) return undefined;
+  if (e.fa) return `${cap(ONDE[e.lugar])}, alguém reconheceu você e chegou tremendo: "Posso tirar uma foto? Desculpa, é que eu sou muito seu fã."`;
+  const p = e.pid ? v.pessoas[e.pid] : undefined;
+  const vin = e.pid ? v.vinculos[e.pid] : undefined;
+  if (!p || !vin) return undefined;
+  const papel = papelDe(p, vin);
+  const anos = Math.round((v.t - vin.tUltimoContato) / 12);
+  const quanto = anos >= 2 ? ` — fazia ${anos} anos que vocês não se viam` : '';
+  return papel === 'ex' ? `${cap(ONDE[e.lugar])}, você deu de cara com ${p.nome}${quanto}. Um segundo de silêncio, os dois sem saber o que fazer com as mãos.`
+    : papel === 'genitor' || papel === 'irmao' || papel === 'avo' || papel === 'filho' ? `${cap(ONDE[e.lugar])}, quem aparece? ${p.nome}, por acaso. Riram da coincidência.`
+      : `${cap(ONDE[e.lugar])}, alguém chamou o seu nome: era ${p.nome}${quanto}.`;
+}
+
+/** VIDA 27 · §13: a escolha na cena presencial (as mesmas consequências de antes; conversar deixa um fio — "vamos marcar"). */
+export function resolverEncontro27(v: Vida, r: Rng, op: string): string {
+  const e = v.celular15?.encontro27;
+  if (!e) return '';
+  if (v.celular15) delete v.celular15.encontro27;
+  if (e.fa) {
+    if (op === 'conversar') { somarAoNome(v, origemDoNome(v) ?? 'arte', 1); contarReacao(v, 'fa_atender'); return 'Uma foto, um abraço, um "obrigado" tremido. A pessoa foi embora feliz.'; }
+    contarReacao(v, 'fa_recusar'); return 'Você recusou com educação. A pessoa entendeu — ou fingiu entender.';
+  }
+  const p = e.pid ? v.pessoas[e.pid] : undefined;
+  const vin = e.pid ? v.vinculos[e.pid] : undefined;
+  if (!p || !vin) return '';
+  const papel = papelDe(p, vin);
+  if (op === 'conversar') {
+    perto(vin, papel === 'ex' ? 2 : r.int(4, 7), true, v.t);
+    if (papel === 'ex') vin.tensao = clamp(vin.tensao - 6);
+    lembrarCom(v, p.id, `Encontraram-se por acaso ${ONDE[e.lugar]}.`, papel === 'ex' ? 'reconciliacao' : 'amizade', 1);
+    // A conversa pode continuar depois — por mensagem, se ninguém marcar nada (o fio vira cobrança: "e aquele café?").
+    if (papel !== 'ex') deixarFio17(v, { pid: p.id, tipo: 'promessa', t: v.t, dado: 'tomar um café' });
+    return papel === 'ex' ? 'Conversaram uns minutos, educados. Na despedida, um "se cuida" sincero.' : `Ficaram meia hora ali mesmo, ${ONDE[e.lugar]}. Saíram com a promessa de marcar — e o número salvo de novo.`;
+  }
+  if (op === 'cumprimentar') { perto(vin, 1, true, v.t); return 'Um aceno, um "quanto tempo!", cada um para o seu lado.'; }
+  perto(vin, papel === 'amigo' || papel === 'amigo_proximo' ? -3 : 0, false);
+  return `Você olhou para o outro lado. ${papel === 'amigo' || papel === 'amigo_proximo' ? `${p.nome} viu — e percebeu.` : 'Ninguém percebeu. Talvez.'}`;
 }
 
 const ONDE: Record<Lugar15, string> = {

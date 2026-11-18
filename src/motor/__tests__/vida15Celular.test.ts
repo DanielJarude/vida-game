@@ -87,10 +87,12 @@ describe('VIDA 15 · durante o ano e por acaso', () => {
       processarCelular15(v);
       for (let k = 0; k < 12; k++) depoisDaAcao15(v, { tipo: 'experiencia', id: 'viagem_pais' });
       ondas += v.celular15!.ondas ?? 0;
-      const e = v.celular15!.msgs.filter(m => m.tipo === 'encontro' || (m.tipo === 'fa' && m.onda === 9));
-      expect(e.length).toBeLessThanOrEqual(3);
-      encontros += e.length;
-      for (const m of e) expect(opcoesDaMsg15(v, m).map(o => o.op)).toContain('conversar');
+      // VIDA 27 · §13: o encontro por acaso é presencial — vira cena no lugar (`encontro27`, aberta pela ação), nunca
+      // mensagem. Continua no máximo três por ano.
+      expect(v.celular15!.msgs.some(m => m.tipo === 'encontro' || (m.tipo === 'fa' && m.onda === 9))).toBe(false);
+      const n = v.celular15!.encontrosNoAno ?? 0;
+      expect(n).toBeLessThanOrEqual(3);
+      encontros += n;
     }
     expect(ondas).toBeGreaterThan(20);
     expect(encontros).toBeGreaterThan(3);

@@ -167,7 +167,11 @@ export function candidatos17(v: Vida, excluir: Set<string>, fama: number): Candi
     const proximo = PROXIMOS.includes(papel) && vin.proximidade >= 40;
 
     // Desabafo: quem confia em você conta o que está passando (o motivo é o estado real da pessoa).
-    if (eu >= 15 && ip >= 15 && vin.confianca >= 45 && (proximo || papel === 'amigo_proximo' || (papel === 'filho' && ip >= 18)) && !moraJunto(vin)) {
+    // VIDA 27 · §13: um adulto não desabafa a demissão, a dívida ou a separação com um adolescente que não é seu par
+    // (o tio que perdeu o emprego conta a NOTÍCIA para a família; não pede apoio a um sobrinho de 15 anos). Entre menores,
+    // e com o irmão ou a irmã mais velha (até uns 25), o desabafo continua.
+    const adultoParaMenor = eu < 18 && ip >= 18 && !(papel === 'irmao' && ip <= 25);
+    if (eu >= 15 && ip >= 15 && !adultoParaMenor && vin.confianca >= 45 && (proximo || papel === 'amigo_proximo' || (papel === 'filho' && ip >= 18)) && !moraJunto(vin)) {
       const ap = p.aperto && !p.aperto.resolvido && v.t - p.aperto.t <= 18 ? p.aperto : undefined;
       const sit = ap ? ({ separacao: 'desabafo_separacao', dinheiro: 'desabafo_dinheiro', desemprego: 'desabafo_desemprego', doenca: 'desabafo_saude', fase: 'desabafo_cansaco', luto: '' } as Record<string, string>)[ap.tipo]
         : p.parceiroId && p.vivo ? 'desabafo_amor' : trabalhaHoje(p, ip) && ip >= 18 ? 'desabafo_trabalho' : vin.confianca >= 60 ? 'desabafo_familia' : 'desabafo_cansaco';
@@ -253,10 +257,15 @@ export function opcoes17(v: Vida, m: Msg15): OpcaoMsg17[] {
   const par = parceiro(v);
   const exclusivo = !!par && par.p.id !== m.de && !acordoConsentido(par.vin.romance);
   const pagar = (x: number | undefined, t: string) => (x ? vereditoDePagar(v, x, t) : PERMITIDO);
+  // VIDA 27 · §13: as respostas cabem em quem responde — quem é menor de idade não "manda um pix" para resolver o aperto
+  // de um adulto, nem dá conselho de vida a quem tem o dobro da idade; ouvir e apoiar, sempre.
+  const eu = idade(v);
+  const de = m.de ? v.pessoas[m.de] : undefined;
+  const ipDe = de ? idadePessoa(v, de) : eu;
   if (sit.startsWith('desabafo')) return [
     op('apoio', 'Oferecer apoio de verdade'),
-    op('conselho', 'Dar um conselho'),
-    ...(sit === 'desabafo_dinheiro' || sit === 'desabafo_separacao' || sit === 'desabafo_desemprego' ? [op('ajudar', 'Oferecer ajuda com dinheiro', pagar(500, 'Ajudar custa uns'))] : []),
+    ...(eu < 18 && ipDe >= eu + 10 ? [] : [op('conselho', 'Dar um conselho')]),
+    ...(eu >= 18 && (sit === 'desabafo_dinheiro' || sit === 'desabafo_separacao' || sit === 'desabafo_desemprego') ? [op('ajudar', 'Oferecer ajuda com dinheiro', pagar(500, 'Ajudar custa uns'))] : []),
     op('engracada', 'Tentar arrancar uma risada'),
     op('evasiva', 'Responder por alto')];
   if (sit === 'brincadeira_aposta') return [op('provocar', 'Aceitar a aposta'), op('engracada', 'Rir e devolver a provocação'), op('evasiva', 'Deixar no visto')];

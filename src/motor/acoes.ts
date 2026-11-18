@@ -1065,6 +1065,17 @@ export function condicoesEmprestimo(v: Vida, valor: number, meses: number): Cond
 
 /* ================================================================= Execução */
 
+/** VIDA 27 · §13: abre a cena do encontro por acaso (se a ação levou a um lugar e alguém apareceu), sem atropelar outra. */
+export function abrirEncontro27(v: Vida, r: Rng): void {
+  const e = v.celular15?.encontro27;
+  if (!e || e.t !== v.t) return;
+  if (v.momento) { delete v.celular15!.encontro27; return; }
+  const d = conteudoPorId(e.fa ? 'enc27_fa' : 'enc27_acaso');
+  const p = e.pid ? v.pessoas[e.pid] : undefined;
+  if (!d || d.tipo !== 'decisao' || (!e.fa && !p?.vivo)) { delete v.celular15!.encontro27; return; }
+  abrirDecisao(v, d, contexto(v, r, p ? { pessoa: p } : {}));
+}
+
 export function executar(vida: Vida, a: Acao): Retorno {
   entrarNaVida(vida);
   const disp = disponibilidade(vida, a);
@@ -1101,6 +1112,8 @@ export function executar(vida: Vida, a: Acao): Retorno {
     conferir(v, ...linhaDoExtrato(a));
     // VIDA 15: o ano anda com o que você faz — chega mais gente; um lugar pode pôr alguém conhecido no caminho.
     depoisDaAcao15(v, a as unknown as { tipo: string; [k: string]: unknown });
+    // VIDA 27 · §13: o encontro por acaso no lugar da ação é uma cena presencial, aberta agora (não uma notificação).
+    abrirEncontro27(v, r);
     // REWORK 9: a agenda guarda só escolhas de coisas que existem (a atividade largada leva o lugar dela junto).
     limparAgenda(v);
     // REWORK 12.4: os objetos nunca ficam num lugar que deixou de existir (o imóvel vendido, a casa para onde se mudou).
