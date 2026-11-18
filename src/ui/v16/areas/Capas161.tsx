@@ -9,6 +9,7 @@ import { idade } from '../../../motor/nucleo';
 import { anoDe } from '../../../motor/tempo';
 import { nomeLugar } from '../../../motor/dados/lugares';
 import { nomeDoPais14 } from '../../../motor/v14/viagens/viagens14';
+import { leituraDoPassaporte } from '../../../motor/sistemas/passaporte';
 import { leituraDaFama13, marcosDaFama13 } from '../../../motor/sistemas/reconhecimento13';
 import { leituraDaSeguranca } from '../../leituraMaterial';
 import { dinheiroCurto } from '../../apresentar';
@@ -71,9 +72,9 @@ export function Manchete161({ vida }: { vida: Vida }) {
 /* ------------------------------------------------------------------ Viagens: o passaporte */
 
 export function Passaporte161({ vida }: { vida: Vida }) {
-  // Os países de fora por onde passou (o de casa não carimba).
-  const paises = Object.keys(vida.viagens14?.paises ?? {}).map(nomeDoPais14);
-  const n = vida.viagens14?.n ?? 0;
+  // VIDA 27 · §6: cada viagem concluída conta (de Viagens, das Experiências, a lua de mel); o país repetido é mais uma
+  // viagem, não mais um país. O de casa não carimba.
+  const l = leituraDoPassaporte(vida);
   const casa = nomeLugar(vida.moradia.municipioId);
   return (
     <section className="passaporte161" aria-label="O seu passaporte">
@@ -84,10 +85,16 @@ export function Passaporte161({ vida }: { vida: Vida }) {
       </div>
       <div className="passaporte161__paginas">
         <p className="passaporte161__partida"><span>Partindo de</span><strong>{casa}</strong></p>
-        <p className="passaporte161__conta"><strong>{n}</strong> {n === 1 ? 'viagem registrada' : 'viagens registradas'} · <strong>{paises.length}</strong> {paises.length === 1 ? 'país fora' : 'países fora'}</p>
-        {paises.length > 0
-          ? <ul className="passaporte161__carimbos" aria-label="Países visitados">{paises.slice(0, 12).map((p, k) => <li key={p} className={`passaporte161__carimbo passaporte161__carimbo--${k % 4}`}>{p}</li>)}</ul>
+        <p className="passaporte161__conta"><strong>{l.viagens}</strong> {l.viagens === 1 ? 'viagem registrada' : 'viagens registradas'} ({l.internacionais} para fora, {l.nacionais} pelo país) · <strong>{l.paises.length}</strong> {l.paises.length === 1 ? 'país fora' : 'países fora'}</p>
+        {l.paises.length > 0
+          ? <ul className="passaporte161__carimbos" aria-label="Países visitados">{l.paises.slice(0, 16).map((p, k) => <li key={p.iso} className={`passaporte161__carimbo passaporte161__carimbo--${k % 4}`}>{nomeDoPais14(p.iso)}{p.vezes > 1 ? <span className="passaporte161__vezes"> ×{p.vezes}</span> : null}</li>)}</ul>
           : <p className="passaporte161__vazio">Nenhum carimbo ainda. A primeira viagem começa logo abaixo.</p>}
+        {l.ultimas.length > 0 && (
+          <details className="passaporte161__registro">
+            <summary>As últimas viagens</summary>
+            <ol>{l.ultimas.map((x, k) => <li key={k}><span>{anoDe(x.t)}</span> {x.destino}{x.internacional ? ` · ${x.paises.map(nomeDoPais14).join(', ')}` : ' · pelo país'}{x.dias ? ` · ${x.dias} dias` : ''}{x.via === 'lua_de_mel' ? ' · lua de mel' : ''}</li>)}</ol>
+          </details>
+        )}
       </div>
     </section>
   );

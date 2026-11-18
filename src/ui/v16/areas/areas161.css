@@ -158,3 +158,10 @@ main .of16__escolha button { text-align: left; justify-content: flex-start; }
 /* VIDA 18: o showroom vazio desenhado (as vagas no chão). */
 .gar161-vazia p { margin: 0; }
 .gar161-vazia svg { max-width: 100%; height: auto; margin-bottom: 6px; }
+/* VIDA 27 · §6: quantas vezes num país e o registro das últimas viagens. */
+.passaporte161__vezes { font-weight: 600; letter-spacing: 0; }
+.passaporte161__registro { margin-top: var(--space-3); font: 400 var(--type-caption)/1.4 var(--font-sans); color: var(--text-secondary); }
+.passaporte161__registro summary { cursor: pointer; min-height: var(--touch-target, 44px); display: flex; align-items: center; font-weight: 600; color: var(--text-primary); }
+.passaporte161__registro ol { margin: 0; padding-left: var(--space-4); }
+.passaporte161__registro li { overflow-wrap: anywhere; }
+.passaporte161__registro li span { font-variant-numeric: tabular-nums; font-weight: 600; }

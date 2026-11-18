@@ -3999,7 +3999,9 @@ export interface Vida {
    * viagens antigas na carga) e as viagens da VIDA 14 (tipo → quando foi a última, para o intervalo entre elas).
    * Ausente: nenhuma registrada (o natal e as mudanças de país contam do mesmo jeito — `paisesVisitados`).
    */
-  viagens14?: { paises: Record<string, number>; ultima?: Record<string, number>; n?: number };
+  viagens14?: { paises: Record<string, number>; ultima?: Record<string, number>; n?: number;
+    /** VIDA 27 · §6: cada viagem concluída, de qualquer caminho (Viagens, Experiências, lua de mel) — `sistemas/passaporte`. */
+    registro?: import('./sistemas/passaporte').ViagemRegistrada[] };
   /**
    * REWORK 11.5 · REL-22: uma relação entre TRÊS adultos (a parceria principal e o namoro paralelo do poliamor, que
    * também se relacionam): a harmonia entre os dois, os ciúmes, a casa, o dinheiro. Ausente: não há trio.

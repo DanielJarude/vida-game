@@ -30,6 +30,7 @@
  */
 
 import { viagem126 } from './viagens126';
+import { registrarViagem } from './passaporte';
 import { temCoisa } from './coisas';
 import { educacaoDaVida, paisDaVida } from '../mundo/vida';
 import { ORDEM_REGIOES, PAIS_PADRAO, ROTULO_REGIAO, doPais, existePais, paisDoCatalogo, paisesVivenciaveis, perfilDoPais } from '../mundo/registro';
@@ -242,6 +243,8 @@ interface DestinoDeViagem {
   /** Aceita o fim de semana prolongado (perto o bastante). */
   curta: boolean;
   grupo: string; grupoNome: string; secao?: string; ordem: number;
+  /** VIDA 27 · §6: o país (ISO) do destino — o passaporte registra. */
+  iso: string;
 }
 
 const pontoDeTurismo = (m: Municipio) => (m.capitalNacional ? 4 : 0) + (m.perfil === 'metropole' ? 3 : 0) + (m.litoral ? 2 : 0) + (m.capital ? 1 : 0);
@@ -257,7 +260,7 @@ function destinosDeViagem(v: Vida, fora: boolean): DestinoDeViagem[] {
         // O transporte: na mesma região, ônibus ou um voo curto; de outra região, avião (mais caro saindo de cidade pequena).
         const mesmaRegiao = regiaoDaUf(d.uf) === aqui.regiao;
         const rg = regiaoDaUf(d.uf);
-        return { id: d.id, nome: d.nome, ida: (mesmaRegiao ? 650 : 1500) + longe * 450 + (d.id === 'noronha' ? 900 : 0), diaria: d.diaria, curta: true, grupo: rg, grupoNome: rg, ordem: REGIOES_BR.indexOf(rg) };
+        return { id: d.id, nome: d.nome, ida: (mesmaRegiao ? 650 : 1500) + longe * 450 + (d.id === 'noronha' ? 900 : 0), diaria: d.diaria, curta: true, grupo: rg, grupoNome: rg, ordem: REGIOES_BR.indexOf(rg), iso: pais };
       });
     }
     // Fora do Brasil: as cidades do país que atraem visita (a capital, as metrópoles, o litoral), longe de casa.
@@ -269,7 +272,7 @@ function destinosDeViagem(v: Vida, fora: boolean): DestinoDeViagem[] {
         id: m.id.replace(':', '.'), nome: m.nome,
         ida: (m.uf === aqui.uf ? 650 : 1500) + longe * 450,
         diaria: Math.round(400 * economiaLocal(m.id).custo / 10) * 10,
-        curta: true, grupo: m.uf, grupoNome: nomeDaDivisao(m), ordem: Math.max(0, divisoes.indexOf(m.uf))
+        curta: true, grupo: m.uf, grupoNome: nomeDaDivisao(m), ordem: Math.max(0, divisoes.indexOf(m.uf)), iso: pais
       }));
   }
   // Para fora: a passagem e a diária estão na unidade do Brasil (o preço de mercado de lá); quem mora num país de preços
@@ -283,14 +286,14 @@ function destinosDeViagem(v: Vida, fora: boolean): DestinoDeViagem[] {
     for (const c of p.cidades) {
       const d = DESTINOS_FORA.find(x => x.id === c)!;
       const passagem = pais === PAIS_PADRAO ? d.passagem : passagemEntre(pais, p.iso);
-      out.push({ id: d.id, nome: d.nome, ida: (passagem + longe * 700) * f, diaria: d.diaria * f, curta: passagem < 3000, grupo: p.id, grupoNome: p.nome, secao: p.continente, ordem: regiao(p.iso) });
+      out.push({ id: d.id, nome: d.nome, ida: (passagem + longe * 700) * f, diaria: d.diaria * f, curta: passagem < 3000, grupo: p.id, grupoNome: p.nome, secao: p.continente, ordem: regiao(p.iso), iso: p.iso });
     }
   }
   if (pais !== PAIS_PADRAO) {
     const passagem = passagemEntre(pais, PAIS_PADRAO);
     for (const c of BRASIL_DE_FORA) {
       const d = DESTINOS_BR.find(x => x.id === c)!;
-      out.push({ id: d.id, nome: d.nome, ida: (passagem + longe * 700) * f, diaria: d.diaria * f, curta: passagem < 3000, grupo: 'brasil', grupoNome: 'Brasil', secao: ROTULO_REGIAO.america_sul, ordem: regiao(PAIS_PADRAO) });
+      out.push({ id: d.id, nome: d.nome, ida: (passagem + longe * 700) * f, diaria: d.diaria * f, curta: passagem < 3000, grupo: 'brasil', grupoNome: 'Brasil', secao: ROTULO_REGIAO.america_sul, ordem: regiao(PAIS_PADRAO), iso: PAIS_PADRAO });
     }
   }
   for (const p of paisesVivenciaveis()) {
@@ -299,7 +302,7 @@ function destinosDeViagem(v: Vida, fora: boolean): DestinoDeViagem[] {
     const diaria = Math.round(560 * precosDoPais(p.id) / 10) * 10;
     for (const id of [...new Set(grandesCentros(p.id))].reverse()) {
       const m = municipio(id);
-      out.push({ id: m.id.replace(':', '.'), nome: m.nome, ida: (passagem + longe * 700) * f, diaria: diaria * f, curta: passagem < 3000, grupo: p.id.toLowerCase(), grupoNome: p.nome, secao: ROTULO_REGIAO[p.regiao], ordem: regiao(p.id) });
+      out.push({ id: m.id.replace(':', '.'), nome: m.nome, ida: (passagem + longe * 700) * f, diaria: diaria * f, curta: passagem < 3000, grupo: p.id.toLowerCase(), grupoNome: p.nome, secao: ROTULO_REGIAO[p.regiao], ordem: regiao(p.id), iso: p.id });
     }
   }
   // Por continente (a ordem de sempre dentro dele).
@@ -463,6 +466,8 @@ export function viverExperiencia(v: Vida, r: Rng, id: TipoExperiencia, escolha?:
       const texto = par ? `Lua de mel em ${dest.nome} (${dur.nome}) com ${par.nome}.` : `Viajou para ${dest.nome} (${dur.nome})${com.length ? `, com ${nomes}` : flex(v.eu.genero, ', sozinho', ', sozinha', ', sozinhe')}.`;
       escrever(v, { texto, relevancia: par ? 'marco' : 'biografia', tema: par ? 'amor' : 'lazer', tom: 'bom', escolha: true, pessoas: com.map(p => p.id), fato: { tipo: 'm_viagem', dados: { destino: dest.nome, ...(par ? { lua: 1 } : {}) } } });
       if (par) viverLuaDeMel(v, par, dest.nome);
+      // VIDA 27 · §6: toda viagem concluída entra no passaporte (antes, só as de Viagens).
+      registrarViagem(v, { destino: dest.nome, paises: [dest.iso], via: par ? 'lua_de_mel' : 'experiencia', dias: dur.dias });
       const historia = acontecimentoDeViagem(v, r, dest.nome, com, fora, fator);
       // VIDA 12.6: o que o bolso, a idade e a companhia fazem acontecer; e o marco da primeira viagem sozinho.
       const extra = [historia, viagem126(v, dest.nome, com, fora, !!historia)].filter(Boolean).join(' ') || undefined;

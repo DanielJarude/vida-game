@@ -86,8 +86,8 @@ describe('VIDA 27 · partilha', () => {
     const { v, p } = casal();
     v.financas.conta = 0;
     const casa = imovel(v, 'casa', 500_000, v.t - 60);
-    v.financas.dividas.push({ id: 'fin', tipo: 'financiamento_imovel', saldo: 200_000, jurosMes: 0.008, parcela: 3000, bemId: casa.id, tInicio: v.t - 60, prazo: 240 });
-    v.financas.dividas.push({ id: 'emp', tipo: 'emprestimo', saldo: 40_000, jurosMes: 0.02, parcela: 1500, tInicio: v.t - 12, prazo: 36 });
+    v.financas.dividas.push({ id: 'fin', tipo: 'financiamento_imovel', descricao: 'Financiamento', saldo: 200_000, jurosMes: 0.008, parcela: 3000, bemId: casa.id, tInicio: v.t - 60, prazo: 240 });
+    v.financas.dividas.push({ id: 'emp', tipo: 'emprestimo', descricao: 'Empréstimo', saldo: 40_000, jurosMes: 0.02, parcela: 1500, tInicio: v.t - 12, prazo: 36 });
     const pl = planoDaPartilha(v, p, 'casamento');
     expect(pl.meu).toBe(260_000); // 500 − 200 (financiamento) − 40 (empréstimo)
     expect(pl.saldo).toBe(130_000);

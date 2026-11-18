@@ -24,6 +24,7 @@ import { companhiasDeViagem } from '../../sistemas/experiencias';
 import { empresasAtivas } from '../../sistemas/empresas';
 import { ocupacao } from '../../dados/ocupacoes';
 import { municipio } from '../../dados/lugares';
+import { registrarViagem } from '../../sistemas/passaporte';
 import {
   CANDIDATAS_COPA, DESTINOS_14, DESTINOS_ANTIGOS_PAIS, NOMES_PAISES_14, SEDES_DA_COPA, type Destino14, type TipoViagem14
 } from '../../dados14/viagens/destinos14';
@@ -105,12 +106,10 @@ export function paisesVisitados(v: Vida): string[] {
 }
 export const nomeDoPais14 = (iso: string) => NOMES_PAISES_14[iso] ?? iso;
 
-function registrar(v: Vida, d: Destino14): string[] {
-  const x = (v.viagens14 ??= { paises: {} });
-  const novos = d.paises.filter(p => x.paises[p] === undefined && p !== paisDaVida(v));
-  for (const p of d.paises) x.paises[p] ??= v.t;
-  (x.ultima ??= {})[d.tipo] = v.t;
-  x.n = (x.n ?? 0) + 1;
+function registrar(v: Vida, d: Destino14, dias: number): string[] {
+  // VIDA 27 · §6: o registro comum (cada viagem, uma a uma) — o mesmo das Experiências.
+  const novos = registrarViagem(v, { destino: d.nome, paises: d.paises, via: 'viagens', dias });
+  ((v.viagens14 ??= { paises: {} }).ultima ??= {})[d.tipo] = v.t;
   return novos;
 }
 
@@ -133,7 +132,7 @@ export function executarViagem14(v: Vida, r: Rng, a: OquaViagem14): { texto: str
   const com = quem(v, a.com);
   const custo = custoDaViagem14(v, d, a.dias, a.com);
   pagar(v, custo);
-  const novos = registrar(v, d);
+  const novos = registrar(v, d, a.dias);
   const fator = Math.min(1.5, 0.5 + a.dias / 10);
   const efeitos: string[] = [];
   // O descanso (a de negócios descansa pouco: é trabalho em outro fuso).
@@ -168,8 +167,31 @@ export function catalogoViagens14(v: Vida) {
   })).filter(g => g.destinos.length);
 }
 
+/**
+ * VIDA 27 · §6: o registro das viagens de antes (cada fato `m_viagem` da biografia é uma viagem concluída, de qualquer
+ * caminho). Uma vez só: com o registro, nada muda. O país vem do catálogo da VIDA 14 ou do mapa das viagens antigas.
+ */
+export function normalizarVida27Viagens(v: Vida): void {
+  if (v.viagens14?.registro) return;
+  const casa = paisDaVida(v);
+  const registro: NonNullable<NonNullable<Vida['viagens14']>['registro']> = [];
+  for (const e of v.biografia ?? []) {
+    if (e.fato?.tipo !== 'm_viagem') continue;
+    const destino = String(e.fato.dados.destino ?? '');
+    const d14 = DESTINOS_14.find(d => d.nome === destino);
+    const paises = d14 ? d14.paises : DESTINOS_ANTIGOS_PAIS[destino] ? [DESTINOS_ANTIGOS_PAIS[destino]] : [casa];
+    registro.push({ t: e.t ?? v.t, destino, paises, internacional: paises.some(p => p !== casa), via: d14 ? 'viagens' : e.fato.dados.lua ? 'lua_de_mel' : 'experiencia' });
+  }
+  if (!registro.length && !v.viagens14) return;
+  const x = (v.viagens14 ??= { paises: {} });
+  x.registro = registro.slice(-200);
+  x.n = Math.max(x.n ?? 0, registro.length);
+  for (const r of registro) for (const p of r.paises) if (p !== casa) x.paises[p] ??= r.t;
+}
+
 /** Saves: as viagens antigas (o fato `m_viagem` com o destino) entram nos países conhecidos. */
 export function normalizarVida14Viagens(v: Vida): void {
+  normalizarVida27Viagens(v);
   if (v.viagens14) return;
   const paises: Record<string, number> = {};
   for (const e of v.biografia ?? []) {
