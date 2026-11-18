@@ -90,7 +90,7 @@ import { disponibilidadeCasamento, executarCasamento, type OpCasamento } from '.
 import { disponibilidadePedirAjuda, pedirAjuda, principal as principalDaOrigem, type MotivoDeAjuda } from './sistemas/origem';
 import { autonomia } from './sistemas/autonomia';
 import { comprarItem, disponibilidadeAparencia, disponibilidadeComprarItem, disponibilidadeUsarItem, mudarAparencia, sincronizarVisual, usarItem, vestirLook, type MudancaVisual } from './sistemas/estilo';
-import { disponibilidadeEspolio21, executarEspolio21, type OqueEspolio21 } from './v21/crime/espolio21';
+import { disponibilidadeEspolio21, disponibilidadeLote21, executarEspolio21, venderLote21, type EscolhaDoLote21, type OqueEspolio21 } from './v21/crime/espolio21';
 import { disponibilidadeAgenda22, responderConvite22 } from './v22/fama/agenda22';
 import type { Comprador21 } from './dados21/crime/espolio21';
 import { clamp, rngDe } from './rng';
@@ -422,6 +422,8 @@ export type Acao =
   | { tipo: 'crime'; acao: AcaoDoCrime }
   /** VIDA 21: o que fazer com um bem que veio do crime (`v21/crime/espolio21`). */
   | { tipo: 'espolio21'; oque: OqueEspolio21; bemId: string; comprador?: Comprador21 }
+  /** VIDA 27 · §12: vender vários bens do crime de uma vez (o comprador escolhido, ou o que paga mais por item). */
+  | { tipo: 'espolio21_lote'; bemIds: string[]; comprador: EscolhaDoLote21 }
   /** VIDA 22: responder a um convite da agenda pública (`v22/fama/agenda22`). */
   | { tipo: 'fama22'; oque: 'aceitar' | 'recusar'; id: string }
   /** REWORK 11.5 · POL-05: as alianças e as promessas (formar, cumprir, romper, pedir apoio, prometer na campanha). */
@@ -496,6 +498,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'submundo': return disponibilidadeSubmundo(v, a.oque, a.ramo, a.pessoaId);
     case 'crime': return disponibilidadeCrime(v, a.acao);
     case 'espolio21': return disponibilidadeEspolio21(v, a.oque, a.bemId, a.comprador);
+    case 'espolio21_lote': return disponibilidadeLote21(v, a.bemIds, a.comprador);
     case 'fama22': return disponibilidadeAgenda22(v, a.oque, a.id);
     case 'alianca': return disponibilidadeAlianca(v, a.oque, a.id);
     case 'tatica': return disponibilidadeTatica(v, a.estilo);
@@ -1150,7 +1153,7 @@ function linhaDoExtrato(a: Acao): [string, TipoMovimento] {
     case 'colecao_servico': case 'colecao_proposta': case 'paralelo': return ['Coleção: compra e venda de peças', 'escolha'];
     case 'exotico_comprar': case 'instalacao_comprar': case 'pet_cuidador': case 'pet_ao_zoo': case 'animal_por_fora': return ['Os bichos: compras e cuidados', 'escolha'];
     // REWORK 12.25 · FIN-12.25-01: o que é do caminho tem linha própria (antes, a ação do Submundo caía em "Compras, viagens").
-    case 'clandestino': case 'submundo': case 'espolio21': return ['Por fora: outros movimentos do caminho', 'por_fora'];
+    case 'clandestino': case 'submundo': case 'espolio21': case 'espolio21_lote': return ['Por fora: outros movimentos do caminho', 'por_fora'];
     case 'crime': return a.acao.area === 'justica' ? ['Justiça: advogados, fianças e custas', 'despesa'] : a.acao.area === 'corrupcao' ? ['Por fora: dinheiro posto para influenciar a Justiça', 'por_fora'] : ['Por fora: outros movimentos do caminho', 'por_fora'];
     case 'margem': return ['Justiça: advogados, fianças e custas', 'despesa'];
     case 'conquistas14': return [linhaDoExtrato14(a.oque), 'escolha'];
@@ -1208,6 +1211,11 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       return { resultado: contrair(x.texto), titulo: a.ramo ? NOME_DO_RAMO[a.ramo] : 'O caminho' };
     }
     case 'fama22': { const x = responderConvite22(v, a.oque, a.id); return { resultado: x.texto, titulo: x.titulo }; }
+    case 'espolio21_lote': {
+      const x = venderLote21(v, a.bemIds, a.comprador);
+      sincronizarVisual(v);
+      return { resultado: x.texto, titulo: 'Venda no mercado paralelo' };
+    }
     case 'espolio21': {
       const x = executarEspolio21(v, a.oque, a.bemId, a.comprador);
       // A peça vai para o guarda-roupa de sempre e é vestida pelo caminho de sempre; ao sair, a Aparência se redesenha.

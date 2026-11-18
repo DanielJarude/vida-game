@@ -43,22 +43,28 @@ function comBens(v: Vida, oque: 'servico_pequeno' | 'servico_maior' = 'servico_p
 }
 
 describe('VIDA 21 · a parte de um serviço', () => {
-  it('soma o mesmo que antes: o dinheiro em espécie + o que o mercado paralelo pagaria pelos bens ≈ a parte', () => {
+  it('soma o mesmo que antes, na média: o dinheiro em espécie + o que o mercado paralelo pagaria pelos bens ≈ a parte', () => {
+    // VIDA 27 · §11: o dinheiro deixou de ser a sobra da conta (é o que o LUGAR tinha) e os objetos são os do lugar —
+    // então um serviço rende o que havia: a soma varia por lugar, e a economia se mantém na MÉDIA (antes, o teste
+    // exigia cada serviço a ±35% da parte, o que só valia porque a sobra virava dinheiro). Partes nas faixas reais.
     const v = noCaminho();
-    let diferenca = 0, comBem = 0, soDinheiro = 0;
+    const razoes: number[] = [];
+    let comBem = 0;
     const categorias = new Set<string>();
-    for (let k = 0; k < 60; k++) {
+    for (let k = 0; k < 80; k++) {
       const w = em(v, x => { x.t += k; });
-      const parte = 6000;
-      const p = repartir21(w, parte, k % 2 ? 3 : 1, 'teste', 3);
-      const soma = p.dinheiro + p.bens.reduce((s, b) => s + baseNoMercado21(b), 0);
-      diferenca = Math.max(diferenca, Math.abs(soma - parte) / parte);
-      if (p.bens.length) comBem++; else soDinheiro++;
+      const escala = k % 2 ? 3 : 1;
+      const parte = escala === 3 ? 12000 : 2500;
+      const p = repartir21(w, parte, escala, 'teste', 3);
+      razoes.push((p.dinheiro + p.bens.reduce((s, b) => s + baseNoMercado21(b), 0)) / parte);
+      if (p.bens.length) comBem++;
       for (const b of p.bens) categorias.add(b.categoria);
     }
-    expect(diferenca).toBeLessThan(0.35);
-    expect(comBem).toBeGreaterThan(30);
-    expect(soDinheiro).toBeGreaterThan(3);
+    const media = razoes.reduce((a, x) => a + x, 0) / razoes.length;
+    expect(media).toBeGreaterThan(0.75);
+    expect(media).toBeLessThan(1.15);
+    expect(Math.min(...razoes)).toBeGreaterThan(0.15);
+    expect(comBem).toBeGreaterThan(50);
     expect(categorias.size).toBeGreaterThanOrEqual(6);
   });
 

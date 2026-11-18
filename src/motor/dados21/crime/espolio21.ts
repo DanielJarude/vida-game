@@ -83,6 +83,8 @@ export const MODELOS_ESPOLIO21: readonly ModeloDoEspolio21[] = [
   { id: 'pneus', categoria: 'mercadoria', nome: 'Lote de pneus', preco: 18000, rastreavel: false, escala: 3 },
   { id: 'eletrodomesticos', categoria: 'mercadoria', nome: 'Eletrodomésticos ainda na caixa', preco: 26000, rastreavel: true, escala: 3 },
   { id: 'ferramentas', categoria: 'mercadoria', nome: 'Ferramentas elétricas', preco: 12000, rastreavel: false, escala: 3 },
+  // VIDA 27: o que sai de um desmonte (as peças, não o carro inteiro).
+  { id: 'pecas_auto', categoria: 'mercadoria', nome: 'Lote de peças de carro', preco: 9000, rastreavel: false, escala: 1 },
   // Veículos (chassi: rastreáveis; sem documento, não entram na garagem legal).
   { id: 'moto', categoria: 'veiculo', nome: 'Moto de 160 cilindradas', preco: 18000, rastreavel: true, escala: 3 },
   { id: 'carro_popular', categoria: 'veiculo', nome: 'Carro popular', preco: 62000, rastreavel: true, escala: 3 },
@@ -94,6 +96,41 @@ export const MODELOS_ESPOLIO21: readonly ModeloDoEspolio21[] = [
 export const FRACAO_DO_MERCADO21: Record<CategoriaDoEspolio21, number> = {
   celular: 0.3, computador: 0.3, eletronico: 0.35, joia: 0.55, relogio: 0.28, bolsa: 0.25, roupa: 0.22,
   arte: 0.1, colecionavel: 0.3, mercadoria: 0.38, veiculo: 0.15
+};
+
+/**
+ * VIDA 27 · §11: ONDE foi. O que se acha depende do lugar: uma casa simples não tem quadro nem relógio suíço; uma
+ * joalheria tem joia e relógio, novos; uma carga é uma carga. O dinheiro em espécie é o que o lugar tinha (a carteira,
+ * o caixa, o cofre da casa) — separado do valor dos objetos (antes, o dinheiro era a sobra da conta). Valores em R$ de
+ * 2026, antes do custo de vida da cidade; estimativas de jogo.
+ */
+export type LocalDoRoubo21 = 'pessoa_rua' | 'casa_simples' | 'casa_media' | 'casa_alto_padrao' | 'comercio_bairro' | 'loja_eletronicos' | 'joalheria' | 'loja_grife' | 'carga' | 'patio_veiculos' | 'desmonte';
+export interface PerfilDoLocal21 {
+  nome: string;
+  escala: 1 | 3;
+  categorias: CategoriaDoEspolio21[];
+  /** A faixa de preço de cada objeto que um lugar assim tem (R$ 2026). */
+  piso: number; teto: number;
+  /** O dinheiro em espécie que se acha (R$ 2026). */
+  especie: [number, number];
+  /** Objetos usados (de alguém) ou novos (de loja, de carga). */
+  usado: boolean;
+  maxItens: number;
+  /** Só estes modelos (o desmonte rende peças e pneus, não perfume). */
+  so?: string[];
+}
+export const LOCAIS21: Record<LocalDoRoubo21, PerfilDoLocal21> = {
+  pessoa_rua: { nome: 'na rua, de uma pessoa', escala: 1, categorias: ['celular', 'relogio', 'joia', 'bolsa', 'eletronico'], piso: 0, teto: 8000, especie: [50, 600], usado: true, maxItens: 2 },
+  casa_simples: { nome: 'numa casa simples', escala: 1, categorias: ['celular', 'eletronico', 'computador', 'joia'], piso: 0, teto: 5000, especie: [100, 1500], usado: true, maxItens: 3 },
+  casa_media: { nome: 'numa casa de classe média', escala: 1, categorias: ['celular', 'computador', 'eletronico', 'joia', 'relogio', 'bolsa', 'roupa', 'colecionavel'], piso: 0, teto: 15000, especie: [300, 4000], usado: true, maxItens: 3 },
+  comercio_bairro: { nome: 'num comércio do bairro', escala: 1, categorias: ['celular', 'eletronico'], piso: 0, teto: 5000, especie: [300, 5000], usado: true, maxItens: 1 },
+  casa_alto_padrao: { nome: 'numa casa de alto padrão', escala: 3, categorias: ['joia', 'relogio', 'bolsa', 'roupa', 'arte', 'colecionavel', 'computador', 'eletronico'], piso: 1500, teto: 600000, especie: [2000, 30000], usado: true, maxItens: 4 },
+  loja_eletronicos: { nome: 'numa loja de eletrônicos', escala: 3, categorias: ['celular', 'computador', 'eletronico'], piso: 1000, teto: 20000, especie: [1000, 8000], usado: false, maxItens: 8 },
+  joalheria: { nome: 'numa joalheria', escala: 3, categorias: ['joia', 'relogio'], piso: 1500, teto: 400000, especie: [2000, 15000], usado: false, maxItens: 6 },
+  loja_grife: { nome: 'numa loja de grife', escala: 3, categorias: ['bolsa', 'roupa'], piso: 1500, teto: 60000, especie: [1000, 10000], usado: false, maxItens: 6 },
+  carga: { nome: 'numa carga desviada', escala: 3, categorias: ['mercadoria'], piso: 5000, teto: 100000, especie: [0, 0], usado: false, maxItens: 6 },
+  patio_veiculos: { nome: 'num pátio de veículos', escala: 3, categorias: ['veiculo'], piso: 10000, teto: 600000, especie: [0, 0], usado: true, maxItens: 1 },
+  desmonte: { nome: 'num desmonte', escala: 1, categorias: ['mercadoria'], piso: 5000, teto: 30000, especie: [0, 500], usado: true, maxItens: 2, so: ['pecas_auto', 'pneus'] }
 };
 
 export const NOME_DA_CATEGORIA21: Record<CategoriaDoEspolio21, string> = {
@@ -146,6 +183,9 @@ export interface BemIlicito21 {
   /** A peça do guarda-roupa (catálogo) e a instância, quando foi vestida. */
   estiloId?: string;
   pecaId?: string;
+  /** VIDA 27: o lugar de onde veio (`LOCAIS21`) e a conservação (0,5..1; o novo de loja é 1) — já aplicada em `valor`. */
+  local?: LocalDoRoubo21;
+  conservacao?: number;
 }
 
 export interface Espolio21 {

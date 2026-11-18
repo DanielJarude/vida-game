@@ -304,8 +304,9 @@ function realizar(v: Vida, r: Rng, x: EncomendaCriminal): { texto: string; tom?:
     // ser só o dinheiro em espécie; os bens ficam com você para decidir (`v21/crime/espolio21`).
     let bens = '';
     if (x.ramo === 'furtos' && x.tipo !== 'furtos_vigiar' && x.tipo !== 'furtos_guardar') {
-      const parte = repartir21(v, liq, x.gravidade >= 3 ? 3 : 1, x.tipo === 'furtos_carga' ? 'a carga desviada' : x.tipo === 'furtos_desmonte' ? 'o desmonte' : 'uma encomenda', e.nivel);
-      if (parte.bens.length) { liq = parte.dinheiro; bens = textoDaParte21({ dinheiro: 0, bens: parte.bens }); }
+      // VIDA 27 · §11: o lugar segue o tipo do trabalho (a carga é carga; o desmonte rende peças; o resto, pelo tamanho).
+      const parte = repartir21(v, liq, x.gravidade >= 3 ? 3 : 1, x.tipo, e.nivel, x.tipo === 'furtos_carga' || x.tipo === 'furtos_guardar' ? 'carga' : x.tipo === 'furtos_desmonte' ? 'desmonte' : undefined);
+      liq = parte.dinheiro; bens = parte.bens.length ? textoDaParte21({ dinheiro: 0, bens: parte.bens, local: parte.local }) : '';
     }
     movimentoPorFora(v, 'encomendas', liq);
     e.ganhos += Math.round(x.valor * fator);
