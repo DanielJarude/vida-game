@@ -25,7 +25,7 @@ import { clubeAtual, encerrarCarreira, fecharTemporada, ficarSemClube, linhaDaTe
 import { registrarTemporada } from '../sistemas/palmares';
 import { colocacaoNaTabela, ligaDe } from '../sistemas/ligas';
 import { aCompeticaoId, campanhaDaSelecao, classificadoParaContinental, copaContinental, copaNacional, idDaSelecao, nomeDaCompeticao } from '../sistemas/competicoes';
-import { perfilDeAtributos } from '../sistemas/atributosEsportivos';
+import { GRUPO_DO_ATRIBUTO, perfilDeAtributos } from '../sistemas/atributosEsportivos';
 import { verbosDoOficio, executarOficio } from '../sistemas/noOficio';
 import { acoesDoTrabalho, leituraDoTrabalho, modoDoTrabalho } from '../sistemas/profissao';
 import { contratar } from '../sistemas/trabalho';
@@ -51,6 +51,9 @@ function atleta(o: { clube: string; cidade: string; nivel?: 1 | 2 | 3 | 4; tecni
   const mod = o.mod ?? 'futebol';
   v.caminhos.frentes[mod] = { habilidade: o.tecnica, interesse: 70, meses: 200, auge: o.tecnica, tInicio: v.t - 200 } as never;
   v.corpo.forma = 75;
+  // VIDA 26: os atributos físicos leem o corpo (capacidades). O fixture mede o CLUBE: o atleta tem o corpo do profissional
+  // médio (a régua das capacidades), para que a constituição sorteada da pessoa não mexa na tabela.
+  v.corpo.composicao24 = { g: -0.8, m: 1.6, t: v.t };
   v.caminhos.esporte = { modalidade: mod, fase: 'profissional', clube: o.clube, nivel: o.nivel ?? 4, tInicio: v.t - 72, tFase: v.t - 60, lesoes: 0, municipioId: o.cidade, reputacao: 55, espaco: o.espaco ?? 'titular', contratoAte: v.t + 36, posicao: mod === 'futebol' ? o.posicao ?? 'goleiro' : undefined, temporadas: [] };
   v.trabalho.atual = { ocupacaoId: mod === 'futebol' ? 'jogador_futebol' : mod === 'basquete' ? 'jogador_basquete' : 'atleta', empregador: `o ${o.clube}`, contrato: 'clt', salario: 30000, tInicio: v.t - 60, desempenho: 70, municipioId: o.cidade, carga: 'integral' };
   return v;
@@ -74,7 +77,9 @@ const fracao = (ts: Temporada[], f: (t: Temporada) => boolean) => ts.filter(f).l
 
 describe('ESP-11.1 · a colocação sai da tabela do país', () => {
   it('grande clube na elite: perto do topo, rebaixamento raro mas possível (e igual ao do mundo); o tradicional, pior', () => {
-    const barca = temporadas(220, { clube: 'Barcelona', cidade: 'es:barcelona', tecnica: 89 });
+    // VIDA 26: 800 temporadas (antes, 220): o mesmo critério, medido com menos ruído — com 220, uma temporada a mais
+    // (9 em vez de 8) cruzava os 4%. Medido: 3,9% (3,5% antes da VIDA 26, que passou a ler o corpo nos atributos físicos).
+    const barca = temporadas(800, { clube: 'Barcelona', cidade: 'es:barcelona', tecnica: 89 });
     expect(media(barca.map(t => t.colocacao))).toBeLessThanOrEqual(5.5);
     expect(fracao(barca, t => t.colocacao >= 17)).toBeLessThanOrEqual(0.04);
     expect(fracao(barca, t => t.colocacao === 1)).toBeGreaterThanOrEqual(0.12);
@@ -160,15 +165,24 @@ describe('ESP-11.2 · os atributos da posição entram na nota e na produção',
   it('cada posição tem os seus atributos; o treino da função sobe os dela; save antigo: derivados da técnica', () => {
     const v = atleta({ clube: 'Cruzeiro', cidade: 'belo-horizonte-mg', tecnica: 88 });
     const e = v.caminhos.esporte!;
-    expect(perfilDeAtributos(v, e, 88, 'goleiro').map(x => x.id)).toEqual(['reflexos', 'posicionamento', 'saidas', 'pes']);
-    expect(perfilDeAtributos(v, e, 88, 'zagueiro').map(x => x.id)).toEqual(['marcacao', 'antecipacao', 'aereo']);
-    expect(perfilDeAtributos(v, e, 88, 'meia').map(x => x.id)).toEqual(['passe', 'visao', 'resistencia']);
-    expect(perfilDeAtributos(v, e, 88, 'atacante').map(x => x.id)).toEqual(['finalizacao', 'movimentacao', 'velocidade']);
-    for (const x of perfilDeAtributos(v, e, 88, 'goleiro')) expect(Math.abs(x.valor - 88)).toBeLessThanOrEqual(4);
+    // VIDA 26: cada posição tem o seu CONJUNTO (técnicos, táticos, físicos, mentais), com os atributos que mais pesam
+    // primeiro — o goleiro vive de reflexo e posicionamento; o atacante, de finalização.
+    const ids = (p: Parameters<typeof perfilDeAtributos>[3]) => perfilDeAtributos(v, e, 88, p).map(x => x.id);
+    expect(ids('goleiro').slice(0, 4)).toEqual(['reflexos', 'posicionamento', 'saidas', 'pes']);
+    expect(ids('zagueiro')).toEqual(expect.arrayContaining(['marcacao', 'antecipacao', 'aereo', 'desarme', 'forca']));
+    expect(ids('meia')).toEqual(expect.arrayContaining(['passe', 'visao', 'resistencia', 'controle', 'decisao']));
+    expect(ids('atacante')).toEqual(expect.arrayContaining(['finalizacao', 'movimentacao', 'velocidade', 'controle']));
+    for (const p of ['goleiro', 'zagueiro', 'meia', 'atacante'] as const) expect(ids(p).length).toBeGreaterThanOrEqual(10);
+    expect(new Set(ids('goleiro'))).not.toEqual(new Set(ids('atacante')));
+    // Os técnicos são a técnica ± o traço de nascença (±4); os físicos e mentais leem também o corpo e a pessoa.
+    for (const x of perfilDeAtributos(v, e, 88, 'goleiro').filter(x => GRUPO_DO_ATRIBUTO[x.id] === 'tecnico')) expect(Math.abs(x.valor - 88)).toBeLessThanOrEqual(4);
     const g = verbosDoOficio(v).find(x => x.oque === 'treino_finalizacao')!;
     expect(g.rotulo).toMatch(/goleiro/i);
     const w = transacao(v, (x, r) => { executarOficio(x, r, 'treino_finalizacao'); }).vida;
-    expect(w.caminhos.esporte!.atributos?.reflexos ?? 0).toBeGreaterThan(0);
+    // VIDA 26: o treino técnico do goleiro sobe os técnicos que mais pesam nele (a saída do gol, o jogo com os pés); o
+    // reflexo virou físico (lê o corpo) e sobe com o treino físico.
+    expect(w.caminhos.esporte!.atributos?.saidas ?? 0).toBeGreaterThan(0);
+    expect(w.caminhos.esporte!.atributos?.pes ?? 0).toBeGreaterThan(0);
     // Saves de antes (sem atributos guardados) abrem iguais.
     expect(recarregar(v).caminhos.esporte!.atributos).toBeUndefined();
   });

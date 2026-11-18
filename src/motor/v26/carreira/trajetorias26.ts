@@ -40,6 +40,7 @@ export interface Trajeto26 {
   meu?: boolean;
 }
 
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const primeiros = (l: Lista, n = 5) => [...l].sort((a, b) => b[1] - a[1]).slice(0, n).map(([id]) => NOME_ATRIBUTO[id]);
 const nomes = (v: Vida | undefined, ids: string[]) => ids.map(id => ocupacaoOuNula(id)).filter(Boolean).map(oc => (v ? nomeOcupacao(v, oc!) : oc!.nome[0]));
 const depoisDe = (v: Vida | undefined, o: OrigemPos26) => nomes(v, POS_CARREIRA26[o] ?? []);
@@ -67,8 +68,8 @@ function trajetoEsporte(v: Vida | undefined, d: Dominio): Trajeto26 {
   const acabou = es?.fase === 'encerrada';
   const lista = d === 'futebol' ? ATRIBUTOS_DA_POSICAO.meia : d === 'basquete' ? ATRIBUTOS_BASQUETE.ala : ATRIBUTOS_DA_MODALIDADE[d] ?? [];
   const etapas: Etapa26[] = [
-    { nome: 'Praticar por gosto', quando: 'desde a infância', como: `${NOME_MOD[d] ?? d} na semana (Minha Semana · Corpo e mente), com os amigos, na escola. Pode ficar só nisso a vida inteira.`, aqui: pratica && !es, feita: pratica || !!es },
-    { nome: 'Treinar a sério', quando: `antes dos ${ini}–${fim} anos`, como: 'Mais vezes por semana, com treinador. A técnica sobe com a prática, a facilidade de nascença e o corpo em dia.' },
+    { nome: 'Praticar por gosto', quando: 'desde a infância', como: `${cap(NOME_MOD[d] ?? d)} na semana (Minha Semana · Corpo e mente), com os amigos, na escola. Pode ficar só nisso a vida inteira.`, aqui: pratica && !es, feita: pratica || !!es },
+    { nome: 'Treinar a sério', quando: `antes da janela da peneira (${ini}–${fim} anos)`, como: 'Mais vezes por semana, com treinador. A técnica sobe com a prática, a facilidade de nascença e o corpo em dia.' },
     { nome: d === 'futebol' || d === 'futsal' ? 'A peneira' : 'A seletiva', quando: `${ini} a ${fim} anos`, como: 'O teste num clube: chega sozinho para quem treina e se destaca, ou se pede. Passar é raro; reprovar não fecha a porta.', aqui: etapa === 'convidado' || etapa === 'decidindo', feita: !!es },
     { nome: 'A formação', quando: categorias, como: 'Cada ano registra jogos, nota, títulos e a leitura da comissão: capacidade atual, potencial (estimativa) e prontidão. Subir de categoria antes da idade e treinar com o profissional são raros e dependem de desempenho e físico.', aqui: es?.fase === 'base', feita: pro || acabou },
     { nome: d === 'tenis' ? 'Virar profissional' : 'O primeiro contrato', quando: `${c.idade[0]} a ${c.idade[1]} anos (a lei permite a partir dos ${IDADE_LEGAL_CONTRATO}; aqui, aos ${IDADE_LEGAL_CONTRATO} só o excepcional)`, como: d === 'tenis' ? 'Sem clube nem salário: a premiação paga, e treinador e viagens passam a ser seus.' : `Pede técnica de ${c.tecnica} ou mais e prontidão (físico, experiência, maturidade). A maioria é dispensada antes.`, feita: pro || (acabou && !!es?.temporadas?.length) },

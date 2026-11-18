@@ -26,6 +26,26 @@ export interface NotaDeVersao {
 
 export const NOTAS: NotaDeVersao[] = [
   {
+    versao: '26',
+    data: '2026-11-17',
+    titulo: 'Corpo e capacidades, atletas em formação e caminhos profissionais',
+    novidades: [
+      'Guia de carreiras (Caminhos): cada esporte, cada jogo de e-sports e o automobilismo, do hobby ao profissional — como começa, as etapas, o que faz evoluir, onde se compete e o que vem depois. A etapa em que você está aparece marcada.',
+      'Depois de competir: toda carreira esportiva e de e-sports tem para onde ir — treinador, auxiliar técnico, analista de desempenho, comentarista, gerente esportivo, professor, caster, técnico de equipe de e-sports e outras, conforme a modalidade e a trajetória.',
+      'Capacidades físicas (força, velocidade, aceleração, resistência, agilidade, impulsão, equilíbrio, alcance): saem do corpo herdado, do que a vida fez dele e da idade, e pesam nos atributos físicos do esporte.'
+    ],
+    melhorias: [
+      'Atributos esportivos completos por posição e função — técnicos, táticos, físicos e mentais — com o peso de cada um, de onde vem o valor e as limitações sérias para a posição, que a nota da temporada cobra.',
+      'Na formação, a comissão separa capacidade atual, potencial (estimativa) e prontidão para o profissional; subir de categoria antes da idade e treinar com o elenco profissional são etapas próprias, antes do contrato.',
+      'E-sports: cada jogo ganhou atributos próprios (controle de spray, construção, controle aéreo, conhecimento de mapas, repertório de campeões...).',
+      'Criação de personagem: o corpo de nascença dividido entre herdado, tendência e facilidade, escolhido por degraus com nome, com o efeito de cada escolha e o que o corpo favorece aos 25 anos, sem treino e treinando.',
+      'Hobbies dizem para onde podem levar (sem obrigar): o próximo passo real e o que pesa. O dinheiro por fora aparece como trabalho por conta, não como hobby. Quem joga videogame há anos pode ser chamado por um time amador.'
+    ],
+    correcoes: [
+      'Um jovem que se destaca na base não ouve mais que "já tem o nível do contrato profissional" só pela técnica: idade, físico, experiência e maturidade contam, e o contrato só vem a partir dos 16 (aos 16, só para o excepcional).'
+    ]
+  },
+  {
     versao: '25',
     data: '2026-11-17',
     titulo: 'Esportes, e-sports e formação de atletas',

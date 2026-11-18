@@ -4,6 +4,7 @@
  * ficha do atleta nas modalidades tradicionais (grupos, antes/agora só com fotografia), a formação ano a ano, o lembrete
  * da CNH (aparece com motivo, some com "agora não") e o corpo em quatro partes.
  */
+import { atributosDaCarreira } from '../../motor/sistemas/atributosEsportivos';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, render, within } from '@testing-library/react';
 import { adulto } from '../../motor/__tests__/cenarios';
@@ -59,14 +60,20 @@ describe('VIDA 25 · ficha do atleta e formação', () => {
     const v = adulto(24, { semente: 2503 });
     const e = { modalidade: 'volei', fase: 'profissional', clube: 'x', nivel: 2, tInicio: 0, tFase: 0, lesoes: 0, municipioId: 'recife-pe' } as CarreiraEsportiva;
     const r = render(<FichaDoEsporte25 vida={v} e={e} />);
-    expect(r.container.querySelectorAll('[data-atributo]').length).toBe(4);
+    // VIDA 26: o conjunto completo da função (técnicos, táticos, físicos, mentais).
+    expect(r.container.querySelectorAll('[data-atributo]').length).toBe(atributosDaCarreira(e, undefined, undefined, v).length);
+    expect(r.container.querySelectorAll('[data-atributo]').length).toBeGreaterThanOrEqual(8);
     expect(r.container.querySelector('.f25-attr__antes')).toBeNull();
     expect(r.container.textContent).toMatch(/A comparação com o ano anterior aparece/);
     cleanup();
     const e2 = { ...e, serieAtributos: [{ ano: 2030, tecnica: 60, a: { ataque: 58, recepcao: 60, bloqueio: 61, saque: 59 } }, { ano: 2031, tecnica: 62, a: { ataque: 63, recepcao: 61, bloqueio: 61, saque: 60 } }] };
     const r2 = render(<FichaDoEsporte25 vida={v} e={e2} />);
-    expect(r2.container.querySelectorAll('.f25-attr__antes').length).toBe(4);
+    // Só os atributos da função que estavam na fotografia anterior têm a marca do ano anterior.
+    const naFoto = atributosDaCarreira(e, undefined, undefined, v).filter(([id]) => ['ataque', 'recepcao', 'bloqueio', 'saque'].includes(id)).length;
+    expect(r2.container.querySelectorAll('.f25-attr__antes').length).toBe(naFoto);
+    expect(naFoto).toBeGreaterThan(0);
     expect(within(r2.container).getByText('Técnicos')).toBeTruthy();
+    expect(within(r2.container).getByText('Mentais e comportamentais')).toBeTruthy();
   });
   it('a formação mostra as categorias, o ano a ano e os títulos registrados', () => {
     const v = aos(17, 2504);

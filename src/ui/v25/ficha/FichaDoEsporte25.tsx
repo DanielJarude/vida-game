@@ -42,8 +42,8 @@ export function linhasDoEsporte25(vida: Vida, e: CarreiraEsportiva): { linhas: L
     linhas, tecnica: h, nivel,
     // A série do nível: só as fotografias que têm todos os atributos de agora (as de antes da VIDA 26 não têm — não se inventa).
     serieTecnica: serie.filter(f => perfil.every(p => typeof f.a[p.id] === 'number')).map(f => nivelNaPosicao(perfil.map(p => ({ valor: f.a[p.id]!, peso: p.peso })))),
-    fortes: ordenados.filter(x => x.d >= 2).sort((a, b) => b.d - a.d).slice(0, 3).map(x => x.id),
-    fracos: [...new Set([...graves, ...ordenados.filter(x => x.d <= -2).sort((a, b) => a.d - b.d).map(x => x.id)])].slice(0, 3)
+    fortes: ordenados.filter(x => x.d >= 3).sort((a, b) => b.d - a.d).slice(0, 3).map(x => x.id),
+    fracos: [...new Set([...graves, ...ordenados.filter(x => x.d <= -3).sort((a, b) => a.d - b.d).map(x => x.id)])].slice(0, 3)
   };
 }
 

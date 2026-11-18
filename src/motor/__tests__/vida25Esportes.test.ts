@@ -137,9 +137,15 @@ describe('VIDA 25 · atributos de toda modalidade', () => {
   });
   it('o perfil entra na nota (acima da técnica soma; abaixo tira)', () => {
     const v = aos(22);
-    const e = { modalidade: 'volei', atributos: { ataque: 10, recepcao: 10, bloqueio: 10, saque: 10 } } as unknown as CarreiraEsportiva;
-    const p = perfilDeAtributos(v, e, 70, undefined);
-    expect(efeitoNaNota(p, 70)).toBeGreaterThan(1.5);
+    // VIDA 26: o conjunto do vôlei é o da função (10 atributos); todos 10 acima da técnica somam ~2,5 na nota — e todos
+    // 10 abaixo tiram (mais, com a limitação séria que a função não perdoa).
+    const ids = atributosDaCarreira({ modalidade: 'volei' } as CarreiraEsportiva, undefined, undefined, v).map(([id]) => id);
+    const acima = { modalidade: 'volei', atributos: Object.fromEntries(ids.map(id => [id, 10])) } as unknown as CarreiraEsportiva;
+    const abaixo = { modalidade: 'volei', atributos: Object.fromEntries(ids.map(id => [id, -10])) } as unknown as CarreiraEsportiva;
+    const neutro = { modalidade: 'volei' } as unknown as CarreiraEsportiva;
+    const ef = (e: CarreiraEsportiva) => efeitoNaNota(perfilDeAtributos(v, e, 70, undefined), 70);
+    expect(ef(acima) - ef(neutro)).toBeGreaterThan(1.5);
+    expect(ef(abaixo) - ef(neutro)).toBeLessThan(-1.5);
   });
 });
 

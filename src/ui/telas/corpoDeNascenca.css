@@ -22,12 +22,12 @@
 .cn26-selo--herdado { background: color-mix(in oklab, var(--acao) 10%, transparent); }
 .cn26-selo--tendencia, .cn26-selo--vida { background: color-mix(in oklab, var(--bom, #3a7) 12%, transparent); }
 .cn26-selo--facilidade, .cn26-selo--capacidade { background: color-mix(in oklab, var(--acao) 18%, transparent); }
-.cn26-previa { display: grid; grid-template-columns: minmax(0, auto) minmax(240px, 1fr); gap: var(--space-3); align-items: start; }
+.cn26-previa { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-3); align-items: start; }
 .cn26-caps { display: grid; gap: 4px; min-width: 0; }
 .cn26-caps__titulo { margin: 0; font-weight: 600; font-size: 0.92em; }
 .cn26-caps__titulo small { font-weight: normal; color: var(--text-muted); }
-.cn26-caps ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; }
-.cn26-cap { display: grid; grid-template-columns: 6.5rem minmax(60px, 1fr) minmax(0, 10.5rem); gap: 8px; align-items: center; font-size: 0.88em; }
+.cn26-caps ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 3px 18px; }
+.cn26-cap { display: grid; grid-template-columns: 6.5rem minmax(50px, 1fr) minmax(0, 11.5rem); gap: 8px; align-items: center; font-size: 0.88em; }
 .cn26-cap__barra { position: relative; height: 7px; border-radius: 999px; background: var(--rule); overflow: hidden; }
 .cn26-cap__barra i { position: absolute; top: 0; bottom: 0; left: 0; background: color-mix(in oklab, var(--acao) 55%, transparent); }
 .cn26-cap__barra i.cn26-cap__com { background: var(--acao); }
