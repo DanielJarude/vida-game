@@ -151,10 +151,16 @@ describe('VIDA 25 · atributos de toda modalidade', () => {
 
 describe('VIDA 25 · a formação registrada', () => {
   it('cada ano de base vira um registro com categoria, jogos, nota, colocação e avaliação; a fotografia do perfil também', () => {
+    // VIDA 27: a vida de teste de uma semente só foi dispensada da base aos 16 (desfecho legítimo, que apaga a carreira
+    // de base ao tentar de novo); a regra é a do registro de cada ano — procura uma vida em que a base continua.
     let v = aos(14);
-    garantirFrente(v, 'futebol').habilidade = 70;
-    entrarNaBase(v, 'futebol', v.moradia.municipioId, 'Sport');
-    v = viver(v, 2);
+    for (let k = 0; k < 6; k++) {
+      v = aos(14, { semente: 91 + k * 13 });
+      garantirFrente(v, 'futebol').habilidade = 70;
+      entrarNaBase(v, 'futebol', v.moradia.municipioId, 'Sport');
+      v = viver(v, 2);
+      if (v.caminhos.esporte?.fase === 'base') break;
+    }
     const e = v.caminhos.esporte ?? v.caminhos.carreirasEsportivas?.[0];
     const f = e?.formacao ?? [];
     expect(f.length).toBeGreaterThan(0);

@@ -93,6 +93,7 @@ import { dinheiroCurto } from '../apresentar';
 import { ehPortaDeTrabalho, ObjetivosEmCurso, PortasAbertas } from './Estudos';
 import { Catalogo, type ItemCatalogo } from './Catalogo';
 import { leituraDasTrajetorias } from '../../motor/sistemas/paralelas';
+import { VagasDeCarreira } from '../v27/VagasDeCarreira';
 import { leituraDoCurriculo } from '../../motor/sistemas/cena';
 import { contaDoContrato, impactoDoContrato, NOME_DO_TIPO } from '../../motor/sistemas/audiovisual';
 import { empregoAcademico, leituraAcademica } from '../../motor/sistemas/academia';
@@ -203,6 +204,7 @@ export function Trabalho({ vida, agir, irPara, parte, explorar: abaDeFora, aoExp
       {parte === 'agora' && div && !preso && modo !== 'crianca' && <AcoesPrincipaisDoTrabalho vida={vida} irPara={irPara} />}
       {em('agora') && <section className="camada camada--agora" aria-labelledby="camada-agora">
         <h2 id="camada-agora" className="camada__titulo">A sua situação agora</h2>
+        <VagasDeCarreira vida={vida} />
         {(e || modo === 'negocio') && modo !== 'politica' && (
           <dl className="ficha-trabalho">
             {l.onde && !/^Por conta própria$|^A internet$|^Por encomenda$/i.test(l.onde) && <Dado rotulo="Onde">{l.onde}</Dado>}

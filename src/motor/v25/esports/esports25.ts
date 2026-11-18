@@ -31,6 +31,8 @@ import { bloqueio, PERMITIDO, type Veredito } from '../../plausibilidade';
 import { lancar } from '../../sistemas/extrato';
 import { registrarMotivoDoNome } from '../../sistemas/notoriedade';
 import { contratar, encerrarEmprego } from '../../sistemas/trabalho';
+import { contratarEmParalela, encerrarParalela, FATOR_PARALELA } from '../../sistemas/paralelas';
+import { motivoDoLimite, temVagaDeCarreira } from '../../sistemas/vagasDeCarreira';
 import { ocupacao } from '../../dados/ocupacoes';
 import { cidadesDoPais, economiaLocal, municipio, paisDaCidade } from '../../dados/lugares';
 import { mudarAgora } from '../../sistemas/processos';
@@ -155,7 +157,13 @@ export function disponibilidadeEsports25(v: Vida, o: OqueEsports25): Veredito {
       if (e.proposta && v.t <= e.proposta.validaAte) return bloqueio('incompativel', 'Há uma proposta na mesa: responda a ela antes.');
       return PERMITIDO;
     }
-    case 'aceitar': case 'recusar': return e.proposta && v.t <= e.proposta.validaAte ? PERMITIDO : bloqueio('impossivel', 'Não há proposta na mesa.');
+    case 'aceitar': case 'recusar': {
+      if (!e.proposta || v.t > e.proposta.validaAte) return bloqueio('impossivel', 'Não há proposta na mesa.');
+      // VIDA 27 · §14: o contrato profissional é uma carreira a mais (se já não for a de agora).
+      const pro = e.proposta.salario > 0 && e.proposta.nivel >= 3;
+      if (o.op === 'aceitar' && pro && !empregoEsports25(v) && v.trabalho.atual && (!temVagaDeCarreira(v) || v.trabalho.paralela)) return bloqueio('requisito', motivoDoLimite(v));
+      return PERMITIDO;
+    }
     case 'sair': return e.equipe ? PERMITIDO : bloqueio('impossivel', 'Você não está em nenhuma equipe.');
     case 'parar': return PERMITIDO;
   }
@@ -255,6 +263,27 @@ function peneira(v: Vida, e: Esports25, r: Rng): { texto: string; tom: 'bom' | '
   return { texto: `Passou na peneira da ${e.proposta.equipe}.`, tom: 'bom' };
 }
 
+/** VIDA 27 · §14: o emprego de jogador profissional — o principal ou a trajetória paralela. */
+export const empregoEsports25 = (v: Vida) => (v.trabalho.atual?.ocupacaoId === OCUPACAO_ESPORTS ? v.trabalho.atual : v.trabalho.paralela?.ocupacaoId === OCUPACAO_ESPORTS ? v.trabalho.paralela : undefined);
+
+/**
+ * VIDA 27 · §14: o contrato profissional ocupa uma vaga de carreira. Sem trabalho, vira o principal; com outro trabalho
+ * (o atleta, a professora), entra como trajetória paralela — antes, `contratar` trocava o emprego de agora em silêncio.
+ * Sem vaga (já há duas carreiras), não assina: devolve false (a tela já disse o limite antes do aceite).
+ */
+function assinarPro25(v: Vida, equipe: string, salario: number): boolean {
+  const ja = empregoEsports25(v);
+  if (ja) { ja.empregador = equipe; ja.salario = salario; return true; }
+  const r = rngDe(v.id, 'esp25_contrato', v.t);
+  const oc = ocupacao(OCUPACAO_ESPORTS);
+  if (!v.trabalho.atual) { const emp = contratar(v, r, oc, 'oportunidade'); emp.empregador = equipe; emp.salario = salario; return true; }
+  if (!temVagaDeCarreira(v) || v.trabalho.paralela) return false;
+  const emp = contratarEmParalela(v, () => contratar(v, r, oc, 'oportunidade'));
+  emp.empregador = equipe;
+  emp.salario = Math.round(salario * FATOR_PARALELA / 10) * 10;
+  return true;
+}
+
 function entrarNaEquipe(v: Vida, e: Esports25, p: Proposta25): void {
   const ano = anoDe(v.t);
   if (e.equipe) sairDaEquipe(v, e, 'transferência', true);
@@ -264,15 +293,13 @@ function entrarNaEquipe(v: Vida, e: Esports25, p: Proposta25): void {
   if (p.funcao) e.funcao = p.funcao;
   e.anosSemEquipe = 0;
   e.passagens.push({ equipe: p.equipe, nivel: p.nivel, de: ano });
-  if (pro) {
+  const assinado = pro && assinarPro25(v, p.equipe, p.salario);
+  if (pro && !assinado && e.equipe) e.equipe.salario = 0;
+  if (assinado) {
     e.fase = 'profissional';
     // O treino agora é o trabalho (as horas da equipe): sai da semana como atividade de tempo livre.
     v.rotinas = v.rotinas.filter(x => x.id !== 'esports');
-    const oc = ocupacao(OCUPACAO_ESPORTS);
-    contratar(v, rngDe(v.id, 'esp25_contrato', v.t), oc, 'oportunidade');
-    const emp = v.trabalho.atual!;
-    emp.empregador = p.equipe;
-    emp.salario = p.salario;
+    const emp = empregoEsports25(v)!;
     // A gaming house é em outra cidade: a vida vai junto (16+; o menor vai com autorização da família — a mudança é dele).
     if (p.municipioId && p.municipioId !== v.moradia.municipioId && idade(v) >= 16) {
       emp.municipioId = p.municipioId;
@@ -281,10 +308,10 @@ function entrarNaEquipe(v: Vida, e: Esports25, p: Proposta25): void {
   } else if (e.fase === 'amador') e.fase = 'competitivo';
   const primeira = e.passagens.length === 1;
   escrever(v, {
-    texto: pro
+    texto: assinado
       ? `${primeira || !e.temporadas.some(t => t.nivel >= 3) ? 'Assinou o primeiro contrato profissional' : 'Assinou contrato'} com a ${p.equipe}, na ${nomeDoNivel25(v, e.jogo, p.nivel)}: ${fmt(p.salario)} por mês, ${p.titular ? 'como titular' : 'para brigar pela vaga'}${p.municipioId && p.municipioId !== v.moradia.municipioId ? '' : ''}.`
       : `Entrou para a ${p.equipe}, uma equipe do ${nomeDoNivel25(v, e.jogo, p.nivel).toLowerCase()}: sem salário, com treino marcado e campeonato de verdade.`,
-    relevancia: pro ? 'marco' : 'biografia', tema: 'trabalho', tom: 'bom', escolha: true
+    relevancia: assinado ? 'marco' : 'biografia', tema: 'trabalho', tom: 'bom', escolha: true
   });
 }
 
@@ -295,6 +322,7 @@ function sairDaEquipe(v: Vida, e: Esports25, motivo: string, silencio = false): 
   if (pas) { pas.ate = anoDe(v.t); pas.saida = motivo; }
   e.equipe = undefined;
   if (v.trabalho.atual?.ocupacaoId === OCUPACAO_ESPORTS) encerrarEmprego(v, `saída da ${eq.nome}`);
+  else if (v.trabalho.paralela?.ocupacaoId === OCUPACAO_ESPORTS) encerrarParalela(v, `saída da ${eq.nome}`, false);
   if (e.fase === 'profissional') e.fase = 'competitivo';
   if (!v.rotinas.some(x => x.id === 'esports')) v.rotinas.push({ id: 'esports', tInicio: v.t, nivel: 2 });
   if (!silencio) escrever(v, { texto: `Deixou a ${eq.nome} (${motivo}).`, relevancia: 'biografia', tema: 'trabalho' });
@@ -304,7 +332,7 @@ function sairDaEquipe(v: Vida, e: Esports25, motivo: string, silencio = false): 
 
 /** A intensidade do treino (0 nenhum … 3 de profissional): a atividade da semana; no profissional, o trabalho. */
 export function intensidade25(v: Vida, e: Esports25): number {
-  if (e.fase === 'profissional' && v.trabalho.atual?.ocupacaoId === OCUPACAO_ESPORTS) return 3;
+  if (e.fase === 'profissional' && empregoEsports25(v)) return 3;
   return v.rotinas.find(x => x.id === 'esports')?.nivel ?? 0;
 }
 
@@ -404,7 +432,7 @@ export function processarEsports25(v: Vida): void {
   if (e.temporadas.some(t => t.ano === ano)) return;
   const r = rngDe(v.id, 'esp25_ano', ano);
   // Quem trocou o contrato da equipe por outro emprego saiu da equipe (o salário e as horas eram dela).
-  if (e.fase === 'profissional' && v.trabalho.atual?.ocupacaoId !== OCUPACAO_ESPORTS && e.equipe) sairDaEquipe(v, e, 'outro trabalho');
+  if (e.fase === 'profissional' && !empregoEsports25(v) && e.equipe) sairDaEquipe(v, e, 'outro trabalho');
   const ultima = e.temporadas[e.temporadas.length - 1];
   evoluir(v, e, r, ultima?.disputas ?? 0);
   // Preso, o ano não tem temporada (a equipe dispensa).
@@ -530,8 +558,13 @@ function renovarOuSair(v: Vida, e: Esports25, t: Temporada25, zMet: number, r: R
   eq.contratoAte = v.t + (e.nivel >= 3 ? 24 : 12);
   if (n.salario[1] > 0 && e.nivel >= 3) {
     eq.salario = Math.max(eq.salario, valorLocal(v, n.salario[0] + (n.salario[1] - n.salario[0]) * clamp(e.reputacao / 100 + (zMet > 0 ? 0.1 : 0), 0, 1)));
-    if (v.trabalho.atual?.ocupacaoId === OCUPACAO_ESPORTS) v.trabalho.atual.salario = eq.salario;
-    else if (e.fase !== 'profissional') { e.fase = 'profissional'; contratar(v, rngDe(v.id, 'esp25_contrato', v.t), ocupacao(OCUPACAO_ESPORTS), 'oportunidade'); const emp = v.trabalho.atual!; emp.empregador = eq.nome; emp.salario = eq.salario; v.rotinas = v.rotinas.filter(x => x.id !== 'esports'); }
+    const emp = empregoEsports25(v);
+    if (emp) emp.salario = emp === v.trabalho.paralela ? Math.round(eq.salario * FATOR_PARALELA / 10) * 10 : eq.salario;
+    else if (e.fase !== 'profissional') {
+      // VIDA 27 · §14: virar profissional na renovação também ocupa uma vaga; sem vaga, a equipe segue sem salário.
+      if (assinarPro25(v, eq.nome, eq.salario)) { e.fase = 'profissional'; v.rotinas = v.rotinas.filter(x => x.id !== 'esports'); }
+      else { eq.salario = 0; escrever(v, { texto: `${eq.nome} quis pagar salário, mas você já tem duas carreiras profissionais: seguiu no time sem contrato profissional.`, relevancia: 'cotidiano', tema: 'trabalho' }); }
+    }
   }
   escrever(v, { texto: `Renovou com a ${eq.nome}${eq.salario ? `: ${fmt(eq.salario)} por mês` : ''}.`, relevancia: 'biografia', tema: 'trabalho', tom: 'bom' });
 }

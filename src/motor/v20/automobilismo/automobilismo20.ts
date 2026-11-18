@@ -36,6 +36,8 @@ import { pagar } from '../../sistemas/dinheiro';
 import { lancar } from '../../sistemas/extrato';
 import { registrarMotivoDoNome } from '../../sistemas/notoriedade';
 import { contratar, encerrarEmprego } from '../../sistemas/trabalho';
+import { moverParaParalela } from '../../sistemas/paralelas';
+import { motivoDoLimite } from '../../sistemas/vagasDeCarreira';
 import { ocupacao } from '../../dados/ocupacoes';
 import type { Auto20, Categoria20, Proposta20, Temporada20 } from '../../dados20/tipos20';
 
@@ -139,7 +141,12 @@ export function disponibilidadeAuto20(v: Vida, o: OqueAuto20): Veredito {
       return PERMITIDO;
     }
     case 'patrocinio': return feito('patrocinio') ? bloqueio('incompativel', 'Já bateu nas portas neste ano.') : PERMITIDO;
-    case 'aceitar': case 'recusar': return a.proposta && v.t <= a.proposta.validaAte ? PERMITIDO : bloqueio('impossivel', 'Não há proposta na mesa.');
+    case 'aceitar': case 'recusar': {
+      if (!a.proposta || v.t > a.proposta.validaAte) return bloqueio('impossivel', 'Não há proposta na mesa.');
+      // VIDA 27 · §14: o contrato de F1 é uma carreira profissional a mais (se o principal não for o de piloto).
+      if (o.op === 'aceitar' && a.proposta.categoria === 'f1' && v.trabalho.atual && v.trabalho.atual.ocupacaoId !== 'piloto_corrida' && v.trabalho.paralela) return bloqueio('requisito', motivoDoLimite(v));
+      return PERMITIDO;
+    }
     case 'parar': return PERMITIDO;
   }
 }
@@ -490,7 +497,12 @@ function mudarDeEquipe(v: Vida, a: Auto20, p: Proposta20): void {
 function atualizarEmprego(v: Vida, a: Auto20): void {
   const oc = ocupacao('piloto_corrida');
   const r = rngDe(v.id, 'auto20_emprego', v.t);
-  if (!v.trabalho.atual || v.trabalho.atual.ocupacaoId !== 'piloto_corrida') contratar(v, r, oc, 'oportunidade');
+  // VIDA 27 · §14: a F1 é o trabalho principal; o trabalho de antes não some em silêncio — vira a trajetória paralela
+  // (a outra vaga de carreira). O aceite já barrou quem tinha duas carreiras.
+  if (!v.trabalho.atual || v.trabalho.atual.ocupacaoId !== 'piloto_corrida') {
+    if (v.trabalho.atual && !v.trabalho.paralela && !['militar', 'eletivo', 'estagio', 'aprendiz'].includes(v.trabalho.atual.contrato)) moverParaParalela(v, 'para correr na Fórmula 1');
+    contratar(v, r, oc, 'oportunidade');
+  }
   const e = v.trabalho.atual!;
   e.empregador = a.equipe;
   e.salario = Math.round((a.salario ?? 5000000) / 12 / 100) * 100;

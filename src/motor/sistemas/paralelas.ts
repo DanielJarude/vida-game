@@ -27,6 +27,7 @@ import { marcar } from './marcas';
 import { encerrarEmprego, nomeOcupacao, rendaDeClientela } from './trabalho';
 import { bloqueio, PERMITIDO, type Veredito } from '../plausibilidade';
 import { anoDe } from '../tempo';
+import { temVagaDeCarreira } from './vagasDeCarreira';
 
 export { TRILHAS_ARTISTICAS, FATOR_PARALELA } from './trabalho';
 import { FATOR_PARALELA, TRILHAS_ARTISTICAS, unificarCarreiraArtistica } from './trabalho';
@@ -56,6 +57,8 @@ const eFlexivelOc = (oc: Ocupacao) => oc.carga === 'parcial' || oc.promocao === 
 export function podeConciliar(v: Vida, novo: Ocupacao): boolean {
   const e = v.trabalho.atual;
   if (!e || v.trabalho.paralela) return false;
+  // VIDA 27 · §14: duas carreiras profissionais no máximo (o negócio nas horas vagas também ocupa uma vaga).
+  if (!temVagaDeCarreira(v)) return false;
   const oc = ocupacaoOuNula(e.ocupacaoId);
   if (!oc || oc.id === novo.id) return false;
   // REWORK 10.6 · CAR-15: dois degraus da mesma carreira artística não são duas trajetórias (o ator e o ator conhecido).
@@ -129,6 +132,19 @@ export function entrarComoParalela(v: Vida, e: Emprego): Emprego {
   const p: Emprego = { ...e, carga: 'parcial', salario: Math.round(e.salario * FATOR_PARALELA / 10) * 10 };
   v.trabalho.paralela = p;
   return p;
+}
+
+/**
+ * VIDA 27 · §14: contrata para a trajetória PARALELA (o principal continua). Para as carreiras que não passam pela
+ * pergunta de conflito (o contrato de e-sports, a Fórmula 1): a segunda vaga, em vez de trocar o emprego em silêncio.
+ */
+export function contratarEmParalela(v: Vida, criar: () => Emprego): Emprego {
+  const guardado = v.trabalho.atual;
+  v.trabalho.atual = undefined;
+  const e = entrarComoParalela(v, criar());
+  v.trabalho.atual = guardado;
+  v.trabalho.desempregadoDesde = undefined;
+  return e;
 }
 
 /** Desfaz a paralela (fica no histórico, com o motivo). */

@@ -42,6 +42,7 @@ import { mudarAgora } from './processos';
 import { modeloRotina } from './rotinas';
 import { largarEscola } from './escola';
 import type { Turno } from '../tipos';
+import { temVagaDeCarreira } from './vagasDeCarreira';
 import { entrarComoParalela, moverParaParalela, novaViraPrincipal, pausadaDe, pausarAtual, podeConciliar, podePausar, retomarPausada, TRILHAS_ARTISTICAS } from './paralelas';
 
 /**
@@ -148,7 +149,8 @@ function conflitoComEmprego(v: Vida, novo: NovoCompromisso): ConflitoDeEntrada |
   if (ehDono(v)) {
     const n = negocioAberto(v)!;
     const alternativas: Alternativa[] = [];
-    if (podeTocarNasHorasVagas(v, n)) alternativas.push({ larga: 'negocio_paralelo', texto: `deixar ${n.nome} para as horas vagas`, consequencia: `${n.nome} continua seu, ${fem(n.nome, 'tocado')} nas horas vagas${(n.equipe?.length ?? 0) > 0 ? ' e pela equipe' : ''}: cresce mais devagar e não paga retirada fixa.` });
+    // VIDA 27 · §14: com uma paralela já ocupando a outra vaga, o negócio nas horas vagas seria a terceira carreira.
+    if (podeTocarNasHorasVagas(v, n) && !v.trabalho.paralela) alternativas.push({ larga: 'negocio_paralelo', texto: `deixar ${n.nome} para as horas vagas`, consequencia: `${n.nome} continua seu, ${fem(n.nome, 'tocado')} nas horas vagas${(n.equipe?.length ?? 0) > 0 ? ' e pela equipe' : ''}: cresce mais devagar e não paga retirada fixa.` });
     alternativas.push({ larga: 'negocio_fechar', texto: valorDoNegocio(v, n) > 0 ? `vender ${n.nome}` : `fechar ${n.nome}`, consequencia: valorDoNegocio(v, n) > 0 ? `${n.nome} é ${fem(n.nome, 'vendido')}: o dinheiro entra, a história acaba.` : `${n.nome} ${fechaAs(n)}.` });
     return { com: 'negocio', rotulo: n.nome, motivo: `${n.nome} é o seu trabalho de todo dia`, alternativas };
   }
@@ -170,7 +172,8 @@ function conflitoComEmprego(v: Vida, novo: NovoCompromisso): ConflitoDeEntrada |
     return {
       com: 'emprego', rotulo: `o trabalho de ${nome}`, motivo: `Você trabalha como ${nome}`,
       alternativas: [
-        { larga: 'negocio_nas_horas_vagas', texto: `manter o trabalho de ${nome} e tocar o negócio nas horas vagas`, consequencia: 'O salário continua. O negócio cresce devagar, pede noites e fins de semana, e não paga retirada fixa.' },
+        // VIDA 27 · §14: o trabalho, a paralela e o negócio seriam três carreiras — sem a paralela livre, só dá para trocar.
+        ...(v.trabalho.paralela ? [] : [{ larga: 'negocio_nas_horas_vagas', texto: `manter o trabalho de ${nome} e tocar o negócio nas horas vagas`, consequencia: 'O salário continua. O negócio cresce devagar, pede noites e fins de semana, e não paga retirada fixa.' }]),
         { larga: 'emprego', texto: `deixar o trabalho de ${nome} e se dedicar ao negócio`, consequencia: `O salário de ${nome} acaba. O negócio vira o trabalho de todo dia: cresce mais — e o risco é todo seu.` }
       ]
     };
@@ -192,6 +195,10 @@ function conflitoComEmprego(v: Vida, novo: NovoCompromisso): ConflitoDeEntrada |
       alternativas.push({ conciliar: true, larga: principal ? 'emprego_paralela' : 'novo_paralela', texto: principal ? `manter ${nome} em paralelo` : `seguir como ${nome} e fazer isso em paralelo`, consequencia: principal ? `${cap(nome)} continua, com menos trabalhos. A semana fica mais cheia.` : `${cap(nome)} continua sendo o trabalho principal; o novo entra em parte da semana, rendendo menos.` });
     }
   }
+  // VIDA 27 · §14: o jogador profissional de e-sports que assina como atleta pode manter o e-sports como a segunda
+  // carreira (a trajetória paralela) — duas carreiras profissionais, o limite.
+  if (novo.tipo === 'contrato_esporte' && e.ocupacaoId === 'jogador_esports' && !v.trabalho.paralela && temVagaDeCarreira(v))
+    alternativas.push({ conciliar: true, larga: 'emprego_paralela', texto: `manter ${nome} em paralelo`, consequencia: `${cap(nome)} continua, como a segunda carreira: menos horas e salário menor; o clube é o trabalho principal.` });
   return { com: 'emprego', rotulo: `o trabalho de ${nome}`, motivo: `Você trabalha como ${nome}${e.carga === 'integral' ? ', o dia inteiro' : ''}`, alternativas };
 }
 
