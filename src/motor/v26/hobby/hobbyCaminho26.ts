@@ -23,6 +23,7 @@ import { janelaDaBase } from '../../sistemas/perseguir';
 import { habilidade } from '../../sistemas/frentes';
 import { nomeOcupacao } from '../../sistemas/trabalho';
 import { conviteAmador26, podeComecar25 } from '../../v25/esports/esports25';
+import { ESTILOS26 } from '../esporte/estilos26';
 
 export type Natureza26 = 'hobby' | 'caminho' | 'formacao' | 'renda' | 'cuidado' | 'social';
 export const NOME_NATUREZA26: Record<Natureza26, string> = { hobby: 'hobby', caminho: 'parte de um caminho', formacao: 'atividade de estudo', renda: 'dinheiro por fora', cuidado: 'cuidado', social: 'convívio' };
@@ -56,7 +57,8 @@ const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 function portaDoEsporte(v: Vida, d: Dominio): Porta26 {
   const i = idade(v);
-  const nome = NOME_MOD[d] ?? d;
+  // VIDA 26.2: a luta pelo estilo escolhido ("Muay Thai por gosto").
+  const nome = d === 'lutas' && v.lutas26?.estilo ? ESTILOS26[v.lutas26.estilo].nome : NOME_MOD[d] ?? d;
   const [ini, fim] = janelaDaBase(d);
   const r = v.rotinas.find(x => x.id === d);
   const es = v.caminhos.esporte;

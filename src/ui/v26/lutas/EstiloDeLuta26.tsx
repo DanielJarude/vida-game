@@ -41,6 +41,7 @@ export function EstiloDeLuta26({ vida, agir }: { vida: Vida; agir: (a: Acao) => 
           })}
           {sel && (
             <div className="l26__confirmar">
+              <p className="l26__nota"><b>{sel.nome}:</b> {sel.sobre}</p>
               <p className="l26__nota">{l.estilo ? `Trocar para ${sel.nome}: a técnica passa a ${Math.round(sel.tecnica)} — a do ${est!.nome} (${Math.round(l.h)}) fica guardada e volta se você voltar.` : `${sel.nome}: o estilo passa a valer na prática, na base e na carreira.`}</p>
               <button type="button" className="botao botao--secundario" onClick={() => { if (agir({ tipo: 'luta26', estilo: sel.id })) { setAberto(false); setEscolha(undefined); } }}>{l.estilo ? `Trocar para ${sel.nome}` : `Escolher ${sel.nome}`}</button>
             </div>

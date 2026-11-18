@@ -14,3 +14,6 @@
 .l26__opcao-sobre { color: var(--text-secondary); }
 .l26__opcao-custo { color: var(--accent); }
 .l26__confirmar { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.pratica .l26__opcoes { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+.pratica .l26__opcao-sobre { display: none; }
+.pratica .l26__opcao { padding: 6px 8px; }

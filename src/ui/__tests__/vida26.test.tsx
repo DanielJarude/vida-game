@@ -32,7 +32,8 @@ describe('VIDA 26 · Guia de carreiras', () => {
     garantirFrente(v, 'futebol').habilidade = 70;
     entrarNaBase(v, 'futebol', v.moradia.municipioId, 'Sport');
     const r = render(<Guia26 vida={v} agir={() => true} />);
-    expect(r.container.querySelectorAll('[data-trajeto]').length).toBe(MODALIDADES.length);
+    // VIDA 26.2: a luta é um caminho por estilo (7); as outras modalidades, um cada.
+    expect(r.container.querySelectorAll('[data-trajeto]').length).toBe(MODALIDADES.length - 1 + 7);
     const fut = r.container.querySelector('[data-trajeto="futebol"]')!;
     expect(fut.hasAttribute('open')).toBe(true);
     expect(fut.querySelector('[aria-current="step"]')?.textContent).toMatch(/A formação/);

@@ -39,3 +39,10 @@ const salvar = (nome: string, v: Vida) => { v.momento = null; writeFileSync(`${O
   v = viver(v, 1);
   salvar('v26-base13', v);
 }
+// 4–5. VIDA 26.2: quem treina luta — sem estilo (a escolha aberta) e no jiu-jitsu (a faixa, a troca).
+{
+  const base = () => { let v = nova({ semente: 2614, genero: 'feminino', municipioId: 'recife-pe' } as never); v = viver(v, 20); v.rotinas = v.rotinas.filter(r => r.id !== 'lutas'); v.rotinas.push({ id: 'lutas', tInicio: v.t - 48, nivel: 1 }); const f = garantirFrente(v, 'lutas'); f.habilidade = 45; f.meses = 48; return v; };
+  salvar('v26-lutadora', base());
+  const { executar } = await import('../../src/motor/acoes');
+  salvar('v26-jiujitsu', executar(base(), { tipo: 'luta26', estilo: 'jiu_jitsu' } as never).vida);
+}
