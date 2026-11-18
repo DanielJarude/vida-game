@@ -72,7 +72,7 @@ export function CenaDaCasa({ l, externo }: { l: LeituraLar; externo?: LadoDeFora
     veiculo: l.veiculo && formaV ? { tipo: l.veiculo, forma: formaV, cor: l.corVeiculo, versaoId: l.versaoVeiculo, estado: l.estadoVeiculo } : undefined,
     bichos: l.bichos.filter(b => b.especie === 'gato' || b.especie === 'cachorro'),
     // VIDA 22: o lugar em volta e o que a casa tem do lado de fora.
-    entorno: l.entorno ? { tipo: tipoDeEntorno({ bairro: l.entorno.bairro, perfil: l.entorno.perfil, forma: l.forma, padrao: l.padrao }), semente: l.entorno.semente } : undefined,
+    entorno: l.entorno ? { tipo: tipoDeEntorno({ bairro: l.entorno.bairro, perfil: l.entorno.perfil, forma: l.forma, padrao: l.padrao }), semente: l.entorno.semente, lugar: { pais: l.entorno.pais, padrao: l.padrao, litoral: l.entorno.litoral } } : undefined,
     extras: l.extras, coisasFora: l.coisasFora
   });
   return <Ilustracao a={a} largura={312} rotulo={rotulo} className={`cena cena--${l.forma} cena--${c.nivel}${l.fachada ? ' cena--colorida' : ''}`} dados={{ 'data-forma': l.forma }} />;

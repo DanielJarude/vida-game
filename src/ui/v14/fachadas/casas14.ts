@@ -466,7 +466,7 @@ export function amostraDaCasa14(e: CenaEntrada): Amostra {
   let cena: Cena & { principal: Bloco };
   try { cena = FORMAS14[e.forma](ctx); } finally { MARGEM = 0; }
   const v = cena.v, b = cena.principal;
-  const ent = e.entorno ? entornoDaCasa(v, cena.largura, 3.6, e.entorno.tipo, e.entorno.semente) : undefined;
+  const ent = e.entorno ? entornoDaCasa(v, cena.largura, 3.6, e.entorno.tipo, e.entorno.semente, e.entorno.lugar) : undefined;
   // Os anexos ficam na faixa nova do lote (à direita da casa); as coisas do quintal, nas faixas livres ao lado da casa.
   const base = cena.largura - anexo;
   const corAnexo = e.fachada ?? pl.cor;

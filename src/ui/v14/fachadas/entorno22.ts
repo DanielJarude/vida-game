@@ -22,7 +22,8 @@
  */
 import { decadaDaFigura } from '../../eras/modaDaDecada';
 import { clarear, escurecer, num, ret, type Peca } from '../../ilustracao/nucleo';
-import { COR, arvore, bloco, quatroAguas, frontal, grupo, janela, marcado, noChao, planoDoChao, platibanda, pt, sombraDoBloco, type Bloco, type Vista } from './kit';
+import { vizinhosDoLugar27 } from './vizinhanca27';
+import { COR, arvore, palmeira, bloco, quatroAguas, frontal, grupo, janela, marcado, noChao, planoDoChao, platibanda, pt, sombraDoBloco, type Bloco, type Vista } from './kit';
 
 export type TipoDeEntorno = 'periferia' | 'bairro' | 'centro' | 'nobre' | 'condominio' | 'pequena' | 'rural';
 
@@ -102,17 +103,21 @@ export interface Entorno { fundo: Peca[]; rua: Peca[] }
  * Os vizinhos (nas divisas, de x < 0 e x > largura, atrás da linha da casa) e a rua (postes, árvores de calçada). `m` é a
  * margem visível de cada lado (em metros). `semente` varia as casas vizinhas entre endereços (sempre a mesma para o mesmo).
  */
-export function entornoDaCasa(v: Vista, largura: number, m: number, tipo: TipoDeEntorno, semente: string): Entorno {
+export function entornoDaCasa(v: Vista, largura: number, m: number, tipo: TipoDeEntorno, semente: string, lugar?: { pais?: string; padrao?: number; litoral?: boolean }): Entorno {
   const fundo: Peca[] = [], rua: Peca[] = [];
   const s = (k: string) => h01(`${semente}|${k}`);
   const lados: [number, number][] = [[-m - 0.4, -0.4], [largura + 0.4, largura + m + 0.4]];
-  if (tipo === 'rural') {
+  // VIDA 27 · §7: com o lugar (país, padrão, litoral), os vizinhos vêm do catálogo do lugar (`vizinhanca27`).
+  if (lugar) {
+    fundo.push(...vizinhosDoLugar27(v, lados, tipo, lugar, s).fundo);
+    if (tipo === 'rural') return { fundo, rua };
+  } else if (tipo === 'rural') {
     for (const [a, b] of lados) {
       fundo.push(marcado('cena__vizinho', { 'data-entorno': 'pasto' }, [noChao(v, a, b, 0, 14, '#a9c47a', 'pasto-vizinho'), arvore(v, (a + b) / 2, 7 + s(`r${a}`) * 3, { alt: 5.5, copa: '#5f8f4e' })]));
     }
     return { fundo, rua };
   }
-  for (const [k, [a, b]] of lados.entries()) {
+  if (!lugar) for (const [k, [a, b]] of lados.entries()) {
     const l = b - a;
     if (tipo === 'centro') fundo.push(...predioVizinho(v, a + 0.2, l - 0.4, 4.2, ((decadaDaFigura() ?? 9999) < 1990 ? 3 : 5) + Math.floor(s(`p${k}`) * ((decadaDaFigura() ?? 9999) < 1990 ? 4 : 6)), s(`c${k}`)));
     else if (tipo === 'periferia') { fundo.push(...casaVizinha(v, a + 0.1, l * 0.55, 4.4, 'laje', s(`a${k}`)), ...casaVizinha(v, a + l * 0.58, l * 0.4, 4, s(`b${k}`) > 0.5 ? 'laje' : 'telha', s(`d${k}`))); }
@@ -129,7 +134,7 @@ export function entornoDaCasa(v: Vista, largura: number, m: number, tipo: TipoDe
   const dec = decadaDaFigura();
   if (dec !== null && dec < 2010 && tipo !== 'nobre' && tipo !== 'condominio') rua.push(orelhao(v, largura + m * 0.25));
   const arvores = tipo === 'periferia' ? [] : tipo === 'centro' ? [largura + m * 0.4] : tipo === 'pequena' ? [-m * 0.3] : [-m * 0.25, largura + m * 0.6];
-  for (const x of arvores) rua.push(marcado('cena__arvore-calcada', { 'data-entorno': 'arvore-calcada' }, [arvore(v, x, -1.05, { alt: tipo === 'nobre' || tipo === 'condominio' ? 6 : 5, copa: tipo === 'pequena' ? '#5f8f4e' : '#4f7f42' })]));
+  for (const x of arvores) rua.push(marcado('cena__arvore-calcada', { 'data-entorno': 'arvore-calcada' }, [lugar?.litoral && s(`coqueiro${x}`) > 0.45 ? palmeira(v, x, -1.05, 6, 1) : arvore(v, x, -1.05, { alt: tipo === 'nobre' || tipo === 'condominio' ? 6 : 5, copa: tipo === 'pequena' ? '#5f8f4e' : '#4f7f42' })]));
   return { fundo, rua };
 }
 

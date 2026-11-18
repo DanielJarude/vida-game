@@ -78,7 +78,7 @@ export interface LeituraLar {
   fachada?: { cor: string; nome: string };
   janelasAcesas: number;
   /** VIDA 22: o lugar em volta — o bairro (as palavras do mercado) e o porte da cidade. */
-  entorno: { bairro?: string; perfil: string; semente: string };
+  entorno: { bairro?: string; perfil: string; semente: string; /** VIDA 27 · §7 */ pais?: string; litoral?: boolean };
   /** VIDA 22: os cômodos de fora que a casa tem (da planta e construídos): garagem, piscina, lazer, quadra, varanda, jardim. */
   extras: string[];
   /** VIDA 22: as coisas da área externa que estão em casa (não guardadas no depósito). */
@@ -183,7 +183,7 @@ export function leituraDoLar(v: Vida): LeituraLar {
     estadoVeiculo: vei?.estado,
     fachada: fachadaDe(chaveDaCasa(v), forma),
     janelasAcesas: 1 + junto.length,
-    entorno: { bairro: m.tipo === 'pais' || m.tipo === 'parente' ? undefined : m.bairro, perfil: mun.perfil, semente: chaveDaCasa(v) },
+    entorno: { bairro: m.tipo === 'pais' || m.tipo === 'parente' ? undefined : m.bairro, perfil: mun.perfil, semente: chaveDaCasa(v), pais: mun.pais, litoral: !!mun.litoral },
     extras: m.tipo === 'pais' || m.tipo === 'parente' || m.tipo === 'cedida' ? [] : comodosDe(m.modeloId, donoDoLar(v)?.lar).map(c => c.tipo).filter(t => EXTRAS_DE_FORA.includes(t)),
     coisasFora: (v.financas.coisas ?? []).filter(c => !c.local && (COISAS_DO_QUINTAL as readonly string[]).includes(c.coisaId)).map(c => c.coisaId)
   };
