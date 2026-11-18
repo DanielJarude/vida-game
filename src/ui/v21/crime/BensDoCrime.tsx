@@ -9,7 +9,7 @@ import type { Acao } from '../../../motor/acoes';
 import { BotaoAcao } from '../../comum';
 import { dinheiroCurto } from '../../leituraMaterial';
 import { anoDe } from '../../../motor/tempo';
-import { bensIlicitos21, ofertas21, rotuloDaSaida21, saidas21 } from '../../../motor/v21/crime/espolio21';
+import { bensIlicitos21, nomeNoMercado21, ofertas21, rotuloDaSaida21, saidas21 } from '../../../motor/v21/crime/espolio21';
 import { NOME_DA_CATEGORIA21, type BemIlicito21 } from '../../../motor/dados21/crime/espolio21';
 import './crime21.css';
 
@@ -25,8 +25,8 @@ export function BensDoCrime({ vida, agir }: { vida: Vida; agir: (a: Acao) => boo
     <section className="svivo-bloco esp21" aria-labelledby="titulo-esp21">
       <h3 id="titulo-esp21" className="svivo-bloco__titulo">O que veio dos serviços</h3>
       <p className="svivo-nota">
-        Dinheiro em espécie já entrou no saldo. Os bens ficam com você até decidir. Nome no mercado paralelo: <strong>{Math.round(es?.reputacao ?? 0)}</strong>
-        {' '}— venda limpa faz subir e abre compradores que pagam melhor; venda que dá errado faz cair.
+        Dinheiro em espécie já entrou no saldo. Os bens ficam com você até decidir. Nome no mercado paralelo: <strong>{Math.round(nomeNoMercado21(vida).valor)}</strong> (por {nomeNoMercado21(vida).porque})
+        {' '}— o posto numa organização e o nome no crime da cidade contam; venda limpa faz subir e abre compradores que pagam melhor; venda que dá errado faz cair.
       </p>
       {bens.length > 0
         ? <ul className="esp21__lista">{bens.map(b => <Bem key={b.id} vida={vida} agir={agir} b={b} />)}</ul>

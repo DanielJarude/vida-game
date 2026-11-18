@@ -105,19 +105,43 @@ export function procura21(v: Vida, c: CategoriaDoEspolio21): number {
 
 export interface Oferta21 { comprador: Comprador21; nome: string; preco: number; risco: number; liberado: boolean; motivo?: string; descricao: string }
 
+/**
+ * VIDA 27: o nome que os compradores enxergam. Antes era só o das vendas anteriores (`espolio21.reputacao`) — o
+ * segundo no comando de uma facção aparecia como "sem nome no meio" para o desmanche. Agora vale o maior entre as
+ * vendas, a reputação no crime aqui na cidade e o posto numa organização de que se é de dentro (ela garante quem é
+ * dela). Lido direto do estado (sem importar o submundo: chunks).
+ */
+export function nomeNoMercado21(v: Vida): { valor: number; porque: string } {
+  const es = espolio21(v);
+  const e = v.caminhos.envolvimento;
+  const op: { valor: number; porque: string }[] = [{ valor: es.reputacao, porque: 'as vendas que já fez' }];
+  if (e) {
+    const aqui = e.reputacaoLocal?.[v.moradia.municipioId] ?? e.reputacao ?? 0;
+    op.push({ valor: Math.round(aqui * 0.8), porque: 'o seu nome no crime da cidade' });
+    for (const o of e.organizacoes ?? []) {
+      if (o.saiu !== undefined || o.expulso !== undefined || o.distancia === 'fora') continue;
+      if (o.propria) { op.push({ valor: 60, porque: `${o.nome}, que é sua` }); continue; }
+      if (o.relacao !== 'membro') continue;
+      const n = o.nivel ?? 0;
+      op.push({ valor: 10 + n * 9, porque: `o seu posto em ${o.nome}` });
+    }
+  }
+  return op.reduce((a, x) => (x.valor > a.valor ? x : a));
+}
+
 /** Quem compraria este bem, por quanto, com que risco — e quem ainda não negocia com você (e por quê). */
 export function ofertas21(v: Vida, b: BemIlicito21): Oferta21[] {
-  const es = espolio21(v);
+  const nome = nomeNoMercado21(v);
   const cautela = !!v.caminhos.envolvimento?.cautela;
   return (Object.keys(COMPRADORES21) as Comprador21[]).filter(c => COMPRADORES21[c].compra.includes(b.categoria)).map(c => {
     const p = COMPRADORES21[c];
-    const reputacaoPaga = 1 + es.reputacao / 400;
+    const reputacaoPaga = 1 + nome.valor / 400;
     const raro = b.raro && c === 'colecionador' ? 1.3 : b.raro && c === 'bairro' ? 0.6 : 1;
     const engano = b.engano ? 0.4 : 1;
     const preco = Math.round(baseNoMercado21(b) * p.paga * procura21(v, b.categoria) * (1 - b.calor / 250) * reputacaoPaga * raro * engano / 10) * 10;
-    const risco = clamp(p.risco * (1 + b.calor / 100) * (b.rastreavel ? 1.4 : 1) * (cautela ? 0.7 : 1) * (1 - es.reputacao / 250), 0.01, 0.6);
-    const liberado = es.reputacao >= p.reputacao;
-    return { comprador: c, nome: p.nome, preco, risco, liberado, descricao: p.descricao, ...(liberado ? {} : { motivo: `Só negocia com quem já tem nome no meio (${p.reputacao}+; o seu: ${Math.round(es.reputacao)}).` }) };
+    const risco = clamp(p.risco * (1 + b.calor / 100) * (b.rastreavel ? 1.4 : 1) * (cautela ? 0.7 : 1) * (1 - nome.valor / 250), 0.01, 0.6);
+    const liberado = nome.valor >= p.reputacao;
+    return { comprador: c, nome: p.nome, preco, risco, liberado, descricao: p.descricao, ...(liberado ? {} : { motivo: `Só negocia com quem já tem nome no meio (${p.reputacao}+; o seu: ${Math.round(nome.valor)}, por ${nome.porque}).` }) };
   });
 }
 

@@ -19,7 +19,7 @@ import { municipio } from '../dados/lugares';
 import { idadeEm } from '../tempo';
 import { derivaDaSaude } from './estado';
 import { registrarQuemApareceu } from './rede';
-import { checkupDoPlano, evoluirCondicoes, MENTAIS, perdaDaCondicao, SINAIS } from './saude';
+import { checkupDoPlano, diagnosticar, evoluirCondicoes, MENTAIS, perdaDaCondicao, SINAIS } from './saude';
 import { flex, listaNatural, rotuloParentesco } from '../texto';
 
 /**
@@ -165,6 +165,18 @@ export function limiteNoCheckup(v: Vida, i = idade(v)): { id: 'hipertensao' | 'd
   if (f.estresse > 60 && melhor.id === 'hipertensao') pesa.push('o estresse');
   if (f.naFamilia(melhor.id)) pesa.push('a história da família');
   return { id: melhor.id, nome: melhor.id === 'hipertensao' ? 'a pressão' : 'a glicemia', pesa };
+}
+
+/**
+ * VIDA 27 · §2: o check-up do evento "O check-up" (conteudo/mundo). Antes, 25% fixos de "acharam pressão alta", sem
+ * olhar risco (somava à incidência natural). Agora o exame acha o que JÁ existe sem nome, ou avisa do limite pelo risco.
+ */
+export function checkupDoEvento(v: Vida): { texto: string; memoria: string | null; efeito?: () => void } {
+  const semNome = v.corpo.condicoes.find(x => x.diagnosticada === false && x.cronica);
+  if (semNome) return { texto: `Os exames acharam ${semNome.nome}, que vinha dando sinais. Melhor saber agora: o tratamento começa já.`, memoria: `Descobriu ${semNome.nome} num check-up.`, efeito: () => { diagnosticar(v, semNome, 'checkup'); semNome.tratando = true; } };
+  const limite = limiteNoCheckup(v);
+  if (limite) return { texto: `Nada fechado como doença, mas ${limite.nome} no limite${limite.pesa.length ? ` — e pesa ${listaNatural(limite.pesa)}` : ''}. Dieta, caminhada, voltar daqui a um ano.`, memoria: null, efeito: () => { v.fatos[`limite_${limite.id}`] = v.t; } };
+  return { texto: 'Tudo em ordem, disse o médico — por enquanto.', memoria: null };
 }
 
 /** Envelhecimento e condições do ano. Devolve se algo marcante aconteceu. */

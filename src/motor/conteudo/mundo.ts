@@ -37,9 +37,7 @@ import { anoDe } from '../tempo';
 import { curso } from '../dados/cursos';
 import { em } from '../sistemas/escola';
 import { categoriaDoVeiculo, textoVeiculo } from '../sistemas/veiculos';
-import { limiteNoCheckup } from '../sistemas/corpo';
-import { diagnosticar } from '../sistemas/saude';
-import { listaNatural } from '../texto';
+import { checkupDoEvento } from '../sistemas/corpo';
 
 
 /** O pai ou a mãe que mora em casa e tem um ofício qualificado — quem um empregador de fora patrocina e leva a família junto. */
@@ -358,18 +356,7 @@ export const MUNDO: Conteudo[] = [
     texto: c => `${P.parceiro(c.v)[0] ? `${P.parceiro(c.v)[0].nome} insiste` : 'O posto de saúde mandou uma carta insistindo'}: faz anos que você não faz exame nenhum.`,
     opcoes: [
       { id: 'fazer', texto: 'Marcar os exames', comportamento: { disciplina: 1 },
-        // VIDA 27 · §2: antes, 25% fixos de "acharam pressão alta" a cada check-up, sem olhar risco nenhum (somava à
-        // incidência natural). Agora o exame acha o que JÁ existe sem nome, ou avisa do limite pelo risco real.
-        resolver: c => {
-          const semNome = c.v.corpo.condicoes.find(x => x.diagnosticada === false && x.cronica);
-          if (semNome) {
-            return { texto: `Os exames acharam ${semNome.nome}, que vinha dando sinais. Melhor saber agora: o tratamento começa já.`, memoria: `Descobriu ${semNome.nome} num check-up.`,
-              efeito: () => { diagnosticar(c.v, semNome, 'checkup'); semNome.tratando = true; } };
-          }
-          const limite = limiteNoCheckup(c.v);
-          if (limite) return { texto: `Nada fechado como doença, mas ${limite.nome} no limite${limite.pesa.length ? ` — e pesa ${listaNatural(limite.pesa)}` : ''}. Dieta, caminhada, voltar daqui a um ano.`, memoria: null, efeito: () => { c.v.fatos[`limite_${limite.id}`] = c.v.t; } };
-          return { texto: 'Tudo em ordem, disse o médico — por enquanto.', memoria: null };
-        } },
+        resolver: c => checkupDoEvento(c.v) },
       { id: 'adiar', texto: 'Deixar para depois', resolver: () => ({ texto: 'A carta foi para a gaveta.', memoria: null }) }
     ]
   },
