@@ -196,9 +196,12 @@ describe('K8 · as novidades da atualização', () => {
     expect(deveMostrarNovidades()).toBe(true);
     abrirJogo(vida(20));
     const janela = await screen.findByRole('dialog', { name: 'Novidades da atualização' });
-    expect(janela.textContent).toMatch(/Novidades/);
-    expect(janela.textContent).toMatch(/Melhorias/);
-    expect(janela.textContent).toMatch(/Correções/);
+    // VIDA 26.1: cada parte aparece quando a versão tem o que dizer nela (as notas não inventam uma correção vazia).
+    const atual = NOTAS.find(n => n.versao === VERSAO_ATUAL)!;
+    if (atual.novidades.length) expect(janela.textContent).toMatch(/Novidades/);
+    if (atual.melhorias.length) expect(janela.textContent).toMatch(/Melhorias/);
+    if (atual.correcoes.length) expect(janela.textContent).toMatch(/Correções/);
+    expect(atual.novidades.length + atual.melhorias.length + atual.correcoes.length).toBeGreaterThan(0);
     expect(janela.textContent).toContain(`Versão ${VERSAO_ATUAL}`);
     fireEvent.click(within(janela).getByRole('button', { name: 'Continuar jogando' }));
     expect(screen.queryByRole('dialog', { name: 'Novidades da atualização' })).toBeNull();
