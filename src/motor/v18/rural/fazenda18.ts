@@ -104,6 +104,8 @@ export interface PropriedadeRural18 {
   seguro?: boolean;
   historico: AnoRural18[];
   ultimoAno: number;
+  /** VIDA 27 · §4: a safra do ano já vendida (a decisão "A hora de vender"): recebida na hora; o fechamento do ano não a conta de novo. */
+  safraVendida?: { ano: number; receita: number; fator: number; comprador: string; t: number };
   origem: 'compra' | 'heranca' | 'familia' | 'arrendamento' | 'antigo';
   /** Arrendada de terceiros (`de: 'terceiro'`, você paga) ou a terceiros (`para: 'terceiro'`, você recebe). */
   arrendamento?: { valorAno: number; ate: number; sentido: 'pago' | 'recebo' };
@@ -572,6 +574,34 @@ function proLaboreAnual(v: Vida, p: PropriedadeRural18): number {
   return Math.round((v.trabalho.atual?.salario ?? 0) * 12);
 }
 
+/**
+ * VIDA 27 · §4: as safras que estão para fechar (o ano ainda não fechado de cada propriedade em produção), pelo mesmo
+ * cálculo do fechamento (mesmo clima, mesmo sorteio de praga): o valor da colheita ao preço do dia.
+ */
+export function safrasAVenda18(v: Vida): { p: PropriedadeRural18; imovel?: Imovel; ano: number; valor: number }[] {
+  const ano = anoDe(v.t);
+  return todasAsPropriedades(v)
+    .filter(({ p }) => p.uso === 'producao' && p.ultimoAno < ano && p.safraVendida?.ano !== ano && p.talhoes.length > 0)
+    .map(({ p, imovel }) => {
+      const s = simularAno(v, p, ano, { rr: rngDe(v.id, 'fazenda18', p.id, ano) });
+      return { p, imovel, ano, valor: s.talhoes.filter(t => t.colheu).reduce((x, t) => x + t.receita, 0) };
+    })
+    .filter(x => x.valor > 0);
+}
+
+/** Vende agora as safras a fechar, a `fator` do preço do dia: o dinheiro entra na hora (e o fechamento não o repete). */
+export function venderSafras18(v: Vida, fator: number, comprador: string): number {
+  let total = 0;
+  for (const x of safrasAVenda18(v)) {
+    const receita = Math.round(x.valor * fator / 100) * 100;
+    x.p.safraVendida = { ano: x.ano, receita, fator, comprador, t: v.t };
+    v.financas.conta += receita;
+    lancar(v, `Venda da safra: ${x.p.nome}`, 'renda', receita);
+    total += receita;
+  }
+  return total;
+}
+
 /** Aplica o ano: dinheiro (uma vez), solo, rebanho, talhões, valor, história. Idempotente por `ultimoAno`. */
 export function viverAnoDaPropriedade(v: Vida, p: PropriedadeRural18, imovel: Imovel | undefined, ano: number): AnoRural18 | undefined {
   if (p.ultimoAno >= ano) return undefined;
@@ -581,10 +611,18 @@ export function viverAnoDaPropriedade(v: Vida, p: PropriedadeRural18, imovel: Im
   const pl = Math.min(proLaboreAnual(v, p), Math.max(0, s.receita - s.custo));
   const linhas = [...s.linhas];
   if (pl > 0) linhas.push({ oque: 'Seu pró-labore (já recebido como renda do trabalho)', receita: 0, custo: pl });
-  const receita = s.receita;
+  // VIDA 27 · §4: a safra vendida antes do fechamento já entrou na conta: aparece no ano pelo preço da venda, uma vez só.
+  const vendida = p.safraVendida?.ano === ano ? p.safraVendida : undefined;
+  let jaRecebido = 0;
+  if (vendida) {
+    s.talhoes.forEach((t, k) => { if (t.colheu && linhas[k]) linhas[k] = { ...linhas[k], receita: 0, nota: [linhas[k].nota, 'vendida antes'].filter(Boolean).join('; ') }; });
+    linhas.push({ oque: `Safra vendida ${vendida.comprador} (recebida na hora)`, receita: vendida.receita, custo: 0 });
+    jaRecebido = vendida.receita;
+  }
+  const receita = linhas.reduce((x, l) => x + l.receita, 0);
   const custo = s.custo + pl;
   const resultado = receita - custo;
-  v.financas.conta = Math.round(v.financas.conta + resultado);
+  v.financas.conta = Math.round(v.financas.conta + resultado - jaRecebido);
   lancar(v, `Resultado: ${p.nome}`, resultado >= 0 ? 'renda' : 'despesa', resultado);
   // O chão: rotação, monocultura, orgânico, pasto lotado.
   if (p.uso === 'producao') {

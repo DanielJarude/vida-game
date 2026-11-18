@@ -63,6 +63,7 @@ import { classificadoParaFinalNacional, faseTenisPlausivel, naFaseTenis, registr
 import { OCUPACAO_TECNICO, decidirFinal, deixarOClube, demitirDoComando, passagemAtual, trabalhoDoTecnico } from './tecnico';
 import { economiaLocal } from '../dados/lugares';
 import { MODELOS_ARTE_11 } from './situacoesArte';
+import { safrasAVenda18, venderSafras18 } from '../v18/rural/fazenda18';
 import { modelosComMemoria } from './situacoesMemoria';
 import { MODELOS_125 } from './situacoes125';
 import { MODELOS_126, TRILHAS_SEM_ESCRITORIO } from './situacoes126';
@@ -1202,16 +1203,45 @@ const noCampo = (v: Vida) => trajetoriaDeSituacao(v) === 'rural';
 const anosNoCampo = (v: Vida) => F('anos de lida', Math.min(15, (v.t - ru(v).tInicio) / 12) / 20 - 0.2);
 const caixa = (v: Vida, quanto: number) => F('caixa', v.financas.conta >= noCustoDaqui(v, quanto) ? 0.15 : -0.3);
 /** REWORK 10.6 · P8: um valor de referência no custo de vida de onde se vive. */
+/** VIDA 27 · §4: quanto vale a safra que está para vender: a lavoura das propriedades do Campo (a conta do fechamento)
+ *  ou, sem propriedade, a produção do ano de quem vive dela (a renda do ofício). */
+function valorDaSafra(v: Vida): { modo: '18' | 'renda'; valor: number } {
+  const v18 = safrasAVenda18(v).reduce((x, s) => x + s.valor, 0);
+  if (v18 > 0) return { modo: '18', valor: v18 };
+  return { modo: 'renda', valor: Math.round((v.trabalho.atual?.salario ?? 0) * 12) };
+}
+const temPropriedade18 = (v: Vida) => v.financas.bens.some(b => b.tipo === 'imovel' && !!b.rural) || !!v.rural18?.arrendadas?.length;
 const noCustoDaqui = (v: Vida, x: number) => Math.round(x * economiaLocal(v.moradia.municipioId).custo / 10) * 10;
 
 const MODELOS_RURAL: ModeloSituacao[] = [
-  { id: 'rur_venda', trajetoria: 'rural', peso: () => 1.2, cabe: v => noCampo(v),
-    titulo: 'A hora de vender', texto: v => `A ${ru(v).cultura === 'leite' ? 'produção do mês' : 'safra'} está pronta. O atravessador oferece pagamento à vista, abaixo do preço. Esperar pode render mais — ou o preço cair.`,
-    intencoes: v => [
-      { id: 'vista', texto: 'Vender agora ao atravessador', dica: 'Dinheiro certo, menor.', risco: 0.1, fatores: () => [], desfechos: D('O preço caiu na semana seguinte: vender cedo foi o certo.', 'Vendeu, sem surpresa.', 'O preço subiu depois.', 'O preço subiu muito depois; o atravessador ganhou a sua margem.', { otimo: { dinheiro: 3000 }, bom: { dinheiro: 1500, nome: 0 } }) },
-      { id: 'esperar', texto: 'Guardar e esperar o preço', dica: 'Pede caixa para aguentar e um pouco de sorte.', risco: 0.6, fatores: v2 => [leitura(v2), caixa(v2, 8000), anosNoCampo(v2)], desfechos: D('O preço subiu bem: o ano fechou no azul.', 'Vendeu um pouco melhor.', 'O preço não se mexeu, e o produto perdeu qualidade.', 'O preço desabou: vendeu abaixo do que o atravessador ofereceu.', { otimo: { dinheiro: 9000 }, bom: { dinheiro: 3000 }, ruim: { dinheiro: -1500 }, pessimo: { dinheiro: -6000 } }, { otimo: 'Segurou a safra esperando o preço — e o ano pagou os anteriores.' }) },
-      ...(ru(v).cooperativa ? [{ id: 'coop', texto: 'Vender pela cooperativa', dica: 'Preço médio, sem susto.', risco: 0.2, fatores: (v2: Vida) => [anosNoCampo(v2)], desfechos: D('A cooperativa fechou contrato com um laticínio grande: preço bom.', 'Preço justo, pago em dia.', 'O pagamento atrasou um mês.', 'A cooperativa passou por uma crise e pagou parcelado.', { otimo: { dinheiro: 5000 }, bom: { dinheiro: 2500 } }) }] : [])
-    ] },
+  // VIDA 27 · §4: a venda é de verdade — o valor sai da lavoura (a mesma conta do fechamento do ano, nas propriedades
+  // do Campo) ou, sem propriedade, da renda do ano de quem produz; todo desfecho diz por quanto vendeu. Antes, valores
+  // fixos (R$ 1.500 a 9.000) e "vender ao atravessador" com desfecho ruim não pagava nada: a safra sumia sem venda.
+  { id: 'rur_venda', trajetoria: 'rural', peso: () => 1.2, cabe: v => noCampo(v) && (safrasAVenda18(v).length > 0 || ru(v).cultura === 'leite' || !temPropriedade18(v)),
+    titulo: 'A hora de vender', texto: v => `A ${ru(v).cultura === 'leite' ? 'produção do mês' : 'safra'} está pronta${valorDaSafra(v).modo === '18' ? ` — vale uns ${moedaCurta(valorDaSafra(v).valor)} ao preço do dia` : ''}. O atravessador oferece pagamento à vista, abaixo do preço. Esperar pode render mais — ou o preço cair.`,
+    intencoes: v => {
+      const venda = (fator: number, comprador: string, frase: string): Efeitos & { texto: string } => {
+        const { modo, valor } = valorDaSafra(v);
+        const recebe = Math.round(valor * fator / 100) * 100;
+        const dif = recebe - valor;
+        const quanto = modo === '18'
+          ? `Vendeu ${comprador} por ${moedaCurta(recebe)} — entrou na conta.`
+          : `Vendeu ${comprador}: ${moedaCurta(recebe)} pela produção do ano (a renda que cai mês a mês), ${dif >= 0 ? `${moedaCurta(dif)} acima` : `${moedaCurta(-dif)} abaixo`} do preço do dia.`;
+        return { texto: `${frase} ${quanto}`, extra: (w: Vida) => { if (valorDaSafra(w).modo === '18') venderSafras18(w, fator, comprador); else w.financas.conta += Math.round(valorDaSafra(w).valor * (fator - 1) / 100) * 100; } };
+      };
+      const Dv = (op: Record<Desfecho, ReturnType<typeof venda>>, mem: Partial<Record<Desfecho, string>> = {}) => {
+        const d = D(op.otimo.texto, op.bom.texto, op.ruim.texto, op.pessimo.texto, { otimo: { extra: op.otimo.extra }, bom: { extra: op.bom.extra }, ruim: { extra: op.ruim.extra }, pessimo: { extra: op.pessimo.extra } }, mem);
+        return d;
+      };
+      return [
+        { id: 'vista', texto: 'Vender agora ao atravessador', dica: 'Dinheiro certo, menor (uns 8% abaixo do preço).', risco: 0.1, fatores: () => [],
+          desfechos: Dv({ otimo: venda(0.96, 'ao atravessador', 'O preço caiu na semana seguinte: vender cedo foi o certo.'), bom: venda(0.92, 'ao atravessador', 'Vendeu, sem surpresa.'), ruim: venda(0.9, 'ao atravessador', 'O preço subiu depois.'), pessimo: venda(0.86, 'ao atravessador', 'O preço subiu muito depois; o atravessador ganhou a sua margem.') }) },
+        { id: 'esperar', texto: 'Guardar e esperar o preço', dica: 'Pede caixa para aguentar e um pouco de sorte.', risco: 0.6, fatores: v2 => [leitura(v2), caixa(v2, 8000), anosNoCampo(v2)],
+          desfechos: Dv({ otimo: venda(1.15, 'no pico do preço', 'O preço subiu bem: o ano fechou no azul.'), bom: venda(1.05, 'um pouco melhor', 'Valeu a espera, por pouco.'), ruim: venda(0.94, 'depois de esperar', 'O preço não se mexeu, e o produto perdeu qualidade.'), pessimo: venda(0.82, 'com o preço no chão', 'O preço desabou: vendeu abaixo do que o atravessador ofereceu.') }, { otimo: 'Segurou a safra esperando o preço — e o ano pagou os anteriores.' }) },
+        ...(ru(v).cooperativa ? [{ id: 'coop', texto: 'Vender pela cooperativa', dica: 'Preço médio, sem susto.', risco: 0.2, fatores: (v2: Vida) => [anosNoCampo(v2)],
+          desfechos: Dv({ otimo: venda(1.05, 'pela cooperativa', 'A cooperativa fechou contrato com um comprador grande: preço bom.'), bom: venda(1, 'pela cooperativa', 'Preço justo, pago em dia.'), ruim: venda(0.98, 'pela cooperativa', 'O pagamento atrasou um mês.'), pessimo: venda(0.95, 'pela cooperativa', 'A cooperativa passou por uma crise e pagou parcelado.') }) }] : [])
+      ];
+    } },
   { id: 'rur_maquina', trajetoria: 'rural', peso: () => 0.8, cabe: v => noCampo(v) && v.t - ru(v).tInicio >= 24,
     titulo: 'A máquina', texto: () => 'Um vendedor oferece financiar uma máquina nova: dobra o que se planta e tira um peso das costas — parcela por cinco anos.',
     intencoes: [
