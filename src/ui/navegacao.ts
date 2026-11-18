@@ -39,7 +39,7 @@ export type ParteCaminhos = 'agora' | 'desenvolvimento' | 'oportunidades' | 'his
 export type Aba = Area | SecaoVida | SecaoTempo | ParteCaminhos | 'estudos' | 'formacao' | 'trabalho' | 'cursos' | 'vagas' | 'concursos' | 'negocio' | 'vida_publica' | 'outros_caminhos' | 'inicio_caminhos' | 'prontuario' | 'submundo'
   /** REWORK 10.6 · C2/C3: os destinos das ações principais (entrar na faculdade, as bolsas, o histórico acadêmico, a carreira). */
   | 'faculdade' | 'bolsas' | 'historico_academico' | 'minha_carreira' | 'conquistas'
-  /** VIDA 26: o guia dos caminhos profissionais (Caminhos · Guia de carreiras). */
+  /** VIDA 26: o explorador dos caminhos de carreira (Caminhos · Caminhos de carreira). */
   | 'guia_carreiras';
 
 export interface Lugar {
@@ -105,7 +105,7 @@ export const DIVISOES_CAMINHOS: { id: DivisaoCaminhos; rotulo: string; oque: str
   { id: 'publica', rotulo: 'Vida pública', oque: 'Concursos, política, serviço público, farda' },
   { id: 'outros', rotulo: 'Outros caminhos', oque: 'Esporte, arte, a universidade como carreira, os projetos' },
   // VIDA 26: a consulta dos caminhos profissionais (esporte, e-sports, pistas): do hobby ao profissional e ao depois.
-  { id: 'guia', rotulo: 'Guia de carreiras', oque: 'Os caminhos profissionais do esporte, dos e-sports e das pistas: como começam, as etapas, os destinos e o depois da competição' },
+  { id: 'guia', rotulo: 'Caminhos de carreira', oque: 'O explorador de trajetórias: esporte, e-sports, pistas e profissões — como começam, as etapas, os destinos, o depois e onde você está' },
   // REWORK 10.5 · CRI-02: antes, a vida à margem era a primeira seção de "Outros caminhos" (e só para quem já estava nela).
   { id: 'submundo', rotulo: 'Submundo', oque: 'O crime: o que você faz por fora, quem sabe o seu nome, a confiança do meio, investigações, processos, a ficha' }
 ];
@@ -192,6 +192,40 @@ export interface Intencao {
   tipo?: 'fazer' | 'ver' | 'acompanhar';
 }
 
+/**
+ * VIDA 26.1 — AS ÁREAS DA CENTRAL "Onde fica cada coisa": a intenção é agrupada pela FINALIDADE (o que a pessoa quer
+ * resolver), não pela tela onde mora. Cada intenção pertence a uma área só (`GRUPO_DA_INTENCAO`); a tela mostra as áreas
+ * primeiro, a busca atravessa todas. O lugar (a tela de destino) continua o mesmo — nenhum id ou destino mudou.
+ */
+export type GrupoDeIntencao = 'pessoas' | 'estudos' | 'trabalho' | 'esporte' | 'lazer' | 'semana' | 'corpo' | 'dinheiro' | 'casa' | 'publica' | 'historia';
+export const GRUPOS_DE_INTENCAO: { id: GrupoDeIntencao; rotulo: string; oque: string }[] = [
+  { id: 'pessoas', rotulo: 'Pessoas e relacionamentos', oque: 'Família, amizades, namoro, filhos, cuidar de alguém, quem se foi' },
+  { id: 'estudos', rotulo: 'Estudos', oque: 'Escola, faculdade, cursos, bolsas, boletim e histórico' },
+  { id: 'trabalho', rotulo: 'Trabalho e carreira', oque: 'Emprego, negócio, o dia a dia do trabalho, a carreira' },
+  { id: 'esporte', rotulo: 'Esportes e competição', oque: 'Praticar, peneira e base, carreira de atleta, e-sports, kart, o depois' },
+  { id: 'lazer', rotulo: 'Hobbies, lazer e redes', oque: 'Música, arte, videogame, sair, redes sociais, o celular' },
+  { id: 'semana', rotulo: 'Rotina e semana', oque: 'A agenda, a dedicação a cada atividade, o estresse, o que você pratica' },
+  { id: 'corpo', rotulo: 'Corpo, saúde e aparência', oque: 'Médico, tratamento, cabeça, atributos, o corpo, cabelo e estilo' },
+  { id: 'dinheiro', rotulo: 'Dinheiro, compras e patrimônio', oque: 'O mês, compras, veículos, o que é seu, apostas, o campo' },
+  { id: 'casa', rotulo: 'Casa, cidade e viagens', oque: 'Onde morar, mudar de cidade ou de país, viajar, custo de vida' },
+  { id: 'publica', rotulo: 'Vida pública e outros rumos', oque: 'Concursos, política, o crime e a Justiça' },
+  { id: 'historia', rotulo: 'História, avisos e o jogo', oque: 'A biografia, as conquistas, os convites com prazo, as cores do jogo' }
+];
+export const GRUPO_DA_INTENCAO: Record<string, GrupoDeIntencao> = {
+  estudar: 'estudos', atividade_escolar: 'estudos', faculdade: 'estudos', cursos: 'estudos', bolsa: 'estudos', historico_escolar: 'estudos', boletim: 'estudos',
+  convite: 'historia', conquistas: 'historia', historia: 'historia', aparencia: 'historia',
+  pedir_compra: 'dinheiro', carro: 'dinheiro', usar_carro: 'dinheiro', dinheiro: 'dinheiro', quanto_ganho: 'dinheiro', apostar: 'dinheiro', campo: 'dinheiro', pertences: 'dinheiro',
+  falar_mae: 'pessoas', namoro: 'pessoas', romance_amigo: 'pessoas', fazer_junto: 'pessoas', sair_amigo: 'pessoas', cuidar_de_alguem: 'pessoas', familia_aconteceu: 'pessoas', homenagear: 'pessoas', agradecer: 'pessoas',
+  agir_trabalho: 'trabalho', emprego: 'trabalho', negocio: 'trabalho', carreira: 'trabalho', profissional: 'trabalho',
+  futebol: 'esporte', carreira_esporte: 'esporte', base_esporte: 'esporte', formacao_atleta: 'esporte', esports: 'esporte', kart: 'esporte', pos_carreira: 'esporte', caminhos_carreira: 'esporte',
+  hobby: 'lazer', violao: 'lazer', sair: 'lazer', rede: 'lazer', celular: 'lazer', videogame: 'lazer',
+  estresse: 'semana', agenda: 'semana', dedicacao: 'semana', praticas: 'semana',
+  condicionamento: 'corpo', cabelo: 'corpo', cirurgia: 'corpo', saude: 'corpo', tratamento: 'corpo', cabeca: 'corpo', atributos: 'corpo', triste: 'corpo', corpo_capacidades: 'corpo',
+  viajar: 'casa', casa: 'casa', onde_moro: 'casa', mudar_cidade: 'casa', mudar_pais: 'casa', custo_de_vida: 'casa', nacionalidade: 'casa', em_casa: 'casa',
+  concurso: 'publica', submundo: 'publica'
+};
+export const grupoDaIntencao = (x: Intencao): GrupoDeIntencao => GRUPO_DA_INTENCAO[x.id] ?? 'historia';
+
 export const MAPA_DE_INTENCOES: Intencao[] = [
   { id: 'estudar', quero: 'Estudar, ver a escola, a faculdade', lugar: { area: 'caminhos', divisao: 'estudos', parte: 'agora' }, la: 'a escola ou o curso, as atividades de lá (os cursos possíveis estão em Cursos)' },
   { id: 'atividade_escolar', quero: 'Entrar numa atividade da escola ou da faculdade', lugar: { area: 'caminhos', divisao: 'estudos', parte: 'agora' }, la: '"O que dá para fazer aqui"' },
@@ -259,7 +293,16 @@ export const MAPA_DE_INTENCOES: Intencao[] = [
   { id: 'concurso', quero: 'Prestar concurso, entrar na política', lugar: { area: 'caminhos', divisao: 'publica' }, la: 'os editais abertos, o preparo, a política, as carreiras de farda' },
   { id: 'carreira_esporte', quero: 'Seguir carreira no esporte ou na arte', lugar: { area: 'caminhos', divisao: 'outros' }, la: 'as peneiras, as seletivas, a banda, o grupo — e como cada caminho começa' },
   { id: 'submundo', quero: 'Entrar para o crime, ver o processo e os antecedentes', lugar: { area: 'caminhos', divisao: 'submundo' }, la: 'Caminhos · Submundo: a situação, os contatos, o risco, o processo e a ficha', chaves: 'crime ilegal esquema por fora policia processo prisao antecedentes advogado submundo', tipo: 'fazer' },
-  { id: 'boletim', quero: 'Ver o meu boletim, as minhas notas', lugar: { area: 'caminhos', divisao: 'estudos', parte: 'desenvolvimento' }, la: 'o boletim: as matérias, a nota, a frequência' }
+  { id: 'boletim', quero: 'Ver o meu boletim, as minhas notas', lugar: { area: 'caminhos', divisao: 'estudos', parte: 'desenvolvimento' }, la: 'o boletim: as matérias, a nota, a frequência' },
+  // VIDA 26.1 — esportes, e-sports, pistas, o depois da competição, o corpo, os caminhos de carreira (cada um com o lugar real).
+  { id: 'caminhos_carreira', quero: 'Explorar caminhos de carreira: do hobby ao profissional', lugar: { area: 'caminhos', divisao: 'guia' }, la: 'Caminhos · Caminhos de carreira: cada esporte, jogo, as pistas e as profissões — como começa, as etapas, o depois', chaves: 'carreira trajetoria caminho profissao futuro sonho virar ser jogador atleta lutador piloto profissional explorar possibilidades', tipo: 'ver' },
+  { id: 'base_esporte', quero: 'Fazer uma peneira ou seletiva, entrar numa base', lugar: { area: 'caminhos', divisao: 'outros' }, la: 'Caminhos · Outros caminhos: "Esporte" — pedir um teste num clube, o convite, a base', chaves: 'peneira seletiva base escolinha clube teste categoria sub futebol futsal basquete volei tenis natacao atletismo luta lutas arte marcial muay thai jiu jitsu judo boxe karate mma', tipo: 'fazer' },
+  { id: 'formacao_atleta', quero: 'Ver a minha formação de atleta e os meus atributos', lugar: { area: 'caminhos', divisao: 'outros' }, la: 'na base: a formação ano a ano, a leitura da comissão (capacidade, potencial, prontidão) e a ficha; no profissional, em Trabalho', chaves: 'formacao base categoria avaliacao comissao potencial prontidao atributo ficha atleta jogador', tipo: 'ver' },
+  { id: 'esports', quero: 'Competir em e-sports (CS, VALORANT, LoL, Fortnite...)', lugar: { area: 'caminhos', divisao: 'outros' }, la: 'Caminhos · Outros caminhos: "E-sports" — escolher o jogo, treinar a sério, peneiras, equipes', chaves: 'esports e-sports counter strike cs csgo cs2 valorant lol league of legends fortnite r6 rainbow six siege rocket league videogame competitivo gamer equipe campeonato', tipo: 'fazer' },
+  { id: 'kart', quero: 'Correr de kart, tentar chegar à Fórmula 1', lugar: { area: 'caminhos', divisao: 'outros' }, la: 'Caminhos · Outros caminhos: "Automobilismo" — o kart, as categorias de fórmula, a F1', chaves: 'kart automobilismo formula f1 f2 f3 f4 piloto corrida carro pista', tipo: 'fazer' },
+  { id: 'pos_carreira', quero: 'Depois de competir: treinador, analista, comentarista', lugar: { area: 'caminhos', divisao: 'trabalho', parte: 'oportunidades' }, la: '"Depois de competir": as portas que a sua carreira abriu (aparece para quem encerrou uma carreira esportiva ou de e-sports)', chaves: 'treinador tecnico auxiliar comentarista analista professor preparador dirigente gerente caster narrador streamer aposentar aposentadoria pos carreira', tipo: 'fazer' },
+  { id: 'videogame', quero: 'Jogar videogame por diversão', lugar: { area: 'tempo', aba: 'atividades' }, la: '"Jogar videogame" — o hobby (e, se quiser, a porta para os e-sports)', chaves: 'videogame jogo jogar console pc gamer playstation xbox', tipo: 'fazer' },
+  { id: 'corpo_capacidades', quero: 'Ver o meu corpo e as capacidades físicas', lugar: { area: 'voce', voce: 'aparencia' }, la: 'Você · Aparência · Corpo: a condição atual, as capacidades (força, velocidade...), a evolução, o objetivo, a constituição', chaves: 'corpo forca velocidade capacidade fisica musculo gordura peso altura treino academia condicionamento', tipo: 'ver' }
 ];
 
 /** O que a intenção é: fazer algo, ver uma informação, acompanhar um problema (dito ou deduzido do verbo). */
@@ -268,24 +311,78 @@ export function tipoDaIntencao(x: Intencao): 'fazer' | 'ver' | 'acompanhar' {
   return /^(Ver|Saber|Consultar|Entender|Onde)/.test(x.quero) ? 'ver' : /^Acompanhar/.test(x.quero) ? 'acompanhar' : 'fazer';
 }
 
+/** Sem acento, minúsculo, sem hífen (Counter-Strike = counter strike = counterstrike). */
+export const normalizarBusca = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[-_./]/g, ' ').replace(/\s+/g, ' ').trim();
+
+/**
+ * VIDA 26.1 — palavras que querem dizer a mesma coisa na busca (o jogador escreve como fala). Cada palavra buscada vale
+ * também pelas suas equivalentes; nada aqui leva a lugar que a intenção não declara.
+ */
+const SINONIMOS: Record<string, string[]> = {
+  namorar: ['namoro', 'romance', 'paquera', 'conhecer alguem'], paquera: ['namoro'], romance: ['namoro'], crush: ['namoro', 'romance'],
+  dinheiro: ['salario', 'conta', 'gasto', 'ganho', 'mes'], grana: ['dinheiro', 'salario'], financas: ['dinheiro'], investir: ['patrimonio', 'aplicacoes'],
+  faculdade: ['universidade', 'graduacao'], universidade: ['faculdade', 'graduacao'], escola: ['estudar', 'boletim'], estudar: ['escola', 'faculdade', 'curso'],
+  futebol: ['bola', 'peneira', 'base'], bola: ['futebol'], soccer: ['futebol'],
+  cs: ['counter strike'], counterstrike: ['counter strike'], csgo: ['counter strike'], valorant: ['esports'], lol: ['league of legends'], fortnite: ['esports'],
+  muay: ['luta', 'lutas', 'arte marcial'], thai: ['luta', 'lutas'], muaythai: ['luta', 'lutas', 'arte marcial'], luta: ['lutas', 'arte marcial'], lutador: ['luta', 'lutas'],
+  boxe: ['luta', 'lutas'], judo: ['luta', 'lutas'], jiujitsu: ['luta', 'lutas'], karate: ['luta', 'lutas'], mma: ['luta', 'lutas'],
+  emprego: ['trabalho', 'vaga'], trabalhar: ['trabalho', 'emprego'], profissao: ['carreira', 'trabalho'], carreira: ['trajetoria', 'profissao'],
+  atleta: ['esporte', 'carreira'], jogador: ['atleta', 'esporte', 'peneira'], gamer: ['videogame', 'esports'], jogo: ['videogame'], game: ['videogame', 'esports'],
+  piloto: ['kart', 'formula'], f1: ['formula'], corrida: ['kart', 'correr'],
+  mae: ['familia'], pai: ['familia'], filho: ['familia', 'filhos'], amigo: ['amizade'],
+  morar: ['casa', 'moro'], apartamento: ['casa'], mudar: ['mudar de cidade'], viagem: ['viajar'],
+  carro: ['veiculo', 'moto'], moto: ['carro', 'veiculo'], celular: ['redes', 'instagram'], instagram: ['redes'],
+  doente: ['saude', 'medico'], hospital: ['saude', 'medico'], academia: ['condicionamento', 'treinar', 'fisico'], musculo: ['corpo'],
+  treinador: ['tecnico', 'depois de competir'], comentarista: ['depois de competir'], aposentar: ['depois de competir', 'aposentadoria']
+};
+
+const prefixoComum = (a: string, b: string) => { let k = 0; while (k < a.length && k < b.length && a[k] === b[k]) k++; return k; };
+/** Uma letra a mais, a menos ou trocada (o erro de digitação), só em palavras de 5+ letras. */
+function quase(a: string, b: string): boolean {
+  if (a.length < 5 || b.length < 5 || Math.abs(a.length - b.length) > 1) return false;
+  let i = 0, j = 0, erros = 0;
+  while (i < a.length && j < b.length) {
+    if (a[i] === b[j]) { i++; j++; continue; }
+    if (++erros > 1) return false;
+    if (a.length > b.length) i++; else if (b.length > a.length) j++; else { i++; j++; }
+  }
+  return erros + (a.length - i) + (b.length - j) <= 1;
+}
+/** A palavra (ou uma equivalente) está no texto: inteira, no texto colado, pelo radical (5+ letras em comum) ou com um erro. */
+function bate(w: string, texto: string): boolean {
+  const colado = texto.replace(/ /g, '');
+  const cands = [w, ...(SINONIMOS[w] ?? [])];
+  const palavras = texto.split(' ');
+  return cands.some(c => texto.includes(c) || (c.length >= 3 && colado.includes(c.replace(/ /g, '')))) ||
+    palavras.some(t => (w.length >= 5 && t.length >= 5 && prefixoComum(w, t) >= Math.min(w.length, t.length, 6) - 1 && prefixoComum(w, t) >= 5) || quase(w, t));
+}
+/**
+ * A pontuação de um item na busca: TODA palavra buscada precisa bater em algum campo; o campo pesa (o pedido > as
+ * palavras-chave > o destino > a explicação). 0 = não é resultado. Usada também pelas trajetórias da central.
+ */
+export function pontuarBusca(busca: string, campos: [texto: string, peso: number][]): number {
+  const palavras = normalizarBusca(busca).split(' ').filter(Boolean);
+  if (!palavras.length) return 0;
+  const cs = campos.map(([t, p]) => [normalizarBusca(t), p] as const);
+  let total = 0;
+  for (const w of palavras) {
+    const melhor = Math.max(0, ...cs.filter(([t]) => bate(w, t)).map(([, p]) => p));
+    if (!melhor) return 0;
+    total += melhor;
+  }
+  return total;
+}
+
 /**
  * REWORK 10.5 · UX-20 — a busca de "onde fica": todas as palavras precisam aparecer (no que se quer, nas palavras-chave,
- * no "lá" ou no destino), e o que bate no PEDIDO vem antes do que só bate na explicação. Antes, era um "contém" em ordem
- * fixa: "saúde" trazia primeiro o custo de vida (porque a explicação dele terminava em "a saúde").
+ * no "lá" ou no destino), e o que bate no PEDIDO vem antes do que só bate na explicação. VIDA 26.1: com sinônimos,
+ * variação de escrita, radical comum e um erro de digitação (`pontuarBusca`); sem repetir resultado.
  */
 export function buscarIntencoes(busca: string): Intencao[] {
-  const sem = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-  const palavras = sem(busca.trim()).split(/\s+/).filter(Boolean);
-  if (!palavras.length) return MAPA_DE_INTENCOES;
+  if (!normalizarBusca(busca)) return MAPA_DE_INTENCOES;
   const pontos = (x: Intencao) => {
-    const quero = sem(x.quero), chaves = sem(x.chaves ?? ''), la = sem(x.la), onde = sem(rotuloDoLugar(x.lugar));
-    let p = 0;
-    for (const w of palavras) {
-      const k = quero.includes(w) ? 4 : chaves.includes(w) ? 3 : onde.includes(w) ? 1.5 : la.includes(w) ? 1 : 0;
-      if (!k) return 0;
-      p += k;
-    }
-    return p + (tipoDaIntencao(x) === 'fazer' ? 0.2 : 0);
+    const p = pontuarBusca(busca, [[x.quero, 4], [x.chaves ?? '', 3], [rotuloDoLugar(x.lugar), 1.5], [x.la, 1]]);
+    return p ? p + (tipoDaIntencao(x) === 'fazer' ? 0.2 : 0) : 0;
   };
   return MAPA_DE_INTENCOES.map(x => ({ x, p: pontos(x) })).filter(y => y.p > 0).sort((a, b) => b.p - a.p).map(y => y.x);
 }

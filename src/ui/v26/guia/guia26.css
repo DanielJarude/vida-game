@@ -39,3 +39,18 @@
 .pc26__porta--fechada { opacity: 0.75; }
 .pc26__porta-texto { display: flex; flex-direction: column; min-width: 0; }
 .pc26__porta-texto small { color: var(--text-muted); font-size: var(--type-caption); }
+/* VIDA 26.1 · o estado de cada caminho, as formas de começar, os filtros, a busca, o botão "ir". */
+.g26-controles { display: flex; flex-direction: column; gap: var(--space-2); }
+.g26-busca { max-width: 640px; }
+.g26-filtros--estado .filtro { font-size: var(--type-caption); }
+.g26-estado { font-size: var(--type-caption); padding: 1px 8px; border-radius: var(--radius-pill); box-shadow: inset 0 0 0 1px var(--fio); color: var(--text-secondary); }
+.g26-estado--andamento { background: color-mix(in oklab, var(--accent) 18%, transparent); color: var(--text-primary); }
+.g26-estado--disponivel { background: color-mix(in oklab, var(--bom) 14%, transparent); }
+.g26-estado--encerrado { background: var(--veu-1, transparent); }
+.g26-estado--fora { opacity: 0.8; }
+.g26-porque { margin: 0; font-size: var(--type-caption); color: var(--text-secondary); }
+.g26-entradas { padding: var(--space-2) var(--space-3); border-left: 3px solid color-mix(in oklab, var(--accent) 50%, transparent); background: var(--veu-1, transparent); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+.g26-entradas__rot { font-size: var(--type-caption); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--text-muted); }
+.g26-entradas ul { margin: 4px 0 0; padding-left: 1.1em; font-size: var(--type-caption); color: var(--text-secondary); display: grid; gap: 2px; }
+.g26-ir { align-self: flex-start; }
+.g26-legenda-recolhida > summary { cursor: pointer; font-size: var(--type-caption); color: var(--text-secondary); margin-bottom: var(--space-2); }

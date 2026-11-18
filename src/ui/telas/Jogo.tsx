@@ -54,7 +54,7 @@ import { Fim } from './Fim';
 import { conquistasDoAno, fechamentoDoAno, rotinaDoAno } from '../../motor/sistemas/fechamento';
 import { emCasa, sinaisSociais } from '../leitura';
 import { doClube } from '../../motor/dados/clubes';
-import { AREAS, buscarIntencoes, resolverDestino, rotuloDoLugar, tipoDaIntencao, type Aba, type Area, type DivisaoCaminhos, type Lugar, type ParteCaminhos, type SecaoTempo, type SecaoVida } from '../navegacao';
+import { AREAS, resolverDestino, type Aba, type Area, type DivisaoCaminhos, type Lugar, type ParteCaminhos, type SecaoTempo, type SecaoVida } from '../navegacao';
 
 export type { Aba };
 
@@ -428,8 +428,11 @@ function Menu({ c, aoFechar, ir }: { c: ControleVida; aoFechar: () => void; ir: 
   if (avisos && c.vida) return <UltimosAvisos vida={c.vida} aoFechar={() => setAvisos(false)} />;
   return (
     // REWORK 6.5: a folha comum (prende o foco, fecha com Esc, devolve o foco a quem abriu) — antes, uma cópia sem teclado.
-    <Folha titulo="VIDA" rotulo="Menu" aoFechar={aoFechar}>
-        <div className="menu">
+    // VIDA 26.1: a central "Onde fica cada coisa" vem primeiro (é o que mais se procura no Menu), numa folha ampla.
+    <Folha titulo="VIDA" rotulo="Menu" aoFechar={aoFechar} largura="ampla">
+        <Central26 vida={c.vida ?? undefined} ir={ir} />
+        <div className="menu menu--jogo">
+          <h2 className="subtitulo">O jogo</h2>
           <SeletorTema />
           <button type="button" className="botao botao--secundario" onClick={() => setNotas(true)}>Novidades da atualização</button>
           {c.vida && <button type="button" className="botao botao--secundario" onClick={() => setAvisos(true)}>Últimos avisos</button>}
@@ -440,38 +443,8 @@ function Menu({ c, aoFechar, ir }: { c: ControleVida; aoFechar: () => void; ir: 
           <button type="button" className="botao botao--secundario" onClick={() => { c.setSom(!c.som); }}>{c.som ? 'Desligar o som' : 'Ligar o som'}</button>
           <button type="button" className="botao botao--secundario" onClick={() => { aoFechar(); c.setTela('inicio'); }}>Voltar ao início</button>
           <button type="button" className="botao botao--perigo" onClick={() => { if (window.confirm('Apagar esta vida e começar outra? Não dá para desfazer.')) { aoFechar(); c.recomecar(); } }}>Abandonar esta vida</button>
-          <OndeFica ir={ir} />
         </div>
     </Folha>
-  );
-}
-
-const ROTULO_TIPO = { fazer: 'fazer', ver: 'ver', acompanhar: 'acompanhar' } as const;
-
-/** "Eu quero fazer X. Onde eu começo?" — o mapa de intenções (`navegacao`), com o caminho de cada uma. */
-function OndeFica({ ir }: { ir: (l: Lugar) => void }) {
-  // REWORK 7: com quarenta intenções, procurar é mais rápido que rolar ("violão", "salário", "mãe").
-  const [busca, setBusca] = useState('');
-  const lista = buscarIntencoes(busca);
-  return (
-    <section className="onde-fica" aria-labelledby="onde-fica-titulo">
-      <h2 id="onde-fica-titulo" className="subtitulo">Onde fica cada coisa</h2>
-      <label className="catalogo__busca onde-fica__busca"><span className="sr-only">Procurar o que você quer fazer</span>
-        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round"><circle cx="11" cy="11" r="6.5" /><path d="M16 16l4.5 4.5" /></svg>
-        <input type="search" value={busca} onChange={e => setBusca(e.target.value)} placeholder="O que você quer fazer? (violão, salário, mãe…)" autoComplete="off" />
-      </label>
-      {lista.length === 0 && <p className="nota">Nada com essa palavra. Tente outra — ou percorra as áreas no alto.</p>}
-      <ul className="onde-fica__lista">
-        {lista.map(x => (
-          <li key={x.id}>
-            <button type="button" className="onde-fica__item" onClick={() => ir(x.lugar)}>
-              <span className="onde-fica__quero">{x.quero}{busca.trim() && <span className={`onde-fica__tipo onde-fica__tipo--${tipoDaIntencao(x)}`}> · {ROTULO_TIPO[tipoDaIntencao(x)]}</span>}</span>
-              <span className="onde-fica__onde">{rotuloDoLugar(x.lugar)} <span aria-hidden>→</span></span>
-            </button>
-          </li>
-        ))}
-      </ul>
-    </section>
   );
 }
 
@@ -482,6 +455,7 @@ function OndeFica({ ir }: { ir: (l: Lugar) => void }) {
 import { ImportarVida } from './ImportarVida';
 import { Novidades } from '../janelaDeNovidades';
 import { Tempo } from '../jogo/Tempo';
+import { Central26 } from '../v26/central/Central26';
 import { oportunidadesAbertas } from '../../motor/sistemas/mercados';
 import { DetalheDaOportunidade } from '../jogo/Alcance';
 import { guardarCompras } from '../jogo/memoriaDeCompras';

@@ -340,6 +340,8 @@ export function Tempo({ vida, agir, irPara, aba: abaDeFora, irAba, abrirPessoa }
             {aba === 'corpo' && i >= 14 && <CuidarDeSi vida={vida} agir={agir} />}
             <AtividadesAtivas vida={vida} agir={agir} irPara={irPara} abrirPessoa={abrirPessoa} ativas={ativas.filter(x => naAba(aba, x.m))} titulo="O que você já faz aqui" vazio={aba === 'corpo' ? 'Nada de corpo na semana por enquanto.' : aba === 'gente' ? 'Nenhuma atividade com gente na semana por enquanto.' : 'Nenhum hobby na semana por enquanto.'} />
             <Comecar vida={vida} agir={agir} custo={custo} filtro={m => naAba(aba, m)} />
+            {/* VIDA 26.1: um hobby pode abrir caminho (sem obrigar) — o explorador mostra como. */}
+            {(aba === 'atividades' || aba === 'corpo') && i >= 6 && irPara && <p className="ligacao-caminho"><span>Um hobby pode virar caminho — ou continuar só gosto. Como cada um se desenvolve:</span> <button type="button" className="link" onClick={() => irPara('guia_carreiras')}>Caminhos de carreira →</button></p>}
             {aba === 'atividades' && frentes.length > 0 && (
               <Secao titulo="O que você sabe fazer" recolhivel aberta={false}>
                 <ul className="frentes">

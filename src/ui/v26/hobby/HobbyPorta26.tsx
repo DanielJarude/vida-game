@@ -21,7 +21,7 @@ export function HobbyPorta26({ vida, id, categoria, irPara }: { vida: Vida; id: 
           <summary><span className="h26__rot">{porta.dentro ? 'O caminho em que você está' : 'Pode levar a'}</span> {porta.sequencia.join(' → ')}</summary>
           <p>{porta.passo}</p>
           <p className="h26__pesa">O que pesa: {porta.pesa.join(' · ')}. É uma possibilidade — dá para manter como hobby a vida toda.</p>
-          {irPara && <button type="button" className="link" onClick={() => irPara('guia_carreiras')}>Ver no Guia de carreiras →</button>}
+          {irPara && <button type="button" className="link" onClick={() => irPara('guia_carreiras')}>Ver em Caminhos de carreira →</button>}
         </details>
       )}
     </div>
@@ -46,7 +46,7 @@ export function HobbiesQueAbrem26({ vida, irPara }: { vida: Vida; irPara?: (a: A
           <p>{p!.passo}</p>
         </li>
       ))}</ul>
-      {irPara && <button type="button" className="link" onClick={() => irPara('guia_carreiras')}>Todos os caminhos, etapa por etapa, no Guia de carreiras →</button>}
+      {irPara && <button type="button" className="link" onClick={() => irPara('guia_carreiras')}>Todos os caminhos, etapa por etapa, em Caminhos de carreira →</button>}
     </section>
   );
 }

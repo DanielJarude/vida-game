@@ -26,6 +26,21 @@ export interface NotaDeVersao {
 
 export const NOTAS: NotaDeVersao[] = [
   {
+    versao: '26.1',
+    data: '2026-11-18',
+    titulo: 'A central "Onde fica cada coisa" e os caminhos de carreira',
+    novidades: [
+      'Caminhos de carreira (no Menu e em Caminhos): cada esporte, jogo de e-sports, as pistas e 23 famílias de profissões — como começa, as formas de começar, as etapas, o que faz evoluir, o depois e onde você está (em andamento, ao seu alcance, mais adiante, já percorrido ou fora de alcance), com o botão que leva ao lugar certo.'
+    ],
+    melhorias: [
+      '"Onde fica cada coisa" organizada por áreas da vida (pessoas, estudos, trabalho, esportes, hobbies, rotina, corpo, dinheiro, casa, vida pública, história): escolha a área e veja as ações, cada uma com o que se faz lá.',
+      'A busca entende sinônimos, variações de escrita e um erro de digitação ("namorar", "Counter-Strike", "muay thai", "faculdadde") e encontra também os caminhos de carreira.',
+      'Novas entradas: peneira e base, formação de atleta, e-sports, kart, depois de competir, videogame, o corpo e as capacidades.',
+      'O Menu ficou mais largo, com a central no alto e as opções do jogo abaixo.'
+    ],
+    correcoes: []
+  },
+  {
     versao: '26',
     data: '2026-11-17',
     titulo: 'Corpo e capacidades, atletas em formação e caminhos profissionais',

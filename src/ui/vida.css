@@ -1319,3 +1319,9 @@ button.agora-sinal:hover { color: var(--text-primary); }
 .looks__acoes { display: flex; flex-wrap: wrap; gap: 4px 8px; }
 .looks__renomear { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .looks__renomear input { min-width: 0; flex: 1 1 120px; }
+
+/* VIDA 26.1: a folha ampla (o Menu com a central "Onde fica cada coisa": áreas em grade no desktop). */
+.folha--ampla { width: min(1120px, 100%); }
+/* VIDA 26.1: abaixo da central, as opções do jogo em grade (no celular, uma coluna). */
+.menu--jogo { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); align-items: start; margin-top: var(--space-5); padding-top: var(--space-4); border-top: 1px solid var(--rule); }
+.menu--jogo > :not(button) { grid-column: 1 / -1; }

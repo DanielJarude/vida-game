@@ -119,7 +119,10 @@ describe('"eu quero fazer X — onde começo?" (o mapa de intenções, com cliqu
     // REWORK 9.6: as divisões de Caminhos.
     // REWORK 10: as apostas (o pacote dos jogos chega sob demanda — o teste vê a tela ou o "carregando" dela).
     apostar: /Loteria|Carregando/,
-    concurso: /Concursos|Carreiras públicas/, carreira_esporte: /Esporte, arte, universidade/, boletim: /Boletim|O ano letivo|Ainda não há o que medir/
+    concurso: /Concursos|Carreiras públicas/, carreira_esporte: /Esporte, arte, universidade/, boletim: /Boletim|O ano letivo|Ainda não há o que medir/,
+    // VIDA 26.1: as intenções novas (esporte, e-sports, pistas, o depois, o corpo, os caminhos de carreira).
+    caminhos_carreira: /Caminhos de carreira/, base_esporte: /Esporte, arte, universidade|Esporte/, formacao_atleta: /Esporte, arte, universidade|Esporte/,
+    esports: /E-sports|Esporte, arte, universidade/, kart: /Automobilismo|Esporte, arte, universidade/, pos_carreira: /Procurar trabalho|Vagas|vagas/, videogame: /Hobbies|videogame/i, corpo_capacidades: /Aparência|Corpo/
   };
   it('cada intenção leva a um lugar que mostra o que promete (adulta de 30)', () => {
     const v = vida(30, x => { adulta(x); x.moradia = { tipo: 'aluguel', municipioId: x.moradia.municipioId, modeloId: 'apto_1q', aluguel: 1300, padrao: 3, tInicio: x.t }; for (const vin of Object.values(x.vinculos)) vin.convivio = vin.convivio.filter(c => c !== 'casa'); });
@@ -135,6 +138,8 @@ describe('"eu quero fazer X — onde começo?" (o mapa de intenções, com cliqu
     fireEvent.click(screen.getByRole('button', { name: 'Menu' }));
     const menu = screen.getByRole('dialog', { name: 'Menu' });
     expect(within(menu).getByText('Onde fica cada coisa')).toBeTruthy();
+    // VIDA 26.1: a central mostra as ÁREAS primeiro; a ação mora na área dela (e a busca atravessa todas).
+    fireEvent.click(within(menu).getByRole('button', { name: /Dinheiro, compras e patrimônio/ }));
     fireEvent.click(within(menu).getByRole('button', { name: /Comprar carro, moto ou bicicleta/ }));
     expect(screen.queryByRole('dialog', { name: 'Menu' })).toBeNull();
     expect(screen.getByRole('tab', { name: 'Compras', selected: true })).toBeTruthy();

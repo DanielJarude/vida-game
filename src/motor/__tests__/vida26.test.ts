@@ -227,7 +227,9 @@ describe('VIDA 26 · guia de carreiras', () => {
     expect(t.filter(x => x.grupo === 'esporte').map(x => x.id).sort()).toEqual([...MODALIDADES].sort());
     expect(t.filter(x => x.grupo === 'esports')).toHaveLength(LISTA_JOGOS25.length);
     expect(t.some(x => x.grupo === 'pistas')).toBe(true);
-    for (const x of t) { expect(x.etapas.length, x.id).toBeGreaterThanOrEqual(5); expect(x.depois.length, x.id).toBeGreaterThanOrEqual(3); expect(x.fatores.length).toBeGreaterThan(0); }
+    // VIDA 26.1: as profissões (as famílias de carreira) entram também, com os degraus que cada uma tem (3 a 5).
+    for (const x of t) { expect(x.etapas.length, x.id).toBeGreaterThanOrEqual(x.grupo === 'profissao' ? 3 : 5); expect(x.depois.length, x.id).toBeGreaterThanOrEqual(x.grupo === 'profissao' ? 1 : 3); expect(x.fatores.length).toBeGreaterThan(0); }
+    expect(t.filter(x => x.grupo === 'profissao').length).toBeGreaterThanOrEqual(15);
   });
   it('marca onde a vida está: a formação de quem está na base', () => {
     const v = aos(14);

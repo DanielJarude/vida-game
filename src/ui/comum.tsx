@@ -91,7 +91,7 @@ export function Secao({ titulo, children, recolhivel, aberta: abertaInicial = tr
 /** Folha modal: prende o foco, fecha com Esc (quando permitido). */
 let abertas = 0;
 
-export function Folha({ titulo, rotulo, children, aoFechar, fechavel = true, largura = 'media', papel }: { titulo?: ReactNode; rotulo: string; children: ReactNode; aoFechar?: () => void; fechavel?: boolean; largura?: 'media' | 'larga'; papel?: boolean }) {
+export function Folha({ titulo, rotulo, children, aoFechar, fechavel = true, largura = 'media', papel }: { titulo?: ReactNode; rotulo: string; children: ReactNode; aoFechar?: () => void; fechavel?: boolean; largura?: 'media' | 'larga' | 'ampla'; papel?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   // 12.4.1: o fechar vive numa ref. Quem abre a folha passa `aoFechar={() => …}` (uma função nova a cada render); com ela
   // nas dependências, toda compra (que muda a vida e re-renderiza) refazia o efeito — o foco voltava ao primeiro botão e a

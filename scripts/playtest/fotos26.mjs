@@ -21,6 +21,7 @@ for (const tema of (process.env.TEMAS ?? 'claro').split(',')) for (const W of (p
       if (k === 'area') { let bt = p.locator('.barra__item', { hasText: x }).locator('visible=true').first(); if (!(await bt.count())) bt = p.getByRole('button', { name: new RegExp(`^(Minha )?${x}$`) }).locator('visible=true').first(); await bt.click(); }
       else if (k === 'div') await p.locator('.divisoes-caminhos__item', { hasText: x }).first().click();
       else if (k === 'tab') await p.getByRole('tab', { name: new RegExp(x) }).locator('visible=true').first().click();
+      else if (k === 'digitar') { await p.getByRole('searchbox').locator('visible=true').first().fill(x); }
       else if (k === 'radio') await p.getByRole('radio', { name: new RegExp(x) }).locator('visible=true').first().click();
       else if (k === 'botao') await p.getByRole('button', { name: new RegExp(x) }).locator('visible=true').first().click();
       else if (k === 'clique') await p.locator(x).locator('visible=true').first().click();

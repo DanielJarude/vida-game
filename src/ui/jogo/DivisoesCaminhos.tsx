@@ -111,6 +111,8 @@ export function OutrosCaminhosDaVida({ vida, agir, irPara }: { vida: Vida; agir:
           <p className="ligacao-caminho"><span>{sp.semVinculo ? 'Sem contrato agora: a situação da carreira e o que dá para fazer estão em Trabalho.' : naCarreira ? 'O clube, o contrato, os treinos extras e o dia a dia estão em Trabalho.' : 'Os trabalhos, as propostas e o dinheiro estão em Trabalho.'}</span> <button type="button" className="link" onClick={() => irPara('trabalho')}>Ir para Trabalho →</button></p>
         </section>
       )}
+      {/* VIDA 26.1: o explorador dos caminhos sempre à mão (descobrir o que dá para construir, não só o que já começou). */}
+      {i >= 6 && <p className="ligacao-caminho"><span>Do hobby ao profissional — e ao depois: cada esporte, jogo, as pistas e as profissões, etapa por etapa.</span> <button type="button" className="link" onClick={() => irPara('guia_carreiras')}>Caminhos de carreira →</button></p>}
       {/* VIDA 26: as portas que os hobbies de agora podem abrir (possibilidade, não obrigação). */}
       {i >= 6 && <HobbiesQueAbrem26 vida={vida} irPara={irPara} />}
       {/* VIDA 16.1: o placar do atleta logo no alto, onde o esporte mora (o mesmo crachá de Trabalho). */}
