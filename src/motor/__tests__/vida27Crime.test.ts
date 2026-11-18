@@ -178,3 +178,50 @@ describe('VIDA 27 · vender vários de uma vez', () => {
     expect(h.filter(x => x.desfecho === 'vendido').length + h.filter(x => x.desfecho === 'apreendido').length + bensIlicitos21(v).length).toBe(40);
   });
 });
+
+/* ================================================================ §10: os pedidos com contexto */
+import { proporEncomenda, processarEncomendas, abertas, TIPOS } from '../sistemas/encomendas';
+import { criarRng } from '../rng';
+
+describe('VIDA 27 · pedidos com contexto e progressão', () => {
+  it('cada pedido diz o quê, por quê e o que pesa se recusar', () => {
+    const v = noCrime();
+    const o = orgsDaCidade(v)[0];
+    const rel = relacaoCom(v, o); rel.relacao = 'membro'; definirNivel(v, rel, 1);
+    const x = proporEncomenda(v, criarRng(1), 'organizado', { orgId: o.id })!;
+    expect(x.alvo).toBeTruthy();
+    expect(x.porque).toBeTruthy();
+    expect(x.seRecusar).toMatch(/recusa pesa/);
+  });
+
+  it('quem está começando não recebe o trabalho grande; o menor de 16, só o pequeno e nada de gente grande', () => {
+    const v = noCrime();
+    v.caminhos.envolvimento!.especializacoes = {};
+    for (let k = 0; k < 40; k++) expect(proporEncomenda(v, criarRng(k), 'furtos', {})!.gravidade).toBeLessThan(3);
+    const m = noCrime(); m.eu.tNasc = m.t - 15 * 12;
+    for (let k = 0; k < 30; k++) { const x = proporEncomenda(m, criarRng(k), 'organizado', {})!; expect(x.gravidade).toBe(1); expect(['org_cobrar', 'org_acompanhar']).not.toContain(x.tipo); }
+  });
+
+  it('o segundo no comando não recebe "um recado da organização": recebe o que é do posto', () => {
+    const v = noCrime();
+    const o = orgsDaCidade(v)[0];
+    const rel = relacaoCom(v, o); rel.relacao = 'membro'; rel.lealdade = 80; definirNivel(v, rel, 5);
+    const tipos = new Set<string>();
+    for (let k = 0; k < 40; k++) { const x = proporEncomenda(v, criarRng(k), 'organizado', { orgId: o.id })!; expect(x.gravidade).toBeGreaterThan(1); tipos.add(x.tipo); }
+    expect([...tipos].some(t => TIPOS.organizado.find(y => y.id === t)?.nivel !== undefined)).toBe(true);
+  });
+
+  it('o mesmo pedido não se repete em dois anos quando há outro', () => {
+    const v = noCrime();
+    const a = proporEncomenda(v, criarRng(5), 'furtos', {}, 1)!;
+    for (let k = 0; k < 10; k++) { const b = proporEncomenda(v, criarRng(100 + k), 'furtos', {}, 1)!; if (TIPOS.furtos.filter(t => t.g === 1).length > 1 && k === 0) expect(b.tipo).not.toBe(a.tipo); }
+  });
+
+  it('quem colaborou com a polícia não recebe pedido de ninguém do meio', () => {
+    const v = noCrime();
+    v.fatos['colaborou'] = v.t - 12;
+    v.caminhos.envolvimento!.encomendas = [];
+    for (let k = 0; k < 5; k++) { v.t += 12; processarEncomendas(v); }
+    expect(abertas(v).length).toBe(0);
+  });
+});

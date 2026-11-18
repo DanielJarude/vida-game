@@ -31,7 +31,8 @@ import { abalar } from './abalo';
 import { historiaDoContato, mudarConfianca } from './redeCriminal';
 import { marcarFalhaGrave } from './conflitosCriminais';
 import { demandaDe, reputacaoAqui } from './mercadoCriminal';
-import { jeitoDe } from './faccoes';
+import { municipio } from '../dados/lugares';
+import { estadoEntre, jeitoDe, orgsDaCidade, orgViva, regioesDe } from './faccoes';
 import { contextoDaEncomenda, reacaoAoFracasso, reacaoAoSucesso, reacaoDaOrg, seuLugar, variante, vozDe } from './relatoDoCrime';
 
 const env = (v: Vida) => v.caminhos.envolvimento;
@@ -123,16 +124,90 @@ export const delegadas = (v: Vida) => encomendas(v).filter(x => x.direcao === 'd
 /** Quantas encomendas a alguém podem correr ao mesmo tempo (o patamar e o posto dão gente para isso). */
 export const limiteDeDelegadas = (v: Vida) => 1 + Math.floor(patamarAtual(v) / 2) + (nivelNaOrganizacao(v) >= 3 || temOrganizacaoPropria(v) ? 1 : 0);
 
+/* ---------------------------------------------------------------- VIDA 27 · §10: o pedido com contexto */
+
+/** Os pedidos que não cabem num menor de 16 (a violência, a cobrança, o que é de gente grande). */
+const SO_ADULTOS = new Set(['org_cobrar', 'org_acompanhar', 'org_ponto', 'org_coordenar', 'org_acerto', 'furtos_carga', 'furtos_grande', 'contra_financiar', 'contra_rota', 'frau_esquentar', 'frau_obra', 'dig_golpe', 'dig_estrutura']);
+
+/**
+ * O objetivo concreto de um pedido (onde e o quê — nunca como): lido da cidade (as regiões), das organizações de verdade
+ * (a rival em guerra, o grupo de quem pede) e do tipo do trabalho. Abstrato no método; concreto no lugar e na gente.
+ */
+function alvoDoPedido(v: Vida, r: Rng, tipo: string, orgId?: string): string {
+  const regs = regioesDe(v.moradia.municipioId);
+  const reg = regs.length ? r.pick(regs).nome : 'na cidade';
+  const minha = orgId ? orgViva(v, orgId) : undefined;
+  const rival = minha ? orgsDaCidade(v).find(o => o.id !== minha.id && ['conflito', 'rivalidade', 'ruptura'].includes(estadoEntre(minha, o))) : undefined;
+  const vizinha = municipio(v.moradia.municipioId).nome;
+  const A: Record<string, string[]> = {
+    furtos_pequeno: [`uma loja que fecha tarde ${reg}`, `um depósito pequeno ${reg}`],
+    furtos_vigiar: [`a rotina de um galpão ${reg}`, `quem entra e sai de um estacionamento ${reg}`],
+    furtos_guardar: [`umas caixas que chegaram a um quartinho ${reg}`, `mercadoria que precisa sumir de ${reg} por uns dias`],
+    furtos_desmonte: [`peças de carro que estão num barracão ${reg}`, `o que sobrou de um desmanche fechado ${reg}`],
+    furtos_grande: [`um depósito de eletrônicos ${reg}`, `uma casa vazia de gente de dinheiro ${reg}`],
+    furtos_carga: [`um caminhão que sai de ${vizinha} na semana que vem`, `uma carga parada num pátio ${reg}`],
+    contra_cuidar: [`uma remessa que chega ${reg}`], contra_viagem: [`uma encomenda que precisa ir de ${vizinha} até a capital`],
+    contra_intermediar: [`um comprador grande ${reg}`], contra_deposito: [`o estoque de um fornecedor que está sendo vigiado`],
+    contra_financiar: [`o lote do mês de uma rede`], contra_rota: [`um caminho novo que evite as estradas fiscalizadas`],
+    org_recado: [`um recado para quem cuida de um ponto ${reg}`], org_vigiar: [`um ponto do grupo ${reg}`],
+    org_pendencia: [`um desentendimento entre dois do grupo ${reg}`], org_cobrar: [`um comerciante ${reg} que deve ao grupo`],
+    org_acompanhar: [`a entrega do mês ${reg}`], org_ponto: [`um negócio do grupo ${reg}`],
+    org_coordenar: [rival ? `a equipe que vai disputar ${reg} com ${rival.nome}` : `uma equipe num trabalho grande ${reg}`],
+    org_acerto: [rival ? `uma trégua com ${rival.nome}` : `um acordo com outra organização da cidade`],
+    dig_pequeno: [`o sistema de uma loja de ${reg}`], dig_dados: [`uma lista de clientes que vazou`], dig_cliente: [`um cliente de fora que paga em cripto`],
+    dig_manutencao: [`o sistema de apostas de um esquema`], dig_estrutura: [`os servidores de um esquema grande`], dig_golpe: [`um golpe pela internet que mira aposentados de outro estado`],
+    frau_assinatura: [`um papel de um cartório ${reg}`], frau_documento: [`um documento para alguém que precisa sumir de um cadastro`],
+    frau_concorrencia: [`uma licitação da prefeitura de ${vizinha}`], frau_nota: [`as notas de uma empresa de fachada`],
+    frau_esquentar: [`o dinheiro de alguém que não pode explicar de onde veio`], frau_obra: [`um contrato de obra com gente de cargo em ${vizinha}`]
+  };
+  return r.pick(A[tipo] ?? [`um trabalho ${reg}`]);
+}
+
+/** O porquê do pedido, lido do estado real (a operação sobre o grupo, a guerra, o aperto de quem pede, o mercado, a sua trajetória). */
+function porqueDoPedido(v: Vida, r: Rng, ramo: Ramo, de: { pessoaId?: string; orgId?: string }, nivel: number): string {
+  const e = env(v)!;
+  const o = de.orgId ? orgViva(v, de.orgId) : undefined;
+  const p = de.pessoaId ? v.pessoas[de.pessoaId] : undefined;
+  const motivos: string[] = [];
+  if (o && o.pressao >= 50) motivos.push(`depois da pressão da polícia, ${o.nome} precisa de gente que não esteja na mira`);
+  if (o && Object.values(o.relacoes ?? {}).includes('conflito')) motivos.push(`a guerra com outra organização pede gente de confiança`);
+  if (p?.aperto && v.t - p.aperto.t <= 18) motivos.push(`${p.nome} está apertad${p.genero === 'feminino' ? 'a' : 'o'} e precisa fechar isso logo`);
+  if (demandaDe(v, v.moradia.municipioId, ramo) >= 0.5) motivos.push('o mercado está aquecido e falta gente');
+  const xp = e.especializacoes?.[ramo]?.experiencia ?? 0;
+  if (nivel >= 4) motivos.push('é do tamanho do seu posto: quem manda quer alguém que responda pelo resultado');
+  else if (xp >= 50 || patamarAtual(v) >= 3) motivos.push('você tem fama de cumprir');
+  else if (xp < 15) motivos.push(p ? `${p.nome} sabe que você está começando e quer ver do que é capaz` : 'querem ver do que você é capaz');
+  if ((garantirCarreira(e).falhasSeguidas ?? 0) >= 2) motivos.push('depois de dois tropeços, é uma chance menor de mostrar serviço');
+  return motivos.length ? r.pick(motivos) : 'alguém lembrou do seu nome';
+}
+
+/** Quem vende você (o delator) e quem está na mira: o meio desconfia. Devolve o porquê de não haver pedido (ou nada). */
+export function semPedidosPorque(v: Vida): string | undefined {
+  if (v.fatos['colaborou'] !== undefined && v.t - v.fatos['colaborou'] < 120) return 'Desde que você colaborou com a polícia, ninguém do meio confia trabalho a você.';
+  return undefined;
+}
+
 /** Uma proposta nova (de um contato ou de uma organização). */
 export function proporEncomenda(v: Vida, r: Rng, ramo: Ramo, de: { pessoaId?: string; orgId?: string }, g?: 1 | 2 | 3): EncomendaCriminal | undefined {
   const e = env(v);
   if (!e) return undefined;
   const xp = e.especializacoes?.[ramo]?.experiencia ?? 0;
   const p = patamarAtual(v);
-  const grav: 1 | 2 | 3 = g ?? (r.chance(clamp(0.15 + xp / 200 + p * 0.1, 0, 0.75)) ? (r.chance(0.25 + p * 0.12) ? 3 : 2) : 1);
+  const i = idade(v);
+  // VIDA 27 · §10: a gravidade cabe na idade (menor de 16, só o pequeno; menor de 18, nada grande) e na trajetória (quem
+  // está começando não recebe o trabalho grande; a investigação em curso deixa o meio cauteloso).
+  let grav: 1 | 2 | 3 = g ?? (r.chance(clamp(0.15 + xp / 200 + p * 0.1, 0, 0.75)) ? (r.chance(0.25 + p * 0.12) ? 3 : 2) : 1);
+  if (i < 16) grav = 1; else if (i < 18 && grav === 3) grav = 2;
+  if (!g && xp < 15 && p <= 1 && grav === 3) grav = 2;
+  if (!g && e.investigado !== undefined && grav === 3) grav = 2;
   // REWORK 12.35: os trabalhos de posto só chegam a quem tem o posto (e, para quem tem, chegam mais).
   const posto = de.orgId ? nivelNaOrganizacao(v) : -1;
-  const cabem = TIPOS[ramo].filter(t => t.g === grav && (t.nivel === undefined || (de.orgId && posto >= t.nivel)));
+  // VIDA 27 · §10: a organização não manda recado pelo segundo no comando — quem tem posto alto recebe o que é do posto.
+  if (!g && de.orgId && posto >= 4 && grav === 1) grav = 2;
+  const recentes = new Set((e.encomendas ?? []).filter(x => x.direcao === 'recebida' && v.t - x.t < 24).map(x => x.tipo));
+  const cabem0 = TIPOS[ramo].filter(t => t.g === grav && (t.nivel === undefined || (de.orgId && posto >= t.nivel)) && !(i < 16 && SO_ADULTOS.has(t.id)));
+  // Sem repetir o mesmo pedido de dois anos para cá, quando há outro.
+  const cabem = cabem0.filter(t => !recentes.has(t.id)).length ? cabem0.filter(t => !recentes.has(t.id)) : cabem0;
   const deposto = cabem.filter(t => t.nivel !== undefined);
   const opcoes = deposto.length && r.chance(0.6) ? deposto : cabem;
   const tipo = (opcoes.length ? r.pick(opcoes) : TIPOS[ramo][0]);
@@ -146,7 +221,11 @@ export function proporEncomenda(v: Vida, r: Rng, ramo: Ramo, de: { pessoaId?: st
     id: novoId(v, 'enc'), direcao: 'recebida', ramo, tipo: tipo.id, gravidade: tipo.g, ...de,
     valor, chance: Math.round(clamp(chanceDoTrabalho(v, ramo, tipo.g, conf) + (tipo.chance ?? 0), 0.25, 0.95) * 100) / 100,
     risco: Math.round(EXPOSICAO_DO_ERRO[tipo.g] * fatorDeExposicao(ramo) * (tipo.risco ?? 1) * (jeito ? Math.sqrt(jeito.policia) : 1) * (1 + Math.max(0, d) * 0.05)),
-    t: v.t, tPrazo: v.t + 12, estado: 'aberta'
+    t: v.t, tPrazo: v.t + 12, estado: 'aberta',
+    // VIDA 27 · §10: o objetivo, o porquê e o que pesa se recusar (sorteios derivados: não mexem no acaso de antes).
+    alvo: alvoDoPedido(v, rngDe(v.id, 'pedido27', v.t, tipo.id, de.pessoaId ?? de.orgId ?? ''), tipo.id, de.orgId),
+    porque: porqueDoPedido(v, rngDe(v.id, 'pedido27_pq', v.t, tipo.id), ramo, de, posto),
+    seRecusar: de.orgId ? (orgPorId(v, de.orgId)?.relacao === 'membro' ? 'de quem é de dentro, recusa pesa na confiança do comando' : 'a organização segue em frente sem você') : de.pessoaId ? (e.fichas?.[de.pessoaId]?.confianca ?? 40) >= 60 ? `${v.pessoas[de.pessoaId]?.nome ?? 'quem pediu'} entende — mas lembra` : `${v.pessoas[de.pessoaId]?.nome ?? 'quem pediu'} pode levar a proposta a outra pessoa` : undefined
   };
   (e.encomendas ??= []).push(x);
   podar(v);
@@ -174,6 +253,8 @@ export function processarEncomendas(v: Vida): void {
   // As delegadas que chegaram ao prazo (correm mesmo para quem foi preso: o resultado chega igual).
   for (const x of delegadas(v)) if (x.tPrazo <= v.t) resolverDelegada(v, x);
   if (!ativo(v) || preso(v) || v.justica?.foragido) return;
+  // VIDA 27 · §10: quem colaborou com a polícia (há menos de dez anos) não recebe pedido de ninguém do meio.
+  if (semPedidosPorque(v)) return;
   // As propostas: dos contatos de confiança (um por contato, no ramo dele) e da organização de que se é de dentro ou aliado.
   const jaAbertas = abertas(v).length;
   let novas = 0;
@@ -484,7 +565,8 @@ export function leituraDasEncomendas(v: Vida) {
   const fmt = (x: EncomendaCriminal) => ({
     id: x.id, nome: tipoDeEncomenda(x.tipo)?.nome ?? 'um trabalho', ramo: NOME_DO_RAMO[x.ramo], gravidade: x.gravidade,
     de: x.pessoaId ? v.pessoas[x.pessoaId]?.nome : x.orgId ? orgPorId(v, x.orgId)?.nome : undefined,
-    valor: x.valor, retorno: x.retorno, chance: x.chance, risco: x.risco, prazo: x.tPrazo, estado: x.estado, resultado: x.resultado, negociada: !!x.negociada
+    valor: x.valor, retorno: x.retorno, chance: x.chance, risco: x.risco, prazo: x.tPrazo, estado: x.estado, resultado: x.resultado, negociada: !!x.negociada,
+    alvo: x.alvo, porque: x.porque, seRecusar: x.seRecusar
   });
   return {
     abertas: abertas(v).map(fmt),

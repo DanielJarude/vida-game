@@ -3488,6 +3488,10 @@ export interface EncomendaCriminal {
   negociada?: boolean;
   resultado?: string;
   tFim?: number;
+  /** VIDA 27 · §10: o pedido com contexto — o objetivo concreto (onde, o quê), o porquê (do estado real) e o que pesa se recusar. */
+  alvo?: string;
+  porque?: string;
+  seRecusar?: string;
 }
 
 /** REWORK 12.25 — o que um familiar sabe do caminho e como reage (a personalidade, a relação, a gravidade). */

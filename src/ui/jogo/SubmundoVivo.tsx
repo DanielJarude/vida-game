@@ -344,6 +344,10 @@ function Atividades({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) 
             <li key={x.id} className={`svivo-cartao svivo-cartao--g${x.gravidade}`}>
               <p className="svivo-cartao__titulo">{cap(x.nome)}</p>
               <p className="svivo-nota">{x.de ? `De ${x.de} · ` : ''}{x.ramo.toLowerCase()} · {['', 'pequeno', 'médio', 'grande'][x.gravidade]} · vale até {anoDe(x.prazo)}</p>
+              {/* VIDA 27 · §10: o pedido com contexto — o quê e onde, por que você, e o que pesa se recusar. */}
+              {x.alvo && <p className="svivo-nota"><strong>O quê:</strong> {x.alvo}.</p>}
+              {x.porque && <p className="svivo-nota"><strong>Por que agora:</strong> {x.porque}.</p>}
+              {x.seRecusar && <p className="svivo-nota"><strong>Se recusar:</strong> {x.seRecusar}.</p>}
               <dl className="svivo-contas">
                 <div><dt>Paga</dt><dd>{dinheiroCurto(x.valor)}</dd></div>
                 <div><dt>Chance de dar certo</dt><dd>{pct(x.chance)}</dd></div>
