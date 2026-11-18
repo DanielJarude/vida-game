@@ -1,0 +1,16 @@
+/* VIDA 26.2 · o estilo de luta (no cartão da prática e em Outros caminhos). */
+.l26 { display: flex; flex-direction: column; gap: 4px; min-width: 0; font-size: var(--type-caption); }
+.l26__agora { margin: 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.l26__faixa { padding: 1px 8px; border-radius: var(--radius-pill); box-shadow: inset 0 0 0 1px var(--fio); }
+.l26__nota { margin: 0; color: var(--text-secondary); }
+.l26__opcoes { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 6px; margin-top: 4px; }
+.l26__opcao { position: relative; display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: var(--radius-sm); box-shadow: inset 0 0 0 1px var(--fio); cursor: pointer; min-width: 0; }
+.l26__opcao input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.l26__opcao--sel { box-shadow: inset 0 0 0 2px var(--accent); }
+.l26__opcao--atual { opacity: 0.7; cursor: default; }
+.l26__opcao:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.l26__opcao-nome { font-weight: var(--weight-semibold); }
+.l26__opcao-nome small { font-weight: normal; color: var(--text-muted); }
+.l26__opcao-sobre { color: var(--text-secondary); }
+.l26__opcao-custo { color: var(--accent); }
+.l26__confirmar { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }

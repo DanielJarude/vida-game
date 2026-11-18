@@ -18,6 +18,8 @@ import { ATRIBUTOS_BASQUETE, ATRIBUTOS_DA_MODALIDADE, ATRIBUTOS_DA_POSICAO, NOME
 import { JOGOS25, LISTA_JOGOS25, NOME_ATRIBUTO25, type JogoId } from '../../v25/esports/jogos25';
 import { CATEGORIAS20, nomeCategoria20, podeComecar20 } from '../../v20/automobilismo/automobilismo20';
 import { podeComecar25 } from '../../v25/esports/esports25';
+import { ESTILOS26, LISTA_ESTILOS26, NOME_FAMILIA26, type EstiloLuta26 } from '../esporte/estilos26';
+import { tecnicaNoEstilo26 } from '../lutas/luta26';
 import { FAMILIAS } from '../../dados/carreiras';
 import { ROTULO_TRILHA } from '../../dados/ocupacoes';
 import { POS_CARREIRA26, type OrigemPos26 } from './posCarreira26';
@@ -129,6 +131,42 @@ function trajetoEsporte(v: Vida | undefined, d: Dominio): Trajeto26 {
   };
 }
 
+
+/**
+ * VIDA 26.2 · a luta, por ESTILO: o mesmo caminho do motor (prática → seletiva → equipe → profissional → depois), com o
+ * que é de cada estilo — os atributos que pesam, as faixas (onde há), as competições, a idade do MMA — e o custo de
+ * trocar para ele a partir do estilo de agora (`luta26.tecnicaNoEstilo26`).
+ */
+function trajetoEstilo(v: Vida | undefined, id: EstiloLuta26): Trajeto26 {
+  const b = trajetoEsporte(v, 'lutas');
+  const st = ESTILOS26[id];
+  const meu = v?.lutas26?.estilo;
+  const pratica = !!v && (v.rotinas.some(r => r.id === 'lutas') || (v.caminhos.esporte?.modalidade === 'lutas' && v.caminhos.esporte.fase !== 'encerrada'));
+  const esteEoMeu = meu === id;
+  const i = v ? idade(v) : 20;
+  let estado = b.estado, porque = b.porque;
+  // Quem já luta outro estilo: este é uma troca (o custo dito); quem luta sem estilo: o pedido de escolher.
+  if (pratica && b.estado !== 'encerrado' && !esteEoMeu) {
+    if (b.estado === 'andamento') estado = 'disponivel';
+    porque = meu ? `Você luta ${ESTILOS26[meu].nome}; trocar aproveita parte da técnica (começaria em ${Math.round(tecnicaNoEstilo26(v!, id))}). ${b.estado === 'andamento' ? '' : b.porque}`.trim()
+      : 'Você treina luta sem estilo definido: escolha o estilo na prática (Minha Semana · Corpo e mente).';
+  }
+  if (id === 'mma' && i < 18 && estado !== 'encerrado' && estado !== 'fora') { estado = estado === 'andamento' ? estado : 'futuro'; porque = 'MMA de competição só a partir dos 18; antes, dá para treinar os estilos que o compõem.'; }
+  const faixas = st.faixas ? `Faixas: ${st.faixas.map(f => f.nome).join(' → ')} (pela técnica, pelos anos de prática e pela idade).` : '';
+  const etapas = b.etapas.map((e, k) => ({ ...e,
+    // A etapa "você está aqui" só no estilo que é o seu (sem estilo escolhido, nenhum: a tela pede a escolha).
+    aqui: !!e.aqui && esteEoMeu,
+    como: k === 0 ? `Aulas de ${st.nome} numa academia (Minha Semana · Corpo e mente: luta, com o estilo escolhido). ${faixas}`.trim()
+      : e.nome === 'A seletiva' ? `A seletiva de uma equipe, ou ${st.amador}: chega a quem treina e se destaca, ou se pede.`
+        : e.nome === 'A carreira' ? `${cap(st.profissional)}: as categorias de peso, o cartel (vitórias, derrotas, antes do tempo), os títulos.` : e.como }));
+  return { ...b, id: `lutas_${id}`, nome: st.nome, area: `${NOME_FAMILIA26[st.familia]} · lutas`, estado, porque, etapas,
+    comeco: `${st.sobre} Começa como atividade da semana, por gosto — o treino de competição pede algumas faixas (ou técnica).`,
+    entradas: [`Aulas por gosto (Minha Semana · Corpo e mente) — escolher ${st.nome} como estilo`, ...b.entradas.slice(1).map(x => x.replace('pelos torneios abertos', `pelos torneios abertos (${st.amador})`)), ...(meu && meu !== id ? [`Trocar do ${ESTILOS26[meu].nome}: a técnica começa em ${Math.round(tecnicaNoEstilo26(v!, id))}; a do ${ESTILOS26[meu].nome} fica guardada`] : [])],
+    fatores: [`O que mais pesa: ${primeiros(st.atributos).join(', ')}.`, 'Lutas são por categoria de peso: o corpo decide a categoria, não a chance.', 'A cabeça conta: disciplina, coragem e controle emocional viram concentração, determinação e compostura.'],
+    chaves: `${st.chaves} ${st.nome} luta lutas lutador arte marcial ${NOME_FAMILIA26[st.familia]}`,
+    meu: esteEoMeu && b.meu };
+}
+
 function trajetoJogo(v: Vida | undefined, j: JogoId): Trajeto26 {
   const g = JOGOS25[j];
   const ano = v ? anoDe(v.t) : 2026;
@@ -232,7 +270,7 @@ function trajetoProfissao(v: Vida | undefined, f: (typeof FAMILIAS)[number]): Tr
 
 /** Todos os caminhos (cada modalidade, cada jogo, as pistas, as profissões), com a posição desta vida marcada. */
 export function trajetorias26(v?: Vida): Trajeto26[] {
-  return [...MODALIDADES.map(d => trajetoEsporte(v, d)), ...LISTA_JOGOS25.map(j => trajetoJogo(v, j)), trajetoPistas(v), ...FAMILIAS.filter(f => f.id !== 'esporte').map(f => trajetoProfissao(v, f))];
+  return [...MODALIDADES.flatMap(d => (d === 'lutas' ? LISTA_ESTILOS26.map(x => trajetoEstilo(v, x)) : [trajetoEsporte(v, d)])), ...LISTA_JOGOS25.map(j => trajetoJogo(v, j)), trajetoPistas(v), ...FAMILIAS.filter(f => f.id !== 'esporte').map(f => trajetoProfissao(v, f))];
 }
 
 export const idadeDaVida26 = (v: Vida) => idade(v);

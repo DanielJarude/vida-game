@@ -201,7 +201,7 @@ export function historicoDaCarreira(e: CarreiraEsportiva): HistoricoEsportivo {
     // A luta: o cartel ano a ano (temporadas antigas, sem cartel, mostram só os pódios).
     return {
       agrupado: 'ano', colunas: ['Ano', 'Nível', 'Categoria', 'Eventos', 'V–D', 'Antes do tempo', 'Títulos', 'Pódios'],
-      linhas: ts.map(t => [String(t.ano), NIVEL_INDIVIDUAL[t.nivel] ?? '', t.luta?.categoria ?? '—', String(t.partidas), t.luta ? `${t.luta.vitorias}–${t.luta.derrotas}` : '—', t.luta ? String(t.luta.antesDoTempo) : '—', t.luta ? String(t.luta.titulos) : '—', String(podiosDe(t))])
+      linhas: ts.map(t => [String(t.ano), NIVEL_INDIVIDUAL[t.nivel] ?? '', t.luta ? `${t.luta.estilo ? `${t.luta.estilo} · ` : ''}${t.luta.categoria}` : '—', String(t.partidas), t.luta ? `${t.luta.vitorias}–${t.luta.derrotas}` : '—', t.luta ? String(t.luta.antesDoTempo) : '—', t.luta ? String(t.luta.titulos) : '—', String(podiosDe(t))])
     };
   }
   if (p.estrutura === 'equipe') {

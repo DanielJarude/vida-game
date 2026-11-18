@@ -2700,7 +2700,8 @@ export interface Temporada {
   /** Natação e atletismo: a prova, a melhor marca do ano (segundos ou metros), se foi recorde pessoal, e o ano de competições. */
   prova?: { nome: string; unidade: 's' | 'm'; marca: number; recorde?: boolean; finais: number; podios: number; vitorias: number };
   /** Luta: a categoria de peso e o cartel do ano (sem empate: a chave decide), os títulos e pódios, a maior sequência de vitórias. */
-  luta?: { categoria: string; lutas: number; vitorias: number; derrotas: number; antesDoTempo: number; titulos: number; podios: number; sequencia: number };
+  /** VIDA 26.2: `estilo` — o nome do estilo de luta daquela temporada (ausente nas antigas). */
+  luta?: { categoria: string; estilo?: string; lutas: number; vitorias: number; derrotas: number; antesDoTempo: number; titulos: number; podios: number; sequencia: number };
   /** VIDA 14 · futsal: os jogos em que o time jogou com goleiro-linha (o quinto jogador de linha) com você nele. */
   goleiroLinha?: number;
 }
@@ -4032,6 +4033,9 @@ export interface Vida {
   automobilismo20?: import('./dados20/tipos20').Auto20;
   /** VIDA 25 · a carreira de e-sports, do ranqueado ao mundial (`v25/esports`). Ausente: nunca competiu. */
   esports25?: import('./v25/esports/tipos25').Esports25;
+  /** VIDA 26.2: o estilo de luta escolhido (Muay Thai, boxe, jiu-jitsu...) e a técnica guardada de cada estilo já treinado
+   *  (`v26/lutas/luta26`). Ausente: a arte marcial sem estilo definido (como antes). */
+  lutas26?: { estilo?: import('./v26/esporte/estilos26').EstiloLuta26; tecnicas?: Partial<Record<import('./v26/esporte/estilos26').EstiloLuta26, number>>; desde?: number; trocas?: number };
   /** VIDA 20 · o clube esportivo de que é dono (`v20/clubes`). Ausente: nenhum. */
   clube20?: import('./dados20/tipos20').Clube20;
   /** REWORK 4: as redes sociais do jogo (simulação interna, sem internet): `sistemas/redes`. Opcional. */

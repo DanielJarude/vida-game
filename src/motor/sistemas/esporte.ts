@@ -50,6 +50,7 @@ import { registrarTemporada, registrarConquista } from './palmares';
 import { clubesNaDivisao, colocacaoNaTabela, divisaoDoClube } from './ligas';
 import { copaContinental, copaNacional, copasDeQuadra, idDaLiga, nomeDaCompeticao } from './competicoes';
 import { desvio, efeitoNaNota, envelhecerAtributos, fotografarAtributos, perfilDeAtributos, type AtributoId } from './atributosEsportivos';
+import { ESTILOS26 } from '../v26/esporte/estilos26';
 import { avaliacaoDaComissao, lerJovem, prontoParaContrato, type LeituraDoJovem } from './jovemAtleta';
 import { avancarLicenca } from './oficioDoTecnico';
 import { processarSelecao } from './selecao';
@@ -146,6 +147,8 @@ export const OCUPACOES_DE_ATLETA = ['jogador_futebol', 'atleta', 'jogador_basque
 /** A ocupação de quem se profissionaliza em cada modalidade. */
 export const ocupacaoDaModalidade = (d: Dominio) => (d === 'futebol' ? 'jogador_futebol' : d === 'basquete' ? 'jogador_basquete' : d === 'tenis' ? 'tenista' : 'atleta');
 
+/** VIDA 26.2: o nome da modalidade NESTA vida (a luta, pelo estilo escolhido: "Muay Thai", "jiu-jitsu"). */
+export const nomeDaModalidade = (v: Vida, d: Dominio) => (d === 'lutas' && v.lutas26?.estilo ? ESTILOS26[v.lutas26.estilo].nome : NOME_MOD[d] ?? d);
 const NOME_MOD: Partial<Record<Dominio, string>> = { futebol: 'futebol', volei: 'vôlei', natacao: 'natação', atletismo: 'atletismo', lutas: 'luta', basquete: 'basquete', tenis: 'tênis', futsal: 'futsal' };
 const EQUIPE: Partial<Record<Dominio, string>> = { futebol: 'a base', volei: 'a equipe de base', natacao: 'a equipe de natação', atletismo: 'a equipe de atletismo', lutas: 'a equipe de competição', basquete: 'a equipe de base', tenis: 'a academia de tênis', futsal: 'a base de futsal' };
 
@@ -1270,7 +1273,7 @@ export function profissionalizar(v: Vida, r: Rng, nivel: number): void {
   // O tenista começa sem prêmio no bolso: a renda do ano é a estimativa do circuito em que entra (a temporada acerta a conta).
   if (e.modalidade === 'tenis') emp.salario = Math.round(premiacaoTenis(e, { nota: 6, partidas: [0, 14, 20, 22, 22][e.nivel] }) / 12 / 10) * 10;
   const outroClube = e.origem === 'amador' ? ` — vindo ${daPorta(e.modalidade)}, sem passar por base` : e.clube !== daBase ? ` (${oClube(daBase)} não tinha lugar no time de cima)` : '';
-  const texto = e.modalidade === 'tenis' ? `Virou tenista profissional aos ${idade(v)}, no ${CIRCUITO_TENIS[e.nivel]}: sem clube, sem salário, a raquete e o ranking.` : e.modalidade === 'basquete' ? `Assinou o primeiro contrato de ${NOME_FUNCAO[funcaoBasquete(v)]} ${peloClube(e.clube)}, aos ${idade(v)}${e.origem === 'amador' ? ', vindo da liga amadora' : ''}.` : e.modalidade === 'futebol' ? `Assinou o primeiro contrato profissional de jogador, ${peloClube(e.clube)}, aos ${idade(v)}${outroClube}.` : `Virou atleta profissional de ${NOME_MOD[e.modalidade]}, ${peloClube(e.clube)}, aos ${idade(v)}.`;
+  const texto = e.modalidade === 'tenis' ? `Virou tenista profissional aos ${idade(v)}, no ${CIRCUITO_TENIS[e.nivel]}: sem clube, sem salário, a raquete e o ranking.` : e.modalidade === 'basquete' ? `Assinou o primeiro contrato de ${NOME_FUNCAO[funcaoBasquete(v)]} ${peloClube(e.clube)}, aos ${idade(v)}${e.origem === 'amador' ? ', vindo da liga amadora' : ''}.` : e.modalidade === 'futebol' ? `Assinou o primeiro contrato profissional de jogador, ${peloClube(e.clube)}, aos ${idade(v)}${outroClube}.` : `Virou atleta profissional de ${nomeDaModalidade(v, e.modalidade)}, ${peloClube(e.clube)}, aos ${idade(v)}.`;
   escrever(v, { texto, relevancia: 'marco', tema: 'trabalho', tom: 'bom', escolha: true });
   marcar(v, 'profissional', texto, 3, { dominio: e.modalidade, ocupacaoId: oc.id });
   registrarConquista(v, { tipo: 'marco', modalidade: e.modalidade, ano: anoDe(v.t), competicao: divisaoDe(e.modalidade, e.nivel, paisDaCidade(e.municipioId)), clube: e.modalidade === 'tenis' ? undefined : e.clube, texto: `Primeiro contrato profissional, aos ${idade(v)}` });
@@ -1577,7 +1580,7 @@ export function encerrarCarreira(v: Vida, e: CarreiraEsportiva, motivo: NonNulla
   if (eraPro && v.trabalho.atual && OCUPACOES_DE_ATLETA.includes(v.trabalho.atual.ocupacaoId)) encerrarEmprego(v, 'fim da carreira esportiva');
   const g = ge(v);
   const texto = !eraPro
-    ? motivo === 'dispensa' ? e.modalidade === 'tenis' ? `A academia cortou a bolsa aos ${i}: sem ela, o circuito juvenil ficou caro demais. O sonho de viver do tênis ficou para trás.` : `${flex(g, 'Dispensado', 'Dispensada')} ${e.modalidade === 'futebol' ? 'da base' : 'da equipe'} ${doClube(e.clube)}, aos ${i}. O sonho de viver do ${NOME_MOD[e.modalidade]} ficou para trás.` : `Deixou ${aEquipe(e.modalidade, e.clube)}, aos ${i}.`
+    ? motivo === 'dispensa' ? e.modalidade === 'tenis' ? `A academia cortou a bolsa aos ${i}: sem ela, o circuito juvenil ficou caro demais. O sonho de viver do tênis ficou para trás.` : `${flex(g, 'Dispensado', 'Dispensada')} ${e.modalidade === 'futebol' ? 'da base' : 'da equipe'} ${doClube(e.clube)}, aos ${i}. O sonho de viver do ${nomeDaModalidade(v, e.modalidade)} ficou para trás.` : `Deixou ${aEquipe(e.modalidade, e.clube)}, aos ${i}.`
     : motivo === 'lesao' ? `Encerrou a carreira aos ${i}, depois de lesões demais.` : motivo === 'sem_contrato' ? `Aos ${i}, ${perfilDe(e.modalidade).estrutura === 'clube' ? 'nenhum clube renovou' : perfilDe(e.modalidade).estrutura === 'equipe' ? 'nenhuma equipe renovou' : 'sem resultado nem patrocínio para seguir no circuito'}: a carreira de ${flex(g, 'atleta', 'atleta')} acabou sem despedida.` : (e.modalidade === 'tenis' ? `Guardou a raquete de competição aos ${i}.` : `Pendurou as chuteiras aos ${i}.`.replace('as chuteiras', e.modalidade === 'futebol' ? 'as chuteiras' : 'a carreira'));
   escrever(v, { texto, relevancia: 'marco', tema: eraPro ? 'trabalho' : 'lazer', tom: 'ruim' });
   marcar(v, eraPro ? 'fim_carreira' : 'fracasso', texto, 3, { dominio: e.modalidade });

@@ -19,6 +19,7 @@ const Esports25 = lazy(() => import('../v25/esports/Esports25'));
 const Formacao25 = lazy(() => import('../v25/formacao/Formacao25').then(m => ({ default: m.Formacao25 })));
 const FichaDoEsporte25 = lazy(() => import('../v25/ficha/FichaDoEsporte25').then(m => ({ default: m.FichaDoEsporte25 })));
 import { HobbiesQueAbrem26 } from '../v26/hobby/HobbyPorta26';
+import { EstiloDeLuta26 } from '../v26/lutas/EstiloDeLuta26';
 const PosCarreira26 = lazy(() => import('../v26/guia/Guia26').then(m => ({ default: m.PosCarreira26 })));
 import type { Vida } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
@@ -117,6 +118,8 @@ export function OutrosCaminhosDaVida({ vida, agir, irPara }: { vida: Vida; agir:
       {i >= 6 && <HobbiesQueAbrem26 vida={vida} irPara={irPara} />}
       {/* VIDA 16.1: o placar do atleta logo no alto, onde o esporte mora (o mesmo crachá de Trabalho). */}
       {esp && esp.fase !== 'encerrada' && <Cracha15 vida={vida} />}
+      {/* VIDA 26.2: quem compete luta escolhe (ou troca) o estilo aqui também. */}
+      {esp && esp.fase !== 'encerrada' && esp.modalidade === 'lutas' && <section className="divisao__secao" aria-label="Estilo de luta"><h2 className="secao-fio">O estilo de luta</h2><EstiloDeLuta26 vida={vida} agir={agir} /></section>}
       {/* VIDA 20: o automobilismo (o convite do kart para quem tem idade; a carreira, do kart à F1). */}
       <Suspense fallback={null}><Automobilismo20 vida={vida} agir={agir} /></Suspense>
       {/* VIDA 25: os e-sports (a porta para quem tem idade; a carreira, do ranqueado ao mundial). */}

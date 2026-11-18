@@ -23,6 +23,7 @@ import { clamp } from '../rng';
 import type { CarreiraEsportiva, Dominio, Temporada, Vida } from '../tipos';
 import { ge } from '../texto';
 import { estaturaAdulta } from './modalidades';
+import { ESTILOS26 } from '../v26/esporte/estilos26';
 
 function hash(s: string): number {
   let h = 2166136261;
@@ -224,7 +225,8 @@ export function jogarLutas(v: Vida, r: Rng, t: Temporada, nota: number): void {
     if (rd >= 2) podios++;
     if (k === 0) principal = rd === 4 ? 1 : rd === 3 ? 2 : rd === 2 ? 3 : rd === 1 ? 5 : 9;
   }
-  t.luta = { categoria: categoriaDeLuta(v), lutas: vit + der, vitorias: vit, derrotas: der, antesDoTempo, titulos, podios, sequencia: melhorSeq };
+  // VIDA 26.2: o estilo daquela temporada (o histórico mostra: "Muay Thai · até 70 kg").
+  t.luta = { categoria: categoriaDeLuta(v), ...(v.lutas26?.estilo ? { estilo: ESTILOS26[v.lutas26.estilo].nome } : {}), lutas: vit + der, vitorias: vit, derrotas: der, antesDoTempo, titulos, podios, sequencia: melhorSeq };
   t.colocacao = t.partidas ? principal : 9;
   t.gols = 0;
 }

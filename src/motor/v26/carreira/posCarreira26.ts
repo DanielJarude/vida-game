@@ -60,7 +60,8 @@ function daCarreira(e: CarreiraEsportiva): Trajetoria26 {
   const ts = e.temporadas ?? [];
   const pro = ts.length > 0;
   return {
-    origem: e.modalidade, nome: NOME_MOD[e.modalidade] ?? e.modalidade, profissional: pro,
+    // VIDA 26.2: a luta pelo estilo em que se competiu (o da última temporada registrada).
+    origem: e.modalidade, nome: [...ts].reverse().find(t => t.luta?.estilo)?.luta?.estilo ?? NOME_MOD[e.modalidade] ?? e.modalidade, profissional: pro,
     anos: Math.max(0, ((e.tFim ?? e.tInicio) - e.tInicio) / 12), nivelMax: pro ? Math.max(...ts.map(t => t.nivel)) : 0,
     titulos: ts.reduce((s, t) => s + (t.titulos ?? (t.colocacao === 1 ? 1 : 0)), 0), reputacao: e.reputacao ?? 0,
     goleiro: e.modalidade === 'futebol' && e.posicao === 'goleiro', capitao: !!e.capitao || ts.some(t => t.capitao), fim: e.tFim ?? e.tInicio

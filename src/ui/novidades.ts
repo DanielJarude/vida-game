@@ -26,6 +26,21 @@ export interface NotaDeVersao {
 
 export const NOTAS: NotaDeVersao[] = [
   {
+    versao: '26.2',
+    data: '2026-11-18',
+    titulo: 'Estilos de luta',
+    novidades: [
+      'Escolha o estilo de luta — Muay Thai, boxe, jiu-jitsu, judô, karatê, taekwondo ou MMA (a partir dos 18) — na prática de luta (Minha Semana · Corpo e mente) ou em Outros caminhos, para quem compete.',
+      'Cada estilo pesa atributos diferentes na luta (o boxeador vive de golpes, defesa e distância; o jiu-jiteiro, do chão, do equilíbrio e da força) e tem as suas competições.',
+      'Faixas no jiu-jitsu, no judô, no karatê e no taekwondo, pela técnica, pelos anos de prática e pela idade — com o que falta para a próxima.'
+    ],
+    melhorias: [
+      'Trocar de estilo aproveita parte da técnica (mais dentro da mesma família) e guarda a do estilo deixado: voltar devolve o que se tinha.',
+      'O histórico da carreira mostra o estilo de cada temporada; os Caminhos de carreira têm um caminho por estilo, com o custo de trocar para ele.'
+    ],
+    correcoes: []
+  },
+  {
     versao: '26.1',
     data: '2026-11-18',
     titulo: 'A central "Onde fica cada coisa" e os caminhos de carreira',

@@ -224,7 +224,9 @@ describe('VIDA 26 · guia de carreiras', () => {
   it('cobre todas as modalidades, todos os jogos e o automobilismo; etapas e depois de cada um', () => {
     const v = aos(15);
     const t = trajetorias26(v);
-    expect(t.filter(x => x.grupo === 'esporte').map(x => x.id).sort()).toEqual([...MODALIDADES].sort());
+    // VIDA 26.2: a luta virou um caminho por estilo.
+    expect(t.filter(x => x.grupo === 'esporte').map(x => x.id).filter(id => !id.startsWith('lutas_')).sort()).toEqual(MODALIDADES.filter(d => d !== 'lutas').sort());
+    expect(t.filter(x => x.id.startsWith('lutas_')).length).toBe(7);
     expect(t.filter(x => x.grupo === 'esports')).toHaveLength(LISTA_JOGOS25.length);
     expect(t.some(x => x.grupo === 'pistas')).toBe(true);
     // VIDA 26.1: as profissões (as famílias de carreira) entram também, com os degraus que cada uma tem (3 a 5).

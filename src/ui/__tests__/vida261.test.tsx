@@ -41,14 +41,17 @@ describe('VIDA 26.1 · a busca', () => {
     expect(ids('namorar')[0]).toBe('namoro');
     expect(ids('dinheiro').slice(0, 3)).toContain('dinheiro');
     for (const q of ['Counter-Strike', 'counter strike', 'CS', 'valorant']) expect(ids(q)[0], q).toBe('esports');
-    expect(ids('muay thai')[0]).toBe('base_esporte');
+    // VIDA 26.2: o estilo de luta tem ação própria; a peneira e a base continuam no resultado.
+    expect(ids('muay thai')[0]).toBe('estilo_luta');
+    expect(ids('muay thai')).toContain('base_esporte');
     expect(ids('faculdadde')).toContain('faculdade');
     expect(ids('treinador')).toContain('pos_carreira');
     for (const q of ['futebol', 'dinheiro', 'cs']) expect(new Set(ids(q)).size).toBe(ids(q).length);
   });
   it('a busca encontra trajetórias: Muay Thai → lutas; Counter-Strike → o caminho do CS; futebol → futebol', () => {
     const t = trajetorias26(aos(15));
-    expect(buscarTrajetorias(t, 'muay thai')[0].id).toBe('lutas');
+    expect(buscarTrajetorias(t, 'muay thai')[0].id).toBe('lutas_muay_thai');
+    expect(buscarTrajetorias(t, 'jiu-jitsu')[0].id).toBe('lutas_jiu_jitsu');
     expect(buscarTrajetorias(t, 'Counter-Strike')[0].id).toBe('esports_cs');
     expect(buscarTrajetorias(t, 'futebol')[0].id).toBe('futebol');
     expect(buscarTrajetorias(t, 'saúde').some(x => x.id === 'prof_saude')).toBe(true);
@@ -83,7 +86,8 @@ describe('VIDA 26.1 · a central na tela', () => {
 describe('VIDA 26.1 · o explorador', () => {
   it('cobre todas as modalidades, todos os jogos, as pistas e as profissões', () => {
     const t = trajetorias26(aos(15));
-    expect(t.filter(x => x.grupo === 'esporte').length).toBe(MODALIDADES.length);
+    // VIDA 26.2: a luta é um caminho por estilo (Muay Thai, boxe, jiu-jitsu, judô, karatê, taekwondo, MMA).
+    expect(t.filter(x => x.grupo === 'esporte').length).toBe(MODALIDADES.length - 1 + 7);
     expect(t.filter(x => x.grupo === 'esports').length).toBe(LISTA_JOGOS25.length);
     expect(t.filter(x => x.grupo === 'pistas').length).toBe(1);
     expect(t.filter(x => x.grupo === 'profissao').length).toBeGreaterThanOrEqual(15);
@@ -108,10 +112,10 @@ describe('VIDA 26.1 · o explorador', () => {
   });
   it('mostra as formas de começar e leva à tela real', () => {
     let foi: Aba | undefined;
-    const r = render(<Explorador26 vida={aos(15)} agir={() => true} irPara={a => { foi = a; }} foco="lutas" semPos />);
-    const lutas = r.container.querySelector('[data-trajeto="lutas"]')!;
+    const r = render(<Explorador26 vida={aos(15)} agir={() => true} irPara={a => { foi = a; }} foco="lutas_muay_thai" semPos />);
+    const lutas = r.container.querySelector('[data-trajeto="lutas_muay_thai"]')!;
     expect(lutas.hasAttribute('open')).toBe(true);
-    expect(lutas.textContent).toMatch(/Muay Thai/);
+    expect(lutas.textContent).toMatch(/oito armas/);
     expect(lutas.textContent).toMatch(/Formas de começar/);
     fireEvent.click(within(lutas as HTMLElement).getByRole('button', { name: /praticar|Ver/ }));
     expect(foi).toBe('corpo');

@@ -26,6 +26,7 @@ import { funcaoBasquete } from './modalidades';
 import { funcaoFutsalPorSorteio } from '../dados14/esportes/futsal';
 import { ATRIBUTOS_ATLETISMO, ATRIBUTOS_BASQUETE, ATRIBUTOS_DA_MODALIDADE, ATRIBUTOS_DA_POSICAO, ATRIBUTOS_FUTSAL, ATRIBUTOS_VOLEI, CORPO_DO_ATRIBUTO, FISICOS26, GRUPO_DO_ATRIBUTO, grupoDaProva, MENTE_DO_ATRIBUTO, TATICOS26, type AtributoId, type GrupoDePosicao, type Lista } from '../v26/esporte/atributos26';
 export * from '../v26/esporte/atributos26';
+import { ESTILOS26 } from '../v26/esporte/estilos26';
 
 export const GRUPO_DA_POSICAO: Record<Posicao, GrupoDePosicao> = { goleiro: 'goleiro', zagueiro: 'defensor', lateral: 'defensor', volante: 'meio', meia: 'meio', ponta: 'atacante', atacante: 'atacante' };
 
@@ -44,6 +45,8 @@ export function atributosDaCarreira(e: CarreiraEsportiva, posicao: Posicao | und
   if (v && e.modalidade === 'volei') return ATRIBUTOS_VOLEI[funcaoVolei(v)];
   if (v && e.modalidade === 'futsal') return ATRIBUTOS_FUTSAL[e.futsal?.funcao ?? funcaoFutsalPorSorteio(hashMisturado(`${v.id}:futsal_funcao`))];
   if (v && e.modalidade === 'atletismo') return ATRIBUTOS_ATLETISMO[grupoDaProva(provaDe(v, 'atletismo')?.nome)];
+  // VIDA 26.2: na luta, o estilo escolhido (o boxeador vive de golpes e defesa; o jiu-jiteiro, do chão). Sem estilo: o de antes.
+  if (v && e.modalidade === 'lutas' && v.lutas26?.estilo) return ESTILOS26[v.lutas26.estilo].atributos;
   return ATRIBUTOS_DA_MODALIDADE[e.modalidade] ?? [];
 }
 

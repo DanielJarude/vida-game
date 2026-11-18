@@ -32,6 +32,7 @@ import type { LeituraPratica } from '../leituraPratica';
 import type { Aba } from '../navegacao';
 import { Trajetoria } from './Voce';
 import { HobbyPorta26 } from '../v26/hobby/HobbyPorta26';
+import { EstiloDeLuta26 } from '../v26/lutas/EstiloDeLuta26';
 
 const CATEGORIA: Record<LeituraPratica['categoria'], string> = {
   esporte: 'Esporte', arte: 'Arte', estudo: 'Estudo', social: 'Gente e comunidade', oficio: 'Ofício', corpo: 'Corpo', lazer: 'Lazer', renda: 'Dinheiro por fora', cuidado: 'Cuidado'
@@ -77,6 +78,8 @@ export function CartaoPratica({ vida, l, abrir, agir, irPara, leitura }: PropsCa
         {leitura && <p className="pratica__leitura rotina__leitura">{leitura}</p>}
         {agora && <p className="pratica__agora">{agora}</p>}
         {/* VIDA 26: o que a atividade é e para onde pode levar (possibilidade, não obrigação). */}
+        {/* VIDA 26.2: na luta, o estilo (Muay Thai, boxe, jiu-jitsu...) e a faixa. */}
+        {l.id === 'lutas' && <EstiloDeLuta26 vida={vida} agir={agir} />}
         {!l.daFormacao && <HobbyPorta26 vida={vida} id={l.id} categoria={l.categoria} irPara={irPara} />}
         {l.daFormacao && irPara && <button type="button" className="link pratica__ir" onClick={() => irPara('formacao')}>ver em Caminhos →</button>}
         {!l.daFormacao && l.niveis.length > 1 && l.nivel < l.niveis.length && (
