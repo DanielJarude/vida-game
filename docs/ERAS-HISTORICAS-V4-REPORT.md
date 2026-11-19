@@ -271,6 +271,15 @@ as decisões de desenho (partidos nazistas, a perseguição aos judeus, reformas
    segregação norte-americana, com a classificação racial do regime).
 5. Cotidiano por classe e década (casa, comida, roupa, lazer) e economia regional (crises por setor e região).
 
-## 14. Commits e publicação
+## 14. Commits e publicação (conferida)
 
-(preenchido abaixo)
+- Branch `claude/eras-v4-sociedade`: `cb468ba` (a camada social, as reformas, os movimentos, os partidos, o esporte
+  amador, as folhas puras), `88d2e1b` (saúde na mortalidade, painel, notas "Eras 4", fontes, QA), `e9c24ab` (textos dos
+  movimentos), seguinte (autor da reforma, herança, auditoria), `854b15e` (relatório, fotos, último ajuste de texto).
+- **Publicado em 19/11/2026**, como autorizado no pedido: `main` e a branch de produção (`claude/fix-pos-rework3-playtest`)
+  avançadas por fast-forward de `e5fe53d` para `854b15e`. Configuração do Cloudflare não foi tocada.
+- https://vida-game.pages.dev/ serve `assets/index-CFR4XjWG.js`; "/" e os 182 arquivos JS/CSS **idênticos (sha256)** ao
+  build local validado (183/183).
+- Teste no site real: as vidas da Geórgia de 1958 (com mandato e reforma), do Brasil de 1955 e da Argentina de 1978 a 1440
+  e 390 px, claro e escuro — o painel da sociedade, uma ação de movimento, Caminhos → Vida pública, um ano vivido: sem erro
+  de console, sem rolagem lateral; e um nascimento novo nos EUA de 1946 (US$, sem erro).
