@@ -19,12 +19,12 @@ const m = (...x: Mercado[]): VersaoVeiculo['mercados'] => x;
 export const VERSOES_DA_EPOCA_MUNDO: readonly V[] = [
   // ---------------------------------------------------------------- Estados Unidos
   { id: 'epm_olds_curved', classe: 'carro_compacto', marca: 'Oldsmobile', modelo: 'Curved Dash', dica: 'carro a motor de dois lugares', faixa: 'alta', preco: 15000, artigo: 'o', pesoUsado: 1, forma: 'compacto', lugares: 2, mercados: m('US'), epoca: [1901, 1907] },
-  { id: 'epm_ford_t', classe: 'carro_compacto', marca: 'Ford', modelo: 'Modelo T', dica: 'o carro de todo mundo', faixa: 'economica', preco: 6000, artigo: 'o', pesoUsado: 3, forma: 'compacto', mercados: m('US', 'GB'), epoca: [1908, 1927] },
-  { id: 'epm_ford_a', classe: 'carro_compacto', marca: 'Ford', modelo: 'Modelo A', dica: 'compacto', faixa: 'economica', preco: 8000, artigo: 'o', pesoUsado: 3, forma: 'compacto', mercados: m('US'), epoca: [1928, 1931] },
+  { id: 'epm_ford_t', classe: 'carro_compacto', marca: 'Ford', modelo: 'Modelo T', dica: 'o carro de todo mundo', faixa: 'economica', preco: 6000, artigo: 'o', pesoUsado: 3, forma: 'compacto', mercados: m('US', 'GB', 'BR'), epoca: [1908, 1927] },
+  { id: 'epm_ford_a', classe: 'carro_compacto', marca: 'Ford', modelo: 'Modelo A', dica: 'compacto', faixa: 'economica', preco: 8000, artigo: 'o', pesoUsado: 3, forma: 'compacto', mercados: m('US', 'BR'), epoca: [1928, 1931] },
   { id: 'epm_ford_v8', classe: 'carro_sedan', marca: 'Ford', modelo: 'V8', acabamento: 'Tudor', dica: 'sedã', faixa: 'intermediaria', preco: 12000, artigo: 'o', pesoUsado: 2, forma: 'seda', mercados: m('US'), epoca: [1932, 1940] },
-  { id: 'epm_chevrolet_master', classe: 'carro_compacto', marca: 'Chevrolet', modelo: 'Master', dica: 'compacto', faixa: 'economica', preco: 11000, artigo: 'o', pesoUsado: 3, forma: 'compacto', mercados: m('US'), epoca: [1933, 1942] },
+  { id: 'epm_chevrolet_master', classe: 'carro_compacto', marca: 'Chevrolet', modelo: 'Master', dica: 'compacto', faixa: 'economica', preco: 11000, artigo: 'o', pesoUsado: 3, forma: 'compacto', mercados: m('US', 'BR'), epoca: [1933, 1942] },
   { id: 'epm_ford_superdeluxe', classe: 'carro_sedan', marca: 'Ford', modelo: 'Super De Luxe', dica: 'sedã', faixa: 'intermediaria', preco: 18000, artigo: 'o', pesoUsado: 2, forma: 'seda', mercados: m('US'), epoca: [1946, 1948] },
-  { id: 'epm_chevrolet_belair', classe: 'carro_sedan', marca: 'Chevrolet', modelo: 'Bel Air', dica: 'sedã grande', faixa: 'intermediaria', preco: 25000, artigo: 'o', pesoUsado: 3, forma: 'seda', mercados: m('US'), epoca: [1950, 1957] },
+  { id: 'epm_chevrolet_belair', classe: 'carro_sedan', marca: 'Chevrolet', modelo: 'Bel Air', dica: 'sedã grande', faixa: 'intermediaria', preco: 25000, artigo: 'o', pesoUsado: 3, forma: 'seda', mercados: m('US', 'BR'), epoca: [1950, 1957] },
   { id: 'epm_ford_fairlane', classe: 'carro_sedan', marca: 'Ford', modelo: 'Fairlane', dica: 'sedã grande', faixa: 'intermediaria', preco: 27000, artigo: 'o', pesoUsado: 2, forma: 'seda', mercados: m('US'), epoca: [1955, 1961] },
   { id: 'epm_vw_beetle', classe: 'carro_compacto', marca: 'Volkswagen', modelo: 'Fusca', acabamento: '1200', dica: 'compacto importado', faixa: 'economica', preco: 18000, artigo: 'o', pesoUsado: 3, forma: 'compacto', mercados: m('US', 'GB', 'DE', 'JP'), epoca: [1950, 1978] },
   { id: 'epm_ford_falcon_us', classe: 'carro_compacto', marca: 'Ford', modelo: 'Falcon', dica: 'compacto americano', faixa: 'economica', preco: 26000, artigo: 'o', pesoUsado: 2, forma: 'seda', mercados: m('US'), epoca: [1960, 1970] },
@@ -34,7 +34,7 @@ export const VERSOES_DA_EPOCA_MUNDO: readonly V[] = [
   { id: 'epm_ford_taurus', classe: 'carro_sedan', marca: 'Ford', modelo: 'Taurus', dica: 'sedã médio', faixa: 'intermediaria', preco: 65000, artigo: 'o', pesoUsado: 3, forma: 'seda', mercados: m('US'), epoca: [1986, 2006] },
   { id: 'epm_toyota_camry', classe: 'carro_sedan', marca: 'Toyota', modelo: 'Camry', dica: 'sedã médio', faixa: 'intermediaria', preco: 80000, artigo: 'o', pesoUsado: 3, forma: 'seda', mercados: m('US', 'JP'), epoca: [1983, 2025] },
   { id: 'epm_ford_focus', classe: 'carro_compacto', marca: 'Ford', modelo: 'Focus', dica: 'hatch médio', faixa: 'intermediaria', preco: 60000, artigo: 'o', pesoUsado: 3, forma: 'hatch', mercados: m('US', 'GB', 'DE', 'AR'), epoca: [1998, 2018] },
-  { id: 'epm_jeep_cj', classe: 'carro_suv', marca: 'Jeep', modelo: 'CJ', dica: 'jipe', faixa: 'intermediaria', preco: 30000, artigo: 'o', pesoUsado: 2, forma: 'suv', mercados: m('US'), epoca: [1945, 1986] },
+  { id: 'epm_jeep_cj', classe: 'carro_suv', marca: 'Jeep', modelo: 'CJ', dica: 'jipe', faixa: 'intermediaria', preco: 30000, artigo: 'o', pesoUsado: 2, forma: 'suv', mercados: m('US', 'BR', 'AR'), epoca: [1945, 1986] },
   { id: 'epm_ford_fserie', classe: 'carro_suv', marca: 'Ford', modelo: 'F-100', dica: 'picape', faixa: 'intermediaria', preco: 35000, artigo: 'a', pesoUsado: 3, forma: 'picape', lugares: 3, mercados: m('US'), epoca: [1948, 2025] },
   { id: 'epm_harley_wl', classe: 'moto_media', marca: 'Harley-Davidson', modelo: 'WL', dica: 'moto de 750 cc', faixa: 'intermediaria', preco: 14000, artigo: 'a', pesoUsado: 1, forma: 'cruiser', mercados: m('US'), epoca: [1937, 1952] },
   { id: 'epm_honda_supercub', classe: 'moto_pequena', marca: 'Honda', modelo: 'Super Cub', dica: 'moto de 50 cc', faixa: 'economica', preco: 5000, artigo: 'a', pesoUsado: 3, forma: 'cub', mercados: m('JP', 'US', 'GB', 'AR'), epoca: [1958, 2025] },
@@ -66,7 +66,6 @@ export const VERSOES_DA_EPOCA_MUNDO: readonly V[] = [
   { id: 'epm_honda_n360', classe: 'carro_compacto', marca: 'Honda', modelo: 'N360', dica: 'minicarro (kei)', faixa: 'economica', preco: 16000, artigo: 'o', pesoUsado: 3, forma: 'compacto', mercados: m('JP'), epoca: [1967, 1972] },
   { id: 'epm_toyota_hilux', classe: 'carro_suv', marca: 'Toyota', modelo: 'Hilux', dica: 'picape', faixa: 'intermediaria', preco: 60000, artigo: 'a', pesoUsado: 3, forma: 'picape', mercados: m('JP', 'AR', 'GB'), epoca: [1968, 2025] },
   // ---------------------------------------------------------------- Argentina
-  { id: 'epm_ika_jeep', classe: 'carro_suv', marca: 'IKA', modelo: 'Jeep', dica: 'jipe nacional', faixa: 'intermediaria', preco: 30000, artigo: 'o', pesoUsado: 2, forma: 'suv', mercados: m('AR'), epoca: [1956, 1977] },
   { id: 'epm_fiat_600', classe: 'carro_compacto', marca: 'Fiat', modelo: '600', dica: 'o "fitito", compacto popular', faixa: 'economica', preco: 18000, artigo: 'o', pesoUsado: 3, forma: 'compacto', mercados: m('AR'), epoca: [1960, 1982] },
   { id: 'epm_ford_falcon_ar', classe: 'carro_sedan', marca: 'Ford', modelo: 'Falcon', dica: 'sedã nacional', faixa: 'intermediaria', preco: 35000, artigo: 'o', pesoUsado: 3, forma: 'seda', mercados: m('AR'), epoca: [1962, 1991] },
   { id: 'epm_renault_4', classe: 'carro_compacto', marca: 'Renault', modelo: '4', dica: 'compacto', faixa: 'economica', preco: 20000, artigo: 'o', pesoUsado: 3, forma: 'compacto', mercados: m('AR'), epoca: [1963, 1987] },
@@ -76,23 +75,14 @@ export const VERSOES_DA_EPOCA_MUNDO: readonly V[] = [
   { id: 'epm_fiat_147_ar', classe: 'carro_compacto', marca: 'Fiat', modelo: '147', dica: 'compacto', faixa: 'economica', preco: 30000, artigo: 'o', pesoUsado: 3, forma: 'hatch', mercados: m('AR'), epoca: [1982, 1996] },
   { id: 'epm_vw_gol_ar', classe: 'carro_compacto', marca: 'Volkswagen', modelo: 'Gol', dica: 'hatch compacto', faixa: 'economica', preco: 45000, artigo: 'o', pesoUsado: 3, forma: 'hatch', mercados: m('AR'), epoca: [1990, 2023] },
   { id: 'epm_siambretta', classe: 'moto_pequena', marca: 'Siambretta', modelo: '150', dica: 'lambreta nacional', faixa: 'economica', preco: 6000, artigo: 'a', pesoUsado: 3, forma: 'scooter', mercados: m('AR'), epoca: [1954, 1966] },
-  // ---------------------------------------------------------------- Brasil antes da indústria nacional (montados aqui ou importados)
-  { id: 'epm_br_ford_t', classe: 'carro_compacto', marca: 'Ford', modelo: 'Modelo T', acabamento: 'montado em São Paulo', dica: 'compacto', faixa: 'intermediaria', preco: 9000, artigo: 'o', pesoUsado: 2, forma: 'compacto', mercados: m('BR'), epoca: [1919, 1927] },
-  { id: 'epm_br_ford_a', classe: 'carro_compacto', marca: 'Ford', modelo: 'Modelo A', dica: 'compacto', faixa: 'intermediaria', preco: 11000, artigo: 'o', pesoUsado: 2, forma: 'compacto', mercados: m('BR'), epoca: [1928, 1931] },
-  { id: 'epm_br_chevrolet', classe: 'carro_sedan', marca: 'Chevrolet', modelo: 'Master', acabamento: 'montado no Brasil', dica: 'sedã', faixa: 'alta', preco: 16000, artigo: 'o', pesoUsado: 2, forma: 'seda', mercados: m('BR'), epoca: [1933, 1942] },
-  { id: 'epm_br_belair', classe: 'carro_sedan', marca: 'Chevrolet', modelo: 'Bel Air', acabamento: 'importado', dica: 'sedã grande importado', faixa: 'alta', preco: 60000, artigo: 'o', pesoUsado: 1, forma: 'seda', mercados: m('BR'), epoca: [1950, 1957] },
+  // ---------------------------------------------------------------- Brasil antes da indústria nacional (os montados aqui ou importados
+  // que são os mesmos dos EUA — Modelo T, Modelo A, Chevrolet, Bel Air, Jeep — estão acima, com o Brasil no mercado)
   { id: 'epm_br_romi_isetta', classe: 'carro_compacto', marca: 'Romi', modelo: 'Isetta', dica: 'minicarro de porta frontal', faixa: 'economica', preco: 22000, artigo: 'o', pesoUsado: 1, forma: 'compacto', lugares: 2, mercados: m('BR'), epoca: [1956, 1961] },
   { id: 'epm_br_dkw', classe: 'carro_sedan', marca: 'DKW-Vemag', modelo: 'Belcar', dica: 'sedã nacional', faixa: 'intermediaria', preco: 50000, artigo: 'o', pesoUsado: 2, forma: 'seda', mercados: m('BR'), epoca: [1956, 1967] },
   { id: 'epm_br_simca', classe: 'carro_sedan', marca: 'Simca', modelo: 'Chambord', dica: 'sedã grande', faixa: 'alta', preco: 75000, artigo: 'o', pesoUsado: 1, forma: 'seda', mercados: m('BR'), epoca: [1959, 1967] },
   { id: 'epm_br_aero_willys', classe: 'carro_sedan', marca: 'Willys', modelo: 'Aero-Willys', dica: 'sedã grande', faixa: 'alta', preco: 70000, artigo: 'o', pesoUsado: 2, forma: 'seda', mercados: m('BR'), epoca: [1960, 1971] },
-  { id: 'epm_br_jeep', classe: 'carro_suv', marca: 'Willys', modelo: 'Jeep', dica: 'jipe', faixa: 'intermediaria', preco: 45000, artigo: 'o', pesoUsado: 2, forma: 'suv', mercados: m('BR'), epoca: [1957, 1983] },
   { id: 'epm_br_rural', classe: 'carro_suv', marca: 'Willys', modelo: 'Rural', dica: 'utilitário', faixa: 'intermediaria', preco: 50000, artigo: 'a', pesoUsado: 2, forma: 'suv', mercados: m('BR'), epoca: [1956, 1977] }
 ];
 
-/** O desenho que cada versão reaproveita (o mesmo modelo já desenhado), quando não tem o seu. */
-export const DESENHO_DE: Readonly<Record<string, string>> = {
-  epm_vw_beetle: 'ep_vw_fusca', epm_honda_civic_us: 'ep_honda_civic', epm_toyota_corolla_mundo: 'ep_toyota_corolla', epm_ford_fserie: 'ford_f150',
-  epm_toyota_hilux: 'toyota_hilux', epm_ford_escort_gb: 'ep_ford_escort', epm_ford_f100_ar: 'ep_ford_f1000', epm_fiat_147_ar: 'ep_fiat_147', epm_vw_gol_ar: 'ep_vw_gol_bola',
-  epm_br_ford_t: 'epm_ford_t', epm_br_ford_a: 'epm_ford_a', epm_br_chevrolet: 'epm_chevrolet_master', epm_br_belair: 'epm_chevrolet_belair', epm_br_jeep: 'epm_jeep_cj',
-  epm_ika_jeep: 'epm_jeep_cj', epm_ford_falcon_ar: 'epm_ford_falcon_us', epm_toyota_camry: 'ep_toyota_corolla', epm_ford_focus: 'ep_ford_escort'
-};
+/** Sem desenho reaproveitado: cada versão da época tem o seu (`ui/ilustracao/carros13`, `motos13`, `duasRodas`). */
+export const DESENHO_DE: Readonly<Record<string, string>> = {};

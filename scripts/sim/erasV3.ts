@@ -9,6 +9,7 @@ import type { Vida } from '../../src/motor/tipos';
 import { idade } from '../../src/motor/nucleo';
 import { podeTentar } from '../../src/motor/plausibilidade';
 import { conciliar } from '../../src/motor/sistemas/extrato';
+import { orcamento } from '../../src/motor/sistemas/dinheiro';
 import { carregarMundo } from '../../src/motor/mundo/carregar';
 import { entrarNaVida } from '../../src/motor/mundo/vida';
 import { formatarDinheiro } from '../../src/motor/mundo/moeda';
@@ -36,7 +37,8 @@ for (const pais of PAISES) {
   for (const ano of COORTES) {
     if (pais === 'AR' && ano < 1945) continue;
     let crashes = 0, naoConcilia = 0, eraTextos = 0, total = 0;
-    const mortes: number[] = [], sal30: number[] = [], emprego30: number[] = [];
+    const mortes: number[] = [], sal30: number[] = [], emprego30: number[] = [], sobra30: number[] = [], aluguel30: number[] = [];
+    let atrasada = 0, anosVividos = 0;
     const moedas = new Set<string>(), meios = new Set<string>();
     let exemplo = '';
     for (let s = 1; s <= N; s++) {
@@ -54,7 +56,9 @@ for (const pais of PAISES) {
           if (anoDe(v.t) <= 2025) { moedas.add(formatarDinheiro(1000).split(' ')[0].replace(/[0-9$:.,]+.*/, '') || formatarDinheiro(1000)); meios.add(`${anoDe(v.t)}:${meioDeComunicacao(v)}`); }
           const ex = v.financas.extrato;
           if (ex && !conciliar(ex).ok) naoConcilia++;
-          if (idade(v) === 30) { emprego30.push(v.trabalho.atual ? 1 : 0); if (v.trabalho.atual) sal30.push(v.trabalho.atual.salario); }
+          anosVividos++;
+          if (v.financas.dividas.some(q => q.saldo > 0 && (q.atraso ?? 0) >= 3)) atrasada++;
+          if (idade(v) === 30) { emprego30.push(v.trabalho.atual ? 1 : 0); if (v.trabalho.atual) sal30.push(v.trabalho.atual.salario); const o = orcamento(v); sobra30.push(Math.round(o.sobra)); }
         }
         if (v.morte) mortes.push(idade(v));
         if (process.env.MOSTRAR && s === 1) for (const b of v.biografia) if (b.fato?.tipo === 'era' || b.relevancia === 'marco') log(`   [${anoDe(b.t)} · ${b.idade}] ${b.texto}`);
@@ -67,7 +71,7 @@ for (const pais of PAISES) {
       } catch (err) { crashes++; log(`  CRASH ${pais} ${ano} #${s} em ${anoDe(v.t)}: ${(err as Error).stack?.split('\n').slice(0, 3).join(' | ')}`); }
     }
     const meiosPorDecada = [...new Set([...meios].map(x => `${Math.floor(Number(x.split(':')[0]) / 10) * 10}:${x.split(':')[1]}`))].join(' ');
-    log(`## ${pais} ${ano}: crashes ${crashes} · não concilia ${naoConcilia} · mortes ${mortes.length}/${N} (idades ${mortes.sort((a, b) => a - b).join(',')}) · emprego aos 30 ${emprego30.filter(Boolean).length}/${emprego30.length} · salário mediano aos 30 ${med(sal30)} · textos da época ${eraTextos}/${total}`);
+    log(`## ${pais} ${ano}: crashes ${crashes} · não concilia ${naoConcilia} · mortes ${mortes.length}/${N} (idades ${mortes.sort((a, b) => a - b).join(',')}) · emprego aos 30 ${emprego30.filter(Boolean).length}/${emprego30.length} · salário mediano aos 30 ${med(sal30)} · textos da época ${eraTextos}/${total} · sobra mediana aos 30 ${med(sobra30)} · anos com dívida atrasada ${Math.round(atrasada / Math.max(1, anosVividos) * 100)}%`);
     log(`   moedas vistas: ${[...moedas].join(' ')} · aparelhos: ${meiosPorDecada}`);
     if (exemplo) log(`   ex.: ${exemplo}`);
   }

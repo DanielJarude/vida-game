@@ -87,3 +87,36 @@ processamento** (`mesHistoricoCorrente`, definido ao entrar na vida): ausência 
 **Outros países**: os dados históricos ficam por país (`pais: 'BR'` na época; séries e listas nomeadas `_BR`); os portões
 só valem no Brasil (`salarioLocal` e `economiaLocal` conferem o país do município). Nenhum dado brasileiro é aplicado fora.
 Um país novo exige as suas séries, moedas, partidos, acontecimentos e tecnologias — não foi feito nesta versão.
+
+---
+
+# v3 · Auditoria de retomada (2026-11-18) e arquitetura internacional
+
+## Estado encontrado
+
+- Produção e `main` em `7e0d485` (VIDA 27). As eras v1/v2 e a auditoria das eras modernas estão inteiras no código:
+  `src/motor/eras/{base,dados,ano.ts}` e `src/ui/eras/`. Testes de eras: 49/49 antes de qualquer mudança.
+- Cobertura: só o Brasil, de 1970 a 2025. O motor já tinha 27 perfis de países vivíveis (cidades, nomes, escola, trabalho,
+  política) — a base certa para a v3: a época de um país é uma camada sobre o perfil dele, não um país novo.
+- O que travava a expansão: (1) `Vida.era.pais` era o literal `'BR'`; (2) a moeda histórica, a economia e as séries eram
+  brasileiras e o "mês histórico" era global, sem país; (3) as tecnologias tinham só a data de chegada ao Brasil; (4) o
+  mercado de veículos da época juntava as versões brasileiras em qualquer país (um vazamento); (5) nada antes de 1970: sem
+  série de preços, sem moeda (mil-réis), sem eletricidade/água/geladeira/TV como tecnologia, sem roupa nem carro antigos,
+  sem mortalidade da época, sem guerra, sem regras de direitos; (6) `motor-textos` a 155 bytes do limite de 800 kB e
+  `motor-dados` a 2,7 kB — nada novo podia entrar neles.
+
+## Arquitetura v3 — um pacote por país, a mesma pergunta central
+
+| Pergunta | Onde | Como |
+|---|---|---|
+| Qual é o país da época? | `eras/base/moedas` (`definirMesHistorico(t, pais, lado)`), `eras/base/contexto.paisDaEpoca` | o da moradia quando ele tem pacote; senão, o da escolha. O lado do país dividido (`mundo/vida.ladoDaVida`) |
+| Quais dados? | `eras/base/pacote.ts` (`PacoteDeEra`, registro) + `eras/paises/<id>/{serie,pacote}.ts` | um arquivo de dados por país, carregado sob demanda (`eras/paises/carregar`, chamado por `mundo/carregar`), um pacote de build por país (`eras-us`, `eras-gb`...: 40–51 kB) |
+| Quanto vale o dinheiro? | `mundo/moeda.fatorNominalNoPais` | fator de hoje × nível de preços do mês ÷ 2025 × unidades da moeda da época; escritas antigas (réis, £sd) |
+| Quanto se ganha? | `eras/base/economia.rendaDaEpocaNoPais`, `mundo/economia.salarioMinimoDoPais` | PIB por pessoa do ano ÷ 2025; o mínimo legal da época, ou o piso de fato |
+| Esta tecnologia chegou? | `eras/base/contexto.datasNoPais` | datas do pacote do país (e as do leste alemão) |
+| O que a lei e a sociedade impunham? | `eras/base/sociedade` (+ `regrasBR`) | regras com período, lugar, lado e a quem pesam; guerras com alcance e letalidade |
+| Quanto se vivia? | `eras/base/mortalidade` | multiplicadores por país e ano no `sistemas/corpo` |
+| O ano histórico | `eras/ano.processarEra` → `eras/v3/anoPais.processarEraNoPais` | o Brasil pelo caminho da v1/v2; os outros pelo pacote; regras, guerras e estudo para todos |
+
+Nenhum dado novo entrou em `motor-textos` nem em `motor-dados`: os pacotes dos países ficam fora, e o motor da época
+(`motor-eras`, 87 kB) e a base (`eras-base`, 123 kB) têm folga. Vida contemporânea: todo fator é 1, toda regra é vazia.

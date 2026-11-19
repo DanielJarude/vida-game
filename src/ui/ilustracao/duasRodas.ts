@@ -26,10 +26,16 @@ export interface PerfilMoto { farol?: 'redondo' | 'anguloso' | 'duplo';
    *  tanque), o escape duplo, a custom de rodas fechadas, a custom baixa, as asas da esportiva. */
   maxi?: boolean; vespa?: boolean; robusta?: boolean; escapeDuplo?: boolean; custom?: boolean; baixa?: boolean; asas?: boolean; aro?: 'liga' | 'raios' | 'cravos'; carenagem?: boolean; grande?: boolean; parabrisa?: boolean; bau?: boolean;
   /** A moto de trabalho com o bagageiro atrás (a CG da entrega); a naked com o escapamento curto sob o motor (a MT-03). */
-  bagageiro?: boolean; escapeCurto?: boolean }
+  bagageiro?: boolean; escapeCurto?: boolean;
+  /** ERAS v3: as de antes — a Vespa de farol baixo no para-lama (anos 1950), a lambreta de banco duplo, a Schwalbe de farol
+   *  redondo no avental, a Super Cub de escudo claro, o ciclomotor de pedal. */
+  antiga?: 'vespa50' | 'lambreta' | 'schwalbe' | 'supercub' | 'ciclomotor' }
 export const MODELOS_MOTO: Record<string, PerfilMoto> = {
   honda_pop: { aro: 'raios' }, honda_biz: { aro: 'liga', bau: true },
   honda_pcx: {},
+  // ERAS v3: as motonetas e as lambretas da época.
+  epm_honda_supercub: { antiga: 'supercub' }, epm_nsu_quickly: { antiga: 'ciclomotor' },
+  epm_vespa: { vespa: true, antiga: 'vespa50' }, epm_siambretta: { vespa: true, antiga: 'lambreta' }, epm_simson_schwalbe: { antiga: 'schwalbe' },
   haojue_dk150: { farol: 'redondo', aro: 'raios' }, yamaha_factor: { farol: 'redondo', aro: 'liga' }, honda_cg160: { farol: 'redondo', aro: 'liga', bagageiro: true },
   yamaha_fazer: { farol: 'anguloso', carenagem: true }, honda_cb300f: { farol: 'anguloso', grande: true }, yamaha_mt03: { farol: 'anguloso', grande: true, escapeCurto: true },
   kawasaki_ninja400: {}, royal_enfield_hunter: { aro: 'liga' },
@@ -44,7 +50,15 @@ const roda = (cx: number, r: number, aro: 'liga' | 'raios' | 'cravos' | 'calota'
 
 function motoneta(cor: string, m: PerfilMoto): Peca[] {
   const eT = 62, eD = 178, r = 22;
-  return [
+  // ERAS v3: o ciclomotor de pedal (o tanque entre as pernas, o pedal da bicicleta) e a Super Cub de escudo claro.
+  const antiga: Peca[] = m.antiga === 'ciclomotor' ? [
+    { tipo: 'metal', d: membro([[104, 96], [112, 110]], [3, 3]), cor: PRETO, marca: 'pedivela' },
+    { tipo: 'massa', d: ret(106, 108, 12, 4, 1.5), cor: PRETO, marca: 'pedal' },
+    { tipo: 'massa', d: suave([[110, 58], [140, 54], [146, 66], [114, 70]], true, 0.45), cor, marca: 'tanque' }
+  ] : m.antiga === 'supercub' ? [
+    { tipo: 'massa', d: suave([[132, 92], [150, 88], [158, 58], [166, 50], [164, 72], [156, 100]], true, 0.35), cor: '#ecebe6', marca: 'escudo-claro' }
+  ] : [];
+  return [...antiga,
     roda(eT, r, m.aro ?? 'raios'), roda(eD, r, m.aro ?? 'raios'),
     { tipo: 'metal', d: membro([[eT, CHAO - r], [100, 92]], [5, 6]), cor: PRETO },
     { tipo: 'metal', d: membro([[158, 42], [eD, CHAO - r]], [4.5, 4]), cor: PRATA, marca: 'garfo' },
@@ -64,9 +78,17 @@ function motoneta(cor: string, m: PerfilMoto): Peca[] {
 }
 
 /** VIDA 12.9: a Vespa — a carroceria de aço arredondada atrás (as "bochechas"), o escudo alto, o farol no guidão. */
-function vespa(cor: string): Peca[] {
+function vespa(cor: string, antiga?: PerfilMoto['antiga']): Peca[] {
   const eT = 66, eD = 176, r = 15;
-  return [
+  // ERAS v3: a Vespa dos anos 1950, com o farol baixo no para-lama; a lambreta, de banco duplo e bagageiro com estepe.
+  const extra: Peca[] = antiga === 'vespa50' ? [
+    { tipo: 'massa', d: circulo(eD + 2, CHAO - r - 22, 5), cor, marca: 'farol-no-paralama' }
+  ] : antiga === 'lambreta' ? [
+    { tipo: 'massa', d: suave([[36, 50], [48, 46], [62, 48], [60, 54], [38, 56]], true, 0.35), cor: COURO, marca: 'banco-garupa' },
+    { tipo: 'metal', d: ret(26, 56, 18, 3.4, 1), cor: PRETO, marca: 'bagageiro' },
+    { tipo: 'pneu', cx: 32, cy: 66, r: 9, aro: 'calota', marca: 'estepe' }
+  ] : [];
+  return [...extra,
     roda(eT, r, 'calota'), roda(eD, r, 'calota'),
     { tipo: 'metal', d: membro([[168, 44], [eD, CHAO - r]], [5, 4.5]), cor: PRATA, marca: 'garfo' },
     { tipo: 'massa', d: suave([[38, 80], [50, 58], [78, 54], [104, 64], [110, 92], [96, 106], [52, 106], [36, 96]], true, 0.5), cor, marca: 'carroceria' },
@@ -83,8 +105,11 @@ function vespa(cor: string): Peca[] {
 
 function scooter(cor: string, m: PerfilMoto = {}): Peca[] {
   const eT = 70, eD = 176, r = 17;
-  if (m.vespa) return vespa(cor);
-  const extra: Peca[] = m.maxi ? [
+  if (m.vespa) return vespa(cor, m.antiga);
+  const extra: Peca[] = m.antiga === 'schwalbe' ? [
+    { tipo: 'massa', d: circulo(176, 40, 6), cor, marca: 'farol-no-avental' },
+    { tipo: 'metal', d: ret(40, 54, 26, 3.4, 1), cor: PRETO, marca: 'bagageiro' }
+  ] : m.maxi ? [
     { tipo: 'massa', d: suave([[40, 50], [50, 40], [58, 42], [56, 54]], true, 0.4), cor: COURO, marca: 'encosto' },
     { tipo: 'vidro', d: suave([[170, 34], [176, 4], [188, 6], [182, 34]], true, 0.4), claro: true, marca: 'parabrisa-alto' }
   ] : [];

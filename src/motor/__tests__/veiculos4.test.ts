@@ -35,8 +35,11 @@ const categoriaDe = (classe: string) => modeloVeiculo(classe).categoria;
 
 describe('catálogo de versões', () => {
   it('carros, motos e bicicletas com marcas reais, em várias faixas', () => {
+    // ERAS v3: as versões da época (`epoca`) têm o preço proporcional à renda do seu tempo (o Modelo T, o Trabant) e ficam
+    // fora desta conferência, que é a do catálogo de hoje.
+    const HOJE = VERSOES_VEICULO.filter(x => !x.epoca);
     for (const cat of ['carro', 'moto', 'bicicleta'] as const) {
-      const lista = VERSOES_VEICULO.filter(x => categoriaDe(x.classe) === cat);
+      const lista = HOJE.filter(x => categoriaDe(x.classe) === cat);
       expect(lista.length).toBeGreaterThanOrEqual(6);
       expect(new Set(lista.map(x => x.marca)).size).toBeGreaterThanOrEqual(3);
       expect(new Set(lista.map(x => x.faixa)).size).toBeGreaterThanOrEqual(2);
@@ -57,18 +60,21 @@ describe('catálogo de versões', () => {
   });
 
   it('preços coerentes: dentro da categoria, a faixa de entrada é mais barata que o topo; a moto de entrada cabe na renda de quem entrega', () => {
+    // ERAS v3: as versões da época (`epoca`) têm o preço proporcional à renda do seu tempo (o Modelo T, o Trabant) e ficam
+    // fora desta conferência, que é a do catálogo de hoje.
+    const HOJE = VERSOES_VEICULO.filter(x => !x.epoca);
     for (const cat of ['carro', 'moto', 'bicicleta'] as const) {
-      const lista = VERSOES_VEICULO.filter(x => categoriaDe(x.classe) === cat);
+      const lista = HOJE.filter(x => categoriaDe(x.classe) === cat);
       const menor = (f: string) => Math.min(...lista.filter(x => x.faixa === f).map(x => x.preco));
       const maior = (f: string) => Math.max(...lista.filter(x => x.faixa === f).map(x => x.preco));
       const faixas = new Set(lista.map(x => x.faixa));
       if (faixas.has('economica') && faixas.has('alta')) expect(maior('economica')).toBeLessThan(maior('alta'));
       if (faixas.has('intermediaria') && faixas.has('alta')) expect(menor('intermediaria')).toBeLessThanOrEqual(menor('alta'));
     }
-    const motoMaisBarata = Math.min(...VERSOES_VEICULO.filter(x => categoriaDe(x.classe) === 'moto').map(x => x.preco));
+    const motoMaisBarata = Math.min(...HOJE.filter(x => categoriaDe(x.classe) === 'moto').map(x => x.preco));
     expect(motoMaisBarata).toBeLessThan(2100 * 8);
     // REWORK 12: o carro zero mais barato (o clássico, que só existe usado e na garagem de colecionador, fica de fora).
-    const carroMaisBarato = Math.min(...VERSOES_VEICULO.filter(x => categoriaDe(x.classe) === 'carro' && !modeloVeiculo(x.classe).segmento).map(x => x.preco));
+    const carroMaisBarato = Math.min(...HOJE.filter(x => categoriaDe(x.classe) === 'carro' && !modeloVeiculo(x.classe).segmento).map(x => x.preco));
     expect(carroMaisBarato).toBeGreaterThan(50000);
     expect(carroMaisBarato).toBeLessThan(90000);
   });

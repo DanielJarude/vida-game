@@ -129,3 +129,99 @@ Rio–Niterói, metrô de SP, LC 20/1974, Decreto 76.593/1975, Lei 6.515/1977, L
   dos anos 2010 **[A]**.
 - Procura de emprego, cabelo da década, dinheiro do dia a dia (cheque, caixa 24 h, débito, banco pela internet, maquininha):
   períodos **[A]**, lidos das mesmas fontes de costumes (Hemeroteca Digital, acervos de moda; Febraban para meios de pagamento).
+
+---
+
+# ERAS v3 (2026-11-19) · fontes da expansão internacional e anterior a 1970
+
+Classificação, como na v1/v2: **[S]** série oficial · **[F]** fato documentado · **[A]** aproximação de jogo. Os dados
+brutos baixados ficam fora do repositório (`~/vida-trabalho/e3/fontes`, baixados em 18/11/2026); os scripts que geram os
+arquivos estão em `scripts/eras3/` (`gerar_series.py`, `estender1900.py`, `mortalidade.py`).
+
+## 15. Séries por país (`eras/paises/<id>/serie.ts`, geradas)
+
+| Dado | Fonte | Países | Período | Classe | Método / limitação |
+|---|---|---|---|---|---|
+| Nível de preços ao consumidor (índice) | Jordà, Schularick & Taylor, *Macrohistory Database* R6 (macrohistory.net), variável `cpi` | EUA, Reino Unido, Japão, Alemanha | 1870–2020 | S | média anual ÷ média de 2025; na Alemanha, a JST encadeia o marco de papel no Rentenmark (÷10¹²) |
+| idem | Banco Mundial, `FP.CPI.TOTL.ZG` (API, baixado em 18/11/2026) | idem | 2021–2025 | S | variação anual aplicada sobre o último valor da JST; EUA 2025 = 2,7% (estimativa [A]) |
+| Hiperinflação alemã, mês a mês | Statistisches Reichsamt, *Zahlen zur Geldentwertung in Deutschland 1914 bis 1923* (1925): marcos por dólar, médias mensais | Alemanha | jan/1919–dez/1923 | A | o nível de preços do mês acompanha a cotação (âncora: o nível de 1913 da JST × cotação ÷ 4,2); dez/1923 ≈ nível de 1924 |
+| PIB real por pessoa (índice) | JST, `rgdpbarro` (Barro & Ursúa) | EUA, Reino Unido, Japão, Alemanha | 1870–2020 | S | renda da época ÷ 2025 (APROXIMAÇÃO do rendimento do trabalho — o mesmo método do Brasil antes de 1992) |
+| idem | Banco Mundial, `NY.GDP.PCAP.KD.ZG` | idem e Argentina | 2021–2025 | S | |
+| Desemprego | JST, `unemp` | EUA, Reino Unido, Japão (lacunas), Alemanha | 1870–2020 | S | acima de 7%, o ano pesa nas contratações e demissões do mundo do jogo (efeito [A]) |
+| Preços ao consumidor | INDEC, IPC (GBA) empalmado, mensal (datos.gob.ar, série 178) | Argentina | 1943–2008 | S | encadeado em pesos de hoje pelo próprio INDEC |
+| idem | índices provinciais e privados da época | Argentina | 2008–2017 | A | o IPC oficial de 2007–2015 foi declarado sem confiabilidade (Decreto 55/2016, emergência estatística); inflação média: 2008 23%, 2009 15%, 2010 25%, 2011 23%, 2012 25%, 2013 26%, 2014 38%, 2015 27%, 2016 40%, 2017 25,7% |
+| idem | Banco Mundial (INDEC) | Argentina | 2018–2024 | S | 2025: 41,3% (estimativa [A]) |
+| PIB por pessoa | Maddison Project Database 2023 (`gdppc`) | Argentina | 1900–2022 | S | 2023–2025 pelo Banco Mundial |
+| Renda do lado leste (RDA) | — | Alemanha | 1945–1990 | A | 55% da renda do oeste (ordem de grandeza da literatura sobre o PIB por pessoa da RDA); o nível de preços do leste = o do oeste (os preços oficiais eram fixos e subsidiados; a aproximação está na moeda, não nos preços) |
+
+Conferência: a vida de 2025 em cada país mostra o fator de hoje (`fatorDoPais`) — teste `erasV3` "a Argentina troca de
+moeda cinco vezes...".
+
+## 16. Brasil de 1900 a 1969 (`eras/base/series.ts`, `economiaSeries.ts`, `dados/acontecimentosBR.ts` estendidos)
+
+| Dado | Fonte | Período | Classe | Método |
+|---|---|---|---|---|
+| Nível de preços | IGP-DI (FGV), Ipeadata `IGP12_IGPDI12`, mensal | fev/1944–dez/1969 | A | encadeado no valor de jan/1970 (outro índice que o IPCA) |
+| idem | Deflator implícito do PIB (IBGE, *Estatísticas do Século XX*), Ipeadata `SCN10_DIPIBG10`, anual | 1900–1943 | A | encadeado na média de 1944; meses por interpolação geométrica entre as médias |
+| PIB real | Ipeadata `SCN10_PIBG10` (IBGE) | 1901–1969 | S | fase da economia de cada ano |
+| Renda da época | Maddison Project Database 2023 (`gdppc` do Brasil) | 1900–1969 | A | encadeada no valor de 1970 da v2 |
+| Salário mínimo | Ipeadata `MTE12_SALMIN12` (Decreto-Lei 2.162/1940 e seguintes) | jul/1940–1968 | S | antes de 1940 não havia mínimo: o piso acompanha a renda média |
+| Moedas | Decreto-Lei 4.791/1942 (cruzeiro, em vigor em 1º/11/1942: Cr$ 1 = 1$000); Decreto-Lei 1/1965 (cruzeiro novo, 13/02/1967: NCr$ 1 = Cr$ 1.000) | 1900–1967 | F | o mil-réis é escrito com o cifrão no meio ("1:250$000") |
+| Acontecimentos (36) e Copas/Jogos de 1920–1968 | fonte em cada item (`eras/dados/brasil1900.ts`): Planalto, Câmara, CPDOC/FGV, Arquivo Nacional, Fiocruz, Museu da Imigração, Comissão Nacional da Verdade, FIFA, COI | 1904–1968 | F | |
+| Presidentes 1898–1969 | Biblioteca da Presidência da República | | F | |
+| Lembranças (18) e décadas | Hemeroteca Digital da Biblioteca Nacional, MIS, IMS (gêneros, costumes, objetos) | | A | intervalos de auge |
+| Tecnologias da casa (luz, água, gás, geladeira, TV, máquina de lavar, avião) | Censos Demográficos do IBGE (1960, 1970, 1980) para `popular`/`massa`; datas de chegada com fonte no item | | F/A | |
+
+## 17. Mortalidade da época (`eras/base/mortalidadeSeries.ts`, gerada)
+
+| Dado | Fonte | Classe | Método |
+|---|---|---|---|
+| Expectativa de vida ao nascer | Our World in Data (Riley 2005; Zijdeman et al./Clio Infra; Human Mortality Database; ONU WPP 2024), baixado em 18/11/2026 | S | anos de guerra excluídos (a guerra é o seu próprio risco) |
+| Alemanha antes de 1950 | Statistisches Bundesamt, *Allgemeine Sterbetafeln* 1901/10, 1924/26, 1932/34, 1949/51 (médias homens/mulheres: 46,5; 57,4; 61,3; 66,5) | F | |
+| EUA 1900 | NCHS (47,3 anos) | F | |
+| Mortalidade até 5 anos | Our World in Data (Gapminder; ONU IGME) | S | sem dado: mediana mundial por faixa de expectativa de vida [A] |
+| Multiplicador do risco adulto | calibração do motor | A | o multiplicador do termo de Gompertz que reproduz a expectativa de vida aos 5 anos do período, relativo a 2020; série monótona |
+| Regras de jogo | — | A | o protagonista não recebe o risco extra da infância; no adulto, metade do excesso; as pessoas do mundo, inteiro |
+
+## 18. Regras sociais, leis, guerras e acesso ao ensino
+
+Cada regra (`PacoteDeEra.regras`, `eras/base/regrasBR.ts`) e cada guerra traz a fonte no próprio dado. Fontes principais:
+- **EUA**: National Archives (19ª Emenda; Ordens Executivas 9066, 9981, 10450); Supreme Court (Plessy 1896, Brown 1954,
+  Griswold 1965, Roe 1973, Lawrence 2003, Obergefell 2015, Dobbs 2022); Civil Rights Act 1964; Voting Rights Act 1965;
+  Fair Housing Act 1968; Equal Credit Opportunity Act 1974; Social Security Act 1935; Fair Labor Standards Act 1938;
+  Selective Service System; Department of Veterans Affairs (combatentes e mortos por guerra).
+- **Reino Unido**: legislation.gov.uk e UK Parliament (Representation of the People Acts 1918 e 1928; Old Age Pensions Act
+  1908; National Insurance Acts 1911 e 1946; Education Acts 1918 e 1944; National Service Act 1948; Sexual Offences Act
+  1967; Divorce Reform Act 1969; Equal Pay Act 1970; Sex Discrimination Act 1975; Race Relations Acts 1965 e 1968;
+  Marriage (Same Sex Couples) Act 2013; National Minimum Wage Act 1998); Imperial War Museums; CWGC.
+- **Japão**: Biblioteca Nacional da Dieta; Código Civil de 1898 e reforma de 1947; Constituição de 1947; Lei de
+  Preservação da Paz (1925–1945); Lei de Igualdade de Oportunidades no Emprego (1985); Ministério da Saúde, Trabalho e
+  Bem-Estar (mortos de guerra; seguro universal de 1961); Cidade de Hiroshima; Prefeitura de Okinawa.
+- **Alemanha**: BGB (1900) e Gleichberechtigungsgesetz (1957); reforma de 1977; StGB § 175 (1871/1935, reforma de 1969) e
+  código penal da RDA (1968); Wehrpflichtgesetz (1956; RDA 1962); Bundesarchiv, Stasi-Unterlagen-Archiv, bpb, Gedenkstätte
+  Berliner Mauer, Volksbund, Overmans (1999).
+- **Argentina**: InfoLEG/Boletín Oficial (Leis 13.010/1947, 23.515/1987, 24.429/1994, 26.618/2010, 27.610/2020; Decreto-Lei
+  4.161/1956); CONADEP (*Nunca Más*, 1984); Ministerio de Defensa (Malvinas).
+- **Brasil**: Constituições de 1891, 1934 e 1937; Decreto 21.076/1932; Código Civil de 1916 e Lei 4.121/1962; Lei
+  Saraiva (1881) e EC 25/1985; AI-3 e AI-5; Código de Menores (1927); CLT (1943); Ministério da Defesa (FEB).
+
+**Alcance das guerras [A]**: a fração dos homens da idade que serviu, calculada de "quantos serviram" (fonte no item) ÷
+uma estimativa da população masculina da faixa de idade; a letalidade é a histórica (mortos ÷ serviram). O protagonista
+convocado recebe metade da letalidade (regra de jogo); as pessoas da família, a inteira.
+
+**Acesso ao ensino superior [A]** (`eras/base/sociedade.taxaDoSuperior`): taxa bruta de matrícula no ensino superior, de 10
+em 10 anos, por Barro & Lee (2013) e UNESCO UIS (desde 1970).
+
+## 19. Tecnologias e cultura por país
+
+`PacoteDeEra.tecnologias`: `chega` (fato, com fonte quando há registro) · `popular` e `massa` (aproximações lidas das séries
+domiciliares: Census Bureau e CPS/Pew nos EUA; ONS/General Household Survey e licenças da BBC no Reino Unido; Gabinete do
+Japão — Pesquisa de Tendências do Consumo; Destatis/EVS e *Statistisches Jahrbuch der DDR* na Alemanha; censos do INDEC na
+Argentina). A Alemanha Oriental tem datas próprias (`leste`). Lembranças culturais: gêneros, costumes e objetos, sem obra,
+personagem ou marca protegida (intervalos de auge [A]).
+
+## 20. Veículos da época no mundo (`eras/base/veiculosMundo.ts`)
+
+Anos de produção/venda por país (The Henry Ford; British Motor Museum; Mercedes-Benz Classic; August Horch Museum Zwickau;
+Toyota Automobile Museum; Museo del Automóvil de Buenos Aires; Anfavea) **[F/A]**; medidas dos desenhos pelas fichas
+técnicas **[F]**; preços em reais de hoje proporcionais ao esforço histórico **[A]** (não é a tabela de preços do ano).

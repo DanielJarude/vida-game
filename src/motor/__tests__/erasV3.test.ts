@@ -182,7 +182,7 @@ describe('veículos', () => {
     expect(ids('DE', 1975, 'oeste').has('epm_trabant')).toBe(false);
     expect(ids('DE', 1975, 'leste').has('epm_vw_golf')).toBe(false);
     expect([...ids('US', 1980)].some(id => id.startsWith('ep_'))).toBe(false);
-    expect(ids('BR', 1952).has('epm_br_belair')).toBe(true);
+    expect(ids('BR', 1952).has('epm_chevrolet_belair')).toBe(true); // o Bel Air importado (o mesmo dos EUA)
     expect(ids('BR', 1952).has('ep_vw_fusca')).toBe(false);
   });
   it('toda versão da época mundial tem anos coerentes e um desenho', async () => {

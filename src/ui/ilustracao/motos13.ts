@@ -87,6 +87,9 @@ export const MOTOS_MODERNAS_13: Record<string, PerfilModerna> = {
 /** As de linha clássica de hoje: o montador das clássicas, com o que é delas. */
 export const MOTOS_RETRO_13: Record<string, PerfilClassica & { disco?: boolean; asaDeMorcego?: boolean; alforjes?: boolean; bagageiro?: boolean }> = {
   // ERAS HISTÓRICAS: as motos da época (`motor/eras/base/veiculos`).
+  // ERAS v3: as motos da época no mundo (`motor/eras/base/veiculosMundo`).
+  epm_harley_wl: { motor: 'vtwin', cabeca: 'no', guidao: 'puxado', tanque: 'harley', banco: 'molas', escape: 'peixe', rodas: 'raios', motorCor: '#3a3633', paralama: 'saia', garfo: 'molas', rigido: true },
+  epm_bsa_bantam: { motor: 'doisTempos', guidao: 'reto', tanque: 'pequeno', banco: 'duplo', escape: 'dois', rodas: 'raios', motorCor: ALU, faixa: '#c9b28a', r: 20.5, paralama: 'fundo' },
   ep_honda_cg125: { motor: 'mono', guidao: 'reto', tanque: 'gota', banco: 'duplo', escape: 'dois', rodas: 'raios', motorCor: ALU, faixa: '#ecebe6', r: 21, bagageiro: true },
   ep_yamaha_ybr125: { motor: 'mono', guidao: 'reto', tanque: 'longo', banco: 'duplo', escape: 'dois', rodas: 'raios', motorCor: '#3a3633', faixa: '#ecebe6', r: 21.5 },
   ep_honda_cg150: { motor: 'mono', guidao: 'reto', tanque: 'gota', banco: 'duplo', escape: 'dois', rodas: 'liga', motorCor: '#8c8882', faixa: '#c8372d', r: 21.5, bagageiro: true },
