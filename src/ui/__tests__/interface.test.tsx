@@ -292,7 +292,8 @@ describe('interface', () => {
   });
 
   it('entrevista: duas ou três perguntas em sequência e um resultado com motivo', () => {
-    adultaSalva(v => { v.educacao.escolaridade = 'medio'; v.trabalho.atual = undefined; v.educacao.matricula = undefined; });
+    // VIDA 27: sem decisões do ano na fila (a vida de teste mudou e trazia uma): o teste é o fluxo da entrevista.
+    adultaSalva(v => { v.educacao.escolaridade = 'medio'; v.trabalho.atual = undefined; v.educacao.matricula = undefined; delete v.fila; });
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: /Continuar a vida/ }));
     resolverMomentos();

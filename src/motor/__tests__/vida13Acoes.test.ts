@@ -35,6 +35,9 @@ const primeira = (v: Vida) => v.momento!.opcoes.find(o => !o.bloqueio)!.id;
 /** Um ano com três decisões: a primeira aberta, duas esperando (a última urgente, se pedido). */
 function anoCom3(urgente = false): { v: Vida; ids: string[] } {
   const v0 = adulto(34, { semente: 7 });
+  // VIDA 27: a vida de teste mudou (a saúde nova); a conta fica folgada para que as três decisões continuem cabendo.
+  v0.financas.conta = Math.max(v0.financas.conta, 50_000);
+  v0.ocorrencias = v0.ocorrencias.filter(o => o.t !== v0.t); // o ano começa sem decisões já vistas (o teto do ano não adia a terceira)
   const ids = decisoesQueCabem(v0, 3);
   expect(ids.length).toBe(3);
   const v = transacao(v0, x => {

@@ -30,7 +30,9 @@ import { executar } from '../acoes';
 const recarregar = (v: Vida): Vida => { const l = importarVida(exportarVida(v)); if (l.tipo !== 'ok') throw new Error(`save: ${l.tipo}`); return l.vida; };
 
 let base: Vida | undefined;
-const quarenta = (): Vida => structuredClone((base ??= adulto(38, { semente: 77, genero: 'masculino', municipioId: 'recife-pe' })));
+// VIDA 27: semente 78 (a vida de teste de semente 77 mudou com a saúde nova — sem a lanchonete, num clube que demite na primeira
+// temporada; desfecho legítimo); o teste quer um técnico com passagens, não aquela vida.
+const quarenta = (): Vida => structuredClone((base ??= adulto(38, { semente: 78, genero: 'masculino', municipioId: 'recife-pe' })));
 
 /** Um técnico recém-promovido (o comando acabou de chegar): o jogo escolhe o clube real. */
 function tecnico(o: { exAtleta?: boolean } = {}): Vida {

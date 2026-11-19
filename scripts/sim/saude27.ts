@@ -67,6 +67,7 @@ async function vidas() {
   const tem: Record<string, Record<number, Record<string, number>>> = {};
   const vivos: Record<string, Record<number, number>> = {};
   const origem: Record<string, number> = {};
+  const crises: Record<string, number> = { teve1: 0, teve2: 0, teve3: 0, anosEmCrise: 0, anosVividos: 0 };
   let n = 0;
   const t0 = Date.now();
   for (let k = 0; k < N; k++) {
@@ -82,6 +83,7 @@ async function vidas() {
         v = avancarAno(v).vida;
         for (let j = 0; j < 12 && v.momento && !v.morte; j++) v = executar(v, { tipo: 'decidir', opcaoId: ag.decidir(v, v.momento!, r) }).vida;
         const i = idade(v);
+        if (i >= 12) { crises.anosVividos++; if ((v.mente.crise27?.nivel ?? 0) >= 2 && v.mente.crise27?.fim === undefined) crises.anosEmCrise++; }
         if (i >= 25) { anos++; if (v.corpo.habitos.sedentario) sedAnos++; }
         if (IDADES.includes(i)) {
           const grupos = ['todos', anos && sedAnos / anos > 0.5 ? 'mais sedentário' : 'mais ativo'];
@@ -93,6 +95,7 @@ async function vidas() {
       }
     } catch (e) { console.log(`travou #${k}: ${(e as Error).message}`); continue; }
     n++;
+    { const h = v.mente.crise27?.historico ?? []; const mx = Math.max(0, ...h.map(x => x.nivel)); if (mx >= 1) crises.teve1++; if (mx >= 2) crises.teve2++; if (mx >= 3) crises.teve3++; }
     for (const c of v.corpo.condicoes) if (c.id === 'hipertensao') origem[c.diagnosticada === false ? 'sem diagnóstico' : 'diagnosticada'] = (origem[c.diagnosticada === false ? 'sem diagnóstico' : 'diagnosticada'] ?? 0) + 1;
   }
   console.log(`\n## 2. Vidas inteiras (${n} vidas, ${((Date.now() - t0) / 1000).toFixed(0)} s) — % dos vivos naquela idade com a condição\n`);
@@ -101,6 +104,7 @@ async function vidas() {
     for (const c of CONDS) console.log(`| ${c} | ${IDADES.map(i => (vivos[g][i] ? `${Math.round(((tem[g]?.[i]?.[c] ?? 0) / vivos[g][i]) * 100)}%` : '—')).join(' | ')} |`);
   }
   console.log(`\nHipertensão no fim da vida: ${JSON.stringify(origem)}`);
+  console.log(`Saúde mental (vidas com pelo menos uma fase): ${JSON.stringify(crises)} de ${n} vidas`);
 }
 
 async function main() { modelo(); if (!SO_MODELO) await vidas(); }

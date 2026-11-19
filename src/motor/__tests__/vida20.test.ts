@@ -277,8 +277,6 @@ describe('Joias de usar', () => {
   it('comprar, usar, trocar e guardar; um por lugar; aliança junto com anel; o save guarda o mesmo item', () => {
     let v = adulto(30, { semente: 5 });
     v.financas.conta = 1e6;
-    // VIDA 27 · §13: sem encontro por acaso nesta sequência de compras (na loja, o encontro agora é uma cena presencial que interrompe).
-    v.celular15 = { ...(v.celular15 ?? { ano: 0, msgs: [] }), encontrosNoAno: 99 };
     const comprar = (id: string) => { v = executar(v, { tipo: 'comprar_item', itemId: id }).vida; if (!v.eu.estilo!.itens.find(x => x.itemId === id)!.usando) v = executar(v, { tipo: 'usar_item', itemId: id, usar: true }).vida; };
     comprar('j20_ponto_de_luz_ouro_branco_diamante');
     expect(v.eu.visual.modeloJoia).toBe('j20_ponto_de_luz_ouro_branco_diamante');

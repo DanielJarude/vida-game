@@ -143,7 +143,7 @@ import { disponibilidadeDep14, executarDep14, type OqueDep14 } from './v14/crenc
 import { disponibilidadeCrenca14, executarCrenca14, type OpCrenca14 } from './v14/crencas/crencas';
 import { disponibilidadeJustica14, executarJustica14, type OqueJustica14 } from './v14/justica/justica14';
 import { disponibilidadeConquistas14, executarConquistas14, linhaDoExtrato14, type OqueConquistas14 } from './v14/conquistas/conquistas';
-import { depoisDaAcao15, disponibilidadeCelular15, executarCelular15, type OqueCelular15 } from './v15/celular/celular15';
+import { depoisDaAcao15, disponibilidadeCelular15, executarCelular15, resolverEncontro27, textoDoEncontro27, type OqueCelular15 } from './v15/celular/celular15';
 import { disponibilidadeConectada19, executarConectada19, type OqueConectada19 } from './v19/conectada/conectada19';
 import { disponibilidadeHaras19, executarHaras19, type OqueHaras19 } from './v19/haras/haras19';
 import { disponibilidadeAgro19, executarAgro19, type OqueAgro19 } from './v19/agro/agro19';
@@ -1065,16 +1065,31 @@ export function condicoesEmprestimo(v: Vida, valor: number, meses: number): Cond
 
 /* ================================================================= Execução */
 
-/** VIDA 27 · §13: abre a cena do encontro por acaso (se a ação levou a um lugar e alguém apareceu), sem atropelar outra. */
-export function abrirEncontro27(v: Vida, r: Rng): void {
+/**
+ * VIDA 27 · §13: o encontro por acaso no lugar da ação — presencial, nunca notificação. Numa SAÍDA (o restaurante, a festa,
+ * a praia, o show, a viagem), abre a cena com a escolha; numa COMPRA (o shopping, a loja), acontece sem interromper a
+ * compra: um "quanto tempo!" no caminho, dito no resultado e na Linha da Vida (e a conversa pode continuar por mensagem).
+ * Devolve o texto a somar ao resultado (só na compra).
+ */
+export function abrirEncontro27(v: Vida, r: Rng, tipoDaAcao = ''): string | undefined {
   const e = v.celular15?.encontro27;
-  if (!e || e.t !== v.t) return;
-  if (v.momento) { delete v.celular15!.encontro27; return; }
-  const d = conteudoPorId(e.fa ? 'enc27_fa' : 'enc27_acaso');
+  if (!e || e.t !== v.t) return undefined;
   const p = e.pid ? v.pessoas[e.pid] : undefined;
-  if (!d || d.tipo !== 'decisao' || (!e.fa && !p?.vivo)) { delete v.celular15!.encontro27; return; }
+  if (!e.fa && !p?.vivo) { delete v.celular15!.encontro27; return undefined; }
+  if (COMPRAS27.has(tipoDaAcao) || v.momento) {
+    const ex = !!p && v.vinculos[p.id]?.romance?.estagio === 'ex';
+    const cena = textoDoEncontro27(v) ?? '';
+    const fim = resolverEncontro27(v, r, e.fa ? 'conversar' : ex ? 'cumprimentar' : 'conversar');
+    const texto = `${cena} ${fim}`.trim();
+    escrever(v, { texto: cena, relevancia: 'cotidiano', tema: 'amizade', ...(p ? { pessoas: [p.id] } : {}) });
+    return texto;
+  }
+  const d = conteudoPorId(e.fa ? 'enc27_fa' : 'enc27_acaso');
+  if (!d || d.tipo !== 'decisao') { delete v.celular15!.encontro27; return undefined; }
   abrirDecisao(v, d, contexto(v, r, p ? { pessoa: p } : {}));
+  return undefined;
 }
+const COMPRAS27 = new Set(['comprar_item', 'comprar_coisa', 'comprar_veiculo', 'comprar_imovel', 'compras', 'presente', 'conquistas14']);
 
 export function executar(vida: Vida, a: Acao): Retorno {
   entrarNaVida(vida);
@@ -1113,7 +1128,8 @@ export function executar(vida: Vida, a: Acao): Retorno {
     // VIDA 15: o ano anda com o que você faz — chega mais gente; um lugar pode pôr alguém conhecido no caminho.
     depoisDaAcao15(v, a as unknown as { tipo: string; [k: string]: unknown });
     // VIDA 27 · §13: o encontro por acaso no lugar da ação é uma cena presencial, aberta agora (não uma notificação).
-    abrirEncontro27(v, r);
+    const encontro = abrirEncontro27(v, r, a.tipo);
+    if (encontro) { out.resultado = out.resultado ? `${out.resultado} ${encontro}` : encontro; resultado = out.resultado; }
     // REWORK 9: a agenda guarda só escolhas de coisas que existem (a atividade largada leva o lugar dela junto).
     limparAgenda(v);
     // REWORK 12.4: os objetos nunca ficam num lugar que deixou de existir (o imóvel vendido, a casa para onde se mudou).

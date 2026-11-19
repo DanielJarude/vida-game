@@ -59,6 +59,19 @@ describe('VIDA 27 · encontro por acaso é presencial', () => {
   });
 });
 
+describe('VIDA 27 · encontro numa compra não interrompe', () => {
+  it('na loja, o encontro acontece no caminho (resultado e Linha da Vida), sem abrir cena nem mensagem', () => {
+    const v = jovem(25);
+    const { p } = comParente(v, 'irmao', 27);
+    celularDe(v).encontro27 = { t: v.t, lugar: 'shopping', pid: p.id };
+    const txt = abrirEncontro27(v, criarRng(3), 'comprar_item');
+    expect(v.momento).toBeNull();
+    expect(txt).toMatch(/shopping/i);
+    expect(v.biografia.some(b => /shopping/i.test(b.texto))).toBe(true);
+    expect(celularDe(v).msgs.some(m => m.tipo === 'encontro')).toBe(false);
+  });
+});
+
 describe('VIDA 27 · conversas que cabem na idade e na relação', () => {
   it('o tio demitido não desabafa com o sobrinho de 15 (a notícia chega; o pedido de apoio, não)', () => {
     const v = jovem(15);

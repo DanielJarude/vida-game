@@ -91,7 +91,8 @@ describe('agradecer: só pelo que aconteceu', () => {
 
 describe('conversar, passar um tempo, carinho: situações, não rodízio de frases', () => {
   it('oito anos de conversa com a mesma amiga: nenhuma cena se repete em seguida, várias estruturas, texto limpo', () => {
-    let v = adulto(30, { semente: 41 });
+    // VIDA 27: semente 44 (a vida de teste anterior passa por uma crise — a saúde mental nova — e a amiga vira apoio, depois romance; o teste é sobre as conversas).
+    let v = adulto(30, { semente: 44 });
     const p = amigaDe(v);
     lembrarCom(v, p.id, 'Viajaram juntas para a praia, sem dinheiro e sem plano.', 'amizade', 2, v.t - 60);
     const cenas: string[] = [];
@@ -110,7 +111,8 @@ describe('conversar, passar um tempo, carinho: situações, não rodízio de fra
   });
 
   it('a lembrança é um marco REAL de vocês (o ano e o que aconteceu), e o conselho recebido fica como ajuda dela', () => {
-    let v = adulto(30, { semente: 41 });
+    // VIDA 27: semente 44 (a vida de teste anterior passa por uma crise — a saúde mental nova — e a amiga vira apoio, depois romance; o teste é sobre as conversas).
+    let v = adulto(30, { semente: 44 });
     const p = amigaDe(v);
     lembrarCom(v, p.id, 'Viajaram juntas para a praia, sem dinheiro e sem plano.', 'amizade', 2, v.t - 60);
     let achouLembranca = false;
@@ -147,7 +149,8 @@ describe('conversar, passar um tempo, carinho: situações, não rodízio de fra
   });
 
   it('passar o tempo não vira marco toda vez (cinco anos de tardes: no máximo dois marcos novos)', () => {
-    let v = adulto(30, { semente: 43 });
+    // VIDA 27: semente 44 (a vida de teste anterior passa por uma crise — a saúde mental nova — e a amiga vira apoio, depois romance; o teste é sobre as conversas).
+    let v = adulto(30, { semente: 44 });
     const p = amigaDe(v);
     // REWORK 9.7: a pré-condição dita — a vida da amiga não tem marcos próprios no período (já casada, com saúde): o que
     // se mede são as tardes. Antes, dependia de a semente não sortear o casamento ou uma internação dela.

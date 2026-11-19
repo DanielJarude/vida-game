@@ -26,6 +26,32 @@ export interface NotaDeVersao {
 
 export const NOTAS: NotaDeVersao[] = [
   {
+    versao: '27',
+    data: '2026-11-18',
+    titulo: 'Uma vida mais coerente',
+    novidades: [
+      'Saúde mental como parte da vida: fases difíceis e crises vêm do que realmente pesa (a depressão sem tratamento, o luto, o isolamento, anos de estresse) e do que protege (acompanhamento, gente por perto). Quem está perto percebe e pergunta; na crise, há caminhos de ajuda — uma linha de apoio, alguém de confiança, psicólogo e psiquiatra — e a recuperação fica na sua história.',
+      'No máximo duas carreiras profissionais ao mesmo tempo (o trabalho principal, a trajetória paralela, o negócio nas horas vagas). Hobby, formação e carreira pausada não contam; a tela de Trabalho mostra as vagas. Dá para ser atleta profissional e jogador de e-sports.',
+      'Separação e divórcio com partilha de verdade: os dois lados entram, só o que foi construído na união (sem o que era de antes nem as heranças), regime de bens escolhido no casamento, e um resumo do que fica com cada um antes de assinar.',
+      'Vender vários bens do crime de uma vez: selecionar, escolher para quem, revisar preço por item e total, e confirmar.',
+      'Os pedidos por fora dizem o quê, onde, por que agora e o que pesa se recusar — e mudam com a idade, a prática, o posto e o histórico.'
+    ],
+    melhorias: [
+      'A vizinhança depende do lugar: o país, o bairro, o padrão e o litoral escolhem as construções (a laje com caixa-d’água, o subúrbio com garagem, as casas geminadas, o campo com galpão e silo).',
+      'Joalheria: filtro por material e por pedra, ordem por nome e por marca, "só o que já é meu", o material no cartão; cada joia com o seu desenho (as pérolas mostram o metal; pulseiras de elos, fina e rígida).',
+      'O encontro por acaso (no shopping, na praia, no restaurante) acontece ali, como cena — não chega mais como notificação; e a conversa pode continuar depois, por mensagem.',
+      'O passaporte registra cada viagem (as de Viagens, as das Experiências e a lua de mel), com quantas vezes em cada país.',
+      'O que se rouba depende do lugar (a casa simples, a joalheria, a carga), o usado vale menos, e o dinheiro em espécie é o que o lugar tinha.'
+    ],
+    correcoes: [
+      'A pressão alta deixou de ser quase inevitável: o risco vem dos fatores (peso, sedentarismo, bebida, família, estresse); o check-up não inventa mais doença.',
+      'Ninguém é expulso de uma facção sem motivo: a expulsão vem de algo que aconteceu (e a mensagem diz o quê), depois de um recado; ser traído por alguém da facção não expulsa você.',
+      'A venda da safra paga de verdade (o valor da lavoura), e o fechamento do ano não conta a safra duas vezes.',
+      'Quem tem posto numa organização tem nome no mercado paralelo: o segundo no comando vende o carro ao desmanche.',
+      'Um adulto não desabafa a demissão com um adolescente esperando dinheiro dele: as mensagens e as respostas cabem na idade e na relação.'
+    ]
+  },
+  {
     versao: '26.2',
     data: '2026-11-18',
     titulo: 'Estilos de luta',

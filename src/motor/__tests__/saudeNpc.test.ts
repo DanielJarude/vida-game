@@ -105,7 +105,8 @@ describe('a condição de uma pessoa do mundo pesa nela', () => {
     const antes = m.risco(fatoresDaPessoa(v, p), 40);
     v.corpo.condicoes.push({ id: 'hipertensao', nome: 'pressão alta', tInicio: v.t - 24, cronica: true, gravidade: 1, tratando: true, diagnosticada: true, tDiagnostico: v.t - 24 });
     const depois = m.risco(fatoresDaPessoa(v, p), 40);
-    expect(depois).toBeCloseTo(antes * 1.4, 6);
+    // VIDA 27 · §2: a história da família pesa mais (×1,8) no modelo por fatores reais.
+    expect(depois).toBeCloseTo(antes * 1.8, 6);
   });
 
   it('a família só sabe do que tem nome', () => {
@@ -132,8 +133,9 @@ describe('nenhuma condição antes da idade que o catálogo permite', () => {
         expect(c.tInicio).toBeGreaterThanOrEqual(p.tNasc);
         expect(c.tInicio).toBeLessThanOrEqual(v.t);
         expect(m.risco(fatoresDaPessoa(v, p, c.tInicio), i)).toBeGreaterThan(0);
-        if (c.id === 'hipertensao') expect(i).toBeGreaterThanOrEqual(28);
-        if (c.id === 'diabetes') expect(i).toBeGreaterThanOrEqual(35);
+        // VIDA 27 · §2: o catálogo agora permite pressão alta a partir dos 18 (rara antes dos 25) e diabetes a partir dos 30.
+        if (c.id === 'hipertensao') expect(i).toBeGreaterThanOrEqual(18);
+        if (c.id === 'diabetes') expect(i).toBeGreaterThanOrEqual(30);
         if (c.id === 'coluna') expect(i).toBeGreaterThanOrEqual(25);
         if (c.id === 'depressao' || c.id === 'ansiedade') expect(i).toBeGreaterThanOrEqual(13);
       }
