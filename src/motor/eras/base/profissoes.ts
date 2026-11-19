@@ -82,8 +82,9 @@ export function ocupacaoExisteAgora(id: string): boolean {
 
 /** Cursos de nome ou existência recentes: o ano em que passam a ser oferecidos (e o nome de antes, quando havia). */
 export const CURSOS_NO_TEMPO: Readonly<Record<string, { desde?: number; antes?: { ate: number; nome: string } }>> = {
-  ads: { antes: { ate: 2005, nome: 'Tecnologia em Processamento de Dados' } },
-  tec_informatica: { antes: { ate: 1999, nome: 'Técnico em Processamento de Dados' } },
+  // ERAS v3: e o primeiro ano (os cursos de processamento de dados nascem no começo dos anos 1970 — aproximação).
+  ads: { desde: 1972, antes: { ate: 2005, nome: 'Tecnologia em Processamento de Dados' } },
+  tec_informatica: { desde: 1970, antes: { ate: 1999, nome: 'Técnico em Processamento de Dados' } },
   tec_desenvolvimento: { desde: 2008 },
   tec_redes: { desde: 2000 },
   mba: { desde: 1993 },

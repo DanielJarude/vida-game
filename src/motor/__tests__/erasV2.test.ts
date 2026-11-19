@@ -174,11 +174,14 @@ describe('anos 1970', () => {
     expect(ids).toEqual(expect.arrayContaining(['cruzado', 'cruzado_novo', 'cruzeiro90']));
     expect(new Set(ids).size).toBe(ids.length); // nada se repete
   });
-  it('a normalização aceita 1970 e recusa 1969, e é idempotente', () => {
+  // ERAS v3: o limite passou para 1900 (1969 agora é válido).
+  it('a normalização aceita 1900 e recusa 1899, e é idempotente', () => {
     const v = historica(1975);
     normalizarEra(v); const a = JSON.stringify(v.era); normalizarEra(v);
     expect(JSON.stringify(v.era)).toBe(a);
     (v.era as { ano: number }).ano = 1969; normalizarEra(v);
+    expect(v.era).toBeDefined();
+    (v.era as { ano: number }).ano = 1899; normalizarEra(v);
     expect(v.era).toBeUndefined();
   });
 });

@@ -24,7 +24,10 @@ describe('ERAS MODERNAS', () => {
     const em2022 = ids(2022);
     for (const id of ['vw_polo', 'jeep_compass', 'hyundai_creta', 'chevrolet_tracker', 'toyota_corolla_cross', 'honda_pcx', 'yamaha_nmax']) expect(em2022.has(id), id).toBe(true);
     expect(ids(2015).has('toyota_corolla_cross')).toBe(false);
-    const n2025 = ids(2025).size, n2026 = ids(2026).size;
+    // ERAS v3: o salto se mede no catálogo de hoje (sem as versões da época, que nunca aparecem depois de 2025 — e que agora
+    // incluem as do mundo inteiro, inflando a contagem de 2026 quando se passava o catálogo completo).
+    const atuais = (ano: number) => new Set(versoesDoAno(VERSOES_VEICULO.filter(x => !x.epoca) as never, ano).map(x => x.id));
+    const n2025 = atuais(2025).size, n2026 = atuais(2026).size;
     expect(Math.abs(n2026 - n2025) / n2026).toBeLessThan(0.25);
   });
 
