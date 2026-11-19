@@ -50,7 +50,8 @@ export const NOTAS: NotaDeVersao[] = [
       'O curso não "fica mais comprido" e é concluído no mesmo ano.',
       'O jogador de e-sports e o piloto não recebem mais cenas de cliente e orçamento de quem trabalha por conta.',
       'O foco de treino do e-sports era ignorado para quem faz aniversário no segundo semestre.',
-      'O orelhão não aparece mais nas ruas antes dos anos 1970.'
+      'O orelhão não aparece mais nas ruas antes dos anos 1970.',
+      'Os brincos colocados aparecem com a forma de cada um também com cabelo comprido (antes, o cabelo os cobria e todos pareciam iguais).'
     ]
   },
   {

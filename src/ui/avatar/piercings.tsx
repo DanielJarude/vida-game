@@ -216,7 +216,7 @@ export function BrincoNovo({ modelo, x, y, s }: { modelo?: string; x: number; y:
     case 'brincos_argola_grande': return <circle className="retrato__joia" data-brinco="argola_grande" cx={x + s * 0.3} cy={y + 2.6} r={2.9} fill="none" stroke="#d8b45a" strokeWidth={0.75} />;
     case 'brincos_gota': return <g className="retrato__joia" data-brinco="gota"><path d={`M ${x} ${y - 0.4} V ${y + 2}`} stroke="#d8b45a" strokeWidth={0.35} /><path d={`M ${x} ${y + 1.8} Q ${x + 1.3} ${y + 3.6} ${x} ${y + 4.6} Q ${x - 1.3} ${y + 3.6} ${x} ${y + 1.8} Z`} fill="#7fc4d8" stroke="#3d7e93" strokeWidth={0.3} /></g>;
     case 'brincos_cruz': return <g className="retrato__joia" data-brinco="cruz" stroke="#c9ccd1" strokeLinecap="round"><path d={`M ${x} ${y - 0.3} V ${y + 1.2}`} strokeWidth={0.3} /><path d={`M ${x} ${y + 1.2} V ${y + 4.4} M ${x - 0.9} ${y + 2.2} H ${x + 0.9}`} strokeWidth={0.6} /></g>;
-    case 'brincos_alargador': return <g className="retrato__joia" data-brinco="alargador"><ellipse cx={x} cy={y + 0.3} rx={1.25} ry={1.5} fill="#1b1b1e" /><ellipse cx={x} cy={y + 0.3} rx={0.6} ry={0.8} fill="#000000" opacity={0.35} /></g>;
+    case 'brincos_alargador': return <g className="retrato__joia" data-brinco="alargador"><ellipse cx={x} cy={y + 0.3} rx={1.25} ry={1.5} fill="#1b1b1e" stroke="#a9aeb5" strokeWidth={0.35} /><ellipse cx={x} cy={y + 0.3} rx={0.6} ry={0.8} fill="#000000" opacity={0.35} /></g>;
     default: return null;
   }
 }
