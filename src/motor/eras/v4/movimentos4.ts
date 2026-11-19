@@ -77,24 +77,33 @@ function riscoDaParticipacao(v: Vida, r: Rng, m: MovimentoDaEpoca, nivel: 0 | 1 
     if (e && e.contrato !== 'servidor' && r.chance(0.3)) { encerrarEmprego(v, 'demitido pela militância'); return ' O patrão soube — e você perdeu o emprego.'; }
     return ' No trabalho e na rua, começaram os olhares e os recados.';
   }
+  const fem = v.eu.genero === 'feminino';
+  // A polícia que fichava por política tinha nome próprio onde existia (o DOPS, a Stasi, a Tokkō, os serviços da ditadura
+  // argentina); nos EUA e no Reino Unido, a prisão era da polícia comum — e a ficha também.
+  const ficha = ['BR', 'AR', 'DE', 'JP'].includes(paisHistoricoCorrente()) ? 'na ficha da polícia política' : 'fichado na polícia';
   if (nivel === 2) {
-    if (!r.chance(0.2 * intensidade)) return '';
-    const meses = r.int(1, 3);
+    if (!r.chance(0.12 * intensidade)) return '';
+    // A maioria das prisões em protesto durava dias; algumas viravam meses de cadeia. [A]
+    const meses = r.chance(0.7) ? 0 : r.int(1, 3);
     h.detencoes = [...(h.detencoes ?? []), { t: v.t, movimento: m.id, meses }];
     v.fatos['fichado_politico'] = v.t;
-    v.mente.estresse = clamp((v.mente.estresse ?? 0) + 15);
-    if (e && (e.contrato === 'servidor' || r.chance(0.4))) encerrarEmprego(v, 'preso por motivo político');
-    return ` A polícia levou você com outros ${r.int(8, 40)}: ${meses} ${meses === 1 ? 'mês' : 'meses'} detid${v.eu.genero === 'feminino' ? 'a' : 'o'}, e o nome ficou na ficha da polícia política.${e && !v.trabalho.atual ? ' O emprego não esperou.' : ''}`;
+    v.mente.estresse = clamp((v.mente.estresse ?? 0) + (meses ? 15 : 8));
+    if (e && (e.contrato === 'servidor' || r.chance(meses ? 0.4 : 0.15))) encerrarEmprego(v, 'preso por motivo político');
+    const quanto = meses ? `${meses} ${meses === 1 ? 'mês' : 'meses'} ${fem ? 'presa' : 'preso'}` : `alguns dias ${fem ? 'detida' : 'detido'}`;
+    return ` A polícia levou você com outros ${r.int(8, 40)}: ${quanto}, e o nome ficou ${ficha}.${e && !v.trabalho.atual ? ' O emprego não esperou.' : ''}`;
   }
-  if (!r.chance(0.15 * intensidade)) return '';
+  if (!r.chance(0.12 * intensidade)) return '';
   const meses = r.int(6, 24);
   h.detencoes = [...(h.detencoes ?? []), { t: v.t, movimento: m.id, meses }];
   v.fatos['fichado_politico'] = v.t;
   v.mente.estresse = clamp((v.mente.estresse ?? 0) + 30);
   v.corpo.saude = Math.max(5, v.corpo.saude - 10);
   if (e) encerrarEmprego(v, 'preso por motivo político');
-  return ` Você foi preso${v.eu.genero === 'feminino' ? 'a' : ''} sem processo e passou ${meses} meses nas mãos do regime. Saiu marcad${v.eu.genero === 'feminino' ? 'a' : 'o'} — no corpo, na ficha e na memória; muitos dos que estavam com você não saíram.`;
+  return ` Você foi ${fem ? 'presa' : 'preso'} sem processo e passou ${meses} meses nas mãos do regime. Saiu ${fem ? 'marcada' : 'marcado'} — no corpo, na ficha e na memória; muitos dos que estavam com você não saíram.`;
 }
+
+/** "O movimento negro" → "o movimento negro" (só a primeira letra: "no Sul" continua com maiúscula). */
+const oNome = (m: MovimentoDaEpoca) => m.nome.charAt(0).toLowerCase() + m.nome.slice(1);
 
 export function executarEras4(v: Vida, r: Rng, oque: OqueEras4, id: string): { texto: string; tom: 'bom' | 'ruim' | 'neutro' } {
   const pais = paisHistoricoCorrente();
@@ -110,17 +119,17 @@ export function executarEras4(v: Vida, r: Rng, oque: OqueEras4, id: string): { t
   const somar = (x: number) => { h.pressao[id] = clamp((h.pressao[id] ?? 0) + x, 0, 100); };
   if (oque === 'sair') {
     delete h.movimentos[id];
-    escrever(v, { texto: `Deixou ${m.nome.replace(/^O /, 'o ').replace(/^A /, 'a ')}: a vida pediu outra coisa.`, relevancia: 'cotidiano', tema: 'escolha', escolha: true, fato: { tipo: 'era', dados: { categoria: 'sociedade', evento: `mov_sair:${id}` } } });
+    escrever(v, { texto: `Deixou ${oNome(m)}: a vida pediu outra coisa.`, relevancia: 'cotidiano', tema: 'escolha', escolha: true, fato: { tipo: 'era', dados: { categoria: 'sociedade', evento: `mov_sair:${id}` } } });
     return { texto: 'Você se afastou do movimento.', tom: 'neutro' };
   }
   if (oque === 'financiar') {
     const valor = doacao(v);
     v.financas.conta -= valor;
-    lancar(v, `Doação: ${m.nome.toLowerCase()}`, 'acontecimento', -valor);
+    lancar(v, `Doação: ${oNome(m)}`, 'acontecimento', -valor);
     somar(3 + 6 * Math.log10(1 + valor / (salarioMinimoReal(v.t) ?? 1500)));
     if (!atual) h.movimentos[id] = { desde: v.t, papel: 'apoio', anos: 0, ultimo: v.t }; else atual.ultimo = v.t;
     const risco = nivel >= 2 ? riscoDaParticipacao(v, r, m, nivel, 0.25) : '';
-    const texto = `Deu dinheiro para ${m.nome.toLowerCase().replace(/^o /, 'o ').replace(/^a /, 'a ')}: o aluguel da sede, os panfletos, a defesa de quem foi preso.${risco}`;
+    const texto = `Deu dinheiro para ${oNome(m)}: o aluguel da sede, os panfletos, a defesa de quem foi preso.${risco}`;
     escrever(v, { texto, relevancia: 'cotidiano', tema: 'dinheiro', escolha: true, tom: risco ? 'ruim' : 'neutro', fato: { tipo: 'era', dados: { categoria: 'sociedade', evento: `mov_financiar:${id}` } } });
     return { texto, tom: risco ? 'ruim' : 'bom' };
   }
@@ -133,7 +142,8 @@ export function executarEras4(v: Vida, r: Rng, oque: OqueEras4, id: string): { t
   const primeiro = !atual;
   const fala = organizar
     ? `Puxou as reuniões, escreveu os panfletos e falou na frente de todos: ${m.causa}.`
-    : primeiro ? `Entrou para ${m.nome.toLowerCase()}: as reuniões, as marchas, a causa — ${m.causa}.` : `Mais um ano na luta: ${m.causa}.`;
-  escrever(v, { texto: `${fala}${risco}`, relevancia: primeiro || organizar || risco ? 'biografia' : 'cotidiano', tema: 'escolha', escolha: true, tom: risco ? 'ruim' : 'neutro', fato: { tipo: 'era', dados: { categoria: 'sociedade', evento: `mov_${oque}:${id}` } } });
+    : primeiro ? `Entrou para ${oNome(m)}: as reuniões, as marchas, a causa — ${m.causa}.` : r.pick([`Mais um ano nas reuniões e nas marchas: ${m.causa}.`, `Continuou na luta: ${m.causa}.`, `As reuniões de sempre, a marcha do ano, os panfletos — ${m.causa}.`]);
+  // O ano de rotina no movimento não lota a História (fica no registro técnico); a entrada, a organização e o preço, sim.
+  escrever(v, { texto: `${fala}${risco}`, relevancia: primeiro || organizar || risco ? 'biografia' : 'tecnico', tema: 'escolha', escolha: true, tom: risco ? 'ruim' : 'neutro', fato: { tipo: 'era', dados: { categoria: 'sociedade', evento: `mov_${oque}:${id}` } } });
   return { texto: `${fala}${risco}`, tom: risco ? 'ruim' : 'bom' };
 }
