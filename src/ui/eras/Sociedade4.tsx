@@ -26,7 +26,7 @@ export function Sociedade4({ vida, agir }: { vida: Vida; agir?: (a: Acao) => boo
             <li key={b.id} className="soc4__barreira" data-natureza={b.natureza}>
               <p className="soc4__etiquetas"><span className="soc4__etiqueta">{rotuloDoDominio(b.dominio)}</span><span className="soc4__etiqueta soc4__etiqueta--natureza">{b.residual ? 'Costume (a lei já caiu)' : rotuloDaNatureza(b.natureza)}</span>{b.bloqueia && <span className="soc4__etiqueta soc4__etiqueta--porta">Porta fechada</span>}</p>
               <p className="soc4__texto">{b.texto}</p>
-              {b.alternativa && <p className="painel-epoca__nota">Saída da época: {b.alternativa}</p>}
+              {b.alternativa && <p className="painel-epoca__nota"><strong>A saída que havia.</strong> {b.alternativa}</p>}
               <details className="soc4__fonte"><summary>Fonte{b.ate ? ` · na história, até ${b.ate}` : ''}</summary><p className="painel-epoca__nota">{b.fonte}</p></details>
             </li>
           ))}
@@ -40,7 +40,7 @@ export function Sociedade4({ vida, agir }: { vida: Vida; agir?: (a: Acao) => boo
             {r.movimentos.map(m => (
               <li key={m.id} className="soc4__movimento" data-risco={m.nivel}>
                 <p className="soc4__nome">{m.nome}{m.papel ? <small> · você {m.papel === 'organizacao' ? 'organiza' : m.papel === 'militante' ? 'participa' : 'apoia'}</small> : null}</p>
-                <p className="soc4__texto">Pela causa: {m.causa}.{m.reformas.length ? ` Luta por: ${m.reformas.join('; ')}.` : ''}</p>
+                <p className="soc4__texto">Pela causa: {m.causa}.{m.reformas.length ? ` Luta por ${m.reformas.join('; ')}.` : ''}</p>
                 <p className="painel-epoca__nota">Risco agora: {m.risco}.{m.pressao > 0 ? ` A pressão que você ajudou a fazer: ${m.pressao} de 100.` : ''}</p>
                 {agir && (
                   <div className="soc4__acoes">

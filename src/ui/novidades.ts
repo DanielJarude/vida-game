@@ -26,6 +26,25 @@ export interface NotaDeVersao {
 
 export const NOTAS: NotaDeVersao[] = [
   {
+    versao: 'Eras 4',
+    data: '2026-11-19',
+    titulo: 'A sociedade da época — e o mundo que você pode mudar',
+    novidades: [
+      'A época pesa na vida, e não só no texto: a lei, a prática das instituições e o costume de cada país e tempo abrem e fecham portas no emprego, no salário de entrada, na faculdade, no crédito e na candidatura — a mulher casada que precisava da assinatura do marido, a segregação no Sul dos Estados Unidos, a "taxa feminina" dos salários, a universidade imperial japonesa fechada às mulheres, a ficha na polícia política.',
+      'De onde você vem importa: numa época em que poucos estudavam, o sobrenome e os contatos da família abriam os postos altos e a faculdade; quem vinha de casa pobre subia mais devagar — mas subia.',
+      'Os movimentos da época estão na rua (o sufragista, os direitos civis, o movimento negro, a anistia, o movimento operário...): dá para participar, organizar ou dar dinheiro, com o risco que cada regime trazia.',
+      'Com um mandato, você pode propor reformas da época — só as da competência do cargo (a cidade, o estado, o país) — contra a oposição daquele tempo. O que passa muda o mundo desta família, pode ser derrubado se vier cedo demais e continua valendo para os filhos e os netos.',
+      'Os partidos de verdade de cada país e período (Democratas e Republicanos, os trabalhistas britânicos, o PLD japonês, a CDU e o SPD, o peronismo e a UCR; no Brasil, do PRP da Primeira República à UDN e ao PTB), com os proibidos e as listas únicas.',
+      'Um painel novo em Você → No mundo: a sua posição na sociedade, o que pesa sobre você agora (com a fonte), os movimentos e o mundo que a família mudou.'
+    ],
+    melhorias: [
+      'Antes do profissionalismo no país (o futebol brasileiro até 1933, o japonês até 1993), não há contrato: o esporte é amador.',
+      'Depois que uma lei cai, o costume ainda pesa por um tempo — cada vez menos.',
+      'A água tratada e a escola que uma cidade conquista antes da hora diminuem a mortalidade infantil e abrem a faculdade para a geração seguinte.'
+    ],
+    correcoes: []
+  },
+  {
     versao: 'Eras 3',
     data: '2026-11-19',
     titulo: 'Outros países e o século XX inteiro',

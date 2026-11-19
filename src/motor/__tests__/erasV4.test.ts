@@ -26,6 +26,7 @@ import { reformasDoMandato, chanceDaReforma } from '../eras/v4/politica4';
 import { movimentosDaVida } from '../eras/v4/movimentos4';
 import { resumoDaSociedade } from '../eras/v4/resumo4';
 import { pacotesDeEra } from '../eras/base/pacote';
+import { fatoresDeMortalidade } from '../eras/base/mortalidade';
 import type { Vida } from '../tipos';
 
 beforeAll(async () => { await carregarMundo(); });
@@ -206,7 +207,7 @@ describe('a história alternativa', () => {
     const v = noMes(vida('BR', 1900, { genero: 'masculino' }), 1950);
     v.caminhos.politica = { fase: 'mandato', origem: 'decisao', tInicio: v.t, apoio: 40, reputacao: 30, desgaste: 5, consecutivos: 1, historico: [], mandato: { cargo: 'prefeito', tInicio: v.t, tFim: v.t + 48, aprovacao: 60, feito: 0 } } as never;
     expect(reformasDoMandato(v).every(r => r.alcance === 'municipal')).toBe(true);
-    v.caminhos.politica!.mandato!.cargo = 'deputado_federal';
+    (v.caminhos.politica as unknown as { mandato: { cargo: string } }).mandato.cargo = 'deputado_federal';
     const rs = reformasDoMandato(v);
     expect(rs.every(r => r.alcance === 'nacional')).toBe(true);
     const est = rs.find(r => r.id === 'br_estatuto_mulher_casada')!;
@@ -241,6 +242,22 @@ describe('a história alternativa', () => {
   });
 });
 
+describe('o que a reforma cria', () => {
+  it('a água e o posto de saúde que a cidade conquista antes da hora cortam a mortalidade da época (mais na infância), só lá', () => {
+    const v = noMes(vida('BR', 1900), 1920);
+    const antes = fatoresDeMortalidade(false, 2);
+    garantirHistoria(v).alteracoes.push({ reforma: 'br_saude_municipal', pais: 'BR', t: tDe(1915, 0), alcance: 'municipal', municipioId: v.moradia.municipioId, por: 'voce', autor: 'X' });
+    entrarNaVida(v);
+    const depois = fatoresDeMortalidade(false, 2);
+    expect(depois.crianca).toBeLessThan(antes.crianca * 0.5);
+    expect(depois.adulto).toBeLessThan(antes.adulto);
+    const outra = noMes(vida('BR', 1900, { uf: 'MG' }), 1920);
+    outra.era!.historia = structuredClone(v.era!.historia);
+    entrarNaVida(outra);
+    expect(fatoresDeMortalidade(false, 2).crianca).toBeCloseTo(antes.crianca, 5);
+  });
+});
+
 describe('movimentos e partidos', () => {
   it('os movimentos da época aparecem no lugar e no tempo; participar soma pressão; sob ditadura, o risco é dito', () => {
     let v = noMes(vida('BR', 1950, { genero: 'feminino' }), 1976);
@@ -258,7 +275,7 @@ describe('movimentos e partidos', () => {
     expect(partidoDe('US_PROG')?.nome).toBe('Partido Progressista');
     noMes(us, 1925);
     expect(partidosDoPais('US')).not.toContain('US_PROG');
-    const de = noMes(vida('DE', 1900, { uf: 'BY' }), 1936);
+    noMes(vida('DE', 1900, { uf: 'BY' }), 1936);
     expect(partidosDoPais('DE')).toEqual([]);
     const ar = noMes(vida('AR', 1945), 1962);
     expect(partidosDoMesNoPais('AR', ar.t)).not.toContain('AR_PJ');

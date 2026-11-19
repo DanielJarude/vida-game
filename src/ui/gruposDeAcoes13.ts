@@ -12,6 +12,7 @@ const G = (id: string, titulo: string, ordem: number): GrupoDeAcoes13 => ({ id, 
 
 // Política (`politica.acoesPoliticas`, `presidencia129`).
 const MANDATO = G('mandato', 'Mandato e governo', 1);
+const REFORMAS = G('reformas', 'Mudar a lei da época', 1.5);
 const CAMPANHA = G('campanha', 'Campanha e eleições', 2);
 const PARTIDO = G('partido', 'Partido', 3);
 const RELACOES = G('relacoes', 'Relações políticas', 4);
@@ -47,6 +48,7 @@ export function grupoDaAcao13(x: { id: string; saida?: boolean }): GrupoDeAcoes1
   const g = POR_ID[x.id];
   if (g) return g;
   if (/^pol_(cargo_|gov_)|^pres_/.test(x.id)) return MANDATO;
+  if (x.id.startsWith('pol_reforma4_')) return REFORMAS; // ERAS v4
   if (x.id.startsWith('banco_')) return DIA;
   return OUTRAS;
 }

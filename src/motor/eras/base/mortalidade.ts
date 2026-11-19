@@ -12,6 +12,7 @@
  */
 import { MORTALIDADE_DA_EPOCA, MORTALIDADE_T0 } from './mortalidadeSeries';
 import { mesHistoricoCorrente, paisHistoricoCorrente } from './moedas';
+import { instituidoAqui } from './sociedade4';
 
 function ponto(arr: readonly number[], ano: number): number {
   const x = (Math.max(MORTALIDADE_T0, Math.min(2025, ano)) - MORTALIDADE_T0) / 5;
@@ -33,9 +34,16 @@ export function fatoresDeMortalidade(protagonista: boolean, idade: number): { ad
   if (t === null) return { adulto: 1, crianca: 0 };
   const m = mortalidadeNoAno(paisHistoricoCorrente(), Math.floor(t / 12));
   if (!m) return { adulto: 1, crianca: 0 };
+  // ERAS v4: a água tratada, o esgoto e o posto de saúde que esta continuidade levou à cidade antes da hora (uma reforma,
+  // `sociedade4.instituidoAqui`) cortam o excesso da época — mais na infância. APROXIMAÇÃO [A] a partir de Cutler & Miller
+  // (2005): a água tratada explica cerca de metade da queda da mortalidade nas grandes cidades americanas de 1900–1936 e
+  // três quartos da queda da mortalidade infantil.
+  const saude = instituidoAqui('saude', t);
+  const adulto = saude ? 1 + (m.adulto - 1) * 0.75 : m.adulto;
+  const crianca = saude ? m.crianca * 0.4 : m.crianca;
   return {
-    adulto: protagonista ? 1 + (m.adulto - 1) / 2 : m.adulto,
-    crianca: protagonista || idade > 4 ? 0 : m.crianca
+    adulto: protagonista ? 1 + (adulto - 1) / 2 : adulto,
+    crianca: protagonista || idade > 4 ? 0 : crianca
   };
 }
 

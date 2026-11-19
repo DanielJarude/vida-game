@@ -37,7 +37,7 @@ export function movimentosDaVida(v: Vida): { m: MovimentoDaEpoca; risco: 0 | 1 |
   const h = v.era.historia;
   return movimentosAtivos(pais, ano).map(m => ({
     m, risco: riscoDoMovimento(m, ano), papel: h?.movimentos[m.id]?.papel, pressao: Math.round(h?.pressao[m.id] ?? 0),
-    reformas: m.reformas.map(id => reformaPorId(pais, id)?.nome).filter((x): x is string => !!x)
+    reformas: m.reformas.map(id => reformaPorId(pais, id)?.nome).filter((x): x is string => !!x).map(n => n.replace(/^(O|A|Os|As) /, x => x.toLowerCase()))
   }));
 }
 

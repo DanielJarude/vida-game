@@ -225,3 +225,36 @@ personagem ou marca protegida (intervalos de auge [A]).
 Anos de produção/venda por país (The Henry Ford; British Motor Museum; Mercedes-Benz Classic; August Horch Museum Zwickau;
 Toyota Automobile Museum; Museo del Automóvil de Buenos Aires; Anfavea) **[F/A]**; medidas dos desenhos pelas fichas
 técnicas **[F]**; preços em reais de hoje proporcionais ao esforço histórico **[A]** (não é a tabela de preços do ano).
+
+## 21. ERAS v4 · barreiras, reformas, movimentos e partidos (`eras/base/sociedadeBR.ts`, `eras/paises/<id>/sociedade.ts`)
+
+Cada barreira, reforma e movimento traz a fonte no próprio dado; aqui, as fontes por área e o que é aproximação.
+
+**Classes.** [F] a lei, a decisão, a data, quem era atingido · [A] o TAMANHO do efeito na chance (de ser contratado, de
+entrar na faculdade, de ser eleito), a força de uma oposição (`resistencia`) e o resíduo do costume depois que a lei cai
+(`residuo`). O jogo não tem série histórica de "probabilidade de contratação" por grupo; os fatores são calibrados para
+que a diferença seja perceptível sem fechar toda mobilidade (a mobilidade existia, mais difícil).
+
+| Área | Fontes principais |
+|---|---|
+| Brasil — mulher casada | Código Civil de 1916 (Lei 3.071), arts. 6º, 242; Estatuto da Mulher Casada (Lei 4.121/1962); Romy Medeiros da Fonseca e o Conselho Nacional de Mulheres |
+| Brasil — racismo no trabalho | Lei 1.390/1951 (Afonso Arinos); Lei 7.716/1989 (Caó); C. Hasenbalg (1979); Frente Negra Brasileira (1931), TEN (1944), MNU (1978) |
+| Brasil — polícia política e serviço público | Comissão Nacional da Verdade, Relatório (2014), vol. I; Lei 6.683/1979 (Anistia); Movimento Feminino pela Anistia (1975), CBA (1978) |
+| Brasil — tutela indígena | Código Civil de 1916, art. 6º, III; Lei 6.001/1973; Constituição de 1988, arts. 231–232 |
+| Brasil — partidos de 1873 a 1965 | CPDOC/FGV (verbetes do PRP, PRM, PRR, PRC, PD, PL, PCB, PSD, UDN, PTB, PSP, PDC, PSB, PR, PTN); Decreto-Lei 37/1937; AI-2 (27/10/1965); TSE (cancelamento do registro do PCB, 1947) |
+| EUA — segregação e direitos civis | leis estaduais "Jim Crow"; Sweatt v. Painter (1950); Brown v. Board of Education (1954); Civil Rights Act (1964); Voting Rights Act (1965); Fair Housing Act (1968); HOLC/FHA (1934–1940); EO 8802 (1941) |
+| EUA — mulheres | 19ª Emenda (1920); C. Goldin, "Marriage Bars" (NBER, 1988); Equal Pay Act (1963); Title IX (1972); Equal Credit Opportunity Act (1974/1975); U.S. Census Bureau (razão de salários, 1963) |
+| EUA — serviço federal | Executive Order 10450 (1953); Civil Service Commission (03/07/1975) |
+| EUA — trabalho infantil, escola, saúde | Fair Labor Standards Act (1938); Hammer v. Dagenhart (1918); Goldin & Katz (high school movement); Cutler & Miller (2005, água tratada e mortalidade) |
+| Reino Unido | Sex Disqualification (Removal) Act 1919; Bebb v. Law Society (1913); marriage bar do Home Civil Service (1946) e Education Act 1944, s. 24(3); Equal Pay Act 1970; Sex Discrimination Act 1975; Race Relations Acts 1965/1968; Bristol Bus Boycott (1963); Sexual Offences Act 1967; Criminal Justice (Scotland) Act 1980; Representation of the People Act 1918 e Equal Franchise Act 1928; Oxford (1920) e Cambridge (1948) |
+| Japão | Código Civil Meiji (1898), art. 14, e a reforma de 1947; Lei dos Advogados (1893, reforma de 1933); Constituição de 1947, arts. 14 e 24; Lei Eleitoral Geral (1925); Lei de Igualdade de Oportunidades no Emprego (1985/1986); caso Sumitomo Cement (1966); Shin Fujin Kyōkai (1920) |
+| Alemanha | BGB §§ 1356 e 1358 (1900); Gleichberechtigungsgesetz (1957/1958); Primeira Lei de Reforma do Casamento (1977); a matrícula de mulheres por estado (Baden 1900 – Prússia 1908); Lei das Servidoras de 30/06/1933; § 175 e a reforma de 1969; Bundesstiftung Aufarbeitung e BStU (RDA) |
+| Argentina | Lei 13.010/1947; Lei 11.357/1926 e Lei 17.711/1968; Lei 21.274/1976 (prescindibilidade) e CONADEP; Lei 23.515/1987; Lei 26.618/2010; Decreto 4.161/1956 (proscrição do peronismo) |
+| Partidos de outros países | registros parlamentares e eleitorais nacionais (Federal Election Commission e a história dos partidos dos EUA; Electoral Commission e House of Commons Library; Kokkai/Arquivos Nacionais do Japão; Bundeszentrale für politische Bildung; Cámara Nacional Electoral). A "linha" de cada partido é descrição factual curta da época, sem juízo e sem efeito no jogo |
+
+**Decisões de desenho registradas.** (1) O jogo não oferece filiação a partidos nazistas, fascistas ou neonazistas: a
+história deles aparece como fato documentado, não como carreira. (2) A perseguição aos judeus na Alemanha (1933–1945) não
+foi modelada como barreira porque o jogo ainda dá às famílias da época a distribuição religiosa de hoje (sem judeus na
+Alemanha de 1930): representar só pela metade seria apagar — fica pendente, junto com a discriminação contra burakumin e
+coreanos no Japão. (3) Reformas "que a história não teve" (o fim da segregação por um estado do Sul antes das decisões
+federais; a escola e a água por iniciativa de uma cidade) são marcadas como tal no dado e na tela.
