@@ -114,7 +114,7 @@ export const ARQUETIPOS = {
 export const MODELOS_13: Record<string, Modelo13> = {
   /* ------------------------------------------------------------ ERAS v3: os carros da época no mundo (`motor/eras/base/veiculosMundo`).
      Medidas das fichas técnicas dos fabricantes e dos museus (mm), arredondadas; a roda de raios e o para-lama solto dos antigos. */
-  epm_olds_curved: { m: { L: 2400, H: 1650, W: 1680, D: 720, bf: 300 }, a: 'antigo', o: { tT: 0.62, tras: 0.5 }, j: { semTeto: true, paralamaSolto: true, farol: 'redondo', lanterna: 'redonda', paraChoque: 'preto', rodas: 'raios', raios: 12, portas: 2, espelho: 'nenhum' } },
+  epm_olds_curved: { m: { L: 2400, H: 1650, W: 1680, D: 720, bf: 300 }, a: 'antigo', o: { tT: 0.7, tras: 0.5 }, j: { capota: '#2b2826', paralamaSolto: true, farol: 'redondo', lanterna: 'redonda', paraChoque: 'preto', rodas: 'raios', raios: 12, portas: 2, espelho: 'nenhum' } },
   epm_ford_t: { m: { L: 3400, H: 1900, W: 2540, D: 760, bf: 380 }, a: 'antigo', j: { paralamaSolto: true, estribo: true, farol: 'redondo', lanterna: 'redonda', paraChoque: 'preto', moldura: 'preta', espelho: 'nenhum', rodas: 'raios', raios: 12, colunas: [0.6], portas: 2 } },
   epm_ford_a: { m: { L: 3870, H: 1730, W: 2630, D: 740, bf: 420 }, a: 'antigo', o: { tT: 0.86, curva: 0.8 }, j: { paralamaSolto: true, estribo: true, farol: 'redondo', lanterna: 'redonda', paraChoque: 'cromo', moldura: 'cromo', espelho: 'nenhum', rodas: 'raios', raios: 14, colunas: [0.6], portas: 2 } },
   epm_austin_seven: { m: { L: 2690, H: 1600, W: 1900, D: 640, bf: 300 }, a: 'antigo', o: { tT: 0.86 }, j: { paralamaSolto: true, farol: 'redondo', lanterna: 'redonda', paraChoque: 'preto', espelho: 'nenhum', rodas: 'raios', raios: 10, portas: 2 } },
@@ -130,7 +130,7 @@ export const MODELOS_13: Record<string, Modelo13> = {
   epm_ford_falcon_us: { m: { L: 4600, H: 1390, W: 2780, D: 660, bf: 760 }, a: 'seda', o: { curva: 0.7 }, j: { farol: 'redondo', lanterna: 'redonda', paraChoque: 'cromo', moldura: 'cromo', espelho: 'cromo', rodas: 'calota', portas: 4 } },
   epm_ford_pinto: { m: { L: 4100, H: 1300, W: 2390, D: 600, bf: 720 }, a: 'fastback', o: { curva: 0.7 }, j: { farol: 'redondo', lanterna: 'bloco', paraChoque: 'cromo', moldura: 'cromo', rodas: 'calota', portas: 2 } },
   epm_ford_taurus: { m: { L: 4790, H: 1380, W: 2690, D: 640, bf: 900 }, a: 'seda', o: { curva: 1.3 }, j: { farol: 'fino', lanterna: 'barra', paraChoque: 'cor', rodas: 'calota', portas: 4 } },
-  epm_jeep_cj: { m: { L: 3400, H: 1770, W: 2030, D: 740, bf: 600 }, a: 'jipe', j: { farol: 'redondo', lanterna: 'redonda', paraChoque: 'preto', espelho: 'preto', rodas: 'calota', semTeto: true, portas: 2 } },
+  epm_jeep_cj: { m: { L: 3400, H: 1770, W: 2030, D: 740, bf: 600 }, a: 'jipe', j: { farol: 'redondo', lanterna: 'redonda', paraChoque: 'preto', espelho: 'preto', rodas: 'calota', capota: '#5b5a4a', portas: 2 } },
   // As versões vendidas fora do Brasil têm a geração e o acabamento de lá (desenho próprio, não o da versão brasileira).
   epm_vw_beetle: { m: { L: 4030, H: 1500, W: 2400, D: 620, bf: 760 }, a: 'besouro', j: { costas: 9, paralamaSolto: true, farol: 'paralama', lanterna: 'redonda', paraChoque: 'cromo', moldura: 'cromo', espelho: 'cromo', rodas: 'calota', colunas: [0.34], portas: 2, faixaBranca: true } },
   epm_honda_civic_us: { m: { L: 3700, H: 1340, W: 2280, D: 570, bf: 640 }, a: 'hatch', o: { curva: 0.7, tT: 0.9 }, j: { farol: 'redondo', lanterna: 'bloco', paraChoque: 'preto', moldura: 'preta', rodas: 'calota', portas: 2 } },

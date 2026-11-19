@@ -24,8 +24,8 @@ async function contexto(w, tema) {
   return { ctx, p, erros };
 }
 
-// ------------------------------------------------------------ (1) A escolha
-for (const w of LARGURAS) for (const tema of TEMAS) {
+// ------------------------------------------------------------ (1) A escolha (SO_VIDAS=1 pula)
+for (const w of process.env.SO_VIDAS ? [] : LARGURAS) for (const tema of TEMAS) {
   const { ctx, p, erros } = await contexto(w, tema);
   const tag = `nascer@${w}-${tema}`;
   await p.goto(URL); await p.waitForTimeout(1200);
