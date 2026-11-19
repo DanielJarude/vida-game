@@ -29,6 +29,8 @@ const Futsal14 = sobDemandaCampeonato(() => import('../v14/esportes/Futsal14').t
 const Automobilismo20 = sobDemandaCampeonato(() => import('../v20/automobilismo/Automobilismo20').then(m => m.Automobilismo20));
 const Esports25 = sobDemandaCampeonato(() => import('../v25/esports/Esports25').then(m => m.Esports25));
 const FichaDoEsporte25 = sobDemandaCampeonato(() => import('../v25/ficha/FichaDoEsporte25').then(m => m.FichaDoEsporte25));
+// VIDA 28: o elenco com nome e o mercado autônomo (sob demanda: não pesa no Jogo).
+const Elenco28 = sobDemandaCampeonato(() => import('../v28/Elenco28').then(m => m.Elenco28));
 const Formacao25 = sobDemandaCampeonato(() => import('../v25/formacao/Formacao25').then(m => m.Formacao25));
 import { CampoDoAtleta, ClaqueteDoAtor, PalcoDoMusico, PlenarioDoPolitico, PranchetaDoTecnico } from './CarreirasEspeciais';
 import { habilitacaoDaVida } from '../../motor/sistemas/autoescola';
@@ -241,6 +243,7 @@ export function Trabalho({ vida, agir, irPara, parte, explorar: abaDeFora, aoExp
         {(modo === 'atleta' || espSemClube) && vida.caminhos.esporte?.modalidade === 'futsal' && <Futsal14 vida={vida} agir={agir} />}
         {/* VIDA 25: a ficha do atleta (os atributos agrupados, o antes e o agora, a evolução) — em toda modalidade. */}
         {(modo === 'atleta' || espSemClube) && vida.caminhos.esporte && <FichaDoEsporte25 vida={vida} e={vida.caminhos.esporte} />}
+        {modo === 'atleta' && vida.caminhos.esporte && <Elenco28 vida={vida} e={vida.caminhos.esporte} />}
         {modo === 'tecnico' && <PainelComissao vida={vida} />}
         {/* VIDA 20: o piloto contratado (a F1) vê a carreira inteira aqui também. */}
         {vida.trabalho.atual?.ocupacaoId === 'piloto_corrida' && <Automobilismo20 vida={vida} agir={agir} />}
