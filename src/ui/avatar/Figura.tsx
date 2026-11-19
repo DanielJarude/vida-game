@@ -888,8 +888,10 @@ export const Figura = memo(function Figura({ visual, genero, idade, semente = 'e
   let h = 0;
   for (let k = 0; k < semente.length; k++) h = (h * 31 + semente.charCodeAt(k)) >>> 0;
   // ERAS v2: numa vida histórica, a roupa de todo dia da década (`ui/eras/modaDaDecada`).
-  const daDecada = !conj.inteira ? roupaDaDecada(h, idade) : undefined;
-  if (daDecada) { if (!conj.cima) conj.cima = daDecada.cima; if (!conj.baixo) conj.baixo = daDecada.baixo; if (!conj.pes) conj.pes = daDecada.pes; }
+  const daDecada = !conj.inteira ? roupaDaDecada(h, idade, genero) : undefined;
+  // ERAS v3: antes de 1970, a roupa da década pode ser inteira (o vestido, o terno) — só quando nada de cima e de baixo foi comprado.
+  if (daDecada?.inteira && !conj.cima && !conj.baixo) { conj.inteira = daDecada.inteira; if (!conj.pes) conj.pes = daDecada.pes; }
+  else if (daDecada) { if (!conj.cima) conj.cima = daDecada.cima; if (!conj.baixo) conj.baixo = daDecada.baixo; if (!conj.pes) conj.pes = daDecada.pes; }
   if (!conj.inteira && !conj.cima) conj.cima = { parte: 'cima', forma: 'camiseta', cor: PADRAO_CIMA[h % PADRAO_CIMA.length], manga: 'curta', gola: 'redonda' };
   if (!conj.inteira && !conj.baixo) conj.baixo = idade < 12 ? { parte: 'baixo', forma: 'bermuda', corte: 'reta', cor: ['#3d5a80', '#5d6b4f', '#7a6248'][h % 3] } : { parte: 'baixo', forma: 'calca', corte: 'reta', cor: ['#3d5a80', '#2b2f36', '#5b6470'][h % 3], bolsos: true, costura: h % 3 === 0 ? '#c99a4a' : undefined };
   if (!conj.pes) conj.pes = { parte: 'pes', forma: idade >= 70 ? 'sapato' : 'tenis', cor: idade >= 70 ? '#3a2a20' : ['#f4f4f2', '#2b2f36', '#7d8590'][h % 3], sola: idade >= 70 ? '#1b1515' : '#f4f4f2' };

@@ -14,6 +14,7 @@
  * O desenho sai só do modelo (`versaoId`): o mesmo carro na loja, na garagem e na oficina. Sem modelo (um save muito
  * antigo), o perfil da forma com a pequena variação da semente — o desenho nunca falta.
  */
+import { DESENHO_DE } from '../../motor/eras/base/veiculosMundo';
 import { cantos, circulo, clarear, entreX, escurecer, misturar, num as f, poligono, ret, suave, variacao, type Amostra, type Peca, type Pt } from './nucleo';
 import type { VisualVeiculo } from '../../motor/dados/veiculos129';
 import { brilhoDoAcabamento, corComAcabamento, extrasDoCarro, peliculaSobre, type Extras129 } from './veiculos129';
@@ -69,7 +70,9 @@ const PERFIS = new Map<string, PerfilCarro>();
 /** O perfil de um modelo do catálogo (montado uma vez). */
 export function perfilDoModelo(versaoId: string): PerfilCarro | undefined {
   let p = PERFIS.get(versaoId);
-  if (!p && MODELOS_13[versaoId]) { p = montarPerfil(MODELOS_13[versaoId]); PERFIS.set(versaoId, p); }
+  // ERAS v3: a versão da época que reaproveita o desenho de outra (o Fusca exportado, o Falcon argentino).
+  const id = MODELOS_13[versaoId] ? versaoId : DESENHO_DE[versaoId] ?? versaoId;
+  if (!p && MODELOS_13[id]) { p = montarPerfil(MODELOS_13[id]); PERFIS.set(versaoId, p); }
   return p;
 }
 

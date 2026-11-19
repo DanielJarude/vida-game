@@ -34,7 +34,7 @@ import { idade, idadePessoa } from '../../motor/nucleo';
 import { anoDe, MESES, mesDe } from '../../motor/tempo';
 import { municipio, nomeLugar } from '../../motor/dados/lugares';
 import { entrarNaVida } from '../../motor/mundo/vida';
-import { decadaVisual, ICONE_DO_APARELHO, meioDaVida, NOME_DO_APARELHO, simboloDaEpoca } from '../eras/epoca';
+import { decadaVisual, ICONE_DO_APARELHO, meioDaVida, NOME_DO_APARELHO, nomeDoPaisNaEpoca, simboloDaEpoca } from '../eras/epoca';
 import { definirDecadaDaFigura } from '../eras/modaDaDecada';
 import '../eras/eras.css';
 import { seguranca } from '../../motor/sistemas/dinheiro';
@@ -186,7 +186,7 @@ export function Jogo({ c }: { c: ControleVida }) {
           <Retrato visual={vida.eu.visual} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? "eu"} tamanho={36} rotulo={vida.eu.nome} expressao={expressaoDe(vida)} />
           <span className="cabecalho__eu-texto">
             <strong>{vida.eu.nome}, {i} {i === 1 ? 'ano' : 'anos'}</strong>
-            <span>{anoDe(vida.t)}{simboloDaEpoca(vida) ? <> <span className="selo-era" title="A moeda do país neste mês">{simboloDaEpoca(vida)}</span></> : null} · {nomeLugar(m.id)}</span>
+            <span>{anoDe(vida.t)}{simboloDaEpoca(vida) ? <> <span className="selo-era" title="A moeda do país neste mês">{simboloDaEpoca(vida)}</span></> : null} · {nomeLugar(m.id)}{nomeDoPaisNaEpoca(vida) ? <> · <span className="selo-era" title="O país dividido">{nomeDoPaisNaEpoca(vida)}</span></> : null}</span>
           </span>
         </button>
       </header>

@@ -4,7 +4,7 @@
  * ao painel "A época". Cores pelos tokens (claro e escuro).
  */
 
-type Decada = 1970 | 1980 | 1990 | 2000 | 2010 | 2020 | 2026;
+type Decada = 1900 | 1910 | 1920 | 1930 | 1940 | 1950 | 1960 | 1970 | 1980 | 1990 | 2000 | 2010 | 2020 | 2026;
 
 export function TelefoneDeDisco({ tamanho = 64 }: { tamanho?: number }) {
   return (
@@ -90,7 +90,38 @@ export function MonitorDeTubo({ tamanho = 64 }: { tamanho?: number }) {
 }
 
 /** Os dois objetos que resumem a época (a comunicação e a tela da casa). */
+/** ERAS v3: o gramofone de corneta (1900–1920). */
+export function Gramofone({ tamanho = 64 }: { tamanho?: number }) {
+  return (
+    <svg width={tamanho} height={tamanho} viewBox="0 0 64 64" aria-hidden className="era-desenho">
+      <rect x="10" y="42" width="30" height="12" rx="1.5" fill="var(--era-tom)" stroke="var(--text-primary)" strokeWidth="1.6" />
+      <ellipse cx="25" cy="42" rx="12" ry="2.6" fill="var(--surface)" stroke="var(--text-primary)" strokeWidth="1.2" />
+      <path d="M33 40l6-14" stroke="var(--text-primary)" strokeWidth="1.8" />
+      <path d="M38 27c2-8 8-15 18-19l2 7c-6 3-10 9-13 15z" fill="var(--surface)" stroke="var(--text-primary)" strokeWidth="1.6" />
+      <path d="M56 8c2 2 3 4 2 7" stroke="var(--text-primary)" strokeWidth="1.2" fill="none" />
+    </svg>
+  );
+}
+
+/** ERAS v3: o rádio de válvula de capelinha (1925–1960). */
+export function RadioDeValvula({ tamanho = 64 }: { tamanho?: number }) {
+  return (
+    <svg width={tamanho} height={tamanho} viewBox="0 0 64 64" aria-hidden className="era-desenho">
+      <path d="M12 56V30c0-12 9-20 20-20s20 8 20 20v26z" fill="var(--era-tom)" stroke="var(--text-primary)" strokeWidth="1.6" />
+      <path d="M18 32c0-8 6-14 14-14s14 6 14 14v6H18z" fill="var(--surface)" stroke="var(--text-primary)" strokeWidth="1.2" />
+      {[22, 26, 30, 34, 38, 42].map(x => <path key={x} d={`M${x} 21v16`} stroke="var(--text-primary)" strokeWidth="0.8" opacity=".5" />)}
+      <rect x="20" y="42" width="24" height="5" rx="1" fill="var(--surface)" stroke="var(--text-primary)" strokeWidth="1" />
+      <circle cx="22" cy="51" r="2.2" fill="var(--surface)" stroke="var(--text-primary)" strokeWidth="1" />
+      <circle cx="42" cy="51" r="2.2" fill="var(--surface)" stroke="var(--text-primary)" strokeWidth="1" />
+    </svg>
+  );
+}
+
 export function ObjetosDaEpoca({ decada, tamanho = 64 }: { decada: Decada; tamanho?: number }) {
+  // ERAS v3: antes de 1970 — a carta e o gramofone; o rádio de válvula; o rádio e a primeira TV.
+  if (decada === 1900 || decada === 1910) return <><Envelope tamanho={tamanho} /><Gramofone tamanho={tamanho} /></>;
+  if (decada === 1920 || decada === 1930 || decada === 1940) return <><Envelope tamanho={tamanho} /><RadioDeValvula tamanho={tamanho} /></>;
+  if (decada === 1950 || decada === 1960) return <><RadioDeValvula tamanho={tamanho} /><TvDeTubo tamanho={tamanho} /></>;
   if (decada === 1970 || decada === 1980) return <><TelefoneDeDisco tamanho={tamanho} /><TvDeTubo tamanho={tamanho} /></>;
   if (decada === 1990) return <><Tijolao tamanho={tamanho} /><MonitorDeTubo tamanho={tamanho} /></>;
   if (decada === 2000) return <><CelularDeTeclas tamanho={tamanho} /><MonitorDeTubo tamanho={tamanho} /></>;

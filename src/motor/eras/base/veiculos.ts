@@ -13,6 +13,8 @@
  */
 
 import type { VersaoVeiculo } from '../../dados/bens';
+import { VERSOES_DA_EPOCA_MUNDO } from './veiculosMundo';
+import { ladoHistoricoCorrente, mesHistoricoCorrente } from './moedas';
 
 type V = VersaoVeiculo & { epoca: [number, number] };
 const BR = ['BR'] as const;
@@ -123,12 +125,17 @@ export const IMPORTACAO_LIBERADA = 1990;
  * O catálogo de uma vida histórica no ano: nas classes cobertas, o que se vendia; nas outras, o de sempre; os clássicos,
  * só os que já tinham pelo menos 20 anos. Depois de 2025: o catálogo atual.
  */
-export function versoesDoAno(atuais: VersaoVeiculo[], ano: number): VersaoVeiculo[] {
+export function versoesDoAno(atuais: VersaoVeiculo[], ano: number, pais = 'BR'): VersaoVeiculo[] {
   if (ano > 2025) return atuais;
-  const daEpoca = VERSOES_DA_EPOCA.filter(x => x.epoca[0] <= ano && ano <= x.epoca[1]);
+  // ERAS v3: as versões da época do PAÍS (as brasileiras da v1/v2 só no Brasil; as do mundo, pelo mercado de cada uma; a
+  // Alemanha Oriental tem o seu mercado). Antes, as brasileiras apareciam em qualquer país.
+  const mercado = pais === 'DE' && ladoHistoricoCorrente() === 'leste' && mesHistoricoCorrente() !== null ? 'DE_LESTE' : pais;
+  const doMundo = VERSOES_DA_EPOCA_MUNDO.filter(x => (x.mercados as readonly string[] | undefined)?.includes(mercado));
+  const daEpoca = [...(pais === 'BR' ? VERSOES_DA_EPOCA : []), ...doMundo].filter(x => x.epoca[0] <= ano && ano <= x.epoca[1]);
   const out = atuais.filter(x => {
     if (x.ano !== undefined) return x.ano <= ano - 20;
-    if (IMPORTADOS.has(x.classe) && ano < IMPORTACAO_LIBERADA) return false;
+    // A proibição de importar (1976–1990) é brasileira; no leste da Alemanha, nada de carro ocidental.
+    if (IMPORTADOS.has(x.classe) && ((pais === 'BR' && ano < IMPORTACAO_LIBERADA) || mercado === 'DE_LESTE')) return false;
     const d = ATUAIS_DESDE[x.id];
     if (!COBERTAS.has(x.classe)) return d === undefined || ano >= d;
     return d !== undefined && ano >= d;

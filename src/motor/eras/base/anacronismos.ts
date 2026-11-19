@@ -55,16 +55,20 @@ const REGRAS: Regra[] = [
   // antes do shopping e do supermercado, o centro e o armazém; antes do cartão, o dinheiro e o fiado.
   { quando: sem('tv'), trocas: [
     [/assistindo TV/g, 'ouvindo rádio'], [/assistir TV/g, 'ouvir rádio'], [/assistir à TV/g, 'ouvir o rádio'], [/na televisão/g, 'no rádio'], [/Na televisão/g, 'No rádio'], [/pela televisão/g, 'pelo rádio'],
-    [/na TV/g, 'no rádio'], [/Na TV/g, 'No rádio'], [/pela TV/g, 'pelo rádio'], [/da TV/g, 'do rádio'], [/a TV/g, 'o rádio'], [/A TV/g, 'O rádio'], [/a televisão/g, 'o rádio']
+    [/\bna TV\b/g, 'no rádio'], [/\bNa TV\b/g, 'No rádio'], [/\bpela TV\b/g, 'pelo rádio'], [/\bda TV\b/g, 'do rádio'], [/\ba TV\b/g, 'o rádio'], [/\bA TV\b/g, 'O rádio'], [/\ba televisão\b/g, 'o rádio'], [/televisão até tarde/g, 'conversa até tarde'], [/\bTV\b/g, 'rádio'], [/\btelevisão\b/g, 'rádio']
   ] },
-  { quando: sem('radio'), trocas: [[/no rádio/g, 'no jornal'], [/No rádio/g, 'No jornal'], [/pelo rádio/g, 'pelo jornal'], [/o rádio/g, 'o jornal'], [/O rádio/g, 'O jornal']] },
+  { quando: sem('radio'), trocas: [[/\bno rádio\b/g, 'no jornal'], [/\bNo rádio\b/g, 'No jornal'], [/\bpelo rádio\b/g, 'pelo jornal'], [/\bo rádio\b/g, 'o jornal'], [/\bO rádio\b/g, 'O jornal']] },
   { quando: (v: Vida) => sem('telefone_fixo')(v) && sem('orelhao')(v), trocas: [
     [/por telefone/g, 'por carta'], [/Por telefone/g, 'Por carta'], [/uma ligação/g, 'uma carta'], [/Uma ligação/g, 'Uma carta'], [/ligou para/g, 'escreveu para'], [/Ligou para/g, 'Escreveu para'],
-    [/telefonou/g, 'escreveu'], [/Telefonou/g, 'Escreveu'], [/no telefone/g, 'na carta'], [/o telefone/g, 'o correio']
+    [/\btelefonou\b/g, 'escreveu'], [/\bTelefonou\b/g, 'Escreveu'], [/\bno telefone\b/g, 'na carta'], [/\bo telefone\b/g, 'o correio']
   ] },
-  { quando: (v: Vida, a: number) => a < (paisDaEpoca(v) === 'US' ? 1956 : paisDaEpoca(v) === 'BR' ? 1966 : 1970), trocas: [[/no shopping/g, 'no centro'], [/ao shopping/g, 'ao centro'], [/do shopping/g, 'do centro'], [/o shopping/g, 'o centro'], [/shopping center/g, 'centro da cidade']] },
-  { quando: (v: Vida, a: number) => a < (paisDaEpoca(v) === 'US' ? 1930 : paisDaEpoca(v) === 'BR' ? 1953 : 1955), trocas: [[/no supermercado/g, 'no armazém'], [/ao supermercado/g, 'ao armazém'], [/do supermercado/g, 'do armazém'], [/o supermercado/g, 'o armazém'], [/supermercados?/g, 'armazém']] },
-  { quando: antes(1955), trocas: [[/no cartão de crédito/g, 'fiado'], [/cartão de crédito/g, 'caderneta de fiado'], [/no cartão/g, 'em dinheiro'], [/pagou no débito/g, 'pagou em dinheiro']] },
+  { quando: (v: Vida, a: number) => a < (paisDaEpoca(v) === 'US' ? 1956 : paisDaEpoca(v) === 'BR' ? 1966 : 1970), trocas: [[/Na praça de alimentação de um shopping/g, 'Na rua do comércio'], [/Num shopping lotado/g, 'Numa loja lotada'], [/\bde um shopping\b/g, 'de uma loja de departamentos'], [/\bnum shopping\b/g, 'numa loja de departamentos'], [/\bno shopping\b/g, 'no centro'], [/\bao shopping\b/g, 'ao centro'], [/\bdo shopping\b/g, 'do centro'], [/\bo shopping\b/g, 'o centro'], [/shopping center/g, 'centro da cidade']] },
+  { quando: (v: Vida, a: number) => a < (paisDaEpoca(v) === 'US' ? 1930 : paisDaEpoca(v) === 'BR' ? 1953 : 1955), trocas: [[/\bno supermercado\b/g, 'no armazém'], [/\bao supermercado\b/g, 'ao armazém'], [/\bdo supermercado\b/g, 'do armazém'], [/\bo supermercado\b/g, 'o armazém'], [/\bsupermercados?\b/g, 'armazém']] },
+  { quando: sem('geladeira'), trocas: [[/O sofá e a geladeira/g, 'O sofá e o guarda-comida'], [/a geladeira tinha só água e um pote de margarina/g, 'o armário tinha só pão e um pote de banha'], [/na geladeira/g, 'no guarda-comida'], [/da geladeira/g, 'do guarda-comida'], [/\ba geladeira\b/g, 'o guarda-comida']] },
+  { quando: antes(1966), trocas: [[/comendo miojo na panela/g, 'comendo pão com o que havia'], [/\bmiojo\b/g, 'sopa']] },
+  { quando: (v: Vida, a: number) => a < (paisDaEpoca(v) === 'US' ? 1950 : paisDaEpoca(v) === 'BR' ? 1956 : 1966), trocas: [[/no cartão de crédito/g, 'fiado'], [/cartão de crédito/g, 'caderneta de fiado'], [/no cartão/g, 'em dinheiro'], [/pagou no débito/g, 'pagou em dinheiro']] },
+  { quando: antes(2008), trocas: [[/\baplicativos\b/g, 'programas'], [/\baplicativo\b/g, 'programa']] },
+  { quando: sem('radio'), trocas: [[/rádio à noite/g, 'histórias à noite'], [/\brádio\b/g, 'jornal']] },
   { quando: antes(1925), trocas: [[/de ônibus/g, 'de bonde'], [/o ônibus/g, 'o bonde'], [/no ônibus/g, 'no bonde']] },
   { quando: sem('smartphone'), trocas: [
     // ERAS MODERNAS: as brincadeiras de amigo que pressupõem vídeo, meme e foto de perfil no bolso (recados do aparelho).
@@ -91,14 +95,14 @@ export function textoDaEpoca(v: Vida, texto: string): string {
  * corrente vem depois). Serve à auditoria (`scripts/sim/textosEras2.ts`) e aos testes: um texto de uma vida histórica que
  * cita um destes antes do ano é anacronismo. Fontes: as mesmas de `tecnologias` (datas de chegada) e as leis citadas.
  */
-export const TERMOS_DATADOS: readonly { re: RegExp; desde: number; nome: string; tec?: string; soBR?: boolean }[] = [
+export const TERMOS_DATADOS: readonly { re: RegExp; desde: number; nome: string; tec?: string; soBR?: boolean; porPais?: Record<string, number>; outros?: number }[] = [
   // ERAS v3 · antes de 1970 (a data é a do Brasil; nos outros países, a chegada da tecnologia lá, quando há `tec`).
   { re: /\btelevisão\b|\bTV\b/, desde: 1950, nome: 'televisão', tec: 'tv' },
   { re: /\brádio\b/i, desde: 1922, nome: 'rádio', tec: 'radio' },
   { re: /\bgeladeira\b/i, desde: 1947, nome: 'geladeira', tec: 'geladeira' },
-  { re: /\bshopping\b/i, desde: 1966, nome: 'shopping' },
-  { re: /\bsupermercado/i, desde: 1953, nome: 'supermercado' },
-  { re: /\bcartão de crédito\b/i, desde: 1956, nome: 'cartão de crédito' },
+  { re: /\bshopping\b/i, desde: 1966, nome: 'shopping', porPais: { US: 1956, BR: 1966 }, outros: 1970 },
+  { re: /\bsupermercado/i, desde: 1953, nome: 'supermercado', porPais: { US: 1930, BR: 1953 }, outros: 1955 },
+  { re: /\bcartão de crédito\b/i, desde: 1956, nome: 'cartão de crédito', porPais: { US: 1950, BR: 1956 }, outros: 1966 },
   { re: /\bWhats ?App\b|\bzap\b|\bzapzap\b/i, desde: 2010, nome: 'aplicativo de mensagens' },
   { re: /\bInstagram\b|\binsta\b/i, desde: 2010, nome: 'Instagram' },
   { re: /\bFacebook\b/i, desde: 2008, nome: 'Facebook' },
@@ -169,7 +173,7 @@ export function anacronismosNoTexto(texto: string, ano: number, pais = 'BR'): st
   const out: string[] = [];
   for (const t of TERMOS_DATADOS) {
     if (t.soBR && pais !== 'BR') continue;
-    const desde = pais !== 'BR' && t.tec ? datasNoPais(pais, t.tec)?.chega ?? t.desde : t.desde;
+    const desde = t.porPais ? t.porPais[pais] ?? t.outros ?? t.desde : pais !== 'BR' && t.tec ? datasNoPais(pais, t.tec)?.chega ?? t.desde : t.desde;
     if (ano < desde && t.re.test(texto)) out.push(t.nome);
   }
   return out;

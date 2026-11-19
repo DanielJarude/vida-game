@@ -16,6 +16,7 @@ import type { Conteudo, Ctx } from './base';
 import type { Empresa } from '../tipos';
 import { clamp, rngDe } from '../rng';
 import { anoDe } from '../tempo';
+import { temAcesso } from '../eras/base/contexto';
 import { dinheiro as fmt } from '../texto';
 import { custa, estresse, feliz, local, perda, saude } from './efeitos';
 import { balanco, orcamento, parcelaPrice } from '../sistemas/dinheiro';
@@ -58,7 +59,8 @@ export const ACONTECIMENTOS_129_ECONOMIA: Conteudo[] = [
   /* ============================================================== pobreza */
   {
     id: 'eco129_pob_geladeira', manual: true, tipo: 'decisao', idade: [18, 95], tema: 'dinheiro', repetir: 8,
-    quando: c => em(c, 'pobreza') && sozinho(c),
+    // ERAS v3: numa vida histórica, só quando a geladeira já faz parte da casa.
+    quando: c => em(c, 'pobreza') && sozinho(c) && (!c.v.era || temAcesso(c.v, 'geladeira')),
     titulo: 'A geladeira parou',
     texto: c => `A geladeira parou numa terça, cheia. O técnico olhou o motor e balançou a cabeça: não compensa consertar. Uma nova custa uns ${fmt(geladeira(c))}; na conta há ${fmt(Math.max(0, c.v.financas.conta))}.`,
     opcoes: [

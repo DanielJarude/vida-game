@@ -138,7 +138,7 @@ export function meioDeComunicacao(v: Vida): MeioDeComunicacao {
   if (!v.era) return 'smartphone';
   // ERAS v3: sem telefone em casa e antes do telefone público na rua (no Brasil, o orelhão de 1972; nos outros países, a
   // cabine pública já existia, mas a vida de quem não tinha telefone em casa era de cartas e visitas).
-  if (!temAcesso(v, 'telefone_fixo') && (paisDaEpoca(v) === 'BR' ? anoDe(v.t) < 1972 : true)) return 'cartas';
+  if (!temAcesso(v, 'telefone_fixo') && (paisDaEpoca(v) === 'BR' ? anoDe(v.t) < 1972 : anoDe(v.t) < 1950 || !temAcesso(v, 'orelhao'))) return 'cartas';
   // O aparelho é da pessoa: a criança usa o telefone da casa até ganhar o seu (o primeiro celular por volta dos 12; o
   // primeiro smartphone por volta dos 11 — e dos 10, quando ele já é de todo mundo, como na vida contemporânea).
   const i = Math.floor((v.t - v.eu.tNasc) / 12);
@@ -167,6 +167,7 @@ export function normalizarEra(v: Vida): void {
   if (x.dia !== undefined && !(Number.isInteger(x.dia) && x.dia >= 1 && x.dia <= 31)) delete x.dia;
   if (x.partilha !== undefined && !(typeof x.partilha === 'number' && x.partilha >= 0 && x.partilha <= 1)) delete x.partilha;
   if (x.guerras !== undefined) { if (!Array.isArray(x.guerras)) delete x.guerras; else x.guerras = x.guerras.filter(g => typeof g === 'string'); }
+  if (x.morte !== undefined && !(x.morte && typeof x.morte.t === 'number' && typeof x.morte.causa === 'string')) delete x.morte;
   const c = x.congelado;
   if (c && !(typeof c.valor === 'number' && Number.isFinite(c.valor) && c.valor >= 0 && typeof c.tVolta === 'number' && typeof c.parcelas === 'number' && typeof c.perda === 'number')) delete x.congelado;
   if (!Array.isArray(v.era!.vistos)) v.era!.vistos = [];

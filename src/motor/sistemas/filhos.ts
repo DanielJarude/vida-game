@@ -14,6 +14,8 @@
  * sabendo: AUTONOMIA NÃO É OPACIDADE.
  */
 
+import { fatorDoSuperior } from '../eras/base/sociedade';
+import { bolsaDaEpoca } from '../eras/base/profissoes';
 import { doPrograma, educacaoDaVida, oPrograma } from '../mundo/vida';
 import { circulaLivre, nacionalidadesDaPessoa, nacionalidadesDoBebe } from '../mundo/vida';
 import type { Rng } from '../rng';
@@ -339,7 +341,9 @@ function trajetoria(v: Vida, r: Rng, f: Pessoa, vin: Vinculo, i: number, cota: C
     const idx = Math.floor(hash(k + 'curso') * CURSOS_NPC.length);
     const curso = nomeCurso(CURSOS_NPC[idx]);
     const escolaPrivada = doJogador && temFato(v, 'filhos_escola_privada') ? 0.22 : 0;
-    const chancePublica = clamp(0.16 + escolaPrivada + (pc > 2600 ? 0.08 : 0) + vida.aptidao * 0.3 + ((vin.presenca ?? 30) > 60 ? 0.05 : 0), 0.04, 0.8);
+    // ERAS v3: numa vida histórica, a universidade estava ao alcance de poucos (`eras/base/sociedade.fatorDoSuperior`).
+    const superior = fatorDoSuperior();
+    const chancePublica = clamp((0.16 + escolaPrivada + (pc > 2600 ? 0.08 : 0) + vida.aptidao * 0.3 + ((vin.presenca ?? 30) > 60 ? 0.05 : 0)) * superior, superior < 1 ? 0.005 : 0.04, 0.8);
     if (r.chance(chancePublica)) {
       f.estudo = { curso, paga: 'publica', tFim: v.t + 48, nivel: 'superior' };
       comunicar(v, f, cota, {
@@ -350,7 +354,7 @@ function trajetoria(v: Vida, r: Rng, f: Pessoa, vin: Vinculo, i: number, cota: C
       if (doJogador) abalar(v, `${f.nome} na universidade`, 5, 0);
       return;
     }
-    if (pc < 2200 && vida.aptidao > -0.1 && r.chance(0.4)) {
+    if (pc < 2200 && vida.aptidao > -0.1 && r.chance(0.4 * superior) && (!v.era || bolsaDaEpoca(v))) {
       f.estudo = { curso, paga: 'bolsa', tFim: v.t + 48, nivel: 'superior' };
       comunicar(v, f, cota, { texto: `${f.nome} conseguiu bolsa integral ${doPrograma(educacaoDaVida(v).bolsa?.nome ?? 'programa público')} para ${curso}.`, tipo: 'estudo', relevancia: rel, tom: 'bom', evento: 'filho_marco', peso: 25, marco: `Bolsa ${doPrograma(educacaoDaVida(v).bolsa?.nome ?? 'programa público')} para ${curso}.`, pesoMarco: 2 });
       return;

@@ -137,6 +137,8 @@ export const ACONTECIMENTOS_15: Conteudo[] = [
   },
   {
     id: 'inf15_celular', manual: true, tipo: 'decisao', idade: [10, 12], tema: 'infancia', peso: 1.8, repetir: 0,
+    // ERAS v3: numa vida histórica, só quando o celular já existe e está ao alcance da família.
+    quando: c => !c.v.era || temAcesso(c.v, 'celular'),
     papeis: { genitor: fixo(P.genitorEmCasa) },
     titulo: 'O primeiro celular',
     texto: c => `Metade da turma já tem celular. Você quer o seu — e ${nome(c, 'genitor') || 'a família'} tem opinião sobre isso.`,

@@ -12,6 +12,7 @@
  */
 
 import type { EfeitosMundo14 } from '../../dados14/mundo/tipos';
+import { ACONTECIMENTOS_BR_1900, ESPORTE_MUNDIAL_BR_1900, PRESIDENTES_BR_1900 } from './brasil1900';
 
 export type CategoriaHistorica = 'politica' | 'economia' | 'sociedade' | 'direitos' | 'esporte' | 'cultura' | 'desastre' | 'saude' | 'tecnologia';
 
@@ -32,12 +33,12 @@ export interface AcontecimentoBR {
   mods?: EfeitosMundo14;
   dura?: number;
   /** Uma consequência especial aplicada pelo motor da época (`eras/ano`). */
-  especial?: 'collor' | 'auxilio' | 'covid_br' | 'apagao';
+  especial?: 'collor' | 'auxilio' | 'covid_br' | 'apagao' | 'gripe_1918';
   /** O que o jogo simula (dito ao jogador só quando aplicado). */
   efeito?: string;
 }
 
-export const ACONTECIMENTOS_BR: readonly AcontecimentoBR[] = [
+const ACONTECIMENTOS_BR_1970: readonly AcontecimentoBR[] = [
   // ERAS v2 · a saúde (leis com data; o jogo não muda o tratamento por isso — é o contexto do atendimento).
   { id: 'ze_gotinha', data: [1986, 6], categoria: 'saude', titulo: 'O Zé Gotinha nas campanhas de vacinação', fato: 'Em 1986, o Ministério da Saúde lançou o Zé Gotinha, personagem das campanhas nacionais de vacinação contra a poliomielite; os dias nacionais de vacinação lotavam os postos.', fonte: 'Ministério da Saúde (Programa Nacional de Imunizações)', idadeMin: 3, peso: 'cotidiano' },
   { id: 'sus', data: [1990, 9], categoria: 'saude', titulo: 'A Lei Orgânica da Saúde cria o SUS', fato: 'Em 19 de setembro de 1990, a Lei 8.080 regulamentou o Sistema Único de Saúde: o atendimento público passou a ser de todos, e não só de quem tinha carteira assinada, como no tempo do INAMPS.', fonte: 'Constituição de 1988, art. 196; Lei 8.080/1990', idadeMin: 16 },
@@ -123,8 +124,12 @@ export const ACONTECIMENTOS_BR: readonly AcontecimentoBR[] = [
   { id: 'cop30', data: [2025, 11, 10], categoria: 'sociedade', titulo: 'A COP30 em Belém', fato: 'Em novembro de 2025, Belém sediou a 30ª Conferência das Nações Unidas sobre Mudança do Clima.', fonte: 'Organização das Nações Unidas (UNFCCC); Governo Federal.', peso: 'cotidiano', idadeMin: 10, ufs: ['PA'] }
 ];
 
+/** ERAS v3: os de 1900 a 1969 (`brasil1900`) e os de 1970 em diante. */
+export const ACONTECIMENTOS_BR: readonly AcontecimentoBR[] = [...ACONTECIMENTOS_BR_1900, ...ACONTECIMENTOS_BR_1970];
+
 /** As posses presidenciais (para o painel da época: quem governa o país no mês). Fonte: Biblioteca da Presidência da República. */
 export const PRESIDENTES_BR: readonly { nome: string; desde: [number, number]; nota?: string }[] = [
+  ...PRESIDENTES_BR_1900,
   { nome: 'Emílio Garrastazu Médici', desde: [1969, 10], nota: 'eleito pelo Congresso, no regime militar' },
   { nome: 'Ernesto Geisel', desde: [1974, 3], nota: 'eleito pelo Colégio Eleitoral, no regime militar' },
   { nome: 'João Figueiredo', desde: [1979, 3] },
@@ -173,6 +178,7 @@ const OLIMPIADAS: [number, number, string][] = [
   [2004, 8, 'Atenas'], [2008, 8, 'Pequim'], [2012, 8, 'Londres'], [2021, 7, 'Tóquio (adiados de 2020 pela pandemia)'], [2024, 8, 'Paris']
 ];
 export const ESPORTE_MUNDIAL_BR: readonly AcontecimentoBR[] = [
+  ...ESPORTE_MUNDIAL_BR_1900,
   ...COPAS.map(([ano, mes, onde, como]): AcontecimentoBR => ({ id: `copa_${ano}`, data: [ano, mes], categoria: 'esporte', titulo: `A Copa de ${ano}`, fato: `A Copa do Mundo de ${ano} foi ${onde}. ${como}`, fonte: 'FIFA.', peso: 'cotidiano', idadeMin: 5, mods: { ramos: { restaurante: 1.03 } } })),
   ...OLIMPIADAS.map(([ano, mes, onde]): AcontecimentoBR => ({ id: `jogos_${ano}`, data: [ano, mes], categoria: 'esporte', titulo: `Os Jogos de ${onde.split(' (')[0]}`, fato: `Os Jogos Olímpicos de ${ano} foram em ${onde}. As provas passavam na TV a qualquer hora do dia, e o quadro de medalhas virou assunto.`, fonte: 'Comitê Olímpico Internacional; Comitê Olímpico do Brasil.', peso: 'cotidiano', idadeMin: 6 }))
 ];

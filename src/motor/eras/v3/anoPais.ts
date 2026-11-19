@@ -23,7 +23,7 @@ import { mundoDe } from '../../v14/mundo/mundo14';
 import { lancar } from '../../sistemas/extrato';
 import { pacoteDaEra, moedaNoMes, naSerie, type AcontecimentoDaEpoca, type PacoteDeEra, type RegraSocial, type LadoDaDivisao } from '../base/pacote';
 import { nivelEconomico, temAcesso, tecnologia } from '../base/contexto';
-import { guerrasDoPais, regrasDoPais, regraValeEm } from '../base/sociedade';
+import { guerrasDoPais, regrasDoPais, regraValeEm, taxaDoSuperior } from '../base/sociedade';
 import { ladoHistoricoCorrente } from '../base/moedas';
 import { fatorNominalNoPais, escritaAntiga } from '../../mundo/moeda';
 import type { EventoMundial14, TipoEventoMundial } from '../../dados14/mundo/tipos';
@@ -118,18 +118,22 @@ export function ehDoLugarNoPais(v: Vida, a: { divisoes?: string[]; lado?: LadoDa
   return !!m.uf && a.divisoes.includes(m.uf);
 }
 
+/** Uma das formas (escolhida pelo acontecimento, sem gastar o acaso da vida): o texto não repete a mesma moldura. */
+const uma = (id: string, xs: string[]) => { let h = 0; for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0; return xs[h % xs.length]; };
+
 function comoChegou(v: Vida, a: AcontecimentoDaEpoca, ano: number): string {
   const i = idade(v);
   if (i < 12) {
     if (a.categoria === 'desastre' || a.categoria === 'guerra') return 'Você era criança, mas lembra do medo nos rostos dos adultos. ';
     if (a.categoria === 'esporte') return 'Você era criança e lembra da festa dos adultos. ';
-    return 'Você era criança, mas lembra dos adultos falando disso. ';
+    return uma(a.id, ['Você era criança, mas lembra dos adultos falando disso. ', 'Você era pequeno demais para entender, mas guardou a conversa da cozinha. ', '']);
   }
-  if (a.divisoes) return '';
-  if (temAcesso(v, 'smartphone', ano)) return 'A notícia chegou primeiro pelo celular. ';
-  if (temAcesso(v, 'tv', ano)) return 'Na televisão e no rádio, só se falava nisso. ';
-  if (temAcesso(v, 'radio', ano)) return 'O rádio deu a notícia, e o jornal do dia seguinte contou o resto. ';
-  return 'A notícia correu pelos jornais e de boca em boca. ';
+  // Os de todo dia, sem moldura: o fato basta. A moldura fica para o que marcou.
+  if (a.divisoes || a.peso !== 'biografia') return '';
+  if (temAcesso(v, 'smartphone', ano)) return uma(a.id, ['A notícia chegou primeiro pelo celular. ', 'O celular não parou de tocar com a notícia. ']);
+  if (tecnologia(v, 'tv', ano) === 'comum') return uma(a.id, ['Na televisão e no rádio, só se falava nisso. ', 'A família parou diante da televisão. ', 'O telejornal da noite não falou de outra coisa. ']);
+  if (temAcesso(v, 'radio', ano)) return uma(a.id, ['O rádio deu a notícia, e o jornal do dia seguinte contou o resto. ', 'A notícia veio pelo rádio da sala, e ninguém falou durante o boletim. ', 'Os jornais esgotaram nas bancas. ']);
+  return uma(a.id, ['A notícia correu pelos jornais e de boca em boca. ', 'Os jornais esgotaram; quem não sabia ler ouvia a notícia lida em voz alta na praça. ']);
 }
 
 /** O efeito especial no dinheiro ou no corpo; devolve a frase pessoal. */
@@ -291,6 +295,20 @@ export function guerrasDoAno(v: Vida, pais: string, lado: LadoDaDivisao): void {
 }
 const flexG = (v: Vida, m: string, f: string) => (v.eu.genero === 'feminino' ? f : m);
 
+/**
+ * A escola e a universidade da época: aos 17, quando poucos seguiam estudando, a vida diz quantos (a taxa de matrícula
+ * no ensino superior do país, `eras/base/sociedade`). Uma vez; só quando ela é baixa (menos de 20 em cada cem).
+ */
+export function estudoDaEpoca(v: Vida, pais: string): void {
+  if (idade(v) !== 17 || visto(v, 'superior')) return;
+  const ano = anoDe(v.t);
+  const taxa = taxaDoSuperior(pais, ano);
+  if (taxa === undefined || taxa >= 20 || ano > 2025) return;
+  marcar(v, 'superior');
+  const n = Math.max(1, Math.round(taxa));
+  escrever(v, { texto: `Na sua turma, quase ninguém seguiria para a faculdade: em ${ano}, só ${n} em cada cem jovens ${n === 1 ? 'chegava' : 'chegavam'} ao ensino superior no país — quase todos de famílias com dinheiro. Para a maioria, os dezoito anos eram a idade de trabalhar.`, relevancia: 'cotidiano', tema: 'estudo', fato: { tipo: 'era', dados: { categoria: 'sociedade', evento: 'superior' } } });
+}
+
 /* ------------------------------------------------------------------ 5. A lembrança do ano (do país) */
 
 function lembranca(v: Vida, p: PacoteDeEra, lado: LadoDaDivisao): void {
@@ -325,6 +343,7 @@ export function processarEraNoPais(v: Vida, pais: string, ec: AnoEconomico, comu
   devolverCongelado(v, p, tFim, lado);
   regrasDoAno(v, pais, lado);
   guerrasDoAno(v, pais, lado);
+  estudoDaEpoca(v, pais);
   comum(v);
   lembranca(v, p, lado);
   return true;

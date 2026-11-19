@@ -2,6 +2,14 @@
    líquido do celular); tudo o mais vem dos tokens do VIDA (claro e escuro). Nada aqui muda a vida contemporânea. */
 
 [data-era] { --era-tom: var(--accent); --era-tela: var(--bg-inset); --era-fonte: var(--font-serif); }
+/* ERAS v3 · de 1900 a 1960: sépia, tinta de jornal, o verde-oliva da guerra, o pastel dos anos 1950, o laranja de 1960. */
+[data-era='1900'] { --era-tom: #7a5a3a; --era-tela: #d8c8a8; }
+[data-era='1910'] { --era-tom: #6e5a48; --era-tela: #d4c6ad; }
+[data-era='1920'] { --era-tom: #8a6a2e; --era-tela: #d9c99a; }
+[data-era='1930'] { --era-tom: #6a5f4a; --era-tela: #cfc6aa; }
+[data-era='1940'] { --era-tom: #5d6a3e; --era-tela: #c9c8a6; }
+[data-era='1950'] { --era-tom: #2f8a8a; --era-tela: #cfe0d8; }
+[data-era='1960'] { --era-tom: #c2662e; --era-tela: #e6d2b4; }
 [data-era='1970'] { --era-tom: #a0662a; --era-tela: #c9b98f; }
 [data-era='1980'] { --era-tom: #c47a3d; --era-tela: #a9c2a4; }
 [data-era='1990'] { --era-tom: #8a6bb8; --era-tela: #b9cba3; }
@@ -127,3 +135,24 @@
   .cel__aparelho[data-meio='fixo'] .cel__status { padding-top: calc(44px + env(safe-area-inset-top)); }
   .cel__aparelho[data-meio='fixo'], .cel__aparelho[data-meio='celular'] { border: 0; border-radius: 0; box-shadow: none; }
 }
+
+/* ------------------------------------------------------------ ERAS v3 · a escolha: país, década, mês e dia */
+.epoca__portas--paises { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (min-width: 560px) { .epoca__portas--paises { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (min-width: 900px) { .epoca__portas--paises { grid-template-columns: repeat(7, minmax(0, 1fr)); } }
+.epoca__decadas { display: flex; flex-wrap: wrap; gap: .35rem; }
+.epoca__decada { font-family: var(--font-serif); font-weight: 600; }
+.epoca__decada[aria-checked='true'] { background: var(--era-tom); color: #fff; border-color: var(--era-tom); }
+.epoca__data { display: flex; flex-wrap: wrap; gap: .5rem .75rem; align-items: flex-end; }
+.epoca__campo { display: grid; gap: .15rem; font-size: var(--type-caption, .78rem); color: var(--text-secondary); }
+.epoca__campo select { min-height: var(--touch-target, 44px); padding: 0 .5rem; border-radius: var(--radius-md); border: 1px solid var(--rule); background: var(--surface); color: var(--text-primary); font: inherit; font-size: .95rem; }
+.epoca__data-texto { margin: 0; font-family: var(--font-serif); font-size: .95rem; color: var(--text-primary); flex: 1 1 12rem; min-width: 0; }
+
+/* ------------------------------------------------------------ ERAS v3 · o aparelho "cartas": papel de carta e carimbo */
+.cel__aparelho[data-meio='cartas'] { --cel-fundo: color-mix(in srgb, var(--papel, var(--surface)) 88%, var(--era-tom)); border-width: 12px; border-color: color-mix(in srgb, var(--era-tom) 55%, #4a3a28); border-radius: 8px; box-shadow: 0 0 0 2px color-mix(in srgb, var(--era-tom) 35%, #000), var(--shadow-lg, 0 30px 60px rgba(0,0,0,.35)); }
+.cel__aparelho[data-meio='cartas']::before { display: none; }
+.cel__aparelho[data-meio='cartas'] .cel__status { justify-content: center; padding: 12px 16px 10px; font: 700 13px/1.2 var(--font-serif); letter-spacing: .08em; text-transform: uppercase; background: color-mix(in srgb, var(--era-tom) 18%, var(--cel-fundo)); border-bottom: 1px dashed color-mix(in srgb, var(--era-tom) 60%, transparent); }
+.cel__aparelho[data-meio='cartas'] .cel__inicio { background: repeating-linear-gradient(to bottom, transparent 0 27px, color-mix(in srgb, var(--era-tom) 18%, transparent) 27px 28px), var(--cel-fundo); }
+.cel__aparelho[data-meio='cartas'] .cel__tile { border-radius: 4px; background: var(--era-tom); color: #fff; }
+.cel__aparelho[data-meio='cartas'] .cel__home { background: color-mix(in srgb, var(--era-tom) 18%, var(--cel-fundo)); }
+.cel__aparelho[data-meio='cartas'] .cel__home button { width: 56px; height: 8px; border-radius: 4px; }

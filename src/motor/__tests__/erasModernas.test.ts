@@ -50,7 +50,8 @@ describe('ERAS MODERNAS', () => {
   it('os marcos da infância nunca são de antes do nascimento, e quem nasce no fim da década vê os anos seguintes', () => {
     for (const d of DECADAS) for (let ano = d.anos[0]; ano <= d.anos[1]; ano++) {
       const m = marcosDaInfancia(d.marcos, ano);
-      for (const a of m) expect(a.data[0], `${ano}: ${a.id}`).toBeGreaterThanOrEqual(ano);
+      // ERAS v3: o marco agora traz o ano pronto (`ano`), para servir a todos os países.
+      for (const a of m) expect(a.ano, `${ano}: ${a.id}`).toBeGreaterThanOrEqual(ano);
       expect(m.length).toBeLessThanOrEqual(4);
     }
     expect(marcosDaInfancia(DECADAS.find(d => d.decada === 2000)!.marcos, 2009).length).toBeGreaterThan(0);

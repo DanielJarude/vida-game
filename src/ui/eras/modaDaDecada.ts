@@ -67,9 +67,50 @@ const DECADAS: Record<number, Opcao[]> = {
   ]
 };
 
+/**
+ * ERAS v3 · DE 1900 A 1969: a roupa de todo dia era muito mais marcada pelo gênero e pela formalidade — o terno e o
+ * chapéu na rua, o vestido comprido e depois na altura da canela, a saia e a blusa; a calça feminina e o jeans só se
+ * espalham nos anos 1960. Cores sóbrias (o tecido tingido em casa ou comprado a metro). APROXIMAÇÃO lida de acervos de
+ * moda (Museu da Moda, Victoria and Albert Museum, Metropolitan Museum — Costume Institute) e da fotografia de rua.
+ */
+const SOBRIAS = ['#3b3a36', '#4a4038', '#2b2f36', '#5d5246', '#6b5e4e'];
+const CLARAS = ['#efe7d6', '#e6dcc8', '#d9d4c7', '#f2ece0'];
+const VESTIDO_ANTIGO: Record<number, Peca[]> = {
+  1900: [{ parte: 'inteira', forma: 'vestido', comprimento: 'longo', cor: ['#3b3a36', '#5d4a5a', '#2f3b4a', '#e6dcc8'], manga: 'longa', gola: 'alta', modelo: 'coluna' }],
+  1910: [{ parte: 'inteira', forma: 'vestido', comprimento: 'longo', cor: ['#3b3a36', '#5b6470', '#6b4e3a', '#e6dcc8'], manga: 'longa', gola: 'alta', modelo: 'imperio' }],
+  1920: [{ parte: 'inteira', forma: 'vestido', comprimento: 'midi', cor: ['#2d3e5c', '#7b5a3a', '#efe7d6', '#5d5246'], manga: 'curta', gola: 'v', modelo: 'coluna' }],
+  1930: [{ parte: 'inteira', forma: 'vestido', comprimento: 'midi', cor: ['#2f5a52', '#7b2d3a', '#2d3e5c', '#c9b28a'], cor2: '#f2ece0', estampa: 'floral', manga: 'curta', gola: 'v', modelo: 'evase' }],
+  1940: [{ parte: 'inteira', forma: 'vestido', comprimento: 'joelho', cor: ['#3f5a48', '#7b2d3a', '#2d3e5c', '#8a7a5a'], manga: 'curta', gola: 'colarinho', modelo: 'evase', cinto: '#3a2a20' }],
+  1950: [{ parte: 'inteira', forma: 'vestido', comprimento: 'midi', cor: ['#c2566b', '#2f6a8a', '#f2c200', '#efe7d6'], manga: 'curta', gola: 'redonda', modelo: 'rodado', cinto: '#1b1b1d' }],
+  1960: [{ parte: 'inteira', forma: 'vestido', comprimento: 'curto', cor: ['#f2c200', '#1d4fa3', '#c8102e', '#f2efe8', '#2a8a6a'], manga: 'sem', gola: 'redonda', modelo: 'coluna' }]
+};
+function roupaAntiga(h: number, idade: number, genero: string | undefined, d: number): Conjunto {
+  const fem = genero === 'feminino' || (genero !== 'masculino' && h % 2 === 0);
+  const sapato: Peca = { parte: 'pes', forma: fem ? 'sapatilha' : 'sapato', cor: ['#3a2a20', '#1b1b1d'], sola: '#1b1515' } as Peca;
+  const calca: Peca = { parte: 'baixo', forma: 'calca', corte: 'reta', cor: SOBRIAS, vinco: true, passadores: true };
+  const camisa: Peca = { parte: 'cima', forma: 'camisa', cor: CLARAS, manga: d >= 1950 && h % 3 === 0 ? 'curta' : 'longa', gola: 'colarinho', botoes: true, modelo: 'caixa', barra: 'reta' };
+  if (idade < 12) {
+    // A criança: o menino de bermuda (ou calça curta) e camisa; a menina de vestido na altura do joelho.
+    if (fem) return { inteira: cor({ parte: 'inteira', forma: 'vestido', comprimento: 'joelho', cor: ['#c2566b', '#2f6a8a', '#efe7d6', '#7b5a3a'], manga: 'curta', gola: 'redonda', modelo: 'evase' }, h >>> 1), pes: cor(sapato, h >>> 3) };
+    return { cima: cor(camisa, h >>> 1), baixo: cor({ parte: 'baixo', forma: 'bermuda', corte: 'reta', cor: SOBRIAS }, h >>> 2), pes: cor(sapato, h >>> 3) };
+  }
+  if (fem) {
+    // Saia e blusa ou o vestido da década; a calça feminina só nos anos 1960, para as jovens.
+    if (d >= 1960 && idade < 30 && h % 3 === 0) return { cima: cor({ parte: 'cima', forma: 'blusa', cor: CLARAS, manga: 'curta', gola: 'redonda' } as Peca, h >>> 1), baixo: cor({ parte: 'baixo', forma: 'calca', corte: 'justa', cor: SOBRIAS }, h >>> 2), pes: cor(sapato, h >>> 3) };
+    if (h % 3 === 1) return { cima: cor({ parte: 'cima', forma: 'blusa', cor: CLARAS, manga: d < 1920 ? 'longa' : 'curta', gola: d < 1920 ? 'alta' : 'colarinho' } as Peca, h >>> 1), baixo: cor({ parte: 'baixo', forma: 'saia', corte: d < 1920 ? 'midi' : 'midi', cor: SOBRIAS }, h >>> 2), pes: cor(sapato, h >>> 3) };
+    const v = VESTIDO_ANTIGO[d] ?? VESTIDO_ANTIGO[1950];
+    return { inteira: cor(v[h % v.length], h >>> 1), pes: cor(sapato, h >>> 3) };
+  }
+  // O homem: o terno na rua até os anos 1950 (um em cada dois); camisa e calça de tecido; o jovem dos anos 1960, de jeans.
+  if (d >= 1960 && idade < 30 && h % 2 === 0) return { cima: cor(POLO, h >>> 1), baixo: cor(JEANS_RETO, h >>> 2), pes: cor(LONA, h >>> 3) };
+  if (d < 1960 && h % 2 === 0) return { inteira: cor({ parte: 'inteira', forma: 'terno', comprimento: 'calca', cor: SOBRIAS, manga: 'longa', gola: 'colarinho', colete: d < 1940 } as Peca, h >>> 1), pes: cor(sapato, h >>> 3) };
+  return { cima: cor(camisa, h >>> 1), baixo: cor(calca, h >>> 2), pes: cor(sapato, h >>> 3) };
+}
+
 /** A roupa de todo dia da década para esta pessoa (undefined: a do jogo de hoje). */
-export function roupaDaDecada(h: number, idade: number): Conjunto | undefined {
+export function roupaDaDecada(h: number, idade: number, genero?: string): Conjunto | undefined {
   if (decada === null || decada >= 2020) return undefined;
+  if (decada < 1970) return roupaAntiga(h, idade, genero, Math.max(1900, Math.floor(decada / 10) * 10));
   const ops = DECADAS[Math.max(1970, Math.min(2010, decada))];
   if (!ops) return undefined;
   // Os mais velhos vestem o que se usava na juventude: a camisa e a calça de tecido.

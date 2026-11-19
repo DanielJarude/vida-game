@@ -62,7 +62,7 @@ for (const pais of PAISES) {
           total++;
           if (b.fato?.tipo === 'era') { eraTextos++; if (!exemplo && String(b.fato.dados.evento).includes(':')) exemplo = `${anoDe(b.t)}: ${b.texto.slice(0, 160)}`; }
           const ab = anoDe(b.t);
-          if (ab <= 2025) for (const x of anacronismosNoTexto(b.texto, ab)) { const k = `${x} @${ab} "${b.texto.slice(0, 90)}"`; anacr.set(k, (anacr.get(k) ?? 0) + 1); }
+          if (ab <= 2025) for (const x of anacronismosNoTexto(b.texto, ab, pais)) { const k = `${x} @${ab} "${b.texto.slice(0, 90)}"`; anacr.set(k, (anacr.get(k) ?? 0) + 1); }
         }
       } catch (err) { crashes++; log(`  CRASH ${pais} ${ano} #${s} em ${anoDe(v.t)}: ${(err as Error).stack?.split('\n').slice(0, 3).join(' | ')}`); }
     }

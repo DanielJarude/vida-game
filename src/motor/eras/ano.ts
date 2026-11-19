@@ -26,7 +26,7 @@ import { mundoDe } from '../v14/mundo/mundo14';
 import { lancar } from '../sistemas/extrato';
 import { fatorNominal, FIM_DA_SERIE, ipcaDoAno, padraoEm, PADROES_MONETARIOS_BR, nivelDePrecos } from './base/moedas';
 import { nivelEconomico, temAcesso, tecnologia, paisDaEpoca } from './base/contexto';
-import { processarEraNoPais, regrasDoAno, guerrasDoAno } from './v3/anoPais';
+import { processarEraNoPais, regrasDoAno, guerrasDoAno, estudoDaEpoca } from './v3/anoPais';
 import { ACONTECIMENTOS_BR, ESPORTE_MUNDIAL_BR, PIB_BR, type AcontecimentoBR } from './dados/acontecimentosBR';
 
 const TODOS = [...ACONTECIMENTOS_BR, ...ESPORTE_MUNDIAL_BR].sort((a, b) => a.data[0] * 12 + a.data[1] - (b.data[0] * 12 + b.data[1]));
@@ -159,7 +159,7 @@ function comoChegou(v: Vida, a: AcontecimentoBR, ano: number): string {
   }
   if (a.ufs) return '';
   // ERAS v3: antes da televisão em casa, o rádio; antes do rádio, o jornal e a conversa.
-  if (ano < 1995 && !temAcesso(v, 'tv', ano)) return temAcesso(v, 'radio', ano) ? 'O rádio deu a notícia, e o jornal do dia seguinte contou o resto. ' : 'A notícia correu pelos jornais e de boca em boca. ';
+  if (ano < 1995 && tecnologia(v, 'tv', ano) !== 'comum') return temAcesso(v, 'radio', ano) ? 'O rádio deu a notícia, e o jornal do dia seguinte contou o resto. ' : 'A notícia correu pelos jornais e de boca em boca. ';
   if (ano < 1995) return 'Na televisão e no rádio, só se falava nisso. ';
   if (temAcesso(v, 'smartphone', ano)) return 'A notícia chegou primeiro pelo celular. ';
   return 'Saiu em todos os jornais e telejornais. ';
@@ -203,6 +203,8 @@ function acontecimentos(v: Vida, tIni: number, tFim: number): void {
     if (a.especial === 'collor' && i >= 10) pessoal = aplicarCollor(v, t);
     if (a.especial === 'auxilio') pessoal = auxilio(v);
     if (a.especial === 'apagao') pessoal = ' Em casa, a conta de luz virou assunto toda semana.';
+    // ERAS v3: a gripe de 1918 passou por quase toda casa (um quarto da população adoeceu; sorteio derivado).
+    if (a.especial === 'gripe_1918' && rngDe(v.id, 'era-gripe', a.id).chance(0.25)) { v.corpo.saude = Math.max(5, v.corpo.saude - 25); pessoal = ' Você pegou a gripe e passou semanas de cama.'; }
     if (a.especial === 'covid_br') pessoal = i < 18 ? ' A escola fechou; as aulas, quando houve, foram por uma tela.' : v.trabalho.atual ? ' O trabalho mudou de um dia para o outro.' : '';
     const efeito = a.efeito && a.mods ? ` ${a.efeito}` : '';
     const peso = a.peso === 'biografia' ? 'biografia' : 'cotidiano';
@@ -324,6 +326,7 @@ export function processarEra(v: Vida, ec: AnoEconomico): void {
   maioridade(v);
   regrasDoAno(v, 'BR', 'oeste');
   guerrasDoAno(v, 'BR', 'oeste');
+  estudoDaEpoca(v, 'BR');
   chegadas(v);
   oficio(v);
   if (anoDe(v.t) <= 2025) lembranca(v);

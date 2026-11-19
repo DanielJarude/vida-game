@@ -6,12 +6,14 @@ import type { Vida } from '../../motor/tipos';
 import { anoDe } from '../../motor/tempo';
 import { meioDeComunicacao } from '../../motor/eras/base/contexto';
 import { padraoEm } from '../../motor/eras/base/moedas';
+import { moedaNoMes, pacoteDaEra } from '../../motor/eras/base/pacote';
+import { ladoDaVida, paisDaVida } from '../../motor/mundo/vida';
 import type { MeioDeComunicacao } from '../../motor/eras/base/tecnologias';
 
 /** A década que dá o tom da tela (depois de 2025, a vida histórica fica no tom dos anos 2020). */
 export function decadaVisual(v: Vida): number | undefined {
   if (!v.era) return undefined;
-  return Math.min(2020, Math.floor(anoDe(v.t) / 10) * 10);
+  return Math.max(1900, Math.min(2020, Math.floor(anoDe(v.t) / 10) * 10));
 }
 
 export const NOME_DO_APARELHO: Record<MeioDeComunicacao, string> = { cartas: 'Cartas', fixo: 'Telefone', celular: 'Celular', smartphone: 'Celular' };
@@ -28,7 +30,23 @@ export const meioDaVida = (v: Vida): MeioDeComunicacao => meioDeComunicacao(v);
 /** O símbolo da moeda do mês (vida histórica até 2025); senão, nada. */
 export function simboloDaEpoca(v: Vida): string | undefined {
   if (!v.era || anoDe(v.t) > 2025) return undefined;
-  return padraoEm(v.t).simbolo;
+  // ERAS v3: a moeda do país onde a vida está (o Brasil pela cadeia da v1; os outros pelos pacotes).
+  const pais = paisDaVida(v);
+  if (pais === 'BR') return padraoEm(v.t).simbolo;
+  const p = pacoteDaEra(pais);
+  return p ? moedaNoMes(p, v.t, ladoDaVida(v)).simbolo : undefined;
+}
+
+/** ERAS v3: o país da época como selo (nome curto) — fora do Brasil e quando o Estado tem outro nome no período. */
+export function nomeDoPaisNaEpoca(v: Vida): string | undefined {
+  if (!v.era || anoDe(v.t) > 2025) return undefined;
+  const pais = paisDaVida(v);
+  const p = pacoteDaEra(pais);
+  if (!p) return undefined;
+  const lado = ladoDaVida(v);
+  if (p.divisao && lado === 'leste') return 'Alemanha Oriental';
+  if (pais === 'DE' && p.divisao && anoDe(v.t) >= p.divisao.de[0] && anoDe(v.t) < p.divisao.ate[0] + (v.t % 12 >= 9 ? 1 : 0)) return 'Alemanha Ocidental';
+  return undefined;
 }
 
 /**

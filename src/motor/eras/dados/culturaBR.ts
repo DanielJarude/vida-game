@@ -7,6 +7,8 @@
  * lembranças do dia a dia, não "fatos históricos" — por isso nunca entram como notícia nem têm efeito no motor.
  */
 
+import { DECADAS_BR_1900, LEMBRANCAS_BR_1900 } from './brasil1900';
+
 export type TipoCultural = 'musica' | 'tv' | 'brincadeira' | 'moda' | 'costume' | 'jogo' | 'cinema';
 
 export interface LembrancaCultural {
@@ -22,6 +24,7 @@ export interface LembrancaCultural {
 }
 
 export const LEMBRANCAS_CULTURAIS: readonly LembrancaCultural[] = [
+  ...LEMBRANCAS_BR_1900,
   // ------------------------------------------------------------------ anos 1970 (ERAS v2)
   { id: 'radio_de_pilha', tipo: 'costume', de: 1970, ate: 1982, idade: [6, 80], texto: 'O rádio de pilha ia junto para todo lado: o jogo de domingo, a novela do rádio, a notícia antes da televisão.', exige: 'radio' },
   { id: 'tv_preto_branco', tipo: 'tv', de: 1970, ate: 1978, idade: [4, 80], texto: 'A televisão era em preto e branco, de botão de girar, e a vizinhança se juntava na casa de quem tinha uma.' },
@@ -104,9 +107,12 @@ export interface DecadaHistorica {
   marcos: string[];
   /** As moedas que a pessoa vai usar nos primeiros quinze anos. */
   moedas: string;
+  /** ERAS v3: a sociedade da década (direitos, desigualdade) em uma frase. */
+  sociedade?: string;
 }
 
 export const DECADAS: readonly DecadaHistorica[] = [
+  ...DECADAS_BR_1900,
   { decada: 1970, rotulo: 'Anos 1970', anos: [1970, 1979], contexto: 'O regime militar, o "milagre econômico" e a crise do petróleo; no fim da década, a anistia e a volta dos partidos.', tecnologia: 'Rádio de pilha, TV em preto e branco (a cores a partir de 1972), telefone com fila de espera, orelhão.', cultura: 'O tri no México, a novela, os festivais e a discoteca, a calça boca de sino.', marcos: ['copa_1970', 'tv_cores', 'ponte_rio_niteroi', 'anistia'], moedas: 'Cruzeiro novo e cruzeiro (o mesmo dinheiro, com outro nome a partir de maio de 1970).' },
   { decada: 1980, rotulo: 'Anos 1980', anos: [1980, 1989], contexto: 'O fim do regime militar, a volta das eleições diretas e uma inflação que mudava os preços toda semana.', tecnologia: 'Telefone fixo para poucos, orelhão, rádio, TV, toca-fitas, videocassete chegando.', cultura: 'Rock nacional, programas infantis, novela das oito, bolinha de gude na rua.', marcos: ['diretas_ja', 'plano_cruzado', 'constituicao_1988', 'eleicao_1989'], moedas: 'Cruzeiro, cruzado, cruzado novo, cruzeiro, cruzeiro real e real.' },
   { decada: 1990, rotulo: 'Anos 1990', anos: [1990, 1999], contexto: 'Plano Collor, impeachment, a chegada do real e o fim da hiperinflação.', tecnologia: 'Bipe, primeiros celulares, CD, videogame de cartucho, internet discada no fim da década.', cultura: 'Axé, pagode, sertanejo, calça larga, o tetra.', marcos: ['plano_collor', 'impeachment_collor', 'tetra', 'telebras'], moedas: 'Cruzeiro, cruzeiro real e real.' },

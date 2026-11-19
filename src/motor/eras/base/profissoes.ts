@@ -52,7 +52,9 @@ export const OCUPACOES_DESDE: Readonly<Record<string, { desde: number; fonte: st
   operador_maquinas: { desde: 1920, fonte: 'Aproximação: o trator no campo.' }, tecnico_agricola: { desde: 1930, fonte: 'Aproximação.' }, tatuador: { desde: 1959, fonte: 'Primeiro estúdio de tatuagem do Brasil: Santos, 1959 (aproximação).' },
   jogador_futebol: { desde: 1933, fonte: 'O profissionalismo no futebol brasileiro: 1933 (antes, amador).' }, piloto_corrida: { desde: 1950, fonte: 'Primeiro campeonato mundial de Fórmula 1: 1950.' },
   tenista: { desde: 1968, fonte: 'A era aberta do tênis (1968): antes, o circuito principal era amador.' }, atleta: { desde: 1982, fonte: 'A IAAF admite atletas profissionais em 1982 (antes, o atletismo olímpico era amador).' },
-  jogador_basquete: { desde: 1965, fonte: 'Aproximação: as ligas nacionais semiprofissionais.' }, jogador_esports: { desde: 2000, fonte: 'Aproximação.' }
+  jogador_basquete: { desde: 1965, fonte: 'Aproximação: as ligas nacionais semiprofissionais.' }, jogador_esports: { desde: 2000, fonte: 'Aproximação.' },
+  // As profissões que o jogo põe no futuro (`surge`): numa vida histórica, nunca antes do ano em que surgem.
+  operador_drone: { desde: 2028, fonte: 'Profissão do futuro do jogo (dados/ocupacoes, surge).' }, tecnico_energia: { desde: 2032, fonte: 'Idem.' }, tecnico_sistemas_automatizados: { desde: 2034, fonte: 'Idem.' }
 };
 
 /** ERAS v3: o ano em que a ocupação passa a existir NO PAÍS da época (o pacote do país sobrepõe a data brasileira). */
@@ -140,3 +142,15 @@ export const FERRAMENTAS: readonly { de: string[]; ate: number; texto: string }[
   { de: ['aux_adm', 'assistente_adm', 'analista_adm', 'recepcionista'], ate: 1995, texto: 'No escritório, máquina de escrever, papel-carbono, telex e arquivo de aço: cópia era com estêncil ou mimeógrafo.' },
   { de: ['escriturario_banco', 'gerente_banco'], ate: 1994, texto: 'No banco, a remarcação dos índices era diária e as filas, longas: o salário era sacado no dia e gasto logo, antes que a inflação comesse.' }
 ];
+
+/**
+ * ERAS v3: a bolsa pública do perfil do país (o ProUni, a Pell Grant) já existia no ano? Datas: ProUni 2005 (BR); Pell Grant
+ * 1972 (EUA, Higher Education Act de 1972); bolsas de manutenção do Estado 1962 (Reino Unido, Education Act 1962); BAföG
+ * 1971 (Alemanha Ocidental); bolsas da JASSO desde 1943 (Japão); PROGRESAR 2014 e bolsas nacionais desde 1990 (Argentina, aproximação).
+ */
+const BOLSA_DESDE: Readonly<Record<string, number>> = { BR: 2005, US: 1972, GB: 1962, DE: 1971, JP: 1943, AR: 1990 };
+export function bolsaDaEpoca(v: Vida): boolean {
+  if (!v.era) return true;
+  const pais = mesHistoricoCorrente() !== null ? paisHistoricoCorrente() : v.era.pais;
+  return anoDe(v.t) >= (BOLSA_DESDE[pais] ?? 1990);
+}

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ControleVida } from '../useVida';
 import type { Classe, Genero, Visual } from '../../motor/tipos';
 import { municipio } from '../../motor/dados/lugares';
-import { corteCoerente, previaDoNascimento, sortearNascimento } from '../../motor/criacao';
+import { corteCoerente, diasNoMes, previaDoNascimento, sortearNascimento } from '../../motor/criacao';
 import { carregarMundo } from '../../motor/mundo/carregar';
 import { LugarDeNascimento, notaDoLugar } from '../jogo/Mundo';
 import { sortearNome, sortearSobrenome } from '../../motor/dados/nomes';
@@ -68,22 +68,26 @@ export function Criacao({ c }: { c: ControleVida }) {
       setSobrenome(sortearSobrenome(r, m.pais, m.uf));
     }
   };
-  // ERAS HISTÓRICAS: quando se nasce. "Hoje" é o VIDA de sempre (2026, o mundo todo); uma década é o Brasil daquele ano.
+  // ERAS HISTÓRICAS: quando e onde se nasce. "Hoje" é o VIDA de sempre (2026, o mundo todo); ERAS v3: um país com época e
+  // uma década (de 1900 a 2020), com o ano, o mês e o dia.
   const [epoca, setEpoca] = useState<Epoca>('hoje');
   const [anoNasc, setAnoNasc] = useState(2026);
+  const [mesNasc, setMesNasc] = useState<number | undefined>(undefined);
+  const [diaNasc, setDiaNasc] = useState<number | undefined>(undefined);
   const historica = epoca !== 'hoje';
   const escolherEpoca = (e: Epoca, ano: number) => {
     tocado.current = true;
     setEpoca(e);
     setAnoNasc(ano);
-    // A primeira versão é brasileira: quem escolhe uma década e estava noutro país passa a nascer no Brasil.
+    if (diaNasc !== undefined && mesNasc !== undefined) setDiaNasc(Math.min(diaNasc, diasNoMes(ano, mesNasc)));
+    // A vida histórica nasce no país escolhido: se a cidade era de outro país, sorteia uma cidade dele.
     let m = municipio(cidade);
-    if (e !== 'hoje' && m.pais !== 'BR') {
+    if (e !== 'hoje' && m.pais !== e.pais) {
       const r = aleatorio();
-      const id = sortearMunicipio(() => r.next(), 'BR').id;
+      const id = sortearMunicipio(() => r.next(), e.pais).id;
       setCidade(id);
       m = municipio(id);
-      if (!nomeEscrito) setSobrenome(sortearSobrenome(r, 'BR', m.uf));
+      if (!nomeEscrito) setSobrenome(sortearSobrenome(r, e.pais, m.uf));
     }
     // O nome sugerido é o da época (os nomes da moda mudam com os anos).
     if (!nomeEscrito) setNome(sortearNome(aleatorio(), genero, ano, m.pais, m.uf));
@@ -108,12 +112,12 @@ export function Criacao({ c }: { c: ControleVida }) {
     semente,
     atributos: modoAtributos === 'escolher' && atributos ? atributos : undefined,
     corpo24: corpo.modo === 'escolher' ? { modo: 'escolher' as const, c: corpo.c, pelos: corpo.pelos } : { modo: corpo.modo },
-    ...(historica ? { ano: anoNasc, era: true } : {})
+    ...(historica ? { ano: anoNasc, era: true, ...(mesNasc !== undefined ? { mes: mesNasc } : {}), ...(diaNasc !== undefined ? { dia: diaNasc } : {}) } : {})
   };
   const previa = useMemo(() => {
     try { return previaDoNascimento(opcoes); } catch { return null; }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [opcoes.nome, opcoes.sobrenome, genero, cidade, classe, podeGestar, tratamento, visual, heranca, semente, modoAtributos, atributos, historica, anoNasc, corpo]);
+  }, [opcoes.nome, opcoes.sobrenome, genero, cidade, classe, podeGestar, tratamento, visual, heranca, semente, modoAtributos, atributos, historica, anoNasc, mesNasc, diaNasc, corpo]);
   const visualDoBebe = previa?.eu ?? visual;
 
   // O mundo inteiro chega depois da tela (os pacotes de países): se o sorteio inicial só pôde escolher entre os países
@@ -204,7 +208,7 @@ export function Criacao({ c }: { c: ControleVida }) {
         </div>
 
         <form className="criacao__form" onSubmit={e => { e.preventDefault(); nascer(); }}>
-          <EscolhaDaEpoca epoca={epoca} ano={anoNasc} aoMudar={escolherEpoca} />
+          <EscolhaDaEpoca epoca={epoca} ano={anoNasc} mes={mesNasc} dia={diaNasc} aoMudar={escolherEpoca} aoMudarData={(m, d) => { tocado.current = true; setMesNasc(m); setDiaNasc(d); }} />
           <fieldset className="campo">
             <legend className="campo__rotulo">Gênero</legend>
             <Escolha rotulo="Gênero" valor={genero} aoMudar={trocarGenero} opcoes={[{ id: 'feminino', rotulo: 'Mulher' }, { id: 'masculino', rotulo: 'Homem' }, { id: 'nao_binario', rotulo: 'Não binária' }]} />

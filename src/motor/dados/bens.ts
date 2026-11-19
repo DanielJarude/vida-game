@@ -13,6 +13,7 @@
  */
 import { VERSOES_VEICULO_129 } from './veiculos129';
 import { VERSOES_DA_EPOCA } from '../eras/base/veiculos';
+import { VERSOES_DA_EPOCA_MUNDO } from '../eras/base/veiculosMundo';
 import { CLASSE_MOTO_CLASSICA, VERSOES_MOTOS_CLASSICAS } from './motosClassicas1291';
 import { CLASSES_21, VERSOES_21 } from './veiculos21';
 
@@ -92,7 +93,7 @@ export interface ModeloVeiculo {
  * REWORK 12: onde um modelo é vendido. Sem a lista, no mundo inteiro. O Kwid, o Mobi e a CG 160 são da América
  * do Sul; a F-150 e o Camry, da América do Norte; o Sandero e o Clio, da Europa e da África.
  */
-export type MercadoVeiculo = 'america_sul' | 'america_norte' | 'america_central_caribe' | 'europa' | 'africa' | 'asia' | 'oceania' | 'BR';
+export type MercadoVeiculo = 'america_sul' | 'america_norte' | 'america_central_caribe' | 'europa' | 'africa' | 'asia' | 'oceania' | 'BR' | 'US' | 'GB' | 'DE' | 'DE_LESTE' | 'JP' | 'AR';
 
 /** Classes de veículo (os ids ficam: estão nos saves e em toda a simulação). */
 export const VEICULOS: readonly ModeloVeiculo[] = [
@@ -315,7 +316,7 @@ const VERSOES_DE_ANTES: readonly VersaoVeiculo[] = [
 /** VIDA 12.9: as versões novas (motos, esportivos, luxo, edições limitadas, clássicos) vêm do catálogo `veiculos129`. */
 // ERAS HISTÓRICAS: as versões da época (`eras/base/veiculos`, com `epoca`) entram no catálogo para serem encontradas
 // pelo id (o carro guardado no save), mas NUNCA nas listas de sempre (`VERSOES_ATUAIS`): só a vida histórica as vê.
-export const VERSOES_VEICULO: readonly VersaoVeiculo[] = [...VERSOES_DE_ANTES, ...VERSOES_VEICULO_129, ...VERSOES_MOTOS_CLASSICAS, ...VERSOES_DA_EPOCA, ...VERSOES_21];
+export const VERSOES_VEICULO: readonly VersaoVeiculo[] = [...VERSOES_DE_ANTES, ...VERSOES_VEICULO_129, ...VERSOES_MOTOS_CLASSICAS, ...VERSOES_DA_EPOCA, ...VERSOES_DA_EPOCA_MUNDO, ...VERSOES_21];
 export const VERSOES_ATUAIS: readonly VersaoVeiculo[] = VERSOES_VEICULO.filter(x => !x.epoca);
 
 /** A forma de uma versão (o desenho que a representa). */

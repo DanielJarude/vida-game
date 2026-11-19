@@ -285,7 +285,7 @@ export function ofertasDeVeiculos(v: Vida, lugar: OfertaVeiculo['lugar']): Ofert
   const pais = paisDaCidade(v.moradia.municipioId);
   const fatorUsado = precoNovoNoPais({ preco: 1000 }, v.moradia.municipioId) / 1000;
   // ERAS HISTÓRICAS: a vida histórica vê o que se vendia no ano (`eras/base/veiculos`); a contemporânea, o de sempre.
-  const locais = v.era ? versoesDoAno(versoesNoPais(pais), ano) : versoesNoPais(pais);
+  const locais = v.era ? versoesDoAno(versoesNoPais(pais), ano, pais) : versoesNoPais(pais);
   const daClasse = (id: string) => locais.filter(x => x.classe === id);
   const out: OfertaVeiculo[] = [];
   let k = 0;
