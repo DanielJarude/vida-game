@@ -203,11 +203,42 @@ as decisões de desenho (partidos nazistas, a perseguição aos judeus, reformas
 
 ## 12. Limitações conhecidas
 
-(preenchido abaixo)
+- **Teste humano de ponta a ponta: não feito** (sem jogador humano disponível nesta sessão). As vidas foram jogadas por
+  agentes (simulações) e a interface foi percorrida no navegador real (Playwright), o que não substitui o olho de quem joga.
+- **Os efeitos são aproximações [A]:** a lei, a data e a fonte são fatos; o tamanho do efeito na chance (de ser contratado,
+  de entrar na faculdade, de ser eleito), a força da oposição e o resíduo do costume são calibrações de jogo, declaradas no
+  dado e no FONTES.md.
+- **Moradia e lugares públicos:** a segregação nos lugares públicos e a discriminação na moradia aparecem como fato (regras
+  da v3) e no crédito (redlining), não como mudança de bairro ou recusa de aluguel.
+- **A perseguição aos judeus na Alemanha (1933–1945)** não foi modelada como barreira: a época ainda não dá às famílias a
+  religião daquele tempo (a distribuição religiosa é a de hoje — não há famílias judias na Alemanha de 1930 no jogo).
+  Representar pela metade seria apagar; fica para quando a demografia religiosa da época existir. O mesmo vale para os
+  burakumin e os coreanos no Japão, e para a discriminação contra imigrantes.
+- **A detenção política é contada, não vivida:** a prisão (dias, meses; na ditadura argentina, de 6 a 24 meses) entra na
+  vida com o custo (emprego, saúde, estresse, ficha), mas o tempo preso não suspende o ano como a prisão da Justiça.
+- **A demissão pela barreira do casamento é automática** (com a probabilidade da regra); não há a decisão de esconder o
+  casamento ou contestar — fica para uma próxima rodada de cenas.
+- **Reformas:** só as que estão nos pacotes (52); não há reforma de impostos, de política econômica, de imigração, de
+  infraestrutura regional nem de sistema eleitoral; não há contrarreforma (restringir direitos) pelo jogador.
+- **Partidos:** lista não exaustiva (os de registro duradouro ou representação); a "linha" de cada um é uma frase
+  factual, sem programa nem efeito; nenhum partido nazista, fascista ou neonazista é oferecido (decisão de desenho).
+- **Cotidiano (Fase 4):** rotina doméstica, alimentação, moda, lazer e preços da época continuam como na v3.
+- **Pacotes:** `motor-textos` (799,7 kB) e `Jogo` (797,0 kB) continuam perto do limite (não cresceram com a v4; a próxima
+  versão que precisar deles deve primeiro aplicar a mesma separação estrutural).
 
-## 13. Próxima etapa
+## 13. Próxima etapa (planejada, não iniciada)
 
-(preenchido abaixo)
+1. **Século XIX brasileiro** (Fase 5): séries de preços anteriores a 1900 (não existe deflator oficial — trabalhar com
+   intervalos e indicadores qualitativos), o Império, a escravidão como estrutura de violência e negação de direitos (nunca
+   como carreira), a condição de escravizado, liberto e livre, a Lei do Ventre Livre, a dos Sexagenários, a Abolição e as
+   barreiras depois dela; instituições do motor (escola, trabalho assalariado, previdência) remodeladas para antes de 1900.
+2. **A demografia da época** (religião, origem, migração) por país e década — a base para representar a perseguição aos
+   judeus, os burakumin, os coreanos residentes e as restrições migratórias com responsabilidade.
+3. **Cenas de escolha diante da barreira** (esconder o casamento, contestar na Justiça, estudar fora, emigrar).
+4. **Novos países** (Fase 6), na ordem em que houver fontes para uma experiência consistente: França, Itália, Portugal,
+   Espanha, México, Canadá, Austrália; depois Rússia/URSS, China, Índia, África do Sul (o apartheid exige o cuidado da
+   segregação norte-americana, com a classificação racial do regime).
+5. Cotidiano por classe e década (casa, comida, roupa, lazer) e economia regional (crises por setor e região).
 
 ## 14. Commits e publicação
 

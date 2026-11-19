@@ -25,7 +25,7 @@ import type { LadoDaDivisao } from '../base/pacote';
 import { paisHistoricoCorrente } from '../base/moedas';
 import {
   barreirasQuePesam, garantirHistoria, noAlvo, sociedadeDoPais, reformaPorId, movimentosAtivos, partidoDaEpoca,
-  proscritoNoAno, quandoValeAReforma, divisaoCorrente, fimDaBarreira, type PesoDaBarreira, type ReformaDaEpoca
+  proscritoNoAno, quandoValeAReforma, divisaoCorrente, fimDaBarreira, feitaPorEla, type PesoDaBarreira, type ReformaDaEpoca
 } from '../base/sociedade4';
 import './politica4';
 
@@ -170,7 +170,7 @@ function contestar(v: Vida, pais: string): void {
     if (!rngDe(v.id, 'v4-contesta', a.reforma, a.t, Math.floor(anos)).chance(chance)) continue;
     a.revogadaEm = v.t;
     a.porQue = a.alcance === 'nacional' ? 'a Corte Suprema e a maioria seguinte' : a.alcance === 'estadual' ? 'a legislatura seguinte' : 'a câmara seguinte';
-    const quem = a.por === 'voce' && a.autor === v.eu.nome ? 'a sua reforma' : `a reforma de ${anoDe(a.t)}`;
+    const quem = feitaPorEla(v, a) ? 'a sua reforma' : `a reforma de ${anoDe(a.t)}`;
     escrever(v, { texto: `${cap(quem)} (${r.nome.toLowerCase()}) foi derrubada por ${a.porQue}: ${r.oposicao} não tinha desistido. Até a data em que a história a trouxe de volta, valeu a regra antiga.`, relevancia: 'biografia', tema: 'lugar', tom: 'ruim', fato: { tipo: 'era', dados: { categoria: 'direitos', evento: `revogada:${r.id}` } } });
     const ano = anoDe(v.t);
     mundoDe(v).eventos.push({ id: `${ano}:v4_rev_${r.id}_${v.t}`, ano, tipo: 'sociedade', escopo: a.alcance === 'nacional' ? 'pais' : 'regiao', titulo: `Derrubada: ${r.nome}`, texto: `Derrubada por ${a.porQue}.`, real: false });
@@ -181,14 +181,17 @@ function contestar(v: Vida, pais: string): void {
 
 function heranca(v: Vida): void {
   const h = v.era?.historia;
-  if (!h?.alteracoes.length || idade(v) !== 16) return;
-  const minhas = h.alteracoes.filter(a => a.revogadaEm === undefined && a.por === 'voce' && a.autor && a.autor !== v.eu.nome);
+  // Quem continua a família (o filho, a neta) ouve, uma vez, a história da reforma de quem veio antes — na escola, se ainda
+  // é criança; em casa, se já é adulto quando a vida passa a ser dele.
+  if (!h?.alteracoes.length || idade(v) < 10) return;
+  const minhas = h.alteracoes.filter(a => a.revogadaEm === undefined && a.por === 'voce' && a.autor && !feitaPorEla(v, a));
   if (!minhas.length || h.encontros.includes(`heranca:${v.eu.nome}`)) return;
   h.encontros.push(`heranca:${v.eu.nome}`);
   const a = minhas[0];
   const r = reformaPorId(a.pais, a.reforma);
   if (!r) return;
-  escrever(v, { texto: `Na escola, contaram a história de ${r.nome.toLowerCase()} (${anoDe(a.t)}) — e o nome que apareceu foi o de ${a.autor}. A vida que você tem passa por ali.`, relevancia: 'biografia', tema: 'familia', tom: 'bom', fato: { tipo: 'era', dados: { categoria: 'direitos', evento: `heranca:${r.id}` } } });
+  const onde = idade(v) <= 18 ? 'Na escola, contaram' : 'Em casa, você ouviu de novo';
+  escrever(v, { texto: `${onde} a história de ${r.nome.charAt(0).toLowerCase()}${r.nome.slice(1)} (${anoDe(a.t)}) — e o nome que aparece é o de ${a.autor}. A vida que você tem passa por ali.`, relevancia: 'biografia', tema: 'familia', tom: 'bom', fato: { tipo: 'era', dados: { categoria: 'direitos', evento: `heranca:${r.id}` } } });
 }
 
 /* ------------------------------------------------------------------ O ano */
@@ -215,7 +218,7 @@ export function notaDaHistoriaAlternativa(v: Vida, pais: string, acontecimentoId
     const a = h.alteracoes.filter(x => x.reforma === r.id && x.revogadaEm === undefined && x.t < v.t).sort((x, y) => x.t - y.t)[0];
     if (!a) continue;
     const onde = a.alcance === 'nacional' ? 'No país' : a.alcance === 'estadual' ? 'No seu estado' : 'Na sua cidade';
-    return ` ${onde}, isso já valia desde ${anoDe(a.t)}${a.autor ? ` — pela mão de ${a.autor === v.eu.nome ? 'você' : a.autor}` : ''}.`;
+    return ` ${onde}, isso já valia desde ${anoDe(a.t)}${a.autor ? ` — pela mão de ${feitaPorEla(v, a) ? 'você' : a.autor}` : ''}.`;
   }
   return '';
 }

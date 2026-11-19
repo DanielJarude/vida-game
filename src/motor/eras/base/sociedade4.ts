@@ -156,6 +156,8 @@ export interface AlteracaoDaHistoria {
   /** Quem fez: a pessoa jogada (o nome dela, para a linha do tempo dos herdeiros) ou o movimento. */
   por: 'voce' | 'movimento';
   autor?: string;
+  /** Quando nasceu quem fez (para a vida saber se foi ela ou quem veio antes, sem depender do nome). */
+  autorNasc?: number;
   /** Quantos anos antes da data real (0 quando veio na hora ou depois; ausente: não aconteceu na história real). */
   antes?: number;
   /** Derrubada depois (tribunal, legislatura seguinte): o mês. */
@@ -176,6 +178,9 @@ export interface HistoriaDaVida {
 }
 
 let LUGAR: { municipioId?: string; divisao?: string; historia?: HistoriaDaVida } = {};
+
+/** Foi esta pessoa (a jogada agora) quem fez a mudança? */
+export const feitaPorEla = (v: Vida, a: AlteracaoDaHistoria) => a.por === 'voce' && (a.autorNasc !== undefined ? a.autorNasc === v.eu.tNasc : a.autor === v.eu.nome);
 
 export function historiaDe(v: Vida): HistoriaDaVida | undefined {
   return v.era?.historia;

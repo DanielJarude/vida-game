@@ -120,3 +120,25 @@ Um país novo exige as suas séries, moedas, partidos, acontecimentos e tecnolog
 
 Nenhum dado novo entrou em `motor-textos` nem em `motor-dados`: os pacotes dos países ficam fora, e o motor da época
 (`motor-eras`, 87 kB) e a base (`eras-base`, 123 kB) têm folga. Vida contemporânea: todo fator é 1, toda regra é vazia.
+
+# v4 · Auditoria de retomada (2026-11-19) e a camada social
+
+## Estado encontrado
+
+- Produção e `main` em `e5fe53d` (v3). Código conferido contra o relatório: seis países, Brasil desde 1900, Argentina desde
+  1945, pacotes por país (`eras/paises/<id>`).
+- As regras sociais da v3 (`RegraSocial`) eram texto escrito uma vez; só a eleição, a universidade dos filhos e a guerra as
+  consultavam. Partidos fora do Brasil: genéricos também nas vidas históricas; Brasil antes de 1966: nenhum. O contrato
+  esportivo vindo da base ignorava a data do profissionalismo. `motor-dados` a 0,7 kB do limite.
+
+## Arquitetura v4 — a mesma pergunta central, agora com consequência
+
+| Pergunta | Onde | Como |
+|---|---|---|
+| O que fecha a porta, o que diminui a chance? | `eras/base/sociedade4` (`epocaNaVaga`, `epocaNoSalario`, `epocaNaFaculdade`, `epocaNoCredito`, `epocaNaPolitica`) | barreiras por país, período, lugar, lado, a quem pesam, natureza, domínio, alvo, efeito e resíduo; lidas pelos sistemas (trabalho, escola, ações de crédito, política) |
+| O que o mundo desta vida já mudou? | `v.era.historia` + `sociedade4.alteracaoQueVale` / `regraDerrubadaAntes` / `instituidoAqui` | alterações com mês, alcance (país, estado, cidade), autor e revogação; o lugar da vida em processamento vem de `mundo/vida.entrarNaVida` |
+| Quem pode mudar o quê? | `eras/v4/politica4` (ganchos `REFORMAS_DA_EPOCA` em `sistemas/politica`) | a competência do cargo, a chance (apoio, oposição, maturidade, pressão, regime), o custo, a linha do tempo alternativa |
+| A ação coletiva | `eras/v4/movimentos4` (Acao `eras4`) | participar, organizar, financiar, sair; risco por período; pressão |
+| O ano social | `eras/v4/sociedadeAno` (chamado depois das regras da v3, nos dois caminhos do ano histórico) | encontros, barreira do casamento, partido proibido, pressão, contestação, herança |
+| Os dados | `eras/base/sociedadeBR.ts`; `eras/paises/<id>/sociedade.ts` (no pacote do país) | um arquivo por país; nenhum dado novo em `motor-dados` nem em `motor-textos` |
+| O limite de 800 kB | `vite.config.ts` (`ehFolhaPura` → `motor-catalogos`) | os catálogos sem import em tempo de execução saem do pacote dos catálogos sozinhos |

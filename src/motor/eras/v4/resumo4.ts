@@ -9,7 +9,7 @@ import { municipio } from '../../dados/lugares';
 import { paisHistoricoCorrente, mesHistoricoCorrente, ladoHistoricoCorrente } from '../base/moedas';
 import {
   barreirasQuePesam, classeNaFaculdade, nivelDeOrigem, partidosDaEpocaDoPais, partidoAtivoNoMes, partidoUnicoNoAno,
-  redeDeOrigem, reformaPorId, taxaDoSuperior, type DominioDaBarreira, type NaturezaDaBarreira
+  redeDeOrigem, reformaPorId, taxaDoSuperior, feitaPorEla, type DominioDaBarreira, type NaturezaDaBarreira
 } from '../base/sociedade4';
 import { SOCIEDADE_BR } from '../base/sociedadeBR';
 import { PARTIDOS_BR_NO_TEMPO, existeNoMes } from '../base/partidos';
@@ -71,7 +71,7 @@ export function resumoDaSociedade(v: Vida): ResumoDaSociedade | undefined {
     const r = reformaPorId(a.pais, a.reforma);
     const onde = a.alcance === 'nacional' ? 'no país' : a.alcance === 'estadual' ? `no estado (${a.divisao ?? '—'})` : `em ${a.municipioId ? municipio(a.municipioId).nome : 'uma cidade'}`;
     const nome = (r?.nome ?? a.reforma).replace(/ no estado$/, '').replace(/ na cidade$/, '');
-    return { ano: anoDe(a.t), nome, onde, quem: a.por === 'voce' ? (a.autor === v.eu.nome ? 'você' : a.autor ?? 'a família') : a.autor ?? 'um movimento', antes: a.antes, ...(a.revogadaEm !== undefined ? { derrubada: { ano: anoDe(a.revogadaEm), porQue: a.porQue } } : {}) };
+    return { ano: anoDe(a.t), nome, onde, quem: a.por === 'voce' ? (feitaPorEla(v, a) ? 'você' : a.autor ?? 'a família') : a.autor ?? 'um movimento', antes: a.antes, ...(a.revogadaEm !== undefined ? { derrubada: { ano: anoDe(a.revogadaEm), porQue: a.porQue } } : {}) };
   });
   return {
     ano, origem: { rotulo: ROTULO_CLASSE[nivelDeOrigem(v)], frase: fraseDaOrigem(v, ano, pais) },

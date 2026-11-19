@@ -153,7 +153,7 @@ export function executarReforma(v: Vida, r0: Rng, id?: string): SaidaPolitica {
   h.alteracoes.push({
     reforma: r.id, pais: paisHistoricoCorrente(), t: v.t, alcance: r.alcance,
     ...(r.alcance === 'estadual' ? { divisao: divisaoCorrente() ?? mu.uf } : r.alcance === 'municipal' ? { municipioId: v.moradia.municipioId } : {}),
-    por: 'voce', autor: v.eu.nome, ...(antes !== undefined ? { antes } : {})
+    por: 'voce', autor: v.eu.nome, autorNasc: v.eu.tNasc, ...(antes !== undefined ? { antes } : {})
   });
   m.feito += 1;
   // O custo da antecipação: quem era contra não esquece; quem era a favor agradece. [A]
