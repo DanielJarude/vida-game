@@ -14,6 +14,7 @@
  * alternativa. A rural tem o que o campo tem: a sede de outra propriedade ao longe, o galpão, o silo, a cerca, a mata.
  */
 import { clarear, escurecer, ret, type Peca } from '../../ilustracao/nucleo';
+import { decadaDaFigura } from '../../eras/modaDaDecada';
 import { COR, arvore, bloco, duasAguas, frontal, frontao, grupo, janela, lajeEmBalanco, marcado, noChao, palmeira, platibanda, quatroAguas, sombraDoBloco, type Bloco, type Vista } from './kit';
 import type { TipoDeEntorno } from './entorno22';
 
@@ -49,6 +50,8 @@ const PALETA: Record<Regiao27, string[]> = {
 interface Ctx27 { regiao: Regiao27; padrao: number; litoral: boolean; semente: (k: string) => number }
 interface Modelo27 {
   id: string;
+  /** VIDA 28: a década a partir da qual esse tipo de casa existe na paisagem (a laje com caixa-d'água de fibra é dos anos 1970). */
+  desde?: number;
   regioes: Regiao27[] | 'todas';
   entornos: TipoDeEntorno[];
   /** O padrão da moradia em que este vizinho combina (0 a 5). */
@@ -75,9 +78,9 @@ function caixaDagua(v: Vista, b: Bloco): Peca[] {
 
 const MODELOS27: Modelo27[] = [
   /* ---------------- Brasil e América Latina */
-  { id: 'laje_caixa', regioes: ['br', 'latam'], entornos: ['periferia', 'bairro'], padrao: [0, 2], min: 4,
+  { id: 'laje_caixa', desde: 1970, regioes: ['br', 'latam'], entornos: ['periferia', 'bairro'], padrao: [0, 2], min: 4,
     desenhar: (v, x0, l, z0, c, k) => { const b: Bloco = { x0, x1: x0 + l, z0, z1: z0 + 7, h1: 2.9 }; const cor = corDe(c, k); return marca('laje_caixa', [sombraDoBloco(v, b, b.h1, 0.12), ...bloco(v, b, { cor, soclo: 0.3, corSoclo: longe('#8f877a') }), ...platibanda(v, b, 0.3, cor), ...caixaDagua(v, b), ...janelas(v, b, 1)]); } },
-  { id: 'laje_puxadinho', regioes: ['br', 'latam'], entornos: ['periferia'], padrao: [0, 1], min: 4.5,
+  { id: 'laje_puxadinho', desde: 1970, regioes: ['br', 'latam'], entornos: ['periferia'], padrao: [0, 1], min: 4.5,
     desenhar: (v, x0, l, z0, c, k) => {
       const b: Bloco = { x0, x1: x0 + l, z0, z1: z0 + 7, h1: 2.9 };
       const cima: Bloco = { x0: x0 + 0.4, x1: x0 + l * 0.7, z0: z0 + 0.6, z1: z0 + 6, h0: 2.9, h1: 5.6 };
@@ -87,12 +90,12 @@ const MODELOS27: Modelo27[] = [
     desenhar: (v, x0, l, z0, c, k) => { const b: Bloco = { x0, x1: x0 + l, z0, z1: z0 + 7, h1: 2.9 }; return marca('casa_4aguas', [sombraDoBloco(v, b, b.h1, 0.12), ...bloco(v, b, { cor: corDe(c, k), soclo: 0.3 }), ...quatroAguas(v, b, 1.2, { cor: longe(c.semente(k + 't') > 0.6 ? COR.telhaEscura : COR.telha) }), ...janelas(v, b, 1)]); } },
   { id: 'casa_frontao', regioes: ['br', 'latam', 'europa'], entornos: ['bairro', 'pequena'], padrao: [0, 3], min: 5,
     desenhar: (v, x0, l, z0, c, k) => { const w = Math.min(l, 7); const b: Bloco = { x0, x1: x0 + w, z0, z1: z0 + 8, h1: 2.9 }; const cor = corDe(c, k); return marca('casa_frontao', [sombraDoBloco(v, b, b.h1, 0.12), ...bloco(v, b, { cor }), ...frontao(v, b, 1.8, { cor: longe(COR.telha) }, cor), ...janelas(v, b, 1, 2.6)]); } },
-  { id: 'sobrado_varanda', regioes: ['br', 'latam'], entornos: ['bairro'], padrao: [1, 4], min: 6,
+  { id: 'sobrado_varanda', desde: 1960, regioes: ['br', 'latam'], entornos: ['bairro'], padrao: [1, 4], min: 6,
     desenhar: (v, x0, l, z0, c, k) => {
       const b: Bloco = { x0, x1: x0 + l, z0, z1: z0 + 7.5, h1: 5.8 }; const cor = corDe(c, k);
       return marca('sobrado_varanda', [sombraDoBloco(v, b, b.h1, 0.12), ...bloco(v, b, { cor, soclo: 0.3 }), ...lajeEmBalanco(v, { ...b, h1: 2.95 }, 0.8, 0.15, longe(COR.branco)), ...quatroAguas(v, b, 1.3, { cor: longe(COR.telha) }), ...janelas(v, b, 2)]);
     } },
-  { id: 'platibanda_moderna', regioes: ['br', 'latam', 'oriente'], entornos: ['bairro', 'nobre', 'condominio'], padrao: [2, 5], min: 7,
+  { id: 'platibanda_moderna', desde: 1960, regioes: ['br', 'latam', 'oriente'], entornos: ['bairro', 'nobre', 'condominio'], padrao: [2, 5], min: 7,
     desenhar: (v, x0, l, z0, c, k) => {
       const b: Bloco = { x0, x1: x0 + l, z0, z1: z0 + 8.5, h1: 5.8 };
       return marca('platibanda_moderna', [sombraDoBloco(v, b, b.h1, 0.12), ...bloco(v, b, { cor: longe(c.semente(k) > 0.5 ? '#efeae0' : '#c9c3b8') }), ...lajeEmBalanco(v, b, 1, 0.25, longe('#e8e2d6')), grupo(frontal(v, x0 + 1, z0, 4.9), [{ tipo: 'massa', d: ret(0, 0, l - 2, 1.9, 0.05), cor: longe(COR.vidro), semVolume: true, marca: 'vidro-vizinho' }])]);
@@ -100,7 +103,7 @@ const MODELOS27: Modelo27[] = [
   /* ---------------- Os bairros caros (quase todo lugar) */
   { id: 'casa_grande', regioes: 'todas', entornos: ['nobre', 'condominio'], padrao: [3, 5], min: 8,
     desenhar: (v, x0, l, z0, c, k) => { const b: Bloco = { x0, x1: x0 + l, z0, z1: z0 + 9, h1: 5.8 }; return marca('casa_grande', [sombraDoBloco(v, b, b.h1, 0.12), ...bloco(v, b, { cor: corDe(c, k), soclo: 0.3 }), ...quatroAguas(v, b, 1.6, { cor: longe(c.regiao === 'europa' || c.regiao === 'anglo' ? COR.ardosia : COR.telhaEscura) }), ...janelas(v, b, 2, 2.6)]); } },
-  { id: 'casa_moderna', regioes: 'todas', entornos: ['nobre', 'condominio'], padrao: [3, 5], min: 8,
+  { id: 'casa_moderna', desde: 1990, regioes: 'todas', entornos: ['nobre', 'condominio'], padrao: [3, 5], min: 8,
     desenhar: (v, x0, l, z0, _c, k) => {
       const b: Bloco = { x0, x1: x0 + l * 0.65, z0, z1: z0 + 9, h1: 3 };
       const cima: Bloco = { x0: x0 + l * 0.25, x1: x0 + l, z0: z0 + 0.4, z1: z0 + 8.6, h0: 3, h1: 6.2 };
@@ -114,7 +117,7 @@ const MODELOS27: Modelo27[] = [
       const garagem: Bloco = { x0: x0 + l * 0.55, x1: x0 + l, z0: z0 - 0.3, z1: z0 + 5, h1: 2.7 };
       return marca('suburbio_duas_aguas', [sombraDoBloco(v, b, b.h1, 0.12), ...bloco(v, b, { cor, textura: 'tabuas' }), ...duasAguas(v, b, 2, { cor: longe(COR.ardosia) }, cor), ...bloco(v, garagem, { cor, textura: 'tabuas' }), grupo(frontal(v, garagem.x0 + 0.4, garagem.z0, 2.2), [{ tipo: 'massa', d: ret(0, 0, garagem.x1 - garagem.x0 - 0.8, 2.1, 0.03), cor: longe('#f2efe8'), semVolume: true, marca: 'porta-garagem' }]), ...janelas(v, { ...b, x1: x0 + l * 0.5 }, 2, 2.2)]);
     } },
-  { id: 'rancho', regioes: ['anglo'], entornos: ['bairro', 'pequena', 'periferia'], padrao: [0, 3], min: 8,
+  { id: 'rancho', desde: 1940, regioes: ['anglo'], entornos: ['bairro', 'pequena', 'periferia'], padrao: [0, 3], min: 8,
     desenhar: (v, x0, l, z0, c, k) => { const b: Bloco = { x0, x1: x0 + l, z0, z1: z0 + 8, h1: 2.8 }; return marca('rancho', [sombraDoBloco(v, b, b.h1, 0.12), ...bloco(v, b, { cor: corDe(c, k), textura: 'tabuas' }), ...quatroAguas(v, b, 1, { cor: longe('#6d6863'), fiadas: false }), ...janelas(v, b, 1, 2.5)]); } },
   /* ---------------- Europa */
   { id: 'geminadas', regioes: ['europa'], entornos: ['bairro', 'centro', 'pequena', 'periferia'], padrao: [0, 4], min: 6,
@@ -140,7 +143,7 @@ const MODELOS27: Modelo27[] = [
   /* ---------------- Os prédios do centro (e o prédio baixo da cidade média) */
   { id: 'predio_comercial', regioes: 'todas', entornos: ['centro'], padrao: [0, 5], min: 6,
     desenhar: (v, x0, l, z0, c, k) => predio(v, x0, l, z0, 4 + Math.floor(c.semente(k) * 5), corDe(c, k), true, 'predio_comercial') },
-  { id: 'predio_varandas', regioes: 'todas', entornos: ['centro', 'bairro'], padrao: [1, 5], min: 7,
+  { id: 'predio_varandas', desde: 1970, regioes: 'todas', entornos: ['centro', 'bairro'], padrao: [1, 5], min: 7,
     desenhar: (v, x0, l, z0, c, k) => predio(v, x0, l, z0, 6 + Math.floor(c.semente(k) * 8), corDe(c, k), false, 'predio_varandas', true) },
   { id: 'predio_baixo', regioes: 'todas', entornos: ['centro', 'bairro'], padrao: [0, 3], min: 6,
     desenhar: (v, x0, l, z0, c, k) => predio(v, x0, l, z0, 3 + Math.floor(c.semente(k) * 2), corDe(c, k), c.semente(k + 'loja') > 0.5, 'predio_baixo') }
@@ -186,8 +189,10 @@ export function vizinhosDoLugar27(v: Vista, lados: [number, number][], tipo: Tip
   }
   for (const [k, [a, b]] of lados.entries()) {
     const l = b - a;
-    const ok = MODELOS27.filter(m => (m.regioes === 'todas' || m.regioes.includes(c.regiao)) && m.entornos.includes(tipo) && c.padrao >= m.padrao[0] - 1 && c.padrao <= m.padrao[1] + 1 && l >= m.min * 0.8);
-    const lista = ok.length ? ok : MODELOS27.filter(m => m.entornos.includes(tipo));
+    // VIDA 28: numa vida histórica, só os tipos de casa que já existiam na década (sem laje com caixa-d'água em 1915).
+    const daEpoca = (m: Modelo27) => (m.desde ?? 0) <= (decadaDaFigura() ?? 9999);
+    const ok = MODELOS27.filter(m => daEpoca(m) && (m.regioes === 'todas' || m.regioes.includes(c.regiao)) && m.entornos.includes(tipo) && c.padrao >= m.padrao[0] - 1 && c.padrao <= m.padrao[1] + 1 && l >= m.min * 0.8);
+    const lista = ok.length ? ok : MODELOS27.filter(m => daEpoca(m) && m.entornos.includes(tipo)).length ? MODELOS27.filter(m => daEpoca(m) && m.entornos.includes(tipo)) : MODELOS27.filter(m => m.entornos.includes(tipo));
     // Os dois lados não repetem o mesmo modelo quando há alternativa.
     const livres = lista.filter(m => !ids.includes(m.id));
     const de = livres.length ? livres : lista;

@@ -9,6 +9,7 @@ import { anoDe } from '../../motor/tempo';
 import { concorrenteNaPosicao, nomeDoPapel, REGRAS_DO_MERCADO } from '../../motor/sistemas/elenco28';
 import { habilidade } from '../../motor/sistemas/frentes';
 import { dinheiroCurto } from '../apresentar';
+import './v28.css';
 import { aoClube, doClube } from '../../motor/dados/clubes';
 
 const PAPEL: Record<string, string> = {
@@ -26,7 +27,7 @@ export function Elenco28({ vida, e }: { vida: Vida; e: CarreiraEsportiva }) {
   const el = e.elenco28;
   if (!el || el.clube !== e.clube || e.fase !== 'profissional' || !REGRAS_DO_MERCADO[e.modalidade]) return null;
   const eu = habilidade(vida, e.modalidade);
-  const papel = el.atletas[0]?.papel;
+  const papel = el.papel ?? el.atletas[0]?.papel;
   const conc = papel ? concorrenteNaPosicao(vida, e, papel) : undefined;
   const regras = REGRAS_DO_MERCADO[e.modalidade]!;
   const ultimoBonus = [...(e.temporadas ?? [])].reverse().find(t => t.bonus);
@@ -34,12 +35,12 @@ export function Elenco28({ vida, e }: { vida: Vida; e: CarreiraEsportiva }) {
     <section className="divisao__secao" aria-label="O elenco e o mercado" data-elenco28="">
       <h3 className="subtitulo">O elenco {doClube(e.clube)}</h3>
       {conc && <p className="nota"><strong>Na disputa pela sua vaga:</strong> {conc.nome}, {Math.floor((vida.t - conc.tNasc) / 12)} anos — {comparado(conc.nivel, eu)}.</p>}
-      <div className="form25__tabela" role="region" aria-label="Quem joga com você" tabIndex={0}>
+      <div className="elenco28__tabela" role="region" aria-label="Quem joga com você" tabIndex={0}>
         <table>
           <thead><tr><th>Nome</th><th>Posição</th><th>Idade</th><th>Nível</th><th>Contrato</th></tr></thead>
           <tbody>
             {el.atletas.map(a => (
-              <tr key={a.id}>
+              <tr key={a.id} className={a.papel === papel ? 'elenco28__rival' : undefined}>
                 <td>{a.nome}</td>
                 <td>{PAPEL[a.papel] ?? a.papel}</td>
                 <td>{Math.floor((vida.t - a.tNasc) / 12)}</td>
@@ -53,7 +54,7 @@ export function Elenco28({ vida, e }: { vida: Vida; e: CarreiraEsportiva }) {
       {el.movimentos.length > 0 && (
         <>
           <h4>A janela de transferências</h4>
-          <ul className="nota" aria-label="Movimentações do elenco">
+          <ul className="elenco28__janela" aria-label="Movimentações do elenco">
             {[...el.movimentos].reverse().slice(0, 8).map((m, k) => <li key={k}>{m.ano} · {m.texto}</li>)}
           </ul>
         </>

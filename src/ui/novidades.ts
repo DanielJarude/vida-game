@@ -26,6 +26,34 @@ export interface NotaDeVersao {
 
 export const NOTAS: NotaDeVersao[] = [
   {
+    versao: '28',
+    data: '2026-11-19',
+    titulo: 'Carreiras que andam sozinhas, gente que lembra, uma História que faz sentido',
+    novidades: [
+      'O clube tem elenco com nome: quem disputa a sua vaga, o capitão, a estrela, o garoto da base. Na janela de cada ano, o mercado anda sozinho — o clube vende quem se valorizou, empresta o jovem que não joga, libera quem não renova e contrata para a vaga que abriu (no basquete e no vôlei, contrato por temporada, sem taxa). Quem chega melhor que você aperta a titularidade.',
+      'Perfis que surgem do jogo e da pessoa: o Matador, o Garçom, o Muralha, o Cerebral, o Capitão, o Marrento; no basquete, o Pontuador e o Reboteiro; no vôlei, o Central bloqueador e o Líbero defensivo; no tênis, o Sacador e o Estrategista; no e-sports, o Entry, o IGL, o AWPer, o Clutch; nas pistas, o Classificador e o Gestor de pneus. O perfil muda a temporada: a oscilação, a confiança do treinador, a imprensa, o vestiário, os jogos grandes.',
+      'Atributos novos onde faltavam: a defesa de pênaltis do goleiro, a bola parada, a criação de chances, o um contra um, o arremesso de três, a cobertura no vôlei, a consistência; e, no automobilismo, classificação, ultrapassagem, gestão de pneus e de combustível e leitura de corrida — a classificação define a largada.',
+      'Bônus por título no contrato do atleta de clube, e a bolsa da base (a partir dos 14, sem salário de profissional).',
+      'As pessoas sentem mais coisas: respeito, admiração, lealdade, rivalidade e dependência. A rivalidade de vestiário pode virar respeito; quem admira você de longe procura; quem dependia de você cobra o sumiço; a fama chega antes de você a quem acabou de conhecer. Os títulos, as dispensas e as transferências ficam na memória de quem é próximo.',
+      'A rua e a casa da época: a terra batida e o paralelepípedo antes do asfalto, o lampião antes do poste, a parede caiada, a antena de TV nos telhados dos anos 1950 aos 2000.',
+      'Vinte e cinco projetos de tatuagem novos que misturam estilos com os desenhos que já existiam (neotradicional com aquarela, oriental em blackwork, realismo com geometria, surrealismo com pontilhismo...).'
+    ],
+    melhorias: [
+      'O e-sports tem momentos próprios (a final, o companheiro, a transmissão, a sequência de derrotas, a organização rival) — e o foco de treino rende de verdade, com o quanto cada atributo subiu dito no fim do ano.',
+      'Cada esporte mostra os seus números no crachá e em campo (o vôlei não mostra mais gols; o tênis mostra o ranking).',
+      'Na tela do atleta: o elenco, a disputa pela vaga e a janela de transferências.'
+    ],
+    correcoes: [
+      'A História não dizia mais "dispensado e o sonho ficou para trás" e, em seguida, "promovido ao sub-20 do mesmo clube": a dispensa agora ouve a avaliação da comissão, a promoção do ano só é contada se o ano não terminar em dispensa, o abandono só aparece quando a pessoa escolhe largar, e o teste seguinte é em outro clube (ou a volta é contada como volta).',
+      'O clube da peneira é o clube do convite e da base: antes, o convite podia sair com outro clube da mesma cidade.',
+      'O médio integrado é uma formatura só (antes, duas entradas: o diploma técnico e o "concluiu o médio").',
+      'O curso não "fica mais comprido" e é concluído no mesmo ano.',
+      'O jogador de e-sports e o piloto não recebem mais cenas de cliente e orçamento de quem trabalha por conta.',
+      'O foco de treino do e-sports era ignorado para quem faz aniversário no segundo semestre.',
+      'O orelhão não aparece mais nas ruas antes dos anos 1970.'
+    ]
+  },
+  {
     versao: 'Eras 4',
     data: '2026-11-19',
     titulo: 'A sociedade da época — e o mundo que você pode mudar',

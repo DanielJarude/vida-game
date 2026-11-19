@@ -3,6 +3,10 @@
  * Testes de TRAJETÓRIA (vários anos de uma vida) e das peças novas; cada um diz a regra que protege.
  */
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { interpretar } from '../save';
+import { avancarAno } from '../ano';
 import { nova, viverAte } from './ajuda';
 import { executar } from '../acoes';
 import { escrever, transacao } from '../nucleo';
@@ -82,7 +86,7 @@ describe('VIDA 28 · a História respeita o que aconteceu', () => {
     expect(porta!.lugar).not.toBe('marilia-sp');
     // Entrar na nova base conta a transição (a dispensa de antes não some).
     entrarNaBase(v, 'futebol', porta!.lugar, porta!.clube);
-    expect(v.biografia.at(-1)!.texto).toMatch(/^Depois da dispensa do Marília, aos 15, uma nova chance: entrou para/);
+    expect(v.biografia[v.biografia.length - 1].texto).toMatch(/^Depois da dispensa do Marília, aos 15, uma nova chance: entrou para/);
   });
 
   it('voltar ao clube que dispensou (anos depois) é dito como volta', () => {
@@ -94,7 +98,7 @@ describe('VIDA 28 · a História respeita o que aconteceu', () => {
     v.caminhos.esporte = undefined;
     v.t += 30;
     entrarNaBase(v, 'futebol', v.moradia.municipioId, 'Ituano');
-    expect(v.biografia.at(-1)!.texto).toMatch(/^Voltou para a base do Ituano, que tinha dispensado você aos 15/);
+    expect(v.biografia[v.biografia.length - 1].texto).toMatch(/^Voltou para a base do Ituano, que tinha dispensado você aos 15/);
   });
 
   it('no mesmo ano, a trajetória é lida na ordem em que aconteceu (a promoção antes da dispensa, mesmo sendo o marco)', () => {
@@ -251,7 +255,7 @@ describe('VIDA 28 · o mercado esportivo', () => {
 
   it('a transferência muda o clube, o salário do contrato novo e a memória de quem é próximo', () => {
     const { v, e } = profissional(2895);
-    v.trabalho.atual = { ocupacaoId: 'jogador_futebol', empregador: 'o Palmeiras', salario: 40000, tInicio: v.t - 24, desempenho: 60, contrato: 'clt', carga: 'integral', municipioId: 'sao-paulo-sp' } as never;
+    v.trabalho.atual = { ocupacaoId: 'jogador_futebol', empregador: 'o Palmeiras', salario: 40000, tInicio: v.t - 24, desempenho: 60, contrato: 'clt', carga: 'integral', municipioId: 'sao-paulo-sp' } as unknown as Vida['trabalho']['atual'];
     const proximo = Object.values(v.vinculos).find(x => x.proximidade >= 45);
     transferirPara(v, e, { clube: 'Santos', municipioId: 'santos-sp', nivel: 4, salario: 70000, salarioTitular: 80000, espaco: 'titular', meses: 36, validaAte: v.t + 6, origem: 'mercado', taxa: 0 } as never);
     expect(e.clube).toBe('Santos');
@@ -267,7 +271,7 @@ describe('VIDA 28 · e-sports', () => {
     expect(mercadoDe(ocupacao('piloto_corrida'))).toBe('esporte');
     const v = jovem(19, 2901);
     v.esports25 = { jogo: 'cs', fase: 'profissional', inicio: v.t - 36, talento: 70, funcao: 'entry', atributos: { mira: 70 }, nivel: 3, passagens: [], temporadas: [], serie: [], totais: { disputas: 0, vencidas: 0, titulos: 0, premios: 0, temporadas: 0 }, reputacao: 30, equipe: { nome: 'Farol Gaming', nivel: 3, forca: 60, desde: v.t - 12, contratoAte: v.t + 12, salario: 5000, titular: true } } as never;
-    v.trabalho.atual = { ocupacaoId: 'jogador_esports', empregador: 'Farol Gaming', salario: 5000, tInicio: v.t - 12, desempenho: 60, contrato: 'autonomo', carga: 'integral', municipioId: v.moradia.municipioId } as never;
+    v.trabalho.atual = { ocupacaoId: 'jogador_esports', empregador: 'Farol Gaming', salario: 5000, tInicio: v.t - 12, desempenho: 60, contrato: 'autonomo', carga: 'integral', municipioId: v.moradia.municipioId } as unknown as Vida['trabalho']['atual'];
     expect(trajetoriaDeSituacao(v)).toBe('esports');
     expect(modeloDaSituacao('esp28_final')!.cabe(v)).toBe(true);
     expect(modeloDaSituacao('aut_cliente')!.trajetoria).toBe('autonomo');
@@ -343,5 +347,36 @@ describe('VIDA 28 · o resto da atualização', () => {
       expect(typeof plano, m.id).toBe('object');
     }
     void criarRng;
+  });
+});
+
+/* ======================================================= persistência e saves antigos */
+describe('VIDA 28 · saves', () => {
+  it('um save antigo de atleta carrega e vive dois anos: o elenco, o perfil e o mercado nascem sem apagar nada', () => {
+    const r = interpretar(readFileSync(join(__dirname, 'fixtures', 'save-v11-atleta.json'), 'utf8'));
+    expect(r.tipo).toBe('ok');
+    if (r.tipo !== 'ok') return;
+    let v = r.vida;
+    const antes = { bio: v.biografia.length, temporadas: v.caminhos.esporte?.temporadas?.length ?? 0, vinculos: Object.keys(v.vinculos).length, conta: v.financas.conta };
+    for (let k = 0; k < 2 && !v.morte; k++) { v = avancarAno(v).vida; for (let j = 0; j < 8 && v.momento; j++) v = executar(v, { tipo: 'decidir', opcaoId: v.momento.opcoes.find(o => !o.bloqueio)?.id ?? v.momento.opcoes[0].id }).vida; }
+    expect(v.biografia.length).toBeGreaterThanOrEqual(antes.bio);
+    expect(Object.keys(v.vinculos).length).toBeGreaterThanOrEqual(antes.vinculos - 3);
+    if (v.caminhos.esporte?.fase === 'profissional') expect((v.caminhos.esporte.temporadas?.length ?? 0)).toBeGreaterThanOrEqual(antes.temporadas);
+  });
+
+  it('a carreira com elenco, perfil e as dimensões novas sobrevive a salvar e carregar', () => {
+    const v = jovem(23, 2931, 'sao-paulo-sp');
+    const e: CarreiraEsportiva = { modalidade: 'futebol', fase: 'profissional', clube: 'Palmeiras', nivel: 4, tInicio: v.t - 60, tFase: v.t - 24, lesoes: 0, municipioId: 'sao-paulo-sp', espaco: 'titular', posicao: 'meia', temporadas: [], perfil28: { principal: 'garcom', secundarios: ['capitao'], desde: v.t, historico: [{ ano: 2040, principal: 'garcom' }] } };
+    v.caminhos.esporte = e;
+    garantirElenco(v, e, { regua: 74, papel: 'meia', salarioBase: 60000 });
+    janelaDoElenco(v, e, { regua: 74, papel: 'meia', salarioBase: 60000 });
+    const r = interpretar(JSON.stringify(v));
+    expect(r.tipo).toBe('ok');
+    if (r.tipo !== 'ok') return;
+    const e2 = r.vida.caminhos.esporte!;
+    expect(e2.perfil28).toEqual(e.perfil28);
+    expect(e2.elenco28!.atletas.map(a => a.nome)).toEqual(e.elenco28!.atletas.map(a => a.nome));
+    const c = concorrenteNaPosicao(r.vida, e2, 'meia');
+    expect(c?.pessoaId && r.vida.vinculos[c.pessoaId]?.rivalidade).toBeGreaterThan(0);
   });
 });

@@ -30,7 +30,7 @@ import { escrever as escreverNaVida, idade, lembrarCom, marcarFato, pais, temFat
 /** VIDA 28: tudo o que a carreira esportiva escreve é do mesmo fio da História (`Entrada.fio`): lido na ordem em que aconteceu. */
 const escrever = (v: Vida, e: NovaEntrada) => escreverNaVida(v, { fio: 'esporte', ...e });
 import { arquetipo, efeitosDoPerfil, guardarPerfil, lerPerfil, nomeDoArquetipo, type LeituraDoPerfil } from './arquetipos';
-import { concorrenciaNaPosicao, concorrenteNaPosicao, janelaDoElenco } from './elenco28';
+import { concorrenciaNaPosicao, concorrenteNaPosicao, garantirElenco, janelaDoElenco } from './elenco28';
 import { ecoNasRelacoes, mexer28 } from './relacoes28';
 import { cidadesDoPais, municipio, municipioDoCodigo, MUNICIPIOS, paisDaCidade } from '../dados/lugares';
 import { estruturaEsportiva } from '../dados/mercado';
@@ -292,6 +292,13 @@ export function salarioDoContrato(v: Vida, e: CarreiraEsportiva, nivel: number =
   return Math.max(salarioMinimoDoPais(paisDoClube), Math.round(bruto / 100) * 100);
 }
 
+/** VIDA 28: monta o elenco do clube de agora (no primeiro contrato e na chegada a um clube novo). */
+export function montarElenco(v: Vida, e: CarreiraEsportiva): void {
+  if (e.fase !== 'profissional') return;
+  const papel = e.modalidade === 'futebol' ? posicaoDe(v, e) : e.modalidade === 'basquete' ? funcaoBasquete(v) : e.modalidade === 'volei' ? funcaoVolei(v) : funcaoFutsalDe(v, e);
+  garantirElenco(v, e, { regua: barraDeTitular(e.modalidade, e.nivel), papel, salarioBase: salarioBaseDoElenco(v, e) });
+}
+
 /** VIDA 28: o salário de referência do elenco do clube (o titular médio da divisão, pelo porte do clube e pelo país). */
 export function salarioBaseDoElenco(_v: Vida, e: CarreiraEsportiva): number {
   const futebol = e.modalidade === 'futebol';
@@ -480,7 +487,9 @@ export function transferirPara(v: Vida, e: CarreiraEsportiva, p: PropostaDeClube
     emp.empregador = vivePremiacao(e.modalidade) ? emp.empregador : oClube(p.clube);
     emp.salario = p.espaco === 'titular' ? p.salarioTitular : p.salario;
   }
-  // VIDA 28: a mudança de clube na memória de quem é próximo (o elenco novo se monta na próxima janela: `elenco28`).
+  // VIDA 28: o elenco do clube novo já existe ao chegar (quem disputa a vaga, quem joga junto) — a janela anda no fim do ano.
+  if (de !== p.clube) montarElenco(v, e);
+  // VIDA 28: a mudança de clube na memória de quem é próximo.
   if (de !== p.clube) ecoNasRelacoes(v, 'transferencia', `Acompanhou a sua ida ${doClube(de)} para ${oClube(p.clube)}, em ${anoDe(v.t)}.`, 1);
 }
 
@@ -1425,6 +1434,7 @@ export function profissionalizar(v: Vida, r: Rng, nivel: number): void {
   ecoNasRelacoes(v, 'contrato', `Comemorou com você o primeiro contrato profissional, ${e.modalidade === 'tenis' ? 'no circuito' : peloClube(e.clube)}, aos ${idade(v)}.`, 3);
   registrarConquista(v, { tipo: 'marco', modalidade: e.modalidade, ano: anoDe(v.t), competicao: divisaoDe(e.modalidade, e.nivel, paisDaCidade(e.municipioId)), clube: e.modalidade === 'tenis' ? undefined : e.clube, texto: `Primeiro contrato profissional, aos ${idade(v)}` });
   marcarFato(v, 'atleta_profissional');
+  montarElenco(v, e);
 }
 
 function anoProfissional(v: Vida, r: Rng, e: CarreiraEsportiva): void {

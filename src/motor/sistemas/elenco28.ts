@@ -53,6 +53,8 @@ export interface AtletaDoElenco {
 
 export interface Elenco28 {
   clube: string;
+  /** A posição (ou função) do personagem no elenco: a vaga que se disputa. */
+  papel?: string;
   /** O ano da última janela processada. */
   ano: number;
   atletas: AtletaDoElenco[];
@@ -108,7 +110,7 @@ export function garantirElenco(v: Vida, e: CarreiraEsportiva, ctx: ContextoDoEle
   const outros = papeis.filter(p => p !== ctx.papel);
   outros.forEach((p, k) => atletas.push(novoAtleta(v, r, e, p, ctx.regua, ctx.salarioBase, k + 2, [20, 33], k === 1)));
   while (atletas.length < regras.tamanho) atletas.push(novoAtleta(v, r, e, r.pick(outros), ctx.regua - 3, ctx.salarioBase, atletas.length, [19, 30]));
-  const el: Elenco28 = { clube: e.clube, ano: anoDe(v.t) - 1, atletas, movimentos: [] };
+  const el: Elenco28 = { clube: e.clube, papel: ctx.papel, ano: anoDe(v.t) - 1, atletas, movimentos: [] };
   // O concorrente direto é uma pessoa da vida (a rivalidade é uma relação); o mais velho do elenco, o capitão do grupo, também.
   const conc = atletas[0];
   conc.pessoaId = pessoaDoElenco(v, r, e, conc, 'concorrente').id;
@@ -180,6 +182,7 @@ export function janelaDoElenco(v: Vida, e: CarreiraEsportiva, ctx: ContextoDoEle
   const ano = anoDe(v.t);
   if (el.ano >= ano && el.movimentos.some(m => m.ano === ano)) return [];
   el.ano = ano;
+  el.papel = ctx.papel;
   const regras = REGRAS_DO_MERCADO[e.modalidade]!;
   const r = rngDe(v.id, 'janela28', e.clube, ano);
   const feitos: Elenco28['movimentos'] = [];
