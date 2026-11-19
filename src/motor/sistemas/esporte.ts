@@ -1507,7 +1507,7 @@ function anoProfissional(v: Vida, r: Rng, e: CarreiraEsportiva): void {
   registrarTemporada(v, r, e, t);
   pagarBonusDaTemporada(v, e, t);
   // VIDA 28: o título na memória de quem é próximo (as conversas lembram; quem gosta admira; o rival reconhece).
-  { const tit = bonusDaTemporada(e, t, 1).motivos; if (tit.length) ecoNasRelacoes(v, 'titulo', `Comemoraram juntos ${listaNatural(tit)}, ${peloClube(e.clube)}, em ${t.ano}.`, 2); }
+  { const tit = bonusDaTemporada(e, t, 1, titulosIndividuaisDoAno(v, e, t)).motivos; if (tit.length) ecoNasRelacoes(v, 'titulo', `Comemoraram juntos ${listaNatural(tit)}, ${peloClube(e.clube)}, em ${t.ano}.`, 2); }
   // VIDA 28: a janela do ano no clube (o elenco com nome; o mercado anda sozinho, pelas regras da modalidade).
   const papel28 = e.modalidade === 'futebol' ? posicaoDe(v, e) : e.modalidade === 'basquete' ? funcaoBasquete(v) : e.modalidade === 'volei' ? funcaoVolei(v) : funcaoFutsalDe(v, e);
   janelaDoElenco(v, e, { regua: barraDeTitular(e.modalidade, e.nivel), papel: papel28, salarioBase: salarioBaseDoElenco(v, e) });
@@ -1776,13 +1776,14 @@ export function encerrarCarreira(v: Vida, e: CarreiraEsportiva, motivo: NonNulla
  * de premiação (já paga no circuito). ABSTRAÇÃO: os múltiplos (1×, 1×, 2× o salário do mês) são calibração de jogo —
  * cada contrato real tem os seus.
  */
-export function bonusDaTemporada(e: CarreiraEsportiva, t: Temporada, salario: number): { valor: number; motivos: string[] } {
+export function bonusDaTemporada(e: CarreiraEsportiva, t: Temporada, salario: number, titulosNoPalmares?: number): { valor: number; motivos: string[] } {
   if (vivePremiacao(e.modalidade) || salario <= 0) return { valor: 0, motivos: [] };
   const motivos: string[] = [];
   let mult = 0;
   const individual = individualComEquipe(e.modalidade);
   if (individual) {
-    const titulos = (t.luta?.titulos ?? 0) + (t.prova?.vitorias ? 1 : 0);
+    // Só o título que o palmarés registrou na temporada (vencer uma prova não é título; a final nacional vencida é).
+    const titulos = titulosNoPalmares ?? (t.luta?.titulos ?? 0);
     if (titulos) { mult += 0.5 * titulos; motivos.push(titulos === 1 ? 'o título do ano' : `${titulos} títulos`); }
   } else {
     if (t.colocacao === 1) { mult += 1; motivos.push('o título da liga'); }
@@ -1793,10 +1794,16 @@ export function bonusDaTemporada(e: CarreiraEsportiva, t: Temporada, salario: nu
   return { valor: Math.round(salario * mult * participacao / 100) * 100, motivos };
 }
 
+/** Os títulos da temporada no palmarés, nas modalidades individuais (a fonte do que é título; `undefined` nas de clube). */
+function titulosIndividuaisDoAno(v: Vida, e: CarreiraEsportiva, t: Temporada): number | undefined {
+  if (!individualComEquipe(e.modalidade)) return undefined;
+  return (v.caminhos.palmares ?? []).filter(c => c.tipo === 'titulo' && c.modalidade === e.modalidade && c.ano === t.ano).length;
+}
+
 function pagarBonusDaTemporada(v: Vida, e: CarreiraEsportiva, t: Temporada): void {
   const emp = v.trabalho.atual;
   if (!emp || !OCUPACOES_DE_ATLETA.includes(emp.ocupacaoId)) return;
-  const b = bonusDaTemporada(e, t, emp.salario);
+  const b = bonusDaTemporada(e, t, emp.salario, titulosIndividuaisDoAno(v, e, t));
   if (!b.valor) return;
   t.bonus = b.valor;
   v.financas.conta += b.valor;
