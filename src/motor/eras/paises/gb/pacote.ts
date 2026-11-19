@@ -9,12 +9,14 @@
  */
 import type { PacoteDeEra } from '../../base/pacote';
 import * as S from './serie';
+import { SOCIEDADE_GB } from './sociedade';
 
 const t = (a: number, m: number) => a * 12 + m - 1;
 /** O mínimo por hora × 40 h × 52 semanas ÷ 12. */
 const mes = (hora: number) => Math.round(hora * 2080 / 12 * 100) / 100;
 
 export const PACOTE: PacoteDeEra = {
+  sociedade: SOCIEDADE_GB,
   pais: 'GB',
   nome: 'Reino Unido',
   desde: 1900,

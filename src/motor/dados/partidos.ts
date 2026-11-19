@@ -14,6 +14,7 @@
 
 import { PARTIDO_NO_TEMPO, nomeNoAno } from '../eras/base/partidos';
 import { mesHistoricoCorrente } from '../eras/base/moedas';
+import { partidoDaEpoca } from '../eras/base/sociedade4';
 
 export interface Partido {
   sigla: string;
@@ -79,7 +80,8 @@ const emVidaHistorica = () => { const mh = mesHistoricoCorrente(); return mh !==
 
 /** ERAS HISTÓRICAS: um partido que já não existe com esse nome (o PFL, o PMDB), com o nome que tinha no ano corrente. */
 function daHistoria(id: string): Partido | undefined {
-  const p = PARTIDO_NO_TEMPO.get(id);
+  // ERAS v4: os partidos de outros países na época (`eras/paises/<id>/sociedade`), pelo id.
+  const p = PARTIDO_NO_TEMPO.get(id) ?? partidoDaEpoca(id);
   if (!p) return undefined;
   const mh = mesHistoricoCorrente();
   const n = nomeNoAno(p, mh !== null ? Math.floor(mh / 12) : 2026);

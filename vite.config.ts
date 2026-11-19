@@ -7,6 +7,16 @@ type InfoDeModulo = { importedIds: readonly string[] } | null;
 const BASE = new Map<string, boolean>();
 const CAMADA_DE_CIMA = /[\\/]src[\\/]motor[\\/](conteudo[\\/]|ano\.ts|acoes\.ts|fachada\.ts|save\.ts|criacao\.ts)/;
 /** Um módulo do motor é da camada de base se tudo o que ele importa (em tempo de execução) é catálogo ou base também. */
+/**
+ * ERAS v4 · uma FOLHA PURA: um módulo do motor que não importa nada em tempo de execução (só tipos, apagados no build). Um
+ * pacote feito só de folhas não importa pacote nenhum — não pode entrar em ciclo, fique onde ficar no grafo. É a saída
+ * estrutural para os catálogos (o pacote dos catálogos estava a 0,7 kB do limite de 800 kB na v3): cada catálogo puro,
+ * novo ou antigo, cai sozinho no pacote das folhas, sem lista de nomes para manter.
+ */
+function ehFolhaPura(id: string, info: (id: string) => InfoDeModulo): boolean {
+  const m = info(id);
+  return !!m && m.importedIds.length === 0;
+}
 function ehBase(id: string, info: (id: string) => InfoDeModulo, visitando = new Set<string>()): boolean {
   const ja = BASE.get(id);
   if (ja !== undefined) return ja;
@@ -143,7 +153,7 @@ export default defineConfig({
           // dos outros países (`eras/v3`) vai com o motor da época.
           const eraPais = /[\\/]src[\\/]motor[\\/]eras[\\/]paises[\\/]([a-z]+)[\\/]/.exec(id);
           if (eraPais) return `eras-${eraPais[1]}`;
-          if (/[\\/]src[\\/]motor[\\/]eras[\\/](dados[\\/]|v3[\\/]|ano\.ts)/.test(id)) return 'motor-eras';
+          if (/[\\/]src[\\/]motor[\\/]eras[\\/](dados[\\/]|v3[\\/]|v4[\\/]|ano\.ts)/.test(id)) return 'motor-eras';
           // A base histórica (só dados e funções puras, sem import de nenhum pacote do motor): pacote próprio, embaixo de tudo.
           if (/[\\/]src[\\/]motor[\\/]eras[\\/]base[\\/]/.test(id)) return 'eras-base';
           if (/[\\/]src[\\/]motor[\\/]v18[\\/]/.test(id)) return 'motor18';
@@ -234,6 +244,8 @@ export default defineConfig({
           // (puro: só importa os outros catálogos de tatuagem, também puros) — motor-dados tinha passado de 800 kB.
           if (/[\\/]src[\\/]motor[\\/]sistemas[\\/](cotaDeMensagens|estadoConjugal)\.ts/.test(id)) return 'motor-casa';
           if (/[\\/]src[\\/]motor[\\/]dados[\\/](casa128|perfisDeMarca|colecao128|animais128|categoriasDaCasa|tatuagens|tatuagens129|tatuagens13|tatuagens13c[A-D]|tatuagens13cTipos|veiculos129|veiculos21|motosClassicas1291|piercings129|piercings13|aparencia13|instituicoes129|cursos129|encontros129|empresas129|produtos13|nomes13|presidencia129|hobbies129|municipios1291|colegioEleitoral129)\.ts/.test(id)) return 'motor-casa';
+          // ERAS v4: os catálogos puros (folhas: nada importado em tempo de execução) num pacote só deles, embaixo de tudo.
+          if (/[\\/]src[\\/]motor[\\/]dados[\\/]/.test(id) && ehFolhaPura(id, getModuleInfo)) return 'motor-catalogos';
           if (/[\\/]src[\\/]motor[\\/]dados[\\/]/.test(id)) return 'motor-dados';
           // Pacote pré-América do Sul: a CAMADA DE BASE — os sistemas-folha que só importam os catálogos e uns aos outros
           // (núcleo, texto, tempo, mercado, origem, rede, notoriedade, economia...) — vai com os catálogos, embaixo de

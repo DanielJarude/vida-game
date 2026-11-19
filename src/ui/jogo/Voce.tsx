@@ -222,7 +222,7 @@ export function Voce({ vida, agir, irPara, abrirPessoa, parte: parteDeFora, irPa
       {/* VIDA 21: as formas de reconhecimento (fama, prestígio, onde você vive, redes, imagem). */}
       <FormasDeReconhecimento vida={vida} />
       <div id="voce-mundo"><QuemNoMundo vida={vida} agir={agir} /></div>
-      {parte === 'mundo' && <Mundo14 vida={vida} />}
+      {parte === 'mundo' && <Mundo14 vida={vida} agir={agir} />}
       {i >= 14 && <OQueConstruiu vida={vida} />}
       <Linhagem vida={vida} />
       </div>

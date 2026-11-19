@@ -8,6 +8,7 @@
 
 import { definirMesHistorico } from '../eras/base/moedas';
 import { ladoNoMes, pacoteDaEra } from '../eras/base/pacote';
+import { definirLugarDaHistoria } from '../eras/base/sociedade4';
 import type { Pessoa, Vida } from '../tipos';
 import { existeMunicipio, municipio, paisDaCidade } from '../dados/lugares';
 import { PAIS_PADRAO, perfilDoPais, temPerfil } from './registro';
@@ -151,6 +152,8 @@ export function entrarNaVida(v: Vida): void {
   definirPaisCorrente(paisDaVida(v));
   // ERAS HISTÓRICAS: a moeda da época sai do mês corrente da vida (nada muda numa vida contemporânea).
   definirMesHistorico(v.era ? v.t : null, paisDaVida(v), v.era ? ladoDaVida(v) : 'oeste');
+  // ERAS v4: onde a vida está e o que ela já mudou no mundo (as reformas valem no alcance delas). Contemporânea: nada.
+  definirLugarDaHistoria(v.era?.historia, v.era ? v.moradia.municipioId : undefined, v.era && existeMunicipio(v.moradia.municipioId) ? municipio(v.moradia.municipioId).uf : undefined);
 }
 
 /**

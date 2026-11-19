@@ -27,6 +27,7 @@ import { lancar } from '../sistemas/extrato';
 import { fatorNominal, FIM_DA_SERIE, ipcaDoAno, padraoEm, PADROES_MONETARIOS_BR, nivelDePrecos } from './base/moedas';
 import { nivelEconomico, temAcesso, tecnologia, paisDaEpoca } from './base/contexto';
 import { processarEraNoPais, regrasDoAno, guerrasDoAno, estudoDaEpoca } from './v3/anoPais';
+import { sociedadeDoAno, notaDaHistoriaAlternativa } from './v4/sociedadeAno';
 import { ACONTECIMENTOS_BR, ESPORTE_MUNDIAL_BR, PIB_BR, type AcontecimentoBR } from './dados/acontecimentosBR';
 
 const TODOS = [...ACONTECIMENTOS_BR, ...ESPORTE_MUNDIAL_BR].sort((a, b) => a.data[0] * 12 + a.data[1] - (b.data[0] * 12 + b.data[1]));
@@ -208,7 +209,7 @@ function acontecimentos(v: Vida, tIni: number, tFim: number): void {
     if (a.especial === 'covid_br') pessoal = i < 18 ? ' A escola fechou; as aulas, quando houve, foram por uma tela.' : v.trabalho.atual ? ' O trabalho mudou de um dia para o outro.' : '';
     const efeito = a.efeito && a.mods ? ` ${a.efeito}` : '';
     const peso = a.peso === 'biografia' ? 'biografia' : 'cotidiano';
-    escrever(v, { t, texto: `${comoChegou(v, a, ano)}${a.fato}${efeito}${pessoal}`, relevancia: peso, tema: a.categoria === 'economia' ? 'dinheiro' : a.categoria === 'saude' ? 'saude' : 'lugar', tom: a.categoria === 'desastre' ? 'ruim' : a.id === 'tetra' || a.id === 'penta' || a.id === 'copa_1970' || a.id.startsWith('jogos_') ? 'bom' : 'neutro', fato: { tipo: 'era', dados: { categoria: a.categoria, evento: a.id } } });
+    escrever(v, { t, texto: `${comoChegou(v, a, ano)}${a.fato}${notaDaHistoriaAlternativa(v, 'BR', a.id)}${efeito}${pessoal}`, relevancia: peso, tema: a.categoria === 'economia' ? 'dinheiro' : a.categoria === 'saude' ? 'saude' : 'lugar', tom: a.categoria === 'desastre' ? 'ruim' : a.id === 'tetra' || a.id === 'penta' || a.id === 'copa_1970' || a.id.startsWith('jogos_') ? 'bom' : 'neutro', fato: { tipo: 'era', dados: { categoria: a.categoria, evento: a.id } } });
   }
 }
 
@@ -325,6 +326,7 @@ export function processarEra(v: Vida, ec: AnoEconomico): void {
   partidoMuda(v, tFim);
   maioridade(v);
   regrasDoAno(v, 'BR', 'oeste');
+  sociedadeDoAno(v, 'BR', 'oeste'); // ERAS v4
   guerrasDoAno(v, 'BR', 'oeste');
   estudoDaEpoca(v, 'BR');
   chegadas(v);

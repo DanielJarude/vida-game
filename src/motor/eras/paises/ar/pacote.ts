@@ -10,10 +10,12 @@
  */
 import type { PacoteDeEra } from '../../base/pacote';
 import * as S from './serie';
+import { SOCIEDADE_AR } from './sociedade';
 
 const t = (a: number, m: number) => a * 12 + m - 1;
 
 export const PACOTE: PacoteDeEra = {
+  sociedade: SOCIEDADE_AR,
   pais: 'AR',
   nome: 'Argentina',
   desde: 1945,

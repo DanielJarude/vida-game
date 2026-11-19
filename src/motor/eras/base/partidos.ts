@@ -17,6 +17,9 @@
  * sem representação ficaram de fora (ver docs/eras/FONTES.md).
  */
 
+import { SOCIEDADE_BR } from './sociedadeBR';
+import { partidoAtivoNoMes, divisaoCorrente } from './sociedade4';
+
 export interface PartidoNoTempo {
   /** A chave guardada na vida (a sigla de 2026 quando o partido ainda existe com ela). */
   id: string;
@@ -109,7 +112,7 @@ export const PARTIDOS_BR_NO_TEMPO: readonly PartidoNoTempo[] = [
   P('DEMOCRATA', 'DEMOCRATA', 'Democrata', [2025, 12], { chamado: 'Democrata' })
 ];
 
-export const PARTIDO_NO_TEMPO = new Map(PARTIDOS_BR_NO_TEMPO.map(p => [p.id, p]));
+export const PARTIDO_NO_TEMPO = new Map<string, PartidoNoTempo>([...PARTIDOS_BR_NO_TEMPO, ...(SOCIEDADE_BR.partidos ?? [])].map(p => [p.id, p]));
 
 const tDe = (x: [number, number]) => x[0] * 12 + x[1] - 1;
 
@@ -118,7 +121,9 @@ export const existeNoMes = (p: PartidoNoTempo, t: number) => t >= tDe(p.de) && (
 
 /** As chaves dos partidos em que se podia filiar no mês. */
 export function partidosNoMes(t: number): string[] {
-  return PARTIDOS_BR_NO_TEMPO.filter(p => existeNoMes(p, t)).map(p => p.id);
+  // ERAS v4: antes de 1966, os partidos da Primeira República e de 1945–1965 (`sociedadeBR`), legais no mês e no estado.
+  const antigos = t < 1966 * 12 ? (SOCIEDADE_BR.partidos ?? []).filter(p => partidoAtivoNoMes(p, t, divisaoCorrente())).map(p => p.id) : [];
+  return [...antigos, ...PARTIDOS_BR_NO_TEMPO.filter(p => existeNoMes(p, t)).map(p => p.id)];
 }
 
 /** O destino de um partido no mês: ele mesmo, se existe; senão, o fim da linhagem até `t` (ou undefined, se extinto sem sucessor). */

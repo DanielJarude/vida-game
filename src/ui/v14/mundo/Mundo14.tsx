@@ -8,10 +8,12 @@ import type { Vida } from '../../../motor/tipos';
 import { resumoDoMundo14 } from '../../../motor/v14/mundo/mundo14';
 import '../politica/politica14.css';
 import { PainelDaEpoca } from '../../eras/PainelDaEpoca';
+import { Sociedade4 } from '../../eras/Sociedade4';
+import type { Acao } from '../../../motor/acoes';
 
 const TIPO: Record<string, string> = { economia: 'Economia', tecnologia: 'Tecnologia', ciencia: 'Ciência', desastre: 'Desastre', pandemia: 'Pandemia', cultura: 'Cultura', esporte: 'Esporte', internacional: 'Mundo', trabalho: 'Trabalho', produtos: 'Produtos', politica: 'Política', sociedade: 'Sociedade' };
 
-export function Mundo14({ vida }: { vida: Vida }) {
+export function Mundo14({ vida, agir }: { vida: Vida; agir?: (a: Acao) => boolean }) {
   const [abertas, setAbertas] = useState(1);
   const r = resumoDoMundo14(vida);
   if (!r.decadas.length && !r.antes.length && !vida.era) return null;
@@ -19,6 +21,8 @@ export function Mundo14({ vida }: { vida: Vida }) {
     <section className="p14" aria-label="O mundo">
       {/* ERAS HISTÓRICAS: o contexto do ano (só nas vidas históricas). */}
       {vida.era && <PainelDaEpoca vida={vida} />}
+      {/* ERAS v4: a sociedade da época — o que pesa, os movimentos, o mundo que a família mudou. */}
+      {vida.era && <Sociedade4 vida={vida} agir={agir} />}
       <div className="p14__bloco">
         <p className="p14__kicker">O mundo agora · {r.ano}</p>
         {r.ativos.length === 0 && <p className="nota">Nada de fora pesando na sua vida neste ano.</p>}

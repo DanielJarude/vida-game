@@ -216,6 +216,8 @@ export interface PacoteDeEra {
   cursos?: Readonly<Record<string, number>>;
   /** Os partidos (siglas do perfil contemporâneo do país) que ainda não existiam: sigla → ano de fundação. */
   partidosDesde?: Readonly<Record<string, number>>;
+  /** ERAS v4: as barreiras, as reformas, os movimentos e os partidos da época (`sociedade4`). */
+  sociedade?: import('./sociedade4').SociedadeDaEra;
 }
 
 /* ------------------------------------------------------------------ O registro */

@@ -17,6 +17,7 @@
  * atletismo e lutas usam a mesma estrutura, com seletivas e equipes.
  */
 
+import { ocupacaoAindaNaoExiste } from '../eras/base/profissoes';
 import { converterEntrePaises, paisCorrente } from '../mundo/moeda';
 import { PAIS_PADRAO } from '../mundo/registro';
 import { rendaRelativa, salarioMinimoDoPais } from '../mundo/economia';
@@ -1201,7 +1202,14 @@ function anoNaBase(v: Vida, r: Rng, e: CarreiraEsportiva, presenca = 1): void {
   // profissional está mais perto dela.
   const integrado = e.integracao26 !== undefined ? 1.35 : 1;
   const prontidaoPesa = clamp(0.6 + (leitura.prontidao - 55) / 60, 0.5, 1.3);
-  if (podeContrato ? r.chance(clamp((h - limiar + 2) / 16 * integrado * prontidaoPesa, 0.08, 0.7)) : quaseLa && r.chance(clamp((h - limiar + 6) / 30, 0.03, 0.2))) {
+  // ERAS v4: antes do profissionalismo no país (o futebol brasileiro até 1933, o inglês desde sempre, o japonês até a
+  // J.League de 1993...), não há contrato: o esporte é amador, joga-se pelo clube e vive-se de outro trabalho.
+  const amadorAte = ocupacaoAindaNaoExiste(v, ocupacaoDaModalidade(e.modalidade));
+  if (amadorAte !== undefined && podeContrato && !temFato(v, 'v4_amador')) {
+    marcarFato(v, 'v4_amador');
+    escrever(v, { texto: `Era bom o bastante para o time de cima — mas, em ${anoDe(v.t)}, ${NOME_MOD[e.modalidade] ?? 'o esporte'} ainda era amador no país (o profissionalismo só viria por volta de ${amadorAte}). Jogava-se pela camisa, e vivia-se de outro trabalho.`, relevancia: 'biografia', tema: 'trabalho', tom: 'neutro', fato: { tipo: 'era', dados: { categoria: 'esporte', evento: `amador:${e.modalidade}` } } });
+  }
+  if (amadorAte === undefined && (podeContrato ? r.chance(clamp((h - limiar + 2) / 16 * integrado * prontidaoPesa, 0.08, 0.7)) : quaseLa && r.chance(clamp((h - limiar + 6) / 30, 0.03, 0.2)))) {
     // O tenista sem ranking não entra direto nos torneios grandes: começa no nacional ou na entrada internacional.
     const nivel = e.modalidade === 'tenis' ? circuitoDeEstreia(h) : nivelPelaHabilidade(h);
     novaOportunidade(v, {

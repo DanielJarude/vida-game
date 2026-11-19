@@ -10,6 +10,7 @@
  * disponível em Tarauacá.
  */
 
+import { epocaNaFaculdade } from '../eras/base/sociedade4';
 import { COTAS_DESDE, cursoExiste, nomeDoCursoNoAno, viaExiste } from '../eras/base/profissoes';
 import { textoDaEpoca } from '../eras/base/anacronismos';
 import { esperadoNaSerie, MATERIAS } from '../dados/frentes';
@@ -575,6 +576,17 @@ export function opcoesDeCurso(v: Vida): OpcaoCurso[] {
     const mens = Math.round(c.mensalidade * local.custo / 10) * 10;
     const add = (o: Omit<OpcaoCurso, 'curso' | 'municipioId'> & { municipioId?: string }) => {
       if (v.era && !viaExiste(v, o.via)) return; // ProUni, FIES e EAD só depois das leis que os criaram
+      // ERAS v4: a universidade da época — a porta que a lei ou a instituição fechava, e a chance que a classe e o costume
+      // davam (`eras/base/sociedade4.epocaNaFaculdade`). Contemporânea: nada muda.
+      if (v.era && c.nivel !== 'livre' && c.nivel !== 'tecnico') {
+        const ep = epocaNaFaculdade(v);
+        if (ep.bloqueio) o = { ...o, veredito: { grau: ep.bloqueio.barreira.natureza === 'lei' ? 'ilegal' : 'requisito', motivo: `${ep.bloqueio.barreira.texto}${ep.bloqueio.barreira.alternativa ? ` ${ep.bloqueio.barreira.alternativa}` : ''}` } };
+        else if (ep.fator < 0.999 && o.veredito.chance !== undefined) {
+          const chance = Math.max(0.02, o.veredito.chance * ep.fator);
+          const motivo = ep.pesos[0] ? ep.pesos[0].barreira.texto : 'Na época, quase só os filhos de famílias com dinheiro chegavam à universidade.';
+          o = { ...o, veredito: { ...o.veredito, chance, ...(chance < 0.3 ? { grau: 'improvavel' as const, motivo } : {}) } };
+        }
+      }
       opcoes.push({ curso: c, municipioId: o.municipioId ?? aqui, ...o, ...(v.era && o.observacao ? { observacao: textoDaEpoca(v, o.observacao) } : {}), veredito: req ?? (v.era && o.veredito.motivo ? { ...o.veredito, motivo: textoDaEpoca(v, o.veredito.motivo) } : o.veredito) });
     };
 

@@ -26,6 +26,7 @@ import { nivelEconomico, temAcesso, tecnologia } from '../base/contexto';
 import { guerrasDoPais, regrasDoPais, regraValeEm, taxaDoSuperior } from '../base/sociedade';
 import { ladoHistoricoCorrente } from '../base/moedas';
 import { fatorNominalNoPais, escritaAntiga } from '../../mundo/moeda';
+import { sociedadeDoAno, notaDaHistoriaAlternativa } from '../v4/sociedadeAno';
 import type { EventoMundial14, TipoEventoMundial } from '../../dados14/mundo/tipos';
 import type { FaseEconomica } from '../../tipos';
 
@@ -220,7 +221,7 @@ function acontecimentos(v: Vida, p: PacoteDeEra, tIni: number, tFim: number, lad
     const pessoal = especial(v, p, a, t, lado);
     const efeito = a.efeito && a.mods ? ` ${a.efeito}` : '';
     const tema: Tema = a.categoria === 'economia' ? 'dinheiro' : a.categoria === 'saude' ? 'saude' : a.categoria === 'esporte' || a.categoria === 'cultura' ? 'lazer' : 'lugar';
-    escrever(v, { t, texto: `${comoChegou(v, a, ano)}${a.fato}${efeito}${pessoal}${frasePessoal(v, a)}`, relevancia: a.peso === 'biografia' ? 'biografia' : 'cotidiano', tema, tom: a.categoria === 'desastre' || a.categoria === 'guerra' ? 'ruim' : 'neutro', fato: { tipo: 'era', dados: { categoria: a.categoria, evento: `${p.pais}:${a.id}`, ...(a.divisoes ? { escopo: 'regional' } : { escopo: 'nacional' }) } } });
+    escrever(v, { t, texto: `${comoChegou(v, a, ano)}${a.fato}${notaDaHistoriaAlternativa(v, p.pais, a.id)}${efeito}${pessoal}${frasePessoal(v, a)}`, relevancia: a.peso === 'biografia' ? 'biografia' : 'cotidiano', tema, tom: a.categoria === 'desastre' || a.categoria === 'guerra' ? 'ruim' : 'neutro', fato: { tipo: 'era', dados: { categoria: a.categoria, evento: `${p.pais}:${a.id}`, ...(a.divisoes ? { escopo: 'regional' } : { escopo: 'nacional' }) } } });
   }
 }
 
@@ -343,6 +344,7 @@ export function processarEraNoPais(v: Vida, pais: string, ec: AnoEconomico, comu
   }
   devolverCongelado(v, p, tFim, lado);
   regrasDoAno(v, pais, lado);
+  sociedadeDoAno(v, pais, lado); // ERAS v4
   guerrasDoAno(v, pais, lado);
   estudoDaEpoca(v, pais);
   comum(v);

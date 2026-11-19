@@ -3976,6 +3976,11 @@ export interface EraDaVida {
   vistos?: string[];
   /** Plano Collor (1990): o que ficou retido no Banco Central e quando volta (unidades do motor). */
   retido?: { valor: number; tVolta: number; parcelas: number };
+  /**
+   * ERAS v4: o mundo que esta continuidade mudou (reformas antecipadas, movimentos, barreiras encontradas) — passa aos
+   * herdeiros com a vida (`eras/base/sociedade4`).
+   */
+  historia?: import('./eras/base/sociedade4').HistoriaDaVida;
 }
 
 export interface Vida {

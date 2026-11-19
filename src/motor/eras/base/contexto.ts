@@ -12,6 +12,7 @@ const anoDe = (t: number) => Math.floor(t / 12);
 import { TECNOLOGIA_POR_ID, type MeioDeComunicacao } from './tecnologias';
 import { salarioMinimoReal, mesHistoricoCorrente, paisHistoricoCorrente, ladoHistoricoCorrente } from './moedas';
 import { pacoteDaEra, type ChegadaNoPais } from './pacote';
+import { normalizarHistoria } from './sociedade4';
 
 /**
  * ERAS v3: os países em que se pode viver uma época, e o primeiro ano de nascimento de cada um (o limite das séries e do
@@ -174,6 +175,7 @@ export function normalizarEra(v: Vida): void {
   else v.era!.vistos = v.era!.vistos.filter(x => typeof x === 'string');
   const r = v.era!.retido;
   if (r && !(typeof r.valor === 'number' && Number.isFinite(r.valor) && r.valor >= 0 && typeof r.tVolta === 'number' && typeof r.parcelas === 'number')) delete v.era!.retido;
+  normalizarHistoria(v); // ERAS v4
 }
 
 /**

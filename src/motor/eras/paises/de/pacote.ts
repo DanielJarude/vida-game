@@ -11,6 +11,7 @@
  */
 import type { PacoteDeEra } from '../../base/pacote';
 import * as S from './serie';
+import { SOCIEDADE_DE } from './sociedade';
 
 const t = (a: number, m: number) => a * 12 + m - 1;
 const LESTE = ['BB', 'MV', 'SN', 'ST', 'TH'];
@@ -18,6 +19,7 @@ const LESTE = ['BB', 'MV', 'SN', 'ST', 'TH'];
 const DM = 1.95583;
 
 export const PACOTE: PacoteDeEra = {
+  sociedade: SOCIEDADE_DE,
   pais: 'DE',
   nome: 'Alemanha',
   desde: 1900,

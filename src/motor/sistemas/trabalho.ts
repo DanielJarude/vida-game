@@ -18,6 +18,7 @@
  */
 
 import { ocupacaoAindaNaoExiste } from '../eras/base/profissoes';
+import { epocaNaVaga, epocaNoSalario } from '../eras/base/sociedade4';
 import { vocacaoDaVaga14 } from '../dados14/cidades/municipios14';
 import { EFEITO_DO_CHEFE, perfilDoChefe } from './jeito';
 import { nomeDoRegistro } from '../mundo/locais';
@@ -162,6 +163,9 @@ export function elegibilidade(v: Vida, oc: Ocupacao, via: ViaDeEntrada = 'curric
   // ERAS HISTÓRICAS: a profissão que só surgiu depois (motorista de aplicativo antes de 2014, cientista de dados antes de 2012...).
   const desde = ocupacaoAindaNaoExiste(v, oc.id);
   if (desde !== undefined) return bloqueio('impossivel', `Essa profissão ainda não existe (surge por volta de ${desde}).`);
+  // ERAS v4: a porta que a época fechava (a lei, a instituição) — com o motivo e a saída que existia. Contemporânea: nada.
+  const epoca = epocaNaVaga(v, oc).bloqueio;
+  if (epoca) return bloqueio(epoca.barreira.natureza === 'lei' ? 'ilegal' : 'requisito', `${epoca.barreira.texto}${epoca.barreira.alternativa ? ` ${epoca.barreira.alternativa}` : ''}`);
   // A idade de trabalhar é a do lugar (`mundo/regras`): no Brasil, 16 — e o jovem aprendiz a partir dos 14.
   const lei = regrasDaVida(v).trabalho;
   const antes = lei.aprendiz?.idade ?? lei.minima;
@@ -386,7 +390,9 @@ function chanceBase(v: Vida, oc: Ocupacao, bonus: number): number {
   // O que se viveu na formação (o projeto técnico, a iniciação, a empresa júnior) pesa — a mesma conta que a tela diz (`formacao`).
   c += vivenciaQuePesa(v, oc).bonus;
   c += bonus;
-  return clamp(c, 0.05, 0.92);
+  // ERAS v4: o costume e a prática da época (quem raramente era chamado) e o privilégio da origem (o sobrenome, os contatos).
+  const epoca = epocaNaVaga(v, oc).fator;
+  return epoca === 1 ? clamp(c, 0.05, 0.92) : clamp(clamp(c, 0.05, 0.92) * epoca, 0.02, 0.92);
 }
 
 /** Todas as ocupações com o veredito (para testes e para quem precisa da lista crua). */
@@ -424,7 +430,8 @@ export function contratar(v: Vida, r: Rng, oc: Ocupacao, via = 'curriculo'): Emp
     ocupacaoId: oc.id,
     empregador: eDasForcas(oc) && v.caminhos.militar ? NOME_FORCA[v.caminhos.militar.forca] : oc.concurso ? orgaoDoConcurso(oc) : r.pick(outroLugar(oc.modalidade && oc.trilha === 'treino' && oc.nivel >= 4 ? ['um clube', 'uma equipe profissional'] : empregadoresPrivados(oc.trilha, oc.contrato === 'autonomo' || oc.contrato === 'informal'), anterior)),
     contrato: oc.contrato,
-    salario: clientela !== undefined ? rendaDeClientela(v, oc, clientela) : Math.round(salarioLocal(oc, v.moradia.municipioId, 0.9 + r.next() * 0.2) * fatorRendaMedica(v, oc) / 10) * 10,
+    // ERAS v4: a diferença de salário que a lei da época permitia (a "taxa feminina", antes das leis de salário igual).
+    salario: clientela !== undefined ? rendaDeClientela(v, oc, clientela) : Math.round(salarioLocal(oc, v.moradia.municipioId, 0.9 + r.next() * 0.2) * fatorRendaMedica(v, oc) * epocaNoSalario(v, oc).fator / 10) * 10,
     tInicio: v.t,
     tPosto: v.t,
     desempenho: 60,

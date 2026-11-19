@@ -35,6 +35,8 @@
 
 import { fatorDasAliancas, liderancaRompida } from './aliancas';
 import { partidosNoMes } from '../eras/base/partidos';
+import { epocaNaPolitica, partidosDoMesNoPais, partidosDaEpocaDoPais } from '../eras/base/sociedade4';
+const ehPaisComPartidosDaEpoca = (pais: string) => partidosDaEpocaDoPais(pais).length > 0;
 import { regraEleitoralDaEpoca } from '../eras/base/leis';
 import { mesHistoricoCorrente } from '../eras/base/moedas';
 import { aliviar, causasDoDesgaste, desgastar, esfriarNoAno } from './desgastePolitico';
@@ -91,12 +93,25 @@ export interface GanchosPresidencia {
 }
 export const PRESIDENCIA: GanchosPresidencia = {};
 
+/**
+ * ERAS v4 · AS REFORMAS DA ÉPOCA moram acima (`eras/v4/politica4`, no pacote do motor da época): ao carregar, elas
+ * registram aqui o que o mandato pode propor (só numa vida histórica), a disponibilidade e a execução.
+ */
+export const REFORMAS_DA_EPOCA: {
+  acoes?: (v: Vida) => AcaoProfissional[];
+  disp?: (v: Vida, valor?: string) => Veredito;
+  exec?: (v: Vida, r: Rng, valor?: string) => SaidaPolitica;
+} = {};
+
 /* ================================================================ Catálogo */
 
 /** Os partidos (siglas) que podem convidar alguém: os registrados no TSE. */
 export const PARTIDOS = PARTIDOS_REAIS.map(p => p.sigla);
 /** Os partidos do país onde a pessoa mora: os reais no Brasil; fora, os do espectro, sem nome próprio (`dados/partidos`). */
 export const partidosDoPais = (pais: string): string[] => {
+  // ERAS v4: numa vida histórica fora do Brasil, os partidos reais daquele país no mês (`eras/paises/<id>/sociedade`).
+  const mh0 = mesHistoricoCorrente();
+  if (pais !== 'BR' && mh0 !== null && mh0 < 2026 * 12) { const daEpoca = partidosDoMesNoPais(pais, mh0); if (daEpoca.length || ehPaisComPartidosDaEpoca(pais)) return daEpoca; }
   if (!politicaDo(pais).partidosReais) return PARTIDOS_GENERICOS.map(p => p.sigla);
   // ERAS HISTÓRICAS: numa vida histórica no Brasil, só os partidos que existiam no mês (`eras/base/partidos`).
   const mh = pais === 'BR' ? mesHistoricoCorrente() : null;
@@ -461,6 +476,9 @@ export function podeConcorrer(v: Vida, cargo: CargoEletivo, tEleicao: number): V
   if (v.justica?.prisao) return bloqueio('ilegal', 'Preso não se candidata.');
   // Disputar eleição é direito de quem tem a NACIONALIDADE do país (a residência não basta): `mundo/vida`.
   if (!temNacionalidade(v, paisDaVida(v))) return bloqueio('ilegal', `Para disputar uma eleição ${noPais(paisDaVida(v))}, é preciso ter a nacionalidade ${gentilico(paisDaVida(v), true)}.`);
+  // ERAS v4: quem a época não deixava concorrer (a lei, a instituição) — com o motivo.
+  const epoca = epocaNaPolitica(v, cargo).bloqueio?.barreira;
+  if (epoca) return bloqueio(epoca.natureza === 'lei' ? 'ilegal' : 'requisito', epoca.texto);
   const inel = inelegivelAte(v);
   if (inel && inel > tEleicao) return bloqueio('ilegal', `Inelegível até ${anoDe(inel)}${politicaDo(paisDaVida(v)).partidosReais && !(v.era && anoDe(v.t) < 2010) ? ' (Lei da Ficha Limpa)' : ', pela condenação'}.`);
   const m = v.caminhos.militar;
@@ -700,7 +718,7 @@ export function registrarCandidatura(v: Vida, cargo: CargoEletivo, tEleicao: num
  * número pesou.
  */
 export interface FatorEleitoral { id: IdFator; valor: number }
-export type IdFator = 'base' | 'nome' | 'campanha' | 'desgaste' | 'mandato' | 'segundo_mandato' | 'experiencia' | 'partido' | 'crise' | 'mare' | 'disputa' | 'escandalo' | 'troca' | 'aliancas' | 'promessas' | 'rompimento';
+export type IdFator = 'base' | 'nome' | 'campanha' | 'desgaste' | 'mandato' | 'segundo_mandato' | 'experiencia' | 'partido' | 'crise' | 'mare' | 'disputa' | 'escandalo' | 'troca' | 'aliancas' | 'promessas' | 'rompimento' | 'epoca';
 
 export function fatoresDaEleicao(v: Vida, cargo: CargoEletivo, tEleicao: number, notaSuposta?: number): { fatores: FatorEleitoral[]; x: number; chance: number } {
   const p = v.caminhos.politica!;
@@ -744,6 +762,9 @@ export function fatoresDaEleicao(v: Vida, cargo: CargoEletivo, tEleicao: number,
   // O mundo, não o jogador: a maré do partido naquela eleição, naquela cidade.
   add('mare', sorteDoPartido(v, Math.floor(tEleicao / 12)));
   add('disputa', -dificuldade(v, cargo));
+  // ERAS v4: o que a época fazia com esta candidatura (o eleitorado que não podia votar, o costume) — `sociedade4`.
+  const epoca = epocaNaPolitica(v, cargo).fator;
+  if (epoca < 1) add('epoca', -20 * (1 - epoca));
   const x = f.reduce((s, k) => s + k.valor, 0);
   // A escala da incerteza: nem base enorme garante, nem base pequena condena de antemão.
   return { fatores: f, x, chance: 1 / (1 + Math.exp(-x / 7)) };
@@ -812,6 +833,7 @@ function palavraDoFator(v: Vida, id: IdFator, valor: number, cargo: CargoEletivo
     case 'rompimento': return 'a aliança que você rompeu há pouco';
     case 'mare': return valor >= 0 ? `uma eleição boa para ${oPartidoDe(p.partido)}` : `uma eleição ruim para ${oPartidoDe(p.partido)}`;
     case 'disputa': return cargo === 'vereador' ? `muitos candidatos por vaga ${lugar}` : `a disputa por ${nomeCargo(v, cargo)} ${lugar}`;
+    case 'epoca': return 'o eleitorado que a época tirava de você';
   }
 }
 
@@ -1249,7 +1271,9 @@ export type OquePolitica = 'aproximar' | 'filiar' | 'indicacao' | 'comunidade' |
   // REWORK 11 · POL-02: as ações do cargo (`mandato`), com o id no `valor`.
   | 'cargo'
   // VIDA 12.9: as do governo do estado e do país (`presidencia129`), com o id no `valor`.
-  | 'governo129';
+  | 'governo129'
+  // ERAS v4: propor uma reforma da época (`eras/v4/politica4`), com o id da reforma no `valor`.
+  | 'reforma4';
 export type AcaoPoliticaCmd = { tipo: 'politica'; oque: OquePolitica; valor?: string };
 
 export function disponibilidadePolitica(v: Vida, a: AcaoPoliticaCmd): Veredito {
@@ -1310,6 +1334,7 @@ export function disponibilidadePolitica(v: Vida, a: AcaoPoliticaCmd): Veredito {
     case 'crise': return p?.mandato?.crise ? PERMITIDO : bloqueio('impossivel', 'Não há crise aberta.');
     case 'cargo': return disponibilidadeDoCargo(v, a.valor);
     case 'governo129': return PRESIDENCIA.disp?.(v, a.valor) ?? bloqueio('impossivel', 'Não se aplica.');
+    case 'reforma4': return REFORMAS_DA_EPOCA.disp?.(v, a.valor) ?? bloqueio('impossivel', 'Não se aplica.');
     case 'deixar': return naPolitica(v) && fase !== 'candidato' ? PERMITIDO : bloqueio('impossivel', fase === 'candidato' ? 'A campanha está na rua: é esperar a apuração.' : 'Não se aplica.');
     case 'bases': case 'recolher': case 'propostas': case 'paz_partido': case 'afastar': case 'responder': {
       if (!p || !naPolitica(v)) return bloqueio('impossivel', 'Não se aplica.');
@@ -1376,6 +1401,7 @@ export function executarPolitica(v: Vida, r: Rng, a: AcaoPoliticaCmd): SaidaPoli
     case 'crise': { const m = p?.mandato; return { decisao: ehCrise129(m?.crise?.tipo) ? (m!.cargo === 'presidente' ? 'presg_crise' : 'govg_crise') : 'pol_crise' }; }
     case 'cargo': return executarDoCargo(v, r, a.valor ?? '');
     case 'governo129': return PRESIDENCIA.exec?.(v, r, a.valor) ?? {};
+    case 'reforma4': return REFORMAS_DA_EPOCA.exec?.(v, r, a.valor) ?? {};
     case 'deixar': return { decisao: 'pol_deixar' };
     case 'trocar_partido': return { decisao: 'pol_troca_partido' };
     case 'bases': case 'recolher': case 'propostas': case 'paz_partido': case 'afastar': case 'responder': return recuperar(v, r, p!, a.oque);
@@ -1482,6 +1508,8 @@ export function acoesPoliticas(v: Vida, disp: (v: Vida, a: Acao) => Veredito): A
   if (m && p.prioridade && !pres) add({ id: 'pol_prioridade', rotulo: `Trabalhar a prioridade: ${NOME_PRIORIDADE[p.prioridade]}`, porque: m.feito === 0 ? 'Sem nada para mostrar, a aprovação cai.' : undefined, acao: A('prioridade'), peso: m.feito === 0 ? 8 : 5 });
   if (m && !p.prioridade && !pres) add({ id: 'pol_bandeira', rotulo: 'Escolher a prioridade do mandato', porque: 'Sem prioridade, o mandato não tem o que mostrar.', acao: A('bandeira'), peso: 9 });
   // REWORK 11 · POL-02: o que este cargo faz (o vereador legisla e fiscaliza; o prefeito monta o governo e executa).
+  // ERAS v4: o que este cargo pode mudar na época (a lei, a escola, a saúde) — só numa vida histórica.
+  if (m) for (const x of REFORMAS_DA_EPOCA.acoes?.(v) ?? []) add(x);
   if (m) for (const id of ACOES_DO_CARGO[m.cargo] ?? []) { const t = rotuloDoCargo(v, id); add({ id: `pol_cargo_${id}`, rotulo: t.rotulo, porque: t.porque, acao: A('cargo', id), peso: id === 'projeto_lei' || id === 'orcamento' ? 5 : 3 }); }
   if (!pres) add({ id: 'pol_comunidade', rotulo: 'Conversar com a comunidade', porque: m && m.aprovacao < 45 ? 'A rua anda reclamando.' : p.apoio < 30 ? 'A base ainda é pequena.' : undefined, acao: A('comunidade'), peso: m ? (m.aprovacao < 45 ? 7 : 4) : 6 });
   if (!p.partido || p.indicacaoMilitar) add({ id: 'pol_filiar', rotulo: 'Filiar-se a um partido', porque: 'Sem partido, não há candidatura.', acao: A('filiar'), peso: p.apoio >= 20 ? 7 : 4 });
