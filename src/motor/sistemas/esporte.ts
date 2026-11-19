@@ -30,6 +30,7 @@ import { escrever as escreverNaVida, idade, lembrarCom, marcarFato, pais, temFat
 /** VIDA 28: tudo o que a carreira esportiva escreve é do mesmo fio da História (`Entrada.fio`): lido na ordem em que aconteceu. */
 const escrever = (v: Vida, e: NovaEntrada) => escreverNaVida(v, { fio: 'esporte', ...e });
 import { arquetipo, efeitosDoPerfil, guardarPerfil, lerPerfil, nomeDoArquetipo, type LeituraDoPerfil } from './arquetipos';
+import { concorrenciaNaPosicao, janelaDoElenco } from './elenco28';
 import { cidadesDoPais, municipio, municipioDoCodigo, MUNICIPIOS, paisDaCidade } from '../dados/lugares';
 import { estruturaEsportiva } from '../dados/mercado';
 import { comissaoDe, ocupacao } from '../dados/ocupacoes';
@@ -37,7 +38,7 @@ import { habilidade, praticar } from './frentes';
 import { marcar } from './marcas';
 import { contratar, encerrarEmprego } from './trabalho';
 import { capitalDoEstado } from './escola';
-import { flex, ge } from '../texto';
+import { flex, ge, listaNatural } from '../texto';
 import { novaOportunidade } from './oportunidades';
 import { aoClube, clubeDoNivel, clubePorNome, clubesDoPais, clubesDaCidade, divisaoDoNivel, doClube, equipeDaCidade, noClube, oClube, peloClube } from '../dados/clubes';
 
@@ -288,6 +289,16 @@ export function salarioDoContrato(v: Vida, e: CarreiraEsportiva, nivel: number =
   // Fora da elite, um nome conhecido vale por si (o veterano que o clube menor contrata pelo nome).
   if (nivel <= 3 && noto >= 45) bruto += (noto - 40) ** 2 * 60 * fase * mercadoDoNome;
   return Math.max(salarioMinimoDoPais(paisDoClube), Math.round(bruto / 100) * 100);
+}
+
+/** VIDA 28: o salário de referência do elenco do clube (o titular médio da divisão, pelo porte do clube e pelo país). */
+export function salarioBaseDoElenco(_v: Vida, e: CarreiraEsportiva): number {
+  const futebol = e.modalidade === 'futebol';
+  const base = (futebol ? BASE_FUTEBOL : e.modalidade === 'basquete' ? BASE_BASQUETE : e.modalidade === 'futsal' ? BASE_FUTSAL : BASE_OUTROS)[e.nivel] ?? 0;
+  const pais = paisDaCidade(e.municipioId);
+  const porte = futebol ? PORTE_CLUBE[clubePorNome(e.clube, pais)?.porte ?? 'regional'] ?? 0.8 : 1;
+  const liga = futebol ? (MERCADOS[pais]?.paga ?? Math.min(2, Math.max(0.4, rendaRelativa(pais)))) : 1;
+  return Math.max(salarioMinimoDoPais(pais), Math.round(base * porte * liga * 0.9 / 100) * 100);
 }
 
 /** Fora da elite, contrato é curto (um ano, uma temporada); na elite, dá para assinar mais longo. */
@@ -963,15 +974,16 @@ export function processarEsporte(v: Vida, r: Rng, presenca: Record<string, numbe
       const visto = mod.d === 'futebol' && (temFato(v, 'destaque_escolar_futebol') || (v.educacao.vivencias ?? []).some(x => x.tipo === 'time' && (x.etapa === 'destaque' || x.etapa === 'capitao'))) ? 1.4 : 1;
       const chance = clamp((h - 36) / 32, 0, 0.6) * serio * visto * (0.6 + estruturaEsportiva(v.moradia.municipioId) * 0.15);
       if (r.chance(chance)) {
-        const lugar = ondeTreina(v, mod.d);
-        const clube = clubeDaPeneira(v, lugar, `${v.id}:${i}`, mod.d);
+        const porta = portaDaPeneira(v, ondeTreina(v, mod.d), `${v.id}:${i}`, mod.d);
+        const lugar = porta?.lugar ?? ondeTreina(v, mod.d);
+        const clube = porta?.clube ?? '';
         const longe = lugar !== v.moradia.municipioId;
         const especifico = mod.d === 'tenis'
           ? `Depois de um torneio da região, o treinador de ${clube}${longe ? `, em ${municipio(lugar).nome}` : ''} chamou para uma semana de testes: quem fica entra no alto rendimento e no circuito juvenil — que custa viagem, e a família paga parte.`
           : mod.d === 'basquete'
             ? `O técnico viu você ${i <= 13 ? 'no torneio da escola' : 'num jogo do estadual'} e chamou para a seletiva da equipe de base ${doClube(clube)}${longe ? `, em ${municipio(lugar).nome}` : ''}. Medem a altura na entrada (${estaturaEmPalavras(estatura(v))}, a sua) — e depois é quadra.`
             : undefined;
-        novaOportunidade(v, {
+        if (porta) novaOportunidade(v, {
           tipo: mod.d === 'futebol' ? 'peneira' : 'seletiva', dominio: mod.d, municipioId: lugar, meses: 12, chave: `peneira_${mod.d}`, clube,
           titulo: mod.d === 'futebol' ? `Peneira ${noClube(clube)}` : mod.d === 'tenis' ? `Testes ${noClube(clube)}` : `Seletiva ${noClube(clube)}`,
           texto: especifico ?? `${v.rotinas.some(x => x.id === 'time_escola') && !v.rotinas.some(x => x.id === 'futebol' && (x.nivel ?? 1) >= 2) ? 'O professor de educação física, nos jogos escolares,' : mod.nivel >= 2 ? 'O treinador' : 'Um conhecido que entende de esporte'} viu você ${mod.d === 'futebol' ? 'jogar' : 'competir'} e indicou para ${mod.d === 'futebol' ? 'a peneira' : 'a seletiva'} ${doClube(clube)}${longe ? `, em ${municipio(lugar).nome}` : ''}. ${mod.d === 'futebol' ? 'Centenas de garotos' : 'Dezenas de atletas'}, poucas vagas.`
@@ -1107,6 +1119,20 @@ export function clubeDaPeneira(v: Vida, lugar: string, semente: string, d: Domin
   let nome = nomeDeClube(lugar, semente, d);
   for (let k = 1; k <= 6 && fora.has(nome); k++) nome = nomeDeClube(lugar, `${semente}:outro${k}`, d);
   return nome;
+}
+
+/**
+ * VIDA 28 · onde fica a próxima peneira de quem foi dispensado há pouco: na cidade de sempre, num clube que não seja o
+ * que dispensou; se a cidade só tem aquele clube (Marília só tem o Marília), na capital do estado. Sem outro clube no
+ * caminho, nenhuma peneira neste ano (`undefined`): o clube que acabou de mandar embora não chama de volta no mesmo ano.
+ */
+export function portaDaPeneira(v: Vida, lugar: string, semente: string, d: Dominio): { lugar: string; clube: string } | undefined {
+  const recentes = new Set(clubesQueDispensaram(v, d, 2).map(x => x.clube));
+  const aqui = clubeDaPeneira(v, lugar, semente, d);
+  if (!recentes.has(aqui)) return { lugar, clube: aqui };
+  const capital = capitalDoEstado(lugar);
+  if (capital !== lugar) { const la = clubeDaPeneira(v, capital, semente, d); if (!recentes.has(la)) return { lugar: capital, clube: la }; }
+  return undefined;
 }
 
 export function entrarNaBase(v: Vida, d: Dominio, municipioId: string, clube: string): void {
@@ -1254,6 +1280,14 @@ function anoNaBase(v: Vida, r: Rng, e: CarreiraEsportiva, presenca = 1): void {
   const anos = (v.t - e.tFase) / 12;
   // VIDA 25: o ano da formação fica registrado (jogos, titularidade, números, nota, colocação, título, avaliação).
   const { a, leitura, podeContrato, subiu } = registrarAnoDeFormacao(v, e, h, presenca);
+  // VIDA 28: a bolsa do ano de base (a partir dos 14; o valor do clube), paga mês a mês — somada aqui, no fim do ano.
+  const bolsa = bolsaDaBase(v, e);
+  if (bolsa > 0) {
+    v.financas.conta += bolsa * 12;
+    lancar(v, `Bolsa da base (${e.clube})`, 'renda', bolsa * 12);
+    a.bolsa = bolsa;
+    if (!temFato(v, `bolsa_base_${e.clube}`)) { marcarFato(v, `bolsa_base_${e.clube}`); escrever(v, { texto: `${cap(oClube(e.clube))} passou a pagar uma bolsa de ${dinheiro(bolsa)} por mês: não é salário de jogador, é ajuda para quem ainda está em formação.`, relevancia: 'cotidiano', tema: 'dinheiro', tom: 'bom' }); }
+  }
   // VIDA 28: as etapas do ano (a categoria de cima, o elenco profissional) entram na História quando o ano não termina em dispensa.
   const contarEtapas = () => { for (const x of subiu) escrever(v, x); };
   // REWORK 10 · ROT-05: quem concilia a base com a faculdade ou o trabalho e perde treinos (a agenda diz quantos) é visto
@@ -1457,6 +1491,10 @@ function anoProfissional(v: Vida, r: Rng, e: CarreiraEsportiva): void {
   const nomeClube = e.modalidade === 'futebol' ? cap(e.clube) : 'A equipe';
   // A temporada no palmarés: título (e o papel nele), acesso ou rebaixamento, prêmios pela posição, marcos — e a seleção, que observa.
   registrarTemporada(v, r, e, t);
+  pagarBonusDaTemporada(v, e, t);
+  // VIDA 28: a janela do ano no clube (o elenco com nome; o mercado anda sozinho, pelas regras da modalidade).
+  const papel28 = e.modalidade === 'futebol' ? posicaoDe(v, e) : e.modalidade === 'basquete' ? funcaoBasquete(v) : e.modalidade === 'volei' ? funcaoVolei(v) : funcaoFutsalDe(v, e);
+  janelaDoElenco(v, e, { regua: barraDeTitular(e.modalidade, e.nivel), papel: papel28, salarioBase: salarioBaseDoElenco(v, e) });
   capitaniaDoClube(v, e, t);
   processarSelecao(v, r, e, t);
   // HOTFIX 11.5.1: os prêmios individuais do mundo (Bola de Ouro, The Best, Chuteira de Ouro, Golden Boy), depois da
@@ -1501,7 +1539,7 @@ function anoProfissional(v: Vida, r: Rng, e: CarreiraEsportiva): void {
   const antes = e.espaco;
   const passou = Math.max(0, i - auge);
   // VIDA 28: o perfil pesa na régua do treinador (o Capitão e o Incansável ganham a confiança; o Marrento a gasta).
-  const confianca = efeitosDoPerfil(e.perfil28).titularidade;
+  const confianca = efeitosDoPerfil(e.perfil28).titularidade + concorrenciaNaPosicao(v, e, papel28, h);
   e.espaco = h + (t.nota - 6) * 2.5 + conversa + confianca - passou * 1.2 >= barraDeTitular(e.modalidade, e.nivel) && !(lesaoAtiva(v)?.lesao.gravidade === 3) ? 'titular' : 'reserva';
   if (antes === 'titular' && e.espaco === 'reserva') { escrever(v, { texto: individualComEquipe(e.modalidade) ? 'Perdeu a vaga nas provas principais da equipe: a próxima temporada começa fora delas.' : `${nomeClube === 'A equipe' ? 'Perdeu a vaga entre os titulares' : 'Perdeu a posição'}: a próxima temporada começa no banco.`, relevancia: 'cotidiano', tema: 'trabalho', tom: 'ruim' }); abalar(v, 'perder a posição no time', -4, 3); }
   else if (antes === 'reserva' && e.espaco === 'titular') {
@@ -1709,6 +1747,57 @@ export function encerrarCarreira(v: Vida, e: CarreiraEsportiva, motivo: NonNulla
     if (oc) novaOportunidade(v, { tipo: 'convite', ocupacaoId: oc, dominio: e.modalidade, meses: 24, chave: 'pos_treinador', titulo: e.modalidade === 'tenis' ? 'Da quadra para a aula' : e.modalidade === 'futebol' ? 'Do campo para o banco' : perfilDe(e.modalidade).estrutura === 'clube' ? 'Da quadra para o banco' : 'Do outro lado do treino', texto: oc === 'treinador_goleiros' ? 'Um clube montando a comissão técnica quer alguém que entenda de goleiro por dentro: o treino próprio, a leitura do jogo pela área, quem joga no domingo.' : oc === 'professor_tenis' ? 'Um clube da cidade quer alguém com passado de circuito para as turmas e os juvenis: aula por hora, alunos seus.' : oc === aux ? (temFato(v, 'pos_treinador') ? 'O treinador que você conheceu no clube montou uma comissão técnica e lembrou de quem tirou os cursos ainda jogando.' : 'Um treinador que trabalhou com você montou uma comissão técnica: quer alguém que o vestiário respeite. Os cursos, você tira no caminho.') : oc === 'instrutor_lutas' ? 'Uma academia do bairro quer abrir turmas com alguém que já lutou de verdade.' : 'Uma escolinha do bairro precisa de alguém que saiba ensinar e que já tenha jogado de verdade.' });
   }
   abalar(v, eraPro ? 'o fim da carreira no esporte' : `a dispensa ${e.modalidade === 'futebol' ? 'da base' : 'da equipe'}`, -(eraPro ? 8 : 10), 6);
+}
+
+/**
+ * VIDA 28 · O BÔNUS POR CONQUISTA (o "bicho" do título): o contrato do atleta de clube paga, além do salário, um prêmio
+ * pelo título da liga, da copa nacional e da continental — proporcional ao salário e a quanto jogou (o titular leva
+ * inteiro; quem quase não entrou, uma parte). Nas modalidades individuais com equipe, o título da prova. O tênis vive
+ * de premiação (já paga no circuito). ABSTRAÇÃO: os múltiplos (1×, 1×, 2× o salário do mês) são calibração de jogo —
+ * cada contrato real tem os seus.
+ */
+export function bonusDaTemporada(e: CarreiraEsportiva, t: Temporada, salario: number): { valor: number; motivos: string[] } {
+  if (vivePremiacao(e.modalidade) || salario <= 0) return { valor: 0, motivos: [] };
+  const motivos: string[] = [];
+  let mult = 0;
+  const individual = individualComEquipe(e.modalidade);
+  if (individual) {
+    const titulos = (t.luta?.titulos ?? 0) + (t.prova?.vitorias ? 1 : 0);
+    if (titulos) { mult += 0.5 * titulos; motivos.push(titulos === 1 ? 'o título do ano' : `${titulos} títulos`); }
+  } else {
+    if (t.colocacao === 1) { mult += 1; motivos.push('o título da liga'); }
+    for (const c of t.copas ?? []) if (c.fase === 'campeão') { const cont = /continental|libertadores|champions|sul-americana/i.test(c.id); mult += cont ? 2 : 1; motivos.push(cont ? 'o título continental' : 'o título da copa'); }
+  }
+  if (!mult) return { valor: 0, motivos };
+  const participacao = individual ? 1 : clamp((t.titular + (t.partidas - t.titular) * 0.4) / Math.max(1, jogosDaTemporada(e.modalidade, e.nivel) * 0.8), 0.25, 1);
+  return { valor: Math.round(salario * mult * participacao / 100) * 100, motivos };
+}
+
+function pagarBonusDaTemporada(v: Vida, e: CarreiraEsportiva, t: Temporada): void {
+  const emp = v.trabalho.atual;
+  if (!emp || !OCUPACOES_DE_ATLETA.includes(emp.ocupacaoId)) return;
+  const b = bonusDaTemporada(e, t, emp.salario);
+  if (!b.valor) return;
+  t.bonus = b.valor;
+  v.financas.conta += b.valor;
+  lancar(v, `Bônus por conquista (${e.clube})`, 'renda', b.valor);
+  escrever(v, { texto: `O bônus pelo ${listaNatural(b.motivos).replace(/^o /, '')} caiu na conta: ${dinheiro(b.valor)}, como o contrato com ${oClube(e.clube)} previa.`, relevancia: 'cotidiano', tema: 'dinheiro', tom: 'bom' });
+}
+
+/**
+ * VIDA 28 · A BOLSA DA BASE. O atleta de base não tem salário de profissional; a partir dos 14, o clube pode pagar uma
+ * bolsa (no Brasil, a "bolsa de aprendizagem" do contrato de formação — Lei 9.615/1998, art. 29, §4º: sem vínculo de
+ * emprego, valor combinado com o clube). ABSTRAÇÃO: o valor é uma fração do salário mínimo do país pelo porte do clube
+ * (o grande paga mais; o pequeno, uma ajuda de custo); antes do profissionalismo do esporte no país, nada.
+ */
+export function bolsaDaBase(v: Vida, e: CarreiraEsportiva): number {
+  const i = idade(v);
+  if (e.fase !== 'base' || i < 14 || e.modalidade === 'tenis' || e.origem === 'amador') return 0;
+  if (ocupacaoAindaNaoExiste(v, ocupacaoDaModalidade(e.modalidade)) !== undefined) return 0;
+  const pais = paisDaCidade(e.municipioId);
+  const porte = e.modalidade === 'futebol' ? clubePorNome(e.clube, pais)?.porte ?? 'regional' : 'regional';
+  const f = (porte === 'grande' ? 0.6 : porte === 'tradicional' ? 0.35 : 0.15) * (i >= 16 ? 1 : 0.5);
+  return Math.round(salarioMinimoDoPais(pais) * f / 10) * 10;
 }
 
 /** Continua praticando o esporte como profissional (o treino do clube). */

@@ -619,6 +619,18 @@ export interface Vinculo {
    */
   intimidade?: number;
   compromisso?: number;
+  /**
+   * VIDA 28 · relações em mais dimensões (`sistemas/relacoes28`), todas 0..100 e opcionais (saves antigos: ausentes, a
+   * relação se lê como antes). RESPEITO: o que a pessoa reconhece em você (a competência, a palavra cumprida) — pode
+   * existir sem afeto. ADMIRAÇÃO: o que ela vê de grande (a conquista, a coragem). LEALDADE: o quanto ela fica do seu
+   * lado quando custa. RIVALIDADE: a disputa (a vaga, o cargo, a mesma pessoa) — pode virar respeito. DEPENDÊNCIA: o
+   * quanto ela precisa de você para ficar bem (cresce com o apoio dado em hora difícil; pesa quando você some).
+   */
+  respeito?: number;
+  admiracao?: number;
+  lealdade?: number;
+  rivalidade?: number;
+  dependencia?: number;
 }
 
 /** REWORK 10.5 · REL-07: o que ficou de um conflito (ver `Vinculo.magoa`). */
@@ -2412,6 +2424,8 @@ export interface CarreiraEsportiva {
   integracao26?: number;
   /** VIDA 28: o arquétipo emergente (`sistemas/arquetipos`): o principal, os secundários, desde quando, as trocas. */
   perfil28?: import('./sistemas/arquetipos').PerfilGuardado;
+  /** VIDA 28: o elenco do clube de agora e o mercado autônomo dele (`sistemas/elenco28`). Ausente: antes da primeira janela. */
+  elenco28?: import('./sistemas/elenco28').Elenco28;
 }
 
 /**
@@ -2451,6 +2465,8 @@ export interface AnoDeFormacao {
   capacidade?: number;
   prontidao?: number;
   potencial?: [number, number];
+  /** VIDA 28: a bolsa mensal paga pelo clube naquele ano de base (`esporte.bolsaDaBase`). Ausente: sem bolsa (ou anos antigos). */
+  bolsa?: number;
   /** VIDA 28: como o ano terminou para o clube ('dispensa': foi dispensado no fim desta temporada). Ausente: seguiu (ou anos antigos). */
   desfecho?: 'dispensa';
 }
@@ -2733,6 +2749,8 @@ export interface Temporada {
   luta?: { categoria: string; estilo?: string; lutas: number; vitorias: number; derrotas: number; antesDoTempo: number; titulos: number; podios: number; sequencia: number };
   /** VIDA 14 · futsal: os jogos em que o time jogou com goleiro-linha (o quinto jogador de linha) com você nele. */
   goleiroLinha?: number;
+  /** VIDA 28: o bônus por conquista pago no fim da temporada (`esporte.bonusDaTemporada`). */
+  bonus?: number;
 }
 
 /** Um projeto artístico coletivo (banda, grupo de teatro, companhia). */

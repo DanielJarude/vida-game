@@ -30,7 +30,7 @@ import { recursosDaFamilia } from './origem';
 import { estudarMateria, podeEstudarMateria } from './vestibular';
 import { preparoDaPos } from './escola';
 import type { Materia } from '../dados/cursos';
-import { barraDeTitular, clubeAmador, etapaNaBase, IDADE_AMADOR, MODALIDADES, MODALIDADES_AMADORAS, NOME_MOD, clubeDaPeneira, ondeTreina } from './esporte';
+import { barraDeTitular, clubeAmador, etapaNaBase, IDADE_AMADOR, MODALIDADES, MODALIDADES_AMADORAS, NOME_MOD, portaDaPeneira, ondeTreina } from './esporte';
 import { capitalDoEstado } from './escola';
 import { municipio } from '../dados/lugares';
 import { doClube, noClube } from '../dados/clubes';
@@ -146,8 +146,10 @@ function pedirTeste(v: Vida, r: Rng, valor?: string): { texto?: string; decisao?
   const d = (MODALIDADES.includes(modalidade as Dominio) ? modalidade : modalidadeSeria(v)) as Dominio;
   if (idade(v) > janelaDaBase(d)[1]) return pedirTesteAdulto(v, r, d);
   const grande = onde === 'grande';
-  const lugar = lugarDoTeste(v, d, grande);
-  const clube = clubeDaPeneira(v, lugar, `${v.id}:pedido:${idade(v)}:${grande ? 'g' : 'p'}`, d);
+  // VIDA 28: o clube que dispensou há pouco não faz o teste de novo; a porta é outro clube (ou a capital).
+  const porta = portaDaPeneira(v, lugarDoTeste(v, d, grande), `${v.id}:pedido:${idade(v)}:${grande ? 'g' : 'p'}`, d);
+  if (!porta) return { texto: 'Depois da dispensa recente, nenhum outro clube da região abriu teste agora. A porta volta a abrir com o tempo — ou com um teste longe de casa.' };
+  const { lugar, clube } = porta;
   v.fatos[`peneira_pedida_${d}`] = v.t;
   const op = novaOportunidade(v, {
     tipo: d === 'futebol' ? 'peneira' : 'seletiva', dominio: d, municipioId: lugar, meses: 12, chave: `peneira_${d}`, clube,

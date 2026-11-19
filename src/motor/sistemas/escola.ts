@@ -872,7 +872,9 @@ export function processarCurso(v: Vida, r: Rng, presenca = 1, estudo = 1, cansac
   m.desempenho = calcularDesempenho(v, r, c.nivel === 'residencia' || c.nivel === 'mestrado' ? 8 : c.nivel === 'livre' ? 10 : 0, materias, presenca, estudo, cansaco);
   let atraso = 0;
   if (m.desempenho < 35 && r.chance(0.6)) atraso = 6;
-  m.mesesRestantes -= Math.min(12, m.mesesRestantes + atraso) - atraso;
+  // VIDA 28: o ano anda até 12 meses do que falta; a reprovação devolve meses ao fim. Antes, quem tinha 6 meses pela
+  // frente e reprovava "perdia" 6 meses e mesmo assim concluía no ano ("o curso ficou mais comprido" e "concluiu" juntos).
+  m.mesesRestantes = m.mesesRestantes - Math.min(12, m.mesesRestantes) + atraso;
   // REWORK 10.5 · EDU-05: o ano do curso vira histórico — as disciplinas (da grade da área), as notas, os créditos, a
   // situação. A nota acompanha o que o curso decidiu acima: quem atrasou reprovou disciplinas; quem não, passou em todas.
   const anoDoCurso = registrosDoCurso(v, m.cursoId, m.tInicio).filter(x => x.disciplinas.length).length + 1;
