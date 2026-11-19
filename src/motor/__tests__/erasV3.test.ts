@@ -150,6 +150,20 @@ describe('economia', () => {
   });
 });
 
+describe('o padrão de consumo da época', () => {
+  it('a cesta básica acompanha a renda: menor no passado, 1 hoje; no Brasil, intacta de 1970 em diante (calibração da v2)', async () => {
+    const { consumoDaEpoca } = await import('../eras/base/economia');
+    definirMesHistorico(tDe(1920, 5), 'US');
+    expect(consumoDaEpoca('US')).toBeLessThan(0.5);
+    definirMesHistorico(tDe(1975, 5), 'BR');
+    expect(consumoDaEpoca('BR')).toBe(1);
+    definirMesHistorico(tDe(1930, 5), 'BR');
+    expect(consumoDaEpoca('BR')).toBeLessThan(1);
+    definirMesHistorico(null);
+    expect(consumoDaEpoca('US')).toBe(1);
+  });
+});
+
 describe('tecnologia por país', () => {
   it('toda tecnologia tem data em todo pacote de país', () => {
     for (const p of pacotesDeEra()) for (const x of TECNOLOGIAS_BR) expect(p.tecnologias[x.id], `${p.pais} ${x.id}`).toBeDefined();

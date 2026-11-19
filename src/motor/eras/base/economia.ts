@@ -188,3 +188,21 @@ export function desempregoDoAno(pais: string, ano: number): number | undefined {
   const p = pacoteDaEra(pais);
   return p ? naSerie(p.serie, p.serie.DESEMPREGO, ano) ?? undefined : undefined;
 }
+
+/**
+ * ERAS v3 · O PADRÃO DE CONSUMO DA ÉPOCA. O motor conta a cesta básica (a moradia de dois quartos, o mercado, as contas da
+ * casa) no padrão de hoje. No passado, a família comum consumia uma cesta muito menor — a casa menor e mais simples, menos
+ * itens no mercado, quase nenhuma conta de serviço —, e é isso que a renda da época comprava. Por isso, numa vida histórica,
+ * o custo de vida básico acompanha o nível de renda da época: fator = renda ^ 0,85 (APROXIMAÇÃO de jogo: a cesta encolhe um
+ * pouco menos que a renda — a parcela da comida e da moradia era maior). No Brasil, a v2 já calibrava 1970–2025 sem este
+ * fator: ele vale só antes de 1970, relativo a 1970 (contínuo na virada). Vida contemporânea e depois de 2025: 1.
+ * Compras, veículos e bens têm os preços deles (não entram aqui).
+ */
+export function consumoDaEpoca(pais: string): number {
+  const t = mesHistoricoCorrente();
+  if (t === null || t > FIM_DA_SERIE) return 1;
+  const ano = Math.floor(t / 12);
+  if (pais === 'BR') return ano >= 1970 ? 1 : Math.min(1, Math.pow(rendaDaEpoca(ano) / rendaDaEpoca(1970), 0.85));
+  const r = rendaDaEpocaNoPais(pais);
+  return r >= 1 ? 1 : Math.pow(r, 0.85);
+}

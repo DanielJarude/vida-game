@@ -14,7 +14,7 @@ import type { Regiao } from '../tipos';
 import type { PerfilDePais, PerfilUrbano } from '../mundo/tipos';
 import { MUNICIPIOS_1291 } from './municipios1291';
 import { AJUSTE_LOCAL_14 as AJ14 } from '../dados14/cidades/municipios14';
-import { precoDaEpoca, rendaDaEpocaCorrente, rendaDaEpocaNoPais } from '../eras/base/economia';
+import { consumoDaEpoca, precoDaEpoca, rendaDaEpocaCorrente, rendaDaEpocaNoPais } from '../eras/base/economia';
 import { trilhoAindaNaoAbriu } from '../eras/base/cidades';
 import { aoRegistrar, idDaCidade, indiceNoCatalogo, PAIS_PADRAO, paisDoCatalogo, paisDoId, paisPeloIndice, perfilDoPais, temPerfil } from '../mundo/registro';
 
@@ -269,11 +269,13 @@ export function economiaLocal(id: string) {
     // ERAS HISTÓRICAS: numa vida histórica no Brasil, o nível de renda da época e o preço relativo do aluguel
     // (`eras/base/economia`; 1 na vida contemporânea).
     const renda = rendaDaEpocaCorrente();
+    // ERAS v3: antes de 1970, a cesta básica da época (`consumoDaEpoca`; 1 de 1970 em diante e na vida contemporânea).
+    const consumo = consumoDaEpoca('BR');
     return {
-      custo: p.custo * r.custo * brasilia * kc,
+      custo: p.custo * r.custo * brasilia * kc * consumo,
       salario: p.salario * r.salario * brasilia * ks * renda,
       /** Aluguel de referência (padrão 3, dois quartos). */
-      aluguel: Math.round(p.aluguel * r.custo * brasilia * kc * precoDaEpoca('aluguel')),
+      aluguel: Math.round(p.aluguel * r.custo * brasilia * kc * precoDaEpoca('aluguel') * consumo),
       // ERAS v2: antes do metrô (ou do trem metropolitano), o transporte da metrópole é o de ônibus.
       transporte: p.transporte === 'bom' && trilhoAindaNaoAbriu(m.id) !== undefined ? 'medio' as const : p.transporte,
       rotulo: p.rotulo
@@ -285,12 +287,14 @@ export function economiaLocal(id: string) {
   const renda = Math.pow(paisDoCatalogo(m.pais).economia?.renda ?? 1, 0.75);
   const moradia = perfil.economia.moradia * (d?.custo ?? 1);
   // A moradia é ~30% do custo de vida de referência; o resto segue o porte e a região.
-  const custo = p.custo * (0.7 * (d?.custo ?? 1) + 0.3 * moradia);
+  // ERAS v3: numa vida histórica, a cesta básica da época (`consumoDaEpoca`): a moradia e o custo de vida acompanham a renda.
+  const consumo = consumoDaEpoca(m.pais);
+  const custo = p.custo * (0.7 * (d?.custo ?? 1) + 0.3 * moradia) * consumo;
   return {
     custo,
     // ERAS v3: numa vida histórica, o nível de renda da época no país (1 na contemporânea e nos países sem pacote).
     salario: p.salario * renda * (d?.salario ?? 1) * rendaDaEpocaNoPais(m.pais),
-    aluguel: Math.round(p.aluguel * moradia),
+    aluguel: Math.round(p.aluguel * moradia * consumo),
     transporte: p.transporte,
     rotulo: p.rotulo
   };
