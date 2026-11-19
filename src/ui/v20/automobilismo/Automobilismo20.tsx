@@ -3,6 +3,7 @@
  * O caminho de categorias, a equipe e o carro, os atributos de piloto, a última temporada, a Superlicença, o orçamento
  * (quem paga), a proposta na mesa e o que dá para fazer no ano.
  */
+import { Perfil28 } from '../../v28/Perfil28';
 import type { Vida } from '../../../motor/tipos';
 import type { Acao } from '../../../motor/acoes';
 import { leituraAuto20, podeComecar20, type OqueAuto20 } from '../../../motor/v20/automobilismo/automobilismo20';
@@ -13,7 +14,9 @@ import './automobilismo20.css';
 
 const A = (oque: OqueAuto20): Acao => ({ tipo: 'auto20', oque } as Acao);
 const NOMES_ATRIBUTOS: [keyof NonNullable<ReturnType<typeof leituraAuto20>>['a']['atributos'], string][] = [
-  ['pilotagem', 'Pilotagem'], ['consistencia', 'Consistência'], ['adaptacao', 'Adaptação aos circuitos'], ['fisico', 'Preparo físico'], ['experiencia', 'Experiência'], ['pressao', 'Cabeça sob pressão']
+  ['pilotagem', 'Pilotagem'], ['consistencia', 'Consistência'], ['adaptacao', 'Adaptação aos circuitos'], ['fisico', 'Preparo físico'], ['experiencia', 'Experiência'], ['pressao', 'Cabeça sob pressão'],
+  // VIDA 28: os atributos de corrida (a largada, a ultrapassagem, a gestão, a leitura).
+  ['classificacao', 'Classificação'], ['ultrapassagem', 'Ultrapassagem'], ['pneus', 'Gestão de pneus'], ['combustivel', 'Gestão de combustível'], ['leitura', 'Leitura de corrida']
 ];
 
 export function Automobilismo20({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
@@ -46,8 +49,9 @@ export function Automobilismo20({ vida, agir }: { vida: Vida; agir: (a: Acao) =>
           {cat !== 'f1' && <div><dt>Superlicença</dt><dd>{l.sl} de {l.slNecessario} pontos (três anos)</dd></div>}
         </dl>
       )}
+      <Perfil28 perfil={a.perfil28} genero={vida.eu.genero} />
       <ul className="auto20__atributos" aria-label="Atributos de piloto">
-        {NOMES_ATRIBUTOS.map(([k, nome]) => <li key={k}><span>{nome}</span><meter min={0} max={100} value={a.atributos[k]} aria-label={nome} /><b>{Math.round(a.atributos[k])}</b></li>)}
+        {NOMES_ATRIBUTOS.map(([k, nome]) => <li key={k}><span>{nome}</span><meter min={0} max={100} value={a.atributos[k] ?? 0} aria-label={nome} /><b>{Math.round(a.atributos[k] ?? 0)}</b></li>)}
       </ul>
       {ult && (
         <p className="auto20__temporada">Última temporada ({ult.ano}, {ult.categoria === 'f1' ? 'Fórmula 1' : l.caminho.find(x => x.c === ult.categoria)?.nome}): <b>{ult.titulo ? 'campeão' : `${ult.posicao}º`}</b> · {ult.pontos} pts · {ult.vitorias} vitória{ult.vitorias === 1 ? '' : 's'} · {ult.podios} pódio{ult.podios === 1 ? '' : 's'} · {ult.abandonos} abandono{ult.abandonos === 1 ? '' : 's'}{ult.campeao ? ` · campeão: ${ult.campeao}` : ''}</p>

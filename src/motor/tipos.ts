@@ -2410,6 +2410,8 @@ export interface CarreiraEsportiva {
   adiantado26?: number;
   /** VIDA 26: quando passou a treinar com o elenco profissional (a integração gradual, antes do contrato). */
   integracao26?: number;
+  /** VIDA 28: o arquétipo emergente (`sistemas/arquetipos`): o principal, os secundários, desde quando, as trocas. */
+  perfil28?: import('./sistemas/arquetipos').PerfilGuardado;
 }
 
 /**

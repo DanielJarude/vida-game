@@ -29,6 +29,7 @@
 import { clamp, rngDe, type Rng } from '../../rng';
 import type { Vida } from '../../tipos';
 import { escrever, idade, parceiro } from '../../nucleo';
+import { arquetipo, efeitosDoPerfil, guardarPerfil, lerPerfil, nomeDoArquetipo } from '../../sistemas/arquetipos';
 import { anoDe } from '../../tempo';
 import { dinheiro as fmt } from '../../texto';
 import { bloqueio, PERMITIDO, type Veredito } from '../../plausibilidade';
@@ -95,12 +96,24 @@ export function nivelDoPiloto(a: Auto20): number {
   const x = a.atributos;
   return x.pilotagem * 0.38 + x.consistencia * 0.16 + x.adaptacao * 0.1 + x.fisico * 0.1 + x.experiencia * 0.08 + x.pressao * 0.18;
 }
+/** VIDA 28: os atributos de corrida (classificação, ultrapassagem, pneus, combustível, leitura), com o valor derivado nos saves antigos. */
+export type AtributoDeCorrida = 'classificacao' | 'ultrapassagem' | 'pneus' | 'combustivel' | 'leitura';
+export const ATRIBUTOS_DE_CORRIDA: AtributoDeCorrida[] = ['classificacao', 'ultrapassagem', 'pneus', 'combustivel', 'leitura'];
+export const NOME_ATRIBUTO_CORRIDA: Record<AtributoDeCorrida, string> = { classificacao: 'Classificação', ultrapassagem: 'Ultrapassagem', pneus: 'Gestão de pneus', combustivel: 'Gestão de combustível', leitura: 'Leitura de corrida' };
+export function derivarAtributosDeCorrida(a: Auto20): void {
+  const x = a.atributos;
+  x.classificacao ??= Math.round(x.pilotagem * 0.8 + x.adaptacao * 0.2);
+  x.ultrapassagem ??= Math.round(x.pilotagem * 0.6 + x.pressao * 0.4);
+  x.pneus ??= Math.round(x.consistencia * 0.6 + x.experiencia * 0.4);
+  x.combustivel ??= Math.round(x.consistencia * 0.5 + x.experiencia * 0.5);
+  x.leitura ??= Math.round(x.experiencia * 0.5 + x.adaptacao * 0.5);
+}
 /** Até onde cada atributo chega: o talento é o teto (o treino aproxima do teto; não passa dele). */
 export function tetoDoAtributo(a: Auto20, k: keyof Auto20['atributos']): number {
   const t = a.talento;
-  return k === 'pilotagem' ? t + 12 : k === 'consistencia' ? 50 + t * 0.4 : k === 'adaptacao' ? 45 + t * 0.4 : k === 'pressao' ? 45 + t * 0.45 : 100;
+  return k === 'pilotagem' ? t + 12 : k === 'classificacao' || k === 'ultrapassagem' ? t + 10 : k === 'consistencia' ? 50 + t * 0.4 : k === 'adaptacao' || k === 'leitura' ? 45 + t * 0.4 : k === 'pneus' || k === 'combustivel' ? 48 + t * 0.4 : k === 'pressao' ? 45 + t * 0.45 : 100;
 }
-function limitar(a: Auto20): void { for (const k of Object.keys(a.atributos) as (keyof Auto20['atributos'])[]) a.atributos[k] = Math.min(tetoDoAtributo(a, k), Math.round(clamp(a.atributos[k], 0, tetoDoAtributo(a, k)) * 10) / 10); }
+function limitar(a: Auto20): void { for (const k of Object.keys(a.atributos) as (keyof Auto20['atributos'])[]) a.atributos[k] = Math.min(tetoDoAtributo(a, k), Math.round(clamp(a.atributos[k] ?? 0, 0, tetoDoAtributo(a, k)) * 10) / 10); }
 /** Os pontos de Superlicença válidos agora (o ano que fechou e os dois anteriores). */
 export function pontosDeSuperlicenca(a: Auto20, ano: number): number {
   return (a.temporadas ?? []).filter(t => t.ano >= ano - 2 && t.ano <= ano).reduce((s, t) => s + (t.sl ?? 0), 0);
@@ -161,7 +174,10 @@ export function executarAuto20(v: Vida, o: OqueAuto20): { texto: string; tom?: '
       const custo = CUSTO_TREINO[o.foco];
       pagarTemporada(v, custo, 'Automobilismo: treino');
       const x = a.atributos;
-      if (o.foco === 'simulador') { x.pilotagem = clamp(x.pilotagem + 2); x.adaptacao = clamp(x.adaptacao + 3); }
+      derivarAtributosDeCorrida(a);
+      // VIDA 28: o simulador é volta lançada (a classificação); estudar os circuitos é a corrida (pneus, combustível, a leitura).
+      if (o.foco === 'simulador') { x.pilotagem = clamp(x.pilotagem + 2); x.adaptacao = clamp(x.adaptacao + 3); x.classificacao = clamp(x.classificacao! + 3); }
+      if (o.foco === 'circuitos') { x.pneus = clamp(x.pneus! + 2); x.combustivel = clamp(x.combustivel! + 2); x.leitura = clamp(x.leitura! + 2); x.ultrapassagem = clamp(x.ultrapassagem! + 1.5); }
       if (o.foco === 'fisico') { x.fisico = clamp(x.fisico + 5); v.corpo.forma = clamp(v.corpo.forma + 3); }
       if (o.foco === 'circuitos') { x.adaptacao = clamp(x.adaptacao + 3); x.consistencia = clamp(x.consistencia + 2); }
       if (o.foco === 'mental') { x.pressao = clamp(x.pressao + 4); v.mente.estresse = clamp(v.mente.estresse - 3); }
@@ -266,18 +282,30 @@ function correrTemporada(v: Vida, a: Auto20, ano: number): Temporada20 {
   const pts = new Map<string, number>(grid.map(x => [x.nome, 0]));
   const t: Temporada20 = { ano, categoria: cat, equipe: a.equipe, corridas: 0, vitorias: 0, podios: 0, poles: 0, pontos: 0, posicao: 0, abandonos: 0, acidentes: 0, melhor: 99 };
   const x = a.atributos;
+  derivarAtributosDeCorrida(a);
   const lesaoAte = a.lesaoAte ?? 0;
+  // VIDA 28: o perfil do piloto (o Agressivo oscila mais; o Gestor de pneus, menos) e os atributos de corrida.
+  const ef = efeitosDoPerfil(a.perfil28);
   // O carro pesa pela categoria; o piloto, pelo resto. O acaso de cada corrida é largo nas de base e menor na F1.
-  const desempenho = (g: Grid, rr: Rng) => g.nivel * (1 - c.carro) + g.carro * c.carro + rr.normal() * (cat === 'kart' ? 9 : 7);
+  const desempenho = (g: Grid, rr: Rng) => g.nivel * (1 - c.carro) + g.carro * c.carro + rr.normal() * (cat === 'kart' ? 9 : 7) * (g.voce ? ef.variancia : 1);
+  // A corrida longa cobra mais da gestão (pneus, combustível); a curta é largada e ultrapassagem.
+  const longa = c.ordem >= 4 ? 1 : 0.5;
+  const ritmo = ((x.pneus! - 50) * 0.06 + (x.combustivel! - 50) * 0.03) * longa + (x.leitura! - 50) * 0.04;
+  // Quanto custa largar atrás: a ultrapassagem decide (os outros do grid, uma ultrapassagem média).
   for (let k = 0; k < c.corridas; k++) {
     const mes = Math.floor((k / c.corridas) * 9) + 3;
     const tCorrida = (ano * 12) + mes;
     const fora = tCorrida < lesaoAte * 1;
+    // A classificação: a volta lançada define a largada (a pole é dela, não da corrida).
+    const quali = grid.map(g => ({ g, q: g.nivel * (1 - c.carro) + g.carro * c.carro + r.normal() * 4 + (g.voce ? (x.classificacao! - 50) * 0.12 : 0) })).sort((p, q) => q.q - p.q);
+    const largada = new Map(quali.map((z, k) => [z.g.nome, k]));
+    const custoDaLargada = (g: Grid) => (largada.get(g.nome) ?? 0) * 0.22 * (1 - (g.voce ? x.ultrapassagem! : 50) / 140);
     const notas = grid.map(g => {
       if (g.voce && fora) return { g, n: -Infinity };
       // a pressão pesa mais nas últimas corridas e em quem briga por título; a consistência segura o erro
-      let n = desempenho(g, r);
+      let n = desempenho(g, r) - custoDaLargada(g);
       if (g.voce) {
+        n += ritmo;
         n += (x.pressao - 50) * (k >= c.corridas - 4 ? 0.12 : 0.04);
         const erro = 0.05 * (1 - x.consistencia / 120);
         if (r.chance(erro)) { n = -Infinity; t.abandonos += 1; if (r.chance(0.35)) { t.acidentes += 1; acidente(v, a, r, tCorrida); } }
@@ -292,7 +320,7 @@ function correrTemporada(v: Vida, a: Auto20, ano: number): Temporada20 {
       t.melhor = Math.min(t.melhor ?? 99, eu + 1);
       if (eu === 0) t.vitorias += 1;
       if (eu < 3) t.podios += 1;
-      if (eu === 0 && r.chance(0.55)) t.poles += 1;
+      if (quali[0].g.voce) t.poles += 1;
     }
   }
   const tabela = [...pts.entries()].sort((p, q) => q[1] - p[1]);
@@ -368,7 +396,15 @@ export function processarAutomobilismo20(v: Vida): void {
   x.fisico = clamp(Math.round(x.fisico * 0.7 + v.corpo.forma * 0.3) - (i >= 36 ? (i - 35) : 0));
   if (t.titulo || t.posicao <= 3) x.pressao = clamp(x.pressao + 3);
   if (i >= 34) { x.pilotagem = clamp(x.pilotagem - (i - 33) * 0.8); x.consistencia = clamp(x.consistencia - 0.5); }
+  // VIDA 28: a corrida ensina a corrida (a leitura, os pneus, o combustível); a volta rápida acompanha a pilotagem.
+  derivarAtributosDeCorrida(a);
+  x.leitura = clamp(x.leitura! + Math.min(3, t.corridas * 0.12));
+  x.pneus = clamp(x.pneus! + Math.min(2.5, t.corridas * 0.1));
+  x.combustivel = clamp(x.combustivel! + Math.min(2, t.corridas * 0.08));
+  if (i <= 30) { x.classificacao = clamp(x.classificacao! + Math.max(0, (tetoDoAtributo(a, 'classificacao') - x.classificacao!) * 0.1)); x.ultrapassagem = clamp(x.ultrapassagem! + Math.max(0, (tetoDoAtributo(a, 'ultrapassagem') - x.ultrapassagem!) * 0.1)); }
+  if (i >= 34) x.classificacao = clamp(x.classificacao! - (i - 33) * 0.8);
   limitar(a);
+  perfilPiloto28(v, a, t, ano);
   // O rival: o piloto que terminou perto, a mesma geração.
   if (!a.rival && t.posicao <= 6) a.rival = nomePiloto(r);
   // A vida em volta: o calendário longe de casa, o colégio, a cabeça.
@@ -557,5 +593,17 @@ export function normalizarVida20Auto(v: Vida): void {
   if (!a) return;
   if (typeof a !== 'object' || !a.atributos || !ORDEM.concat(['encerrada' as Categoria20]).includes(a.fase as Categoria20)) { delete v.automobilismo20; return; }
   a.temporadas ??= [];
+  derivarAtributosDeCorrida(a);
+}
+
+/** VIDA 28 · o arquétipo do piloto: os atributos de corrida em relação ao nível, a personalidade, a idade. */
+function perfilPiloto28(v: Vida, a: Auto20, t: Temporada20, ano: number): void {
+  const x = a.atributos;
+  const n = nivelDoPiloto(a);
+  const desvio: Record<string, number> = { pilotagem: x.pilotagem - n, consistencia: x.consistencia - n, adaptacao: x.adaptacao - n };
+  for (const k of ATRIBUTOS_DE_CORRIDA) desvio[k] = (x[k] ?? n) - n;
+  const { perfil, mudou } = guardarPerfil(a.perfil28, lerPerfil({ modalidade: 'automobilismo', desvio, acimaDaDivisao: n - CATEGORIAS20[t.categoria].nivel, tracos: v.personalidade.tracos as unknown as Record<string, number>, idade: idade(v), anosNoClube: 0, capitao: false, reserva: false, titulos: (a.temporadas ?? []).slice(-3).filter(z => z.titulo).length }), ano, v.t);
+  a.perfil28 = perfil;
+  if (mudou && perfil.principal && CATEGORIAS20[t.categoria].ordem >= 2) escrever(v, { texto: `${naCat(t.categoria).replace(/^./, m => m.toUpperCase())}, passaram a falar de você como ${nomeDoArquetipo(perfil.principal, v.eu.genero).toLowerCase()}: ${arquetipo(perfil.principal)!.sobre.charAt(0).toLowerCase()}${arquetipo(perfil.principal)!.sobre.slice(1)}`, relevancia: 'biografia', tema: 'trabalho', chave: `perfil28a:${perfil.principal}:${ano}` });
 }
 

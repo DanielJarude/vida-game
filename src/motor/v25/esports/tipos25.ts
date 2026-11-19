@@ -71,6 +71,8 @@ export interface Esports25 {
   temporadas: Temporada25[];
   /** A fotografia dos atributos no fim de cada ano (a ficha compara e desenha). */
   serie: { ano: number; nivel: number; a: Partial<Record<AtributoEsports, number>> }[];
+  /** VIDA 28: o arquétipo emergente (`sistemas/arquetipos`). */
+  perfil28?: import('../../sistemas/arquetipos').PerfilGuardado;
   totais: { disputas: number; vencidas: number; titulos: number; premios: number; temporadas: number };
   reputacao: number;
   proposta?: Proposta25;

@@ -29,6 +29,7 @@ import type { AnoDeFormacao, CarreiraEsportiva, Dominio, Posicao, PropostaDeClub
 import { escrever as escreverNaVida, idade, lembrarCom, marcarFato, pais, temFato, type NovaEntrada } from '../nucleo';
 /** VIDA 28: tudo o que a carreira esportiva escreve é do mesmo fio da História (`Entrada.fio`): lido na ordem em que aconteceu. */
 const escrever = (v: Vida, e: NovaEntrada) => escreverNaVida(v, { fio: 'esporte', ...e });
+import { arquetipo, efeitosDoPerfil, guardarPerfil, lerPerfil, nomeDoArquetipo, type LeituraDoPerfil } from './arquetipos';
 import { cidadesDoPais, municipio, municipioDoCodigo, MUNICIPIOS, paisDaCidade } from '../dados/lugares';
 import { estruturaEsportiva } from '../dados/mercado';
 import { comissaoDe, ocupacao } from '../dados/ocupacoes';
@@ -52,7 +53,7 @@ import { mudarAgora } from './processos';
 import { registrarTemporada, registrarConquista } from './palmares';
 import { clubesNaDivisao, colocacaoNaTabela, divisaoDoClube } from './ligas';
 import { copaContinental, copaNacional, copasDeQuadra, idDaLiga, nomeDaCompeticao } from './competicoes';
-import { desvio, efeitoNaNota, envelhecerAtributos, fotografarAtributos, perfilDeAtributos, type AtributoId } from './atributosEsportivos';
+import { desvio, efeitoNaNota, envelhecerAtributos, fotografarAtributos, nivelNaPosicao, perfilDeAtributos, type AtributoId } from './atributosEsportivos';
 import { ESTILOS26 } from '../v26/esporte/estilos26';
 import { avaliacaoDaComissao, lerJovem, prontoParaContrato, type LeituraDoJovem } from './jovemAtleta';
 import { avancarLicenca } from './oficioDoTecnico';
@@ -627,7 +628,9 @@ export function fecharTemporada(v: Vida, r: Rng, e: CarreiraEsportiva): Temporad
   const funcaoB = e.modalidade === 'basquete' ? funcaoBasquete(v) : undefined;
   const perfil = perfilDeAtributos(v, e, h, futebol ? pos : undefined, funcaoB);
   const dv = (id: AtributoId) => desvio(perfil, id, h);
-  let nota = 6 + (h - barraDaDivisao(e.modalidade, e.nivel)) / 4 + (v.corpo.forma - 70) / 22 + corpo + efeitoNaNota(perfil, h) - passou * (futebol && pos === 'goleiro' ? 0.18 : 0.3) * desgaste - (sacrificio ? 0.9 : 0) + r.normal() * 0.6;
+  // VIDA 28: o perfil que as temporadas anteriores formaram (o Marrento oscila, o Cerebral não; o Matador finaliza mais).
+  const ef = efeitosDoPerfil(e.perfil28);
+  let nota = 6 + (h - barraDaDivisao(e.modalidade, e.nivel)) / 4 + (v.corpo.forma - 70) / 22 + corpo + efeitoNaNota(perfil, h) - passou * (futebol && pos === 'goleiro' ? 0.18 : 0.3) * desgaste - (sacrificio ? 0.9 : 0) + r.normal() * 0.6 * ef.variancia;
   nota = Math.round(clamp(nota, 2.5, 9.6) * 10) / 10;
   // Nos outros esportes, a temporada é um calendário de competições; o que conta são os pódios.
   const max = jogosDaTemporada(e.modalidade, e.nivel);
@@ -637,9 +640,9 @@ export function fecharTemporada(v: Vida, r: Rng, e: CarreiraEsportiva): Temporad
   const partidas = Math.max(0, Math.min(max, Math.round(max * disp * (e.espaco === 'titular' ? 0.92 : 0.45) * (0.9 + r.next() * 0.15) * folego)));
   const titular = Math.min(partidas, Math.round(partidas * (e.espaco === 'titular' ? 0.88 : 0.3)));
   const peso = (titular + (partidas - titular) * 0.35) * Math.max(0.25, nota / 6.5);
-  const fGol = futebol ? clamp(1 + dv('finalizacao') * 0.025 + dv('movimentacao') * 0.01 + dv('velocidade') * 0.008 + dv('aereo') * 0.03, 0.5, 1.7) : 1;
-  const fAst = futebol ? clamp(1 + dv('passe') * 0.015 + dv('visao') * 0.015 + dv('velocidade') * 0.005 + dv('pes') * 0.02, 0.5, 1.7) : 1;
-  const fDef = clamp(1 + dv('marcacao') * 0.012 + dv('antecipacao') * 0.01, 0.5, 1.6);
+  const fGol = (futebol ? clamp(1 + dv('finalizacao') * 0.025 + dv('movimentacao') * 0.01 + dv('velocidade') * 0.008 + dv('aereo') * 0.03 + dv('bola_parada') * 0.006, 0.5, 1.7) : 1) * ef.gols;
+  const fAst = (futebol ? clamp(1 + dv('passe') * 0.015 + dv('visao') * 0.015 + dv('velocidade') * 0.005 + dv('pes') * 0.02 + dv('criacao') * 0.012, 0.5, 1.7) : 1) * ef.assistencias;
+  const fDef = clamp(1 + dv('marcacao') * 0.012 + dv('antecipacao') * 0.01 + dv('duelos') * 0.006, 0.5, 1.6) * ef.defesa;
   const gols = Math.round(peso * (futebol ? GOL[pos] : clamp((nota - 5) / 8, 0.02, 0.5)) * (0.75 + r.next() * 0.5) * fGol);
   const assistencias = futebol ? Math.round(peso * ASSIST[pos] * (0.75 + r.next() * 0.5) * fAst) : 0;
   const desarmes = futebol && (pos === 'zagueiro' || pos === 'lateral' || pos === 'volante') ? Math.round(peso * DEFESA[pos] * (0.8 + r.next() * 0.4) * fDef) : undefined;
@@ -662,7 +665,9 @@ export function fecharTemporada(v: Vida, r: Rng, e: CarreiraEsportiva): Temporad
   // REWORK 11 · ESP-11.3: as copas do ano (a nacional; a continental, para quem se classificou na temporada anterior),
   // jogadas fase a fase com a mesma força do clube na liga e a mesma contribuição de quem joga.
   if (futebol) {
-    const copas = [copaNacional(v, pais, ano, e.clube, e.nivel, ajuste), copaContinental(v, pais, ano, e.clube, ajuste)].filter(c => !!c);
+    // VIDA 28: o mata-mata é jogo grande — o Decisivo pesa nele.
+    const ajusteCopa = ajuste + ef.decisivo * 0.3;
+    const copas = [copaNacional(v, pais, ano, e.clube, e.nivel, ajusteCopa), copaContinental(v, pais, ano, e.clube, ajusteCopa)].filter(c => !!c);
     if (copas.length) t.copas = copas.map(c => ({ id: c!.id, fase: c!.fase, jogos: Math.round(c!.jogos * (e.espaco === 'titular' ? disp : 0.3 * disp)), ...(c!.final ? { final: `contra ${c!.final.adversario.startsWith('um') ? c!.final.adversario : oClube(c!.final.adversario)}, ${c!.final.placar}` } : {}), ...(c!.fase === 'vice' && c!.final && !c!.final.adversario.startsWith('um') ? { campeao: c!.final.adversario } : {}) }));
   }
   // REWORK 11.5 · ESP-02: as copas de quadra (basquete e vôlei), com o formato delas: só a elite, pela colocação do ano
@@ -688,9 +693,9 @@ export function fecharTemporada(v: Vida, r: Rng, e: CarreiraEsportiva): Temporad
     const minutos = e.espaco === 'titular' ? 1 : 0.45;
     const q = clamp((nota - 3.5) / 5, 0.1, 1.4) * minutos;
     const f = (id: AtributoId) => clamp(1 + dv(id) * 0.02, 0.6, 1.5);
-    t.pontos = Math.round((fn === 'ala' ? 15 : fn === 'pivo' ? 12 : 11) * q * (0.85 + r.next() * 0.3) * f('arremesso') * 10) / 10;
-    t.rebotes = Math.round((fn === 'pivo' ? 9 : fn === 'ala' ? 5 : 3) * q * (0.85 + r.next() * 0.3) * f('rebote') * 10) / 10;
-    t.assistencias = Math.round((fn === 'armador' ? 6.5 : fn === 'ala' ? 2.5 : 1.5) * q * (0.85 + r.next() * 0.3) * f('passe') * 10) / 10;
+    t.pontos = Math.round((fn === 'ala' ? 15 : fn === 'pivo' ? 12 : 11) * q * (0.85 + r.next() * 0.3) * f('arremesso') * clamp(1 + dv('tres_pontos') * 0.008, 0.8, 1.2) * ef.gols * 10) / 10;
+    t.rebotes = Math.round((fn === 'pivo' ? 9 : fn === 'ala' ? 5 : 3) * q * (0.85 + r.next() * 0.3) * f('rebote') * ef.defesa * 10) / 10;
+    t.assistencias = Math.round((fn === 'armador' ? 6.5 : fn === 'ala' ? 2.5 : 1.5) * q * (0.85 + r.next() * 0.3) * f('passe') * clamp(1 + dv('criacao') * 0.01, 0.8, 1.2) * ef.assistencias * 10) / 10;
     t.gols = 0;
   }
   if (e.modalidade === 'tenis') jogarCircuito(v, r, e, t, nota);
@@ -712,7 +717,8 @@ export function fecharTemporada(v: Vida, r: Rng, e: CarreiraEsportiva): Temporad
   if (e.temporadas.length > 30) e.temporadas.splice(0, e.temporadas.length - 30);
   // O nome no mercado: o que a temporada construiu (ou gastou). Divisão maior conta mais.
   const participacao = max ? titular / max : 0;
-  const alvoRep = clamp((nota - 4.3) * 14 + (e.nivel - 1) * 6 + participacao * 10);
+  // VIDA 28: a imprensa e a torcida também leem o perfil (o Marrento e o Talento precoce rendem manchete).
+  const alvoRep = clamp((nota - 4.3) * 14 + (e.nivel - 1) * 6 + participacao * 10 + ef.imprensa * 2);
   e.reputacao = Math.round(clamp((e.reputacao ?? 30) * 0.55 + alvoRep * 0.45));
   if (e.modalidade === 'tenis') t.ranking = rankingPorPontos(t.pontosRanking ?? 0);
   // O perfil envelhece com o ano (o que não se treina esfria; depois do auge, o corpo dá lugar à leitura).
@@ -722,8 +728,40 @@ export function fecharTemporada(v: Vida, r: Rng, e: CarreiraEsportiva): Temporad
     envelhecerAtributos(e, i, augeDe(v, e));
     fotografarAtributos(e, ano, perfilDeAtributos(v, e, habilidade(v, e.modalidade), futebol ? pos : undefined, funcaoB), habilidade(v, e.modalidade));
   }
+  // VIDA 28: o perfil emergente, relido com a temporada que acabou (vale para a próxima).
+  atualizarPerfil28(v, e, perfil, h, ano);
   return t;
 }
+
+/**
+ * VIDA 28 · a leitura do arquétipo do atleta no fim da temporada (`arquetipos.lerPerfil`): os desvios dos atributos da
+ * posição, a personalidade, a idade, o clube, a braçadeira, as últimas três temporadas. A troca do principal é dita na
+ * História (a imprensa e o vestiário passam a vê-lo assim) e lembrada pela gente próxima.
+ */
+export function atualizarPerfil28(v: Vida, e: CarreiraEsportiva, perfil: { id: AtributoId; valor: number; peso: number }[], h: number, ano: number): void {
+  if (e.fase !== 'profissional') return;
+  const n = perfil.length ? nivelNaPosicao(perfil) : h;
+  const desvio = Object.fromEntries(perfil.map(x => [x.id, x.valor - n]));
+  const ultimas = (e.temporadas ?? []).slice(-3);
+  const jogos = ultimas.reduce((s, x) => s + x.partidas, 0) || 1;
+  const seguidas = [...(e.temporadas ?? [])].reverse().findIndex(x => x.clube !== e.clube);
+  const leitura: LeituraDoPerfil = {
+    modalidade: e.modalidade, papel: e.modalidade === 'futebol' ? posicaoDe(v, e) : e.modalidade === 'basquete' ? funcaoBasquete(v) : e.modalidade === 'volei' ? funcaoVolei(v) : e.modalidade === 'futsal' ? funcaoFutsalDe(v, e) : undefined,
+    desvio, acimaDaDivisao: h - barraDaDivisao(e.modalidade, e.nivel), tracos: v.personalidade.tracos as unknown as Record<string, number>, idade: idade(v),
+    anosNoClube: seguidas === -1 ? (e.temporadas ?? []).length : seguidas, capitao: !!e.capitao && e.capitao.clube === e.clube, reserva: e.espaco === 'reserva',
+    nota: ultimas.length ? ultimas.reduce((s, x) => s + x.nota, 0) / ultimas.length : undefined,
+    golsPorJogo: ultimas.reduce((s, x) => s + x.gols, 0) / jogos, assistPorJogo: ultimas.reduce((s, x) => s + x.assistencias, 0) / jogos,
+    titulos: (v.caminhos.palmares ?? []).filter(c => c.tipo === 'titulo' && c.modalidade === e.modalidade && c.ano >= ano - 2).length
+  };
+  const { perfil: novo, mudou, anterior } = guardarPerfil(e.perfil28, lerPerfil(leitura), ano, v.t);
+  e.perfil28 = novo;
+  if (mudou && novo.principal) {
+    const nome = nomeDoArquetipo(novo.principal, ge(v));
+    const onde = perfilDe(e.modalidade).estrutura === 'circuito' ? 'no circuito' : `${noClube(e.clube)}`;
+    escrever(v, { texto: anterior ? `${onde.charAt(0).toUpperCase() + onde.slice(1)}, a imprensa e o vestiário já não falam de você como ${nomeDoArquetipo(anterior, ge(v)).toLowerCase()}: agora é ${artigo(nome)} ${nome.toLowerCase()} — ${arquetipo(novo.principal)!.sobre.charAt(0).toLowerCase() + arquetipo(novo.principal)!.sobre.slice(1)}` : `${onde.charAt(0).toUpperCase() + onde.slice(1)}, a imprensa passou a falar de você como ${artigo(nome)} ${nome.toLowerCase()}: ${arquetipo(novo.principal)!.sobre.charAt(0).toLowerCase() + arquetipo(novo.principal)!.sobre.slice(1)}`, relevancia: 'biografia', tema: 'trabalho', tom: 'neutro', chave: `perfil28:${novo.principal}:${ano}` });
+  }
+}
+const artigo = (nome: string) => (/^(Muralha|Garçonete|Matadora|Marrenta|Capitã|Pontuadora|Reboteira|Armadora|Defensora|Ponteira|Central|Levantadora|Oposta|Líbero defensiva|Agressiva|Sacadora|Estrategista|Jogadora|Sexta|Classificadora|Gestora|Pilota)/.test(nome) ? 'a' : 'o');
 
 /**
  * REWORK 11 · ESP-11.1 — a contribuição de quem joga para o time, em pontos de força da tabela (a mesma escala de
@@ -1462,7 +1500,9 @@ function anoProfissional(v: Vida, r: Rng, e: CarreiraEsportiva): void {
   const conversa = v.fatos['esp_treinador_ok'] !== undefined && v.t - v.fatos['esp_treinador_ok'] <= 12 ? 3 : 0;
   const antes = e.espaco;
   const passou = Math.max(0, i - auge);
-  e.espaco = h + (t.nota - 6) * 2.5 + conversa - passou * 1.2 >= barraDeTitular(e.modalidade, e.nivel) && !(lesaoAtiva(v)?.lesao.gravidade === 3) ? 'titular' : 'reserva';
+  // VIDA 28: o perfil pesa na régua do treinador (o Capitão e o Incansável ganham a confiança; o Marrento a gasta).
+  const confianca = efeitosDoPerfil(e.perfil28).titularidade;
+  e.espaco = h + (t.nota - 6) * 2.5 + conversa + confianca - passou * 1.2 >= barraDeTitular(e.modalidade, e.nivel) && !(lesaoAtiva(v)?.lesao.gravidade === 3) ? 'titular' : 'reserva';
   if (antes === 'titular' && e.espaco === 'reserva') { escrever(v, { texto: individualComEquipe(e.modalidade) ? 'Perdeu a vaga nas provas principais da equipe: a próxima temporada começa fora delas.' : `${nomeClube === 'A equipe' ? 'Perdeu a vaga entre os titulares' : 'Perdeu a posição'}: a próxima temporada começa no banco.`, relevancia: 'cotidiano', tema: 'trabalho', tom: 'ruim' }); abalar(v, 'perder a posição no time', -4, 3); }
   else if (antes === 'reserva' && e.espaco === 'titular') {
     escrever(v, { texto: `${individualComEquipe(e.modalidade) ? 'Ganhou a vaga nas provas principais da equipe' : 'Ganhou a posição: a próxima temporada começa como titular'}${e.clausulaTitular ? ' — e o salário sobe, como o contrato dizia' : ''}.`, relevancia: 'biografia', tema: 'trabalho', tom: 'bom' });

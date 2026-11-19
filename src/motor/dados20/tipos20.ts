@@ -21,7 +21,17 @@ export interface Auto20 {
   equipe: string;
   /** O talento de nascença (estável): o teto da pilotagem. */
   talento: number;
-  atributos: { pilotagem: number; consistencia: number; adaptacao: number; fisico: number; experiencia: number; pressao: number };
+  atributos: {
+    pilotagem: number; consistencia: number; adaptacao: number; fisico: number; experiencia: number; pressao: number;
+    /**
+     * VIDA 28: o que a corrida pede além do "andar rápido" — a volta de classificação (a largada), a ultrapassagem, a
+     * gestão de pneus e de combustível (o ritmo que cresce quando os outros caem), a leitura de corrida (a parada certa, a
+     * chuva). Ausentes nos saves antigos: `normalizarVida20Auto` deriva dos de antes.
+     */
+    classificacao?: number; ultrapassagem?: number; pneus?: number; combustivel?: number; leitura?: number;
+  };
+  /** VIDA 28: o arquétipo emergente do piloto (`sistemas/arquetipos`). */
+  perfil28?: import('../sistemas/arquetipos').PerfilGuardado;
   temporadas: Temporada20[];
   vitorias: number; podios: number; titulos: number; largadas: number;
   companheiro?: string; rival?: string;

@@ -323,20 +323,20 @@ export function processarEscola(v: Vida, r: Rng, presenca = 1, estudo = 1, cansa
       subir(v, 'medio');
       e.basica = undefined;
       marcarFato(v, 'concluiu_medio');
-      if (b.integrado) {
-        const c = cursoOuNulo(b.integrado);
-        if (c) {
-          e.concluidos.push({ cursoId: c.id, nome: c.nome, nivel: c.nivel, area: c.area, tFim: v.t, instituicao: educacaoDaVida(v).inst.tecnico, rede: 'publica', modalidade: 'presencial' });
-          subir(v, 'tecnico');
-          v.fatos['concluiu_integrado'] = v.t;
-          escrever(v, { texto: `Terminou o médio integrado: saiu com o diploma de ${c.nome.replace(/^Técnico em /, 'técnico em ')}.`, relevancia: 'marco', tema: 'escola', tom: 'bom' });
-          marcar(v, 'formacao', `Técnico em ${c.nome.replace(/^Técnico em /, '')}, pelo médio integrado.`, 3);
-        }
+      // VIDA 28: o médio integrado é UMA formatura com dois diplomas — antes eram duas entradas na mesma idade ("terminou o
+      // médio integrado: diploma de técnico" e "concluiu o ensino médio entre os melhores"), lidas como dois fatos.
+      const integrado = b.integrado ? cursoOuNulo(b.integrado) : undefined;
+      if (integrado) {
+        e.concluidos.push({ cursoId: integrado.id, nome: integrado.nome, nivel: integrado.nivel, area: integrado.area, tFim: v.t, instituicao: educacaoDaVida(v).inst.tecnico, rede: 'publica', modalidade: 'presencial' });
+        subir(v, 'tecnico');
+        v.fatos['concluiu_integrado'] = v.t;
+        marcar(v, 'formacao', `Técnico em ${integrado.nome.replace(/^Técnico em /, '')}, pelo médio integrado.`, 3);
       }
       // FIX pós-REWORK 4: a formatura do médio é desta vida (a escola, as notas, quem estava) — não a mesma frase em todas.
+      const conclusao = fraseDeConclusao(v, { nucleo: `Concluiu ${educacaoDaVida(v).medio.o}${integrado ? ` integrado ao ${integrado.nome.replace(/^Técnico em /, 'técnico em ')}, com os dois diplomas` : ''}`, instituicao: inst?.nome, desempenho: b.desempenho, reprovacoes: b.reprovacoes, chave: 'medio' });
       escrever(v, {
-        texto: fraseDeConclusao(v, { nucleo: `Concluiu ${educacaoDaVida(v).medio.o}`, instituicao: inst?.nome, desempenho: b.desempenho, reprovacoes: b.reprovacoes, chave: 'medio' }),
-        relevancia: 'marco', tema: 'escola', tom: 'bom'
+        texto: conclusao,
+        relevancia: 'marco', tema: 'escola', tom: 'bom', fio: 'escola', chave: `conclusao:medio:${v.t}`
       });
     } else {
       b.serie = Math.min(3, b.serie + (b.eja ? 2 : 1));

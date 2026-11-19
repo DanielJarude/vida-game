@@ -3,6 +3,7 @@
  * a modalidade (vôlei, futsal, tênis, natação, atletismo, luta) usam, lidos do motor (`perfilDeAtributos`), comparados
  * com a fotografia do fim do ano anterior (`CarreiraEsportiva.serieAtributos`) e agrupados em técnicos, físicos e táticos.
  */
+import { Perfil28 } from '../../v28/Perfil28';
 import type { CarreiraEsportiva, Vida } from '../../../motor/tipos';
 import { CORPO_DO_ATRIBUTO, deficienciasGraves, GRUPO_DO_ATRIBUTO, MENTE_DO_ATRIBUTO, NOME_ATRIBUTO, nivelNaPosicao, perfilDeAtributos, SOBRE_ATRIBUTO } from '../../../motor/sistemas/atributosEsportivos';
 import { NOME_CAPACIDADE26 } from '../../../motor/v26/corpo/capacidades26';
@@ -51,9 +52,12 @@ export function FichaDoEsporte25({ vida, e }: { vida: Vida; e: CarreiraEsportiva
   const l = linhasDoEsporte25(vida, e);
   if (!l.linhas.length) return null;
   return (
+    <>
     <FichaDeAtleta25 titulo={e.fase === 'base' ? 'Atributos na formação' : 'Atributos do atleta'} nivel={l.nivel} nivelRotulo={e.modalidade === 'futebol' ? 'nível na posição' : 'nível na função'} nivelSerie={l.serieTecnica}
       explica={`O nível é a média dos atributos, pesada pelo que a ${e.modalidade === 'futebol' ? 'posição' : 'função'} exige. A técnica (${Math.round(l.tecnica)}) é a base dos técnicos e táticos; os físicos somam o corpo de agora, os mentais o jeito de ser e a maturidade. Uma limitação séria num atributo que pesa cobra a mais na nota — a média alta não a esconde.`}
       grupos={GRUPOS} linhas={l.linhas} fortes={l.fortes} fracos={l.fracos}
       rodape={e.modalidade === 'futebol' ? 'Os atributos são os da posição: pesam na nota da temporada e no que ela produz (gols, assistências, desarmes, defesas). O treino extra (técnico, tático, físico) sobe os três do grupo que mais pesam; depois do auge, o corpo perde e a leitura de jogo ganha.' : 'Os atributos pesam na nota da temporada (o peso de cada um aparece ao lado do nome). O treino extra sobe os do grupo treinado; depois do auge, os do corpo caem e os da leitura sobem.'} />
+      {e.fase === 'profissional' && <Perfil28 perfil={e.perfil28} genero={vida.eu.genero} />}
+    </>
   );
 }

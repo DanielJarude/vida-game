@@ -5,6 +5,7 @@
  * (competições, colocações, a métrica individual, o prêmio), a proposta na mesa, o que dá para fazer no ano e o
  * histórico (temporadas, equipes, títulos).
  */
+import { Perfil28 } from '../../v28/Perfil28';
 import { useState } from 'react';
 import type { Vida } from '../../../motor/tipos';
 import type { Acao } from '../../../motor/acoes';
@@ -72,6 +73,7 @@ export function Esports25({ vida, agir }: { vida: Vida; agir: (a: Acao) => boole
         <h3 id="esp25-t" className="subtitulo">E-sports · {l.nomeJogo}</h3>
         <p className="esp25__placar"><span className={`esp25__estado esp25__estado--${e.fase}`}>{fase}</span>{l.funcao ? <span> · {l.funcao.nome}</span> : null}{!encerrada && <span> · {l.caminho[e.nivel - 1].nome}</span>}</p>
       </header>
+      <Perfil28 perfil={e.perfil28} genero={vida.eu.genero} />
       <ol className="esp25__caminho" aria-label="O caminho até a elite">
         {l.caminho.map(c => <li key={c.n} className={`esp25__degrau${c.atual && !encerrada ? ' esp25__degrau--atual' : ''}${c.feito ? ' esp25__degrau--feito' : ''}`}><span className="esp25__degrau-n">{c.n}</span> {c.nome}</li>)}
       </ol>

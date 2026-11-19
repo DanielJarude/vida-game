@@ -24,7 +24,10 @@
  */
 import { clamp, hashMisturado, rngDe, type Rng } from '../../rng';
 import type { Vida } from '../../tipos';
-import { escrever, idade, pais as paisDe } from '../../nucleo';
+import { escrever as escreverNaVida, idade, pais as paisDe, type NovaEntrada } from '../../nucleo';
+/** VIDA 28: a carreira de e-sports é um fio da História (lida na ordem em que aconteceu). */
+const escrever = (v: Vida, x: NovaEntrada) => escreverNaVida(v, { fio: 'esports', ...x });
+import { arquetipo, efeitosDoPerfil, guardarPerfil, lerPerfil, nomeDoArquetipo, type LeituraDoPerfil } from '../../sistemas/arquetipos';
 import { anoDe } from '../../tempo';
 import { dinheiro as fmt } from '../../texto';
 import { bloqueio, PERMITIDO, type Veredito } from '../../plausibilidade';
@@ -36,7 +39,7 @@ import { motivoDoLimite, temVagaDeCarreira } from '../../sistemas/vagasDeCarreir
 import { ocupacao } from '../../dados/ocupacoes';
 import { cidadesDoPais, economiaLocal, municipio, paisDaCidade } from '../../dados/lugares';
 import { mudarAgora } from '../../sistemas/processos';
-import { JOGOS25, LISTA_JOGOS25, DA_LEITURA25, DA_MAO25, type AtributoEsports, type Jogo25, type JogoId } from './jogos25';
+import { JOGOS25, LISTA_JOGOS25, DA_LEITURA25, DA_MAO25, NOME_ATRIBUTO25, type AtributoEsports, type Jogo25, type JogoId } from './jogos25';
 import type { Competicao25, Esports25, Proposta25, Temporada25 } from './tipos25';
 
 export type { Esports25 };
@@ -339,7 +342,17 @@ export function intensidade25(v: Vida, e: Esports25): number {
   return v.rotinas.find(x => x.id === 'esports')?.nivel ?? 0;
 }
 
-function evoluir(v: Vida, e: Esports25, r: Rng, disputas: number): void {
+/** VIDA 28: os atributos que cada foco de treino trabalha (a mesma lista que `evoluir` usa e a frase do fim do ano diz). */
+function alvoDoFoco(foco: string | undefined, id: AtributoEsports): boolean {
+  if (foco === 'mecanica') return DA_MAO25.has(id);
+  if (foco === 'estrategia') return id === 'estrategia' || id === 'conhecimento' || id === 'decisao' || id === 'posicionamento' || id === 'utilitarios' || id === 'mapas' || id === 'leitura' || id === 'repertorio';
+  if (foco === 'equipe') return id === 'comunicacao' || id === 'consistencia' || id === 'equipe';
+  if (foco === 'mental') return id === 'mental' || id === 'consistencia';
+  return false;
+}
+
+function evoluir(v: Vida, e: Esports25, r: Rng, disputas: number): Partial<Record<AtributoEsports, number>> {
+  const antes: Partial<Record<AtributoEsports, number>> = { ...e.atributos };
   const i = idade(v);
   const int = intensidade25(v, e);
   const foco = e.foco && e.foco.ano >= anoDaTemporada25(v) ? e.foco.qual : undefined;
@@ -352,17 +365,18 @@ function evoluir(v: Vida, e: Esports25, r: Rng, disputas: number): void {
     // O adolescente aprende a mão mais depressa (é quando quase todo profissional se forma).
     if (int >= 2 && i <= 19 && DA_MAO25.has(id)) ritmo += 0.05;
     if (id === 'mental' && e.nivel >= 3) ritmo += 0.04;
-    if (foco === 'mecanica' && DA_MAO25.has(id)) ritmo += 0.08;
-    if (foco === 'estrategia' && (id === 'estrategia' || id === 'conhecimento' || id === 'decisao' || id === 'posicionamento' || id === 'utilitarios')) ritmo += 0.08;
-    if (foco === 'equipe' && (id === 'comunicacao' || id === 'consistencia')) ritmo += 0.1;
-    if (foco === 'mental' && (id === 'mental' || id === 'consistencia')) ritmo += 0.1;
-    let novo = x + Math.max(0, teto - x) * ritmo + r.normal() * 0.8;
+    // VIDA 28: o foco do ano pesa de verdade nos atributos que ele trabalha (antes, +8% do caminho até o teto: quase
+    // invisível); e ainda dá um ganho fixo, dentro do teto — o treino dirigido é perceptível mesmo perto do limite.
+    const alvo = alvoDoFoco(foco, id);
+    if (alvo) ritmo += 0.14;
+    let novo = x + Math.max(0, teto - x) * ritmo + r.normal() * 0.8 + (alvo && x < teto ? Math.min(1.5, teto - x) : 0);
     // Sem treino, a mão esfria (a leitura fica); acima do teto (a idade baixou o teto), cai devagar até ele.
     if (int === 0 && DA_MAO25.has(id)) novo -= 2;
     if (novo > teto) novo = Math.max(teto, x - (DA_MAO25.has(id) ? 2.2 : 1));
     if (foco === 'descanso') novo = x + (novo - x) * 0.6;
     e.atributos[id] = Math.round(clamp(novo, 1, 99) * 10) / 10;
   }
+  return antes;
 }
 
 /** A colocação de quem tem força `s` num campo de `n` participantes de força média `f` (com o acaso da temporada). */
@@ -410,7 +424,7 @@ function jogarTemporada(v: Vida, e: Esports25, r: Rng, ano: number): Temporada25
   // O mundial: a elite joga (nível 5); no nível 4, quem termina no topo da liga se classifica naquele ano.
   if (nivel >= 4 && j.niveis[4].liga(ano, bra) && (nivel === 5 || col <= (e.jogo === 'lol' ? 1 : 2))) {
     const m = j.niveis[4];
-    const c = colocacaoNoCampo(r, forca, m.forca, m.equipes, 5);
+    const c = colocacaoNoCampo(r, forca + efeitosDoPerfil(e.perfil28).decisivo * 3, m.forca, m.equipes, 5);
     const jogos = Math.max(2, Math.round(7 - Math.log2(c)));
     competicoes.push({ nome: m.liga(ano, bra), tipo: 'mundial', colocacao: c, participantes: m.equipes, vitorias: titular ? Math.max(0, jogos - (c === 1 ? 0 : 2)) : 0, derrotas: titular ? (c === 1 ? 1 : 2) : 0, premio: titular ? parte(m.premio, c, m.equipes) : 0, titulo: c === 1 && titular });
   }
@@ -418,7 +432,9 @@ function jogarTemporada(v: Vida, e: Esports25, r: Rng, ano: number): Temporada25
   const vencidas = competicoes.reduce((s, c) => s + c.vitorias, 0);
   // A métrica individual: o seu nível contra o do degrau (a equipe forte não infla o seu rating; a função pesa).
   const met = j.metrica;
-  const z = clamp((nj - n.forca) / 9 + r.normal() * 0.6 + (e.atributos.consistencia ?? 40) / 100 * 0.3 - 0.15, -2.8, 2.8);
+  // VIDA 28: o perfil emergente (o Entry oscila, o Suporte não) e o jogo grande (o Clutch aparece no mundial e nas finais).
+  const ef = efeitosDoPerfil(e.perfil28);
+  const z = clamp((nj - n.forca) / 9 + r.normal() * 0.6 * ef.variancia + (e.atributos.consistencia ?? 40) / 100 * 0.3 - 0.15, -2.8, 2.8);
   const metrica = Math.round(Math.max(0, met.media + z * met.sd) * 10 ** met.casas) / 10 ** met.casas;
   const premios = competicoes.reduce((s, c) => s + c.premio, 0);
   const t: Temporada25 = { ano, jogo: e.jogo, nivel, equipe: e.equipe?.nome, papel: semEquipe ? 'sem_equipe' : titular ? 'titular' : 'reserva', funcao: e.funcao, competicoes, disputas, vencidas, metrica, nivelDeJogo: nj, premios };
@@ -437,7 +453,13 @@ export function processarEsports25(v: Vida): void {
   // Quem trocou o contrato da equipe por outro emprego saiu da equipe (o salário e as horas eram dela).
   if (e.fase === 'profissional' && !empregoEsports25(v) && e.equipe) sairDaEquipe(v, e, 'outro trabalho');
   const ultima = e.temporadas[e.temporadas.length - 1];
-  evoluir(v, e, r, ultima?.disputas ?? 0);
+  const antes = evoluir(v, e, r, ultima?.disputas ?? 0);
+  // VIDA 28: o que o foco do ano rendeu, em números (o treino tem de se ver).
+  const foco = e.foco && e.foco.ano >= ano ? e.foco.qual : undefined;
+  if (foco && foco !== 'descanso') {
+    const ganhos = jogoDe(e).atributos.map(([id]) => id).filter(id => alvoDoFoco(foco, id)).map(id => ({ id, de: antes[id] ?? 30, para: e.atributos[id] ?? 30 })).filter(x => x.para - x.de >= 0.5).sort((a, b) => (b.para - b.de) - (a.para - a.de)).slice(0, 3);
+    if (ganhos.length) escrever(v, { texto: `O treino de ${({ mecanica: 'mecânica', estrategia: 'estratégia', equipe: 'equipe', mental: 'cabeça' } as Record<string, string>)[foco]} do ano apareceu: ${ganhos.map(x => `${NOME_ATRIBUTO25[x.id] ?? x.id} de ${Math.round(x.de)} para ${Math.round(x.para)}`).join(', ')}.`, relevancia: 'cotidiano', tema: 'trabalho', tom: 'bom' });
+  }
   // Preso, o ano não tem temporada (a equipe dispensa).
   if (v.justica?.prisao) { if (e.equipe) sairDaEquipe(v, e, 'a prisão'); return; }
   const int = intensidade25(v, e);
@@ -459,11 +481,23 @@ export function processarEsports25(v: Vida): void {
   // O nome no cenário: o degrau, onde terminou, a métrica, os títulos, o destaque.
   const liga = t.competicoes[0];
   const alvo = clamp((t.nivel - 1) * 14 + (1 - (liga.colocacao - 1) / Math.max(1, liga.participantes - 1)) * 22 + (t.metrica - jogoDe(e).metrica.media) / jogoDe(e).metrica.sd * 6 + titulos.length * 6 + (t.destaque ? 8 : 0) + (t.competicoes.some(c => c.tipo === 'mundial') ? 10 : 0), 0, 100);
-  e.reputacao = Math.round(clamp(e.reputacao * 0.6 + alvo * 0.4, 0, 100));
+  e.reputacao = Math.round(clamp(e.reputacao * 0.6 + (alvo + efeitosDoPerfil(e.perfil28).imprensa * 2) * 0.4, 0, 100));
   contarTemporada(v, e, t);
+  perfilEsports28(v, e, t, ano);
   vidaEmVolta(v, e, int);
   depoisDaTemporada(v, e, t, r);
   fotografar(e, ano);
+}
+
+/** VIDA 28 · o arquétipo do jogador de e-sports (`arquetipos`): a função, os atributos do jogo, a personalidade, os títulos. */
+function perfilEsports28(v: Vida, e: Esports25, t: Temporada25, ano: number): void {
+  const nj = nivelDeJogo25(e);
+  const desvio = Object.fromEntries(Object.entries(e.atributos).map(([k, x]) => [k, (x ?? nj) - nj]));
+  const titulos = e.temporadas.slice(-3).reduce((s, x) => s + x.competicoes.filter(c => c.titulo).length, 0);
+  const leitura: LeituraDoPerfil = { modalidade: 'esports', papel: e.funcao, desvio, acimaDaDivisao: nj - forcaDoNivel(e.jogo, t.nivel), tracos: v.personalidade.tracos as unknown as Record<string, number>, idade: idade(v), anosNoClube: e.equipe ? Math.floor((v.t - e.equipe.desde) / 12) : 0, capitao: false, reserva: t.papel === 'reserva', titulos };
+  const { perfil, mudou } = guardarPerfil(e.perfil28, lerPerfil(leitura), ano, v.t);
+  e.perfil28 = perfil;
+  if (mudou && perfil.principal && t.nivel >= 2) escrever(v, { texto: `No cenário de ${jogoDe(e).nome(ano)}, passaram a falar de você como ${nomeDoArquetipo(perfil.principal, v.eu.genero).toLowerCase().replace(/^igl/, 'IGL').replace(/^awper/, 'AWPer')}: ${arquetipo(perfil.principal)!.sobre.charAt(0).toLowerCase()}${arquetipo(perfil.principal)!.sobre.slice(1)}`, relevancia: 'biografia', tema: 'trabalho', fio: 'esports', chave: `perfil28e:${perfil.principal}:${ano}` });
 }
 
 function fotografar(e: Esports25, ano: number): void {
@@ -528,7 +562,7 @@ function depoisDaTemporada(v: Vida, e: Esports25, t: Temporada25, r: Rng): void 
   // Os jogos de equipe.
   if (e.equipe) {
     // O banco: o titular que rende muito abaixo perde a vaga; o reserva com nível volta.
-    if (e.equipe.titular && zMet <= -1.1 && r.chance(0.6)) { e.equipe.titular = false; escrever(v, { texto: `Foi para o banco da ${e.equipe.nome}: o ${j.metrica.nome} do ano ficou entre os piores da equipe.`, relevancia: 'biografia', tema: 'trabalho', tom: 'ruim' }); }
+    if (e.equipe.titular && zMet <= -1.1 + efeitosDoPerfil(e.perfil28).titularidade * 0.2 && r.chance(0.6)) { e.equipe.titular = false; escrever(v, { texto: `Foi para o banco da ${e.equipe.nome}: o ${j.metrica.nome} do ano ficou entre os piores da equipe.`, relevancia: 'biografia', tema: 'trabalho', tom: 'ruim' }); }
     else if (!e.equipe.titular && nj >= e.equipe.forca - 2 && r.chance(0.55)) { e.equipe.titular = true; escrever(v, { texto: `Ganhou a vaga de titular na ${e.equipe.nome}.`, relevancia: 'biografia', tema: 'trabalho', tom: 'bom' }); }
     // Acesso e queda da EQUIPE (a vaga é da organização): campeã da segunda divisão sobe; lanterna da liga cai.
     if (liga.colocacao === 1 && e.nivel <= 3 && e.nivel >= 2) { e.nivel += 1; e.equipe.nivel = e.nivel; e.equipe.forca = Math.round((e.equipe.forca + forcaDoNivel(e.jogo, e.nivel)) / 2); escrever(v, { texto: `A ${e.equipe.nome} conquistou o acesso: no ano que vem, ${nomeDoNivel25(v, e.jogo, e.nivel)}.`, relevancia: 'marco', tema: 'trabalho', tom: 'bom' }); }
@@ -556,7 +590,8 @@ function depoisDaTemporada(v: Vida, e: Esports25, t: Temporada25, r: Rng): void 
 function renovarOuSair(v: Vida, e: Esports25, t: Temporada25, zMet: number, r: Rng): void {
   const eq = e.equipe;
   if (!eq || (eq.contratoAte ?? 0) > v.t + 6) return;
-  const fica = zMet >= -0.4 || (eq.titular && t.competicoes[0].colocacao <= 3) || r.chance(0.25);
+  // VIDA 28: quem segura o grupo (o IGL, o Suporte) é renovado com números piores; o Marrento, não.
+  const fica = zMet >= -0.4 - efeitosDoPerfil(e.perfil28).vestiario * 0.12 || (eq.titular && t.competicoes[0].colocacao <= 3) || r.chance(0.25);
   if (!fica) { sairDaEquipe(v, e, 'contrato não renovado'); escrever(v, { texto: 'O contrato acabou e a equipe não renovou: o ano que vem começa sem equipe.', relevancia: 'biografia', tema: 'trabalho', tom: 'ruim' }); return; }
   const j = jogoDe(e);
   const n = j.niveis[e.nivel - 1];
