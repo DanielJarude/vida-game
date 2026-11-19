@@ -199,7 +199,38 @@ as decisões de desenho (partidos nazistas, a perseguição aos judeus, reformas
 
 ## 11. Testes
 
-(preenchido com os números reais — ver abaixo)
+- **Novos:** `src/motor/__tests__/erasV4.test.ts` — 20 testes: integridade dos pacotes sociais (fontes, ids, referências
+  entre barreiras, reformas, regras da v3 e movimentos), nenhum partido nazista/fascista oferecido, vida contemporânea sem
+  nenhum efeito, a mulher casada no Brasil de 1950 (trabalho, crédito, resíduo depois de 1962), a segregação na Geórgia e
+  não em Nova York, o motivo da porta fechada na vaga (Inglaterra, 1919), o salário de entrada, a RDA e a igreja, o
+  privilégio de origem por época, a reforma estadual que só vale no estado, a revogação, a escola e a saúde municipais
+  (inclusive na mortalidade), as reformas pendentes no tempo e no lugar, a competência do cargo e o regime fechado, a
+  reforma proposta pelo mandato até a linha do tempo alternativa, movimentos e risco, partidos do país e do mês
+  (proscritos, partido único, o estado no Brasil de 1925), o esporte amador, saves (ida e volta, malformado, antigo) e 40
+  anos de vida histórica sem erro. **20/20.**
+- **Suíte completa no código da v4** (240 arquivos, em 8 lotes, `--maxWorkers=3`): **3.166 testes passaram**. Falharam por
+  tempo esgotado sob carga 6; rodados sozinhos, `att3`, `fechamentoMundo` #4 e `rework115Esportes` passam; `profissao`
+  "clima péssimo", `fixPosPlaytestHumano` C e `motor.test` "regra de agência" esgotam o tempo fixo também sozinhos — e
+  esgotaram também na base v3 (`e5fe53d`) rodada nesta sessão (pré-existentes desta máquina). O lote 3 travou: o arquivo
+  `rework5.test.ts` trava no teste "sem quebrar, e com o mundo produzindo notícias" **também na base v3** (mesmos 18 de 19
+  testes concluídos nas duas) — pré-existente, não investigado a fundo nesta entrega; os outros 30 arquivos do lote passaram
+  (rodados em metades e um a um). Nenhuma falha de asserção.
+- **Repassados no código final** (depois dos últimos ajustes): eras v1–v4, política, calendário, esportes e as notas da
+  versão — 13 arquivos, 208/208; erasV4 20/20.
+- **Vida contemporânea intacta:** `scripts/sim/contemp4.ts` — 8 vidas de 50 anos (Brasil, EUA, Alemanha, Japão, Reino
+  Unido, Argentina) com as mesmas sementes na base v3 e na v4: biografias **idênticas byte a byte** (2.626 linhas).
+- **Simulações** (`scripts/sim/erasV4.ts`): parte A — 72 vidas em 12 cenários (Brasil 1920/1950, EUA 1920/1960, Alemanha
+  1925/1955, Japão 1935/1955, Argentina 1945/1965, Reino Unido 1905/1955, três classes, metade militando): **0 crashes**;
+  encontros com barreiras, demissão pela barreira do casamento, movimentos e uma reforma antecipada por pressão aparecem.
+  Parte B — mandatos em 8 países/cargos propondo reformas: 0 crashes, chances baixas quando muito à frente do tempo, a
+  mudança persiste até a vida do herdeiro. Comparação v3×v4 (`erasV3.ts`, 72 vidas, EUA/Brasil/Reino Unido): emprego aos
+  30, dívida atrasada e conciliação do extrato equivalentes; o salário mediano um pouco menor onde a barreira salarial pesa
+  (efeito esperado).
+- **Interface** (`scripts/playtest/gerarErasV4.ts` + `erasV4.mjs`, build de produção): 7 vidas (Brasil, EUA com mandato e
+  reforma, RDA, Reino Unido, Argentina, Japão) × 1440 e 390 px × claro/escuro — o painel, uma ação de movimento, as
+  reformas no mandato (Caminhos → Vida pública), um ano vivido: **sem erro de console, sem rolagem lateral, sem texto
+  quebrado**. Corrigido no caminho: a etiqueta "porta fechada" sem contraste nos dois temas. Fotos em `docs/eras/fotos/v4-*`.
+- **Build:** sem erro; 9 avisos de "circular chunk", os mesmos da base. **Smoke de produção: 36/36.**
 
 ## 12. Limitações conhecidas
 

@@ -26,7 +26,7 @@ import { garantirHistoria, movimentosAtivos, riscoDoMovimento, movimentoPorId, r
 
 export type OqueEras4 = 'participar' | 'organizar' | 'financiar' | 'sair';
 
-const PALAVRA_RISCO = ['sem risco além da discussão em casa', 'o patrão e a vizinhança podem não gostar', 'há prisões, e o nome vai para a ficha da polícia política', 'o regime prende, tortura e faz desaparecer'] as const;
+const PALAVRA_RISCO = ['sem risco além da discussão em casa', 'o patrão e a vizinhança podem não gostar', 'há prisões, e o nome vai para a ficha da polícia', 'o regime prende, tortura e faz desaparecer'] as const;
 export const palavraDoRisco = (n: 0 | 1 | 2 | 3) => PALAVRA_RISCO[n];
 
 /** Os movimentos em que esta vida pode entrar agora (o país, o lugar, o ano). */
