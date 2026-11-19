@@ -26,6 +26,7 @@ import { municipio, nomeLugar, grandesCentros, paisDaCidade, sortearMunicipio } 
 import { paisesVivenciaveis, perfilDoPais } from './mundo/registro';
 import { entrarNaVida } from './mundo/vida';
 import { definirMesHistorico } from './eras/base/moedas';
+import { PAISES_COM_ERA, anoImperial } from './eras/base/contexto';
 import { sortearNome, sortearSobrenome } from './dados/nomes';
 import { estiloPara } from './sistemas/identidade';
 import { nacionalidadesAoNascer } from './mundo/cidadania';
@@ -70,10 +71,19 @@ export interface OpcoesCriacao {
    * marcada (`Vida.era`) e o calendário segue normalmente. Ausente: a vida contemporânea de sempre.
    */
   era?: boolean;
+  /** ERAS v3: o mês (0..11) e o dia (1..31) de nascimento escolhidos (vida histórica). Ausentes: o mês sai da semente. */
+  mes?: number;
+  dia?: number;
 }
 
-/** ERAS HISTÓRICAS: os anos de nascimento que a primeira versão oferece. */
-export const ANOS_HISTORICOS: readonly [number, number] = [1970, 2025];
+/**
+ * ERAS HISTÓRICAS: os anos de nascimento oferecidos (ERAS v3: de 1900 a 2025; cada país tem o seu primeiro ano em
+ * `eras/base/contexto.PAISES_COM_ERA` — a Argentina, 1945).
+ */
+export const ANOS_HISTORICOS: readonly [number, number] = [1900, 2025];
+
+/** Quantos dias tem o mês (o calendário gregoriano, em vigor em todos os países com época desde antes de 1900). */
+export const diasNoMes = (ano: number, mes: number) => new Date(Date.UTC(ano, mes + 1, 0)).getUTCDate();
 
 /**
  * "Tudo ao acaso" (FIX pós-playtest humano): o nascimento sorteado no MUNDO, não no Brasil.
@@ -199,7 +209,9 @@ function avoVivo(r: Rng, idadeAvo: number): boolean {
 export function criarVida(o: OpcoesCriacao): Vida {
   const r = criarRng(o.semente);
   const ano = o.ano ?? 2026;
-  const t = tDe(ano, r.int(0, 11));
+  // ERAS v3: o mês escolhido substitui o sorteado (o sorteio acontece do mesmo jeito: o resto do nascimento não muda).
+  const mesSorteado = r.int(0, 11);
+  const t = tDe(ano, o.mes !== undefined && Number.isInteger(o.mes) && o.mes >= 0 && o.mes <= 11 ? o.mes : mesSorteado);
   const classe = o.classe ?? sortearClasse(r, o.municipioId);
   const arranjo = sortearArranjo(r, classe);
   const podeGestar = o.genero === 'feminino' ? true : o.genero === 'masculino' ? false : !!o.podeGestar;
@@ -293,7 +305,12 @@ export function criarVida(o: OpcoesCriacao): Vida {
     anoAtual: { acoes: [] },
     luto: [],
     caminhos: caminhosVazios(),
-    ...(o.era && paisNatal === 'BR' && ano >= ANOS_HISTORICOS[0] && ano <= ANOS_HISTORICOS[1] ? { era: { pais: 'BR' as const, ano, decada: Math.floor(ano / 10) * 10, vistos: [] } } : {})
+    ...(o.era && PAISES_COM_ERA[paisNatal] !== undefined && ano >= PAISES_COM_ERA[paisNatal] && ano <= ANOS_HISTORICOS[1] ? { era: {
+      pais: paisNatal, ano, decada: Math.floor(ano / 10) * 10, vistos: [],
+      ...(o.dia !== undefined && Number.isInteger(o.dia) && o.dia >= 1 && o.dia <= diasNoMes(ano, mesDe(t)) ? { dia: o.dia } : {}),
+      // A cidade partilhada (Berlim): de que lado a família mora, da semente (não gasta o acaso do nascimento).
+      ...(paisNatal === 'DE' ? { partilha: rngDe(`${o.semente}`, 'era-partilha').next() } : {})
+    } } : {})
   };
   // A moeda e o salário mínimo do texto de nascimento são os do mês em que se nasce (a vida contemporânea, a de sempre).
   if (v.era) entrarNaVida(v); else definirMesHistorico(null);
@@ -483,7 +500,7 @@ function escreverNascimento(
   }
 
   escrever(v, {
-    texto: `${nascido} em ${mes} de ${anoDe(v.t)}, em ${lugar}, ${pais}.`,
+    texto: `${nascido} em ${v.era?.dia ? `${v.era.dia === 1 ? '1º' : v.era.dia} de ` : ''}${mes} de ${anoDe(v.t)}${anoImperial(v)}, em ${lugar}, ${pais}.`,
     relevancia: 'marco',
     tema: 'nascimento',
     tom: 'bom',

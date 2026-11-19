@@ -24,7 +24,7 @@ import { educacaoDaVida } from './mundo/vida';
 import { noPais } from './mundo/registro';
 import type { MotivoMigracao } from './tipos';
 import { avaliarMigracao, migrar, pedirNaturalizacao, podeNaturalizar } from './sistemas/migracao';
-import { daMoedaLocal } from './mundo/moeda';
+import { daMoedaLocalDeHoje } from './mundo/moeda';
 import { contrair, dinheiro as moeda } from './texto';
 import { declararIntencao, patrimonioPagaAVida, podeDeclararIntencao, registrarProcura } from './sistemas/intencao';
 import { entrarNaVida, paisDaVida, perfilDaVida } from './mundo/vida';
@@ -801,7 +801,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
       if (v.caminhos.negocio && ['comecando', 'firme', 'apertado'].includes(v.caminhos.negocio.estado)) return bloqueio('impossivel', 'O negócio já tem CNPJ próprio.');
       if (e.contrato === 'autonomo' && e.clientela === undefined) return bloqueio('impossivel', 'Não se aplica.');
       if (e.ocupacaoId === 'produtor_rural' || e.ocupacaoId === 'pescador') return bloqueio('impossivel', 'Produtor rural e pescador têm registro próprio, não MEI.');
-      const teto = daMoedaLocal(regime.tetoAnual, paisDaVida(v)) / 12;
+      const teto = daMoedaLocalDeHoje(regime.tetoAnual, paisDaVida(v)) / 12;
       if (e.salario > teto * 1.0) return bloqueio('requisito', `O faturamento passa do limite do ${regime.nome} (cerca de ${moeda(teto * 12)} por ano).`);
       return PERMITIDO;
     }

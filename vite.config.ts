@@ -139,7 +139,11 @@ export default defineConfig({
           // VIDA 18: o campo, as apostas e os acontecimentos num pacote só (motor18) e os catálogos puros em dados18.
           // ERAS HISTÓRICAS: os dados da época (acontecimentos, cultura) e o motor do ano histórico num pacote próprio, acima
           // dos sistemas e do mundo; a base (`eras/base`: séries, moedas, tecnologias, o contexto) fica com quem a importa.
-          if (/[\\/]src[\\/]motor[\\/]eras[\\/](dados[\\/]|ano\.ts)/.test(id)) return 'motor-eras';
+          // ERAS v3: cada país com época é um pacote próprio de dados (`eras/paises/<id>/`), carregado sob demanda; o ano histórico
+          // dos outros países (`eras/v3`) vai com o motor da época.
+          const eraPais = /[\\/]src[\\/]motor[\\/]eras[\\/]paises[\\/]([a-z]+)[\\/]/.exec(id);
+          if (eraPais) return `eras-${eraPais[1]}`;
+          if (/[\\/]src[\\/]motor[\\/]eras[\\/](dados[\\/]|v3[\\/]|ano\.ts)/.test(id)) return 'motor-eras';
           // A base histórica (só dados e funções puras, sem import de nenhum pacote do motor): pacote próprio, embaixo de tudo.
           if (/[\\/]src[\\/]motor[\\/]eras[\\/]base[\\/]/.test(id)) return 'eras-base';
           if (/[\\/]src[\\/]motor[\\/]v18[\\/]/.test(id)) return 'motor18';

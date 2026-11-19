@@ -39,7 +39,7 @@ import './celular15.css';
 import { MapaDaCidade } from '../../v17/mapa/MapaDaCidade';
 import { temAcesso } from '../../../motor/eras/base/contexto';
 import { GUARDAR_O_APARELHO, meioDaVida, NOME_DO_APARELHO, nomeDaRedeNaEpoca } from '../../eras/epoca';
-import { CelularDeTeclas, TelefoneDeDisco } from '../../eras/Aparelhos';
+import { CelularDeTeclas, Envelope, TelefoneDeDisco } from '../../eras/Aparelhos';
 // VIDA 20: cada rede é um app próprio (o feed delas, publicar em um toque, o perfil, a conta) — `v20/redes/AppSocial20`.
 const AppSocial20 = lazy(() => import('../../v20/redes/AppSocial20'));
 const REDES20: PlataformaId[] = ['instagram', 'tiktok', 'youtube', 'x', 'facebook', 'twitch', 'onlyfans'];
@@ -620,9 +620,9 @@ export default function Celular({ vida, agir, aoFechar, irPara, irLugar, abrirPe
   const smart = meio === 'smartphone';
   const nomes: Record<Exclude<App15, 'inicio' | PlataformaId>, string> = !vida.era ? NOMES : {
     ...NOMES,
-    mensagens: meio === 'fixo' ? (tem('telefone_fixo') ? 'Recados' : 'Cartas') : meio === 'celular' ? (tem('sms') ? 'Torpedos' : 'Ligações') : NOMES.mensagens,
+    mensagens: meio === 'cartas' ? 'Cartas' : meio === 'fixo' ? (tem('telefone_fixo') ? 'Recados' : 'Cartas') : meio === 'celular' ? (tem('sms') ? 'Torpedos' : 'Ligações') : NOMES.mensagens,
     noticias: smart ? NOMES.noticias : 'Jornal',
-    agenda: meio === 'fixo' ? 'Caderneta' : NOMES.agenda
+    agenda: meio === 'fixo' || meio === 'cartas' ? 'Caderneta' : NOMES.agenda
   };
   // As redes (VIDA 20): as quatro grandes e o Facebook sempre; a Twitch e o OnlyFans, para quem tem conta lá.
   const redes = tem('redes_modernas') ? REDES20.filter(r => (r !== 'twitch' && r !== 'onlyfans') || !!contaAtiva(vida, r)) : [];
@@ -647,7 +647,7 @@ export default function Celular({ vida, agir, aoFechar, irPara, irLugar, abrirPe
   return (
     <div className="cel" onClick={e => { if (e.target === e.currentTarget) aoFechar(); }}>
       <div className="cel__aparelho" role="dialog" aria-modal="true" aria-label={NOME_DO_APARELHO[meio]} tabIndex={-1} ref={ref} data-app={atual} data-meio={meio}>
-        {meio === 'fixo' ? <div className="cel__status" aria-hidden><span>Telefone de casa · {anoDe(vida.t)}</span></div> : (
+        {meio === 'cartas' ? <div className="cel__status" aria-hidden><span>Cartas e recados · {anoDe(vida.t)}</span></div> : meio === 'fixo' ? <div className="cel__status" aria-hidden><span>Telefone de casa · {anoDe(vida.t)}</span></div> : (
         <div className="cel__status" aria-hidden>
           <Relogio />
           <span className="cel__status-dir"><span className="cel__sinal" /><span className="cel__bateria" /></span>
@@ -657,8 +657,10 @@ export default function Celular({ vida, agir, aoFechar, irPara, irLugar, abrirPe
             <div className="cel__data-grande"><strong>{MESES[mesDe(vida.t)]}</strong><span>{anoDe(vida.t)} · {municipio(vida.moradia.municipioId).nome}</span></div>
             {vida.era && !smart && (
               <div className="cel__epoca">
-                {meio === 'fixo' ? <TelefoneDeDisco tamanho={44} /> : <CelularDeTeclas tamanho={44} />}
-                <p>{meio === 'fixo'
+                {meio === 'cartas' ? <Envelope tamanho={44} /> : meio === 'fixo' ? <TelefoneDeDisco tamanho={44} /> : <CelularDeTeclas tamanho={44} />}
+                <p>{meio === 'cartas'
+                  ? 'Sem telefone em casa: as notícias chegam por carta, telegrama e visita. Quem mora longe escreve; a resposta leva dias ou semanas.'
+                  : meio === 'fixo'
                   ? (tem('telefone_fixo') ? 'O telefone da sala. Quem liga deixa recado; quem mora longe escreve carta, e a resposta leva dias.' : 'Sem telefone em casa: recado pelo vizinho, ligação do orelhão e carta pelo correio.')
                   : `Celular de teclas: ligação cara${tem('sms') ? ', torpedo curto' : ''}.${tem('internet') ? ' A internet é no computador.' : ' Internet, ainda não.'}`}</p>
               </div>

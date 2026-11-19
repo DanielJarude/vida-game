@@ -24,7 +24,7 @@
 import { IPCA, IPCA_T0, SALARIO_MINIMO_BR } from './series';
 
 export interface PadraoMonetario {
-  id: 'cruzeiro_novo' | 'cruzeiro70' | 'cruzado' | 'cruzado_novo' | 'cruzeiro90' | 'cruzeiro_real' | 'real';
+  id: 'reis' | 'cruzeiro42' | 'cruzeiro_novo' | 'cruzeiro70' | 'cruzado' | 'cruzado_novo' | 'cruzeiro90' | 'cruzeiro_real' | 'real';
   nome: string;
   /** Plural ("cruzados novos"). */
   plural: string;
@@ -39,6 +39,8 @@ export interface PadraoMonetario {
   porReal: number;
   /** Quanto da moeda anterior vale uma desta (a troca). */
   troca?: string;
+  /** ERAS v3: o réis escreve-se com o cifrão no meio ("1:250$000" = um conto e 250 mil-réis). */
+  formato?: 'reis';
 }
 
 const t = (ano: number, mes: number) => ano * 12 + mes;
@@ -46,7 +48,12 @@ const t = (ano: number, mes: number) => ano * 12 + mes;
 export const PADROES_MONETARIOS_BR: readonly PadraoMonetario[] = [
   // ERAS v2 (anos 1970): o cruzeiro novo (Decreto-Lei 1/1965, em circulação desde 13/02/1967) voltou a se chamar cruzeiro em
   // 15/05/1970 (Resolução BACEN 144/1970), sem corte de zeros: NCr$ 1 = Cr$ 1.
-  { id: 'cruzeiro_novo', nome: 'cruzeiro novo', plural: 'cruzeiros novos', simbolo: 'NCr$', codigo: 'BRB', desde: -Infinity, dataOficial: '13 de fevereiro de 1967', porReal: 2750 * 1000 * 1 * 1000 * 1000 },
+  // ERAS v3 (1900–1966): o mil-réis (a unidade de conta, o réis, escrevia-se "1$500" = um mil-réis e 500 réis; "1:000$000" =
+  // um conto) até o cruzeiro do Decreto-Lei 4.791 de 05/10/1942, em vigor em 1º/11/1942 (Cr$ 1 = 1$000); depois, o cruzeiro
+  // novo do Decreto-Lei 1/1965, em circulação desde 13/02/1967 (NCr$ 1 = Cr$ 1.000).
+  { id: 'reis', nome: 'mil-réis', plural: 'mil-réis', simbolo: 'Rs', codigo: 'BRR_REIS', desde: -Infinity, dataOficial: 'o tempo do Império', porReal: 2750 * 1000 * 1 * 1000 * 1000 * 1000 * 1000, formato: 'reis' },
+  { id: 'cruzeiro42', nome: 'cruzeiro', plural: 'cruzeiros', simbolo: 'Cr$', codigo: 'BRZ', desde: t(1942, 10), dataOficial: '1º de novembro de 1942', porReal: 2750 * 1000 * 1 * 1000 * 1000 * 1000, troca: 'Cr$ 1 = 1$000 (um mil-réis)' },
+  { id: 'cruzeiro_novo', nome: 'cruzeiro novo', plural: 'cruzeiros novos', simbolo: 'NCr$', codigo: 'BRB', desde: t(1967, 1), dataOficial: '13 de fevereiro de 1967', porReal: 2750 * 1000 * 1 * 1000 * 1000, troca: 'NCr$ 1 = Cr$ 1.000' },
   { id: 'cruzeiro70', nome: 'cruzeiro', plural: 'cruzeiros', simbolo: 'Cr$', codigo: 'BRB', desde: t(1970, 4), dataOficial: '15 de maio de 1970', porReal: 2750 * 1000 * 1 * 1000 * 1000, troca: 'Cr$ 1 = NCr$ 1' },
   { id: 'cruzado', nome: 'cruzado', plural: 'cruzados', simbolo: 'Cz$', codigo: 'BRC', desde: t(1986, 2), dataOficial: '28 de fevereiro de 1986', porReal: 2750 * 1000 * 1 * 1000, troca: 'Cz$ 1 = Cr$ 1.000' },
   { id: 'cruzado_novo', nome: 'cruzado novo', plural: 'cruzados novos', simbolo: 'NCz$', codigo: 'BRN', desde: t(1989, 1), dataOficial: '16 de janeiro de 1989', porReal: 2750 * 1000 * 1, troca: 'NCz$ 1 = Cz$ 1.000' },
@@ -99,7 +106,17 @@ export function salarioMinimoReal(tMes: number): number | undefined {
 /* ------------------------------------------------------------ O mês corrente da vida em processamento */
 
 let mesHistorico: number | null = null;
+let paisHistorico = 'BR';
+let ladoHistorico: 'oeste' | 'leste' = 'oeste';
 
-/** Quem entra numa vida histórica diz o mês corrente (`mundo/vida.entrarNaVida`); null = vida contemporânea. */
-export const definirMesHistorico = (tMes: number | null) => { mesHistorico = tMes; };
+/**
+ * Quem entra numa vida histórica diz o mês corrente (`mundo/vida.entrarNaVida`); null = vida contemporânea.
+ * ERAS v3: e o país da época (o da vida; 'BR' por padrão) e o lado do país dividido (a Alemanha de 1949–1990).
+ */
+export const definirMesHistorico = (tMes: number | null, pais = 'BR', lado: 'oeste' | 'leste' = 'oeste') => { mesHistorico = tMes; paisHistorico = pais; ladoHistorico = lado; };
 export const mesHistoricoCorrente = () => mesHistorico;
+/** O país da vida histórica em processamento (só tem sentido com o mês definido). */
+export const paisHistoricoCorrente = () => paisHistorico;
+export const ladoHistoricoCorrente = () => ladoHistorico;
+/** O mês histórico, só quando a vida em processamento é brasileira (os módulos brasileiros da v1/v2 leem este). */
+export const mesHistoricoNoBrasil = () => (paisHistorico === 'BR' ? mesHistorico : null);

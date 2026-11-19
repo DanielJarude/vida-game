@@ -14,7 +14,7 @@ import type { Regiao } from '../tipos';
 import type { PerfilDePais, PerfilUrbano } from '../mundo/tipos';
 import { MUNICIPIOS_1291 } from './municipios1291';
 import { AJUSTE_LOCAL_14 as AJ14 } from '../dados14/cidades/municipios14';
-import { precoDaEpoca, rendaDaEpocaCorrente } from '../eras/base/economia';
+import { precoDaEpoca, rendaDaEpocaCorrente, rendaDaEpocaNoPais } from '../eras/base/economia';
 import { trilhoAindaNaoAbriu } from '../eras/base/cidades';
 import { aoRegistrar, idDaCidade, indiceNoCatalogo, PAIS_PADRAO, paisDoCatalogo, paisDoId, paisPeloIndice, perfilDoPais, temPerfil } from '../mundo/registro';
 
@@ -288,7 +288,8 @@ export function economiaLocal(id: string) {
   const custo = p.custo * (0.7 * (d?.custo ?? 1) + 0.3 * moradia);
   return {
     custo,
-    salario: p.salario * renda * (d?.salario ?? 1),
+    // ERAS v3: numa vida histórica, o nível de renda da época no país (1 na contemporânea e nos países sem pacote).
+    salario: p.salario * renda * (d?.salario ?? 1) * rendaDaEpocaNoPais(m.pais),
     aluguel: Math.round(p.aluguel * moradia),
     transporte: p.transporte,
     rotulo: p.rotulo

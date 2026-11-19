@@ -25,7 +25,8 @@ import { municipio } from '../dados/lugares';
 import { mundoDe } from '../v14/mundo/mundo14';
 import { lancar } from '../sistemas/extrato';
 import { fatorNominal, FIM_DA_SERIE, ipcaDoAno, padraoEm, PADROES_MONETARIOS_BR, nivelDePrecos } from './base/moedas';
-import { nivelEconomico, temAcesso, tecnologia } from './base/contexto';
+import { nivelEconomico, temAcesso, tecnologia, paisDaEpoca } from './base/contexto';
+import { processarEraNoPais, regrasDoAno, guerrasDoAno } from './v3/anoPais';
 import { ACONTECIMENTOS_BR, ESPORTE_MUNDIAL_BR, PIB_BR, type AcontecimentoBR } from './dados/acontecimentosBR';
 
 const TODOS = [...ACONTECIMENTOS_BR, ...ESPORTE_MUNDIAL_BR].sort((a, b) => a.data[0] * 12 + a.data[1] - (b.data[0] * 12 + b.data[1]));
@@ -157,6 +158,8 @@ function comoChegou(v: Vida, a: AcontecimentoBR, ano: number): string {
     return 'Você era criança, mas lembra dos adultos falando disso na sala. ';
   }
   if (a.ufs) return '';
+  // ERAS v3: antes da televisão em casa, o rádio; antes do rádio, o jornal e a conversa.
+  if (ano < 1995 && !temAcesso(v, 'tv', ano)) return temAcesso(v, 'radio', ano) ? 'O rádio deu a notícia, e o jornal do dia seguinte contou o resto. ' : 'A notícia correu pelos jornais e de boca em boca. ';
   if (ano < 1995) return 'Na televisão e no rádio, só se falava nisso. ';
   if (temAcesso(v, 'smartphone', ano)) return 'A notícia chegou primeiro pelo celular. ';
   return 'Saiu em todos os jornais e telejornais. ';
@@ -296,7 +299,7 @@ function maioridade(v: Vida): void {
     marcar(v, 'lei:maioridade18');
     escrever(v, { texto: 'Dezoito anos: já dava para votar, tirar carteira de motorista e responder pelos próprios atos. Mas, pela lei da época, a maioridade civil era aos 21 — assinar contrato ou casar sem a autorização dos pais, só depois.', relevancia: 'cotidiano', tema: 'escolha', fato: { tipo: 'era', dados: { categoria: 'direitos', evento: 'maioridade18' } } });
   }
-  if (i === 21 && ano <= 2003 && ano >= 1970 && !visto(v, 'lei:maioridade21')) {
+  if (i === 21 && ano <= 2003 && ano >= 1900 && !visto(v, 'lei:maioridade21')) {
     marcar(v, 'lei:maioridade21');
     escrever(v, { texto: ano < 2003 ? 'Vinte e um anos: a maioridade civil, pela lei da época. Dali em diante, a assinatura bastava sozinha.' : 'Vinte e um anos — e, com o Código Civil novo, a maioridade já tinha chegado aos 18.', relevancia: 'cotidiano', tema: 'escolha', fato: { tipo: 'era', dados: { categoria: 'direitos', evento: 'maioridade21' } } });
   }
@@ -306,6 +309,10 @@ function maioridade(v: Vida): void {
 
 export function processarEra(v: Vida, ec: AnoEconomico): void {
   if (!v.era) return;
+  // ERAS v3: um país com pacote de época tem o seu ano (`v3/anoPais`); as partes comuns (o ofício, as chegadas de
+  // tecnologia em casa) são as mesmas. O Brasil segue abaixo, como na v1/v2, mais as regras sociais e as guerras.
+  const pais = paisDaEpoca(v);
+  if (pais !== 'BR' && processarEraNoPais(v, pais, ec, x => { chegadas(x); oficio(x); })) return;
   const tFim = v.t, tIni = v.t - 12;
   if (tIni <= FIM_DA_SERIE + 12) {
     economiaHistorica(v, ec);
@@ -315,6 +322,8 @@ export function processarEra(v: Vida, ec: AnoEconomico): void {
   devolverCollor(v, tFim);
   partidoMuda(v, tFim);
   maioridade(v);
+  regrasDoAno(v, 'BR', 'oeste');
+  guerrasDoAno(v, 'BR', 'oeste');
   chegadas(v);
   oficio(v);
   if (anoDe(v.t) <= 2025) lembranca(v);

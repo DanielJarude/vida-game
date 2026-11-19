@@ -17,6 +17,19 @@ export function TelefoneDeDisco({ tamanho = 64 }: { tamanho?: number }) {
   );
 }
 
+/** ERAS v3: a carta (o envelope selado com o carimbo do correio), para quem ainda não tem telefone em casa. */
+export function Envelope({ tamanho = 64 }: { tamanho?: number }) {
+  return (
+    <svg width={tamanho} height={tamanho} viewBox="0 0 64 64" aria-hidden className="era-desenho">
+      <rect x="7" y="16" width="50" height="34" rx="2" fill="var(--surface)" stroke="var(--text-primary)" strokeWidth="1.6" />
+      <path d="M7 17l25 19 25-19" fill="none" stroke="var(--text-primary)" strokeWidth="1.6" />
+      <rect x="44" y="20" width="9" height="11" fill="var(--era-tom)" stroke="var(--text-primary)" strokeWidth="1.1" />
+      <circle cx="42" cy="27" r="6" fill="none" stroke="var(--text-primary)" strokeWidth="0.9" strokeDasharray="2 1.5" />
+      <path d="M13 42h16M13 46h11" stroke="var(--text-primary)" strokeWidth="1.1" />
+    </svg>
+  );
+}
+
 export function Tijolao({ tamanho = 64 }: { tamanho?: number }) {
   return (
     <svg width={tamanho} height={tamanho} viewBox="0 0 64 64" aria-hidden className="era-desenho">

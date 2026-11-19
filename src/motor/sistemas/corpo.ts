@@ -8,6 +8,8 @@
  * causas externas que pesam sobre jovens no Brasil.
  */
 
+import { fatoresDeMortalidade, causaDaEpoca } from '../eras/base/mortalidade';
+import { riscoDeGuerraDaPessoa, guerraEmCurso } from '../eras/base/sociedade';
 import { redeDeSaude } from './saude';
 import { causaDaMortePet, riscoDoPet } from './pets';
 import { predisposicao } from './predisposicao';
@@ -256,8 +258,11 @@ export function processarCorpo(v: Vida, r: Rng): void {
  * (mais para mulheres, menos para homens), com saúde e condições mexendo
  * no risco e causas externas pesando sobre homens jovens.
  */
-function riscoBase(i: number, saude: number, masculino: boolean, condicoes: { id: string; tratando: boolean }[] = []): number {
-  const gompertz = 0.0000085 * Math.exp(0.1 * i) * (masculino ? 1.35 : 1);
+function riscoBase(i: number, saude: number, masculino: boolean, condicoes: { id: string; tratando: boolean }[] = [], protagonista = false): number {
+  // ERAS v3: numa vida histórica, o risco da época (`eras/base/mortalidade`): o multiplicador do adulto e, nas crianças
+  // que não são o protagonista, o risco extra de morrer antes dos cinco anos. Vida contemporânea: 1 e 0.
+  const epoca = fatoresDeMortalidade(protagonista, i);
+  const gompertz = 0.0000085 * Math.exp(0.1 * i) * (masculino ? 1.35 : 1) * epoca.adulto;
   const externas = i >= 15 && i <= 34 ? (masculino ? 0.0018 : 0.0004) : 0;
   const infantil = i <= 1 ? 0.003 : 0;
   const fatorSaude = Math.exp((70 - saude) / 22);
@@ -269,7 +274,7 @@ function riscoBase(i: number, saude: number, masculino: boolean, condicoes: { id
   // REWORK 9.7: a saúde quase no zero é um corpo que não aguenta mais — antes, aos 60 com saúde 0, o risco era ~11% ao
   // ano, e havia vidas inteiras de anos com saúde zero. Abaixo de 15, o risco cresce também por fora da idade.
   const fragilidade = saude < 15 ? (15 - saude) * 0.015 : 0;
-  return (gompertz + infantil) * fatorSaude * fatorCondicoes + externas + fragilidade;
+  return (gompertz + infantil) * fatorSaude * fatorCondicoes + externas + fragilidade + epoca.crianca;
 }
 
 export function causaDaMorte(r: Rng, i: number, masculino: boolean, condicoes: string[]): string {
@@ -282,8 +287,8 @@ export function causaDaMorte(r: Rng, i: number, masculino: boolean, condicoes: s
 }
 
 /** O risco de morrer no ano: idade, saúde e condições — a mesma conta para o protagonista e para as pessoas do mundo. */
-function riscoDeMorte(i: number, saude: number, masculino: boolean, condicoes: { id: string; tratando: boolean; tarde?: boolean }[]): number {
-  return riscoBase(i, saude, masculino, condicoes)
+function riscoDeMorte(i: number, saude: number, masculino: boolean, condicoes: { id: string; tratando: boolean; tarde?: boolean }[], protagonista = false): number {
+  return riscoBase(i, saude, masculino, condicoes, protagonista)
     + condicoes.reduce((s, c) => s + (c.id === 'cancer' ? (c.tratando ? (c.tarde ? 0.045 : 0.025) : 0.08) : 0), 0);
 }
 
@@ -307,11 +312,21 @@ export function morreEsteAno(v: Vida, r: Rng): string | null {
   const noCrime = v.caminhos.envolvimento?.morteNoCrime;
   // (Decidida numa cena do ano que passou — o ano já virou quando a cena é respondida: vale no fechamento seguinte.)
   if (noCrime && v.t - noCrime.t >= 0 && v.t - noCrime.t <= 12) return noCrime.causa;
+  // ERAS v3: a morte que a época trouxe neste ano (uma catástrofe da cidade) e a guerra de quem foi convocado — metade da
+  // letalidade histórica (regra de jogo: `eras/base/sociedade`), sorteio derivado.
+  const daEpoca = v.era?.morte;
+  if (daEpoca && v.t - daEpoca.t >= 0 && v.t - daEpoca.t <= 12) return daEpoca.causa;
+  const g = guerraEmCurso(v.t);
+  if (g && v.era?.guerras?.includes(g.id)) {
+    const anos = Math.max(1, (g.ate[0] * 12 + g.ate[1] - (g.de[0] * 12 + g.de[1])) / 12);
+    if (rngDe(v.id, 'guerra_eu', g.id, v.t).chance(g.letalidade * 0.5 / anos)) return `em combate (${g.nome})`;
+  }
   const i = idade(v);
   const fator = fatorDoEstresseProlongado(v);
-  const risco = riscoDeMorte(i, v.corpo.saude, v.eu.genero === 'masculino', v.corpo.condicoes) * fator;
+  const risco = riscoDeMorte(i, v.corpo.saude, v.eu.genero === 'masculino', v.corpo.condicoes, true) * fator;
   if (!r.chance(Math.min(0.95, risco))) return null;
-  const causa = causaDaMorte(r, i, v.eu.genero === 'masculino', v.corpo.condicoes.map(c => c.id));
+  // ERAS v3: antes dos antibióticos, a causa da época (sorteio derivado: não mexe no acaso da vida).
+  const causa = causaDaEpoca(i, rngDe(v.id, 'causa_epoca', v.t).next()) ?? causaDaMorte(r, i, v.eu.genero === 'masculino', v.corpo.condicoes.map(c => c.id));
   // O coração cobra o que a cabeça carregou (sorteio derivado: não mexe no acaso de quem não chegou aqui).
   if (fator > 1.15 && causa !== 'câncer' && !/violência|acidente/.test(causa) && rngDe(v.id, 'causa_estresse', v.t).chance(0.5)) return rngDe(v.id, 'causa_estresse2', v.t).chance(0.6) ? 'infarto' : 'AVC';
   return causa;
@@ -330,6 +345,9 @@ export function processarCorpoDePessoa(v: Vida, r: Rng, p: Pessoa, acompanhar = 
     if (!r.chance(riscoDoPet(v, p))) return null;
     return causaDaMortePet(v, p, r);
   }
+  // ERAS v3: numa guerra com convocação, quem tinha a idade podia não voltar (`eras/base/sociedade`; sorteio derivado).
+  const guerra = riscoDeGuerraDaPessoa(v.t, i, p.genero);
+  if (guerra.risco > 0 && rngDe(v.id, 'guerra', p.id, v.t).chance(guerra.risco)) return `na guerra (${guerra.guerra!.nome})`;
   let perda = 0;
   if (acompanhar) {
     garantirCondicoes(v, p);
@@ -342,7 +360,9 @@ export function processarCorpoDePessoa(v: Vida, r: Rng, p: Pessoa, acompanhar = 
   p.saude = clamp(Math.round(p.saude + deriva - perda + r.normal() * 2));
   const conds = p.condicoes ?? [];
   if (r.chance(Math.min(0.95, riscoDeMorte(i, p.saude, p.genero === 'masculino', conds)))) {
-    return causaDaMorte(r, i, p.genero === 'masculino', conds.map(c => c.id));
+    const daEpoca = causaDaEpoca(i, rngDe(p.id, 'causa_epoca', v.t).next());
+    const comum = causaDaMorte(r, i, p.genero === 'masculino', conds.map(c => c.id));
+    return daEpoca ?? comum;
   }
   return null;
 }

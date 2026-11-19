@@ -10,6 +10,8 @@
  *     a idade adulta em todas as épocas (simplificação de jogo, documentada): só o texto menciona a regra antiga.
  */
 import type { Vida } from '../../tipos';
+import { paisDaEpoca } from './contexto';
+import { regraVigente } from './sociedade';
 
 const anoDe = (t: number) => Math.floor(t / 12);
 const tDe = (a: number, m: number) => a * 12 + m - 1;
@@ -22,6 +24,8 @@ export const DIVORCIO_DIRETO = tDe(2010, 7);
 /** Numa vida histórica no Brasil, o casamento civil entre pessoas do mesmo gênero ainda não era possível? (o motivo) */
 export function casamentoImpedidoPelaLei(v: Vida, generoA: string, generoB: string): string | undefined {
   if (!v.era || generoA !== generoB || (generoA !== 'masculino' && generoA !== 'feminino')) return undefined;
+  // ERAS v3: nos outros países, a regra do pacote (vale enquanto o casamento ainda não era possível; o Japão, até hoje).
+  if (paisDaEpoca(v) !== 'BR') { const r = anoDe(v.t) <= 2025 ? regraVigente('casamento_igualitario', anoDe(v.t)) : undefined; return r ? `Em ${anoDe(v.t)}: ${r.texto}` : undefined; }
   if (v.t >= CASAMENTO_MESMO_GENERO) return undefined;
   return v.t >= UNIAO_ESTAVEL_MESMO_GENERO
     ? 'Em ' + anoDe(v.t) + ', a lei ainda não garantia o casamento civil entre pessoas do mesmo gênero: o STF tinha reconhecido a união estável (maio de 2011); o casamento só viria com a Resolução 175 do CNJ, em maio de 2013.'
@@ -31,6 +35,7 @@ export function casamentoImpedidoPelaLei(v: Vida, generoA: string, generoB: stri
 /** O que a lei da época pedia para desfazer um casamento (texto; o efeito no jogo é o mesmo). */
 export function divorcioNaEpoca(v: Vida): string {
   if (!v.era) return '';
+  if (paisDaEpoca(v) !== 'BR') { const r = regraVigente('divorcio', anoDe(v.t)); return r ? ` ${r.texto}` : ''; }
   if (v.t < DIVORCIO_INSTITUIDO) return ' Ainda não havia divórcio no Brasil: só o desquite, que separava os bens e a casa, mas não permitia casar de novo.';
   if (v.t < DIVORCIO_DIRETO) return ' Pela lei da época, o divórcio só saía depois de um ano de separação judicial (ou dois de separação de fato): começou pela separação, e o divórcio veio depois.';
   return '';
@@ -47,6 +52,13 @@ export function divorcioNaEpoca(v: Vida): string {
  */
 export function regraEleitoralDaEpoca(v: Vida, cargo: string, anoEleicao: number, mesmoCargoNoMandato: boolean): string | undefined {
   if (!v.era) return undefined;
+  // ERAS v3: os períodos sem eleição (todas, ou só para o cargo) — em qualquer país com época.
+  const sem = anoEleicao <= 2025 ? regraVigente('sem_eleicoes', anoEleicao, undefined, cargo) : undefined;
+  if (sem) return sem.texto;
+  // Onde a mulher ainda não votava, também não podia ser votada.
+  const voto = v.eu.genero === 'feminino' && anoEleicao <= 2025 ? regraVigente('voto_feminino', anoEleicao) : undefined;
+  if (voto && voto.quem === 'mulher') return voto.texto;
+  if (paisDaEpoca(v) !== 'BR') return undefined;
   if (cargo === 'presidente' && anoEleicao < 1994) return 'A eleição direta para presidente voltou só em 1989, fora do calendário das eleições gerais.';
   const executivo = cargo === 'prefeito' || cargo === 'governador' || cargo === 'presidente';
   const desde = cargo === 'prefeito' ? 2000 : 1998;

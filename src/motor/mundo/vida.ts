@@ -7,8 +7,9 @@
  */
 
 import { definirMesHistorico } from '../eras/base/moedas';
+import { ladoNoMes, pacoteDaEra } from '../eras/base/pacote';
 import type { Pessoa, Vida } from '../tipos';
-import { existeMunicipio, paisDaCidade } from '../dados/lugares';
+import { existeMunicipio, municipio, paisDaCidade } from '../dados/lugares';
 import { PAIS_PADRAO, perfilDoPais, temPerfil } from './registro';
 import { definirPaisCorrente } from './moeda';
 import type { PerfilDePais } from './tipos';
@@ -149,5 +150,16 @@ export function nacionalidadesDoBebe(municipioNatal: string, dosPais: string[][]
 export function entrarNaVida(v: Vida): void {
   definirPaisCorrente(paisDaVida(v));
   // ERAS HISTÓRICAS: a moeda da época sai do mês corrente da vida (nada muda numa vida contemporânea).
-  definirMesHistorico(v.era ? v.t : null);
+  definirMesHistorico(v.era ? v.t : null, paisDaVida(v), v.era ? ladoDaVida(v) : 'oeste');
+}
+
+/**
+ * ERAS v3: de que lado do país dividido a vida está agora (a Alemanha de 1949–1990): pela divisão onde mora; numa cidade
+ * partilhada (Berlim), pelo lado da família (`era.partilha`). Fora disso, 'oeste' (o país inteiro).
+ */
+export function ladoDaVida(v: Vida): 'oeste' | 'leste' {
+  const pais = paisDaVida(v);
+  const p = pacoteDaEra(pais);
+  if (!p?.divisao || !v.era) return 'oeste';
+  return ladoNoMes(p, municipio(v.moradia.municipioId).uf, v.t, v.era.partilha ?? 0.99);
 }

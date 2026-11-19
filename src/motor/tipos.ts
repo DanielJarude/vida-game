@@ -3953,11 +3953,25 @@ export type FonteDoNome = 'esporte' | 'arte' | 'politica' | 'negocio' | 'rede';
 
 /** ERAS HISTÓRICAS: a época escolhida no nascimento (só o Brasil nesta primeira versão). */
 export interface EraDaVida {
-  pais: 'BR';
+  /** O país em que a época foi escolhida (ERAS v3: o Brasil ou um país com pacote de época — `eras/base/pacote`). */
+  pais: string;
   /** O ano de nascimento escolhido. */
   ano: number;
-  /** A década escolhida na tela Nascer (1980, 1990, 2000, 2010, 2020). */
+  /** A década escolhida na tela Nascer (1900 … 2020). */
   decada: number;
+  /** ERAS v3: o dia de nascimento escolhido (1..31), quando foi escolhido; o mês é o de `eu.tNasc`. */
+  dia?: number;
+  /**
+   * ERAS v3: numa cidade partilhada por uma divisão (Berlim, 1949–1990), de que lado a família morava (0..1, da semente:
+   * abaixo da fração do leste, o lado leste). Só existe nas vidas em que a pergunta se coloca.
+   */
+  partilha?: number;
+  /** ERAS v3: guerras e convocações já vividas (ids) — a convocação acontece uma vez. */
+  guerras?: string[];
+  /** ERAS v3: dinheiro preso num congelamento de depósitos (o mesmo desenho do Plano Collor, `retido`). */
+  congelado?: { valor: number; tVolta: number; parcelas: number; perda: number };
+  /** ERAS v3: a morte que a época trouxe no ano (uma catástrofe, a guerra) — decidida no ano histórico, aplicada pelo corpo. */
+  morte?: { t: number; causa: string };
   /** O que a vida já viu da época (ids de acontecimentos, chegadas de tecnologia, trocas de moeda): nunca duas vezes. */
   vistos?: string[];
   /** Plano Collor (1990): o que ficou retido no Banco Central e quando volta (unidades do motor). */

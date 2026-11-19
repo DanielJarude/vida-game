@@ -10,7 +10,8 @@
 import type { Vida } from '../../tipos';
 /** O ano civil de um instante (sem importar `tempo`: a base histórica não depende de nenhum pacote de cima). */
 const anoDe = (t: number) => Math.floor(t / 12);
-import { mesHistoricoCorrente } from './moedas';
+import { mesHistoricoCorrente, paisHistoricoCorrente } from './moedas';
+import { pacoteDaEra } from './pacote';
 
 /** Ocupação → ano em que passa a existir no Brasil. */
 export const OCUPACOES_DESDE: Readonly<Record<string, { desde: number; fonte: string }>> = {
@@ -27,13 +28,43 @@ export const OCUPACOES_DESDE: Readonly<Record<string, { desde: number; fonte: st
   policial_penal: { desde: 2019, fonte: 'Emenda Constitucional 104/2019 (polícias penais); antes, agente penitenciário.' },
   agente_saude: { desde: 1991, fonte: 'Programa de Agentes Comunitários de Saúde (Ministério da Saúde, 1991).' },
   medico_familia: { desde: 1994, fonte: 'Programa Saúde da Família (Ministério da Saúde, 1994).' },
-  jovem_aprendiz: { desde: 2000, fonte: 'Lei 10.097/2000 (Lei da Aprendizagem).' }
+  jovem_aprendiz: { desde: 2000, fonte: 'Lei 10.097/2000 (Lei da Aprendizagem).' },
+  // ERAS v3 · antes de 1970 (APROXIMAÇÕES do ano em que a ocupação passa a existir como trabalho corrente; datas do Brasil —
+  // os pacotes dos outros países sobrepõem as que diferem lá: `PacoteDeEra.ocupacoes`).
+  dev_jr: { desde: 1960, fonte: 'Aproximação: programador de computador de grande porte a partir dos anos 1960.' },
+  dev_pleno: { desde: 1960, fonte: 'Aproximação.' }, dev_senior: { desde: 1962, fonte: 'Aproximação.' }, tech_lead: { desde: 1975, fonte: 'Aproximação.' },
+  consultor_ti: { desde: 1975, fonte: 'Aproximação.' }, suporte_ti: { desde: 1982, fonte: 'Aproximação: suporte de microcomputadores.' }, estagio_ti: { desde: 1975, fonte: 'Aproximação.' },
+  engenheiro_infra: { desde: 1992, fonte: 'Aproximação: redes e servidores.' }, operador_telemarketing: { desde: 1985, fonte: 'Aproximação: centrais de atendimento por telefone.' },
+  supervisor_atendimento: { desde: 1985, fonte: 'Aproximação.' }, motoboy: { desde: 1985, fonte: 'Aproximação: o motofrete nas capitais nos anos 1980.' },
+  cooperado_reciclagem: { desde: 1990, fonte: 'Aproximação: as primeiras cooperativas de catadores (São Paulo, 1989).' },
+  personal: { desde: 1985, fonte: 'Aproximação.' }, coordenador_academia: { desde: 1980, fonte: 'Aproximação.' }, preparador_fisico: { desde: 1930, fonte: 'Aproximação.' },
+  frentista: { desde: 1920, fonte: 'Aproximação: os postos de gasolina com bomba nos anos 1920.' }, motorista_onibus: { desde: 1912, fonte: 'Aproximação.' },
+  motorista_caminhao: { desde: 1918, fonte: 'Aproximação.' }, caminhoneiro: { desde: 1918, fonte: 'Aproximação.' }, operador_empilhadeira: { desde: 1935, fonte: 'Aproximação.' },
+  tecnico_refrigeracao: { desde: 1930, fonte: 'Aproximação.' }, tec_radiologia: { desde: 1920, fonte: 'Aproximação: os raios X nos hospitais.' },
+  fisioterapeuta: { desde: 1940, fonte: 'Aproximação.' }, fisio_clinica: { desde: 1950, fonte: 'Aproximação.' }, fisio_especialista: { desde: 1970, fonte: 'Aproximação.' },
+  nutricionista: { desde: 1940, fonte: 'Aproximação: primeiros cursos de nutricionistas no fim dos anos 1930.' }, nutricionista_especialista: { desde: 1970, fonte: 'Aproximação.' }, coordenador_nutricao: { desde: 1965, fonte: 'Aproximação.' },
+  psicologo: { desde: 1940, fonte: 'Aproximação.' }, psicologo_clinico: { desde: 1945, fonte: 'Aproximação.' }, psicologo_hospitalar: { desde: 1970, fonte: 'Aproximação.' },
+  designer_jr: { desde: 1955, fonte: 'Aproximação.' }, designer: { desde: 1950, fonte: 'Aproximação.' }, produtor_audiovisual: { desde: 1950, fonte: 'Aproximação.' }, produtor_musical: { desde: 1950, fonte: 'Aproximação.' },
+  analista_rh: { desde: 1950, fonte: 'Aproximação: os departamentos de pessoal das grandes empresas.' }, analista_logistica: { desde: 1970, fonte: 'Aproximação.' }, coordenador_logistica: { desde: 1970, fonte: 'Aproximação.' },
+  analista_financeiro: { desde: 1950, fonte: 'Aproximação.' }, tec_seguranca: { desde: 1972, fonte: 'Portaria 3.237/1972 (Ministério do Trabalho); aproximação para os outros países.' },
+  supervisor_vigilancia: { desde: 1970, fonte: 'Aproximação.' }, vigilante: { desde: 1950, fonte: 'Aproximação.' }, perito_criminal: { desde: 1910, fonte: 'Aproximação.' },
+  cuidador: { desde: 1950, fonte: 'Aproximação.' }, aux_creche: { desde: 1940, fonte: 'Aproximação.' }, instrutor_tecnico: { desde: 1940, fonte: 'Aproximação: o ensino industrial (SENAI, 1942).' },
+  operador_maquinas: { desde: 1920, fonte: 'Aproximação: o trator no campo.' }, tecnico_agricola: { desde: 1930, fonte: 'Aproximação.' }, tatuador: { desde: 1959, fonte: 'Primeiro estúdio de tatuagem do Brasil: Santos, 1959 (aproximação).' },
+  jogador_futebol: { desde: 1933, fonte: 'O profissionalismo no futebol brasileiro: 1933 (antes, amador).' }, piloto_corrida: { desde: 1950, fonte: 'Primeiro campeonato mundial de Fórmula 1: 1950.' },
+  tenista: { desde: 1968, fonte: 'A era aberta do tênis (1968): antes, o circuito principal era amador.' }, atleta: { desde: 1982, fonte: 'A IAAF admite atletas profissionais em 1982 (antes, o atletismo olímpico era amador).' },
+  jogador_basquete: { desde: 1965, fonte: 'Aproximação: as ligas nacionais semiprofissionais.' }, jogador_esports: { desde: 2000, fonte: 'Aproximação.' }
 };
+
+/** ERAS v3: o ano em que a ocupação passa a existir NO PAÍS da época (o pacote do país sobrepõe a data brasileira). */
+function desdeNoPais(id: string, pais: string): number | undefined {
+  const p = pais === 'BR' ? undefined : pacoteDaEra(pais)?.ocupacoes?.[id];
+  return p ?? OCUPACOES_DESDE[id]?.desde;
+}
 
 /** A ocupação não existe ainda no ano desta vida (vida contemporânea: sempre existe). */
 export function ocupacaoAindaNaoExiste(v: Vida, id: string): number | undefined {
   if (!v.era) return undefined;
-  const d = OCUPACOES_DESDE[id]?.desde;
+  const d = desdeNoPais(id, mesHistoricoCorrente() !== null ? paisHistoricoCorrente() : v.era.pais);
   return d !== undefined && anoDe(v.t) < d ? d : undefined;
 }
 
@@ -43,7 +74,7 @@ export function ocupacaoAindaNaoExiste(v: Vida, id: string): number | undefined 
  */
 export function ocupacaoExisteAgora(id: string): boolean {
   const t = mesHistoricoCorrente();
-  const d = OCUPACOES_DESDE[id]?.desde;
+  const d = t === null ? undefined : desdeNoPais(id, paisHistoricoCorrente());
   return t === null || d === undefined || anoDe(t) >= d;
 }
 
@@ -53,7 +84,20 @@ export const CURSOS_NO_TEMPO: Readonly<Record<string, { desde?: number; antes?: 
   tec_informatica: { antes: { ate: 1999, nome: 'Técnico em Processamento de Dados' } },
   tec_desenvolvimento: { desde: 2008 },
   tec_redes: { desde: 2000 },
-  mba: { desde: 1993 }
+  mba: { desde: 1993 },
+  // ERAS v3 · antes de 1970 (APROXIMAÇÕES do ano em que o curso passa a ser oferecido de forma corrente; datas do Brasil —
+  // os pacotes dos outros países sobrepõem as que diferem lá: `PacoteDeEra.cursos`).
+  computacao: { desde: 1968 }, estatistica: { desde: 1935 }, administracao: { desde: 1952 }, economia: { desde: 1935 }, psicologia: { desde: 1953 },
+  fisioterapia: { desde: 1951 }, nutricao: { desde: 1939 }, jornalismo: { desde: 1947 }, publicidade: { desde: 1951 }, design: { desde: 1963 },
+  eng_producao: { desde: 1958 }, ed_fisica: { desde: 1939 }, artes_cenicas: { desde: 1948 }, pedagogia: { desde: 1939 },
+  mestrado: { desde: 1965 }, doutorado: { desde: 1965 }, especializacao: { desde: 1950 }, esp_educacao: { desde: 1960 }, residencia: { desde: 1945 },
+  tec_eletronica: { desde: 1950 }, tec_telecomunicacoes: { desde: 1960 }, tec_mecatronica: { desde: 1992 }, tec_automacao: { desde: 1980 },
+  tec_radiologia: { desde: 1950 }, tec_seguranca: { desde: 1972 }, tec_logistica: { desde: 1995 }, tec_marketing: { desde: 1990 }, tec_recursos_humanos: { desde: 1985 },
+  tec_design: { desde: 1970 }, tec_audiovisual: { desde: 1970 }, tec_hospedagem: { desde: 1970 }, tecn_gastronomia: { desde: 1999 }, tec_imoveis: { desde: 1975 },
+  tec_alimentos: { desde: 1960 }, tec_refrigeracao: { desde: 1950 }, q_refrigeracao: { desde: 1965 }, q_empilhadeira: { desde: 1945 }, q_vigilante: { desde: 1983 },
+  tec_agronegocio: { desde: 1995 }, tec_zootecnia: { desde: 1950 }, tec_cozinha: { desde: 1990 }, tec_jogos_digitais: { desde: 2010 }, tec_informatica_internet: { desde: 2008 },
+  tec_energia_renovavel: { desde: 2008 }, q_solar: { desde: 2012 }, tec_enfermagem: { desde: 1950 }, tec_administracao: { desde: 1950 }, tec_contabilidade: { desde: 1931 },
+  tec_eletrotecnica: { desde: 1920 }, tec_mecanica: { desde: 1920 }, tec_edificacoes: { desde: 1940 }, tec_manutencao_automotiva: { desde: 1940 }, tec_soldagem: { desde: 1940 }
 };
 
 /** As vias de entrada que dependem de lei: o ano de início. */
@@ -68,7 +112,12 @@ export const VIAS_DESDE: Readonly<Record<string, { desde: number; fonte: string 
 export const COTAS_DESDE = 2013;
 
 export const viaExiste = (v: Vida, via: string) => !v.era || anoDe(v.t) >= (VIAS_DESDE[via]?.desde ?? -Infinity);
-export const cursoExiste = (v: Vida, id: string) => !v.era || anoDe(v.t) >= (CURSOS_NO_TEMPO[id]?.desde ?? -Infinity);
+export const cursoExiste = (v: Vida, id: string) => {
+  if (!v.era) return true;
+  const pais = mesHistoricoCorrente() !== null ? paisHistoricoCorrente() : v.era.pais;
+  const d = (pais !== 'BR' ? pacoteDaEra(pais)?.cursos?.[id] : undefined) ?? CURSOS_NO_TEMPO[id]?.desde ?? -Infinity;
+  return anoDe(v.t) >= d;
+};
 export function nomeDoCursoNoAno(v: Vida, id: string, nome: string): string {
   const a = v.era ? CURSOS_NO_TEMPO[id]?.antes : undefined;
   return a && anoDe(v.t) <= a.ate ? a.nome : nome;

@@ -7,6 +7,7 @@
  */
 
 import { registrarPerfis } from './registro';
+import { carregarEras } from '../eras/paises/carregar';
 import type { PerfilDePais, RegiaoMundial } from './tipos';
 
 type Pacote = () => Promise<{ PAISES: PerfilDePais[] }>;
@@ -39,6 +40,7 @@ export function carregarRegiao(r: RegiaoMundial): Promise<void> {
 /** Carrega o mundo inteiro. Falhas de uma região não impedem as outras; devolve as que faltaram. */
 export async function carregarMundo(): Promise<RegiaoMundial[]> {
   const regioes = Object.keys(PACOTES) as RegiaoMundial[];
-  const r = await Promise.allSettled(regioes.map(carregarRegiao));
+  // ERAS v3: os pacotes de época dos países vêm junto (pequenos; o service worker os guarda para jogar sem internet).
+  const [r] = await Promise.all([Promise.allSettled(regioes.map(carregarRegiao)), carregarEras().catch(() => [])]);
   return regioes.filter((_, i) => r[i].status === 'rejected');
 }

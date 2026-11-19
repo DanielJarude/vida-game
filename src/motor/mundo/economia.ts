@@ -1,4 +1,6 @@
 import { mesHistoricoCorrente, salarioMinimoReal } from '../eras/base/moedas';
+import { pacoteDaEra } from '../eras/base/pacote';
+import { rendaDaEpocaNoPais } from '../eras/base/economia';
 /**
  * A economia de cada país em unidades do motor (o real de poder de compra
  * brasileiro — `mundo/moeda`). O perfil escreve os números legais na moeda
@@ -7,7 +9,7 @@ import { mesHistoricoCorrente, salarioMinimoReal } from '../eras/base/moedas';
  */
 
 import { PAIS_PADRAO, paisDoCatalogo, perfilDoPais, temPerfil } from './registro';
-import { daMoedaLocal } from './moeda';
+import { daMoedaLocal, daMoedaLocalDeHoje } from './moeda';
 
 const perfil = (pais: string) => perfilDoPais(temPerfil(pais) ? pais : PAIS_PADRAO);
 
@@ -28,8 +30,11 @@ export const nivelSalarial = (pais: string): number => Math.pow(rendaRelativa(pa
 export const rendaNoPais = (pais: string, valorNoBrasil: number): number =>
   (pais === PAIS_PADRAO ? valorNoBrasil : Math.round(valorNoBrasil * nivelSalarial(pais) / 10) * 10);
 
-/** Um valor legal do perfil (moeda local por mês) na unidade do motor. */
-const local = (pais: string, valor: number) => (pais === PAIS_PADRAO ? valor : daMoedaLocal(valor, pais));
+/**
+ * Um valor legal do perfil (moeda local por mês) na unidade do motor. ERAS v3: os perfis escrevem na moeda de HOJE —
+ * numa vida histórica a conversão continua a de hoje (a moeda da época é só da tela).
+ */
+const local = (pais: string, valor: number) => (pais === PAIS_PADRAO ? valor : daMoedaLocalDeHoje(valor, pais));
 
 /**
  * O salário mínimo do país, na unidade do motor. Sem mínimo nacional, o
@@ -40,6 +45,16 @@ export function salarioMinimoDoPais(pais: string): number {
   const mh = pais === 'BR' ? mesHistoricoCorrente() : null;
   const real = mh !== null ? salarioMinimoReal(mh) : undefined;
   if (real !== undefined) return Math.round(real);
+  // ERAS v3: num país com pacote de época, o mínimo legal vigente no mês (nominal → motor pela moeda do mês); sem lei de
+  // mínimo naquele tempo, o piso de fato do mercado na renda da época.
+  const pk = mh === null ? pacoteDaEra(pais) : undefined;
+  const mhp = pk ? mesHistoricoCorrente() : null;
+  if (pk && mhp !== null && mhp < 2026 * 12) {
+    let nominal: number | undefined;
+    for (const [desde, valor] of pk.salarioMinimo ?? []) if (desde <= mhp) nominal = valor;
+    if (nominal !== undefined) return Math.round(daMoedaLocal(nominal, pais));
+    return Math.round(rendaNoPais(pais, 1620) * 0.9 * rendaDaEpocaNoPais(pais));
+  }
   const m = perfil(pais).economia.salarioMinimo;
   return Math.round(m !== undefined ? local(pais, m) : rendaNoPais(pais, 1620) * 0.9);
 }

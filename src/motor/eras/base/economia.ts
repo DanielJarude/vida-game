@@ -20,10 +20,11 @@
  */
 
 import { RENDA_REAL, PRECO_RELATIVO, CESTA_SP } from './economiaSeries';
-import { mesHistoricoCorrente, salarioMinimoReal, FIM_DA_SERIE } from './moedas';
+import { mesHistoricoCorrente, mesHistoricoNoBrasil, salarioMinimoReal, FIM_DA_SERIE, paisHistoricoCorrente, ladoHistoricoCorrente } from './moedas';
+import { pacoteDaEra, naSerie } from './pacote';
 
 const anoDe = (t: number) => Math.floor(t / 12);
-const PRIMEIRO = 1970;
+const PRIMEIRO = 1900;
 const ULTIMO = 2025;
 
 /** O mínimo real de 2025 (o último da série) e a posição da renda média e do topo na escala de mínimos de hoje. */
@@ -34,7 +35,9 @@ const TOPO_EM_MINIMOS = 10;
 
 /** O ano histórico da vida que o motor está processando agora (null: contemporânea ou depois da série). */
 export function anoEconomicoCorrente(): number | null {
-  const t = mesHistoricoCorrente();
+  // ERAS v3: as séries desta seção (PNAD, IPCA por grupo, mínimo, cesta do DIEESE) são do Brasil — só valem numa vida
+  // histórica brasileira. Os outros países têm a renda deles (`rendaDaEpocaNoPais`) e os preços relativos de hoje.
+  const t = mesHistoricoNoBrasil();
   if (t === null || t > FIM_DA_SERIE) return null;
   return anoDe(t);
 }
@@ -62,7 +65,8 @@ export function minimoDaEpoca(ano: number): number {
   if (ano > ULTIMO) return 1;
   let soma = 0, n = 0;
   for (let m = 0; m < 12; m++) { const x = salarioMinimoReal(Math.max(PRIMEIRO, ano) * 12 + m); if (x !== undefined) { soma += x; n++; } }
-  return n ? soma / n / SM_2025 : 1;
+  // ERAS v3: antes de julho de 1940 não havia salário mínimo (Decreto-Lei 2.162/1940): o piso acompanha a renda média.
+  return n ? soma / n / SM_2025 : rendaDaEpoca(ano);
 }
 
 const memo = new Map<string, number>();
@@ -161,4 +165,26 @@ const CATEGORIA_DA_LOJA: Readonly<Record<string, CategoriaDePreco>> = {
 export function precoDaCategoriaNaEpoca(cat: string | undefined): number {
   const c = cat ? CATEGORIA_DA_LOJA[cat] : undefined;
   return c ? precoDaEpoca(c) : 1;
+}
+
+/* ------------------------------------------------------------------ ERAS v3 · os outros países */
+
+/**
+ * O nível de renda do ano num país com pacote de época (PIB real per capita do ano ÷ o de 2025 — APROXIMAÇÃO, o mesmo
+ * método que o Brasil usa antes de 1992). Do lado leste do país dividido, a fração da renda do oeste (`divisao.rendaLeste`).
+ * Fora de uma vida histórica, ou num país sem pacote (ou o Brasil, que tem as suas séries): 1.
+ */
+export function rendaDaEpocaNoPais(pais: string): number {
+  const t = mesHistoricoCorrente();
+  if (t === null || pais === 'BR' || t > FIM_DA_SERIE) return 1;
+  const p = pacoteDaEra(pais);
+  if (!p) return 1;
+  const r = naSerie(p.serie, p.serie.RENDA, Math.floor(t / 12)) ?? 1;
+  return pais === paisHistoricoCorrente() && ladoHistoricoCorrente() === 'leste' && p.divisao ? r * p.divisao.rendaLeste : r;
+}
+
+/** O desemprego do ano no país (%), ou undefined sem dado. */
+export function desempregoDoAno(pais: string, ano: number): number | undefined {
+  const p = pacoteDaEra(pais);
+  return p ? naSerie(p.serie, p.serie.DESEMPREGO, ano) ?? undefined : undefined;
 }

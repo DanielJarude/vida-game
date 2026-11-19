@@ -11,12 +11,14 @@
 import type { Vida } from '../../tipos';
 /** O ano civil de um instante (sem importar `tempo`: a base histórica não depende de nenhum pacote de cima). */
 const anoDe = (t: number) => Math.floor(t / 12);
-import { tecnologia } from './contexto';
+import { tecnologia, paisDaEpoca, datasNoPais } from './contexto';
 
 interface Regra { quando: (v: Vida, ano: number) => boolean; trocas: [RegExp, string][] }
 
 const sem = (id: string) => (v: Vida) => tecnologia(v, id) === 'indisponivel';
 const antes = (ano: number) => (_v: Vida, a: number) => a < ano;
+/** ERAS v3: as trocas que falam de instituições brasileiras (o SUS, o Enem, o FIES) só valem numa vida no Brasil. */
+const antesNoBrasil = (ano: number) => (v: Vida, a: number) => a < ano && paisDaEpoca(v) === 'BR';
 
 const REGRAS: Regra[] = [
   { quando: sem('celular'), trocas: [
@@ -34,18 +36,36 @@ const REGRAS: Regra[] = [
   { quando: sem('pix'), trocas: [[/um Pix/g, 'um depósito'], [/o Pix/g, 'o depósito'], [/via Pix/g, 'por depósito'], [/por Pix/g, 'por depósito'], [/\bPix\b/g, 'depósito']] },
   { quando: sem('streaming'), trocas: [[/de streaming/g, 'da locadora'], [/streaming/g, 'locadora']] },
   { quando: antes(1996), trocas: [[/a TV a cabo/g, 'a assinatura do jornal'], [/TV a cabo/g, 'assinatura do jornal']] },
-  { quando: antes(2009), trocas: [[/o Enem/g, 'o vestibular'], [/O Enem/g, 'O vestibular'], [/do Enem/g, 'do vestibular'], [/no Enem/g, 'no vestibular'], [/\bEnem\b/g, 'vestibular'], [/pelo Sisu/g, 'pelo vestibular'], [/no Sisu/g, 'no vestibular'], [/\bSisu\b/g, 'vestibular']] },
+  { quando: antesNoBrasil(2009), trocas: [[/o Enem/g, 'o vestibular'], [/O Enem/g, 'O vestibular'], [/do Enem/g, 'do vestibular'], [/no Enem/g, 'no vestibular'], [/\bEnem\b/g, 'vestibular'], [/pelo Sisu/g, 'pelo vestibular'], [/no Sisu/g, 'no vestibular'], [/\bSisu\b/g, 'vestibular']] },
   { quando: antes(2014), trocas: [[/motorista de aplicativo/g, 'taxista'], [/[Dd]elivery/g, 'entrega'], [/táxi ou aplicativo/g, 'táxi ou ônibus'], [/carro de aplicativo/g, 'táxi'], [/um aplicativo de transporte/g, 'um táxi']] },
-  { quando: antes(1999), trocas: [[/do FIES/g, 'do Crédito Educativo'], [/o FIES/g, 'o Crédito Educativo'], [/pelo FIES/g, 'pelo Crédito Educativo'], [/\bFIES\b/g, 'Crédito Educativo']] },
+  { quando: antesNoBrasil(1999), trocas: [[/do FIES/g, 'do Crédito Educativo'], [/o FIES/g, 'o Crédito Educativo'], [/pelo FIES/g, 'pelo Crédito Educativo'], [/\bFIES\b/g, 'Crédito Educativo']] },
   { quando: antes(2005), trocas: [[/ \(e o podcast dele\)/g, ''], [/um podcast/g, 'um programa de rádio'], [/o podcast/g, 'o programa de rádio'], [/\bpodcasts?\b/g, 'programa de rádio']] },
   { quando: antes(2014), trocas: [[/entregas por aplicativo/g, 'entregas de bicicleta'], [/entrega por aplicativo/g, 'entrega de bicicleta']] },
   // ERAS v2 · saúde e dinheiro: o INAMPS antes do SUS (1990), a ambulância antes do SAMU (2003), o cartão sem aproximação.
-  { quando: antes(1990), trocas: [[/pelo SUS/g, 'pelo INAMPS'], [/do SUS/g, 'do INAMPS'], [/no SUS/g, 'no INAMPS'], [/o SUS/g, 'o INAMPS'], [/\bSUS\b/g, 'INAMPS']] },
-  { quando: antes(2003), trocas: [[/chamou o SAMU/g, 'chamou a ambulância'], [/o SAMU/g, 'a ambulância'], [/do SAMU/g, 'da ambulância'], [/\bSAMU\b/g, 'ambulância']] },
+  // ERAS v3: antes do INAMPS (1977), o INPS (1966); antes dele, os institutos de aposentadoria de cada categoria.
+  { quando: antesNoBrasil(1966), trocas: [[/pelo SUS/g, 'pelo instituto da categoria'], [/do SUS/g, 'do instituto da categoria'], [/no SUS/g, 'na Santa Casa'], [/o SUS/g, 'o instituto da categoria'], [/\bSUS\b/g, 'instituto da categoria']] },
+  { quando: antesNoBrasil(1977), trocas: [[/pelo SUS/g, 'pelo INPS'], [/do SUS/g, 'do INPS'], [/no SUS/g, 'no INPS'], [/o SUS/g, 'o INPS'], [/\bSUS\b/g, 'INPS']] },
+  { quando: antesNoBrasil(1990), trocas: [[/pelo SUS/g, 'pelo INAMPS'], [/do SUS/g, 'do INAMPS'], [/no SUS/g, 'no INAMPS'], [/o SUS/g, 'o INAMPS'], [/\bSUS\b/g, 'INAMPS']] },
+  { quando: antesNoBrasil(2003), trocas: [[/chamou o SAMU/g, 'chamou a ambulância'], [/o SAMU/g, 'a ambulância'], [/do SAMU/g, 'da ambulância'], [/\bSAMU\b/g, 'ambulância']] },
   { quando: antes(2016), trocas: [[/ por aproximação/g, ''], [/cartão por aproximação/g, 'cartão']] },
   // ERAS v2 (auditoria textual): a UPA (2008), o meme (anos 2000), o print de tela (smartphone).
-  { quando: antes(2008), trocas: [[/para a UPA/g, 'para o pronto-socorro'], [/na UPA/g, 'no pronto-socorro'], [/da UPA/g, 'do pronto-socorro'], [/a UPA/g, 'o pronto-socorro'], [/\bUPA\b/g, 'pronto-socorro']] },
+  { quando: antesNoBrasil(2008), trocas: [[/para a UPA/g, 'para o pronto-socorro'], [/na UPA/g, 'no pronto-socorro'], [/da UPA/g, 'do pronto-socorro'], [/a UPA/g, 'o pronto-socorro'], [/\bUPA\b/g, 'pronto-socorro']] },
   { quando: antes(2006), trocas: [[/esse meme/g, 'essa piada'], [/um meme/g, 'uma piada'], [/Um meme/g, 'Uma piada'], [/o meme/g, 'a piada'], [/memes/g, 'piadas'], [/\bmeme\b/g, 'piada']] },
+  // ERAS v3 · antes de 1970: antes da TV em casa, o rádio (e antes do rádio, o jornal); antes do telefone em casa, a carta;
+  // antes do shopping e do supermercado, o centro e o armazém; antes do cartão, o dinheiro e o fiado.
+  { quando: sem('tv'), trocas: [
+    [/assistindo TV/g, 'ouvindo rádio'], [/assistir TV/g, 'ouvir rádio'], [/assistir à TV/g, 'ouvir o rádio'], [/na televisão/g, 'no rádio'], [/Na televisão/g, 'No rádio'], [/pela televisão/g, 'pelo rádio'],
+    [/na TV/g, 'no rádio'], [/Na TV/g, 'No rádio'], [/pela TV/g, 'pelo rádio'], [/da TV/g, 'do rádio'], [/a TV/g, 'o rádio'], [/A TV/g, 'O rádio'], [/a televisão/g, 'o rádio']
+  ] },
+  { quando: sem('radio'), trocas: [[/no rádio/g, 'no jornal'], [/No rádio/g, 'No jornal'], [/pelo rádio/g, 'pelo jornal'], [/o rádio/g, 'o jornal'], [/O rádio/g, 'O jornal']] },
+  { quando: (v: Vida) => sem('telefone_fixo')(v) && sem('orelhao')(v), trocas: [
+    [/por telefone/g, 'por carta'], [/Por telefone/g, 'Por carta'], [/uma ligação/g, 'uma carta'], [/Uma ligação/g, 'Uma carta'], [/ligou para/g, 'escreveu para'], [/Ligou para/g, 'Escreveu para'],
+    [/telefonou/g, 'escreveu'], [/Telefonou/g, 'Escreveu'], [/no telefone/g, 'na carta'], [/o telefone/g, 'o correio']
+  ] },
+  { quando: (v: Vida, a: number) => a < (paisDaEpoca(v) === 'US' ? 1956 : paisDaEpoca(v) === 'BR' ? 1966 : 1970), trocas: [[/no shopping/g, 'no centro'], [/ao shopping/g, 'ao centro'], [/do shopping/g, 'do centro'], [/o shopping/g, 'o centro'], [/shopping center/g, 'centro da cidade']] },
+  { quando: (v: Vida, a: number) => a < (paisDaEpoca(v) === 'US' ? 1930 : paisDaEpoca(v) === 'BR' ? 1953 : 1955), trocas: [[/no supermercado/g, 'no armazém'], [/ao supermercado/g, 'ao armazém'], [/do supermercado/g, 'do armazém'], [/o supermercado/g, 'o armazém'], [/supermercados?/g, 'armazém']] },
+  { quando: antes(1955), trocas: [[/no cartão de crédito/g, 'fiado'], [/cartão de crédito/g, 'caderneta de fiado'], [/no cartão/g, 'em dinheiro'], [/pagou no débito/g, 'pagou em dinheiro']] },
+  { quando: antes(1925), trocas: [[/de ônibus/g, 'de bonde'], [/o ônibus/g, 'o bonde'], [/no ônibus/g, 'no bonde']] },
   { quando: sem('smartphone'), trocas: [
     // ERAS MODERNAS: as brincadeiras de amigo que pressupõem vídeo, meme e foto de perfil no bolso (recados do aparelho).
     [/OLHA ESSE VÍDEO E ME DIZ QUE NÃO É VOCÊ/g, 'VI ALGUÉM NA RUA HOJE IGUALZINHO A VOCÊ'], [/Achei a sua foto de perfil ideal: um gato caindo do sofá\./g, 'Vi um gato caindo do sofá e lembrei de você.'],
@@ -71,7 +91,14 @@ export function textoDaEpoca(v: Vida, texto: string): string {
  * corrente vem depois). Serve à auditoria (`scripts/sim/textosEras2.ts`) e aos testes: um texto de uma vida histórica que
  * cita um destes antes do ano é anacronismo. Fontes: as mesmas de `tecnologias` (datas de chegada) e as leis citadas.
  */
-export const TERMOS_DATADOS: readonly { re: RegExp; desde: number; nome: string }[] = [
+export const TERMOS_DATADOS: readonly { re: RegExp; desde: number; nome: string; tec?: string; soBR?: boolean }[] = [
+  // ERAS v3 · antes de 1970 (a data é a do Brasil; nos outros países, a chegada da tecnologia lá, quando há `tec`).
+  { re: /\btelevisão\b|\bTV\b/, desde: 1950, nome: 'televisão', tec: 'tv' },
+  { re: /\brádio\b/i, desde: 1922, nome: 'rádio', tec: 'radio' },
+  { re: /\bgeladeira\b/i, desde: 1947, nome: 'geladeira', tec: 'geladeira' },
+  { re: /\bshopping\b/i, desde: 1966, nome: 'shopping' },
+  { re: /\bsupermercado/i, desde: 1953, nome: 'supermercado' },
+  { re: /\bcartão de crédito\b/i, desde: 1956, nome: 'cartão de crédito' },
   { re: /\bWhats ?App\b|\bzap\b|\bzapzap\b/i, desde: 2010, nome: 'aplicativo de mensagens' },
   { re: /\bInstagram\b|\binsta\b/i, desde: 2010, nome: 'Instagram' },
   { re: /\bFacebook\b/i, desde: 2008, nome: 'Facebook' },
@@ -82,29 +109,29 @@ export const TERMOS_DATADOS: readonly { re: RegExp; desde: number; nome: string 
   { re: /\bNetflix\b/i, desde: 2011, nome: 'Netflix' },
   { re: /\bSpotify\b/i, desde: 2014, nome: 'Spotify' },
   { re: /\bUber\b/i, desde: 2014, nome: 'Uber' },
-  { re: /\biFood\b/i, desde: 2011, nome: 'iFood' },
-  { re: /\bPix\b/, desde: 2020, nome: 'Pix' },
+  { re: /\biFood\b/i, desde: 2011, nome: 'iFood', soBR: true },
+  { re: /\bPix\b/, desde: 2020, nome: 'Pix', soBR: true },
   { re: /\bselfies?\b/i, desde: 2013, nome: 'selfie' },
-  { re: /\bsmartphones?\b/i, desde: 2008, nome: 'smartphone' },
+  { re: /\bsmartphones?\b/i, desde: 2008, nome: 'smartphone', tec: 'smartphone' },
   { re: /\baplicativos?\b|\bapps?\b/i, desde: 2008, nome: 'aplicativo' },
   { re: /\binfluenciador|\binfluencer/i, desde: 2014, nome: 'influenciador' },
   { re: /\bstories\b/i, desde: 2016, nome: 'stories' },
-  { re: /\bstreaming\b/i, desde: 2011, nome: 'streaming' },
+  { re: /\bstreaming\b/i, desde: 2011, nome: 'streaming', tec: 'streaming' },
   { re: /\bpodcasts?\b/i, desde: 2005, nome: 'podcast' },
   { re: /\bWi-?Fi\b/i, desde: 2003, nome: 'Wi-Fi' },
-  { re: /\be-?mails?\b/i, desde: 1995, nome: 'e-mail' },
-  { re: /\binternet\b/i, desde: 1995, nome: 'internet' },
-  { re: /\bon-?line\b/i, desde: 1995, nome: 'on-line' },
-  { re: /\bcelular(es)?\b/i, desde: 1990, nome: 'celular' },
-  { re: /\btorpedos?\b|\bSMS\b/, desde: 1999, nome: 'torpedo' },
-  { re: /\bEnem\b/, desde: 1998, nome: 'Enem' },
-  { re: /\bSisu\b/, desde: 2010, nome: 'Sisu' },
-  { re: /\bProUni\b/i, desde: 2005, nome: 'ProUni' },
-  { re: /\bFIES\b/, desde: 1999, nome: 'FIES' },
-  { re: /\bBolsa Família\b/, desde: 2003, nome: 'Bolsa Família' },
-  { re: /\bMaria da Penha\b/, desde: 2006, nome: 'Lei Maria da Penha' },
-  { re: /\bDVDs?\b/, desde: 1998, nome: 'DVD' },
-  { re: /\bMP3\b/i, desde: 1998, nome: 'MP3' },
+  { re: /\be-?mails?\b/i, desde: 1995, nome: 'e-mail', tec: 'email' },
+  { re: /\binternet\b/i, desde: 1995, nome: 'internet', tec: 'internet' },
+  { re: /\bon-?line\b/i, desde: 1995, nome: 'on-line', tec: 'internet' },
+  { re: /\bcelular(es)?\b/i, desde: 1990, nome: 'celular', tec: 'celular' },
+  { re: /\btorpedos?\b|\bSMS\b/, desde: 1999, nome: 'torpedo', tec: 'sms' },
+  { re: /\bEnem\b/, desde: 1998, nome: 'Enem', soBR: true },
+  { re: /\bSisu\b/, desde: 2010, nome: 'Sisu', soBR: true },
+  { re: /\bProUni\b/i, desde: 2005, nome: 'ProUni', soBR: true },
+  { re: /\bFIES\b/, desde: 1999, nome: 'FIES', soBR: true },
+  { re: /\bBolsa Família\b/, desde: 2003, nome: 'Bolsa Família', soBR: true },
+  { re: /\bMaria da Penha\b/, desde: 2006, nome: 'Lei Maria da Penha', soBR: true },
+  { re: /\bDVDs?\b/, desde: 1998, nome: 'DVD', tec: 'dvd' },
+  { re: /\bMP3\b/i, desde: 1998, nome: 'MP3', tec: 'mp3' },
   { re: /\bGPS\b/, desde: 2000, nome: 'GPS' },
   { re: /\bQR\b/, desde: 2012, nome: 'QR code' },
   { re: /\bdrones?\b/i, desde: 2014, nome: 'drone' },
@@ -117,30 +144,34 @@ export const TERMOS_DATADOS: readonly { re: RegExp; desde: number; nome: string 
   { re: /\bseguidores\b/i, desde: 2009, nome: 'seguidores' },
   { re: /\bviraliz/i, desde: 2008, nome: 'viralizar' },
   { re: /\bmemes?\b/i, desde: 2005, nome: 'meme' },
-  { re: /\bUPA\b/, desde: 2008, nome: 'UPA' },
-  { re: /\bSAMU\b/, desde: 2003, nome: 'SAMU' },
-  { re: /\bSUS\b/, desde: 1990, nome: 'SUS' },
+  { re: /\bUPA\b/, desde: 2008, nome: 'UPA', soBR: true },
+  { re: /\bSAMU\b/, desde: 2003, nome: 'SAMU', soBR: true },
+  { re: /\bSUS\b/, desde: 1990, nome: 'SUS', soBR: true },
   { re: /por aproximação/, desde: 2016, nome: 'pagamento por aproximação' },
   { re: /\bAirbnb\b/i, desde: 2012, nome: 'Airbnb' },
   { re: /\bcoworking\b/i, desde: 2010, nome: 'coworking' },
   { re: /\bstartups?\b/i, desde: 2008, nome: 'startup' },
   { re: /\bLinkedIn\b/i, desde: 2010, nome: 'LinkedIn' },
   { re: /\bbanco digital\b|\bNubank\b/i, desde: 2014, nome: 'banco digital' },
-  { re: /\bmaquininha\b/i, desde: 2013, nome: 'maquininha' },
+  { re: /\bmaquininha\b/i, desde: 2013, nome: 'maquininha', soBR: true },
   { re: /\b4G\b/, desde: 2013, nome: '4G' },
   { re: /\b5G\b/, desde: 2022, nome: '5G' },
-  { re: /\bLei Seca\b/, desde: 2008, nome: 'Lei Seca' },
-  { re: /\bFicha Limpa\b/, desde: 2010, nome: 'Ficha Limpa' },
+  { re: /\bLei Seca\b/, desde: 2008, nome: 'Lei Seca', soBR: true },
+  { re: /\bFicha Limpa\b/, desde: 2010, nome: 'Ficha Limpa', soBR: true },
   { re: /\bemojis?\b/i, desde: 2011, nome: 'emoji' },
-  { re: /\bnotebooks?\b/i, desde: 1992, nome: 'notebook' },
+  { re: /\bnotebooks?\b/i, desde: 1992, nome: 'notebook', tec: 'notebook' },
   { re: /\bPlayStation\b/i, desde: 1995, nome: 'PlayStation' },
   { re: /\bfoto do perfil\b|\bperfil\b (?:dele|dela|seu|na rede)/i, desde: 2004, nome: 'perfil' }
 ];
 
 /** Os termos de um texto que ainda não fazem sentido no ano (vazio quando está tudo bem). */
-export function anacronismosNoTexto(texto: string, ano: number): string[] {
+export function anacronismosNoTexto(texto: string, ano: number, pais = 'BR'): string[] {
   const out: string[] = [];
-  for (const t of TERMOS_DATADOS) if (ano < t.desde && t.re.test(texto)) out.push(t.nome);
+  for (const t of TERMOS_DATADOS) {
+    if (t.soBR && pais !== 'BR') continue;
+    const desde = pais !== 'BR' && t.tec ? datasNoPais(pais, t.tec)?.chega ?? t.desde : t.desde;
+    if (ano < desde && t.re.test(texto)) out.push(t.nome);
+  }
   return out;
 }
 

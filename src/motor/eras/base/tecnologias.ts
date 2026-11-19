@@ -15,7 +15,8 @@
  * As marcas e os nomes de produto aparecem só como referência histórica (o que existia), nunca como peça do jogo.
  */
 
-export type MeioDeComunicacao = 'fixo' | 'celular' | 'smartphone';
+/** ERAS v3: 'cartas' — sem telefone em casa e antes do telefone público na rua (cartas, telegrama, visita). */
+export type MeioDeComunicacao = 'cartas' | 'fixo' | 'celular' | 'smartphone';
 
 export interface TecnologiaBR {
   id: string;
@@ -53,6 +54,16 @@ export const TECNOLOGIAS_BR: readonly TecnologiaBR[] = [
   { id: 'banco_app', nome: 'banco no celular', lancada: 2010, brasil: 2011, popular: 2014, massa: 2017, fonte: 'Aproximação: o celular passa a ser o principal canal bancário no fim dos anos 2010 (Febraban, Pesquisa de Tecnologia Bancária).' },
   { id: 'pix', nome: 'Pix', lancada: 2020, brasil: 2020, popular: 2020, massa: 2021, fonte: 'Pix: em funcionamento pleno a partir de 16/11/2020 (Banco Central do Brasil).' },
   { id: 'ia_conversa', nome: 'assistente de inteligência artificial', lancada: 2022, brasil: 2023, popular: 2024, massa: 9999, fonte: 'Assistentes conversacionais abertos ao público em novembro de 2022 (aproximação para o uso no Brasil).' },
+  // ---------------------------------------------------------------- ERAS v3 · a casa antes de 1970 (dados do Brasil; os outros países
+  // têm as próprias datas em `eras/paises/<id>`). popular/massa: Censos Demográficos do IBGE (domicílios com iluminação
+  // elétrica, água canalizada, geladeira, televisão: 1960, 1970, 1980, 1991) — os anos entre censos são aproximação.
+  { id: 'eletricidade', nome: 'luz elétrica em casa', lancada: 1882, brasil: 1883, popular: 1935, massa: 1976, fonte: 'Primeira iluminação pública elétrica: Campos dos Goytacazes, 1883. Domicílios com iluminação elétrica: 38,7% (Censo 1960), 47,6% (1970), 69% (1980) — IBGE.' },
+  { id: 'agua_encanada', nome: 'água encanada em casa', lancada: 1850, brasil: 1880, popular: 1950, massa: 1982, fonte: 'Domicílios com água canalizada: cerca de um terço em 1970 e mais da metade em 1980 (Censos do IBGE); antes, aproximação.' },
+  { id: 'fogao_gas', nome: 'fogão a gás', lancada: 1900, brasil: 1937, popular: 1955, massa: 1980, fonte: 'Gás liquefeito em botijão no Brasil a partir de 1937; antes, o fogão a lenha e a carvão (aproximação para a difusão).' },
+  { id: 'geladeira', nome: 'geladeira', lancada: 1927, brasil: 1947, popular: 1965, massa: 1982, fonte: 'Geladeiras fabricadas no Brasil a partir do fim dos anos 1940; domicílios com geladeira: 26% (Censo 1970), cerca de 50% (1980) — IBGE.' },
+  { id: 'tv', nome: 'televisão', lancada: 1936, brasil: 1950, popular: 1965, massa: 1979, fonte: 'TV Tupi, São Paulo, 18/09/1950. Domicílios com televisão: 24% (Censo 1970), 56% (1980) — IBGE.' },
+  { id: 'maquina_lavar', nome: 'máquina de lavar roupa', lancada: 1937, brasil: 1959, popular: 1990, massa: 2015, fonte: 'Aproximação: lavadoras nacionais a partir do fim dos anos 1950; a maioria das casas só nos anos 2010 (PNAD).' },
+  { id: 'aviao', nome: 'viagem de avião', lancada: 1919, brasil: 1927, popular: 2005, massa: 9999, fonte: 'Primeiras linhas aéreas comerciais no Brasil em 1927 (Syndicato Condor, VARIG). Popularização: aproximação (anos 2000).' },
   // ---------------------------------------------------------------- som, imagem, foto
   { id: 'radio', nome: 'rádio', lancada: 1920, brasil: 1922, popular: 1940, massa: 1960, fonte: 'Primeira transmissão de rádio no Brasil: 7 de setembro de 1922.' },
   { id: 'tv_cores', nome: 'televisão em cores', lancada: 1954, brasil: 1972, popular: 1980, massa: 1990, fonte: 'Transmissão oficial em cores no Brasil: 1972 (aproximação para a popularização).' },
