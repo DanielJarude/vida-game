@@ -12,6 +12,9 @@ import { especialidadeMedica } from '../../../motor/sistemas/medicina';
 import { leituraDoPalmares } from '../../../motor/sistemas/palmares';
 import { flex } from '../../../motor/texto';
 import { dinheiroCurto } from '../../apresentar';
+import { numerosDaTemporada, resumoDaCarreira } from '../../../motor/sistemas/perfisEsportivos';
+import { nomeDaModalidade } from '../../../motor/sistemas/esporte';
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 const CARGO: Record<string, [string, string]> = {
   vereador: ['Vereador', 'Vereadora'], prefeito: ['Prefeito', 'Prefeita'], deputado_estadual: ['Deputado estadual', 'Deputada estadual'],
@@ -34,11 +37,12 @@ function lerCracha(v: Vida): Cracha | undefined {
     const pal = leituraDoPalmares(v);
     return {
       tipo: 'atleta', selo: e.fase === 'base' ? 'Categoria de base' : 'Atleta profissional', titulo: e.clube,
-      sub: [e.posicao ? POS[e.posicao] : undefined, e.espaco === 'titular' ? 'titular' : e.espaco === 'reserva' ? 'reserva' : undefined, e.contratoAte ? `contrato até ${anoDe(e.contratoAte)}` : undefined].filter(Boolean).join(' · '),
+      sub: [e.modalidade === 'futebol' && e.posicao ? POS[e.posicao] : e.modalidade !== 'futebol' ? cap(nomeDaModalidade(v, e.modalidade)) : undefined, e.espaco === 'titular' ? 'titular' : e.espaco === 'reserva' ? 'reserva' : undefined, e.contratoAte ? `contrato até ${anoDe(e.contratoAte)}` : undefined].filter(Boolean).join(' · '),
       dados: [
-        ...(ult ? [{ r: `Temporada ${ult.ano}`, v: `${ult.partidas} jogos · ${ult.gols} gols · ${ult.assistencias} assist.` }] : []),
-        ...(tot ? [{ r: 'Na carreira', v: `${tot.partidas} jogos · ${tot.gols} gols · ${tot.temporadas} temporadas` }] : []),
-        ...(e.transferencias?.length ? [{ r: 'Clubes', v: String(new Set([...e.transferencias.map(x => x.para), e.clube]).size) }] : [])
+        // VIDA 28: os números da modalidade (o tenista não tem gols; a nadadora tem a marca do ano) — `numerosDaTemporada`.
+        ...(ult ? [{ r: `Temporada ${ult.ano}`, v: numerosDaTemporada(e, ult).map(([k, x]) => `${k}: ${x}`).join(' · ') }] : []),
+        ...(tot && e.temporadas?.length ? [{ r: 'Na carreira', v: resumoDaCarreira(e) }] : []),
+        ...(e.transferencias?.length ? [{ r: e.modalidade === 'futebol' ? 'Clubes' : 'Equipes', v: String(new Set([...e.transferencias.map(x => x.para), e.clube]).size) }] : [])
       ],
       lista: pal.titulos.length ? { titulo: 'Títulos', itens: pal.titulos.slice(-4).reverse() } : undefined
     };

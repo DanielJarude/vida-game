@@ -67,8 +67,9 @@ import { safrasAVenda18, venderSafras18 } from '../v18/rural/fazenda18';
 import { modelosComMemoria } from './situacoesMemoria';
 import { MODELOS_125 } from './situacoes125';
 import { MODELOS_126, TRILHAS_SEM_ESCRITORIO } from './situacoes126';
+import { MODELOS_ESPORTS28 } from './situacoesEsports28';
 
-export type Trajetoria = 'futebol' | 'basquete' | 'tenis' | 'atleta' | 'tecnico' | 'medicina' | 'academia' | 'cena' | 'negocio' | 'autonomo' | 'emprego' | 'militar' | 'politica' | 'rural' | 'universidade';
+export type Trajetoria = 'futebol' | 'basquete' | 'tenis' | 'atleta' | 'esports' | 'tecnico' | 'medicina' | 'academia' | 'cena' | 'negocio' | 'autonomo' | 'emprego' | 'militar' | 'politica' | 'rural' | 'universidade';
 export type Desfecho = RegistroDeSituacao['desfecho'];
 type Dados = Record<string, string | number>;
 export interface Fator { id: string; valor: number }
@@ -207,6 +208,10 @@ export function trajetoriaDeSituacao(v: Vida): Trajetoria | undefined {
   const es = v.caminhos.esporte;
   // Toda carreira esportiva produz momentos — cada modalidade os seus (o futebol não é exceção de arquitetura).
   if (es?.fase === 'profissional' && e && OCUPACOES_DE_ATLETA.includes(e.ocupacaoId)) return es.modalidade === 'futebol' ? 'futebol' : es.modalidade === 'basquete' ? 'basquete' : es.modalidade === 'tenis' ? 'tenis' : 'atleta';
+  // VIDA 28: o e-sports tem os momentos de quem compete (a final, o companheiro, a transmissão) — com equipe, ou
+  // competindo sem outro trabalho principal. Nunca as cenas do trabalho por conta.
+  const x25 = v.esports25;
+  if (x25 && x25.fase !== 'encerrada' && (e?.ocupacaoId === 'jogador_esports' || (!!x25.equipe && (!e || v.trabalho.paralela?.ocupacaoId === 'jogador_esports')))) return 'esports';
   // O banco tem a sua gramática (Carreira de técnico 2.0): não é o "emprego" com outro nome.
   if (e?.ocupacaoId === OCUPACAO_TECNICO && passagemAtual(v)) return 'tecnico';
   // A universidade como experiência: quem estuda (e, no máximo, estagia) vive situações do curso.
@@ -272,13 +277,14 @@ const politicaAtiva = (v: Vida) => { const p = v.caminhos.politica; return !!p &
 const COMUNS = new Set<Trajetoria>(['emprego', 'autonomo', 'universidade']);
 
 /** A chance-base de um ano com a carreira em velocidade de cruzeiro (o silêncio e o contexto multiplicam). */
-export const RITMO: Record<Trajetoria, number> = { futebol: 0.62, basquete: 0.55, tenis: 0.55, atleta: 0.5, tecnico: 0.55, medicina: 0.42, academia: 0.4, cena: 0.42, negocio: 0.4, autonomo: 0.22, emprego: 0.22, militar: 0.4, politica: 0.6, rural: 0.38, universidade: 0.22 };
+export const RITMO: Record<Trajetoria, number> = { futebol: 0.62, basquete: 0.55, tenis: 0.55, atleta: 0.5, esports: 0.5, tecnico: 0.55, medicina: 0.42, academia: 0.4, cena: 0.42, negocio: 0.4, autonomo: 0.22, emprego: 0.22, militar: 0.4, politica: 0.6, rural: 0.38, universidade: 0.22 };
 
 /** Desde quando esta trajetória corre (o silêncio de quem acabou de chegar conta a partir daqui). */
 function inicioDaTrajetoria(v: Vida, tr: Trajetoria): number {
   const e = v.trabalho.atual;
   if (tr === 'futebol' || tr === 'basquete' || tr === 'tenis' || tr === 'atleta') return v.caminhos.esporte?.tFase ?? v.t;
   if (tr === 'tecnico') return v.caminhos.tecnico?.tInicio ?? v.t;
+  if (tr === 'esports') return v.esports25?.equipe?.desde ?? v.esports25?.inicio ?? v.t;
   if (tr === 'politica') return v.caminhos.politica?.tInicio ?? v.t;
   if (tr === 'negocio') return negocioAtivo(v)?.tInicio ?? v.t;
   if (tr === 'universidade') return v.educacao.matricula?.tInicio ?? v.t;
@@ -442,6 +448,7 @@ function aplicar(v: Vida, tr: Trajetoria, ef: Efeitos, d: Dados, desfecho: Desfe
   if (ef.nome) {
     if (tr === 'futebol' || tr === 'basquete' || tr === 'tenis' || tr === 'atleta') { const es = v.caminhos.esporte; if (es) es.reputacao = clamp((es.reputacao ?? 30) + ef.nome); }
     else if (tr === 'tecnico') { const c = v.caminhos.tecnico; if (c) c.reputacao = clamp(c.reputacao + ef.nome); }
+    else if (tr === 'esports') { const x = v.esports25; if (x) x.reputacao = clamp(x.reputacao + ef.nome); }
     else if (tr === 'politica') { const p = v.caminhos.politica; const m = p?.mandato; if (m) m.aprovacao = clamp(m.aprovacao + ef.nome * 1.5); else if (p) p.reputacao = clamp(p.reputacao + ef.nome); }
     else if (tr === 'universidade') { const m = v.educacao.matricula; if (m) m.desempenho = clamp(m.desempenho + ef.nome * 2); }
     else if (tr === 'rural' && e?.clientela !== undefined) e.clientela = clamp(e.clientela + ef.nome * 1.5);
@@ -1846,7 +1853,7 @@ const MODELOS_ARTE: ModeloSituacao[] = [
 /** REWORK 11 · CAR-11.9: as cenas que lembram (o ex-clube, o título, o atrito, a dispensa superada, o banco que volta). */
 const MODELOS_COM_MEMORIA = modelosComMemoria({ F, D, DT, trajetoria: trajetoriaDeSituacao, coragem, social, disciplina, leitura, cabeca, tecnica: v => (v.caminhos.esporte?.modalidade === 'futebol' ? tecnicaFut(v) : F('técnica', (habilidade(v, v.caminhos.esporte?.modalidade ?? 'futebol') - barraDaDivisao(v.caminhos.esporte?.modalidade ?? 'futebol', v.caminhos.esporte?.nivel ?? 1)) / 12)), nomeNoElenco: nomeFut, nomeTec, vestiario: v => (passagemAtual(v) ? vestiarioF(v) : F('vestiário', 0)) });
 
-export const MODELOS: ModeloSituacao[] = [...MODELOS_FUTEBOL, ...MODELOS_FUTEBOL_MAIS, ...MODELOS_COM_MEMORIA, ...MODELOS_PROFISSOES, ...MODELOS_ESPORTES, ...MODELOS_MILITAR, ...MODELOS_POLITICA, ...MODELOS_POLITICA_BASE, ...MODELOS_RURAL, ...MODELOS_UNIVERSIDADE, ...MODELOS_MEDICINA_MAIS, ...MODELOS_TECNICO, ...MODELOS_OFICIO, ...MODELOS_OFICIO_AUTONOMO, ...MODELOS_ARTE, ...MODELOS_ARTE_11, ...MODELOS_125, ...MODELOS_126];
+export const MODELOS: ModeloSituacao[] = [...MODELOS_FUTEBOL, ...MODELOS_FUTEBOL_MAIS, ...MODELOS_COM_MEMORIA, ...MODELOS_PROFISSOES, ...MODELOS_ESPORTES, ...MODELOS_MILITAR, ...MODELOS_POLITICA, ...MODELOS_POLITICA_BASE, ...MODELOS_RURAL, ...MODELOS_UNIVERSIDADE, ...MODELOS_MEDICINA_MAIS, ...MODELOS_TECNICO, ...MODELOS_OFICIO, ...MODELOS_OFICIO_AUTONOMO, ...MODELOS_ARTE, ...MODELOS_ARTE_11, ...MODELOS_125, ...MODELOS_126, ...MODELOS_ESPORTS28];
 
 /** As situações vividas, para a tela (as mais recentes primeiro). */
 export function momentosDaCarreira(v: Vida, n = 8): { ano: number; texto: string; desfecho: Desfecho; intencao: string }[] {

@@ -23,13 +23,15 @@ import { criarPessoa, vincular } from '../pessoas';
 import { anoDe } from '../tempo';
 import { comChefia } from '../sistemas/ritmo';
 import { noTrabalho } from '../sistemas/ambiente';
+import { ehCompetidor } from '../sistemas/mercados';
 import { categoriaDoVeiculo, textoVeiculo } from '../sistemas/veiculos';
 
 // Emprego comum: o atleta (contrato especial, Lei Pelé) tem as próprias situações — clube, contrato, banco.
 /** "Uma fábrica foi vendida", "um escritório foi vendido": pelo artigo do empregador. */
 const vendid = (empregador: string) => (/^(uma|a) /i.test(empregador) ? 'vendida' : 'vendido');
-const porConta = (c: Ctx) => c.v.trabalho.atual?.contrato === 'autonomo';
-const empregado = (c: Ctx) => !!c.v.trabalho.atual && c.v.trabalho.atual.contrato !== 'informal' && ocupacao(c.v.trabalho.atual.ocupacaoId).trilha !== 'atleta';
+// VIDA 28: o jogador de e-sports e o piloto têm contrato 'autonomo' no papel, mas não trabalham "por conta" (têm equipe).
+const porConta = (c: Ctx) => c.v.trabalho.atual?.contrato === 'autonomo' && !ehCompetidor(ocupacao(c.v.trabalho.atual.ocupacaoId));
+const empregado = (c: Ctx) => !!c.v.trabalho.atual && c.v.trabalho.atual.contrato !== 'informal' && !ehCompetidor(ocupacao(c.v.trabalho.atual.ocupacaoId));
 const mora = (c: Ctx) => municipio(c.v.moradia.municipioId);
 
 export const ADULTO: Conteudo[] = [

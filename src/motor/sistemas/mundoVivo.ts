@@ -116,7 +116,7 @@ function anoNoTrabalho(v: Vida, r: Rng, pode: () => boolean, conta: () => void):
   // VIDA 12.5 (CAR-11.9): onde não há escritório (por conta própria, o negócio próprio, o clube, o palco, a banda), não
   // há "reorganização com gente demitida em outros andares"; o colega que sai é negociado, ou deixa a banda.
   const trilha = ocupacaoOuNula(e.ocupacaoId)?.trilha;
-  const esporte = trilha === 'atleta' || trilha === 'tecnico';
+  const esporte = trilha === 'atleta' || trilha === 'tecnico' || trilha === 'esports' || trilha === 'automobilismo';
   const palco = !!trilha && TRILHAS_ARTISTICAS.has(trilha);
   const semEscritorio = e.contrato === 'autonomo' || /^por conta/i.test(e.empregador) || !!v.caminhos.negocio && v.caminhos.negocio.estado !== 'fechado' && e.contrato !== 'clt' || esporte || palco;
   const colegas = vinculosVivos(v).filter(x => x.vin.ambiente === chave && !x.p.especie && x.p.ocupacao !== 'gestor' && x.p.ocupacao !== 'gestora');

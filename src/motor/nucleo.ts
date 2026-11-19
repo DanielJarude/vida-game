@@ -149,9 +149,15 @@ export interface NovaEntrada {
   fato?: Entrada['fato'];
   /** REWORK 7.5: a entrada de que esta é consequência (ver `Entrada.segue`). */
   segue?: string;
+  /** VIDA 28: o fio da trajetória (ver `Entrada.fio`). */
+  fio?: string;
+  /** VIDA 28: a identidade do fato (ver `Entrada.chave`): o mesmo fato não é escrito duas vezes. */
+  chave?: string;
 }
 
 export function escrever(v: Vida, e: NovaEntrada): Entrada {
+  // VIDA 28: o mesmo fato, narrado duas vezes, fica uma vez só (a chave é do fato, não da frase).
+  if (e.chave) { const ja = v.biografia.find(x => x.chave === e.chave); if (ja) return ja; }
   const t = e.t ?? v.t;
   const entrada: Entrada = {
     id: novoId(v, 'e'),
@@ -168,7 +174,9 @@ export function escrever(v: Vida, e: NovaEntrada): Entrada {
     escolha: e.escolha,
     evento: e.evento,
     ...(e.fato ? { fato: e.fato } : {}),
-    ...(e.segue ? { segue: e.segue } : {})
+    ...(e.segue ? { segue: e.segue } : {}),
+    ...(e.fio ? { fio: e.fio } : {}),
+    ...(e.chave ? { chave: e.chave } : {})
   };
   v.biografia.push(entrada);
   return entrada;

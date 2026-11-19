@@ -38,6 +38,9 @@ export function Formacao25({ vida, e }: { vida: Vida; e: CarreiraEsportiva }) {
   const gols = anos.reduce((s, a) => s + (a.gols ?? 0), 0);
   const individual = anos.some(a => a.podios !== undefined) || e.modalidade === 'tenis';
   const ultimo = anos[anos.length - 1];
+  // VIDA 28: a coluna da produção é a da modalidade (o vôlei de base não faz "gols · assistências").
+  const comGols = e.modalidade === 'futebol' || e.modalidade === 'futsal';
+  const producao = e.modalidade === 'basquete' ? 'Pts/jogo' : individual ? 'Pódios' : comGols ? 'G · A' : undefined;
   return (
     <section className="form25" aria-labelledby="form25-t">
       <h3 id="form25-t" className="form25__titulo">A formação</h3>
@@ -55,16 +58,16 @@ export function Formacao25({ vida, e }: { vida: Vida; e: CarreiraEsportiva }) {
       </dl>
       <div className="form25__tabela" role="region" aria-label="Ano a ano" tabIndex={0}>
         <table>
-          <thead><tr><th>Ano</th><th>Categoria</th><th>{individual ? 'Disputas' : 'Jogos (tit.)'}</th><th>{e.modalidade === 'basquete' ? 'Pts/jogo' : individual ? 'Pódios' : 'G · A'}</th><th>Nota</th><th>Colocação</th></tr></thead>
+          <thead><tr><th>Ano</th><th>Categoria</th><th>{individual ? 'Disputas' : 'Jogos (tit.)'}</th>{producao && <th>{producao}</th>}<th>Nota</th><th>Colocação</th></tr></thead>
           <tbody>
             {anos.map(a => (
               <tr key={a.ano} className={a.titulo ? 'form25__linha--titulo' : undefined}>
                 <td>{a.ano}<small> · {a.idade}a</small></td>
                 <td>{a.categoria}{a.papel ? <small> · {a.papel}</small> : null}{a.acima ? <small className="form26__acima"> · {a.acima === 'profissional' ? 'treinou com o profissional' : `subiu ao ${a.acima}`}</small> : null}</td>
                 <td>{individual ? a.jogos : `${a.jogos} (${a.titular})`}</td>
-                <td>{e.modalidade === 'basquete' ? num(a.pontos ?? 0) : individual ? (a.podios ?? '—') : `${a.gols ?? 0} · ${a.assistencias ?? 0}`}</td>
+                {producao && <td>{e.modalidade === 'basquete' ? num(a.pontos ?? 0) : individual ? (a.podios ?? '—') : `${a.gols ?? 0} · ${a.assistencias ?? 0}`}</td>}
                 <td>{num(a.nota)}</td>
-                <td>{a.titulo && <b className="form25__selo">campeão</b>}{a.colocacao}º de {a.participantes}</td>
+                <td>{a.titulo && <b className="form25__selo">campeão</b>}{a.colocacao}º de {a.participantes}{a.desfecho === 'dispensa' && <small className="form25__dispensa"> · dispensad{vida.eu.genero === 'feminino' ? 'a' : 'o'} no fim do ano</small>}</td>
               </tr>
             ))}
           </tbody>

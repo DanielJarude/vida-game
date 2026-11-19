@@ -12,6 +12,7 @@
  *
  * Os painéis de antes (`Trabalho`) seguem embaixo, com o detalhe; estes são a cabeça de cada carreira.
  */
+import { numerosDaTemporada } from '../../motor/sistemas/perfisEsportivos';
 import type { Vida } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
 import { BotaoAcao } from '../comum';
@@ -88,15 +89,8 @@ export function CampoDoAtleta({ vida }: { vida: Vida }) {
   // divisões nacionais; a continental de quem se classificou no ano anterior).
   const disputas = [competicaoDe(es.modalidade, es.nivel, pais), ...(futebol && es.nivel >= 2 ? [nomeDaCompeticao(idDaCopa(pais))] : []), ...(futebol && classificadoParaContinental(vida, pais, ano, es.clube) ? [nomeDaCompeticao(idContinental(confederacaoDe(pais)))] : [])];
   const titulos = (vida.caminhos.palmares ?? []).filter(c => c.tipo === 'titulo' && c.modalidade === es.modalidade).length;
-  const goleiro = es.posicao === 'goleiro';
-  const defensor = es.posicao === 'zagueiro' || es.posicao === 'lateral' || es.posicao === 'volante';
-  const numeros: [string, string][] = !t ? [] : goleiro
-    ? [['Jogos', String(t.partidas)], ['Sem sofrer gol', String(t.semSofrerGol ?? '—')], ['Gols sofridos', String(t.golsSofridos ?? '—')], ['Nota', t.nota.toFixed(1)]]
-    : es.modalidade === 'basquete'
-      ? [['Jogos', String(t.partidas)], ['Pontos/jogo', String(t.pontos ?? '—')], ['Rebotes/jogo', String(t.rebotes ?? '—')], ['Assist./jogo', String(t.assistencias)]]
-      : defensor
-        ? [['Jogos', String(t.partidas)], ['Desarmes', String(t.defesa ?? '—')], ['Gols', String(t.gols)], ['Nota', t.nota.toFixed(1)]]
-        : [['Jogos', String(t.partidas)], ['Gols', String(t.gols)], ['Assistências', String(t.assistencias)], ['Nota', t.nota.toFixed(1)]];
+  // VIDA 28: os números da modalidade (o vôlei mostrava gols e assistências) — a fonte única `numerosDaTemporada`.
+  const numeros: [string, string][] = t ? numerosDaTemporada(es, t) : [];
   return (
     <section className="carreira-especial carreira-especial--campo" aria-label="Em campo">
       <div className="carreira-especial__cena">

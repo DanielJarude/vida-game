@@ -88,14 +88,26 @@ export interface Fio {
  * de miudezas, no fim. Ordem: os fios mais pesados primeiro (o marco do ano abre o ano), depois a ordem em que
  * começaram; dentro do fio, a ordem em que aconteceram (a origem antes da consequência).
  */
+/**
+ * VIDA 28: a ordem em que o motor escreveu (o id das entradas da vida é sequencial, em base 36: "e1a" vem antes de
+ * "e1b"). No mesmo mês, é ela que diz o que veio antes — não a relevância (o marco não pula para antes da causa).
+ * Ids de outra origem (pessoas do mundo, `q19…`) não têm ordem: ficam onde estavam.
+ */
+function ordemDeEscrita(e: Entrada): number {
+  return /^e[0-9a-z]+$/.test(e.id) ? parseInt(e.id.slice(1), 36) : 0;
+}
+
 export function fiosDoAno(entradas: Entrada[]): Fio[] {
   const pai = entradas.map((_, k) => k);
   const raiz = (k: number): number => (pai[k] === k ? k : (pai[k] = raiz(pai[k])));
   const unir = (a: number, b: number) => { const x = raiz(a), y = raiz(b); if (x !== y) pai[Math.max(x, y)] = Math.min(x, y); };
   const porId = new Map(entradas.map((e, k) => [e.id, k]));
   const porPessoa = new Map<string, number>();
+  const porFio = new Map<string, number>();
   entradas.forEach((e, k) => {
     if (e.segue && porId.has(e.segue)) unir(k, porId.get(e.segue)!);
+    // VIDA 28: a mesma trajetória (o esporte, a escola) é um fio só — lido na ordem em que aconteceu.
+    if (e.fio) { const j = porFio.get(e.fio); if (j === undefined) porFio.set(e.fio, k); else unir(k, j); }
     for (const id of e.pessoas ?? []) {
       const j = porPessoa.get(id);
       if (j === undefined) porPessoa.set(id, k); else unir(k, j);
@@ -107,7 +119,7 @@ export function fiosDoAno(entradas: Entrada[]): Fio[] {
   const miudezas: Entrada[] = [];
   for (const g of grupos.values()) {
     if (g.length === 1 && g[0].relevancia === 'cotidiano') { miudezas.push(g[0]); continue; }
-    const ordem = [...g].sort((a, b) => a.t - b.t || (a.segue === b.id ? 1 : b.segue === a.id ? -1 : 0));
+    const ordem = [...g].sort((a, b) => a.t - b.t || (a.segue === b.id ? 1 : b.segue === a.id ? -1 : 0) || ordemDeEscrita(a) - ordemDeEscrita(b));
     fios.push({ id: ordem[0].id, entradas: ordem, peso: Math.max(...g.map(peso)) });
   }
   fios.sort((a, b) => b.peso - a.peso || a.entradas[0].t - b.entradas[0].t);

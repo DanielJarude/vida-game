@@ -404,6 +404,8 @@ function Projetos({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
             {tipos.map(t => <optgroup key={t} label={NOME_COMPOSICAO[t]}>{MODELOS_DE_COMPOSICAO.filter(x => x.tipo === t).map(x => <option key={x.id} value={x.id}>{x.nome}</option>)}</optgroup>)}
           </select>
           <span className="campo__nota">{m.descricao}</span>
+          {/* VIDA 28: os estilos que o projeto junta (lidos dos desenhos dele, não de um rótulo). */}
+          <span className="campo__nota" data-estilos-do-projeto>Estilos: {[...new Set(m.pecas.map(p => desenhoDeTatuagem(p.desenho)?.estilo).filter((x): x is NonNullable<typeof x> => !!x))].map(x => NOME_ESTILO[x] ?? x).join(' · ')}.</span>
         </label>
         {comLado && <Escolha rotulo="Lado" valor={lado} aoMudar={setLado} opcoes={[{ id: 'd' as const, rotulo: m.tipo === 'perna' ? 'Perna direita' : 'Braço direito' }, { id: 'e' as const, rotulo: m.tipo === 'perna' ? 'Perna esquerda' : 'Braço esquerdo' }]} />}
         {prev ? (

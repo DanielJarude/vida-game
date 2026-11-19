@@ -177,7 +177,10 @@ export function executarEsports25(v: Vida, o: OqueEsports25): { texto: string; t
   v.anoAtual.acoes.push(`esp25:${o.op}`);
   switch (o.op) {
     case 'treinar': {
-      e.foco = { ano: anoDe(v.t), qual: o.foco };
+      // VIDA 28: o foco vale para a temporada que o fim deste ano processa (`anoDaTemporada25` depois da virada = o ano de
+      // daqui a seis meses). Antes, gravava o ano civil de agora: para quem faz aniversário no segundo semestre, a
+      // temporada processada já era a do ano seguinte e o foco era ignorado — o treino escolhido não fazia nada.
+      e.foco = { ano: anoDe(v.t + 6), qual: o.foco };
       return { texto: { mecanica: 'Horas de treino de mira e de mão: o mesmo exercício até sair sem pensar.', estrategia: 'Assistiu às próprias partidas e às dos melhores: o que fazer, e quando.', equipe: 'Treinos combinados com outras equipes e a conversa depois de cada um: falar menos e dizer mais.', mental: 'Trabalho com psicólogo do esporte: a final, o erro, a respiração.', descanso: 'Menos horas, mais sono: o corpo e a cabeça agradeceram.' }[o.foco], tom: 'bom' };
     }
     case 'funcao': {
@@ -489,7 +492,9 @@ function contarTemporada(v: Vida, e: Esports25, t: Temporada25): void {
 
 function vidaEmVolta(v: Vida, e: Esports25, int: number): void {
   const i = idade(v);
-  v.mente.estresse = clamp(v.mente.estresse + (e.fase === 'profissional' ? 4 : int >= 2 ? 2 : 0));
+  // VIDA 28: o foco "descanso" é escolha de treino com efeito próprio — menos evolução no ano (`evoluir`), cabeça mais leve.
+  const descanso = e.foco?.qual === 'descanso' && e.foco.ano >= anoDaTemporada25(v);
+  v.mente.estresse = clamp(v.mente.estresse + (e.fase === 'profissional' ? 4 : int >= 2 ? 2 : 0) - (descanso ? 8 : 0));
   // Horas sentado: sem outra atividade física na semana, o condicionamento cai.
   const mexe = v.rotinas.some(x => ['academia', 'corrida', 'futebol', 'natacao', 'volei', 'basquete', 'lutas', 'atletismo', 'ciclismo', 'danca', 'tenis', 'futsal', 'caminhada'].includes(x.id));
   if (int >= 2 && !mexe) v.corpo.forma = clamp(v.corpo.forma - (int === 3 ? 3 : 2));

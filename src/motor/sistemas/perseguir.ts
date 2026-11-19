@@ -30,7 +30,7 @@ import { recursosDaFamilia } from './origem';
 import { estudarMateria, podeEstudarMateria } from './vestibular';
 import { preparoDaPos } from './escola';
 import type { Materia } from '../dados/cursos';
-import { barraDeTitular, clubeAmador, etapaNaBase, IDADE_AMADOR, MODALIDADES, MODALIDADES_AMADORAS, NOME_MOD, nomeDeClube, ondeTreina } from './esporte';
+import { barraDeTitular, clubeAmador, etapaNaBase, IDADE_AMADOR, MODALIDADES, MODALIDADES_AMADORAS, NOME_MOD, clubeDaPeneira, ondeTreina } from './esporte';
 import { capitalDoEstado } from './escola';
 import { municipio } from '../dados/lugares';
 import { doClube, noClube } from '../dados/clubes';
@@ -123,7 +123,7 @@ function pedirTesteAdulto(v: Vida, r: Rng, d: Dominio): { texto?: string; decisa
   v.fatos[`testes_amador_${d}`] = (v.fatos[`testes_amador_${d}`] ?? 0) + 1;
   v.caminhos.ultimas[`amador_${d}`] = v.t;
   const op = novaOportunidade(v, {
-    tipo: d === 'futebol' ? 'peneira' : 'seletiva', dominio: d, municipioId: lugar, meses: 12, chave: `amador_${d}`, atividade: 'amador',
+    tipo: d === 'futebol' ? 'peneira' : 'seletiva', dominio: d, municipioId: lugar, meses: 12, chave: `amador_${d}`, atividade: 'amador', clube,
     titulo: `Teste ${noClube(clube)}`,
     texto: `Você pediu uma semana de treino com o time de cima ${doClube(clube)}${lugar !== v.moradia.municipioId ? `, de ${municipio(lugar).nome}` : ''}. Não é a base: é o elenco adulto de um clube pequeno, e ${idade(v) >= 25 ? 'a idade conta contra' : 'ninguém indicou'} — é o seu jogo que vai falar.`,
     bonus: -0.1
@@ -147,10 +147,10 @@ function pedirTeste(v: Vida, r: Rng, valor?: string): { texto?: string; decisao?
   if (idade(v) > janelaDaBase(d)[1]) return pedirTesteAdulto(v, r, d);
   const grande = onde === 'grande';
   const lugar = lugarDoTeste(v, d, grande);
-  const clube = nomeDeClube(lugar, `${v.id}:pedido:${idade(v)}:${grande ? 'g' : 'p'}`, d);
+  const clube = clubeDaPeneira(v, lugar, `${v.id}:pedido:${idade(v)}:${grande ? 'g' : 'p'}`, d);
   v.fatos[`peneira_pedida_${d}`] = v.t;
   const op = novaOportunidade(v, {
-    tipo: d === 'futebol' ? 'peneira' : 'seletiva', dominio: d, municipioId: lugar, meses: 12, chave: `peneira_${d}`,
+    tipo: d === 'futebol' ? 'peneira' : 'seletiva', dominio: d, municipioId: lugar, meses: 12, chave: `peneira_${d}`, clube,
     titulo: d === 'futebol' ? `Peneira ${noClube(clube)}` : `Seletiva ${noClube(clube)}`,
     texto: `Você pediu um teste ${doClube(clube)}${lugar !== v.moradia.municipioId ? `, em ${municipio(lugar).nome}` : ''}. Ninguém indicou: é o seu treino que vai falar.`,
     bonus: -0.03

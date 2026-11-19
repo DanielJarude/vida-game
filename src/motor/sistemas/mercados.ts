@@ -34,8 +34,16 @@ export type Mercado = 'emprego' | 'servico_publico' | 'esporte' | 'arte' | 'acad
 const ACADEMIA = new Set(['academia', 'pesquisa', 'docencia_superior']);
 const MILITARES = /^(exercito|marinha|aeronautica)/;
 
+/**
+ * VIDA 28: as carreiras de COMPETIDOR — o atleta, o jogador de e-sports, o piloto. Têm equipe, contrato, temporada e
+ * premiação: não são "trabalho por conta" (antes, o jogador de e-sports, de contrato 'autonomo', caía no mercado
+ * autônomo e recebia cenas de cliente que não paga, orçamento e ferramenta quebrada).
+ */
+export const TRILHAS_DE_COMPETIDOR = new Set(['atleta', 'esports', 'automobilismo']);
+export const ehCompetidor = (oc?: Pick<Ocupacao, 'trilha'>) => !!oc && TRILHAS_DE_COMPETIDOR.has(oc.trilha);
+
 export function mercadoDe(oc: Ocupacao): Mercado {
-  if (oc.trilha === 'atleta') return 'esporte';
+  if (ehCompetidor(oc)) return 'esporte';
   if (oc.entrada === 'eleicao' || oc.trilha === 'politica') return 'politica';
   if (oc.setor === 'criativo' && oc.entrada === 'oportunidade') return 'arte';
   if (ACADEMIA.has(oc.trilha)) return 'academia';

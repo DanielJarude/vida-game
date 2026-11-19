@@ -22,7 +22,9 @@ import { estresse, fato, feliz, custa, local } from './efeitos';
 import { escrever, idade, lembrarCom, marcarFato, parceiro, temFato, idadePessoa } from '../nucleo';
 import { portaAmadora } from '../sistemas/perfisEsportivos';
 import { semVocabularioCorporativo } from '../sistemas/oficioDoTecnico';
-import { conviteDaBase, encerrarCarreira, entrarPeloAmador, etapaNaBase, fazerPeneira, IDADE_CONVITE, NOME_MOD, nomeDeClube } from '../sistemas/esporte';
+import { arquivarCarreiraEsportiva, conviteDaBase, encerrarCarreira, entrarPeloAmador, etapaNaBase, fazerPeneira, IDADE_CONVITE, NOME_MOD, nomeDeClube } from '../sistemas/esporte';
+/** "do futebol", "do vôlei", "da natação", "das lutas". */
+const deModalidade = (d: string) => ({ natacao: 'da natação', lutas: 'das lutas' } as Record<string, string>)[d] ?? `do ${NOME_MOD[d as keyof typeof NOME_MOD] ?? d}`;
 import { dinheiro as fmt } from '../texto';
 import { TRILHAS_ARTISTICAS } from '../sistemas/paralelas';
 import { conflitoDoContrato, contaDoContrato, descricaoDoContrato, podePausar as podePausarAV, resolverConflitoAV } from '../sistemas/audiovisual';
@@ -55,6 +57,7 @@ import { chamadoAoAlistamento } from '../sistemas/militar';
 import { clamp } from '../rng';
 import { editaisAbertos } from '../sistemas/concurso';
 import { noTrabalho } from '../sistemas/ambiente';
+import { ehCompetidor } from '../sistemas/mercados';
 import { declararIntencao, mesesProcurando, podeDeclararIntencao } from '../sistemas/intencao';
 import { podeTentar } from '../plausibilidade';
 
@@ -200,11 +203,13 @@ export const CAMINHOS: Conteudo[] = [
     opcoes: [
       { id: 'tentar', texto: 'Treinar mais e tentar outro clube', comportamento: { disciplina: 1 },
         disponivel: c => ((c.v.fatos['peneiras_' + c.v.caminhos.esporte!.modalidade] ?? 0) < 3 && idade(c.v) <= 18 ? true : 'Já não há idade para outra base: o caminho, agora, é jogar bem no amador e pedir um teste num time adulto.'),
-        resolver: c => ({ texto: 'Você voltou para o treino na semana seguinte. Ninguém mandou.', memoria: 'Foi dispensado e decidiu tentar de novo.'.replace('dispensado', c.g('dispensado', 'dispensada', 'dispensade')), efeito: () => { const e = c.v.caminhos.esporte!; delete c.v.caminhos.ultimas[`peneira_${e.modalidade}`]; c.v.caminhos.esporte = undefined; const rot = c.v.rotinas.find(x => x.id === e.modalidade); if (rot) rot.nivel = 2; } }) },
+        // VIDA 28: a carreira de base que acabou vai para o arquivo (a formação e a dispensa ficam): a próxima peneira procura OUTRO clube.
+        resolver: c => ({ texto: 'Você voltou para o treino na semana seguinte. Ninguém mandou.', memoria: `Foi dispensado e decidiu tentar outro clube.`.replace('dispensado', c.g('dispensado', 'dispensada', 'dispensade')), efeito: () => { const e = c.v.caminhos.esporte!; delete c.v.caminhos.ultimas[`peneira_${e.modalidade}`]; arquivarCarreiraEsportiva(c.v); c.v.caminhos.esporte = undefined; const rot = c.v.rotinas.find(x => x.id === e.modalidade); if (rot) rot.nivel = 2; } }) },
       { id: 'gosto', texto: c => `Continuar a ${VERBOS[c.v.caminhos.esporte!.modalidade] ?? 'treinar'} por gosto`,
-        resolver: c => ({ texto: `${cap(VERBOS[c.v.caminhos.esporte!.modalidade] ?? 'treinar')} voltou a ser coisa de fim de semana. Doeu menos do que parecia.`, memoria: null }) },
+        // VIDA 28: é AQUI que o sonho fica para trás (a dispensa sozinha não decide isso — quem tenta outro clube não desistiu).
+        resolver: c => ({ texto: `${cap(VERBOS[c.v.caminhos.esporte!.modalidade] ?? 'treinar')} voltou a ser coisa de fim de semana. Doeu menos do que parecia.`, memoria: `Continuou a ${VERBOS[c.v.caminhos.esporte!.modalidade] ?? 'treinar'} só por gosto: o sonho de viver ${deModalidade(c.v.caminhos.esporte!.modalidade)} ficou para trás.` }) },
       { id: 'largar', texto: 'Largar de vez',
-        resolver: c => ({ texto: `Você guardou ${EQUIPO15[c.v.caminhos.esporte!.modalidade] ?? 'o material de treino'} no fundo do armário.`, memoria: null, efeito: () => { const d = c.v.caminhos.esporte!.modalidade; c.v.rotinas = c.v.rotinas.filter(x => x.id !== d); } }) }
+        resolver: c => ({ texto: `Você guardou ${EQUIPO15[c.v.caminhos.esporte!.modalidade] ?? 'o material de treino'} no fundo do armário.`, memoria: `Largou de vez: o sonho de viver ${deModalidade(c.v.caminhos.esporte!.modalidade)} ficou para trás.`, efeito: () => { const d = c.v.caminhos.esporte!.modalidade; c.v.rotinas = c.v.rotinas.filter(x => x.id !== d); marcarFato(c.v, `largou_esporte_${d}`); } }) }
     ]
   },
   {
@@ -332,7 +337,7 @@ export const CAMINHOS: Conteudo[] = [
       const e = c.v.trabalho.atual;
       if (!e || e.clientela !== undefined || e.posAposentadoria || e.formacaoAte || temFato(c.v, 'aceitou_estabilidade_' + e.ocupacaoId)) return false;
       const oc = ocupacao(e.ocupacaoId);
-      if (oc.promocao === 'antiguidade' || oc.trilha === 'atleta') return false;
+      if (oc.promocao === 'antiguidade' || ehCompetidor(oc)) return false;
       return (c.v.t - (e.tPosto ?? e.tInicio)) >= 72;
     },
     titulo: c => `${Math.floor((c.v.t - (c.v.trabalho.atual!.tPosto ?? c.v.trabalho.atual!.tInicio)) / 12)} anos no mesmo lugar`,
@@ -414,7 +419,7 @@ export const CAMINHOS: Conteudo[] = [
   /* ============================================== O TRABALHO ACONTECE (mundo) */
   {
     id: 'car_reconhecimento', tipo: 'acontecimento', idade: [20, 64], tema: 'trabalho', repetir: 6, peso: 3,
-    quando: c => { const e = c.v.trabalho.atual; return !!e && e.contrato !== 'eletivo' && e.clientela === undefined && e.desempenho >= 76 && !e.formacaoAte && ocupacao(e.ocupacaoId).trilha !== 'atleta' && noTrabalho(c.v, 'chefia', 'organizacao') && !temFato(c.v, `reconhecido_${e.ocupacaoId}_${e.tPosto ?? e.tInicio}`); },
+    quando: c => { const e = c.v.trabalho.atual; return !!e && e.contrato !== 'eletivo' && e.clientela === undefined && e.desempenho >= 76 && !e.formacaoAte && !ehCompetidor(ocupacao(e.ocupacaoId)) && noTrabalho(c.v, 'chefia', 'organizacao') && !temFato(c.v, `reconhecido_${e.ocupacaoId}_${e.tPosto ?? e.tInicio}`); },
     narrar: c => {
       const e = c.v.trabalho.atual!;
       const texto = c.r.pick([
@@ -427,7 +432,7 @@ export const CAMINHOS: Conteudo[] = [
   },
   {
     id: 'car_novato', tipo: 'acontecimento', idade: [30, 64], tema: 'trabalho', repetir: 10, peso: 2,
-    quando: c => { const e = c.v.trabalho.atual; return !!e && e.contrato !== 'eletivo' && e.clientela === undefined && ocupacao(e.ocupacaoId).trilha !== 'atleta' && noTrabalho(c.v, 'colegas') && (c.v.trabalho.experiencia[ocupacao(e.ocupacaoId).trilha] ?? 0) >= 144; },
+    quando: c => { const e = c.v.trabalho.atual; return !!e && e.contrato !== 'eletivo' && e.clientela === undefined && !ehCompetidor(ocupacao(e.ocupacaoId)) && noTrabalho(c.v, 'colegas') && (c.v.trabalho.experiencia[ocupacao(e.ocupacaoId).trilha] ?? 0) >= 144; },
     narrar: c => ({ texto: c.r.pick(['Puseram um novato para aprender o serviço com você. Na primeira semana, você se viu repetindo frases que ouviu vinte anos atrás.', 'Uma estagiária nova passou a andar atrás de você com um caderninho.', 'Chamaram você para treinar a turma que acabava de entrar.']), relevancia: 'biografia', efeito: () => { const f = c.v.caminhos.frentes.lideranca; if (f) f.interesse = clamp(f.interesse + 5); } })
   },
   {
@@ -441,7 +446,7 @@ export const CAMINHOS: Conteudo[] = [
     // corporação; a companhia do artista não entra. ESP-11.7: nem o atleta nem a comissão técnica de clube (o curso
     // deles é a licença). (A condição de empresa vem depois do sorteio: a sequência de números de quem já recebia o
     // acontecimento não muda.)
-    quando: c => { const e = c.v.trabalho.atual; return !!e && ['clt', 'servidor', 'militar'].includes(e.contrato) && ocupacao(e.ocupacaoId).trilha !== 'atleta' && !semVocabularioCorporativo(e) && !TRILHAS_ARTISTICAS.has(ocupacao(e.ocupacaoId).trilha) && noTrabalho(c.v, 'organizacao') && e.desempenho >= 55 && c.r.chance(0.5) && (temEmpresa(e) || temOrgao(e)); },
+    quando: c => { const e = c.v.trabalho.atual; return !!e && ['clt', 'servidor', 'militar'].includes(e.contrato) && !ehCompetidor(ocupacao(e.ocupacaoId)) && !semVocabularioCorporativo(e) && !TRILHAS_ARTISTICAS.has(ocupacao(e.ocupacaoId).trilha) && noTrabalho(c.v, 'organizacao') && e.desempenho >= 55 && c.r.chance(0.5) && (temEmpresa(e) || temOrgao(e)); },
     narrar: c => {
       const e = c.v.trabalho.atual!;
       const oc = ocupacao(e.ocupacaoId);
@@ -550,6 +555,9 @@ function etapaDaPeneira(c: Ctx, k: number): Resultado {
   if (res.passou) {
     c.v.fatos['convite_base'] = c.v.t;
     c.v.fatos['peneira_lugar'] = municipioIndice(lugar);
+    c.v.fatos['peneira_mod'] = MODS.indexOf(d);
+    // VIDA 28: o convite é DO CLUBE DO TESTE — a modalidade, a cidade e o nome exatos (fonte única: `conviteDaBase`).
+    c.v.caminhos.conviteBase = { clube: pr.lugar ?? nomeDeClube(lugar, `${c.v.id}:${c.v.t}`, d), municipioId: lugar, dominio: d, t: c.v.t };
     const texto = `Passou na ${nome} ${doLugar}.`;
     marcar(c.v, 'oportunidade', texto, 3, { dominio: d });
     // O convite vem na hora: passar é ser chamado — a resposta (ir ou ficar) é do jogador, e a tela não volta a mostrar "chegar a uma base".

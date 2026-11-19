@@ -300,7 +300,7 @@ export function resumoDaCarreira(e: CarreiraEsportiva): string {
   }
   const jogos = soma(t => t.partidas);
   const casa = um(equipes, e.modalidade === 'futebol' ? ['clube', 'clubes'] : ['equipe', 'equipes']);
-  if (e.modalidade === 'futebol' || e.modalidade === 'futsal') return `${anos}, ${casa},${um(jogos, p.disputas)}, ${um(soma(t => t.gols), ['gol', 'gols'])}`;
+  if (e.modalidade === 'futebol' || e.modalidade === 'futsal') return `${anos}, ${casa}, ${um(jogos, p.disputas)}, ${um(soma(t => t.gols), ['gol', 'gols'])}`;
   if (e.modalidade === 'basquete') return `${anos}, ${casa}, ${um(jogos, p.disputas)}, ${virgula(soma(t => (t.pontos ?? 0) * t.partidas) / (jogos || 1))} pontos por jogo`;
   const vs = ts.filter(t => t.volei);
   if (e.modalidade === 'volei' && vs.length) {
@@ -309,4 +309,39 @@ export function resumoDaCarreira(e: CarreiraEsportiva): string {
     return `${anos}, ${casa}, ${um(jogos, p.disputas)}, ${sets} sets como ${NOME_FUNCAO_VOLEI[fn] ?? fn}: ${numeroDaFuncao({ ...vs[0], funcao: fn, volei: { sets, pontos: 0, bloqueios: 0, aces: 0, levantamentos: 0, defesas: 0, ...somaVolei(vs) } })}`;
   }
   return `${anos}, ${casa}, ${um(jogos, p.disputas)}`;
+}
+
+/**
+ * VIDA 28 · os NÚMEROS de uma temporada, no idioma da modalidade (rótulo, valor) — a fonte única do crachá, do campo e
+ * de qualquer resumo curto. Antes, o crachá da carreira dizia "jogos · gols · assist." para o tenista, a nadadora e o
+ * levantador; o painel "Em campo" do vôlei mostrava gols e assistências. Cada modalidade diz o que ELA produz.
+ */
+export function numerosDaTemporada(e: Pick<CarreiraEsportiva, 'modalidade' | 'posicao'>, t: Temporada): [string, string][] {
+  const nota: [string, string] = ['Nota', t.nota.toFixed(1)];
+  switch (e.modalidade) {
+    case 'tenis':
+      return [['Vitórias–derrotas', `${t.vitorias ?? 0}–${t.derrotas ?? 0}`], ['Títulos', String(t.titulos ?? 0)], ['Ranking', t.ranking ? `${t.ranking}º` : '—'], ['Melhor fase', t.melhorFase ?? '—']];
+    case 'basquete':
+      return [['Jogos', String(t.partidas)], ['Pontos/jogo', virgula(t.pontos ?? 0)], ['Rebotes/jogo', virgula(t.rebotes ?? 0)], ['Assist./jogo', virgula(t.assistencias)]];
+    case 'volei': {
+      const x = t.volei;
+      if (!x) return [['Jogos', String(t.partidas)], ['Titular', String(t.titular)], nota];
+      const fn = t.funcao as FuncaoVolei | undefined;
+      const principal: [string, string] = fn === 'levantador' ? ['Levantamentos', String(x.levantamentos)] : fn === 'libero' ? ['Defesas', String(x.defesas)] : fn === 'central' ? ['Bloqueios', String(x.bloqueios)] : ['Pontos', String(x.pontos)];
+      return [['Jogos', String(t.partidas)], ['Sets', String(x.sets)], principal, fn === 'libero' && x.recepcao !== undefined ? ['Recepção', `${x.recepcao}%`] : ['Aces', String(x.aces)]];
+    }
+    case 'natacao': case 'atletismo':
+      return t.prova ? [['Prova', t.prova.nome], ['Marca do ano', `${formatarMarca(t.prova.unidade, t.prova.marca)}${t.prova.recorde ? ' (RP)' : ''}`], ['Finais', String(t.prova.finais)], ['Pódios', String(t.prova.podios)]]
+        : [['Competições', String(t.partidas)], ['Pódios', String(podiosDe(t))], nota];
+    case 'lutas':
+      return t.luta ? [['Lutas', String(t.luta.lutas)], ['Cartel', `${t.luta.vitorias}–${t.luta.derrotas}`], ['Antes do tempo', String(t.luta.antesDoTempo)], ['Títulos', String(t.luta.titulos)]]
+        : [['Eventos', String(t.partidas)], ['Pódios', String(podiosDe(t))], nota];
+    case 'futebol': case 'futsal': {
+      if (e.posicao === 'goleiro') return [['Jogos', String(t.partidas)], ['Sem sofrer gol', String(t.semSofrerGol ?? '—')], ['Gols sofridos', String(t.golsSofridos ?? '—')], nota];
+      if (e.posicao === 'zagueiro' || e.posicao === 'lateral' || e.posicao === 'volante') return [['Jogos', String(t.partidas)], ['Desarmes', String(t.defesa ?? '—')], ['Gols', String(t.gols)], nota];
+      return [['Jogos', String(t.partidas)], ['Gols', String(t.gols)], ['Assistências', String(t.assistencias)], nota];
+    }
+    default:
+      return [['Jogos', String(t.partidas)], ['Titular', String(t.titular)], nota];
+  }
 }

@@ -2098,6 +2098,17 @@ export interface Entrada {
    * quando o motor SABE a origem (nunca por semelhança); a Linha da Vida usa para agrupar e dizer "por causa de".
    */
   segue?: string;
+  /**
+   * VIDA 28: o FIO da trajetória a que a entrada pertence ('esporte', 'escola', 'esports'...). A História junta as
+   * entradas do mesmo fio num ano e as lê na ordem em que aconteceram (a promoção de categoria antes da dispensa do fim
+   * da temporada) — sem isto, o marco do ano subia para o topo e a cronologia se invertia. Ausente: entradas antigas.
+   */
+  fio?: string;
+  /**
+   * VIDA 28: a IDENTIDADE do fato ("conclusao:medio:2043"). Duas narrações do mesmo fato (a formatura do médio integrado
+   * contada como "diploma de técnico" e como "concluiu o médio") têm a mesma chave: `nucleo.escrever` não grava a segunda.
+   */
+  chave?: string;
 }
 
 export type TipoEvento =
@@ -2298,6 +2309,11 @@ export interface Oportunidade {
    * antigos), a natureza é deduzida do tipo e da ocupação.
    */
   natureza?: NaturezaDaOportunidade;
+  /**
+   * VIDA 28: o clube (ou a equipe) da peneira, da seletiva, do teste — gravado quando a porta nasce. O convite, o
+   * contrato e o vínculo usam ESTE nome (antes, o convite recalculava o clube da cidade por sorteio e podia sair outro).
+   */
+  clube?: string;
 }
 
 /** REWORK 11 · Fase B — a natureza de uma oportunidade de trabalho (o rótulo e as consequências que a tela diz antes). */
@@ -2433,6 +2449,8 @@ export interface AnoDeFormacao {
   capacidade?: number;
   prontidao?: number;
   potencial?: [number, number];
+  /** VIDA 28: como o ano terminou para o clube ('dispensa': foi dispensado no fim desta temporada). Ausente: seguiu (ou anos antigos). */
+  desfecho?: 'dispensa';
 }
 
 /** Uma proposta concreta de clube (ou de empréstimo): o que se viu é o que se assina. */
@@ -3130,6 +3148,11 @@ export interface Caminhos {
   praticaDoPeriodo?: Partial<Record<Dominio, Record<string, number>>>;
   /** Processo seletivo em andamento (a decisão aberta é uma etapa dele). */
   processo?: ProcessoSeletivo;
+  /**
+   * VIDA 28: o convite de quem passou na peneira — o clube, a cidade e a modalidade EXATOS do teste. É a fonte única do
+   * convite (`esporte.conviteDaBase`): a decisão, o vínculo, a tela. Ausente (saves antigos): o convite de antes.
+   */
+  conviteBase?: { clube: string; municipioId: string; dominio: Dominio; t: number };
   /** Perguntas de entrevista usadas recentemente (para não repetir) e quantas entrevistas já fez. */
   entrevistas: { recentes: string[]; feitas: number };
   /** Os retornos das últimas tentativas. */

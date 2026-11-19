@@ -22,6 +22,7 @@
 import { DESENHOS_129, NOME_ESTILO_129, type EstiloDeTatuagem129, type TemaDeTatuagem } from './tatuagens129';
 import { DESENHOS_13 } from './tatuagens13';
 import { DESENHOS_17, MODELOS_17 } from '../dados17/tatuagens/tatuagens17';
+import { MODELOS_28 } from './tatuagens28';
 
 export type EstiloDeTatuagem =
   | EstiloDeTatuagem129 | 'realista' | 'tradicional' | 'blackwork' | 'tribal' | 'geometrica' | 'oriental' | 'minimalista' | 'fine_line'
@@ -385,7 +386,9 @@ export const MODELOS_DE_COMPOSICAO: readonly ModeloDeComposicao[] = [
   { id: 'perna_blackwork', nome: 'Perna blackwork', tipo: 'perna', fundo: 'blackwork', cor: 'preta', descricao: 'Corvo na coxa, mandala no joelho, floresta na canela, serpente na panturrilha.',
     pecas: [{ regiao: 'coxa', desenho: 'corvo', tamanho: 3 }, { regiao: 'joelho', desenho: 'mandala', tamanho: 2 }, { regiao: 'canela', desenho: 'floresta', tamanho: 2 }, { regiao: 'panturrilha', desenho: 'serpente_negra', tamanho: 3 }] },
   // VIDA 17: os conjuntos da rua, da fé, da família e da cadeia.
-  ...MODELOS_17
+  ...MODELOS_17,
+  // VIDA 28: projetos que misturam estilos, com os desenhos que já existem.
+  ...MODELOS_28
 ];
 export const modeloDeComposicao = (id: string) => MODELOS_DE_COMPOSICAO.find(m => m.id === id);
 

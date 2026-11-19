@@ -47,13 +47,13 @@ import { distanciaDaCarreira, indicacaoPlausivel, LIMIAR_MUDANCA, naturezaDaOpor
 
 export const LIMITE_OPORTUNIDADES = 4;
 
-export function novaOportunidade(v: Vida, o: { tipo: TipoOportunidade; titulo: string; texto: string; meses: number; chave: string; ocupacaoId?: string; dominio?: Dominio; pessoaId?: string; municipioId?: string; bonus?: number; atividade?: string; natureza?: NaturezaDaOportunidade }): Oportunidade | undefined {
+export function novaOportunidade(v: Vida, o: { tipo: TipoOportunidade; titulo: string; texto: string; meses: number; chave: string; ocupacaoId?: string; dominio?: Dominio; pessoaId?: string; municipioId?: string; bonus?: number; atividade?: string; natureza?: NaturezaDaOportunidade; clube?: string }): Oportunidade | undefined {
   const lista = v.caminhos.oportunidades;
   // Uma carreira de mercado próprio (o clube, o palco, a academia) não recebe as portas do emprego comum (`mercados`).
   if (oportunidadeCoerente(v, o) !== true) return undefined;
   if (lista.some(x => x.tipo === o.tipo && x.ocupacaoId === o.ocupacaoId && x.dominio === o.dominio)) return undefined;
   if (lista.length >= LIMITE_OPORTUNIDADES) lista.shift();
-  const op: Oportunidade = { id: novoId(v, 'op'), tipo: o.tipo, titulo: o.titulo, texto: o.texto, tInicio: v.t, tFim: v.t + o.meses, ocupacaoId: o.ocupacaoId, dominio: o.dominio, pessoaId: o.pessoaId, municipioId: o.municipioId, bonus: o.bonus, ...(o.atividade ? { atividade: o.atividade } : {}), ...(o.natureza ? { natureza: o.natureza } : {}) };
+  const op: Oportunidade = { id: novoId(v, 'op'), tipo: o.tipo, titulo: o.titulo, texto: o.texto, tInicio: v.t, tFim: v.t + o.meses, ocupacaoId: o.ocupacaoId, dominio: o.dominio, pessoaId: o.pessoaId, municipioId: o.municipioId, bonus: o.bonus, ...(o.atividade ? { atividade: o.atividade } : {}), ...(o.natureza ? { natureza: o.natureza } : {}), ...(o.clube ? { clube: o.clube } : {}) };
   lista.push(op);
   v.caminhos.ultimas[o.chave] = v.t;
   return op;
@@ -456,7 +456,8 @@ export function aceitarOportunidade(v: Vida, r: Rng, id: string): Aceite {
       const lugar = o.municipioId ?? v.moradia.municipioId;
       v.fatos['peneira_mod'] = MODS.indexOf(d);
       v.fatos['peneira_lugar'] = municipioIndex(lugar);
-      const clube = o.titulo.replace(/^(Peneira|Seletiva|Teste) (no|na) /, '').replace(/^Seletiva: /, '');
+      // VIDA 28: o clube gravado na porta (o título é só a frase; "Testes na academia..." escapava da leitura antiga).
+      const clube = o.clube ?? o.titulo.replace(/^(Peneira|Seletiva|Testes?) (no|na|nos|nas) /, '').replace(/^Seletiva: /, '');
       // O teste do time de cima (a rota amadora) é avaliado contra o elenco adulto de um clube pequeno, não contra a base.
       v.caminhos.processo = { tipo: 'peneira', dominio: d, municipioId: lugar, bonus: 0, via: o.atividade === 'amador' ? 'amador' : o.pessoaId ? 'indicacao' : 'oportunidade', etapas: [], atual: 0, lugar: clube };
       return { texto: '', decisao: 'esp_peneira' };

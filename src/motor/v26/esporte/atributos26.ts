@@ -15,12 +15,18 @@ export type AtributoId =
   | 'passe' | 'passe_longo' | 'cruzamento' | 'finalizacao' | 'drible' | 'controle' | 'desarme' | 'conducao'
   | 'saidas' | 'pes' | 'arremesso' | 'ataque' | 'recepcao' | 'saque' | 'levantamento' | 'devolucao' | 'fundo' | 'forehand' | 'backhand' | 'rede'
   | 'largada' | 'viradas' | 'bracada' | 'tecnica_prova' | 'golpes' | 'solo'
+  // VIDA 28: o que faltava às posições e funções (o pênalti do goleiro, a bola parada, o um contra um, o três pontos)
+  | 'penaltis' | 'bola_parada' | 'um_contra_um' | 'tres_pontos'
   // táticos
   | 'posicionamento' | 'antecipacao' | 'marcacao' | 'visao' | 'movimentacao' | 'decisao' | 'disciplina' | 'defesa' | 'distancia'
+  // VIDA 28: criar a chance (o passe que vira finalização), cobrir o espaço do companheiro
+  | 'criacao' | 'cobertura'
   // físicos
   | 'reflexos' | 'aereo' | 'velocidade' | 'aceleracao' | 'forca' | 'resistencia' | 'agilidade' | 'impulsao' | 'equilibrio' | 'alcance' | 'explosao' | 'rebote' | 'bloqueio'
   // mentais
-  | 'concentracao' | 'determinacao' | 'compostura' | 'lideranca' | 'equipe';
+  | 'concentracao' | 'determinacao' | 'compostura' | 'lideranca' | 'equipe'
+  // VIDA 28: render igual em todo jogo (o oposto do altos e baixos); o corpo a corpo do duelo
+  | 'consistencia' | 'duelos';
 
 export type NaturezaDoAtributo = 'tecnico' | 'tatico' | 'fisico' | 'mental';
 
@@ -34,7 +40,9 @@ export const NOME_ATRIBUTO: Record<AtributoId, string> = {
   decisao: 'tomada de decisão', disciplina: 'disciplina tática', defesa: 'defesa', distancia: 'controle de distância',
   reflexos: 'reflexos', aereo: 'jogo aéreo', velocidade: 'velocidade', aceleracao: 'aceleração', forca: 'força', resistencia: 'resistência', agilidade: 'agilidade',
   impulsao: 'impulsão', equilibrio: 'equilíbrio', alcance: 'alcance', explosao: 'explosão', rebote: 'rebote', bloqueio: 'bloqueio',
-  concentracao: 'concentração', determinacao: 'determinação', compostura: 'controle emocional', lideranca: 'liderança', equipe: 'trabalho em equipe'
+  concentracao: 'concentração', determinacao: 'determinação', compostura: 'controle emocional', lideranca: 'liderança', equipe: 'trabalho em equipe',
+  penaltis: 'defesa de pênaltis', bola_parada: 'bola parada', um_contra_um: 'um contra um', tres_pontos: 'arremesso de três', criacao: 'criação de chances',
+  cobertura: 'cobertura', consistencia: 'consistência', duelos: 'duelos'
 };
 
 /** O que cada atributo é, em uma frase (a ficha explica; nunca o número interno). */
@@ -91,12 +99,20 @@ export const SOBRE_ATRIBUTO: Record<AtributoId, string> = {
   determinacao: 'Não desistir do lance, do treino, da temporada.',
   compostura: 'Decidir com a cabeça fria: a final, o pênalti, a vaia.',
   lideranca: 'Puxar o grupo: a voz no vestiário e em campo.',
-  equipe: 'Jogar para o time: a ajuda, o passe a mais, o sacrifício.'
+  equipe: 'Jogar para o time: a ajuda, o passe a mais, o sacrifício.',
+  penaltis: 'O pênalti: ler o batedor, escolher o canto, esperar o último instante.',
+  bola_parada: 'A falta, o escanteio, o pênalti batido: a bola parada que vira gol.',
+  um_contra_um: 'Partir para cima do marcador e passar — a jogada que desmonta a defesa.',
+  tres_pontos: 'O arremesso de longe, atrás da linha: o espaçamento que abre a quadra.',
+  criacao: 'Criar a chance: o último passe, a bola que deixa alguém na cara do gol (ou da cesta).',
+  cobertura: 'Fechar o espaço que o companheiro deixou: a sobra, a cobertura do bloqueio.',
+  consistencia: 'Render no mesmo nível em todos os jogos: sem as quedas de um jogo ruim para outro.',
+  duelos: 'Ganhar a disputa direta, no corpo e no chão: a dividida, o ombro a ombro.'
 };
 
-const TATICOS: AtributoId[] = ['posicionamento', 'antecipacao', 'marcacao', 'visao', 'movimentacao', 'decisao', 'disciplina', 'defesa', 'distancia'];
-const FISICOS: AtributoId[] = ['reflexos', 'aereo', 'velocidade', 'aceleracao', 'forca', 'resistencia', 'agilidade', 'impulsao', 'equilibrio', 'alcance', 'explosao', 'rebote', 'bloqueio'];
-const MENTAIS: AtributoId[] = ['concentracao', 'determinacao', 'compostura', 'lideranca', 'equipe'];
+const TATICOS: AtributoId[] = ['posicionamento', 'antecipacao', 'marcacao', 'visao', 'movimentacao', 'decisao', 'disciplina', 'defesa', 'distancia', 'criacao', 'cobertura'];
+const FISICOS: AtributoId[] = ['reflexos', 'aereo', 'velocidade', 'aceleracao', 'forca', 'resistencia', 'agilidade', 'impulsao', 'equilibrio', 'alcance', 'explosao', 'rebote', 'bloqueio', 'duelos'];
+const MENTAIS: AtributoId[] = ['concentracao', 'determinacao', 'compostura', 'lideranca', 'equipe', 'consistencia'];
 /** A natureza de cada atributo (a ficha agrupa por ela; a fonte do valor depende dela). */
 export const GRUPO_DO_ATRIBUTO: Record<AtributoId, NaturezaDoAtributo> = Object.fromEntries((Object.keys(NOME_ATRIBUTO) as AtributoId[]).map(id => [id,
   TATICOS.includes(id) ? 'tatico' : FISICOS.includes(id) ? 'fisico' : MENTAIS.includes(id) ? 'mental' : 'tecnico'])) as Record<AtributoId, NaturezaDoAtributo>;
@@ -107,41 +123,45 @@ export const CORPO_DO_ATRIBUTO: Partial<Record<AtributoId, [Capacidade26, number
   velocidade: [['velocidade', 1]], aceleracao: [['aceleracao', 1]], forca: [['forca', 1]], resistencia: [['resistencia', 0.8], ['recuperacao', 0.2]],
   agilidade: [['agilidade', 1]], impulsao: [['impulsao', 1]], equilibrio: [['equilibrio', 0.7], ['forca', 0.3]], alcance: [['alcance', 1]],
   explosao: [['potencia', 1]], rebote: [['alcance', 0.5], ['impulsao', 0.3], ['forca', 0.2]], bloqueio: [['alcance', 0.5], ['impulsao', 0.5]],
-  saidas: [['agilidade', 0.5], ['alcance', 0.5]]
+  saidas: [['agilidade', 0.5], ['alcance', 0.5]], duelos: [['forca', 0.5], ['equilibrio', 0.3], ['potencia', 0.2]]
 };
 /** De que traços de personalidade cada atributo mental depende (o traço vai de −100 a 100). */
 export const MENTE_DO_ATRIBUTO: Partial<Record<AtributoId, [string, number][]>> = {
   concentracao: [['disciplina', 0.06], ['impulsividade', -0.04]], determinacao: [['disciplina', 0.05], ['coragem', 0.04]],
   compostura: [['impulsividade', -0.06], ['coragem', 0.02]], lideranca: [['sociabilidade', 0.04], ['coragem', 0.04], ['independencia', 0.02]],
-  equipe: [['empatia', 0.04], ['sociabilidade', 0.03], ['generosidade', 0.02]]
+  equipe: [['empatia', 0.04], ['sociabilidade', 0.03], ['generosidade', 0.02]],
+  consistencia: [['disciplina', 0.06], ['impulsividade', -0.03]]
 };
 
 export type Lista = [AtributoId, number][];
 /** Futebol: cada posição com o seu conjunto e o peso de cada atributo na nota (somam 1). Estilos diferentes cabem no mesmo conjunto. */
 export const ATRIBUTOS_DA_POSICAO: Record<Posicao, Lista> = {
-  goleiro: [['reflexos', 0.2], ['posicionamento', 0.16], ['saidas', 0.12], ['pes', 0.08], ['aereo', 0.08], ['decisao', 0.08], ['concentracao', 0.08], ['agilidade', 0.06], ['compostura', 0.06], ['impulsao', 0.04], ['lideranca', 0.04]],
-  zagueiro: [['marcacao', 0.16], ['antecipacao', 0.14], ['desarme', 0.12], ['aereo', 0.12], ['posicionamento', 0.1], ['forca', 0.08], ['passe', 0.06], ['concentracao', 0.06], ['velocidade', 0.05], ['decisao', 0.05], ['impulsao', 0.03], ['lideranca', 0.03]],
-  lateral: [['velocidade', 0.12], ['resistencia', 0.12], ['cruzamento', 0.12], ['marcacao', 0.1], ['posicionamento', 0.08], ['desarme', 0.07], ['passe', 0.07], ['aceleracao', 0.07], ['antecipacao', 0.06], ['drible', 0.05], ['movimentacao', 0.05], ['disciplina', 0.05], ['determinacao', 0.04]],
-  volante: [['desarme', 0.13], ['passe', 0.13], ['marcacao', 0.12], ['antecipacao', 0.12], ['posicionamento', 0.1], ['resistencia', 0.1], ['visao', 0.07], ['decisao', 0.07], ['forca', 0.05], ['disciplina', 0.05], ['passe_longo', 0.03], ['determinacao', 0.03]],
-  meia: [['passe', 0.16], ['visao', 0.15], ['controle', 0.11], ['decisao', 0.11], ['drible', 0.08], ['movimentacao', 0.08], ['passe_longo', 0.07], ['finalizacao', 0.07], ['resistencia', 0.07], ['agilidade', 0.04], ['compostura', 0.03], ['equipe', 0.03]],
-  ponta: [['velocidade', 0.14], ['drible', 0.14], ['finalizacao', 0.12], ['aceleracao', 0.1], ['cruzamento', 0.1], ['movimentacao', 0.1], ['controle', 0.08], ['agilidade', 0.07], ['decisao', 0.06], ['passe', 0.05], ['determinacao', 0.04]],
-  atacante: [['finalizacao', 0.24], ['movimentacao', 0.14], ['controle', 0.09], ['aereo', 0.09], ['forca', 0.08], ['velocidade', 0.08], ['posicionamento', 0.08], ['compostura', 0.07], ['aceleracao', 0.05], ['decisao', 0.05], ['determinacao', 0.03]]
+  // VIDA 28: o pênalti do goleiro; os duelos e a cobertura da defesa; a criação, o um contra um e a bola parada do ataque.
+  goleiro: [['reflexos', 0.19], ['posicionamento', 0.15], ['saidas', 0.11], ['pes', 0.08], ['aereo', 0.08], ['decisao', 0.07], ['concentracao', 0.08], ['penaltis', 0.05], ['agilidade', 0.06], ['compostura', 0.06], ['impulsao', 0.03], ['lideranca', 0.04]],
+  zagueiro: [['marcacao', 0.14], ['antecipacao', 0.13], ['desarme', 0.11], ['aereo', 0.11], ['posicionamento', 0.1], ['duelos', 0.08], ['forca', 0.06], ['passe', 0.06], ['cobertura', 0.05], ['concentracao', 0.05], ['velocidade', 0.04], ['decisao', 0.04], ['lideranca', 0.03]],
+  lateral: [['velocidade', 0.11], ['resistencia', 0.11], ['cruzamento', 0.11], ['marcacao', 0.1], ['posicionamento', 0.08], ['desarme', 0.07], ['passe', 0.07], ['aceleracao', 0.06], ['duelos', 0.06], ['antecipacao', 0.05], ['um_contra_um', 0.05], ['movimentacao', 0.05], ['disciplina', 0.04], ['determinacao', 0.04]],
+  volante: [['desarme', 0.12], ['passe', 0.12], ['marcacao', 0.11], ['antecipacao', 0.11], ['posicionamento', 0.1], ['cobertura', 0.08], ['resistencia', 0.09], ['visao', 0.07], ['decisao', 0.06], ['duelos', 0.05], ['disciplina', 0.04], ['passe_longo', 0.03], ['determinacao', 0.02]],
+  meia: [['passe', 0.14], ['visao', 0.14], ['criacao', 0.12], ['controle', 0.1], ['decisao', 0.1], ['drible', 0.07], ['movimentacao', 0.07], ['passe_longo', 0.06], ['finalizacao', 0.06], ['bola_parada', 0.05], ['resistencia', 0.05], ['compostura', 0.02], ['equipe', 0.02]],
+  ponta: [['velocidade', 0.13], ['drible', 0.12], ['um_contra_um', 0.11], ['finalizacao', 0.11], ['aceleracao', 0.09], ['cruzamento', 0.09], ['movimentacao', 0.09], ['criacao', 0.07], ['controle', 0.07], ['agilidade', 0.05], ['decisao', 0.04], ['determinacao', 0.03]],
+  atacante: [['finalizacao', 0.23], ['movimentacao', 0.13], ['posicionamento', 0.09], ['controle', 0.09], ['aereo', 0.09], ['compostura', 0.08], ['forca', 0.07], ['velocidade', 0.07], ['criacao', 0.05], ['aceleracao', 0.04], ['decisao', 0.04], ['determinacao', 0.02]]
 };
 /** Compatibilidade (REWORK 11): o conjunto do GRUPO da posição — o da posição típica de cada grupo. */
 export const ATRIBUTOS_DO_GRUPO: Record<GrupoDePosicao, Lista> = { goleiro: ATRIBUTOS_DA_POSICAO.goleiro, defensor: ATRIBUTOS_DA_POSICAO.zagueiro, meio: ATRIBUTOS_DA_POSICAO.meia, atacante: ATRIBUTOS_DA_POSICAO.atacante };
 
 /** Basquete: pela função (o armador baixo compensa com condução, passe e decisão; o pivô vive do alcance e do rebote). */
 export const ATRIBUTOS_BASQUETE: Record<'armador' | 'ala' | 'pivo', Lista> = {
-  armador: [['conducao', 0.16], ['passe', 0.16], ['arremesso', 0.14], ['visao', 0.1], ['decisao', 0.1], ['defesa', 0.08], ['velocidade', 0.08], ['aceleracao', 0.06], ['agilidade', 0.06], ['compostura', 0.06]],
-  ala: [['arremesso', 0.22], ['conducao', 0.1], ['rebote', 0.1], ['defesa', 0.1], ['impulsao', 0.08], ['velocidade', 0.08], ['movimentacao', 0.08], ['decisao', 0.08], ['alcance', 0.06], ['agilidade', 0.05], ['compostura', 0.05]],
-  pivo: [['rebote', 0.22], ['alcance', 0.14], ['forca', 0.12], ['arremesso', 0.1], ['defesa', 0.1], ['posicionamento', 0.1], ['impulsao', 0.08], ['passe', 0.06], ['equipe', 0.04], ['concentracao', 0.04]]
+  // VIDA 28: o arremesso de três separado do de média; a criação (a assistência) do armador; o bloqueio do pivô.
+  armador: [['conducao', 0.15], ['passe', 0.13], ['criacao', 0.1], ['arremesso', 0.1], ['tres_pontos', 0.09], ['visao', 0.09], ['decisao', 0.1], ['defesa', 0.08], ['velocidade', 0.06], ['aceleracao', 0.05], ['compostura', 0.05]],
+  ala: [['arremesso', 0.15], ['tres_pontos', 0.12], ['conducao', 0.09], ['rebote', 0.09], ['defesa', 0.1], ['impulsao', 0.07], ['velocidade', 0.07], ['movimentacao', 0.08], ['decisao', 0.08], ['alcance', 0.05], ['agilidade', 0.05], ['compostura', 0.05]],
+  pivo: [['rebote', 0.2], ['alcance', 0.13], ['forca', 0.11], ['bloqueio', 0.11], ['arremesso', 0.09], ['defesa', 0.1], ['posicionamento', 0.1], ['impulsao', 0.06], ['passe', 0.04], ['equipe', 0.03], ['concentracao', 0.03]]
 };
 export const ATRIBUTOS_VOLEI: Record<FuncaoVolei, Lista> = {
-  levantador: [['levantamento', 0.26], ['decisao', 0.14], ['saque', 0.1], ['recepcao', 0.1], ['agilidade', 0.1], ['compostura', 0.08], ['bloqueio', 0.06], ['lideranca', 0.06], ['concentracao', 0.06], ['posicionamento', 0.04]],
-  ponteiro: [['ataque', 0.2], ['recepcao', 0.2], ['saque', 0.12], ['impulsao', 0.1], ['bloqueio', 0.08], ['alcance', 0.08], ['agilidade', 0.06], ['decisao', 0.06], ['compostura', 0.05], ['resistencia', 0.05]],
-  oposto: [['ataque', 0.28], ['saque', 0.14], ['bloqueio', 0.12], ['impulsao', 0.12], ['alcance', 0.12], ['compostura', 0.08], ['forca', 0.07], ['decisao', 0.07]],
-  central: [['bloqueio', 0.24], ['ataque', 0.16], ['alcance', 0.16], ['impulsao', 0.12], ['posicionamento', 0.1], ['saque', 0.08], ['concentracao', 0.08], ['agilidade', 0.06]],
-  libero: [['recepcao', 0.32], ['posicionamento', 0.14], ['agilidade', 0.14], ['concentracao', 0.12], ['compostura', 0.08], ['equipe', 0.08], ['levantamento', 0.06], ['velocidade', 0.06]]
+  // VIDA 28: a cobertura (o ataque bloqueado que volta) e a consistência (o rali longo sem erro).
+  levantador: [['levantamento', 0.25], ['decisao', 0.13], ['saque', 0.09], ['recepcao', 0.09], ['agilidade', 0.09], ['compostura', 0.07], ['cobertura', 0.06], ['bloqueio', 0.05], ['lideranca', 0.06], ['consistencia', 0.07], ['posicionamento', 0.04]],
+  ponteiro: [['ataque', 0.19], ['recepcao', 0.18], ['saque', 0.11], ['impulsao', 0.09], ['bloqueio', 0.08], ['alcance', 0.07], ['defesa', 0.06], ['cobertura', 0.04], ['decisao', 0.06], ['consistencia', 0.06], ['resistencia', 0.06]],
+  oposto: [['ataque', 0.27], ['saque', 0.13], ['bloqueio', 0.12], ['impulsao', 0.11], ['alcance', 0.11], ['compostura', 0.08], ['forca', 0.07], ['decisao', 0.06], ['consistencia', 0.05]],
+  central: [['bloqueio', 0.23], ['ataque', 0.15], ['alcance', 0.15], ['impulsao', 0.11], ['posicionamento', 0.1], ['saque', 0.07], ['concentracao', 0.07], ['agilidade', 0.06], ['cobertura', 0.06]],
+  libero: [['recepcao', 0.28], ['defesa', 0.12], ['posicionamento', 0.12], ['agilidade', 0.12], ['cobertura', 0.08], ['concentracao', 0.08], ['consistencia', 0.08], ['equipe', 0.06], ['levantamento', 0.06]]
 };
 const ALA_FUTSAL: Lista = [['drible', 0.16], ['conducao', 0.14], ['passe', 0.12], ['finalizacao', 0.12], ['aceleracao', 0.1], ['agilidade', 0.1], ['marcacao', 0.08], ['decisao', 0.08], ['resistencia', 0.06], ['controle', 0.04]];
 export const ATRIBUTOS_FUTSAL: Record<FuncaoFutsal, Lista> = {
@@ -163,7 +183,8 @@ export const ATRIBUTOS_ATLETISMO: Record<GrupoDeProva, Lista> = {
 export const ATRIBUTOS_DA_MODALIDADE: Partial<Record<string, Lista>> = {
   volei: ATRIBUTOS_VOLEI.ponteiro,
   futsal: ALA_FUTSAL,
-  tenis: [['saque', 0.16], ['forehand', 0.14], ['devolucao', 0.12], ['backhand', 0.12], ['agilidade', 0.1], ['resistencia', 0.08], ['decisao', 0.08], ['compostura', 0.08], ['rede', 0.06], ['velocidade', 0.06]],
+  // VIDA 28: a consistência (o ponto longo sem erro não forçado) e a movimentação em quadra.
+  tenis: [['saque', 0.15], ['forehand', 0.13], ['devolucao', 0.11], ['backhand', 0.11], ['agilidade', 0.09], ['movimentacao', 0.06], ['resistencia', 0.07], ['decisao', 0.07], ['compostura', 0.08], ['consistencia', 0.06], ['rede', 0.04], ['velocidade', 0.03]],
   natacao: [['bracada', 0.26], ['resistencia', 0.14], ['largada', 0.12], ['viradas', 0.1], ['velocidade', 0.1], ['forca', 0.08], ['alcance', 0.08], ['determinacao', 0.06], ['concentracao', 0.06]],
   atletismo: ATRIBUTOS_ATLETISMO.velocidade,
   lutas: [['golpes', 0.18], ['solo', 0.16], ['defesa', 0.14], ['distancia', 0.1], ['resistencia', 0.1], ['forca', 0.08], ['explosao', 0.08], ['agilidade', 0.06], ['decisao', 0.05], ['compostura', 0.05]]

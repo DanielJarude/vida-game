@@ -17,13 +17,14 @@ import type { Emprego, Pessoa, Vida } from '../tipos';
 import { escrever, idadePessoa, lembrarCom } from '../nucleo';
 import { criarPessoa, vincular } from '../pessoas';
 import { ocupacaoOuNula } from '../dados/ocupacoes';
+import { ehCompetidor } from './mercados';
 
 const ambiente = (e: Emprego) => `trabalho:${e.empregador}:${e.tInicio}`;
 /** Quem tem equipe: empregos com chefia (não o autônomo, o mandato, o atleta, o bico). */
 export function temEquipe(e?: Emprego): e is Emprego {
   if (!e || e.contrato === 'autonomo' || e.contrato === 'informal' || e.posAposentadoria) return false;
   const oc = ocupacaoOuNula(e.ocupacaoId);
-  return !!oc && oc.trilha !== 'atleta' && oc.trilha !== 'politica';
+  return !!oc && !ehCompetidor(oc) && oc.trilha !== 'politica';
 }
 const vivo = (v: Vida, id?: string) => !!id && !!v.pessoas[id]?.vivo && !!v.vinculos[id];
 
