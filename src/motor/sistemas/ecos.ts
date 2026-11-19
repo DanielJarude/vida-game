@@ -14,7 +14,7 @@
  *   mudou_de_curso   você trocou de curso                                                 → a área nova abre (ou não) portas
  *   cuidou           você cuidou de alguém da família na doença                           → a família responde quando é você
  */
-import type { Vida } from '../tipos';
+import type { Pessoa, Vida } from '../tipos';
 
 export type TipoDeEco = 'favor' | 'mentor' | 'recusou' | 'fiador' | 'investiu' | 'denunciou' | 'mudou_de_curso' | 'cuidou';
 export type Eco = NonNullable<Vida['ecos']>[number];
@@ -34,7 +34,14 @@ export function ecoAberto(v: Vida, tipo: TipoDeEco): Eco | undefined {
 export function ecoVoltou(v: Vida, e: Eco): void { e.voltou = v.t; }
 
 /** A pessoa de um eco aberto (para os papéis dos acontecimentos). */
-export const pessoaDoEco = (tipo: TipoDeEco) => (v: Vida) => { const e = ecoAberto(v, tipo); const p = e?.pessoaId ? v.pessoas[e.pessoaId] : undefined; return p ? [p] : []; };
+/**
+ * VIDA 28: declaração de função (não `const`): o catálogo de acontecimentos chama isto ao CARREGAR (os papéis dos ecos),
+ * e os chunks `motor-acontecimentos` e `motor-vida` estão num ciclo — uma `const` ainda não inicializada derrubava o jogo
+ * ("Cannot access … before initialization") quando a rede carregava os chunks numa ordem desfavorável.
+ */
+export function pessoaDoEco(tipo: TipoDeEco): (v: Vida) => Pessoa[] {
+  return (v: Vida) => { const e = ecoAberto(v, tipo); const p = e?.pessoaId ? v.pessoas[e.pessoaId] : undefined; return p ? [p] : []; };
+}
 
 /** Uma vez por ano: os ecos que passaram da janela sem voltar saem (a vida seguiu). */
 export function processarEcos(v: Vida): void {

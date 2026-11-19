@@ -858,7 +858,7 @@ export const ACONTECIMENTOS_10: Conteudo[] = [
   /* =================================================================== OS ECOS QUE VOLTAM */
   {
     id: 'eco10_favor', tipo: 'decisao', idade: [18, 95], tema: 'amizade', prioritario: true, prioridade: 2, repetir: 0,
-    papeis: { amigo: fixo(pessoaDoEco('favor')) }, quando: c => !!ecoAberto(c.v, 'favor') && (desempregado(c) || aperto(c)),
+    papeis: { amigo: fixo(v => pessoaDoEco('favor')(v)) }, quando: c => !!ecoAberto(c.v, 'favor') && (desempregado(c) || aperto(c)),
     titulo: 'Quem lembrou',
     texto: c => `${nome(c, 'amigo')} soube do seu momento — e apareceu. "Você me ajudou quando ninguém ajudava."`,
     opcoes: [
@@ -871,7 +871,7 @@ export const ACONTECIMENTOS_10: Conteudo[] = [
   },
   {
     id: 'eco10_mentor', tipo: 'acontecimento', idade: [18, 60], tema: 'estudo', prioritario: true, repetir: 0,
-    papeis: { professor: fixo(pessoaDoEco('mentor')) }, quando: c => !!ecoAberto(c.v, 'mentor') && (c.v.trabalho.candidaturas.length > 0 || desempregado(c) || c.v.caminhos.oportunidades.some(o => o.tipo === 'vaga' || o.tipo === 'estagio')),
+    papeis: { professor: fixo(v => pessoaDoEco('mentor')(v)) }, quando: c => !!ecoAberto(c.v, 'mentor') && (c.v.trabalho.candidaturas.length > 0 || desempregado(c) || c.v.caminhos.oportunidades.some(o => o.tipo === 'vaga' || o.tipo === 'estagio')),
     narrar: c => ({ texto: `${nome(c, 'professor')}, que apostou em você anos atrás, escreveu uma carta de recomendação sem que você pedisse. Ela abriu uma porta.`, relevancia: 'biografia', tom: 'bom', lembrar: ['professor', 'A carta de recomendação.', 'apoio'],
       efeito: () => { ecoVoltou(c.v, ecoAberto(c.v, 'mentor')!); novaOportunidade(c.v, { tipo: 'indicacao', ocupacaoId: 'analista_adm', meses: 12, chave: 'carta_mentor', titulo: 'A carta de recomendação', texto: `Uma vaga que chegou com a carta de ${nome(c, 'professor')}.`, bonus: 0.45, pessoaId: c.p.professor.id }); } })
   },
@@ -884,7 +884,7 @@ export const ACONTECIMENTOS_10: Conteudo[] = [
   },
   {
     id: 'eco10_fiador', tipo: 'decisao', idade: [25, 90], tema: 'dinheiro', prioritario: true, prioridade: 3, repetir: 0,
-    papeis: { parente: fixo(pessoaDoEco('fiador')) }, quando: c => !!ecoAberto(c.v, 'fiador'),
+    papeis: { parente: fixo(v => pessoaDoEco('fiador')(v)) }, quando: c => !!ecoAberto(c.v, 'fiador'),
     titulo: 'A conta do fiador',
     texto: c => `A imobiliária ligou: ${nome(c, 'parente')} deve três meses de aluguel, e o fiador é você — uns ${fmt(ecoAberto(c.v, 'fiador')!.valor ?? preco(c, 6000))}.`,
     opcoes: [
@@ -897,13 +897,13 @@ export const ACONTECIMENTOS_10: Conteudo[] = [
   },
   {
     id: 'eco10_investiu', tipo: 'acontecimento', idade: [25, 95], tema: 'dinheiro', prioritario: true, repetir: 0,
-    papeis: { amigo: fixo(pessoaDoEco('investiu')) }, quando: c => !!ecoAberto(c.v, 'investiu'),
+    papeis: { amigo: fixo(v => pessoaDoEco('investiu')(v)) }, quando: c => !!ecoAberto(c.v, 'investiu'),
     narrar: c => { const e = ecoAberto(c.v, 'investiu')!; const deu = c.p.amigo.temperamento.responsabilidade + (c.v.t % 7) / 10 > 0.2; const volta = Math.round((e.valor ?? 0) * (deu ? 1.8 : 0.2)); return { texto: deu ? `O negócio de ${nome(c, 'amigo')} deu certo: a sua parte rendeu ${fmt(volta)} de volta, e ainda rende.` : `O negócio de ${nome(c, 'amigo')} fechou. Da sua parte, voltaram ${fmt(volta)}. A amizade sobreviveu — arranhada.`, relevancia: 'biografia', tom: deu ? 'bom' : 'ruim',
       efeito: () => { ecoVoltou(c.v, e); c.v.financas.conta += volta; prox(c, 'amigo', deu ? 6 : -8); } }; }
   },
   {
     id: 'eco10_cuidou', tipo: 'acontecimento', idade: [30, 100], tema: 'familia', prioritario: true, repetir: 0,
-    papeis: { parente: fixo(pessoaDoEco('cuidou')) }, quando: c => !!ecoAberto(c.v, 'cuidou') && (c.v.corpo.saude < 50 || aperto(c) || c.v.luto.length > 0),
+    papeis: { parente: fixo(v => pessoaDoEco('cuidou')(v)) }, quando: c => !!ecoAberto(c.v, 'cuidou') && (c.v.corpo.saude < 50 || aperto(c) || c.v.luto.length > 0),
     narrar: c => ({ texto: `Quando foi a sua vez de precisar, ${nome(c, 'parente')} foi a primeira pessoa a aparecer. "Você esteve lá por mim."`, relevancia: 'biografia', tom: 'bom', lembrar: ['parente', 'Esteve por perto quando foi a sua vez.', 'apoio'],
       efeito: () => { ecoVoltou(c.v, ecoAberto(c.v, 'cuidou')!); prox(c, 'parente', 8); estresse(c, -6); feliz(c, 4); } })
   },
