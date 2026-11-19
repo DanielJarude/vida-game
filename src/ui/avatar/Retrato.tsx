@@ -10,7 +10,7 @@
 
 import { BrincoDoRetrato, ColarDoRetrato } from './joias20';
 import { BrincoNovo, PiercingsDoRosto } from './piercings';
-import { Batom, Blush, Delineado, Mechas, SombraDosOlhos, temBigode } from './identidade13';
+import { Batom, Blush, Delineado, Mechas, SombraDosOlhos, cabeloCobreOrelha, temBigode } from './identidade13';
 import { misturar } from './cores';
 import { MarcasDoRosto } from './marcas23';
 import { lerCorpo23 } from '../../motor/v23/corpo/corpo23';
@@ -222,6 +222,22 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
   // VIDA 13: as mechas — a forma do mesmo cabelo, em branco, recorta as luzes (qualquer corte, qualquer comprimento).
   const comMechas = !!v.mechas && !calvo && f !== 'bebe' && f !== 'crianca';
   const mascara = comMechas ? desenharCabelo({ estilo, cor: '#ffffff', cx, cy, w, hh, fase: f, linha: v.linhaCabelo, textura: v.textura, estagio: entradas ? 1 : 0, pele: '#000000' }) : undefined;
+  // VIDA 28: os brincos (desenhados antes do cabelo da frente — ou depois dele, quando o cabelo cobre a orelha).
+  const brincoPorCima = !!v.cabelo && cabeloCobreOrelha(v.cabelo);
+  const brincos = f !== 'bebe' && (v.joia === 'brincos' || v.brincos) && [-1, 1].map(s => {
+        const x = cx + s * (w / 2 - 0.4 + orelhaFora), y = olhoY + 7.6;
+        const m = v.modeloBrincos;
+        // VIDA 13: os brincos novos (pérola, argola grande, gota, cruz, alargador).
+        const j20 = BrincoDoRetrato({ modelo: m, x, y, s });
+        if (j20) return <g key={s}>{j20}</g>;
+        const novo = BrincoNovo({ modelo: m, x, y, s });
+        if (novo) return <g key={s}>{novo}</g>;
+        return m === 'brincos_diamante'
+          ? <g key={s} className="retrato__joia" data-brinco="diamante"><circle cx={x} cy={y} r={2.6} fill="#dff3ff" opacity={0.45} /><path d={`M ${x} ${y - 1.9} L ${x + 1.4} ${y} L ${x} ${y + 1.9} L ${x - 1.4} ${y} Z`} fill="#f4fbff" stroke="#5f8aa8" strokeWidth={0.45} /></g>
+          : m === 'brincos_ouro'
+            ? <circle key={s} className="retrato__joia" data-brinco="ouro" cx={x} cy={y + 1.2} r={1.8} fill="none" stroke="#d8b45a" strokeWidth={0.8} />
+            : <circle key={s} className="retrato__joia" data-brinco="simples" cx={x} cy={y + 0.8} r={1.4} fill="none" stroke="#8d939b" strokeWidth={0.8} />;
+      });
   const corMecha = comMechas ? (CABELO[v.mechas!] ?? CABELO.loiro) : '';
   const maquiada = f !== 'bebe' && f !== 'crianca';
   const geoOlhos = { cx, olhoY: cy + G.olhoY, esp: G.esp + distOlho, olho: G.olho * tamOlho, rx: G.olho * tamOlho * olhoRx, ry: G.olho * tamOlho * (f === 'idoso' ? 0.8 : olhoRy) };
@@ -279,20 +295,9 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
       <path d={rosto} fill={pele} />
       {/* Brincos: um ponto de luz na ponta da orelha. */}
       {/* VIDA 12.7: no lóbulo de verdade (na ponta da orelha, fora do rosto), e cada modelo com a sua forma. */}
-      {f !== 'bebe' && (v.joia === 'brincos' || v.brincos) && [-1, 1].map(s => {
-        const x = cx + s * (w / 2 - 0.4 + orelhaFora), y = olhoY + 7.6;
-        const m = v.modeloBrincos;
-        // VIDA 13: os brincos novos (pérola, argola grande, gota, cruz, alargador).
-        const j20 = BrincoDoRetrato({ modelo: m, x, y, s });
-        if (j20) return <g key={s}>{j20}</g>;
-        const novo = BrincoNovo({ modelo: m, x, y, s });
-        if (novo) return <g key={s}>{novo}</g>;
-        return m === 'brincos_diamante'
-          ? <g key={s} className="retrato__joia" data-brinco="diamante"><circle cx={x} cy={y} r={2.6} fill="#dff3ff" opacity={0.45} /><path d={`M ${x} ${y - 1.9} L ${x + 1.4} ${y} L ${x} ${y + 1.9} L ${x - 1.4} ${y} Z`} fill="#f4fbff" stroke="#5f8aa8" strokeWidth={0.45} /></g>
-          : m === 'brincos_ouro'
-            ? <circle key={s} className="retrato__joia" data-brinco="ouro" cx={x} cy={y + 1.2} r={1.8} fill="none" stroke="#d8b45a" strokeWidth={0.8} />
-            : <circle key={s} className="retrato__joia" data-brinco="simples" cx={x} cy={y + 0.8} r={1.4} fill="none" stroke="#8d939b" strokeWidth={0.8} />;
-      })}
+      {/* VIDA 28: com cabelo que cobre a orelha, o brinco vai por cima do cabelo (abaixo) — antes, o cabelo da frente o
+          cobria e todo brinco virava a mesma ponta: a vitrine (de cabelo preso) mostrava a forma; o corpo, não. */}
+      {!brincoPorCima && brincos}
       {(f === 'bebe' || f === 'crianca') && (
         <>
           <ellipse cx={cx - esp - 2} cy={olhoY + 7} rx={4} ry={2.6} fill="#e8889a" opacity={0.22} />
@@ -411,6 +416,7 @@ export const Retrato = memo(function Retrato({ visual, genero, idade, semente = 
 
       {/* Cabelo da frente */}
       {cabelo.frente && <g className="retrato__cabelo retrato__cabelo--frente">{cabelo.frente}</g>}
+      {brincoPorCima && brincos}
       {cabelo.frente && mascara?.frente && <Mechas id={`${uid}-mf`} forma={mascara.frente} cor={corMecha} estilo={v.mechasEstilo} cx={cx} cy={cy} w={w} hh={hh} />}
 
       {/* O que vai na cabeça */}
