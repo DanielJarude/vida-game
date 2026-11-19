@@ -44,10 +44,10 @@ const abrir = (v: Vida, id: string, papeis: Record<string, string> = {}) => { co
   v.financas.conta = 500_000;
   salvar('v27-joias', v);
 }
-// 3. Duas carreiras: atleta com o e-sports em paralelo.
+// 3. Duas carreiras: fotógrafo com o e-sports em paralelo.
 {
   let v = viver(nova({ semente: 2703, genero: 'masculino', municipioId: 'recife-pe' } as never), 23);
-  v = transacao(v, (x, r) => { contratar(x, r, ocupacao('atleta'), 'oportunidade'); contratarEmParalela(x, () => contratar(x, r, ocupacao('jogador_esports'), 'oportunidade')); }).vida;
+  v = transacao(v, (x, r) => { contratar(x, r, ocupacao('fotografo'), 'oportunidade'); contratarEmParalela(x, () => contratar(x, r, ocupacao('jogador_esports'), 'oportunidade')); }).vida;
   salvar('v27-carreiras', v);
 }
 // 4. Saúde mental: uma crise (e a cena da crise aberta).

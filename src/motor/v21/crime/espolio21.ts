@@ -24,7 +24,7 @@
 import type { Vida } from '../../tipos';
 import { clamp, rngDe, type Rng } from '../../rng';
 import { escrever } from '../../nucleo';
-import { dinheiro } from '../../texto';
+import { contrair, dinheiro } from '../../texto';
 import { anoDe } from '../../tempo';
 import { economiaLocal } from '../../dados/lugares';
 import { itemEstilo } from '../../dados/estilo';
@@ -153,16 +153,16 @@ export interface Oferta21 { comprador: Comprador21; nome: string; preco: number;
 export function nomeNoMercado21(v: Vida): { valor: number; porque: string } {
   const es = espolio21(v);
   const e = v.caminhos.envolvimento;
-  const op: { valor: number; porque: string }[] = [{ valor: es.reputacao, porque: 'as vendas que já fez' }];
+  const op: { valor: number; porque: string }[] = [{ valor: es.reputacao, porque: 'pelas vendas que já fez' }];
   if (e) {
     const aqui = e.reputacaoLocal?.[v.moradia.municipioId] ?? e.reputacao ?? 0;
-    op.push({ valor: Math.round(aqui * 0.8), porque: 'o seu nome no crime da cidade' });
+    op.push({ valor: Math.round(aqui * 0.8), porque: 'pelo seu nome no crime da cidade' });
     for (const o of e.organizacoes ?? []) {
       if (o.saiu !== undefined || o.expulso !== undefined || o.distancia === 'fora') continue;
-      if (o.propria) { op.push({ valor: 60, porque: `${o.nome}, que é sua` }); continue; }
+      if (o.propria) { op.push({ valor: 60, porque: contrair(`por ${o.nome}, que é sua`) }); continue; }
       if (o.relacao !== 'membro') continue;
       const n = o.nivel ?? 0;
-      op.push({ valor: 10 + n * 9, porque: `o seu posto em ${o.nome}` });
+      op.push({ valor: 10 + n * 9, porque: contrair(`pelo seu posto em ${o.nome}`) });
     }
   }
   return op.reduce((a, x) => (x.valor > a.valor ? x : a));
@@ -180,7 +180,7 @@ export function ofertas21(v: Vida, b: BemIlicito21): Oferta21[] {
     const preco = Math.round(baseNoMercado21(b) * p.paga * procura21(v, b.categoria) * (1 - b.calor / 250) * reputacaoPaga * raro * engano / 10) * 10;
     const risco = clamp(p.risco * (1 + b.calor / 100) * (b.rastreavel ? 1.4 : 1) * (cautela ? 0.7 : 1) * (1 - nome.valor / 250), 0.01, 0.6);
     const liberado = nome.valor >= p.reputacao;
-    return { comprador: c, nome: p.nome, preco, risco, liberado, descricao: p.descricao, ...(liberado ? {} : { motivo: `Só negocia com quem já tem nome no meio (${p.reputacao}+; o seu: ${Math.round(nome.valor)}, por ${nome.porque}).` }) };
+    return { comprador: c, nome: p.nome, preco, risco, liberado, descricao: p.descricao, ...(liberado ? {} : { motivo: `Só negocia com quem já tem nome no meio (${p.reputacao}+; o seu: ${Math.round(nome.valor)}, ${nome.porque}).` }) };
   });
 }
 

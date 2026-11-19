@@ -30,7 +30,7 @@ export function BensDoCrime({ vida, agir }: { vida: Vida; agir: (a: Acao) => boo
     <section className="svivo-bloco esp21" aria-labelledby="titulo-esp21">
       <h3 id="titulo-esp21" className="svivo-bloco__titulo">O que veio dos serviços</h3>
       <p className="svivo-nota">
-        Dinheiro em espécie já entrou no saldo. Os bens ficam com você até decidir. Nome no mercado paralelo: <strong>{Math.round(nomeNoMercado21(vida).valor)}</strong> (por {nomeNoMercado21(vida).porque})
+        Dinheiro em espécie já entrou no saldo. Os bens ficam com você até decidir. Nome no mercado paralelo: <strong>{Math.round(nomeNoMercado21(vida).valor)}</strong> ({nomeNoMercado21(vida).porque})
         {' '}— o posto numa organização e o nome no crime da cidade contam; venda limpa faz subir e abre compradores que pagam melhor; venda que dá errado faz cair.
       </p>
       {bens.length > 1 && <VenderVarios vida={vida} agir={agir} selecao={sel} setSelecao={setSelecao} />}
