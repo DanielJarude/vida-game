@@ -158,7 +158,9 @@ export function escrever(v: Vida, e: NovaEntrada): Entrada {
     t,
     idade: idadeEm(v.eu.tNasc, t),
     // ERAS HISTÓRICAS: numa vida histórica, a frase fala do jeito da época (vida contemporânea: a mesma frase).
-    texto: v.era ? textoDaEpoca(v, e.texto) : e.texto,
+    // ERAS v3: os textos da própria época (acontecimentos, lembranças, regras) já são do ano certo — a peneira não os toca
+    // (ela trocaria a chegada da televisão por "rádio" para quem ainda não tem TV).
+    texto: v.era && e.fato?.tipo !== 'era' ? textoDaEpoca(v, e.texto) : e.texto,
     relevancia: e.relevancia ?? 'biografia',
     tema: e.tema,
     tom: e.tom,

@@ -32,7 +32,7 @@ import type { Vida } from '../tipos';
 
 beforeAll(async () => { await carregarMundo(); });
 
-const vida = (pais: string, municipioId: string, ano: number, o: Parameters<typeof nova>[0] = {}) => nova({ semente: 777, municipioId, ano, era: true, ...o });
+const vida = (_pais: string, municipioId: string, ano: number, o: Parameters<typeof nova>[0] = {}) => nova({ semente: 777, municipioId, ano, era: true, ...o });
 const noMes = (v: Vida, ano: number, mes = 5) => { v.t = tDe(ano, mes); entrarNaVida(v); return v; };
 
 describe('datas e calendários', () => {

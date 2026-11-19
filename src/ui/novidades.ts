@@ -26,6 +26,31 @@ export interface NotaDeVersao {
 
 export const NOTAS: NotaDeVersao[] = [
   {
+    versao: 'Eras 3',
+    data: '2026-11-19',
+    titulo: 'Outros países e o século XX inteiro',
+    novidades: [
+      'Nascer em outra época agora também fora do Brasil: Estados Unidos, Reino Unido, Alemanha e Japão (desde 1900) e Argentina (desde 1945) — cada um com a sua moeda da época, a sua economia, os seus acontecimentos, as suas leis e a sua cultura.',
+      'O Brasil desde 1900: o mil-réis (com o cifrão no meio), o cruzeiro de 1942, a gripe de 1918, a Revolução de 1930, o voto feminino, a CLT, a Copa de 1950, Brasília, 1964 e o AI-5.',
+      'Escolha o país, a década, o ano, o mês e o dia de nascimento; a prévia mostra o contexto, a sociedade, a tecnologia, a cultura e o dinheiro da época.',
+      'A Alemanha dividida: quem nasce em Leipzig ou Dresden vive a Alemanha Oriental, com outra moeda, outros carros, outras leis e outros acontecimentos — até o Muro cair.',
+      'As guerras chamam quem tinha a idade (na proporção de cada guerra) e chegam em casa: o racionamento, os bombardeios, os que não voltaram.',
+      'As leis e a sociedade de cada tempo pesam na vida: o voto que a mulher ainda não tinha, a segregação no Sul dos Estados Unidos, a mulher casada que precisava de licença, a relação proibida, os anos sem eleições.',
+      'Antes do telefone em casa, a vida se comunica por cartas.'
+    ],
+    melhorias: [
+      'O dinheiro de cada época e país: a libra de xelins e pence até 1971, a hiperinflação alemã de 1923, as trocas de moeda da Argentina, o congelamento de depósitos no Japão de 1946 e no corralito de 2001.',
+      'Quanto se vivia: a expectativa de vida e a mortalidade infantil de cada país e época pesam nas pessoas da sua vida (e um pouco na sua).',
+      'A universidade era para poucos: quantos chegavam a ela muda com o país e a época.',
+      'Carros, roupas, casas e aparelhos da época: o Modelo T, o Austin Seven, o Fusca, o Trabant, o Fiat 600; o terno e o vestido comprido; o rádio de válvula e o gramofone.',
+      'O painel "A época" de cada país: governo, moeda, salário mínimo (quando existia), preços, desemprego, expectativa de vida, as leis em vigor e a guerra em curso. No Japão, o ano da era do imperador.'
+    ],
+    correcoes: [
+      'Numa vida histórica, os carros brasileiros não aparecem mais à venda fora do Brasil.',
+      'Profissões e cursos de hoje não aparecem antes de existirem (o curso de análise de sistemas em 1930, o operador de drones em 1950).'
+    ]
+  },
+  {
     versao: '27',
     data: '2026-11-18',
     titulo: 'Uma vida mais coerente',

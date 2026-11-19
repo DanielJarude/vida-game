@@ -162,7 +162,7 @@ export const PACOTE: PacoteDeEra = {
   ],
   guerras: [
     { id: 'jp_russia', nome: 'a guerra contra a Rússia', de: [1904, 2], ate: [1905, 9], idades: [20, 32], alcance: 0.2, letalidade: 0.07, fonte: 'Cerca de 1,1 milhão mobilizados e 88 mil mortos (Biblioteca Nacional da Dieta). Aproximação [A].' },
-    { id: 'jp_pacifico', nome: 'a guerra na China e no Pacífico', de: [1937, 7], ate: [1945, 8], idades: [19, 40], alcance: 0.65, letalidade: 0.25, frente: 'A guerra chegou às cidades: os bombardeios incendiários a partir de 1944 queimaram bairros inteiros de madeira; o arroz racionado não bastava, e as crianças foram mandadas para o interior.', fonte: 'Cerca de 2,3 milhões de militares e 800 mil civis japoneses mortos de 1937 a 1945 (Ministério da Saúde, Trabalho e Bem-Estar). Alcance: aproximação [A].' }
+    { id: 'jp_pacifico', nome: 'a guerra na China e no Pacífico', de: [1937, 7], ate: [1945, 8], idades: [19, 40], alcance: 0.65, letalidade: 0.25, frenteDesde: [1944, 11], frente: 'A guerra chegou às cidades: os bombardeios incendiários a partir de 1944 queimaram bairros inteiros de madeira; o arroz racionado não bastava, e as crianças foram mandadas para o interior.', fonte: 'Cerca de 2,3 milhões de militares e 800 mil civis japoneses mortos de 1937 a 1945 (Ministério da Saúde, Trabalho e Bem-Estar). Alcance: aproximação [A].' }
   ],
   governantes: [
     { nome: 'Imperador Meiji', cargo: 'imperador', desde: [1867, 2] }, { nome: 'Imperador Taishō', cargo: 'imperador', desde: [1912, 7] },

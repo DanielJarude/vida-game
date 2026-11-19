@@ -7,6 +7,7 @@
  * vire carimbo: há mistura.
  */
 
+import { mesHistoricoCorrente } from '../eras/base/moedas';
 import type { Genero } from '../tipos';
 import type { Rng } from '../rng';
 import type { Geracao, GrupoDeNomes } from '../mundo/tipos';
@@ -28,8 +29,15 @@ export function grupoDeNomes(r: Rng, pais: string, divisao?: string): GrupoDeNom
   // `peso` é a parcela NACIONAL do grupo. Dentro das divisões dele, a parcela local é muito maior: ×60 aproxima
   // "parcela nacional ÷ peso da região na população" (uma região típica tem 1–3% do país); fora delas, quase ninguém
   // nasce com os nomes de lá (×0,05). Os grupos nacionais (sem `divisoes`) valem o próprio peso em todo lugar.
-  return r.weighted(grupos, g => g.peso * (divisao && g.divisoes ? (g.divisoes.includes(divisao) ? 60 : 0.05) : 1))!;
+  // ERAS v3: numa vida histórica, os grupos que chegaram com a imigração recente ainda não existem (os trabalhadores
+  // turcos na Alemanha a partir de 1961; a imigração do sul da Ásia no Reino Unido a partir dos anos 1950). O sorteio é o
+  // mesmo (um só), só o peso muda: a vida contemporânea não sente.
+  const mh = mesHistoricoCorrente();
+  const existe = (g: GrupoDeNomes) => mh === null || Math.floor(mh / 12) >= (GRUPO_DESDE[g.id] ?? -Infinity);
+  return r.weighted(grupos, g => (existe(g) ? 1 : 0) * g.peso * (divisao && g.divisoes ? (g.divisoes.includes(divisao) ? 60 : 0.05) : 1))!;
 }
+/** O ano em que o grupo de nomes passa a existir no país (Bundesamt für Migration und Flüchtlinge; Office for National Statistics). */
+const GRUPO_DESDE: Readonly<Record<string, number>> = { de_turco: 1961, sul_asiatico: 1950 };
 
 const grupoPorSobrenome = (pais: string, sobrenome?: string) =>
   sobrenome ? perfilNomes(pais).grupos.find(g => g.sobrenomes.some(s => sobrenome.split(' ').includes(s))) : undefined;

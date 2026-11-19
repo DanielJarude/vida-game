@@ -273,7 +273,8 @@ export function guerrasDoAno(v: Vida, pais: string, lado: LadoDaDivisao): void {
     const ini = tDe(g.de[0], g.de[1] - 1), fim = tDe(g.ate[0], g.ate[1] - 1);
     if (v.t < ini || v.t - 12 > fim) continue;
     const servidas = (v.era!.guerras ??= []);
-    if (g.frente && !visto(v, `gf:${g.id}`) && i >= 4) {
+    const frente = g.frenteDesde ? tDe(g.frenteDesde[0], g.frenteDesde[1] - 1) : ini;
+    if (g.frente && !visto(v, `gf:${g.id}`) && i >= 4 && v.t >= frente) {
       marcar(v, `gf:${g.id}`);
       escrever(v, { texto: g.frente, relevancia: 'biografia', tema: 'lugar', tom: 'ruim', fato: { tipo: 'era', dados: { categoria: 'guerra', evento: `frente:${g.id}` } } });
     }

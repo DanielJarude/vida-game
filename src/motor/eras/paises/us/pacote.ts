@@ -185,7 +185,7 @@ export const PACOTE: PacoteDeEra = {
   ],
   guerras: [
     { id: 'us_ww1', nome: 'a Primeira Guerra Mundial', de: [1917, 4], ate: [1918, 11], idades: [21, 31], alcance: 0.35, letalidade: 0.025, fonte: 'Cerca de 4,7 milhões serviram e 116.516 morreram (Department of Veterans Affairs). Alcance: aproximação [A] sobre os homens de 21 a 31 anos.' },
-    { id: 'us_ww2', nome: 'a Segunda Guerra Mundial', de: [1941, 12], ate: [1945, 8], idades: [18, 37], alcance: 0.6, letalidade: 0.025, frente: 'Em casa, a guerra era o racionamento — cupons para açúcar, café, carne, gasolina e pneus —, as fábricas de carros virando fábricas de aviões e as mulheres indo trabalhar nelas.', fonte: '16,1 milhões serviram; 405.399 mortos (Department of Veterans Affairs). Alcance: aproximação [A].' },
+    { id: 'us_ww2', nome: 'a Segunda Guerra Mundial', de: [1941, 12], ate: [1945, 8], idades: [18, 37], alcance: 0.6, letalidade: 0.025, frenteDesde: [1942, 5], frente: 'Em casa, a guerra era o racionamento — cupons para açúcar, café, carne, gasolina e pneus —, as fábricas de carros virando fábricas de aviões e as mulheres indo trabalhar nelas.', fonte: '16,1 milhões serviram; 405.399 mortos (Department of Veterans Affairs). Alcance: aproximação [A].' },
     { id: 'us_coreia', nome: 'a Guerra da Coreia', de: [1950, 6], ate: [1953, 7], idades: [18, 26], alcance: 0.2, letalidade: 0.012, fonte: 'Cerca de 5,7 milhões serviram no período; 36.574 mortos (Department of Veterans Affairs). Aproximação [A].' },
     { id: 'us_vietna', nome: 'a Guerra do Vietnã', de: [1964, 8], ate: [1973, 3], idades: [18, 26], alcance: 0.1, letalidade: 0.021, fonte: 'Cerca de 2,7 milhões serviram no Vietnã; 58.220 mortos (National Archives, Vietnam War Casualty Statistics). Aproximação [A].' }
   ],

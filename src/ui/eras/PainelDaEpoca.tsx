@@ -59,12 +59,12 @@ export function PainelDaEpoca({ vida }: { vida: Vida }) {
       </div>
       <dl className="painel-epoca__grade">
         {pres && dentro && <div className="painel-epoca__dado"><dt>Presidência</dt><dd>{pres.nome}<small>{pres.nota ?? `desde ${pres.desde[0]}`}</small></dd></div>}
-        <div className="painel-epoca__dado"><dt>Moeda</dt><dd>{dentro ? `${p.nome.charAt(0).toUpperCase()}${p.nome.slice(1)} (${p.simbolo})` : 'Real (R$)'}<small>{dentro && p.troca ? `desde ${p.dataOficial}: ${p.troca}` : 'valores em reais de hoje'}</small></dd></div>
+        <div className="painel-epoca__dado"><dt>Moeda</dt><dd>{dentro ? `${p.nome.charAt(0).toUpperCase()}${p.nome.slice(1)} (${p.simbolo})` : 'Real (R$)'}<small>{dentro ? (p.troca ? `desde ${p.dataOficial}: ${p.troca}` : `a moeda de ${p.dataOficial}`) : 'valores em reais de hoje'}</small></dd></div>
         {sm !== undefined && dentro && <div className="painel-epoca__dado"><dt>Salário mínimo</dt><dd>{nominal(sm, t)}<small>vigente no mês (Ipeadata/MTE)</small></dd></div>}
         {ipca !== undefined && <div className="painel-epoca__dado"><dt>Inflação de {ano - 1}</dt><dd>{pct(ipca)}<small>{ano - 1 >= 1980 ? 'IPCA, IBGE' : ano - 1 >= 1944 ? 'IGP-DI, FGV' : 'deflator do PIB, IBGE'}</small></dd></div>}
         {pib !== undefined && <div className="painel-epoca__dado"><dt>Economia em {ano - 1}</dt><dd>{pib >= 0 ? '+' : '−'}{Math.abs(pib).toLocaleString('pt-BR')}%<small>PIB, IBGE</small></dd></div>}
         {(() => { const m = mortalidadeNoAno('BR', ano); return m ? <div className="painel-epoca__dado"><dt>Expectativa de vida</dt><dd>{Math.round(m.e0)} anos<small>ao nascer, no país</small></dd></div> : null; })()}
-        {dentro && <div className="painel-epoca__dado"><dt>Poder de compra</dt><dd>{nominal(nivelDePrecos(t), t)}<small>compram o que R$ 1,00 compra hoje</small></dd></div>}
+        {dentro && <div className="painel-epoca__dado"><dt>Poder de compra</dt><dd>{p.formato ? formatarDinheiro(1) : nominal(nivelDePrecos(t), t)}<small>compram o que R$ 1,00 compra hoje</small></dd></div>}
       </dl>
       {dentro && (() => {
         // ERAS v2: o poder de compra da época (PNAD, DIEESE e IPCA por grupo: `motor/eras/base/economia`).
@@ -75,8 +75,8 @@ export function PainelDaEpoca({ vida }: { vida: Vida }) {
             <h3>Quanto rende o salário</h3>
             <ul className="painel-epoca__lista">
               {pc.cestaNoMinimo !== undefined && <li>A cesta básica (DIEESE, São Paulo) custa <strong>{pc.cestaNoMinimo}% do salário mínimo</strong>{pc.cestaNoMinimo >= 80 ? ': sobra pouco para o resto' : pc.cestaNoMinimo <= 55 ? '' : ''}.</li>}
-              <li>Quem trabalha ganha, em média, <strong>{Math.round(renda * 100)}% do que se ganha em 2025</strong> (rendimento médio real, PNAD/IBGE).</li>
-              {pc.destaques.length > 0 && <li>Preço em relação a hoje — {pc.destaques.map(d => `${d.nome}: ${d.fator > 1 ? (d.fator >= 1.95 ? `${String(Math.round(d.fator * 10) / 10).replace('.', ',')} vezes o de hoje` : `${Math.round((d.fator - 1) * 100)}% a mais`) : `${Math.round((1 - d.fator) * 100)}% a menos`}`).join('; ')} (IPCA por grupo, em poder de compra).</li>}
+              <li>Quem trabalha ganha, em média, <strong>{Math.round(renda * 100)}% do que se ganha em 2025</strong> ({ano >= 1992 ? 'rendimento médio real, PNAD/IBGE' : ano >= 1970 ? 'PIB real por pessoa, IBGE — aproximação' : 'PIB real por pessoa, Maddison Project — aproximação'}).</li>
+              {pc.destaques.length > 0 && ano >= 1970 && <li>Preço em relação a hoje — {pc.destaques.map(d => `${d.nome}: ${d.fator > 1 ? (d.fator >= 1.95 ? `${String(Math.round(d.fator * 10) / 10).replace('.', ',')} vezes o de hoje` : `${Math.round((d.fator - 1) * 100)}% a mais`) : `${Math.round((1 - d.fator) * 100)}% a menos`}`).join('; ')} (IPCA por grupo, em poder de compra).</li>}
             </ul>
           </>
         );
@@ -85,9 +85,10 @@ export function PainelDaEpoca({ vida }: { vida: Vida }) {
         // ERAS v2: quanto custa, no jogo, agora — na moeda do mês (os preços que as lojas cobram nesta vida).
         const carro = ofertasDeVeiculos(vida, 'concessionaria').filter(o => !o.usado && o.modeloId === 'carro_compacto').sort((a, b) => a.preco - b.preco)[0];
         const nomeCarro = carro ? VERSOES_VEICULO.find(x => x.id === carro.versaoId) : undefined;
+        // ERAS v3: só o que existia (a geladeira chega em 1947; a calça jeans, nos anos 1950 — antes, a de brim).
         const itens: [string, number][] = [
-          ['Uma calça jeans', precoDoItem(vida, 'jeans')],
-          [`A ${coisa('geladeira') ? coisaNoAno(coisa('geladeira')!, ano).nome : 'geladeira'}`, precoDaCoisa(vida, 'geladeira')],
+          [ano < 1955 ? 'Uma calça de brim' : 'Uma calça jeans', precoDoItem(vida, 'jeans')],
+          ...(tecnologia(vida, 'geladeira') !== 'indisponivel' || ano >= 1947 ? [[`A ${coisa('geladeira') ? coisaNoAno(coisa('geladeira')!, ano).nome : 'geladeira'}`, precoDaCoisa(vida, 'geladeira')] as [string, number]] : []),
           ...(carro && nomeCarro ? [[`O carro mais barato da concessionária (${nomeCarro.marca} ${nomeCarro.modelo})`, carro.preco] as [string, number]] : []),
           ['O aluguel de dois quartos na sua cidade', economiaLocal(vida.moradia.municipioId).aluguel]
         ];

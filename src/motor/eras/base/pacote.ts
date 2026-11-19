@@ -160,6 +160,8 @@ export interface GuerraDaEpoca {
   letalidade: number;
   /** Onde a guerra chega em casa (bombardeios, ocupação): a frase da vida civil. */
   frente?: string;
+  /** [ano, mês] a partir de quando a frase da frente vale (os bombardeios não começam com a guerra). */
+  frenteDesde?: [number, number];
   lado?: LadoDaDivisao;
   fonte: string;
 }
