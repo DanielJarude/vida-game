@@ -7,6 +7,7 @@
  * proximidade de quem acabou de se conhecer, salvo família.
  */
 
+import { primeiraImpressao } from './sistemas/relacoes28';
 import type { Rng } from './rng';
 import type { Convivio, Especie, Genero, Parentesco, Pessoa, Vida, Vinculo, Visual } from './tipos';
 import { novoId, temperamentoAleatorio } from './nucleo';
@@ -199,6 +200,8 @@ export function vincular(v: Vida, p: Pessoa, n: NovoVinculo): Vinculo {
     historia: []
   };
   v.vinculos[p.id] = vin;
+  // VIDA 28: a fama chega antes — quem conhece você agora já ouviu falar (`relacoes28.primeiraImpressao`).
+  if (!p.especie) primeiraImpressao(v, vin);
   return vin;
 }
 

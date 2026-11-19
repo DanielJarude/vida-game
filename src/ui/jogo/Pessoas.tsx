@@ -48,6 +48,7 @@ import { trajetoriaDaRelacao } from '../../motor/sistemas/relacoes';
 import { estadoDaRelacao, forcaDaRelacao } from '../../motor/sistemas/lacos';
 import { estadosContextuais, fraseDaMagoa, type EstadoContextual } from '../../motor/sistemas/magoas';
 import { dimensoesEmPalavras } from '../../motor/sistemas/afetos';
+import { dimensoes28EmPalavras } from '../../motor/sistemas/relacoes28';
 import { fraseDoSaber, pendentes, saberes } from '../../motor/sistemas/conhecimento';
 import { ocasioesDoPresente, presentesDados, presentesPara } from '../../motor/sistemas/presentes';
 import { contasAtivas } from '../../motor/sistemas/redesBase';
@@ -489,7 +490,9 @@ function lacoEmPalavras(vin: Vinculo, agora: number): { id: string; rotulo: stri
     { id: 'confianca', rotulo: 'Confiança', ...confiancaEmPalavras(vin, agora) },
     { id: 'atrito', rotulo: 'Atrito', palavra: t >= 55 ? 'muito' : t >= 30 ? 'algum' : t >= 12 ? 'pouco' : 'nenhum', tom: t >= 55 ? 'ruim' : t >= 30 ? 'neutro' : 'bom' },
     // REWORK 10.5 · REL-09: a intimidade (o quanto se contam) e o compromisso (o quanto a vida está amarrada), quando existem.
-    ...dimensoesEmPalavras(vin)
+    ...dimensoesEmPalavras(vin),
+    // VIDA 28: respeito, admiração, lealdade, rivalidade, dependência — só as que existem e pesam.
+    ...dimensoes28EmPalavras(vin)
   ];
 }
 

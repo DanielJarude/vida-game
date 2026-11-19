@@ -30,7 +30,8 @@ import { escrever as escreverNaVida, idade, lembrarCom, marcarFato, pais, temFat
 /** VIDA 28: tudo o que a carreira esportiva escreve é do mesmo fio da História (`Entrada.fio`): lido na ordem em que aconteceu. */
 const escrever = (v: Vida, e: NovaEntrada) => escreverNaVida(v, { fio: 'esporte', ...e });
 import { arquetipo, efeitosDoPerfil, guardarPerfil, lerPerfil, nomeDoArquetipo, type LeituraDoPerfil } from './arquetipos';
-import { concorrenciaNaPosicao, janelaDoElenco } from './elenco28';
+import { concorrenciaNaPosicao, concorrenteNaPosicao, janelaDoElenco } from './elenco28';
+import { ecoNasRelacoes, mexer28 } from './relacoes28';
 import { cidadesDoPais, municipio, municipioDoCodigo, MUNICIPIOS, paisDaCidade } from '../dados/lugares';
 import { estruturaEsportiva } from '../dados/mercado';
 import { comissaoDe, ocupacao } from '../dados/ocupacoes';
@@ -479,6 +480,8 @@ export function transferirPara(v: Vida, e: CarreiraEsportiva, p: PropostaDeClube
     emp.empregador = vivePremiacao(e.modalidade) ? emp.empregador : oClube(p.clube);
     emp.salario = p.espaco === 'titular' ? p.salarioTitular : p.salario;
   }
+  // VIDA 28: a mudança de clube na memória de quem é próximo (o elenco novo se monta na próxima janela: `elenco28`).
+  if (de !== p.clube) ecoNasRelacoes(v, 'transferencia', `Acompanhou a sua ida ${doClube(de)} para ${oClube(p.clube)}, em ${anoDe(v.t)}.`, 1);
 }
 
 /**
@@ -1419,6 +1422,7 @@ export function profissionalizar(v: Vida, r: Rng, nivel: number): void {
   const texto = e.modalidade === 'tenis' ? `Virou tenista profissional aos ${idade(v)}, no ${CIRCUITO_TENIS[e.nivel]}: sem clube, sem salário, a raquete e o ranking.` : e.modalidade === 'basquete' ? `Assinou o primeiro contrato de ${NOME_FUNCAO[funcaoBasquete(v)]} ${peloClube(e.clube)}, aos ${idade(v)}${e.origem === 'amador' ? ', vindo da liga amadora' : ''}.` : e.modalidade === 'futebol' ? `Assinou o primeiro contrato profissional de jogador, ${peloClube(e.clube)}, aos ${idade(v)}${outroClube}.` : `Virou atleta profissional de ${nomeDaModalidade(v, e.modalidade)}, ${peloClube(e.clube)}, aos ${idade(v)}.`;
   escrever(v, { texto, relevancia: 'marco', tema: 'trabalho', tom: 'bom', escolha: true });
   marcar(v, 'profissional', texto, 3, { dominio: e.modalidade, ocupacaoId: oc.id });
+  ecoNasRelacoes(v, 'contrato', `Comemorou com você o primeiro contrato profissional, ${e.modalidade === 'tenis' ? 'no circuito' : peloClube(e.clube)}, aos ${idade(v)}.`, 3);
   registrarConquista(v, { tipo: 'marco', modalidade: e.modalidade, ano: anoDe(v.t), competicao: divisaoDe(e.modalidade, e.nivel, paisDaCidade(e.municipioId)), clube: e.modalidade === 'tenis' ? undefined : e.clube, texto: `Primeiro contrato profissional, aos ${idade(v)}` });
   marcarFato(v, 'atleta_profissional');
 }
@@ -1492,6 +1496,8 @@ function anoProfissional(v: Vida, r: Rng, e: CarreiraEsportiva): void {
   // A temporada no palmarés: título (e o papel nele), acesso ou rebaixamento, prêmios pela posição, marcos — e a seleção, que observa.
   registrarTemporada(v, r, e, t);
   pagarBonusDaTemporada(v, e, t);
+  // VIDA 28: o título na memória de quem é próximo (as conversas lembram; quem gosta admira; o rival reconhece).
+  { const tit = bonusDaTemporada(e, t, 1).motivos; if (tit.length) ecoNasRelacoes(v, 'titulo', `Comemoraram juntos ${listaNatural(tit)}, ${peloClube(e.clube)}, em ${t.ano}.`, 2); }
   // VIDA 28: a janela do ano no clube (o elenco com nome; o mercado anda sozinho, pelas regras da modalidade).
   const papel28 = e.modalidade === 'futebol' ? posicaoDe(v, e) : e.modalidade === 'basquete' ? funcaoBasquete(v) : e.modalidade === 'volei' ? funcaoVolei(v) : funcaoFutsalDe(v, e);
   janelaDoElenco(v, e, { regua: barraDeTitular(e.modalidade, e.nivel), papel: papel28, salarioBase: salarioBaseDoElenco(v, e) });
@@ -1541,6 +1547,8 @@ function anoProfissional(v: Vida, r: Rng, e: CarreiraEsportiva): void {
   // VIDA 28: o perfil pesa na régua do treinador (o Capitão e o Incansável ganham a confiança; o Marrento a gasta).
   const confianca = efeitosDoPerfil(e.perfil28).titularidade + concorrenciaNaPosicao(v, e, papel28, h);
   e.espaco = h + (t.nota - 6) * 2.5 + conversa + confianca - passou * 1.2 >= barraDeTitular(e.modalidade, e.nivel) && !(lesaoAtiva(v)?.lesao.gravidade === 3) ? 'titular' : 'reserva';
+  // VIDA 28: a vaga é disputada com alguém (o concorrente direto é uma pessoa): a troca de lugar acende a rivalidade.
+  { const c = concorrenteNaPosicao(v, e, papel28); const vc = c?.pessoaId ? v.vinculos[c.pessoaId] : undefined; if (vc) { mexer28(vc, 'rivalidade', antes !== e.espaco ? 10 : 2); if (e.espaco === 'titular' && t.nota >= 7) mexer28(vc, 'respeito', 3); } }
   if (antes === 'titular' && e.espaco === 'reserva') { escrever(v, { texto: individualComEquipe(e.modalidade) ? 'Perdeu a vaga nas provas principais da equipe: a próxima temporada começa fora delas.' : `${nomeClube === 'A equipe' ? 'Perdeu a vaga entre os titulares' : 'Perdeu a posição'}: a próxima temporada começa no banco.`, relevancia: 'cotidiano', tema: 'trabalho', tom: 'ruim' }); abalar(v, 'perder a posição no time', -4, 3); }
   else if (antes === 'reserva' && e.espaco === 'titular') {
     escrever(v, { texto: `${individualComEquipe(e.modalidade) ? 'Ganhou a vaga nas provas principais da equipe' : 'Ganhou a posição: a próxima temporada começa como titular'}${e.clausulaTitular ? ' — e o salário sobe, como o contrato dizia' : ''}.`, relevancia: 'biografia', tema: 'trabalho', tom: 'bom' });
@@ -1734,6 +1742,8 @@ export function encerrarCarreira(v: Vida, e: CarreiraEsportiva, motivo: NonNulla
     : motivo === 'lesao' ? `Encerrou a carreira aos ${i}, depois de lesões demais.` : motivo === 'sem_contrato' ? `Aos ${i}, ${perfilDe(e.modalidade).estrutura === 'clube' ? 'nenhum clube renovou' : perfilDe(e.modalidade).estrutura === 'equipe' ? 'nenhuma equipe renovou' : 'sem resultado nem patrocínio para seguir no circuito'}: a carreira de ${flex(g, 'atleta', 'atleta')} acabou sem despedida.` : (e.modalidade === 'tenis' ? `Guardou a raquete de competição aos ${i}.` : `Pendurou as chuteiras aos ${i}.`.replace('as chuteiras', e.modalidade === 'futebol' ? 'as chuteiras' : 'a carreira'));
   escrever(v, { texto, relevancia: 'marco', tema: eraPro ? 'trabalho' : 'lazer', tom: 'ruim' });
   marcar(v, eraPro ? 'fim_carreira' : 'fracasso', texto, 3, { dominio: e.modalidade });
+  // VIDA 28: quem é próximo viveu isso junto (a dispensa traz quem é afável para perto; o fim da carreira fica na história).
+  if (motivo === 'dispensa' || eraPro) ecoNasRelacoes(v, eraPro ? 'aposentadoria' : 'dispensa', eraPro ? `Esteve junto no fim da sua carreira ${e.modalidade === 'futebol' ? 'de jogador' : 'no esporte'}, aos ${i}.` : `Esteve do seu lado quando ${oClube(e.clube)} dispensou você, aos ${i}.`, 2);
   marcarFato(v, eraPro ? 'fim_carreira_esportiva' : 'dispensado_base');
   // Quem se preparou ainda jogando tem para onde ir: a comissão técnica, a escolinha.
   // Quem teve nome no esporte também é lembrado (sem curso, a porta é menor e mais rara).

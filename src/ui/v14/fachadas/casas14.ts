@@ -16,6 +16,7 @@
  */
 import type { FormaDaCasa } from '../../leituraMaterial';
 import { anexosDaCasa, coisaDoQuintal, entornoDaCasa, LARGURA_DO_ANEXO } from './entorno22';
+import { decadaDaFigura } from '../../eras/modaDaDecada';
 import { circulo, clarear, escurecer, num, ret, type Amostra, type Peca } from '../../ilustracao/nucleo';
 import { amostraDoVeiculo } from '../../ilustracao/veiculos';
 import { cachorro, gato, PLANTAS, type CenaEntrada, type LadoDeFora } from '../../ilustracao/casas';
@@ -57,9 +58,18 @@ const texturaDe = (x?: LadoDeFora): Textura | undefined => (x?.fachada === 'tijo
 /* ============================================================== O lote: rua, calçada, muro */
 
 function lote(v: Vista, largura: number, fundo: number, chao: string, muro?: { cor: string; vao?: [number, number]; alt?: number; grade?: boolean; portao?: string }): { chao: Peca[]; frente: Peca[] } {
+  // VIDA 28 · a rua da época (vida histórica: `decadaDaFigura`): a terra batida antes de 1920, o paralelepípedo até os
+  // anos 1950, o asfalto (e a faixa pintada) depois. APROXIMAÇÃO DOCUMENTADA: a pavimentação variou por cidade e bairro —
+  // a década é a régua do jogo, não a data de cada rua.
+  const dec = decadaDaFigura();
+  const piso = dec === null || dec >= 1960 ? 'asfalto' : dec >= 1920 ? 'paralelepipedo' : 'terra';
   const ch: Peca[] = [
-    noChao(v, -300, largura + 300, -RUA - CALCADA, -CALCADA, COR.asfalto, 'rua'),
-    planoDoChao(v, -30, -RUA - CALCADA, [{ tipo: 'linha', d: Array.from({ length: Math.ceil((largura + 60) / 3) }, (_, k) => `M${num(k * 3 + 0.5)} ${num(RUA * 0.55)}h1.4`).join(''), larg: 1, cor: '#d9d2c2', marca: 'faixa' }]),
+    noChao(v, -300, largura + 300, -RUA - CALCADA, -CALCADA, piso === 'asfalto' ? COR.asfalto : piso === 'paralelepipedo' ? '#8d867b' : '#b49a74', 'rua'),
+    piso === 'asfalto'
+      ? planoDoChao(v, -30, -RUA - CALCADA, [{ tipo: 'linha', d: Array.from({ length: Math.ceil((largura + 60) / 3) }, (_, k) => `M${num(k * 3 + 0.5)} ${num(RUA * 0.55)}h1.4`).join(''), larg: 1, cor: '#d9d2c2', marca: 'faixa' }])
+      : piso === 'paralelepipedo'
+        ? planoDoChao(v, -30, -RUA - CALCADA, [{ tipo: 'linha', d: Array.from({ length: 5 }, (_, k) => `M0 ${num(0.3 + k * 0.5)}H${largura + 60}`).join('') + Array.from({ length: Math.ceil((largura + 60) / 0.6) }, (_, k) => `M${num(k * 0.6 + ((k % 2) * 0.3))} 0v${RUA}`).join(''), larg: 0.35, cor: '#6f685e', marca: 'paralelepipedo' }])
+        : planoDoChao(v, -30, -RUA - CALCADA, [{ tipo: 'linha', d: Array.from({ length: Math.ceil((largura + 60) / 2.3) }, (_, k) => `M${num(k * 2.3)} ${num(0.4 + (k % 3) * 0.6)}h0.8`).join(''), larg: 0.6, cor: '#9a8160', marca: 'terra-batida' }]),
     noChao(v, -300, largura + 300, -CALCADA, 0, COR.calcada, 'calcada'),
     planoDoChao(v, -30, -CALCADA, [{ tipo: 'linha', d: Array.from({ length: Math.ceil((largura + 60) / 1.2) }, (_, k) => `M${num(k * 1.2)} 0V${CALCADA}`).join('') + `M0 ${CALCADA / 2}H${largura + 60}`, larg: 0.4, cor: escurecer(COR.calcada, 0.12), fino: true, marca: 'juntas' }]),
     // O meio-fio: a pedra de borda, com a face para a rua.
@@ -461,7 +471,11 @@ export function amostraDaCasa14(e: CenaEntrada): Amostra {
   const anexo = anexos.reduce((s, a) => s + (LARGURA_DO_ANEXO[a] ?? 0), 0);
   const jardimSemProjeto = quintal && (e.extras ?? []).includes('jardim') && (!e.externo?.paisagismo || e.externo.paisagismo === 'nenhum');
   const externo: LadoDeFora | undefined = jardimSemProjeto ? { ...e.externo, paisagismo: 'gramado' } : e.externo;
-  const ctx: Ctx = { acesas: Math.max(1, e.acesas), tijolo: e.tijolo, cor: e.fachada ?? pl.cor, externo, usadas: 0, anexo, varanda: quintal && (e.extras ?? []).includes('varanda') };
+  // VIDA 28 · a casa da época: antes de 1950, sem cor escolhida, a parede é caiada (a cal, o acabamento de quase toda casa
+  // de então); a parede de bloco à mostra (o "tijolo" da autoconstrução de laje) é coisa da segunda metade do século.
+  const dec = decadaDaFigura();
+  const caiada = dec !== null && dec < 1950 && !e.fachada && !externo?.corFachada;
+  const ctx: Ctx = { acesas: Math.max(1, e.acesas), tijolo: e.tijolo && !(dec !== null && dec < 1950), cor: caiada ? '#eee6d2' : e.fachada ?? pl.cor, externo, usadas: 0, anexo, varanda: quintal && (e.extras ?? []).includes('varanda') };
   MARGEM = e.entorno ? 3.6 : 0;
   let cena: Cena & { principal: Bloco };
   try { cena = FORMAS14[e.forma](ctx); } finally { MARGEM = 0; }
@@ -484,6 +498,7 @@ export function amostraDaCasa14(e: CenaEntrada): Amostra {
     ...cena.chao, ...(ent?.fundo ?? []), ...cena.fundo, ...quintalPecas, ...anexosPecas, ...cena.corpo,
     ...estado(v, b, e.nivel, e.reforma),
     ...cena.frente,
+    ...daEpocaNoTelhado(v, b, e.forma, dec),
     ...(cena.muro?.length ? [marcado(undefined, { 'data-detalhe': 'muro' }, cena.muro)] : []),
     ...(ent?.rua ?? [])
   ];
@@ -501,6 +516,21 @@ export function amostraDaCasa14(e: CenaEntrada): Amostra {
     pecas.push({ tipo: 'grupo', t: `translate(${num(px)} ${num(py)}) scale(${s.toFixed(4)}) translate(0 -128)`, pecas: [bi.especie === 'gato' ? gato(0, bi.id) : cachorro(0, bi.id)] });
   });
   return { vb: [W, H], pecas };
+}
+
+/**
+ * VIDA 28 · o telhado da época: a antena de TV (a espinha de peixe dos anos 1950 aos 2000, quando a TV aberta pegava
+ * pelo ar) e a antena parabólica (anos 1990 e 2000). Antes da TV, nada no telhado. Só nas casas (no prédio, a antena é
+ * coletiva e não aparece). Vida contemporânea (`dec === null`): o telhado de sempre.
+ */
+function daEpocaNoTelhado(v: Vista, b: Bloco, forma: string, dec: number | null): Peca[] {
+  if (dec === null || dec < 1950 || dec >= 2010 || !/^casa_|^sitio$|^familia$|^parente$|^favor$/.test(forma)) return [];
+  const x = b.x1 - 1.2, z = (b.z0 + b.z1) / 2, h0 = (b.h1 ?? 2.9) + 0.9;
+  const [p0, p1] = [pt(v, x, z, h0), pt(v, x, z, h0 + 2.4)];
+  const hastes = [0.6, 1.2, 1.8].map(dh => { const [a, c] = [pt(v, x - 0.6, z, h0 + dh), pt(v, x + 0.6, z, h0 + dh)]; return `M${num(a[0])} ${num(a[1])}L${num(c[0])} ${num(c[1])}`; }).join('');
+  const out: Peca[] = [marcado('cena__antena', { 'data-epoca': 'antena' }, [{ tipo: 'linha', d: `M${num(p0[0])} ${num(p0[1])}L${num(p1[0])} ${num(p1[1])}${hastes}`, larg: 0.6, cor: '#3d3a36', marca: 'antena-tv' }])];
+  if (dec >= 1990) { const [c] = [pt(v, b.x0 + 1, z, h0 - 0.4)]; out.push(marcado('cena__parabolica', { 'data-epoca': 'parabolica' }, [{ tipo: 'massa', d: `M${num(c[0] - v.S * 0.6)} ${num(c[1])}a${num(v.S * 0.6)} ${num(v.S * 0.45)} 0 0 0 ${num(v.S * 1.2)} 0Z`, cor: '#d8d6d0', marca: 'parabolica' }])); }
+  return out;
 }
 
 void lateral; void COR;

@@ -124,7 +124,9 @@ function pessoaDoElenco(v: Vida, r: Rng, e: CarreiraEsportiva, a: AtletaDoElenco
   p.ocupacao = e.modalidade === 'futebol' ? (a.genero === 'feminino' ? 'jogadora de futebol' : 'jogador de futebol') : a.genero === 'feminino' ? 'atleta' : 'atleta';
   p.renda = a.salario;
   const vin = vincular(v, p, { origem: 'trabalho', proximidade: papel === 'parceiro' ? 30 : 18, convivio: ['trabalho'], estagio: 'colega' });
-  vin.ambiente = `clube:${e.clube}`;
+  // O ambiente é o do trabalho de atleta (o mesmo que `social.recalcularConvivio` reconhece): convivem enquanto você está no clube.
+  const emp = v.trabalho.atual;
+  vin.ambiente = emp ? `trabalho:${emp.empregador}:${emp.tInicio}` : `clube:${e.clube}`;
   // VIDA 28 · relações: o concorrente direto começa como rival (a disputa da vaga); o parceiro, com respeito.
   if (papel === 'concorrente') vin.rivalidade = 30; else vin.respeito = 40;
   return p;

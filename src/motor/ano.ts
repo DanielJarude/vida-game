@@ -8,6 +8,7 @@
  * Silêncio é permitido: nem todo ano precisa de uma história.
  */
 
+import { iniciativaDasDimensoes, processarRelacoes28 } from './sistemas/relacoes28';
 import { processarVidas19 } from './v19/npcs/vidas19';
 import { processarConectada19 } from './v19/conectada/conectada19';
 import { processarHaras19 } from './v19/haras/haras19';
@@ -292,6 +293,10 @@ function viverAno(v: Vida, r: Rng): void {
   processarTrio(v);
   // As outras pessoas também agem: pedem, convidam, cobram, aparecem — e o silêncio do ano passado responde.
   processarIniciativas(v, r);
+  // VIDA 28: as dimensões da relação no ano (a rivalidade que vira respeito, a admiração que se apaga, a lealdade) e o
+  // que elas pedem (quem admira de longe procura; o rival fecha a cara; quem dependia cobra o sumiço).
+  processarRelacoes28(v);
+  iniciativaDasDimensoes(v);
   // VIDA 15: o celular — quem manda mensagem na virada do ano (sorteio derivado: não mexe no acaso da vida).
   processarCelular15(v);
   // VIDA 16: a pasta do ofício e a carreira religiosa fecham o ano (só para quem abriu a pasta / tem a carreira).
