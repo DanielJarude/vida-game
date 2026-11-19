@@ -45,7 +45,7 @@ export function processarRelacoes28(v: Vida): void {
       const cai = juntos ? 0.1 : 0.35;
       const antes = vin.rivalidade;
       vin.rivalidade = Math.round(antes * (1 - cai));
-      if (!juntos && antes >= 20 && vin.tensao < 50) mexer28(vin, 'respeito', (antes - vin.rivalidade) * 0.5);
+      if (!juntos && antes >= 20 && vin.tensao < 50) mexer28(vin, 'respeito', (antes - vin.rivalidade) * 0.8);
       if (antes >= 30 && vin.rivalidade < 30 && !juntos) lembrarCom(v, p.id, 'A rivalidade de antes virou respeito: hoje, cada um torce pelo outro de longe.', 'reconciliacao', 2);
       if (vin.rivalidade <= 2) delete vin.rivalidade;
     }
