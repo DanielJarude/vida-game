@@ -182,6 +182,13 @@ antes de 1970 (geladeira à venda em 1928, fonte errada da renda, preços relati
 (peneira, frente da guerra, nomes, aparelho) · testes `erasV3` · veículos com desenho próprio · padrão de consumo da época ·
 `b088172` capotas e galeria · relatório (este).
 
-## 17. Publicação
+## 17. Publicação (conferida)
 
-Ver a seção final, preenchida só depois de conferida em produção.
+- **Publicado em 19/11/2026**, como autorizado no pedido: `main` e a branch de produção (`claude/fix-pos-rework3-playtest`)
+  avançadas por fast-forward de `7e0d485` para `8d11bb6` (o código é o de `b088172`; `8d11bb6` acrescenta só os documentos).
+  Configuração do Cloudflare não foi tocada.
+- https://vida-game.pages.dev/ serve `assets/index-DleZfLaD.js`; "/" e os 180 arquivos JS/CSS idênticos (sha256) ao build
+  local validado.
+- Teste no site real (1440 e 390 px): escolha de país e data em 6 países e nascimento na Argentina de 1976; vidas da Alemanha
+  Oriental de 1975 (marco do leste, cabeçalho "Alemanha Oriental"), do Japão de 1955 e do Brasil de 1928 (mil-réis, cartas):
+  painel "A época", aparelho, todas as áreas e um ano vivido — sem erro de console, sem rolagem lateral.
