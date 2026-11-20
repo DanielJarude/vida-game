@@ -33,7 +33,7 @@
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
 import type { Vida } from '../tipos';
-import { escrever, idade, parceiro } from '../nucleo';
+import { escrever, filhos, idade, idadePessoa, moraCom, parceiro } from '../nucleo';
 import { bloqueio, PERMITIDO, type Veredito } from '../plausibilidade';
 import { abalar } from './abalo';
 import { dinheiro } from '../texto';
@@ -313,6 +313,35 @@ export function processarApostas(v: Vida): void {
     const par = parceiro(v);
     if (par) par.vin.tensao = clamp(par.vin.tensao + 8);
   }
+  consequenciasNaFamilia29(v, perdeu, renda, e.anosPesados);
+}
+
+/**
+ * VIDA 29 · as consequências proporcionais. Quem joga de vez em quando não tem assunto nenhum; quem perde um pedaço que
+ * se nota (10% da renda) começa a ser notado por quem mora junto — uma vez; quem aposta o dinheiro das contas (a conta
+ * no vermelho ou parcela atrasada no ano de perda) ouve a família; três anos pesados seguidos viram ultimato da parceria
+ * e afastam os filhos adultos. Cada degrau é um acontecimento com escolha (`conteudo/possibilidades`), não um castigo.
+ */
+function consequenciasNaFamilia29(v: Vida, perdeu: number, renda: number, pesados: number): void {
+  if (perdeu <= 0 || idade(v) < 18) return;
+  const casa = moraCom(v).filter(p => !p.especie && v.vinculos[p.id]);
+  const par = parceiro(v);
+  const atrasada = v.financas.dividas.some(d => (d.atraso ?? 0) > 0);
+  // O dinheiro das contas foi para o jogo: a família sente no mês.
+  if (perdeu > renda * 0.15 && (v.financas.conta < 0 || atrasada) && (casa.length || par)) {
+    v.fatos['apo_contas29'] = v.t;
+    for (const p of casa) { const vin = v.vinculos[p.id]; vin.tensao = clamp(vin.tensao + 5); }
+    return;
+  }
+  // Três anos pesados: o ultimato (uma vez a cada três anos) e os filhos adultos se afastam um pouco.
+  if (pesados >= 3 && (par || filhos(v).some(f => idadePessoa(v, f) >= 18))) {
+    const ult = v.fatos['apo_ultimato29'];
+    if (ult === undefined || v.t - ult >= 36) v.fatos['apo_ultimato29'] = v.t;
+    for (const f of filhos(v).filter(f => idadePessoa(v, f) >= 18)) { const vin = v.vinculos[f.id]; if (vin) vin.proximidade = clamp(vin.proximidade - 4); }
+    return;
+  }
+  // Alguém de casa percebeu (uma vez na vida, antes de virar problema grande).
+  if (perdeu > renda * 0.1 && pesados < 2 && (casa.length || par) && v.fatos['apo_notou29'] === undefined) v.fatos['apo_notou29'] = v.t;
 }
 
 /** O balanço do ano e da vida, em palavras (para a tela). */
