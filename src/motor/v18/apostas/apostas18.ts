@@ -17,7 +17,7 @@ import { debitar, podeApostar, proibido, registrar } from '../../sistemas/aposta
 import { ligaDe } from '../../sistemas/ligas';
 import { LOTERIAS18, INSCRICAO_TURFE, PREMIOS_TURFE, type LoteriaId } from '../../dados18/apostas/loterias18';
 import { anotar18, estadoApostas18, type ApostaEsportiva18, type Bilhete18, type MercadoEsportivo } from './estado18';
-import { apurarConcurso, bolaoDaLoterica, precoDaAposta, precoDaLoteca, proximoConcurso, concursosDoAnoAcabaram, surpresinha, validarJogo, validarLoteca, primeiroDoAno, viradaDoAno, ehVirada } from './loterias18';
+import { apurarConcurso, bolaoDaLoterica, precoDaAposta, precoDaLoteca, precoDoJogo, proximoConcurso, concursosDoAnoAcabaram, surpresinha, surpresinhaExtra, validarJogo, validarLoteca, primeiroDoAno, viradaDoAno, ehVirada, nomeDoExtra } from './loterias18';
 import { impedidoNoFutebol, liquidarTemporada, mercadoDaTemporada, odd, paisDoFutebol, probabilidades, gradeDePlacares, resultadoDoJogo, rodada } from './esportivas18';
 import { chancesDoPareo, chegada, hipodromosDaVida, oddTurfe, pareo } from './turfe18';
 import { bingoBeneficente, jogarBingo } from './bingo18';
@@ -40,7 +40,7 @@ export function leiDa(v: Vida, m: Modalidade18): { permitido: boolean; texto: st
 /* ================================================================== As operações */
 
 export type OqueAposta18 =
-  | { jogo: 'loteria'; oque: 'comprar'; loteria: LoteriaId; jogos?: number[][]; palpites?: ('1' | 'X' | '2')[][]; surpresinhas?: number; dezenas?: number; /** VIDA 19: no concurso especial da Mega da Virada. */ virada?: boolean }
+  | { jogo: 'loteria'; oque: 'comprar'; loteria: LoteriaId; jogos?: number[][]; /** VIDA 29: o extra de cada jogo (time, mês, trevos). */ extras?: number[][]; palpites?: ('1' | 'X' | '2')[][]; surpresinhas?: number; dezenas?: number; /** VIDA 19: no concurso especial da Mega da Virada. */ virada?: boolean }
   | { jogo: 'loteria'; oque: 'bolao'; loteria: LoteriaId; cotas: number; virada?: boolean }
   | { jogo: 'loteria'; oque: 'bolao_conhecidos'; loteria: LoteriaId; pessoas: string[]; jogos: number }
   | { jogo: 'loteria'; oque: 'sorteio'; loteria: LoteriaId }
@@ -77,11 +77,12 @@ export function custoDaOperacao(v: Vida, q: OqueAposta18): number {
   if (q.jogo === 'loteria') {
     if (q.oque === 'comprar') {
       if (q.loteria === 'loteca') return precoDaLoteca(q.palpites ?? []);
-      const jogos = q.jogos?.length ? q.jogos.map(j => j.length) : Array(q.surpresinhas ?? 1).fill(q.dezenas ?? LOTERIAS18[q.loteria].min);
+      if (q.jogos?.length) return Math.round(q.jogos.reduce((s, j, k) => s + precoDoJogo(q.loteria, j, q.extras?.[k]), 0) * 100) / 100;
+      const jogos = Array(q.surpresinhas ?? 1).fill(q.dezenas ?? LOTERIAS18[q.loteria].min);
       return Math.round(jogos.reduce((s, n) => s + precoDaAposta(q.loteria, n), 0) * 100) / 100;
     }
     if (q.oque === 'bolao') return Math.round(bolaoDaLoterica(v, q.loteria, !!q.virada).valorCota * q.cotas * 100) / 100;
-    if (q.oque === 'bolao_conhecidos') return Math.round(precoDaAposta(q.loteria, LOTERIAS18[q.loteria].min + (q.loteria === 'lotomania' ? 0 : 1)) * q.jogos / (q.pessoas.length + 1) * 100) / 100;
+    if (q.oque === 'bolao_conhecidos') return Math.round(precoDaAposta(q.loteria, dezenasDoBolaoDeConhecidos(q.loteria)) * q.jogos / (q.pessoas.length + 1) * 100) / 100;
     return 0;
   }
   if (q.jogo === 'esportiva') return q.oque === 'jogo' || q.oque === 'temporada' ? q.valor : 0;
@@ -89,6 +90,10 @@ export function custoDaOperacao(v: Vida, q: OqueAposta18): number {
   if (q.jogo === 'bingo') return precoDaCartela(v) * q.cartelas;
   return 0;
 }
+/** O jogo do bolão entre conhecidos: uma dezena a mais que o mínimo (onde a regra deixa). */
+const dezenasDoBolaoDeConhecidos = (l: LoteriaId) => Math.min(LOTERIAS18[l].max, LOTERIAS18[l].min + (l === 'lotomania' ? 0 : 1));
+/** VIDA 29: a loteria já existe no ano? (A Timemania é de 2008; o Dia de Sorte, de 2018; o Super Sete, de 2020; a +Milionária, de 2022.) */
+export const loteriaExiste = (v: Vida, l: LoteriaId) => anoDe(v.t) >= LOTERIAS18[l].desde;
 export const precoDaCartela = (v: Vida) => (bingoBeneficente(v) ? 10 : 25);
 
 export function disponibilidadeAposta18(v: Vida, q: OqueAposta18): Veredito {
@@ -100,12 +105,13 @@ export function disponibilidadeAposta18(v: Vida, q: OqueAposta18): Veredito {
   const custo = custoDaOperacao(v, q);
   switch (q.jogo) {
     case 'loteria': {
+      if (!loteriaExiste(v, q.loteria)) return bloqueio('impossivel', `A ${LOTERIAS18[q.loteria].nome} só começou em ${LOTERIAS18[q.loteria].desde}.`);
       if (q.oque === 'sorteio') return PERMITIDO;
       if (concursosDoAnoAcabaram(v, q.loteria)) return bloqueio('incompativel', 'Os concursos deste ano já correram: o próximo é no ano que vem.');
       if ((q.oque === 'comprar' || q.oque === 'bolao') && q.virada && q.loteria !== 'mega') return bloqueio('impossivel', 'A Virada é da Mega-Sena.');
       if (q.oque === 'comprar') {
         if (q.loteria === 'loteca') { const e = validarLoteca(q.palpites ?? []); if (e) return bloqueio('impossivel', e); }
-        else for (const j of q.jogos ?? []) { const e = validarJogo(q.loteria, j); if (e) return bloqueio('impossivel', e); }
+        else for (const [k, j] of (q.jogos ?? []).entries()) { const e = validarJogo(q.loteria, j, q.extras?.[k]); if (e) return bloqueio('impossivel', e); }
         if (!q.jogos?.length && q.loteria !== 'loteca' && !(q.surpresinhas! >= 1 && q.surpresinhas! <= 20)) return bloqueio('impossivel', 'Escolha quantos jogos.');
         if (q.dezenas !== undefined && (q.dezenas < LOTERIAS18[q.loteria].min || q.dezenas > LOTERIAS18[q.loteria].max)) return bloqueio('impossivel', 'Quantidade de dezenas fora da regra.');
       }
@@ -226,7 +232,7 @@ function loteria(v: Vida, rr: Rng, q: Extract<OqueAposta18, { jogo: 'loteria' }>
   if (q.oque === 'sorteio') {
     const a = apurarConcurso(v, l, n);
     e.proximo[l] = n + 1;
-    const sorteado = l === 'loteca' ? `os 14 jogos da rodada` : `${a.sorteio.a.map(x => String(x).padStart(2, '0')).join(' ')}${a.sorteio.b ? ` · 2º sorteio: ${a.sorteio.b.map(x => String(x).padStart(2, '0')).join(' ')}` : ''}`;
+    const sorteado = l === 'loteca' ? `os 14 jogos da rodada` : L.colunas ? `colunas ${a.sorteio.a.map(x => x % 10).join(' ')}` : `${a.sorteio.a.map(x => String(x).padStart(2, '0')).join(' ')}${a.sorteio.b ? ` · 2º sorteio: ${a.sorteio.b.map(x => String(x).padStart(2, '0')).join(' ')}` : ''}${a.sorteio.extra ? ` · ${L.extra!.nome}: ${a.sorteio.extra.map(x => nomeDoExtra(l, x)).join(' e ')}` : ''}`;
     if (!a.bilhetes.length) return { texto: `${L.nome}, concurso ${n}: ${sorteado}. Você não tinha jogo neste.` };
     const custo = a.bilhetes.reduce((s, b) => s + b.custo, 0);
     if (a.premio > 0) registrar(v, { jogo: 'loteria18', t: v.t, apostado: 0, recebido: a.premio, texto: `${L.nome} ${n}` });
@@ -239,14 +245,17 @@ function loteria(v: Vida, rr: Rng, q: Extract<OqueAposta18, { jogo: 'loteria' }>
   const custo = custoDaOperacao(v, q);
   if (q.oque === 'comprar') {
     const jogos = l === 'loteca' ? [[]] : q.jogos?.length ? q.jogos.map(j => [...j].sort((x, y) => x - y)) : Array.from({ length: q.surpresinhas ?? 1 }, () => surpresinha(rr, l, q.dezenas ?? L.min));
-    b = { id: `bl${v.seq++}`, loteria: l, concurso: n, t: v.t, jogos, ...(l === 'loteca' ? { palpites: q.palpites } : {}), custo, ...(!q.jogos?.length && l !== 'loteca' ? { surpresinha: true } : {}) };
+    // VIDA 29: o extra de cada jogo (o escolhido no volante; na surpresinha, sorteado também).
+    const extras = L.extra ? jogos.map((_, k) => (q.jogos?.length ? [...(q.extras?.[k] ?? [])].sort((x, y) => x - y) : surpresinhaExtra(rr, l)!)) : undefined;
+    b = { id: `bl${v.seq++}`, loteria: l, concurso: n, t: v.t, jogos, ...(extras ? { extras } : {}), ...(l === 'loteca' ? { palpites: q.palpites } : {}), custo, ...(!q.jogos?.length && l !== 'loteca' ? { surpresinha: true } : {}) };
   } else if (q.oque === 'bolao') {
     const bo = bolaoDaLoterica(v, l, !!q.virada);
-    b = { id: `bl${v.seq++}`, loteria: l, concurso: n, t: v.t, jogos: bo.jogos, ...(bo.palpites ? { palpites: bo.palpites } : {}), custo, bolao: { minhas: q.cotas, cotas: bo.cotas, organizador: 'loterica' } };
+    b = { id: `bl${v.seq++}`, loteria: l, concurso: n, t: v.t, jogos: bo.jogos, ...(bo.extras ? { extras: bo.extras } : {}), ...(bo.palpites ? { palpites: bo.palpites } : {}), custo, bolao: { minhas: q.cotas, cotas: bo.cotas, organizador: 'loterica' } };
   } else {
-    const d = L.min + (l === 'lotomania' ? 0 : 1);
+    const d = dezenasDoBolaoDeConhecidos(l);
     const jogos = Array.from({ length: q.jogos }, () => surpresinha(rr, l, d));
-    b = { id: `bl${v.seq++}`, loteria: l, concurso: n, t: v.t, jogos, custo, bolao: { minhas: 1, cotas: q.pessoas.length + 1, pessoas: q.pessoas, organizador: 'voce' } };
+    const extras = L.extra ? jogos.map(() => surpresinhaExtra(rr, l)!) : undefined;
+    b = { id: `bl${v.seq++}`, loteria: l, concurso: n, t: v.t, jogos, ...(extras ? { extras } : {}), custo, bolao: { minhas: 1, cotas: q.pessoas.length + 1, pessoas: q.pessoas, organizador: 'voce' } };
   }
   debitar(v, custo);
   registrar(v, { jogo: 'loteria18', t: v.t, apostado: custo, recebido: 0, texto: `${L.nome} ${n}` });

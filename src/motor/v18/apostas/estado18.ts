@@ -7,7 +7,7 @@ import type { Vida } from '../../tipos';
 import type { LoteriaId } from '../../dados18/apostas/loterias18';
 import { anoDe } from '../../tempo';
 
-export interface ResultadoDoBilhete { sorteio: number[]; sorteio2?: number[]; resultados?: ('1' | 'X' | '2')[]; premio: number; faixas: { nome: string; combinacoes: number; valor: number }[] }
+export interface ResultadoDoBilhete { sorteio: number[]; sorteio2?: number[]; /** VIDA 29: o time, o mês ou os trevos sorteados. */ sorteioExtra?: number[]; resultados?: ('1' | 'X' | '2')[]; premio: number; faixas: { nome: string; combinacoes: number; valor: number }[] }
 
 export interface Bilhete18 {
   id: string;
@@ -17,6 +17,8 @@ export interface Bilhete18 {
   /** Os jogos (cada um, as dezenas marcadas); na Loteca, um só "jogo" com os palpites em `palpites`. */
   jogos: number[][];
   palpites?: ('1' | 'X' | '2')[][];
+  /** VIDA 29: o extra de cada jogo (o time do coração, o mês da sorte, os trevos), na ordem dos jogos. */
+  extras?: number[][];
   custo: number;
   /** Bolão: as cotas que são suas, o total de cotas e — no bolão entre conhecidos — quem mais entrou. */
   bolao?: { minhas: number; cotas: number; pessoas?: string[]; organizador?: 'loterica' | 'voce' };

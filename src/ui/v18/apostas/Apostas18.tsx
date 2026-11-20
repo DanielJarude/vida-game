@@ -11,10 +11,10 @@ import { BotaoAcao, Subnav } from '../../comum';
 import { dinheiroCurto } from '../../leituraMaterial';
 import { anoDe } from '../../../motor/tempo';
 import { LOTERIAS18, BOLOES18, INSCRICAO_TURFE, type LoteriaId } from '../../../motor/dados18/apostas/loterias18';
-import { bolaoDaLoterica, chanceDaFaixa, comb, precoDaAposta, precoDaLoteca, premioEstimado, proximoConcurso, viradaDoAno } from '../../../motor/v18/apostas/loterias18';
+import { apostasSimples, bolaoDaLoterica, chanceDaFaixaDe, nomeDoExtra, precoDaAposta, precoDaLoteca, precoDoJogo, premioEstimado, proximoConcurso, timesDaTimemania, viradaDoAno } from '../../../motor/v18/apostas/loterias18';
 import { mercadoDaTemporada, mercadoPronto, odd, probabilidades, rodada, gradeDePlacares, paisDoFutebol } from '../../../motor/v18/apostas/esportivas18';
 import { chancesDoPareo, hipodromosDaVida, oddTurfe, desempenho } from '../../../motor/v18/apostas/turfe18';
-import { cavalosDaCasa, leiDa, pareoAberto, pareoDe, precoDaCartela, rodadaAberta, pendentesEsportivas, type OqueAposta18 } from '../../../motor/v18/apostas/apostas18';
+import { cavalosDaCasa, leiDa, loteriaExiste, pareoAberto, pareoDe, precoDaCartela, rodadaAberta, pendentesEsportivas, type OqueAposta18 } from '../../../motor/v18/apostas/apostas18';
 import { bingoBeneficente } from '../../../motor/v18/apostas/bingo18';
 import './apostas18.css';
 
@@ -28,16 +28,20 @@ function Lei({ texto }: { texto: string }) { return <p className="apostas18__lei
 
 /* ================================================================== Loterias da Caixa */
 
-const ORDEM: LoteriaId[] = ['mega', 'lotofacil', 'quina', 'lotomania', 'duplasena', 'loteca'];
+const ORDEM: LoteriaId[] = ['mega', 'lotofacil', 'quina', 'lotomania', 'duplasena', 'timemania', 'diadesorte', 'supersete', 'maismilionaria', 'loteca'];
 
 export function Loterias18({ vida, agir }: { vida: Vida; agir: Agir }) {
-  const [l, setL] = useState<LoteriaId>('mega');
+  const [l0, setL] = useState<LoteriaId>('mega');
   const lei = leiDa(vida, 'loterias');
+  // VIDA 29: só as loterias que já existem no ano (a Timemania é de 2008; a +Milionária, de 2022).
+  const ordem = ORDEM.filter(id => loteriaExiste(vida, id));
+  const l = ordem.includes(l0) ? l0 : ordem[0];
   if (!lei.permitido) return <Lei texto={lei.texto} />;
+  if (!l) return <Lei texto="Nenhuma loteria federal existe ainda nesta época." />;
   return (
     <div className="apostas18">
       <Lei texto={lei.texto} />
-      <Subnav rotulo="Loterias" prefixo="loterias18" classe="subnav--loterias18" itens={ORDEM.map(id => ({ id, rotulo: LOTERIAS18[id].nome, oque: LOTERIAS18[id].dias }))} atual={l} aoMudar={setL} />
+      <Subnav rotulo="Loterias" prefixo="loterias18" classe="subnav--loterias18" itens={ordem.map(id => ({ id, rotulo: LOTERIAS18[id].nome, oque: LOTERIAS18[id].dias }))} atual={l} aoMudar={setL} />
       <div role="tabpanel" id="loterias18-painel" aria-labelledby={`loterias18-aba-${l}`}>
         {l === 'loteca' ? <Loteca vida={vida} agir={agir} /> : <Volante key={l} vida={vida} agir={agir} l={l} />}
       </div>
@@ -76,6 +80,7 @@ function Virada19({ vida, agir, dezenas, qtd }: { vida: Vida; agir: Agir; dezena
 function Volante({ vida, agir, l }: { vida: Vida; agir: Agir; l: LoteriaId }) {
   const L = LOTERIAS18[l];
   const [marcados, setMarcados] = useState<number[]>([]);
+  const [extra, setExtra] = useState<number[]>(L.extra?.tipo === 'trevo' ? [] : []);
   const [dezenas, setDezenas] = useState(L.min);
   const [qtd, setQtd] = useState(1);
   const [cotas, setCotas] = useState(1);
@@ -83,7 +88,9 @@ function Volante({ vida, agir, l }: { vida: Vida; agir: Agir; l: LoteriaId }) {
   const bolao = useMemo(() => bolaoDaLoterica(vida, l), [vida, l]);
   const lo = L.doZero ? 0 : 1;
   const nums = Array.from({ length: L.universo }, (_, k) => k + lo);
-  const alternar = (x: number) => setMarcados(m => (m.includes(x) ? m.filter(y => y !== x) : m.length < L.max ? [...m, x].sort((a, b) => a - b) : m));
+  const alternar = (x: number) => setMarcados(m => (m.includes(x) ? m.filter(y => y !== x) : m.length < L.max && (!L.colunas || m.filter(y => Math.floor(y / 10) === Math.floor(x / 10)).length < L.colunas.porColuna) ? [...m, x].sort((a, b) => a - b) : m));
+  const alternarExtra = (x: number) => setExtra(e => (L.extra!.max === 1 ? [x] : e.includes(x) ? e.filter(y => y !== x) : e.length < L.extra!.max ? [...e, x].sort((a, b) => a - b) : e));
+  const completo = L.colunas ? Array.from({ length: L.colunas.n }, (_, c) => marcados.some(x => Math.floor(x / 10) === c)).every(Boolean) : marcados.length >= L.min;
   const meus = (vida.apostas18?.bilhetes ?? []).filter(b => b.loteria === l).slice(-6).reverse();
   const ultimoConferido = meus.find(b => b.resultado);
   const sorteados = new Set([...(ultimoConferido?.resultado?.sorteio ?? []), ...(ultimoConferido?.resultado?.sorteio2 ?? [])]);
@@ -92,19 +99,45 @@ function Volante({ vida, agir, l }: { vida: Vida; agir: Agir; l: LoteriaId }) {
     <section className="apostas18__loteria" aria-label={L.nome}>
       <Cartaz vida={vida} l={l} />
       <div className="apostas18__volante papel papel--sem-dobra">
-        <p className="bilhete__cabeca"><span>{L.nome} · marque {L.min === L.max ? L.min : `${L.min} a ${L.max}`}</span><span>{marcados.length >= L.min ? dinheiroCurto(precoDaAposta(l, marcados.length)) : `aposta simples: ${dinheiroCurto(L.preco)}`}</span></p>
-        <div className={`apostas18__grade apostas18__grade--${l}`} role="group" aria-label={`Dezenas de ${dz(lo)} a ${dz(L.universo - 1 + lo)}`}>
-          {nums.map(x => <button key={x} type="button" className={`bilhete__numero${marcados.includes(x) ? ' bilhete__numero--marcado' : ''}${sorteados.has(x) ? ' bilhete__numero--sorteado' : ''}`} aria-pressed={marcados.includes(x)} onClick={() => alternar(x)}>{dz(x)}</button>)}
-        </div>
-        <p className="nota">{marcados.length} marcadas{marcados.length > L.min && l !== 'lotomania' ? ` = ${comb(marcados.length, L.min).toLocaleString('pt-BR')} apostas simples` : ''}.</p>
+        <p className="bilhete__cabeca"><span>{L.nome} · {L.colunas ? `um a ${L.colunas.porColuna} números em cada uma das ${L.colunas.n} colunas` : `marque ${L.min === L.max ? L.min : `${L.min} a ${L.max}`}`}{L.extra ? ` e ${L.extra.min === L.extra.max ? (L.extra.min === 1 ? `o ${L.extra.nome}` : `${L.extra.min} ${L.extra.nome}`) : `${L.extra.min} a ${L.extra.max} ${L.extra.nome}`}` : ''}</span><span>{completo ? dinheiroCurto(precoDoJogo(l, marcados, extra.length ? extra : undefined)) : `aposta simples: ${dinheiroCurto(L.preco)}`}</span></p>
+        {L.colunas ? (
+          <div className="apostas18__colunas" role="group" aria-label="As sete colunas">
+            {Array.from({ length: L.colunas.n }, (_, c) => (
+              <div key={c} className="apostas18__coluna" role="group" aria-label={`Coluna ${c + 1}`}>
+                <span className="apostas18__coluna-nome">{c + 1}ª</span>
+                {Array.from({ length: 10 }, (_, d) => c * 10 + d).map(x => <button key={x} type="button" className={`bilhete__numero${marcados.includes(x) ? ' bilhete__numero--marcado' : ''}${sorteados.has(x) ? ' bilhete__numero--sorteado' : ''}`} aria-pressed={marcados.includes(x)} aria-label={`Coluna ${c + 1}, número ${x % 10}`} onClick={() => alternar(x)}>{x % 10}</button>)}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className={`apostas18__grade apostas18__grade--${l}`} role="group" aria-label={`Dezenas de ${dz(lo)} a ${dz(L.universo - 1 + lo)}`}>
+            {nums.map(x => <button key={x} type="button" className={`bilhete__numero${marcados.includes(x) ? ' bilhete__numero--marcado' : ''}${sorteados.has(x) ? ' bilhete__numero--sorteado' : ''}`} aria-pressed={marcados.includes(x)} onClick={() => alternar(x)}>{dz(x)}</button>)}
+          </div>
+        )}
+        {L.extra?.tipo === 'time' && (
+          <label className="campo apostas18__extra">Time do coração
+            <select value={extra[0] ?? ''} onChange={e => setExtra(e.target.value ? [Number(e.target.value)] : [])}>
+              <option value="">Escolha o clube</option>
+              {timesDaTimemania().map((t, k) => <option key={k} value={k + 1}>{t}</option>)}
+            </select>
+          </label>
+        )}
+        {(L.extra?.tipo === 'mes' || L.extra?.tipo === 'trevo') && (
+          <div className="apostas18__extra" role="group" aria-label={L.extra.tipo === 'mes' ? 'Mês da sorte' : 'Trevos'}>
+            <span>{L.extra.tipo === 'mes' ? 'Mês da sorte' : `Trevos (${L.extra.min} a ${L.extra.max})`}</span>
+            {Array.from({ length: L.extra.universo }, (_, k) => k + 1).map(x => <button key={x} type="button" className={`bilhete__numero apostas18__extra-item${extra.includes(x) ? ' bilhete__numero--marcado' : ''}${ultimoConferido?.resultado?.sorteioExtra?.includes(x) ? ' bilhete__numero--sorteado' : ''}`} aria-pressed={extra.includes(x)} onClick={() => alternarExtra(x)}>{L.extra!.tipo === 'mes' ? nomeDoExtra(l, x).slice(0, 3) : `☘ ${x}`}</button>)}
+          </div>
+        )}
+        <p className="nota">{marcados.length} {L.colunas ? 'números' : 'marcadas'}{completo && l !== 'lotomania' && apostasSimples(l, marcados, extra.length ? extra : undefined) > 1 ? ` = ${apostasSimples(l, marcados, extra.length ? extra : undefined).toLocaleString('pt-BR')} apostas simples` : ''}.</p>
         <div className="grupo-acoes grupo-acoes--linha">
-          <button type="button" className="botao botao--discreto" onClick={() => setMarcados([])}>Limpar</button>
-          <BotaoAcao vida={vida} agir={agir} variante="principal" acao={a18({ jogo: 'loteria', oque: 'comprar', loteria: l, jogos: [marcados] })} semAviso>Registrar este jogo</BotaoAcao>
+          <button type="button" className="botao botao--discreto" onClick={() => { setMarcados([]); setExtra([]); }}>Limpar</button>
+          <BotaoAcao vida={vida} agir={agir} variante="principal" acao={a18({ jogo: 'loteria', oque: 'comprar', loteria: l, jogos: [marcados], ...(L.extra ? { extras: [extra] } : {}) })} semAviso>Registrar este jogo</BotaoAcao>
         </div>
       </div>
       <div className="apostas18__linha">
         <span>Surpresinha</span>
-        {l !== 'lotomania' && <label>dezenas <select value={dezenas} onChange={e => setDezenas(Number(e.target.value))}>{Array.from({ length: Math.min(L.max, L.min + 5) - L.min + 1 }, (_, k) => L.min + k).map(d => <option key={d} value={d}>{d}</option>)}</select></label>}
+        {l !== 'lotomania' && L.min !== L.max && <label>{L.colunas ? 'números' : 'dezenas'} <select value={dezenas} onChange={e => setDezenas(Number(e.target.value))}>{Array.from({ length: Math.min(L.max, L.min + 5) - L.min + 1 }, (_, k) => L.min + k).map(d => <option key={d} value={d}>{d}</option>)}</select></label>}
+        {L.extra && <span className="nota">{L.extra.tipo === 'trevo' ? 'com dois trevos' : `o ${L.extra.nome} também vem na surpresinha`}</span>}
         <label>jogos <select value={qtd} onChange={e => setQtd(Number(e.target.value))}>{[1, 2, 3, 5, 10].map(d => <option key={d} value={d}>{d}</option>)}</select></label>
         <BotaoAcao vida={vida} agir={agir} acao={a18({ jogo: 'loteria', oque: 'comprar', loteria: l, surpresinhas: qtd, dezenas })}>Registrar · {dinheiroCurto(precoDaAposta(l, dezenas) * qtd)}</BotaoAcao>
       </div>
@@ -128,7 +161,7 @@ function Volante({ vida, agir, l }: { vida: Vida; agir: Agir; l: LoteriaId }) {
       <details className="regras">
         <summary>Regras, faixas e chances</summary>
         <table className="regras__tabela"><thead><tr><th>Faixa</th><th>Prêmio</th><th>Chance (aposta simples)</th></tr></thead>
-          <tbody>{L.faixas.map(f => <tr key={f.nome}><td>{f.nome}</td><td>{f.fixo ? dinheiroCurto(f.fixo) : `${Math.round((f.pct ?? 0) * 100)}% do prêmio, dividido`}</td><td>{umEm(chanceDaFaixa(L.universo, L.sorteia, L.min, f.acertos))}</td></tr>)}</tbody></table>
+          <tbody>{L.faixas.map(f => <tr key={f.nome}><td>{f.nome}</td><td>{f.fixo ? dinheiroCurto(f.fixo) : `${Math.round((f.pct ?? 0) * 100)}% do prêmio, dividido`}</td><td>{umEm(chanceDaFaixaDe(l, f))}</td></tr>)}</tbody></table>
         <p className="nota">{Math.round(43.35)}% da arrecadação vira prêmio. Uma aposta com mais dezenas vale por todas as combinações simples que contém (e custa por elas). A faixa principal acumula quando ninguém acerta.</p>
       </details>
     </section>
@@ -144,9 +177,9 @@ function Bilhetes({ vida, l }: { vida: Vida; l: LoteriaId }) {
       {meus.map(b => (
         <li key={b.id} className={`apostas18__bilhete${b.resultado?.premio ? ' apostas18__bilhete--premiado' : ''}`}>
           <span className="apostas18__bilhete-cab">Concurso {b.concurso.toLocaleString('pt-BR')} · {b.bolao ? `bolão (${b.bolao.minhas} de ${b.bolao.cotas} cotas)` : `${b.jogos.length} ${b.jogos.length === 1 ? 'jogo' : 'jogos'}`} · {dinheiroCurto(b.custo)}</span>
-          {l !== 'loteca' && <span className="apostas18__dezenas">{b.jogos.slice(0, 3).map((j, k) => <span key={k}>{j.map(x => dz(x)).join(' ')}</span>)}{b.jogos.length > 3 ? <span>…</span> : null}</span>}
+          {l !== 'loteca' && <span className="apostas18__dezenas">{b.jogos.slice(0, 3).map((j, k) => <span key={k}>{L.colunas ? Array.from({ length: L.colunas.n }, (_, c) => j.filter(x => Math.floor(x / 10) === c).map(x => x % 10).join('/')).join(' · ') : j.map(x => dz(x)).join(' ')}{b.extras?.[k]?.length ? ` + ${b.extras[k].map(x => nomeDoExtra(l, x)).join(', ')}` : ''}</span>)}{b.jogos.length > 3 ? <span>…</span> : null}</span>}
           {b.resultado ? (
-            <span>{l === 'loteca' ? 'Resultados: ' + b.resultado.resultados!.join(' ') : <>Sorteio: <span className="loteria__bolas apostas18__bolas">{b.resultado.sorteio.map(x => <span key={x} className="loteria__bola">{dz(x)}</span>)}</span>{b.resultado.sorteio2 ? <> · 2º: <span className="loteria__bolas apostas18__bolas">{b.resultado.sorteio2.map(x => <span key={x} className="loteria__bola">{dz(x)}</span>)}</span></> : null}</>} — {b.resultado.premio > 0 ? <strong>{b.resultado.faixas.map(f => `${f.combinacoes > 1 ? `${f.combinacoes}× ` : ''}${f.nome}`).join(', ')}: {dinheiroCurto(b.resultado.premio)}</strong> : 'nenhuma faixa'}</span>
+            <span>{l === 'loteca' ? 'Resultados: ' + b.resultado.resultados!.join(' ') : <>Sorteio: <span className="loteria__bolas apostas18__bolas">{b.resultado.sorteio.map(x => <span key={x} className="loteria__bola">{L.colunas ? x % 10 : dz(x)}</span>)}</span>{b.resultado.sorteioExtra ? <> · {L.extra?.nome}: {b.resultado.sorteioExtra.map(x => nomeDoExtra(l, x)).join(' e ')}</> : null}{b.resultado.sorteio2 ? <> · 2º: <span className="loteria__bolas apostas18__bolas">{b.resultado.sorteio2.map(x => <span key={x} className="loteria__bola">{dz(x)}</span>)}</span></> : null}</>} — {b.resultado.premio > 0 ? <strong>{b.resultado.faixas.map(f => `${f.combinacoes > 1 ? `${f.combinacoes}× ` : ''}${f.nome}`).join(', ')}: {dinheiroCurto(b.resultado.premio)}</strong> : 'nenhuma faixa'}</span>
           ) : <span className="nota">Aguardando o sorteio ({L.dias}).</span>}
         </li>
       ))}

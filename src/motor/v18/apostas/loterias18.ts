@@ -18,7 +18,8 @@ import type { Vida } from '../../tipos';
 import { rngDe, type Rng } from '../../rng';
 import { anoDe } from '../../tempo';
 import { dinheiro as fmt } from '../../texto';
-import { BOLOES18, LOTERIAS18, PREMIO_BRUTO, TARIFA_BOLAO, VIRADA18, type LoteriaId } from '../../dados18/apostas/loterias18';
+import { BOLOES18, LOTERIAS18, PREMIO_BRUTO, TARIFA_BOLAO, VIRADA18, type FaixaLoteria, type LoteriaId } from '../../dados18/apostas/loterias18';
+import { clubesDoPais } from '../../dados/clubes';
 import { estadoApostas18, type Bilhete18, type ResultadoDoBilhete } from './estado18';
 import { rodadaDoConcurso, resultadoDoJogo } from './esportivas18';
 
@@ -39,7 +40,44 @@ export const combinacoesCom = (n: number, a: number, k: number, j: number) => co
 export function precoDaAposta(l: LoteriaId, n: number): number {
   const L = LOTERIAS18[l];
   if (l === 'lotomania') return L.preco;
+  // Super Sete: a surpresinha põe os números a mais um por coluna (cada coluna com dois dobra as apostas simples).
+  if (l === 'supersete') return Math.round(L.preco * 2 ** Math.max(0, Math.min(7, n - 7)) * 3 ** Math.max(0, n - 14) / (n > 14 ? 2 ** (n - 14) : 1) * 100) / 100;
   return Math.round(L.preco * comb(n, L.min) * 100) / 100;
+}
+/** VIDA 29 · as apostas simples de UM jogo (com os extras): o Super Sete multiplica coluna a coluna; a +Milionária, dezenas × trevos. */
+export function apostasSimples(l: LoteriaId, jogo: number[], extra?: number[]): number {
+  const L = LOTERIAS18[l];
+  if (l === 'lotomania') return 1;
+  if (L.colunas) return Array.from({ length: L.colunas.n }, (_, c) => jogo.filter(x => Math.floor(x / 10) === c).length).reduce((a, b) => a * Math.max(1, b), 1);
+  const base = comb(jogo.length, L.min);
+  return L.extra?.tipo === 'trevo' ? base * comb(extra?.length ?? L.extra.min, L.extra.sorteia) : base;
+}
+/** O preço de um jogo marcado no volante (com os extras). */
+export const precoDoJogo = (l: LoteriaId, jogo: number[], extra?: number[]) => Math.round(LOTERIAS18[l].preco * apostasSimples(l, jogo, extra) * 100) / 100;
+
+/** VIDA 29 · a chave de uma faixa (os acertos e o sorteio; a +Milionária e o time do coração têm a sua). */
+export const chaveDe = (f: FaixaLoteria) => f.chave ?? `${f.acertos}${f.sorteio ? `:${f.sorteio}` : ''}`;
+/** A chance de uma aposta simples cair na faixa (a hipergeométrica das dezenas; as colunas; os trevos; o extra sozinho). */
+export function chanceDaFaixaDe(l: LoteriaId, f: FaixaLoteria): number {
+  const L = LOTERIAS18[l];
+  if (l === 'loteca') return f.acertos === 14 ? 1 / 1_300_000 : 1 / 22_000;
+  if (f.soExtra && L.extra) return L.extra.sorteia / L.extra.universo;
+  if (L.colunas) return comb(L.colunas.n, f.acertos) * 0.1 ** f.acertos * 0.9 ** (L.colunas.n - f.acertos);
+  const p = chanceDaFaixa(L.universo, L.sorteia, L.min, f.acertos);
+  if (f.extras && L.extra) return p * f.extras.reduce((s, t) => s + chanceDaFaixa(L.extra!.universo, L.extra!.sorteia, L.extra!.sorteia, t), 0);
+  return p;
+}
+/** O nome do extra sorteado (o time, o mês, o trevo). */
+export function nomeDoExtra(l: LoteriaId, x: number): string {
+  if (l === 'timemania') return timesDaTimemania()[x - 1] ?? `time ${x}`;
+  if (l === 'diadesorte') return ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'][x - 1] ?? String(x);
+  return `trevo ${x}`;
+}
+/** Os 80 clubes da Timemania (os do país no catálogo de clubes, em ordem estável; completados por número se faltarem). */
+export function timesDaTimemania(): string[] {
+  const xs = [...new Set(clubesDoPais('BR').map(c => c.nome.replace(/^~/, '')))].slice(0, 80);
+  while (xs.length < 80) xs.push(`Clube ${xs.length + 1}`);
+  return xs;
 }
 export function precoDaLoteca(palpites: ('1' | 'X' | '2')[][]): number { return Math.round(LOTERIAS18.loteca.preco * combinacoesLoteca(palpites) * 100) / 100; }
 export const combinacoesLoteca = (palpites: ('1' | 'X' | '2')[][]) => palpites.reduce((s, p) => s * Math.max(1, p.length), 1);
@@ -101,8 +139,9 @@ export function acumulado(v: Vida, l: LoteriaId, n: number): number {
   for (let k = n - 24; k < n; k++) {
     if (ehVirada(l, k)) continue;
     const nac = nacionalSem(v, l, k, j);
-    const topoPct = L.faixas.find(f => f.acertos === L.acumula && (f.sorteio ?? 1) === 1)?.pct ?? 0;
-    const saiu = (nac.ganhadores[chaveDaFaixa(L.acumula, L.duasVezes ? 1 : undefined)] ?? 0) > 0 || topo.has(k);
+    // A faixa principal é a primeira de cada loteria (a sena, os 15, os 7, o 6+2...).
+    const topoPct = L.faixas[0].pct ?? 0;
+    const saiu = (nac.ganhadores[chaveDe(L.faixas[0])] ?? 0) > 0 || topo.has(k);
     j = saiu ? L.inicial * (0.8 + rngDe(v.id, 'acum18', l, k).next() * 0.4) : j + nac.arrecadacao * PREMIO_BRUTO * topoPct;
   }
   return Math.round(j / 1000) * 1000;
@@ -117,10 +156,8 @@ function nacionalSem(v: Vida, l: LoteriaId, n: number, acum: number): Nacional {
   const apostas = arrecadacao / L.preco;
   const ganhadores: Record<string, number> = {};
   for (const f of L.faixas) {
-    let p: number;
-    if (l === 'loteca') p = f.acertos === 14 ? 1 / 1_300_000 : 1 / 22_000;
-    else p = chanceDaFaixa(L.universo, L.sorteia, L.min, f.acertos);
-    ganhadores[chaveDaFaixa(f.acertos, f.sorteio)] = poisson(r, apostas * p * (l === 'loteca' ? 0.55 + r.next() * 0.9 : 1));
+    const p = chanceDaFaixaDe(l, f);
+    ganhadores[chaveDe(f)] = poisson(r, apostas * p * (l === 'loteca' ? 0.55 + r.next() * 0.9 : 1));
   }
   return { arrecadacao, acumulado: acum, ganhadores };
 }
@@ -131,7 +168,7 @@ export function premioEstimado(v: Vida, l: LoteriaId, n: number): number {
   const L = LOTERIAS18[l];
   const nac = nacional(v, l, n);
   if (ehVirada(l, n)) return Math.round((nac.acumulado + nac.arrecadacao * PREMIO_BRUTO) * VIRADA18.sena / 1000) * 1000;
-  const pct = L.faixas.find(f => f.acertos === L.acumula && (f.sorteio ?? 1) === 1)?.pct ?? 0;
+  const pct = L.faixas[0].pct ?? 0;
   return Math.round((nac.acumulado + nac.arrecadacao * PREMIO_BRUTO * pct * (l === 'lotofacil' ? 0.35 : 1)) / 1000) * 1000;
 }
 
@@ -143,17 +180,21 @@ function embaralhar(r: Rng, n: number, doZero: boolean): number[] {
   return b;
 }
 /** O sorteio do concurso (as dezenas em ordem crescente; a Dupla Sena tem o segundo). Estável neste mundo. */
-export function sorteioDoConcurso(v: Vida, l: LoteriaId, n: number): { a: number[]; b?: number[]; resultados?: ('1' | 'X' | '2')[] } {
+export type Sorteio18 = { a: number[]; b?: number[]; extra?: number[]; resultados?: ('1' | 'X' | '2')[] };
+export function sorteioDoConcurso(v: Vida, l: LoteriaId, n: number): Sorteio18 {
   const L = LOTERIAS18[l];
   if (l === 'loteca') return { a: [], resultados: rodadaDoConcurso(v, n).jogos.map((_, k) => resultadoDoJogo(v, n, k).res) };
   const r = rngDe(v.id, 'sorteio18', l, n);
+  // Super Sete: um algarismo por coluna (codificado coluna × 10 + algarismo, como no volante).
+  if (L.colunas) return { a: Array.from({ length: L.colunas.n }, (_, c) => c * 10 + Math.floor(r.next() * 10)) };
   const a = embaralhar(r, L.universo, !!L.doZero).slice(0, L.sorteia).sort((x, y) => x - y);
   const b = L.duasVezes ? embaralhar(r, L.universo, false).slice(0, L.sorteia).sort((x, y) => x - y) : undefined;
-  return { a, ...(b ? { b } : {}) };
+  const extra = L.extra ? embaralhar(r, L.extra.universo, false).slice(0, L.extra.sorteia).sort((x, y) => x - y) : undefined;
+  return { a, ...(b ? { b } : {}), ...(extra ? { extra } : {}) };
 }
 
 /** Quantas combinações premiadas um bilhete tem em cada faixa (antes do rateio). */
-export function conferir(b: Pick<Bilhete18, 'loteria' | 'jogos' | 'palpites'>, s: { a: number[]; b?: number[]; resultados?: ('1' | 'X' | '2')[] }): Record<string, number> {
+export function conferir(b: Pick<Bilhete18, 'loteria' | 'jogos' | 'palpites' | 'extras'>, s: Sorteio18): Record<string, number> {
   const L = LOTERIAS18[b.loteria];
   const out: Record<string, number> = {};
   if (b.loteria === 'loteca') {
@@ -169,14 +210,28 @@ export function conferir(b: Pick<Bilhete18, 'loteria' | 'jogos' | 'palpites'>, s
     for (const f of L.faixas) out[chaveDaFaixa(f.acertos)] = poli[f.acertos] ?? 0;
     return out;
   }
-  for (const jogo of b.jogos) {
+  b.jogos.forEach((jogo, k) => {
+    const extra = b.extras?.[k] ?? [];
+    // Super Sete: o polinômio das colunas (em cada uma, os números marcados que acertam e os que erram).
+    const poliColunas = L.colunas ? Array.from({ length: L.colunas.n }, (_, c) => c).reduce((poli, c) => {
+      const marcados = jogo.filter(x => Math.floor(x / 10) === c);
+      const acerta = marcados.filter(x => s.a.includes(x)).length, erra = Math.max(0, marcados.length - acerta);
+      const novo = new Array(poli.length + 1).fill(0);
+      poli.forEach((q, i) => { novo[i] += q * erra; novo[i + 1] += q * acerta; });
+      return novo;
+    }, [1] as number[]) : undefined;
+    const tA = extra.filter(x => s.extra?.includes(x)).length;
     for (const f of L.faixas) {
       const sorteio = f.sorteio === 2 ? s.b! : s.a;
       const a = jogo.filter(x => sorteio.includes(x)).length;
-      const c = b.loteria === 'lotomania' ? (a === f.acertos ? 1 : 0) : combinacoesCom(jogo.length, a, L.min, f.acertos);
-      if (c > 0) out[chaveDaFaixa(f.acertos, f.sorteio)] = (out[chaveDaFaixa(f.acertos, f.sorteio)] ?? 0) + c;
+      let c: number;
+      if (poliColunas) c = poliColunas[f.acertos] ?? 0;
+      else if (f.soExtra) c = tA > 0 ? comb(jogo.length, L.min) : 0;
+      else if (f.extras && L.extra) c = combinacoesCom(jogo.length, a, L.min, f.acertos) * f.extras.reduce((x, t) => x + combinacoesCom(extra.length, tA, L.extra!.sorteia, t), 0);
+      else c = b.loteria === 'lotomania' ? (a === f.acertos ? 1 : 0) : combinacoesCom(jogo.length, a, L.min, f.acertos);
+      if (c > 0) out[chaveDe(f)] = (out[chaveDe(f)] ?? 0) + c;
     }
-  }
+  });
   return out;
 }
 
@@ -200,13 +255,13 @@ export function rateio(v: Vida, l: LoteriaId, n: number, daVida: Record<string, 
   }
   // As faixas de valor fixo (Lotofácil 11–13) saem primeiro; o resto do prêmio bruto vai para as de rateio.
   let fixos = 0;
-  for (const f of L.faixas) if (f.fixo) { out[chaveDaFaixa(f.acertos)] = f.fixo; fixos += f.fixo * ((nac.ganhadores[chaveDaFaixa(f.acertos)] ?? 0) + (daVida[chaveDaFaixa(f.acertos)] ?? 0)); }
-  const sobra = l === 'lotofacil' ? Math.max(0, bruto - fixos) : bruto;
+  for (const f of L.faixas) if (f.fixo) { out[chaveDe(f)] = f.fixo; fixos += f.fixo * ((nac.ganhadores[chaveDe(f)] ?? 0) + (daVida[chaveDe(f)] ?? 0)); }
+  const sobra = L.faixas.some(f => f.fixo) ? Math.max(0, bruto - fixos) : bruto;
   for (const f of L.faixas) {
     if (f.fixo) continue;
-    const k = chaveDaFaixa(f.acertos, f.sorteio);
+    const k = chaveDe(f);
     const ganh = (nac.ganhadores[k] ?? 0) + (daVida[k] ?? 0);
-    const principal = f.acertos === L.acumula && (f.sorteio ?? 1) === 1;
+    const principal = f === L.faixas[0];
     const pool = sobra * (f.pct ?? 0) + (principal ? nac.acumulado : 0);
     out[k] = ganh > 0 ? Math.round(pool / ganh * 100) / 100 : 0;
   }
@@ -228,10 +283,10 @@ export function apurarConcurso(v: Vida, l: LoteriaId, n: number): { bilhetes: Bi
   const L = LOTERIAS18[l];
   pendentes.forEach(b => {
     const x = porBilhete[seus.indexOf(b)];
-    const faixas = L.faixas.map(f => { const k = chaveDaFaixa(f.acertos, f.sorteio); const c = x[k] ?? 0; return { nome: f.nome, combinacoes: c, valor: Math.round(c * (valor[k] ?? 0) * 100) / 100 }; }).filter(f => f.combinacoes > 0);
+    const faixas = L.faixas.map(f => { const k = chaveDe(f); const c = x[k] ?? 0; return { nome: f.nome, combinacoes: c, valor: Math.round(c * (valor[k] ?? 0) * 100) / 100 }; }).filter(f => f.combinacoes > 0);
     let total = faixas.reduce((s2, f) => s2 + f.valor, 0);
     if (b.bolao) total = Math.round(total * b.bolao.minhas / b.bolao.cotas * 100) / 100;
-    const res: ResultadoDoBilhete = { sorteio: s.a, ...(s.b ? { sorteio2: s.b } : {}), ...(s.resultados ? { resultados: s.resultados } : {}), premio: total, faixas };
+    const res: ResultadoDoBilhete = { sorteio: s.a, ...(s.b ? { sorteio2: s.b } : {}), ...(s.extra ? { sorteioExtra: s.extra } : {}), ...(s.resultados ? { resultados: s.resultados } : {}), premio: total, faixas };
     b.resultado = res;
     premio += total;
     if (faixas.some(f => f.nome === L.faixas[0].nome)) (e.topo[l] ??= []).push(n);
@@ -241,9 +296,25 @@ export function apurarConcurso(v: Vida, l: LoteriaId, n: number): { bilhetes: Bi
 
 /* ================================================================== Validação e surpresinha */
 
-export function validarJogo(l: LoteriaId, jogo: number[]): string | undefined {
+export function validarJogo(l: LoteriaId, jogo: number[], extra?: number[]): string | undefined {
   const L = LOTERIAS18[l];
   if (l === 'loteca') return undefined;
+  if (new Set(jogo).size !== jogo.length) return 'Os números precisam ser diferentes.';
+  if (L.colunas) {
+    if (jogo.some(x => !Number.isInteger(x) || x < 0 || x >= L.colunas!.n * 10)) return 'Cada número é um algarismo (0 a 9) de uma das sete colunas.';
+    for (let c = 0; c < L.colunas.n; c++) {
+      const m = jogo.filter(x => Math.floor(x / 10) === c).length;
+      if (m < 1) return `Marque ao menos um número em cada coluna (falta a ${c + 1}ª).`;
+      if (m > L.colunas.porColuna) return `No máximo ${L.colunas.porColuna} números por coluna.`;
+    }
+    if (jogo.length > L.max) return `No máximo ${L.max} números.`;
+    return undefined;
+  }
+  if (L.extra) {
+    const e = extra ?? [];
+    if (new Set(e).size !== e.length || e.some(x => !Number.isInteger(x) || x < 1 || x > L.extra!.universo)) return `Escolha ${L.extra.nome === 'trevos' ? 'os trevos (1 a 6)' : `o ${L.extra.nome}`}.`;
+    if (e.length < L.extra.min || e.length > L.extra.max) return L.extra.min === L.extra.max ? `Escolha ${L.extra.min === 1 ? `um ${L.extra.nome}` : `${L.extra.min} ${L.extra.nome}`}.` : `Marque de ${L.extra.min} a ${L.extra.max} ${L.extra.nome}.`;
+  }
   const lo = L.doZero ? 0 : 1, hi = L.doZero ? L.universo - 1 : L.universo;
   if (new Set(jogo).size !== jogo.length) return 'As dezenas precisam ser diferentes.';
   if (jogo.some(x => !Number.isInteger(x) || x < lo || x > hi)) return `As dezenas vão de ${String(lo).padStart(2, '0')} a ${hi}.`;
@@ -260,12 +331,29 @@ export function validarLoteca(p: ('1' | 'X' | '2')[][]): string | undefined {
 /** A surpresinha: o sistema escolhe as dezenas (estável pelo bilhete). */
 export function surpresinha(r: Rng, l: LoteriaId, n = LOTERIAS18[l].min): number[] {
   const L = LOTERIAS18[l];
+  if (L.colunas) {
+    // Um número por coluna; os a mais, cada um numa coluna diferente (até completar; depois o terceiro).
+    const jogo = Array.from({ length: L.colunas.n }, (_, c) => c * 10 + Math.floor(r.next() * 10));
+    const ordem = embaralhar(r, L.colunas.n, true);
+    for (let k = 0; jogo.length < Math.min(n, L.max); k++) {
+      const c = ordem[k % L.colunas.n];
+      const livres = Array.from({ length: 10 }, (_, d) => c * 10 + d).filter(x => !jogo.includes(x));
+      jogo.push(livres[Math.floor(r.next() * livres.length)]);
+    }
+    return jogo.sort((a, b) => a - b);
+  }
   return embaralhar(r, L.universo, !!L.doZero).slice(0, n).sort((a, b) => a - b);
+}
+/** VIDA 29 · o extra da surpresinha (o time, o mês, os dois trevos). */
+export function surpresinhaExtra(r: Rng, l: LoteriaId, n?: number): number[] | undefined {
+  const X = LOTERIAS18[l].extra;
+  if (!X) return undefined;
+  return embaralhar(r, X.universo, false).slice(0, n ?? X.min).sort((a, b) => a - b);
 }
 
 /* ================================================================== O bolão */
 
-export interface Bolao18 { loteria: LoteriaId; concurso: number; jogos: number[][]; palpites?: ('1' | 'X' | '2')[][]; cotas: number; valorCota: number; total: number }
+export interface Bolao18 { loteria: LoteriaId; concurso: number; jogos: number[][]; extras?: number[][]; palpites?: ('1' | 'X' | '2')[][]; cotas: number; valorCota: number; total: number }
 
 /** O bolão da lotérica para o próximo concurso (os jogos são fixos para o concurso: o mesmo bolão para quem olhar). */
 export function bolaoDaLoterica(v: Vida, l: LoteriaId, virada = false): Bolao18 {
@@ -278,8 +366,9 @@ export function bolaoDaLoterica(v: Vida, l: LoteriaId, virada = false): Bolao18 
     return { loteria: l, concurso: n, jogos: [[]], palpites, cotas: cfg.cotas, total, valorCota: Math.round(total / cfg.cotas * (1 + TARIFA_BOLAO) * 100) / 100 };
   }
   const jogos = Array.from({ length: cfg.jogos }, () => surpresinha(r, l, cfg.dezenas));
-  const total = jogos.reduce((s, j) => s + precoDaAposta(l, j.length), 0);
-  return { loteria: l, concurso: n, jogos, cotas: cfg.cotas, total, valorCota: Math.round(total / cfg.cotas * (1 + TARIFA_BOLAO) * 100) / 100 };
+  const extras = LOTERIAS18[l].extra ? jogos.map(() => surpresinhaExtra(r, l)!) : undefined;
+  const total = Math.round(jogos.reduce((s, j, k) => s + precoDoJogo(l, j, extras?.[k]), 0) * 100) / 100;
+  return { loteria: l, concurso: n, jogos, ...(extras ? { extras } : {}), cotas: cfg.cotas, total, valorCota: Math.round(total / cfg.cotas * (1 + TARIFA_BOLAO) * 100) / 100 };
 }
 
 export const textoDoPremio = (valor: number) => (valor > 0 ? `Prêmio: ${fmt(valor)}.` : 'Nenhuma faixa premiada.');

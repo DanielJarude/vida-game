@@ -26,6 +26,22 @@ export interface NotaDeVersao {
 
 export const NOTAS: NotaDeVersao[] = [
   {
+    versao: '29.1',
+    data: '2026-11-20',
+    titulo: 'Mais quatro loterias da Caixa',
+    novidades: [
+      'Timemania: dez dezenas de 01 a 80 e o seu time do coração entre 80 clubes — sete dezenas e um time sorteados; 7, 6 e 5 acertos dividem o prêmio (o de 7 acumula), 4 e 3 acertos e o time do coração pagam valor fixo.',
+      'Dia de Sorte: de 7 a 15 dezenas de 01 a 31 e o mês da sorte; 7, 6 e 5 acertos dividem o prêmio, 4 acertos e o mês pagam valor fixo.',
+      'Super Sete: sete colunas com os algarismos de 0 a 9 — um a três números em cada coluna; ganha quem acerta de 3 a 7 colunas.',
+      '+Milionária: de 6 a 12 dezenas de 01 a 50 e de 2 a 6 trevos; dez faixas pela combinação de dezenas e trevos, do 6+2 (que acumula) ao 2+1.'
+    ],
+    melhorias: [
+      'As quatro têm surpresinha (com o time, o mês ou os trevos), bolão da lotérica e com conhecidos, sorteio por concurso, conferência por faixa com as chances oficiais e o prêmio na conta de sempre.',
+      'Cada loteria só aparece a partir do ano em que começou (a Timemania em 2008, o Dia de Sorte em 2018, o Super Sete em 2020, a +Milionária em 2022) — e as de antes também: a Mega-Sena em 1996, a Quina em 1994, a Lotofácil em 2003.'
+    ],
+    correcoes: []
+  },
+  {
     versao: '29',
     data: '2026-11-20',
     titulo: 'O campo para quem nunca teve fazenda, notícias que correm e a casa de cada época',
