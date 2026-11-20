@@ -108,7 +108,7 @@ export function RetratoDaVida({ vida, irPara, abrirPessoa }: { vida: Vida; irPar
             </ul>
           </div>
         )}
-        <button type="button" className="link retrato-vida__voce" onClick={() => irPara('voce')}>Como você está, em detalhe — em Você →</button>
+        <button type="button" className="link retrato-vida__voce" onClick={() => irPara('voce')}>Como você está, em detalhe — em Eu →</button>
       </section>
     </header>
   );

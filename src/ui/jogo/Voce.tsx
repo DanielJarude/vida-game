@@ -94,7 +94,7 @@ export function Voce({ vida, agir, irPara, abrirPessoa, parte: parteDeFora, irPa
       <section className="voce-rosto" aria-label="Como você está">
         <RetratoDoJogador17 vida={vida} visual={vida.eu.visual} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? "eu"} tamanho={132} rotulo={`${vida.eu.nome} aos ${i}`} expressao={expressaoDe(vida)} />
         <div className="voce-rosto__texto">
-          <p className="folio__kicker"><span className="folio__area">Você</span> · {i} {i === 1 ? 'ano' : 'anos'} · {faseDaVida(i)}</p>
+          <p className="folio__kicker"><span className="folio__area">Eu</span> · {i} {i === 1 ? 'ano' : 'anos'} · {faseDaVida(i)}</p>
           <h1 className="voce-rosto__momento">{momentoAtual(vida)}</h1>
           <p className="voce-rosto__linha">{ocupacaoAtual(vida)} · {ondeMora(vida)}</p>
           {afeto && <p className="voce-rosto__linha">{afeto}{luto ? ` · ${luto}` : ''}</p>}

@@ -277,7 +277,7 @@ function LojaDeEstilo({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }
   const doEstilo = (x: (typeof ITENS_ESTILO)[number]) => !estilo || (x.estilos ?? []).includes(estilo);
   return (
     <div className="loja-estilo">
-      <p className="nota">Mudar o corte, a cor ou a barba não custa nada: fica em Você · Aparência e estilo. Aqui é o que se compra — e fica com você: dá para usar, guardar e trocar depois.</p>
+      <p className="nota">Mudar o corte, a cor ou a barba não custa nada: fica em Eu · Aparência e estilo. Aqui é o que se compra — e fica com você: dá para usar, guardar e trocar depois.</p>
       <Escolha rotulo="Balcão" valor={balcao} aoMudar={setBalcao} opcoes={BALCOES.map(b => ({ id: b.id, rotulo: b.nome }))} />
       {balcao === 'roupas' && (
         <label className="campo"><span className="campo__rotulo">Estilo</span>
