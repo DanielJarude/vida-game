@@ -18,7 +18,8 @@ import { sobDemanda } from '../util/sobDemanda';
 const GostosECultura = sobDemanda(() => import('./Personalizar').then(m => m.GostosECultura));
 import { TratamentoEmCurso } from './Alcance';
 import { leituraDaFama13 } from '../../motor/sistemas/reconhecimento13';
-import { Fama13 } from './Fama13';
+// VIDA 30: o painel da Fama vem sob demanda (só quem tem nome o vê; o pacote do Jogo está no limite).
+const Fama13 = lazy(() => import('./Fama13').then(m => ({ default: m.Fama13 })));
 import { redeDeSaude } from '../../motor/sistemas/saude';
 import { QuemNoMundo } from './Mundo';
 import { leituraDoNome } from '../../motor/sistemas/notoriedade';
@@ -32,7 +33,7 @@ import { ResumoDaRotina } from './Rotina';
 import { evolucaoDaFrente } from '../../motor/sistemas/progressao';
 import { MATERIAS } from '../../motor/dados/frentes';
 import { BotaoAcao, Subnav, Vazio } from '../comum';
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { frentesDaVida } from '../../motor/sistemas/frentes';
 import { faseDaVida, ocupacaoAtual, ondeMora } from '../apresentar';
 import { lutoVisivel, situacaoAfetiva } from '../leitura';
@@ -215,7 +216,7 @@ export function Voce({ vida, agir, irPara, abrirPessoa, parte: parteDeFora, irPa
       <div className={fora('objetivos')} id="voce-objetivos">{i >= 12 && parte === 'objetivos' && <Objetivos14 vida={vida} agir={agir} />}</div>
 
       {/* VIDA 13 · Fama: o nome público ganhou parte própria (antes, "O seu nome" dentro de No mundo). */}
-      {fama.relevante && <div className={fora('fama')} id="voce-fama"><Fama13 vida={vida} agir={agir} /></div>}
+      {fama.relevante && <div className={fora('fama')} id="voce-fama"><Suspense fallback={<p className="nota">Carregando…</p>}><Fama13 vida={vida} agir={agir} /></Suspense></div>}
 
       <div className={fora('mundo')}>
       {fama.relevante && <button type="button" className="fama13-atalho" onClick={() => irA('fama')}>O seu nome público mora em Fama →</button>}

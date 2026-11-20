@@ -25,9 +25,9 @@ import { municipio, nomeLugar } from '../../../motor/dados/lugares';
 import { rotulosDoChamado } from '../../../motor/sistemas/iniciativas';
 import { extratoAberto } from '../../../motor/sistemas/extrato';
 import { leituraDaFama13 } from '../../../motor/sistemas/reconhecimento13';
-import { INTERESSES, matches15, naoLidas15, nivelDaFama15, opcoesDaMsg15, rotuloArea, rotuloDoLugar15, disponibilidadeNamoro15 } from '../../../motor/v15/celular/celular15';
+import { matches15, naoLidas15, nivelDaFama15, opcoesDaMsg15, rotuloArea, rotuloDoLugar15, disponibilidadeNamoro15 } from '../../../motor/v15/celular/celular15';
 import { jornal15, ROTULO_EDITORIA15, type Editoria15 } from '../../../motor/v15/celular/noticias15';
-import type { FiltrosNamoro30, Msg15, PerfilApp15 } from '../../../motor/dados15/celular/tipos';
+import type { Msg15, PerfilApp15 } from '../../../motor/dados15/celular/tipos';
 import { contatosAutorizados17, ligacoesRestantes17, limiteDeLigacoes17, MOTIVO_PRESO17 } from '../../../motor/v17/prisao/telefone17';
 import { contatos16, historico16, horaDaMsg16, ROTULO_INTENCAO16, type IntencaoMsg16 } from '../../../motor/v16/celular/mensagens16';
 import { Retrato } from '../../avatar/Retrato';
@@ -299,29 +299,8 @@ function opcaoRotulo(v: Vida, m: Msg15): string {
 
 const BUSCA: Record<PerfilApp15['busca'], string> = { relacionamento: 'Procura um relacionamento', casual: 'Algo sem compromisso', incerto: 'Ainda não sabe o que procura' };
 
-/** VIDA 30: os filtros do aplicativo — a idade, a distância, o que a pessoa busca, um interesse em comum e "só famosos". */
-function FiltrosNamoro30({ vida, agir, padrao }: { vida: Vida; agir: Props['agir']; padrao: FiltrosNamoro30 }) {
-  const atual = vida.celular15?.deck?.filtros30 ?? padrao;
-  const [aberto, setAberto] = useState(false);
-  const [f, setF] = useState<FiltrosNamoro30>(atual);
-  const acao = { tipo: 'celular15', oque: { op: 'namoro_filtros', filtros: f } } as Acao;
-  const ativos = vida.celular15?.deck?.filtros30;
-  return (
-    <div className="namoro30__filtros">
-      <button type="button" className="cel__link" aria-expanded={aberto} onClick={() => setAberto(x => !x)}>Filtros{ativos ? ` · ${ativos.idadeMin}–${ativos.idadeMax} anos · até ${ativos.km} km${ativos.famosos ? ' · só famosos' : ''}` : ''}</button>
-      {aberto && (
-        <form className="namoro30__form" onSubmit={e => { e.preventDefault(); if (agir(acao)) setAberto(false); }}>
-          <label>Idade <input type="number" min={18} max={90} value={f.idadeMin} onChange={e => setF({ ...f, idadeMin: Number(e.target.value) })} aria-label="Idade mínima" /> a <input type="number" min={18} max={90} value={f.idadeMax} onChange={e => setF({ ...f, idadeMax: Number(e.target.value) })} aria-label="Idade máxima" /></label>
-          <label>Distância <select value={f.km} onChange={e => setF({ ...f, km: Number(e.target.value) })}>{[5, 10, 18, 30, 50, 80].map(k => <option key={k} value={k}>até {k} km</option>)}</select></label>
-          <label>Busca <select value={f.busca} onChange={e => setF({ ...f, busca: e.target.value as FiltrosNamoro30['busca'] })}><option value="qualquer">qualquer</option><option value="relacionamento">relacionamento sério</option><option value="casual">algo casual</option></select></label>
-          <label>Interesse <select value={f.interesse ?? ''} onChange={e => setF({ ...f, interesse: e.target.value || undefined })}><option value="">qualquer</option>{INTERESSES.map(x => <option key={x} value={x}>{x}</option>)}</select></label>
-          <label className="namoro30__check"><input type="checkbox" checked={!!f.famosos} onChange={e => setF({ ...f, famosos: e.target.checked })} /> Só famosos (perfis verificados)</label>
-          <button type="submit" className="botao botao--principal" disabled={!podeTentar(disponibilidade(vida, acao))} title={disponibilidade(vida, acao).motivo}>Aplicar</button>
-        </form>
-      )}
-    </div>
-  );
-}
+// VIDA 30: os filtros do aplicativo (sob demanda: o pacote do Jogo está no limite).
+const FiltrosNamoro30 = lazy(() => import('../../v30/redes/FiltrosNamoro30'));
 
 function Namoro({ vida, agir, abrirPessoa }: { vida: Vida; agir: Props['agir']; abrirPessoa: (id: string) => void }) {
   const [aba, setAba] = useState<'descobrir' | 'conversas'>('descobrir');
@@ -362,7 +341,7 @@ function Namoro({ vida, agir, abrirPessoa }: { vida: Vida; agir: Props['agir']; 
         </div>
       </div>
       {d.grau === 'irregular' && <p className="cel__aviso">⚠ {d.motivo}</p>}
-      {aba === 'descobrir' && doAno && <FiltrosNamoro30 vida={vida} agir={agir} padrao={{ idadeMin: Math.max(18, i - 7), idadeMax: Math.min(90, i + 7), km: 18, busca: 'qualquer' }} />}
+      {aba === 'descobrir' && doAno && <Suspense fallback={null}><FiltrosNamoro30 vida={vida} agir={agir} padrao={{ idadeMin: Math.max(18, i - 7), idadeMax: Math.min(90, i + 7), km: 18, busca: 'qualquer' }} /></Suspense>}
       {aba === 'descobrir' && (atual ? (
         <article className="perfil-app" aria-label={`Perfil de ${atual.pessoa.nome}`}>
           <div className="perfil-app__foto">

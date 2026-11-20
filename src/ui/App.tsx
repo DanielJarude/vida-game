@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { deveMostrarNovidades, marcarNovidadesVistas } from './novidades';
+import { deveMostrarNovidades, marcarNovidadesVistas } from './novidadesVersao';
 import { Novidades } from './janelaDeNovidades';
 import { useVida } from './useVida';
 import { Inicio } from './telas/Inicio';
