@@ -2735,7 +2735,9 @@ export interface Temporada {
   /** Tênis: os pontos do ranking que o ano somou (a rodada alcançada em cada torneio × o peso dele); o ranking sai daqui. */
   pontosRanking?: number;
   melhorFase?: string;
-  torneios?: { nome: string; fase: string }[];
+  torneios?: { nome: string; fase: string; superficie?: string }[];
+  /** VIDA 29 · tênis: vitórias e derrotas por superfície no ano (quadra dura, saibro, grama). */
+  superficies29?: Partial<Record<'dura' | 'saibro' | 'grama', [number, number]>>;
   /** A temporada foi de empréstimo: o clube detentor do contrato. */
   emprestado?: string;
   /** Basquete e vôlei: a função em quadra naquela temporada. */

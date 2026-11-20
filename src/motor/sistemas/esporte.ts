@@ -721,7 +721,7 @@ export function fecharTemporada(v: Vida, r: Rng, e: CarreiraEsportiva): Temporad
     t.assistencias = Math.round((fn === 'armador' ? 6.5 : fn === 'ala' ? 2.5 : 1.5) * q * (0.85 + r.next() * 0.3) * f('passe') * clamp(1 + dv('criacao') * 0.01, 0.8, 1.2) * ef.assistencias * 10) / 10;
     t.gols = 0;
   }
-  if (e.modalidade === 'tenis') jogarCircuito(v, r, e, t, nota);
+  if (e.modalidade === 'tenis') jogarCircuito(v, r, e, t, nota, dv);
   // As outras modalidades medem o que é delas (FIX final da generalização): a função no vôlei, a prova e a marca na
   // natação e no atletismo, o cartel na luta.
   if (e.modalidade === 'volei') jogarTemporadaVolei(v, r, e, t, nota);
@@ -862,25 +862,47 @@ function nomeDoTorneio(nivel: number, r: Rng, porte = 0): string {
  * fase, os torneios que marcaram — e os pontos do ranking (a rodada
  * alcançada × o peso do torneio), de onde sai a posição no mundo.
  */
-function jogarCircuito(_v: Vida, r: Rng, e: CarreiraEsportiva, t: Temporada, nota: number): void {
+/**
+ * VIDA 29 · AS SUPERFÍCIES DO TÊNIS. O calendário tem quadra dura (a maior parte), saibro (a temporada europeia e a
+ * sul-americana) e grama (as poucas semanas de junho). Cada uma pede um jogo: a grama premia o saque e a rede (o ponto
+ * curto); o saibro, a resistência e a consistência do fundo (o ponto longo, a bola alta); a dura, o forehand, o backhand,
+ * a agilidade e o saque. A aptidão sai dos atributos (o desvio de cada um em relação ao nível do jogador) e pesa até seis
+ * pontos percentuais por jogo — o especialista em saibro sofre na grama, e vice-versa.
+ */
+export type Superficie29 = 'dura' | 'saibro' | 'grama';
+export const NOME_SUPERFICIE29: Record<Superficie29, string> = { dura: 'quadra dura', saibro: 'saibro', grama: 'grama' };
+export function aptidaoNaSuperficie29(dv: (id: AtributoId) => number, s: Superficie29): number {
+  if (s === 'grama') return dv('saque') * 0.5 + dv('rede') * 0.35 + dv('devolucao') * 0.15;
+  if (s === 'saibro') return dv('resistencia') * 0.35 + dv('consistencia') * 0.35 + dv('forehand') * 0.15 + dv('movimentacao') * 0.15;
+  return dv('forehand') * 0.3 + dv('backhand') * 0.3 + dv('agilidade') * 0.2 + dv('saque') * 0.2;
+}
+/** A superfície do k-ésimo torneio do ano (estável e derivada: não gasta o gerador da temporada). */
+export const superficieDoTorneio29 = (v: Vida, ano: number, k: number): Superficie29 => { const x = rngDe(v.id, 'superficie29', ano, k).next(); return x < 0.55 ? 'dura' : x < 0.85 ? 'saibro' : 'grama'; };
+
+function jogarCircuito(_v: Vida, r: Rng, e: CarreiraEsportiva, t: Temporada, nota: number, dv: (id: AtributoId) => number = () => 0): void {
   const aproveitamento = clamp(0.32 + (nota - 5.5) * 0.12, 0.08, 0.86);
   const rodadas = e.nivel === 1 ? 4 : 5;
   let vit = 0, der = 0, tit = 0, fin = 0, melhor = 0, pontos = 0;
-  const marcantes: { nome: string; fase: string; v: number }[] = [];
+  const marcantes: { nome: string; fase: string; v: number; superficie?: string }[] = [];
+  const porSup: NonNullable<Temporada['superficies29']> = {};
   for (let k = 0; k < t.partidas; k++) {
     const porte = e.nivel >= 4 ? porteNoPrincipal(r) : 0;
+    const sup = superficieDoTorneio29(_v, t.ano, k);
+    const apt = clamp(aptidaoNaSuperficie29(dv, sup) * 0.006, -0.06, 0.06);
+    const conta = (porSup[sup] ??= [0, 0]);
     let rd = 0;
     while (rd < rodadas) {
       // Cada rodada é um adversário melhor: chegar à final já é raro; o título, mais.
-      const p = clamp(aproveitamento + 0.05 - rd * 0.08 + r.normal() * 0.05, 0.03, 0.95);
-      if (r.chance(p)) { vit++; rd++; } else { der++; break; }
+      const p = clamp(aproveitamento + 0.05 - rd * 0.08 + apt + r.normal() * 0.05, 0.03, 0.95);
+      if (r.chance(p)) { vit++; rd++; conta[0]++; } else { der++; conta[1]++; break; }
     }
     if (rd === rodadas) tit++;
     if (rd >= rodadas - 1) fin++;
     melhor = Math.max(melhor, rd);
     pontos += pontosDaRodada(rd, rodadas, e.nivel >= 4 ? PONTOS_PRINCIPAL[porte] : PONTOS_CAMPEAO[e.nivel]);
-    if (rd >= rodadas - 2 && (rd >= rodadas - 1 || e.nivel >= 3)) marcantes.push({ nome: nomeDoTorneio(e.nivel, r, porte), fase: faseDoTenis(rd, rodadas), v: rd });
+    if (rd >= rodadas - 2 && (rd >= rodadas - 1 || e.nivel >= 3)) marcantes.push({ nome: nomeDoTorneio(e.nivel, r, porte), fase: faseDoTenis(rd, rodadas), v: rd, superficie: NOME_SUPERFICIE29[sup] });
   }
+  if (t.partidas) t.superficies29 = porSup;
   // VIDA 12.9: a fase que um momento do ano jogou (a semifinal vencida no tie-break) é do ano — se o sorteio dos outros
   // torneios não chegou lá, um torneio chega (um nome estável, sem gastar o gerador).
   const garantida = e.lances?.faseTenis;
@@ -894,9 +916,17 @@ function jogarCircuito(_v: Vida, r: Rng, e: CarreiraEsportiva, t: Temporada, not
   t.vitorias = vit; t.derrotas = der; t.titulos = tit; t.finais = fin;
   t.pontosRanking = pontos;
   t.melhorFase = t.partidas ? faseDoTenis(melhor, rodadas) : undefined;
-  t.torneios = marcantes.sort((a, b) => b.v - a.v).slice(0, 4).map(({ nome, fase }) => ({ nome, fase }));
+  t.torneios = marcantes.sort((a, b) => b.v - a.v).slice(0, 4).map(({ nome, fase, superficie }) => ({ nome, fase, ...(superficie ? { superficie } : {}) }));
   t.gols = 0; t.assistencias = 0; t.titular = t.partidas;
   t.colocacao = tit > 0 ? 1 : 10;
+}
+
+/** VIDA 29: a superfície em que o ano rendeu mais (com pelo menos seis jogos nela), para a linha da temporada. */
+function melhorSuperficie29(t: Temporada): string {
+  const xs = Object.entries(t.superficies29 ?? {}).filter(([, [a, b]]) => a + b >= 6).map(([s, [a, b]]) => ({ s: s as Superficie29, a, b, pct: a / (a + b) }));
+  if (xs.length < 2) return '';
+  const m = xs.sort((x, y) => y.pct - x.pct)[0];
+  return ` · melhor ${m.s === 'dura' ? 'na quadra dura' : m.s === 'saibro' ? 'no saibro' : 'na grama'} (${m.a}–${m.b})`;
 }
 
 /** A temporada em uma linha (tela, resumo do ano, Linha da Vida). */
@@ -905,7 +935,7 @@ export function linhaDaTemporada(_v: Vida, t: Temporada, modalidade?: Dominio): 
   // REWORK 11 · ESP-11.5: a liga é a do país do clube NAQUELA temporada (antes, a do país de hoje: "2051 Cruzeiro: Primera División").
   const pais = paisDaTemporada(_v, t, d);
   if (t.pontos !== undefined) return `${cap(divisaoDe('basquete', t.nivel, pais))} · ${t.colocacao}º lugar · ${t.partidas} ${t.partidas === 1 ? 'jogo' : 'jogos'} · ${String(t.pontos).replace('.', ',')} pontos, ${String(t.rebotes ?? 0).replace('.', ',')} rebotes e ${String(t.assistencias).replace('.', ',')} assistências por jogo${t.mesesFora >= 2 ? ` · ${t.mesesFora} meses fora por lesão` : ''}`;
-  if (t.vitorias !== undefined) return `${cap(CIRCUITO_TENIS[t.nivel])} · ${t.partidas} torneios · ${t.vitorias} vitórias e ${t.derrotas ?? 0} derrotas${t.titulos ? ` · ${t.titulos} ${t.titulos === 1 ? 'título' : 'títulos'}` : ''}${(t.finais ?? 0) > (t.titulos ?? 0) ? ` · ${(t.finais ?? 0) - (t.titulos ?? 0)} ${(t.finais ?? 0) - (t.titulos ?? 0) === 1 ? 'final perdida' : 'finais perdidas'}` : ''}${t.ranking ? ` · ranking ${t.ranking}º` : ''}${t.premio !== undefined ? ` · prêmios de ${dinheiro(t.premio)}, custos de ${dinheiro(t.custos ?? 0)}` : ''}${t.mesesFora >= 2 ? ` · ${t.mesesFora} meses fora por lesão` : ''}`;
+  if (t.vitorias !== undefined) return `${cap(CIRCUITO_TENIS[t.nivel])} · ${t.partidas} torneios · ${t.vitorias} vitórias e ${t.derrotas ?? 0} derrotas${melhorSuperficie29(t)}${t.titulos ? ` · ${t.titulos} ${t.titulos === 1 ? 'título' : 'títulos'}` : ''}${(t.finais ?? 0) > (t.titulos ?? 0) ? ` · ${(t.finais ?? 0) - (t.titulos ?? 0)} ${(t.finais ?? 0) - (t.titulos ?? 0) === 1 ? 'final perdida' : 'finais perdidas'}` : ''}${t.ranking ? ` · ranking ${t.ranking}º` : ''}${t.premio !== undefined ? ` · prêmios de ${dinheiro(t.premio)}, custos de ${dinheiro(t.custos ?? 0)}` : ''}${t.mesesFora >= 2 ? ` · ${t.mesesFora} meses fora por lesão` : ''}`;
   const fora = t.mesesFora >= 2 ? ` · ${t.mesesFora} meses fora por lesão` : '';
   if (!t.posicao && d === 'volei') return `${cap(divisaoDe('volei', t.nivel, pais))} · ${t.colocacao}º lugar · ${t.partidas} ${t.partidas === 1 ? 'jogo' : 'jogos'}, ${t.titular} como titular${t.volei && t.funcao ? ` · ${NOME_FUNCAO_VOLEI[t.funcao as FuncaoVolei] ?? t.funcao}: ${numeroDaFuncao(t)}` : ''}${fora}`;
   const nivelInd = cap(['', 'competições regionais', 'circuito nacional de acesso', 'circuito nacional', 'elite nacional'][t.nivel]);
