@@ -132,33 +132,55 @@ export function processarBoatos29(v: Vida): void {
   // 2. Andar: uma ou duas rodadas por ano (a notícia grande corre mais).
   const vel = velocidadeDaEpoca29(ano);
   const famoso = (v.notoriedade?.valor ?? 0) >= 35;
-  for (const n of lista) {
-    if (v.t - n.t > 36) continue; // notícia velha não anda mais
-    const rodadas = n.peso === 3 ? 2 : 1;
-    for (let k = 0; k < rodadas; k++) andar(v, n, r, vel, famoso);
+  const vivas = lista.filter(n => v.t - n.t <= 36); // notícia velha não anda mais
+  if (vivas.length) {
+    const rede = rede29(v);
+    for (const n of vivas) {
+      const rodadas = n.peso === 3 ? 2 : 1;
+      for (let k = 0; k < rodadas; k++) andar(v, n, r, vel, famoso, rede);
+    }
   }
   // 3. Limpeza: só as recentes ficam.
   v.boatos29 = lista.filter(n => v.t - n.t <= 96).slice(-24);
 }
 
-function andar(v: Vida, n: Noticia29, r: Rng, vel: number, famoso: boolean): void {
+/** O que não muda dentro do ano: quem está na rede, o círculo e o quanto cada um fala (calculado uma vez por ano). */
+interface Rede29 { ids: string[]; circ: Map<string, string>; fala: Map<string, number> }
+function rede29(v: Vida): Rede29 {
   const ids = Object.keys(v.vinculos).filter(id => humanoVivo(v, id));
-  const sabe = ids.filter(id => n.sabem[id]);
-  const naoSabe = ids.filter(id => !n.sabem[id]);
+  const circ = new Map<string, string>(), fala = new Map<string, number>();
+  for (const id of ids) {
+    const vin = v.vinculos[id];
+    circ.set(id, circulo(vin));
+    fala.set(id, falante(v.pessoas[id]) * (vin.ruptura || vin.estagio === 'rival' ? 1.3 : 1));
+  }
+  return { ids, circ, fala };
+}
+
+function andar(v: Vida, n: Noticia29, r: Rng, vel: number, famoso: boolean, rede: Rede29): void {
+  const naoSabe = rede.ids.filter(id => !n.sabem[id]);
+  if (!naoSabe.length) return;
   // A notícia grande de quem é conhecido sai no jornal (ou nas redes): chega a todo mundo, do mesmo jeito.
   if (famoso && n.peso === 3 && r.chance(0.7)) {
     for (const id of naoSabe) saber(v, n, id, anoDe(v.t) >= 2008 ? 'redes' : 'jornal', false);
     return;
   }
   const base = n.peso === 3 ? 0.7 : n.peso === 2 ? 0.45 : 0.25;
+  // De cada círculo, quem mais fala entre os que sabem (a chance de chegar a alguém é a da melhor boca que o alcança).
+  const bocas = new Map<string, { id: string; f: number }>();
+  for (const id of rede.ids) {
+    if (!n.sabem[id]) continue;
+    const c = rede.circ.get(id)!, f = rede.fala.get(id)!;
+    const m = bocas.get(c);
+    if (!m || f > m.f) bocas.set(c, { id, f });
+  }
+  if (!bocas.size) return;
   for (const alvo of naoSabe) {
-    const vinA = v.vinculos[alvo];
-    const cA = circulo(vinA);
+    const cA = rede.circ.get(alvo)!;
     let melhor: { id: string; chance: number } | undefined;
-    for (const de of sabe) {
-      const vinD = v.vinculos[de];
-      const chance = base * vel * ponte(circulo(vinD), cA) * falante(v.pessoas[de]) * (vinD.ruptura || vinD.estagio === 'rival' ? 1.3 : 1);
-      if (!melhor || chance > melhor.chance) melhor = { id: de, chance };
+    for (const [c, m] of bocas) {
+      const chance = base * vel * ponte(c, cA) * m.f;
+      if (!melhor || chance > melhor.chance) melhor = { id: m.id, chance };
     }
     if (melhor && r.chance(clamp(melhor.chance, 0, 0.9))) {
       // Cada boca aumenta um pouco: a versão chega torta às vezes (mais de quem tem atrito com você).

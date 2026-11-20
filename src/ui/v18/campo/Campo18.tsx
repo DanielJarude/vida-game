@@ -307,7 +307,7 @@ function Administracao29({ vida, agir, p, detalhado }: { vida: Vida; agir: Agir;
             {ADMINS.map(a => (
               <li key={a.id} className={`campo18__item${atual === a.id ? ' campo18__item--tem' : ''}`}>
                 <div><strong>{a.rotulo}{atual === a.id ? ' · atual' : ''}</strong><span>{a.oque}</span></div>
-                {atual !== a.id && <BotaoAcao vida={vida} agir={agir} ocultarImpossivel acao={r18({ op: 'admin29', id: p.id, admin: a.id })}>Escolher</BotaoAcao>}
+                {atual !== a.id && <BotaoAcao vida={vida} agir={agir} acao={r18({ op: 'admin29', id: p.id, admin: a.id })}>Escolher</BotaoAcao>}
               </li>
             ))}
           </ul>
