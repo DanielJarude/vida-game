@@ -26,6 +26,32 @@ export interface NotaDeVersao {
 
 export const NOTAS: NotaDeVersao[] = [
   {
+    versao: '29',
+    data: '2026-11-20',
+    titulo: 'O campo para quem nunca teve fazenda, notícias que correm e a casa de cada época',
+    novidades: [
+      'A propriedade rural abre numa Visão geral em linguagem de gente: como ela está, o que vai mal e o que fazer. Cada quadro (a terra, a água, o pasto, os animais, a gente para o trabalho, as máquinas, quem administra, o clima e o seguro, o dinheiro, as dívidas) explica o que significa, como pesa na produção, o que acontece se piorar e o que dá para fazer — com o custo e o tempo. O pasto diz quantos animais cabem, não "UA".',
+      'As abas do campo com o nome do dia a dia — Plantação, Animais, Construções e equipamentos, Administração, Finanças — e um modo simples e um detalhado (os mesmos dados, com os números técnicos). Na primeira visita a cada parte, uma dica curta (some com "Entendi").',
+      'Administrar de verdade: você mesmo nas horas vagas, um caseiro, um gerente ou uma administradora rural; equipe fixa registrada ou diaristas na safra; máquina por empreitada (a tecnologia sem comprar trator); assistência técnica (a Emater no pequeno). Cada escolha muda o custo e o resultado do ano.',
+      'Vender a safra do seu jeito: na colheita, em contrato antecipado (preço travado), guardada para a entressafra ou direto na feira. Gado, cavalo, ovelha e cabra também vão a leilão (o lance do dia, menos a comissão).',
+      'As notícias da sua vida circulam: o casamento, a demissão, a prisão, o prêmio, a separação chegam às pessoas pelos círculos (a família conversa entre si; os colegas, entre si), mais rápido quanto mais relevantes, mais devagar nos tempos da carta e mais depressa nos das redes — às vezes aumentadas. Quem não devia saber e soube por outros reage como enganado. A ficha de cada pessoa mostra o que ela sabe de você, e a conversa puxa o assunto (e desfaz o exagero).',
+      'O cenário dos e-sports tem equipes fixas em cada divisão e elenco com nome (nick, nome, função, idade, nível). Na janela, o mercado anda sozinho: o companheiro que joga muito é vendido, o veterano se aposenta, chega gente de outras equipes — e, às vezes, alguém para a sua função.',
+      'O mercado de pilotos: o companheiro que bateu você sobe de categoria (e chega outro), o rival que brigou pelo título sobe e sai do seu grid (e volta quando você chega lá), as trocas do grid da F1.',
+      'Tênis em três superfícies: quadra dura, saibro e grama. O sacador rende mais na grama; o consistente e resistente, no saibro. A temporada mostra onde você foi melhor.',
+      'A casa da época: o fogão a lenha e a pia antiga antes dos anos 1960, a banheira de pés antes do box, o lampião a querosene, o assoalho, o vermelhão e o ladrilho hidráulico. Nas reformas, só o que existe no ano.'
+    ],
+    melhorias: [
+      'Apostas com consequências na medida: jogar pouco não vira assunto; perder um pedaço que se nota faz alguém de casa reparar; apostar o dinheiro das contas vira problema da casa; três anos pesados viram ultimato — cada degrau com escolhas (contar, combinar limite, autoexclusão, ajuda) que mudam coisas diferentes.',
+      'Você → Aparência tem de novo a categoria Acessórios e joias, com todas as partes do corpo (mesmo as vazias): ver, usar, trocar e tirar, e combinar várias peças ao mesmo tempo.',
+      'A joalheria por categorias — Brincos, Colares e correntes, Pulseiras, Anéis, Relógios, Piercings — e tipos (argolas, pontos de luz e pérolas, pendentes, ear cuffs; correntes, com pingente, gargantilhas). A busca vale dentro da categoria, e a loja lembra onde você estava.'
+    ],
+    correcoes: [
+      'Os brincos aparecem com a forma de cada modelo também na lupa da orelha (antes, quase todos saíam como a mesma argola) e por cima do cabelo.',
+      'O aviso de ciúme não aparece mais logo no começo do namoro sem motivo: só com um motivo registrado (o caso escondido, o perfil no aplicativo, o jeito ciumento depois de meses, a tensão alta depois de um ano).',
+      'Uma proposta de equipe (e-sports e automobilismo) nunca vem da própria equipe, e a equipe da proposta é a mesma do contrato, do emprego e da História.'
+    ]
+  },
+  {
     versao: '28',
     data: '2026-11-19',
     titulo: 'Carreiras que andam sozinhas, gente que lembra, uma História que faz sentido',
