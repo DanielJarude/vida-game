@@ -111,9 +111,10 @@ describe('Fase A · UX-09/10 — Caminhos: uma página inicial e quatro divisõe
   it('a página inicial mostra a situação, o próximo passo e as quatro entradas — sem listar vagas nem editais', () => {
     pagina(tecnico(), 'inicio');
     // REWORK 10.5 · CRI-02: a partir dos 14, a quinta entrada é o Submundo (a porta clara para o crime existente).
-    expect(document.querySelectorAll('.entrada-caminho')).toHaveLength(5);
+    // VIDA 31: a página inicial é a Minha Trajetória — o Explorar lista as cinco divisões e os Caminhos de carreira.
+    expect(document.querySelectorAll('.entrada-caminho')).toHaveLength(6);
     expect(document.querySelector('.entrada-caminho--submundo')).toBeTruthy();
-    expect(screen.getByRole('region', { name: 'O próximo passo' }).textContent).toMatch(/Procurar trabalho/);
+    expect(screen.getByRole('region', { name: 'Próximos passos' }).textContent).toMatch(/Procurar trabalho/);
     expect(document.querySelector('.vaga-resumo')).toBeNull();
     expect(document.querySelector('.boletim')).toBeNull();
   });

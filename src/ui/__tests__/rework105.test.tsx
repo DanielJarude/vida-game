@@ -135,7 +135,7 @@ describe('UX-20 · a busca de "onde fica"', () => {
       expect(r.length, termo).toBeGreaterThan(0);
       expect(r[0].lugar, termo).toEqual({ area: 'voce', voce: 'saude' });
     }
-    expect(rotuloDoLugar({ area: 'voce', voce: 'saude' })).toBe('Você · Saúde');
+    expect(rotuloDoLugar({ area: 'voce', voce: 'saude' })).toBe('Eu · Saúde'); // VIDA 31: Você virou Eu
     expect(resolverDestino('prontuario')).toEqual({ area: 'voce', voce: 'saude' });
   });
 });

@@ -15,7 +15,7 @@ import { salvar } from '../../motor/save';
 import { contratar } from '../../motor/sistemas/trabalho';
 import { ocupacao } from '../../motor/dados/ocupacoes';
 import type { Vida } from '../../motor/tipos';
-import { AREAS, DIVISOES_CAMINHOS, MAPA_DE_INTENCOES, PARTES_DA_DIVISAO, SECOES_TEMPO, SECOES_VIDA, rotuloDoLugar, type Lugar } from '../navegacao';
+import { AREAS, AREAS_DA_BARRA, DIVISOES_CAMINHOS, MAPA_DE_INTENCOES, PARTES_DA_DIVISAO, SECOES_TEMPO, SECOES_VIDA, rotuloDoLugar, type Lugar } from '../navegacao';
 import { Estudos } from '../jogo/Estudos';
 import { Voce } from '../jogo/Voce';
 import { VidaConcreta } from '../jogo/VidaConcreta';
@@ -46,8 +46,10 @@ function abrirJogo(v: Vida): void {
   fireEvent.click(screen.getByRole('button', { name: /Continuar/ }));
 }
 function ir(l: Lugar): void {
-  const a = AREAS.find(x => x.id === l.area)!;
+  // VIDA 31: Minha Semana mora dentro de Eu (a barra tem cinco lugares; o id 'tempo' continua).
+  const a = AREAS.find(x => x.id === (l.area === 'tempo' ? 'voce' : l.area))!;
   fireEvent.click(screen.getAllByRole('button', { name: a.rotulo })[0]);
+  if (l.area === 'tempo') fireEvent.click(screen.getByRole('button', { name: 'Minha Semana' }));
   if (l.secao) fireEvent.click(screen.getByRole('tab', { name: SECOES_VIDA.find(s => s.id === l.secao)!.rotulo }));
   // HOTFIX 11.5.1: Compras tem segmentos — o destino que pede um (Veículos, Serviços) é o clique no segmento.
   if (l.segmento) fireEvent.click(within(document.querySelector('.compras__segmentos') as HTMLElement).getByRole('button', { name: SEGMENTOS.find(s => s.id === l.segmento)!.nome }));
@@ -69,20 +71,23 @@ const adulta = (v: Vida) => {
   v.financas.conta = 40000; v.financas.negativado = false;
 };
 
-describe('as seis áreas são estáveis (não mudam de lugar com a idade) — REWORK 9', () => {
+// VIDA 31: as seis áreas viraram CINCO lugares na barra — Hoje, Eu (com Minha Semana dentro), Pessoas, Caminhos, Vida.
+describe('os lugares da barra são estáveis (não mudam de lugar com a idade) — REWORK 9 / VIDA 31', () => {
   for (const idade of [5, 15, 32]) {
-    it(`aos ${idade}: História, Você, Pessoas, Caminhos, Minha Semana, Vida — e nada de "Formação", "Trabalho", "Casa" ou "Cidade" no topo`, () => {
+    it(`aos ${idade}: Hoje, Eu, Pessoas, Caminhos, Vida — Minha Semana dentro de Eu — e nada de "Formação", "Trabalho", "Casa" ou "Cidade" no topo`, () => {
       abrirJogo(vida(idade, idade >= 18 ? adulta : undefined));
       const navs = screen.getAllByRole('navigation', { name: 'Áreas' });
       expect(navs.length).toBe(2); // o topo (desktop) e a barra (celular): a mesma estrutura
       for (const nav of navs) {
         const nomes = within(nav).getAllByRole('button').map(b => b.getAttribute('aria-label') ?? b.textContent);
-        expect(nomes).toEqual(nav === navs[0] ? ['História', 'Você', 'Pessoas', 'Caminhos', 'Minha Semana', 'Vida'] : ['História', 'Você', 'Pessoas', 'Caminhos', 'Semana', 'Vida']);
+        expect(nomes).toEqual(['Hoje', 'Eu', 'Pessoas', 'Caminhos', 'Vida']);
       }
-      for (const a of AREAS) expect(screen.getAllByRole('button', { name: a.rotulo }).length).toBeGreaterThan(0);
+      for (const a of AREAS_DA_BARRA) expect(screen.getAllByRole('button', { name: a.rotulo }).length).toBeGreaterThan(0);
+      fireEvent.click(screen.getAllByRole('button', { name: 'Eu' })[0]);
+      expect(screen.getByRole('button', { name: 'Minha Semana' })).toBeTruthy();
       for (const velho of ['Casa', 'Cidade', 'Estudos', 'Formação', 'Trabalho', 'Tempo livre', 'Linha da Vida']) expect(within(navs[0]).queryByRole('button', { name: velho })).toBeNull();
-      // A barra do celular foi desenhada para seis (layout responsivo estrutural).
-      expect(document.querySelector('.barra.barra--6')).toBeTruthy();
+      // A barra do celular foi desenhada para cinco (layout responsivo estrutural).
+      expect(document.querySelector('.barra.barra--5')).toBeTruthy();
     });
   }
 
@@ -92,7 +97,9 @@ describe('as seis áreas são estáveis (não mudam de lugar com a idade) — RE
     // REWORK 9.6: a página inicial põe as entradas na ordem da fase da vida (nenhuma some).
     const entradas = [...document.querySelectorAll('.entrada-caminho')].map(x => x.className.replace(/.*entrada-caminho--/, ''));
     expect(entradas[0]).toBe('estudos');
-    expect(entradas).toHaveLength(4);
+    // VIDA 31: o Explorar da Minha Trajetória lista as quatro divisões da fase e, por último, os Caminhos de carreira.
+    expect(entradas).toHaveLength(5);
+    expect(entradas[4]).toBe('guia');
     ir({ area: 'caminhos', divisao: 'trabalho', parte: 'agora' });
     expect(screen.getByText(/Quem sustenta a casa/)).toBeTruthy();
     expect(screen.getByText(/Antes dos 14 anos, trabalhar é proibido/)).toBeTruthy();
@@ -108,14 +115,15 @@ describe('"eu quero fazer X — onde começo?" (o mapa de intenções, com cliqu
     hobby: /Explorar outras atividades|Arte|Leitura/, sair: /Com quem|Sair e ver gente/, estresse: /O que está pesando/, viajar: /Viagens e experiências/,
     rede: /Criar uma conta no Instagram|Instagram/, fazer_junto: /Família|Amigos|Perto|Gente da sua vida/, agir_trabalho: /No dia a dia do trabalho|O que dá para fazer agora/, usar_carro: /Nada seu ainda|Seu veículo|Seus veículos/, pertences: /Nada seu ainda|Para usar|Pertences/, casa: /Procurar (um|outro) lugar/, onde_moro: /Quem paga a casa/,
     romance_amigo: /Família|Amigos|Perto|Gente da sua vida/, cirurgia: /Clínica de cirurgia plástica/,
-    mudar_cidade: /Mudar de cidade/, mudar_pais: /Mudar de país/, custo_de_vida: /Aqui a moeda é/, nacionalidade: /No mundo/, dinheiro: /A família/, cabelo: /Aparência e estilo/, saude: /Cabeça|Saúde/, historia: /História/,
+    mudar_cidade: /Mudar de cidade/, mudar_pais: /Mudar de país/, custo_de_vida: /Aqui a moeda é/, nacionalidade: /No mundo/, dinheiro: /A família/, cabelo: /Aparência e estilo/, saude: /Cabeça|Saúde/, historia: /Os últimos anos/, // VIDA 31: a História virou o Hoje (os últimos anos e a biografia inteira estão nele)
     // REWORK 7: os testes de intenção do playtest.
     sair_amigo: /Família|Amigos|Perto|Gente da sua vida/, violao: /Tocar um instrumento|Explorar outras atividades/, condicionamento: /Academia|Correr ou caminhar|Cuidar de si/,
     praticas: /O que você pratica/, carreira: /Por onde você passou|Ainda não há história|Sua formação/, quanto_ganho: /O mês|Entra|entra/, em_casa: /O que há em casa|Quem mora com você|Quem paga a casa/,
     historico_escolar: /Sua formação|Sua história na formação|Ensino médio|ensino médio/, familia_aconteceu: /Família/,
     // REWORK 7.5: as intenções das interfaces do cotidiano.
     agenda: /A agenda da semana/, dedicacao: /A agenda da semana/, celular: /Tela inicial|Instagram/, homenagear: /Em memória|Quem se foi|Família/,
-    agradecer: /Família|Amigos|Perto|Gente da sua vida/, triste: /pesa|Cabeça|Como você está/, aparencia: /História/, profissional: /A sua situação agora|Procurar outro caminho/,
+    // VIDA 31: 'aparencia' (o Menu, no alto) e 'historia' levam ao Hoje — a antiga História.
+    agradecer: /Família|Amigos|Perto|Gente da sua vida/, triste: /pesa|Cabeça|Como você está/, aparencia: /Hoje/, profissional: /A sua situação agora|Procurar outro caminho/,
     // REWORK 9.6: as divisões de Caminhos.
     // REWORK 10: as apostas (o pacote dos jogos chega sob demanda — o teste vê a tela ou o "carregando" dela).
     apostar: /Loteria|Carregando/,

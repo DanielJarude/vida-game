@@ -131,7 +131,8 @@ describe('Fase A · Caminhos une Formação e Trabalho sem perder ação nenhuma
     expect(resolverDestino('vagas')).toMatchObject({ area: 'caminhos', divisao: 'trabalho', parte: 'oportunidades', explorar: 'vagas' });
     expect(resolverDestino('cursos')).toMatchObject({ area: 'caminhos', divisao: 'estudos', parte: 'oportunidades' });
     expect(resolverDestino('viagens')).toMatchObject({ area: 'vida', secao: 'viagens' });
-    expect(AREAS.map(a => a.rotulo)).toEqual(['História', 'Você', 'Pessoas', 'Caminhos', 'Minha Semana', 'Vida']);
+    // VIDA 31: História virou Hoje e Você virou Eu (Minha Semana continua uma área, aberta de dentro de Eu).
+    expect(AREAS.map(a => a.rotulo)).toEqual(['Hoje', 'Eu', 'Pessoas', 'Caminhos', 'Minha Semana', 'Vida']);
     // Toda intenção aponta para uma área que existe.
     for (const x of MAPA_DE_INTENCOES) expect(AREAS.some(a => a.id === x.lugar.area), x.id).toBe(true);
   });

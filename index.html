@@ -10,7 +10,7 @@
     />
     <!-- user-scalable=no removido: impedir zoom é uma barreira de acessibilidade. -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#22262c" />
+    <meta name="theme-color" content="#ffffff" />
     <!--
       REWORK 6.5 / 7.5 — a paleta (Memória Clara · Horizonte Claro · Memória Escura · Atlântico Noturno · Automático) entra ANTES do CSS e do React: a primeira pintura já sai no
       tema certo, sem piscar, e offline (só lê o localStorage e o sistema). O mesmo algoritmo de src/ui/tema.ts
@@ -20,7 +20,7 @@
       (function () {
         var a = 'auto', p, t;
         var luz = { claro: 'claro', horizonte: 'claro', escuro: 'escuro', atlantico: 'escuro' };
-        var moldura = { claro: '#22262c', horizonte: '#163430', escuro: '#131518', atlantico: '#0a1118' };
+        var moldura = { claro: '#ffffff', horizonte: '#163430', escuro: '#12161c', atlantico: '#0a1118' };
         try { a = localStorage.getItem('VIDA_APARENCIA') || 'auto'; } catch (e) {}
         if (!luz[a]) a = 'auto';
         try { p = a === 'auto' ? (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro') : a; } catch (e) { p = 'claro'; }

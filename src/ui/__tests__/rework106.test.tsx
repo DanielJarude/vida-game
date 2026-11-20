@@ -130,7 +130,8 @@ describe('K3 · o convite com prazo', () => {
       novaOportunidade(x, { tipo: 'iniciacao', meses: 12, chave: 'k3', titulo: 'Francisco chamou para um projeto', texto: 'Um projeto de ciências depois da aula.', pessoaId: p.id, atividade: 'projeto_escola' });
     });
     abrirJogo(v);
-    const porta = document.querySelector('.agora [data-porta]') as HTMLButtonElement;
+    // VIDA 31: o painel "Agora" mora no Hoje (a coluna do lado saiu); o jogo abre no Hoje.
+    const porta = document.querySelector('.painel-agora [data-porta]') as HTMLButtonElement;
     expect(porta.textContent).toMatch(/Francisco chamou para um projeto/);
     fireEvent.click(porta);
     const dialogo = screen.getByRole('dialog', { name: /Convite: Francisco chamou para um projeto/ });
@@ -140,7 +141,7 @@ describe('K3 · o convite com prazo', () => {
     expect(within(dialogo).getByRole('button', { name: 'Decidir depois' })).toBeTruthy();
     fireEvent.click(within(dialogo).getByRole('button', { name: 'Deixar passar' }));
     expect(screen.queryByRole('dialog', { name: /Convite/ })).toBeNull();
-    expect(document.querySelector('.agora [data-porta]')).toBeNull();
+    expect(document.querySelector('.painel-agora [data-porta]')).toBeNull();
     expect(quem).not.toBe('');
   });
 });
@@ -149,7 +150,7 @@ describe('K4 · parar o tratamento', () => {
   it('Você → Saúde: "Parar o tratamento…" diz o risco antes; confirmado, a condição aparece como tratamento parado', () => {
     const v = vida(40, x => { x.corpo.condicoes = [{ id: 'hipertensao', nome: 'hipertensão', tInicio: x.t - 60, cronica: true, gravidade: 2, tratando: true, diagnosticada: true, tTratamento: x.t - 24 }]; });
     abrirJogo(v);
-    area('Você');
+    area('Eu'); // VIDA 31: Você virou Eu
     fireEvent.click(screen.getByRole('tab', { name: /Saúde/ }));
     fireEvent.click(screen.getByRole('button', { name: /^Parar o tratamento \(hipertensão\)…$/ }));
     expect(document.body.textContent).toMatch(/pressão volta a subir/);

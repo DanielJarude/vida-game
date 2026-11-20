@@ -36,7 +36,7 @@ export const APARENCIAS: readonly { id: Aparencia; rotulo: string; nota: string 
 export const LUZ_DA_PALETA: Record<Paleta, Tema> = { claro: 'claro', horizonte: 'claro', escuro: 'escuro', atlantico: 'escuro' };
 
 /** A cor da moldura em cada paleta (barra do navegador, PWA): a mesma de `--p-moldura` em tokens.css. */
-export const COR_DA_MOLDURA: Record<Paleta, string> = { claro: '#22262c', escuro: '#131518', horizonte: '#163430', atlantico: '#0a1118' };
+export const COR_DA_MOLDURA: Record<Paleta, string> = { claro: '#ffffff', escuro: '#12161c', horizonte: '#163430', atlantico: '#0a1118' };
 
 const PALETAS = new Set<string>(['claro', 'horizonte', 'escuro', 'atlantico', 'auto']);
 

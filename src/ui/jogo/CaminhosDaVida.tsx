@@ -42,8 +42,7 @@ import { lazy as lazy16, Suspense as Suspense16 } from 'react';
 const Guia26 = lazy16(() => import('../v26/guia/Guia26'));
 const PosCarreira26 = lazy16(() => import('../v26/guia/Guia26').then(m => ({ default: m.PosCarreira26 })));
 const Oficio16 = lazy16(() => import('../v16/oficios/Oficio16'));
-// VIDA 31: a Minha Trajetória (a página inicial de Caminhos) vem num pacote à parte.
-const Trajetoria31 = lazy16(() => import('../v31/Trajetoria31'));
+import { Trajetoria31 } from '../v31/trajetoriaSobDemanda';
 import { doClube } from '../../motor/dados/clubes';
 import { nomeOcupacao } from '../../motor/sistemas/trabalho';
 import { modoDoTrabalho } from '../../motor/sistemas/profissao';
@@ -267,7 +266,7 @@ export function PaginaCaminhos({ vida, agir, irPara, abrirPessoa, divisao = 'ini
         </ul>
       </nav>
       {divisao === 'inicio'
-        ? <Suspense16 fallback={null}><Trajetoria31 vida={vida} irDivisao={irDivisao} irPara={irPara} abrirConvite={abrirConvite} /></Suspense16>
+        ? <Trajetoria31 vida={vida} irDivisao={irDivisao} irPara={irPara} abrirConvite={abrirConvite} />
         : (
           <header className="folio folio--caminhos folio--divisao">
             <p className="folio__kicker"><span className="folio__area">Caminhos</span> · {rotulo.toLowerCase()}</p>

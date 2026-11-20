@@ -82,7 +82,7 @@ describe('tela do legado', () => {
     const nova = (r as { vida: Vida }).vida;
     expect(nova.eu.nome).toBe(b);
     expect(nova.morte).toBeUndefined();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Você' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Eu' })[0]); // VIDA 31: Você virou Eu
     expect(screen.getByRole('heading', { name: 'Quem veio antes' })).toBeTruthy();
   });
 
@@ -104,7 +104,7 @@ describe('tela do legado', () => {
     const nova = (ler() as { vida: Vida }).vida;
     expect(nova.corpo.condicoes.map(c => c.id).sort()).toEqual(['diabetes', 'hipertensao']);
     // O diabetes que ninguém nomeou continua sem nome: na tela "Você", são os sinais do corpo dela.
-    fireEvent.click(screen.getAllByRole('button', { name: 'Você' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Eu' })[0]); // VIDA 31: Você virou Eu
     expect(within(screen.getByRole('region', { name: 'Sinais do corpo' })).getByText(/muita sede/i)).toBeTruthy();
   });
 

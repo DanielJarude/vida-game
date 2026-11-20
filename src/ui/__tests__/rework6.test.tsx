@@ -157,7 +157,7 @@ describe('os sinais são a leitura do motor', () => {
     expect(within(retrato).getByText('Onde')).toBeTruthy();
     expect(within(retrato).queryAllByRole('img', { name: /de 5$/ })).toHaveLength(0);
     fireEvent.click(within(retrato).getByRole('button', { name: /Como você está, em detalhe/ }));
-    expect(screen.getAllByRole('button', { name: 'Você' }).some(b => b.getAttribute('aria-current') === 'page')).toBe(true);
+    expect(screen.getAllByRole('button', { name: 'Eu' }).some(b => b.getAttribute('aria-current') === 'page')).toBe(true);
   });
 });
 
@@ -231,8 +231,8 @@ describe('tokens: uma fonte só, contraste e foco', () => {
   it('teclado: áreas com aria-current, os detalhes de Você abrem com o teclado (summary), sem rolagem lateral no CSS do corpo', () => {
     abrir(vida(30));
     const nav = screen.getAllByRole('navigation', { name: 'Áreas' })[0];
-    fireEvent.click(within(nav).getByRole('button', { name: 'Você' }));
-    expect(within(nav).getByRole('button', { name: 'Você' }).getAttribute('aria-current')).toBe('page');
+    fireEvent.click(within(nav).getByRole('button', { name: 'Eu' }));
+    expect(within(nav).getByRole('button', { name: 'Eu' }).getAttribute('aria-current')).toBe('page');
     // REWORK 9.6: os atributos (e a cabeça) abrem com o teclado — cada um é um <details> com <summary>.
     const resumos = document.querySelectorAll('.estado-bloco > summary, .atributo__dobra > summary');
     expect(resumos.length).toBeGreaterThanOrEqual(2);
@@ -275,7 +275,9 @@ describe('celular: modais, dinheiro grande e nada perdido na reorganização', (
   it('nenhuma área nem seção sumiu: cada uma abre, com título, e o avançar continua lá', () => {
     abrir(vida(25));
     for (const a of AREAS) {
-      fireEvent.click(screen.getAllByRole('button', { name: a.rotulo })[0]);
+      // VIDA 31: Minha Semana mora dentro de Eu (Eu → Minha Semana).
+      if (a.id === 'tempo') { fireEvent.click(screen.getAllByRole('button', { name: 'Eu' })[0]); fireEvent.click(screen.getByRole('button', { name: 'Minha Semana' })); }
+      else fireEvent.click(screen.getAllByRole('button', { name: a.rotulo })[0]);
       expect(screen.getAllByRole('heading').length).toBeGreaterThan(0);
       expect(screen.getAllByRole('button', { name: /Viver mais um ano/ })).toHaveLength(1);
       const secoes = a.id === 'vida' ? SECOES_VIDA : a.id === 'tempo' ? SECOES_TEMPO : [];

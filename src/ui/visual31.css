@@ -315,3 +315,5 @@ html:root, html:root[data-tema], html:root[data-paleta] {
   #root .traj31__lista .entrada-caminho__oque { display: none; }
   #root .traj31__bloco { padding: var(--space-4); }
 }
+/* A barra do celular com cinco lugares (era desenhada para seis). */
+#root .barra--5 { grid-template-columns: repeat(5, 1fr); }
