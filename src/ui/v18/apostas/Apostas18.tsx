@@ -23,6 +23,8 @@ const a18 = (oque: OqueAposta18): Acao => ({ tipo: 'aposta18', oque });
 const dz = (n: number, zero?: boolean) => String(n).padStart(2, '0') + (zero ? '' : '');
 const umEm = (p: number) => (p > 0 ? `1 em ${Math.round(1 / p).toLocaleString('pt-BR')}` : '—');
 const fmtOdd = (x: number) => x.toFixed(2).replace('.', ',');
+/** VIDA 29: os valores das loterias (só do Brasil) com os centavos quando há (R$ 3,50, não "R$ 4"); os grandes, curtos. */
+const precoLot = (x: number) => (Math.abs(x) < 1000 ? `R$ ${x.toLocaleString('pt-BR', { minimumFractionDigits: Number.isInteger(x) ? 0 : 2, maximumFractionDigits: 2 })}` : dinheiroCurto(x));
 
 function Lei({ texto }: { texto: string }) { return <p className="apostas18__lei">{texto}</p>; }
 
@@ -57,7 +59,7 @@ function Cartaz({ vida, l }: { vida: Vida; l: LoteriaId }) {
     <div className={`apostas18__cartaz apostas18__cartaz--${l}`}>
       <span className="apostas18__cartaz-nome">{L.nome}</span>
       <span>Concurso {n.toLocaleString('pt-BR')} · {L.dias}</span>
-      <strong>Prêmio estimado: {dinheiroCurto(est)}</strong>
+      <strong>Prêmio estimado: {precoLot(est)}</strong>
     </div>
   );
 }
@@ -69,10 +71,10 @@ function Virada19({ vida, agir, dezenas, qtd }: { vida: Vida; agir: Agir; dezena
   const bolao = bolaoDaLoterica(vida, 'mega', true);
   return (
     <div className="apostas18__linha apostas18__virada">
-      <span><strong>Mega da Virada</strong> · concurso {n.toLocaleString('pt-BR')} · 31 de dezembro · prêmio estimado {dinheiroCurto(est)}</span>
+      <span><strong>Mega da Virada</strong> · concurso {n.toLocaleString('pt-BR')} · 31 de dezembro · prêmio estimado {precoLot(est)}</span>
       <span className="nota">Não acumula: sem ganhador da sena, o prêmio vai para a quina; sem quina, para a quadra. Cada concurso do ano reservou parte do prêmio para ela.</span>
-      <BotaoAcao vida={vida} agir={agir} acao={a18({ jogo: 'loteria', oque: 'comprar', loteria: 'mega', surpresinhas: qtd, dezenas, virada: true })}>Apostar na Virada · {dinheiroCurto(precoDaAposta('mega', dezenas) * qtd)}</BotaoAcao>
-      <BotaoAcao vida={vida} agir={agir} acao={a18({ jogo: 'loteria', oque: 'bolao', loteria: 'mega', cotas: 1, virada: true })}>Uma cota do bolão da Virada · {dinheiroCurto(bolao.valorCota)}</BotaoAcao>
+      <BotaoAcao vida={vida} agir={agir} acao={a18({ jogo: 'loteria', oque: 'comprar', loteria: 'mega', surpresinhas: qtd, dezenas, virada: true })}>Apostar na Virada · {precoLot(precoDaAposta('mega', dezenas) * qtd)}</BotaoAcao>
+      <BotaoAcao vida={vida} agir={agir} acao={a18({ jogo: 'loteria', oque: 'bolao', loteria: 'mega', cotas: 1, virada: true })}>Uma cota do bolão da Virada · {precoLot(bolao.valorCota)}</BotaoAcao>
     </div>
   );
 }
@@ -99,7 +101,7 @@ function Volante({ vida, agir, l }: { vida: Vida; agir: Agir; l: LoteriaId }) {
     <section className="apostas18__loteria" aria-label={L.nome}>
       <Cartaz vida={vida} l={l} />
       <div className="apostas18__volante papel papel--sem-dobra">
-        <p className="bilhete__cabeca"><span>{L.nome} · {L.colunas ? `um a ${L.colunas.porColuna} números em cada uma das ${L.colunas.n} colunas` : `marque ${L.min === L.max ? L.min : `${L.min} a ${L.max}`}`}{L.extra ? ` e ${L.extra.min === L.extra.max ? (L.extra.min === 1 ? `o ${L.extra.nome}` : `${L.extra.min} ${L.extra.nome}`) : `${L.extra.min} a ${L.extra.max} ${L.extra.nome}`}` : ''}</span><span>{completo ? dinheiroCurto(precoDoJogo(l, marcados, extra.length ? extra : undefined)) : `aposta simples: ${dinheiroCurto(L.preco)}`}</span></p>
+        <p className="bilhete__cabeca"><span>{L.nome} · {L.colunas ? `um a ${L.colunas.porColuna} números em cada uma das ${L.colunas.n} colunas` : `marque ${L.min === L.max ? L.min : `${L.min} a ${L.max}`}`}{L.extra ? ` e ${L.extra.min === L.extra.max ? (L.extra.min === 1 ? `o ${L.extra.nome}` : `${L.extra.min} ${L.extra.nome}`) : `${L.extra.min} a ${L.extra.max} ${L.extra.nome}`}` : ''}</span><span>{completo ? precoLot(precoDoJogo(l, marcados, extra.length ? extra : undefined)) : `aposta simples: ${precoLot(L.preco)}`}</span></p>
         {L.colunas ? (
           <div className="apostas18__colunas" role="group" aria-label="As sete colunas">
             {Array.from({ length: L.colunas.n }, (_, c) => (
@@ -139,12 +141,12 @@ function Volante({ vida, agir, l }: { vida: Vida; agir: Agir; l: LoteriaId }) {
         {l !== 'lotomania' && L.min !== L.max && <label>{L.colunas ? 'números' : 'dezenas'} <select value={dezenas} onChange={e => setDezenas(Number(e.target.value))}>{Array.from({ length: Math.min(L.max, L.min + 5) - L.min + 1 }, (_, k) => L.min + k).map(d => <option key={d} value={d}>{d}</option>)}</select></label>}
         {L.extra && <span className="nota">{L.extra.tipo === 'trevo' ? 'com dois trevos' : `o ${L.extra.nome} também vem na surpresinha`}</span>}
         <label>jogos <select value={qtd} onChange={e => setQtd(Number(e.target.value))}>{[1, 2, 3, 5, 10].map(d => <option key={d} value={d}>{d}</option>)}</select></label>
-        <BotaoAcao vida={vida} agir={agir} acao={a18({ jogo: 'loteria', oque: 'comprar', loteria: l, surpresinhas: qtd, dezenas })}>Registrar · {dinheiroCurto(precoDaAposta(l, dezenas) * qtd)}</BotaoAcao>
+        <BotaoAcao vida={vida} agir={agir} acao={a18({ jogo: 'loteria', oque: 'comprar', loteria: l, surpresinhas: qtd, dezenas })}>Registrar · {precoLot(precoDaAposta(l, dezenas) * qtd)}</BotaoAcao>
       </div>
       {l === 'mega' && <Virada19 vida={vida} agir={agir} dezenas={dezenas} qtd={qtd} />}
       <div className="apostas18__linha">
         <span>Bolão da lotérica</span>
-        <span className="nota">{bolao.jogos.length} jogos de {BOLOES18[l].dezenas} dezenas, {bolao.cotas} cotas de {dinheiroCurto(bolao.valorCota)} (com a tarifa de serviço)</span>
+        <span className="nota">{bolao.jogos.length} jogos de {BOLOES18[l].dezenas} dezenas, {bolao.cotas} cotas de {precoLot(bolao.valorCota)} (com a tarifa de serviço)</span>
         <label>cotas <select value={cotas} onChange={e => setCotas(Number(e.target.value))}>{[1, 2, 3, 5].map(d => <option key={d} value={d}>{d}</option>)}</select></label>
         <BotaoAcao vida={vida} agir={agir} acao={a18({ jogo: 'loteria', oque: 'bolao', loteria: l, cotas })}>Comprar cotas</BotaoAcao>
       </div>
@@ -161,7 +163,7 @@ function Volante({ vida, agir, l }: { vida: Vida; agir: Agir; l: LoteriaId }) {
       <details className="regras">
         <summary>Regras, faixas e chances</summary>
         <table className="regras__tabela"><thead><tr><th>Faixa</th><th>Prêmio</th><th>Chance (aposta simples)</th></tr></thead>
-          <tbody>{L.faixas.map(f => <tr key={f.nome}><td>{f.nome}</td><td>{f.fixo ? dinheiroCurto(f.fixo) : `${Math.round((f.pct ?? 0) * 100)}% do prêmio, dividido`}</td><td>{umEm(chanceDaFaixaDe(l, f))}</td></tr>)}</tbody></table>
+          <tbody>{L.faixas.map(f => <tr key={f.nome}><td>{f.nome}</td><td>{f.fixo ? precoLot(f.fixo) : `${Math.round((f.pct ?? 0) * 100)}% do prêmio, dividido`}</td><td>{umEm(chanceDaFaixaDe(l, f))}</td></tr>)}</tbody></table>
         <p className="nota">{Math.round(43.35)}% da arrecadação vira prêmio. Uma aposta com mais dezenas vale por todas as combinações simples que contém (e custa por elas). A faixa principal acumula quando ninguém acerta.</p>
       </details>
     </section>
@@ -176,10 +178,10 @@ function Bilhetes({ vida, l }: { vida: Vida; l: LoteriaId }) {
     <ul className="apostas18__bilhetes" aria-label="Seus bilhetes">
       {meus.map(b => (
         <li key={b.id} className={`apostas18__bilhete${b.resultado?.premio ? ' apostas18__bilhete--premiado' : ''}`}>
-          <span className="apostas18__bilhete-cab">Concurso {b.concurso.toLocaleString('pt-BR')} · {b.bolao ? `bolão (${b.bolao.minhas} de ${b.bolao.cotas} cotas)` : `${b.jogos.length} ${b.jogos.length === 1 ? 'jogo' : 'jogos'}`} · {dinheiroCurto(b.custo)}</span>
+          <span className="apostas18__bilhete-cab">Concurso {b.concurso.toLocaleString('pt-BR')} · {b.bolao ? `bolão (${b.bolao.minhas} de ${b.bolao.cotas} cotas)` : `${b.jogos.length} ${b.jogos.length === 1 ? 'jogo' : 'jogos'}`} · {precoLot(b.custo)}</span>
           {l !== 'loteca' && <span className="apostas18__dezenas">{b.jogos.slice(0, 3).map((j, k) => <span key={k}>{L.colunas ? Array.from({ length: L.colunas.n }, (_, c) => j.filter(x => Math.floor(x / 10) === c).map(x => x % 10).join('/')).join(' · ') : j.map(x => dz(x)).join(' ')}{b.extras?.[k]?.length ? ` + ${b.extras[k].map(x => nomeDoExtra(l, x)).join(', ')}` : ''}</span>)}{b.jogos.length > 3 ? <span>…</span> : null}</span>}
           {b.resultado ? (
-            <span>{l === 'loteca' ? 'Resultados: ' + b.resultado.resultados!.join(' ') : <>Sorteio: <span className="loteria__bolas apostas18__bolas">{b.resultado.sorteio.map(x => <span key={x} className="loteria__bola">{L.colunas ? x % 10 : dz(x)}</span>)}</span>{b.resultado.sorteioExtra ? <> · {L.extra?.nome}: {b.resultado.sorteioExtra.map(x => nomeDoExtra(l, x)).join(' e ')}</> : null}{b.resultado.sorteio2 ? <> · 2º: <span className="loteria__bolas apostas18__bolas">{b.resultado.sorteio2.map(x => <span key={x} className="loteria__bola">{dz(x)}</span>)}</span></> : null}</>} — {b.resultado.premio > 0 ? <strong>{b.resultado.faixas.map(f => `${f.combinacoes > 1 ? `${f.combinacoes}× ` : ''}${f.nome}`).join(', ')}: {dinheiroCurto(b.resultado.premio)}</strong> : 'nenhuma faixa'}</span>
+            <span>{l === 'loteca' ? 'Resultados: ' + b.resultado.resultados!.join(' ') : <>Sorteio: <span className="loteria__bolas apostas18__bolas">{b.resultado.sorteio.map(x => <span key={x} className="loteria__bola">{L.colunas ? x % 10 : dz(x)}</span>)}</span>{b.resultado.sorteioExtra ? <> · {L.extra?.nome}: {b.resultado.sorteioExtra.map(x => nomeDoExtra(l, x)).join(' e ')}</> : null}{b.resultado.sorteio2 ? <> · 2º: <span className="loteria__bolas apostas18__bolas">{b.resultado.sorteio2.map(x => <span key={x} className="loteria__bola">{dz(x)}</span>)}</span></> : null}</>} — {b.resultado.premio > 0 ? <strong>{b.resultado.faixas.map(f => `${f.combinacoes > 1 ? `${f.combinacoes}× ` : ''}${f.nome}`).join(', ')}: {precoLot(b.resultado.premio)}</strong> : 'nenhuma faixa'}</span>
           ) : <span className="nota">Aguardando o sorteio ({L.dias}).</span>}
         </li>
       ))}
@@ -202,8 +204,8 @@ function Loteca({ vida, agir }: { vida: Vida; agir: Agir }) {
       </table>
       <p className="nota">{p.filter(x => x.length === 2).length} duplos, {p.filter(x => x.length === 3).length} triplos = {(preco / LOTERIAS18.loteca.preco).toLocaleString('pt-BR')} combinações. Vale o tempo regulamentar.</p>
       <div className="grupo-acoes grupo-acoes--linha">
-        <BotaoAcao vida={vida} agir={agir} variante="principal" acao={a18({ jogo: 'loteria', oque: 'comprar', loteria: 'loteca', palpites: p })}>Registrar · {dinheiroCurto(preco)}</BotaoAcao>
-        <BotaoAcao vida={vida} agir={agir} acao={a18({ jogo: 'loteria', oque: 'bolao', loteria: 'loteca', cotas: 1 })}>Uma cota do bolão · {dinheiroCurto(bolaoDaLoterica(vida, 'loteca').valorCota)}</BotaoAcao>
+        <BotaoAcao vida={vida} agir={agir} variante="principal" acao={a18({ jogo: 'loteria', oque: 'comprar', loteria: 'loteca', palpites: p })}>Registrar · {precoLot(preco)}</BotaoAcao>
+        <BotaoAcao vida={vida} agir={agir} acao={a18({ jogo: 'loteria', oque: 'bolao', loteria: 'loteca', cotas: 1 })}>Uma cota do bolão · {precoLot(bolaoDaLoterica(vida, 'loteca').valorCota)}</BotaoAcao>
         <BotaoAcao vida={vida} agir={agir} acao={a18({ jogo: 'loteria', oque: 'sorteio', loteria: 'loteca' })}>Ver os jogos do concurso {n.toLocaleString('pt-BR')}</BotaoAcao>
       </div>
       <Bilhetes vida={vida} l="loteca" />

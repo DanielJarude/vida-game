@@ -89,8 +89,9 @@
 }
 
 /* VIDA 29 · o Super Sete (sete colunas de 0 a 9) e os extras (time do coração, mês da sorte, trevos). */
-.apostas18__colunas { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
-.apostas18__coluna { display: flex; flex-direction: column; gap: 4px; align-items: stretch; }
+.apostas18__colunas { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); grid-template-rows: repeat(11, auto); grid-auto-flow: column; gap: 4px 6px; }
+.apostas18__coluna { display: contents; }
+.apostas18__colunas .bilhete__numero { min-height: 32px; min-width: 0; padding: 0; font-size: 13px; }
 .apostas18__coluna-nome { text-align: center; font-size: 12px; font-weight: 700; color: var(--tinta-3); }
 .apostas18__extra { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
 .apostas18__extra > span { font-size: 13px; font-weight: 700; margin-right: 4px; }
