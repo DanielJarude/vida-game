@@ -34,8 +34,9 @@ const foto = async (p, sel, n) => { const l = p.locator(sel).first(); if (await 
 
 // Clube
 { const x = await abrir('clube'); const { p } = x;
-  await area(p, 'Patrimônio').catch(() => {});
-  const emp = p.getByRole('tab', { name: /Empresas/ }).first(); if (await emp.count()) { await emp.click(); await p.waitForTimeout(1500); }
+  await area(p, 'Vida');
+  for (const n of [/^Patrimônio$/, /^Empresas/]) { const bt = p.getByRole('button', { name: n }).first(); const tb = p.getByRole('tab', { name: n }).first(); if (await bt.count()) await bt.click(); else if (await tb.count()) await tb.click(); await p.waitForTimeout(2000); }
+  if (!(await p.locator('.clube30').count())) { const t = p.getByText(/Clube de futebol|Náutico/).first(); await t.scrollIntoViewIfNeeded().catch(() => {}); }
   await p.locator('.clube30').first().waitFor({ timeout: 8000 }).catch(() => {});
   await foto(p, '.clube30', 'clube-painel');
   resumo.push(`  clube: escudo=${await p.locator('.clube30__capa .escudo30').count()} jogadores no campo=${await p.locator('.clube30__jog').count()}`);
@@ -54,12 +55,12 @@ const foto = async (p, sel, n) => { const l = p.locator(sel).first(); if (await 
   await foto(p, '.meio30', 'fama-meio');
   await fechar('fama', x); }
 { const x = await abrir('famosa'); const { p } = x;
-  const cel = p.getByRole('button', { name: /Celular/ }).first(); await cel.click().catch(() => {}); await p.waitForTimeout(1200);
-  for (const app of ['Twitch', 'Instagram', 'faísca']) {
-    const a = p.getByRole('button', { name: new RegExp(app, 'i') }).first();
+  await area(p, 'Você'); const cel = p.getByRole('button', { name: /^Celular$/ }).first(); await cel.click().catch(() => {}); await p.waitForTimeout(1500);
+  for (const app of ['Twitch', 'Instagram', 'Namoro']) {
+    const a = p.getByRole('button', { name: new RegExp('^' + app) }).first();
     if (!(await a.count())) { resumo.push(`  (sem app ${app})`); continue; }
     await a.click(); await p.waitForTimeout(1200);
-    if (app !== 'faísca') { const perf = p.getByRole('button', { name: /Perfil|Canal/ }).last(); await perf.click().catch(() => {}); await p.waitForTimeout(900); await foto(p, '.meus30', `redes-${app.toLowerCase()}`); resumo.push(`  ${app}: posts=${await p.locator('.meus30__post').count()} previas=${await p.locator('.previa30').count()}`); }
+    if (app !== 'Namoro') { const perf = p.getByRole('button', { name: /Perfil|Canal/ }).last(); await perf.click().catch(() => {}); await p.waitForTimeout(900); await foto(p, '.meus30', `redes-${app.toLowerCase()}`); resumo.push(`  ${app}: posts=${await p.locator('.meus30__post').count()} previas=${await p.locator('.previa30').count()}`); }
     else { const fb = p.getByRole('button', { name: /^Filtros/ }).first(); await fb.click().catch(() => {}); await p.waitForTimeout(800); await foto(p, '.namoro', 'namoro-filtros'); resumo.push(`  namoro: form=${await p.locator('.namoro30__form').count()}`); }
     const voltar = p.getByRole('button', { name: /Voltar à tela inicial/ }).first(); await voltar.click().catch(() => {}); await p.waitForTimeout(600);
   }
@@ -67,12 +68,15 @@ const foto = async (p, sel, n) => { const l = p.locator(sel).first(); if (await 
 // Base
 { const x = await abrir('base'); const { p } = x;
   await area(p, 'Caminhos').catch(() => {}); await p.waitForTimeout(800);
+  for (const n of ['Outros caminhos']) { if (await p.locator('.form25').count()) break; await p.getByRole('button', { name: n }).first().click().catch(() => {}); await p.waitForTimeout(1500); }
   await p.locator('.form30').first().waitFor({ timeout: 6000 }).catch(() => {});
   await foto(p, '.form25', 'base-formacao');
+  resumo.push(`  base: porta de outro clube=${await p.getByText(/quer você na base|Avaliação d/).count()} registro=${await p.locator('.form30').count()}`);
   await fechar('base', x); }
 // Ofício
 { const x = await abrir('oficio'); const { p } = x;
   await area(p, 'Caminhos').catch(() => {}); await p.waitForTimeout(1200);
+  await p.getByRole('button', { name: 'Trabalho' }).first().click().catch(() => {}); await p.waitForTimeout(1500);
   await p.locator('.oficio30').first().waitFor({ timeout: 6000 }).catch(() => {});
   await foto(p, '.oficio30', 'oficio');
   await fechar('oficio', x); }

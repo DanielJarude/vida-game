@@ -23,7 +23,7 @@ export const ACONTECIMENTOS_30_POS: Conteudo[] = [
     id: 'pos30_estilo', manual: true, tipo: 'decisao', idade: [18, 90], tema: 'trabalho',
     quando: c => cenaDoOficio30(c.v, 'pos30_estilo'),
     titulo: c => `No ar, na ${of(c).casa}`,
-    texto: c => `Primeira temporada no ${of(c).programa ?? 'programa'}. O diretor quer saber que comentarista você vai ser — "o público decide em três semanas".`,
+    texto: c => `Primeira temporada no programa ${of(c).programa ?? ''}. O diretor quer saber que comentarista você vai ser — "o público decide em três semanas".`,
     opcoes: [
       { id: 'tecnico', texto: 'O técnico: a tática, o porquê do lance', consequencia: () => 'Credibilidade sobe devagar; a audiência, também.', resolver: c => ({ texto: 'Você levou a prancheta para o estúdio. Os outros comentaristas passaram a perguntar a sua opinião antes do programa.', memoria: null, efeito: () => { of(c).estilo = 'tecnico'; mexe(c, 0, 6); fim(c); } }) },
       { id: 'polemico', texto: 'O polêmico: opinião forte, sem medo', consequencia: () => 'Audiência alta, credibilidade em risco — e ex-companheiros incomodados.', resolver: c => ({ texto: 'A primeira opinião forte virou trecho compartilhado. O telefone da emissora não parou.', memoria: null, efeito: () => { of(c).estilo = 'polemico'; mexe(c, 8, -4); fim(c); } }) },

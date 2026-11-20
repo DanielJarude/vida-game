@@ -124,7 +124,7 @@ export function OutrosCaminhosDaVida({ vida, agir, irPara }: { vida: Vida; agir:
       <Suspense fallback={null}><Automobilismo20 vida={vida} agir={agir} /></Suspense>
       {/* VIDA 25: os e-sports (a porta para quem tem idade; a carreira, do ranqueado ao mundial). */}
       {i >= 12 && <Suspense fallback={null}><Esports25 vida={vida} agir={agir} /></Suspense>}
-      <PortasAbertas vida={vida} agir={agir} filtro={o => ['peneira', 'seletiva', 'banda', 'grupo'].includes(o.tipo)} titulo="Portas do esporte e da arte" />
+      <PortasAbertas vida={vida} agir={agir} filtro={o => ['peneira', 'seletiva', 'banda', 'grupo', 'base_transferencia'].includes(o.tipo)} titulo="Portas do esporte e da arte" />
       {esp?.fase === 'base' && (
         <section className="divisao__secao paralelo" aria-label="A base">
           <h2 className="secao-fio">{esp.modalidade === 'futebol' ? 'A base' : 'A equipe'}</h2>

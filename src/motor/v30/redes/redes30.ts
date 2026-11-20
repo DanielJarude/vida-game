@@ -97,15 +97,20 @@ const LEGENDA_PROPRIA: Partial<Record<string, string[]>> = {
   estilo: ['Look do dia. Aprovam?', 'Me arrumei só pra tirar foto, confesso.'],
   jogo: ['Live até tarde de novo. Quem tava lá sabe 🎮', 'Partida insana hoje!'],
   divulgar: ['Saiu! Corre lá e me conta o que achou.', 'Muito trabalho por trás disso. Está no ar!'],
-  estudo: ['Café, livro e foco. Vamos!', 'A prova que lute.']
+  estudo: ['Café, livro e foco. Vamos!', 'A prova que lute.'],
+  conversa: ['Obrigad{o} a quem ficou até o fim da live! Vocês são demais.', 'Quem perdeu a live de ontem perdeu as melhores histórias.', 'Chat mais engraçado da internet, sem discussão 😂'],
+  arte: ['Feito à mão, do jeito que eu gosto.', 'Horas nisso. Valeu cada uma.'],
+  tutorial: ['Aprendi errando — agora vocês não precisam.', 'Salva aí pra não esquecer!'],
+  comunidade: ['Bora ajudar? Compartilhem!', 'O bairro é de todo mundo.'],
+  musica_live: ['Vocês pediram, eu toquei 🎸']
 };
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /** A legenda que você escreveu (em primeira pessoa) — com o detalhe que a sua vida tem (o que a publicação mostrou). */
-export function legendaPropria30(v: Vida, pub: Publicacao): string {
+export function legendaPropria30(v: Vida, pub: Publicacao, n = 0): string {
   const r = rngDe(v.id, 'leg30', pub.id);
-  const lista = LEGENDA_PROPRIA[pub.tema] ?? ['Só passando pra deixar isso aqui.', 'Um pedaço do meu dia.'];
-  const base = lista[Math.floor(r.next() * lista.length)].replace(/\{o\}/g, v.eu.genero === 'feminino' ? 'a' : 'o');
+  const lista = LEGENDA_PROPRIA[pub.tema] ?? ['Só passando pra deixar isso aqui.', 'Um pedaço do meu dia.', 'Hoje foi assim.', 'Sem legenda, só sentimento.'];
+  const base = lista[(Math.floor(r.next() * lista.length) + n) % lista.length].replace(/\{o\}/g, v.eu.genero === 'feminino' ? 'a' : 'o');
   return base;
 }
 
@@ -145,21 +150,23 @@ const CATEGORIA: Partial<Record<string, string>> = { jogo: 'Games', musica: 'Mú
 const TITULO_LIVE: Partial<Record<string, string[]>> = {
   jogo: ['RANQUEADA ATÉ SUBIR (ou até cair) | !discord', 'Zerando hoje, sem desistir | chat decide', 'Campeonato com os inscritos 🏆'],
   musica: ['Pedidos do chat ao vivo 🎸', 'Voz e violão até a meia-noite'],
-  conversa: ['Bate-papo: perguntem qualquer coisa', 'Reagindo aos vídeos de vocês'],
+  conversa: ['Bate-papo: perguntem qualquer coisa', 'Reagindo aos vídeos de vocês', 'Contando a história que eu nunca contei', 'Respondendo o chat até o sono vencer', 'Vida real: como foi a minha semana'],
+  arte: ['Desenhando ao vivo: o chat escolhe o tema', 'Do rascunho ao final, sem cortes'],
+  tutorial: ['Aula aberta: do zero ao avançado', 'Tirando as dúvidas de vocês'],
   receita: ['Cozinhando ao vivo (vai dar errado?)'],
   esporte: ['Treino ao vivo + perguntas'],
-  tutorial: ['Aula aberta: do zero ao avançado'],
   humor: ['Lendo os piores comentários do mês 😂']
 };
 
 /** A miniatura de uma publicação sua em vídeo (YouTube, TikTok) ou live (Twitch). */
-export function previaPropria30(v: Vida, pl: PlataformaId, pub: Publicacao): Previa30 | undefined {
+export function previaPropria30(v: Vida, pl: PlataformaId, pub: Publicacao, n = 0): Previa30 | undefined {
   if (pl !== 'twitch' && pl !== 'youtube' && pl !== 'tiktok') return undefined;
   const r = rngDe(v.id, 'prev30', pub.id);
   const categoria = CATEGORIA[pub.tema] ?? 'Vlog';
   if (pl === 'twitch') {
     const ts = TITULO_LIVE[pub.tema] ?? ['Ao vivo com vocês'];
-    return { titulo: ts[Math.floor(r.next() * ts.length)], categoria, aoVivo: true, espectadores: Math.max(1, Math.round(pub.alcance * (0.02 + r.next() * 0.04))) };
+    // (A posição do post na conta gira o título: duas lives seguidas não têm o mesmo nome.)
+    return { titulo: ts[(Math.floor(r.next() * ts.length) + n) % ts.length], categoria, aoVivo: true, espectadores: Math.max(1, Math.round(pub.alcance * (0.02 + r.next() * 0.04))) };
   }
   const min = pl === 'tiktok' ? 0 : 4 + Math.floor(r.next() * 16);
   const seg = Math.floor(r.next() * 60);

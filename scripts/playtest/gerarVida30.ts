@@ -12,6 +12,7 @@ import { entrarNaBase } from '../../src/motor/sistemas/esporte';
 import { mercadoDaBase30 } from '../../src/motor/sistemas/base30';
 import { anoDoOficio30 } from '../../src/motor/v30/oficio/oficio30';
 import { criarRng } from '../../src/motor/rng';
+import { conteudosPossiveis } from '../../src/motor/sistemas/redes';
 import type { Vida } from '../../src/motor/tipos';
 import { mkdirSync, writeFileSync } from 'node:fs';
 await carregarMundo();
@@ -33,7 +34,8 @@ const ex = (v: Vida, a: Acao) => { const r = executar(v, a); r.vida.momento = nu
   const m = garantirRede30(v); for (let k = 0; k < 4; k++) { v.t += 12; anoDaRede30(v); } conhecerFigura30(v, criarRng(1), m.figuras[0], 'a noite de premiação do ano', 40);
   v.eu.atracao = 'ambos';
   for (const pl of ['twitch', 'instagram', 'youtube'] as const) { v = ex(v, { tipo: 'rede', op: { oque: 'criar', plataforma: pl } } as Acao); }
-  for (const [pl, tema] of [['twitch', 'jogo'], ['instagram', 'pet'], ['youtube', 'receita'], ['instagram', 'humor']] as const) v = ex(v, { tipo: 'rede', op: { oque: 'publicar', plataforma: pl, tema } } as Acao);
+  for (let k = 0; k < 3; k++) { for (const pl of ['twitch', 'instagram', 'youtube'] as const) { const t = conteudosPossiveis(v, pl)[k % Math.max(1, conteudosPossiveis(v, pl).length)]; if (t) v = ex(v, { tipo: 'rede', op: { oque: 'publicar', plataforma: pl, tema: t.tema } } as Acao); } v.anoAtual = { acoes: [] }; v.t += 4; }
+  console.log('posts:', Object.entries(v.redes?.contas ?? {}).map(([k, c]) => `${k}:${c?.publicacoes.length}`).join(' '));
   salvar('famosa', v); }
 // 4. O atleta da base com a proposta de outro clube aberta.
 { let v = viver(nova({ semente: 3004, genero: 'masculino', municipioId: 'campinas-sp' } as never), 15); v.momento = null;

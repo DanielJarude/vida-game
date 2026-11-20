@@ -87,7 +87,7 @@ const GRANDE_AREA: Record<AreaFormacao, string> = {
 };
 
 const PORTAS_DE_TRABALHO = new Set(['vaga', 'indicacao', 'aprendiz', 'estagio', 'temporario', 'proposta', 'reinsercao', 'funcao', 'atualizacao']);
-const PORTAS_DE_TEMPO = new Set(['peneira', 'seletiva', 'banda', 'grupo', 'retomar', 'clientela']);
+const PORTAS_DE_TEMPO = new Set(['peneira', 'seletiva', 'banda', 'grupo', 'retomar', 'clientela', 'base_transferencia']);
 /** Em que área a porta aparece: trabalho, estudos ou tempo livre (esporte, arte, o bico). */
 export function areaDaPorta(o: Oportunidade): 'trabalho' | 'estudos' | 'tempo' {
   if (PORTAS_DE_TRABALHO.has(o.tipo)) return 'trabalho';

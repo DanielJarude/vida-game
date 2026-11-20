@@ -12,6 +12,7 @@ import { anoDe } from '../../../motor/tempo';
 import { BotaoAcao } from '../../comum';
 import { dinheiroCurto } from '../../apresentar';
 import './clube20.css';
+import { municipio } from '../../../motor/dados/lugares';
 import { desenhoDoClube30, Escudo30 } from '../../v30/escudos/Escudo30';
 
 const C = (oque: OqueClube20): Acao => ({ tipo: 'clube20', oque } as Acao);
@@ -180,7 +181,7 @@ function MeuClube({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
         <Escudo nome={c.nome} />
         <div>
           <h3 id="clube20-titulo" className="subtitulo">{c.nome}</h3>
-          <p className="clube30__sub">{h ? DIV[h.divisao] : 'temporada em curso'} · {c.cidade ? `${c.cidade} · ` : ''}você é dono desde {anoDe(c.desde)}</p>
+          <p className="clube30__sub">{h ? DIV[h.divisao] : 'temporada em curso'} · {c.cidade ? `${municipio(c.cidade).nome} · ` : ''}você é dono desde {anoDe(c.desde)}</p>
           {c.objetivo && <span className="clube30__chip">Objetivo: {OBJ[c.objetivo]}</span>}
         </div>
       </header>

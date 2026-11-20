@@ -93,6 +93,22 @@ export function oficio30(v: Vida): Oficio30 | undefined {
   return v.oficio30;
 }
 
+/** Os anos comuns de cada ofício (sem repetir a frase do ano anterior). */
+const ANOS_COMUNS: Record<Familia30, string[]> = {
+  midia: ['Cobriu a final do campeonato ao lado do narrador principal da {casa}.', 'Ganhou um quadro fixo no programa {programa}: a análise do lance da semana.', 'Entrevistou um ex-companheiro ao vivo — e a conversa virou assunto.', 'Viajou com a equipe da {casa} para cobrir um torneio fora do país.', 'Participou de um debate quente sobre arbitragem; o vídeo rodou as redes.', 'Fez a cobertura da janela de transferências, com informação exclusiva.'],
+  formacao: ['Levou a turma para o primeiro torneio fora da cidade.', 'Os pais organizaram uma festa de fim de ano na {casa}.', 'Fez uma clínica de fim de semana com um ex-companheiro de profissão.', 'Ganhou uniformes novos de um patrocinador do bairro.', 'Abriu uma turma para quem nunca tinha jogado.', 'A turma foi campeã de um torneio regional de base.'],
+  comissao: ['Montou com o técnico o plano de jogo da final do estadual.', 'Viajou com o elenco numa sequência de jogos fora de casa.', 'Ajudou a integrar dois garotos da base ao time principal.', 'Passou a pré-temporada estudando os adversários em vídeo.', 'Ganhou mais espaço nos treinos: o técnico passou a pedir a sua opinião.'],
+  gestao: ['Renegociou o contrato do principal patrocinador.', 'Reformou o centro de treinamento com o orçamento do ano.', 'Trouxe de volta um ídolo do clube para um cargo na base.', 'Fechou parceria com um clube do exterior para intercâmbio da base.', 'Enfrentou uma reunião difícil com a torcida organizada.']
+};
+function anoComum30(v: Vida, o: Oficio30, ano: number): string {
+  const lista = ANOS_COMUNS[o.familia];
+  const ultimo = o.anos[o.anos.length - 1]?.texto;
+  const r = rngDe(v.id, 'oficio30_comum', ano);
+  let k = Math.floor(r.next() * lista.length);
+  for (let t = 0; t < lista.length; t++) { const x = lista[(k + t) % lista.length].replace('{casa}', o.casa).replace('{programa}', o.programa ?? 'programa'); if (x !== ultimo && !o.anos.slice(-3).some(y => y.texto === x)) return x; }
+  return lista[k].replace('{casa}', o.casa).replace('{programa}', o.programa ?? 'programa');
+}
+
 function registrar(o: Oficio30, ano: number, texto: string, tom?: 'bom' | 'ruim'): void {
   o.anos.push({ ano, texto, ...(tom ? { tom } : {}) });
   if (o.anos.length > 12) o.anos.splice(0, o.anos.length - 12);
@@ -133,7 +149,7 @@ export function anoDoOficio30(v: Vida, semDecisao: boolean): string | undefined 
     const humor = o.estilo === 'humor' ? 4 : 0, polemica = o.estilo === 'polemico';
     o.a = clamp(Math.round(o.a + (desemp - 60) / 10 + nome / 60 + humor + (polemica ? 6 : 0) + r.normal() * 4));
     o.b = clamp(Math.round(o.b + (o.estilo === 'tecnico' ? 4 : 0) - (polemica ? 5 : 0) + (desemp - 60) / 15 + r.normal() * 3));
-    const fato = o.a >= 70 ? `O ${o.programa ?? 'programa'} foi o mais assistido da faixa — e o seu comentário virou corte nas redes.` : o.a <= 30 ? `A audiência caiu, e a ${o.casa} mexeu no horário do ${o.programa ?? 'programa'}.` : `Mais uma temporada no ar, na ${o.casa}: ${o.b >= 65 ? 'o público confia no que você diz' : 'opinião não falta'}.`;
+    const fato = o.a >= 70 ? `O programa ${o.programa ?? ''} foi o mais assistido da faixa — e o seu comentário virou corte nas redes.` : o.a <= 30 ? `A audiência caiu, e a ${o.casa} mexeu no horário do programa ${o.programa ?? ''}.` : anoComum30(v, o, ano);
     registrar(o, ano, fato, o.a >= 70 ? 'bom' : o.a <= 30 ? 'ruim' : undefined);
     if (o.a >= 70) { const bonus = Math.round(e.salario * 1.5 / 100) * 100; v.financas.conta += bonus; lancar(v, `Bônus de audiência (${o.casa})`, 'renda', bonus); }
     e.desempenho = clamp(Math.round(e.desempenho + (o.a - 50) / 12 + (o.b - 50) / 20));
@@ -161,7 +177,7 @@ export function anoDoOficio30(v: Vida, semDecisao: boolean): string | undefined 
         o.b = clamp(o.b + 8);
       }
     }
-    if (!o.anos.some(y => y.ano === ano)) registrar(o, ano, o.propria ? `A ${o.casa} fechou o ano com ${alunos.length * 6} alunos e a quadra cheia nos sábados.` : `Mais uma turma na ${o.casa}: ${o.a >= 60 ? 'lista de espera' : 'vagas sobrando'}.`, o.a >= 60 ? 'bom' : undefined);
+    if (!o.anos.some(y => y.ano === ano)) registrar(o, ano, o.propria && o.a >= 60 ? `A ${o.casa} fechou o ano com ${alunos.length * 6} alunos e a quadra cheia nos sábados.` : anoComum30(v, o, ano), o.a >= 60 ? 'bom' : undefined);
     if (o.propria) { const lucro = Math.round(e.salario * 12 * ((o.a - 45) / 100) / 100) * 100; v.financas.conta += lucro; lancar(v, `Resultado da ${o.casa}`, lucro >= 0 ? 'renda' : 'despesa', lucro); }
     e.desempenho = clamp(Math.round(e.desempenho + (o.a - 50) / 15));
     // O melhor da turma que ainda ninguém indicou (o talento acima do comum: 63+).
@@ -175,7 +191,7 @@ export function anoDoOficio30(v: Vida, semDecisao: boolean): string | undefined 
     o.a = clamp(Math.round(o.a + (desemp - 60) / 8 + (o.b - 50) / 10 + r.normal() * 4));
     const vin = chefe ? v.vinculos[chefe.id] : undefined;
     if (vin) { vin.confianca = clamp(Math.round(vin.confianca + (o.a - 50) / 10)); vin.tUltimoContato = v.t; }
-    registrar(o, ano, o.b >= 65 ? `Temporada boa d${o.casa.startsWith('equipe') ? 'a' : 'o'} ${o.casa}: o trabalho da comissão foi elogiado.` : o.b <= 30 ? `Temporada ruim d${o.casa.startsWith('equipe') ? 'a' : 'o'} ${o.casa}: a diretoria começou a cobrar a comissão.` : `Temporada de meio de tabela d${o.casa.startsWith('equipe') ? 'a' : 'o'} ${o.casa}.`, o.b >= 65 ? 'bom' : o.b <= 30 ? 'ruim' : undefined);
+    registrar(o, ano, o.b >= 65 ? `Temporada boa d${o.casa.startsWith('equipe') ? 'a' : 'o'} ${o.casa}: o trabalho da comissão foi elogiado.` : o.b <= 30 ? `Temporada ruim d${o.casa.startsWith('equipe') ? 'a' : 'o'} ${o.casa}: a diretoria começou a cobrar a comissão.` : anoComum30(v, o, ano), o.b >= 65 ? 'bom' : o.b <= 30 ? 'ruim' : undefined);
     e.desempenho = clamp(Math.round(e.desempenho + (o.a - 50) / 12 + (o.b - 50) / 25));
     const auxiliar = /^auxiliar_tecnico|tecnico_esports|treinador_goleiros/.test(o.oc);
     if (o.b <= 32 && auxiliar && o.a >= 55 && r.chance(0.6)) cena = 'pos30_interino';
@@ -183,7 +199,7 @@ export function anoDoOficio30(v: Vida, semDecisao: boolean): string | undefined 
   } else {
     o.a = clamp(Math.round(o.a + (desemp - 60) / 10 + r.normal() * 6));
     o.b = clamp(Math.round(o.b + (o.a - 50) / 8 + r.normal() * 5));
-    registrar(o, ano, o.a >= 65 ? `A janela d${o.casa.startsWith('equipe') ? 'a' : 'o'} ${o.casa} deu certo: os reforços jogaram.` : o.a <= 35 ? `Dois reforços caros não renderam — e a torcida lembrou o seu nome nas arquibancadas.` : `Uma janela de acertos e erros.`, o.a >= 65 ? 'bom' : o.a <= 35 ? 'ruim' : undefined);
+    registrar(o, ano, o.a >= 65 ? `A janela d${o.casa.startsWith('equipe') ? 'a' : 'o'} ${o.casa} deu certo: os reforços jogaram.` : o.a <= 35 ? `Dois reforços caros não renderam — e a torcida lembrou o seu nome nas arquibancadas.` : anoComum30(v, o, ano), o.a >= 65 ? 'bom' : o.a <= 35 ? 'ruim' : undefined);
     e.desempenho = clamp(Math.round(e.desempenho + (o.a - 50) / 10 + (o.b - 50) / 20));
     if (o.a <= 40 && r.chance(0.5)) cena = 'pos30_pressao';
     else if (r.chance(0.45)) cena = 'pos30_janela';

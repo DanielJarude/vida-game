@@ -41,6 +41,9 @@ describe('VIDA 30 · o ofício depois de competir', () => {
     expect(r.oficio30!.estilo).toBe('polemico');
     anos(r, 4);
     expect(r.oficio30!.anos.length).toBeGreaterThanOrEqual(4);
+    // Os anos comuns não repetem a mesma frase em sequência.
+    const textos = r.oficio30!.anos.map(a => a.texto);
+    for (let k = 1; k < textos.length; k++) expect(textos[k]).not.toBe(textos[k - 1]);
   });
 
   it('formação: alunos com nome; a revelação indicada assina com um clube anos depois (e a notícia volta)', () => {
