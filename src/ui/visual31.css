@@ -99,6 +99,9 @@
   }
   #root .subnav__item--ativo svg, #root .subnav__item--ativo .nav161__icone { color: inherit; }
   #root .subnav__item--ativo .subnav__conta { background: color-mix(in oklab, var(--fundo) 25%, transparent); color: var(--fundo); }
+  /* O segundo nível de abas no celular: o escolhido em tom claro (o escuro é do primeiro nível). */
+  #root [role=tabpanel] .subnav__item--ativo, #root [role=tabpanel] .subnav__item--ativo:hover,
+  #root .pagina-caminhos .subnav__item--ativo, #root .pagina-caminhos .subnav__item--ativo:hover { color: var(--tinta); background: var(--tom-wash); box-shadow: inset 0 0 0 1.5px var(--tom); }
   #root main .vida-concreta > .subnav, #root main .pessoas > .subnav, #root main .voce > .subnav--voce { margin: 0 0 var(--space-3); padding: 0; background: none; }
   #root main .vida-concreta > .subnav, #root main .voce > .subnav--voce { margin-bottom: 0; }
 }
@@ -138,8 +141,23 @@
 #root :is(.acao-principal, .acao13) { border-radius: var(--v31-raio-ctl); }
 /* A nota que leva a outro lugar ("os cursos estão em Estudos"): um bilhete suave, não uma caixa tracejada. */
 #root .ligacao-caminho { border: 0; border-radius: var(--v31-raio-ctl); background: var(--veu-1); }
+/* Abas dentro de abas (Patrimônio: Resumo, Imóveis…; Trabalho: Meu trabalho, Desempenho…): o segundo nível é mais leve
+   que o primeiro — sem a caixa em volta, para não parecer outra fileira de áreas. */
+#root [role=tabpanel] .subnav__lista, #root .pagina-caminhos .subnav__lista { background: none; box-shadow: none; padding: 0; gap: 4px; }
+#root [role=tabpanel] .subnav__item, #root .pagina-caminhos .subnav__item { min-height: 34px; padding: 0 var(--space-3); }
+#root [role=tabpanel] .subnav__item:not(.subnav__item--ativo), #root .pagina-caminhos .subnav__item:not(.subnav__item--ativo) { box-shadow: inset 0 0 0 1px var(--fio); }
+/* Os números do patrimônio: cartões, com a cor de cada parte numa faixa fina (a mesma legenda de antes). */
+#root :is(.pat-numeros__item, .e129-kpi) { background: var(--v31-cartao); box-shadow: var(--v31-contorno); border-left-width: 3px; border-radius: var(--v31-raio-ctl); }
+@media (max-width: 719px) {
+  /* Você no celular: o retrato do perfil menor, para o texto e as abas aparecerem sem rolar tanto. */
+  #root main .perfil161 .voce-rosto > :first-child { width: 92px; height: 92px; }
+  #root .perfil161__capa { height: 56px; }
+  #root main .perfil161 .voce-rosto { margin-top: -36px; }
+  #root main .perfil161 .voce-rosto__texto { padding-top: 0; }
+}
 /* O calendário do ano: cada mês é um cartão, não uma caixa cinza. */
 #root .calendario__mes { background: var(--v31-cartao); border: 0; border-radius: var(--v31-raio-ctl); box-shadow: var(--v31-contorno); }
+#root .calendario__meses { grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr)); }
 #root .calendario__mes--agora { box-shadow: inset 0 0 0 1.5px var(--acao); }
 /* Compras: as vitrines dos segmentos, no mesmo cartão das outras áreas. */
 #root .compras-inicio__cartao { border: 0; border-radius: var(--v31-raio); box-shadow: var(--v31-contorno), var(--v31-sombra); }
