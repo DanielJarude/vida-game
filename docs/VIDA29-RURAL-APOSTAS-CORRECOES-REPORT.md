@@ -250,4 +250,4 @@ Rodada final no código publicado (`661b2a9`), em 10 lotes:
 
 - **3.242 de 3.247** testes passam.
 - Os 5 que não passam são os estouros de tempo descritos no item 10: pré-existentes ou no limite na base, e nenhum é falha de asserção.
-- Os 75 testes que a primeira rodada acusou foram todos explicados e corrigidos (itens 5–7) e conferidos contra a base `91f7369`.
+- As 13 falhas de asserção da primeira rodada (mais a do rework 12.4.1, vista antes) foram todas explicadas e corrigidas (itens 5–7) e conferidas contra a base `91f7369`.
