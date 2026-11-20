@@ -57,7 +57,7 @@ export function FichaDoEsporte25({ vida, e }: { vida: Vida; e: CarreiraEsportiva
       explica={`O nível é a média dos atributos, pesada pelo que a ${e.modalidade === 'futebol' ? 'posição' : 'função'} exige. A técnica (${Math.round(l.tecnica)}) é a base dos técnicos e táticos; os físicos somam o corpo de agora, os mentais o jeito de ser e a maturidade. Uma limitação séria num atributo que pesa cobra a mais na nota — a média alta não a esconde.`}
       grupos={GRUPOS} linhas={l.linhas} fortes={l.fortes} fracos={l.fracos}
       rodape={e.modalidade === 'futebol' ? 'Os atributos são os da posição: pesam na nota da temporada e no que ela produz (gols, assistências, desarmes, defesas). O treino extra (técnico, tático, físico) sobe os três do grupo que mais pesam; depois do auge, o corpo perde e a leitura de jogo ganha.' : 'Os atributos pesam na nota da temporada (o peso de cada um aparece ao lado do nome). O treino extra sobe os do grupo treinado; depois do auge, os do corpo caem e os da leitura sobem.'} />
-      {e.fase === 'profissional' && <Perfil28 perfil={e.perfil28} genero={vida.eu.genero} />}
+      {e.fase === 'profissional' && <Perfil28 perfil={e.perfil28} genero={vida.eu.genero} modalidade={e.modalidade} />}
     </>
   );
 }

@@ -15,11 +15,17 @@ const DO_PILOTO: Record<string, string> = {
   pilotagem: 'pilotagem', consistencia: 'consistência', adaptacao: 'adaptação aos circuitos', fisico: 'preparo físico', experiencia: 'experiência', pressao: 'cabeça sob pressão',
   classificacao: 'classificação', ultrapassagem: 'ultrapassagem', pneus: 'gestão de pneus', combustivel: 'gestão de combustível', leitura: 'leitura de corrida'
 };
-const nomeDoAtributo = (id: string) => ((NOME_ATRIBUTO as Record<string, string>)[id] ?? (NOME_ATRIBUTO25 as Record<string, string>)[id] ?? DO_PILOTO[id] ?? id.replace(/_/g, ' ')).toLowerCase();
+/** O nome do atributo na língua da modalidade (no e-sports, "movimentação" é a do personagem; no futebol, a sem bola). */
+const nomeDoAtributoEm = (mod: string | undefined) => (id: string) => {
+  const ordem: Record<string, string>[] = mod === 'esports' ? [NOME_ATRIBUTO25 as Record<string, string>, DO_PILOTO, NOME_ATRIBUTO as Record<string, string>] : mod === 'automobilismo' ? [DO_PILOTO, NOME_ATRIBUTO as Record<string, string>, NOME_ATRIBUTO25 as Record<string, string>] : [NOME_ATRIBUTO as Record<string, string>, NOME_ATRIBUTO25 as Record<string, string>, DO_PILOTO];
+  for (const d of ordem) if (d[id]) return d[id].toLowerCase();
+  return id.replace(/_/g, ' ');
+};
 const sigla = (nome: string) => nome.replace(/\(.*\)/, '').split(/\s+/).filter(p => p.length > 2 || /^[A-Z]/.test(p)).slice(0, 2).map(p => p[0]).join('').toUpperCase();
 
-export function Perfil28({ perfil, genero }: { perfil?: PerfilGuardado; genero?: string }) {
+export function Perfil28({ perfil, genero, modalidade }: { perfil?: PerfilGuardado; genero?: string; /** 'esports', 'automobilismo' ou o esporte (os nomes dos atributos). */ modalidade?: string }) {
   if (!perfil) return null;
+  const nomeDoAtributo = nomeDoAtributoEm(modalidade);
   if (!perfil.principal) {
     const perto = perfil.perto ? arquetipo(perfil.perto.id) : undefined;
     return (
@@ -57,7 +63,7 @@ export function Perfil28({ perfil, genero }: { perfil?: PerfilGuardado; genero?:
       {perfil.secundarios.length > 0 && (
         <div className="tipo29__linha"><span className="tipo29__rotulo">Às vezes, também</span><ul className="tipo29__chips">{perfil.secundarios.map(id => <li key={id} title={arquetipo(id)?.sobre}>{nomeDoArquetipo(id, genero).toLowerCase()}</li>)}</ul></div>
       )}
-      <p className="tipo29__desde">Assim desde {anoDe(perfil.desde)}{trocas.length > 1 ? <> · {trocas.map(h => `${h.ano} ${nomeDoArquetipo(h.principal!, genero).toLowerCase()}`).join(' → ')}</> : null}</p>
+      <p className="tipo29__desde">Assim desde {trocas.length ? trocas[trocas.length - 1].ano : anoDe(perfil.desde)}{trocas.length > 1 ? <> · {trocas.map(h => `${h.ano} ${nomeDoArquetipo(h.principal!, genero).toLowerCase()}`).join(' → ')}</> : null}</p>
     </section>
   );
 }

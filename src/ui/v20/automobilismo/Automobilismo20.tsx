@@ -55,7 +55,7 @@ export function Automobilismo20({ vida, agir }: { vida: Vida; agir: (a: Acao) =>
           <ul>{a.mercado29.movimentos.map((m, k) => <li key={k}>{m}</li>)}</ul>
         </details>
       )}
-      <Perfil28 perfil={a.perfil28} genero={vida.eu.genero} />
+      <Perfil28 modalidade="automobilismo" perfil={a.perfil28} genero={vida.eu.genero} />
       <ul className="auto20__atributos" aria-label="Atributos de piloto">
         {NOMES_ATRIBUTOS.map(([k, nome]) => <li key={k}><span>{nome}</span><meter min={0} max={100} value={a.atributos[k] ?? 0} aria-label={nome} /><b>{Math.round(a.atributos[k] ?? 0)}</b></li>)}
       </ul>
