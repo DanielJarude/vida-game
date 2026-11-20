@@ -31,10 +31,11 @@ describe('VIDA 18 · Campo', () => {
     const sitio = ofertasRurais(v).find(o => o.p.tipo === 'sitio')!;
     const card = screen.getByText(new RegExp(`${sitio.p.nome} ·`)).closest('li')!;
     await act(async () => { fireEvent.click(within(card as HTMLElement).getByRole('button', { name: 'Comprar à vista' })); });
-    expect(screen.getByRole('tab', { name: /Lavoura/ })).toBeTruthy();
-    await act(async () => { fireEvent.click(screen.getByRole('tab', { name: /Contas/ })); });
+    // VIDA 29: as partes com os nomes do dia a dia (Plantação, Finanças) e a Visão geral primeiro.
+    expect(screen.getByRole('tab', { name: /Plantação/ })).toBeTruthy();
+    await act(async () => { fireEvent.click(screen.getByRole('tab', { name: /Finanças/ })); });
     expect(screen.getByText(/Num ano normal, hoje/)).toBeTruthy();
-    await act(async () => { fireEvent.click(screen.getByRole('tab', { name: /A terra/ })); });
+    await act(async () => { fireEvent.click(screen.getByRole('tab', { name: /Visão geral/ })); });
     expect(screen.getByRole('img', { name: /Uso da terra/ })).toBeTruthy();
   });
 });

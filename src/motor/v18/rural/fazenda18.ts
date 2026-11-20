@@ -119,7 +119,21 @@ export interface PropriedadeRural18 {
   outorga19?: number;
   /** VIDA 19: o crédito de custeio do Plano Safra em aberto (linha, taxa, valor, quando vence; prorrogado uma vez). */
   safra19?: { ano: number; linha: 'pronaf' | 'pronamp' | 'demais'; taxa: number; valor: number; vence: number; prorrogado?: boolean };
+  /** VIDA 29: quem administra, escolhido (sem o campo: o automático de antes — você se é produtor, caseiro no pequeno, gerente no grande). */
+  admin29?: Admin29;
+  /** VIDA 29: trabalhadores fixos registrados (sem o campo: diaristas na safra, já no custo por hectare). */
+  equipe29?: number;
+  /** VIDA 29: serviço de máquinas por empreitada (a tecnologia sem comprar a máquina). */
+  empreitada29?: boolean;
+  /** VIDA 29: assistência técnica contratada (agrônomo ou veterinário; a Emater no pequeno). */
+  assistencia29?: boolean;
+  /** VIDA 29: como a safra é vendida (sem o campo: na colheita, ao preço do dia). */
+  venda29?: Venda29;
 }
+
+/** VIDA 29 · quem administra e como se vende. */
+export type Admin29 = 'voce' | 'caseiro' | 'gerente' | 'empresa';
+export type Venda29 = 'colheita' | 'contrato' | 'armazem' | 'feira';
 
 export interface CavaloDeCorrida18 {
   id: string; nome: string; nasc: number; sexo: 'macho' | 'femea'; velocidade: number; fundo: number; forma: number; corridas: number; vitorias: number; premios: number; aposentado?: boolean;
@@ -200,8 +214,13 @@ export function haIrrigaveis(p: PropriedadeRural18): number {
 
 /** Tecnologia (0–3): as máquinas e a agricultura de precisão. */
 export function tecnologia(p: PropriedadeRural18): number {
-  return Math.min(3, Math.round(p.maquinas.reduce((s, m) => s + MAQUINAS18[m.id].tecnologia, 0) * 10) / 10);
+  const propria = Math.min(3, Math.round(p.maquinas.reduce((s, m) => s + MAQUINAS18[m.id].tecnologia, 0) * 10) / 10);
+  // VIDA 29: a empreitada (a máquina de terceiros, na hora certa) dá a tecnologia básica a quem não compra.
+  return p.empreitada29 ? Math.max(propria, TEC_DA_EMPREITADA) : propria;
 }
+export const TEC_DA_EMPREITADA = 1.2;
+/** A tecnologia das máquinas próprias, só (a empreitada fora). */
+export const tecnologiaPropria = (p: PropriedadeRural18) => Math.min(3, Math.round(p.maquinas.reduce((s, m) => s + MAQUINAS18[m.id].tecnologia, 0) * 10) / 10);
 
 /** Capacidade de pasto em UA (unidade animal): o solo, a água e o manejo. */
 export function capacidadeUA(p: PropriedadeRural18): number {
@@ -276,11 +295,107 @@ export const temVeterinaria = (v: Vida) => v.educacao.concluidos.some(c => c.are
 /** O custo de gestão por ano de uma propriedade que você não toca: caseiro no pequeno, gerente no grande. */
 export function custoDeGestao(v: Vida, p: PropriedadeRural18): number {
   if (p.uso !== 'producao' || tocadaPorVoce(v) === p.id) return 0;
+  if (p.admin29) {
+    const c0 = custoLocal(p.municipioId);
+    return p.admin29 === 'voce' ? 0 : p.admin29 === 'caseiro' ? Math.round(32000 * c0) : p.admin29 === 'gerente' ? Math.round((p.ha < 300 ? 78000 : 140000) * c0) : Math.round((36000 + p.ha * 110) * c0);
+  }
   // Quem mora no sítio (ou na chácara) cuida dele no dia a dia: sem caseiro.
   const im = todasAsPropriedades(v).find(x => x.p === p)?.imovel;
   if (p.ha <= 50 && im && im.id === v.moradia.imovelId) return 0;
   const c = custoLocal(p.municipioId);
   return Math.round((p.ha < 40 ? 32000 : p.ha < 300 ? 78000 : 140000) * c);
+}
+
+/* ================================================================== VIDA 29 · quem administra, a equipe, a venda */
+
+/** Quem cuida da propriedade no dia a dia. `mora`: você mora nela (até 50 ha) e cuida sem caseiro. */
+export type QuemAdministra29 = 'produtor' | 'mora' | Admin29;
+export function quemAdministra(v: Vida, p: PropriedadeRural18): QuemAdministra29 {
+  if (tocadaPorVoce(v) === p.id) return 'produtor';
+  if (p.admin29) return p.admin29;
+  const im = todasAsPropriedades(v).find(x => x.p === p)?.imovel;
+  if (p.ha <= 50 && im && im.id === v.moradia.imovelId) return 'mora';
+  return p.ha < 40 ? 'caseiro' : 'gerente';
+}
+export const NOME_DA_GESTAO: Record<QuemAdministra29, string> = { produtor: 'você, como produtor rural', mora: 'você, que mora nela', voce: 'você, nas horas vagas', caseiro: 'um caseiro', gerente: 'um gerente', empresa: 'uma administradora rural' };
+
+/**
+ * O quanto a terra é bem conduzida (0–100) pelo jeito como é administrada: o produtor usa o que sabe; quem cuida nas horas
+ * vagas, um pouco menos (e menos ainda de longe); o caseiro dá conta do pequeno; a administradora tem método. Sem escolha
+ * nenhuma (o save antigo) é o mesmo 45 de sempre.
+ */
+export function competenciaDaGestao(v: Vida, p: PropriedadeRural18): number {
+  const quem = quemAdministra(v, p);
+  let comp = quem === 'produtor' ? competencia(v)
+    : quem === 'voce' ? Math.round(competencia(v) * (p.municipioId === v.moradia.municipioId ? 0.85 : 0.7))
+    : quem === 'caseiro' ? (p.ha < 40 ? 45 : 36)
+    : quem === 'empresa' ? 58 : 45;
+  if (p.assistencia29) comp += 8;
+  const mo = maoDeObra29(v, p);
+  if (p.equipe29 !== undefined && mo.cobertura >= 1) comp += 3;
+  return clamp(comp);
+}
+
+/** Pessoas de trabalho por hectare (o ano inteiro), por cultura; o resto da lavoura mecanizada fica no 0,006. */
+const MAO_POR_HA: Partial<Record<CulturaId, number>> = { horta: 0.8, uva: 0.3, frutas: 0.12, cafe: 0.1, cacau: 0.08, acai: 0.06, mandioca: 0.05, feijao: 0.02, algodao: 0.012, cana: 0.01, arroz: 0.01, eucalipto: 0.003, pinus: 0.003 };
+/** E por cabeça (ou tonelada de peixe). */
+const MAO_POR_CABECA: Record<EspecieRural, number> = { corte: 1 / 250, leite: 1 / 22, cavalos: 1 / 8, ovelhas: 1 / 150, cabras: 1 / 120, porcos: 1 / 500, galinhas: 1 / 8000, frangos: 1 / 20000, tilapia: 1 / 15, tambaqui: 1 / 15 };
+/** As culturas que pedem muita gente na colheita (onde falta diarista na hora H). */
+export const COLHEITA_MANUAL = new Set<CulturaId>(['horta', 'uva', 'frutas', 'cafe', 'cacau', 'acai', 'mandioca']);
+
+/** Quantas pessoas a propriedade pede o ano inteiro (a máquina tira gente da lavoura; a ordenhadeira, do leite). */
+export function trabalhoNecessario(p: PropriedadeRural18): number {
+  if (p.uso !== 'producao') return 0;
+  const tec = tecnologia(p);
+  const lav = p.talhoes.reduce((s, t) => s + t.ha * (MAO_POR_HA[t.cultura] ?? 0.006), 0) * (1 - tec * 0.12);
+  const cri = p.rebanhos.reduce((s, rb) => s + rb.cabecas * MAO_POR_CABECA[rb.especie] * (rb.alimentacao === 'confinado' ? 1.2 : 1) * (rb.especie === 'leite' && (temMaquina(p, 'ordenhadeira') || temEstrutura(p, 'ordenha')) ? 0.6 : 1), 0);
+  return Math.round((lav + cri) * 10) / 10;
+}
+/** O salário de um trabalhador rural registrado no ano (com 13º, férias e encargos), no custo da região. */
+export const salarioRural29 = (p: PropriedadeRural18) => Math.round(30000 * custoLocal(p.municipioId) / 100) * 100;
+
+/** A mão de obra: quantos precisa, quantos tem (a equipe e o seu braço) e a cobertura. */
+export function maoDeObra29(v: Vida, p: PropriedadeRural18): { precisa: number; equipe: number; familia: number; cobertura: number; modo: 'diaristas' | 'equipe' } {
+  const precisa = trabalhoNecessario(p);
+  const quem = quemAdministra(v, p);
+  const familia = quem === 'produtor' || quem === 'mora' ? 1 : quem === 'voce' ? 0.4 : quem === 'caseiro' ? 1 : 0;
+  const equipe = p.equipe29 ?? 0;
+  const cobertura = precisa <= 0 ? 1 : Math.min(2, (equipe + familia) / precisa);
+  return { precisa, equipe, familia, cobertura: Math.round(cobertura * 100) / 100, modo: p.equipe29 !== undefined ? 'equipe' : 'diaristas' };
+}
+
+/** As culturas que se vendem em contrato a termo (as de bolsa e de trading) e as que se guardam em armazém. */
+const DE_CONTRATO = new Set<CulturaId>(['soja', 'milho', 'trigo', 'cafe', 'algodao', 'arroz', 'feijao', 'cana', 'cacau']);
+const DE_ARMAZEM = new Set<CulturaId>(['soja', 'milho', 'trigo', 'feijao', 'arroz', 'cafe', 'cacau', 'algodao']);
+const DE_FEIRA = new Set<CulturaId>(['horta', 'frutas', 'uva', 'mandioca', 'feijao', 'acai']);
+export const vendaServe29 = (venda: Venda29, c: CulturaId) => venda === 'colheita' || (venda === 'contrato' ? DE_CONTRATO : venda === 'armazem' ? DE_ARMAZEM : DE_FEIRA).has(c);
+/** A área de feira que uma família dá conta de vender direto (o resto vai para o atravessador). */
+export const HA_DE_FEIRA = 8;
+
+/**
+ * O efeito do jeito de vender num talhão colhido: o contrato trava o preço (sem a alta nem a baixa do ano; numa quebra
+ * grande, compra-se de volta o que faltou entregar), o armazém espera a entressafra (aluguel e frete), a feira vende direto
+ * ao consumidor (mais caro, mas só o que uma família dá conta e com custo de banca e transporte).
+ */
+export function efeitoDaVenda29(p: PropriedadeRural18, t: Talhao18, ano: number, clima: ClimaRural18, receita: number): { receita: number; custo: number; nota?: string } {
+  const venda = p.venda29 ?? 'colheita';
+  if (venda === 'colheita' || receita <= 0 || !vendaServe29(venda, t.cultura)) return { receita, custo: 0 };
+  const f = fatorDePreco(t.cultura, ano);
+  if (venda === 'contrato') {
+    let r = receita * (0.97 / f);
+    const quebra = !t.irrigado && clima.severidade >= 0.3;
+    if (quebra) r *= 0.94;
+    return { receita: Math.round(r), custo: 0, nota: `contrato a termo: preço travado${quebra ? ', e a quebra obrigou a comprar o que faltou entregar' : ''}` };
+  }
+  if (venda === 'armazem') {
+    if (temEstrutura(p, 'silo')) return { receita, custo: 0, nota: 'guardada no silo da casa' };
+    const nf = Math.max(f, (f + 1) / 2) + 0.03;
+    const r = receita * (nf / f);
+    return { receita: Math.round(r), custo: Math.round(r * 0.04), nota: 'guardada em armazém de terceiros até a entressafra' };
+  }
+  const parte = Math.min(1, HA_DE_FEIRA / Math.max(0.1, t.ha));
+  const extra = receita * parte * 0.3;
+  return { receita: Math.round(receita + extra), custo: Math.round(extra * 0.2), nota: parte >= 1 ? 'vendida direto na feira' : `${Math.round(parte * 100)}% vendida na feira, o resto ao atravessador` };
 }
 
 /* ================================================================== Valor */
@@ -520,7 +635,14 @@ export function custosFixos(v: Vida, p: PropriedadeRural18, ano: number): { oque
   const itr = paisDaCidade(p.municipioId) === 'BR' && p.arrendamento?.sentido !== 'pago' ? p.valorHa * p.ha * (usada > 0.65 || p.ha < 30 ? 0.0006 : 0.003) : 0;
   if (itr > 0) out.push({ oque: 'ITR (imposto da terra)', custo: Math.round(itr) });
   const gestao = custoDeGestao(v, p);
-  if (gestao > 0) out.push({ oque: p.ha < 40 ? 'Caseiro' : 'Gerente da fazenda', custo: gestao });
+  if (gestao > 0) { const q = quemAdministra(v, p); out.push({ oque: q === 'empresa' ? 'Administradora rural' : q === 'caseiro' ? 'Caseiro' : 'Gerente da fazenda', custo: gestao }); }
+  // VIDA 29: a equipe registrada, as máquinas de terceiros, a assistência técnica, a banca na feira.
+  if (p.uso === 'producao') {
+    if (p.equipe29) out.push({ oque: `Equipe fixa (${p.equipe29} ${p.equipe29 === 1 ? 'trabalhador' : 'trabalhadores'} registrados)`, custo: p.equipe29 * salarioRural29(p) });
+    if (p.empreitada29 && areaPlantada(p) > 0) out.push({ oque: 'Máquinas de terceiros (empreitada)', custo: Math.round(areaPlantada(p) * 280 * c) });
+    if (p.assistencia29) out.push({ oque: p.ha <= 50 ? 'Assistência técnica (Emater)' : 'Assistência técnica (agrônomo contratado)', custo: Math.round((p.ha <= 50 ? 800 : 7000 + p.ha * 12) * c) });
+    if (p.venda29 === 'feira' && p.talhoes.some(t => vendaServe29('feira', t.cultura))) out.push({ oque: 'Banca na feira e transporte', custo: Math.round(2400 * c) });
+  }
   if (p.cooperativa) out.push({ oque: 'Cooperativa (cota e mensalidade)', custo: Math.round(1200 * c + p.ha * 8 * c) });
   // VIDA 19: com o CAR em dia, o seguro tem a subvenção federal do prêmio (PSR, Lei 10.823/2003): o produtor paga ~70%.
   if (p.seguro) out.push({ oque: p.car19 !== undefined ? 'Seguro rural (com subvenção do PSR)' : 'Seguro rural', custo: Math.round(p.talhoes.reduce((s, t) => s + CULTURAS18[t.cultura].custoHa * t.ha, 0) * 0.04 * c * (p.car19 !== undefined ? 0.7 : 1)) });
@@ -534,8 +656,15 @@ export function custosFixos(v: Vida, p: PropriedadeRural18, ano: number): { oque
 export function simularAno(v: Vida, p: PropriedadeRural18, ano: number, opts: { clima?: ClimaRural18; rr?: Rng; prever?: boolean } = {}): { linhas: AnoRural18['linhas']; receita: number; custo: number; clima: ClimaRural18; talhoes: ReturnType<typeof resultadoDoTalhao>[]; rebanhos: ReturnType<typeof resultadoDoRebanho>[] } {
   const clima = opts.clima ?? climaDoAno(v, p.municipioId, ano);
   const rr = opts.rr ?? rngDe(v.id, 'fazenda18', p.id, ano);
-  const comp = tocadaPorVoce(v) === p.id ? competencia(v) : 45;
+  const comp = competenciaDaGestao(v, p);
   const linhas: AnoRural18['linhas'] = [];
+  // VIDA 29: a mão de obra. Com equipe fixa, a lavoura dispensa parte das diárias (mais barata); com gente de menos, a
+  // colheita perde. Sem equipe (o de sempre), falta diarista na hora H de vez em quando nas culturas de colheita manual.
+  const mo = maoDeObra29(v, p);
+  const rm = rngDe(v.id, 'mao29', p.id, ano);
+  const faltaDiarista = !opts.prever && mo.modo === 'diaristas' && mo.precisa >= 4 && mo.cobertura < 1 && rm.chance(0.2);
+  const perdaDeGente = mo.modo === 'equipe' && mo.precisa > 0 && mo.cobertura < 0.8 ? Math.min(0.35, (0.8 - mo.cobertura) * 0.5) : 0;
+  const economiaDeDiaria = mo.modo === 'equipe' ? 0.12 * Math.min(1, mo.cobertura) : 0;
   if (p.uso === 'arrendada') {
     const rec = p.arrendamento?.sentido === 'recebo' ? p.arrendamento.valorAno : 0;
     linhas.push({ oque: 'Arrendamento recebido', receita: rec, custo: 0 });
@@ -547,12 +676,23 @@ export function simularAno(v: Vida, p: PropriedadeRural18, ano: number, opts: { 
     const risco = k.risco * ((t.repete ?? 0) >= 3 ? 1.5 : 1) * (p.manejo === 'organico' ? 1.15 : 1);
     const praga = opts.prever ? false : rr.chance(risco);
     const res = resultadoDoTalhao(v, p, t, ano, clima, praga, comp);
+    if (res.colheu) {
+      const notas: string[] = res.nota ? [res.nota] : [];
+      if (perdaDeGente > 0) { res.receita = Math.round(res.receita * (1 - perdaDeGente)); notas.push(`faltou gente: ${Math.round(perdaDeGente * 100)}% ficou no pé`); }
+      else if (faltaDiarista && COLHEITA_MANUAL.has(t.cultura)) { res.receita = Math.round(res.receita * 0.94); notas.push('faltou diarista na colheita: 6% perdido'); }
+      if (economiaDeDiaria > 0) res.custo = Math.round(res.custo * (1 - economiaDeDiaria));
+      const ev = efeitoDaVenda29(p, t, ano, clima, res.receita);
+      res.receita = ev.receita; res.custo += ev.custo;
+      if (ev.nota) notas.push(ev.nota);
+      res.nota = notas.join('; ') || undefined;
+    }
     linhas.push({ oque: `${k.nome.charAt(0).toUpperCase() + k.nome.slice(1)} · ${fmtHa(t.ha)}`, receita: res.receita, custo: res.custo, nota: res.nota });
     return res;
   });
   const rebanhos = p.rebanhos.map(rb => {
     const surto = opts.prever ? false : rr.chance(0.06 * (1.5 - rb.sanidade / 100) * (rb.cabecas > tetoDaEstrutura(p, rb.especie) ? 1.6 : 1));
     const res = resultadoDoRebanho(v, p, rb, ano, clima, surto, comp);
+    if (perdaDeGente > 0) { res.receita = Math.round(res.receita * (1 - perdaDeGente * 0.6)); res.nota = [res.nota, 'faltou gente no trato dos animais'].filter(Boolean).join('; '); }
     linhas.push({ oque: `${REBANHOS18[rb.especie].nome.charAt(0).toUpperCase() + REBANHOS18[rb.especie].nome.slice(1)} · ${rb.cabecas.toLocaleString('pt-BR')} ${REBANHOS18[rb.especie].unidade}`, receita: res.receita, custo: res.custo, nota: res.nota });
     return res;
   });
@@ -581,7 +721,7 @@ function proLaboreAnual(v: Vida, p: PropriedadeRural18): number {
 export function safrasAVenda18(v: Vida): { p: PropriedadeRural18; imovel?: Imovel; ano: number; valor: number }[] {
   const ano = anoDe(v.t);
   return todasAsPropriedades(v)
-    .filter(({ p }) => p.uso === 'producao' && p.ultimoAno < ano && p.safraVendida?.ano !== ano && p.talhoes.length > 0)
+    .filter(({ p }) => p.uso === 'producao' && p.ultimoAno < ano && p.safraVendida?.ano !== ano && p.talhoes.length > 0 && p.venda29 !== 'contrato')
     .map(({ p, imovel }) => {
       const s = simularAno(v, p, ano, { rr: rngDe(v.id, 'fazenda18', p.id, ano) });
       return { p, imovel, ano, valor: s.talhoes.filter(t => t.colheu).reduce((x, t) => x + t.receita, 0) };

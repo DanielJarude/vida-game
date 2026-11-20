@@ -23,7 +23,8 @@ import {
 import {
   acharPropriedade, areaLivre, areaUtil, custoDaEstrutura, custoLocal, fmtHa, maxDaEstrutura, novaPropriedade, povoar, qtdEstrutura,
   regiaoRural, sincronizarValor, tetoDaEstrutura, todasAsPropriedades, valorDaPropriedade, valorDasMaquinas, valorDoRebanho, haIrrigaveis,
-  type Alimentacao18, type Estrategia18, type PropriedadeRural18, type UsoRural18
+  type Alimentacao18, type Estrategia18, type PropriedadeRural18, type UsoRural18, type Admin29, type Venda29,
+  salarioRural29, trabalhoNecessario, vendaServe29
 } from './fazenda18';
 
 /* ================================================================== As ofertas da região */
@@ -87,7 +88,14 @@ export type OqueRural18 =
   | { op: 'reduzir'; id: string; ha: number }
   | { op: 'tocar'; id: string }
   | { op: 'temporada'; id: string }
-  | { op: 'festa'; festa: string };
+  | { op: 'festa'; festa: string }
+  /* VIDA 29 · administração, equipe, máquinas de terceiros, assistência, venda, leilão */
+  | { op: 'admin29'; id: string; admin: Admin29 | 'auto' }
+  | { op: 'equipe29'; id: string; n: number }
+  | { op: 'empreitada29'; id: string }
+  | { op: 'assistencia29'; id: string }
+  | { op: 'venda29'; id: string; venda: Venda29 }
+  | { op: 'leilao29'; id: string; especie: EspecieRural; fracao: number };
 
 const jaFez = (v: Vida, chave: string) => v.anoAtual.acoes.includes(chave);
 const fazer = (v: Vida, chave: string) => { v.anoAtual.acoes.push(chave); };
@@ -244,6 +252,36 @@ export function disponibilidadeRural18(v: Vida, q: OqueRural18): Veredito {
     case 'tocar': {
       if (v.trabalho.atual?.ocupacaoId === 'produtor_rural') return bloqueio('impossivel', 'Você já vive de produzir.');
       if (p.uso !== 'producao') return bloqueio('incompativel', 'Ponha a propriedade em produção primeiro.');
+      return PERMITIDO;
+    }
+    case 'admin29': {
+      if (parada) return bloqueio('incompativel', 'A propriedade não está em produção: não há o que administrar.');
+      if (v.trabalho.atual?.ocupacaoId === 'produtor_rural' && todasAsPropriedades(v).find(x => x.p.uso === 'producao')?.p.id === p.id) return bloqueio('incompativel', 'Esta é a terra que você toca como produtor rural: a administração é sua.');
+      if ((p.admin29 ?? 'auto') === q.admin) return bloqueio('impossivel', 'Já é assim.');
+      if (q.admin === 'caseiro' && p.ha > 100) return bloqueio('impossivel', 'Acima de 100 ha, um caseiro não dá conta: é trabalho de gerente.');
+      if (q.admin === 'voce' && p.ha > 200) return bloqueio('impossivel', 'Acima de 200 ha, nas horas vagas não dá: é preciso gerente (ou largar o emprego e tocar a terra).');
+      return PERMITIDO;
+    }
+    case 'equipe29': {
+      if (parada) return bloqueio('incompativel', 'A propriedade não está em produção.');
+      if (!(q.n >= 0) || q.n > Math.max(3, Math.ceil(trabalhoNecessario(p) * 1.5))) return bloqueio('impossivel', 'Mais gente do que o serviço pede.');
+      if (q.n === (p.equipe29 ?? 0)) return bloqueio('impossivel', 'A equipe já é essa.');
+      return q.n > (p.equipe29 ?? 0) ? vereditoDePagar(v, Math.round(salarioRural29(p) / 12), 'O primeiro mês da equipe nova custa') : PERMITIDO;
+    }
+    case 'empreitada29': case 'assistencia29': return parada ? bloqueio('incompativel', 'A propriedade não está em produção.') : PERMITIDO;
+    case 'venda29': {
+      if (parada) return bloqueio('incompativel', 'A propriedade não está em produção.');
+      if ((p.venda29 ?? 'colheita') === q.venda) return bloqueio('impossivel', 'Já vende assim.');
+      if (q.venda !== 'colheita' && !p.talhoes.some(t => vendaServe29(q.venda, t.cultura))) return bloqueio('incompativel', q.venda === 'feira' ? 'Nada aqui é de feira (hortaliça, fruta, mandioca, feijão).' : q.venda === 'contrato' ? 'Contrato a termo é para grão, café, cana e cacau: não há essas lavouras aqui.' : 'Armazém é para grão e café: não há essas lavouras aqui.');
+      if (q.venda === 'feira' && p.ha > 300) return bloqueio('impossivel', 'Feira é para quem produz pouco e vende direto.');
+      if (p.safraVendida?.ano === anoT) return bloqueio('incompativel', 'A safra deste ano já foi vendida: a mudança vale para a próxima.');
+      return PERMITIDO;
+    }
+    case 'leilao29': {
+      const rb = p.rebanhos.find(r => r.especie === q.especie && r.cabecas > 0);
+      if (!rb) return bloqueio('impossivel', 'Não há esse rebanho.');
+      if (['tilapia', 'tambaqui', 'galinhas', 'frangos', 'porcos'].includes(q.especie)) return bloqueio('impossivel', 'Leilão é de gado, cavalo, ovelha e cabra: o resto vai para o frigorífico ou a integradora.');
+      if (jaFez(v, `leilao29:${p.id}:${q.especie}`)) return bloqueio('incompativel', 'Já levou esse rebanho a leilão este ano.');
       return PERMITIDO;
     }
     case 'temporada': return jaFez(v, `temporada18:${anoT}`) ? bloqueio('incompativel', 'Já passou uma temporada no campo este ano.') : !temCasa(p) ? bloqueio('requisito', 'Não há casa para ficar: construa a sede primeiro.') : vereditoDePagar(v, custoDaTemporada(v, p), 'A temporada custa');
@@ -439,6 +477,57 @@ export function executarRural18(v: Vida, rr: Rng, q: OqueRural18): SaidaRural18 
       if (imovel) { const bens = v.financas.bens; const k = bens.indexOf(imovel); if (k > 0) { bens.splice(k, 1); bens.unshift(imovel); } }
       escrever(v, { texto: `Foi viver de produzir: ${p.nome} passou a ser o seu trabalho.`, relevancia: 'marco', tema: 'trabalho' });
       return fim('Agora a terra é o seu trabalho: a renda vem da safra e do rebanho.', 'bom');
+    }
+    case 'admin29': {
+      p.admin29 = q.admin === 'auto' ? undefined : q.admin;
+      const t = q.admin === 'voce' ? 'Você mesmo administra, nas horas vagas: sem salário de gerente, mas o resultado depende do que você sabe — e do tempo que sobra.'
+        : q.admin === 'caseiro' ? 'Um caseiro cuida do dia a dia: barato, dá conta do pequeno; numa área maior, as coisas escapam.'
+        : q.admin === 'gerente' ? 'Um gerente contratado: a fazenda anda sozinha, ao custo de um salário bom.'
+        : q.admin === 'empresa' ? 'Uma administradora rural assumiu: planilha, técnico, compra no atacado. Custa por hectare, e a terra rende mais.'
+        : 'A administração volta ao arranjo de sempre (caseiro no pequeno, gerente no grande).';
+      escrever(v, { texto: `${p.nome}: ${t}`, relevancia: 'cotidiano', tema: 'trabalho' });
+      return fim(t);
+    }
+    case 'equipe29': {
+      const antes = p.equipe29 ?? 0;
+      if (q.n > antes) pagar(Math.round(salarioRural29(p) / 12) * (q.n - antes), `Contratação: ${p.nome}`);
+      // Demitir sem justa causa custa o aviso e a multa do FGTS (uns dois meses de salário por pessoa).
+      if (q.n < antes) pagar(Math.round(salarioRural29(p) / 12 * 2) * (antes - q.n), `Rescisões: ${p.nome}`);
+      p.equipe29 = q.n === 0 ? undefined : q.n;
+      return fim(q.n === 0 ? 'Sem equipe fixa: a lavoura volta aos diaristas da safra.' : q.n > antes ? `Equipe de ${q.n}: carteira assinada, gente que conhece a terra o ano inteiro.` : `A equipe ficou com ${q.n}: as rescisões foram pagas.`);
+    }
+    case 'empreitada29': {
+      p.empreitada29 = !p.empreitada29 || undefined;
+      return fim(p.empreitada29 ? 'Máquinas por empreitada: o vizinho mecanizado (ou a prestadora) planta, pulveriza e colhe por hectare — tecnologia sem comprar trator.' : 'Sem empreitada: só as máquinas da casa.');
+    }
+    case 'assistencia29': {
+      p.assistencia29 = !p.assistencia29 || undefined;
+      return fim(p.assistencia29 ? (p.ha <= 50 ? 'A Emater passa a visitar: análise de solo, calendário, o técnico no telefone.' : 'Um agrônomo contratado visita todo mês: menos erro, menos praga, adubo na medida.') : 'Sem assistência técnica.');
+    }
+    case 'venda29': {
+      p.venda29 = q.venda === 'colheita' ? undefined : q.venda;
+      return fim(q.venda === 'contrato' ? 'Safra vendida antes de plantar (contrato a termo): o preço fica travado — sem susto na baixa, sem ganho na alta. Se a safra quebrar, compra-se de volta o que faltar.'
+        : q.venda === 'armazem' ? 'A safra vai para o armazém e espera a entressafra, quando o preço costuma subir; paga-se aluguel e frete (quem tem silo não paga).'
+        : q.venda === 'feira' ? 'Venda direta na feira: preço de varejo, mas só o que a família dá conta de levar — e os sábados vão para a banca.'
+        : 'Venda na colheita, ao preço do dia.');
+    }
+    case 'leilao29': {
+      const rb = p.rebanhos.find(r => r.especie === q.especie)!;
+      const d = REBANHOS18[q.especie];
+      fazer(v, `leilao29:${p.id}:${q.especie}`);
+      const n = Math.max(1, Math.round(rb.cabecas * clamp(q.fracao, 0, 1)));
+      const unit = d.valor * (0.6 + rb.genetica / 125);
+      // O pregão: a genética boa atrai comprador; o dia pode ser bom ou fraco. A leiloeira fica com 6%.
+      const rl = rngDe(v.id, 'leilao29', p.id, q.especie, anoT);
+      const fator = clamp(0.85 + rl.next() * 0.3 + (rb.genetica - 50) / 250, 0.75, 1.4);
+      const valor = Math.round(n * unit * c * fator * 0.94);
+      rb.cabecas -= n;
+      if (rb.cabecas <= 0) p.rebanhos = p.rebanhos.filter(x => x !== rb);
+      if (q.especie === 'cavalos' && rb.cabecas <= 0) p.cavalos = undefined;
+      receber(valor, `Leilão: ${d.nome}`);
+      const dia = fator >= 1.1 ? 'Pregão disputado: os lances passaram do esperado.' : fator < 0.92 ? 'Pregão fraco: pouca gente, lance baixo.' : 'Pregão normal.';
+      escrever(v, { texto: `Levou ${n.toLocaleString('pt-BR')} ${d.unidade} de ${d.nome} a leilão. ${dia}`, relevancia: 'cotidiano', tema: 'dinheiro' });
+      return fim(`${dia} ${n.toLocaleString('pt-BR')} ${d.unidade}: ${fmt(valor)} (já sem a comissão da leiloeira).`, fator >= 1.05 ? 'bom' : fator < 0.92 ? 'ruim' : 'neutro');
     }
     case 'temporada': {
       const custo = custoDaTemporada(v, p);

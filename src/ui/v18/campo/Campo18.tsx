@@ -22,6 +22,8 @@ import {
   ofertasRurais, precoDaEstrutura, precoDaMaquina, precoDoLote, custoDaGenetica, custoDaTemporada, type OfertaRural18
 } from '../../../motor/v18/rural/acoes18';
 import { Paisagem18 } from './Paisagem18';
+import { capacidadeUA, maoDeObra29, quemAdministra, salarioRural29, tecnologiaPropria, vendaServe29, NOME_DA_GESTAO, type Admin29, type Venda29 } from '../../../motor/v18/rural/fazenda18';
+import { decisoesRecomendadas, diagnosticoDaPropriedade, situacaoDaPropriedade, type Indicador29 } from '../../../motor/v18/rural/diagnostico29';
 import './campo18.css';
 
 type Agir = (a: Acao) => boolean;
@@ -90,18 +92,46 @@ export function Campo18({ vida, agir }: { vida: Vida; agir: Agir }) {
 
 /* ================================================================== Uma propriedade */
 
-type Parte = 'terra' | 'lavoura' | 'rebanho' | 'estrutura' | 'gestao' | 'contas';
+/* VIDA 29: a navegação de quem nunca tocou uma fazenda — a visão geral primeiro, e cada parte com o nome do dia a dia. */
+type Parte = 'visao' | 'lavoura' | 'rebanho' | 'estrutura' | 'gestao' | 'contas';
 const PARTES: { id: Parte; rotulo: string; oque: string }[] = [
-  { id: 'terra', rotulo: 'A terra', oque: 'Área, uso, solo, água, valor' },
-  { id: 'lavoura', rotulo: 'Lavoura', oque: 'Talhões, calendário, plantar' },
-  { id: 'rebanho', rotulo: 'Rebanho', oque: 'Animais, manejo, comprar e vender' },
-  { id: 'estrutura', rotulo: 'Estrutura', oque: 'Obras e máquinas' },
-  { id: 'gestao', rotulo: 'Gestão', oque: 'Uso, manejo, cooperativa, arrendar, expandir' },
-  { id: 'contas', rotulo: 'Contas', oque: 'O ano que passou e a previsão' }
+  { id: 'visao', rotulo: 'Visão geral', oque: 'Como está, os problemas e o que fazer' },
+  { id: 'lavoura', rotulo: 'Plantação', oque: 'Talhões, calendário, plantar' },
+  { id: 'rebanho', rotulo: 'Animais', oque: 'Criação, manejo, comprar, vender, leilão' },
+  { id: 'estrutura', rotulo: 'Construções e equipamentos', oque: 'Obras, máquinas, empreitada' },
+  { id: 'gestao', rotulo: 'Administração', oque: 'Quem cuida, equipe, venda, uso, cooperativa' },
+  { id: 'contas', rotulo: 'Finanças', oque: 'O ano que passou, a previsão, crédito e papéis' }
 ];
 
+/* As preferências de quem joga (o modo e as dicas já vistas): só conveniência, no navegador; sem armazenamento, tudo funciona. */
+const ler = (k: string) => { try { return localStorage.getItem(k); } catch { return null; } };
+const gravar = (k: string, x: string) => { try { localStorage.setItem(k, x); } catch { /* sem armazenamento */ } };
+const CHAVE_MODO = 'VIDA_campo29_modo';
+const DICAS: Record<Parte, string> = {
+  visao: 'Aqui está o resumo da propriedade: como ela está, o que vai mal e o que fazer. Toque num quadro para entender o que ele significa. Os números técnicos aparecem no modo detalhado.',
+  lavoura: 'Cada talhão é um pedaço de terra com uma cultura. A anual (soja, milho, feijão) colhe no ano; a perene (café, pomar) leva anos para começar a dar. O calendário mostra os meses de plantar (verde) e de colher (amarelo).',
+  rebanho: 'Cada criação tem o seu jeito: o gado vive no pasto (veja na Visão geral quantos animais cabem), a galinha no aviário, o peixe no tanque. Sanidade é vacina e trato em dia; genética é a qualidade dos animais.',
+  estrutura: 'Obras ficam (casa, curral, poço, silo); máquinas aumentam a tecnologia. Não precisa comprar tudo: no pequeno, a máquina se contrata por empreitada.',
+  gestao: 'Decida quem cuida (você, um caseiro, um gerente ou uma administradora), se terá equipe fixa e como vai vender a safra. Cada escolha muda o custo e o resultado do ano.',
+  contas: 'O resultado do ano entra (ou sai) da sua conta de sempre na virada. Aqui está o que entrou e saiu, linha por linha, e o que esperar num ano normal.'
+};
+
+function Dica({ parte }: { parte: Parte }) {
+  const chave = `VIDA_campo29_dica_${parte}`;
+  const [vista, setVista] = useState(() => ler(chave) === '1');
+  if (vista) return null;
+  return (
+    <div className="campo29__dica" role="note">
+      <p><strong>Primeira vez aqui?</strong> {DICAS[parte]}</p>
+      <button type="button" className="campo18__chip" onClick={() => { gravar(chave, '1'); setVista(true); }}>Entendi</button>
+    </div>
+  );
+}
+
 function Propriedade({ vida, agir, p, propria }: { vida: Vida; agir: Agir; p: PropriedadeRural18; propria: boolean }) {
-  const [parte, setParte] = useState<Parte>('terra');
+  const [parte, setParte] = useState<Parte>('visao');
+  const [detalhado, setDetalhado] = useState(() => ler(CHAVE_MODO) === 'detalhado');
+  const trocarModo = () => { const d = !detalhado; setDetalhado(d); gravar(CHAVE_MODO, d ? 'detalhado' : 'simples'); };
   const r = resumoDaPropriedade(vida, p);
   return (
     <article className="campo18__prop" aria-label={p.nome}>
@@ -110,17 +140,22 @@ function Propriedade({ vida, agir, p, propria }: { vida: Vida; agir: Agir; p: Pr
         <div className="campo18__placa">
           <p className="campo18__placa-tipo">{TIPOS18[p.tipo].nome}{propria ? '' : ' · arrendada'}</p>
           <h3>{p.nome}</h3>
-          <p>{fmtHa(p.ha)} · {r.regiao === 'outro' ? 'zona rural' : `${r.regiao}`} · {p.uso === 'producao' ? (r.tocadaPorVoce ? 'você toca' : p.ha < 40 ? 'com caseiro' : 'com gerente') : p.uso === 'residencia' ? 'casa e lazer' : p.uso === 'investimento' ? 'parada (investimento)' : 'arrendada a terceiros'}</p>
+          <p>{fmtHa(p.ha)} · {r.regiao === 'outro' ? 'zona rural' : `${r.regiao}`} · {p.uso === 'producao' ? `quem cuida: ${NOME_DA_GESTAO[quemAdministra(vida, p)]}` : p.uso === 'residencia' ? 'casa e lazer' : p.uso === 'investimento' ? 'parada (investimento)' : 'arrendada a terceiros'}</p>
           <p className="campo18__placa-valor">{propria ? <>Vale <strong>{dinheiroCurto(r.valor)}</strong></> : <>Arrendamento: <strong>{dinheiroCurto(p.arrendamento?.valorAno ?? 0)}</strong>/ano até {p.arrendamento?.ate}</>}</p>
         </div>
       </div>
       <Subnav rotulo="Partes da propriedade" prefixo="campo18" itens={PARTES} atual={parte} aoMudar={setParte} classe="subnav--campo18" />
+      <div className="campo29__modo">
+        <button type="button" className={`campo18__chip${detalhado ? ' campo18__chip--ativo' : ''}`} aria-pressed={detalhado} onClick={trocarModo}>{detalhado ? 'Modo detalhado (números técnicos)' : 'Modo simples'}</button>
+        <span className="nota">{detalhado ? 'Os mesmos dados, com as medidas que o técnico usa.' : 'Os mesmos dados, explicados.'}</span>
+      </div>
       <div role="tabpanel" id="campo18-painel" aria-labelledby={`campo18-aba-${parte}`} className="campo18__painel">
-        {parte === 'terra' && <Terra p={p} r={r} propria={propria} />}
+        <Dica key={parte} parte={parte} />
+        {parte === 'visao' && <VisaoGeral vida={vida} agir={agir} p={p} r={r} propria={propria} detalhado={detalhado} />}
         {parte === 'lavoura' && <Lavoura vida={vida} agir={agir} p={p} />}
         {parte === 'rebanho' && <Rebanho vida={vida} agir={agir} p={p} />}
         {parte === 'estrutura' && <Estrutura vida={vida} agir={agir} p={p} />}
-        {parte === 'gestao' && <Gestao vida={vida} agir={agir} p={p} propria={propria} />}
+        {parte === 'gestao' && <><Administracao29 vida={vida} agir={agir} p={p} detalhado={detalhado} /><Gestao vida={vida} agir={agir} p={p} propria={propria} /></>}
         {parte === 'contas' && <><Contas p={p} r={r} /><Papelada19 vida={vida} agir={agir} p={p} /></>}
       </div>
     </article>
@@ -139,7 +174,7 @@ function Medidor({ rotulo, valor, dica }: { rotulo: string; valor: number; dica:
   );
 }
 
-function Terra({ p, r, propria }: { p: PropriedadeRural18; r: Resumo; propria: boolean }) {
+function Terra({ p, r, propria, detalhado }: { p: PropriedadeRural18; r: Resumo; propria: boolean; detalhado: boolean }) {
   const total = p.ha;
   const partes = [
     { k: 'lavoura', rotulo: 'Lavoura', ha: r.plantada },
@@ -156,14 +191,11 @@ function Terra({ p, r, propria }: { p: PropriedadeRural18; r: Resumo; propria: b
         {partes.map(x => <li key={x.k}><span className={`campo18__cor campo18__faixa--${x.k}`} />{x.rotulo}: <strong>{fmtHa(x.ha)}</strong></li>)}
       </ul>
       <p className="nota">A reserva legal ({pct(r.reserva)} da área aqui, pelo Código Florestal) não se planta nem vira pasto.</p>
-      <div className="campo18__medidores">
-        <Medidor rotulo="Solo" valor={p.solo} dica={p.solo >= 70 ? 'fértil' : p.solo >= 50 ? 'médio' : 'cansado — pede correção'} />
-        <Medidor rotulo="Água" valor={p.agua} dica={p.agua >= 65 ? 'farta' : p.agua >= 40 ? 'regular' : 'escassa'} />
-        <Medidor rotulo="Tecnologia" valor={r.tecnologia / 3 * 100} dica={`${r.tecnologia.toLocaleString('pt-BR')} de 3`} />
-      </div>
+      {detalhado && <>
       <dl className="campo18__dados">
         <div><dt>Relevo</dt><dd>{p.relevo}</dd></div>
-        <div><dt>Pasto comporta</dt><dd>{r.capacidadeUA} UA ({r.ua} ocupadas)</dd></div>
+        <div><dt>Solo · água · tecnologia</dt><dd>{p.solo}/100 · {p.agua}/100 · {r.tecnologia.toLocaleString('pt-BR')} de 3</dd></div>
+        <div><dt>Pasto sustenta</dt><dd>uns {capacidadeUA(p).toLocaleString('pt-BR')} bois adultos ({r.capacidadeUA} UA; {r.ua} ocupadas)</dd></div>
         <div><dt>Irrigação dá conta de</dt><dd>{fmtHa(r.irrigaveis)}</dd></div>
         {propria && <div><dt>Terra nua</dt><dd>{dinheiroCurto(r.terra)} ({dinheiroCurto(p.valorHa)}/ha)</dd></div>}
         {propria && <div><dt>Estruturas e máquinas</dt><dd>{dinheiroCurto(r.estruturas + r.maquinas)}</dd></div>}
@@ -171,6 +203,149 @@ function Terra({ p, r, propria }: { p: PropriedadeRural18; r: Resumo; propria: b
         <div><dt>Manejo</dt><dd>{p.manejo === 'organico' ? `orgânico${p.transicao !== undefined ? ` (transição desde ${p.transicao})` : ''}` : 'convencional'}</dd></div>
         <div><dt>Foco</dt><dd>{p.foco === 'volume' ? 'volume' : p.foco === 'qualidade' ? 'qualidade' : 'equilíbrio'}</dd></div>
       </dl>
+      </>}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ VIDA 29 · Visão geral */
+
+const NOME_ESTADO = { bom: 'Bem', atencao: 'Atenção', ruim: 'Problema' } as const;
+
+function VisaoGeral({ vida, agir, p, r, propria, detalhado }: { vida: Vida; agir: Agir; p: PropriedadeRural18; r: Resumo; propria: boolean; detalhado: boolean }) {
+  const ind = diagnosticoDaPropriedade(vida, p);
+  const sit = situacaoDaPropriedade(ind);
+  const decisoes = decisoesRecomendadas(ind);
+  const prev = r.previsao;
+  const cabecas = p.rebanhos.reduce((s, rb) => s + rb.cabecas, 0);
+  return (
+    <div className="campo29">
+      <p className={`campo29__situacao campo29__situacao--${sit.estado}`}><strong>{NOME_ESTADO[sit.estado]}.</strong> {sit.frase}</p>
+      <dl className="campo29__numeros">
+        <div><dt>Produção</dt><dd>{p.talhoes.length ? `${fmtHa(r.plantada)} plantados` : 'nada plantado'}{p.rebanhos.length ? ` · ${cabecas.toLocaleString('pt-BR')} animais` : ''}</dd></div>
+        <div><dt>Terra</dt><dd>{fmtHa(p.ha)} · {fmtHa(r.livre)} livres</dd></div>
+        <div><dt>Num ano normal</dt><dd>entra {dinheiroCurto(prev.receita)} · sai {dinheiroCurto(prev.custo)}</dd></div>
+        <div><dt>O último ano</dt><dd className={r.ultimo && r.ultimo.resultado < 0 ? 'campo18__ruim' : 'campo18__bom'}>{r.ultimo ? `${r.ultimo.resultado >= 0 ? '+' : '−'}${dinheiroCurto(Math.abs(r.ultimo.resultado))}` : 'fecha na virada'}</dd></div>
+      </dl>
+      {decisoes.length > 0 && (
+        <section className="campo29__decisoes" aria-label="O que fazer agora">
+          <h4>O que fazer agora</h4>
+          <ol>
+            {decisoes.map((d, k) => (
+              <li key={k} className={`campo29__decisao campo29__decisao--${d.estado}`}>
+                <div><strong>{d.texto}</strong><span>{d.porque}{d.custo ? ` · custa ${dinheiroCurto(d.custo)}` : ''}{d.tempo ? ` · ${d.tempo}` : ''}</span></div>
+                {d.acao && <BotaoAcao vida={vida} agir={agir} acao={d.acao}>Fazer</BotaoAcao>}
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
+      <ul className="campo29__quadros" aria-label="Como está cada parte">
+        {ind.map(i => <Quadro key={i.id} i={i} vida={vida} agir={agir} detalhado={detalhado} />)}
+      </ul>
+      <section aria-label="O uso da terra">
+        <h4>O uso da terra</h4>
+        <Terra p={p} r={r} propria={propria} detalhado={detalhado} />
+      </section>
+    </div>
+  );
+}
+
+function Quadro({ i, vida, agir, detalhado }: { i: Indicador29; vida: Vida; agir: Agir; detalhado: boolean }) {
+  return (
+    <li className={`campo29__quadro campo29__quadro--${i.estado}`} data-indicador={i.id}>
+      <details>
+        <summary>
+          <span className="campo29__quadro-cab"><strong>{i.titulo}</strong><span className={`campo29__selo campo29__selo--${i.estado}`}>{NOME_ESTADO[i.estado]}</span></span>
+          {i.valor !== undefined && <span className="campo18__medidor-barra" role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(i.valor)} aria-label={i.titulo}><span style={{ width: `${Math.max(3, Math.min(100, i.valor))}%` }} /></span>}
+          <span className="campo29__resumo">{i.resumo}</span>
+        </summary>
+        <dl className="campo29__explica">
+          <div><dt>O que significa</dt><dd>{i.significa}</dd></div>
+          <div><dt>Como afeta a propriedade</dt><dd>{i.efeito}</dd></div>
+          <div><dt>Se piorar</dt><dd>{i.sePiorar}</dd></div>
+          {i.fazer.length > 0 && <div><dt>O que fazer</dt><dd><ul className="campo29__passos">{i.fazer.map((f, k) => (
+            <li key={k}><span>{f.texto}{f.custo ? ` Custa ${dinheiroCurto(f.custo)}.` : ''}{f.tempo ? ` (${f.tempo})` : ''}</span>{f.acao && <BotaoAcao vida={vida} agir={agir} acao={f.acao}>Fazer</BotaoAcao>}</li>
+          ))}</ul></dd></div>}
+          {detalhado && i.tecnico && <div><dt>Nos números</dt><dd className="campo29__tecnico">{i.tecnico}</dd></div>}
+        </dl>
+      </details>
+    </li>
+  );
+}
+
+/* ------------------------------------------------------------------ VIDA 29 · Administração: quem cuida, a equipe, a venda */
+
+const ADMINS: { id: Admin29 | 'auto'; rotulo: string; oque: string }[] = [
+  { id: 'auto', rotulo: 'O de sempre', oque: 'Caseiro até 40 ha, gerente acima (ou você, se mora nela).' },
+  { id: 'voce', rotulo: 'Eu mesmo', oque: 'Sem salário de gerente; o resultado depende do que você sabe e do tempo que sobra (de longe, rende menos).' },
+  { id: 'caseiro', rotulo: 'Caseiro', oque: 'Barato; dá conta do pequeno. Numa área maior, as coisas escapam.' },
+  { id: 'gerente', rotulo: 'Gerente', oque: 'A fazenda anda sozinha, ao custo de um bom salário.' },
+  { id: 'empresa', rotulo: 'Administradora rural', oque: 'Método e técnico: custa por hectare e rende mais.' }
+];
+const VENDAS: { id: Venda29; rotulo: string; oque: string }[] = [
+  { id: 'colheita', rotulo: 'Na colheita', oque: 'Vende ao preço do dia: às vezes alto, às vezes baixo.' },
+  { id: 'contrato', rotulo: 'Contrato antecipado', oque: 'Trava o preço antes de plantar (grão, café, cana, cacau). Sem susto e sem ganho; numa quebra, compra-se o que faltar.' },
+  { id: 'armazem', rotulo: 'Guardar e vender depois', oque: 'Espera a entressafra, quando o preço costuma subir; paga armazém e frete (quem tem silo não paga).' },
+  { id: 'feira', rotulo: 'Feira e venda direta', oque: 'Hortaliça, fruta, mandioca: preço de varejo, mas só o que a família dá conta de vender (uns 8 ha).' }
+];
+
+function Administracao29({ vida, agir, p, detalhado }: { vida: Vida; agir: Agir; p: PropriedadeRural18; detalhado: boolean }) {
+  if (p.uso !== 'producao') return <p className="nota">A propriedade não está em produção: não há equipe nem venda para administrar. Mude o uso logo abaixo.</p>;
+  const quem = quemAdministra(vida, p);
+  const mo = maoDeObra29(vida, p);
+  const atual = p.admin29 ?? 'auto';
+  const venda = p.venda29 ?? 'colheita';
+  const sal = salarioRural29(p);
+  return (
+    <div className="campo29__admin">
+      <section aria-label="Quem administra">
+        <h4>Quem cuida da propriedade</h4>
+        <p className="nota">Hoje: {NOME_DA_GESTAO[quem]}.</p>
+        {quem === 'produtor' ? <p className="nota">Esta é a terra que você toca como produtor rural: a administração é sua.</p> : (
+          <ul className="campo18__itens">
+            {ADMINS.map(a => (
+              <li key={a.id} className={`campo18__item${atual === a.id ? ' campo18__item--tem' : ''}`}>
+                <div><strong>{a.rotulo}{atual === a.id ? ' · atual' : ''}</strong><span>{a.oque}</span></div>
+                {atual !== a.id && <BotaoAcao vida={vida} agir={agir} ocultarImpossivel acao={r18({ op: 'admin29', id: p.id, admin: a.id })}>Escolher</BotaoAcao>}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+      <section aria-label="Equipe">
+        <h4>Gente para o trabalho</h4>
+        <p className="nota">O serviço pede umas {Math.max(1, Math.round(mo.precisa)).toLocaleString('pt-BR')} {mo.precisa < 1.5 ? 'pessoa' : 'pessoas'} o ano inteiro. {mo.modo === 'equipe' ? `Equipe fixa: ${mo.equipe}.` : 'Hoje: diaristas na safra (o custo já está no gasto por hectare; na colheita manual, às vezes falta gente).'} Cada trabalhador registrado custa uns {dinheiroCurto(sal)} por ano, com 13º, férias e encargos.{detalhado ? ` Cobertura: ${pct(mo.cobertura)}.` : ''}</p>
+        <div className="campo18__botoes">
+          <BotaoAcao vida={vida} agir={agir} ocultarImpossivel acao={r18({ op: 'equipe29', id: p.id, n: (p.equipe29 ?? 0) + 1 })}>{p.equipe29 ? 'Contratar mais um' : 'Contratar um trabalhador'}</BotaoAcao>
+          {(p.equipe29 ?? 0) > 0 && <BotaoAcao vida={vida} agir={agir} acao={r18({ op: 'equipe29', id: p.id, n: (p.equipe29 ?? 0) - 1 })}>Dispensar um (rescisão)</BotaoAcao>}
+          {(p.equipe29 ?? 0) > 1 && <BotaoAcao vida={vida} agir={agir} acao={r18({ op: 'equipe29', id: p.id, n: 0 })}>Voltar aos diaristas</BotaoAcao>}
+        </div>
+      </section>
+      <section aria-label="Apoio técnico e máquinas">
+        <h4>Apoio sem comprar</h4>
+        <ul className="campo18__itens">
+          <li className={`campo18__item${p.assistencia29 ? ' campo18__item--tem' : ''}`}><div><strong>Assistência técnica{p.assistencia29 ? ' · contratada' : ''}</strong><span>{p.ha <= 50 ? 'A Emater visita: análise de solo, calendário, o técnico no telefone.' : 'Um agrônomo visita todo mês: menos erro, menos praga.'}</span></div><BotaoAcao vida={vida} agir={agir} acao={r18({ op: 'assistencia29', id: p.id })}>{p.assistencia29 ? 'Dispensar' : 'Contratar'}</BotaoAcao></li>
+          {p.talhoes.length > 0 && <li className={`campo18__item${p.empreitada29 ? ' campo18__item--tem' : ''}`}><div><strong>Máquina por empreitada{p.empreitada29 ? ' · contratada' : ''}</strong><span>O vizinho mecanizado (ou uma prestadora) planta, pulveriza e colhe, pago por hectare. {tecnologiaPropria(p) >= 1.2 ? 'Com as máquinas que já tem, não muda nada.' : 'Tecnologia sem comprar trator.'}</span></div><BotaoAcao vida={vida} agir={agir} acao={r18({ op: 'empreitada29', id: p.id })}>{p.empreitada29 ? 'Parar' : 'Contratar'}</BotaoAcao></li>}
+        </ul>
+      </section>
+      {p.talhoes.length > 0 && (
+        <section aria-label="Como vender a safra">
+          <h4>Como vender a safra</h4>
+          <ul className="campo18__itens">
+            {VENDAS.map(x => {
+              const serve = x.id === 'colheita' || p.talhoes.some(t => vendaServe29(x.id, t.cultura));
+              return (
+                <li key={x.id} className={`campo18__item${venda === x.id ? ' campo18__item--tem' : ''}`}>
+                  <div><strong>{x.rotulo}{venda === x.id ? ' · atual' : ''}</strong><span>{x.oque}{!serve ? ' (nada daqui se vende assim)' : ''}</span></div>
+                  {venda !== x.id && serve && <BotaoAcao vida={vida} agir={agir} ocultarImpossivel acao={r18({ op: 'venda29', id: p.id, venda: x.id })}>Vender assim</BotaoAcao>}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+      <h4>Uso, manejo e a terra</h4>
     </div>
   );
 }
@@ -273,6 +448,7 @@ function Rebanho({ vida, agir, p }: { vida: Vida; agir: Agir; p: PropriedadeRura
               {rb.especie !== 'tilapia' && rb.especie !== 'tambaqui' && <BotaoAcao vida={vida} agir={agir} acao={r18({ op: 'genetica', id: p.id, especie: rb.especie })}>Melhoramento genético · {dinheiroCurto(custoDaGenetica(p, rb.especie))}</BotaoAcao>}
               <BotaoAcao vida={vida} agir={agir} acao={r18({ op: 'vender_animais', id: p.id, especie: rb.especie, fracao: 0.25 })}>Vender um quarto</BotaoAcao>
               <BotaoAcao vida={vida} agir={agir} acao={r18({ op: 'vender_animais', id: p.id, especie: rb.especie, fracao: 1 })}>Vender todos</BotaoAcao>
+              <BotaoAcao vida={vida} agir={agir} ocultarImpossivel acao={r18({ op: 'leilao29', id: p.id, especie: rb.especie, fracao: 0.25 })}>Levar um quarto a leilão</BotaoAcao>
             </div>
             {rb.especie === 'cavalos' && (p.cavalos?.length ?? 0) > 0 && (
               <Haras19 vida={vida} agir={agir} p={p} />
@@ -336,6 +512,11 @@ function Estrutura({ vida, agir, p }: { vida: Vida; agir: Agir; p: PropriedadeRu
           })}
         </ul>
       ) : <p className="nota">Numa área deste tamanho, o trabalho de máquina é contratado por empreitada.</p>}
+      {p.uso === 'producao' && p.talhoes.length > 0 && (
+        <ul className="campo18__itens">
+          <li className={`campo18__item${p.empreitada29 ? ' campo18__item--tem' : ''}`}><div><strong>Sem comprar: máquina por empreitada{p.empreitada29 ? ' · contratada' : ''}</strong><span>Paga-se por hectare a quem tem a máquina: a tecnologia básica sem o investimento (e sem a manutenção).</span></div><BotaoAcao vida={vida} agir={agir} acao={r18({ op: 'empreitada29', id: p.id })}>{p.empreitada29 ? 'Parar' : 'Contratar'}</BotaoAcao></li>
+        </ul>
+      )}
     </div>
   );
 }
