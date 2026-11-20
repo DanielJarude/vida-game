@@ -48,6 +48,7 @@ import { divisaoDoClube } from './ligas';
 import { paisDaCidade } from '../dados/lugares';
 import { apresentarNoFestival, viveDoOficio } from './cena';
 import { mercadoDoTrabalho, oportunidadeCoerente } from './mercados';
+import { aceitarBase30, expirarPropostasBase30, podeAceitarBase30, recusarBase30 } from './base30';
 import { carreiraEspecialAtiva, situacaoProfissional } from './situacaoProfissional';
 import { distanciaDaCarreira, indicacaoPlausivel, LIMIAR_MUDANCA, naturezaDaOportunidade, ocupacaoDeReferencia, pontuarIndicacao } from './indicacoes';
 
@@ -92,6 +93,7 @@ export function processarOportunidades(v: Vida, r: Rng): void {
   for (const o of v.caminhos.oportunidades) if (o.tFim <= v.t && o.pessoaId && v.pessoas[o.pessoaId]?.vivo) escrever(v, { texto: `O convite de ${v.pessoas[o.pessoaId].nome} passou sem resposta (${o.titulo.charAt(0).toLowerCase()}${o.titulo.slice(1)}).`, relevancia: (v.vinculos[o.pessoaId]?.proximidade ?? 0) >= 60 ? 'cotidiano' : 'tecnico', // VIDA 12.5: era a linha de trabalho mais frequente da biografia
  tema: 'trabalho', pessoas: [o.pessoaId] });
   v.caminhos.oportunidades = v.caminhos.oportunidades.filter(o => o.tFim > v.t && (!o.pessoaId || v.pessoas[o.pessoaId]?.vivo) && oportunidadeCoerente(v, o) === true && !conviteObsoleto(v, o));
+  expirarPropostasBase30(v);
   if (v.morte) return;
   const b = v.educacao.basica;
   const m = v.educacao.matricula;
@@ -601,6 +603,11 @@ export function aceitarOportunidade(v: Vida, r: Rng, id: string): Aceite {
       v.fatos['projeto_convite'] = MODS_ARTE.indexOf(o.dominio ?? 'musica');
       if (o.pessoaId) v.fatos['projeto_pessoa_marca'] = v.t;
       return { texto: '', decisao: 'arte_projeto' };
+    case 'base_transferencia': {
+      // VIDA 30 · §7: a proposta de outro clube para o atleta da base (`base30`).
+      if (podeAceitarBase30(v, o.id) !== true) return { texto: 'A proposta já não vale.', tom: 'neutro' };
+      return aceitarBase30(v, r, o.id);
+    }
     case 'edital_cultura':
       // O festival que chamou: aceitar é ir lá e se apresentar — com o resultado que vier (`cena`).
       return apresentarNoFestival(v, r, o);
@@ -626,6 +633,7 @@ export const municipioIndice = municipioIndex;
 
 export function recusarOportunidade(v: Vida, id: string): void {
   const o = v.caminhos.oportunidades.find(x => x.id === id);
+  if (o?.tipo === 'base_transferencia') recusarBase30(v, id);
   if (o?.pessoaId && v.pessoas[o.pessoaId]?.vivo) escrever(v, { texto: `Recusou o convite de ${v.pessoas[o.pessoaId].nome}.`, relevancia: 'cotidiano', tema: 'trabalho', escolha: true, pessoas: [o.pessoaId] });
   v.caminhos.oportunidades = v.caminhos.oportunidades.filter(x => x.id !== id);
 }

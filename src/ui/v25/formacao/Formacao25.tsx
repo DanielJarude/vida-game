@@ -9,6 +9,9 @@ import { anoDe } from '../../../motor/tempo';
 import { NOME_MOD } from '../../../motor/sistemas/esporte';
 import { IDADE_LEGAL_CONTRATO } from '../../../motor/sistemas/jovemAtleta';
 import { palavraDoValor25 } from '../ficha/FichaDeAtleta25';
+import { remuneracaoDaBase30 } from '../../../motor/sistemas/base30';
+import { dinheiroCurto } from '../../apresentar';
+import { municipio } from '../../../motor/dados/lugares';
 import './formacao25.css';
 
 const num = (x: number) => x.toLocaleString('pt-BR', { maximumFractionDigits: 1 });
@@ -56,6 +59,7 @@ export function Formacao25({ vida, e }: { vida: Vida; e: CarreiraEsportiva }) {
         <div><dt>Títulos</dt><dd>{titulos.length}</dd></div>
         <div><dt>Técnica</dt><dd>{num(anos[0].tecnica)} → {num(ultimo.tecnica)} <Evolucao serie={anos.map(a => a.tecnica)} /></dd></div>
       </dl>
+      <ApoioEClubes30 vida={vida} e={e} />
       <div className="form25__tabela" role="region" aria-label="Ano a ano" tabIndex={0}>
         <table>
           <thead><tr><th>Ano</th><th>Categoria</th><th>{individual ? 'Disputas' : 'Jogos (tit.)'}</th>{producao && <th>{producao}</th>}<th>Nota</th><th>Colocação</th></tr></thead>
@@ -63,7 +67,7 @@ export function Formacao25({ vida, e }: { vida: Vida; e: CarreiraEsportiva }) {
             {anos.map(a => (
               <tr key={a.ano} className={a.titulo ? 'form25__linha--titulo' : undefined}>
                 <td>{a.ano}<small> · {a.idade}a</small></td>
-                <td>{a.categoria}{a.papel ? <small> · {a.papel}</small> : null}{a.acima ? <small className="form26__acima"> · {a.acima === 'profissional' ? 'treinou com o profissional' : `subiu ao ${a.acima}`}</small> : null}</td>
+                <td>{a.categoria}{new Set(anos.map(x => x.clube)).size > 1 ? <small> · {a.clube}</small> : null}{a.papel ? <small> · {a.papel}</small> : null}{a.acima ? <small className="form26__acima"> · {a.acima === 'profissional' ? 'treinou com o profissional' : `subiu ao ${a.acima}`}</small> : null}</td>
                 <td>{individual ? a.jogos : `${a.jogos} (${a.titular})`}</td>
                 {producao && <td>{e.modalidade === 'basquete' ? num(a.pontos ?? 0) : individual ? (a.podios ?? '—') : `${a.gols ?? 0} · ${a.assistencias ?? 0}`}</td>}
                 <td>{num(a.nota)}</td>
@@ -78,6 +82,39 @@ export function Formacao25({ vida, e }: { vida: Vida; e: CarreiraEsportiva }) {
       {titulos.length > 0 && <ul className="form25__titulos" aria-label="Títulos na formação">{titulos.map(a => <li key={a.ano}>{a.ano} · {cap(a.competicao)} ({a.clube})</li>)}</ul>}
       {chegou && <p className="form25__pro">Profissionalizou-se em {anoPro}, {e.temporadas?.[0]?.clube ? `${e.temporadas[0].clube === anos[anos.length - 1].clube ? 'no mesmo clube que o formou' : `por ${e.temporadas[0].clube}`}` : ''}{vida.caminhos.palmares?.some(x => x.tipo === 'marco' && /Primeiro contrato profissional/.test(x.texto)) ? ' — o primeiro contrato está entre os marcos da carreira' : ''}.</p>}
     </section>
+  );
+}
+
+/**
+ * VIDA 30 · §7 — o registro, o apoio financeiro (por partes, com o porquê) e as trocas de clube na base. O apoio é dito
+ * como o que é: bolsa, ajuda de custo, benefícios e o vínculo — nunca como salário de profissional.
+ */
+function ApoioEClubes30({ vida, e }: { vida: Vida; e: CarreiraEsportiva }) {
+  const b = e.base30;
+  const naBase = e.fase === 'base';
+  const rem = naBase ? remuneracaoDaBase30(vida, e) : undefined;
+  const trocas = b?.transferencias ?? [];
+  const propostas = (b?.propostas ?? []).filter(p => p.desfecho && p.desfecho !== 'aceitou');
+  if (!rem && !trocas.length) return null;
+  const DESFECHO: Record<string, string> = { recusou: 'recusou', reprovado: 'não passou na avaliação', expirou: 'passou sem resposta' };
+  return (
+    <div className="form30" aria-label="Registro, apoio e clubes">
+      {rem && (
+        <dl className="form25__resumo form30__apoio">
+          <div><dt>Registro</dt><dd>{b?.registro?.clube ?? e.clube}{b?.registro ? <small> · desde {anoDe(b.registro.desde)}</small> : null}</dd></div>
+          <div><dt>Vínculo</dt><dd>{rem.rotulo}</dd></div>
+          <div><dt>Bolsa</dt><dd>{rem.bolsa ? `${dinheiroCurto(rem.bolsa)}/mês` : '—'}</dd></div>
+          <div><dt>Ajuda de custo</dt><dd>{rem.ajuda ? `${dinheiroCurto(rem.ajuda)}/mês` : '—'}</dd></div>
+        </dl>
+      )}
+      {rem && <p className="nota form30__porque">{rem.porque}{rem.beneficios.length ? ` O clube dá: ${rem.beneficios.join(', ')}.` : ''}</p>}
+      {trocas.length > 0 && (
+        <ul className="form25__titulos form30__trocas" aria-label="Trocas de clube na base">
+          {trocas.map(x => <li key={x.t}>{anoDe(x.t)} · {x.idade} anos · {x.de} → {x.para}{x.paraMunicipio !== x.deMunicipio ? ` (${municipio(x.paraMunicipio).nome})` : ''} · {x.categoria} · {x.via === 'convite' ? 'convite' : 'aprovado em avaliação'}</li>)}
+        </ul>
+      )}
+      {propostas.length > 0 && <p className="nota">Outras chamadas: {propostas.map(p => `${p.para} (${anoDe(p.t)}, ${DESFECHO[p.desfecho!]})`).join('; ')}.</p>}
+    </div>
   );
 }
 

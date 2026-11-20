@@ -30,3 +30,7 @@
 .form26__nota { font-size: var(--type-caption); color: var(--text-secondary); }
 .form26__etapas { grid-column: 1 / -1; margin: 0; font-size: var(--type-caption); color: var(--text-muted); }
 .form26__acima { color: var(--accent); }
+
+/* VIDA 30 · §7: registro, apoio e trocas de clube na base */
+.form30 { display: grid; gap: 0.5rem; margin: 0.75rem 0; }
+.form30__porque { margin: 0; }

@@ -32,7 +32,7 @@ const TIPO_EM_PALAVRAS: Partial<Record<Oportunidade['tipo'], string>> = {
   vaga: 'Uma vaga', indicacao: 'Uma indicação', aprendiz: 'Aprendizagem', estagio: 'Estágio', temporario: 'Trabalho temporário', peneira: 'Peneira',
   seletiva: 'Seletiva', banda: 'Uma banda', grupo: 'Um grupo', clientela: 'Clientes', convite: 'Um convite', retomar: 'Voltar a fazer', bolsa: 'Uma bolsa',
   selecao_tecnico: 'Seleção do técnico', proposta: 'Uma proposta', edital_cultura: 'Edital de cultura', reinsercao: 'Recomeço', atualizacao: 'Atualização',
-  funcao: 'Uma função nova', iniciacao: 'Um projeto'
+  funcao: 'Uma função nova', iniciacao: 'Um projeto', base_transferencia: 'Outro clube na base'
 };
 
 /** O que aceitar muda, em palavras — lido do motor (o trabalho e o salário, a atividade, o conflito com o que já existe). */

@@ -23,6 +23,7 @@ import { PAIS_PADRAO } from '../mundo/registro';
 import { rendaRelativa, salarioMinimoDoPais } from '../mundo/economia';
 import { paisDaVida } from '../mundo/vida';
 import { lancar } from './extrato';
+import { mercadoDaBase30, pagarAnoDeBase30 } from './base30';
 import type { Rng } from '../rng';
 import { clamp, hashMisturado, rngDe } from '../rng';
 import type { AnoDeFormacao, CarreiraEsportiva, Dominio, Posicao, PropostaDeClube, Temporada, Vida } from '../tipos';
@@ -1323,13 +1324,11 @@ function anoNaBase(v: Vida, r: Rng, e: CarreiraEsportiva, presenca = 1): void {
   // VIDA 25: o ano da formação fica registrado (jogos, titularidade, números, nota, colocação, título, avaliação).
   const { a, leitura, podeContrato, subiu } = registrarAnoDeFormacao(v, e, h, presenca);
   // VIDA 28: a bolsa do ano de base (a partir dos 14; o valor do clube), paga mês a mês — somada aqui, no fim do ano.
-  const bolsa = bolsaDaBase(v, e);
-  if (bolsa > 0) {
-    v.financas.conta += bolsa * 12;
-    lancar(v, `Bolsa da base (${e.clube})`, 'renda', bolsa * 12);
-    a.bolsa = bolsa;
-    if (!temFato(v, `bolsa_base_${e.clube}`)) { marcarFato(v, `bolsa_base_${e.clube}`); escrever(v, { texto: `${cap(oClube(e.clube))} passou a pagar uma bolsa de ${dinheiro(bolsa)} por mês: não é salário de jogador, é ajuda para quem ainda está em formação.`, relevancia: 'cotidiano', tema: 'dinheiro', tom: 'bom' }); }
-  }
+  // VIDA 30 · §7: a bolsa (a mesma conta), a ajuda de custo, o contrato de formação e os benefícios (`base30`).
+  const rem = pagarAnoDeBase30(v, e);
+  if (rem.bolsa > 0) a.bolsa = rem.bolsa;
+  if (rem.ajuda > 0) a.ajuda = rem.ajuda;
+  if (rem.vinculo !== 'nenhum') a.vinculo = rem.vinculo;
   // VIDA 28: as etapas do ano (a categoria de cima, o elenco profissional) entram na História quando o ano não termina em dispensa.
   const contarEtapas = () => { for (const x of subiu) escrever(v, x); };
   // REWORK 10 · ROT-05: quem concilia a base com a faculdade ou o trabalho e perde treinos (a agenda diz quantos) é visto
@@ -1402,6 +1401,8 @@ function anoNaBase(v: Vida, r: Rng, e: CarreiraEsportiva, presenca = 1): void {
     return;
   }
   contarEtapas();
+  // VIDA 30 · §7: quem seguiu na base e foi bem pode ser chamado por outro clube (sorteio derivado).
+  mercadoDaBase30(v, e);
 }
 
 export function profissionalizar(v: Vida, r: Rng, nivel: number): void {

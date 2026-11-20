@@ -2294,7 +2294,9 @@ export type TipoOportunidade =
   | 'clientela' | 'convite' | 'retomar' | 'bolsa' | 'selecao_tecnico' | 'proposta'
   | 'edital_cultura' | 'reinsercao' | 'atualizacao' | 'funcao'
   /** Um professor chamou para a iniciação científica, a monitoria, um projeto (REWORK 3). */
-  | 'iniciacao';
+  | 'iniciacao'
+  /** VIDA 30 · §7: outro clube quer o atleta da base (convite direto ou avaliação) — `sistemas/base30`. */
+  | 'base_transferencia';
 
 /**
  * Uma porta que a vida abriu AGORA, por um motivo (a escola divulgou, um
@@ -2435,6 +2437,8 @@ export interface CarreiraEsportiva {
   perfil28?: import('./sistemas/arquetipos').PerfilGuardado;
   /** VIDA 28: o elenco do clube de agora e o mercado autônomo dele (`sistemas/elenco28`). Ausente: antes da primeira janela. */
   elenco28?: import('./sistemas/elenco28').Elenco28;
+  /** VIDA 30 · §7: o mercado da base (transferências, propostas, registro) — `sistemas/base30`. Ausente: nenhuma movimentação. */
+  base30?: import('./sistemas/base30').Base30;
 }
 
 /**
@@ -2478,6 +2482,9 @@ export interface AnoDeFormacao {
   bolsa?: number;
   /** VIDA 28: como o ano terminou para o clube ('dispensa': foi dispensado no fim desta temporada). Ausente: seguiu (ou anos antigos). */
   desfecho?: 'dispensa';
+  /** VIDA 30 · §7: a ajuda de custo mensal e o vínculo do ano ('bolsa', 'formacao'). Ausentes: anos antigos (ou sem). */
+  ajuda?: number;
+  vinculo?: 'bolsa' | 'formacao';
 }
 
 /** Uma proposta concreta de clube (ou de empréstimo): o que se viu é o que se assina. */

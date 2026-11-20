@@ -45,6 +45,7 @@ import { eDasForcas, aposentar, elegibilidade, encerrarEmprego, nomeOcupacao, po
 import { disponibilidadePerseguir, executarPerseguir, type AcaoPerseguirCmd } from './sistemas/perseguir';
 import { inscrever, leituraDoPreparo } from './sistemas/concurso';
 import { aceitarOportunidade, recusarOportunidade } from './sistemas/oportunidades';
+import { podeAceitarBase30 } from './sistemas/base30';
 import { oportunidadeCoerente } from './sistemas/mercados';
 import { disponibilidadeVisibilidade, usarVisibilidade, type UsoDaVisibilidade } from './sistemas/visibilidade';
 import { abrirNegocio, podeAbrirNegocio } from './sistemas/negocio';
@@ -538,6 +539,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
         const d = elegibilidade(v, ocupacao(o.ocupacaoId), 'oportunidade');
         if (!podeTentar(d)) return d;
       }
+      if (o.tipo === 'base_transferencia') { const ok = podeAceitarBase30(v, o.id); if (ok !== true) return bloqueio('incompativel', ok); }
       if (o.tipo === 'temporario' && v.trabalho.atual) return bloqueio('incompativel', 'Com um trabalho, o temporário de fim de ano não cabe.');
       if ((o.tipo === 'peneira' || o.tipo === 'seletiva') && i >= 14 && v.trabalho.atual?.carga === 'integral') return bloqueio('incompativel', 'Com trabalho integral, não dá para treinar numa base.');
       return PERMITIDO;
