@@ -19,7 +19,7 @@ import { SeusAtalhos, UltimosAvisos } from '../jogo/Atalhos';
 import { noticiasDoAno, type Noticia } from '../../motor/sistemas/mundoVivo';
 import { BaixarApp } from './BaixarApp';
 import { SeletorTema } from '../SeletorTema';
-import { Folha, useEstreito } from '../comum';
+import { Folha } from '../comum';
 import { habilitacaoDaVida } from '../../motor/sistemas/autoescola';
 import { LembreteCnh25 } from '../v25/cnh/LembreteCnh25';
 import { redeDeSaude } from '../../motor/sistemas/saude';
@@ -54,7 +54,7 @@ import { Fim } from './Fim';
 import { conquistasDoAno, fechamentoDoAno, rotinaDoAno } from '../../motor/sistemas/fechamento';
 import { emCasa, sinaisSociais } from '../leitura';
 import { doClube } from '../../motor/dados/clubes';
-import { AREAS, resolverDestino, type Aba, type Area, type DivisaoCaminhos, type Lugar, type ParteCaminhos, type SecaoTempo, type SecaoVida } from '../navegacao';
+import { AREAS_DA_BARRA, areaDaBarra, resolverDestino, type Aba, type Area, type DivisaoCaminhos, type Lugar, type ParteCaminhos, type SecaoTempo, type SecaoVida } from '../navegacao';
 
 export type { Aba };
 
@@ -101,7 +101,6 @@ export function Jogo({ c }: { c: ControleVida }) {
   const [parteHistoria, setParteHistoria] = useState<ParteHistoria>('agora');
   const [parteVoce, setParteVoce] = useState<ParteVoce>('resumo');
   const [partePessoas, setPartePessoas] = useState<PartePessoas>('circulo');
-  const estreito = useEstreito();
   const conteudo = useRef<HTMLElement>(null);
   const fecharMenu = useCallback(() => setMenu(false), []);
   const area = lugar.area;
@@ -171,9 +170,9 @@ export function Jogo({ c }: { c: ControleVida }) {
       <header className="cabecalho">
         <button type="button" className="marca" onClick={() => setMenu(true)} aria-label="Menu">VIDA</button>
         <nav className="abas" aria-label="Áreas">
-          {AREAS.map(a => (
-            <button key={a.id} type="button" className={`aba aba--${a.id}${area === a.id ? ' aba--ativa' : ''}`} aria-label={a.rotulo} aria-current={area === a.id ? 'page' : undefined} onClick={() => irArea(a.id)}>
-              <Icone d={a.icone} /><span>{a.rotulo}</span>
+          {AREAS_DA_BARRA.map(a => (
+            <button key={a.id} type="button" className={`aba aba--${a.id}${areaDaBarra(area) === a.id ? ' aba--ativa' : ''}`} aria-label={a.rotulo} aria-current={areaDaBarra(area) === a.id ? 'page' : undefined} onClick={() => irArea(a.id)}>
+              <Icone d={a.icone} /><span>{a.rotulo}</span>{a.id === 'linha' && area !== 'linha' && pedeAtencao(vida) ? <span className="aba__ponto" aria-label="algo pede atenção" /> : null}
             </button>
           ))}
         </nav>
@@ -195,10 +194,11 @@ export function Jogo({ c }: { c: ControleVida }) {
         <main className={`conteudo pagina pagina--${area}${area === 'vida' ? ` pagina--vida-${secao}` : ''}`} ref={conteudo}>
           {area === 'linha' && <Historia vida={vida} marca={c.marcaAno} parte={parteHistoria} irParte={setParteHistoria} irPara={ir} abrirPessoa={abrirPessoa}
             anoQuePassou={c.marcaAno > 0 ? <AnoQuePassou vida={vida} desde={c.marcaAno} abrirPessoa={abrirPessoa} /> : undefined}
-            pedeVoce={estreito ? <Agora vida={vida} area={area} irPara={ir} abrirPessoa={abrirPessoa} abrirConvite={setConvite} agir={c.agir} /> : undefined} />}
+            pedeVoce={<Agora vida={vida} area={area} irPara={ir} abrirPessoa={abrirPessoa} abrirConvite={setConvite} agir={c.agir} />} />}
+          {(area === 'voce' || area === 'tempo') && <TrocaDoEu area={area} ir={ir} />}
           {area === 'voce' && <Voce vida={vida} agir={c.agir} irPara={ir} abrirPessoa={abrirPessoa} parte={parteVoce} irParte={setParteVoce} />}
           {area === 'pessoas' && <Pessoas vida={vida} agir={c.agir} aberta={pessoaAberta} abrir={focar} parte={partePessoas} irParte={setPartePessoas} />}
-          {area === 'caminhos' && <PaginaCaminhos vida={vida} agir={c.agir} irPara={ir} abrirPessoa={abrirPessoa} divisao={divisao} irDivisao={(d, p) => irLugar({ area: 'caminhos', divisao: d, parte: p })} parte={parte} irParte={p => irLugar({ area: 'caminhos', divisao, parte: p })} explorar={explorar} aoExplorar={setExplorar} />}
+          {area === 'caminhos' && <PaginaCaminhos vida={vida} agir={c.agir} irPara={ir} abrirPessoa={abrirPessoa} divisao={divisao} irDivisao={(d, p) => irLugar({ area: 'caminhos', divisao: d, parte: p })} parte={parte} irParte={p => irLugar({ area: 'caminhos', divisao, parte: p })} explorar={explorar} aoExplorar={setExplorar} abrirConvite={setConvite} />}
           {area === 'tempo' && <Tempo vida={vida} agir={c.agir} irPara={ir} aba={abaTempo} irAba={a => ir(a)} abrirPessoa={abrirPessoa} />}
           {area === 'vida' && <VidaConcreta vida={vida} agir={c.agir} secao={secao} irSecao={s => ir(s)} irPara={ir} abrirPessoa={abrirPessoa} />}
           {/* FIX pós-playtest humano: "Viver mais um ano" é "terminei o que queria fazer neste ano" — mora no FIM da
@@ -211,15 +211,12 @@ export function Jogo({ c }: { c: ControleVida }) {
           </div>
         </main>
 
-        <aside className="agora" aria-label="Agora">
-          <Agora vida={vida} area={area} irPara={ir} abrirPessoa={abrirPessoa} abrirConvite={setConvite} agir={c.agir} />
-        </aside>
       </div>
 
-      <nav className={`barra barra--${AREAS.length}`} aria-label="Áreas">
-        {AREAS.map(a => (
-          <button key={a.id} type="button" className={`barra__item barra__item--${a.id}${area === a.id ? ' barra__item--ativo' : ''}`} aria-current={area === a.id ? 'page' : undefined} onClick={() => irArea(a.id)}>
-            <Icone d={a.icone} /><span>{a.curto}</span>
+      <nav className={`barra barra--${AREAS_DA_BARRA.length}`} aria-label="Áreas">
+        {AREAS_DA_BARRA.map(a => (
+          <button key={a.id} type="button" className={`barra__item barra__item--${a.id}${areaDaBarra(area) === a.id ? ' barra__item--ativo' : ''}`} aria-current={areaDaBarra(area) === a.id ? 'page' : undefined} onClick={() => irArea(a.id)}>
+            <Icone d={a.icone} /><span>{a.curto}</span>{a.id === 'linha' && area !== 'linha' && pedeAtencao(vida) ? <span className="aba__ponto" aria-hidden /> : null}
           </button>
         ))}
       </nav>
@@ -465,3 +462,21 @@ import { agendaDaSemana } from '../../motor/sistemas/agenda';
 /** Um conflito entre compromissos obrigatórios (o trabalho em cima da aula), não uma atividade que perde uma vez. */
 const conflitoObrigatorio = (v: Vida) => !!(v.educacao.basica || v.educacao.matricula) && !!v.trabalho.atual && agendaDaSemana(v).conflitos.some(c => c.tipo === 'sobreposicao' && (c.perde === 'escola' || c.perde === 'curso') && (c.ocupa ?? '').startsWith('trabalho'));
 export { ImportarVida };
+
+/**
+ * VIDA 31 · EU = quem você é + como organiza o tempo. Minha Semana deixou de ser uma área da barra: mora dentro de Eu,
+ * com esta troca no alto (o id 'tempo' e todos os destinos antigos continuam valendo).
+ */
+function TrocaDoEu({ area, ir }: { area: Area; ir: (d: Aba) => void }) {
+  return (
+    <div className="troca-eu" role="group" aria-label="Eu">
+      <button type="button" className={`troca-eu__item${area === 'voce' ? ' troca-eu__item--ativo' : ''}`} aria-pressed={area === 'voce'} onClick={() => ir('voce')}>Perfil</button>
+      <button type="button" className={`troca-eu__item${area === 'tempo' ? ' troca-eu__item--ativo' : ''}`} aria-pressed={area === 'tempo'} onClick={() => ir('tempo')}>Minha Semana</button>
+    </div>
+  );
+}
+
+/** Há algo no Hoje pedindo você (uma porta com prazo, um conflito na semana, alguém precisando)? O ponto na barra. */
+function pedeAtencao(v: Vida): boolean {
+  return oportunidadesAbertas(v).length > 0 || conflitoObrigatorio(v) || sinaisSociais(v, 12).some(x => x.escopo === 'global');
+}

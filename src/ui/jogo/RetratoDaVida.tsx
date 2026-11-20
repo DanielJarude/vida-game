@@ -71,7 +71,7 @@ export function RetratoDaVida({ vida, irPara, abrirPessoa }: { vida: Vida; irPar
         <RetratoDoJogador17 vida={vida} visual={vida.eu.visual} genero={vida.eu.genero} idade={i} semente={vida.eu.semente ?? 'eu'} tamanho={72} rotulo={`${vida.eu.nome} aos ${i}`} expressao={expressaoDe(vida)} />
       </button>
       <div className="hoje__texto">
-        <p className="folio__kicker"><span className="folio__area">História</span> · {i} {i === 1 ? 'ano' : 'anos'} · {faseDaVida(i)}</p>
+        <p className="folio__kicker"><span className="folio__area">Hoje</span> · {i} {i === 1 ? 'ano' : 'anos'} · {faseDaVida(i)}</p>
         <h1 className="hoje__nome">{vida.eu.nome} <span>{vida.eu.sobrenome}</span></h1>
         <p className="hoje__frase">{momentoAtual(vida)}</p>
       </div>

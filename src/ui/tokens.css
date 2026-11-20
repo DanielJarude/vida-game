@@ -31,36 +31,36 @@
   /* REWORK 8: as fachadas da rua (cores do material, não da paleta) — no papel escuro, a rua à noite, um pouco mais baixa. */
   --p-filtro-rua: none;
   /* ======================================== PALETA · MEMÓRIA CLARA (a base) */
-  --p-papel: #f2eee5;          /* a página (marfim) */
-  --p-papel-alto: #fbf9f4;     /* o que é uma coisa (cartão, ficha) */
-  --p-papel-topo: #fffdf9;     /* a carta da decisão, o modal */
-  --p-tinta: #1d2126;          /* grafite: o texto */
-  --p-tinta-2: #434a53;        /* texto secundário */
-  --p-tinta-3: #5c636c;        /* texto auxiliar (≥ 4,5:1 no marfim) */
-  --p-moldura: #22262c;        /* a moldura do jogo: abas, barra, avançar */
-  --p-moldura-2: #2d323a;
-  --p-moldura-tinta: #f2eee5;
-  --p-moldura-tinta-2: #a9b0b9;
-  --p-acao: #bf4f35;           /* coral envelhecido: agir, a marca */
-  --p-acao-forte: #a8432c;     /* o coral como texto no papel */
+  --p-papel: #f2f4f7;          /* a página (marfim) */
+  --p-papel-alto: #ffffff;     /* o que é uma coisa (cartão, ficha) */
+  --p-papel-topo: #ffffff;     /* a carta da decisão, o modal */
+  --p-tinta: #111827;          /* grafite: o texto */
+  --p-tinta-2: #374151;        /* texto secundário */
+  --p-tinta-3: #5a6372;        /* texto auxiliar (≥ 4,5:1 no marfim) */
+  --p-moldura: #ffffff;        /* a moldura do jogo: abas, barra, avançar */
+  --p-moldura-2: #eef1f5;
+  --p-moldura-tinta: #111827;
+  --p-moldura-tinta-2: #5a6372;
+  --p-acao: #c43f22;           /* coral envelhecido: agir, a marca */
+  --p-acao-forte: #a83419;     /* o coral como texto no papel */
   --p-acao-sobre: #ffffff;
-  --p-bom: #56662a;            /* oliva */
-  --p-ruim: #a12f3c;           /* vinho (≠ coral: mais escuro, mais frio) */
-  --p-alerta: #8f5f0c;         /* ocre */
-  --p-info: #4a6478;           /* cinza-azulado */
-  --p-neutro: #62666b;         /* o cinza do clima difícil */
+  --p-bom: #2b7330;            /* oliva */
+  --p-ruim: #b42335;           /* vinho (≠ coral: mais escuro, mais frio) */
+  --p-alerta: #8d5a00;         /* ocre */
+  --p-info: #2b5d8a;           /* cinza-azulado */
+  --p-neutro: #646b75;         /* o cinza do clima difícil */
   /* Os tons das áreas (mesma luminosidade; todos legíveis como texto no papel). */
-  --p-linha: #a8432c;          /* Linha da Vida: o coral */
-  --p-voce: #7a4b86;           /* Você: ameixa */
-  --p-pessoas: #a63d5a;        /* Pessoas: rosa antigo */
-  --p-formacao: #2f6390;       /* Formação: azul de caderno */
-  --p-trabalho: #85600f;       /* Trabalho: mostarda */
-  --p-tempo: #1f6f64;          /* Tempo livre: verde-mar */
-  --p-vida: #56662a;           /* Vida (casa, dinheiro, compras): oliva */
-  --p-cidade: #4a6478;         /* Cidade: cinza-azulado */
-  --p-saude: #3a7438;          /* Saúde: folha */
+  --p-linha: #c43f22;          /* Linha da Vida: o coral */
+  --p-voce: #7c3aed;           /* Você: ameixa */
+  --p-pessoas: #c0266d;        /* Pessoas: rosa antigo */
+  --p-formacao: #1d5fb8;       /* Formação: azul de caderno */
+  --p-trabalho: #9a5a00;       /* Trabalho: mostarda */
+  --p-tempo: #0f766e;          /* Tempo livre: verde-mar */
+  --p-vida: #3f7a1c;           /* Vida (casa, dinheiro, compras): oliva */
+  --p-cidade: #3b5b80;         /* Cidade: cinza-azulado */
+  --p-saude: #2e7d32;          /* Saúde: folha */
   --p-sobre-tom: #ffffff;      /* o texto sobre um tom preenchido (botão principal, selo, chip ativo) */
-  --p-sombra: #1d2126;         /* a cor das sombras */
+  --p-sombra: #0b1220;         /* a cor das sombras */
   --p-acao-pastilha: rgb(0 0 0 / 0.2); /* a pastilha da idade dentro do botão de avançar */
   --p-esquema: light;
 
@@ -301,35 +301,35 @@
    ========================================================================== */
 :root[data-tema='escuro'],
 [data-amostra='escuro'] {
-  --p-filtro-rua: brightness(0.82) saturate(0.9);
-  --p-papel: #1a1d21;
-  --p-papel-alto: #22262b;
-  --p-papel-topo: #292e34;
-  --p-tinta: #ebe5d9;
-  --p-tinta-2: #c6bfb3;
-  --p-tinta-3: #a39c91;
-  --p-moldura: #131518;
-  --p-moldura-2: #1d2024;
-  --p-moldura-tinta: #ebe5d9;
-  --p-moldura-tinta-2: #a2a9b2;
-  --p-acao: #e0765a;
-  --p-acao-forte: #ef8d70;
-  --p-acao-sobre: #1b1210;
-  --p-bom: #acbd72;
-  --p-ruim: #ec8d98;
-  --p-alerta: #ddb066;
-  --p-info: #9fb7ca;
-  --p-neutro: #9a9ea4;
-  --p-linha: #ef8d70;
-  --p-voce: #c9a5d6;
-  --p-pessoas: #e997ae;
-  --p-formacao: #92b9e2;
-  --p-trabalho: #d9b463;
-  --p-tempo: #78c4b6;
-  --p-vida: #acbd72;
-  --p-cidade: #9fb7ca;
-  --p-saude: #92c98c;
-  --p-sobre-tom: #15171a;
+  --p-filtro-rua: brightness(0.8) saturate(0.9);
+  --p-papel: #0e1116;
+  --p-papel-alto: #161a21;
+  --p-papel-topo: #1d222b;
+  --p-tinta: #eef1f5;
+  --p-tinta-2: #c4cad3;
+  --p-tinta-3: #98a0ab;
+  --p-moldura: #12161c;
+  --p-moldura-2: #1c212a;
+  --p-moldura-tinta: #eef1f5;
+  --p-moldura-tinta-2: #a3abb6;
+  --p-acao: #ff7a59;
+  --p-acao-forte: #ff8e72;
+  --p-acao-sobre: #1a0f0b;
+  --p-bom: #8fd18a;
+  --p-ruim: #ff8a9a;
+  --p-alerta: #f0b85a;
+  --p-info: #8cb8e6;
+  --p-neutro: #9aa1ab;
+  --p-linha: #ff8e72;
+  --p-voce: #c4a1ff;
+  --p-pessoas: #ff8fbf;
+  --p-formacao: #8ab8ff;
+  --p-trabalho: #f0bd5e;
+  --p-tempo: #5fd1c1;
+  --p-vida: #a6d36a;
+  --p-cidade: #9cb6d6;
+  --p-saude: #8fd18a;
+  --p-sobre-tom: #0e1116;
   --p-sombra: #000000;
   --p-acao-pastilha: rgb(255 255 255 / 0.24);
   --p-esquema: dark;
@@ -387,7 +387,7 @@
    ========================================================================== */
 :root[data-paleta='atlantico'],
 [data-amostra='atlantico'] {
-  --p-filtro-rua: brightness(0.82) saturate(0.9);
+  --p-filtro-rua: brightness(0.8) saturate(0.9);
   --p-papel: #101923;
   --p-papel-alto: #17212c;
   --p-papel-topo: #1e2935;

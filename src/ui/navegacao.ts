@@ -99,7 +99,7 @@ export const SECOES_TEMPO: { id: SecaoTempo; rotulo: string; oque: string }[] = 
 ];
 
 export const DIVISOES_CAMINHOS: { id: DivisaoCaminhos; rotulo: string; oque: string }[] = [
-  { id: 'inicio', rotulo: 'Início', oque: 'A situação de agora, o próximo passo e as entradas de cada caminho' },
+  { id: 'inicio', rotulo: 'Minha trajetória', oque: 'Onde você está, o próximo degrau, os próximos passos, as portas abertas e os outros caminhos' },
   { id: 'estudos', rotulo: 'Estudos', oque: 'Escola, boletim, cursos, técnico, faculdade, qualificações, histórico acadêmico, preparação para provas' },
   { id: 'trabalho', rotulo: 'Trabalho', oque: 'O emprego de agora, vagas, candidaturas, promoções, experiência, o próprio negócio, histórico profissional' },
   { id: 'publica', rotulo: 'Vida pública', oque: 'Concursos, política, serviço público, farda' },
@@ -136,14 +136,21 @@ export const SECOES_CAMINHOS: { id: ParteCaminhos; rotulo: string; oque: string 
 ];
 
 export const AREAS: { id: Area; rotulo: string; curto: string; icone: string }[] = [
-  { id: 'linha', rotulo: 'História', curto: 'História', icone: 'M5 4h10a4 4 0 0 1 4 4v12H9a4 4 0 0 1-4-4V4zm0 12a4 4 0 0 0 4 4' },
-  { id: 'voce', rotulo: 'Você', curto: 'Você', icone: 'M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9zm-7.5 9a7.5 7.5 0 0 1 15 0' },
+  // VIDA 31: a antiga História virou HOJE — o centro do jogo (o ano, o que pede atenção, o que passou; a biografia fica dentro).
+  { id: 'linha', rotulo: 'Hoje', curto: 'Hoje', icone: 'M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z' },
+  // VIDA 31: Você virou EU — e Minha Semana mora dentro dele (a barra mostra cinco lugares; o id 'tempo' continua).
+  { id: 'voce', rotulo: 'Eu', curto: 'Eu', icone: 'M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9zm-7.5 9a7.5 7.5 0 0 1 15 0' },
   { id: 'pessoas', rotulo: 'Pessoas', curto: 'Pessoas', icone: 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm-7 10a7 7 0 0 1 14 0M17 3.5a4 4 0 0 1 0 7.5M22 21a7 7 0 0 0-4-6.3' },
   // Caminhos: a estrada que se bifurca (a formação e o trabalho são partes de uma trajetória só).
   { id: 'caminhos', rotulo: 'Caminhos', curto: 'Caminhos', icone: 'M12 21v-7M12 14l-6-6M12 14l6-6M6 8V4M18 8V4M4 6l2-2 2 2M16 6l2-2 2 2' },
   { id: 'tempo', rotulo: 'Minha Semana', curto: 'Semana', icone: 'M4 6.5h16V20H4zM4 10.5h16M8.5 4v4M15.5 4v4M8 14h3M13 14h3M8 17h3' },
   { id: 'vida', rotulo: 'Vida', curto: 'Vida', icone: 'M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-9z' }
 ];
+
+/** VIDA 31 · o que a barra mostra: Hoje, Eu (com a Semana dentro), Pessoas, Caminhos, Vida. */
+export const AREAS_DA_BARRA = AREAS.filter(a => a.id !== 'tempo');
+/** A entrada da barra acesa para cada área (Minha Semana acende Eu). */
+export const areaDaBarra = (a: Area): Area => (a === 'tempo' ? 'voce' : a);
 
 export const SECOES_VIDA: { id: SecaoVida; rotulo: string; oque: string }[] = [
   { id: 'casa', rotulo: 'Casa', oque: 'Onde e com quem você mora; sair de casa, voltar' },

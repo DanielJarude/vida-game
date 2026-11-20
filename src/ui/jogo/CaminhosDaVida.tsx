@@ -42,6 +42,8 @@ import { lazy as lazy16, Suspense as Suspense16 } from 'react';
 const Guia26 = lazy16(() => import('../v26/guia/Guia26'));
 const PosCarreira26 = lazy16(() => import('../v26/guia/Guia26').then(m => ({ default: m.PosCarreira26 })));
 const Oficio16 = lazy16(() => import('../v16/oficios/Oficio16'));
+// VIDA 31: a Minha Trajetória (a página inicial de Caminhos) vem num pacote à parte.
+const Trajetoria31 = lazy16(() => import('../v31/Trajetoria31'));
 import { doClube } from '../../motor/dados/clubes';
 import { nomeOcupacao } from '../../motor/sistemas/trabalho';
 import { modoDoTrabalho } from '../../motor/sistemas/profissao';
@@ -50,7 +52,6 @@ import { negocioAberto } from '../../motor/sistemas/negocio';
 import { nomeDaMatricula, rotuloSerie } from '../../motor/sistemas/escola';
 import { instituicaoAtual } from '../../motor/sistemas/formacao';
 import { navegarAbas } from '../comum';
-import { recenteDe, TEMAS_CAMINHOS } from '../area';
 import { DIVISOES_CAMINHOS, PARTES_DA_DIVISAO, type Aba, type DivisaoCaminhos, type ParteCaminhos } from '../navegacao';
 import { Estudos } from './Estudos';
 import { Trabalho, TrabalhoAindaNao } from './Trabalho';
@@ -232,7 +233,7 @@ export function proximoNosCaminhos(v: Vida): { texto: string; divisao: Exclude<D
   return undefined;
 }
 
-const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
+export const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 
 const VAZIO: Record<ParteCaminhos, string> = {
   agora: 'Nada ocupa a vida agora.',
@@ -246,14 +247,17 @@ interface Props {
   divisao?: DivisaoCaminhos; irDivisao?: (d: DivisaoCaminhos, p?: ParteCaminhos) => void;
   parte: ParteCaminhos; irParte: (p: ParteCaminhos) => void;
   explorar?: string; aoExplorar?: (a: string | undefined) => void;
+  /** VIDA 31: as portas abertas da trajetória abrem o convite por cima (como no Hoje). */
+  abrirConvite?: (id: string) => void;
 }
 
-export function PaginaCaminhos({ vida, agir, irPara, abrirPessoa, divisao = 'inicio', irDivisao = () => {}, parte, irParte, explorar, aoExplorar }: Props) {
+export function PaginaCaminhos({ vida, agir, irPara, abrirPessoa, divisao = 'inicio', irDivisao = () => {}, parte, irParte, explorar, aoExplorar, abrirConvite }: Props) {
   const i = idade(vida);
   const rotulo = DIVISOES_CAMINHOS.find(x => x.id === divisao)!.rotulo;
   return (
     <div className={`pagina-caminhos pagina-caminhos--${divisao}`}>
-      <nav className="divisoes-caminhos" aria-label="Divisões de Caminhos">
+      {divisao !== 'inicio' && <button type="button" className="traj31__voltar" onClick={() => irDivisao('inicio')}>← Minha trajetória</button>}
+      <nav className={`divisoes-caminhos${divisao === 'inicio' ? ' divisoes-caminhos--inicio' : ''}`} aria-label="Divisões de Caminhos">
         <ul className="divisoes-caminhos__lista">
           {DIVISOES_CAMINHOS.filter(x => x.id !== 'submundo' || submundoVisivel(vida) || divisao === 'submundo').map(x => (
             <li key={x.id}>
@@ -263,7 +267,7 @@ export function PaginaCaminhos({ vida, agir, irPara, abrirPessoa, divisao = 'ini
         </ul>
       </nav>
       {divisao === 'inicio'
-        ? <InicioCaminhos vida={vida} irDivisao={irDivisao} irPara={irPara} />
+        ? <Suspense16 fallback={null}><Trajetoria31 vida={vida} irDivisao={irDivisao} irPara={irPara} abrirConvite={abrirConvite} /></Suspense16>
         : (
           <header className="folio folio--caminhos folio--divisao">
             <p className="folio__kicker"><span className="folio__area">Caminhos</span> · {rotulo.toLowerCase()}</p>
@@ -309,63 +313,6 @@ export function PaginaCaminhos({ vida, agir, irPara, abrirPessoa, divisao = 'ini
       {divisao === 'guia' && <div className="caminhos__painel caminhos__painel--guia caminhos__painel--ativo" data-divisao="guia"><Suspense16 fallback={null}><Guia26 vida={vida} agir={agir} irPara={irPara} /></Suspense16></div>}
       {divisao === 'submundo' && <div className="caminhos__painel caminhos__painel--submundo caminhos__painel--ativo" data-divisao="submundo"><Submundo vida={vida} agir={agir} irPara={irPara} /></div>}
     </div>
-  );
-}
-
-/**
- * A PÁGINA INICIAL de Caminhos: o que ocupa a vida agora (cada coisa leva à sua divisão), o próximo passo que mais
- * importa e as quatro entradas, na ordem da fase da vida. Não lista as oportunidades do mundo: cada divisão as tem.
- */
-function InicioCaminhos({ vida, irDivisao, irPara }: { vida: Vida; irDivisao: (d: DivisaoCaminhos, p?: ParteCaminhos) => void; irPara: (a: Aba) => void }) {
-  const i = idade(vida);
-  const agora = situacaoAtual(vida);
-  const prox = proximoNosCaminhos(vida);
-  const ordem = ordemDasDivisoes(vida);
-  return (
-    <>
-      <header className="folio folio--caminhos">
-        <p className="folio__kicker"><span className="folio__area">Caminhos</span> · início</p>
-        <h1 className="folio__titulo">{faseDosCaminhos(vida)}</h1>
-        <ul className="situacao-atual" aria-label="O que ocupa a sua vida agora">
-          {agora.map(x => {
-            const d = divisaoDaOcupacao(x, vida);
-            return (
-              <li key={x.id} className={`situacao-atual__item situacao-atual__item--${x.lado}`} data-ocupacao={x.id}>
-                <button type="button" className="situacao-atual__ir" onClick={() => irDivisao(d, 'agora')} disabled={x.id === 'nada'}>
-                  <span className="situacao-atual__lado">{DIVISOES_CAMINHOS.find(y => y.id === d)!.rotulo}</span>
-                  <span className="situacao-atual__rotulo">{cap(x.rotulo)}</span>
-                  {x.detalhe && <span className="situacao-atual__detalhe">{x.detalhe}</span>}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-        {i >= 6 && <ResumoDaRotina vida={vida} irPara={() => irPara('semana')} />}
-        {/* REWORK 10 · UX-13: o que aconteceu há pouco nos estudos e no trabalho (a mesma leitura da cabeça das outras áreas). */}
-        {(() => { const r = recenteDe(vida, TEMAS_CAMINHOS); return r ? <p className="cabeca-area__recente caminhos__recente"><span className="cabeca-area__rotulo">Há pouco</span><span className="cabeca-area__quando">{r.quando}</span> {r.texto}</p> : null; })()}
-      </header>
-      {prox && (
-        <section className="proximo-caminho" aria-labelledby="titulo-proximo-caminho">
-          <h2 id="titulo-proximo-caminho" className="proximo-caminho__rotulo">O próximo passo</h2>
-          <p className="proximo-caminho__texto">{prox.texto}</p>
-          <button type="button" className="link proximo-caminho__ir" onClick={() => irDivisao(prox.divisao, prox.parte)}>Ver em {DIVISOES_CAMINHOS.find(y => y.id === prox.divisao)!.rotulo} →</button>
-        </section>
-      )}
-      <ul className="entradas-caminhos" aria-label="Os caminhos">
-        {ordem.map(d => {
-          const x = DIVISOES_CAMINHOS.find(y => y.id === d)!;
-          return (
-            <li key={d} className={`entrada-caminho entrada-caminho--${d}`}>
-              <button type="button" className="entrada-caminho__botao" onClick={() => irDivisao(d)}>
-                <span className="entrada-caminho__nome">{x.rotulo}</span>
-                <span className="entrada-caminho__estado">{estadoDaDivisao(vida, d)}</span>
-                <span className="entrada-caminho__oque">{x.oque}</span>
-              </button>
-            </li>
-          );
-        })}
-      </ul>
-    </>
   );
 }
 

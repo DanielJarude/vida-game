@@ -19,6 +19,7 @@ import { RetratoDaVida } from './RetratoDaVida';
 import { LinhaDaVida } from './LinhaDaVida';
 import { sobDemanda } from '../util/sobDemanda';
 import { FitaDaVida } from '../v17/areas/Capas17';
+import { StatusDaVida31 } from '../v31/StatusDaVida31';
 
 /** VIDA 12.5: a Retrospectiva (o álbum e a linha do tempo) vem sob demanda. */
 const Retrospectiva = sobDemanda(() => import('./Retrospectiva').then(m => m.Retrospectiva));
@@ -41,27 +42,34 @@ export function Historia({ vida, marca, parte, irParte, irPara, abrirPessoa, ano
   pedeVoce?: ReactNode;
 }) {
   const i = idade(vida);
+  const subnav = <Subnav rotulo="Partes da História" prefixo="historia" itens={PARTES_HISTORIA} atual={parte} aoMudar={irParte} classe="subnav--historia" />;
+  // VIDA 31 · O HOJE: o alto (quem, onde, as barras da vida), o que pede você ao lado (no celular, logo abaixo do alto) e,
+  // embaixo, o ano que passou e os últimos anos. A Biografia e a Retrospectiva continuam como partes.
+  if (parte === 'agora') return (
+    <div className="historia historia--agora hoje31">
+      <div className="hoje31__topo">
+        <RetratoDaVida vida={vida} irPara={irPara} abrirPessoa={abrirPessoa} />
+        <StatusDaVida31 vida={vida} irPara={irPara} />
+        <FitaDaVida vida={vida} />
+        {subnav}
+      </div>
+      {pedeVoce && <section className="pede-voce hoje31__lado" aria-label="O que pede você"><h2 className="secao__titulo">O que pede você</h2>{pedeVoce}</section>}
+      <div role="tabpanel" id="historia-painel" aria-labelledby={`historia-aba-${parte}`} className="hoje31__corpo">
+        {anoQuePassou}
+        <h2 className="secao__titulo historia__recente">Os últimos anos</h2>
+        <LinhaDaVida vida={vida} marca={marca} abrirPessoa={abrirPessoa} compacta={{ anos: ANOS_NO_AGORA, aoVerTudo: () => irParte('biografia') }} />
+      </div>
+    </div>
+  );
   return (
     <div className={`historia historia--${parte}`}>
-      {parte === 'agora' && <RetratoDaVida vida={vida} irPara={irPara} abrirPessoa={abrirPessoa} />}
-      {/* VIDA 17: a fita da vida — as fases e os marcos de verdade, do nascimento até hoje. */}
       {parte !== 'biografia' && <FitaDaVida vida={vida} />}
-      {parte !== 'agora' && (
-        <header className="folio">
-          <p className="folio__kicker"><span className="folio__area">História</span> · {parte === 'biografia' ? 'Biografia' : 'Retrospectiva'} · {i} {i === 1 ? 'ano' : 'anos'} · {faseDaVida(i)}</p>
-          <h1 className="folio__titulo">{vida.eu.nome} {vida.eu.sobrenome}</h1>
-        </header>
-      )}
-      <Subnav rotulo="Partes da História" prefixo="historia" itens={PARTES_HISTORIA} atual={parte} aoMudar={irParte} classe="subnav--historia" />
+      <header className="folio">
+        <p className="folio__kicker"><span className="folio__area">Hoje</span> · {parte === 'biografia' ? 'Biografia' : 'Retrospectiva'} · {i} {i === 1 ? 'ano' : 'anos'} · {faseDaVida(i)}</p>
+        <h1 className="folio__titulo">{vida.eu.nome} {vida.eu.sobrenome}</h1>
+      </header>
+      {subnav}
       <div role="tabpanel" id="historia-painel" aria-labelledby={`historia-aba-${parte}`}>
-        {parte === 'agora' && (
-          <>
-            {anoQuePassou}
-            {pedeVoce && <section className="pede-voce" aria-label="O que pede você"><h2 className="secao__titulo">O que pede você</h2>{pedeVoce}</section>}
-            <h2 className="secao__titulo historia__recente">Os últimos anos</h2>
-            <LinhaDaVida vida={vida} marca={marca} abrirPessoa={abrirPessoa} compacta={{ anos: ANOS_NO_AGORA, aoVerTudo: () => irParte('biografia') }} />
-          </>
-        )}
         {parte === 'biografia' && <LinhaDaVida vida={vida} marca={marca} abrirPessoa={abrirPessoa} />}
         {parte === 'retrospectiva' && <Retrospectiva vida={vida} abrirPessoa={abrirPessoa} />}
       </div>

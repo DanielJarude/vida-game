@@ -195,3 +195,123 @@
 @media (min-width: 720px) {
   #root .semana17 { display: none; }
 }
+
+/* ==========================================================================
+   VIDA 31 · SEGUNDA PARTE — O APP MODERNO
+   A paleta nova mora em tokens.css (Memória Clara e Escura viraram o "app": cinza-claro, cartões brancos, cores
+   vivas por área). Aqui: a letra única (sem serifa), o papel sem textura, o casco novo (Hoje, Eu, a barra de cinco
+   lugares, sem a coluna do lado), o painel do Hoje e a Minha Trajetória.
+   ========================================================================== */
+:root { --font-serif: var(--font-sans); --font-display: var(--font-sans); }
+/* O papel dos documentos (a ficha, o boletim, o prontuário) sem grão, pauta nem margem de caderno: o cartão do app. */
+html:root, html:root[data-tema], html:root[data-paleta] {
+  --mat-papel: var(--superficie); --mat-grao: none; --mat-pauta: transparent; --mat-margem: transparent;
+  --mat-borda: var(--fio); --mat-sombra: var(--v31-sombra);
+}
+#root h1, #root h2, #root h3, #root .folio__titulo, #root .cabeca-area__titulo, #root .secao__titulo { font-weight: 700; letter-spacing: -0.02em; }
+#root .folio__titulo, #root .cabeca-area__titulo, #root .hoje__nome, #root .lar__frase { font-size: clamp(1.45rem, 1.15rem + 1.1vw, 2rem); line-height: 1.15; }
+
+/* ---------------------------------------------------------------- O casco */
+#root .cabecalho { box-shadow: 0 1px 0 var(--fio); }
+#root .marca { letter-spacing: 0.24em; font-weight: 800; }
+#root .aba { font-size: var(--type-body); }
+#root .aba--ativa, #root .aba--ativa:hover { color: var(--tom-aba, var(--tinta)); background: color-mix(in oklab, var(--tom-aba, var(--tinta)) 11%, transparent); box-shadow: none; font-weight: var(--weight-semibold); }
+#root .aba--ativa .icone { color: inherit; }
+#root .aba--linha, #root .barra__item--linha { --tom-aba: var(--p-linha); }
+#root .aba__ponto { width: 7px; height: 7px; border-radius: 50%; background: var(--acao); margin-left: 2px; align-self: flex-start; margin-top: 10px; }
+#root .barra { box-shadow: 0 -1px 0 var(--fio); }
+#root .barra__item { position: relative; }
+#root .barra__item .aba__ponto { position: absolute; top: 6px; right: calc(50% - 16px); margin: 0; }
+#root .barra__item--ativo { color: var(--tom-aba, var(--tinta)); }
+/* Sem a coluna do lado: o que ela dizia mora no Hoje (e o ponto na barra avisa quando algo pede você). */
+#root .palco { grid-template-columns: minmax(0, 1fr); max-width: 1120px; }
+#root .conteudo { max-width: none; }
+#root .avancar__botao { border-radius: var(--radius-pill); }
+
+/* Eu: Perfil e Minha Semana, a troca no alto. */
+#root .troca-eu { display: flex; gap: 4px; padding: 4px; margin: 0 0 var(--space-5); width: max-content; max-width: 100%; border-radius: var(--radius-pill); background: var(--veu-2); }
+#root .troca-eu__item { min-height: 40px; padding: 0 var(--space-5); border-radius: var(--radius-pill); font-weight: var(--weight-semibold); color: var(--tinta-2); }
+#root .troca-eu__item:hover { color: var(--tinta); }
+#root .troca-eu__item--ativo { background: var(--superficie); color: var(--tinta); box-shadow: 0 1px 3px var(--sombra-cor); }
+#root .troca-eu__item:focus-visible { outline: 2px solid var(--acao); outline-offset: 2px; }
+
+/* ---------------------------------------------------------------- O Hoje */
+#root .hoje31 { display: grid; gap: var(--space-5); grid-template-columns: minmax(0, 1fr); grid-template-areas: 'topo' 'lado' 'corpo'; }
+#root .hoje31__topo { grid-area: topo; display: grid; gap: var(--space-4); min-width: 0; }
+#root .hoje31__lado { grid-area: lado; min-width: 0; align-self: start; padding: var(--space-4); border-radius: var(--v31-raio); background: var(--v31-cartao); box-shadow: var(--v31-contorno), var(--v31-sombra); }
+#root .hoje31__lado > .secao__titulo { font-size: var(--type-subheading); margin: 0 0 var(--space-3); }
+#root .hoje31__corpo { grid-area: corpo; min-width: 0; }
+@media (min-width: 1000px) {
+  #root .hoje31 { grid-template-columns: minmax(0, 1fr) 320px; grid-template-areas: 'topo lado' 'corpo lado'; column-gap: var(--space-7); }
+  #root .hoje31__lado { position: sticky; top: calc(var(--header-height) + var(--space-5)); max-height: calc(100dvh - var(--header-height) - var(--space-8)); overflow-y: auto; }
+}
+#root .hoje31 .hoje--retrato { margin: 0; padding: var(--space-5); border-radius: var(--v31-raio); background: var(--v31-cartao); box-shadow: var(--v31-contorno), var(--v31-sombra); border: 0; }
+#root .hoje31 .retrato-vida { background: none; box-shadow: none; border: 0; }
+#root .hoje31 .subnav--historia { margin: 0; }
+
+/* As barras da vida. */
+#root .status31 { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--space-2); }
+#root .status31__item { display: grid; gap: 8px; width: 100%; padding: var(--space-3) var(--space-4); text-align: left; border-radius: var(--v31-raio-ctl); background: var(--v31-cartao); box-shadow: var(--v31-contorno); }
+#root .status31__item:hover { box-shadow: inset 0 0 0 1px var(--fio-forte), var(--v31-sombra); }
+#root .status31__item:focus-visible { outline: 2px solid var(--acao); outline-offset: 2px; }
+#root .status31__topo { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-2); }
+#root .status31__rotulo { font-size: var(--type-caption); color: var(--tinta-2); font-weight: var(--weight-medium); }
+#root .status31__valor { font-size: var(--type-body); font-variant-numeric: tabular-nums; color: var(--tinta); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#root .status31__trilho { display: block; height: 8px; border-radius: 99px; background: var(--veu-2); overflow: hidden; }
+#root .status31__barra { display: block; height: 100%; border-radius: 99px; background: var(--bom); transition: width 300ms ease; }
+#root .status31__item--medio .status31__barra { background: var(--alerta); }
+#root .status31__item--ruim .status31__barra { background: var(--ruim); }
+#root .status31__item--ruim .status31__valor { color: var(--ruim); }
+@media (prefers-reduced-motion: reduce) { #root .status31__barra { transition: none; } }
+
+/* ---------------------------------------------------------------- Minha Trajetória */
+#root .traj31 { display: grid; gap: var(--space-5); }
+#root .traj31__cabeca { margin: 0; padding: 0; }
+#root .traj31__bloco { display: grid; gap: var(--space-3); padding: var(--space-5); border-radius: var(--v31-raio); background: var(--v31-cartao); box-shadow: var(--v31-contorno), var(--v31-sombra); min-width: 0; }
+#root .traj31__titulo { font-size: var(--type-subheading); margin: 0; display: flex; align-items: center; gap: var(--space-2); }
+#root .traj31__conta { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 99px; background: var(--acao); color: var(--acao-sobre); font-size: var(--type-meta); }
+#root .traj31__icone { width: 22px; height: 22px; color: var(--tom); flex: none; }
+#root .traj31__ocupacoes { margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: var(--space-2); }
+#root .traj31__ocupacao { padding: 0; box-shadow: var(--v31-contorno); background: var(--veu-1); border-radius: var(--v31-raio-ctl); }
+#root .traj31__ocupacao .situacao-atual__ir { width: 100%; padding: var(--space-3) var(--space-4); grid-template-columns: auto minmax(0, 1fr); column-gap: var(--space-3); align-items: center; }
+#root .traj31__ocupacao .situacao-atual__ir > :not(svg) { grid-column: 2; }
+#root .traj31__ocupacao .traj31__icone { grid-row: 1 / span 3; }
+#root .traj31__degrau { display: grid; gap: var(--space-2); padding: var(--space-4); border-radius: var(--v31-raio-ctl); background: color-mix(in oklab, var(--tom) 7%, var(--v31-cartao)); box-shadow: inset 0 0 0 1px var(--tom-linha); }
+#root .traj31__degrau-topo { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px var(--space-3); margin: 0; }
+#root .traj31__degrau-topo > span:first-child { font-size: var(--type-meta); text-transform: uppercase; letter-spacing: var(--tracking-meta); color: var(--tinta-2); font-weight: var(--weight-semibold); }
+#root .traj31__degrau-topo strong { font-size: var(--type-subheading); }
+#root .traj31__degrau-conta { margin-left: auto; font-size: var(--type-caption); color: var(--tinta-2); font-variant-numeric: tabular-nums; }
+#root .traj31__trilho { display: block; height: 10px; border-radius: 99px; background: var(--veu-2); overflow: hidden; }
+#root .traj31__barra { display: block; height: 100%; border-radius: 99px; background: var(--tom); }
+#root .traj31__requisitos { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: var(--type-caption); color: var(--tinta-2); }
+#root .traj31__req--ok { color: var(--tinta); }
+#root .traj31__req--ok span { color: var(--bom); font-weight: 700; }
+#root .traj31__passos, #root .traj31__portas { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: var(--space-2); }
+#root .traj31__passo, #root .traj31__porta { display: grid; gap: 2px; width: 100%; height: 100%; text-align: left; padding: var(--space-3) var(--space-4); border-radius: var(--v31-raio-ctl); background: var(--v31-cartao); box-shadow: inset 0 0 0 1px var(--fio-forte); }
+#root .traj31__passo:hover, #root .traj31__porta:hover { box-shadow: inset 0 0 0 1.5px var(--tom); background: var(--tom-wash); }
+#root .traj31__passo--destaque { grid-column: 1 / -1; background: var(--tom); box-shadow: none; }
+#root .traj31__passo--destaque .traj31__passo-rotulo, #root .traj31__passo--destaque .traj31__passo-nota { color: var(--tom-sobre); }
+#root .traj31__passo--destaque:hover { background: color-mix(in oklab, var(--tom) 88%, black); box-shadow: none; }
+#root .traj31__passo-rotulo { font-weight: var(--weight-semibold); color: var(--tinta); }
+#root .traj31__passo-nota, #root .traj31__porta span { font-size: var(--type-caption); color: var(--tinta-2); }
+#root .traj31__porta { box-shadow: inset 0 0 0 1px var(--fio-forte), inset 3px 0 0 var(--acao); }
+#root .traj31__busca input { width: 100%; min-height: 44px; padding: 0 var(--space-4); border-radius: var(--radius-pill); border: 0; background: var(--veu-1); box-shadow: inset 0 0 0 1px var(--fio-forte); color: var(--tinta); font: inherit; }
+#root .traj31__busca input:focus-visible { outline: 2px solid var(--tom); outline-offset: 1px; }
+#root .traj31__lista { grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); }
+#root .traj31__lista .entrada-caminho__botao { grid-template-columns: auto minmax(0, 1fr); column-gap: var(--space-3); box-shadow: inset 0 0 0 1px var(--fio); background: var(--veu-1); }
+#root .traj31__lista .entrada-caminho__botao > :not(svg) { grid-column: 2; }
+#root .traj31__lista .traj31__icone { grid-row: 1 / span 3; color: var(--cor-entrada, var(--tom)); margin-top: 3px; }
+#root .traj31__lista .entrada-caminho__nome { font-size: var(--type-subheading); }
+#root .traj31__voltar { display: inline-flex; align-items: center; min-height: 40px; padding: 0 var(--space-4); margin-bottom: var(--space-3); border-radius: var(--radius-pill); background: var(--veu-2); font-weight: var(--weight-semibold); color: var(--tinta); }
+#root .traj31__voltar:hover { background: var(--tom-wash); }
+#root .pagina-caminhos { --tom: var(--p-formacao); }
+/* Na página inicial de Caminhos, as divisões aparecem no Explorar (a fileira de abas fica para dentro de cada divisão). */
+#root .divisoes-caminhos--inicio { display: none; }
+/* O painel "Agora" dentro do cartão do Hoje não é um segundo cartão. */
+#root .hoje31__lado .painel-agora { padding: 0; background: none; box-shadow: none; border-radius: 0; }
+#root .status31 { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+@media (max-width: 719px) {
+  /* No celular, o Explorar mostra o nome e a situação de cada caminho (a descrição longa fica para dentro). */
+  #root .traj31__lista .entrada-caminho__oque { display: none; }
+  #root .traj31__bloco { padding: var(--space-4); }
+}
