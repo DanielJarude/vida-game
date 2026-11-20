@@ -1,0 +1,32 @@
+/* VIDA 31 · as fotos do perfil do app de namoro: o carrossel (tocar à esquerda/direita troca a foto) e os cenários. */
+.fotos31 { width: 100%; position: relative; display: grid; place-items: end center; height: 300px; overflow: hidden; border-radius: 18px 18px 0 0; background: linear-gradient(180deg, #ffd6c9, #f7a98f); }
+.fotos31--rosto, .fotos31--sorriso { place-items: center; }
+.fotos31--sorriso { background: linear-gradient(180deg, #ffe7a8, #f6b977); }
+.fotos31--corpo { background: linear-gradient(180deg, #e8ecf3 0 78%, #c9cfd9 78%); }
+.fotos31__quadro { display: grid; place-items: end center; width: 100%; height: 100%; padding-bottom: 6px; }
+.fotos31--rosto .fotos31__quadro, .fotos31--sorriso .fotos31__quadro { place-items: center; padding: 0; }
+.fotos31__quadro svg { max-height: 100%; }
+.fotos31__pontos { position: absolute; top: 8px; left: 10px; right: 10px; z-index: 2; display: flex; gap: 4px; list-style: none; margin: 0; padding: 0; }
+.fotos31__pontos li { flex: 1; height: 3px; border-radius: 3px; background: rgb(255 255 255 / 0.45); }
+.fotos31__pontos li.ativo { background: #fff; }
+.fotos31__legenda { position: absolute; right: 10px; top: 18px; z-index: 2; padding: 3px 10px; border-radius: 99px; background: rgb(0 0 0 / 0.5); color: #fff; font-size: 0.75rem; font-weight: 600; }
+.fotos31__lado { position: absolute; top: 0; bottom: 0; width: 45%; z-index: 1; background: none; border: 0; cursor: pointer; }
+.fotos31__lado--antes { left: 0; }
+.fotos31__lado--depois { right: 0; }
+.fotos31__lado:focus-visible { outline: 2px solid #fff; outline-offset: -4px; border-radius: 12px; }
+/* Os cenários (o lugar que a pessoa curte). */
+.fotos31--cena-praia { background: linear-gradient(180deg, #8fd3f4 0 55%, #3aa0c8 55% 68%, #f2d7a0 68%); }
+.fotos31--cena-trilha { background: linear-gradient(180deg, #bfe3f5 0 40%, #7fa86a 40% 62%, #5b7f48 62% 80%, #8a6a45 80%); }
+.fotos31--cena-viagem { background: linear-gradient(180deg, #ffd3a5 0 50%, #c9b7a3 50% 74%, #a39282 74%); }
+.fotos31--cena-academia { background: linear-gradient(180deg, #3b4250 0 70%, #252a33 70%); }
+.fotos31--cena-parque { background: linear-gradient(180deg, #cdeefa 0 50%, #8ccf7e 50% 80%, #74b465 80%); }
+.fotos31--cena-cafe { background: linear-gradient(180deg, #e9d4bd 0 66%, #a8774f 66% 72%, #7a5236 72%); }
+.fotos31--cena-cozinha { background: linear-gradient(180deg, #f3efe7 0 62%, #d7cbb8 62% 70%, #b9a98f 70%); }
+.fotos31--cena-noite { background: linear-gradient(180deg, #2b2246 0 70%, #4a2f3d 70%); }
+.fotos31--cena-show { background: radial-gradient(60% 40% at 50% 10%, #ff6fb5 0, transparent 70%), linear-gradient(180deg, #1c1430 0 78%, #3a2a50 78%); }
+.fotos31--cena-campo { background: linear-gradient(180deg, #bfe6ff 0 45%, #4fae55 45%); }
+.fotos31--cena-jardim { background: linear-gradient(180deg, #e6f4dc 0 55%, #8fc27a 55%); }
+.fotos31--cena-museu { background: linear-gradient(180deg, #f1ece4 0 72%, #cfc6b8 72%); }
+.fotos31--cena-cidade { background: linear-gradient(180deg, #d5e3f0 0 58%, #9aa7b6 58% 76%, #6f7a88 76%); }
+.fotos31--cena-academia .fotos31__legenda, .fotos31--cena-noite .fotos31__legenda, .fotos31--cena-show .fotos31__legenda { background: rgb(255 255 255 / 0.2); }
+.perfil-app__foto:has(.fotos31) { display: block; padding-top: 0; background: none; }

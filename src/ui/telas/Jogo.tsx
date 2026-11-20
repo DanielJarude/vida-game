@@ -86,6 +86,10 @@ export function Jogo({ c }: { c: ControleVida }) {
   const [explorar, setExplorar] = useState<string | undefined>(undefined);
   const foco = useRef<'formacao' | 'trabalho' | undefined>(undefined);
   const [menu, setMenu] = useState(false);
+  // VIDA 31: Vida, Pessoas e Eu abrem na página inicial deles (como a Minha Trajetória); um destino com seção vai direto.
+  const [inicio, setInicio] = useState<Record<'vida' | 'pessoas' | 'voce', boolean>>({ vida: true, pessoas: true, voce: true });
+  const sairDoInicio = (a: 'vida' | 'pessoas' | 'voce') => setInicio(x => (x[a] ? { ...x, [a]: false } : x));
+  const voltarAoInicio = (a: 'vida' | 'pessoas' | 'voce') => setInicio(x => (x[a] ? x : { ...x, [a]: true }));
   const [pessoaAberta, setPessoaAberta] = useState<string | null>(null);
   // REWORK 10.6 · UX-23: o convite aberto por cima da página (fechar devolve o jogador exatamente onde estava).
   const [convite, setConvite] = useState<string | null>(null);
@@ -105,7 +109,8 @@ export function Jogo({ c }: { c: ControleVida }) {
   const fecharMenu = useCallback(() => setMenu(false), []);
   const area = lugar.area;
   const irLugar = (l: Lugar) => {
-    if (l.secao) setSecao(l.secao);
+    if (l.secao) { setSecao(l.secao); sairDoInicio('vida'); }
+    if (l.voce) sairDoInicio('voce');
     if (l.aba) setAbaTempo(l.aba);
     if (l.area === 'caminhos') {
       // Um destino antigo que só diz a parte (sem a divisão) cai no lado que pede — ou no trabalho.
@@ -127,7 +132,11 @@ export function Jogo({ c }: { c: ControleVida }) {
   // VIDA 14: a loja de piercings leva ao painel (Você · Aparência · Piercings) — `v14/aparencia/irAosPiercings`.
   useEffect(() => { const f = () => irLugar({ area: 'voce', voce: 'aparencia' }); window.addEventListener(EVENTO_IR_PIERCINGS, f); return () => window.removeEventListener(EVENTO_IR_PIERCINGS, f); });
   // Tocar em Caminhos estando em Caminhos volta à página inicial dele; vindo de outra área, abre onde estava.
-  const irArea = (a: Area) => { if (a === 'caminhos' && area === 'caminhos') irLugar({ area: 'caminhos', divisao: 'inicio' }); else ir(a); };
+  const irArea = (a: Area) => {
+    if (a === 'caminhos' && area === 'caminhos') irLugar({ area: 'caminhos', divisao: 'inicio' });
+    else if ((a === 'vida' || a === 'pessoas' || a === 'voce') && areaDaBarra(area) === a) { voltarAoInicio(a); if (a === 'pessoas') focar(null); ir(a); }
+    else ir(a);
+  };
   const focar = (id: string | null) => { setPessoaAberta(id); c.focarPessoa(id); };
   const abrirPessoa = (id: string | null) => { focar(id); if (id) ir('pessoas'); };
 
@@ -196,11 +205,17 @@ export function Jogo({ c }: { c: ControleVida }) {
             anoQuePassou={c.marcaAno > 0 ? <AnoQuePassou vida={vida} desde={c.marcaAno} abrirPessoa={abrirPessoa} /> : undefined}
             pedeVoce={<Agora vida={vida} area={area} irPara={ir} abrirPessoa={abrirPessoa} abrirConvite={setConvite} agir={c.agir} />} />}
           {(area === 'voce' || area === 'tempo') && <TrocaDoEu area={area} ir={ir} />}
-          {area === 'voce' && <Voce vida={vida} agir={c.agir} irPara={ir} abrirPessoa={abrirPessoa} parte={parteVoce} irParte={setParteVoce} />}
-          {area === 'pessoas' && <Pessoas vida={vida} agir={c.agir} aberta={pessoaAberta} abrir={focar} parte={partePessoas} irParte={setPartePessoas} />}
+          {area === 'voce' && inicio.voce && <EuInicio31 vida={vida} irParte={p => { setParteVoce(p); sairDoInicio('voce'); }} irPara={ir} />}
+          {((area === 'voce' && !inicio.voce) || area === 'tempo') && <Voltar31 rotulo="Eu" ir={() => { voltarAoInicio('voce'); ir('voce'); }} />}
+          {area === 'voce' && !inicio.voce && <Voce vida={vida} agir={c.agir} irPara={ir} abrirPessoa={abrirPessoa} parte={parteVoce} irParte={setParteVoce} />}
+          {area === 'pessoas' && inicio.pessoas && !pessoaAberta && <PessoasInicio31 vida={vida} abrir={focar} irParte={p => { setPartePessoas(p); sairDoInicio('pessoas'); }} irPara={ir} />}
+          {area === 'pessoas' && (!inicio.pessoas || pessoaAberta) && <Voltar31 rotulo="Minhas pessoas" ir={() => { focar(null); voltarAoInicio('pessoas'); }} />}
+          {area === 'pessoas' && (!inicio.pessoas || pessoaAberta) && <Pessoas vida={vida} agir={c.agir} aberta={pessoaAberta} abrir={focar} parte={partePessoas} irParte={setPartePessoas} />}
           {area === 'caminhos' && <PaginaCaminhos vida={vida} agir={c.agir} irPara={ir} abrirPessoa={abrirPessoa} divisao={divisao} irDivisao={(d, p) => irLugar({ area: 'caminhos', divisao: d, parte: p })} parte={parte} irParte={p => irLugar({ area: 'caminhos', divisao, parte: p })} explorar={explorar} aoExplorar={setExplorar} abrirConvite={setConvite} />}
           {area === 'tempo' && <Tempo vida={vida} agir={c.agir} irPara={ir} aba={abaTempo} irAba={a => ir(a)} abrirPessoa={abrirPessoa} />}
-          {area === 'vida' && <VidaConcreta vida={vida} agir={c.agir} secao={secao} irSecao={s => ir(s)} irPara={ir} abrirPessoa={abrirPessoa} />}
+          {area === 'vida' && inicio.vida && <VidaInicio31 vida={vida} agir={c.agir} irSecao={s => ir(s)} />}
+          {area === 'vida' && !inicio.vida && <Voltar31 rotulo="Minha vida" ir={() => voltarAoInicio('vida')} />}
+          {area === 'vida' && !inicio.vida && <VidaConcreta vida={vida} agir={c.agir} secao={secao} irSecao={s => ir(s)} irPara={ir} abrirPessoa={abrirPessoa} />}
           {/* FIX pós-playtest humano: "Viver mais um ano" é "terminei o que queria fazer neste ano" — mora no FIM da
               página, depois de tudo o que dá para ver e fazer nela; nunca por cima do conteúdo. */}
           <div className="avancar">
@@ -453,6 +468,8 @@ import { ImportarVida } from './ImportarVida';
 import { Novidades } from '../janelaDeNovidades';
 import { Tempo } from '../jogo/Tempo';
 import { Central26 } from '../v26/central/Central26';
+import { EuInicio31, PessoasInicio31, VidaInicio31 } from '../v31/InicioDasAreas31';
+import { Voltar31 } from '../v31/Inicio31';
 import { oportunidadesAbertas } from '../../motor/sistemas/mercados';
 import { DetalheDaOportunidade } from '../jogo/Alcance';
 import { guardarCompras } from '../jogo/memoriaDeCompras';

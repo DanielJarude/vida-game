@@ -317,3 +317,71 @@ html:root, html:root[data-tema], html:root[data-paleta] {
 }
 /* A barra do celular com cinco lugares (era desenhada para seis). */
 #root .barra--5 { grid-template-columns: repeat(5, 1fr); }
+
+/* ---------------------------------------------------------------- As páginas iniciais (Vida, Pessoas, Eu) */
+/* As abas da área ficam fora da vista no início (o Explorar é a entrada); continuam no documento para os atalhos. */
+#root .inicio31__abas-ocultas { display: none; }
+#root .inicio31__cena { min-width: 0; }
+#root .inicio31__cena .lar { padding: var(--space-3); border: 0; border-radius: var(--v31-raio); background: var(--v31-cartao); box-shadow: var(--v31-contorno), var(--v31-sombra); }
+#root .inicio31__cena .constelacao17 { margin: 0; border-radius: var(--v31-raio); box-shadow: var(--v31-contorno), var(--v31-sombra); }
+#root .inicio31__agora { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: var(--space-2); }
+#root .inicio31__cartao { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: var(--space-3); row-gap: 2px; align-content: start; width: 100%; height: 100%; padding: var(--space-3) var(--space-4); text-align: left; border-radius: var(--v31-raio-ctl); background: var(--veu-1); box-shadow: var(--v31-contorno); color: var(--tinta); }
+#root .inicio31__cartao > :not(svg) { grid-column: 2; }
+#root .inicio31__cartao .traj31__icone { grid-row: 1 / span 3; margin-top: 2px; }
+#root button.inicio31__cartao:hover { box-shadow: inset 0 0 0 1.5px var(--tom); background: var(--tom-wash); }
+#root .inicio31__cartao-rotulo { font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--tinta-2); font-weight: var(--weight-semibold); }
+#root .inicio31__cartao-titulo { font-size: var(--type-subheading); line-height: 1.25; overflow-wrap: anywhere; }
+#root .inicio31__cartao-detalhe { font-size: var(--type-caption); color: var(--tinta-2); }
+#root .inicio31__cartao--ruim { box-shadow: inset 0 0 0 1px var(--ruim), inset 3px 0 0 var(--ruim); }
+#root .inicio31__cartao--ruim .inicio31__cartao-titulo { color: var(--ruim); }
+#root .inicio31__cartao--alerta { box-shadow: inset 0 0 0 1px var(--fio-forte), inset 3px 0 0 var(--alerta); }
+#root .inicio31--vida { --tom: var(--p-vida); }
+#root .inicio31--pessoas { --tom: var(--p-pessoas); }
+#root .inicio31--eu { --tom: var(--p-voce); }
+#root .eu31 { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-4); align-items: center; padding: var(--space-4); border-radius: var(--v31-raio); background: var(--v31-cartao); box-shadow: var(--v31-contorno), var(--v31-sombra); }
+#root .eu31__retrato { border-radius: 50%; padding: 0; }
+#root .eu31__retrato .retrato, #root .eu31__retrato svg { border-radius: 50%; }
+#root .eu31__barras { display: grid; gap: var(--space-2); min-width: 0; }
+#root .eu31__nome { margin: 0; font-weight: 700; font-size: var(--type-subheading); }
+@media (max-width: 719px) {
+  #root .eu31 { grid-template-columns: minmax(0, 1fr); justify-items: center; }
+  #root .eu31__barras { width: 100%; }
+}
+@media (max-width: 719px) {
+  /* No celular, o Explorar das páginas iniciais em duas colunas compactas (nome e situação). */
+  #root .inicio31__lista { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+  #root .inicio31__lista .entrada-caminho__botao { min-height: 0; padding: var(--space-3); grid-template-columns: minmax(0, 1fr); }
+  #root .inicio31__lista .entrada-caminho__botao > :not(svg) { grid-column: 1; }
+  #root .inicio31__lista .traj31__icone { grid-row: auto; margin: 0 0 2px; }
+  #root .inicio31__lista .entrada-caminho__nome { font-size: var(--type-body); }
+  #root .inicio31__lista .entrada-caminho__estado { font-size: var(--type-meta); }
+}
+
+/* ---------------------------------------------------------------- A abertura do app */
+#root .inicio31 { display: grid; grid-template-columns: minmax(0, 1fr); align-items: stretch; justify-items: stretch; padding: 0; text-align: left; background: var(--fundo); min-height: 100dvh; }
+#root .inicio31__marca-bloco { position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: center; gap: var(--space-4); padding: var(--space-9) max(var(--space-5), env(safe-area-inset-left, 0px)) var(--space-8); color: var(--p-sobre-tom);
+  background: radial-gradient(120% 90% at 0% 0%, color-mix(in oklab, var(--p-linha) 92%, white) 0, transparent 60%), radial-gradient(90% 90% at 100% 100%, var(--p-voce) 0, transparent 65%), linear-gradient(140deg, var(--p-linha), var(--p-pessoas) 55%, var(--p-voce)); }
+#root .inicio31__marca-bloco .inicio__marca { position: relative; margin: 0; padding: 0; color: inherit; font-size: clamp(3.6rem, 12vw, 6.5rem); font-weight: 800; letter-spacing: 0.16em; line-height: 1; }
+#root .inicio31__marca-bloco .inicio__frase { position: relative; margin: 0; color: inherit; opacity: 0.92; font-style: normal; font-size: var(--type-lead); line-height: 1.5; max-width: 34ch; }
+#root .inicio31__selos { position: relative; list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-2); }
+#root .inicio31__selos li { padding: 6px 12px; border-radius: var(--radius-pill); background: rgb(255 255 255 / 0.18); font-size: var(--type-caption); font-weight: var(--weight-semibold); }
+#root .inicio31__bolhas i { position: absolute; border-radius: 50%; background: rgb(255 255 255 / 0.12); }
+#root .inicio31__bolhas i:nth-child(1) { width: 220px; height: 220px; right: -60px; top: -50px; }
+#root .inicio31__bolhas i:nth-child(2) { width: 120px; height: 120px; right: 22%; bottom: -40px; }
+#root .inicio31__bolhas i:nth-child(3) { width: 60px; height: 60px; right: 12%; top: 42%; background: rgb(255 255 255 / 0.2); }
+#root .inicio31__bolhas i:nth-child(4) { width: 34px; height: 34px; left: 58%; top: 16%; }
+#root .inicio31__bolhas i:nth-child(5) { width: 300px; height: 300px; left: -120px; bottom: -160px; background: rgb(255 255 255 / 0.08); }
+#root .inicio31__painel { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-5); padding: var(--space-7) max(var(--space-4), env(safe-area-inset-left, 0px)) var(--space-8); }
+#root .inicio31__painel .inicio__miolo { width: 100%; max-width: 420px; align-items: stretch; gap: var(--space-4); }
+#root .inicio31__painel .inicio__acoes { max-width: none; gap: var(--space-3); }
+#root .inicio31__painel .inicio__acoes .botao { min-height: 52px; font-size: var(--type-subheading); border-radius: var(--radius-pill); }
+#root .inicio31__painel .inicio__acoes .botao--principal { background: var(--acao); color: var(--acao-sobre); }
+#root .inicio31__salva { display: grid; gap: 4px; padding: var(--space-4); border-radius: var(--v31-raio); background: var(--v31-cartao); box-shadow: var(--v31-contorno), var(--v31-sombra); }
+#root .inicio31__salva-rotulo { font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--tinta-2); font-weight: var(--weight-semibold); }
+#root .inicio31__salva-nome { font-size: var(--type-heading); margin-bottom: var(--space-2); }
+#root .inicio31__painel .seletor-tema, #root .inicio31__painel .baixar-app, #root .inicio31__painel .inicio__rodape { max-width: 520px; text-align: center; }
+#root .inicio31__painel .inicio__rodape { margin-top: 0; }
+@media (min-width: 900px) {
+  #root .inicio31 { grid-template-columns: minmax(0, 1.1fr) minmax(420px, 1fr); }
+  #root .inicio31__marca-bloco { padding: var(--space-9) var(--space-9); }
+}

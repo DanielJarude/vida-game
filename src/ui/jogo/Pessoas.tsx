@@ -69,7 +69,7 @@ interface Props { vida: Vida; agir: (a: Acao) => boolean; aberta: string | null;
 const ROTULO_SINAL: Record<TipoDeSinal, string> = { urgente: 'Precisa de você', importante: 'Importante', noticia: 'Notícia', oportunidade: 'Para retomar' };
 
 export type PartePessoas = 'circulo' | 'deles' | 'nossa';
-const PARTES_PESSOAS: { id: PartePessoas; rotulo: string; oque: string }[] = [
+export const PARTES_PESSOAS: { id: PartePessoas; rotulo: string; oque: string }[] = [
   { id: 'circulo', rotulo: 'Meu círculo', oque: 'Quem está na sua vida agora: a casa, a família, os amigos, quem pede atenção' },
   { id: 'deles', rotulo: 'A vida deles', oque: 'O que aconteceu com cada um: emprego, estudo, amor, filhos, perdas' },
   { id: 'nossa', rotulo: 'Nossa história', oque: 'O que vocês viveram juntos — só o que aconteceu de fato' }
@@ -785,7 +785,7 @@ function FichaPet({ vida, agir, p }: { vida: Vida; agir: (a: Acao) => boolean; p
 }
 
 /** O título de Pessoas: quem divide a vida com você, em palavras. */
-function tituloDePessoas(v: Vida, nucleo: { p: Pessoa }[]): string {
+export function tituloDePessoas(v: Vida, nucleo: { p: Pessoa }[]): string {
   const par = parceiro(v);
   if (par) return nucleo.length > 1 ? `A vida com ${par.p.nome} e mais ${nucleo.length - 1}` : `A vida com ${par.p.nome}`;
   if (nucleo.length) return `Perto: ${nucleo.slice(0, 2).map(x => x.p.nome).join(' e ')}${nucleo.length > 2 ? ` e mais ${nucleo.length - 2}` : ''}`;

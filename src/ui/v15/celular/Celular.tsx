@@ -301,6 +301,7 @@ const BUSCA: Record<PerfilApp15['busca'], string> = { relacionamento: 'Procura u
 
 // VIDA 30: os filtros do aplicativo (sob demanda: o pacote do Jogo está no limite).
 const FiltrosNamoro30 = lazy(() => import('../../v30/redes/FiltrosNamoro30'));
+import { FotosDoPerfil31 } from '../../v31/namoro/FotosDoPerfil31';
 
 function Namoro({ vida, agir, abrirPessoa }: { vida: Vida; agir: Props['agir']; abrirPessoa: (id: string) => void }) {
   const [aba, setAba] = useState<'descobrir' | 'conversas'>('descobrir');
@@ -345,7 +346,9 @@ function Namoro({ vida, agir, abrirPessoa }: { vida: Vida; agir: Props['agir']; 
       {aba === 'descobrir' && (atual ? (
         <article className="perfil-app" aria-label={`Perfil de ${atual.pessoa.nome}`}>
           <div className="perfil-app__foto">
-            <Retrato visual={atual.pessoa.visual} genero={atual.pessoa.genero} idade={idadePessoa(vida, atual.pessoa)} semente={atual.pessoa.id} tamanho={230} rotulo={atual.pessoa.nome} especie={atual.pessoa.especie} />
+            {/* VIDA 31: mais fotos — o rosto, o corpo inteiro, um lugar que a pessoa curte e sorrindo (tocar nos lados troca). */}
+            {atual.pessoa.visual ? <FotosDoPerfil31 p={atual.pessoa} idade={idadePessoa(vida, atual.pessoa)} interesses={atual.interesses} nome={atual.pessoa.nome} />
+              : <Retrato visual={atual.pessoa.visual} genero={atual.pessoa.genero} idade={idadePessoa(vida, atual.pessoa)} semente={atual.pessoa.id} tamanho={230} rotulo={atual.pessoa.nome} especie={atual.pessoa.especie} />}
             <div className="perfil-app__nome"><strong>{atual.pessoa.nome}{atual.figuraId ? ` ${atual.pessoa.sobrenome ?? ''}` : ''}, {idadePessoa(vida, atual.pessoa)}{atual.figuraId && <span className="perfil-app__verificado" title="Perfil verificado: pessoa pública"> ✓</span>}</strong><span>{atual.pessoa.ocupacao ? `${atual.pessoa.ocupacao} · ` : ''}a {atual.km} km</span></div>
           </div>
           <div className="perfil-app__corpo">
