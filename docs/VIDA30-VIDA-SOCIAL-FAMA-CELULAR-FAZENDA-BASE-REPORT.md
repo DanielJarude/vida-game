@@ -1,7 +1,9 @@
 # VIDA 30 — vida social, experiências de vida, fama em pessoa, celular, fazenda, base, propostas, pós-carreira e clube
 
 Branch `claude/vida30-vida-social-fama-celular` (a partir de `b7f90fd`, a VIDA 29.2 publicada). Um agente só, trabalho
-sequencial, sem subagentes. O "Manual Mestre de Diretrizes" não está no repositório nem foi anexado (como nas VIDA 21–29):
+sequencial, sem subagentes. Pedidos que chegaram durante o trabalho e entraram no escopo: as carreiras pós-esporte, a tela
+do dono de clube, as redes sociais (o que você publicou, o feed, a prévia de vídeo na Twitch), filtros no aplicativo de
+namoro (com famosos), o casamento entre famosos como notícia e os escudos por clube. O "Manual Mestre de Diretrizes" não está no repositório nem foi anexado (como nas VIDA 21–29):
 segui as regras do próprio prompt e as do projeto (memórias de ambiente, a regra do limite de 800 kB por pacote, a regra
 de funções declaradas nos pacotes em ciclo). Dois pedidos chegaram durante o trabalho e entraram no escopo: **carreiras
 pós-esporte mais profundas** e **a tela do dono de clube, que era quase só texto**.
@@ -24,7 +26,12 @@ pós-esporte mais profundas** e **a tela do dono de clube, que era quase só tex
   par, apresentar o par à sua família, conquista com parabéns e inveja, o amigo que percebe a mudança...).
 - **Pós-carreira (pedido extra)**: cada porta da VIDA 26 virou um ofício com jogo próprio (mídia, formação, comissão,
   gestão), com cenas e painel.
-- **Dono de clube (pedido extra)**: a tela virou painel visual.
+- **Dono de clube (pedido extra)**: a tela virou painel visual, com escudo de cada clube (cores e traço do clube, nunca o
+  escudo oficial).
+- **Redes e namoro (pedido extra)**: o seu post como post (legenda, curtidas, comentários de quem reagiu, miniatura do
+  vídeo/live com título, categoria, duração ou "ao vivo" e espectadores), o dia a dia das pessoas no feed, os filtros do
+  aplicativo (idade, distância, busca, interesse, só famosos — perfis verificados do meio) e o casamento, o namoro e a
+  separação de famosos no jornal e em alta.
 
 (Ver os itens 2–15 abaixo.)
 
@@ -56,7 +63,17 @@ modo detalhado). O save continua na versão 20 (só campos opcionais).
 
 ## 4. Novas funcionalidades (cada uma com teste)
 
-(Ver tabela de arquivos no item 9.)
+| Frente | Arquivos principais |
+|---|---|
+| Propostas | `sistemas/oportunidades.ts` (contratante, convite × formal, comissão com clube), `trabalho.elegibilidade`, `compromissos.aplicarAjuste`, `conteudo/desafios.ts`, `mercados.oportunidadeCoerente`, `ui/jogo/Alcance.tsx` |
+| Base | `sistemas/base30.ts` (remuneração em partes, mercado, transferência, registro), `esporte.anoNaBase`, `ui/v25/formacao/Formacao25.tsx`, portas do esporte |
+| Fazenda | `v18/rural/fazenda18.ts` (balanceamento, custeio), `v18/rural/problemas30.ts` (problemas e saídas), `ui/v18/campo/Campo18.tsx`; sims `scripts/sim/fazenda30*.ts` |
+| Celular | `dados17/celular/ambientes30.ts`, `dados17/celular/catalogo17.ts` (situações novas), `v17/celular/mensagens17.ts`, `v15/celular/celular15.ts`; sim `scripts/sim/celular30.ts` |
+| Fama | `v30/fama/rede30.ts` (o meio, cenas, privacidade), `conteudo/acontecimentos30Fama.ts`, `ui/v30/fama/Meio30.tsx` |
+| Vida e reações | `conteudo/acontecimentos30Vida.ts` (30 cenas e o fluxo `vidaDe30DoAno`) |
+| Pós-carreira | `v30/oficio/oficio30.ts`, `conteudo/acontecimentos30Pos.ts`, `ui/v30/oficio/Oficio30.tsx` |
+| Clube | `ui/v20/clubes/Clube20.tsx` (painel), `ui/v30/escudos/Escudo30.tsx` (escudos por clube) |
+| Redes e namoro | `v30/redes/redes30.ts`, `v19/conectada/feed19.ts` e `conectada19.ts`, `v15/celular/noticias15.ts`, `ui/v30/redes/MeusPosts30.tsx` e `FiltrosNamoro30.tsx`, `ui/v19/conectada/Feed19.tsx` |
 
 ## 5. Problemas encontrados · 6. Causas-raiz · 7. Correções
 
@@ -100,7 +117,43 @@ balanceamento.
 
 ## 9–10. Testes executados e resultados
 
-(Preenchido no fechamento.)
+**Testes novos (todos passando):** vida30Propostas (6), vida30Base (10), vida30Fazenda (8), vida30Celular (6), vida30Fama (6),
+vida30Vida (5), vida30Oficio (3), vida30Redes (5), vida30Saves (4), vida30Clube (tela, 2), vida30Novidades (1).
+
+**Suíte completa** (10 lotes, worktree fixo no commit `2301299`): **3.304 passaram, 15 falharam.**
+- 5 estouros de tempo já conhecidos das versões anteriores (fechamentoMundo "a mesma discussão", fixPosPlaytestHumano C,
+  motor "linguagem de escolha", profissao "clima péssimo", rework115Esportes "copas").
+- 10 falhas de asserção: todas passavam na base; todas explicadas e corrigidas na causa, sem afrouxar a regra:
+  - deriva das vidas de teste pelas cenas e situações novas do ano (rework2 academia — agora contra o alvo do dia a dia
+    da própria vida; rework75 luto — o suporte é só o que o teste põe; rework9 e vida129Presidencia — amostras maiores, com
+    o piso na mesma proporção; rework11Carreiras — a vida sorteada morria antes dos 25, agora usa a próxima semente;
+    rework75 tela — a vida da semente 80 perdia alguém central e reavivava o luto, troca de semente; rework105 — o teto da
+    exposição sobre o público real da conta);
+  - o painel da Fama passou a vir sob demanda (pacotePlaytest e rework105 de tela esperam ele aparecer).
+  Os 22 arquivos corrigidos e todos os da 30 passaram depois (273 testes), e os 30 arquivos ligados ao que mudou na revisão
+  visual (313 testes).
+
+**Simulações (antes → depois, mesmas sementes):**
+- Celular (18 vidas × 75 anos): mensagens que repetem um texto já recebido na mesma vida 26,4% → **8,4%**; mensagens "de
+  escritório" a quem não trabalha em escritório 54 → 4; textos distintos 475 → 586; cota anual respeitada (máx. 4).
+- Fazenda (8 sementes × 10 anos; o produtor iniciante): chácara 4 ha −6,3 mil/ano (51% no vermelho) → +0,5 mil (30%); sítio
+  familiar +8,4 mil (39%) → +25,3 mil (10%); agrícola 300 ha +177 mil (16%) → +227 mil (1%); agrícola com solo cansado −63 mil
+  (70%) → +72 mil (15%); grande com gado em dobro: solo 79 → 27 em espiral (−50 mil/ano) → sem espiral (+1,1 mi/ano);
+  pecuária 500 ha com gerente: 90% dos anos no vermelho → 65% (o meio de propriedade povoado a 60% continua apertado com
+  gerente — ver pendências).
+- Catálogo: 621 → 663 conteúdos (0–5 anos 49 → 52; 6–11 83 → 88; 12–17 194 → 210; 18–29 435 → 462; 30–59 486 → 518;
+  60+ 458 → 487).
+
+**Typecheck** `tsc --noEmit`: rc=0. **Build**: rc=0; maiores pacotes `motor-textos` 794 kB, `Jogo` 791 kB (o painel da Fama e
+os filtros do namoro foram para pacotes sob demanda para caber), `motor` 788 kB — todos abaixo de 800 kB. **Fumaça de
+distribuição**: 36/36.
+
+**Revisão visual** (`scripts/playtest/vida30.mjs`, saves de `scripts/playtest/gerarVida30.ts`, 1440 e 390 px, no preview e
+depois no site real): clube (escudo, 11 no campo, elenco e mercado), campo (pasto, produção, saúde dos animais, seguro),
+Fama (o meio), Twitch (3 posts com prévia "ao vivo"), Instagram, namoro (filtros), base (a porta de outro clube e o
+registro), ofício — sem erro de página e sem rolagem lateral. Corrigido pela revisão: a proposta da base não aparecia nas
+portas do esporte (e cairia nas de estudo), a cidade do clube aparecia como identificador, duas lives com o mesmo título,
+legenda genérica nas lives de conversa, a mesma frase em todo ano comum do ofício, "no Resenha do Domingo".
 
 ## 11. Compatibilidade com saves antigos
 
@@ -112,8 +165,29 @@ e um save da VIDA 29 (rural), vividos três anos e salvos/reabertos.
 
 ## 12. Pendências reais
 
-(Preenchido no fechamento.)
+- **Fama**: as figuras do meio vivem em resumo (um fato por ano, laços entre elas); quem você conhece vira Pessoa e entra na
+  vida própria completa da VIDA 19. Um meio por país de nascimento (quem se muda continua com o meio de origem).
+- **Celular**: a repetição caiu para 8,4%; o que resta vem de situações frequentes com poucas falas (o convite, a saudade).
+  Nenhum aplicativo novo foi criado (o prompt pediu utilidade, não ícones): a utilidade nova está nas mensagens, no
+  E-mail (propostas com contratante), nas redes e no namoro.
+- **Família do par**: os familiares nascem quando o encontro acontece (mãe, às vezes pai e irmão); a família da parceria
+  que já existia em saves antigos não é reconstruída.
+- **Base**: transferências entre clubes com nome no futebol; nas outras modalidades, entre as equipes de base das cidades
+  maiores. A compensação de formação entre clubes é dita, não calculada.
+- **Fazenda**: a pecuária grande pouco povoada e tocada por gerente continua apertada (o gerente custa o tamanho da área,
+  e a terra ociosa paga ITR mais alto); a tela mostra o problema do dinheiro com as saídas.
+- **Pós-carreira**: os números do ofício mexem no desempenho, no dinheiro e no nome, mas a mídia não tem audiência por
+  partida nem a comissão tem a tabela do clube (lê-se a temporada pelo número do ofício).
+- **Escudos**: desenhados para os clubes do catálogo brasileiro e os grandes de fora; os outros recebem um escudo estável
+  pelo nome.
 
 ## 13–15. Commit final, deploy, URL
 
-(Preenchido no fechamento.)
+- **Commit do código validado:** `5e3cf18` (branch `claude/vida30-vida-social-fama-celular`). `main` e
+  `claude/fix-pos-rework3-playtest` (a branch de produção do Cloudflare Pages) foram avançados até ele por fast-forward, sem
+  merge. Este relatório entra num commit só de documentação, em `main` e na branch da 30 (a de produção fica no código).
+- **Deploy conferido:** https://vida-game.pages.dev/ serve `assets/index-upx25QHu.js`; "/" e os 198 arquivos JS/CSS com
+  sha256 idêntico ao build local validado.
+- **Fluxos no site real:** a revisão visual inteira em 1440 e duas vezes em 390 px, sem erro de página; um save antigo da
+  VIDA 28 (1965) e um da VIDA 29 (rural) abriram e viraram o ano sem erro.
+- **URL de produção:** https://vida-game.pages.dev/
