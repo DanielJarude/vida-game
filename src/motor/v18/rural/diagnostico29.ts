@@ -8,7 +8,9 @@
 import type { Vida } from '../../tipos';
 import type { Acao } from '../../acoes';
 import { anoDe } from '../../tempo';
-import { dinheiro as fmt } from '../../texto';
+import { dinheiro } from '../../texto';
+/** O dinheiro arredondado (ninguém fala "R$ 116.268" da fazenda: são uns R$ 116 mil). */
+const fmt = (x: number) => dinheiro(Math.abs(x) >= 20000 ? Math.round(x / 1000) * 1000 : Math.round(x / 10) * 10);
 import { CULTURAS18, ESTRUTURAS18, REBANHOS18 } from '../../dados18/rural/catalogo18';
 import {
   areaLivre, areaPasto, areaPlantada, capacidadeUA, climaDoAno, competenciaDaGestao, custoLocal, custosFixos, fmtHa, maoDeObra29, NOME_DA_GESTAO,
@@ -208,7 +210,7 @@ export function diagnosticoDaPropriedade(v: Vida, p: PropriedadeRural18): Indica
     const sugestao = Math.max(1, Math.ceil(mo.precisa - mo.familia));
     out.push({
       id: 'gente', titulo: 'Gente para o trabalho', estado, valor: Math.min(100, mo.cobertura * 100),
-      resumo: `O serviço pede umas ${n0(Math.max(1, mo.precisa))} ${mo.precisa < 1.5 ? 'pessoa' : 'pessoas'} o ano inteiro; ${mo.modo === 'equipe' ? `há ${mo.equipe} na equipe fixa${mo.familia ? ' mais o seu braço' : ''}` : 'hoje são diaristas contratados na safra'}.`,
+      resumo: `O serviço pede ${mo.precisa < 1.5 ? 'uma pessoa' : `umas ${n0(mo.precisa)} pessoas`} o ano inteiro; ${mo.modo === 'equipe' ? `há ${mo.equipe} na equipe fixa${mo.familia ? ' mais o seu braço' : ''}` : 'hoje são diaristas contratados na safra'}.`,
       significa: 'Mão de obra: quem planta, trata, ordenha, colhe. Pode ser diarista (paga por dia, na safra) ou equipe fixa (carteira assinada, o ano inteiro). Máquina tira gente da lavoura; ordenhadeira tira do leite.',
       efeito: mo.modo === 'equipe'
         ? (mo.cobertura >= 1 ? 'A equipe cobre o serviço: a lavoura dispensa parte das diárias (fica mais barata) e quem conhece a terra trabalha melhor.' : `Faltam ${faltam} na equipe: parte da colheita fica no pé e o trato dos animais atrasa.`)

@@ -210,3 +210,25 @@ describe('VIDA 29 · o diagnóstico em linguagem simples', () => {
     expect(corr.tempo).toMatch(/safra seguinte/);
   });
 });
+
+describe('VIDA 29 · a comunidade do campo', () => {
+  it('o mutirão, a divisa e a estrada abrem pelo fato do ano e mudam o motor (ajuda na colheita, estradas internas)', async () => {
+    const { ACONTECIMENTOS_18 } = await import('../v18/eventos/acontecimentos18');
+    const { preparar } = await import('../conteudo/motor');
+    const { criarRng } = await import('../rng');
+    const { vizinhosAjudam29, vizinhosFrios29 } = await import('../v18/rural/fazenda18');
+    const v = lavoura();
+    for (const id of ['rural29_mutirao', 'rural29_divisa', 'rural29_estrada']) {
+      const c = ACONTECIMENTOS_18.find(x => x.id === id)!;
+      expect(c).toBeTruthy();
+      expect(preparar(c, v, criarRng(1))).toBeNull();
+      v.fatos[id] = v.t;
+      expect(preparar(c, v, criarRng(1))).toBeTruthy();
+    }
+    expect(vizinhosAjudam29(v)).toBe(false);
+    v.fatos['rural29_ajudou'] = v.t;
+    expect(vizinhosAjudam29(v)).toBe(true);
+    v.fatos['rural29_recusou'] = v.t - 30;
+    expect(vizinhosFrios29(v)).toBe(false);
+  });
+});

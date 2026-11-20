@@ -192,3 +192,4 @@
 .campo29__passos li > span { flex: 1 1 200px; }
 .campo29__tecnico { font-family: var(--font-mono, monospace); font-size: 12px; }
 .campo29__admin { display: flex; flex-direction: column; gap: var(--space-3); margin-bottom: var(--space-3); }
+.campo29__decisao > :not(:first-child), .campo29__passos li > :not(span) { flex: 0 0 auto; width: auto; }

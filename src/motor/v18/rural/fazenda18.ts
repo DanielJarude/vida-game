@@ -662,7 +662,8 @@ export function simularAno(v: Vida, p: PropriedadeRural18, ano: number, opts: { 
   // colheita perde. Sem equipe (o de sempre), falta diarista na hora H de vez em quando nas culturas de colheita manual.
   const mo = maoDeObra29(v, p);
   const rm = rngDe(v.id, 'mao29', p.id, ano);
-  const faltaDiarista = !opts.prever && mo.modo === 'diaristas' && mo.precisa >= 4 && mo.cobertura < 1 && rm.chance(0.2);
+  // VIDA 29: os vizinhos que você ajudou no mutirão vêm na sua colheita; os que você recusou, não.
+  const faltaDiarista = !opts.prever && mo.modo === 'diaristas' && mo.precisa >= 4 && mo.cobertura < 1 && !vizinhosAjudam29(v) && rm.chance(vizinhosFrios29(v) ? 0.35 : 0.2);
   const perdaDeGente = mo.modo === 'equipe' && mo.precisa > 0 && mo.cobertura < 0.8 ? Math.min(0.35, (0.8 - mo.cobertura) * 0.5) : 0;
   const economiaDeDiaria = mo.modo === 'equipe' ? 0.12 * Math.min(1, mo.cobertura) : 0;
   if (p.uso === 'arrendada') {
@@ -846,7 +847,30 @@ export function processarFazendas18(v: Vida): void {
     relevancia: Math.abs(total) > 200000 ? 'biografia' : 'cotidiano', tema: 'trabalho', tom: total >= 0 ? 'bom' : 'ruim'
   });
   if (ruins.length && total < 0) v.fatos['rural18_prejuizo'] = v.t;
+  comunidadeRural29(v);
 }
+
+/**
+ * VIDA 29 · A COMUNIDADE DO CAMPO. Quem produz tem vizinhos: o mutirão da colheita (ajudar abre a ajuda deles na sua
+ * colheita por dois anos; recusar faz faltar diarista), a divisa e a água (o acordo custa a cerca; a briga, o advogado),
+ * a estrada cascalhada junto (quem entra com a parte ganha as estradas internas — menos perda na chuva). Um por ano, no
+ * máximo, e só para quem tem propriedade em produção; sorteio derivado.
+ */
+function comunidadeRural29(v: Vida): void {
+  const prod = todasAsPropriedades(v).filter(x => x.p.uso === 'producao');
+  if (!prod.length || idade(v) < 18) return;
+  const ultima = Math.max(v.fatos['rural29_mutirao'] ?? -999, v.fatos['rural29_divisa'] ?? -999, v.fatos['rural29_estrada'] ?? -999);
+  if (v.t - ultima < 24) return;
+  const r = rngDe(v.id, 'comunidade29', v.t);
+  const x = r.next();
+  const p = prod[0].p;
+  if (x < 0.22 && p.talhoes.length) v.fatos['rural29_mutirao'] = v.t;
+  else if (x < 0.32 && (p.rebanhos.length || p.agua < 55)) v.fatos['rural29_divisa'] = v.t;
+  else if (x < 0.45 && !temEstrutura(p, 'estradas') && p.ha >= 5) v.fatos['rural29_estrada'] = v.t;
+}
+/** A ajuda dos vizinhos na colheita (quem foi ao mutirão deles): sem falta de diarista por dois anos. Quem recusou: falta mais. */
+export const vizinhosAjudam29 = (v: Vida) => v.fatos['rural29_ajudou'] !== undefined && v.t - v.fatos['rural29_ajudou'] <= 24;
+export const vizinhosFrios29 = (v: Vida) => v.fatos['rural29_recusou'] !== undefined && v.t - v.fatos['rural29_recusou'] <= 24;
 
 /** O resumo para as telas: área, uso, valor, o último ano. */
 export function resumoDaPropriedade(v: Vida, p: PropriedadeRural18) {

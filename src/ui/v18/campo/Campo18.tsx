@@ -315,7 +315,7 @@ function Administracao29({ vida, agir, p, detalhado }: { vida: Vida; agir: Agir;
       </section>
       <section aria-label="Equipe">
         <h4>Gente para o trabalho</h4>
-        <p className="nota">O serviço pede umas {Math.max(1, Math.round(mo.precisa)).toLocaleString('pt-BR')} {mo.precisa < 1.5 ? 'pessoa' : 'pessoas'} o ano inteiro. {mo.modo === 'equipe' ? `Equipe fixa: ${mo.equipe}.` : 'Hoje: diaristas na safra (o custo já está no gasto por hectare; na colheita manual, às vezes falta gente).'} Cada trabalhador registrado custa uns {dinheiroCurto(sal)} por ano, com 13º, férias e encargos.{detalhado ? ` Cobertura: ${pct(mo.cobertura)}.` : ''}</p>
+        <p className="nota">O serviço pede {mo.precisa < 1.5 ? 'uma pessoa' : `umas ${Math.round(mo.precisa).toLocaleString('pt-BR')} pessoas`} o ano inteiro. {mo.modo === 'equipe' ? `Equipe fixa: ${mo.equipe}.` : 'Hoje: diaristas na safra (o custo já está no gasto por hectare; na colheita manual, às vezes falta gente).'} Cada trabalhador registrado custa uns {dinheiroCurto(sal)} por ano, com 13º, férias e encargos.{detalhado ? ` Cobertura: ${pct(mo.cobertura)}.` : ''}</p>
         <div className="campo18__botoes">
           <BotaoAcao vida={vida} agir={agir} ocultarImpossivel acao={r18({ op: 'equipe29', id: p.id, n: (p.equipe29 ?? 0) + 1 })}>{p.equipe29 ? 'Contratar mais um' : 'Contratar um trabalhador'}</BotaoAcao>
           {(p.equipe29 ?? 0) > 0 && <BotaoAcao vida={vida} agir={agir} acao={r18({ op: 'equipe29', id: p.id, n: (p.equipe29 ?? 0) - 1 })}>Dispensar um (rescisão)</BotaoAcao>}

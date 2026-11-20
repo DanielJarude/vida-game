@@ -142,6 +142,50 @@ export const ACONTECIMENTOS_18: Conteudo[] = [
       { id: 'aguentar', texto: 'Aguentar: a terra dá e tira', resolver: c => ({ texto: 'Você apertou o cinto e esperou a próxima chuva.', memoria: null, efeito: () => estresse(c, 5) }) }
     ]
   },
+  /* ---------------------------------------------------------------- VIDA 29 · a comunidade do campo */
+  {
+    id: 'rural29_mutirao', tipo: 'decisao', idade: [18, 110], tema: 'trabalho', prioritario: true, prioridade: 1, repetir: 2,
+    quando: c => deHoje(c, 'rural29_mutirao') && todasAsPropriedades(c.v).some(x => x.p.uso === 'producao'),
+    titulo: 'O mutirão do vizinho',
+    texto: c => { const p = todasAsPropriedades(c.v).find(x => x.p.uso === 'producao')!.p; return `O vizinho de ${p.nome} perdeu a janela da colheita: a chuva vem aí e falta gente. Ele bateu na porteira pedindo um sábado de mutirão — "quem ajuda, é ajudado".`; },
+    opcoes: [
+      { id: 'ir', texto: 'Ir, de bota e enxada', comportamento: { empatia: 1 },
+        consequencia: () => 'Um sábado inteiro; na sua colheita, os vizinhos vêm (dois anos sem faltar gente).',
+        resolver: c => ({ texto: 'Você passou o sábado no eirado do vizinho. No fim, café com bolo e a promessa: na sua colheita, eles vêm.', memoria: 'Foi ao mutirão do vizinho na colheita.', relevancia: 'biografia', efeito: () => { c.v.fatos['rural29_ajudou'] = c.v.t; estresse(c, 2); feliz(c, 2); } }) },
+      { id: 'mandar', texto: 'Mandar um dos seus trabalhadores pelo dia', disponivel: c => todasAsPropriedades(c.v).some(x => (x.p.equipe29 ?? 0) > 0),
+        consequencia: () => 'Conta como ajuda (a sua colheita também terá gente), sem gastar o seu sábado.',
+        resolver: c => ({ texto: 'O seu trabalhador passou o dia lá. O vizinho mandou dizer que fica devendo uma.', memoria: null, efeito: () => { c.v.fatos['rural29_ajudou'] = c.v.t; } }) },
+      { id: 'recusar', texto: 'Dizer que não dá', comportamento: { independencia: 1 },
+        consequencia: () => 'Na sua colheita, a ajuda também vai faltar (por dois anos, mais chance de faltar diarista).',
+        resolver: c => ({ texto: 'Você disse que não dava. Ele entendeu — e a vizinhança também.', memoria: null, efeito: () => { c.v.fatos['rural29_recusou'] = c.v.t; } }) }
+    ]
+  },
+  {
+    id: 'rural29_divisa', tipo: 'decisao', idade: [18, 110], tema: 'casa', prioritario: true, prioridade: 1, repetir: 3,
+    quando: c => deHoje(c, 'rural29_divisa') && todasAsPropriedades(c.v).some(x => x.p.uso === 'producao'),
+    titulo: 'A cerca da divisa',
+    texto: c => { const p = todasAsPropriedades(c.v).find(x => x.p.uso === 'producao')!.p; return p.rebanhos.length ? `O gado de ${p.nome} passou pela cerca velha da divisa e pisoteou a roça do vizinho. Ele quer a cerca refeita — e o prejuízo pago.` : `O vizinho de cima desviou o córrego que abastece ${p.nome}: a água chega fraca. Ou se conversa, ou se vai à Justiça.`; },
+    opcoes: [
+      { id: 'acordo', texto: () => `Fazer um acordo: dividir a cerca nova (uns ${fmt(9000)})`, comportamento: { empatia: 1 }, disponivel: c => c.v.financas.conta >= 9000,
+        resolver: c => ({ texto: 'Cerca nova, café na varanda dele. A divisa voltou a ser só uma linha no mapa.', memoria: null, efeito: () => { tirar(c, 9000, 'Cerca da divisa (acordo com o vizinho)'); } }) },
+      { id: 'justica', texto: 'Chamar o advogado', comportamento: { independencia: 1 }, disponivel: c => c.v.financas.conta >= 15000,
+        consequencia: () => 'Custa mais e demora; a vizinhança azeda.',
+        resolver: c => ({ texto: 'O processo correu um ano. Você ganhou no papel — e perdeu o vizinho.', memoria: 'Brigou na Justiça com o vizinho da fazenda.', relevancia: 'biografia', efeito: () => { tirar(c, 15000, 'Advogado (questão de divisa)'); c.v.fatos['rural29_recusou'] = c.v.t; estresse(c, 6); } }) },
+      { id: 'deixar', texto: 'Deixar como está', resolver: c => ({ texto: 'Você deixou para lá. A água continuou fraca; o vizinho, desconfiado.', memoria: null, efeito: () => { for (const { p } of todasAsPropriedades(c.v)) if (p.uso === 'producao') p.agua = clamp(p.agua - 4, 5, 100); } }) }
+    ]
+  },
+  {
+    id: 'rural29_estrada', tipo: 'decisao', idade: [18, 110], tema: 'casa', prioritario: true, prioridade: 1, repetir: 4,
+    quando: c => deHoje(c, 'rural29_estrada') && todasAsPropriedades(c.v).some(x => x.p.uso === 'producao'),
+    titulo: 'A estrada da comunidade',
+    texto: c => { const p = todasAsPropriedades(c.v).find(x => x.p.uso === 'producao')!.p; return `Os vizinhos da estrada de ${p.nome} se juntaram para cascalhar o caminho antes das chuvas: a prefeitura entra com a máquina, cada propriedade com a sua parte. Na última chuva, o caminhão do leite atolou duas vezes.`; },
+    opcoes: [
+      { id: 'entrar', texto: 'Entrar com a sua parte (uns R$ 6.000)', disponivel: c => c.v.financas.conta >= 6000, comportamento: { empatia: 1 },
+        consequencia: () => 'O cascalho chega também às estradas internas: na chuva, a colheita sai.',
+        resolver: c => ({ texto: 'O cascalho chegou em setembro. Na primeira chuva, o caminhão passou sem atolar — e a máquina da prefeitura aproveitou e cascalhou as suas estradas internas.', memoria: null, efeito: () => { tirar(c, 6000, 'Estrada da comunidade (a sua parte)'); const x = todasAsPropriedades(c.v).find(y => y.p.uso === 'producao'); if (x && !x.p.estruturas.some(e => e.id === 'estradas')) x.p.estruturas.push({ id: 'estradas', n: 1, t: c.v.t }); c.v.fatos['rural29_ajudou'] = c.v.t; } }) },
+      { id: 'nao', texto: 'Ficar de fora', resolver: c => ({ texto: 'Você ficou de fora. A estrada foi cascalhada até a sua porteira — e parou ali.', memoria: null, efeito: () => { c.v.fatos['rural29_recusou'] = c.v.t; } }) }
+    ]
+  },
   {
     id: 'rural18_infancia', tipo: 'acontecimento', idade: [5, 15], tema: 'familia', repetir: 3, peso: 0.5,
     quando: c => Object.values(c.v.pessoas).some(p => p.vivo && p.posses?.bens.some(b => b.tipo === 'imovel' && b.rural) && ['mae', 'pai', 'avo'].includes(c.v.vinculos[p.id]?.parentesco ?? '')),
