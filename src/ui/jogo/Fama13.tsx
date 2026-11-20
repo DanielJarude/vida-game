@@ -17,6 +17,9 @@ import { anoDe } from '../../motor/tempo';
 import './fama13.css';
 import { Manchete161 } from '../v16/areas/Capas161';
 import { convites22, imprensaDoAno22 } from '../../motor/v22/fama/agenda22';
+import { lazy, Suspense } from 'react';
+// VIDA 30 · §3: o meio (sob demanda: o pacote do Jogo está no limite).
+const Meio30 = lazy(() => import('../v30/fama/Meio30'));
 
 const CHEGA: Record<string, string> = { 'a cidade': 'à cidade', 'a região': 'à região', 'o país': 'ao país todo', 'fora do país': 'além das fronteiras' };
 const DEGRAUS = ['anônimo', 'local', 'reconhecido', 'famoso', 'muito famoso'];
@@ -159,6 +162,8 @@ export function Fama13({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean 
           </section>
         );
       })()}
+
+      {vida.fama30 && <Suspense fallback={null}><Meio30 vida={vida} /></Suspense>}
 
       {usos.length === 0 && l.valor < 25 && <p className="nota">Quando o público conhecer mais o seu nome, dá para usá-lo: entrevistas, causas, publicidade, recolhimento.</p>}
       {usos.length > 0 && (

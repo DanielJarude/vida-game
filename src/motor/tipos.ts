@@ -46,6 +46,9 @@ export interface Pessoa {
   marcos?: Record<string, number>;
   /** VIDA 15: a pessoa é conhecida do público (a área, o tamanho do nome, desde quando). Ausente: anônima. */
   celebridade15?: { area: import('./dados15/celular/tipos').AreaCelebridade15; nivel: 1 | 2 | 3; desde?: number };
+  /** VIDA 30 · §5: a família de quem você namora (os familiares, quando você os conheceu, o que acharam de você) e a sua
+   *  família diante dessa pessoa (quando foi apresentada, o que cada um achou, a conversa depois). */
+  familia30?: { ids: string[]; conheceu?: number; impressao?: Record<string, number>; apresentado?: number; aprovacao?: Record<string, number>; opiniao?: number };
   tMorte?: number;
   causaMorte?: string;
   temperamento: Temperamento;

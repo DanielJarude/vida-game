@@ -34,6 +34,7 @@ import type { Rng } from './rng';
 import { entrarNaVida, paisDaVida } from './mundo/vida';
 import { clamp, rngDe } from './rng';
 import { fama30DoAno } from './v30/fama/rede30';
+import { vidaDe30DoAno } from './conteudo/acontecimentos30Vida';
 import type { Retorno, Vida } from './tipos';
 import { escrever, idade, transacao } from './nucleo';
 import { morreEsteAno, processarCorpo } from './sistemas/corpo';
@@ -506,6 +507,8 @@ function faseDeConteudo(v: Vida, r: Rng, linhasSistemicas: number): void {
   processarConquistas14(v, CATALOGO, preparar, (c, ctx) => (c.tipo === 'acontecimento' ? aplicarAcontecimento(v, c, ctx) : (abrirDecisao(v, c, ctx), true)));
   // VIDA 30 · §3: o meio vive, a privacidade anda e, num ano sem decisão, às vezes a fama acontece em pessoa.
   abrirCena30(v, fama30DoAno(v, !v.momento && !v.fila?.length && decisoesDoAno(v) === 0));
+  // VIDA 30 · §4–§5: as experiências de cada fase e as pessoas que reagem — sorteio derivado próprio; decisão só num ano sem nenhuma.
+  vidaDe30DoAno(v, CATALOGO, preparar, (c, ctx) => { if (c.tipo === 'decisao') abrirDecisao(v, c, ctx); else aplicarAcontecimento(v, c, ctx); }, !v.momento && !v.fila?.length && decisoesDoAno(v) === 0);
 }
 
 export function totalDeConteudo(): { acontecimentos: number; decisoes: number } {
