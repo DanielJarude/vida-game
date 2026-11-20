@@ -466,7 +466,10 @@ describe('FAM-02 · seguidores: crescimento com causa, no ano certo', () => {
     for (const posts of [0, 3]) {
       const v = famosa(posts, 510 + posts);
       const b = contaAtiva(v, 'instagram')!.anos![0];
-      expect(b.exposicao, `${posts} posts`).toBeLessThanOrEqual(1_400_000 * 0.06 * 1.2 + 4000);
+      // VIDA 30: o teto é o da regra (6% do público real, com a sorte de até 1,2) sobre o público que a conta TINHA no ano
+      // (as três publicações trazem seguidores; quantos, depende da vida sorteada, que deriva quando o ano ganha passagens).
+      const real = Math.max(1_400_000, b.inicio + b.publicacoes + b.organico);
+      expect(b.exposicao, `${posts} posts`).toBeLessThanOrEqual(real * 0.06 * 1.2 + 4000);
     }
   });
   it('um acontecimento público com o nome subindo ainda permite o salto — e ele é explicado', () => {

@@ -26,6 +26,34 @@ export interface NotaDeVersao {
 
 export const NOTAS: NotaDeVersao[] = [
   {
+    versao: '30',
+    data: '2026-11-20',
+    titulo: 'A vida com gente, a fama em pessoa e um campo mais justo',
+    novidades: [
+      'A fama acontece em pessoa: reconhecem você na padaria, no shopping, no aeroporto — do jeito do tamanho do seu nome. Às vezes alguém lembra do que acabou de acontecer, às vezes chega uma proposta de trabalho; o fotógrafo na porta é só para quem é muito famoso.',
+      'O meio tem gente de verdade: cantoras, atores, atletas, jogadores de e-sports, apresentadores e empresários com nome, ofício, jeito e uma vida que anda sozinha — lançam, estreiam, se transferem, namoram, brigam e viram notícia. Numa festa, numa premiação ou num jogo beneficente, você pode conhecer um deles, conversar, trocar contato e flertar; a pessoa entra na sua vida como qualquer outra. A Fama mostra o meio e a sua privacidade.',
+      'Conhecer a família de quem você namora: um almoço de domingo com gente de jeito próprio — simpatia, desconfiança, curiosidade, constrangimento —, o que fica depois e a chance de virar o jogo. E apresentar o par à sua família, com as perguntas dos pais, a provocação do irmão e a opinião que vem depois.',
+      'Mais vida em cada fase: a cabana com o irmão, a festa de aniversário, a bicicleta sem rodinhas, as férias com os avós, a primeira festa, a pressão da turma, sair de casa, a viagem de estrada, o churrasco, o Natal de quem, a reunião da escola, a conversa difícil no casamento, o encontro da turma décadas depois, o orgulho de um filho, a despedida da aposentadoria, os netos, o álbum de fotos que traz uma lembrança da sua infância e o amigo de cinquenta anos.',
+      'As pessoas reagem: o amigo que comemora e o que sente inveja, o amigo que percebe que você mudou, o que cobra o seu sumiço, a família que comenta uma decisão sua, o par que se preocupa quando você não está bem.',
+      'O ofício depois de competir: a mídia tem emissora, programa, audiência e o seu jeito no ar; a escolinha tem alunos com nome — e o que você indica pode assinar com um clube anos depois; a comissão técnica tem o técnico com nome e, quando ele cai, o convite para assumir; a gestão tem janela, orçamento e torcida.',
+      'As redes mostram o que você publicou como post de verdade: a legenda que você escreveu, as curtidas, os comentários de quem reagiu — e, no YouTube, no TikTok e na Twitch, a miniatura do vídeo ou da live (título, categoria, duração ou "ao vivo" com espectadores).',
+      'O feed ficou cheio de vida: além das grandes notícias, as pessoas postam o dia a dia (o prato, o treino, o bicho, o show, o pôr do sol), cada uma no seu jeito — e dá para curtir e comentar.',
+      'O aplicativo de namoro tem filtros: idade, distância, o que a pessoa busca, um interesse em comum e "só famosos" (perfis verificados de gente do meio, que escolhe mais).',
+      'O casamento, o namoro assumido e a separação entre famosos viram notícia no jornal e assunto em alta.',
+      'Os clubes têm escudo próprio, desenhado com as cores e o traço de cada um (sem copiar os escudos oficiais).',
+      'Categorias de base com mercado: outro clube pode convidar ou chamar para uma avaliação — com a cidade, a categoria e o que oferece —, e a ficha da formação mostra o registro, as trocas de clube e o apoio que você recebe (bolsa, ajuda de custo, benefícios, contrato de formação aos 16).'
+    ],
+    melhorias: [
+      'O celular fala do seu trabalho de verdade: o atleta, o soldado, o pintor, a manicure e o médico recebem mensagens do próprio ambiente, e as propostas que chegam por um contato são do seu ramo. A mesma frase não volta toda hora.',
+      'A fazenda ficou mais justa: o caseiro e o gerente custam o tamanho da propriedade, o solo cansado pesa menos, o que o clima levou não se colhe (nem se paga a colheita), o excesso de gado é vendido por quem cuida, a horta não conta como monocultura e quem toca a terra aprende com os anos. O ano ruim vira crédito de custeio (Pronaf no pequeno), não dívida de cartão.',
+      'A Visão geral do campo mostra primeiro o que pede atenção — com a urgência, o que acontece se não fizer nada e as saídas com custo e consequência; a explicação longa ficou no modo detalhado.',
+      'A tela do clube de que você é dono virou painel: escudo, números, o time provável no campo, torcida, nome e folha em barras, estrutura, temporadas com receita e despesa, e cartões de jogadores com força, potencial e comparação com o titular.'
+    ],
+    correcoes: [
+      'A proposta de emprego diz quem contrata (a empresa ou o clube), o cargo e o salário; convite para entrevista e proposta formal são coisas diferentes; aceitar não trava mais sem motivo, e o vínculo é com quem propôs. O técnico não recebe mais o recado genérico de headhunter sem clube.'
+    ]
+  },
+  {
     versao: '29.2',
     data: '2026-11-20',
     titulo: 'O tipo de jogador, as equipes de verdade e a rua inteira',

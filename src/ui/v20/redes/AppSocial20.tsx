@@ -18,10 +18,11 @@ import { seguidoresEmPalavras } from '../../../motor/sistemas/redesBase';
 import { BotaoAcao } from '../../comum';
 import { dinheiroCurto } from '../../apresentar';
 import { Retrato } from '../../avatar/Retrato';
-import { BalancoDoPublico, Feed, GestaoDaConta, Glifo, notificacoes, perfilDaRede, TemaDesenho, crescimentoNoAno } from '../../jogo/Redes';
+import { BalancoDoPublico, GestaoDaConta, Glifo, notificacoes, perfilDaRede, TemaDesenho, crescimentoNoAno } from '../../jogo/Redes';
 import { EmAlta19, FeedDaPlataforma19 } from '../../v19/conectada/Feed19';
 import { nomeDaRedeNaEpoca } from '../../eras/epoca';
 import './appSocial20.css';
+import MeusPosts30 from '../../v30/redes/MeusPosts30';
 
 type Tela = 'inicio' | 'alta' | 'criar' | 'avisos' | 'perfil';
 interface Props { vida: Vida; agir: (a: Acao) => boolean; id: PlataformaId; abrirPessoa: (id: string) => void; abrirConversa: (id: string) => void; voltar?: () => void }
@@ -134,7 +135,8 @@ function Compor({ vida, agir, id, aoPublicar }: { vida: Vida; agir: Props['agir'
 function MinhasPublicacoes({ vida, agir, id }: { vida: Vida; agir: Props['agir']; id: PlataformaId }) {
   const l = leituraDaConta(vida, id);
   const ultimas = l ? l.conta.publicacoes.filter(x => !x.apagada).slice(-9).reverse() : [];
-  return ultimas.length ? <Feed vida={vida} agir={agir} id={id} lista={ultimas} /> : <p className="app20__vazio">Nada publicado ainda — o botão de criar fica no alto.</p>;
+  // VIDA 30: o que você publicou, como post de verdade (a legenda, a prévia do vídeo ou da live, curtidas e comentários).
+  return ultimas.length ? <MeusPosts30 vida={vida} agir={agir} id={id} arroba={l!.conta.arroba} lista={ultimas} /> : <p className="app20__vazio">Nada publicado ainda — o botão de criar fica no alto.</p>;
 }
 
 function PerfilDaConta({ vida, agir, id, abrirPessoa }: { vida: Vida; agir: Props['agir']; id: PlataformaId; abrirPessoa: (id: string) => void }) {

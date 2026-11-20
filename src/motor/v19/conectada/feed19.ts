@@ -25,6 +25,7 @@ import { flex } from '../../texto';
 import { exposicaoDe19 } from '../npcs/vidas19';
 import { municipio } from '../../dados/lugares';
 import { anoDe } from '../../tempo';
+import { cotidianoDe30, materiasDoMeio30 } from '../../v30/redes/redes30';
 
 export type Formato19 = 'texto' | 'foto' | 'album' | 'video' | 'story';
 export type TomNpc19 = 'apoio' | 'parabens' | 'carinho' | 'brincadeira' | 'saudade' | 'ironia' | 'ciume';
@@ -246,7 +247,8 @@ export function feed19(v: Vida, o: { pid?: string; limite?: number } = {}): Post
   const seguindo = new Set(v.conectada19?.seguindo ?? []);
   for (const { p, vin } of vinculosVivos(v)) {
     if (o.pid && p.id !== o.pid) continue;
-    if (p.especie || !p.vivo || !p.nome || !p.vida?.trajetoria?.length) continue;
+    if (p.especie || !p.vivo || !p.nome) continue;
+    if (!p.vida?.trajetoria?.length) { if (!o.pid || o.pid === p.id) out.push(...cotidianoDe30(v, p, vin, o.pid ? 60 : 24)); continue; }
     if (vin.digital?.bloqueado !== undefined || (vin.ruptura && vin.estagio !== 'ex_amigo')) continue;
     if (vin.convivio.includes('casa') && !o.pid) {
       // Quem mora com você: você já sabe — só o que é grande (o filho, a formatura) aparece.
@@ -258,11 +260,13 @@ export function feed19(v: Vida, o: { pid?: string; limite?: number } = {}): Post
       const post = publicacao19(v, p, vin, x);
       if (post) out.push(post);
     }
+    // VIDA 30: o dia a dia de quem expõe a vida (o prato, o treino, o bicho, o show) — o feed não é só de grandes notícias.
+    out.push(...cotidianoDe30(v, p, vin, janela));
   }
   const vistos = new Set<string>();
   return out.sort((a, b) => b.t - a.t || (v.vinculos[b.pid]?.proximidade ?? 0) - (v.vinculos[a.pid]?.proximidade ?? 0) || (a.chave < b.chave ? -1 : 1))
     .filter(x => { const k = `${x.tipo}|${x.t}|${x.origem}`; if (x.tipo === 'perda' && vistos.has(k)) return false; vistos.add(k); return true; })
-    .slice(0, o.limite ?? 40);
+    .slice(0, o.limite ?? 60);
 }
 
 /* ------------------------------------------------------------------ Em alta (com origem) */
@@ -279,6 +283,8 @@ export function emAlta19(v: Vida): Tendencia19[] {
   }
   const minhas = Object.values(v.redes?.contas ?? {}).flatMap(c => (c?.publicacoes ?? []).filter(pub => pub.viral && v.t - pub.t <= 12));
   if (minhas.length) out.push({ id: 'eu:viral', texto: 'Sua publicação está circulando', origem: 'Uma publicação sua viralizou neste ano.' });
+  // VIDA 30: o que acontece no meio (o casamento, o namoro assumido, a separação) também vira assunto.
+  for (const m of materiasDoMeio30(v).slice(0, 2)) out.push({ id: m.id, texto: m.titulo, origem: m.linha });
   const liga = v.caminhos.ligas?.BR?.historico?.slice(-1)[0];
   if (liga?.liga) out.push({ id: `fut:${liga.ano}`, texto: `${liga.liga.replace(/^~/, '')}, campeão de ${liga.ano}`, origem: 'O campeonato nacional da temporada.' });
   // VIDA 20: o seu clube (o título, o acesso, a queda) e a sua temporada nas pistas também viram assunto.

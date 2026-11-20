@@ -76,3 +76,5 @@
 .clube30__delta--bom { color: var(--bom); font-weight: 600; }
 .clube30__obras { display: flex; flex-direction: column; gap: 8px; }
 .clube30__obra { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; border-bottom: 1px solid var(--fio); padding-bottom: 6px; }
+.clube30__venda-nome { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.clube30__venda-nome .escudo30 { flex: none; }

@@ -39,11 +39,11 @@ import { municipio } from '../../dados/lugares';
 import { sortearNome, sortearSobrenome } from '../../dados/nomes';
 import { candidatos17, deixarFio17, ehTipo17, extrasDaVida15, opcoes17, responder17, semResposta17, aoChegar17, ambienteDe30, guardarDito30, jaDito30 } from '../../v17/celular/mensagens17';
 import { PROPOSTAS30 } from '../../dados17/celular/ambientes30';
-import { eventoDoConvite30, garantirRede30, ligarFigura30, moldeDaRede30 } from '../../v30/fama/rede30';
+import { eventoDoConvite30, garantirRede30, idadeDaFigura30, ligarFigura30, moldeDaRede30, nivelDoNome30 } from '../../v30/fama/rede30';
 import { podeReceber17, receber17, type Prioridade17 } from '../../sistemas/cotaDeMensagens';
 import { aindaEmRomance } from '../../sistemas/estadoConjugal';
 import { disponibilidadeLigacao17, ligarDaUnidade17, MOTIVO_PRESO17, preso17 } from '../../v17/prisao/telefone17';
-import type { AreaCelebridade15, Celular15, Lugar15, Molde15, Msg15, PerfilApp15, TipoMsg15 } from '../../dados15/celular/tipos';
+import type { AreaCelebridade15, Celular15, FiltrosNamoro30, Lugar15, Molde15, Msg15, PerfilApp15, TipoMsg15 } from '../../dados15/celular/tipos';
 import { convite21, falaDaResposta21, marcas21, saudade21 } from '../../v21/celular/conversas21';
 import { noticia21, noticiaDeApoio } from '../../dados21/celular/falas21';
 
@@ -823,7 +823,7 @@ export function conhecerCelebridade(v: Vida, r: Rng, m: Molde15, via: 'evento' |
 
 /* ------------------------------------------------------------------ O aplicativo de namoro */
 
-const INTERESSES = ['cinema', 'trilha', 'cozinhar', 'praia', 'séries', 'futebol', 'música ao vivo', 'livros', 'viajar', 'academia', 'cachorros', 'gatos', 'vinho', 'café', 'jogos', 'fotografia', 'dança', 'yoga', 'samba', 'rock', 'sertanejo', 'museus', 'corrida', 'bicicleta', 'bares', 'teatro', 'plantas', 'astrologia'];
+export const INTERESSES = ['cinema', 'trilha', 'cozinhar', 'praia', 'séries', 'futebol', 'música ao vivo', 'livros', 'viajar', 'academia', 'cachorros', 'gatos', 'vinho', 'café', 'jogos', 'fotografia', 'dança', 'yoga', 'samba', 'rock', 'sertanejo', 'museus', 'corrida', 'bicicleta', 'bares', 'teatro', 'plantas', 'astrologia'];
 const BIOS = [
   'Sem paciência para joguinho. Bom papo e um café já me ganham.',
   'Meio caseir{o}, meio aventureir{o}. Depende do dia (e do convite).',
@@ -866,18 +866,42 @@ function gerarPerfis(v: Vida, n: number, lote: number): PerfilApp15[] {
   const i = idade(v);
   const at = v.eu.atracao!;
   const out: PerfilApp15[] = [];
+  // VIDA 30: os filtros (a idade, a distância, o que a pessoa busca, um interesse em comum, só famosos).
+  const f = v.celular15?.deck?.filtros30;
+  if (f?.famosos) return perfisFamosos30(v, n, f);
   for (let k = 0; k < n; k++) {
     const genero = at === 'homens' ? 'masculino' : at === 'mulheres' ? 'feminino' : r.chance(0.5) ? 'masculino' : 'feminino';
-    const faixa = [Math.max(18, i - 7), Math.min(80, i + 7)];
+    const faixa = f ? [Math.max(18, f.idadeMin), Math.max(Math.max(18, f.idadeMin), Math.min(90, f.idadeMax))] : [Math.max(18, i - 7), Math.min(80, i + 7)];
     const p = criarPessoa(v, r, { idade: r.int(faixa[0], faixa[1]), genero, municipioId: v.moradia.municipioId });
     // Fica fora da vida até o match (o perfil não é ninguém que você conheça).
     delete v.pessoas[p.id];
     p.atracao = v.eu.genero === 'masculino' ? (r.chance(0.85) ? 'homens' : 'ambos') : v.eu.genero === 'feminino' ? (r.chance(0.85) ? 'mulheres' : 'ambos') : 'ambos';
     p.parceiroId = undefined;
-    const ints = [...INTERESSES].sort(() => r.next() - 0.5).slice(0, 3);
-    out.push({ pessoa: p, bio: r.pick(BIOS).replace(/\{o\}/g, flex(p.genero, 'o', 'a', 'e')), busca: buscaDoPerfil(v, p, r), km: r.int(1, 18), interesses: ints });
+    let ints = [...INTERESSES].sort(() => r.next() - 0.5).slice(0, 3);
+    if (f?.interesse && !ints.includes(f.interesse)) ints = [f.interesse, ...ints.slice(0, 2)];
+    const busca = f && f.busca !== 'qualquer' ? f.busca : buscaDoPerfil(v, p, r);
+    out.push({ pessoa: p, bio: r.pick(BIOS).replace(/\{o\}/g, flex(p.genero, 'o', 'a', 'e')), busca, km: r.int(1, Math.max(1, Math.min(f?.km ?? 18, 80))), interesses: ints });
   }
   return out;
+}
+
+/** VIDA 30: os perfis verificados — figuras do meio sem par, do gênero e da idade do filtro (podem ser poucas). */
+function perfisFamosos30(v: Vida, n: number, f: FiltrosNamoro30): PerfilApp15[] {
+  const m = garantirRede30(v);
+  const at = v.eu.atracao!;
+  const r = rngDe(v.id, 'namoro30_fam', v.t, v.celular15?.deck?.aplicacoes30 ?? 0);
+  const livres = m.figuras.filter(x => x.fora === undefined && !x.pessoaId && !x.lacos.some(l => l.tipo === 'romance' || l.tipo === 'casados')
+    && (at === 'ambos' || (at === 'homens' ? x.genero === 'masculino' : x.genero === 'feminino')) && idadeDaFigura30(v, x) >= Math.max(18, f.idadeMin) && idadeDaFigura30(v, x) <= f.idadeMax);
+  return livres.slice(0, n).map(x => {
+    const p = criarPessoa(v, r, { idade: idadeDaFigura30(v, x), genero: x.genero, municipioId: x.municipioId, nome: x.nome, sobrenome: x.sobrenome, ocupacao: x.oficio, renda: 30000 * x.nivel });
+    delete v.pessoas[p.id];
+    p.celebridade15 = { area: x.area === 'atuacao' ? 'cinema' : x.area === 'futebol' || x.area === 'esports' ? 'esporte' : x.area as never, nivel: x.nivel, desde: v.t };
+    p.atracao = v.eu.genero === 'masculino' ? 'homens' : v.eu.genero === 'feminino' ? 'mulheres' : 'ambos';
+    if (r.chance(0.2)) p.atracao = 'ambos';
+    p.parceiroId = undefined;
+    const ult = x.fatos[x.fatos.length - 1];
+    return { pessoa: p, bio: `${x.oficio.charAt(0).toUpperCase()}${x.oficio.slice(1)}.${ult ? ` Ultimamente: ${ult.texto}.` : ''} Discrição, por favor.`, busca: f.busca !== 'qualquer' ? f.busca : r.chance(0.5) ? 'relacionamento' : 'incerto', km: r.int(2, Math.max(3, f.km)), interesses: [...INTERESSES].sort(() => r.next() - 0.5).slice(0, 3), figuraId: x.id };
+  });
 }
 
 export type OqueCelular15 =
@@ -885,6 +909,8 @@ export type OqueCelular15 =
   | { op: 'responder'; id: string; escolha: string }
   | { op: 'namoro_abrir' }
   | { op: 'namoro_mais' }
+  /** VIDA 30: os filtros do aplicativo (quem aparece). */
+  | { op: 'namoro_filtros'; filtros: FiltrosNamoro30 }
   | { op: 'curtir'; pid: string }
   | { op: 'passar'; pid: string }
   | { op: 'desfazer'; pid: string }
@@ -909,6 +935,13 @@ export function disponibilidadeCelular15(v: Vida, q: OqueCelular15): Veredito {
       return op ? op.veredito : bloqueio('impossivel', 'Não dá para responder assim.');
     }
     case 'namoro_abrir': return disponibilidadeNamoro15(v);
+    case 'namoro_filtros': {
+      const d = disponibilidadeNamoro15(v);
+      if (d.grau === 'impossivel' || d.grau === 'requisito' || d.grau === 'incompativel') return d;
+      if (v.celular15?.deck?.ano !== anoDe(v.t)) return bloqueio('requisito', 'Abra o aplicativo primeiro.');
+      if ((v.celular15.deck.aplicacoes30 ?? 0) >= 6) return bloqueio('incompativel', 'Você já mexeu muito nos filtros este ano: o aplicativo não tem mais ninguém novo para mostrar.');
+      return d;
+    }
     case 'namoro_mais': {
       const d = disponibilidadeNamoro15(v);
       if (d.grau === 'impossivel' || d.grau === 'requisito' || d.grau === 'incompativel') return d;
@@ -945,6 +978,15 @@ export function executarCelular15(v: Vida, r: Rng, q: OqueCelular15): SaidaCelul
       const x = deixarRastro16(v, 'perfil', undefined, r);
       return x.texto ? { texto: x.texto, titulo: 'Descoberto', tom: 'ruim' } : { texto: '' };
     }
+    case 'namoro_filtros': {
+      // VIDA 30: os filtros trocam quem aparece (os matches e as decisões ficam).
+      const d = c.deck!;
+      d.filtros30 = q.filtros;
+      d.aplicacoes30 = (d.aplicacoes30 ?? 0) + 1;
+      d.perfis = [...d.perfis.filter(x => x.decisao), ...gerarPerfis(v, TAMANHO_DO_DECK, 100 + d.aplicacoes30)];
+      const novos = d.perfis.filter(x => !x.decisao).length;
+      return { texto: novos ? '' : q.filtros.famosos ? 'Nenhuma pessoa famosa e sem par com esse filtro, por enquanto.' : 'Ninguém com esse filtro por perto.' };
+    }
     case 'namoro_mais': {
       const d = c.deck!;
       d.extras = (d.extras ?? 0) + 1;
@@ -980,11 +1022,14 @@ function curtirPerfil(v: Vida, r: Rng, pf: PerfilApp15): SaidaCelular15 {
   if (!v.anoAtual.acoes.includes('buscar:app')) v.anoAtual.acoes.push('buscar:app');
   v.fatos['buscas_romance'] = (v.fatos['buscas_romance'] ?? 0) + 1;
   const comp = compatibilidade(v, p);
-  const interesse = clamp(Math.round(interesseInicial(v, p) + (0.78 - 0.4) * 22 + comp * 12 + r.normal() * 9));
+  // VIDA 30: quem é famoso escolhe mais (e gosta de quem também é conhecido).
+  const exigencia = pf.figuraId ? (4 - Math.min(4, nivelDoNome30(v))) * 5 : 0;
+  const interesse = clamp(Math.round(interesseInicial(v, p) + (0.78 - 0.4) * 22 + comp * 12 + r.normal() * 9 - exigencia));
   const mutuo = atraiGenero(p.atracao, v.eu.genero) && interesse >= 50;
   if (!mutuo) return { texto: '' };
   pf.decisao = 'match';
   v.pessoas[p.id] = p;
+  if (pf.figuraId) ligarFigura30(v, p.nome, p.sobrenome ?? '', p.id);
   const vin = vincular(v, p, { origem: 'online', proximidade: r.int(18, 26), estagio: 'conhecido' });
   vin.contexto = novoContexto('app', { busca: pf.busca, etapa: 'match' });
   registrarFase(v, vin, 'conhecido');

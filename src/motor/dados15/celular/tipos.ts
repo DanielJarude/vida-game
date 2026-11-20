@@ -87,7 +87,12 @@ export interface PerfilApp15 {
   /** Os interesses que aparecem no perfil. */
   interesses: string[];
   decisao?: 'curtiu' | 'passou' | 'match';
+  /** VIDA 30: o perfil é de uma figura do meio (verificado). */
+  figuraId?: string;
 }
+
+/** VIDA 30: os filtros do aplicativo de namoro (quem aparece). */
+export interface FiltrosNamoro30 { idadeMin: number; idadeMax: number; km: number; busca: 'qualquer' | 'relacionamento' | 'casual'; interesse?: string; famosos?: boolean }
 
 export interface Celular15 {
   /** O ano (calendário) das mensagens novas. */
@@ -103,7 +108,7 @@ export interface Celular15 {
   /** VIDA 27 · §13: o encontro por acaso de AGORA (presencial: abre como cena no lugar, não como mensagem). */
   encontro27?: { t: number; lugar: Lugar15; pid?: string; fa?: boolean };
   /** O aplicativo de namoro: os perfis do ano. */
-  deck?: { ano: number; perfis: PerfilApp15[]; extras?: number; instalado?: boolean };
+  deck?: { ano: number; perfis: PerfilApp15[]; extras?: number; instalado?: boolean; filtros30?: FiltrosNamoro30; aplicacoes30?: number };
   /** As publicações dos amigos já curtidas (chaves; no máximo 160). */
   curtidas?: string[];
   /** VIDA 16: o rastro do aplicativo de namoro usado com uma parceria exclusiva (`motor/v16/romance`). */

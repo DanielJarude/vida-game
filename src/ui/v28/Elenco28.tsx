@@ -4,6 +4,7 @@
  * `CarreiraEsportiva.elenco28` (o mercado anda no motor: `sistemas/elenco28`). Sem elenco ainda (antes da primeira
  * janela, ou modalidade sem clube), não mostra nada.
  */
+import { Escudo30 } from '../v30/escudos/Escudo30';
 import type { CarreiraEsportiva, Vida } from '../../motor/tipos';
 import { anoDe } from '../../motor/tempo';
 import { concorrenteNaPosicao, nomeDoPapel, REGRAS_DO_MERCADO } from '../../motor/sistemas/elenco28';
@@ -33,7 +34,7 @@ export function Elenco28({ vida, e }: { vida: Vida; e: CarreiraEsportiva }) {
   const ultimoBonus = [...(e.temporadas ?? [])].reverse().find(t => t.bonus);
   return (
     <section className="divisao__secao" aria-label="O elenco e o mercado" data-elenco28="">
-      <h3 className="subtitulo">O elenco {doClube(e.clube)}</h3>
+      <h3 className="subtitulo elenco30__titulo"><Escudo30 nome={e.clube} tamanho={30} /> O elenco {doClube(e.clube)}</h3>
       {conc && <p className="nota"><strong>Na disputa pela sua vaga:</strong> {conc.nome}, {Math.floor((vida.t - conc.tNasc) / 12)} anos — {comparado(conc.nivel, eu)}.</p>}
       <div className="elenco28__tabela" role="region" aria-label="Quem joga com você" tabIndex={0}>
         <table>

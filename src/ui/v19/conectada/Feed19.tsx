@@ -9,6 +9,7 @@
  * Toda interação passa pelas ações do jogo (`conectada19`): nada muda só na tela. A mensagem a partir de uma publicação
  * abre a conversa em Mensagens (o mesmo histórico).
  */
+import { previaDoPost30 } from '../../../motor/v30/redes/redes30';
 import { useState, type ReactNode } from 'react';
 import type { Pessoa, Vida } from '../../../motor/tipos';
 import type { Acao } from '../../../motor/acoes';
@@ -60,7 +61,7 @@ function Midia({ vida, post }: { vida: Vida; post: Post19 }) {
         {junto && <Rosto vida={vida} p={par} tamanho={post.formato === 'story' ? 80 : 92} />}
       </div>
       {post.formato === 'video' && <span className="midia19__play" aria-hidden><svg viewBox="0 0 24 24" width="28" height="28"><circle cx="12" cy="12" r="11" fill="rgba(0,0,0,.55)" /><path d="M9.5 7.5v9l7-4.5z" fill="#fff" /></svg></span>}
-      {post.formato === 'video' && <span className="midia19__duracao">0:{String(12 + (post.curtidas % 47)).padStart(2, '0')}</span>}
+      {post.formato === 'video' && <span className="midia19__duracao">{previaDoPost30(post)?.duracao ?? '0:30'} · {numero(previaDoPost30(post)?.visualizacoes ?? 0)} views</span>}
       {post.formato === 'album' && <span className="midia19__selo">1/{3 + (post.curtidas % 6)}</span>}
       {post.formato === 'story' && <span className="midia19__selo">story · 24 h</span>}
     </div>
@@ -90,9 +91,9 @@ function Cartao({ vida, post, agir, abrirPerfil, abrirConversa }: { vida: Vida; 
         </span>
       </button>
       <Midia vida={vida} post={post} />
-      <p className="post19__titulo">{post.titulo}</p>
+      {post.titulo && <p className="post19__titulo">{post.titulo}</p>}
       <p className="post19__legenda">{post.legenda}</p>
-      <p className="post19__origem">{post.origem}</p>
+      {post.origem && <p className="post19__origem">{post.origem}</p>}
       <p className="post19__numeros"><span>{post.dificil ? 'abraços' : 'curtidas'} {numero(post.curtidas + (r?.curtiu ? 1 : 0))}</span><span>comentários {numero(post.comentarios + (r?.comentou ? 1 : 0))}</span>{post.compartilhamentos > 0 && <span>compartilhamentos {numero(post.compartilhamentos + (r?.compartilhou ? 1 : 0))}</span>}</p>
       {(post.destaque.length > 0 || r?.comentou) && (
         <ul className="post19__comentarios">

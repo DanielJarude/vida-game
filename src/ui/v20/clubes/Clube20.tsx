@@ -12,6 +12,7 @@ import { anoDe } from '../../../motor/tempo';
 import { BotaoAcao } from '../../comum';
 import { dinheiroCurto } from '../../apresentar';
 import './clube20.css';
+import { desenhoDoClube30, Escudo30 } from '../../v30/escudos/Escudo30';
 
 const C = (oque: OqueClube20): Acao => ({ tipo: 'clube20', oque } as Acao);
 const DIV = ['', 'estadual/regional', 'acesso', '2ª divisão', 'elite'];
@@ -45,7 +46,7 @@ function ComprarClube({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }
           <ul className="clube20__lista">
             {lista.map(c => (
               <li key={`${c.pais}:${c.nome}`} className="clube20__item">
-                <div><strong>{c.nome}</strong> <span className="clube20__meta">{DIV[c.divisao]} · {c.porte} · receita ~{dinheiroCurto(c.receita)}/ano · dívida {dinheiroCurto(c.divida)}</span></div>
+                <div className="clube30__venda-nome"><Escudo30 nome={c.nome} tamanho={28} /><strong>{c.nome}</strong> <span className="clube20__meta">{DIV[c.divisao]} · {c.porte} · receita ~{dinheiroCurto(c.receita)}/ano · dívida {dinheiroCurto(c.divida)}</span></div>
                 <div className="clube20__botoes">
                   <BotaoAcao vida={vida} agir={agir} acao={C({ op: 'comprar', nome: c.nome, pais: c.pais })}>Comprar · {dinheiroCurto(c.preco)}</BotaoAcao>
                   <BotaoAcao vida={vida} agir={agir} acao={C({ op: 'comprar', nome: c.nome, pais: c.pais, financiar: true })}>Financiado · entrada {dinheiroCurto(Math.round(c.preco * 0.4))}</BotaoAcao>
@@ -61,24 +62,9 @@ function ComprarClube({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }
 
 /* ------------------------------------------------------------------ VIDA 30 · o clube como painel (não só texto) */
 
-/** As cores do clube (estáveis pelo nome): o escudo, as barras e o uniforme no campo. */
-function coresDoClube(nome: string): [string, string] {
-  let h = 0; for (const ch of nome) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  const PALETA: [string, string][] = [['#1f4e9c', '#ffffff'], ['#b3202a', '#ffffff'], ['#111111', '#ffffff'], ['#1e7a3c', '#ffffff'], ['#5b2a86', '#f2c14e'], ['#0b6e8a', '#ffd23f'], ['#c75b12', '#1c1c1c'], ['#8b1d2c', '#1f3a68'], ['#2d6a4f', '#d8f3dc'], ['#f2c14e', '#1c3f8c']];
-  return PALETA[h % PALETA.length];
-}
-const iniciais = (nome: string) => nome.split(/\s+/).filter(w => w.length > 2 || /^[A-Z]/.test(w)).map(w => w[0]).join('').slice(0, 3).toUpperCase() || nome.slice(0, 2).toUpperCase();
-
-function Escudo({ nome, tamanho = 64 }: { nome: string; tamanho?: number }) {
-  const [a, b] = coresDoClube(nome);
-  return (
-    <svg className="clube30__escudo" width={tamanho} height={tamanho * 1.15} viewBox="0 0 100 115" role="img" aria-label={`Escudo do ${nome}`}>
-      <path d="M50 3 L95 15 L92 62 Q86 95 50 112 Q14 95 8 62 L5 15 Z" fill={a} stroke={b} strokeWidth="5" />
-      <path d="M50 3 L50 112 Q86 95 92 62 L95 15 Z" fill={b} opacity="0.18" />
-      <text x="50" y="66" textAnchor="middle" fontSize="30" fontWeight="800" fill={b} fontFamily="system-ui, sans-serif">{iniciais(nome)}</text>
-    </svg>
-  );
-}
+/** As cores do clube (as do escudo: `v30/escudos`), para o campo e as barras. */
+function coresDoClube(nome: string): [string, string] { const d = desenhoDoClube30(nome); return [d[2], d[3]]; }
+const Escudo = Escudo30;
 
 function Medidor({ rotulo, valor, max = 100, texto, tom }: { rotulo: string; valor: number; max?: number; texto?: string; tom?: 'bom' | 'ruim' | 'atencao' }) {
   const pct = Math.max(2, Math.min(100, (valor / max) * 100));

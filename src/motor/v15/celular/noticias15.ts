@@ -15,6 +15,7 @@ import { campeaoContinentalNoAno, campeaoDaCopaNoAno } from '../../sistemas/comp
 import { eleicaoNaJanela } from '../../sistemas/politica';
 import { marcosDaFama13 } from '../../sistemas/reconhecimento13';
 import { ROTULO_AREA15, nivelDaFama15 } from './celular15';
+import { materiasDoMeio30 } from '../../v30/redes/redes30';
 
 export type Editoria15 = 'voce' | 'mundo' | 'pais' | 'politica' | 'economia' | 'esportes' | 'cultura' | 'tecnologia' | 'pessoas';
 export const ROTULO_EDITORIA15: Record<Editoria15, string> = {
@@ -67,6 +68,10 @@ export function jornal15(v: Vida): Jornal15 {
     if (!c || p.especie) continue;
     if (c.desde !== undefined && anoDe(c.desde) >= ano - 1) add({ id: `gente:${p.id}:${anoDe(c.desde)}`, editoria: 'pessoas', titulo: `${p.nome} ${p.sobrenome}, ${ROTULO_AREA15[c.area][p.genero === 'feminino' ? 1 : 0]}, é o nome do momento`, linha: 'Entrevistas, fotos, gente pedindo autógrafo na rua.', ano: anoDe(c.desde) });
   }
+
+  // VIDA 30: o meio — os casamentos, os namoros assumidos, as separações e as parcerias das figuras públicas (o mundo
+  // tem gente famosa que vive sem você), e quem do meio caiu ou subiu.
+  for (const mt of materiasDoMeio30(v)) add({ id: mt.id, editoria: 'pessoas', titulo: mt.titulo, linha: mt.linha, ano: mt.ano, destaque: mt.destaque && mt.ano === ano, tom: mt.tom });
 
   // A cidade: o que a Linha da Vida registrou do mundo à volta (a crise que chegou, a fábrica que abriu).
   for (const e of v.biografia.filter(e => e.t >= v.t - 12 && e.fato?.tipo === 'mundo' && !e.pessoas?.length).slice(-3)) add({ id: `cid:${e.id}`, editoria: 'pais', titulo: e.texto.replace(/\.$/, ''), linha: nomeLugar(m.id), ano: anoDe(e.t), tom: e.tom });

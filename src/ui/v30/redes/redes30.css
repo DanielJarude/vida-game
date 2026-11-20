@@ -1,0 +1,26 @@
+/* VIDA 30 · os seus posts e a prévia de vídeo/live */
+.meus30 { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.meus30__post { border: 1px solid var(--fio); border-radius: 12px; background: var(--superficie); padding: 10px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.meus30__post--polemica { border-color: var(--ruim); }
+.meus30__post--viral { box-shadow: 0 0 0 2px color-mix(in oklab, var(--bom) 60%, transparent); }
+.meus30__quem { display: flex; gap: 8px; align-items: center; }
+.meus30__quem > span { display: flex; flex-direction: column; font-size: 12px; color: var(--tinta-3); }
+.meus30__quem strong { color: var(--tinta); font-size: 14px; }
+.meus30__foto { display: grid; place-items: center; gap: 6px; aspect-ratio: 4 / 3; border-radius: 10px; background: linear-gradient(135deg, color-mix(in oklab, var(--cor-plataforma, #888) 25%, var(--superficie)), var(--superficie)); text-align: center; padding: 10px; font-size: 13px; color: var(--tinta-2); }
+.meus30__legenda { margin: 0; font-size: 14px; color: var(--tinta); }
+.meus30__sobre { margin: 0; font-size: 12px; color: var(--tinta-3); }
+.meus30__numeros { margin: 0; display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--tinta-2); }
+.meus30__coms { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; font-size: 13px; color: var(--tinta-2); }
+.meus30__coms strong { color: var(--tinta); }
+.previa30 { position: relative; aspect-ratio: 16 / 9; border-radius: 10px; overflow: hidden; color: #fff; }
+.previa30--tiktok { aspect-ratio: 9 / 12; max-width: 260px; }
+.previa30__arte { position: absolute; right: 8%; top: 18%; opacity: 0.85; color: #fff; }
+.previa30__rosto { position: absolute; left: 6%; bottom: 0; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.45)); }
+.previa30__vivo { position: absolute; left: 8px; top: 8px; background: #e91916; color: #fff; font: 700 11px/1 var(--font-sans, system-ui); padding: 4px 6px; border-radius: 4px; letter-spacing: 0.5px; }
+.previa30__esp { position: absolute; left: 8px; bottom: 8px; background: rgba(0, 0, 0, 0.6); font-size: 11px; padding: 2px 6px; border-radius: 4px; }
+.previa30__duracao { position: absolute; right: 8px; bottom: 8px; background: rgba(0, 0, 0, 0.75); font-size: 11px; padding: 2px 6px; border-radius: 4px; }
+.previa30__play { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 44px; height: 44px; border-radius: 50%; background: rgba(0, 0, 0, 0.55); display: grid; place-items: center; font-size: 18px; }
+.previa30__titulo { position: absolute; left: 30%; right: 8px; top: 36%; font: 800 15px/1.2 var(--font-sans, system-ui); text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+.previa30--tiktok .previa30__titulo { left: 8px; top: auto; bottom: 30px; }
+.previa30__cat { position: absolute; right: 8px; top: 8px; background: rgba(255, 255, 255, 0.2); font-size: 11px; padding: 2px 6px; border-radius: 4px; }
+.previa30--grande .previa30__titulo { font-size: 19px; }

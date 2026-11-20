@@ -294,9 +294,9 @@ function privacidadeDoAno30(v: Vida, m: Fama30, n: number): void {
  * a abrir (ou undefined).
  */
 export function fama30DoAno(v: Vida, semDecisao: boolean): string | undefined {
-  if (v.morte || idade(v) < 14) return undefined;
-  const n = nivelDoNome30(v);
-  if (n === 0 && !v.fama30) return undefined;
+  if (v.morte || idade(v) < 12) return undefined;
+  const n = idade(v) < 14 ? 0 : nivelDoNome30(v);
+  // VIDA 30: o meio existe para todo mundo (a gente famosa vive e vira notícia mesmo para quem não é famoso).
   const m = garantirRede30(v);
   anoDaRede30(v);
   privacidadeDoAno30(v, m, n);
@@ -419,7 +419,8 @@ export function viverCena30(v: Vida, resposta: string, publica: boolean): void {
   if (!m || !c) return;
   m.vividas.push({ t: c.t, tipo: c.tipo, onde: c.onde, resposta });
   if (m.vividas.length > 16) m.vividas.splice(0, m.vividas.length - 16);
-  if (publica) somarAoNome(v, origemDoNome(v) ?? 'arte', 1);
+  // A aparição ajuda o nome pequeno a crescer; o nome enorme não cresce por uma foto na rua.
+  if (publica && nivelDoNome30(v) <= 2) somarAoNome(v, origemDoNome(v) ?? 'arte', 1);
   delete m.cena;
 }
 

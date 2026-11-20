@@ -14,6 +14,7 @@
  * Nenhuma curtida ou comentário vira mensagem recebida, nem chamado em "Pede atenção": a rede é a vida pública.
  * A Linha da Vida só recebe o que é marcante (a briga pública, o famoso que respondeu). Sorteios: `rngDe` da publicação.
  */
+import { postDoCotidiano30 } from '../../v30/redes/redes30';
 import type { Rng } from '../../rng';
 import { clamp, rngDe } from '../../rng';
 import type { Pessoa, Vida, Vinculo } from '../../tipos';
@@ -46,8 +47,10 @@ function estado(v: Vida): Conectada19 { return (v.conectada19 ??= { reacoes: {} 
 
 /** A publicação de uma chave (`pid:t:tipo`), lida de novo da trajetória (nunca guardada). */
 export function postDaChave19(v: Vida, chave: string): Post19 | undefined {
-  const [pid, tS, tipo] = chave.split(':');
+  const [pid, tS, tipo, k] = chave.split(':');
   const p = v.pessoas[pid];
+  // VIDA 30: o post do dia a dia (lido de novo da chave, como os da trajetória).
+  if (tipo === 'cotidiano') return p ? postDoCotidiano30(v, p, Number(tS), Number(k)) : undefined;
   if (!p?.vida?.trajetoria) return undefined;
   const x = p.vida.trajetoria.find(e => e.t === Number(tS) && e.tipo === tipo);
   return x ? publicacao19(v, p, v.vinculos[pid], x) : undefined;
