@@ -266,6 +266,9 @@ describe('luto: intensidade e duração proporcionais; a memória fica, o peso p
   const lutoDe = (inicial: number, suporte = 0) => {
     const v = adulto(40, { semente: 70 });
     v.luto = [{ pessoaId: 'x', t: v.t, peso: inicial, inicial }];
+    // VIDA 30: o suporte é SÓ o que o teste põe (a vida sorteada deriva — ganhou vizinho, sogros, amizades das cenas novas —
+    // e a rede que já existia encurtava todos os lutos igualmente).
+    for (const vin of Object.values(v.vinculos)) { vin.proximidade = Math.min(vin.proximidade, 30); vin.convivio = []; }
     for (let k = 0; k < suporte; k++) { const a = amigaDe(v); v.vinculos[a.id].proximidade = 85; v.vinculos[a.id].convivio = ['trabalho']; }
     let anos = 0;
     while (v.luto.length && anos < 30) { v.t += 12; processarLuto(v); anos++; }

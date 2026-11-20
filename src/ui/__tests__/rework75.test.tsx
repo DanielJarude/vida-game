@@ -286,7 +286,9 @@ function ComFicha({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
 }
 
 function comAvoMorto(): { v: Vida; avoId: string } {
-  const v = adulto(30, { semente: 80 });
+  // VIDA 30: semente 81 (era 80): com as cenas novas do ano, a vida de 80 perdia alguém central três anos depois — e uma
+  // segunda perda grande reaviva o luto do avô (regra testada à parte); o cenário aqui é o do luto que se acalma sozinho.
+  const v = adulto(30, { semente: 81 });
   const { p } = comParente(v, 'avo', 78, 'masculino', 75);
   lembrarCom(v, p.id, 'Ensinou você a pescar no açude.', 'amizade', 2, v.t - 120);
   registrarMortes(v, criarRng(3), [{ p, vin: v.vinculos[p.id], causa: 'coração' }], () => {});

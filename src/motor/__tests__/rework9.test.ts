@@ -421,7 +421,8 @@ describe('EDU-01 · a curva do que se espera acompanha o aluno típico (sem empu
 
   it('numa turma, há de tudo: com dificuldade, medianos, bons e excelentes — e a postura pesa sem decidir sozinha', () => {
     const notas: number[] = [];
-    for (let k = 0; k < 14; k++) {
+    // VIDA 30: 18 vidas (eram 14): com 14, a amplitude ficava no limite (25) e oscilava com qualquer deriva das vidas.
+    for (let k = 0; k < 18; k++) {
       let v = criarVida({ nome: 'A', sobrenome: 'B', genero: k % 2 ? 'feminino' : 'masculino', municipioId: ['recife-pe', 'sao-paulo-sp', 'belem-pa', 'curitiba-pr'][k % 4], semente: 9100 + k });
       for (let a = 0; a < 15; a++) { v = avancarAno(v).vida; v.momento = null; v.caminhos.pendente = undefined; v.caminhos.processo = undefined; }
       if (v.educacao.basica && !v.educacao.evadiu) notas.push(v.educacao.basica.desempenho);

@@ -9,7 +9,7 @@
  *   UX-20   a busca de "onde fica" leva ao médico, não aos atributos
  */
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import { precarregar } from '../App';
 import { criarRng } from '../../motor/rng';
 import { transacao } from '../../motor/nucleo';
@@ -186,9 +186,11 @@ describe('UX-19 / CAR-06 · a carreira de atuação, sempre no mesmo painel, e a
 });
 
 describe('FAM-01 · o nome em partes', () => {
-  it('Você · No mundo: reconhecimento, prestígio, alcance e redes — coisas diferentes', () => {
+  it('Você · No mundo: reconhecimento, prestígio, alcance e redes — coisas diferentes', async () => {
     const v = em(adulto(40, { semente: 31 }), x => { x.notoriedade = { valor: 62, pico: 62, t: x.t, fonte: 'arte' }; });
     render(<main><Voce vida={v} agir={nada} irPara={() => {}} abrirPessoa={() => {}} parte="mundo" /></main>);
+    // VIDA 30: o painel da Fama vem sob demanda — espera aparecer.
+    await waitFor(() => expect(document.querySelector('.fama-ficha')).not.toBeNull(), { timeout: 8000 });
     const sec = document.querySelector('.fama-ficha')!;
     for (const t of ['Reconhecimento público', 'Prestígio profissional', 'Alcance']) expect(sec.textContent).toContain(t);
   });

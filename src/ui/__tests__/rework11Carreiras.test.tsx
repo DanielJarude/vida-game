@@ -32,8 +32,13 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 function vida(idade: number, ajuste: (v: Vida) => void = () => {}, semente = 5): Vida {
+  // VIDA 30: a vida sorteada que morre antes da idade pedida dá lugar à próxima semente (o cenário é o de uma vida viva).
   let v = criarVida({ nome: 'Caio', sobrenome: 'Lopes', genero: 'masculino', municipioId: 'recife-pe', semente });
-  for (let i = 0; i < idade; i++) { v = avancarAno(v).vida; v.momento = null; v.caminhos.pendente = undefined; }
+  for (let s = semente; ; s++) {
+    v = criarVida({ nome: 'Caio', sobrenome: 'Lopes', genero: 'masculino', municipioId: 'recife-pe', semente: s });
+    for (let i = 0; i < idade && !v.morte; i++) { v = avancarAno(v).vida; v.momento = null; v.caminhos.pendente = undefined; }
+    if (!v.morte || s > semente + 20) break;
+  }
   v.caminhos.processo = undefined;
   ajuste(v);
   return v;

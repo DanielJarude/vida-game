@@ -81,7 +81,7 @@ describe('Trabalho: a carreira no esporte tem memória e não recebe portas de e
 });
 
 describe('Você × Política: o mesmo nome dos dois lados', () => {
-  it('o ex-jogador famoso é "famoso pelo futebol" em Você e na Política; como político, estreante', () => {
+  it('o ex-jogador famoso é "famoso pelo futebol" em Você e na Política; como político, estreante', async () => {
     const v = transacao(jogador(36), x => {
       x.notoriedade = { valor: 66, pico: 80, fonte: 'esporte', t: x.t, origens: { esporte: 80 } };
       x.caminhos.esporte!.fase = 'encerrada';
@@ -92,7 +92,8 @@ describe('Você × Política: o mesmo nome dos dois lados', () => {
     expect(screen.getAllByText(/Para o público: famoso pelo futebol/).length).toBeGreaterThan(0);
     // Usar a visibilidade é uma ação (com o resultado em aberto).
     // VIDA 13 · Fama: "O seu nome" virou a parte Fama de Você (os usos ficam em "O que fazer com o nome").
-    expect(screen.getByRole('heading', { name: 'O que fazer com o nome' })).toBeTruthy();
+    // VIDA 30: o painel da Fama vem sob demanda — espera aparecer.
+    expect(await screen.findByRole('heading', { name: 'O que fazer com o nome' }, { timeout: 8000 })).toBeTruthy();
     expect(screen.getAllByText('Levar o nome para a política').length).toBeGreaterThan(0);
     unmount();
     render(<Trabalho vida={v} agir={() => true} irPara={() => {}} />);

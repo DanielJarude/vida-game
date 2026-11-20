@@ -398,7 +398,8 @@ describe('posse e governo', () => {
 describe('consequências · impeachment', () => {
   it('rua contra, base pequena e um escândalo abrem o processo; a votação decide pelo quórum do país', () => {
     let abriu = 0, caiu = 0, sobreviveu = 0;
-    for (let s = 0; s < 20; s++) {
+    // VIDA 30: 30 tentativas (eram 20) e o piso na mesma proporção: com 20, "mais de 5" ficava no limite da deriva da vida.
+    for (let s = 0; s < 30; s++) {
       const v = presidenteEmExercicio(); v.id += `-imp${s}`;
       const g = governoAtual(v)!;
       g.base = 20; g.escandalos = 2; v.caminhos.politica!.mandato!.aprovacao = 12;
@@ -417,7 +418,7 @@ describe('consequências · impeachment', () => {
         expect(presidencia(v).mandatos[presidencia(v).mandatos.length - 1].como).toBe('afastado');
       } else sobreviveu++;
     }
-    expect(abriu).toBeGreaterThan(5);
+    expect(abriu).toBeGreaterThan(7);
     expect(caiu + sobreviveu).toBe(abriu);
     // Com base larga, o processo não passa.
     const forte = presidenteEmExercicio();

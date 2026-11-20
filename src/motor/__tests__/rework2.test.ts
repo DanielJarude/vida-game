@@ -106,7 +106,10 @@ describe('1. academia → condicionamento → consumidor → persistência', () 
     const pico = v.corpo.forma;
     v = executar(v, { tipo: 'rotina', id: 'academia', ativa: false }).vida;
     for (let k = 0; k < 4; k++) v = ano(v);
-    expect(v.corpo.forma).toBeLessThan(pico - 15);
+    // VIDA 30: a intenção é "volta ao condicionamento do dia a dia" — medido contra o alvo do dia a dia DESTA vida (a vida
+    // de teste deriva quando o ano ganha cenas; antes, o número fixo de 15 pontos dependia do trabalho sorteado).
+    expect(v.corpo.forma).toBeLessThan(pico - 10);
+    expect(Math.abs(v.corpo.forma - alvoCondicionamento(v))).toBeLessThan(Math.abs(v.corpo.forma - pico) / 2);
   });
 });
 
