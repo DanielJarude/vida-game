@@ -129,7 +129,7 @@ export function leituraDaOportunidade(v: Vida, o: Oportunidade): LeituraDaOportu
   const natureza = naturezaDaOportunidade(v, o);
   const oc = o.ocupacaoId ? ocupacaoOuNula(o.ocupacaoId) : undefined;
   const porConta = !!oc && porContaPropria(oc);
-  const entrevista = !!oc && !porConta && COM_ENTREVISTA.includes(o.tipo);
+  const entrevista = !!oc && !porConta && COM_ENTREVISTA.includes(o.tipo) && !(o.tipo === 'proposta' && o.formal);
   let mudanca: string | undefined;
   if (natureza === 'mudanca_carreira' && oc) {
     const sp = situacaoProfissional(v);

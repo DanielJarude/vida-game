@@ -23,7 +23,8 @@ import type { Rng } from '../rng';
 import type { AjusteDeEmprego, CompromissoPendente, Dominio, Emprego, Negocio, NovoCompromisso, PlanoDeConflito, Vida } from '../tipos';
 import { escrever, idade, lembrarCom } from '../nucleo';
 import { iniciarRural } from './rural';
-import { doClube, oClube } from '../dados/clubes';
+import { artigoDoClube, doClube, oClube } from '../dados/clubes';
+import { comArtigo, organizacao } from './organizacoes';
 import { curso, cursoOuNulo } from '../dados/cursos';
 import { ocupacao, ocupacaoOuNula } from '../dados/ocupacoes';
 import { municipio } from '../dados/lugares';
@@ -696,7 +697,7 @@ function aplicarNovo(v: Vida, r: Rng, novo: NovoCompromisso, nasHorasVagas: bool
         v.trabalho.atual = guardado;
         v.trabalho.desempregadoDesde = undefined;
       } else { fimDaCarreiraDeAtletaPor(v, oc); e = contratar(v, r, oc, novo.via); }
-      aplicarAjuste(e, novo.ajuste);
+      aplicarAjuste(v, e, novo.ajuste);
       if (novo.extra === 'rural_familia' || novo.extra === 'rural_arrendada') iniciarRural(v, novo.extra === 'rural_familia' ? 'familia' : 'arrendada');
       if (novo.extra === 'arte') {
         marcar(v, 'profissional', larga.includes('novo_paralela') ? `Começou a trabalhar como ${nomeOcupacao(v, oc)} em paralelo, aos ${idade(v)}.` : `Passou a viver da arte: ${nomeOcupacao(v, oc)}, aos ${idade(v)}.`, 3, { ocupacaoId: oc.id, dominio: oc.habilidade?.dominio });
@@ -745,8 +746,12 @@ function fimDaCarreiraDeAtletaPor(v: Vida, oc: Ocupacao): void {
 /* ===================================================== Contratar fora de `propor` */
 
 /** O que a contratação ajusta no emprego novo (guardado no pendente: a pergunta pode ficar para depois). */
-function aplicarAjuste(e: Emprego, a?: AjusteDeEmprego): void {
+function aplicarAjuste(v: Vida, e: Emprego, a?: AjusteDeEmprego): void {
   if (!a) return;
+  // VIDA 30 · §8: quem fez a proposta é quem contrata (a organização ou o clube dela), não um sorteio da contratação.
+  const org = a.orgId ? organizacao(v, a.orgId) : undefined;
+  if (org) { e.orgId = org.id; e.empregador = comArtigo(org.nome); e.clube = undefined; }
+  if (a.clube) { e.clube = a.clube; e.empregador = /^equipe/.test(a.clube) ? `a ${a.clube}` : `${artigoDoClube(a.clube)} ${a.clube}`; e.orgId = undefined; if (a.clubeCidade) e.municipioId = a.clubeCidade; }
   if (a.posAposentadoria) e.posAposentadoria = true;
   if (a.especialidade) e.especialidade = a.especialidade;
   if (a.clientelaMais && e.clientela !== undefined) e.clientela = Math.max(0, Math.min(100, e.clientela + a.clientelaMais));
@@ -778,7 +783,7 @@ export function contratarComAnalise(v: Vida, r: Rng, oc: Ocupacao, via: string, 
   if (!grandes.length) {
     fimDaCarreiraDeAtletaPor(v, oc);
     const e = contratar(v, r, oc, via);
-    aplicarAjuste(e, o.ajuste);
+    aplicarAjuste(v, e, o.ajuste);
     reconciliacao?.(v);
     return { resultado: 'feito', emprego: e };
   }

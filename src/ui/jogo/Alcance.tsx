@@ -25,6 +25,7 @@ import { aQuemPedir, dependeDosResponsaveis, situacaoDaCompra } from '../../moto
 import { riscoDeParar } from '../../motor/sistemas/saude';
 import { BotaoAcao, Folha, Linha } from '../comum';
 import { dinheiroCurto } from '../apresentar';
+import { municipio } from '../../motor/dados/lugares';
 import { Retrato } from '../avatar/Retrato';
 
 const TIPO_EM_PALAVRAS: Partial<Record<Oportunidade['tipo'], string>> = {
@@ -44,6 +45,10 @@ function oQueMuda(vida: Vida, o: Oportunidade): string[] {
     // que o motor usa de verdade ao aceitar.
     const l = leituraDaOportunidade(vida, o);
     out.push(`Trabalho: ${nomeOcupacao(vida, oc)}${oc.carga === 'parcial' ? ', meio período' : ''}.`);
+    // VIDA 30 · §8: quem contrata e por quanto (o vínculo será com ESTE contratante).
+    if (o.empregador) out.push(`Contratante: ${o.empregador}${o.clube && o.municipioId ? ` (${municipio(o.municipioId).nome})` : ''}.`);
+    if (o.salario) out.push(`Salário oferecido: ${dinheiroCurto(o.salario)} por mês${vida.trabalho.atual ? ` (hoje: ${dinheiroCurto(vida.trabalho.atual.salario)})` : ''}.`);
+    if (o.tipo === 'proposta' && o.formal) out.push('Proposta formal: aceitar é assinar — sem entrevista.');
     if (l.mudanca) out.push(l.mudanca);
     if (l.entrevista) out.push('Aceitar leva à entrevista: a vaga ainda é decidida lá.');
     else if (l.porConta) out.push('Por conta própria: sem entrevista — clientes seus, renda pela freguesia, sem salário fixo.');
@@ -81,7 +86,7 @@ export function DetalheDaOportunidade({ vida, id, agir, aoFechar, abrirPessoa }:
   const meses = Math.max(0, o.tFim - vida.t);
   const muda = oQueMuda(vida, o);
   return (
-    <Folha titulo={(() => { const n = leituraDaOportunidade(vida, o); return n.natureza !== 'propria' && n.natureza !== 'emprego' ? n.rotulo : TIPO_EM_PALAVRAS[o.tipo] ?? 'Uma porta aberta'; })()} rotulo={`Convite: ${o.titulo}`} aoFechar={aoFechar} papel>
+    <Folha titulo={(() => { const n = leituraDaOportunidade(vida, o); return n.natureza !== 'propria' && n.natureza !== 'emprego' ? n.rotulo : o.tipo === 'proposta' ? (o.formal ? 'Proposta formal' : o.empregador ? 'Convite para entrevista' : 'Uma proposta') : TIPO_EM_PALAVRAS[o.tipo] ?? 'Uma porta aberta'; })()} rotulo={`Convite: ${o.titulo}`} aoFechar={aoFechar} papel>
       <article className="detalhe-convite" data-convite={o.id}>
         {quem && (
           <div className="detalhe-convite__quem">

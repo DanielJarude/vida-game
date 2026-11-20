@@ -74,8 +74,11 @@ export const PORTAS_DO_EMPREGO: TipoOportunidade[] = ['proposta', 'indicacao', '
  * mercado próprio; a "proposta de um concorrente" só para quem está num
  * emprego comum (é uma troca de emprego).
  */
-export function oportunidadeCoerente(v: Vida, o: Pick<Oportunidade, 'tipo'>): true | string {
+export function oportunidadeCoerente(v: Vida, o: Pick<Oportunidade, 'tipo'> & Partial<Pick<Oportunidade, 'ocupacaoId' | 'empregador'>>): true | string {
   if (!PORTAS_DO_EMPREGO.includes(o.tipo)) return true;
+  // VIDA 30 · §8: a "proposta de concorrente" genérica (sem contratante) que um save antigo trouxe para o técnico principal
+  // não é porta: o técnico recebe propostas de clube com nome, na carreira de técnico.
+  if (o.tipo === 'proposta' && o.ocupacaoId === 'tecnico_futebol' && !o.empregador) return 'O comando técnico recebe proposta de clube com nome (na carreira de técnico), não recado genérico.';
   const m = mercadoDoTrabalho(v);
   if (o.tipo === 'proposta') return m === 'emprego' ? true : motivoDoMercado(m);
   if (m && MERCADOS_PROPRIOS.includes(m)) return motivoDoMercado(m);

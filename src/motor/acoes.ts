@@ -31,7 +31,7 @@ import { declararIntencao, patrimonioPagaAVida, podeDeclararIntencao, registrarP
 import { entrarNaVida, paisDaVida, perfilDaVida } from './mundo/vida';
 import { OCUPACOES_DE_ATLETA } from './sistemas/esporte';
 import type { Rng } from './rng';
-import type { EstiloDeVida, Imovel, Pessoa, Produto, Ramo, Retorno, TipoMovimento, Veiculo, Vida } from './tipos';
+import type { AjusteDeEmprego, EstiloDeVida, Imovel, Pessoa, Produto, Ramo, Retorno, TipoMovimento, Veiculo, Vida } from './tipos';
 import { escrever, filhos, idade, idadePessoa, lembrarCom, marcarFato, parceiro, temFato, transacao, vinculosVivos } from './nucleo';
 import { bloqueio, podeTentar, PERMITIDO, type Veredito } from './plausibilidade';
 import type { Desfecho13 } from './tipos';
@@ -1342,7 +1342,7 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
       const o = v.caminhos.oportunidades.find(x => x.id === a.id)!;
       const pessoaId = o.pessoaId;
       const res = aceitarOportunidade(v, r, a.id);
-      if (res.entrevista) return abrirEntrevista(v, r, res.entrevista.ocupacaoId, res.entrevista.bonus, res.entrevista.via);
+      if (res.entrevista) return abrirEntrevista(v, r, res.entrevista.ocupacaoId, res.entrevista.bonus, res.entrevista.via, res.entrevista.ajuste);
       if (res.decisao) {
         const d = conteudoPorId(res.decisao);
         if (d && d.tipo === 'decisao') {
@@ -1897,8 +1897,10 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
   }
 }
 
-function abrirEntrevista(v: Vida, r: Rng, ocupacaoId: string, bonus: number, via: string): Saida {
+function abrirEntrevista(v: Vida, r: Rng, ocupacaoId: string, bonus: number, via: string, ajuste?: AjusteDeEmprego): Saida {
   iniciarEntrevista(v, r, ocupacao(ocupacaoId), bonus, via);
+  // VIDA 30 · §8: a entrevista da proposta é NAQUELA organização (o nome e o salário oferecido seguem para a contratação).
+  if (ajuste && v.caminhos.processo?.tipo === 'entrevista') v.caminhos.processo.ajuste = ajuste;
   const d = conteudoPorId('trab_entrevista')!;
   if (d.tipo === 'decisao') abrirDecisao(v, d, contexto(v, r));
   return {};

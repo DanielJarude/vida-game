@@ -22,7 +22,7 @@ import { OCUPACOES_DE_ATLETA } from './esporte';
 import { conviteDaEspecialidade } from './medicina';
 import type { Rng } from '../rng';
 import { clamp } from '../rng';
-import type { Dominio, NaturezaDaOportunidade, Oportunidade, Pessoa, TipoOportunidade, Vida, Vinculo } from '../tipos';
+import type { AjusteDeEmprego, Dominio, NaturezaDaOportunidade, Oportunidade, Pessoa, TipoOportunidade, Vida, Vinculo } from '../tipos';
 import { escrever, idade, idadePessoa, lembrarCom, marcarFato, novoId, parentes, temFato, vinculosVivos, somarExperiencia } from '../nucleo';
 import { ocupacao, ocupacaoOuNula, type Ocupacao } from '../dados/ocupacoes';
 import { cursoOuNulo } from '../dados/cursos';
@@ -39,7 +39,13 @@ import { anoDe } from '../tempo';
 import { rngDe } from '../rng';
 import { podeTentar } from '../plausibilidade';
 import { conviteDoProfessor, exColegasDaArea, ofereceAqui } from './formacao';
-import { flex, ge } from '../texto';
+import { dinheiro, flex, ge } from '../texto';
+import { comArtigo, guardarOrganizacao, naOrganizacao, organizacoesDe } from './organizacoes';
+import { salarioLocal } from './renda';
+import { temOrganizacao } from './trabalho';
+import { artigoDoClube, clubesDoPais, divisaoDoNivel, type Clube } from '../dados/clubes';
+import { divisaoDoClube } from './ligas';
+import { paisDaCidade } from '../dados/lugares';
 import { apresentarNoFestival, viveDoOficio } from './cena';
 import { mercadoDoTrabalho, oportunidadeCoerente } from './mercados';
 import { carreiraEspecialAtiva, situacaoProfissional } from './situacaoProfissional';
@@ -47,13 +53,13 @@ import { distanciaDaCarreira, indicacaoPlausivel, LIMIAR_MUDANCA, naturezaDaOpor
 
 export const LIMITE_OPORTUNIDADES = 4;
 
-export function novaOportunidade(v: Vida, o: { tipo: TipoOportunidade; titulo: string; texto: string; meses: number; chave: string; ocupacaoId?: string; dominio?: Dominio; pessoaId?: string; municipioId?: string; bonus?: number; atividade?: string; natureza?: NaturezaDaOportunidade; clube?: string }): Oportunidade | undefined {
+export function novaOportunidade(v: Vida, o: { tipo: TipoOportunidade; titulo: string; texto: string; meses: number; chave: string; ocupacaoId?: string; dominio?: Dominio; pessoaId?: string; municipioId?: string; bonus?: number; atividade?: string; natureza?: NaturezaDaOportunidade; clube?: string; empregador?: string; orgId?: string; salario?: number; formal?: boolean}): Oportunidade | undefined {
   const lista = v.caminhos.oportunidades;
   // Uma carreira de mercado próprio (o clube, o palco, a academia) não recebe as portas do emprego comum (`mercados`).
   if (oportunidadeCoerente(v, o) !== true) return undefined;
   if (lista.some(x => x.tipo === o.tipo && x.ocupacaoId === o.ocupacaoId && x.dominio === o.dominio)) return undefined;
   if (lista.length >= LIMITE_OPORTUNIDADES) lista.shift();
-  const op: Oportunidade = { id: novoId(v, 'op'), tipo: o.tipo, titulo: o.titulo, texto: o.texto, tInicio: v.t, tFim: v.t + o.meses, ocupacaoId: o.ocupacaoId, dominio: o.dominio, pessoaId: o.pessoaId, municipioId: o.municipioId, bonus: o.bonus, ...(o.atividade ? { atividade: o.atividade } : {}), ...(o.natureza ? { natureza: o.natureza } : {}), ...(o.clube ? { clube: o.clube } : {}) };
+  const op: Oportunidade = { id: novoId(v, 'op'), tipo: o.tipo, titulo: o.titulo, texto: o.texto, tInicio: v.t, tFim: v.t + o.meses, ocupacaoId: o.ocupacaoId, dominio: o.dominio, pessoaId: o.pessoaId, municipioId: o.municipioId, bonus: o.bonus, ...(o.atividade ? { atividade: o.atividade } : {}), ...(o.natureza ? { natureza: o.natureza } : {}), ...(o.clube ? { clube: o.clube } : {}), ...(o.empregador ? { empregador: o.empregador } : {}), ...(o.orgId ? { orgId: o.orgId } : {}), ...(o.salario ? { salario: o.salario } : {}), ...(o.formal ? { formal: true } : {}) };
   lista.push(op);
   v.caminhos.ultimas[o.chave] = v.t;
   return op;
@@ -204,21 +210,42 @@ export function processarOportunidades(v: Vida, r: Rng): void {
   }
 
   // Proposta de outra empresa: quem é bom e tem estrada — no emprego comum (o atleta recebe proposta de clube: `esporte`).
+  // VIDA 30 · §8: a proposta diz QUEM oferece (uma organização do mercado da cidade que não é a sua; na comissão técnica,
+  // um clube com nome), o cargo e o salário. O headhunter traz um CONVITE PARA ENTREVISTA (a vaga está em avaliação);
+  // as outras vozes trazem uma PROPOSTA FORMAL (aceitar é assinar). O técnico principal tem mercado próprio, com o clube
+  // dito (`tecnico`): não recebe a "proposta de concorrente" genérica — era ela que chegava sem clube e com o "Aceitar"
+  // travado (a entrada do cargo é por oportunidade, e a proposta era lida como currículo).
   const e = v.trabalho.atual;
   if (e && e.contrato === 'clt' && mercadoDoTrabalho(v, e) === 'emprego' && e.desempenho >= 70 && !e.posAposentadoria && i <= 58 && podeGerar(v, 'proposta', 5)) {
     const oc = ocupacao(e.ocupacaoId);
     if (experienciaNaTrilha(v, oc.trilha) >= 36 && r.chance(0.15)) {
-      const melhor = OCUPACOES_POR_TRILHA(oc.trilha).filter(x => x.nivel === oc.nivel + 1 && x.modalidade === oc.modalidade && !x.concurso && !x.entrada && elegibilidade(v, x).grau === 'permitido')[0] ?? oc;
-      // VIDA 12.5 (CAR-11.8): a proposta do concorrente tinha um texto só (19 vezes iguais).
-      const cargo = melhor.id !== oc.id ? `como ${nomeOcupacao(v, melhor)}` : 'para a mesma função';
-      const texto = rngDe(v.id, 'proposta_texto', v.t).pick([
-        `Uma concorrente quer você ${cargo}, com salário melhor. Seria recomeçar num lugar novo, sem os anos de casa.`,
-        `Um headhunter ligou: uma empresa do mesmo ramo procura alguém ${cargo} — e o seu nome apareceu em mais de uma conversa.`,
-        `Quem já foi seu chefe agora está em outro lugar e quer levar você junto, ${cargo}. O salário é maior; o risco também.`,
-        `Do outro lado da rua, a concorrência faz as contas: oferece ${melhor.id !== oc.id ? `o cargo de ${nomeOcupacao(v, melhor)}` : 'a mesma função'} e um salário que a sua empresa não cobriria.`,
-        `Um cliente que conhece o seu trabalho contou que a empresa dele está contratando ${cargo}. Ele mesmo marcou a conversa.`
-      ]);
-      novaOportunidade(v, { tipo: 'proposta', ocupacaoId: melhor.id, meses: 12, chave: 'proposta', bonus: 0.18, titulo: 'Uma proposta', texto });
+      const rp = rngDe(v.id, 'proposta_texto', v.t);
+      const k = Math.floor(rp.next() * 5);
+      if (ehDaComissao(oc)) propostaDaComissao(v, oc, e, rp);
+      else if (temOrganizacao(oc)) {
+        const melhor = OCUPACOES_POR_TRILHA(oc.trilha).filter(x => x.nivel === oc.nivel + 1 && x.modalidade === oc.modalidade && !x.concurso && !x.entrada && elegibilidade(v, x).grau === 'permitido')[0] ?? oc;
+        const orgs = organizacoesDe(v.moradia.municipioId, melhor.setor).filter(o => o.id !== e.orgId);
+        const org = orgs.length ? orgs[Math.floor(rp.next() * orgs.length)] : undefined;
+        if (org) {
+          guardarOrganizacao(v, org);
+          const salario = Math.round(Math.max(e.salario * (1.12 + rp.next() * 0.13), salarioLocal(melhor, v.moradia.municipioId)) / 10) * 10;
+          const cargo = melhor.id !== oc.id ? `como ${nomeOcupacao(v, melhor)}` : `na mesma função (${nomeOcupacao(v, oc)})`;
+          const quem = comArtigo(org.nome);
+          const na = naOrganizacao(org.nome);
+          const valor = dinheiro(salario);
+          const formal = k !== 1;
+          const texto = [
+            `${cap(quem)} quer você ${cargo}, com ${valor} por mês. Seria recomeçar num lugar novo, sem os anos de casa.`,
+            `Um headhunter ligou: ${quem} procura alguém ${cargo} — e o seu nome apareceu em mais de uma conversa. Ainda não é proposta: é um convite para entrevista.`,
+            `Quem já foi seu chefe agora está ${na} e quer levar você junto, ${cargo}: ${valor} por mês. O salário é maior; o risco também.`,
+            `Do outro lado da rua, ${quem} fez as contas: oferece ${melhor.id !== oc.id ? `o cargo de ${nomeOcupacao(v, melhor)}` : 'a mesma função'} e ${valor} por mês — um salário que a sua empresa não cobriria.`,
+            `Um cliente que conhece o seu trabalho levou o seu nome ${org.nome.match(/^(Colégio|Escritório|Hospital|Centro|Instituto|Mercado|Restaurante|Jornal|Estúdio|Banco)\b/) ? 'ao' : 'à'} ${org.nome}: a proposta veio por escrito, ${cargo}, ${valor} por mês.`
+          ][k];
+          novaOportunidade(v, formal
+            ? { tipo: 'proposta', ocupacaoId: melhor.id, meses: 12, chave: 'proposta', bonus: 0.18, titulo: `Proposta ${daOrganizacao(org.nome)}`, texto, empregador: org.nome, orgId: org.id, salario, formal: true }
+            : { tipo: 'proposta', ocupacaoId: melhor.id, meses: 12, chave: 'proposta', bonus: 0.18, titulo: `Entrevista ${na}`, texto, empregador: org.nome, orgId: org.id, salario });
+        }
+      }
     }
   }
 
@@ -407,6 +434,40 @@ function entradaPelaPessoa(v: Vida, ocupacaoId: string): Ocupacao | undefined {
   return entradas.find(x => x.nivel <= Math.max(1, dele.nivel)) ?? entradas[entradas.length - 1];
 }
 
+
+/* ------------------------------------------------- VIDA 30 · §8: quem oferece */
+
+const cap = (x: string) => x.charAt(0).toUpperCase() + x.slice(1);
+/** "da Nexa Sistemas", "do Hospital Âmbar". */
+const daOrganizacao = (nome: string) => `${comArtigo(nome).startsWith('o ') ? 'do' : 'da'} ${nome}`;
+
+/** A comissão técnica de clube (auxiliar, treinador de goleiros, preparador): o empregador é um CLUBE. O técnico principal fica fora: tem mercado próprio (`tecnico`). */
+export function ehDaComissao(oc: Ocupacao): boolean {
+  return oc.trilha === 'treino' && oc.setor === 'esporte' && oc.contrato === 'clt' && (!!oc.modalidade || oc.nivel >= 3) && oc.id !== 'tecnico_futebol';
+}
+
+/**
+ * A proposta de OUTRO clube para quem trabalha numa comissão de futebol: o clube (do estado, profissional, que não é o
+ * seu), a divisão, o cargo, o salário. Aceitar leva a ESTE clube (`AjusteDeEmprego.clube`). Fora do futebol, a equipe
+ * da cidade é uma só: não há proposta de concorrente.
+ */
+function propostaDaComissao(v: Vida, oc: Ocupacao, e: NonNullable<Vida['trabalho']['atual']>, rp: Rng): void {
+  if (oc.modalidade && oc.modalidade !== 'futebol') return;
+  const pais = paisDaCidade(v.moradia.municipioId);
+  const uf = municipio(v.moradia.municipioId).uf;
+  const candidatos = clubesDoPais(pais).filter((c: Clube) => c.nome !== e.clube && municipio(c.cidade).uf === uf && divisaoDoClube(v, c.nome, pais) >= 2);
+  const lista = candidatos.length ? candidatos : clubesDoPais(pais).filter((c: Clube) => c.nome !== e.clube && divisaoDoClube(v, c.nome, pais) >= 2);
+  if (!lista.length) return;
+  const c = lista[Math.floor(rp.next() * lista.length)];
+  const salario = Math.round(Math.max(e.salario * (1.1 + rp.next() * 0.2), salarioLocal(oc, c.cidade)) / 10) * 10;
+  const art = artigoDoClube(c.nome);
+  const div = divisaoDoClube(v, c.nome, pais);
+  const ondeFica = c.cidade === v.moradia.municipioId ? 'aqui mesmo na cidade' : `em ${municipio(c.cidade).nome}`;
+  novaOportunidade(v, { tipo: 'proposta', ocupacaoId: oc.id, meses: 12, chave: 'proposta', bonus: 0.18, clube: c.nome, municipioId: c.cidade, empregador: c.nome, salario, formal: true,
+    titulo: `Proposta ${art === 'a' ? 'da' : 'do'} ${c.nome}`,
+    texto: `${art === 'a' ? 'A' : 'O'} ${c.nome} (${ondeFica}, ${divisaoDoNivel(div, pais)}) quer você na comissão técnica: ${nomeOcupacao(v, oc)}, ${dinheiro(salario)} por mês, contrato até o fim da temporada que vem. A diretoria ligou direto.` });
+}
+
 /* ------------------------------------------------------------- Aceitar */
 
 import { propor } from './compromissos';
@@ -417,7 +478,7 @@ export interface Aceite {
   /** Decisão que precisa abrir em seguida (a peneira, a seleção). */
   decisao?: string;
   /** Candidatura com entrevista (e o bônus que a porta dá). */
-  entrevista?: { ocupacaoId: string; bonus: number; via: string };
+  entrevista?: { ocupacaoId: string; bonus: number; via: string; ajuste?: AjusteDeEmprego };
 }
 
 export function aceitarOportunidade(v: Vida, r: Rng, id: string): Aceite {
@@ -429,11 +490,19 @@ export function aceitarOportunidade(v: Vida, r: Rng, id: string): Aceite {
     case 'aprendiz': case 'estagio': case 'indicacao': case 'vaga': case 'proposta': case 'reinsercao': {
       if (!oc) return { texto: 'A vaga sumiu.' };
       if (o.pessoaId) lembrarCom(v, o.pessoaId, `Indicou você para um trabalho: ${nomeOcupacao(v, oc)}.`, 'apoio', 2);
+      // VIDA 30 · §8: o que a porta combinou vai junto (quem contrata, o salário oferecido).
+      const ajuste = o.orgId || o.clube || o.salario ? { ...(o.orgId ? { orgId: o.orgId } : {}), ...(o.clube ? { clube: o.clube, clubeCidade: o.municipioId } : {}), ...(o.salario ? { salarioMinimo: o.salario } : {}) } : undefined;
+      if (o.tipo === 'proposta' && o.formal) {
+        const quem = o.empregador ?? 'A empresa';
+        const res = propor(v, r, { tipo: 'emprego', ocupacaoId: oc.id, via: 'proposta', ajuste, substitui: true, texto: `${quem}: ${nomeOcupacao(v, oc)}${o.salario ? `, ${dinheiro(o.salario)} por mês` : ''}.` });
+        const e = v.trabalho.atual;
+        return { texto: res === 'feito' && e?.ocupacaoId === oc.id ? `Assinou com ${e.empregador}: ${nomeOcupacao(v, oc)}, ${dinheiro(e.salario)} por mês.` : res === 'perdido' ? PASSOU : '', tom: res === 'perdido' ? 'neutro' : 'bom' };
+      }
       if (porContaPropria(oc)) {
         const res = propor(v, r, { tipo: 'emprego', ocupacaoId: oc.id, via: o.tipo === 'indicacao' ? 'indicacao' : o.tipo });
         return { texto: res === 'feito' ? `Começou a trabalhar como ${nomeOcupacao(v, oc)}.` : res === 'perdido' ? PASSOU : '', tom: res === 'perdido' ? 'neutro' : 'bom' };
       }
-      return { texto: '', entrevista: { ocupacaoId: oc.id, bonus: o.bonus ?? 0.15, via: o.tipo === 'indicacao' ? 'indicacao' : o.tipo } };
+      return { texto: '', entrevista: { ocupacaoId: oc.id, bonus: o.bonus ?? 0.15, via: o.tipo === 'indicacao' ? 'indicacao' : o.tipo, ...(ajuste ? { ajuste } : {}) } };
     }
     case 'temporario': {
       const agro = o.ocupacaoId === 'trabalhador_rural';

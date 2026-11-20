@@ -183,7 +183,8 @@ export function elegibilidade(v: Vida, oc: Ocupacao, via: ViaDeEntrada = 'curric
   if (oc.idoneidade && via !== 'promocao' && antecedenteAdulto(v)) return bloqueio('requisito', 'A investigação social pede ficha limpa: os antecedentes fecham esta porta.');
   if (oc.lugar === 'agua' && !pertoDaAgua(v.moradia.municipioId)) return bloqueio('requisito', `Não há mar nem rio de pesca por perto de ${municipio(v.moradia.municipioId).nome}.`);
 
-  if (oc.entrada === 'oportunidade' && via !== 'oportunidade' && via !== 'promocao') {
+  // VIDA 30 · §8: a proposta formal de quem contrata É a oportunidade concreta (antes, era lida como currículo e o "Aceitar" travava).
+  if (oc.entrada === 'oportunidade' && via !== 'oportunidade' && via !== 'promocao' && via !== 'proposta') {
     return bloqueio('requisito', MOTIVO_ENTRADA[oc.trilha] ?? 'Não se entra por currículo: depende de uma oportunidade concreta.');
   }
   if (oc.entrada === 'negocio' && via !== 'negocio') return bloqueio('requisito', 'É preciso abrir o próprio negócio.');

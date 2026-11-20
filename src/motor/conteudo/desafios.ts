@@ -127,14 +127,15 @@ function concluirEntrevista(c: Ctx): Resultado {
   c.v.caminhos.entrevistas.feitas += 1;
   const oc = ocupacao(pr.ocupacaoId!);
   const nome = nomeOcupacao(c.v, oc);
-  const d = elegibilidade(c.v, oc);
+  // VIDA 30 · §8: a entrevista que veio de uma proposta (a mesma função noutra empresa) não é "você já trabalha nisso".
+  const d = elegibilidade(c.v, oc, pr.via === 'proposta' ? 'proposta' : 'curriculo');
   if (!podeTentar(d)) return { texto: 'Antes de o resultado sair, a vaga foi preenchida por dentro.', memoria: null, tom: 'ruim' };
   const a = avaliar(c.v, oc, d.chance ?? 0.4, pr.bonus, pr.etapas);
   if (c.r.chance(a.chance)) {
     const elogio = a.melhor ? ` Na ligação, disseram que ${a.melhor.bom}.` : '';
     registrarDevolutiva(c.v, { tipo: 'entrevista', titulo: `Entrevista para ${nome}`, texto: a.melhor ? `Passou. Disseram que ${a.melhor.bom}.` : 'Passou.', passou: true, ocupacaoId: oc.id, nivel: perfilParaVaga(c.v, oc).compatibilidade });
     // A vaga é sua — se ela não couber com o que você já faz (a base, a faculdade do dia inteiro, o negócio), vem a pergunta.
-    const saiu = propor(c.v, c.r, { tipo: 'emprego', ocupacaoId: oc.id, via: pr.via, texto: `A vaga de ${nome} é sua.` });
+    const saiu = propor(c.v, c.r, { tipo: 'emprego', ocupacaoId: oc.id, via: pr.via, texto: `A vaga de ${nome} é sua.`, ...(pr.ajuste ? { ajuste: pr.ajuste } : {}) });
     const e = c.v.trabalho.atual;
     if (saiu === 'feito' && e?.ocupacaoId === oc.id) return { texto: `Ligaram dois dias depois: a vaga é sua. ${nome.charAt(0).toUpperCase() + nome.slice(1)} ${naCasa(e.empregador)}, ${moeda(e.salario)} por mês.${elogio}`, memoria: null, tom: 'bom' };
     return { texto: `Ligaram dois dias depois: a vaga é sua.${elogio}`, memoria: null, tom: 'bom' };

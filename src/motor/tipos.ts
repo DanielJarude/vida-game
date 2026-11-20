@@ -2326,6 +2326,15 @@ export interface Oportunidade {
    * contrato e o vínculo usam ESTE nome (antes, o convite recalculava o clube da cidade por sorteio e podia sair outro).
    */
   clube?: string;
+  /**
+   * VIDA 30 · §8: QUEM oferece (a organização do mercado da cidade, ou o clube) e o que oferece. `formal`: uma proposta
+   * de verdade (contratante, cargo e salário ditos) — aceitar é assinar; sem `formal`, o que chega é um convite para
+   * entrevista (há uma vaga em avaliação; aceitar é ir à entrevista). Opcionais: os saves antigos seguem como antes.
+   */
+  empregador?: string;
+  orgId?: string;
+  salario?: number;
+  formal?: boolean;
 }
 
 /** REWORK 11 · Fase B — a natureza de uma oportunidade de trabalho (o rótulo e as consequências que a tela diz antes). */
@@ -3063,6 +3072,8 @@ export interface ProcessoSeletivo {
   atual: number;
   /** Nome do lugar (empresa, clube) — fixo durante o processo. */
   lugar?: string;
+  /** VIDA 30 · §8: o que a porta já combinou (a organização que convidou, o salário oferecido) — a contratação usa. */
+  ajuste?: AjusteDeEmprego;
 }
 
 /** O que ficou de uma tentativa: o retorno que a pessoa recebeu. */
@@ -3283,6 +3294,11 @@ export interface AjusteDeEmprego {
   clientelaMais?: number;
   /** O salário mínimo combinado (a proposta que trouxe a mudança). */
   salarioMinimo?: number;
+  /** VIDA 30 · §8: a organização que fez a proposta (o vínculo é com ELA, não com uma sorteada na contratação). */
+  orgId?: string;
+  /** VIDA 30 · §8: o clube que fez a proposta (comissão técnica) e a cidade dele. */
+  clube?: string;
+  clubeCidade?: string;
 }
 
 /** Um plano possível diante do conflito: o que se larga, o que se tenta conciliar. */
