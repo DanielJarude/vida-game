@@ -27,6 +27,7 @@ import { flex } from '../texto';
 import { anoDe } from '../tempo';
 import { compatibilidade } from './social';
 import { cenaDaDescoberta, fraseDoSaber, pendentes, revelar } from './conhecimento';
+import { assuntoDaConversa29, esclarecer29 } from './boatos29';
 import type { CtxI } from './interacoes';
 
 /* ------------------------------------------------------------- Efeitos */
@@ -142,6 +143,18 @@ const CONVERSAR: Cena[] = [
     viver: c => {
       // (O que acalma e o marco "acertaram as coisas" já vêm da interação; aqui, só a cena.)
       return { texto: compatibilidade(c.v, c.p) > 0 ? `Vocês sentaram para conversar. Não foi fácil, mas ${c.p.nome} terminou rindo de uma bobagem.` : `A conversa com ${c.p.nome} foi dura. Pelo menos, foi.` };
+    }
+  },
+  {
+    // VIDA 29: o que a pessoa ouviu de você por outros (`boatos29`) vira o assunto — e a conversa desfaz a versão aumentada.
+    id: 'soube29', quando: c => c.eu >= 14 && c.ip >= 14 && !!assuntoDaConversa29(c.v, c.p.id) && (c.vin.habitos?.boato29 ?? -999) < c.v.t - 12, peso: () => 8,
+    viver: c => {
+      const fala = assuntoDaConversa29(c.v, c.p.id)!;
+      (c.vin.habitos ??= {}).boato29 = c.v.t;
+      const corrigiu = esclarecer29(c.v, c.p.id);
+      if (corrigiu) { confiar(c, 3); lembrarCom(c.v, c.p.id, 'Você desfez a versão aumentada que tinha chegado a ela.', undefined, 1); }
+      else afeto(c, 1);
+      return { texto: `${fala} ${corrigiu ? 'Você contou como foi de verdade; a versão que tinha corrido era bem pior.' : 'Você contou do seu jeito.'}` };
     }
   },
   {

@@ -9,6 +9,7 @@
  */
 
 import { iniciativaDasDimensoes, processarRelacoes28 } from './sistemas/relacoes28';
+import { processarBoatos29 } from './sistemas/boatos29';
 import { processarVidas19 } from './v19/npcs/vidas19';
 import { processarConectada19 } from './v19/conectada/conectada19';
 import { processarHaras19 } from './v19/haras/haras19';
@@ -297,6 +298,8 @@ function viverAno(v: Vida, r: Rng): void {
   // que elas pedem (quem admira de longe procura; o rival fecha a cara; quem dependia cobra o sumiço).
   processarRelacoes28(v);
   iniciativaDasDimensoes(v);
+  // VIDA 29: as notícias da sua vida circulam entre as pessoas (por proximidade, relevância, época e jeito de cada uma).
+  processarBoatos29(v);
   // VIDA 15: o celular — quem manda mensagem na virada do ano (sorteio derivado: não mexe no acaso da vida).
   processarCelular15(v);
   // VIDA 16: a pasta do ofício e a carreira religiosa fecham o ano (só para quem abriu a pasta / tem a carreira).

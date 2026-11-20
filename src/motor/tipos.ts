@@ -4118,6 +4118,8 @@ export interface Vida {
   dependencias14?: import('./dados14/crencas/crencas').EstadoDependencias14;
   /** VIDA 20 · a carreira no automobilismo, do kart à F1 (`v20/automobilismo`). Ausente: nunca correu. */
   automobilismo20?: import('./dados20/tipos20').Auto20;
+  /** VIDA 29 · as notícias da sua vida que circulam entre as pessoas (`sistemas/boatos29`). Ausente: nada circulou ainda. */
+  boatos29?: import('./sistemas/boatos29').Noticia29[];
   /** VIDA 25 · a carreira de e-sports, do ranqueado ao mundial (`v25/esports`). Ausente: nunca competiu. */
   esports25?: import('./v25/esports/tipos25').Esports25;
   /** VIDA 26.2: o estilo de luta escolhido (Muay Thai, boxe, jiu-jitsu...) e a técnica guardada de cada estilo já treinado

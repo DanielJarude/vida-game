@@ -50,6 +50,7 @@ import { estadosContextuais, fraseDaMagoa, type EstadoContextual } from '../../m
 import { dimensoesEmPalavras } from '../../motor/sistemas/afetos';
 import { dimensoes28EmPalavras } from '../../motor/sistemas/relacoes28';
 import { fraseDoSaber, pendentes, saberes } from '../../motor/sistemas/conhecimento';
+import { oQueSabeDeVoce29 } from '../../motor/sistemas/boatos29';
 import { ocasioesDoPresente, presentesDados, presentesPara } from '../../motor/sistemas/presentes';
 import { contasAtivas } from '../../motor/sistemas/redesBase';
 import { DesenhoObjeto } from './material/Objetos';
@@ -709,6 +710,14 @@ function FichaPessoa({ vida, p, vin, agir, aoFechar }: { vida: Vida; p: Pessoa; 
               <ul className="ficha__sabe">
                 {fatos.map(f => <li key={f.k}>{fraseDoSaber(vida, p, f)}</li>)}
                 {sabe.slice(-3).map((h, k) => <li key={`h${k}`}>{h.texto}</li>)}
+              </ul>
+            </>
+          )}
+          {p.vivo && !p.especie && oQueSabeDeVoce29(vida, p.id).length > 0 && (
+            <>
+              <h3 className="ficha__subtitulo">O que {flex(p.genero, 'ele', 'ela', 'elu')} sabe de você</h3>
+              <ul className="ficha__sabe ficha__sabe--boatos">
+                {oQueSabeDeVoce29(vida, p.id).slice(0, 5).map((x, k) => <li key={k}>Que você {x.texto} — soube {x.via}{x.torto ? ', numa versão aumentada' : ''}.</li>)}
               </ul>
             </>
           )}
