@@ -193,3 +193,22 @@
 .campo29__tecnico { font-family: var(--font-mono, monospace); font-size: 12px; }
 .campo29__admin { display: flex; flex-direction: column; gap: var(--space-3); margin-bottom: var(--space-3); }
 .campo29__decisao > :not(:first-child), .campo29__passos li > :not(span) { flex: 0 0 auto; width: auto; }
+
+/* VIDA 30 · §6.4 — o que pede atenção: um cartão por problema, as saídas com custo e consequência */
+.campo30 { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; }
+.campo30__h { margin: 10px 0 4px; }
+.campo30__nada { margin: 0; color: var(--tinta-2); }
+.campo30__problema { border: 1px solid var(--fio); border-left: 4px solid var(--alerta, #c98a1a); border-radius: var(--radius-md); background: var(--superficie); padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; }
+.campo30__problema--agora { border-left-color: var(--ruim); }
+.campo30__problema--depois { border-left-color: var(--tinta-3); }
+.campo30__problema header { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; align-items: baseline; }
+.campo30__urg { font-size: 0.8em; padding: 1px 8px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
+.campo30__urg--agora { color: var(--ruim); }
+.campo30__urg--safra { color: var(--tinta); }
+.campo30__fatores, .campo30__senada { margin: 0; font-size: 13px; color: var(--tinta-2); }
+.campo30__senada span { font-weight: 600; }
+.campo30__opcoes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.campo30__opcoes li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 0; border-top: 1px dashed var(--fio); }
+.campo30__opcoes li > div { display: flex; flex-direction: column; min-width: 0; flex: 1 1 14rem; }
+.campo30__opcoes li span { font-size: 13px; color: var(--tinta-2); }
+.campo30__problema header strong, .campo30__opcoes strong { color: var(--tinta); font-size: 14px; }

@@ -177,6 +177,11 @@ export const laminaDagua = (p: PropriedadeRural18) => qtdEstrutura(p, 'tanques')
 export const areaLivre = (p: PropriedadeRural18) => Math.max(0, Math.round((areaUtil(p) - areaPlantada(p) - laminaDagua(p)) * 10) / 10);
 
 /** Preço da terra nua por hectare: o tipo, a região, o solo e a água (terra boa e com água vale mais). */
+/** VIDA 30 · §6: o peso do solo na produção (60 = 1,0; 30 = 0,875; 90 = 1,125). */
+export function fatorDoSolo30(solo: number): number {
+  return 0.75 + solo / 240;
+}
+
 export function precoDaTerraHa(tipo: TipoRural, municipioId: string, solo: number, agua: number): number {
   const base = TIPOS18[tipo].precoHa * PRECO_TERRA_REGIAO[regiaoRural(municipioId)] * custoLocal(municipioId);
   return Math.round(base * (0.7 + solo / 250 + agua / 500) / 10) * 10;
@@ -297,13 +302,25 @@ export function custoDeGestao(v: Vida, p: PropriedadeRural18): number {
   if (p.uso !== 'producao' || tocadaPorVoce(v) === p.id) return 0;
   if (p.admin29) {
     const c0 = custoLocal(p.municipioId);
-    return p.admin29 === 'voce' ? 0 : p.admin29 === 'caseiro' ? Math.round(32000 * c0) : p.admin29 === 'gerente' ? Math.round((p.ha < 300 ? 78000 : 140000) * c0) : Math.round((36000 + p.ha * 110) * c0);
+    return p.admin29 === 'voce' ? 0 : p.admin29 === 'caseiro' ? Math.round(salarioDoCaseiro30(p.ha) * c0) : p.admin29 === 'gerente' ? Math.round(salarioDoGerente30(p.ha) * c0) : Math.round((36000 + p.ha * 110) * c0);
   }
   // Quem mora no sítio (ou na chácara) cuida dele no dia a dia: sem caseiro.
   const im = todasAsPropriedades(v).find(x => x.p === p)?.imovel;
   if (p.ha <= 50 && im && im.id === v.moradia.imovelId) return 0;
   const c = custoLocal(p.municipioId);
-  return Math.round((p.ha < 40 ? 32000 : p.ha < 300 ? 78000 : 140000) * c);
+  return Math.round((p.ha < 40 ? salarioDoCaseiro30(p.ha) : salarioDoGerente30(p.ha)) * c);
+}
+
+/**
+ * VIDA 30 · §6: quem cuida custa o tamanho do que cuida. Antes, a chácara de 4 ha pagava o caseiro inteiro de R$ 32 mil
+ * (perdia todo ano) e a fazenda de 301 ha pulava de R$ 78 mil para R$ 140 mil de gerente. Agora: o caseiro de meio
+ * período no pequeno (até 10 ha), o caseiro inteiro até 40 ha; o gerente cresce com a área, até o teto de antes.
+ */
+export function salarioDoCaseiro30(ha: number): number {
+  return ha < 10 ? 9000 + ha * 1200 : 32000;
+}
+export function salarioDoGerente30(ha: number): number {
+  return Math.round(Math.min(140000, ha < 300 ? 48000 + ha * 100 : 78000 + (ha - 300) * 40) / 100) * 100;
 }
 
 /* ================================================================== VIDA 29 · quem administra, a equipe, a venda */
@@ -331,6 +348,8 @@ export function competenciaDaGestao(v: Vida, p: PropriedadeRural18): number {
     : quem === 'caseiro' ? (p.ha < 40 ? 45 : 36)
     : quem === 'empresa' ? 58 : 45;
   if (p.assistencia29) comp += 8;
+  // VIDA 30 · §6: quem toca a mesma terra aprende com ela — os anos de casa somam (até +10 em quatro anos).
+  if (quem === 'produtor' || quem === 'voce' || quem === 'mora') comp += Math.min(10, p.historico.length * 2.5);
   const mo = maoDeObra29(v, p);
   if (p.equipe29 !== undefined && mo.cobertura >= 1) comp += 3;
   return clamp(comp);
@@ -516,7 +535,8 @@ export function resultadoDoTalhao(_v: Vida | undefined, p: PropriedadeRural18, t
   if (emFormacao || florestaCrescendo) return { receita: 0, custo: Math.round((emFormacao ? k.custoHa * 0.35 : k.custoHa) * t.ha * c), nota: emFormacao ? `em formação (${idadeT + 1}º de ${k.formacao} anos)` : `crescendo (${idadeT} de ${k.vidaUtil} anos até o corte)`, colheu: false, producao: 0 };
   // A produtividade: aptidão da região, solo, água, tecnologia, competência de quem toca, foco.
   // Solo 60, quem toca com prática média (45) e água suficiente: a produtividade de referência.
-  let prod = k.produtividade * k.aptidao[reg] * (0.6 + p.solo / 150) * (1 + tec * 0.05) * (0.95 + comp / 900);
+  // VIDA 30 · §6: o solo pesa menos nas pontas (o de 30 tirava 20% da produção e o de 80 dava +13%); a referência (60) é a mesma.
+  let prod = k.produtividade * k.aptidao[reg] * fatorDoSolo30(p.solo) * (1 + tec * 0.05) * (0.95 + comp / 900);
   const aguaOk = t.irrigado ? 1 : Math.min(1, (p.agua + 30) / (k.agua * 100 + 30));
   prod *= 0.75 + 0.25 * aguaOk;
   if (p.foco === 'volume') prod *= 1.06; else if (p.foco === 'qualidade') prod *= 0.92;
@@ -542,6 +562,9 @@ export function resultadoDoTalhao(_v: Vida | undefined, p: PropriedadeRural18, t
     nota = (nota ? nota + '; ' : '') + `${k.praga} levou ${Math.round(p0 * 100)}%`;
   }
   prod *= Math.max(0.1, 1 - perda);
+  // VIDA 30 · §6: o que o clima ou a praga levaram não se colhe nem se transporta — parte do custo (a colheita, o frete)
+  // não acontece. Antes, o ano ruim pagava o custo inteiro de uma safra cheia.
+  if (perda > 0.05) custo *= 1 - Math.min(0.8, perda) * 0.25;
   const producao = Math.round(prod * t.ha * 10) / 10;
   // O preço: o do ano, o prêmio do orgânico certificado e da qualidade, e o silo (vender na entressafra).
   const certificado = p.manejo === 'organico' && p.transicao !== undefined && ano - p.transicao >= 3;
@@ -554,7 +577,7 @@ export function resultadoDoTalhao(_v: Vida | undefined, p: PropriedadeRural18, t
   // A safrinha de milho depois da soja (precisa de chuva no outono — ou de irrigação).
   if (t.safrinha && t.cultura === 'soja') {
     const m = CULTURAS18.milho;
-    const pm = m.produtividade * 0.8 * m.aptidao[reg] * (0.6 + p.solo / 150) * (t.irrigado ? 1 : clima.tipo === 'seca' ? 0.5 : 0.9);
+    const pm = m.produtividade * 0.8 * m.aptidao[reg] * fatorDoSolo30(p.solo) * (t.irrigado ? 1 : clima.tipo === 'seca' ? 0.5 : 0.9);
     receita += pm * t.ha * m.preco * fatorDePreco('milho', ano) * c;
     custo += m.custoHa * 0.85 * t.ha * c * (1 - reducaoOperacao);
   }
@@ -605,7 +628,10 @@ export function resultadoDoRebanho(_v: Vida | undefined, p: PropriedadeRural18, 
   // rebanho de cria vende o que passa do alvo: manter = o mesmo tamanho; crescer = reter as fêmeas (+12%); reduzir = −20%.
   const giro = rb.especie === 'porcos' || rb.especie === 'frangos' || rb.especie === 'galinhas';
   const vivos = n + nascidos - mortos;
-  const alvo = Math.round(n * (rb.estrategia === 'crescer' ? 1.12 : rb.estrategia === 'reduzir' ? 0.8 : 1));
+  // VIDA 30 · §6: com o pasto bem acima do que sustenta, quem cuida vende o excesso (não se segura boi magro no pasto
+  // rapado) — a não ser que a escolha tenha sido crescer. Antes, "manter" segurava o excesso e o chão afundava.
+  const vendeExcesso = lotado > 1.25 && rb.estrategia !== 'crescer';
+  const alvo = Math.round(n * (rb.estrategia === 'crescer' ? 1.12 : rb.estrategia === 'reduzir' ? 0.8 : 1) * (vendeExcesso ? Math.min(1, 1.05 / lotado) : 1));
   const vendidos = giro ? Math.round(n * d.desfrute * (1 - mort)) : Math.round(Math.min(Math.max(0, vivos - alvo), vivos * 0.6));
   const cabecas = giro ? n : Math.max(0, vivos - vendidos);
   const precoVenda = d.precoVenda * gen * fatorDePreco(rb.especie, ano) * c * (rb.especie === 'cavalos' ? 1 + rb.genetica / 60 : 1);
@@ -615,7 +641,7 @@ export function resultadoDoRebanho(_v: Vida | undefined, p: PropriedadeRural18, 
   const custo = n * d.custoAno * custoAlim * c * (rb.sanitario === 'completo' ? 1.08 : 1) * (temEstrutura(p, 'solar') && (rb.especie === 'leite' || rb.especie === 'frangos' || rb.especie === 'galinhas' || rb.especie === 'porcos') ? 0.95 : 1);
   const notas: string[] = [];
   if (surto) notas.push(`${d.doenca} atacou o rebanho`);
-  if (excesso > 1.05) notas.push(lotado > apertado ? 'pasto pequeno para tanto animal' : `falta ${dEstrutura(rb.especie)}`);
+  if (excesso > 1.05) notas.push(lotado > apertado ? (vendeExcesso ? 'pasto pequeno para tanto animal: vendeu o excesso' : 'pasto pequeno para tanto animal') : `falta ${dEstrutura(rb.especie)}`);
   if (clima.tipo === 'seca' && rb.alimentacao === 'pasto') notas.push('o pasto secou');
   return { receita: Math.round(receita), custo: Math.round(custo), cabecas, nascidos: giro ? 0 : nascidos, mortos: giro ? 0 : mortos, vendidos, sanidade: san, nota: notas.join('; ') || undefined };
 }
@@ -632,7 +658,8 @@ export function custosFixos(v: Vida, p: PropriedadeRural18, ano: number): { oque
   // ITR (Lei 9.393/1996): alíquota baixa na terra bem usada; a terra parada paga mais.
   const usada = (areaPlantada(p) + Math.min(areaPasto(p), uaOcupadas(p) / 0.9)) / Math.max(1, areaUtil(p));
   // (Sobre o valor da terra nua declarado, que fica bem abaixo do de mercado: 0,06% bem usada, 0,3% parada.)
-  const itr = paisDaCidade(p.municipioId) === 'BR' && p.arrendamento?.sentido !== 'pago' ? p.valorHa * p.ha * (usada > 0.65 || p.ha < 30 ? 0.0006 : 0.003) : 0;
+  // VIDA 30 · §6: o VTN declarado é cerca de metade do valor de mercado (antes, a conta usava o de mercado inteiro).
+  const itr = paisDaCidade(p.municipioId) === 'BR' && p.arrendamento?.sentido !== 'pago' ? p.valorHa * 0.5 * p.ha * (usada > 0.65 || p.ha < 30 ? 0.0006 : 0.003) : 0;
   if (itr > 0) out.push({ oque: 'ITR (imposto da terra)', custo: Math.round(itr) });
   const gestao = custoDeGestao(v, p);
   if (gestao > 0) { const q = quemAdministra(v, p); out.push({ oque: q === 'empresa' ? 'Administradora rural' : q === 'caseiro' ? 'Caseiro' : 'Gerente da fazenda', custo: gestao }); }
@@ -765,6 +792,7 @@ export function viverAnoDaPropriedade(v: Vida, p: PropriedadeRural18, imovel: Im
   const resultado = receita - custo;
   v.financas.conta = Math.round(v.financas.conta + resultado - jaRecebido);
   lancar(v, `Resultado: ${p.nome}`, resultado >= 0 ? 'renda' : 'despesa', resultado);
+  custeioDoPrejuizo30(v, p, resultado);
   // O chão: rotação, monocultura, orgânico, pasto lotado.
   if (p.uso === 'producao') {
     const novos: Talhao18[] = [];
@@ -774,7 +802,8 @@ export function viverAnoDaPropriedade(v: Vida, p: PropriedadeRural18, imovel: Im
       if (kk.ciclo === 'anual') {
         const g = grupo(t.cultura);
         // A safrinha de milho depois da soja já é rotação (gramínea depois de leguminosa, no mesmo ano).
-        t.repete = t.safrinha ? 1 : t.antes === g ? (t.repete ?? 1) + 1 : 1;
+        // VIDA 30 · §6: a horta roda canteiros e famílias dentro dela mesma — não é monocultura.
+        t.repete = t.safrinha || t.cultura === 'horta' ? 1 : t.antes === g ? (t.repete ?? 1) + 1 : 1;
         t.antes = t.safrinha ? 'graminea' : g;
         p.solo = clamp(p.solo + (t.repete >= 3 ? -0.8 : g === 'leguminosa' ? 0.4 : -0.2) * t.ha / Math.max(1, areaUtil(p)) * 3, 10, 98);
       }
@@ -785,7 +814,8 @@ export function viverAnoDaPropriedade(v: Vida, p: PropriedadeRural18, imovel: Im
     p.talhoes = novos;
     if (p.manejo === 'organico') p.solo = clamp(p.solo + 0.8, 10, 98);
     const lot = uaOcupadas(p) / Math.max(1, capacidadeUA(p));
-    if (lot > 1.1) p.solo = clamp(p.solo - (lot - 1) * 4, 10, 98);
+    // VIDA 30 · §6: o pasto lotado cansa o chão — com teto (antes, o gado 2× virava espiral: solo de 79 a 27 em dez anos).
+    if (lot > 1.1) p.solo = clamp(p.solo - Math.min(2.5, (lot - 1) * 4), 10, 98);
     p.rebanhos.forEach((rb, k) => { const res = s.rebanhos[k]; if (!res) return; rb.cabecas = res.cabecas; rb.sanidade = res.sanidade; rb.genetica = clamp(rb.genetica + (rb.estrategia === 'crescer' ? 0.6 : 0.3)); });
     p.rebanhos = p.rebanhos.filter(rb => rb.cabecas > 0);
     for (const cav of p.cavalos ?? []) envelhecerCavalo(cav, ano);
@@ -800,6 +830,26 @@ export function viverAnoDaPropriedade(v: Vida, p: PropriedadeRural18, imovel: Im
   if (p.arrendamento && p.arrendamento.ate <= ano) acabarArrendamento(v, p);
   sincronizarValor(v, imovel);
   return registro;
+}
+
+/**
+ * VIDA 30 · §6: o ano ruim da terra em produção é coberto por CRÉDITO DE CUSTEIO (o banco do produtor, juros de crédito
+ * rural, dois anos para pagar) — não pelo cartão de crédito a 4,5% ao mês, como antes. Só o que a conta não cobre, e só o
+ * prejuízo da produção. No Brasil, o pequeno (até 80 ha) usa o Pronaf, mais barato.
+ */
+export function custeioDoPrejuizo30(v: Vida, p: PropriedadeRural18, resultado: number): number {
+  if (resultado >= 0 || p.uso !== 'producao' || v.financas.conta >= 0) return 0;
+  const valor = Math.round(Math.min(-resultado, -v.financas.conta) / 100) * 100;
+  if (valor < 500) return 0;
+  const pronaf = paisDaCidade(p.municipioId) === 'BR' && p.ha <= 80;
+  const jurosMes = pronaf ? 0.0025 : 0.0055;
+  const prazo = 24;
+  const parcela = Math.round(valor * jurosMes / (1 - Math.pow(1 + jurosMes, -prazo)));
+  v.financas.dividas.push({ id: `d${v.seq++}`, tipo: 'emprestimo', saldo: valor, jurosMes, parcela, descricao: `${pronaf ? 'Pronaf custeio' : 'Crédito de custeio'}: ${p.nome}`, tInicio: v.t, prazo });
+  v.financas.conta += valor;
+  lancar(v, `${pronaf ? 'Pronaf custeio' : 'Crédito de custeio'} (cobre o ano ruim de ${p.nome})`, 'divida', valor);
+  escrever(v, { texto: `O ano ${p.nome.startsWith('Sítio') ? 'do' : 'da'} ${p.nome} fechou no vermelho: ${fmt(valor)} viraram ${pronaf ? 'Pronaf custeio' : 'crédito de custeio'}, em 24 parcelas de ${fmt(parcela)}, com juros de crédito rural.`, relevancia: 'cotidiano', tema: 'dinheiro', tom: 'ruim' });
+  return valor;
 }
 
 function envelhecerCavalo(c: CavaloDeCorrida18, ano: number): void {

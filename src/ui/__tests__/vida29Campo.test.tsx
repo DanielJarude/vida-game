@@ -39,8 +39,10 @@ describe('VIDA 29 · Campo: a Visão geral', () => {
     expect(screen.getByText('Num ano normal')).toBeTruthy();
     const quadros = screen.getByRole('list', { name: 'Como está cada parte' });
     const solo = quadros.querySelector('[data-indicador="solo"]')!;
-    expect(within(solo as HTMLElement).getByText('O que significa')).toBeTruthy();
-    expect(within(solo as HTMLElement).getByText('Se piorar')).toBeTruthy();
+    // VIDA 30 · §6.5: o pedido mudou — no modo simples, nada de blocos de texto por indicador (a explicação longa fica no
+    // modo detalhado); no topo, "O que pede atenção" com os problemas e as saídas.
+    expect(within(solo as HTMLElement).queryByText('O que significa')).toBeNull();
+    expect(screen.getByRole('region', { name: 'O que pede atenção' })).toBeTruthy();
     // Sem jargão no modo simples: nenhum número em "UA" (a sigla só aparece explicada) nem "pede correção".
     const painel = document.getElementById('campo18-painel')!;
     expect(painel.textContent).not.toMatch(/\d UA\b/);
@@ -58,6 +60,7 @@ describe('VIDA 29 · Campo: a Visão geral', () => {
     await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Modo simples/ })); });
     expect(screen.getByRole('button', { name: /Modo detalhado/ }).getAttribute('aria-pressed')).toBe('true');
     expect(screen.getAllByText('Nos números').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('O que significa').length).toBeGreaterThan(0);
     expect(document.getElementById('campo18-painel')!.textContent).toMatch(/\d UA\b/);
   });
 

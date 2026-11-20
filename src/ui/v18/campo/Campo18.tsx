@@ -23,7 +23,8 @@ import {
 } from '../../../motor/v18/rural/acoes18';
 import { Paisagem18 } from './Paisagem18';
 import { capacidadeUA, maoDeObra29, quemAdministra, salarioRural29, tecnologiaPropria, vendaServe29, NOME_DA_GESTAO, type Admin29, type Venda29 } from '../../../motor/v18/rural/fazenda18';
-import { decisoesRecomendadas, diagnosticoDaPropriedade, situacaoDaPropriedade, type Indicador29 } from '../../../motor/v18/rural/diagnostico29';
+import { diagnosticoDaPropriedade, situacaoDaPropriedade, type Indicador29 } from '../../../motor/v18/rural/diagnostico29';
+import { problemasDaPropriedade30, type Problema30 } from '../../../motor/v18/rural/problemas30';
 import './campo18.css';
 
 type Agir = (a: Acao) => boolean;
@@ -108,7 +109,7 @@ const ler = (k: string) => { try { return localStorage.getItem(k); } catch { ret
 const gravar = (k: string, x: string) => { try { localStorage.setItem(k, x); } catch { /* sem armazenamento */ } };
 const CHAVE_MODO = 'VIDA_campo29_modo';
 const DICAS: Record<Parte, string> = {
-  visao: 'Aqui está o resumo da propriedade: como ela está, o que vai mal e o que fazer. Toque num quadro para entender o que ele significa. Os números técnicos aparecem no modo detalhado.',
+  visao: 'Primeiro, o que pede atenção — com as saídas, o custo e o que acontece se não fizer nada. Embaixo, cada parte em uma linha; os números técnicos ficam no modo detalhado.',
   lavoura: 'Cada talhão é um pedaço de terra com uma cultura. A anual (soja, milho, feijão) colhe no ano; a perene (café, pomar) leva anos para começar a dar. O calendário mostra os meses de plantar (verde) e de colher (amarelo).',
   rebanho: 'Cada criação tem o seu jeito: o gado vive no pasto (veja na Visão geral quantos animais cabem), a galinha no aviário, o peixe no tanque. Sanidade é vacina e trato em dia; genética é a qualidade dos animais.',
   estrutura: 'Obras ficam (casa, curral, poço, silo); máquinas aumentam a tecnologia. Não precisa comprar tudo: no pequeno, a máquina se contrata por empreitada.',
@@ -215,7 +216,6 @@ const NOME_ESTADO = { bom: 'Bem', atencao: 'Atenção', ruim: 'Problema' } as co
 function VisaoGeral({ vida, agir, p, r, propria, detalhado }: { vida: Vida; agir: Agir; p: PropriedadeRural18; r: Resumo; propria: boolean; detalhado: boolean }) {
   const ind = diagnosticoDaPropriedade(vida, p);
   const sit = situacaoDaPropriedade(ind);
-  const decisoes = decisoesRecomendadas(ind);
   const prev = r.previsao;
   const cabecas = p.rebanhos.reduce((s, rb) => s + rb.cabecas, 0);
   return (
@@ -227,19 +227,8 @@ function VisaoGeral({ vida, agir, p, r, propria, detalhado }: { vida: Vida; agir
         <div><dt>Num ano normal</dt><dd>entra {dinheiroCurto(prev.receita)} · sai {dinheiroCurto(prev.custo)}</dd></div>
         <div><dt>O último ano</dt><dd className={r.ultimo && r.ultimo.resultado < 0 ? 'campo18__ruim' : 'campo18__bom'}>{r.ultimo ? `${r.ultimo.resultado >= 0 ? '+' : '−'}${dinheiroCurto(Math.abs(r.ultimo.resultado))}` : 'fecha na virada'}</dd></div>
       </dl>
-      {decisoes.length > 0 && (
-        <section className="campo29__decisoes" aria-label="O que fazer agora">
-          <h4>O que fazer agora</h4>
-          <ol>
-            {decisoes.map((d, k) => (
-              <li key={k} className={`campo29__decisao campo29__decisao--${d.estado}`}>
-                <div><strong>{d.texto}</strong><span>{d.porque}{d.custo ? ` · custa ${dinheiroCurto(d.custo)}` : ''}{d.tempo ? ` · ${d.tempo}` : ''}</span></div>
-                {d.acao && <BotaoAcao vida={vida} agir={agir} acao={d.acao}>Fazer</BotaoAcao>}
-              </li>
-            ))}
-          </ol>
-        </section>
-      )}
+      <Problemas30 vida={vida} agir={agir} p={p} />
+      <h4 className="campo30__h">Como está cada parte</h4>
       <ul className="campo29__quadros" aria-label="Como está cada parte">
         {ind.map(i => <Quadro key={i.id} i={i} vida={vida} agir={agir} detalhado={detalhado} />)}
       </ul>
@@ -248,6 +237,39 @@ function VisaoGeral({ vida, agir, p, r, propria, detalhado }: { vida: Vida; agir
         <Terra p={p} r={r} propria={propria} detalhado={detalhado} />
       </section>
     </div>
+  );
+}
+
+/**
+ * VIDA 30 · §6.4 — O QUE PEDE ATENÇÃO: um cartão por problema real (a urgência, os fatores com o peso, o que acontece se
+ * não fizer nada) e as saídas, cada uma com o custo e a consequência — e o botão que faz.
+ */
+const URGENCIA = { agora: 'Agora', safra: 'Nesta safra', depois: 'Pode esperar' } as const;
+function Problemas30({ vida, agir, p }: { vida: Vida; agir: Agir; p: PropriedadeRural18 }) {
+  const ps = problemasDaPropriedade30(vida, p);
+  return (
+    <section className="campo30" aria-label="O que pede atenção">
+      <h4 className="campo30__h">O que pede atenção</h4>
+      {!ps.length && <p className="campo30__nada">{p.uso === 'producao' ? 'Nada pede atenção agora: a propriedade anda sozinha.' : 'A terra não está produzindo: nada a acompanhar no dia a dia.'}</p>}
+      {ps.map(x => <CartaoProblema30 key={x.id} x={x} vida={vida} agir={agir} />)}
+    </section>
+  );
+}
+function CartaoProblema30({ x, vida, agir }: { x: Problema30; vida: Vida; agir: Agir }) {
+  return (
+    <article className={`campo30__problema campo30__problema--${x.urgencia}`} data-problema={x.id}>
+      <header><strong>{x.titulo}</strong><span className={`campo30__urg campo30__urg--${x.urgencia}`}>{URGENCIA[x.urgencia]}</span></header>
+      {x.fatores && x.fatores.length > 0 && <p className="campo30__fatores">Por quê: {x.fatores.map(f => `${f.texto} (−${Math.max(1, Math.round(f.peso * 100))}%)`).join(' · ')}</p>}
+      <ul className="campo30__opcoes">
+        {x.opcoes.map((o, k) => (
+          <li key={k}>
+            <div><strong>{o.rotulo}</strong><span>{o.custo !== undefined ? (o.custo < 0 ? `entra ${dinheiroCurto(-o.custo)}` : `custa ${dinheiroCurto(o.custo)}`) + (o.porAno ? ' por ano' : '') + ' · ' : ''}{o.efeito}</span></div>
+            {o.acao && <BotaoAcao vida={vida} agir={agir} acao={o.acao}>Fazer</BotaoAcao>}
+          </li>
+        ))}
+      </ul>
+      <p className="campo30__senada"><span>Se não fizer nada:</span> {x.seNada}</p>
+    </article>
   );
 }
 
@@ -261,13 +283,14 @@ function Quadro({ i, vida, agir, detalhado }: { i: Indicador29; vida: Vida; agir
           <span className="campo29__resumo">{i.resumo}</span>
         </summary>
         <dl className="campo29__explica">
-          <div><dt>O que significa</dt><dd>{i.significa}</dd></div>
-          <div><dt>Como afeta a propriedade</dt><dd>{i.efeito}</dd></div>
-          <div><dt>Se piorar</dt><dd>{i.sePiorar}</dd></div>
           {i.fazer.length > 0 && <div><dt>O que fazer</dt><dd><ul className="campo29__passos">{i.fazer.map((f, k) => (
             <li key={k}><span>{f.texto}{f.custo ? ` Custa ${dinheiroCurto(f.custo)}.` : ''}{f.tempo ? ` (${f.tempo})` : ''}</span>{f.acao && <BotaoAcao vida={vida} agir={agir} acao={f.acao}>Fazer</BotaoAcao>}</li>
           ))}</ul></dd></div>}
+          {/* VIDA 30 · §6.5: a explicação longa fica para quem quer aprofundar (o modo detalhado). */}
+          {detalhado && <div><dt>O que significa</dt><dd>{i.significa}</dd></div>}
+          {detalhado && <div><dt>Se piorar</dt><dd>{i.sePiorar}</dd></div>}
           {detalhado && i.tecnico && <div><dt>Nos números</dt><dd className="campo29__tecnico">{i.tecnico}</dd></div>}
+          {!detalhado && !i.fazer.length && <div><dd>{i.efeito}</dd></div>}
         </dl>
       </details>
     </li>

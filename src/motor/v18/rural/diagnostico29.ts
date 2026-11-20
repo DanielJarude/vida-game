@@ -13,7 +13,7 @@ import { dinheiro } from '../../texto';
 const fmt = (x: number) => dinheiro(Math.abs(x) >= 20000 ? Math.round(x / 1000) * 1000 : Math.round(x / 10) * 10);
 import { CULTURAS18, ESTRUTURAS18, REBANHOS18 } from '../../dados18/rural/catalogo18';
 import {
-  areaLivre, areaPasto, areaPlantada, capacidadeUA, climaDoAno, competenciaDaGestao, custoLocal, custosFixos, fmtHa, maoDeObra29, NOME_DA_GESTAO,
+  fatorDoSolo30, areaLivre, areaPasto, areaPlantada, capacidadeUA, climaDoAno, competenciaDaGestao, custoLocal, custosFixos, fmtHa, maoDeObra29, NOME_DA_GESTAO,
   quemAdministra, resumoDaPropriedade, salarioRural29, tecnologia, tecnologiaPropria, temEstrutura, tetoDaEstrutura, uaOcupadas, COLHEITA_MANUAL,
   type PropriedadeRural18
 } from './fazenda18';
@@ -45,7 +45,8 @@ const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const pior = (a: Estado29, b: Estado29): Estado29 => (a === 'ruim' || b === 'ruim' ? 'ruim' : a === 'atencao' || b === 'atencao' ? 'atencao' : 'bom');
 
 /** O quanto o solo de hoje rende perto de um solo médio (60), pela mesma conta da produtividade. */
-const rendimentoDoSolo = (solo: number) => (0.6 + solo / 150) / (0.6 + 60 / 150);
+// VIDA 30 · §6: a mesma curva do motor (`fatorDoSolo30`).
+const rendimentoDoSolo = (solo: number) => fatorDoSolo30(solo) / fatorDoSolo30(60);
 
 export function diagnosticoDaPropriedade(v: Vida, p: PropriedadeRural18): Indicador29[] {
   const ano = anoDe(v.t);
