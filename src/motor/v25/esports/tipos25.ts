@@ -83,4 +83,14 @@ export interface Esports25 {
   anosSemEquipe?: number;
   fim?: number;
   motivoFim?: 'escolha' | 'idade' | 'sem_equipe' | 'trabalho';
+  /** VIDA 29: o elenco da equipe atual (os companheiros com nome e função) e o mercado do último fim de temporada. */
+  mercado29?: Mercado29;
+}
+
+/** VIDA 29 · um jogador do cenário (leve: nome de jogo, função, idade, nível). */
+export interface JogadorDoCenario29 { nick: string; nome: string; funcao?: string; nasc: number; forca: number; desde: number }
+export interface Mercado29 {
+  ano: number;
+  elenco?: { equipe: string; jogadores: JogadorDoCenario29[] };
+  movimentos: { texto: string; tipo: 'chegou' | 'saiu' | 'cenario' }[];
 }

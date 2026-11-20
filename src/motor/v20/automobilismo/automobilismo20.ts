@@ -262,7 +262,7 @@ function montarGrid(v: Vida, a: Auto20, ano: number, r: Rng): Grid[] {
   g.push({ nome: 'você', nivel: nivelDoPiloto(a), carro: minhaForca, voce: true });
   a.companheiro ??= nomePiloto(r);
   g.push({ nome: a.companheiro, nivel: c.nivel + r.normal() * 7, carro: minhaForca, companheiro: true });
-  if (a.rival) g.push({ nome: a.rival, nivel: c.nivel + 6 + r.normal() * 3, carro: forcaDaEquipe(v, a.fase as Categoria20, equipes[0], ano), rival: true });
+  if (a.rival && (a.rivalCat29 ?? a.fase) === a.fase) g.push({ nome: a.rival, nivel: c.nivel + 6 + r.normal() * 3, carro: forcaDaEquipe(v, a.fase as Categoria20, equipes[0], ano), rival: true });
   // O grid da F1 é uma elite apertada (pouca diferença entre os pilotos); as equipes boas contratam os melhores.
   const sd = a.fase === 'f1' ? 4.5 : 8;
   while (g.length < c.grid) {
@@ -416,6 +416,54 @@ export function processarAutomobilismo20(v: Vida): void {
   // A F1 paga (o salário é o do contrato, no emprego).
   contarTemporada(v, a, t);
   depoisDaTemporada(v, a, t, r);
+  if ((a.fase as string) !== 'encerrada') mercadoDePilotos29(v, a, t);
+}
+
+/**
+ * VIDA 29 · O MERCADO DE PILOTOS ANDA SOZINHO. No fim de cada temporada, pelos dados do campeonato: o companheiro que
+ * ganhou de você e é jovem sobe de categoria (ou, na F1, vai para uma equipe melhor); o que terminou lá atrás perde a vaga;
+ * o veterano pendura o capacete — e a equipe anuncia quem chega (vindo de onde). O rival que brigou pelo título sobe e sai
+ * do seu grid (volta a ele quando você chega lá). Na F1, duas ou três trocas entre as equipes do grid. Os nomes são os
+ * mesmos de sempre (as equipes de `EQUIPES`); os sorteios são derivados (`rngDe`) e não mexem no resto da vida.
+ */
+function mercadoDePilotos29(v: Vida, a: Auto20, t: Temporada20): void {
+  const cat = t.categoria;
+  const r = rngDe(v.id, 'auto29_mercado', t.ano);
+  const ordem = ORDEM.indexOf(cat);
+  const acima = ORDEM[Math.min(ORDEM.length - 1, ordem + 1)];
+  const grid = CATEGORIAS20[cat].grid;
+  const mov: string[] = [];
+  // O companheiro (se você continua na mesma equipe: quem muda de equipe ganha outro de qualquer jeito).
+  if (a.companheiro && a.equipe === t.equipe && a.fase === cat && t.companheiroPos) {
+    const cp = t.companheiroPos;
+    let saiu: string | undefined;
+    if (cp <= 3 && cat !== 'f1' && r.chance(0.6)) saiu = `${a.companheiro} subiu para ${CATEGORIAS20[acima].nome}, pela ${r.pick(EQUIPES[acima])}`;
+    else if (cp <= 4 && cat === 'f1' && r.chance(0.35)) saiu = `${a.companheiro} foi para a ${r.pick(EQUIPES.f1.slice(0, 4).filter(x => x !== a.equipe))}`;
+    else if (cp > grid * 0.7 && r.chance(0.55)) saiu = `${a.companheiro} perdeu a vaga na ${a.equipe}`;
+    else if (cat === 'f1' && r.chance(0.08)) saiu = `${a.companheiro} anunciou a aposentadoria`;
+    if (saiu) {
+      const novo = nomePiloto(r);
+      const de = ordem > 0 ? `da ${CATEGORIAS20[ORDEM[ordem - 1]].nome}` : 'do kart regional';
+      mov.push(`${saiu}. O novo companheiro na ${a.equipe} é ${novo}, que vem ${cat === 'f1' && r.chance(0.5) ? `da ${r.pick(EQUIPES.f1.filter(x => x !== a.equipe))}` : de}.`);
+      a.companheiro = novo;
+    } else mov.push(`${a.companheiro} continua na ${a.equipe} — o mesmo companheiro em ${t.ano + 1}.`);
+  }
+  // O rival que brigou lá em cima sobe (e sai do seu grid); o que ficou para trás, às vezes, desiste.
+  if (a.rival && (a.rivalCat29 ?? cat) === cat && t.rivalPos) {
+    if (t.rivalPos <= 2 && cat !== 'f1' && r.chance(0.55)) { a.rivalCat29 = acima; mov.push(`O seu rival, ${a.rival}, subiu para ${CATEGORIAS20[acima].nome}: o reencontro fica para quando você chegar lá.`); }
+    else if (t.rivalPos > grid * 0.8 && r.chance(0.3)) { mov.push(`${a.rival}, o rival dos últimos anos, ficou sem orçamento e saiu do grid.`); a.rival = undefined; a.rivalCat29 = undefined; }
+  }
+  // Quem chega à categoria do rival o encontra de novo.
+  if (a.rivalCat29 === a.fase) a.rivalCat29 = undefined;
+  // As trocas do grid (na F1, com as equipes de verdade do grid do jogo).
+  const eqs = EQUIPES[cat];
+  for (let k = 0; k < (cat === 'f1' ? 3 : 2); k++) {
+    const de = r.pick(eqs), para = r.pick(eqs.filter(x => x !== de));
+    if (de === a.equipe || para === a.equipe) continue;
+    mov.push(`${nomePiloto(r)} trocou a ${de} pela ${para}.`);
+  }
+  a.mercado29 = { ano: t.ano, movimentos: mov.slice(0, 6) };
+  if (mov.length && mov[0] && !mov[0].includes('continua')) escrever(v, { texto: mov[0], relevancia: 'cotidiano', tema: 'trabalho' });
 }
 
 function contarTemporada(v: Vida, a: Auto20, t: Temporada20): void {
@@ -446,7 +494,8 @@ function depoisDaTemporada(v: Vida, a: Auto20, t: Temporada20, r: Rng): void {
   const valida = v.t + 11;
   const proxima = (c: Categoria20) => ORDEM.indexOf(c);
   const propor = (c: Categoria20, forte: boolean) => {
-    const lista = EQUIPES[c];
+    // VIDA 29: a proposta é de OUTRA equipe (a sua renova, não "propõe").
+    const lista = c === cat && EQUIPES[c].length > 1 ? EQUIPES[c].filter(x => x !== a.equipe) : EQUIPES[c];
     const eq = forte ? lista[Math.floor(r.next() * Math.min(3, lista.length))] : lista[Math.floor(lista.length / 2 + r.next() * (lista.length / 2))];
     const p: Proposta20 = { categoria: c, equipe: eq, validaAte: valida, forca: forcaDaEquipe(v, c, eq, ano + 1) };
     if (c === 'f1') p.salario = salarioF1(v, a, p.forca, t);

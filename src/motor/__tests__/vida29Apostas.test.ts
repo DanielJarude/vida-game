@@ -46,7 +46,7 @@ describe('VIDA 29 · consequências proporcionais das apostas', () => {
     expect(v.fatos['apo_ultimato29']).toBe(v.t);
     for (const id of ['apo_notou29', 'apo_contas29', 'apo_ultimato29']) {
       const c = POSSIBILIDADES.find(p => p.id === id)!;
-      expect(c.opcoes!.length).toBeGreaterThanOrEqual(2);
+      expect((c as unknown as { opcoes: unknown[] }).opcoes.length).toBeGreaterThanOrEqual(2);
     }
   });
 });

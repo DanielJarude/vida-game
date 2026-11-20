@@ -140,6 +140,17 @@ export function Esports25({ vida, agir }: { vida: Vida; agir: (a: Acao) => boole
           )}
         </div>
       )}
+      {(e.mercado29?.elenco?.equipe === e.equipe?.nome && e.mercado29?.elenco?.jogadores.length) || e.mercado29?.movimentos.length ? (
+        <details className="esp25__historico esp29__mercado">
+          <summary>O elenco e o mercado{e.mercado29?.ano ? ` (janela de ${e.mercado29.ano})` : ''}</summary>
+          {e.equipe && e.mercado29?.elenco?.equipe === e.equipe.nome && (
+            <ul className="esp25__passagens" aria-label={`Elenco da ${e.equipe.nome}`}>
+              {e.mercado29.elenco.jogadores.map((x, k) => <li key={k}><b>{x.nick}</b> ({x.nome}) · {j.funcoes.find(f => f.id === x.funcao)?.nome ?? 'jogador'} · {Math.floor((vida.t - x.nasc) / 12)} anos · nível {x.forca}</li>)}
+            </ul>
+          )}
+          {!!e.mercado29?.movimentos.length && <ul className="esp25__passagens" aria-label="As trocas da janela">{e.mercado29.movimentos.map((m, k) => <li key={k}>{m.texto}</li>)}</ul>}
+        </details>
+      ) : null}
       {(e.temporadas.length > 1 || e.passagens.length > 0) && (
         <details className="esp25__historico">
           <summary>A carreira: {pl(e.totais.temporadas, 'temporada')}, {pl(e.passagens.length, 'equipe')}, {pl(e.totais.titulos, 'título')}{e.totais.premios ? `, ${dinheiroCurto(e.totais.premios)} em prêmios` : ''}</summary>

@@ -44,6 +44,10 @@ export interface Auto20 {
   lesaoAte?: number; acidentesGraves?: number;
   semOrcamento?: number; familiaInvestiu?: number;
   motivoFim?: 'escolha' | 'orcamento' | 'sem_vaga' | 'resultados' | 'idade';
+  /** VIDA 29: a categoria em que o rival corre agora (ausente: a mesma sua). O rival que sobe sai do seu grid e volta quando você o alcança. */
+  rivalCat29?: Categoria20;
+  /** VIDA 29: o mercado de pilotos do último fim de temporada (o companheiro que sai e o que chega, o rival, as trocas do grid). */
+  mercado29?: { ano: number; movimentos: string[] };
 }
 
 /* ------------------------------------------------------------------ clubes */

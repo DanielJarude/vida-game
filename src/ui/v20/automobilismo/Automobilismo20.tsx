@@ -43,11 +43,17 @@ export function Automobilismo20({ vida, agir }: { vida: Vida; agir: (a: Acao) =>
         <dl className="auto20__ficha">
           <div><dt>Equipe</dt><dd>{a.equipe}{l.forcaEquipe !== undefined && <small> · carro {l.forcaEquipe}/100</small>}</dd></div>
           {a.companheiro && <div><dt>Companheiro</dt><dd>{a.companheiro}</dd></div>}
-          {a.rival && <div><dt>Rival</dt><dd>{a.rival}</dd></div>}
+          {a.rival && <div><dt>Rival</dt><dd>{a.rival}{a.rivalCat29 && a.rivalCat29 !== a.fase ? <small> · hoje na {l.caminho.find(x => x.c === a.rivalCat29)?.nome ?? a.rivalCat29}</small> : null}</dd></div>}
           {a.academia && <div><dt>Academia</dt><dd>programa de jovens da equipe {a.academia}</dd></div>}
           {cat === 'f1' && a.salario && <div><dt>Contrato</dt><dd>{dinheiroCurto(a.salario)}/ano até {a.contratoAte}</dd></div>}
           {cat !== 'f1' && <div><dt>Superlicença</dt><dd>{l.sl} de {l.slNecessario} pontos (três anos)</dd></div>}
         </dl>
+      )}
+      {!!a.mercado29?.movimentos.length && (
+        <details className="auto20__mercado">
+          <summary>O mercado de pilotos (fim de {a.mercado29.ano})</summary>
+          <ul>{a.mercado29.movimentos.map((m, k) => <li key={k}>{m}</li>)}</ul>
+        </details>
       )}
       <Perfil28 perfil={a.perfil28} genero={vida.eu.genero} />
       <ul className="auto20__atributos" aria-label="Atributos de piloto">

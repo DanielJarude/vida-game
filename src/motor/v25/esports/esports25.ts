@@ -40,7 +40,8 @@ import { ocupacao } from '../../dados/ocupacoes';
 import { cidadesDoPais, economiaLocal, municipio, paisDaCidade } from '../../dados/lugares';
 import { mudarAgora } from '../../sistemas/processos';
 import { JOGOS25, LISTA_JOGOS25, DA_LEITURA25, DA_MAO25, NOME_ATRIBUTO25, type AtributoEsports, type Jogo25, type JogoId } from './jogos25';
-import type { Competicao25, Esports25, Proposta25, Temporada25 } from './tipos25';
+import type { Competicao25, Esports25, JogadorDoCenario29, Proposta25, Temporada25 } from './tipos25';
+import { sortearNome, sortearSobrenome } from '../../dados/nomes';
 
 export type { Esports25 };
 export const OCUPACAO_ESPORTS = 'jogador_esports';
@@ -55,6 +56,102 @@ export function nomeDeEquipe25(jogo: JogoId, nivel: number, k: number, semente: 
   const r = rngDe(semente, 'esp25_nome', jogo, nivel, k);
   if (nivel >= 5) return INTERNACIONAIS[Math.floor(r.next() * INTERNACIONAIS.length)];
   return `${RAIZES[Math.floor(r.next() * RAIZES.length)]} ${SUFIXOS[Math.floor(r.next() * (nivel <= 2 ? SUFIXOS.length : SUFIXOS.length - 1))]}`;
+}
+
+/**
+ * VIDA 29 · as equipes DO CENÁRIO: uma lista estável por jogo e degrau (os mesmos nomes ano após ano, sem repetir entre
+ * degraus). A proposta, a peneira, o mercado e a tabela usam esta lista — a equipe que propõe é a mesma que aparece no
+ * contrato, no emprego e na História.
+ */
+export function equipesDoCenario29(jogo: JogoId, nivel: number, semente: string): string[] {
+  const usadas = new Set<string>();
+  const out: string[][] = [];
+  for (let n = 5; n >= 2; n--) {
+    const lista: string[] = [];
+    for (let k = 0; lista.length < 8 && k < 60; k++) { const nome = nomeDeEquipe25(jogo, n, k, semente); if (!usadas.has(nome)) { usadas.add(nome); lista.push(nome); } }
+    out[n] = lista;
+  }
+  return out[clamp(nivel, 2, 5)] ?? [];
+}
+/** Uma equipe do degrau que não é a sua (o índice vem do sorteio de sempre: a sequência da vida não muda). */
+function equipeDoDegrau29(v: Vida, e: Esports25, nivel: number, idx: number): string {
+  const lista = equipesDoCenario29(e.jogo, Math.max(2, nivel), v.id).filter(x => x !== e.equipe?.nome);
+  return lista.length ? lista[idx % lista.length] : nomeDeEquipe25(e.jogo, nivel, idx, v.id);
+}
+
+const NICKS = ['kyo', 'zeta', 'nox', 'fallen', 'drako', 'liz', 'tuca', 'raio', 'mito', 'vex', 'bruma', 'kai', 'sora', 'jinx', 'pira', 'tank', 'guri', 'lumi', 'brisa', 'trovão', 'axe', 'nina', 'cobra', 'faro', 'max', 'yumi', 'ruivo', 'kenji', 'saci', 'pulga', 'orca', 'tigrão', 'neon', 'gelo', 'pixel', 'ziggy', 'bento', 'koda', 'vovô', 'shiny'];
+function jogadorDoCenario29(v: Vida, r: Rng, forca: number, funcao: string | undefined, idadeAlvo: number): JogadorDoCenario29 {
+  const genero = r.chance(0.12) ? 'feminino' : 'masculino';
+  const nasc = v.t - Math.round(idadeAlvo * 12);
+  const pais = paisDaCidade(v.moradia.municipioId);
+  return { nick: `${r.pick(NICKS)}${r.chance(0.3) ? Math.floor(r.next() * 99) : ''}`, nome: `${sortearNome(r, genero, anoDe(nasc), pais)} ${sortearSobrenome(r, pais)}`, funcao, nasc, forca: Math.round(clamp(forca, 20, 99)), desde: anoDe(v.t) };
+}
+
+/** O elenco da equipe atual: os companheiros (um por função que não é a sua), criados quando você chega. */
+export function garantirElencoEsports29(v: Vida, e: Esports25): JogadorDoCenario29[] {
+  if (!e.equipe || e.jogo === 'fortnite') return [];
+  const m = (e.mercado29 ??= { ano: anoDe(v.t), movimentos: [] });
+  if (m.elenco?.equipe === e.equipe.nome) return m.elenco.jogadores;
+  const r = rngDe(v.id, 'esp29_elenco', e.equipe.nome, e.equipe.desde);
+  const j = jogoDe(e);
+  const tam = j.porEquipe(anoDe(v.t));
+  const funcoes = j.funcoes.map(f => f.id).filter(f => f !== e.funcao);
+  const jogadores = Array.from({ length: Math.max(0, tam - 1) }, (_, k) => jogadorDoCenario29(v, r, e.equipe!.forca + r.normal() * 3, funcoes[k % Math.max(1, funcoes.length)], j.auge - 3 + r.next() * 8));
+  m.elenco = { equipe: e.equipe.nome, jogadores };
+  return jogadores;
+}
+
+/**
+ * VIDA 29 · O MERCADO DO CENÁRIO ANDA SOZINHO. No fim de cada temporada, pelos dados: o companheiro que joga acima da
+ * equipe é comprado por uma equipe do degrau de cima; o que joga abaixo é dispensado; o veterano se aposenta; a vaga é
+ * preenchida por alguém de um degrau abaixo (com nome e de onde veio). Às vezes a equipe traz alguém para a SUA função:
+ * se ele joga mais do que você, a titularidade vai para ele (consequência de verdade no próximo ano). E o cenário do seu
+ * degrau tem as suas trocas (as manchetes da janela). Sorteios derivados: não mexem no resto da vida.
+ */
+function mercadoEsports29(v: Vida, e: Esports25, ano: number): void {
+  const r = rngDe(v.id, 'esp29_janela', ano);
+  const mov: NonNullable<Esports25['mercado29']>['movimentos'] = [];
+  const j = jogoDe(e);
+  if (e.equipe && e.jogo !== 'fortnite') {
+    const elenco = garantirElencoEsports29(v, e);
+    const eq = e.equipe;
+    for (let k = elenco.length - 1; k >= 0; k--) {
+      const x = elenco[k];
+      const idadeX = (v.t - x.nasc) / 12;
+      // A evolução do ano (o jovem melhora, o veterano cai).
+      x.forca = Math.round(clamp(x.forca + (idadeX < j.auge ? 1.5 : idadeX > j.auge + 4 ? -2 : 0) + r.normal() * 2, 20, 99));
+      let saida: string | undefined;
+      if (x.forca >= eq.forca + 5 && e.nivel < 5 && r.chance(0.55)) saida = `${x.nick} foi vendido para a ${equipeDoDegrau29(v, e, e.nivel + 1, Math.floor(r.next() * 100))}`;
+      else if (idadeX > j.auge + 7 && r.chance(0.4)) saida = `${x.nick} se aposentou`;
+      else if (x.forca < eq.forca - 7 && r.chance(0.5)) saida = `${x.nick} foi dispensado`;
+      if (!saida) continue;
+      const veio = e.nivel > 2 ? `da ${equipeDoDegrau29(v, e, e.nivel - 1, Math.floor(r.next() * 100))}` : 'do cenário aberto';
+      const novo = jogadorDoCenario29(v, r, eq.forca + r.normal() * 3, x.funcao, j.auge - 4 + r.next() * 5);
+      elenco[k] = novo;
+      mov.push({ texto: `${saida}. No lugar, chegou ${novo.nick} (${novo.nome}), ${veio}.`, tipo: 'saiu' });
+    }
+    // A concorrência na sua função: a equipe que quer subir traz alguém para o seu lugar.
+    const nj = nivelDeJogo25(e);
+    if (eq.forca > nj && r.chance(0.25)) {
+      const fNome = j.funcoes.find(f => f.id === e.funcao)?.nome ?? 'a sua função';
+      const novo = jogadorDoCenario29(v, r, eq.forca + 2 + r.normal() * 3, e.funcao, j.auge - 3 + r.next() * 4);
+      if (novo.forca > nj + 2 && eq.titular) {
+        eq.titular = false;
+        mov.push({ texto: `A ${eq.nome} contratou ${novo.nick} para ${fNome} — e ele começa como titular: você vai para o banco.`, tipo: 'chegou' });
+        escrever(v, { texto: `A ${eq.nome} contratou ${novo.nick} para a sua função; no ano que vem, você começa no banco.`, relevancia: 'biografia', tema: 'trabalho', tom: 'ruim' });
+      } else mov.push({ texto: `A ${eq.nome} trouxe ${novo.nick} para ${fNome} como reserva: a vaga é sua enquanto o seu jogo segurar.`, tipo: 'chegou' });
+    }
+  }
+  // As manchetes do degrau (as equipes de verdade da lista do cenário).
+  const lista = equipesDoCenario29(e.jogo, Math.max(2, e.nivel), v.id).filter(x => x !== e.equipe?.nome);
+  for (let k = 0; k < 3 && lista.length >= 2; k++) {
+    const de = r.pick(lista), para = r.pick(lista.filter(x => x !== de));
+    const x = jogadorDoCenario29(v, r, forcaDoNivel(e.jogo, e.nivel), r.pick(j.funcoes).id, j.auge - 2 + r.next() * 6);
+    mov.push({ texto: `${x.nick} trocou a ${de} pela ${para}.`, tipo: 'cenario' });
+  }
+  const m = (e.mercado29 ??= { ano, movimentos: [] });
+  m.ano = ano;
+  m.movimentos = mov.slice(0, 8);
 }
 
 /* ------------------------------------------------------------------ leitura */
@@ -248,7 +345,7 @@ function criarProposta(v: Vida, e: Esports25, nivel: number, origem: Proposta25[
   const rep = clamp(e.reputacao / 100, 0, 1);
   const salario = max > 0 ? valorLocal(v, min + (max - min) * clamp(0.25 + rep * 0.5 + (forca - n.forca) / 20 + r.normal() * 0.1, 0, 1)) : 0;
   const titular = origem !== 'peneira' || nivelDeJogo25(e) >= n.forca - 2 || r.chance(0.5);
-  return { equipe: nomeDeEquipe25(e.jogo, nivel, Math.floor(r.next() * 1000), v.id), nivel, forca, salario, meses: nivel >= 3 ? 24 : 12, validaAte: v.t + 11, origem, funcao: e.funcao, titular, municipioId: cidadeDaEquipe(v, nivel) };
+  return { equipe: equipeDoDegrau29(v, e, nivel, Math.floor(r.next() * 1000)), nivel, forca, salario, meses: nivel >= 3 ? 24 : 12, validaAte: v.t + 11, origem, funcao: e.funcao, titular, municipioId: cidadeDaEquipe(v, nivel) };
 }
 
 function peneira(v: Vida, e: Esports25, r: Rng): { texto: string; tom: 'bom' | 'ruim' } {
@@ -299,6 +396,7 @@ function entrarNaEquipe(v: Vida, e: Esports25, p: Proposta25): void {
   if (p.funcao) e.funcao = p.funcao;
   e.anosSemEquipe = 0;
   e.passagens.push({ equipe: p.equipe, nivel: p.nivel, de: ano });
+  garantirElencoEsports29(v, e);
   const assinado = pro && assinarPro25(v, p.equipe, p.salario);
   if (pro && !assinado && e.equipe) e.equipe.salario = 0;
   if (assinado) {
@@ -486,6 +584,7 @@ export function processarEsports25(v: Vida): void {
   perfilEsports28(v, e, t, ano);
   vidaEmVolta(v, e, int);
   depoisDaTemporada(v, e, t, r);
+  if (ativa25(e)) mercadoEsports29(v, e, ano);
   fotografar(e, ano);
 }
 
