@@ -7,7 +7,6 @@ import { Clube20 } from '../v20/clubes/Clube20';
 import { adulto } from '../../motor/__tests__/cenarios';
 import { executar, type Acao } from '../../motor/acoes';
 import { carregarMundo } from '../../motor/mundo/carregar';
-import type { Vida } from '../../motor/tipos';
 
 beforeAll(async () => { await carregarMundo(); });
 afterEach(() => cleanup());

@@ -31,12 +31,14 @@ const Esports25 = sobDemandaCampeonato(() => import('../v25/esports/Esports25').
 const FichaDoEsporte25 = sobDemandaCampeonato(() => import('../v25/ficha/FichaDoEsporte25').then(m => m.FichaDoEsporte25));
 // VIDA 28: o elenco com nome e o mercado autônomo (sob demanda: não pesa no Jogo).
 const Elenco28 = sobDemandaCampeonato(() => import('../v28/Elenco28').then(m => m.Elenco28));
+// VIDA 30: o ofício depois de competir (sob demanda).
+const Oficio30 = lazy(() => import('../v30/oficio/Oficio30'));
 const Formacao25 = sobDemandaCampeonato(() => import('../v25/formacao/Formacao25').then(m => m.Formacao25));
 import { CampoDoAtleta, ClaqueteDoAtor, PalcoDoMusico, PlenarioDoPolitico, PranchetaDoTecnico } from './CarreirasEspeciais';
 import { habilitacaoDaVida } from '../../motor/sistemas/autoescola';
 import { regrasDaVida } from '../../motor/mundo/regras';
 import { nomeDoRegistro, previdenciaDaVida, textoLocal } from '../../motor/mundo/locais';
-import { useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useMemo, useRef, useState } from 'react';
 import type { Devolutiva, Vida } from '../../motor/tipos';
 import type { Acao } from '../../motor/acoes';
 import { disponibilidade } from '../../motor/acoes';
@@ -244,6 +246,7 @@ export function Trabalho({ vida, agir, irPara, parte, explorar: abaDeFora, aoExp
         {/* VIDA 25: a ficha do atleta (os atributos agrupados, o antes e o agora, a evolução) — em toda modalidade. */}
         {(modo === 'atleta' || espSemClube) && vida.caminhos.esporte && <FichaDoEsporte25 vida={vida} e={vida.caminhos.esporte} />}
         {modo === 'atleta' && vida.caminhos.esporte && <Elenco28 vida={vida} e={vida.caminhos.esporte} />}
+        {vida.oficio30 && vida.oficio30.oc === vida.trabalho.atual?.ocupacaoId && <Suspense fallback={null}><Oficio30 vida={vida} /></Suspense>}
         {modo === 'tecnico' && <PainelComissao vida={vida} />}
         {/* VIDA 20: o piloto contratado (a F1) vê a carreira inteira aqui também. */}
         {vida.trabalho.atual?.ocupacaoId === 'piloto_corrida' && <Automobilismo20 vida={vida} agir={agir} />}

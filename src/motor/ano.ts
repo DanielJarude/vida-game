@@ -34,6 +34,7 @@ import type { Rng } from './rng';
 import { entrarNaVida, paisDaVida } from './mundo/vida';
 import { clamp, rngDe } from './rng';
 import { fama30DoAno } from './v30/fama/rede30';
+import { anoDoOficio30 } from './v30/oficio/oficio30';
 import { vidaDe30DoAno } from './conteudo/acontecimentos30Vida';
 import type { Retorno, Vida } from './tipos';
 import { escrever, idade, transacao } from './nucleo';
@@ -506,6 +507,8 @@ function faseDeConteudo(v: Vida, r: Rng, linhasSistemicas: number): void {
   vidaDeCrencas14(v, CATALOGO, preparar, (c, ctx) => (c.tipo === 'acontecimento' ? aplicarAcontecimento(v, c, ctx) : (abrirDecisao(v, c, ctx), true))); // VIDA 14: as datas da fé e as decisões dela
   processarConquistas14(v, CATALOGO, preparar, (c, ctx) => (c.tipo === 'acontecimento' ? aplicarAcontecimento(v, c, ctx) : (abrirDecisao(v, c, ctx), true)));
   // VIDA 30 · §3: o meio vive, a privacidade anda e, num ano sem decisão, às vezes a fama acontece em pessoa.
+  // VIDA 30: o ofício depois de competir (os números do ano e, às vezes, uma escolha dele).
+  abrirCena30(v, anoDoOficio30(v, !v.momento && !v.fila?.length && decisoesDoAno(v) === 0));
   abrirCena30(v, fama30DoAno(v, !v.momento && !v.fila?.length && decisoesDoAno(v) === 0));
   // VIDA 30 · §4–§5: as experiências de cada fase e as pessoas que reagem — sorteio derivado próprio; decisão só num ano sem nenhuma.
   vidaDe30DoAno(v, CATALOGO, preparar, (c, ctx) => { if (c.tipo === 'decisao') abrirDecisao(v, c, ctx); else aplicarAcontecimento(v, c, ctx); }, !v.momento && !v.fila?.length && decisoesDoAno(v) === 0);
@@ -521,5 +524,5 @@ export function abrirCena30(v: Vida, id: string | undefined): void {
   if (!id) return;
   const c = conteudoPorId(id);
   const ctx = c && c.tipo === 'decisao' && !v.momento ? preparar(c, v, rngDe(v.id, 'cena30_abrir', v.t)) : null;
-  if (c && c.tipo === 'decisao' && ctx) abrirDecisao(v, c, ctx); else if (v.fama30) delete v.fama30.cena;
+  if (c && c.tipo === 'decisao' && ctx) abrirDecisao(v, c, ctx); else { if (v.fama30 && id.startsWith('fama30')) delete v.fama30.cena; if (v.oficio30 && id.startsWith('pos30')) delete v.oficio30.cena; }
 }
