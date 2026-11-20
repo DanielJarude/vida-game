@@ -24,7 +24,6 @@ const CampeoesDoPais = sobDemandaCampeonato(() => import('./Campeonato').then(m 
 const PremiosDoMundo = sobDemandaCampeonato(() => import('./Campeonato').then(m => m.PremiosDoMundo));
 /** VIDA 12.9: a Presidência no painel político (a corrida, o governo do país, a história) — sob demanda. */
 const PainelPresidencial = sobDemandaCampeonato(() => import('./Presidencia129').then(m => m.PainelPresidencial));
-const Justica14 = sobDemandaCampeonato(() => import('../v14/justica/Justica14').then(m => m.Justica14));
 const Futsal14 = sobDemandaCampeonato(() => import('../v14/esportes/Futsal14').then(m => m.Futsal14));
 const Automobilismo20 = sobDemandaCampeonato(() => import('../v20/automobilismo/Automobilismo20').then(m => m.Automobilismo20));
 const Esports25 = sobDemandaCampeonato(() => import('../v25/esports/Esports25').then(m => m.Esports25));
@@ -224,7 +223,7 @@ export function Trabalho({ vida, agir, irPara, parte, explorar: abaDeFora, aoExp
 
         {preso && <PainelDaPena vida={vida} agir={agir} />}
         {foragido(vida) && <PainelForagido vida={vida} agir={agir} />}
-        {vida.justica14 && (vida.justica14.casos.length > 0 || (vida.justica14.fechados?.length ?? 0) > 0) && <Justica14 vida={vida} agir={agir} />}
+        {/* VIDA 31: os processos na Justiça (cível, trabalhista) saíram daqui — moram em Vida · Dinheiro. */}
         {modo === 'pausa' && <p className="nota-grande">{leituraDaPausa(vida)}</p>}
         {/* REWORK 10 · ECO-03: o seguro-desemprego vem em parcelas — quantas faltam, de quanto, e o que as encerra. */}
         {vida.trabalho.seguroDesemprego && <p className="nota-grande">Seguro-desemprego: faltam {vida.trabalho.seguroDesemprego.restantes} de {vida.trabalho.seguroDesemprego.total} parcelas de {fmtDinheiro(vida.trabalho.seguroDesemprego.parcela)}, uma por mês. Um emprego formal encerra as que faltarem; um bico, não.</p>}

@@ -55,7 +55,7 @@ import { recursosDaFamilia } from './origem';
 import { mudarAgora } from './processos';
 import { registrarTemporada, registrarConquista } from './palmares';
 import { clubesNaDivisao, colocacaoNaTabela, divisaoDoClube } from './ligas';
-import { copaContinental, copaNacional, copasDeQuadra, idDaLiga, nomeDaCompeticao } from './competicoes';
+import { copaContinental, copaNacional, copasDeQuadra, idDaLiga, mundialDeClubes, nomeDaCompeticao } from './competicoes';
 import { desvio, efeitoNaNota, envelhecerAtributos, fotografarAtributos, nivelNaPosicao, perfilDeAtributos, type AtributoId } from './atributosEsportivos';
 import { ESTILOS26 } from '../v26/esporte/estilos26';
 import { avaliacaoDaComissao, lerJovem, prontoParaContrato, type LeituraDoJovem } from './jovemAtleta';
@@ -692,6 +692,8 @@ export function fecharTemporada(v: Vida, r: Rng, e: CarreiraEsportiva): Temporad
     // VIDA 28: o mata-mata é jogo grande — o Decisivo pesa nele.
     const ajusteCopa = ajuste + ef.decisivo * 0.3;
     const copas = [copaNacional(v, pais, ano, e.clube, e.nivel, ajusteCopa), copaContinental(v, pais, ano, e.clube, ajusteCopa)].filter(c => !!c);
+    // VIDA 31: quem ganhou a copa continental joga o Mundial de Clubes (a Copa Intercontinental, até 2004) no fim do ano.
+    if (copas.some(c => c!.id.startsWith('cont:') && c!.fase === 'campeão')) { const m = mundialDeClubes(v, pais, ano, e.clube, ajusteCopa); if (m) copas.push(m); }
     if (copas.length) t.copas = copas.map(c => ({ id: c!.id, fase: c!.fase, jogos: Math.round(c!.jogos * (e.espaco === 'titular' ? disp : 0.3 * disp)), ...(c!.final ? { final: `contra ${c!.final.adversario.startsWith('um') ? c!.final.adversario : oClube(c!.final.adversario)}, ${c!.final.placar}` } : {}), ...(c!.fase === 'vice' && c!.final && !c!.final.adversario.startsWith('um') ? { campeao: c!.final.adversario } : {}) }));
   }
   // REWORK 11.5 · ESP-02: as copas de quadra (basquete e vôlei), com o formato delas: só a elite, pela colocação do ano
@@ -1818,7 +1820,7 @@ export function bonusDaTemporada(e: CarreiraEsportiva, t: Temporada, salario: nu
     if (titulos) { mult += 0.5 * titulos; motivos.push(titulos === 1 ? 'o título do ano' : `${titulos} títulos`); }
   } else {
     if (t.colocacao === 1) { mult += 1; motivos.push('o título da liga'); }
-    for (const c of t.copas ?? []) if (c.fase === 'campeão') { const cont = /continental|libertadores|champions|sul-americana/i.test(c.id); mult += cont ? 2 : 1; motivos.push(cont ? 'o título continental' : 'o título da copa'); }
+    for (const c of t.copas ?? []) if (c.fase === 'campeão') { const cont = /continental|libertadores|champions|sul-americana/i.test(c.id) || c.id.startsWith('cont:') || c.id.startsWith('mundial:'); mult += cont ? 2 : 1; motivos.push(cont ? 'o título continental' : 'o título da copa'); }
   }
   if (!mult) return { valor: 0, motivos };
   const participacao = individual ? 1 : clamp((t.titular + (t.partidas - t.titular) * 0.4) / Math.max(1, jogosDaTemporada(e.modalidade, e.nivel) * 0.8), 0.25, 1);

@@ -204,9 +204,8 @@ export function Jogo({ c }: { c: ControleVida }) {
           {area === 'linha' && <Historia vida={vida} marca={c.marcaAno} parte={parteHistoria} irParte={setParteHistoria} irPara={ir} abrirPessoa={abrirPessoa}
             anoQuePassou={c.marcaAno > 0 ? <AnoQuePassou vida={vida} desde={c.marcaAno} abrirPessoa={abrirPessoa} /> : undefined}
             pedeVoce={<Agora vida={vida} area={area} irPara={ir} abrirPessoa={abrirPessoa} abrirConvite={setConvite} agir={c.agir} />} />}
-          {(area === 'voce' || area === 'tempo') && <TrocaDoEu area={area} ir={ir} />}
           {area === 'voce' && inicio.voce && <EuInicio31 vida={vida} irParte={p => { setParteVoce(p); sairDoInicio('voce'); }} irPara={ir} />}
-          {((area === 'voce' && !inicio.voce) || area === 'tempo') && <Voltar31 rotulo="Eu" ir={() => { voltarAoInicio('voce'); ir('voce'); }} />}
+          {area === 'voce' && !inicio.voce && <Voltar31 rotulo="Eu" ir={() => { voltarAoInicio('voce'); ir('voce'); }} />}
           {area === 'voce' && !inicio.voce && <Voce vida={vida} agir={c.agir} irPara={ir} abrirPessoa={abrirPessoa} parte={parteVoce} irParte={setParteVoce} />}
           {area === 'pessoas' && inicio.pessoas && !pessoaAberta && <PessoasInicio31 vida={vida} abrir={focar} irParte={p => { setPartePessoas(p); sairDoInicio('pessoas'); }} irPara={ir} />}
           {area === 'pessoas' && (!inicio.pessoas || pessoaAberta) && <Voltar31 rotulo="Minhas pessoas" ir={() => { focar(null); voltarAoInicio('pessoas'); }} />}
@@ -479,19 +478,6 @@ import { agendaDaSemana } from '../../motor/sistemas/agenda';
 /** Um conflito entre compromissos obrigatórios (o trabalho em cima da aula), não uma atividade que perde uma vez. */
 const conflitoObrigatorio = (v: Vida) => !!(v.educacao.basica || v.educacao.matricula) && !!v.trabalho.atual && agendaDaSemana(v).conflitos.some(c => c.tipo === 'sobreposicao' && (c.perde === 'escola' || c.perde === 'curso') && (c.ocupa ?? '').startsWith('trabalho'));
 export { ImportarVida };
-
-/**
- * VIDA 31 · EU = quem você é + como organiza o tempo. Minha Semana deixou de ser uma área da barra: mora dentro de Eu,
- * com esta troca no alto (o id 'tempo' e todos os destinos antigos continuam valendo).
- */
-function TrocaDoEu({ area, ir }: { area: Area; ir: (d: Aba) => void }) {
-  return (
-    <div className="troca-eu" role="group" aria-label="Eu">
-      <button type="button" className={`troca-eu__item${area === 'voce' ? ' troca-eu__item--ativo' : ''}`} aria-pressed={area === 'voce'} onClick={() => ir('voce')}>Perfil</button>
-      <button type="button" className={`troca-eu__item${area === 'tempo' ? ' troca-eu__item--ativo' : ''}`} aria-pressed={area === 'tempo'} onClick={() => ir('tempo')}>Minha Semana</button>
-    </div>
-  );
-}
 
 /** Há algo no Hoje pedindo você (uma porta com prazo, um conflito na semana, alguém precisando)? O ponto na barra. */
 function pedeAtencao(v: Vida): boolean {

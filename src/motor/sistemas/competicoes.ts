@@ -35,6 +35,8 @@ export const idDaLiga = (pais: string, nivel: number): CompeticaoId => `liga:${p
 export const idDaCopa = (pais: string): CompeticaoId => `copa:${pais}`;
 export const idContinental = (c: Confederacao): CompeticaoId => `cont:${c}`;
 export const idDaSelecao = (tipo: 'mundial' | Confederacao): CompeticaoId => `sel:${tipo}`;
+/** VIDA 31: o título mundial de clubes — a Copa Intercontinental (1960–2004, a final entre os campeões da América do Sul e da Europa) e o Mundial de Clubes (de 2005 em diante, com os campeões de todas as confederações). */
+export const idMundialDeClubes = (ano: number): CompeticaoId => (ano < 2005 ? 'mundial:intercontinental' : 'mundial:clubes');
 
 /** A confederação do país (pela região do catálogo; a Austrália joga na Ásia). */
 export function confederacaoDe(pais: string): Confederacao {
@@ -59,10 +61,11 @@ export function nomeDaCompeticao(id: CompeticaoId): string {
   if (tipo === 'copa') return COPAS[a] ?? 'copa nacional';
   if (tipo === 'cont') return CONTINENTAIS[a as Confederacao] ?? `copa continental de clubes da ${a}`;
   if (tipo === 'sel') return SELECOES[a as 'mundial' | Confederacao] ?? 'torneio de seleções';
+  if (tipo === 'mundial') return a === 'intercontinental' ? 'Copa Intercontinental' : 'Mundial de Clubes';
   return id;
 }
 /** Com artigo ("a Copa do Brasil", "o torneio continental..."). Todas as copas nomeadas são femininas. */
-export const aCompeticaoId = (id: CompeticaoId) => { const n = nomeDaCompeticao(id); return /^(torneio|campeonato)/.test(n) ? `o ${n}` : `a ${n}`; };
+export const aCompeticaoId = (id: CompeticaoId) => { const n = nomeDaCompeticao(id); return /^(torneio|campeonato|Mundial)/.test(n) ? `o ${n}` : `a ${n}`; };
 export const daCompeticaoId = (id: CompeticaoId) => aCompeticaoId(id).replace(/^o /, 'do ').replace(/^a /, 'da ');
 export const naCompeticaoId = (id: CompeticaoId) => aCompeticaoId(id).replace(/^o /, 'no ').replace(/^a /, 'na ');
 
@@ -194,6 +197,56 @@ export function copaContinental(v: Vida, pais: string, ano: number, clube: strin
   const forca = forcaNaLiga(clube, pais, 4) + forcaDaLigaDoPais(pais) + ajuste + r.normal() * 0.35;
   const lista = clubesDoContinente(conf, pais).filter(x => x.nome !== clube);
   return jogarCampanha(r, idContinental(conf), forca, lista, true, () => ({ nome: 'um campeão de uma liga menor do continente', forca: 3 + forcaDaLigaDoPais('') + r.next() }));
+}
+
+/* ------------------------------------------------------------ VIDA 31: o Mundial de Clubes */
+
+/** O campeão continental de outra confederação (para o Mundial): um clube forte do catálogo dela — ou dito pelo que é. */
+function campeaoDe(r: Rng, conf: Confederacao, excluir: string): { nome: string; forca: number } {
+  const lista = clubesDoContinente(conf, '').filter(x => x.nome !== excluir);
+  const base = conf === 'UEFA' ? 4.4 : conf === 'CONMEBOL' ? 4 : 3;
+  return sortearAdversarioDeCopa(r, lista, 4, new Set(), () => ({ nome: conf === 'UEFA' ? 'o campeão europeu' : conf === 'CONMEBOL' ? 'o campeão sul-americano' : `o campeão da ${conf}`, forca: base + r.next() * 0.6 }));
+}
+
+/**
+ * VIDA 31 · O MUNDIAL DE CLUBES de quem ganhou a copa continental no ano. Até 2004, a Copa Intercontinental: uma final só,
+ * entre os campeões da América do Sul e da Europa (só eles a jogam). De 2005 em diante, o Mundial: os campeões da América
+ * do Sul e da Europa entram na semifinal (contra um campeão de outra confederação) e se encontram, quase sempre, na final;
+ * os campeões das outras confederações começam uma fase antes. Jogo único por fase, pênaltis no empate. Antes de 1960,
+ * nada (não havia a disputa). O acaso é o de `rngDe` (o gerador principal não muda).
+ */
+export function mundialDeClubes(v: Vida, pais: string, ano: number, clube: string, ajuste: number): Campanha | undefined {
+  if (ano < 1960) return undefined;
+  const conf = confederacaoDe(pais);
+  const id = idMundialDeClubes(ano);
+  const grande = conf === 'CONMEBOL' || conf === 'UEFA';
+  if (id === 'mundial:intercontinental' && !grande) return undefined;
+  const r = rngDe(v.id, 'mundial-clubes', pais, ano, clube);
+  const forca = forcaNaLiga(clube, pais, 4) + forcaDaLigaDoPais(pais) + ajuste + r.normal() * 0.35;
+  const outra: Confederacao = conf === 'UEFA' ? 'CONMEBOL' : 'UEFA';
+  const menores: Confederacao[] = (['CONCACAF', 'AFC', 'CAF', 'OFC'] as Confederacao[]).filter(x => x !== conf);
+  // As fases desta campanha: as rodadas de quem não é da América do Sul nem da Europa; depois a semifinal; a final.
+  const rodadas: { fase: FaseDeCopa; rival: { nome: string; forca: number } }[] = [];
+  if (id === 'mundial:clubes') {
+    if (!grande) rodadas.push({ fase: 'quartas', rival: campeaoDe(r, menores[r.int(0, menores.length - 1)], clube) });
+    rodadas.push({ fase: 'semifinal', rival: grande ? campeaoDe(r, menores[r.int(0, menores.length - 1)], clube) : campeaoDe(r, r.chance(0.5) ? 'UEFA' : 'CONMEBOL', clube) });
+  }
+  const c: Campanha = { id, fase: rodadas[0]?.fase ?? 'semifinal', jogos: 0, v: 0, e: 0, d: 0, adversarios: [] };
+  for (const x of rodadas) {
+    const res = partidaDeCopa(r, forca - x.rival.forca);
+    c.jogos++; c[res]++; c.adversarios.push(x.rival.nome);
+    const passou = res === 'v' || (res === 'e' && passaNosPenaltis(r, forca - x.rival.forca));
+    if (!passou) { c.fase = x.fase; return c; }
+  }
+  // A final: contra o campeão da outra grande (o europeu, para o sul-americano — e vice-versa); às vezes, a zebra de outra confederação.
+  const fin = grande && id === 'mundial:clubes' && r.chance(0.2) ? campeaoDe(r, menores[r.int(0, menores.length - 1)], clube) : campeaoDe(r, grande ? outra : 'UEFA', clube);
+  const res = partidaDeCopa(r, forca - fin.forca);
+  c.jogos++; c[res]++; c.adversarios.push(fin.nome);
+  const venceu = res === 'v' || (res === 'e' && passaNosPenaltis(r, forca - fin.forca));
+  const [a, b] = placarDe(r, res);
+  c.final = { adversario: fin.nome, placar: `${a} a ${b}${res === 'e' ? `, ${venceu ? 'vitória' : 'derrota'} nos pênaltis` : ''}` };
+  c.fase = venceu ? 'campeão' : 'vice';
+  return c;
 }
 
 /* ------------------------------------------------------------ REWORK 11.5 · ESP-02: as copas de quadra */

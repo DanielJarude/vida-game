@@ -105,8 +105,7 @@ describe('interface', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Nascer' }));
     avancar(8);
     // FIX pós-REWORK 3: Tempo livre é uma área própria (a mais visitada no dia a dia).
-    // VIDA 31: Minha Semana mora dentro de Eu (a troca Perfil · Minha Semana no alto).
-    fireEvent.click(screen.getAllByRole('button', { name: 'Eu' })[0]); fireEvent.click(screen.getByRole('button', { name: 'Minha Semana' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Minha Semana' })[0]);
     expect(screen.getByText('Sua semana')).toBeTruthy();
   });
 
@@ -189,8 +188,7 @@ describe('interface', () => {
     fireEvent.click(screen.getByRole('button', { name: /Continuar a vida/ }));
     resolverMomentos();
     // FIX pós-REWORK 3: Tempo livre é uma área própria (a mais visitada no dia a dia).
-    // VIDA 31: Minha Semana mora dentro de Eu (a troca Perfil · Minha Semana no alto).
-    fireEvent.click(screen.getAllByRole('button', { name: 'Eu' })[0]); fireEvent.click(screen.getByRole('button', { name: 'Minha Semana' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Minha Semana' })[0]);
     const main = screen.getByRole('main');
     // REWORK 9.5 · ROT-01: as notas da rotina dizem o que mais exige (a agenda mostra os blocos; a lista de antes saiu).
     const rotina = within(main).getByRole('region', { name: 'Como está a rotina' });
@@ -267,8 +265,7 @@ describe('interface', () => {
     fireEvent.click(screen.getByRole('button', { name: /Continuar a vida/ }));
     resolverMomentos();
     // FIX pós-REWORK 3: Tempo livre é uma área própria (a mais visitada no dia a dia).
-    // VIDA 31: Minha Semana mora dentro de Eu (a troca Perfil · Minha Semana no alto).
-    fireEvent.click(screen.getAllByRole('button', { name: 'Eu' })[0]); fireEvent.click(screen.getByRole('button', { name: 'Minha Semana' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Minha Semana' })[0]);
     const main = screen.getByRole('main');
     expect(within(main).getByRole('region', { name: 'Como está a rotina' })).toBeTruthy();
     // FIX pós-REWORK 4: o catálogo mora nas abas (aqui, "Hobbies"): poucas sugestões com motivo, o resto a um toque.

@@ -46,6 +46,8 @@ import { IconeDaSecao161 } from '../v16/areas/Capas161';
 
 /** REWORK 10 · JOG-01: os jogos num pacote à parte (só carregam quando se abre a seção; o service worker guarda para o offline). */
 const Apostas = sobDemanda(() => import('./Apostas').then(m => m.Apostas));
+/** VIDA 31: os processos na Justiça (sob demanda). */
+const Justica14 = sobDemanda(() => import('../v14/justica/Justica14').then(m => m.Justica14));
 /** VIDA 18: o campo (as propriedades rurais) num pacote à parte. */
 const Campo18 = sobDemanda(() => import('../v18/campo/Campo18').then(m => m.Campo18));
 /** REWORK 12.4: a personalização mora num pacote à parte (carrega quando a tela aparece). */
@@ -88,6 +90,8 @@ export function VidaConcreta({ vida, agir, secao, irSecao, abrirPessoa }: Props)
           <div className="casa">
             {i >= 8 ? <ODinheiro vida={vida} agir={agir} irParaCasa={() => irSecao('casa')} /> : <p className="nota">Dinheiro, por enquanto, é assunto dos adultos da casa. O seu é o do cofrinho.</p>}
             {i >= 6 && i < 16 && <DinheiroDaCrianca vida={vida} agir={agir} irCompras={() => irSecao('compras')} />}
+            {/* VIDA 31: os processos na Justiça (o que está em jogo, o advogado, o acordo) moram com o dinheiro (antes, em Trabalho). */}
+            {vida.justica14 && (vida.justica14.casos.length > 0 || (vida.justica14.fechados?.length ?? 0) > 0) && <Justica14 vida={vida} agir={agir} />}
             <AFamilia vida={vida} agir={agir} abrirPessoa={abrirPessoa} />
             {i >= 12 && <p className="nota">Os bens, o aplicado e o balanço do que é seu estão em <button type="button" className="link" onClick={() => irSecao('pertences')}>Patrimônio →</button></p>}
           </div>

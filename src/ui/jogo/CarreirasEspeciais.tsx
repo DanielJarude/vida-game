@@ -169,6 +169,11 @@ export function PranchetaDoTecnico({ vida, agir }: { vida: Vida; agir: (a: Acao)
             <div><dt>Diretoria</dt><dd>{p.pressao >= 70 ? 'o cargo balança' : p.pressao >= 50 ? 'cobrando' : 'confiante'}</dd></div>
             {ult && <div><dt>Temporada {ult.ano}</dt><dd>{ult.colocacao ? `${ult.colocacao}º` : '—'} · {ult.v}V {ult.e}E {ult.d}D</dd></div>}
             {ult?.campeao && <div><dt>Campeão</dt><dd>{ult.campeao}</dd></div>}
+            {/* VIDA 31: as copas do ano — o estadual, a copa nacional, a continental e o Mundial (quando o clube jogou). */}
+            {ult?.estadual && <div><dt>Estadual</dt><dd>{ult.estadual}</dd></div>}
+            {ult?.copa && <div><dt>{nomeDaCompeticao(ult.copa.id)}</dt><dd>{ult.copa.fase}</dd></div>}
+            {ult?.continental && <div><dt>{nomeDaCompeticao(ult.continental.id)}</dt><dd>{ult.continental.fase}</dd></div>}
+            {ult?.mundial && <div><dt>{nomeDaCompeticao(ult.mundial.id)}</dt><dd>{ult.mundial.fase}</dd></div>}
           </dl>
           {ult?.rivais && ult.rivais.length > 0 && <p className="carreira-especial__nota">Os rivais mais fortes da divisão: {ult.rivais.join(', ')}.</p>}
           {c?.proposta && <p className="carreira-especial__nota">Há uma proposta de outro clube na mesa (em "O que dá para fazer agora").</p>}

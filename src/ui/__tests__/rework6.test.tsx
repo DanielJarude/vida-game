@@ -277,9 +277,7 @@ describe('celular: modais, dinheiro grande e nada perdido na reorganização', (
   it('nenhuma área nem seção sumiu: cada uma abre, com título, e o avançar continua lá', () => {
     abrir(vida(25));
     for (const a of AREAS) {
-      // VIDA 31: Minha Semana mora dentro de Eu (Eu → Minha Semana).
-      if (a.id === 'tempo') { fireEvent.click(screen.getAllByRole('button', { name: 'Eu' })[0]); fireEvent.click(screen.getByRole('button', { name: 'Minha Semana' })); }
-      else fireEvent.click(screen.getAllByRole('button', { name: a.rotulo })[0]);
+      fireEvent.click(screen.getAllByRole('button', { name: a.rotulo })[0]);
       expect(screen.getAllByRole('heading').length).toBeGreaterThan(0);
       expect(screen.getAllByRole('button', { name: /Viver mais um ano/ })).toHaveLength(1);
       const secoes = a.id === 'vida' ? SECOES_VIDA : a.id === 'tempo' ? SECOES_TEMPO : [];

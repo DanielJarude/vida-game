@@ -18,7 +18,7 @@ import { dinheiroCurto, leituraDaSeguranca } from '../leituraMaterial';
 import { faseDaVida, ondeMora } from '../apresentar';
 import { emCasa, sinaisSociais, situacaoAfetiva } from '../leitura';
 import { expressaoDe, momentoAtual } from '../estadoPessoal';
-import { SECOES_TEMPO, SECOES_VIDA, type Aba, type SecaoTempo, type SecaoVida } from '../navegacao';
+import { SECOES_VIDA, type Aba, type SecaoVida } from '../navegacao';
 import { Lar } from '../jogo/Casa';
 import { Lugar, type QualLugar } from '../jogo/material/Lugares';
 import { ConstelacaoDePessoas } from '../v17/areas/Capas17';
@@ -74,6 +74,7 @@ export function VidaInicio31({ vida, agir, irSecao }: { vida: Vida; agir: (a: Ac
     { id: 'casa', rotulo: 'Casa', titulo: cap(ondeMora(vida)), detalhe: emCasa(vida).pessoas.length ? `com ${emCasa(vida).pessoas.map(p => p.nome).filter(Boolean).slice(0, 3).join(', ')}` : 'sozinho(a)', icone: ICONE31.casa, ir: () => irSecao('casa') },
     ...(i >= 8 ? [{ id: 'dinheiro', rotulo: 'Dinheiro', titulo: seg.palavra, detalhe: i >= 16 ? `quem paga a casa: ${independencia(vida).palavra.toLowerCase()}` : undefined, icone: ICONE31.dinheiro, ir: () => irSecao('dinheiro'), tom: aperta ? 'ruim' as const : undefined }] : []),
     ...(i >= 12 ? [{ id: 'pertences', rotulo: 'O que é seu', titulo: dinheiroCurto(liquido), detalhe: 'imóveis, veículos, aplicações e objetos', icone: ICONE31.pertences, ir: () => irSecao('pertences'), tom: liquido < 0 ? 'ruim' as const : undefined }] : []),
+    ...((vida.justica14?.casos.length ?? 0) > 0 ? [{ id: 'justica', rotulo: 'Na Justiça', titulo: `${vida.justica14!.casos.length} ${vida.justica14!.casos.length === 1 ? 'processo aberto' : 'processos abertos'}`, detalhe: 'o advogado, o acordo, a sentença — em Dinheiro', icone: ICONE31.nossa, ir: () => irSecao('dinheiro'), tom: 'alerta' as const }] : []),
     { id: 'cidade', rotulo: 'Cidade', titulo: cidade, detalhe: 'o custo de viver aqui, o trajeto, mudar', icone: ICONE31.cidade, ir: () => irSecao('cidade') }
   ];
   const passos: Passo31[] = [];
@@ -160,7 +161,6 @@ export function EuInicio31({ vida, irParte, irPara }: { vida: Vida; irParte: (p:
   if (i >= 12) passos.push({ id: 'meta', rotulo: 'Escolher um objetivo', nota: 'metas de vida, com o progresso medido', ir: () => irParte('objetivos') });
   const destinos: Destino31[] = [
     ...PARTES_EU.filter(p => (p.desde ?? 0) <= i && (p.id !== 'fama' || fama.relevante)).map(p => ({ id: p.id, rotulo: p.rotulo, oque: p.oque, icone: ICONE31[p.id], ir: () => irParte(p.id) })),
-    ...(i >= 3 ? SECOES_TEMPO.map(s => ({ id: `tempo-${s.id}`, rotulo: s.id === 'semana' ? 'Agenda da semana' : s.rotulo, oque: s.oque.split(' (')[0], estado: 'Minha Semana', icone: ICONE31[s.id], ir: () => irPara(s.id as SecaoTempo) })) : [])
   ];
   return (
     <Inicio31 area="Eu" classe="inicio31--eu" kicker={`${i} ${i === 1 ? 'ano' : 'anos'} · ${faseDaVida(i)}`} titulo={momentoAtual(vida)}
@@ -172,7 +172,7 @@ export function EuInicio31({ vida, irParte, irPara }: { vida: Vida; irParte: (p:
           <div className="eu31__barras"><p className="eu31__nome">{vida.eu.nome} {vida.eu.sobrenome}</p><StatusDaVida31 vida={vida} irPara={irPara} /></div>
         </div>
       }
-      agora={agora} passos={passos} destinos={destinos} tituloExplorar="Explorar" buscaDica="Procurar: saúde, cabelo, tatuagem, academia, agenda, redes…"
+      agora={agora} passos={passos} destinos={destinos} tituloExplorar="Explorar" buscaDica="Procurar: saúde, cabelo, tatuagem, objetivos…"
       abas={PARTES_EU.filter(p => (p.desde ?? 0) <= i && (p.id !== 'fama' || fama.relevante)).map(p => ({ id: p.id, rotulo: p.rotulo, ir: () => irParte(p.id) }))} rotuloAbas="Partes do retrato" />
   );
 }

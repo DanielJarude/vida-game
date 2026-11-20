@@ -46,10 +46,8 @@ function abrirJogo(v: Vida): void {
   fireEvent.click(screen.getByRole('button', { name: /Continuar/ }));
 }
 function ir(l: Lugar): void {
-  // VIDA 31: Minha Semana mora dentro de Eu (a barra tem cinco lugares; o id 'tempo' continua).
-  const a = AREAS.find(x => x.id === (l.area === 'tempo' ? 'voce' : l.area))!;
+  const a = AREAS.find(x => x.id === l.area)!;
   fireEvent.click(screen.getAllByRole('button', { name: a.rotulo })[0]);
-  if (l.area === 'tempo') fireEvent.click(screen.getByRole('button', { name: 'Minha Semana' }));
   // VIDA 31: Eu e Pessoas abrem na página inicial; a parte do destino abre pela aba.
   if (l.area === 'voce') fireEvent.click(screen.getByRole('tab', { name: ({ resumo: 'Resumo', saude: 'Saúde', habilidades: 'Habilidades', aparencia: 'Aparência', fama: 'Fama', mundo: 'No mundo' } as const)[l.voce ?? 'resumo'] }));
   if (l.area === 'pessoas') fireEvent.click(screen.getByRole('tab', { name: 'Meu círculo' }));
@@ -74,23 +72,21 @@ const adulta = (v: Vida) => {
   v.financas.conta = 40000; v.financas.negativado = false;
 };
 
-// VIDA 31: as seis áreas viraram CINCO lugares na barra — Hoje, Eu (com Minha Semana dentro), Pessoas, Caminhos, Vida.
+// VIDA 31: História virou Hoje e Você virou Eu — as seis áreas continuam no mesmo lugar.
 describe('os lugares da barra são estáveis (não mudam de lugar com a idade) — REWORK 9 / VIDA 31', () => {
   for (const idade of [5, 15, 32]) {
-    it(`aos ${idade}: Hoje, Eu, Pessoas, Caminhos, Vida — Minha Semana dentro de Eu — e nada de "Formação", "Trabalho", "Casa" ou "Cidade" no topo`, () => {
+    it(`aos ${idade}: Hoje, Eu, Pessoas, Caminhos, Minha Semana, Vida — e nada de "Formação", "Trabalho", "Casa" ou "Cidade" no topo`, () => {
       abrirJogo(vida(idade, idade >= 18 ? adulta : undefined));
       const navs = screen.getAllByRole('navigation', { name: 'Áreas' });
       expect(navs.length).toBe(2); // o topo (desktop) e a barra (celular): a mesma estrutura
       for (const nav of navs) {
         const nomes = within(nav).getAllByRole('button').map(b => b.getAttribute('aria-label') ?? b.textContent);
-        expect(nomes).toEqual(['Hoje', 'Eu', 'Pessoas', 'Caminhos', 'Vida']);
+        expect(nomes).toEqual(nav === navs[0] ? ['Hoje', 'Eu', 'Pessoas', 'Caminhos', 'Minha Semana', 'Vida'] : ['Hoje', 'Eu', 'Pessoas', 'Caminhos', 'Semana', 'Vida']);
       }
       for (const a of AREAS_DA_BARRA) expect(screen.getAllByRole('button', { name: a.rotulo }).length).toBeGreaterThan(0);
-      fireEvent.click(screen.getAllByRole('button', { name: 'Eu' })[0]);
-      expect(screen.getByRole('button', { name: 'Minha Semana' })).toBeTruthy();
       for (const velho of ['Casa', 'Cidade', 'Estudos', 'Formação', 'Trabalho', 'Tempo livre', 'Linha da Vida']) expect(within(navs[0]).queryByRole('button', { name: velho })).toBeNull();
-      // A barra do celular foi desenhada para cinco (layout responsivo estrutural).
-      expect(document.querySelector('.barra.barra--5')).toBeTruthy();
+      // A barra do celular foi desenhada para seis (layout responsivo estrutural).
+      expect(document.querySelector('.barra.barra--6')).toBeTruthy();
     });
   }
 

@@ -2645,6 +2645,9 @@ export interface TemporadaDeTecnico {
   estadual?: 'campeão' | 'vice' | 'semifinal' | 'primeira fase';
   /** REWORK 11 · ESP-11.8: fora do Brasil, a copa nacional (id estável de `competicoes`) e até onde foi. */
   copa?: { id: string; fase: FaseDeCopa };
+  /** VIDA 31: a copa continental (Libertadores, Champions…) e o Mundial de Clubes do ano, quando o clube jogou. Opcionais. */
+  continental?: { id: string; fase: FaseDeCopa };
+  mundial?: { id: string; fase: FaseDeCopa };
   titulos?: string[];
   acesso?: boolean;
   rebaixamento?: boolean;

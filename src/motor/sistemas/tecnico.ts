@@ -47,6 +47,7 @@ import { mudarAgora } from './processos';
 import { marcar } from './marcas';
 import { abalar } from './abalo';
 import { clubesNaDivisao, divisaoDoClube, fecharTemporadaDaLiga, forcaDoClube, forcaNaLiga, formaNaLiga, ultimaTemporadaDoPais } from './ligas';
+import { copaContinental, mundialDeClubes } from './competicoes';
 import { aCompeticaoId, campanhaDaSelecao, partidaDeCopa, daCompeticaoId, faseDaSelecaoEmPalavras, idDaCopa, nomeDaCompeticao, placarDe, sortearAdversarioDeCopa, torneioDeSelecoes, anotarCopaNoHistorico } from './competicoes';
 import { pesoDaLicenca, vestiarioDeExAtleta } from './oficioDoTecnico';
 import { rngDe } from '../rng';
@@ -70,6 +71,7 @@ export function passagemAtual(v: Vida): PassagemDeTecnico | undefined {
 export const noComando = (v: Vida) => !!passagemAtual(v) && v.trabalho.atual?.ocupacaoId === OCUPACAO_TECNICO;
 
 const porteDe = (nome: string): Clube['porte'] | undefined => clubePorNome(nome)?.porte;
+const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 /** A força do elenco pelo porte — a mesma régua da carreira de jogador (REWORK 9: força, nunca teto; quem sobe e cai é a tabela, `ligas`). */
 const tetoDoClube = (nome: string) => forcaDoClube(nome);
 /** A divisão em que o clube joga agora, na tabela do país dele. */
@@ -370,7 +372,8 @@ function jogarTemporada(v: Vida, r: Rng, c: CarreiraDeTecnico, p: PassagemDeTecn
   if (paisDoClube !== 'BR') {
     const fora = copaDoTecnico(v, r, c, p, t, nosso, conta);
     if (fora === 'demitido') return;
-    if (p.nivel >= 2) { jogarLiga(v, r, c, p, t, nosso, conta); return; }
+    // VIDA 31: a copa continental (a vaga é da tabela do ano anterior — antes de a liga deste ano fechar).
+    if (p.nivel >= 2) { copasInternacionais(v, c, p, t, nosso); jogarLiga(v, r, c, p, t, nosso, conta); return; }
   }
   // 1. O estadual: o porte no estado (o grande da capital contra o time do interior), fase única e mata-mata.
   const uf = municipio(p.municipioId).uf;
@@ -404,6 +407,8 @@ function jogarTemporada(v: Vida, r: Rng, c: CarreiraDeTecnico, p: PassagemDeTecn
   const esperadaNoEstado = 1 + est.slice(1).filter(f => f > valorNoEstado(porteDe(p.clube))).length;
   if (checar(v, r, p, t, posEstadual, esperadaNoEstado, porteDe(p.clube) === 'grande' ? 1.3 : p.nivel === 1 ? 1 : 0.6)) return;
 
+  // VIDA 31: a Copa do Brasil (quem está nas divisões nacionais), com o acaso dela à parte (o sorteio da liga não muda).
+  if (paisDoClube === 'BR' && p.nivel >= 2) copaDoTecnico(v, rngDe(v.id, 'tec-copa', ano, p.clube), c, p, t, nosso, conta, true);
   // 2. A liga da divisão (o estadual é a liga de quem está no nível 1: os dois primeiros ganham a vaga nas divisões de acesso).
   if (p.nivel === 1) {
     t.colocacao = posEstadual;
@@ -418,6 +423,7 @@ function jogarTemporada(v: Vida, r: Rng, c: CarreiraDeTecnico, p: PassagemDeTecn
     c.reputacao = clamp(c.reputacao + clamp((esperadaNoEstado - posEstadual) * 0.4, -3, 3));
     return;
   }
+  copasInternacionais(v, c, p, t, nosso);
   jogarLiga(v, r, c, p, t, nosso, conta);
 }
 
@@ -491,7 +497,7 @@ function jogarLiga(v: Vida, r: Rng, c: CarreiraDeTecnico, p: PassagemDeTecnico, 
  * Primeira fase, oitavas, quartas e semifinal são jogadas aqui; a final fica para o momento do ano (`tec_final`) — ou
  * para o sorteio neutro. Um clube da terceira divisão chegar à final já é notícia; ser campeão, raríssimo.
  */
-function copaDoTecnico(v: Vida, r: Rng, c: CarreiraDeTecnico, p: PassagemDeTecnico, t: TemporadaDeTecnico, nosso: (base: number) => number, conta: (k: 'v' | 'e' | 'd') => void): 'demitido' | undefined {
+function copaDoTecnico(v: Vida, r: Rng, c: CarreiraDeTecnico, p: PassagemDeTecnico, t: TemporadaDeTecnico, nosso: (base: number) => number, conta: (k: 'v' | 'e' | 'd') => void, finalDireta = false): 'demitido' | undefined {
   const pais = paisDaCidade(p.municipioId);
   const id = idDaCopa(pais);
   const lista = clubesDoPais(pais).filter(k => k.nome !== p.clube).map(k => ({ nome: k.nome, forca: forcaNaLiga(k.nome, pais, divisaoDe(v, k)) * 3 }));
@@ -506,7 +512,24 @@ function copaDoTecnico(v: Vida, r: Rng, c: CarreiraDeTecnico, p: PassagemDeTecni
     conta(res);
     const passou = res === 'v' || (res === 'e' && r.chance(Math.min(0.65, Math.max(0.35, 0.5 + (minha - a.forca * 3) * 0.02))));
     if (!passou) { t.copa.fase = fases[k]; anotarCopaNoHistorico(v, pais, t.ano, id, p.clube, fases[k]); break; }
-    if (k === 3) {
+    if (k === 3 && (finalDireta || p.decisao)) {
+      // VIDA 31: no Brasil (a Copa do Brasil, com o estadual já na decisão do ano), a final é jogada aqui mesmo.
+      const fin = sortearAdversarioDeCopa(r, lista.map(x => ({ nome: x.nome, forca: x.forca / 3 })), 4, ja, () => ({ nome: '', forca: 1.5 + r.next() }));
+      const resF = partidaDeCopa(r, (minha - fin.forca * 3) / 3);
+      conta(resF);
+      const venceu = resF === 'v' || (resF === 'e' && r.chance(0.5));
+      t.copa.fase = venceu ? 'campeão' : 'vice';
+      anotarCopaNoHistorico(v, pais, t.ano, id, p.clube, t.copa.fase, venceu || !fin.nome ? undefined : fin.nome);
+      const contra = fin.nome ? oClube(fin.nome) : 'um time das divisões de baixo';
+      if (venceu) {
+        const texto = `${flex(ge(v), 'Campeão', 'Campeã')} ${daCompeticaoId(id)} com ${oClube(p.clube)} (${t.ano}), contra ${contra} na final`;
+        (t.titulos ??= []).push(`${flex(ge(v), 'Campeão', 'Campeã')} ${daCompeticaoId(id)}`);
+        c.reputacao = clamp(c.reputacao + 3 + (p.nivel <= 3 ? 3 : 0));
+        p.pressao = clamp(p.pressao - 12);
+        escrever(v, { texto: `${texto}.`, relevancia: p.nivel <= 3 ? 'marco' : 'biografia', tema: 'trabalho', tom: 'bom' });
+        marcar(v, 'conquista', `${texto}.`, p.nivel <= 3 ? 3 : 2, { dominio: 'futebol', ocupacaoId: OCUPACAO_TECNICO });
+      } else escrever(v, { texto: `${cap(aCompeticaoId(id))} ${t.ano}: ${oClube(p.clube)} perdeu a final para ${contra}.`, relevancia: 'biografia', tema: 'trabalho' });
+    } else if (k === 3) {
       const fin = sortearAdversarioDeCopa(r, lista.map(x => ({ nome: x.nome, forca: x.forca / 3 })), 4, ja, () => ({ nome: '', forca: 1.5 + r.next() }));
       t.copa.fase = 'vice';
       p.decisao = { competicao: nomeDaCompeticao(id), adversario: fin.nome || torneioCurto(p.municipioId).rival, forca: Math.round((minha - fin.forca * 3) * 10) / 10, ano: t.ano, t: v.t, unica: true };
@@ -517,6 +540,48 @@ function copaDoTecnico(v: Vida, r: Rng, c: CarreiraDeTecnico, p: PassagemDeTecni
   if (porteDe(p.clube) === 'grande' && (t.copa.fase === 'primeira fase' || t.copa.fase === 'oitavas')) p.pressao = clamp(p.pressao + 6);
   if (p.nivel <= 2 && (t.copa.fase === 'semifinal' || t.copa.fase === 'vice')) c.reputacao = clamp(c.reputacao + 2);
   return undefined;
+}
+
+/**
+ * VIDA 31 · AS COPAS INTERNACIONAIS do técnico: a copa continental do ano (a Libertadores, a Champions — para quem terminou
+ * nas vagas da elite na temporada anterior, a mesma regra do jogador) e, para o campeão, o Mundial de Clubes. Jogadas
+ * com a força do clube e o trabalho do banco (o mesmo `nosso` da liga, na régua das copas). O acaso é o de `rngDe`.
+ */
+function copasInternacionais(v: Vida, c: CarreiraDeTecnico, p: PassagemDeTecnico, t: TemporadaDeTecnico, nosso: (base: number) => number): void {
+  if (passagemAtual(v) !== p || p.nivel < 4) return;
+  const pais = paisDaCidade(p.municipioId);
+  const g = ge(v);
+  const ajuste = nosso(0) / 3;
+  const somar = (x: { jogos: number; v: number; e: number; d: number }) => { t.jogos += x.jogos; t.v += x.v; t.e += x.e; t.d += x.d; };
+  const cont = copaContinental(v, pais, t.ano, p.clube, ajuste);
+  if (!cont) return;
+  somar(cont);
+  t.continental = { id: cont.id, fase: cont.fase };
+  anotarCopaNoHistorico(v, pais, t.ano, cont.id, p.clube, cont.fase);
+  const final = cont.final ? `: a final foi contra ${cont.final.adversario.startsWith('o ') || cont.final.adversario.startsWith('um') ? cont.final.adversario : oClube(cont.final.adversario)}, ${cont.final.placar}` : '';
+  if (cont.fase !== 'campeão') {
+    if (cont.fase === 'vice' || cont.fase === 'semifinal') escrever(v, { texto: `${cap(aCompeticaoId(cont.id))} ${t.ano}: ${oClube(p.clube)} ${cont.fase === 'vice' ? 'perdeu a final' : 'parou na semifinal'} com você no banco${final}.`, relevancia: 'biografia', tema: 'trabalho' });
+    if (porteDe(p.clube) === 'grande' && cont.fase === 'primeira fase') p.pressao = clamp(p.pressao + 6);
+    return;
+  }
+  const texto = `${flex(g, 'Campeão', 'Campeã')} ${daCompeticaoId(cont.id)} com ${oClube(p.clube)} (${t.ano})`;
+  (t.titulos ??= []).push(`${flex(g, 'Campeão', 'Campeã')} ${daCompeticaoId(cont.id)}`);
+  c.reputacao = clamp(c.reputacao + 6);
+  p.pressao = clamp(p.pressao - 20);
+  escrever(v, { texto: `${texto}${final}.`, relevancia: 'marco', tema: 'trabalho', tom: 'bom' });
+  marcar(v, 'conquista', `${texto}.`, 3, { dominio: 'futebol', ocupacaoId: OCUPACAO_TECNICO });
+  const m = mundialDeClubes(v, pais, t.ano, p.clube, ajuste);
+  if (!m) return;
+  somar(m);
+  t.mundial = { id: m.id, fase: m.fase };
+  const fm = m.final ? `: a final foi contra ${m.final.adversario.startsWith('o ') || m.final.adversario.startsWith('um') ? m.final.adversario : oClube(m.final.adversario)}, ${m.final.placar}` : '';
+  if (m.fase === 'campeão') {
+    const tm = `${flex(g, 'Campeão', 'Campeã')} ${daCompeticaoId(m.id)} com ${oClube(p.clube)} (${t.ano})`;
+    (t.titulos ??= []).push(`${flex(g, 'Campeão', 'Campeã')} ${daCompeticaoId(m.id)}`);
+    c.reputacao = clamp(c.reputacao + 6);
+    escrever(v, { texto: `${tm}${fm}.`, relevancia: 'marco', tema: 'trabalho', tom: 'bom' });
+    marcar(v, 'conquista', `${tm}.`, 3, { dominio: 'futebol', ocupacaoId: OCUPACAO_TECNICO });
+  } else escrever(v, { texto: `${cap(aCompeticaoId(m.id))} ${t.ano}: ${oClube(p.clube)} ${m.fase === 'vice' ? 'perdeu a final' : 'caiu antes da final'}${fm}.`, relevancia: 'biografia', tema: 'trabalho' });
 }
 
 /**
@@ -721,9 +786,9 @@ export function decidirFinal(v: Vida, r: Rng, como: 'otimo' | 'bom' | 'ruim' | '
   p.decisao = undefined;
   const tc = torneioCurto(p.municipioId);
   // HOTFIX 11.5.1: a copa nacional decidida entra no histórico de campeões do país.
-  if (t?.copa) anotarCopaNoHistorico(v, paisDaCidade(p.municipioId), d.ano, t.copa.id, p.clube, venceu ? 'campeão' : 'vice', venceu || d.adversario.startsWith('um') ? undefined : d.adversario);
+  if (t?.copa && unica) anotarCopaNoHistorico(v, paisDaCidade(p.municipioId), d.ano, t.copa.id, p.clube, venceu ? 'campeão' : 'vice', venceu || d.adversario.startsWith('um') ? undefined : d.adversario);
   if (venceu) {
-    if (t) { if (t.copa) t.copa.fase = 'campeão'; else t.estadual = 'campeão'; (t.titulos ??= []).push(`${flex(g, 'Campeão', 'Campeã')} ${tc.campeao.replace(/^o /, 'do ').replace(/^a /, 'da ')}`); }
+    if (t) { if (t.copa && unica) t.copa.fase = 'campeão'; else t.estadual = 'campeão'; (t.titulos ??= []).push(`${flex(g, 'Campeão', 'Campeã')} ${tc.campeao.replace(/^o /, 'do ').replace(/^a /, 'da ')}`); }
     // Uma conquista improvável repercute à altura: quanto mais fraco o time na final, mais o nome cresce.
     const zebra = Math.max(0, -d.forca);
     c.reputacao = clamp(c.reputacao + 3 + Math.min(6, zebra / 1.5));
@@ -732,7 +797,7 @@ export function decidirFinal(v: Vida, r: Rng, como: 'otimo' | 'bom' | 'ruim' | '
     escrever(v, { texto, relevancia: zebra >= 3 ? 'marco' : 'biografia', tema: 'trabalho', tom: 'bom' });
     marcar(v, 'conquista', texto, zebra >= 3 ? 3 : 2, { dominio: 'futebol', ocupacaoId: OCUPACAO_TECNICO });
   } else {
-    if (t) { if (t.copa) t.copa.fase = 'vice'; else t.estadual = 'vice'; }
+    if (t) { if (t.copa && unica) t.copa.fase = 'vice'; else t.estadual = 'vice'; }
     p.pressao = clamp(p.pressao + (porteDe(p.clube) === 'grande' ? 10 : 4));
   }
   return { venceu, placar, unica };

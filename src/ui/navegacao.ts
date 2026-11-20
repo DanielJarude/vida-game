@@ -138,7 +138,7 @@ export const SECOES_CAMINHOS: { id: ParteCaminhos; rotulo: string; oque: string 
 export const AREAS: { id: Area; rotulo: string; curto: string; icone: string }[] = [
   // VIDA 31: a antiga História virou HOJE — o centro do jogo (o ano, o que pede atenção, o que passou; a biografia fica dentro).
   { id: 'linha', rotulo: 'Hoje', curto: 'Hoje', icone: 'M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z' },
-  // VIDA 31: Você virou EU — e Minha Semana mora dentro dele (a barra mostra cinco lugares; o id 'tempo' continua).
+  // VIDA 31: Você virou EU.
   { id: 'voce', rotulo: 'Eu', curto: 'Eu', icone: 'M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9zm-7.5 9a7.5 7.5 0 0 1 15 0' },
   { id: 'pessoas', rotulo: 'Pessoas', curto: 'Pessoas', icone: 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm-7 10a7 7 0 0 1 14 0M17 3.5a4 4 0 0 1 0 7.5M22 21a7 7 0 0 0-4-6.3' },
   // Caminhos: a estrada que se bifurca (a formação e o trabalho são partes de uma trajetória só).
@@ -147,10 +147,10 @@ export const AREAS: { id: Area; rotulo: string; curto: string; icone: string }[]
   { id: 'vida', rotulo: 'Vida', curto: 'Vida', icone: 'M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-9z' }
 ];
 
-/** VIDA 31 · o que a barra mostra: Hoje, Eu (com a Semana dentro), Pessoas, Caminhos, Vida. */
-export const AREAS_DA_BARRA = AREAS.filter(a => a.id !== 'tempo');
-/** A entrada da barra acesa para cada área (Minha Semana acende Eu). */
-export const areaDaBarra = (a: Area): Area => (a === 'tempo' ? 'voce' : a);
+/** VIDA 31 · o que a barra mostra: Hoje, Eu, Pessoas, Caminhos, Minha Semana (com as abas de sempre), Vida. */
+export const AREAS_DA_BARRA = AREAS;
+/** A entrada da barra acesa para cada área. */
+export const areaDaBarra = (a: Area): Area => a;
 
 export const SECOES_VIDA: { id: SecaoVida; rotulo: string; oque: string }[] = [
   { id: 'casa', rotulo: 'Casa', oque: 'Onde e com quem você mora; sair de casa, voltar' },
