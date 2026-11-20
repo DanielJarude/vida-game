@@ -2,7 +2,7 @@
  * VIDA 20 · O clube esportivo: comprar (todos os clubes em que se pode jogar, de cada país carregado) e administrar —
  * elenco, mercado, base, estádio, CT, caixa, dívidas, objetivo, conflito de interesses (em Patrimônio · Empresas).
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Vida } from '../../../motor/tipos';
 import type { Acao } from '../../../motor/acoes';
 import { clubesAVenda, custoDaObra, dividendosPossiveis, mediaDoElenco, mercadoDoAno, valorDoJogador, type OqueClube20 } from '../../../motor/v20/clubes/clubes20';
@@ -59,54 +59,195 @@ function ComprarClube({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }
   );
 }
 
+/* ------------------------------------------------------------------ VIDA 30 · o clube como painel (não só texto) */
+
+/** As cores do clube (estáveis pelo nome): o escudo, as barras e o uniforme no campo. */
+function coresDoClube(nome: string): [string, string] {
+  let h = 0; for (const ch of nome) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  const PALETA: [string, string][] = [['#1f4e9c', '#ffffff'], ['#b3202a', '#ffffff'], ['#111111', '#ffffff'], ['#1e7a3c', '#ffffff'], ['#5b2a86', '#f2c14e'], ['#0b6e8a', '#ffd23f'], ['#c75b12', '#1c1c1c'], ['#8b1d2c', '#1f3a68'], ['#2d6a4f', '#d8f3dc'], ['#f2c14e', '#1c3f8c']];
+  return PALETA[h % PALETA.length];
+}
+const iniciais = (nome: string) => nome.split(/\s+/).filter(w => w.length > 2 || /^[A-Z]/.test(w)).map(w => w[0]).join('').slice(0, 3).toUpperCase() || nome.slice(0, 2).toUpperCase();
+
+function Escudo({ nome, tamanho = 64 }: { nome: string; tamanho?: number }) {
+  const [a, b] = coresDoClube(nome);
+  return (
+    <svg className="clube30__escudo" width={tamanho} height={tamanho * 1.15} viewBox="0 0 100 115" role="img" aria-label={`Escudo do ${nome}`}>
+      <path d="M50 3 L95 15 L92 62 Q86 95 50 112 Q14 95 8 62 L5 15 Z" fill={a} stroke={b} strokeWidth="5" />
+      <path d="M50 3 L50 112 Q86 95 92 62 L95 15 Z" fill={b} opacity="0.18" />
+      <text x="50" y="66" textAnchor="middle" fontSize="30" fontWeight="800" fill={b} fontFamily="system-ui, sans-serif">{iniciais(nome)}</text>
+    </svg>
+  );
+}
+
+function Medidor({ rotulo, valor, max = 100, texto, tom }: { rotulo: string; valor: number; max?: number; texto?: string; tom?: 'bom' | 'ruim' | 'atencao' }) {
+  const pct = Math.max(2, Math.min(100, (valor / max) * 100));
+  return (
+    <div className="clube30__medidor">
+      <span className="clube30__medidor-rot">{rotulo}</span>
+      <span className="clube30__barra" role="meter" aria-valuemin={0} aria-valuemax={max} aria-valuenow={Math.round(valor)} aria-label={rotulo}><span className={tom ? `clube30__barra--${tom}` : undefined} style={{ width: `${pct}%` }} /></span>
+      <strong>{texto ?? Math.round(valor)}</strong>
+    </div>
+  );
+}
+
+function Pips({ rotulo, n }: { rotulo: string; n: number }) {
+  return (
+    <div className="clube30__pips" aria-label={`${rotulo}: ${n} de 5`}>
+      <span>{rotulo}</span>
+      <span aria-hidden="true">{[1, 2, 3, 4, 5].map(k => <i key={k} className={k <= n ? 'clube30__pip clube30__pip--on' : 'clube30__pip'} />)}</span>
+    </div>
+  );
+}
+
+const SETOR: Record<string, { nome: string; y: number }> = { GOL: { nome: 'Goleiro', y: 88 }, DEF: { nome: 'Defesa', y: 68 }, MEI: { nome: 'Meio', y: 45 }, ATA: { nome: 'Ataque', y: 20 } };
+const QUANTOS: Record<string, number> = { GOL: 1, DEF: 4, MEI: 4, ATA: 2 };
+
+/** O time provável (os melhores de cada setor) desenhado no campo — as cores do clube, a força de cada um. */
+function Campo({ c }: { c: NonNullable<Vida['clube20']> }) {
+  const [a, b] = coresDoClube(c.nome);
+  const titulares = (['GOL', 'DEF', 'MEI', 'ATA'] as const).flatMap(pos => [...c.elenco].filter(j => j.pos === pos).sort((x, y) => y.forca - x.forca).slice(0, QUANTOS[pos]).map((j, k, arr) => ({ j, x: ((k + 1) / (arr.length + 1)) * 100, y: SETOR[pos].y })));
+  return (
+    <figure className="clube30__campo">
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" role="img" aria-label="O time titular provável no campo">
+        <rect x="0" y="0" width="100" height="100" fill="#2f7d46" />
+        {[0, 1, 2, 3, 4].map(k => <rect key={k} x="0" y={k * 20} width="100" height="10" fill="#36894f" />)}
+        <rect x="3" y="3" width="94" height="94" fill="none" stroke="#e8f5ea" strokeWidth="0.6" />
+        <line x1="3" y1="50" x2="97" y2="50" stroke="#e8f5ea" strokeWidth="0.6" />
+        <circle cx="50" cy="50" r="9" fill="none" stroke="#e8f5ea" strokeWidth="0.6" />
+        <rect x="30" y="82" width="40" height="15" fill="none" stroke="#e8f5ea" strokeWidth="0.6" />
+        <rect x="30" y="3" width="40" height="15" fill="none" stroke="#e8f5ea" strokeWidth="0.6" />
+      </svg>
+      {titulares.map(({ j, x, y }) => (
+        <div key={j.id} className="clube30__jog" style={{ left: `${x}%`, top: `${y}%` }}>
+          <span className="clube30__camisa" style={{ background: j.pos === 'GOL' ? b : a, color: j.pos === 'GOL' ? a : b, borderColor: b }}>{j.forca}</span>
+          <span className="clube30__nome">{j.nome.split(' ').slice(-1)[0]}</span>
+        </div>
+      ))}
+      <figcaption className="nota">O time provável: os melhores de cada setor (4-4-2). O número é a força.</figcaption>
+    </figure>
+  );
+}
+
+/** As temporadas como dono: a posição ano a ano (desenhada) e receita × despesa em barras. */
+function Temporadas({ c }: { c: NonNullable<Vida['clube20']> }) {
+  const hs = c.historico.slice(-10);
+  if (!hs.length) return <p className="nota">A primeira temporada como dono aparece aqui quando fechar.</p>;
+  const max = Math.max(...hs.flatMap(h => [h.receita, h.despesa]), 1);
+  return (
+    <div className="clube30__temporadas">
+      <ul className="clube30__anos" aria-label="Temporadas como dono">
+        {hs.map(h => (
+          <li key={h.ano}>
+            <span className="clube30__ano">{h.ano}</span>
+            <span className="clube30__res">{DIV[h.divisao]}{h.posicao ? ` · ${h.posicao}º` : ''}{h.titulo ? ' · campeão' : h.acesso ? ' · subiu' : h.queda ? ' · caiu' : ''}</span>
+            <span className="clube30__fin" aria-label={`Receita ${dinheiroCurto(h.receita)}, despesa ${dinheiroCurto(h.despesa)}`}>
+              <i className="clube30__rec" style={{ width: `${(h.receita / max) * 100}%` }} />
+              <i className="clube30__desp" style={{ width: `${(h.despesa / max) * 100}%` }} />
+            </span>
+            <span className={h.receita >= h.despesa ? 'clube30__saldo clube30__saldo--bom' : 'clube30__saldo clube30__saldo--ruim'}>{h.receita >= h.despesa ? '+' : '−'}{dinheiroCurto(Math.abs(h.receita - h.despesa))}</span>
+          </li>
+        ))}
+      </ul>
+      <p className="nota clube30__legenda"><i className="clube30__rec" /> receita <i className="clube30__desp" /> despesa</p>
+    </div>
+  );
+}
+
+function CartaoJogador({ j, ano, titularDaPos, children }: { j: { nome: string; pos: string; forca: number; potencial: number; tNasc: number; salario: number; contratoAte?: number; daBase?: boolean }; ano: number; titularDaPos?: number; children?: ReactNode }) {
+  const i = ano - anoDe(j.tNasc);
+  const delta = titularDaPos !== undefined ? j.forca - titularDaPos : undefined;
+  return (
+    <li className="clube30__cartao">
+      <div className="clube30__cartao-topo">
+        <span className="clube30__pos">{j.pos}</span>
+        <strong>{j.nome}</strong>
+        <span className="clube30__meta">{i} anos{j.daBase ? ' · da base' : ''}</span>
+      </div>
+      <div className="clube30__forca" aria-label={`Força ${j.forca}, potencial ${j.potencial}`}>
+        <span className="clube30__forca-barra"><i style={{ width: `${j.forca}%` }} />{j.potencial > j.forca && <i className="clube30__pot" style={{ left: `${j.forca}%`, width: `${j.potencial - j.forca}%` }} />}</span>
+        <span>{j.forca}{j.potencial > j.forca ? <small> → {j.potencial}</small> : null}</span>
+        {delta !== undefined && <span className={delta > 0 ? 'clube30__delta clube30__delta--bom' : 'clube30__delta'}>{delta > 0 ? `+${delta}` : delta} vs. titular</span>}
+      </div>
+      <span className="clube30__meta">{dinheiroCurto(j.salario)}/ano{j.contratoAte ? ` · contrato até ${j.contratoAte}` : ''}</span>
+      {children && <div className="clube20__botoes">{children}</div>}
+    </li>
+  );
+}
+
 function MeuClube({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
   const c = vida.clube20!;
   const ano = anoDe(vida.t);
-  const [aba, setAba] = useState<'elenco' | 'mercado' | 'base' | 'clube'>('elenco');
+  const [aba, setAba] = useState<'painel' | 'elenco' | 'mercado' | 'base' | 'clube'>('painel');
   const mercado = aba === 'mercado' ? mercadoDoAno(vida) : [];
   const h = c.historico[c.historico.length - 1];
   const folha = c.elenco.reduce((s, j) => s + j.salario, 0);
-  const idadeJ = (tNasc: number) => ano - anoDe(tNasc);
+  const receita = h?.receita ?? 0;
+  const pesoFolha = receita > 0 ? folha / receita : 0;
+  const media = Math.round(mediaDoElenco(c));
+  const melhorDa = (pos: string) => Math.max(0, ...c.elenco.filter(j => j.pos === pos).map(j => j.forca));
+  const contratosAcabando = c.elenco.filter(j => j.contratoAte <= ano).length;
+  const OBJ = { titulo: 'Brigar pelo título', acesso: 'Subir', meio: 'Meio de tabela', permanencia: 'Não cair' } as const;
   return (
-    <section className="clube20" aria-labelledby="clube20-titulo">
-      <h3 id="clube20-titulo" className="subtitulo">{c.nome} · você é dono desde {anoDe(c.desde)}</h3>
+    <section className="clube20 clube30" aria-labelledby="clube20-titulo">
+      <header className="clube30__capa">
+        <Escudo nome={c.nome} />
+        <div>
+          <h3 id="clube20-titulo" className="subtitulo">{c.nome}</h3>
+          <p className="clube30__sub">{h ? DIV[h.divisao] : 'temporada em curso'} · {c.cidade ? `${c.cidade} · ` : ''}você é dono desde {anoDe(c.desde)}</p>
+          {c.objetivo && <span className="clube30__chip">Objetivo: {OBJ[c.objetivo]}</span>}
+        </div>
+      </header>
       {c.conflito && <p className="clube20__alerta" role="alert">{c.conflito} A federação exige a venda: só vender o clube está liberado.</p>}
-      <dl className="clube20__ficha">
-        <div><dt>Elenco</dt><dd>média {Math.round(mediaDoElenco(c))} · {c.elenco.length} jogadores</dd></div>
-        <div><dt>Caixa</dt><dd>{dinheiroCurto(c.caixa)}</dd></div>
-        <div><dt>Dívida</dt><dd>{dinheiroCurto(c.divida)}</dd></div>
-        <div><dt>Folha</dt><dd>{dinheiroCurto(folha)}/ano</dd></div>
-        <div><dt>Valor do clube</dt><dd>{dinheiroCurto(c.valor)}</dd></div>
-        <div><dt>Torcida · nome</dt><dd>{c.torcida} · {c.reputacao}</dd></div>
-        <div><dt>Estádio · CT · base</dt><dd>{c.estadio} · {c.ct} · {c.base} (de 5)</dd></div>
-        {h && <div><dt>Última temporada</dt><dd>{h.ano}: {DIV[h.divisao]}{h.posicao ? `, ${h.posicao}º` : ''}{h.titulo ? ' · campeão' : h.acesso ? ' · subiu' : h.queda ? ' · caiu' : ''}</dd></div>}
-      </dl>
-      <div className="clube20__abas" role="tablist">
-        {(['elenco', 'mercado', 'base', 'clube'] as const).map(x => <button key={x} type="button" role="tab" aria-selected={aba === x} className={`clube20__aba${aba === x ? ' clube20__aba--ativa' : ''}`} onClick={() => setAba(x)}>{{ elenco: 'Elenco', mercado: 'Mercado', base: 'Base', clube: 'Clube e finanças' }[x]}</button>)}
+      <div className="clube30__numeros">
+        <div className="clube30__num"><span>Caixa</span><strong className={c.caixa < 0 ? 'clube30__ruim' : undefined}>{dinheiroCurto(c.caixa)}</strong></div>
+        <div className="clube30__num"><span>Dívida</span><strong className={c.divida > receita ? 'clube30__ruim' : undefined}>{dinheiroCurto(c.divida)}</strong></div>
+        <div className="clube30__num"><span>Valor do clube</span><strong>{dinheiroCurto(c.valor)}</strong></div>
+        <div className="clube30__num"><span>Elenco</span><strong>{media}</strong><small>média · {c.elenco.length} jogadores</small></div>
       </div>
+      <div className="clube20__abas" role="tablist">
+        {(['painel', 'elenco', 'mercado', 'base', 'clube'] as const).map(x => <button key={x} type="button" role="tab" aria-selected={aba === x} className={`clube20__aba${aba === x ? ' clube20__aba--ativa' : ''}`} onClick={() => setAba(x)}>{{ painel: 'Painel', elenco: 'Elenco', mercado: 'Mercado', base: 'Base', clube: 'Estrutura e finanças' }[x]}</button>)}
+      </div>
+      {aba === 'painel' && (
+        <div className="clube30__painel">
+          <Campo c={c} />
+          <div className="clube30__lado">
+            <Medidor rotulo="Torcida" valor={c.torcida} />
+            <Medidor rotulo="Nome do clube" valor={c.reputacao} />
+            <Medidor rotulo="Folha / receita" valor={Math.min(100, pesoFolha * 100)} texto={receita ? `${Math.round(pesoFolha * 100)}%` : '—'} tom={pesoFolha > 0.8 ? 'ruim' : pesoFolha > 0.6 ? 'atencao' : 'bom'} />
+            <Pips rotulo="Estádio" n={c.estadio} />
+            <Pips rotulo="CT" n={c.ct} />
+            <Pips rotulo="Base" n={c.base} />
+            {(contratosAcabando > 0 || pesoFolha > 0.8 || c.caixa < 0) && (
+              <ul className="clube30__alertas" aria-label="O que pede atenção">
+                {contratosAcabando > 0 && <li>{contratosAcabando} contrato{contratosAcabando > 1 ? 's' : ''} terminando neste ano — renove ou deixe sair (Elenco).</li>}
+                {pesoFolha > 0.8 && <li>A folha consome {Math.round(pesoFolha * 100)}% da receita: vender ou dispensar alivia; o caixa paga a diferença.</li>}
+                {c.caixa < 0 && <li>Caixa negativo: um aporte ou uma venda evita juros.</li>}
+              </ul>
+            )}
+          </div>
+          <section className="clube30__bloco"><h4>Temporadas</h4><Temporadas c={c} /></section>
+        </div>
+      )}
       {aba === 'elenco' && (
-        <ul className="clube20__lista">
+        <ul className="clube30__cartoes">
           {[...c.elenco].sort((a, b) => 'GOLDEFMEIATA'.indexOf(a.pos) - 'GOLDEFMEIATA'.indexOf(b.pos) || b.forca - a.forca).map(j => (
-            <li key={j.id} className="clube20__item">
-              <div><strong>{j.pos}</strong> {j.nome} <span className="clube20__meta">{idadeJ(j.tNasc)} anos · força {j.forca}{j.potencial > j.forca ? ` (até ${j.potencial})` : ''} · {dinheiroCurto(j.salario)}/ano até {j.contratoAte}{j.daBase ? ' · da base' : ''}</span></div>
-              <div className="clube20__botoes">
-                <BotaoAcao vida={vida} agir={agir} acao={C({ op: 'renovar', id: j.id })} ocultarBloqueado>Renovar</BotaoAcao>
-                <BotaoAcao vida={vida} agir={agir} acao={C({ op: 'vender', id: j.id })}>Vender · ~{dinheiroCurto(valorDoJogador(j, ano))}</BotaoAcao>
-                <BotaoAcao vida={vida} agir={agir} acao={C({ op: 'dispensar', id: j.id })}>Dispensar</BotaoAcao>
-              </div>
-            </li>
+            <CartaoJogador key={j.id} j={j} ano={ano}>
+              <BotaoAcao vida={vida} agir={agir} acao={C({ op: 'renovar', id: j.id })} ocultarBloqueado>Renovar</BotaoAcao>
+              <BotaoAcao vida={vida} agir={agir} acao={C({ op: 'vender', id: j.id })}>Vender · ~{dinheiroCurto(valorDoJogador(j, ano))}</BotaoAcao>
+              <BotaoAcao vida={vida} agir={agir} acao={C({ op: 'dispensar', id: j.id })}>Dispensar</BotaoAcao>
+            </CartaoJogador>
           ))}
         </ul>
       )}
       {aba === 'mercado' && (
         <>
-          <p className="nota">Jogadores de outros clubes do país, à venda neste ano. Quem aceita vir depende da divisão e do nome do clube. O dinheiro sai do caixa do clube.</p>
-          <ul className="clube20__lista">
+          <p className="nota">Jogadores de outros clubes do país, à venda neste ano. A comparação é com o melhor do seu elenco na mesma posição. O dinheiro sai do caixa do clube.</p>
+          <ul className="clube30__cartoes">
             {mercado.map(j => (
-              <li key={j.id} className="clube20__item">
-                <div><strong>{j.pos}</strong> {j.nome} <span className="clube20__meta">{idadeJ(j.tNasc)} anos · força {j.forca}{j.potencial > j.forca ? ` (até ${j.potencial})` : ''} · do {j.clube} · salário {dinheiroCurto(j.salario)}/ano</span></div>
+              <CartaoJogador key={j.id} j={{ ...j, nome: `${j.nome} · ${j.clube}` }} ano={ano} titularDaPos={melhorDa(j.pos)}>
                 <BotaoAcao vida={vida} agir={agir} acao={C({ op: 'contratar', id: j.id })}>Contratar · {dinheiroCurto(j.preco)}</BotaoAcao>
-              </li>
+              </CartaoJogador>
             ))}
           </ul>
         </>
@@ -116,38 +257,34 @@ function MeuClube({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
           <div className="clube20__botoes" role="group" aria-label="Investimento na base">
             {([0, 1, 2] as const).map(n => <BotaoAcao key={n} vida={vida} agir={agir} acao={C({ op: 'base', nivel: n })} variante={c.investimentoBase === n ? 'principal' : 'secundario'}>{['Mínimo', 'Normal', 'Forte'][n]}</BotaoAcao>)}
           </div>
-          <ul className="clube20__lista">
+          <ul className="clube30__cartoes">
             {c.juniores.map(j => (
-              <li key={j.id} className="clube20__item">
-                <div><strong>{j.pos}</strong> {j.nome} <span className="clube20__meta">{idadeJ(j.tNasc)} anos · força {j.forca} · potencial {j.potencial}</span></div>
+              <CartaoJogador key={j.id} j={j} ano={ano} titularDaPos={melhorDa(j.pos)}>
                 <BotaoAcao vida={vida} agir={agir} acao={C({ op: 'promover', id: j.id })}>Subir ao profissional</BotaoAcao>
-              </li>
+              </CartaoJogador>
             ))}
           </ul>
         </>
       )}
       {aba === 'clube' && (
         <div className="clube20__clube">
-          <div className="clube20__botoes">
-            {(['estadio', 'ct', 'base'] as const).map(q => <BotaoAcao key={q} vida={vida} agir={agir} acao={C({ op: 'obra', qual: q })}>{{ estadio: 'Ampliar o estádio', ct: 'Melhorar o CT', base: 'Estrutura da base' }[q]} · {dinheiroCurto(custoDaObra(c, q))}</BotaoAcao>)}
+          <div className="clube30__obras">
+            {(['estadio', 'ct', 'base'] as const).map(q => (
+              <div key={q} className="clube30__obra">
+                <Pips rotulo={{ estadio: 'Estádio', ct: 'Centro de treinamento', base: 'Estrutura da base' }[q]} n={c[q]} />
+                {c.obra?.qual === q ? <span className="nota">Em obra · pronta no fim de {c.obra.ate}</span> : <BotaoAcao vida={vida} agir={agir} acao={C({ op: 'obra', qual: q })}>{c[q] >= 5 ? 'No máximo' : `Melhorar · ${dinheiroCurto(custoDaObra(c, q))}`}</BotaoAcao>}
+              </div>
+            ))}
           </div>
-          {c.obra && <p className="nota">Obra em andamento: {c.obra.qual === 'estadio' ? 'estádio' : c.obra.qual === 'ct' ? 'centro de treinamento' : 'base'}, pronta no fim de {c.obra.ate}.</p>}
           <div className="clube20__botoes" role="group" aria-label="Objetivo da temporada">
-            {(['titulo', 'acesso', 'meio', 'permanencia'] as const).map(o => <BotaoAcao key={o} vida={vida} agir={agir} acao={C({ op: 'objetivo', qual: o })} variante={c.objetivo === o ? 'principal' : 'secundario'}>{{ titulo: 'Brigar pelo título', acesso: 'Subir', meio: 'Meio de tabela', permanencia: 'Não cair' }[o]}</BotaoAcao>)}
+            {(['titulo', 'acesso', 'meio', 'permanencia'] as const).map(o => <BotaoAcao key={o} vida={vida} agir={agir} acao={C({ op: 'objetivo', qual: o })} variante={c.objetivo === o ? 'principal' : 'secundario'}>{OBJ[o]}</BotaoAcao>)}
           </div>
           <div className="clube20__botoes">
             <BotaoAcao vida={vida} agir={agir} acao={C({ op: 'aportar', valor: Math.max(100000, Math.round(folha / 4 / 100000) * 100000) })}>Aportar {dinheiroCurto(Math.max(100000, Math.round(folha / 4 / 100000) * 100000))}</BotaoAcao>
             <BotaoAcao vida={vida} agir={agir} acao={C({ op: 'dividendos' })}>Distribuir dividendos{dividendosPossiveis(c) > 0 ? ` · ${dinheiroCurto(dividendosPossiveis(c))}` : ''}</BotaoAcao>
             <BotaoAcao vida={vida} agir={agir} acao={C({ op: 'vender_clube' })}>Vender o clube · ~{dinheiroCurto(Math.max(0, c.valor - c.divida))}</BotaoAcao>
           </div>
-          {c.historico.length > 0 && (
-            <details className="clube20__historico">
-              <summary>Temporadas como dono</summary>
-              <table><thead><tr><th>Ano</th><th>Divisão</th><th>Pos.</th><th>Receita</th><th>Despesa</th></tr></thead>
-                <tbody>{[...c.historico].reverse().map(x => <tr key={x.ano}><td>{x.ano}</td><td>{DIV[x.divisao]}</td><td>{x.posicao ?? '—'}{x.titulo ? ' 🏆' : x.acesso ? ' ↑' : x.queda ? ' ↓' : ''}</td><td>{dinheiroCurto(x.receita)}</td><td>{dinheiroCurto(x.despesa)}</td></tr>)}</tbody>
-              </table>
-            </details>
-          )}
+          <Temporadas c={c} />
           {c.vendas.length > 0 && <p className="nota">Vendas: {c.vendas.slice(0, 5).map(x => `${x.nome} → ${x.para} (${dinheiroCurto(x.valor)}, ${x.ano})`).join('; ')}.</p>}
         </div>
       )}

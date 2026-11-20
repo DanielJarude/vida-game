@@ -18,3 +18,61 @@
 .clube20__historico { overflow-x: auto; max-width: 100%; }
 .clube20__historico table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
 .clube20__historico th, .clube20__historico td { text-align: left; padding: 2px 4px; }
+
+/* VIDA 30 · o clube como painel: escudo, números, campo, medidores, temporadas, cartões. */
+.clube30__capa { display: flex; gap: 12px; align-items: center; }
+.clube30__capa .subtitulo { margin: 0; }
+.clube30__sub { margin: 2px 0 4px; font-size: 13px; color: var(--tinta-2); }
+.clube30__chip { display: inline-block; font-size: 12px; padding: 1px 10px; border-radius: 99px; border: 1px solid var(--fio); }
+.clube30__escudo { flex: none; }
+.clube30__numeros { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; }
+.clube30__num { border: 1px solid var(--fio); border-radius: var(--radius-md, 10px); padding: 8px 10px; background: var(--superficie); display: flex; flex-direction: column; min-width: 0; }
+.clube30__num span, .clube30__num small { font-size: 12px; color: var(--tinta-3); }
+.clube30__num strong { font-size: 17px; color: var(--tinta); }
+.clube30__ruim { color: var(--ruim) !important; }
+.clube30__painel { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 12px; align-items: start; }
+.clube30__painel > .clube30__bloco { grid-column: 1 / -1; }
+@media (max-width: 720px) { .clube30__painel { grid-template-columns: 1fr; } }
+.clube30__campo { position: relative; margin: 0; aspect-ratio: 3 / 4; max-width: 420px; width: 100%; border-radius: 10px; overflow: hidden; }
+.clube30__campo svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.clube30__campo figcaption { position: absolute; left: 0; right: 0; bottom: 0; margin: 0; padding: 2px 6px; font-size: 11px; color: #e8f5ea; background: rgba(0, 0, 0, 0.35); }
+.clube30__jog { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 1px; width: 22%; }
+.clube30__camisa { width: 28px; height: 28px; border-radius: 50%; border: 2px solid; display: grid; place-items: center; font: 700 12px/1 var(--font-sans, system-ui); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35); }
+.clube30__nome { font-size: 11px; color: #fff; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.clube30__lado { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.clube30__medidor { display: grid; grid-template-columns: 110px 1fr 46px; gap: 8px; align-items: center; font-size: 13px; }
+.clube30__medidor-rot { color: var(--tinta-2); }
+.clube30__barra { height: 9px; border-radius: 99px; background: var(--fio); overflow: hidden; }
+.clube30__barra > span { display: block; height: 100%; background: var(--bom); }
+.clube30__barra--atencao { background: var(--alerta, #c98a1a) !important; }
+.clube30__barra--ruim { background: var(--ruim) !important; }
+.clube30__pips { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; color: var(--tinta-2); }
+.clube30__pip { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-left: 3px; background: var(--fio); }
+.clube30__pip--on { background: var(--tinta); }
+.clube30__alertas { margin: 0; padding: 8px 10px 8px 24px; border-left: 4px solid var(--alerta, #c98a1a); background: var(--superficie); font-size: 13px; color: var(--tinta-2); border-radius: 6px; }
+.clube30__bloco h4 { margin: 4px 0; }
+.clube30__anos { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.clube30__anos li { display: grid; grid-template-columns: 44px minmax(0, 1.2fr) minmax(60px, 1fr) 80px; gap: 8px; align-items: center; font-size: 13px; }
+@media (max-width: 480px) { .clube30__anos li { grid-template-columns: 40px 1fr 70px; } .clube30__fin { display: none !important; } }
+.clube30__fin { display: flex; flex-direction: column; gap: 2px; }
+.clube30__fin i, .clube30__legenda i { display: block; height: 5px; border-radius: 3px; }
+.clube30__legenda i { display: inline-block; width: 14px; margin: 0 4px 0 10px; }
+.clube30__rec { background: var(--bom); }
+.clube30__desp { background: var(--ruim); }
+.clube30__saldo { text-align: right; font-weight: 600; }
+.clube30__saldo--bom { color: var(--tinta); }
+.clube30__saldo--ruim { color: var(--ruim); }
+.clube30__cartoes { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; max-height: 620px; overflow-y: auto; }
+.clube30__cartao { border: 1px solid var(--fio); border-radius: var(--radius-md, 10px); background: var(--superficie); padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.clube30__cartao-topo { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; }
+.clube30__cartao-topo strong { color: var(--tinta); overflow-wrap: anywhere; }
+.clube30__pos { font: 700 11px/1.6 var(--font-sans, system-ui); padding: 0 6px; border-radius: 4px; background: var(--tinta); color: var(--superficie); }
+.clube30__meta { font-size: 12px; color: var(--tinta-3); }
+.clube30__forca { display: grid; grid-template-columns: 1fr auto; gap: 4px 8px; align-items: center; font-size: 13px; }
+.clube30__forca-barra { position: relative; height: 8px; border-radius: 99px; background: var(--fio); overflow: hidden; }
+.clube30__forca-barra > i { position: absolute; top: 0; bottom: 0; left: 0; background: var(--tinta-2); }
+.clube30__forca-barra > i.clube30__pot { background: color-mix(in oklab, var(--bom) 55%, transparent); }
+.clube30__delta { grid-column: 1 / -1; font-size: 12px; color: var(--tinta-3); }
+.clube30__delta--bom { color: var(--bom); font-weight: 600; }
+.clube30__obras { display: flex; flex-direction: column; gap: 8px; }
+.clube30__obra { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; border-bottom: 1px solid var(--fio); padding-bottom: 6px; }

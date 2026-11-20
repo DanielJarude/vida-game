@@ -22,7 +22,7 @@ function abrir(v: Vida, id: string, papeis?: Record<string, string>): boolean {
   if (!ctx || c.tipo !== 'decisao') return false;
   v.momento = null; delete v.fila;
   abrirDecisao(v, c, ctx);
-  return v.momento?.situacaoId === id;
+  return (v.momento as Vida['momento'])?.situacaoId === id;
 }
 
 describe('VIDA 30 · §4 cada cena cabe na idade e resolve', () => {
