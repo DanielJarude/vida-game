@@ -42,6 +42,8 @@ interface Props {
   objetos: ObjetoNaCena[];
   /** VIDA 12.8: a área do cômodo (m²): o tamanho da cena e a escala dos objetos. Ausente: a cena de antes (25 m²). */
   area?: number;
+  /** VIDA 29: o ano (a cozinha e o banheiro da época). Ausente: os de hoje. */
+  ano?: number;
   largura?: number;
   rotulo: string;
 }
@@ -58,12 +60,12 @@ function enquadrar(a: Amostra, larguraTela: number, alturaMax: number) {
   return { s, c, bw, bh };
 }
 
-export const CenaDoComodo = memo(function CenaDoComodo({ tipo, parede, piso, luz = 'simples', rodape: rodapeId, cortina: cortinaId, luzRegulada, objetos, area, largura = 320, rotulo }: Props) {
+export const CenaDoComodo = memo(function CenaDoComodo({ tipo, parede, piso, luz = 'simples', rodape: rodapeId, cortina: cortinaId, luzRegulada, objetos, area, ano, largura = 320, rotulo }: Props) {
   const uid = useId().replace(/:/g, '');
   const id = (k: string) => `${uid}-${k}`;
   const chaveObjetos = objetos.map(o => `${o.id}:${o.coisaId}:${o.cor ?? ''}:${o.marca ?? ''}`).join('|');
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const disp = useMemo(() => disporComodo(tipo, area, objetos, luz), [tipo, area, luz, chaveObjetos]);
+  const disp = useMemo(() => disporComodo(tipo, area, objetos, luz, ano), [tipo, area, luz, ano, chaveObjetos]);
   const g = disp.g;
   const { W, H } = g;
   const externo = g.externo;
@@ -75,7 +77,7 @@ export const CenaDoComodo = memo(function CenaDoComodo({ tipo, parede, piso, luz
   const dPiso = opcaoDeAcabamento('piso', piso?.id)?.desenho ?? (!piso && (tipo === 'banheiro' || tipo === 'cozinha' || tipo === 'lavabo') ? 'rejunte' : piso || tipo === 'varanda' ? 'tabua' : 'liso');
   const cor2Piso = opcaoDeAcabamento('piso', piso?.id)?.cor2;
   const dLuz = opcaoDeAcabamento('luz', luz)?.desenho ?? 'teto';
-  const temperatura = luzRegulada?.temperatura ?? (dLuz === 'teto' || dLuz === 'plafon' ? 'neutra' : 'quente');
+  const temperatura = luzRegulada?.temperatura ?? (dLuz === 'teto' ? (ano !== undefined && ano < 1980 ? 'quente' : 'neutra') : dLuz === 'plafon' ? 'neutra' : 'quente');
   const intensidade = Math.max(40, Math.min(100, luzRegulada?.intensidade ?? 100)) / 100;
   const quente = temperatura === 'quente' && dLuz !== 'teto';
   const [tom1, tom2] = TOM_DA_LUZ[temperatura];
@@ -435,6 +437,8 @@ function LuzDoComodo({ desenho, tom, intensidade, lampada, automacao, g, TETO_E,
     <g data-peca="luz" data-desenho={desenho}>
       {desenho === 'teto' && <><path d="M160 0 V12" stroke="#5a5550" strokeWidth={1} /><circle cx={160} cy={15} r={3.4} fill={tom} /><path d={`M156 17 L${FX0 + 30} ${FY1} H${FX1 - 30} L164 17 Z`} fill={`url(#${lampada})`} /></>}
       {desenho === 'plafon' && <><ellipse cx={160} cy={6} rx={16} ry={3.6} fill="#f4f2ec" stroke="#cfcac0" strokeWidth={0.6} /><path d={`M146 8 L${FX0 + 20} ${FY1} H${FX1 - 20} L174 8 Z`} fill={`url(#${lampada})`} /></>}
+      {/* VIDA 29: o lampião a querosene na parede do fundo — a luz pouca, amarela, que só alcança a volta dele. */}
+      {desenho === 'lampiao' && <g data-peca="lampiao"><ellipse cx={FX0 + 46} cy={FY0 + 40} rx={46} ry={40} fill={tom} opacity={0.22 * k} /><path d={`M${FX0 + 40} ${FY0 + 34} h12`} stroke="#5a4632" strokeWidth={1.4} /><path d={`M${FX0 + 42} ${FY0 + 34} q-2 -10 4 -16 q6 6 4 16 Z`} fill="#f3e1b4" stroke="#7c6a4a" strokeWidth={0.6} /><path d={`M${FX0 + 46} ${FY0 + 30} q-1.6 -3 0 -6 q1.6 3 0 6`} fill="#f59a3a" /><rect x={FX0 + 42} y={FY0 + 34} width={8} height={5} rx={1} fill="#7c6a4a" /></g>}
       {/* 12.8.1: o abajur é a luminária de pé, um objeto do chão posto pela disposição (`_abajur`). */}
       {desenho === 'arandelas' && [FX0 + 34, FX1 - 34].map(x => <g key={x}><rect x={x - 3} y={44} width={6} height={9} rx={1.5} fill="#c9a76a" /><path d={`M${x - 3} 44 L${x - 9} 24 H${x + 9} L${x + 3} 44 Z M${x - 3} 53 L${x - 8} 72 H${x + 8} L${x + 3} 53 Z`} fill={tom} opacity={0.3 * k} /></g>)}
       {desenho === 'pendentes' && [130, 160, 190].map(px => pendente(px, 30))}

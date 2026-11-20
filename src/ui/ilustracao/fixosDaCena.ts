@@ -23,6 +23,30 @@ export const FIXOS_DA_CENA: Record<string, (cor: string) => Amostra> = {
     P(ret(66, 62.5, 22, 3, 1), '#4a4744'), Mt('M77 62v-9q6 -4 8 2', '#a7adb3'),
     M(ret(8, 8, 104, 24, 1), '#e2dccf', 'armario'), L('M34 8V32M60 8V32M86 8V32', 0.8, '#b7b0a5')
   ]),
+  /**
+   * VIDA 29 · a cozinha de antes dos anos 1960: a pia de mármore (ou de cimento) com a cortininha de pano no lugar das
+   * portas, a prateleira de madeira com as latas em cima — nada de armário planejado.
+   */
+  _bancada_antiga: () => naParede([
+    M(ret(4, 66, 112, 44, 1), '#d9d2c4', 'pia'), P(ret(2, 62, 116, 5, 1), '#e8e4dc'),
+    P(ret(8, 72, 50, 36, 1), '#c9b07a'), L('M14 72V108M22 72V108M30 72V108M38 72V108M46 72V108M54 72V108', 0.5, '#a88f5c'),
+    P(ret(64, 72, 46, 36, 1), '#c9b07a'), L('M70 72V108M78 72V108M86 72V108M94 72V108M102 72V108', 0.5, '#a88f5c'),
+    P(ret(70, 62.5, 22, 3, 1), '#8f8a82'), Mt('M81 62v-9q6 -4 8 2', '#9a8f7a'),
+    P(ret(10, 24, 100, 3, 0.5), '#7a5536'), ...[18, 32, 46].map(x => P(ret(x, 12, 10, 12, 1.5), x === 32 ? '#b3463a' : '#c8b25a'))
+  ]),
+  /** VIDA 29 · o fogão a lenha de ferro e tijolo: a chapa com as bocas, a fornalha, o forno, a chaminé até o teto. */
+  _fogao_lenha: () => noChao([
+    M(ret(10, 56, 100, 54, 2), '#b9644a', 'fogao'), L('M10 70H110M10 84H110M10 98H110M35 56V70M60 70V84M85 56V70M35 84V98M85 84V98', 0.5, '#8e4a35'),
+    P(ret(8, 50, 104, 7, 1), '#2e2b29'), ...[28, 50, 72].map(x => P(circulo(x, 53, 3.6), '#1a1817')),
+    P(ret(18, 74, 26, 20, 2), '#3a3633'), P(ret(22, 82, 18, 8, 1), '#d9742e'), P(ret(56, 72, 40, 24, 2), '#3a3633'), Mt(ret(70, 82, 12, 2.4, 1)),
+    P(ret(92, 0, 12, 50, 0), '#3b3835'), P(ret(90, 44, 16, 6, 1), '#2e2b29')
+  ], 50),
+  /** VIDA 29 · a banheira de ferro esmaltado sobre pés (antes do box com chuveiro elétrico). */
+  _tina: () => noChao([
+    M(suave([[6, 58], [114, 58], [110, 92], [100, 98], [20, 98], [10, 92]]), '#f2f0ea', 'tina'), P(ret(4, 54, 112, 6, 3), '#e6e2d8'),
+    ...[18, 98].map(x => Mt(`M${x} 98 q-2 6 -4 10 h8 q-2 -4 -4 -10`, '#b08d4a')),
+    Mt('M100 54v-14q0 -6 -8 -6', '#a7adb3'), Mt(circulo(92, 34, 2))
+  ], 54),
   /** O fogão simples de quatro bocas. */
   _fogao: () => noChao([M(ret(16, 52, 88, 58, 2), '#ece9e4', 'fogao'), P(ret(16, 48, 88, 6, 1), '#3b3835'), ...[34, 52, 70, 88].map(x => P(circulo(x, 51, 3.4), '#1f1d1b')), P(ret(26, 66, 68, 30, 2), '#2b2927'), V(ret(30, 70, 60, 22, 1))], 46),
   /** O box: vidro do chão ao teto, o chuveiro. */

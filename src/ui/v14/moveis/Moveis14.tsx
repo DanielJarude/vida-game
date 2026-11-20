@@ -4,6 +4,7 @@
  * `motor/v14/moveis` — a tela não faz conta.
  */
 import { useState } from 'react';
+import { anoDe } from '../../../motor/tempo';
 import type { Vida } from '../../../motor/tipos';
 import type { Acao } from '../../../motor/acoes';
 import type { OfertaImovel } from '../../../motor/sistemas/mercado';
@@ -33,7 +34,7 @@ function PreviaNoComodo22({ vida, comodoId, coisaId, marca, cor, cabe }: { vida:
   const area = areaDoComodo(vida.moradia.modeloId, cm) * (['jardim', 'piscina', 'lazer', 'quadra'].includes(cm.tipo) ? 1.6 : 1);
   return (
     <span className="m14-previa22" data-previa={coisaId}>
-      <CenaDoComodo tipo={cm.tipo} parede={asp('parede')} piso={asp('piso')} luz={asp('luz').id} rodape={asp('rodape').id} cortina={asp('cortina').id} objetos={cabe ? [...ja, nova] : ja} area={area} largura={300}
+      <CenaDoComodo ano={anoDe(vida.t)} tipo={cm.tipo} parede={asp('parede')} piso={asp('piso')} luz={asp('luz').id} rodape={asp('rodape').id} cortina={asp('cortina').id} objetos={cabe ? [...ja, nova] : ja} area={area} largura={300}
         rotulo={`Prévia: ${cm.nome}${cabe ? ` com ${coisa(coisaId)?.nome}` : ` como está (a peça não cabe)`}`} />
       <span className="nota">{cabe ? `Assim ficaria n${artigoDoComodo22(cm.nome)} ${cm.nome} — a mesma peça, a mesma cor e a mesma marca do cartão.` : `Assim está ${artigoDoComodo22(cm.nome)} ${cm.nome} hoje: a peça não cabe aqui.`}</span>
     </span>

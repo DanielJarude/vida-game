@@ -10,6 +10,7 @@
  * Módulo de base (só lê tipos e catálogos): o dinheiro (custos do mês) e as coisas (a prática) o leem sem ciclo.
  */
 
+import { anoDe } from '../tempo';
 import type { AspectoDoComodo, CoisaTida, Imovel, LarPersonalizado, Vida } from '../tipos';
 import { clamp } from '../rng';
 import { modeloMoradia, AREA_MORADIA } from '../dados/bens';
@@ -110,7 +111,7 @@ export function areaDoComodo(modeloId: string | undefined, c: ComodoDaCasa): num
 
 /** O acabamento de um aspecto de um cômodo (o escolhido; senão, o de origem do imóvel pelo padrão). */
 export function acabamentoDoComodo(v: Vida, comodoId: string, a: AspectoDoComodo, lar = donoDoLar(v)?.lar): string {
-  return lar?.acabamentos[comodoId]?.[a] ?? acabamentoDeOrigem(a, v.moradia.padrao);
+  return lar?.acabamentos[comodoId]?.[a] ?? acabamentoDeOrigem(a, v.moradia.padrao, anoDe(Math.min(v.t, v.moradia.tInicio ?? v.t)));
 }
 
 /* ------------------------------------------------------------- objetos */
@@ -212,7 +213,7 @@ export function confortoDaCasa(v: Vida): LeituraDoConforto {
     // Só os cômodos de dentro (onde há piso e luz): a média do que se escolheu contra a do padrão de origem.
     const internos = comodos.filter(c => !['jardim', 'piscina', 'garagem', 'lazer', 'quadra', 'varanda'].includes(c.tipo));
     const nivel = (a: AspectoDoComodo, c: ComodoDaCasa) => opcaoDeAcabamento(a, acabamentoDoComodo(v, c.id, a, lar))?.nivel ?? 1;
-    const origem = (a: AspectoDoComodo) => opcaoDeAcabamento(a, acabamentoDeOrigem(a, padrao))?.nivel ?? 1;
+    const origem = (a: AspectoDoComodo) => opcaoDeAcabamento(a, acabamentoDeOrigem(a, padrao, anoDe(Math.min(v.t, v.moradia.tInicio))))?.nivel ?? 1;
     const delta = internos.reduce((s, c) => s + (nivel('piso', c) - origem('piso')) + (nivel('luz', c) - origem('luz')) * 0.8, 0) / Math.max(1, internos.length);
     const pintou = internos.filter(c => lar.acabamentos[c.id]?.parede).length / Math.max(1, internos.length);
     // 12.7: o rodapé, a moldura e a cortina escolhidos contam um pouco (só onde se escolheu; o resto não muda).

@@ -178,6 +178,9 @@ export const VOLUMES: Record<string, (cor: string) => Bloco[]> = {
     b(4, 67, 112, 43, 0.03, 1, { cor: '#e9e4da' })
   ],
   _fogao: () => [b(16, 52, 88, 58, 0, 1, { cor: '#ece9e4' })],
+  _bancada_antiga: () => [b(2, 62, 116, 5, 0, 1, { cor: '#e8e4dc' }), b(4, 67, 112, 43, 0.03, 1, { cor: '#d9d2c4' })],
+  _fogao_lenha: () => [b(10, 56, 100, 54, 0, 1, { cor: '#b9644a' }), b(92, 0, 12, 50, 0.7, 0.9, { cor: '#3b3835' })],
+  _tina: () => [b(6, 58, 108, 40, 0.05, 0.95, { cor: '#f2f0ea' })],
   _pia: () => [b(18, 52, 84, 12, 0, 0.85, { cor: '#f4f4f2' }), b(48, 64, 24, 46, 0.25, 0.7, { cor: '#ecebe7' })],
   // VIDA 20: a caixa acoplada (18 cm de fundo, encostada) com a tampa e o botão; a bacia com o assento; o pé.
   _vaso: () => [b(32, 6, 56, 42, 0.74, 1, { cor: '#f2f2ef', pecas: [0, 3] }), b(34, 48, 52, 49, 0.04, 0.76, { cor: '#f4f4f2' }), b(44, 95, 32, 15, 0.2, 0.74, { cor: '#ecebe7' })],
@@ -211,7 +214,7 @@ export interface Referencial { o: V3; U: V3; D: V3; sigma: number; sigmaV: numbe
  * O desenho que é mais largo do que alto de propósito (a bancada da cozinha com os armários de cima): a altura vem do
  * tampo — a linha `y` do desenho fica a `m` metros do chão —, não da largura (a bancada estreita não fica baixinha).
  */
-const ALTURA_PELO_TAMPO: Record<string, [number, number]> = { _bancada: [62, 0.92] };
+const ALTURA_PELO_TAMPO: Record<string, [number, number]> = { _bancada: [62, 0.92], _bancada_antiga: [62, 0.92] };
 
 export function referencial(p: Posto, a: Amostra): Referencial {
   const c = caixaDaAmostra(a);

@@ -36,7 +36,8 @@ import { pagar, PATRIMONIO_NO_MES, vereditoDePagar } from './dinheiro';
 import { coisasDaVida } from './coisas';
 import { colecao } from './colecao';
 import { precoNovoLocal, textoVeiculo, veiculos } from './veiculos';
-import { opcaoDeAcabamento as opcaoAcab } from '../dados/lar';
+import { anoDe } from '../tempo';
+import { opcaoDeAcabamento as opcaoAcab, acabamentoNoAno } from '../dados/lar';
 import { ACABAMENTOS, acabamentoDoComodo, areaDoComodo, casaDaFamilia, comodosDaCasa, comodosDe, custoMensalDoLar, donoDoLar, efeitoDoAnoEmCasa, imovelDaMoradia, naCasaAtual, plantaDaCasa, poderSobreACasa, precoDoAcabamento, terrenoLivre } from './lar';
 import { afetoDe, registrarNoObjeto } from './memoriaDosObjetos';
 import { disponibilidadeCultural, disponibilidadeObra, fazerCultural, processarGostos, produzirObra } from './gostos';
@@ -168,6 +169,7 @@ export function disponibilidadePersonalizar(v: Vida, op: OpPersonalizar): Veredi
       if (!aspectoCabe(cm.tipo, op.aspecto)) return bloqueio('impossivel', 'Não se aplica a esse espaço.');
       const opc = ACABAMENTOS[op.aspecto].opcoes.find(x => x.id === op.opcao);
       if (!opc) return bloqueio('impossivel', 'Essa opção não existe.');
+      if (!acabamentoNoAno(opc, anoDe(v.t))) return bloqueio('impossivel', `${cap(opc.nome)}: ${(opc.desde ?? 0) > anoDe(v.t) ? 'ainda não existe nesta época' : 'já não se faz nesta época'}.`);
       if ((donoDoLar(v)?.lar?.acabamentos[op.comodo]?.[op.aspecto] ?? '') === op.opcao) return bloqueio('incompativel', 'Já está assim.');
       return vereditoDePagar(v, precoDoAcabamento(v.moradia.modeloId, cm, op.aspecto, op.opcao, c(v)));
     }
@@ -182,6 +184,7 @@ export function disponibilidadePersonalizar(v: Vida, op: OpPersonalizar): Veredi
         if (!aspectoCabe(cm.tipo, x.aspecto)) return bloqueio('impossivel', `${ACABAMENTOS[x.aspecto].nome}: não se aplica a esse espaço.`);
         if (poder === 'superficie' && x.aspecto === 'piso') return bloqueio('incompativel', 'Trocar o piso é obra: na casa alugada, só com o dono (e quem paga é ele).');
         if (!ACABAMENTOS[x.aspecto].opcoes.some(o => o.id === x.opcao)) return bloqueio('impossivel', 'Essa opção não existe.');
+        { const o = ACABAMENTOS[x.aspecto].opcoes.find(y => y.id === x.opcao)!; if (!acabamentoNoAno(o, anoDe(v.t))) return bloqueio('impossivel', `${cap(o.nome)}: não existe nesta época.`); }
       }
       if (op.luz && !r.regulavel) return bloqueio('requisito', 'Essa luz não regula: troque por uma com dimmer.');
       if (!r.itens.length && !r.luzMuda) return bloqueio('incompativel', 'Nada mudou na prévia.');

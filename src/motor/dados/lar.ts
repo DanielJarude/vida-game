@@ -127,6 +127,9 @@ export interface OpcaoDeAcabamento {
   cor2?: string;
   /** 12.7 — como a cena desenha (o padrão do piso, o desenho da parede, o tipo de luminária). */
   desenho?: string;
+  /** VIDA 29 — os anos em que existe (o LED não se instala em 1950; o lampião não se vende em 2020). Ausentes: sempre. */
+  desde?: number;
+  ate?: number;
   /** 12.7 — luz que aceita regular temperatura e intensidade (dimmer, lâmpada de cor ajustável). */
   regulavel?: boolean;
   /** O que pede de cuidado por mês (o mármore polido, a automação). */
@@ -143,15 +146,17 @@ export const ACABAMENTOS: Record<AspectoDoComodo, { nome: string; opcoes: OpcaoD
   piso: {
     nome: 'Piso',
     opcoes: [
-      { id: 'ceramica', nome: 'cerâmica simples', nivel: 1, preco: 60, porM2: true, cor: '#c9b9a0', desenho: 'rejunte' },
+      { id: 'ceramica', nome: 'cerâmica simples', nivel: 1, preco: 60, porM2: true, cor: '#c9b9a0', desenho: 'rejunte', desde: 1960 },
+      { id: 'vermelhao', nome: 'cimento vermelhão encerado', nivel: 1, preco: 45, porM2: true, cor: '#9c4a3a', desenho: 'cimento', ate: 1990 },
+      { id: 'tabuado', nome: 'assoalho de tábua corrida', nivel: 2, preco: 150, porM2: true, cor: '#9a6b43', desenho: 'tabua_larga' },
       { id: 'cimento', nome: 'cimento queimado', nivel: 2, preco: 90, porM2: true, cor: '#9b9894', desenho: 'cimento' },
-      { id: 'vinilico', nome: 'vinílico amadeirado', nivel: 2, preco: 110, porM2: true, cor: '#b48a5e', desenho: 'tabua' },
-      { id: 'vinilico_cinza', nome: 'vinílico cinza-carvalho', nivel: 2, preco: 120, porM2: true, cor: '#a39d93', desenho: 'tabua' },
-      { id: 'carpete', nome: 'carpete em placas', nivel: 2, preco: 95, porM2: true, cor: '#8c8f96', desenho: 'carpete' },
+      { id: 'vinilico', nome: 'vinílico amadeirado', nivel: 2, preco: 110, porM2: true, cor: '#b48a5e', desenho: 'tabua', desde: 1990 },
+      { id: 'vinilico_cinza', nome: 'vinílico cinza-carvalho', nivel: 2, preco: 120, porM2: true, cor: '#a39d93', desenho: 'tabua', desde: 2005 },
+      { id: 'carpete', nome: 'carpete em placas', nivel: 2, preco: 95, porM2: true, cor: '#8c8f96', desenho: 'carpete', desde: 1970 },
       { id: 'ladrilho', nome: 'ladrilho hidráulico', nivel: 3, preco: 210, porM2: true, cor: '#d9cbb0', cor2: '#3f6f7a', desenho: 'ladrilho' },
-      { id: 'porcelanato', nome: 'porcelanato', nivel: 3, preco: 180, porM2: true, cor: '#d6d0c6', desenho: 'rejunte' },
-      { id: 'porcelanato_gf', nome: 'porcelanato de grande formato', nivel: 3, preco: 260, porM2: true, cor: '#e2ddd4', desenho: 'grande_formato' },
-      { id: 'porcelanato_marmo', nome: 'porcelanato marmorizado', nivel: 3, preco: 240, porM2: true, cor: '#ece8e1', cor2: '#b9b3a8', desenho: 'marmore' },
+      { id: 'porcelanato', nome: 'porcelanato', nivel: 3, preco: 180, porM2: true, cor: '#d6d0c6', desenho: 'rejunte', desde: 1990 },
+      { id: 'porcelanato_gf', nome: 'porcelanato de grande formato', nivel: 3, preco: 260, porM2: true, cor: '#e2ddd4', desenho: 'grande_formato', desde: 2010 },
+      { id: 'porcelanato_marmo', nome: 'porcelanato marmorizado', nivel: 3, preco: 240, porM2: true, cor: '#ece8e1', cor2: '#b9b3a8', desenho: 'marmore', desde: 2008 },
       { id: 'granito', nome: 'granito polido', nivel: 3, preco: 280, porM2: true, cor: '#8a8580', cor2: '#3e3a37', desenho: 'granito' },
       { id: 'madeira', nome: 'taco de madeira', nivel: 4, preco: 320, porM2: true, cor: '#8f5e37', desenho: 'tabua' },
       { id: 'taco_espinha', nome: 'taco em espinha de peixe', nivel: 4, preco: 420, porM2: true, cor: '#9a6a40', desenho: 'espinha' },
@@ -181,10 +186,10 @@ export const ACABAMENTOS: Record<AspectoDoComodo, { nome: string; opcoes: OpcaoD
       { id: 'tijolo_branco', nome: 'tijolo aparente pintado de branco', nivel: 3, preco: 150, porM2: true, cor: '#ebe6dd', desenho: 'tijolo' },
       { id: 'papel', nome: 'papel de parede estampado', nivel: 3, preco: 95, porM2: true, cor: '#b7a37d', desenho: 'papel_floral' },
       { id: 'papel_listras', nome: 'papel de parede listrado', nivel: 3, preco: 95, porM2: true, cor: '#e7dfcd', cor2: '#9fb2a3', desenho: 'papel_listras' },
-      { id: 'papel_geometrico', nome: 'papel de parede geométrico', nivel: 3, preco: 110, porM2: true, cor: '#2d3a3f', cor2: '#c9a24f', desenho: 'papel_geometrico' },
+      { id: 'papel_geometrico', nome: 'papel de parede geométrico', nivel: 3, preco: 110, porM2: true, cor: '#2d3a3f', cor2: '#c9a24f', desenho: 'papel_geometrico', desde: 1960 },
       { id: 'azulejo_metro', nome: 'azulejo metrô branco', nivel: 3, preco: 160, porM2: true, cor: '#f2f1ec', desenho: 'azulejo' },
       { id: 'lambri', nome: 'lambri de madeira', nivel: 3, preco: 190, porM2: true, cor: '#b98a5a', desenho: 'lambri' },
-      { id: 'ripado', nome: 'painel ripado de madeira', nivel: 4, preco: 330, porM2: true, cor: '#8a5d38', desenho: 'ripado' },
+      { id: 'ripado', nome: 'painel ripado de madeira', nivel: 4, preco: 330, porM2: true, cor: '#8a5d38', desenho: 'ripado', desde: 2010 },
       { id: 'pedra', nome: 'pedra natural (canjiquinha)', nivel: 4, preco: 300, porM2: true, cor: '#b3a48c', desenho: 'pedra' },
       { id: 'papel_damasco', nome: 'papel de parede damasco', nivel: 4, preco: 240, porM2: true, cor: '#3d2a3a', cor2: '#a8865a', desenho: 'papel_damasco' },
       { id: 'boiserie', nome: 'boiserie (molduras)', nivel: 4, preco: 260, porM2: true, cor: '#e4dfd5', desenho: 'boiserie' },
@@ -197,19 +202,20 @@ export const ACABAMENTOS: Record<AspectoDoComodo, { nome: string; opcoes: OpcaoD
   luz: {
     nome: 'Iluminação',
     opcoes: [
-      { id: 'simples', nome: 'lâmpada no teto', nivel: 1, preco: 0, desenho: 'teto' },
-      { id: 'plafon', nome: 'plafon de LED', nivel: 1, preco: 180, desenho: 'plafon', regulavel: true },
+      { id: 'lampiao', nome: 'lampião a querosene', nivel: 1, preco: 0, desenho: 'lampiao', ate: 1975 },
+      { id: 'simples', nome: 'lâmpada no teto', nivel: 1, preco: 0, desenho: 'teto', desde: 1900 },
+      { id: 'plafon', nome: 'plafon de LED', nivel: 1, preco: 180, desenho: 'plafon', regulavel: true, desde: 2008 },
       { id: 'quente', nome: 'luz quente, abajur e arandela', nivel: 2, preco: 450, desenho: 'abajur', regulavel: true },
       { id: 'arandelas', nome: 'arandelas nas paredes', nivel: 2, preco: 780, desenho: 'arandelas', regulavel: true },
       { id: 'pendentes', nome: 'pendentes sobre a mesa', nivel: 2, preco: 950, desenho: 'pendentes', regulavel: true },
-      { id: 'trilho', nome: 'trilho com spots', nivel: 3, preco: 1400, desenho: 'trilho', regulavel: true },
-      { id: 'fita_led', nome: 'fita de LED indireta', nivel: 3, preco: 1200, desenho: 'fita', regulavel: true },
-      { id: 'planejada', nome: 'projeto de iluminação (sanca, pendentes)', nivel: 3, preco: 2600, desenho: 'sanca', regulavel: true },
-      { id: 'destaque', nome: 'luz de destaque (quadros e nichos)', nivel: 3, preco: 2100, desenho: 'destaque', regulavel: true },
+      { id: 'trilho', nome: 'trilho com spots', nivel: 3, preco: 1400, desenho: 'trilho', regulavel: true, desde: 1985 },
+      { id: 'fita_led', nome: 'fita de LED indireta', nivel: 3, preco: 1200, desenho: 'fita', regulavel: true, desde: 2008 },
+      { id: 'planejada', nome: 'projeto de iluminação (sanca, pendentes)', nivel: 3, preco: 2600, desenho: 'sanca', regulavel: true, desde: 1990 },
+      { id: 'destaque', nome: 'luz de destaque (quadros e nichos)', nivel: 3, preco: 2100, desenho: 'destaque', regulavel: true, desde: 1980 },
       { id: 'lustre', nome: 'lustre', nivel: 3, preco: 2400, desenho: 'lustre', regulavel: true },
-      { id: 'automacao', nome: 'automação (cenas, controle pelo celular)', nivel: 4, preco: 6500, desenho: 'sanca', regulavel: true, manutencao: 25 },
+      { id: 'automacao', nome: 'automação (cenas, controle pelo celular)', nivel: 4, preco: 6500, desenho: 'sanca', regulavel: true, manutencao: 25, desde: 2014 },
       { id: 'lustre_cristal', nome: 'lustre de cristal', nivel: 5, preco: 18000, desenho: 'lustre_cristal', regulavel: true, manutencao: 15 },
-      { id: 'luminotecnico', nome: 'projeto luminotécnico assinado', nivel: 5, preco: 26000, desenho: 'sanca', regulavel: true, manutencao: 30 },
+      { id: 'luminotecnico', nome: 'projeto luminotécnico assinado', nivel: 5, preco: 26000, desenho: 'sanca', regulavel: true, manutencao: 30, desde: 1995 },
       { id: 'lustre_assinado', nome: 'lustre de designer, peça numerada', nivel: 6, preco: 120000, desenho: 'lustre_cristal', regulavel: true, manutencao: 40 }
     ]
   },
@@ -220,7 +226,7 @@ export const ACABAMENTOS: Record<AspectoDoComodo, { nome: string; opcoes: OpcaoD
       { id: 'madeira', nome: 'rodapé de madeira', nivel: 2, preco: 70, porM2: true, desenho: 'madeira', cor: '#8a5d38' },
       { id: 'alto', nome: 'rodapé alto branco', nivel: 3, preco: 110, porM2: true, desenho: 'alto', cor: '#f4f2ec' },
       { id: 'moldura_teto', nome: 'rodapé alto e moldura de gesso no teto', nivel: 4, preco: 220, porM2: true, desenho: 'moldura', cor: '#f4f2ec' },
-      { id: 'embutido', nome: 'rodapé embutido com luz', nivel: 4, preco: 260, porM2: true, desenho: 'led', cor: '#2a2a2a' }
+      { id: 'embutido', nome: 'rodapé embutido com luz', nivel: 4, preco: 260, porM2: true, desenho: 'led', cor: '#2a2a2a', desde: 2005 }
     ]
   },
   cortina: {
@@ -228,12 +234,12 @@ export const ACABAMENTOS: Record<AspectoDoComodo, { nome: string; opcoes: OpcaoD
     opcoes: [
       { id: 'nenhuma', nome: 'sem cortina', nivel: 1, preco: 0, desenho: 'nenhuma' },
       { id: 'tecido', nome: 'cortina de tecido leve', nivel: 1, preco: 320, desenho: 'tecido', cor: '#efe7d6' },
-      { id: 'persiana', nome: 'persiana horizontal', nivel: 2, preco: 450, desenho: 'persiana', cor: '#e8e6e0' },
-      { id: 'rolo', nome: 'persiana rolô blackout', nivel: 2, preco: 520, desenho: 'rolo', cor: '#5d5f63' },
+      { id: 'persiana', nome: 'persiana horizontal', nivel: 2, preco: 450, desenho: 'persiana', cor: '#e8e6e0', desde: 1950 },
+      { id: 'rolo', nome: 'persiana rolô blackout', nivel: 2, preco: 520, desenho: 'rolo', cor: '#5d5f63', desde: 1990 },
       { id: 'linho', nome: 'cortina de linho', nivel: 3, preco: 1100, desenho: 'tecido', cor: '#d8cbb3' },
       { id: 'romana', nome: 'persiana romana', nivel: 3, preco: 980, desenho: 'romana', cor: '#c9bba1' },
       { id: 'veludo', nome: 'cortina de veludo', nivel: 4, preco: 2400, desenho: 'tecido', cor: '#5b2333' },
-      { id: 'motorizada', nome: 'cortina motorizada de linho', nivel: 5, preco: 7800, desenho: 'tecido', cor: '#e2d8c4', manutencao: 8 }
+      { id: 'motorizada', nome: 'cortina motorizada de linho', nivel: 5, preco: 7800, desenho: 'tecido', cor: '#e2d8c4', manutencao: 8, desde: 2005 }
     ]
   }
 };
@@ -247,8 +253,20 @@ export type TemperaturaDaLuz = (typeof TEMPERATURAS_DA_LUZ)[number]['id'];
 
 export const opcaoDeAcabamento = (a: AspectoDoComodo, id: string | undefined): OpcaoDeAcabamento | undefined => ACABAMENTOS[a].opcoes.find(o => o.id === id);
 
-/** O acabamento com que o imóvel vem, pelo padrão dele (a casa simples não vem com mármore; a mansão não vem com cerâmica). */
-export function acabamentoDeOrigem(a: AspectoDoComodo, padrao: number): string {
+/** VIDA 29 — a opção existe no ano? */
+export const acabamentoNoAno = (o: OpcaoDeAcabamento, ano: number) => (o.desde ?? 0) <= ano && (o.ate ?? 9999) >= ano;
+
+/**
+ * O acabamento com que o imóvel vem, pelo padrão dele (a casa simples não vem com mármore; a mansão não vem com cerâmica).
+ * VIDA 29: e pela ÉPOCA em que se chegou a ela — antes de 1930, o lampião e o assoalho (ou o vermelhão); até os anos 1970,
+ * o taco e o ladrilho hidráulico; o porcelanato só depois de 1990. Sem o ano (as chamadas antigas), o de hoje.
+ */
+export function acabamentoDeOrigem(a: AspectoDoComodo, padrao: number, ano = 2026): string {
+  if (a === 'piso' && ano < 1930) return padrao >= 4 ? 'tabuado' : 'vermelhao';
+  if (a === 'piso' && ano < 1975) return padrao >= 3 ? 'madeira' : 'ladrilho';
+  if (a === 'piso' && ano < 1990) return padrao >= 4 ? 'madeira' : 'ceramica';
+  if (a === 'luz' && ano < 1930) return padrao >= 5 ? 'lustre' : 'lampiao';
+  if (a === 'cortina' && ano < 1960) return padrao >= 3 ? 'tecido' : 'nenhuma';
   if (a === 'piso') return padrao >= 5 ? 'madeira' : padrao >= 3 ? 'porcelanato' : 'ceramica';
   if (a === 'parede') return 'branco';
   if (a === 'rodape') return 'simples';

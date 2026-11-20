@@ -131,19 +131,23 @@ const passos = (min: number, max: number, centro: number, passo = 0.1): number[]
 };
 
 /** Os fixos de cada cômodo (o que vem com ele, desenhado): a bancada da cozinha, o box, a pia, o vaso, a árvore. */
-function fixosDe(tipo: string, g: Geometria, ids: Set<string>): Omit<Posto, 'id'>[] {
+function fixosDe(tipo: string, g: Geometria, ids: Set<string>, ano = 2026): Omit<Posto, 'id'>[] {
   const f = (coisaId: string, x0: number, w: number, d: number, h: number, extra: Partial<Posto> = {}): Omit<Posto, 'id'> => ({ coisaId, x0, x1: x0 + w, z0: 0.02, z1: 0.02 + d, base: 0, h, montagem: 'chao', fixo: true, ...extra });
   const tem = (...xs: string[]) => xs.some(x => ids.has(x));
   if (tipo === 'cozinha') {
     const w = Math.min(1.9, g.Wm * 0.45);
-    const out = [f('_bancada', 0.02, w, 0.62, 0.92)];
-    if (!tem('fogao', 'cooktop_forno', 'fogao_profissional')) out.push(f('_fogao', 0.02 + w + 0.02, 0.6, 0.62, 0.9));
+    // VIDA 29: a cozinha da época — até os anos 1950, a pia de mármore com a cortininha e o fogão a lenha (de ferro e
+    // tijolo, com a chapa e a chaminé); o fogão a gás de quatro bocas chega depois.
+    const antiga = ano < 1960;
+    const out = [f(antiga ? '_bancada_antiga' : '_bancada', 0.02, w, 0.62, 0.92)];
+    if (!tem('fogao', 'cooktop_forno', 'fogao_profissional')) out.push(antiga ? f('_fogao_lenha', 0.02 + w + 0.02, Math.min(1.0, Math.max(0.6, g.Wm - w - 0.1)), 0.7, 0.85) : f('_fogao', 0.02 + w + 0.02, 0.6, 0.62, 0.9));
     return out;
   }
   if (tipo === 'banheiro' || tipo === 'lavabo') {
     const out: Omit<Posto, 'id'>[] = [];
     let x = 0.02;
-    if (tipo === 'banheiro' && !tem('ducha')) { out.push(f('_box', x, 0.9, 0.9, 2.0)); x += 0.92; }
+    // VIDA 29: antes do chuveiro com box (anos 1950), a banheira de ferro esmaltado sobre pés.
+    if (tipo === 'banheiro' && !tem('ducha')) { if (ano < 1950) { out.push(f('_tina', x, 1.5, 0.7, 0.62)); x += 1.52; } else { out.push(f('_box', x, 0.9, 0.9, 2.0)); x += 0.92; } }
     if (!tem('gabinete', 'bancada_marmore')) { out.push(f('_pia', x + 0.05, 0.55, 0.45, 0.85)); x += 0.62; }
     out.push(f('_vaso', Math.min(g.Wm - 0.47, x + 0.12), 0.42, 0.68, 0.78));
     return out;
@@ -155,13 +159,13 @@ function fixosDe(tipo: string, g: Geometria, ids: Set<string>): Omit<Posto, 'id'
 
 /** Os tampos onde as coisas pequenas sentam (com o espaço que ainda sobra em cada um). */
 interface Tampo { posto: Posto; topo: number; livre: [number, number][] }
-const TOPO_FIXO: Record<string, number> = { _bancada: 0.92, _pia: 0.85, _prateleira: 0 };
+const TOPO_FIXO: Record<string, number> = { _bancada: 0.92, _bancada_antiga: 0.92, _pia: 0.85, _prateleira: 0 };
 
 /**
  * Dispõe os objetos de um cômodo. Determinística: os mesmos objetos dão a mesma cena (a ordem vem do tamanho e do id,
  * não do acaso). `area` em m² (a do cômodo; lá fora, a da área).
  */
-export function disporComodo(tipo: string, area: number | undefined, objetos: ObjetoParaDispor[], luz?: string): Disposicao {
+export function disporComodo(tipo: string, area: number | undefined, objetos: ObjetoParaDispor[], luz?: string, ano?: number): Disposicao {
   // 12.8.1: a luminária de pé (a luz "abajur") é um objeto do chão como os outros — ao lado do sofá, da cama ou da
   // poltrona, na perspectiva do cômodo —, não um desenho solto na frente da cena.
   if (!EXTERNOS.has(tipo) && tipo !== 'banheiro' && tipo !== 'lavabo' && opcaoDeAcabamento('luz', luz)?.desenho === 'abajur') objetos = [...objetos, { id: '_abajur', coisaId: '_abajur' }];
@@ -170,7 +174,7 @@ export function disporComodo(tipo: string, area: number | undefined, objetos: Ob
   // 12.8.1: e, sem nada de fora, a que não deixa um móvel alto solto no meio do cômodo (o closet longe da parede).
   let melhor: Disposicao | undefined, nota = Infinity;
   for (const lado of ['meio', 'direita', 'esquerda'] as const) {
-    const d = dispor(tipo, area, objetos, lado);
+    const d = dispor(tipo, area, objetos, lado, ano);
     const n = d.fora.length * 10 + soltos(d);
     if (n < nota) { melhor = d; nota = n; }
     if (!nota) break;
@@ -181,7 +185,7 @@ export function disporComodo(tipo: string, area: number | undefined, objetos: Ob
 /** Os móveis altos (armário, vitrine, estante) que ficaram longe da parede do fundo. */
 const soltos = (d: Disposicao) => d.g.externo ? 0 : d.postos.filter(p => p.montagem === 'chao' && !p.fixo && !p.giro && p.h > 1.4 && p.z0 > 0.8).length;
 
-function dispor(tipo: string, area: number | undefined, objetos: ObjetoParaDispor[], lado: 'meio' | 'direita' | 'esquerda'): Disposicao {
+function dispor(tipo: string, area: number | undefined, objetos: ObjetoParaDispor[], lado: 'meio' | 'direita' | 'esquerda', ano?: number): Disposicao {
   const g = geometria(tipo, area);
   const postos: Posto[] = [];
   const fora: string[] = [];
@@ -200,7 +204,7 @@ function dispor(tipo: string, area: number | undefined, objetos: ObjetoParaDispo
   // A quadra: o piso inteiro é de jogo; os objetos ficam na borda.
   if (tipo === 'quadra') chao.push({ x0: g.Wm * 0.12, x1: g.Wm * 0.88, z0: g.Dv * 0.15, z1: g.Dv * 0.85 });
 
-  for (const [i, f] of fixosDe(tipo, g, ids).entries()) {
+  for (const [i, f] of fixosDe(tipo, g, ids, ano).entries()) {
     const p: Posto = { ...f, id: `fixo${i}` };
     postos.push(p); chao.push(p);
     if (p.h > 1.2) paredeFundo.push({ x0: p.x0, x1: p.x1, b0: 0, b1: p.h });

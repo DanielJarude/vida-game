@@ -219,6 +219,9 @@ describe('os eventos por fase', () => {
     expect(preparar(goteira, v, r)).toBeFalsy();
     const pede = conteudoPorId('adu1241_filho_entrada')!;
     const w = adulto(55, { semente: 9 });
+    // (A vida simulada até os 55 tem os filhos dela — um deles ainda em casa, conforme o caminho da simulação; o teste é
+    // da condição: só o filho do cenário conta.)
+    for (const [id, x] of Object.entries(w.vinculos)) if (x.parentesco === 'filho' || x.parentesco === 'enteado') delete w.vinculos[id];
     w.financas.conta = 10;
     comFilho(w, 28, { casa: false });
     expect(preparar(pede, w, r)).toBeFalsy();

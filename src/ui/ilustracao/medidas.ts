@@ -230,7 +230,7 @@ export const MEDIDAS: Record<string, Medida> = {
  */
 export const ALTURA_NO_DESENHO: Record<string, number | 'tudo'> = {
   geladeira: 'tudo', geladeira_inox: 'tudo', guarda_roupa: 'tudo', estante_escritorio: 'tudo', organizadores: 'tudo',
-  fliperama: 'tudo', beliche: 'tudo', _box: 'tudo', _fogao: 'tudo', _pia: 'tudo', ducha: 'tudo', churrasqueira: 'tudo',
+  fliperama: 'tudo', beliche: 'tudo', _box: 'tudo', _fogao: 'tudo', _fogao_lenha: 'tudo', _tina: 'tudo', _pia: 'tudo', ducha: 'tudo', churrasqueira: 'tudo',
   forno_pizza: 'tudo', cooktop_forno: 'tudo', penteadeira: 'tudo', lavadora_pressao: 'tudo', espelho_chao: 'tudo',
   _abajur: 'tudo', cavalete: 'tudo', saco_pancada: 'tudo', escultura_jardim: 'tudo', vasos_grandes: 'tudo', plantas: 'tudo',
   prancha: 'tudo', cadeira_ergonomica: 'tudo', _vaso: 'tudo', criado_mudo: 64

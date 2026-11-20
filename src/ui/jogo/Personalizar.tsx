@@ -21,7 +21,7 @@ import { idade, idadePessoa } from '../../motor/nucleo';
 import { anoDe } from '../../motor/tempo';
 import { coisa } from '../../motor/dados/coisas';
 import { variantesDaCoisa } from '../../motor/dados/pertences';
-import { acabamentoDeOrigem, ASPECTOS_DO_COMODO, COMODOS, opcaoDeAcabamento, SEGMENTOS_DE_LUXO, segmentoDoNivel, TEMPERATURAS_DA_LUZ, type TemperaturaDaLuz, type TipoComodo } from '../../motor/dados/lar';
+import { acabamentoDeOrigem, acabamentoNoAno, ASPECTOS_DO_COMODO, COMODOS, opcaoDeAcabamento, SEGMENTOS_DE_LUXO, segmentoDoNivel, TEMPERATURAS_DA_LUZ, type TemperaturaDaLuz, type TipoComodo } from '../../motor/dados/lar';
 import { CenaDoComodo } from '../ilustracao/comodos';
 import { disporComodo } from '../ilustracao/disposicao';
 import { ESTILOS, itemEstilo, lugaresDoItem, NOME_OCASIAO, adequacaoDaRoupa, estiloDominante, nomeDoEstilo } from '../../motor/dados/estilo';
@@ -69,10 +69,10 @@ function Cena({ vida, comodoId, tipo, nome, coisas, largura, rascunho }: { vida:
   // 12.8: o tamanho do cômodo (a escala da cena) e as peças de coleção expostas nele (na parede, no tampo, na vitrine).
   const { area, expostas, objetos } = objetosDaCena(vida, comodoId, tipo, coisas);
   const nomes = [...coisas.map(t => coisa(t.coisaId)?.nome), ...expostas.map(c => c.nome)].filter(Boolean);
-  const cena = <CenaDoComodo tipo={tipo} parede={asp('parede')} piso={asp('piso')} luz={asp('luz').id} rodape={asp('rodape').id} cortina={asp('cortina').id} luzRegulada={regulada} objetos={objetos} area={area} largura={largura} rotulo={`${cap(nome)}${nomes.length ? `: ${nomes.join(', ')}` : ', sem nada seu'}`} />;
+  const cena = <CenaDoComodo ano={anoDe(vida.t)} tipo={tipo} parede={asp('parede')} piso={asp('piso')} luz={asp('luz').id} rodape={asp('rodape').id} cortina={asp('cortina').id} luzRegulada={regulada} objetos={objetos} area={area} largura={largura} rotulo={`${cap(nome)}${nomes.length ? `: ${nomes.join(', ')}` : ', sem nada seu'}`} />;
   if (largura < 300) return cena;
   // O que não coube à vista não é espremido: a tela diz o quê (continua no cômodo, na lista abaixo).
-  const fora = disporComodo(tipo, area, objetos, asp('luz').id).fora.map(id => coisas.find(t => t.id === id)?.coisaId ?? expostas.find(c => c.id === id)?.nome).filter(Boolean).map(x => coisa(x!)?.nome ?? x);
+  const fora = disporComodo(tipo, area, objetos, asp('luz').id, anoDe(vida.t)).fora.map(id => coisas.find(t => t.id === id)?.coisaId ?? expostas.find(c => c.id === id)?.nome).filter(Boolean).map(x => coisa(x!)?.nome ?? x);
   return <>{cena}{fora.length > 0 && <p className="nota pz-fora-da-cena">Não cabe à vista: {fora.join(', ')}.</p>}</>;
 }
 
@@ -253,7 +253,7 @@ function Reforma({ vida, agir, comodoId, aspectos, rascunho, setRascunho, verAtu
   const regulada = { ...(donoDoLar(vida)?.lar?.luzes?.[comodoId] ?? {}), ...rascunho.luz };
   const conta = reformaDoComodo(vida, comodoId, rascunho.acab, Object.keys(rascunho.luz).length ? rascunho.luz : undefined);
   const nada = !conta.itens.length && !conta.luzMuda;
-  const origem = () => setRascunho({ acab: Object.fromEntries(aspectos.filter(a => !(poder === 'superficie' && a === 'piso')).map(a => [a, acabamentoDeOrigem(a, vida.moradia.padrao)])), luz: {} });
+  const origem = () => setRascunho({ acab: Object.fromEntries(aspectos.filter(a => !(poder === 'superficie' && a === 'piso')).map(a => [a, acabamentoDeOrigem(a, vida.moradia.padrao, anoDe(Math.min(vida.t, vida.moradia.tInicio)))])), luz: {} });
   const op = { o: 'reforma' as const, comodo: comodoId, mudancas: Object.fromEntries(conta.itens.map(x => [x.aspecto, x.opcao])), ...(conta.luzMuda ? { luz: rascunho.luz } : {}) };
   return (
     <div className="pz-reforma">
@@ -268,7 +268,8 @@ function Reforma({ vida, agir, comodoId, aspectos, rascunho, setRascunho, verAtu
               <span className="campo__rotulo">{ACABAMENTOS[a].nome} · hoje: {opcoes.find(x => x.id === atual(a))?.nome ?? atual(a)}</span>
               <select value={e} disabled={travado} onChange={ev => mudar(a, ev.target.value)}>
                 {SEGMENTOS_DE_LUXO.map((seg, k) => {
-                  const doSeg = opcoes.filter(x => x.nivel === k + 1);
+                  // VIDA 29: só o que existe na época (o atual fica, mesmo antigo, para se ver o que há).
+                  const doSeg = opcoes.filter(x => x.nivel === k + 1 && (acabamentoNoAno(x, anoDe(vida.t)) || x.id === atual(a)));
                   return doSeg.length ? <optgroup key={seg} label={cap(seg)}>{doSeg.map(x => <option key={x.id} value={x.id}>{cap(x.nome)}</option>)}</optgroup> : null;
                 })}
               </select>
