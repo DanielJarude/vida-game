@@ -1,0 +1,18 @@
+/* VIDA 29.2 · o cartão do tipo de jogador (todas as modalidades, e-sports e automobilismo). */
+.tipo29 { margin: var(--space-3, 12px) 0; padding: 12px 14px; border: 1px solid var(--fio); border-left: 4px solid var(--acao); border-radius: var(--radius-md, 10px); background: var(--superficie); display: flex; flex-direction: column; gap: 8px; }
+.tipo29--marcante { border-left-color: var(--bom); }
+.tipo29--vazio { border-left-color: var(--fio-forte, var(--fio)); }
+.tipo29__kicker { margin: 0; font: 600 11px/1.3 var(--font-sans); letter-spacing: var(--tracking-meta, 0.06em); text-transform: uppercase; color: var(--tinta-3); }
+.tipo29__cabeca { display: flex; gap: 12px; align-items: flex-start; }
+.tipo29__selo { flex: none; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; font: 700 15px/1 var(--font-sans); color: var(--acao-sobre, #fff); background: var(--acao); }
+.tipo29--vazio .tipo29__selo { background: color-mix(in oklab, var(--tinta) 15%, transparent); color: var(--tinta-2); }
+.tipo29__nome { margin: 0; font: 700 18px/1.25 var(--font-display, var(--font-serif)); color: var(--tinta); }
+.tipo29__firmeza { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 99px; font: 600 11px/1.6 var(--font-sans); vertical-align: middle; background: color-mix(in oklab, var(--acao) 14%, transparent); color: var(--tinta-2); }
+.tipo29__sobre, .tipo29__perto { margin: 2px 0 0; font-size: 14px; color: var(--tinta-2); }
+.tipo29__linha { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; }
+.tipo29__rotulo { flex: 0 0 auto; min-width: 150px; font-size: 12px; font-weight: 700; color: var(--tinta-3); }
+.tipo29__chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.tipo29__chips li { padding: 2px 10px; border-radius: 99px; font-size: 13px; color: var(--tinta); background: color-mix(in oklab, var(--tinta) 7%, transparent); }
+.tipo29__chips .tipo29__chip--bom { background: color-mix(in oklab, var(--bom) 16%, transparent); }
+.tipo29__chips .tipo29__chip--ruim { background: color-mix(in oklab, var(--ruim) 16%, transparent); }
+.tipo29__desde { margin: 0; font-size: 12px; color: var(--tinta-3); }

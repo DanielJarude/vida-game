@@ -784,7 +784,7 @@ export function atualizarPerfil28(v: Vida, e: CarreiraEsportiva, perfil: { id: A
     escrever(v, { texto: anterior ? `${onde.charAt(0).toUpperCase() + onde.slice(1)}, a imprensa e o vestiário já não falam de você como ${nomeDoArquetipo(anterior, ge(v)).toLowerCase()}: agora é ${artigo(nome)} ${nome.toLowerCase()} — ${arquetipo(novo.principal)!.sobre.charAt(0).toLowerCase() + arquetipo(novo.principal)!.sobre.slice(1)}` : `${onde.charAt(0).toUpperCase() + onde.slice(1)}, a imprensa passou a falar de você como ${artigo(nome)} ${nome.toLowerCase()}: ${arquetipo(novo.principal)!.sobre.charAt(0).toLowerCase() + arquetipo(novo.principal)!.sobre.slice(1)}`, relevancia: 'biografia', tema: 'trabalho', tom: 'neutro', chave: `perfil28:${novo.principal}:${ano}` });
   }
 }
-const artigo = (nome: string) => (/^(Muralha|Garçonete|Matadora|Marrenta|Capitã|Pontuadora|Reboteira|Armadora|Defensora|Ponteira|Central|Levantadora|Oposta|Líbero defensiva|Agressiva|Sacadora|Estrategista|Jogadora|Sexta|Classificadora|Gestora|Pilota)/.test(nome) ? 'a' : 'o');
+const artigo = (nome: string) => (/^(Muralha|Garçonete|Matadora|Marrenta|Capitã|Pontuadora|Reboteira|Armadora|Defensora|Ponteira|Central|Levantadora|Oposta|Líbero defensiva|Agressiva|Sacadora|Estrategista|Jogadora|Sexta|Classificadora|Gestora|Pilota|Explosiva|Técnica|Trocadora|Contragolpeadora|Veterana|Nadadora|Potência)/.test(nome) ? 'a' : 'o');
 
 /**
  * REWORK 11 · ESP-11.1 — a contribuição de quem joga para o time, em pontos de força da tabela (a mesma escala de

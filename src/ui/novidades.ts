@@ -26,6 +26,19 @@ export interface NotaDeVersao {
 
 export const NOTAS: NotaDeVersao[] = [
   {
+    versao: '29.2',
+    data: '2026-11-20',
+    titulo: 'O tipo de jogador, as equipes de verdade e a rua inteira',
+    novidades: [
+      'O tipo de jogador ganhou um cartão na ficha de todo esporte, do e-sports e do automobilismo: o tipo e o quanto ele está firmado (em afirmação, firme, marcante), o que faz você ser assim, o que ele muda na temporada — o que ajuda e o que atrapalha —, os traços que aparecem às vezes e as trocas ao longo da carreira. Sem tipo ainda, mostra o que está mais perto de virar um.',
+      'Natação, atletismo e lutas têm tipos próprios: velocista de piscina, fundista, nadador técnico; explosivo, fundista de resistência, técnico da prova, potência pura; trocador, especialista de chão, contragolpeador. E o veterano, em todo esporte.',
+      'O e-sports tem as organizações de verdade de cada jogo e de cada época: a elite mundial (Natus Vincere, T1, Sentinels, G2...), as ligas brasileiras (FURIA, LOUD, paiN, MIBR, Imperial, RED Canids...), a segunda divisão e as academias — sem nome repetido, e só as que existiam no ano.',
+      'A vizinhança virou rua: as casas dos dois lados vão até a borda do desenho, cada uma de um modelo, de uma cor, de uma largura e com o seu recuo (coladas na periferia, com quintal e árvore no bairro, afastadas no bairro nobre), e por cima da casa aparecem os telhados da rua de trás.'
+    ],
+    melhorias: [],
+    correcoes: ['Os dois lados da casa não repetem mais a mesma construção, e o prédio alto não aparece colado numa rua de casas.']
+  },
+  {
     versao: '29.1',
     data: '2026-11-20',
     titulo: 'Mais quatro loterias da Caixa',

@@ -480,7 +480,12 @@ export function amostraDaCasa14(e: CenaEntrada): Amostra {
   let cena: Cena & { principal: Bloco };
   try { cena = FORMAS14[e.forma](ctx); } finally { MARGEM = 0; }
   const v = cena.v, b = cena.principal;
-  const ent = e.entorno ? entornoDaCasa(v, cena.largura, 3.6, e.entorno.tipo, e.entorno.semente, e.entorno.lugar) : undefined;
+  // VIDA 29.2: a rua inteira que cabe no quadro (de borda a borda) e a fileira da rua de trás, onde ela ainda aparece
+  // por cima da casa (os telhados de dois andares cabem até o alto do quadro).
+  const limites: [number, number] = [-v.OX / v.S, (W - v.OX) / v.S];
+  const zCabe = ((v.GY - 4) / v.S - 5.8) / KY;
+  const zTras = Math.min(b.z1 + 6, zCabe);
+  const ent = e.entorno ? entornoDaCasa(v, cena.largura, 3.6, e.entorno.tipo, e.entorno.semente, e.entorno.lugar, { limites, ...(zTras > b.z1 + 1.5 ? { zTras } : {}) }) : undefined;
   // Os anexos ficam na faixa nova do lote (à direita da casa); as coisas do quintal, nas faixas livres ao lado da casa.
   const base = cena.largura - anexo;
   const corAnexo = e.fachada ?? pl.cor;

@@ -42,6 +42,7 @@ import { mudarAgora } from '../../sistemas/processos';
 import { JOGOS25, LISTA_JOGOS25, DA_LEITURA25, DA_MAO25, NOME_ATRIBUTO25, type AtributoEsports, type Jogo25, type JogoId } from './jogos25';
 import type { Competicao25, Esports25, JogadorDoCenario29, Proposta25, Temporada25 } from './tipos25';
 import { sortearNome, sortearSobrenome } from '../../dados/nomes';
+import { equipesReaisDoDegrau29 } from './equipesReais29';
 
 export type { Esports25 };
 export const OCUPACAO_ESPORTS = 'jogador_esports';
@@ -63,19 +64,43 @@ export function nomeDeEquipe25(jogo: JogoId, nivel: number, k: number, semente: 
  * degraus). A proposta, a peneira, o mercado e a tabela usam esta lista — a equipe que propõe é a mesma que aparece no
  * contrato, no emprego e na História.
  */
-export function equipesDoCenario29(jogo: JogoId, nivel: number, semente: string): string[] {
-  const usadas = new Set<string>();
-  const out: string[][] = [];
-  for (let n = 5; n >= 2; n--) {
-    const lista: string[] = [];
-    for (let k = 0; lista.length < 8 && k < 60; k++) { const nome = nomeDeEquipe25(jogo, n, k, semente); if (!usadas.has(nome)) { usadas.add(nome); lista.push(nome); } }
-    out[n] = lista;
+export function equipesDoCenario29(jogo: JogoId, nivel: number, semente: string, ano = 2026, br = true): string[] {
+  const chave = `${jogo}|${semente}|${ano}|${br}`;
+  let por = cacheCenario29.get(chave);
+  if (!por) {
+    // VIDA 29.2: as organizações de verdade do jogo, do ano e da região (`equipesReais29`), de cima para baixo, sem repetir
+    // entre degraus; o degrau curto completa com as academias do de cima; só no fim (o jogo recém-lançado, a década antiga)
+    // entra um nome inventado — e nenhum repete a raiz de outro.
+    const usadas = new Set<string>();
+    const raizes = new Set<string>();
+    por = [];
+    for (let n = 5; n >= 2; n--) {
+      const r = rngDe(semente, 'esp29_cenario', jogo, n, ano);
+      const reais = equipesReaisDoDegrau29(jogo, n, ano, br).filter(x => !usadas.has(x));
+      for (let k = reais.length - 1; k > 0; k--) { const m = Math.floor(r.next() * (k + 1)); [reais[k], reais[m]] = [reais[m], reais[k]]; }
+      const lista = reais.slice(0, 10);
+      const acima = por[n + 1] ?? [];
+      for (const x of acima) { if (lista.length >= 6) break; const a = `${x.replace(/ Academy$/, '')} Academy`; if (!usadas.has(a) && !lista.includes(a) && !/Academy$/.test(x)) lista.push(a); }
+      for (let k = 0; lista.length < 6 && k < 80; k++) {
+        const nome = nomeDeEquipe25(jogo, n, k, semente);
+        const raiz = nome.split(' ')[0];
+        if (raizes.has(raiz) || usadas.has(nome) || lista.includes(nome)) continue;
+        raizes.add(raiz); lista.push(nome);
+      }
+      lista.forEach(x => usadas.add(x));
+      por[n] = lista;
+    }
+    if (cacheCenario29.size > 64) cacheCenario29.clear();
+    cacheCenario29.set(chave, por);
   }
-  return out[clamp(nivel, 2, 5)] ?? [];
+  return por[clamp(nivel, 2, 5)] ?? [];
 }
+const cacheCenario29 = new Map<string, string[][]>();
 /** Uma equipe do degrau que não é a sua (o índice vem do sorteio de sempre: a sequência da vida não muda). */
+/** O cenário da vida agora (o ano e a região de onde mora). */
+const cenarioDaVida29 = (v: Vida, jogo: JogoId, nivel: number) => equipesDoCenario29(jogo, nivel, v.id, anoDe(v.t), paisDaCidade(v.moradia.municipioId) === 'BR');
 function equipeDoDegrau29(v: Vida, e: Esports25, nivel: number, idx: number): string {
-  const lista = equipesDoCenario29(e.jogo, Math.max(2, nivel), v.id).filter(x => x !== e.equipe?.nome);
+  const lista = cenarioDaVida29(v, e.jogo, Math.max(2, nivel)).filter(x => x !== e.equipe?.nome);
   return lista.length ? lista[idx % lista.length] : nomeDeEquipe25(e.jogo, nivel, idx, v.id);
 }
 
@@ -143,7 +168,7 @@ function mercadoEsports29(v: Vida, e: Esports25, ano: number): void {
     }
   }
   // As manchetes do degrau (as equipes de verdade da lista do cenário).
-  const lista = equipesDoCenario29(e.jogo, Math.max(2, e.nivel), v.id).filter(x => x !== e.equipe?.nome);
+  const lista = cenarioDaVida29(v, e.jogo, Math.max(2, e.nivel)).filter(x => x !== e.equipe?.nome);
   for (let k = 0; k < 3 && lista.length >= 2; k++) {
     const de = r.pick(lista), para = r.pick(lista.filter(x => x !== de));
     const x = jogadorDoCenario29(v, r, forcaDoNivel(e.jogo, e.nivel), r.pick(j.funcoes).id, j.auge - 2 + r.next() * 6);

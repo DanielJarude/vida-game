@@ -180,37 +180,86 @@ function vizinhoRural(v: Vista, a: number, b: number, c: Ctx27, k: string): Peca
  * Os vizinhos dos dois lados, pelo lugar. `lados` são as faixas visíveis (x de cada divisa); devolve as peças do fundo.
  * Estável: o mesmo endereço tem os mesmos vizinhos.
  */
-export function vizinhosDoLugar27(v: Vista, lados: [number, number][], tipo: TipoDeEntorno, ctx: { pais?: string; padrao?: number; litoral?: boolean }, sem: (k: string) => number): { fundo: Peca[]; ids: string[] } {
+export function vizinhosDoLugar27(v: Vista, lados: [number, number][], tipo: TipoDeEntorno, ctx: { pais?: string; padrao?: number; litoral?: boolean }, sem: (k: string) => number, extra?: { limites?: [number, number]; zTras?: number }): { fundo: Peca[]; ids: string[] } {
   const c: Ctx27 = { regiao: regiaoDoPais27(ctx.pais), padrao: ctx.padrao ?? 2, litoral: !!ctx.litoral, semente: sem };
   const fundo: Peca[] = [], ids: string[] = [];
   if (tipo === 'rural') {
     for (const [k, [a, b]] of lados.entries()) { const p = vizinhoRural(v, a, b, c, `rural${k}`); fundo.push(...p); ids.push(String((p[0] as { attrs?: Record<string, string> }).attrs?.['data-vizinho'] ?? 'rural')); }
     return { fundo, ids };
   }
-  for (const [k, [a, b]] of lados.entries()) {
-    const l = b - a;
-    // VIDA 28: numa vida histórica, só os tipos de casa que já existiam na década (sem laje com caixa-d'água em 1915).
-    const daEpoca = (m: Modelo27) => (m.desde ?? 0) <= (decadaDaFigura() ?? 9999);
-    const ok = MODELOS27.filter(m => daEpoca(m) && (m.regioes === 'todas' || m.regioes.includes(c.regiao)) && m.entornos.includes(tipo) && c.padrao >= m.padrao[0] - 1 && c.padrao <= m.padrao[1] + 1 && l >= m.min * 0.8);
-    const lista = ok.length ? ok : MODELOS27.filter(m => daEpoca(m) && m.entornos.includes(tipo)).length ? MODELOS27.filter(m => daEpoca(m) && m.entornos.includes(tipo)) : MODELOS27.filter(m => m.entornos.includes(tipo));
-    // Os dois lados não repetem o mesmo modelo quando há alternativa.
-    const livres = lista.filter(m => !ids.includes(m.id));
+  // VIDA 28: numa vida histórica, só os tipos de casa que já existiam na década (sem laje com caixa-d'água em 1915).
+  const daEpoca = (m: Modelo27) => (m.desde ?? 0) <= (decadaDaFigura() ?? 9999);
+  const doLugar = MODELOS27.filter(m => daEpoca(m) && (m.regioes === 'todas' || m.regioes.includes(c.regiao)) && m.entornos.includes(tipo) && c.padrao >= m.padrao[0] - 1 && c.padrao <= m.padrao[1] + 1);
+  const base = doLugar.length ? doLugar : MODELOS27.filter(m => daEpoca(m) && m.entornos.includes(tipo)).length ? MODELOS27.filter(m => daEpoca(m) && m.entornos.includes(tipo)) : MODELOS27.filter(m => m.entornos.includes(tipo));
+  /**
+   * VIDA 29.2 · A RUA DE VERDADE. Antes: uma casa de cada lado (muitas vezes o mesmo modelo dos dois lados) e nada atrás —
+   * uma "vizinhança de duas casas". Agora cada lado é preenchido até a borda do quadro com várias construções, de
+   * larguras, modelos, cores e recuos diferentes (o mesmo modelo nunca fica colado nele mesmo), com o espaçamento do lugar
+   * (colado na periferia, com quintal e árvore no bairro, afastado no nobre); e, atrás do lote, a fileira da rua de trás,
+   * de que se veem os telhados por cima da casa. Tudo estável pelo endereço.
+   */
+  const passo = tipo === 'periferia' ? [4.5, 7, 0, 0.3] : tipo === 'centro' ? [7, 12, 0, 0.4] : tipo === 'nobre' || tipo === 'condominio' ? [9, 12, 1.6, 3.2] : tipo === 'pequena' ? [6, 8.5, 1.5, 4] : [5.5, 9, 0.4, 1.4];
+  const usados: string[] = [];
+  // O prédio é do centro: num bairro de casas, no máximo um, e só lá atrás (não encosta no lote).
+  let prediosFora = 0;
+  const escolher = (chave: string, largura: number, tras: boolean): Modelo27 => {
+    const semPredio = tipo !== 'centro' && (!tras || prediosFora >= 1);
+    const cabem = base.filter(m => largura >= m.min * 0.8 && !(semPredio && m.id.startsWith('predio')));
+    const lista = cabem.length ? cabem : base;
+    const recentes = usados.slice(-2);
+    const livres = lista.filter(m => !recentes.includes(m.id));
     const de = livres.length ? livres : lista;
-    const m = de[Math.floor(sem(`m${k}`) * de.length) % de.length];
-    const largo = Math.min(l - 0.4, tipo === 'periferia' ? l * 0.6 : tipo === 'nobre' || tipo === 'condominio' ? 10 : 9);
-    const x0 = k === 0 ? b - largo - 0.2 : a + 0.2;
-    const z0 = tipo === 'nobre' || tipo === 'condominio' ? 7 : tipo === 'centro' ? 4.2 : tipo === 'pequena' ? 5 : 4.4;
-    fundo.push(...m.desenhar(v, x0, largo, z0, c, `${m.id}${k}`));
-    ids.push(m.id);
-    // A periferia é colada: um segundo vizinho menor no resto da divisa.
-    if (tipo === 'periferia' && l - largo > 3.5) {
-      const m2 = de.find(x => x.id !== m.id && x.min <= l - largo) ?? m;
-      fundo.push(...m2.desenhar(v, k === 0 ? a + 0.1 : x0 + largo + 0.2, l - largo - 0.5, 4, c, `${m2.id}${k}b`));
+    const m = de[Math.floor(sem(chave) * de.length) % de.length];
+    usados.push(m.id);
+    if (m.id.startsWith('predio') && tipo !== 'centro') prediosFora++;
+    return m;
+  };
+  const arvoreAqui = (x: number, z: number, k: string) => (c.litoral && sem(`coq${k}`) > 0.45 ? palmeira(v, x, z, 6.5, sem(`lado${k}`) > 0.5 ? 1 : -1) : arvore(v, x, z, { alt: 5 + sem(`alt${k}`) * 2, copa: ['#4f7f42', '#5f8f4e', '#3f6534'][Math.floor(sem(`copa${k}`) * 3)] }));
+  const zBase = tipo === 'nobre' || tipo === 'condominio' ? 7 : tipo === 'centro' ? 4.2 : tipo === 'pequena' ? 5 : 4.4;
+  // Uma fileira de construções entre x0 e x1 (na profundidade z): da casa para fora (`sentido` −1, para a esquerda; +1, para a direita).
+  const fileira = (de: number, ate: number, z: number, sentido: 1 | -1, chave: string, max = 8, tras = false) => {
+    const alvo: Peca[] = [];
+    let x = de;
+    for (let n = 0; n < max; n++) {
+      const resta = sentido < 0 ? x - ate : ate - x;
+      if (resta < 2.5) break;
+      const largura = Math.min(resta + 3, passo[0] + sem(`${chave}w${n}`) * (passo[1] - passo[0]));
+      const m = escolher(`${chave}m${n}`, largura, tras);
+      const x0 = sentido < 0 ? x - largura : x;
+      const recuo = tipo === 'periferia' || tipo === 'centro' ? 0 : (sem(`${chave}r${n}`) - 0.5) * 1.4;
+      alvo.push(...m.desenhar(v, x0, largura, z + recuo, c, `${m.id}${chave}${n}`));
+      ids.push(m.id);
+      // Lá atrás, os quintais aparecem mais (vão maior, mais árvore): a rua de trás não vira um paredão.
+      const vao = passo[2] + (tras ? 1 : 0) + sem(`${chave}g${n}`) * (passo[3] - passo[2]);
+      if (vao >= 1.2 && sem(`${chave}t${n}`) > (tras ? 0.2 : 0.35)) alvo.push(arvoreAqui(sentido < 0 ? x0 - vao / 2 : x0 + largura + vao / 2, z - 1.2, `${chave}${n}`));
+      x = sentido < 0 ? x0 - vao : x0 + largura + vao;
     }
-    // Os bairros com quintal têm árvore; o litoral, coqueiro.
-    if (tipo === 'nobre' || tipo === 'condominio' || (tipo === 'bairro' && sem(`arv${k}`) > 0.5)) fundo.push(c.litoral && sem(`coq${k}`) > 0.4 ? palmeira(v, k === 0 ? a + 0.8 : b - 0.8, 2.6, 6.5, k === 0 ? 1 : -1) : arvore(v, k === 0 ? a + 0.8 : b - 0.8, 2.6, { alt: 6, copa: '#4f7f42' }));
+    // A rua de trás, mais longe: mais clara (o ar entre ela e a casa).
+    fundo.push(...(tras ? desbotar(alvo, 0.28) : alvo));
+  };
+  // A rua de trás primeiro (é a mais longe: fica por baixo do resto).
+  if (extra?.zTras !== undefined && extra.limites) {
+    const desloca = extra.zTras * 0.38;
+    const [la, lb] = [extra.limites[0] - desloca - 2, extra.limites[1] - desloca + 2];
+    fileira(la, lb, extra.zTras, 1, 'tras', 12, true);
   }
+  const [esq, dir] = lados;
+  const limites = extra?.limites ?? [esq[0], dir[1]];
+  fileira(esq[1] - 0.2, Math.min(esq[0], limites[0] - 1), zBase, -1, 'esq');
+  fileira(dir[0] + 0.2, Math.max(dir[1], limites[1] + 1), zBase, 1, 'dir');
+  // O bairro com quintal tem árvore logo na divisa; o litoral, coqueiro.
+  if (tipo === 'nobre' || tipo === 'condominio' || (tipo === 'bairro' && sem('arv0') > 0.5)) fundo.push(arvoreAqui(esq[1] - 0.6, 2.6, 'div0'));
   return { fundo, ids };
+}
+
+/** Clareia as cores de um conjunto de peças (o que está longe perde contraste). */
+function desbotar(pecas: Peca[], k: number): Peca[] {
+  return pecas.map(p => {
+    const q = { ...p } as Peca & { cor?: string; pecas?: Peca[] };
+    if (typeof q.cor === 'string' && q.cor.startsWith('#')) q.cor = clarear(q.cor, k);
+    if (Array.isArray(q.pecas)) q.pecas = desbotar(q.pecas, k);
+    return q as Peca;
+  });
 }
 
 /** Os modelos que podem aparecer num lugar (para os testes e para a auditoria de variedade). */

@@ -113,13 +113,13 @@ export interface Entorno { fundo: Peca[]; rua: Peca[] }
  * Os vizinhos (nas divisas, de x < 0 e x > largura, atrás da linha da casa) e a rua (postes, árvores de calçada). `m` é a
  * margem visível de cada lado (em metros). `semente` varia as casas vizinhas entre endereços (sempre a mesma para o mesmo).
  */
-export function entornoDaCasa(v: Vista, largura: number, m: number, tipo: TipoDeEntorno, semente: string, lugar?: { pais?: string; padrao?: number; litoral?: boolean }): Entorno {
+export function entornoDaCasa(v: Vista, largura: number, m: number, tipo: TipoDeEntorno, semente: string, lugar?: { pais?: string; padrao?: number; litoral?: boolean }, extra?: { limites?: [number, number]; zTras?: number }): Entorno {
   const fundo: Peca[] = [], rua: Peca[] = [];
   const s = (k: string) => h01(`${semente}|${k}`);
   const lados: [number, number][] = [[-m - 0.4, -0.4], [largura + 0.4, largura + m + 0.4]];
   // VIDA 27 · §7: com o lugar (país, padrão, litoral), os vizinhos vêm do catálogo do lugar (`vizinhanca27`).
   if (lugar) {
-    fundo.push(...vizinhosDoLugar27(v, lados, tipo, lugar, s).fundo);
+    fundo.push(...vizinhosDoLugar27(v, lados, tipo, lugar, s, extra).fundo);
     if (tipo === 'rural') return { fundo, rua };
   } else if (tipo === 'rural') {
     for (const [a, b] of lados) {
