@@ -1143,6 +1143,9 @@ export function executar(vida: Vida, a: Acao): Retorno {
     conferir(v, ...linhaDoExtrato(a));
     // VIDA 15: o ano anda com o que você faz — chega mais gente; um lugar pode pôr alguém conhecido no caminho.
     depoisDaAcao15(v, a as unknown as { tipo: string; [k: string]: unknown });
+    // VIDA 30 · §3: o convite aceito no celular vira o evento EM PESSOA (com uma figura do meio).
+    const c30 = v.fama30?.cena;
+    if (c30 && c30.t === v.t && c30.tipo === 'evento' && !v.momento) { const d30 = conteudoPorId('fama30_evento'); const ctx30 = d30 && d30.tipo === 'decisao' ? preparar(d30, v, r) : null; if (d30 && d30.tipo === 'decisao' && ctx30) abrirDecisao(v, d30, ctx30); else delete v.fama30!.cena; }
     // VIDA 27 · §13: o encontro por acaso no lugar da ação é uma cena presencial, aberta agora (não uma notificação).
     const encontro = abrirEncontro27(v, r, a.tipo);
     if (encontro) { out.resultado = out.resultado ? `${out.resultado} ${encontro}` : encontro; resultado = out.resultado; }

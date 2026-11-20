@@ -72,9 +72,9 @@ export const FALAS17: Record<string, Falas17> = {
   /* ---------------- Brincadeira: a amizade que não precisa de motivo. */
   brincadeira_meme: {
     expansivo: ['"OLHA ESSE VÍDEO E ME DIZ QUE NÃO É VOCÊ 😂😂😂"', '"Achei a sua foto de perfil ideal: um gato caindo do sofá. Igualzinho."', '"Mandei esse meme pra você e pra mais ninguém, porque só você vai entender."'],
-    contido: ['"Isso aqui é a sua cara."', '"Vi isso e lembrei de você. 😄"'],
-    carinhoso: ['"Vi uma coisa hoje que me fez rir e pensei: preciso mandar pra {eu}!"'],
-    ironico: ['"Encontrei a prova definitiva de que você estava errad{o} naquela discussão de 2 anos atrás. Segue anexo."', '"Teste de amizade: se você não rir disso, a gente termina."']
+    contido: ['"Isso aqui é a sua cara."', '"Vi isso e lembrei de você. 😄"', '"Lembra disso? 😂"', '"Não comenta nada. Só olha."'],
+    carinhoso: ['"Vi uma coisa hoje que me fez rir e pensei: preciso mandar pra {eu}!"', '"Separei esse vídeo pra você ver no fim do dia, depois de tudo. Pra rir um pouco."', '"Achei um cachorro igualzinho ao seu jeito de acordar. Te mandei com amor."', '"Fiquei rindo sozinh{po} no ônibus por causa disso. Precisava dividir com você."'],
+    ironico: ['"Encontrei a prova definitiva de que você estava errad{o} naquela discussão de 2 anos atrás. Segue anexo."', '"Teste de amizade: se você não rir disso, a gente termina."', '"Este meme foi escrito por alguém que te conhece. Não fui eu. Juro."', '"Documentário sobre você, versão de 30 segundos. Segue o link."']
   },
   // VIDA 21: {marco} é uma oração na voz de quem manda ("você ligou para comemorar…", "a gente saiu junto…").
   brincadeira_lembranca: {
@@ -229,6 +229,38 @@ export const FALAS17: Record<string, Falas17> = {
     contido: ['"Levaram o crédito pelo nosso trabalho. Vai deixar passar?"'],
     carinhoso: ['"Achei injusto o que fizeram com você na reunião. Quer conversar?"'],
     ironico: ['"Reunião de hoje: nossa ideia, a cara de outra pessoa. Que bonito."']
+  },
+
+  /* ---------------- VIDA 30 · §2.4: a parceria preocupada, a família que comenta uma decisão, a turma de estudo. */
+  parceiro_preocupado: {
+    expansivo: ['"Amor, você anda tão longe… Tá tudo bem MESMO? Fala comigo, por favor!"', '"Te vi chegar exaust{o} de novo ontem. Vamos sumir um fim de semana, só nós dois?"'],
+    contido: ['"Você tá bem? Tô preocupad{po}."', '"Percebi que você anda sem dormir direito. Quer conversar hoje à noite?"'],
+    carinhoso: ['"Meu bem, só queria dizer que tô aqui. Você não precisa dar conta de tudo sozinh{o}."', '"Fiz aquele chá que você gosta. Quando chegar, a gente conversa — sem pressa."'],
+    ironico: ['"Pergunta séria disfarçada de piada: você ainda mora aqui ou só dorme? Tô com saudade."', '"Seu celular sabe mais da sua semana do que eu. Me conta como você tá?"']
+  },
+  familia_apoio: {
+    expansivo: ['"Fiquei sabendo da novidade! Que orgulho, {eu}! Conta TUDO!"', '"Já contei pra família inteira, desculpa! Tô feliz demais por você!"'],
+    contido: ['"Soube da sua decisão. Achei certa. Conta com a gente."', '"Boa escolha. Se precisar de alguma coisa, avisa."'],
+    carinhoso: ['"Meu coração ficou quentinho quando soube. Você sempre soube o que quer. Tô do seu lado."', '"Que alegria, {eu}. Liga quando puder, quero ouvir da sua boca."'],
+    ironico: ['"Então você resolveu crescer de vez, hein? Brincadeira — gostei muito."', '"Quem diria. A pessoa que perdia o ônibus todo dia agora decide a vida assim. Parabéns, de verdade."']
+  },
+  familia_receio: {
+    expansivo: ['"{eu}, me explica direito essa história! Fiquei preocupad{po} desde que soube!"', '"Você pensou bem nisso? Não dormi direito pensando!"'],
+    contido: ['"Soube da sua decisão. Tenho minhas dúvidas. Podemos conversar?"', '"Não sei se concordo, mas a vida é sua. Só pensa bem."'],
+    carinhoso: ['"Não quero me meter, mas me preocupo. Promete que pensou em tudo?"', '"Você sabe que eu torço por você. Só fiquei com o coração apertado com essa notícia."'],
+    ironico: ['"Interessante a sua decisão. Lembra da última vez que você teve uma ideia assim?"', '"Tô tentando achar a lógica. Me ajuda?"']
+  },
+  estudo_grupo: {
+    expansivo: ['"A prova é sexta e eu NÃO sei nada! Estuda comigo amanhã? Levo os salgadinhos!"', '"Formamos o grupo do trabalho! Só falta você aceitar ser o cérebro da equipe 😅"'],
+    contido: ['"Vamos estudar juntos pra prova? Biblioteca, amanhã, depois da aula."', '"Fiquei no seu grupo do trabalho. Dividimos as partes?"'],
+    carinhoso: ['"Sei que essa matéria tá pesada pra você também. Vamos estudar juntos? A gente se ajuda."', '"Fiz um resumo e lembrei de você. Quer revisar comigo?"'],
+    ironico: ['"Proposta indecente: você explica a matéria, eu pago o café. Fechado?"', '"Nosso professor acha que a gente tem a semana livre. Estudamos juntos pra sobreviver?"']
+  },
+  estudo_festa: {
+    expansivo: ['"Festa da turma sábado!!! Você vai, né? Sem desculpa!"', '"Vai ter churrasco da sala no fim da prova! Confirma que eu já coloquei seu nome!"'],
+    contido: ['"Tem festa da turma no sábado. Vai?"', '"O pessoal vai comemorar o fim do semestre. Te espero lá?"'],
+    carinhoso: ['"A turma vai se reunir no sábado e sentiria sua falta. Vem com a gente?"'],
+    ironico: ['"Festa da turma: oportunidade única de ver o professor dançando. Não pode faltar."']
   },
 
   /* ---------------- Família. */

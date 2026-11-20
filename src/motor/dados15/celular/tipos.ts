@@ -112,4 +112,6 @@ export interface Celular15 {
   arquivo16?: Msg15[];
   /** VIDA 17: os fios de conversa que podem voltar (a promessa, o apoio, o favor, a mágoa, a paquera; no máximo 40). */
   fios17?: import('../../v17/celular/mensagens17').Fio17[];
+  /** VIDA 30 · §2.1: as chaves curtas do que já foi dito nesta vida (a memória que evita a mesma frase; no máximo 240). */
+  ditos30?: string[];
 }

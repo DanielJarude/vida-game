@@ -185,6 +185,9 @@ export default defineConfig({
           // VIDA 25: idem (motor/v25/<frente> → motor25-<frente>): os e-sports.
           const v25 = /[\\/]src[\\/]motor[\\/]v25[\\/]([a-z0-9]+)[\\/]/.exec(id);
           if (v25) return `motor25-${v25[1]}`;
+          // VIDA 30: idem (motor/v30/<frente> → motor30-<frente>): o meio famoso.
+          const v30 = /[\\/]src[\\/]motor[\\/]v30[\\/]([a-z0-9]+)[\\/]/.exec(id);
+          if (v30) return `motor30-${v30[1]}`;
           // VIDA 27: idem (motor/v27/<frente> → motor27-<frente>): a saúde mental.
           const v27 = /[\\/]src[\\/]motor[\\/]v27[\\/]([a-z0-9]+)[\\/]/.exec(id);
           if (v27) return `motor27-${v27[1]}`;

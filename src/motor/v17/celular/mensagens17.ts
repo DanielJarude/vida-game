@@ -29,6 +29,8 @@ import { vereditoDePagar } from '../../sistemas/dinheiro';
 import { flex } from '../../texto';
 import { anoDe } from '../../tempo';
 import { FALAS17, RESPOSTAS17, type Tom17 } from '../../dados17/celular/catalogo17';
+import { ambienteDoTrabalho30, FALAS_TRABALHO30, QUEM_MANDA30, type Ambiente30 } from '../../dados17/celular/ambientes30';
+import { ocupacaoOuNula } from '../../dados/ocupacoes';
 import type { Msg15, TipoMsg15 } from '../../dados15/celular/tipos';
 import type { Prioridade17 } from '../../sistemas/cotaDeMensagens';
 import { falaDaResposta21, falaDaSituacao21, lembrancaNatural, sabeDoFeito, trabalhaHoje } from '../../v21/celular/conversas21';
@@ -80,12 +82,58 @@ function fala(sit: string, tom: Tom17, r: Rng, p: Pessoa | undefined, v: Vida, e
   // VIDA 21: onde quem manda importa mais do que o temperamento (o aniversário da mãe ≠ o da irmã de 10 anos).
   const propria = falaDaSituacao21(v, r, sit, p);
   if (propria) return propria;
+  // VIDA 30 · §2.3: o trabalho no ambiente de quem recebe (a obra, o clube, o quartel...), não sempre o escritório.
+  const amb = FALAS_TRABALHO30[sit as keyof typeof FALAS_TRABALHO30] ? ambienteDe30(v) : undefined;
   const f = FALAS17[sit];
-  const lista = f[tom].length ? f[tom] : f.contido;
-  let s = r.pick(lista);
+  const lista = amb ? FALAS_TRABALHO30[sit as keyof typeof FALAS_TRABALHO30][amb] : f[tom].length ? f[tom] : f.contido;
+  // VIDA 30 · §2.1: o que já foi dito nesta vida não volta igual enquanto houver outra fala (antes, 26% das mensagens
+  // repetiam um texto já recebido). Sem outra, a menos usada.
+  // (Sem fala nova no jeito da pessoa, vale outra do mesmo assunto em outro tom antes de repetir.)
+  let s = escolherSemRepetir30(v, r, `${sit}`, lista, amb ? undefined : Object.values(f).flat());
+  guardarDito30(v, s);
   s = s.replace(/\{po\}/g, p ? oP(p) : 'o').replace(/\{o\}/g, flex(v.eu.genero, 'o', 'a', 'e')).replace(/\{eu\}/g, v.eu.nome).replace(/\{idade\}/g, String(idade(v)));
   for (const [k, val] of Object.entries(extra)) s = s.split(`{${k}}`).join(val);
   return s;
+}
+
+/** VIDA 30: o ambiente do trabalho de agora (ou undefined). */
+export function ambienteDe30(v: Vida): Ambiente30 | undefined {
+  const e = v.trabalho.atual;
+  const oc = e ? ocupacaoOuNula(e.ocupacaoId) : undefined;
+  return oc ? ambienteDoTrabalho30(oc) : undefined;
+}
+
+/** VIDA 30 · §2.1: a chave curta de um texto (sem nomes nem números) — o que a memória do aparelho guarda. */
+export function chaveDoDito30(texto: string): string {
+  const n = texto.replace(/\{[a-z]+\}/g, '').replace(/[A-ZÁÉÍÓÚÂÊÔ][a-záéíóúãõçâêô]+/g, '').replace(/\d+/g, '').replace(/[^a-záéíóúãõçâêô]/gi, '').slice(0, 60);
+  let h = 0;
+  for (let k = 0; k < n.length; k++) h = (h * 31 + n.charCodeAt(k)) | 0;
+  return (h >>> 0).toString(36);
+}
+/** Já foi dito nesta vida? */
+export function jaDito30(v: Vida, texto: string): boolean {
+  return (v.celular15?.ditos30 ?? []).includes(chaveDoDito30(texto));
+}
+/** Guarda o que foi dito (no máximo 240 chaves; as mais antigas saem). */
+export function guardarDito30(v: Vida, texto: string): void {
+  const c = v.celular15;
+  if (!c) return;
+  const k = chaveDoDito30(texto);
+  const l = (c.ditos30 ??= []);
+  const i = l.indexOf(k);
+  if (i >= 0) l.splice(i, 1);
+  l.push(k);
+  if (l.length > 240) l.splice(0, l.length - 240);
+}
+/** Escolhe da lista uma fala ainda não dita (se todas já foram, a mais antiga na memória). */
+function escolherSemRepetir30(v: Vida, r: Rng, _sit: string, lista: string[], reserva?: string[]): string {
+  const ditos = v.celular15?.ditos30 ?? [];
+  const novos = lista.filter(x => !ditos.includes(chaveDoDito30(x)));
+  if (novos.length) return r.pick(novos);
+  const outros = (reserva ?? []).filter(x => !ditos.includes(chaveDoDito30(x)));
+  if (outros.length) return r.pick(outros);
+  const ordem = (x: string) => ditos.indexOf(chaveDoDito30(x));
+  return [...lista].sort((a, b) => ordem(a) - ordem(b))[0] ?? r.pick(lista);
 }
 
 /** Uma lembrança real dos dois (o texto do marco, terminado em ponto). */
@@ -115,6 +163,26 @@ function feitoRecente(v: Vida): { id: string; texto: string; tema: string } | un
   return undefined;
 }
 
+/** VIDA 30: uma decisão SUA do último ano (escolha registrada na biografia), que a família comentaria. */
+function decisaoRecente30(v: Vida): { id: string; texto: string; tema: string; risco: number } | undefined {
+  for (let i = v.biografia.length - 1; i >= 0; i--) {
+    const e = v.biografia[i];
+    if (v.t - e.t > 12) break;
+    if (!e.escolha || (e.relevancia !== 'marco' && e.relevancia !== 'biografia')) continue;
+    if (!['trabalho', 'lugar', 'casa', 'amor', 'estudo', 'dinheiro', 'escola'].includes(e.tema)) continue;
+    if (v.fatos[`cel30fam_${e.id}`] !== undefined) continue;
+    // O risco que a família enxerga: largar, mudar para longe, casar cedo, dívida grande, trocar o certo pelo incerto.
+    const risco = /larg|demiss|tranc|abandon|pediu as contas|desist/i.test(e.texto) ? 0.7 : e.tema === 'lugar' ? 0.55 : /financ|empréstim|dívida/i.test(e.texto) ? 0.5 : e.tema === 'amor' && idade(v) < 22 ? 0.5 : /abriu|negócio|por conta/i.test(e.texto) ? 0.45 : 0.15;
+    return { id: e.id, texto: /[.!?]$/.test(e.texto) ? e.texto : `${e.texto}.`, tema: e.tema, risco };
+  }
+  return undefined;
+}
+/** A chance de a pessoa se preocupar (em vez de apoiar): o risco da decisão e o jeito de quem fala. */
+function receioDaFamilia30(p: Pessoa, d: { risco: number }): number {
+  const t = p.temperamento;
+  return clamp(Math.round((d.risco + Math.max(0, -t.estabilidade) * 0.3 - Math.max(0, t.abertura ?? 0) * 0.25) * 100), 5, 90) / 100;
+}
+
 /* ------------------------------------------------------------------ Os candidatos */
 
 export interface Candidato17 { tipo: TipoMsg15; peso: number; p?: Pessoa; prioridade: Prioridade17; montar: (r: Rng) => Omit<Msg15, 'id' | 't' | 'tipo' | 'onda'> }
@@ -126,6 +194,7 @@ export function candidatos17(v: Vida, excluir: Set<string>, fama: number): Candi
   const out: Candidato17[] = [];
   const par = parceiro(v);
   const feito = eu >= 12 ? feitoRecente(v) : undefined;
+  const decisao30 = eu >= 16 ? decisaoRecente30(v) : undefined;
   const aniv = !RECENTE(v, `cel17_aniv`, 12) && eu >= 6;
 
   // Os fios que voltam (a continuidade tem prioridade: é a vida da pessoa respondendo à sua).
@@ -230,6 +299,22 @@ export function candidatos17(v: Vida, excluir: Set<string>, fama: number): Candi
     if (v.trabalho.atual && vin.convivio.includes('trabalho') && eu >= 18 && !RECENTE(v, 'cel17_trab', 18)) {
       out.push({ tipo: 'trabalho17', p, prioridade: 'normal', peso: 0.45, montar: rr => { v.fatos['cel17_trab'] = v.t; const sit = rr.pick(['trabalho_bastidor', 'trabalho_parceria', 'trabalho_credito']); return { de: p.id, sit17: sit, texto: fala(sit, tom, rr, p, v), assunto: sit }; } });
     }
+    // VIDA 30 · §2.4: a parceria preocupada — com motivo real (o estresse alto, a tristeza, a doença que pesa).
+    const doenca30 = v.corpo.condicoes.some(k => k.gravidade >= 2 && k.diagnosticada !== false);
+    if (papel === 'parceiro' && eu >= 18 && (v.mente.estresse >= 68 || v.mente.felicidade <= 30 || doenca30) && !RECENTE(v, 'cel30_preoc', 18)) {
+      out.push({ tipo: 'desabafo', p, prioridade: 'alta', peso: 0.9 + v.mente.estresse / 200, montar: rr => { v.fatos['cel30_preoc'] = v.t; return { de: p.id, sit17: 'parceiro_preocupado', texto: fala('parceiro_preocupado', tom, rr, p, v), assunto: doenca30 ? 'saude' : v.mente.estresse >= 68 ? 'estresse' : 'tristeza' }; } });
+    }
+    // VIDA 30 · §5.2: a família comenta uma decisão SUA (lida da biografia do ano): apoia ou se preocupa, pelo jeito da
+    // pessoa e pelo que foi decidido — nada forçado.
+    if (decisao30 && (papel === 'genitor' || papel === 'avo' || (papel === 'irmao' && ip >= 16)) && !moraJunto(vin) && ip >= 12 && v.fatos[`cel30fam_${decisao30.id}`] === undefined) {
+      const receio = receioDaFamilia30(p, decisao30);
+      out.push({ tipo: 'familia17', p, prioridade: 'normal', peso: 0.8, montar: rr => { v.fatos[`cel30fam_${decisao30.id}`] = v.t; const sit = rr.next() < receio ? 'familia_receio' : 'familia_apoio'; return { de: p.id, sit17: sit, texto: fala(sit, tom, rr, p, v), cartao: decisao30.texto, assunto: decisao30.tema }; } });
+    }
+    // VIDA 30 · §2.2: a turma de estudo (a prova, o trabalho em grupo, a festa da sala) — de quem estuda com você.
+    const estudando30 = (!!v.educacao.basica && eu >= 12) || (!!v.educacao.matricula && !v.educacao.matricula.trancado);
+    if (estudando30 && eu <= 30 && Math.abs(ip - eu) <= 4 && (papel === 'colega' || papel === 'amigo' || papel === 'amigo_proximo') && (vin.origem === 'escola' || vin.origem === 'faculdade' || !!vin.formacao || vin.convivio.includes('escola')) && !RECENTE(v, 'cel30_estudo', 10)) {
+      out.push({ tipo: 'convite', p, prioridade: 'normal', peso: 0.55, montar: rr => { v.fatos['cel30_estudo'] = v.t; const sit = eu >= 15 && rr.chance(0.4) ? 'estudo_festa' : 'estudo_grupo'; return { de: p.id, sit17: sit, texto: fala(sit, tom, rr, p, v), assunto: sit, ...(sit === 'estudo_festa' ? { custo: 40 } : {}) }; } });
+    }
     // A família de longe: a reunião de domingo, o conselho de quem criou você.
     if ((papel === 'genitor' || papel === 'avo' || (papel === 'irmao' && ip >= 18)) && eu >= 16 && !moraJunto(vin) && p.municipioId === v.moradia.municipioId && !RECENTE(v, 'cel17_fam', 18)) {
       out.push({ tipo: 'familia17', p, prioridade: 'normal', peso: 0.5, montar: rr => { v.fatos['cel17_fam'] = v.t; const sit = papel === 'irmao' || rr.chance(0.5) ? 'familia_reuniao' : 'familia_conselho'; return { de: p.id, sit17: sit, texto: fala(sit, tom, rr, p, v), assunto: sit }; } });
@@ -293,7 +378,13 @@ export function opcoes17(v: Vida, m: Msg15): OpcaoMsg17[] {
   if (sit === 'fama_amigo') return [op('carinhosa', 'Responder com humildade'), op('engracada', 'Brincar com a fama'), op('firme', 'Pedir para não misturar as coisas')];
   if (sit === 'fama_pedido') return [op('topar', 'Atender o pedido'), op('cache', 'Dizer que cobra cachê'), op('recusa', 'Recusar com educação')];
   if (sit === 'trabalho_parceria') return [op('topar', 'Topar o projeto'), op('recusa', 'Recusar: já está cheio')];
-  if (sit === 'trabalho_credito') return [op('confrontar', 'Ir falar com a chefia'), op('apoio', 'Apoiar o colega'), op('evasiva', 'Deixar para lá')];
+  if (sit === 'trabalho_credito') return [op('confrontar', `Ir falar com ${QUEM_MANDA30[ambienteDe30(v) ?? 'escritorio']}`), op('apoio', 'Apoiar o colega'), op('evasiva', 'Deixar para lá')];
+  // VIDA 30 · §2.4
+  if (sit === 'parceiro_preocupado') return [op('abrir', 'Contar como está, de verdade'), op('tranquilizar', 'Dizer que está tudo bem'), op('irritar', 'Pedir espaço, sem paciência')];
+  if (sit === 'familia_apoio') return [op('agradecimento', 'Agradecer'), op('carinhosa', 'Ligar para contar tudo')];
+  if (sit === 'familia_receio') return [op('explicar', 'Explicar os motivos, com calma'), op('ouvir', 'Ouvir o que tem a dizer'), op('cortar', '"A vida é minha"')];
+  if (sit === 'estudo_grupo') return [op('topar', 'Estudar junto'), op('recusa', 'Preferir estudar sozinh' + flex(v.eu.genero, 'o', 'a', 'e'))];
+  if (sit === 'estudo_festa') return [op('ir', 'Ir à festa', pagar(m.custo, 'A festa custa uns')), op('recusa', 'Ficar em casa')];
   if (sit === 'trabalho_bastidor') return [op('carinhosa', 'Agradecer o aviso'), op('engracada', 'Fazer piada da situação'), op('firme', 'Não entrar em fofoca')];
   if (sit === 'familia_reuniao') return [op('ir', 'Confirmar presença', pagar(60, 'Ir custa uns')), op('engracada', '"Só se tiver pudim"'), op('recusa', 'Inventar uma desculpa')];
   if (sit === 'familia_conselho' || sit === 'filho_carinho') return [op('carinhosa', 'Responder com carinho'), op('engracada', 'Responder brincando'), op('curto', 'Um "tá bom" rápido')];
@@ -473,13 +564,35 @@ export function responder17(v: Vida, r: Rng, m: Msg15, opc: string): Saida17 | u
   } else if (sit.startsWith('trabalho')) {
     const emp = v.trabalho.atual as { desempenho?: number } | undefined;
     const desemp = (n: number) => { if (emp && typeof emp.desempenho === 'number') emp.desempenho = clamp(emp.desempenho + n); };
-    if (sit === 'trabalho_parceria' && opc === 'topar') { desemp(5); humor(v, 1, 4); mexer(v, vin, { prox: 4, conf: 3 }); marcar('Fizeram um projeto juntos.', 'trabalho'); texto = `O projeto deu trabalho e deu certo. A chefia notou os dois.`; tom = 'bom'; }
-    else if (opc === 'confrontar') { if (r.chance(0.45)) { desemp(6); humor(v, 3, 2); texto = `Você foi falar com a chefia, com os fatos na mão. O crédito voltou para quem fez.`; tom = 'bom'; } else { desemp(-4); humor(v, -2, 6); texto = `A chefia não gostou do tom. O crédito ficou onde estava — e o clima, pior.`; tom = 'ruim'; } mexer(v, vin, { prox: 3, conf: 3 }); falaChave = 'firme'; }
+    if (sit === 'trabalho_parceria' && opc === 'topar') { desemp(5); humor(v, 1, 4); mexer(v, vin, { prox: 4, conf: 3 }); marcar('Trabalharam juntos numa parceria que deu certo.', 'trabalho'); texto = `Deu trabalho e deu certo. ${QUEM_MANDA30[ambienteDe30(v) ?? 'escritorio'].replace(/^./, c => c.toUpperCase())} notou os dois.`; tom = 'bom'; }
+    else if (opc === 'confrontar') { const chefe = QUEM_MANDA30[ambienteDe30(v) ?? 'escritorio']; if (r.chance(0.45)) { desemp(6); humor(v, 3, 2); texto = `Você foi falar com ${chefe}, com os fatos na mão. O reconhecimento voltou para quem fez.`; tom = 'bom'; } else { desemp(-4); humor(v, -2, 6); texto = `${chefe.charAt(0).toUpperCase() + chefe.slice(1)} não gostou do tom. Ficou tudo onde estava — e o clima, pior.`; tom = 'ruim'; } mexer(v, vin, { prox: 3, conf: 3 }); falaChave = 'firme'; }
     else if (opc === 'apoio') { mexer(v, vin, { prox: 4, conf: 4 }); texto = `${nome} agradeceu: "pelo menos alguém viu."`; tom = 'bom'; }
     else if (opc === 'carinhosa') { mexer(v, vin, { prox: 2, conf: 2 }); texto = `"De nada. A gente se protege", respondeu ${nome}.`; tom = 'bom'; falaChave = 'agradecimento'; }
     else if (opc === 'engracada') { mexer(v, vin, { prox: 3 }); humor(v, 1, -1); texto = `A piada rodou o grupo do setor inteiro. Deu uma aliviada no dia.`; tom = 'bom'; }
     else if (opc === 'firme') { mexer(v, vin, { conf: 3, prox: -1 }); texto = `${nome} respeitou. Fama de discreto no trabalho vale mais do que parece.`; }
     else { mexer(v, vin, { prox: -2 }, false); humor(v, 0, 1); texto = sit === 'trabalho_credito' ? `Você deixou para lá. ${nome} ficou sozinh${p ? oP(p) : 'o'} na revolta.` : `${nome} entendeu.`; }
+  } else if (sit === 'parceiro_preocupado') {
+    // VIDA 30 · §2.4: a resposta muda o casal (e fica lembrada quando pesa).
+    if (opc === 'abrir') { mexer(v, vin, { conf: 6, prox: 4, tens: -4, rom: 3 }); humor(v, 3, -8); marcar('Você se abriu quando a preocupação apareceu.', 'apoio', 2); texto = `Conversaram até tarde. ${nome} não resolveu nada — mas você dormiu melhor do que em semanas.`; tom = 'bom'; falaChave = 'carinhosa'; }
+    else if (opc === 'tranquilizar') { if (v.mente.estresse >= 75 && r.chance(0.6)) { mexer(v, vin, { tens: 3, conf: -2 }); if (p) deixarFio17(v, { pid: p.id, tipo: 'promessa', t: v.t, dado: 'aquela conversa' }); texto = `"Tá bom", respondeu ${nome}. Não acreditou — e vai voltar ao assunto.`; } else { mexer(v, vin, { prox: 1 }); texto = `${nome} respondeu com um coração. Por ora, ficou assim.`; } falaChave = 'evasiva'; }
+    else { mexer(v, vin, { tens: 9, conf: -4, rom: -3 }); marcar('Pediu espaço sem paciência quando só queriam ajudar.', 'conflito'); if (p) deixarFio17(v, { pid: p.id, tipo: 'magoa', t: v.t }); texto = `${nome} não respondeu. À noite, o silêncio em casa falou por todo mundo.`; tom = 'ruim'; falaChave = 'firme'; }
+  } else if (sit === 'familia_apoio') {
+    if (opc === 'carinhosa') { mexer(v, vin, { prox: 5, conf: 3 }); humor(v, 3); marcar(`Apoiou uma decisão sua: ${(m.cartao ?? '').replace(/\.$/, '').toLowerCase()}.`, 'apoio'); texto = `A ligação durou uma hora. ${nome} quis saber de tudo.`; tom = 'bom'; }
+    else { mexer(v, vin, { prox: 2 }); humor(v, 1); texto = `${nome} respondeu "conta comigo".`; tom = 'bom'; }
+  } else if (sit === 'familia_receio') {
+    if (opc === 'explicar') {
+      const entende = !p || p.temperamento.afabilidade > -0.1 || r.chance(0.4);
+      if (entende) { mexer(v, vin, { conf: 4, tens: -3, prox: 2 }); marcar('Entendeu a sua decisão depois de uma conversa.', 'apoio'); texto = `${nome} ouviu tudo e respondeu: "agora entendi. Fico mais tranquil${p ? oP(p) : 'o'}."`; tom = 'bom'; }
+      else { mexer(v, vin, { conf: 1, tens: 1 }); texto = `${nome} não se convenceu — "mas respeito", escreveu no fim.`; }
+      falaChave = 'firme';
+    } else if (opc === 'ouvir') { mexer(v, vin, { prox: 4, conf: 3, tens: -2 }); humor(v, 1); texto = `${nome} falou bastante. Nem tudo servia — mas ficou claro o quanto se importa.`; tom = 'bom'; falaChave = 'carinhosa'; }
+    else { mexer(v, vin, { tens: 10, conf: -3, prox: -3 }); marcar('Uma discussão sobre uma decisão sua.', 'conflito'); if (p) deixarFio17(v, { pid: p.id, tipo: 'magoa', t: v.t }); texto = `${nome} não escreveu mais naquela semana. No almoço seguinte, o assunto ficou no ar.`; tom = 'ruim'; falaChave = 'firme'; }
+  } else if (sit === 'estudo_grupo') {
+    if (opc === 'topar') { const b = v.educacao.basica; if (b) b.desempenho = clamp(b.desempenho + 3); const mt = v.educacao.matricula as { desempenho?: number } | undefined; if (!b && mt && typeof mt.desempenho === 'number') mt.desempenho = clamp(mt.desempenho + 3); mexer(v, vin, { prox: 5, conf: 2 }); humor(v, 1, -1); marcar('Estudaram juntos para uma prova.', 'amizade'); texto = `Estudaram a tarde inteira (e riram metade dela). Na prova, a matéria estava lá.`; tom = 'bom'; }
+    else { mexer(v, vin, { prox: -1 }, false); texto = `${nome} entendeu: cada um tem o seu jeito de estudar.`; }
+  } else if (sit === 'estudo_festa') {
+    if (opc === 'ir') { if (m.custo) v.financas.conta -= m.custo; mexer(v, vin, { prox: 5 }); humor(v, 4, -3); marcar('Uma festa da turma, todo mundo junto.', 'amizade'); texto = `A festa foi daquelas que viram assunto o semestre inteiro.`; tom = 'bom'; falaChave = 'topar'; }
+    else { mexer(v, vin, { prox: -1 }, false); texto = `As fotos da festa apareceram no dia seguinte. Você não estava em nenhuma.`; falaChave = 'recusa'; }
   } else if (sit === 'familia_reuniao') {
     if (opc === 'ir') { v.financas.conta -= 60; mexer(v, vin, { prox: 5, tens: -3 }); humor(v, 3, -2); marcar('Um almoço de família, todo mundo junto.', 'ritual'); texto = `Teve comida demais, conversa alta e foto de todo mundo no fim.`; tom = 'bom'; falaChave = 'topar'; }
     else if (opc === 'engracada') { mexer(v, vin, { prox: 3 }); texto = `"Tem pudim!", veio a resposta. Você foi — e comeu dois pedaços.`; humor(v, 2); tom = 'bom'; }

@@ -4164,6 +4164,8 @@ export interface Vida {
   mundo14?: import('./dados14/mundo/tipos').Mundo14;
   /** VIDA 15 (`v15/celular`): as mensagens do ano, os perfis do aplicativo de namoro, as curtidas. Ausente: o celular não tocou. */
   celular15?: import('./dados15/celular/tipos').Celular15;
+  /** VIDA 30 · §3: o meio (as figuras públicas com vida própria), a privacidade e a cena de fama em pessoa — `v30/fama/rede30`. */
+  fama30?: import('./v30/fama/rede30').Fama30;
   /** VIDA 16: a pasta do ofício (direito, docência, tecnologia) — os casos, as turmas, o projeto do ano (`motor/v16/oficios`). */
   oficio16?: import('./v16/oficios/oficios16').Oficio16;
   /** VIDA 16: a carreira religiosa (`motor/v16/religiao`). */

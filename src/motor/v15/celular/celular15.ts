@@ -37,7 +37,9 @@ import { textoDaEpoca } from '../../eras/base/anacronismos';
 import { anoNoBrasil, existeNoBrasil, temAcesso } from '../../eras/base/contexto';
 import { municipio } from '../../dados/lugares';
 import { sortearNome, sortearSobrenome } from '../../dados/nomes';
-import { candidatos17, deixarFio17, ehTipo17, extrasDaVida15, opcoes17, responder17, semResposta17, aoChegar17 } from '../../v17/celular/mensagens17';
+import { candidatos17, deixarFio17, ehTipo17, extrasDaVida15, opcoes17, responder17, semResposta17, aoChegar17, ambienteDe30, guardarDito30, jaDito30 } from '../../v17/celular/mensagens17';
+import { PROPOSTAS30 } from '../../dados17/celular/ambientes30';
+import { eventoDoConvite30, garantirRede30, ligarFigura30, moldeDaRede30 } from '../../v30/fama/rede30';
 import { podeReceber17, receber17, type Prioridade17 } from '../../sistemas/cotaDeMensagens';
 import { aindaEmRomance } from '../../sistemas/estadoConjugal';
 import { disponibilidadeLigacao17, ligarDaUnidade17, MOTIVO_PRESO17, preso17 } from '../../v17/prisao/telefone17';
@@ -167,7 +169,19 @@ function candidatos(v: Vida, excluir: Set<string>): Candidato[] {
     // O colega de anos atrás: da escola, da faculdade, de um trabalho antigo (sem convívio, sem contato há 5+ anos).
     if ((papel === 'conhecido' || papel === 'colega' || papel === 'afastado' || papel === 'amigo') && vin.convivio.length === 0 && semContato >= 5 && eu >= 20 && vin.tensao < 40 && vin.historia.length >= 2 && !RECENTE(v, `cel15r_${p.id}`, 120)) {
       const de = vin.formacao ? 'da escola' : vin.origem === 'trabalho' ? 'do trabalho antigo' : vin.origem === 'faculdade' ? 'da faculdade' : vin.origem === 'escola' ? 'da escola' : 'de anos atrás';
-      out.push({ tipo: 'reencontro', p, peso: 0.25 + Math.min(0.5, semContato / 20), montar: rr => ({ de: p.id, texto: rr.pick([`"Lembra de mim? ${p.nome}, ${de}! Achei você aqui por acaso."`, `"Quanto tempo! Tô organizando um encontro da turma ${de}. Você vem?"`, `"${cap(p.nome)} aqui, ${de}. Passei pela sua rua e lembrei de você."`]), assunto: de }) });
+      // VIDA 30 · §2.1: o reencontro diz quem a pessoa virou (o ofício, a cidade, os anos sem se ver) — não três frases fixas.
+      const anos = Math.max(5, Math.round(semContato));
+      const ondeMora = p.municipioId && p.municipioId !== v.moradia.municipioId ? municipio(p.municipioId).nome : undefined;
+      const virou = p.ocupacao && !/aposentad|estudante|desempregad/.test(p.ocupacao) ? p.ocupacao : undefined;
+      out.push({ tipo: 'reencontro', p, peso: 0.25 + Math.min(0.5, semContato / 20), montar: rr => ({ de: p.id, texto: rr.pick([
+        `"Lembra de mim? ${p.nome}, ${de}! Achei você aqui por acaso."`,
+        `"Quanto tempo! Tô organizando um encontro da turma ${de}. Você vem?"`,
+        `"${cap(p.nome)} aqui, ${de}. Passei pela sua rua e lembrei de você."`,
+        ...(virou ? [`"${cap(p.nome)} aqui, ${de}! Virei ${virou}, acredita? Lembrei de você e quis saber da sua vida."`] : []),
+        ...(ondeMora ? [`"Tô morando em ${ondeMora} agora. Se um dia passar por aqui, me avisa — tenho saudade ${de === 'de anos atrás' ? 'daquele tempo' : `do pessoal ${de}`}."`] : []),
+        `"Uns ${anos} anos sem notícia, né? Achei uma foto nossa ${de} e não resisti."`,
+        `"Sonhei com aquele tempo ${de} e acordei querendo saber de você. Tudo bem por aí?"`
+      ]), assunto: de }) });
     }
     // O ex: anos depois, uma mensagem (com ou sem segundas intenções — a resposta é sua).
     if (papel === 'ex' && vin.romance?.estagio === 'ex' && v.t - vin.romance.tEstagio >= 30 && eu >= 17 && vin.tensao < 60 && !RECENTE(v, `cel15ex_${p.id}`, 48)) {
@@ -175,7 +189,8 @@ function candidatos(v: Vida, excluir: Set<string>): Candidato[] {
     }
     // A proposta: um contato do trabalho (de agora ou de antes) oferece um trabalho extra, uma indicação.
     if ((vin.origem === 'trabalho' || vin.convivio.includes('trabalho')) && eu >= 18 && (v.trabalho.atual || v.trabalho.historico?.length) && vin.proximidade >= 30 && !RECENTE(v, 'cel15_proposta', 24)) {
-      out.push({ tipo: 'proposta', p, peso: 0.5, montar: rr => ({ de: p.id, texto: rr.pick(['"Tenho um trabalho extra, coisa de algumas semanas, e pensei em você. Paga bem. Topa?"', '"Tem um projeto aqui que é a sua cara. Posso passar o seu nome?"', '"Um cliente meu precisa de alguém de confiança. Quer que eu indique você?"']), assunto: 'extra' }) });
+      // VIDA 30 · §2.3: a proposta no ambiente de quem recebe (o atleta não recebe "um cliente meu"; o soldado, nada de "projeto").
+      out.push({ tipo: 'proposta', p, peso: 0.5, montar: rr => { const amb = ambienteDe30(v) ?? 'escritorio'; const lista = PROPOSTAS30[amb]; const novas = lista.filter(x => !jaDito30(v, x.texto)); const x = rr.pick(novas.length ? novas : lista); return { de: p.id, texto: x.texto, assunto: x.extra ? 'extra' : 'indicacao' }; } });
     }
   }
   // A parceria sugere um programa a dois (a relação também pede atitude dela).
@@ -258,6 +273,12 @@ export const ROTULO_AREA15: Record<AreaCelebridade15, [string, string]> = {
 
 /** A pessoa famosa do convite: idade perto da sua, gênero pelo acaso (às vezes pelo seu interesse). */
 function molde(v: Vida, r: Rng, fama: number): Molde15 {
+  // VIDA 30 · §3: a pessoa famosa é do meio (identidade, ofício, vida própria), quando o meio já existe.
+  const daRede = moldeDaRede30(v, rngDe(v.id, 'molde30', v.t, r.int(0, 999)));
+  if (daRede) return daRede;
+  return moldeSorteado(v, r, fama);
+}
+function moldeSorteado(v: Vida, r: Rng, fama: number): Molde15 {
   const at = v.eu.atracao;
   const genero = at && r.chance(0.5) ? (at === 'homens' ? 'masculino' : at === 'mulheres' ? 'feminino' : r.chance(0.5) ? 'masculino' : 'feminino') : r.chance(0.5) ? 'masculino' : 'feminino';
   const i = idade(v);
@@ -293,7 +314,10 @@ function entregar(v: Vida, r: Rng, n: number, onda: number): Msg15[] {
     if (!x) break;
     const mes = receber17(v, x.prioridade ?? PRIORIDADE15[x.tipo] ?? 'normal');
     if (mes === undefined) break;
-    const base = x.montar(r);
+    let base = x.montar(r);
+    // VIDA 30 · §2.1: a frase já dita nesta vida não volta igual — outra tentativa (sorteio derivado), até três.
+    for (let k = 0; k < 3 && !base.sit17 && jaDito30(v, base.texto); k++) base = x.montar(rngDe(v.id, 'cel30_rep', v.t, onda, k));
+    if (!base.sit17) guardarDito30(v, base.texto);
     const m: Msg15 = { id: `m${anoDe(v.t)}_${onda}_${k}_${c.msgs.length}`, t: v.t, tipo: x.tipo, onda, mes17: mes, ...base };
     if (m.texto.includes('{o}')) m.texto = m.texto.replace(/\{o\}/g, flex(v.eu.genero, 'o', 'a', 'e'));
     if (v.era) m.texto = textoDaEpoca(v, m.texto); // ERAS HISTÓRICAS: o recado fala do jeito da época
@@ -535,7 +559,7 @@ function opcoesDaMsg15Base(v: Vida, m: Msg15): OpcaoMsg15[] {
       { op: 'marcar', rotulo: 'Topar o café', veredito: exclusivo ? { grau: 'irregular', motivo: `Você está com ${par!.p.nome}: um café com ${p?.nome ?? 'o ex'} pode ser mal entendido.` } : ok },
       { op: 'ignorar', rotulo: 'Deixar sem resposta', veredito: ok }];
     case 'proposta': return [
-      { op: 'aceitar', rotulo: m.texto.includes('extra') ? 'Aceitar o trabalho extra' : 'Aceitar a indicação', veredito: v.justica?.prisao ? bloqueio('impossivel', 'Não daqui.') : ok },
+      { op: 'aceitar', rotulo: m.assunto === 'extra' ? 'Aceitar o trabalho' : 'Aceitar a indicação', veredito: v.justica?.prisao ? bloqueio('impossivel', 'Não daqui.') : ok },
       { op: 'recusar', rotulo: 'Agradecer e recusar', veredito: ok }];
     case 'fa': return [
       { op: 'atender', rotulo: m.assunto === 'foto' ? 'Tirar a foto, com um sorriso' : 'Responder com carinho', veredito: ok },
@@ -688,7 +712,7 @@ export function responderMsg15(v: Vida, r: Rng, m: Msg15, op: string): SaidaCelu
     case 'proposta': {
       if (op === 'aceitar') {
         const base = Math.max(1200, Math.round((v.trabalho.atual?.salario ?? 2500) * 0.8));
-        if (m.assunto === 'extra' && m.texto.includes('extra')) {
+        if (m.assunto === 'extra') {
           v.financas.conta += base;
           humor(v, 1, 6);
           perto(vin, 3, true, v.t);
@@ -724,6 +748,8 @@ export function responderMsg15(v: Vida, r: Rng, m: Msg15, op: string): SaidaCelu
         if (m.custo) v.financas.conta -= m.custo;
         humor(v, 3, 2);
         if (m.tipo === 'evento') somarAoNome(v, origemDoNome(v) ?? 'arte', 1);
+        // VIDA 30 · §3: o evento é vivido EM PESSOA — a cena abre logo depois da resposta, com uma figura do meio.
+        if (m.tipo === 'evento') { garantirRede30(v); if (eventoDoConvite30(v, m.assunto)) { texto = 'Você confirmou presença. Chegou o dia.'; escrever(v, { texto: 'Foi a um evento de gente famosa.', relevancia: 'cotidiano', tema: 'lazer', escolha: true }); tom = 'bom'; break; } }
         const c = m.molde ? conhecerCelebridade(v, r, m.molde, m.tipo === 'evento' ? 'evento' : 'online') : undefined;
         pessoaId = c?.p.id;
         texto = m.tipo === 'evento'
@@ -782,6 +808,7 @@ function contarReacao(v: Vida, id: string): void {
 export function conhecerCelebridade(v: Vida, r: Rng, m: Molde15, via: 'evento' | 'online'): { p: Pessoa; vin: Vinculo; faisca: boolean } {
   const p = criarPessoa(v, r, { idade: m.idade, genero: m.genero, municipioId: v.moradia.municipioId, nome: m.nome, sobrenome: m.sobrenome, ocupacao: ROTULO_AREA15[m.area][m.genero === 'feminino' ? 1 : 0], renda: 40000 * m.nivel });
   p.celebridade15 = { area: m.area, nivel: m.nivel, desde: v.t };
+  ligarFigura30(v, m.nome, m.sobrenome, p.id);
   const vin = vincular(v, p, { origem: via === 'online' ? 'online' : 'apresentado', proximidade: r.int(24, 34), estagio: 'conhecido' });
   vin.contexto = novoContexto(via === 'online' ? 'outro' : 'evento', {});
   registrarFase(v, vin, 'conhecido');

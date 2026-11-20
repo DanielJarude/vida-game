@@ -33,6 +33,7 @@ import { processarMundo } from './sistemas/migracao';
 import type { Rng } from './rng';
 import { entrarNaVida, paisDaVida } from './mundo/vida';
 import { clamp, rngDe } from './rng';
+import { fama30DoAno } from './v30/fama/rede30';
 import type { Retorno, Vida } from './tipos';
 import { escrever, idade, transacao } from './nucleo';
 import { morreEsteAno, processarCorpo } from './sistemas/corpo';
@@ -113,7 +114,7 @@ import { processarFazendas18 } from './v18/rural/fazenda18';
 import { terraDaFamilia } from './v18/rural/acoes18';
 import { processarTransformacao } from './sistemas/carreira';
 import { efetivarMudancaMilitar } from './sistemas/militar';
-import { abrirDecisao, abrirProximaDaFila, aplicarAcontecimento, candidatos, conteudoPorId, montarFila, preparar, sortear, vidaComumDoAno, vidaDe15DoAno, vidaPorFasesDoAno, vidaQueDevolveDoAno } from './conteudo/motor';
+import { abrirDecisao, abrirProximaDaFila, aplicarAcontecimento, candidatos, conteudoPorId, decisoesDoAno, montarFila, preparar, sortear, vidaComumDoAno, vidaDe15DoAno, vidaPorFasesDoAno, vidaQueDevolveDoAno } from './conteudo/motor';
 import { contexto } from './conteudo/base';
 import { CATALOGO } from './conteudo/catalogo';
 import type { Conteudo } from './conteudo/base';
@@ -503,9 +504,19 @@ function faseDeConteudo(v: Vida, r: Rng, linhasSistemicas: number): void {
   // VIDA 14 · Conquistas: os objetivos pessoais (silencioso, salvo a conclusão) e, às vezes, um convite do meio profissional.
   vidaDeCrencas14(v, CATALOGO, preparar, (c, ctx) => (c.tipo === 'acontecimento' ? aplicarAcontecimento(v, c, ctx) : (abrirDecisao(v, c, ctx), true))); // VIDA 14: as datas da fé e as decisões dela
   processarConquistas14(v, CATALOGO, preparar, (c, ctx) => (c.tipo === 'acontecimento' ? aplicarAcontecimento(v, c, ctx) : (abrirDecisao(v, c, ctx), true)));
+  // VIDA 30 · §3: o meio vive, a privacidade anda e, num ano sem decisão, às vezes a fama acontece em pessoa.
+  abrirCena30(v, fama30DoAno(v, !v.momento && !v.fila?.length && decisoesDoAno(v) === 0));
 }
 
 export function totalDeConteudo(): { acontecimentos: number; decisoes: number } {
   const acontecimentos = CATALOGO.filter((c: Conteudo) => c.tipo === 'acontecimento').length;
   return { acontecimentos, decisoes: CATALOGO.length - acontecimentos };
+}
+
+/** VIDA 30 · §3: abre a cena da fama (o conteúdo que o fluxo do ano ou o convite pediu), conferida de novo; sem ela, a cena sai. */
+export function abrirCena30(v: Vida, id: string | undefined): void {
+  if (!id) return;
+  const c = conteudoPorId(id);
+  const ctx = c && c.tipo === 'decisao' && !v.momento ? preparar(c, v, rngDe(v.id, 'cena30_abrir', v.t)) : null;
+  if (c && c.tipo === 'decisao' && ctx) abrirDecisao(v, c, ctx); else if (v.fama30) delete v.fama30.cena;
 }
