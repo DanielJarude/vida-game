@@ -147,7 +147,7 @@ const CONVERSAR: Cena[] = [
   },
   {
     // VIDA 29: o que a pessoa ouviu de você por outros (`boatos29`) vira o assunto — e a conversa desfaz a versão aumentada.
-    id: 'soube29', quando: c => c.eu >= 14 && c.ip >= 14 && !!assuntoDaConversa29(c.v, c.p.id) && (c.vin.habitos?.boato29 ?? -999) < c.v.t - 12, peso: () => 8,
+    id: 'soube29', quando: c => c.eu >= 14 && c.ip >= 14 && !!assuntoDaConversa29(c.v, c.p.id) && (c.vin.habitos?.boato29 ?? -999) < c.v.t - 24, peso: () => 3,
     viver: c => {
       const fala = assuntoDaConversa29(c.v, c.p.id)!;
       (c.vin.habitos ??= {}).boato29 = c.v.t;

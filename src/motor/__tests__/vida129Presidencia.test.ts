@@ -191,6 +191,9 @@ describe('candidatura e campanha', () => {
     for (let s = 0; s < 12; s++) {
       const v = politico({ reputacao: 52, apoio: 30 });
       v.id += `-conv${s}`;
+      // (Cada tentativa com o seu acaso: o clone da mesma vida-base tinha o MESMO estado do gerador nas 12 — o sorteio da
+      // convenção dava o mesmo resultado em todas, e o teste passava ou falhava por inteiro conforme a vida-base.)
+      v.rng = 7919 * (s + 1) + 104729;
       v.caminhos.politica!.tFiliacao = v.t - 8; v.caminhos.politica!.historico = [];
       registrarCandidatura(v, 'presidente', tDaEleicao(2030));
       abrirDecisao(v, conteudoPorId('presc_campanha') as never, contexto(v, criarRng(s)));

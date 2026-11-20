@@ -206,17 +206,18 @@ function saber(v: Vida, n: Noticia29, id: string, via: string, torto: boolean): 
 }
 
 /** O que uma pessoa sabe da sua vida pelo que circulou (para a ficha e para a conversa). */
-export function oQueSabeDeVoce29(v: Vida, id: string): { texto: string; via: string; torto: boolean; t: number; boa: boolean }[] {
+export function oQueSabeDeVoce29(v: Vida, id: string): { texto: string; via: string; torto: boolean; t: number; boa: boolean; peso: number }[] {
   return (v.boatos29 ?? []).filter(n => n.sabem[id]).map(n => {
     const s = n.sabem[id];
     const via = s.via === 'voce' ? 'por você' : s.via === 'jornal' ? 'pelo jornal' : s.via === 'redes' ? 'pelas redes' : v.pessoas[s.via] ? `por ${v.pessoas[s.via].nome}` : 'por terceiros';
-    return { texto: n.texto, via, torto: !!s.torto, t: s.t, boa: BOAS.has(n.tipo) };
+    return { texto: n.texto, via, torto: !!s.torto, t: s.t, boa: BOAS.has(n.tipo), peso: n.peso };
   }).sort((a, b) => b.t - a.t);
 }
 
 /** A primeira coisa que a pessoa comenta numa conversa: o que soube por outros há pouco (um ano), se soube. */
 export function assuntoDaConversa29(v: Vida, id: string): string | undefined {
-  const x = oQueSabeDeVoce29(v, id).find(s => s.via !== 'por você' && v.t - s.t <= 12);
+  // Só a notícia que é assunto (casamento, separação, demissão, prisão, prêmio...): a contratação comum não vira conversa.
+  const x = oQueSabeDeVoce29(v, id).find(s => s.via !== 'por você' && v.t - s.t <= 12 && s.peso >= 2);
   if (!x) return undefined;
   const p = v.pessoas[id];
   if (!p) return undefined;

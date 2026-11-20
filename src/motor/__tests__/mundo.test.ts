@@ -132,7 +132,9 @@ describe('migrar', () => {
     const v = adultaEm(maior('AR'), 13);
     entrarNaVida(v);
     const antes = patrimonio(v);
-    const sem = transacao(v, x => { x.financas.bens = x.financas.bens.filter(b => b.tipo !== 'veiculo'); }).vida;
+    // (Sem dívidas: a tolerância é sobre o patrimônio líquido, e a remessa incide sobre o dinheiro que atravessa — com um
+    // empréstimo grande que a simulação da vida às vezes deixa, o líquido fica pequeno e a tolerância não mede mais o câmbio.)
+    const sem = transacao(v, x => { x.financas.bens = x.financas.bens.filter(b => b.tipo !== 'veiculo'); x.financas.dividas = []; }).vida;
     const antesSem = patrimonio(sem);
     const depois = transacao(sem, (x, r) => migrar(x, r, 'sao-paulo-sp', 'pessoal')).vida;
     void antesSem;

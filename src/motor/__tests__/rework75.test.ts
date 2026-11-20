@@ -139,7 +139,8 @@ describe('conversar, passar um tempo, carinho: situações, não rodízio de fra
     let x = w;
     let teveConselho = false;
     for (let k = 0; k < 10 && !teveConselho; k++) {
-      x = transacao(x, y => { y.mente.estresse = 70; }).vida;
+      // (A pessoa fica na cidade: o teste é do conselho, não da mudança de cidade que a simulação da vida dela pode sortear.)
+      x = transacao(x, y => { y.mente.estresse = 70; y.pessoas[mais.id].municipioId = y.moradia.municipioId; }).vida;
       x = fazer(x, mais.id, 'conversar').vida;
       teveConselho = x.vinculos[mais.id].historia.some(h => h.de === 'ela' && /conselho/.test(h.texto));
       x = umAno(x);

@@ -32,7 +32,8 @@ import { sementeDaPeca } from '../sistemas/estilo';
 import { itemEstilo } from '../dados/estilo';
 import { categoriaDoItem } from '../sistemas/lojas';
 
-const novo = (): Vida => { const v = structuredClone(adulto(30)); v.financas.conta = 3_000_000; for (const k of Object.keys(v.fatos)) if (k.startsWith('cota17')) delete v.fatos[k]; return v; };
+// (Os fios de conversa que a vida sorteada já deixou saem: cada teste monta os seus.)
+const novo = (): Vida => { const v = structuredClone(adulto(30)); v.financas.conta = 3_000_000; for (const k of Object.keys(v.fatos)) if (k.startsWith('cota17')) delete v.fatos[k]; if (v.celular15) v.celular15.fios17 = []; return v; };
 
 describe('VIDA 17 · a cota de mensagens recebidas', () => {
   it('no máximo 4 por ano, somando todas as fontes; o ano novo zera; o que se escreve não conta', () => {

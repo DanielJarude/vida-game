@@ -26,7 +26,10 @@ function familia(semente = 11): { v: Vida; conjuge: string; a: string; b: string
   const v = adulto(62, { semente, genero: 'masculino' });
   for (const vin of Object.values(v.vinculos)) if (vin.parentesco === 'mae' || vin.parentesco === 'pai') v.pessoas[vin.pessoaId].vivo = false;
   // A família do cenário é a única descendência (a vida sorteada até os 62 pode ter tido filhos: saem da conta).
-  for (const p of Object.values(v.pessoas)) if (p.genitores?.includes('eu')) { delete v.pessoas[p.id]; delete v.vinculos[p.id]; }
+  // (E a descendência deles: o neto que a vida sorteada às vezes já deu apontaria para um filho que saiu.)
+  const fora = new Set<string>(['eu']);
+  for (let mudou = true; mudou;) { mudou = false; for (const p of Object.values(v.pessoas)) if (!fora.has(p.id) && p.genitores?.some(g => fora.has(g))) { fora.add(p.id); mudou = true; } }
+  for (const id of fora) if (id !== 'eu') { delete v.pessoas[id]; delete v.vinculos[id]; }
   for (const [id, vin] of Object.entries(v.vinculos)) if (vin.parentesco === 'filho' || vin.parentesco === 'neto' || vin.parentesco === 'enteado') { delete v.vinculos[id]; delete v.pessoas[id]; }
   const { p: mae } = comParceiro(v, { idade: 60, estagio: 'casamento', anos: 36, genero: 'feminino' });
   const { p: a } = comFilho(v, 34, { outroId: mae.id, casa: false, genero: 'masculino' });

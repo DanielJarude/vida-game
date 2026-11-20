@@ -25,7 +25,8 @@ import type { ExtratoDoAno, LinhaExtrato, TipoMovimento, Vida } from '../tipos';
 
 /** Total nas aplicações (a mesma conta de `investimentos.totalAplicado`, sem importar o módulo). */
 const aplicadoDe = (v: Vida) => v.financas.investimentos.reduce((s, a) => s + a.valor, 0);
-const r2 = (x: number) => Math.round(x * 100) / 100;
+/** Centavos. VIDA 29: nunca −0 (o arredondamento de um resto negativo minúsculo dava −0, e o save reaberto voltava 0). */
+const r2 = (x: number) => Math.round(x * 100) / 100 || 0;
 
 const valido = (e: ExtratoDoAno | undefined): e is ExtratoDoAno =>
   !!e && Array.isArray(e.linhas) && Number.isFinite(e.contaInicial) && Number.isFinite(e.aplicadoInicial);
