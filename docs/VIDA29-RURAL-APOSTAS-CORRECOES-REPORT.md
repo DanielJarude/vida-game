@@ -182,11 +182,20 @@ Todas na causa:
 - Typecheck: `tsc --noEmit` passou (rc=0).
 - Build: passou. Maior pacote: Jogo com 798,6 kB, abaixo do limite de 800 kB.
 
-(Números finais na seção "Fechamento", depois da última rodada.)
+Os números finais da suíte estão em "Fechamento".
 
 ## 10. Testes que não puderam ser concluídos e motivos
 
-Ver "Fechamento".
+Cinco testes estouram o tempo-limite na suíte em lotes. Nenhum é regressão:
+
+- **Já estouravam na base (VIDA 28):**
+  - `fechamentoMundo` "4. a mesma discussão" (60 s);
+  - `fixPosPlaytestHumano` C (cirurgia);
+  - `motor.test` "nenhum acontecimento usa linguagem de escolha" (60 s; a mesma família do "regra de agência");
+  - `profissao` "com clima péssimo, cortes acontecem mais" — estourou também na base, medido nesta máquina.
+- **No limite também na base:** `rework115Esportes` "copas" leva 19,8 s na base e passa sozinho nesta branch.
+
+Uma lentidão real foi introduzida e corrigida: a circulação de boatos tinha custo quadrático, e rework1235, rework122, pacotePlaytest e profissao "treinar dobrado" passaram a estourar o tempo. A rede do ano agora é calculada uma vez e cada círculo usa a melhor boca (mesma regra, mesmo resultado). Os quatro voltaram a passar.
 
 ## 11. Compatibilidade com saves antigos
 
@@ -213,11 +222,18 @@ Feita no build de produção local (preview), com Playwright.
 
 ## 13. Situação do build
 
-Ver "Fechamento".
+- `tsc --noEmit`: rc=0.
+- `vite build`: rc=0. Os maiores pacotes: Jogo 798,6 kB, motor-textos 794,0 kB, motor 775,9 kB, motor-carreira 771,0 kB — todos abaixo do limite de 800 kB.
+- O campo continua num pacote carregado sob demanda.
 
 ## 14. Commit final · 15. Publicação · 16. URL de produção
 
-Ver "Fechamento".
+- **Commit do código validado:** `661b2a9`, na branch `claude/vida29-rural-apostas-correcoes`. `main` e `claude/fix-pos-rework3-playtest` (a branch de produção do Cloudflare Pages) foram avançados até ele sem merge (fast-forward). Este relatório entra num commit só de docs, que não muda o build.
+- **Publicação conferida:** https://vida-game.pages.dev/ serve o mesmo build validado — `/` e todos os JS e CSS, 186 de 186 arquivos com sha256 idêntico (index `index-C8miFNFE.js`).
+- **Fluxos reais no site de produção:**
+  - fumaça sem nenhum erro de página, a 1440 px e a 390 px, com os saves novos (campo e aparência) e um save antigo da VIDA 28 (1965);
+  - campo: seis abas, diagnóstico com os quadros, troca para a administradora;
+  - brinco: comprar, usar, trocar e recarregar, e a figura continua com o modelo escolhido.
 
 ## 17. Pendências reais
 
@@ -227,3 +243,11 @@ Ver "Fechamento".
 - **Logística e frete:** continuam embutidos no custo por hectare e no preço local. O armazém de terceiros cobra aluguel e frete, e a feira, banca e transporte. Não há rota nem distância.
 - **Boatos:** circulam as notícias da vida do protagonista. A vida dos NPCs entre si continua resumida (`vidas19`): um NPC não espalha notícia de outro NPC.
 - **Personalidade dos NPCs:** a VIDA 29 usa os traços que já existem (sociável, reservado, leal, rancoroso, generoso, carinhoso) na circulação e na reação aos boatos. Não foram criados medos nem objetivos novos.
+
+## Fechamento — a suíte
+
+Rodada final no código publicado (`661b2a9`), em 10 lotes:
+
+- **3.242 de 3.247** testes passam.
+- Os 5 que não passam são os estouros de tempo descritos no item 10: pré-existentes ou no limite na base, e nenhum é falha de asserção.
+- Os 75 testes que a primeira rodada acusou foram todos explicados e corrigidos (itens 5–7) e conferidos contra a base `91f7369`.
