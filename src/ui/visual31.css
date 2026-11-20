@@ -1,0 +1,179 @@
+/* ==========================================================================
+   VIDA 31 · REWORK VISUAL GERAL — a camada final da aparência
+
+   Trinta versões deixaram trinta jeitos de desenhar a mesma coisa: abas em
+   pílula, abas sublinhadas e abas em grade; cartões com faixa no alto, faixa
+   do lado, fundo cinza, papel pautado; ações que eram botões, links
+   sublinhados ou estrelas soltas. Esta folha é o acabamento único por cima de
+   tudo: UMA aba, UM cartão, UMA ação, UM cabeçalho — nas quatro paletas.
+
+   Regras desta folha:
+   - Só aparência. Nenhum elemento ganha ou perde função; o que some (a semana
+     em tiras no computador) é informação repetida, com a mesma coisa logo
+     abaixo.
+   - Só tokens (tokens.css): nenhuma cor escrita à mão — vale nos temas claro,
+     escuro, Horizonte e Atlântico sem regra nova.
+   - Tudo sob `#root` (a raiz do app): os pacotes sob demanda trazem as folhas
+     deles DEPOIS desta, e o acabamento precisa valer por cima de qualquer uma.
+   ========================================================================== */
+
+:root {
+  --v31-raio: 16px;
+  --v31-raio-ctl: 10px;
+  --v31-sombra: 0 1px 2px var(--sombra-cor), 0 10px 28px -22px var(--sombra-cor);
+  --v31-sombra-alta: 0 2px 4px var(--sombra-cor), 0 16px 36px -22px var(--sombra-cor);
+  --v31-contorno: inset 0 0 0 1px var(--fio);
+  --v31-cartao: var(--superficie);
+}
+
+/* ============================================================ 1. O palco */
+#root .palco { gap: var(--space-8); padding-top: var(--space-6); }
+
+/* O painel ao lado ("Agora"): um cartão só, em vez de uma coluna riscada. */
+#root .agora { border-left: 0; padding-left: 0; }
+#root .painel-agora { padding: var(--space-4); border-radius: var(--v31-raio); background: var(--v31-cartao); box-shadow: var(--v31-contorno), var(--v31-sombra); }
+#root .painel-agora > :first-child { margin-top: 0; }
+#root .painel-agora__titulo { margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--fio); }
+#root .painel-agora > .painel-agora__titulo:first-child { border-top: 0; padding-top: 0; }
+
+/* ============================================ 2. O cabeçalho de cada área */
+#root .cabeca-area, #root .folio { border-bottom: 0; padding-bottom: var(--space-2); margin-bottom: var(--space-4); }
+#root .folio__kicker { margin-bottom: var(--space-1); }
+#root .cabeca-area__fatos { gap: var(--space-2); margin-top: var(--space-3); }
+#root .cabeca-area__fatos > div { flex-direction: row; align-items: baseline; gap: 6px; padding: 4px 12px; border-radius: var(--radius-pill); background: var(--v31-cartao); box-shadow: var(--v31-contorno); }
+#root .cabeca-area__fatos dt { font-size: var(--type-meta); }
+#root .cabeca-area__fatos dd { font-size: var(--type-caption); font-family: var(--font-sans); font-weight: var(--weight-medium); }
+#root .cabeca-area__rodape { padding: var(--space-3) var(--space-4); border-radius: var(--v31-raio-ctl); background: var(--tom-wash); box-shadow: inset 0 0 0 1px var(--tom-linha); }
+
+/* ========================================= 3. As abas: um controle só */
+/* As abas de seção (Você, Pessoas, Semana, Vida, História…) e as divisões de Caminhos: o mesmo controle segmentado. */
+#root .subnav, #root .divisoes-caminhos { margin: 0 0 var(--space-5); }
+#root .subnav__lista, #root .divisoes-caminhos__lista {
+  display: flex; flex-wrap: nowrap; gap: 2px; width: max-content; max-width: 100%; min-width: 0;
+  padding: 4px; margin: 0; border: 0; border-radius: var(--radius-pill);
+  background: var(--veu-1); box-shadow: var(--v31-contorno);
+}
+#root .subnav__item, #root .divisoes-caminhos__item {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 38px; padding: 0 var(--space-4); border: 0; border-radius: var(--radius-pill);
+  background: transparent; box-shadow: none; color: var(--tinta-2);
+  font-family: var(--font-sans); font-size: var(--type-caption); font-weight: var(--weight-medium); white-space: nowrap;
+}
+#root .subnav__item:hover, #root .divisoes-caminhos__item:hover { color: var(--tinta); background: var(--veu-2); box-shadow: none; }
+#root .subnav__item--ativo, #root .subnav__item--ativo:hover,
+#root .divisoes-caminhos__item--ativa, #root .divisoes-caminhos__item--ativa:hover {
+  color: var(--tinta); background: var(--superficie-topo); font-weight: var(--weight-semibold);
+  box-shadow: 0 1px 2px var(--sombra-cor), inset 0 0 0 1px var(--fio), inset 0 -2px 0 var(--tom);
+}
+#root .subnav__item--ativo .subnav__conta { background: var(--tom-wash); color: var(--tinta); }
+#root .subnav__item svg, #root .subnav__item .nav161__icone { opacity: 0.7; }
+#root .subnav__item--ativo svg, #root .subnav__item--ativo .nav161__icone { opacity: 1; color: var(--tom); }
+
+/* A faixa presa embaixo do topo (Você, Pessoas, Vida): sem o fio de baixo, o mesmo papel da página. */
+#root main .vida-concreta > .subnav, #root main .pessoas > .subnav, #root main .voce > .subnav--voce {
+  margin: 0 calc(-1 * var(--space-2)) var(--space-4); padding: var(--space-2); border-bottom: 0;
+  background: color-mix(in oklab, var(--fundo) 90%, transparent);
+}
+/* As áreas que já espaçam os filhos (gap) não somam a margem da aba por cima: o cabeçalho, as abas e o conteúdo juntos. */
+#root .vida-concreta.material { gap: var(--space-4); }
+#root .vida-concreta.material > .cabeca-area, #root .voce > .perfil161 { margin-bottom: 0; }
+#root .voce { gap: var(--space-5); }
+/* Os cartões de uma parte de Você não encostam um no outro. */
+#root .voce__parte > * + * { margin-top: var(--space-4); }
+#root main .vida-concreta > .subnav, #root main .voce > .subnav--voce { margin-bottom: 0; }
+
+/* No celular: as abas quebram em fichas compactas — todas à vista, sem grade de caixas nem rolagem escondida. */
+@media (max-width: 719px) {
+  #root .subnav, #root .divisoes-caminhos { overflow: visible; }
+  #root .subnav__lista, #root .divisoes-caminhos__lista, #root .subnav--caminhos .subnav__lista {
+    display: flex; flex-wrap: wrap; width: auto; gap: 6px; padding: 0; background: none; box-shadow: none; border-radius: 0;
+  }
+  #root .subnav__lista > li { display: flex; min-width: 0; }
+  #root .subnav__item, #root .divisoes-caminhos__item, #root .subnav--caminhos .subnav__item {
+    flex: 0 0 auto; width: auto; min-height: 36px; padding: 0 var(--space-3); line-height: 1.15;
+    border-radius: var(--radius-pill); background: var(--v31-cartao); box-shadow: var(--v31-contorno); text-align: center;
+  }
+  #root .subnav__item--ativo, #root .subnav__item--ativo:hover,
+  #root .divisoes-caminhos__item--ativa, #root .divisoes-caminhos__item--ativa:hover {
+    color: var(--fundo); background: var(--tinta); box-shadow: none;
+  }
+  #root .subnav__item--ativo svg, #root .subnav__item--ativo .nav161__icone { color: inherit; }
+  #root .subnav__item--ativo .subnav__conta { background: color-mix(in oklab, var(--fundo) 25%, transparent); color: var(--fundo); }
+  #root main .vida-concreta > .subnav, #root main .pessoas > .subnav, #root main .voce > .subnav--voce { margin: 0 0 var(--space-3); padding: 0; background: none; }
+  #root main .vida-concreta > .subnav, #root main .voce > .subnav--voce { margin-bottom: 0; }
+}
+
+/* ============================================== 4. Os botões e as ações */
+#root .botao { border-radius: var(--v31-raio-ctl); }
+/* As ações de um grupo (o que dá para fazer aqui) eram texto sublinhado: agora são fichas que parecem tocáveis. */
+#root .grupo-acoes .botao--discreto, #root .lar__acoes .botao--discreto {
+  min-height: 40px; padding: 6px var(--space-4); text-decoration: none; color: var(--tinta);
+  background: var(--v31-cartao); box-shadow: inset 0 0 0 1px var(--fio-forte); border-radius: var(--v31-raio-ctl);
+}
+#root .grupo-acoes .botao--discreto:hover:not(:disabled), #root .lar__acoes .botao--discreto:hover:not(:disabled) {
+  background: var(--tom-wash); box-shadow: inset 0 0 0 1.5px var(--tom); color: var(--tinta);
+}
+#root .grupo-acoes .botao--discreto:disabled, #root .lar__acoes .botao--discreto:disabled { background: transparent; box-shadow: inset 0 0 0 1px var(--fio); }
+#root .grupo-acoes { gap: var(--space-2); }
+
+/* ================================================== 5. Um cartão só */
+/* As peças que são "uma coisa" na página: o mesmo papel, o mesmo canto, a mesma sombra (sem faixas coloridas soltas). */
+#root :is(.estado-bloco, .entrada-caminho__botao, .perfil161, .voce-dinheiro__ir, .p14__bloco, .situacao-atual__item) {
+  background: var(--v31-cartao); border: 0; border-radius: var(--v31-raio); box-shadow: var(--v31-contorno), var(--v31-sombra);
+}
+#root .estado-bloco { box-shadow: var(--v31-contorno), var(--v31-sombra), inset 0 3px 0 var(--tom-e); }
+#root :is(.situacao-atual__item, .voce-dinheiro__ir) { border-radius: var(--v31-raio-ctl); }
+#root .entrada-caminho__botao { padding: var(--space-4) var(--space-5); box-shadow: var(--v31-contorno), var(--v31-sombra), inset 3px 0 0 var(--cor-entrada, var(--tom)); }
+#root .entrada-caminho__botao:hover { box-shadow: inset 0 0 0 1px var(--fio-forte), var(--v31-sombra-alta), inset 3px 0 0 var(--cor-entrada, var(--tom)); transform: translateY(-1px); }
+#root .entrada-caminho__oque { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+#root .situacao-atual__item { box-shadow: var(--v31-contorno), inset 3px 0 0 var(--tom); }
+#root .situacao-atual__item--formacao { box-shadow: var(--v31-contorno), inset 3px 0 0 var(--bom); }
+#root .rotina-resumo { border-radius: var(--v31-raio-ctl); }
+#root .p14 { margin-top: var(--space-5); }
+
+/* ============================================ 7. Peças de cada área */
+/* Você: o primeiro cartão depois das abas não soma a própria margem ao espaço da área. */
+#root .voce__parte > :first-child { margin-top: 0; }
+/* As ações principais de Caminhos e as ações com marca (VIDA 13): o mesmo canto das outras peças. */
+#root :is(.acao-principal, .acao13) { border-radius: var(--v31-raio-ctl); }
+/* A nota que leva a outro lugar ("os cursos estão em Estudos"): um bilhete suave, não uma caixa tracejada. */
+#root .ligacao-caminho { border: 0; border-radius: var(--v31-raio-ctl); background: var(--veu-1); }
+/* O calendário do ano: cada mês é um cartão, não uma caixa cinza. */
+#root .calendario__mes { background: var(--v31-cartao); border: 0; border-radius: var(--v31-raio-ctl); box-shadow: var(--v31-contorno); }
+#root .calendario__mes--agora { box-shadow: inset 0 0 0 1.5px var(--acao); }
+/* Compras: as vitrines dos segmentos, no mesmo cartão das outras áreas. */
+#root .compras-inicio__cartao { border: 0; border-radius: var(--v31-raio); box-shadow: var(--v31-contorno), var(--v31-sombra); }
+#root .compras-inicio__cartao:hover:not(:disabled) { box-shadow: inset 0 0 0 1px var(--fio-forte), var(--v31-sombra-alta); transform: translateY(-1px); }
+@media (max-width: 719px) {
+  /* No celular, duas vitrines por linha (eram uma só, com a fachada inteira: a lista virava uma rua de três telas). */
+  #root .compras-inicio__lista { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+  #root .compras161__vitrine { height: 64px; }
+  #root main .compras-inicio__cartao > span:not(.compras161__vitrine) { padding-left: var(--space-3); padding-right: var(--space-3); }
+  #root .compras-inicio__nome { font-size: var(--type-body); line-height: 1.2; }
+  #root .compras-inicio__frase { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  /* O cabeçalho da área no celular: os fatos numa linha que rola, para as abas e o conteúdo subirem. */
+  #root .cabeca-area__fatos { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-right: calc(-1 * var(--space-4)); padding-right: var(--space-4); }
+  #root .cabeca-area__fatos::-webkit-scrollbar { display: none; }
+  #root .cabeca-area__fatos > div { flex: none; white-space: nowrap; }
+}
+
+/* ============================================== 8. Nascer (a criação) */
+/* O formulário longo vira blocos: cada escolha num cartão, em vez de uma coluna corrida de rótulos e campos. */
+#root .criacao__form { gap: var(--space-3); }
+#root .criacao__form > :is(.campo, .campos-linha, fieldset) { margin: 0; padding: var(--space-4); border: 0; border-radius: var(--v31-raio); background: var(--v31-cartao); box-shadow: var(--v31-contorno); min-width: 0; }
+#root .criacao__form > .campos-linha > .campo { margin: 0; }
+#root .criacao__form > :is(.campo, fieldset) > .campo__rotulo { font-weight: var(--weight-semibold); color: var(--tinta); }
+/* A legenda de um grupo fica DENTRO do cartão (num fieldset ela sentaria na borda de cima). */
+#root .criacao__form fieldset > legend { float: left; width: 100%; padding: 0; margin-bottom: var(--space-2); }
+#root .criacao__form fieldset > legend + * { clear: both; }
+#root .criacao__form > .criacao__nascer { margin-top: var(--space-3); }
+/* Os lugares de nascimento: o nome inteiro do país cabe (eram sete colunas fixas e "Argentina" saía da caixa). */
+#root .epoca__portas--paises { grid-template-columns: repeat(auto-fill, minmax(min(100%, 112px), 1fr)); }
+#root .epoca__porta { border-radius: var(--v31-raio-ctl); min-width: 0; overflow-wrap: anywhere; }
+
+/* ======================================= 6. O que estava repetido */
+/* Minha Semana: no computador, a grade de horários logo abaixo já mostra os sete dias lado a lado — a semana em tiras
+   repetia a mesma semana. No celular (a grade mostra um dia por vez) ela continua: é a visão da semana inteira. */
+@media (min-width: 720px) {
+  #root .semana17 { display: none; }
+}

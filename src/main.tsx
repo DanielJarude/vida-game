@@ -28,6 +28,8 @@ import './ui/alcance.css';
 import './ui/movimento.css';
 // REWORK 12.25: o Submundo numa tela só (a situação, as partes, as propostas, as pessoas, as organizações, a Justiça).
 import './ui/submundo.css';
+// VIDA 31 · rework visual geral: o acabamento único (abas, cartões, ações, cabeçalhos) — sempre a ÚLTIMA folha.
+import './ui/visual31.css';
 
 iniciarTema();
 
