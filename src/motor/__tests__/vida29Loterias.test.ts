@@ -11,7 +11,7 @@ import { estadoApostas18 } from '../v18/apostas/estado18';
 
 const NOVAS: LoteriaId[] = ['timemania', 'diadesorte', 'supersete', 'maismilionaria'];
 const comDinheiro = (semente = 1) => { const v = structuredClone(adulto(30, { semente, municipioId: 'sao-paulo-sp' })); v.financas.conta = 1_000_000; v.momento = null; return v; };
-const ap = (v: Vida, oque: Record<string, unknown>) => ({ tipo: 'aposta18', oque } as Parameters<typeof executar>[1]);
+const ap = (_v: Vida, oque: Record<string, unknown>) => ({ tipo: 'aposta18', oque } as Parameters<typeof executar>[1]);
 
 describe('VIDA 29 · as quatro loterias novas', () => {
   it('as chances são as oficiais da Caixa (aposta simples)', () => {
