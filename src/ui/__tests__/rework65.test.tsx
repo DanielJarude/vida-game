@@ -330,6 +330,8 @@ describe('acessibilidade do seletor e do sistema', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: /Continuar a vida/ }));
     fireEvent.click(screen.getAllByRole('button', { name: 'Vida' })[0]);
+    // VIDA 31: a área abre na página inicial; a seção abre pela aba (ou pelo Explorar).
+    fireEvent.click(screen.getByRole('tab', { name: 'Casa' }));
     const lista = screen.getByRole('tablist');
     const abas = within(lista).getAllByRole('tab');
     expect(abas.filter(a => a.tabIndex === 0)).toHaveLength(1);

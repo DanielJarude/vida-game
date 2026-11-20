@@ -172,6 +172,8 @@ describe('Casa e dinheiro (Vida · Casa: moradia; Vida · Dinheiro: o mês, os b
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: /Continuar/ }));
     fireEvent.click(screen.getAllByRole('button', { name: 'Pessoas' })[0]);
+    // VIDA 31: a área abre na página inicial; a seção abre pela aba (ou pelo Explorar).
+    fireEvent.click(screen.getByRole('tab', { name: 'Meu círculo' }));
     fireEvent.click(screen.getAllByRole('button', { name: /Faísca/ })[0]);
     const ficha = screen.getByRole('dialog', { name: 'Faísca' });
     expect(within(ficha).getByText(/doente: uma infecção urinária/i)).toBeTruthy();

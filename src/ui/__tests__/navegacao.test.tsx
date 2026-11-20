@@ -50,6 +50,9 @@ function ir(l: Lugar): void {
   const a = AREAS.find(x => x.id === (l.area === 'tempo' ? 'voce' : l.area))!;
   fireEvent.click(screen.getAllByRole('button', { name: a.rotulo })[0]);
   if (l.area === 'tempo') fireEvent.click(screen.getByRole('button', { name: 'Minha Semana' }));
+  // VIDA 31: Eu e Pessoas abrem na página inicial; a parte do destino abre pela aba.
+  if (l.area === 'voce') fireEvent.click(screen.getByRole('tab', { name: ({ resumo: 'Resumo', saude: 'Saúde', habilidades: 'Habilidades', aparencia: 'Aparência', fama: 'Fama', mundo: 'No mundo' } as const)[l.voce ?? 'resumo'] }));
+  if (l.area === 'pessoas') fireEvent.click(screen.getByRole('tab', { name: 'Meu círculo' }));
   if (l.secao) fireEvent.click(screen.getByRole('tab', { name: SECOES_VIDA.find(s => s.id === l.secao)!.rotulo }));
   // HOTFIX 11.5.1: Compras tem segmentos — o destino que pede um (Veículos, Serviços) é o clique no segmento.
   if (l.segmento) fireEvent.click(within(document.querySelector('.compras__segmentos') as HTMLElement).getByRole('button', { name: SEGMENTOS.find(s => s.id === l.segmento)!.nome }));

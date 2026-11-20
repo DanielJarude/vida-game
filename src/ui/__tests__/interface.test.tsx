@@ -88,6 +88,8 @@ describe('interface', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Nascer' }));
     avancar(6);
     fireEvent.click(screen.getAllByRole('button', { name: /Pessoas/ })[0]);
+    // VIDA 31: a área abre na página inicial; a seção abre pela aba (ou pelo Explorar).
+    fireEvent.click(screen.getByRole('tab', { name: 'Meu círculo' }));
     const mae = within(screen.getByRole('main')).getAllByText(/sua mãe/)[0].closest('button')!;
     fireEvent.click(mae);
     const ficha = screen.getByRole('dialog');
@@ -158,6 +160,8 @@ describe('interface', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: /Continuar a vida de Rita/ }));
     fireEvent.click(screen.getAllByRole('button', { name: /Pessoas/ })[0]);
+    // VIDA 31: a área abre na página inicial; a seção abre pela aba (ou pelo Explorar).
+    fireEvent.click(screen.getByRole('tab', { name: 'Meu círculo' }));
     const main = within(screen.getByRole('main'));
     expect(main.getByText('Com você')).toBeTruthy();
     const cartoes = screen.getByRole('main').querySelectorAll('.cartao-pessoa');
@@ -244,6 +248,8 @@ describe('interface', () => {
     fireEvent.click(screen.getByRole('button', { name: /Continuar a vida/ }));
     resolverMomentos();
     fireEvent.click(screen.getAllByRole('button', { name: /^Eu$/ })[0]); // VIDA 31: Você virou Eu
+    // VIDA 31: a área abre na página inicial; a seção abre pela aba (ou pelo Explorar).
+    fireEvent.click(screen.getByRole('tab', { name: 'Resumo' }));
     const main = within(screen.getByRole('main'));
     expect(main.getByRole('heading', { name: 'Cabeça' })).toBeTruthy();
     expect(main.getByText('sob pressão')).toBeTruthy();

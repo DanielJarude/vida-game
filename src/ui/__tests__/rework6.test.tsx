@@ -233,6 +233,8 @@ describe('tokens: uma fonte só, contraste e foco', () => {
     const nav = screen.getAllByRole('navigation', { name: 'Áreas' })[0];
     fireEvent.click(within(nav).getByRole('button', { name: 'Eu' }));
     expect(within(nav).getByRole('button', { name: 'Eu' }).getAttribute('aria-current')).toBe('page');
+    // VIDA 31: a área abre na página inicial; a seção abre pela aba (ou pelo Explorar).
+    fireEvent.click(screen.getByRole('tab', { name: 'Resumo' }));
     // REWORK 9.6: os atributos (e a cabeça) abrem com o teclado — cada um é um <details> com <summary>.
     const resumos = document.querySelectorAll('.estado-bloco > summary, .atributo__dobra > summary');
     expect(resumos.length).toBeGreaterThanOrEqual(2);
@@ -282,9 +284,9 @@ describe('celular: modais, dinheiro grande e nada perdido na reorganização', (
       expect(screen.getAllByRole('button', { name: /Viver mais um ano/ })).toHaveLength(1);
       const secoes = a.id === 'vida' ? SECOES_VIDA : a.id === 'tempo' ? SECOES_TEMPO : [];
       for (const s of secoes) {
-        const t = screen.getByRole('tab', { name: s.rotulo });
-        fireEvent.click(t);
-        expect(t.getAttribute('aria-selected')).toBe('true');
+        // VIDA 31: no início da área as abas são a entrada (a seção abre e as abas de verdade marcam a escolhida).
+        fireEvent.click(screen.getByRole('tab', { name: s.rotulo }));
+        expect(screen.getByRole('tab', { name: s.rotulo }).getAttribute('aria-selected')).toBe('true');
       }
     }
   });
