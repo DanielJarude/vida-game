@@ -4,6 +4,7 @@
  * linha ("É seu"): a lista não se reordena, os filtros e a página continuam onde estavam (as escolhas de cada linha
  * moram na linha, chaveada pelo produto).
  */
+import { categoriaDeJoia, NOME_CATEGORIA_DE_JOIA, ORDEM_DAS_JOIAS, subcategoriaDeJoia, type CategoriaDeJoia } from '../../../motor/dados/categoriasDeJoia29';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { joia20, METAIS20, PEDRAS20 } from '../../../motor/dados20/joias20';
 import { leituraDoMetal } from '../../avatar/joias23';
@@ -108,7 +109,19 @@ export function LojaDaVida({ vida, agir, lojaId }: { vida: Vida; agir: (a: Acao)
   // eletrônicos, esporte…).
   const secoes = cats.filter(c => !(tipos.length > 1 && ['vestuario', 'calcados', 'acessorios', 'otica', 'relogios', 'joias'].includes(c)) && !((ambientes.length > 1 || ambientes22.length > 1) && (c === 'moveis' || c === 'eletrodomesticos')));
   const nivelDe = (l: Linha) => { const o = l.ofertas.filter(passa)[0] ?? l.ofertas[0]; return l.produto.tipo === 'item' ? nivelDoItem(itemEstilo(l.produto.id)!) : nivelDaCoisa({ coisaId: l.produto.id, marca: o?.marca } as CoisaTida); };
+  // VIDA 29: as categorias da joalheria (brincos, colares, pulseiras, anéis, relógios, piercings, tornozeleiras) e as
+  // subcategorias onde há variedade — a navegação principal da loja de joias; a busca e os filtros valem DENTRO dela.
+  const catJoiaDe = (l: Linha) => { if (l.produto.tipo !== 'item') return undefined; const it = itemEstilo(l.produto.id); return it ? categoriaDeJoia(it as never) : undefined; };
+  const subJoiaDe = (l: Linha) => { const it = l.produto.tipo === 'item' ? itemEstilo(l.produto.id) : undefined; return it ? subcategoriaDeJoia(l.produto.id, it, joia20(l.produto.id)) : undefined; };
+  const contaJoias = new Map<CategoriaDeJoia, number>();
+  for (const l of linhas) { const c = catJoiaDe(l); if (c) contaJoias.set(c, (contaJoias.get(c) ?? 0) + 1); }
+  const catsDeJoia = ORDEM_DAS_JOIAS.filter(c => contaJoias.has(c));
+  const joiaSel = catsDeJoia.includes(m.joia as CategoriaDeJoia) ? m.joia as CategoriaDeJoia : '';
+  const contaSub = new Map<string, number>();
+  if (joiaSel) for (const l of linhas) if (catJoiaDe(l) === joiaSel) { const sc = subJoiaDe(l); if (sc) contaSub.set(sc, (contaSub.get(sc) ?? 0) + 1); }
+  const subSel = m.subjoia && contaSub.has(m.subjoia) ? m.subjoia : '';
   const visiveis = linhas
+    .filter(l => (!joiaSel || catJoiaDe(l) === joiaSel) && (!subSel || subJoiaDe(l) === subSel))
     .filter(l => (!m.metal || joiaDe(l)?.metal === m.metal) && (!m.pedra || (m.pedra === 'sem' ? !joiaDe(l)?.pedra : joiaDe(l)?.pedra === m.pedra)) && (!m.meus || ehMeu(l)) && (!tipo || tipoDe(l) === tipo) && noAmbiente(l) && (!ambiente || ambienteDe(l) === ambiente) && (!cat || l.categoria === cat) && l.ofertas.some(passa) && (!q || q.split(/\s+/).every(t => normalizarBusca(nomeDoProduto(l.produto)).includes(t) || l.ofertas.some(o => o.marca && normalizarBusca(marcaPorId(o.marca)!.nome).includes(t)))))
     .sort((a, b) => m.ordem === 'menor' ? Math.min(...a.ofertas.filter(passa).map(o => o.preco)) - Math.min(...b.ofertas.filter(passa).map(o => o.preco)) : m.ordem === 'maior' ? Math.max(...b.ofertas.filter(passa).map(o => o.preco)) - Math.max(...a.ofertas.filter(passa).map(o => o.preco)) : m.ordem === 'qualidade' ? nivelDe(b) - nivelDe(a) : m.ordem === 'nome' ? nomeDoProduto(a.produto).localeCompare(nomeDoProduto(b.produto)) : m.ordem === 'marca' ? nomeDaMarcaDe(a).localeCompare(nomeDaMarcaDe(b)) || Math.min(...a.ofertas.filter(passa).map(o => o.preco)) - Math.min(...b.ofertas.filter(passa).map(o => o.preco)) : 0);
   const i = idade(vida);
@@ -131,12 +144,18 @@ export function LojaDaVida({ vida, agir, lojaId }: { vida: Vida; agir: (a: Acao)
         {' '}O preço muda com a marca: escolha a marca no próprio produto.
       </p>
       <label className="busca-compras__campo loja-vida__busca">
-        <span className="busca-compras__rotulo">Buscar nesta loja</span>
+        <span className="busca-compras__rotulo">{joiaSel ? `Buscar em ${NOME_CATEGORIA_DE_JOIA[joiaSel].toLowerCase()}` : 'Buscar nesta loja'}</span>
         <input type="search" value={m.texto} onChange={ev => mudar({ texto: ev.target.value, quantos: POR_PAGINA })} placeholder="Produto ou marca" autoComplete="off" />
       </label>
       {tipos.length > 1 && <Escolha rotulo="Tipo de peça" valor={tipo} aoMudar={x => { mudar({ tipo: x, cat: '', marca: '', quantos: POR_PAGINA }); }} opcoes={[{ id: '', rotulo: 'Tudo' }, ...tipos.map(t => ({ id: t.id as string, rotulo: t.nome }))]} />}
       {ambientes22.length > 1 && !tipo && (!cat || cat === 'moveis' || cat === 'eletrodomesticos') && <Escolha rotulo="Ambiente" valor={ambiente22} aoMudar={x => { mudar({ ambiente22: x, ambiente: '', cat: '', marca: '', quantos: POR_PAGINA }); }} opcoes={[{ id: '', rotulo: 'Todos' }, ...ambientes22.map(a => ({ id: a.id as string, rotulo: a.nome }))]} />}
       {ambientes.length > 1 && !tipo && (!cat || cat === 'moveis' || cat === 'eletrodomesticos') && <Escolha rotulo={ambiente22 ? `Em ${nomeDoAmbiente(ambiente22 as never).toLowerCase()}` : 'Tipo de móvel'} valor={ambiente} aoMudar={x => { mudar({ ambiente: x, cat: '', marca: '', quantos: POR_PAGINA }); }} opcoes={[{ id: '', rotulo: 'Tudo' }, ...ambientes.map(a => ({ id: a.id as string, rotulo: a.nome }))]} />}
+      {catsDeJoia.length > 1 && (
+        <div className="joalheria29" role="group" aria-label="Categorias da joalheria">
+          <Escolha rotulo="Categoria" valor={joiaSel} aoMudar={x => mudar({ joia: x, subjoia: '', quantos: POR_PAGINA })} opcoes={[{ id: '' as const, rotulo: `Todas (${linhas.filter(l => !!catJoiaDe(l)).length})` }, ...catsDeJoia.map(c => ({ id: c, rotulo: `${NOME_CATEGORIA_DE_JOIA[c]} (${contaJoias.get(c)})` }))]} />
+          {contaSub.size > 1 && <Escolha rotulo="Tipo" valor={subSel} aoMudar={x => mudar({ subjoia: x, quantos: POR_PAGINA })} opcoes={[{ id: '', rotulo: 'Todos' }, ...[...contaSub].map(([sc, n]) => ({ id: sc, rotulo: `${sc} (${n})` }))]} />}
+        </div>
+      )}
       {secoes.length > 1 && !tipo && !ambiente && <Escolha rotulo="Seção" valor={cat} aoMudar={x => { mudar({ cat: x, marca: '', quantos: POR_PAGINA }); }} opcoes={[{ id: '' as const, rotulo: 'Tudo' }, ...secoes.map(c => ({ id: c, rotulo: NOME_CATEGORIA[c] }))]} />}
       {faixas.length > 1 && <Escolha rotulo="Segmento da marca" valor={faixa} aoMudar={x => { mudar({ faixa: x, quantos: POR_PAGINA }); }} opcoes={[{ id: '', rotulo: 'Todos' }, ...faixas.map(f => ({ id: String(f), rotulo: cap(NOME_SEGMENTO_DE_MARCA[f]) }))]} />}
       <div className="busca-compras__filtros">

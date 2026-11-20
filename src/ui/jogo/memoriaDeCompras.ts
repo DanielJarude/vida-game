@@ -21,7 +21,7 @@ export interface EstadoDeCompras {
   /** O segmento foi pedido de fora (o mapa "Comprar carro" leva a Veículos): vale mesmo numa vida nova. */
   deFora?: boolean;
 }
-export interface EstadoDaLoja { texto: string; cat: string; faixa: string; marca: string; preco: string; ordem: OrdemDeCompras; quantos: number; /** 12.7: o tipo de peça (casacos, vestidos, calçados…). */ tipo?: string; /** 12.8.1: a categoria da loja da casa (sala e estar, quarto, cozinha e jantar…). */ ambiente?: string; /** VIDA 22: o ambiente da casa (sala de estar, quarto, banheiro…), o primeiro filtro da loja da casa. */ ambiente22?: string; /** VIDA 27 · §9: o metal e a pedra (na joalheria), só o que já é seu, e a rolagem de onde se estava. */ metal?: string; pedra?: string; meus?: boolean; rolagem?: number }
+export interface EstadoDaLoja { /** VIDA 29: a categoria e a subcategoria da joalheria (brincos → argolas). */ joia?: string; subjoia?: string; texto: string; cat: string; faixa: string; marca: string; preco: string; ordem: OrdemDeCompras; quantos: number; /** 12.7: o tipo de peça (casacos, vestidos, calçados…). */ tipo?: string; /** 12.8.1: a categoria da loja da casa (sala e estar, quarto, cozinha e jantar…). */ ambiente?: string; /** VIDA 22: o ambiente da casa (sala de estar, quarto, banheiro…), o primeiro filtro da loja da casa. */ ambiente22?: string; /** VIDA 27 · §9: o metal e a pedra (na joalheria), só o que já é seu, e a rolagem de onde se estava. */ metal?: string; pedra?: string; meus?: boolean; rolagem?: number }
 
 const CHAVE = 'vida-compras-1151';
 const PADRAO: EstadoDeCompras = { segmento: 'inicio', texto: '', categoria: '', marca: '', faixa: '', ordem: 'relevancia', categoriaDasLojas: '' };

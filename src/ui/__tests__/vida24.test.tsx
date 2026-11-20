@@ -29,7 +29,8 @@ describe('VIDA 24 · Aparência por categorias', () => {
     const v = vida(2410);
     const um = render(<AparenciaEEstilo vida={v} agir={() => true} irPara={() => undefined} />);
     const abas = within(um.container).getAllByRole('tab').map(b => b.textContent);
-    expect(abas).toEqual(expect.arrayContaining(['Corpo', 'Pele e marcas', 'Pelos', 'Cabelo e rosto', 'Piercings e joias', 'Roupas e estilo']));
+    // VIDA 29: os acessórios ganharam categoria própria; os piercings ficaram com a lupa.
+    expect(abas).toEqual(expect.arrayContaining(['Corpo', 'Pele e marcas', 'Pelos', 'Cabelo e rosto', 'Roupas', 'Acessórios e joias', 'Piercings']));
     fireEvent.click(within(um.container).getByRole('tab', { name: 'Corpo' }));
     await waitFor(() => expect(um.container.querySelector('[data-c24="corpo"]')).toBeTruthy());
     um.unmount();

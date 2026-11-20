@@ -13,6 +13,7 @@
 import type { ReactElement } from 'react';
 import { COR_DO_METAL, piercingDoItem, type Piercing } from '../../motor/dados/piercings129';
 import { acabamento, TracoDeMetal } from './joias23';
+import { BrincoDoRetrato } from './joias20';
 
 export interface GeometriaDoRosto {
   cx: number; olhoY: number; esp: number; w: number; orelhaFora: number; orelhaRx: number;
@@ -269,7 +270,10 @@ export function OrelhaDePerto({ ids, brinco, pele, sombra, cabelo, largura = 220
       default: break;
     }
   }
-  const lobulo = brinco ? (BrincoNovo({ modelo: brinco, x: 13.4, y: 33.2, s: 1 }) ?? (
+  // VIDA 29: o lóbulo de perto desenha o MESMO brinco do retrato — as 94 joias do catálogo (`BrincoDoRetrato`), as da VIDA 13
+  // (`BrincoNovo`) e as antigas. Antes, as joias do catálogo caíam todas no aro genérico: a lupa mostrava a mesma forma
+  // para qualquer brinco colocado.
+  const lobulo = brinco ? (BrincoDoRetrato({ modelo: brinco, x: 13.4, y: 33.2, s: 1 }) ?? BrincoNovo({ modelo: brinco, x: 13.4, y: 33.2, s: 1 }) ?? (
     brinco === 'brincos_diamante' ? <path data-brinco="diamante" d="M 13.4 31.3 L 14.8 33.2 L 13.4 35.1 L 12 33.2 Z" fill="#f4fbff" stroke="#5f8aa8" strokeWidth={0.45} />
       : <circle data-brinco={brinco === 'brincos_ouro' ? 'ouro' : 'simples'} cx={13.4} cy={34.2} r={brinco === 'brincos_ouro' ? 1.8 : 1.4} fill="none" stroke={brinco === 'brincos_ouro' ? '#d8b45a' : '#8d939b'} strokeWidth={0.8} />)) : null;
   return (
@@ -283,9 +287,10 @@ export function OrelhaDePerto({ ids, brinco, pele, sombra, cabelo, largura = 220
       <path d="M 12.2 11.4 C 16.6 8.6, 21 12, 19.2 18.6 C 18.4 21.8, 16.6 23.4, 15.6 26" fill="none" stroke={misturarCor(sombra, '#000000', 0.16)} strokeWidth={0.8} strokeLinecap="round" />
       <ellipse cx={14.2} cy={20.4} rx={3.6} ry={4.4} fill={misturarCor(sombra, '#000000', 0.2)} />
       <path d="M 8.6 18 Q 11.2 18.4 11 21 Q 10.8 23.4 8.6 23.6 Z" fill={pele} stroke={contorno} strokeWidth={0.3} />
-      {lobulo && <g transform="translate(13.4 33.2) scale(1.5) translate(-13.4 -33.2)">{lobulo}</g>}
       {joias}
       {cabelo && <path data-cabelo-cobre="sim" d="M 0 0 H 26 Q 24 6 21 14 Q 18 24 17.4 40 H 0 Z" fill={cabelo} opacity={0.94} />}
+      {/* VIDA 29: o brinco do lóbulo vem por cima do cabelo solto (o que pende do lóbulo aparece), como no retrato. */}
+      {lobulo && <g transform="translate(13.4 33.2) scale(1.5) translate(-13.4 -33.2)">{lobulo}</g>}
     </svg>
   );
 }

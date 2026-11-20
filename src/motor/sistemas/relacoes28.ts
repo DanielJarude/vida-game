@@ -150,3 +150,28 @@ export function dimensoes28EmPalavras(vin: Vinculo): { id: string; rotulo: strin
 }
 
 export const DIMENSOES28 = D;
+
+/**
+ * VIDA 29 · O MOTIVO DO CIÚME. A cobrança de ciúme (a mensagem "quem é essa pessoa nas suas fotos?", o jantar calado
+ * depois do celular) chegava logo no começo do namoro, sem nada que a justificasse: bastava a tensão do vínculo estar
+ * alta — e ela vinha de ANTES do namoro (a briga da amizade, um atrito antigo). Agora o ciúme precisa de um motivo que o
+ * jogo registrou, e o começo do namoro tem um período em que só um motivo real (não o temperamento) o dispara:
+ *
+ *   o caso escondido (`Romance.segredo`) · o aplicativo de namoro descoberto há pouco (`app16_publico`) — motivos reais;
+ *   o jeito ciumento da pessoa (`jeito.tem`) — só depois de 6 meses de namoro;
+ *   a tensão construída DENTRO do namoro (≥ 35, com 12 meses ou mais de relação).
+ *
+ * Devolve o motivo (para o texto e para os testes) ou `undefined` — e aí não há cena de ciúme.
+ */
+export function motivoDeCiume(v: Vida, p: Pessoa, vin: Vinculo, ciumento: (p: Pessoa) => boolean): 'segredo' | 'aplicativo' | 'jeito' | 'tensao' | undefined {
+  const rom = vin.romance;
+  if (!rom) return undefined;
+  const inicio = vin.fases?.find(f => f.fase === 'namoro')?.t ?? rom.tInicio ?? rom.tEstagio;
+  const meses = v.t - inicio;
+  if (rom.segredo) return 'segredo';
+  const app = v.fatos['app16_publico'];
+  if (app !== undefined && v.t - app <= 24 && app >= inicio) return 'aplicativo';
+  if (meses >= 6 && ciumento(p)) return 'jeito';
+  if (meses >= 12 && vin.tensao >= 35) return 'tensao';
+  return undefined;
+}

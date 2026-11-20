@@ -33,7 +33,8 @@ describe('12.7 · o guarda-roupa veste a peça escolhida', () => {
     const sel = within(rosto).getByLabelText('Trocar por') as HTMLSelectElement;
     const grife = v.eu.estilo!.itens.find(x => x.itemId === 'oculos_grife')!;
     fireEvent.change(sel, { target: { value: grife.id } });
-    fireEvent.click(within(rosto).getByRole('button', { name: 'Vestir' }));
+    // VIDA 29: acessório se usa (não se veste).
+    fireEvent.click(within(rosto).getByRole('button', { name: 'Usar' }));
     expect(v.eu.visual.modeloOculos).toBe('oculos_grife');
     expect(v.eu.estilo!.itens.filter(x => x.usando && itemEstilo(x.itemId)!.categoria === 'oculos').map(x => x.itemId)).toEqual(['oculos_grife']);
     expect(within(container.querySelector('[data-parte="rosto"]') as HTMLElement).getByText('Óculos escuros de grife')).toBeTruthy();

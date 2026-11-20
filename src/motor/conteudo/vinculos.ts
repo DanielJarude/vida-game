@@ -3,6 +3,8 @@
  * Existe para que quem entrou na história continue nela.
  */
 
+import { motivoDeCiume } from '../sistemas/relacoes28';
+import { tem as temJeito } from '../sistemas/jeito';
 import { textoLocal } from '../mundo/locais';
 import { educacaoDaVida, oPrograma, paisDaVida } from '../mundo/vida';
 import { dinheiro as moeda } from '../texto';
@@ -48,7 +50,9 @@ export const VINCULOS: Conteudo[] = [
   {
     id: 'par_ciume', tipo: 'decisao', idade: [18, 70], tema: 'amor', repetir: 8,
     papeis: { pessoa: P.parceiro, outro: P.qualquer(P.genteDe('trabalho'), P.amigo) },
-    quando: c => c.p.outro.genero !== c.v.eu.genero || c.v.eu.atracao === 'ambos',
+    // VIDA 29: o jantar calado precisa de um motivo (o jeito ciumento depois de meses, o caso, o aplicativo, a tensão do
+    // próprio namoro) — não chega mais a quem acabou de começar a namorar sem nada que o justifique.
+    quando: c => (c.p.outro.genero !== c.v.eu.genero || c.v.eu.atracao === 'ambos') && !!c.v.vinculos[c.p.pessoa.id] && !!motivoDeCiume(c.v, c.p.pessoa, c.v.vinculos[c.p.pessoa.id], x => temJeito(x, 'ciumento')),
     titulo: 'O celular',
     texto: c => `${c.p.pessoa.nome} viu uma mensagem de ${c.p.outro.nome} no seu celular às onze da noite — uma coisa de trabalho, uma piada — e passou o jantar calad${gp(c, 'pessoa', 'o', 'a', 'e')}.`,
     opcoes: [

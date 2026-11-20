@@ -113,7 +113,8 @@ export function AparenciaEEstilo({ vida, agir, irPara }: Props) {
       {atual === 'corpo' && <CorpoPainel vida={vida} agir={agir} irPara={irPara} />}
       {atual === 'pele' && (familia ? <p className="nota">{AUTONOMIA.aparencia_basica.antes}</p> : <PeleEMarcas vida={vida} agir={agir} />)}
       {atual === 'pelos' && <PelosPainel vida={vida} agir={agir} />}
-      {atual === 'joias' && <><PainelDePiercings vida={vida} agir={agir} />{vitrine(<><OQueVeste vida={vida} agir={agir} so="joias" />{compras}</>)}</>}
+      {atual === 'joias' && <><PainelDePiercings vida={vida} agir={agir} />{compras}</>}
+      {atual === 'acessorios' && vitrine(<><OQueVeste vida={vida} agir={agir} so="acessorios" />{compras}</>)}
       {atual === 'roupas' && vitrine(<>{i >= 3 && <OQueVeste vida={vida} agir={agir} so="roupas" />}<GuardaRoupa vida={vida} agir={agir} />{compras}</>)}
       {atual === 'tatuagens' && <EstudioDeTatuagem vida={vida} agir={agir} />}
       {atual === 'cabelo' && <>
@@ -219,23 +220,29 @@ const PARTES: { id: string; nome: string; lugares: string[] }[] = [
   // VIDA 13: os piercings saíram daqui (eram um cartão por furo): têm a seção própria, com a lupa (`Piercings13`).
 ];
 
-/** VIDA 24: as partes das joias (o resto é roupa e estilo). */
-const PARTES_DE_JOIA = new Set(['pulso', 'pulseira', 'anel', 'alianca', 'joia', 'orelha', 'tornozelo']);
-export function OQueVeste({ vida, agir, so }: { vida: Vida; agir: (a: Acao) => boolean; so?: 'joias' | 'roupas' }) {
+/**
+ * VIDA 24: as partes das joias (o resto é roupa e estilo). VIDA 29: os ACESSÓRIOS são uma categoria própria (a cabeça, o
+ * rosto, a bolsa e as joias): antes, óculos, chapéu e bolsa ficavam no meio das roupas, as joias com os piercings, e uma
+ * parte sem peça sumia da tela — o jogador não achava onde se arrumar. Agora cada parte de acessório aparece sempre (vazia,
+ * diz onde comprar), e dá para combinar todas ao mesmo tempo (uma por parte).
+ */
+const PARTES_DE_ACESSORIO = new Set(['cabeca', 'rosto', 'bolsa', 'pulso', 'pulseira', 'anel', 'alianca', 'joia', 'orelha', 'tornozelo']);
+export function OQueVeste({ vida, agir, so }: { vida: Vida; agir: (a: Acao) => boolean; so?: 'acessorios' | 'roupas' }) {
   const itens = itensDaPessoa(vida);
-  if (!itens.length) return null;
+  if (!itens.length && so !== 'acessorios') return null;
   const daParte = (l: string[]) => itens.filter(x => { const it = itemEstilo(x.itemId); return !!it && lugaresDoItem(it).some(y => l.includes(y)) && (it.lugar === 'casaco') === l.includes('casaco'); });
-  const partes = PARTES.filter(p => !so || (so === 'joias') === PARTES_DE_JOIA.has(p.id)).map(p => ({ ...p, itens: daParte(p.lugares) })).filter(p => p.itens.length);
-  if (!partes.length && so === 'joias') return <p className="nota">Nenhuma joia sua ainda (brincos, colares, pulseiras, anéis e relógios ficam aqui).</p>;
+  const partes = PARTES.filter(p => !so || (so === 'acessorios') === PARTES_DE_ACESSORIO.has(p.id)).map(p => ({ ...p, itens: daParte(p.lugares) }))
+    // A aliança só aparece para quem tem uma (é do casamento, não da loja); as outras partes de acessório aparecem sempre.
+    .filter(p => p.itens.length || (so === 'acessorios' && p.id !== 'alianca'));
   return (
     <div className="aparencia__itens">
-      <h3 className="subtitulo">{so === 'joias' ? 'Joias e relógio' : 'O que você está usando'}</h3>
+      <h3 className="subtitulo">{so === 'acessorios' ? 'Acessórios e joias' : 'O que você está usando'}</h3>
       {/* 12.7: um cartão por parte do corpo — a peça (o desenho dela), a marca, trocar por outra sua ou tirar. */}
       <ul className="vestir vestir--cartoes">
         {partes.map(p => <ParteDoCorpo key={p.id} vida={vida} agir={agir} parte={p} />)}
       </ul>
       <p className="nota">A peça que sai fica guardada: é sua, dá para voltar a usar quando quiser.</p>
-      {idade(vida) >= 10 && so !== 'joias' && <LooksSalvos vida={vida} agir={agir} />}
+      {idade(vida) >= 10 && so !== 'acessorios' && <LooksSalvos vida={vida} agir={agir} />}
     </div>
   );
 }
@@ -248,13 +255,13 @@ function ParteDoCorpo({ vida, agir, parte }: { vida: Vida; agir: (a: Acao) => bo
   const it = atual ? itemEstilo(atual.itemId)! : undefined;
   const inteira = !!it && it.lugar === 'corpo' && parte.id === 'pernas';
   // Bolsa se leva, não se veste (VIDA 21).
-  const verbo = parte.id === 'bolsa' ? 'Levar' : 'Vestir';
+  const verbo = parte.id === 'bolsa' ? 'Levar' : PARTES_DE_ACESSORIO.has(parte.id) ? 'Usar' : 'Vestir';
   return (
     <li className="vestir__parte vestir__cartao" data-parte={parte.id}>
       <span className="vestir__miniatura" aria-hidden={!atual}>{atual ? <Miniatura vida={vida} itemId={atual.itemId} id={sementeDaPeca(atual)} largura={64} marca={atual.marca} /> : <span className="vestir__vazio">—</span>}</span>
       <span className="vestir__info">
         <span className="vestir__nome">{parte.nome}</span>
-        <span className="vestir__atual">{it ? it.nome : <span className="nota">nada</span>}{inteira ? <span className="nota"> (a peça inteira)</span> : null}</span>
+        <span className="vestir__atual">{it ? it.nome : <span className="nota">{parte.itens.length ? 'nada' : 'nenhum seu ainda — Vida · Compras'}</span>}{inteira ? <span className="nota"> (a peça inteira)</span> : null}</span>
         {atual?.marca && <span className="nota vestir__marca">{nomeDaMarca(atual.marca) ?? atual.marca}</span>}
       </span>
       <span className="vestir__trocar">
@@ -344,10 +351,11 @@ function LooksSalvos({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean })
 
 /* ------------------------------------------------------------------ VIDA 24: as categorias */
 
-type Categoria = 'corpo' | 'pele' | 'pelos' | 'cabelo' | 'joias' | 'roupas' | 'tatuagens';
+type Categoria = 'corpo' | 'pele' | 'pelos' | 'cabelo' | 'roupas' | 'acessorios' | 'joias' | 'tatuagens';
+// VIDA 29: Acessórios e joias é uma categoria (todas as partes); Piercings fica com a lupa e os furos.
 const CATEGORIAS: { id: Categoria; nome: string }[] = [
   { id: 'corpo', nome: 'Corpo' }, { id: 'pele', nome: 'Pele e marcas' }, { id: 'pelos', nome: 'Pelos' }, { id: 'cabelo', nome: 'Cabelo e rosto' },
-  { id: 'joias', nome: 'Piercings e joias' }, { id: 'roupas', nome: 'Roupas e estilo' }, { id: 'tatuagens', nome: 'Tatuagens' }
+  { id: 'roupas', nome: 'Roupas' }, { id: 'acessorios', nome: 'Acessórios e joias' }, { id: 'joias', nome: 'Piercings' }, { id: 'tatuagens', nome: 'Tatuagens' }
 ];
 const CHAVE_CATEGORIA = 'vida.aparencia.categoria';
 let categoriaNaMemoria: Categoria | undefined;

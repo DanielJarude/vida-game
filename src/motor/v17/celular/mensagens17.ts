@@ -15,6 +15,8 @@
  * Tudo isso entra pela MESMA porta das mensagens da VIDA 15 (`candidatos` → `entregar`) e respeita a cota global de
  * 4 mensagens recebidas por ano (`sistemas/cotaDeMensagens`). Mais variedade, não mais frequência.
  */
+import { tem } from '../../sistemas/jeito';
+import { motivoDeCiume } from '../../sistemas/relacoes28';
 import type { Rng } from '../../rng';
 import { clamp } from '../../rng';
 import type { Marco, Pessoa, TipoMarco, Vida, Vinculo } from '../../tipos';
@@ -206,7 +208,9 @@ export function candidatos17(v: Vida, excluir: Set<string>, fama: number): Candi
     if ((mg || cf) && eu >= 12 && ip >= 12 && !RECENTE(v, `cel17_conf_${p.id}`, 24)) {
       const assunto = (mg?.motivo ?? cf!.assunto).replace(/\.$/, '');
       out.push({ tipo: 'conflito', p, prioridade: 'alta', peso: 0.9, montar: rr => { v.fatos[`cel17_conf_${p.id}`] = v.t; return { de: p.id, sit17: 'conflito_magoa', texto: fala('conflito_magoa', tom, rr, p, v, { assunto }), assunto }; } });
-    } else if (papel === 'parceiro' && vin.tensao >= 35 && !RECENTE(v, `cel17_conf_${p.id}`, 24)) {
+    // VIDA 29: o ciúme da parceria precisa de um motivo registrado (`relacoes28.motivoDeCiume`): antes, bastava a tensão
+    // do vínculo — herdada de antes do namoro — e o namoro mal começado já recebia a cobrança.
+    } else if (papel === 'parceiro' && !!motivoDeCiume(v, p, vin, x => tem(x, 'ciumento')) && !RECENTE(v, `cel17_conf_${p.id}`, 24)) {
       out.push({ tipo: 'conflito', p, prioridade: 'normal', peso: 0.5 + vin.tensao / 120, montar: rr => { v.fatos[`cel17_conf_${p.id}`] = v.t; return { de: p.id, sit17: 'conflito_ciume', texto: fala('conflito_ciume', tom, rr, p, v) }; } });
     }
     // Comemoração: alguém próximo soube do que aconteceu na SUA vida (o feito é lido da biografia).
