@@ -757,7 +757,7 @@ export function processarOrg31(v: Vida): void {
   const patrocinio = o.patrocinio && o.patrocinio.ate >= ano ? o.patrocinio.valor : 0;
   const receita = arred(receitaBase31(o.divisao, o.fas, o.reputacao, o.regiao) + receitaConteudo(o) + patrocinio + premio);
   const folha = o.elenco.reduce((s, j) => s + j.salario, 0) + o.academia.reduce((s, j) => s + j.salario, 0);
-  const despesa = arred(folha + (o.tecnico?.salario ?? 0) + OPERACAO[o.divisao] * MULT[o.regiao] + receita * 0.15 + [0, 60e3, 200e3][o.academiaNivel] * MULT[o.regiao] + o.divida * 0.12);
+  const despesa = arred(folha + (o.tecnico?.salario ?? 0) + OPERACAO[o.divisao] * MULT[o.regiao] + receita * 0.3 + [0, 60e3, 200e3][o.academiaNivel] * MULT[o.regiao] + o.divida * 0.12);
   o.caixa += receita - despesa;
   if (o.caixa < 0) { o.divida += -o.caixa; o.caixa = 0; }
   else if (o.divida > 0 && o.caixa > receita * 0.2) { const a = Math.min(o.divida, Math.round((o.caixa - receita * 0.2) * 0.5)); o.divida -= a; o.caixa -= a; }
@@ -835,7 +835,7 @@ export function processarOrg31(v: Vida): void {
 function atualizarValor(o: OrgEsports31, ano: number): void {
   const g = jogo(o.jogo);
   const elenco = o.elenco.reduce((s, j) => s + valorDoJogador31(j, ano, o.regiao, g.auge), 0);
-  o.valor = arred(receitaBase31(o.divisao, o.fas, o.reputacao, o.regiao) * 1.8 + elenco * 0.6 + o.trofeus.length * 200e3 * MULT[o.regiao], 1e5);
+  o.valor = arred(receitaBase31(o.divisao, o.fas, o.reputacao, o.regiao) * 1.8 + elenco * 0.6 + (o.fas * o.reputacao / 100) * 60e3 * MULT[o.regiao] + o.trofeus.length * 200e3 * MULT[o.regiao], 1e5);
 }
 
 /* ------------------------------------------------------------------ fama e saves */
