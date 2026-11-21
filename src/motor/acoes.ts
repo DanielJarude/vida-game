@@ -155,6 +155,7 @@ import { disponibilidadeEras4, executarEras4, type OqueEras4 } from './eras/v4/m
 import { disponibilidadePos26, executarPos26 } from './v26/carreira/posCarreira26';
 import { disponibilidadeLuta26, executarLuta26 } from './v26/lutas/luta26';
 import { disponibilidadeClube20, executarClube20, type OqueClube20 } from './v20/clubes/clubes20';
+import { disponibilidadeOrg31, executarOrg31, type OqueOrg31 } from './v31/esports/org31';
 import { disponibilidadeOficio16, executarOficio16, type OqueOficio16 } from './v16/oficios/oficios16';
 import { disponibilidadeReligiao16, executarReligiao16, type OqueReligiao16 } from './v16/religiao/religiao16';
 import { disponibilidadeRural18, executarRural18, type OqueRural18 } from './v18/rural/acoes18';
@@ -370,6 +371,7 @@ export type Acao =
   /** VIDA 26.2: escolher ou trocar o estilo de luta (`v26/lutas/luta26`). */
   | { tipo: 'luta26'; estilo: import('./v26/esporte/estilos26').EstiloLuta26 }
   | { tipo: 'clube20'; oque: OqueClube20 }
+  | { tipo: 'org31'; oque: OqueOrg31 }
   /** VIDA 19: a documentação e o crédito do campo (CAR, georreferenciamento, outorga, Plano Safra). */
   | { tipo: 'agro19'; oque: OqueAgro19 }
   | { tipo: 'oficio16'; oque: OqueOficio16 }
@@ -909,6 +911,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'pos26': return disponibilidadePos26(v, a.ocupacaoId);
     case 'luta26': return disponibilidadeLuta26(v, a.estilo);
     case 'clube20': return disponibilidadeClube20(v, a.oque);
+    case 'org31': return disponibilidadeOrg31(v, a.oque);
     case 'agro19': return disponibilidadeAgro19(v, a.oque);
     case 'oficio16': return disponibilidadeOficio16(v, a.oque);
     case 'religiao16': return disponibilidadeReligiao16(v, a.oque);
@@ -1214,6 +1217,7 @@ function linhaDoExtrato(a: Acao): [string, TipoMovimento] {
     case 'pos26': return ['Trabalho: procurar emprego', 'escolha'];
     case 'luta26': return ['Esporte: o estilo de luta', 'escolha'];
     case 'clube20': return ['O clube: compra, aportes e venda', 'escolha'];
+    case 'org31': return ['A organização de e-sports: compra, elenco e negócios', 'escolha'];
     case 'moveis14': return ['Coisas da casa e da vida: compra e venda', 'escolha'];
     default: return ['Compras, viagens e outras escolhas', 'escolha'];
   }
@@ -1853,6 +1857,7 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
     case 'pos26': { const x = executarPos26(v, r, a.ocupacaoId); return { aviso: { texto: x.texto, tom: x.tom } }; }
     case 'luta26': { const x = executarLuta26(v, a.estilo); return { aviso: { texto: x.texto, tom: x.tom } }; }
     case 'clube20': { const x = executarClube20(v, a.oque); return { aviso: { texto: x.texto, tom: x.tom ?? 'neutro' } }; }
+    case 'org31': { const x = executarOrg31(v, a.oque); return { aviso: { texto: x.texto, tom: x.tom ?? 'neutro' } }; }
     case 'conectada19': { const x = executarConectada19(v, r, a.oque); return x.texto ? { aviso: { texto: x.texto, tom: x.tom ?? 'neutro' }, pessoaId: x.pessoaId } : {}; }
     case 'oficio16': { const x = executarOficio16(v, r, a.oque); return x.texto ? { aviso: { texto: x.texto, tom: x.tom } } : {}; }
     case 'religiao16': { const x = executarReligiao16(v, r, a.oque); return x.texto ? { aviso: { texto: x.texto, tom: x.tom } } : {}; }

@@ -19,6 +19,7 @@ import { processarPosCarreira26 } from './v26/carreira/posCarreira26';
 import { processarHobbies26 } from './v26/hobby/hobbyCaminho26';
 import { processarEsports25 } from './v25/esports/esports25';
 import { processarClube20 } from './v20/clubes/clubes20';
+import { processarOrg31 } from './v31/esports/org31';
 import { processarJeito } from './sistemas/convivio126';
 import { processarPersonalizacao } from './sistemas/personalizacao';
 import { fotografarEvolucao, praticandoPor } from './sistemas/progressao';
@@ -365,6 +366,7 @@ function viverAno(v: Vida, r: Rng): void {
   processarColecao(v, r);
   processarParalelos(v, r);
   processarEmpresas(v, r);
+  processarOrg31(v); // VIDA 32: a organização de e-sports de que é dono (a liga, o mundial, o caixa, o elenco, a mesa)
   processarClube20(v); // VIDA 20: o clube de que é dono (a temporada da liga, o caixa, o elenco, a base, as obras)
   processarAutomobilismo20(v); // VIDA 20: a temporada nas pistas (do kart à F1), o orçamento, as propostas
   processarEsports25(v); // VIDA 25: a temporada de e-sports (o treino, as competições, as equipes, as propostas)
