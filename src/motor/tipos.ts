@@ -2613,6 +2613,27 @@ export interface PassagemDeTecnico {
   meioDeTemporada?: { rodada: number; rodadas: number; posicao: number };
   /** A tabela do dia em que se assumiu (só até a primeira temporada ser jogada: dela em diante, os jogos são seus). */
   retomada?: TabelaEmCurso;
+  /** VIDA 32: o dia a dia do técnico (treino, elenco, imprensa, diretoria) — `sistemas/acoesDoTecnico32`. Opcional (saves antigos). */
+  v32?: DiaADiaDoTecnico32;
+}
+
+/**
+ * VIDA 32 · o que o técnico fez na passagem (as ações da prancheta). Tudo opcional: o save antigo não tem nada disto.
+ * `feitos` guarda o `v.t` da última vez de cada limite (o treino, a coletiva, o pedido à diretoria...): uma vez por
+ * temporada. `decisivo` é o bônus dos jogos que decidem (a final, o mata-mata) na PRÓXIMA temporada, consumido nela.
+ */
+export interface DiaADiaDoTecnico32 {
+  feitos?: Record<string, number>;
+  /** O foco da pré-temporada escolhido (só para a tela dizer). */
+  treino?: 'fisico' | 'tatico' | 'bola_parada' | 'descanso';
+  /** Bônus de força nos jogos decisivos da próxima temporada (o estudo do adversário, a bola parada). */
+  decisivo?: number;
+  /** Os garotos promovidos: quantos, e o ganho que rendem quando amadurecem (a partir da temporada `aPartirDe`, contada em temporadas jogadas na passagem). */
+  garotos?: { quantos: number; ganho: number; aPartirDe: number };
+  /** Quando escolheu o capitão pela última vez. */
+  tCapitao?: number;
+  /** A comissão técnica que a diretoria aceitou montar (efeito a cada temporada da passagem). */
+  comissao?: ('auxiliar' | 'preparador' | 'analista')[];
 }
 
 /**
