@@ -51,3 +51,17 @@ projeto depois de revisão local (http://localhost:4173) em quatro rodadas.
   `fix31`, que passa sozinho: 25/25). Build OK, smoke 36/36.
 - Deploy: `main` e produção em `2f0ef8c`; https://vida-game.pages.dev/ serve `index-BW551TQc.js`, 204 arquivos com sha256
   idêntico; navegação no site real (dona de clube no computador, adulta no celular, três anos vividos) sem erro.
+
+## VIDA 31.2 — troféus do técnico e datas (publicado em 2026-11-21)
+- **Troféus do técnico** (`ui/jogo/Galeria.trofeusDoTecnico`): a forma de cada competição (liga, estadual/acesso, urna da
+  copa, figura da Libertadores, orelhas da Champions, globo do Mundial e da Copa do Mundo, seleções), o nome sem a
+  preposição sobrando, o acesso e as finais perdidas (prata). Lido do que a carreira já registrou (vale para saves antigos).
+- **Datas**: o dono fechava a temporada `temporadaCorrente − 1` (um ano atrás do atleta e do técnico). Agora
+  `processarClube20` chama `ligas.fecharTemporadasAte(v, pais, temporadaCorrente(v))` antes de ler o resultado.
+- **Técnico e dono do mesmo clube**: quando a temporada do país já tinha sido jogada, a tabela era rejogada procurando a
+  força que levasse o clube à colocação da carreira — e às vezes parava a uma posição (13º no banco, 14º na mesa). A
+  tabela agora fica com o clube exatamente onde a carreira terminou (troca de linha, e de nome nas partidas, com quem
+  estava ali). Simulação: 19 temporadas de técnico+dono comparadas, 0 divergências.
+- Testes: suíte completa 3.330 passaram (4 limites de tempo antigos). Build OK, smoke 36/36.
+- Deploy: `main` e produção em `51feefd`; `index-3c5-Z3LF.js`, 204 arquivos com sha256 idêntico; navegação no site real
+  (dona de clube no computador, adulta no celular, três anos vividos) sem erro.
