@@ -55,6 +55,7 @@ const Clube20 = sobDemanda(() => import('../v20/clubes/Clube20').then(m => m.Clu
 // VIDA 32: o esporte do dono (os times de quadra, a fundação de um time) — pacote à parte.
 const EquipesDeQuadra32 = sobDemanda(() => import('../v32/esporte/Esporte32').then(m => m.EquipesDeQuadra32));
 const FundarTime32 = sobDemanda(() => import('../v32/esporte/Esporte32').then(m => m.FundarTime32));
+const OrgEsports31 = sobDemanda(() => import('../v31/esports/OrgEsports31').then(m => m.default));
 const RaioX129 = sobDemanda(() => import('./Empresas129').then(m => m.RaioX129));
 
 export type PartePatrimonio = 'resumo' | 'imoveis' | 'garagem' | 'colecao' | 'empresas' | 'objetos';
@@ -454,12 +455,12 @@ type AbaEmpresas = 'minhas' | 'esporte' | 'abrir';
 function Empresas({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
   const lista = empresasAtivas(vida);
   const adulto = idade(vida) >= 18;
-  const temEsporte = !!vida.clube20 || (vida.equipes32?.length ?? 0) > 0;
+  const temEsporte = !!vida.clube20 || !!vida.orgEsports31 || (vida.equipes32?.length ?? 0) > 0;
   const [aba, setAba] = useState<AbaEmpresas>(() => consumirAbaEmpresas() ?? (lista.length ? 'minhas' : temEsporte ? 'esporte' : adulto ? 'abrir' : 'minhas'));
   const ofertas = ofertasDeParticipacao(vida);
   const abas: { id: AbaEmpresas; rotulo: string; n?: number }[] = [
     { id: 'minhas', rotulo: 'Minhas empresas', n: lista.length },
-    ...(adulto || temEsporte ? [{ id: 'esporte' as const, rotulo: 'Esporte', n: (vida.clube20 ? 1 : 0) + (vida.equipes32?.length ?? 0) }] : []),
+    ...(adulto || temEsporte ? [{ id: 'esporte' as const, rotulo: 'Esporte', n: (vida.clube20 ? 1 : 0) + (vida.orgEsports31 ? 1 : 0) + (vida.equipes32?.length ?? 0) }] : []),
     ...(adulto ? [{ id: 'abrir' as const, rotulo: 'Abrir ou comprar' }] : [])
   ];
   return (
@@ -480,7 +481,8 @@ function Empresas({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
           {/* VIDA 20: o clube de futebol (comprar — agora em vitrine — ou administrar o seu). */}
           <Clube20 vida={vida} agir={agir} />
           <EquipesDeQuadra32 vida={vida} agir={agir} />
-          {/* VIDA 32 · ESPORTS-SLOT */}
+          {/* VIDA 32: a organização de e-sports (comprar, fundar, administrar). */}
+          {adulto || vida.orgEsports31 ? <OrgEsports31 vida={vida} agir={agir} /> : null}
           <FundarTime32 vida={vida} agir={agir} />
         </div>
       )}

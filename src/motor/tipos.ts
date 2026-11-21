@@ -4160,6 +4160,8 @@ export interface Vida {
   clube20?: import('./dados20/tipos20').Clube20;
   /** VIDA 32 · os times de quadra (basquete, vôlei, futsal) fundados por você (`v32/equipes`). Ausente: nenhum. */
   equipes32?: import('./v32/equipes/equipe32').Equipe32[];
+  /** VIDA 32 · a organização de e-sports de que é dono (`v31/esports/org31`). Ausente: nenhuma. */
+  orgEsports31?: import('./v31/esports/org31').OrgEsports31;
   /** REWORK 4: as redes sociais do jogo (simulação interna, sem internet): `sistemas/redes`. Opcional. */
   redes?: { contas: Record<string, ContaSocial> };
   /** REWORK 4: as organizações onde a vida trabalhou (nome, setor, cidade) — `sistemas/organizacoes`. Opcional. */
