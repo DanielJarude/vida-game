@@ -26,6 +26,22 @@ export interface NotaDeVersao {
 
 export const NOTAS: NotaDeVersao[] = [
   {
+    versao: '31.1',
+    data: '2026-11-21',
+    titulo: 'O clube com vida própria',
+    novidades: [
+      'Dono de clube: a mesa do presidente — a cada temporada, assuntos da torcida (protesto, festa), do técnico (pedido de reforço, atrito) e dos jogadores (aumento, indisciplina, proposta da Europa, bicho do clássico), com escolhas que mexem no caixa, na torcida, no vestiário e no elenco.',
+      'O técnico indica reforços: um jogador do mercado melhor do que o titular do setor mais fraco.',
+      'Aba Campeonato no clube: as forças da divisão na temporada (e onde o seu time está), a tabela da última temporada e os campeões.',
+      'O clima do vestiário e o humor do técnico agora pesam na força do time.'
+    ],
+    melhorias: [
+      'Mercado do clube em faixas: reforços acima do nível do elenco, jogadores do nível, apostas jovens e, às vezes, uma estrela de fora.',
+      'No Hoje, um aviso quando há assuntos do clube esperando na mesa.'
+    ],
+    correcoes: []
+  },
+  {
     versao: '31',
     data: '2026-11-21',
     titulo: 'Um VIDA de cara nova',
