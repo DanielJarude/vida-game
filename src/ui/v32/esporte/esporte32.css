@@ -1,0 +1,52 @@
+/* VIDA 32 · a vitrine dos clubes à venda, os times do dono e a fundação. */
+.vitrine32 { display: grid; gap: 10px; }
+.vitrine32__barra, .esp32__form { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: end; }
+.vitrine32__campo { display: grid; gap: 4px; font-size: var(--type-caption); color: var(--tinta-2); }
+.vitrine32__campo select, .vitrine32__campo input { min-height: 38px; border-radius: 10px; padding: 0 10px; min-width: 0; }
+.vitrine32__campo--busca { flex: 1 1 200px; }
+.vitrine32__fichas, .esp32__fichas { display: flex; flex-wrap: wrap; gap: 6px; }
+.vitrine32__ficha { min-height: 34px; padding: 4px 12px; border-radius: 999px; border: 0; background: var(--veu-2); color: var(--tinta); font: inherit; font-size: var(--type-caption); font-weight: 600; cursor: pointer; box-shadow: inset 0 0 0 1px var(--fio); }
+.vitrine32__ficha[aria-pressed='true'], .vitrine32__ficha[aria-selected='true'] { background: var(--acao); color: var(--fundo); box-shadow: none; }
+.vitrine32__ficha--leve { font-weight: 500; }
+.vitrine32__grade { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: 12px; }
+.vitrine32__cartao { position: relative; display: grid; gap: 10px; align-content: start; padding: 0 14px 14px; border-radius: 16px; background: var(--superficie); box-shadow: inset 0 0 0 1px var(--fio); overflow: hidden; }
+.vitrine32__cartao--caro { opacity: 0.82; }
+.vitrine32__faixa { height: 8px; margin: 0 -14px; background: linear-gradient(90deg, var(--c1, var(--acao)) 0 60%, var(--c2, var(--fio)) 60% 100%); }
+.vitrine32__topo, .esp32__equipe-topo { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; }
+.vitrine32__topo { grid-template-columns: auto minmax(0, 1fr); }
+.vitrine32__quem { display: grid; min-width: 0; }
+.vitrine32__quem strong { overflow-wrap: anywhere; font-size: var(--type-body); }
+.vitrine32__quem span { font-size: var(--type-caption); color: var(--tinta-2); }
+.vitrine32__selos { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.vitrine32__div { padding: 3px 10px; border-radius: 999px; font-size: var(--type-caption); font-weight: 700; background: var(--veu-2); color: var(--tinta); white-space: nowrap; }
+.vitrine32__div--4 { background: var(--alerta); color: var(--fundo); }
+.vitrine32__div--3 { background: var(--info); color: var(--fundo); }
+.vitrine32__div--2 { background: var(--bom); color: var(--fundo); }
+.vitrine32__porte { font-size: var(--type-caption); color: var(--tinta-2); }
+.vitrine32__porte i { font-style: normal; letter-spacing: 1px; color: var(--alerta); }
+.vitrine32__numeros { display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 6px; margin: 0; }
+.vitrine32__numeros div { display: grid; gap: 1px; padding: 6px 8px; border-radius: 10px; background: var(--veu-1); }
+.vitrine32__numeros dt { font-size: var(--type-meta); text-transform: uppercase; letter-spacing: 0.06em; color: var(--tinta-2); }
+.vitrine32__numeros dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; }
+.vitrine32__preco { color: var(--acao); }
+.vitrine32__comprar { display: grid; gap: 6px; }
+.vitrine32__abrir { width: 100%; }
+.esp32 { display: grid; gap: 16px; }
+.esp32__bloco { display: grid; gap: 10px; padding: 16px; border-radius: 18px; background: var(--superficie); box-shadow: inset 0 0 0 1px var(--fio); }
+.esp32__cabeca { display: flex; align-items: center; gap: 10px; }
+.esp32__cabeca h3 { margin: 0; font-size: var(--type-subheading); }
+.esp32__icone { display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: var(--veu-2); font-size: 1.1rem; }
+.esp32__fundar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; padding: 12px; border-radius: 14px; background: var(--veu-1); }
+.esp32__previa { display: flex; gap: 12px; align-items: center; min-width: 0; }
+.esp32__previa div { display: grid; min-width: 0; }
+.esp32__previa span { font-size: var(--type-caption); color: var(--tinta-2); }
+.esp32__equipe { display: grid; gap: 10px; padding: 14px; border-radius: 14px; background: var(--veu-1); box-shadow: inset 0 0 0 1px var(--fio); }
+.esp32__acoes { display: grid; gap: 12px; }
+.esp32__grupo { display: grid; gap: 6px; }
+.esp32__grupo h4 { margin: 0; font-size: var(--type-caption); text-transform: uppercase; letter-spacing: 0.08em; color: var(--tinta-2); }
+.esp32__temporadas { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.esp32__temp { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; gap: 8px; padding: 6px 10px; border-radius: 8px; background: var(--superficie); font-size: var(--type-caption); }
+.esp32__temp--titulo { box-shadow: inset 3px 0 0 var(--alerta); }
+.esp32__temp--acesso { box-shadow: inset 3px 0 0 var(--bom); }
+.esp32__temp--queda { box-shadow: inset 3px 0 0 var(--ruim, #c0392b); }
+.emp32__abas { margin-bottom: 12px; }

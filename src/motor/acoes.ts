@@ -6,6 +6,7 @@
  * para mostrar o motivo de um bloqueio; o motor revalida na execução.
  */
 
+import { disponibilidadeEquipe32, executarEquipe32 } from './v32/equipes/equipe32';
 import { epocaNoCredito } from './eras/base/sociedade4';
 import { disponibilidade24, executar24, type Op24 } from './v24/acao/acao24';
 import { comoAchouAVaga } from './eras/base/contexto';
@@ -370,6 +371,7 @@ export type Acao =
   /** VIDA 26.2: escolher ou trocar o estilo de luta (`v26/lutas/luta26`). */
   | { tipo: 'luta26'; estilo: import('./v26/esporte/estilos26').EstiloLuta26 }
   | { tipo: 'clube20'; oque: OqueClube20 }
+  | { tipo: 'equipe32'; oque: import('./v32/equipes/equipe32').OqueEquipe32 }
   /** VIDA 19: a documentação e o crédito do campo (CAR, georreferenciamento, outorga, Plano Safra). */
   | { tipo: 'agro19'; oque: OqueAgro19 }
   | { tipo: 'oficio16'; oque: OqueOficio16 }
@@ -909,6 +911,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'pos26': return disponibilidadePos26(v, a.ocupacaoId);
     case 'luta26': return disponibilidadeLuta26(v, a.estilo);
     case 'clube20': return disponibilidadeClube20(v, a.oque);
+    case 'equipe32': return disponibilidadeEquipe32(v, a.oque);
     case 'agro19': return disponibilidadeAgro19(v, a.oque);
     case 'oficio16': return disponibilidadeOficio16(v, a.oque);
     case 'religiao16': return disponibilidadeReligiao16(v, a.oque);
@@ -1214,6 +1217,7 @@ function linhaDoExtrato(a: Acao): [string, TipoMovimento] {
     case 'pos26': return ['Trabalho: procurar emprego', 'escolha'];
     case 'luta26': return ['Esporte: o estilo de luta', 'escolha'];
     case 'clube20': return ['O clube: compra, aportes e venda', 'escolha'];
+    case 'equipe32': return ['O time: fundação, reforços e venda', 'escolha'];
     case 'moveis14': return ['Coisas da casa e da vida: compra e venda', 'escolha'];
     default: return ['Compras, viagens e outras escolhas', 'escolha'];
   }
@@ -1853,6 +1857,7 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
     case 'pos26': { const x = executarPos26(v, r, a.ocupacaoId); return { aviso: { texto: x.texto, tom: x.tom } }; }
     case 'luta26': { const x = executarLuta26(v, a.estilo); return { aviso: { texto: x.texto, tom: x.tom } }; }
     case 'clube20': { const x = executarClube20(v, a.oque); return { aviso: { texto: x.texto, tom: x.tom ?? 'neutro' } }; }
+    case 'equipe32': { const x = executarEquipe32(v, a.oque); return { aviso: { texto: x.texto, tom: x.tom ?? 'neutro' } }; }
     case 'conectada19': { const x = executarConectada19(v, r, a.oque); return x.texto ? { aviso: { texto: x.texto, tom: x.tom ?? 'neutro' }, pessoaId: x.pessoaId } : {}; }
     case 'oficio16': { const x = executarOficio16(v, r, a.oque); return x.texto ? { aviso: { texto: x.texto, tom: x.tom } } : {}; }
     case 'religiao16': { const x = executarReligiao16(v, r, a.oque); return x.texto ? { aviso: { texto: x.texto, tom: x.tom } } : {}; }

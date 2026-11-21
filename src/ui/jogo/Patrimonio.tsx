@@ -32,6 +32,8 @@ import { NOME_PRECO_EMPRESA, TIPOS_DE_EMPRESA, tipoDeEmpresa } from '../../motor
 import { setorGrande } from '../../motor/dados/empresas129';
 import { lojaNaCidade } from '../../motor/sistemas/mercado';
 import { BotaoAcao, Secao, Subnav, type ItemDeSubnav } from '../comum';
+import { consumirAbaEmpresas } from '../v31/destinoPatrimonio';
+import '../v32/esporte/esporte32.css';
 import { dinheiroCheio, dinheiroCurto } from '../leituraMaterial';
 import { evolucaoPatrimonial, painelPatrimonial } from '../leituraPatrimonio';
 import { BensDoTipo, OQueTem } from './Casa';
@@ -50,6 +52,9 @@ const GaragemVisual = sobDemanda(() => import('./Garagem129').then(m => m.Garage
 const PainelDaEmpresa129 = sobDemanda(() => import('./Empresas129').then(m => m.PainelDaEmpresa129));
 const FundarOuAdquirir129 = sobDemanda(() => import('./Empresas129').then(m => m.FundarOuAdquirir129));
 const Clube20 = sobDemanda(() => import('../v20/clubes/Clube20').then(m => m.Clube20));
+// VIDA 32: o esporte do dono (os times de quadra, a fundação de um time) — pacote à parte.
+const EquipesDeQuadra32 = sobDemanda(() => import('../v32/esporte/Esporte32').then(m => m.EquipesDeQuadra32));
+const FundarTime32 = sobDemanda(() => import('../v32/esporte/Esporte32').then(m => m.FundarTime32));
 const RaioX129 = sobDemanda(() => import('./Empresas129').then(m => m.RaioX129));
 
 export type PartePatrimonio = 'resumo' | 'imoveis' | 'garagem' | 'colecao' | 'empresas' | 'objetos';
@@ -440,45 +445,85 @@ function ListaDePecas({ vida, agir, lista, leilao }: { vida: Vida; agir: (a: Aca
 
 /* ------------------------------------------------------------------ Empresas */
 
+type AbaEmpresas = 'minhas' | 'esporte' | 'abrir';
+
+/**
+ * VIDA 32 · Empresas em três abas: as suas (o painel de cada uma), o esporte (o clube de futebol, os times de quadra,
+ * a organização de e-sports e a fundação de um time) e abrir ou comprar (empresa nova, empresa grande, participações).
+ */
 function Empresas({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
   const lista = empresasAtivas(vida);
-  const [abrindo, setAbrindo] = useState(false);
-  const [grande, setGrande] = useState(false);
+  const adulto = idade(vida) >= 18;
+  const temEsporte = !!vida.clube20 || (vida.equipes32?.length ?? 0) > 0;
+  const [aba, setAba] = useState<AbaEmpresas>(() => consumirAbaEmpresas() ?? (lista.length ? 'minhas' : temEsporte ? 'esporte' : adulto ? 'abrir' : 'minhas'));
   const ofertas = ofertasDeParticipacao(vida);
+  const abas: { id: AbaEmpresas; rotulo: string; n?: number }[] = [
+    { id: 'minhas', rotulo: 'Minhas empresas', n: lista.length },
+    ...(adulto || temEsporte ? [{ id: 'esporte' as const, rotulo: 'Esporte', n: (vida.clube20 ? 1 : 0) + (vida.equipes32?.length ?? 0) }] : []),
+    ...(adulto ? [{ id: 'abrir' as const, rotulo: 'Abrir ou comprar' }] : [])
+  ];
   return (
     <Secao titulo="Empresas">
-      <p className="nota">Empresa sua não é salário: o caixa é dela; o lucro só vira seu quando é distribuído. Dá para ter uma sem largar a profissão — com alguém contratado tocando, ou tocando você mesm{vida.eu.genero === 'feminino' ? 'a' : 'o'} (algumas noites e os sábados).</p>
-      <VisaoGeralDasEmpresas vida={vida} />
-      {lista.map(e => <CartaoEmpresa key={e.id} vida={vida} agir={agir} e={e} />)}
-      {/* VIDA 20: o clube esportivo (comprar qualquer clube em que se pode jogar; administrar o que é seu). */}
-      {(idade(vida) >= 18 || vida.clube20) && <Clube20 vida={vida} agir={agir} />}
-      {idade(vida) >= 18 && (
-        <div className="pat-abrir">
-          <button type="button" className="botao botao--secundario" aria-expanded={abrindo} onClick={() => setAbrindo(x => !x)}>{abrindo ? 'Fechar' : 'Abrir uma empresa'}</button>
-          {abrindo && <AbrirEmpresa vida={vida} agir={agir} />}
-          <button type="button" className="botao botao--secundario" aria-expanded={grande} onClick={() => setGrande(x => !x)}>{grande ? 'Fechar' : 'Fundar ou comprar uma empresa grande'}</button>
-          {grande && <FundarOuAdquirir129 vida={vida} agir={agir} />}
+      <div className="esp32__fichas emp32__abas" role="tablist" aria-label="Empresas">
+        {abas.map(t => <button key={t.id} type="button" role="tab" aria-selected={aba === t.id} className="vitrine32__ficha" onClick={() => setAba(t.id)}>{t.rotulo}{t.n ? ` · ${t.n}` : ''}</button>)}
+      </div>
+      {aba === 'minhas' && (
+        <>
+          <p className="nota">Empresa sua não é salário: o caixa é dela; o lucro só vira seu quando é distribuído. Dá para ter uma sem largar a profissão — com alguém contratado tocando, ou tocando você mesm{vida.eu.genero === 'feminino' ? 'a' : 'o'} (algumas noites e os sábados).</p>
+          <VisaoGeralDasEmpresas vida={vida} />
+          {lista.map(e => <CartaoEmpresa key={e.id} vida={vida} agir={agir} e={e} />)}
+          {!lista.length && <p className="vazio">Nenhuma empresa ainda.{adulto ? ' Em “Abrir ou comprar” dá para começar uma — ou comprar a parte de alguém.' : ''}</p>}
+        </>
+      )}
+      {aba === 'esporte' && (
+        <div className="esp32">
+          {/* VIDA 20: o clube de futebol (comprar — agora em vitrine — ou administrar o seu). */}
+          <Clube20 vida={vida} agir={agir} />
+          <EquipesDeQuadra32 vida={vida} agir={agir} />
+          {/* VIDA 32 · ESPORTS-SLOT */}
+          <FundarTime32 vida={vida} agir={agir} />
         </div>
       )}
-      {ofertas.length > 0 && (
-        <div className="pat-participacoes">
-          <h3 className="subtitulo">Participações à venda na cidade</h3>
-          <p className="nota">Uma parte de uma empresa que outros tocam: você recebe o que eles distribuírem — e não manda em nada. Os números são os dos últimos três anos; os próximos, ninguém sabe.</p>
-          <ul className="ofertas">
-            {ofertas.map(o => (
-              <li key={o.id} className="oferta oferta--estilo">
-                <span className="oferta__texto">
-                  <strong>{Math.round(o.parte * 100)}% de {o.nome} ({tipoDeEmpresa(o.tipo).rotulo.toLowerCase()})</strong>
-                  <span>Resultado dos últimos anos: {o.historico.map(x => dinheiroCurto(x)).join(', ')}. A empresa toda vale uns {dinheiroCurto(o.avaliacao)}.</span>
-                </span>
-                <span className="oferta__preco">{dinheiroCurto(o.preco)}</span>
-                <span className="oferta__comprar"><BotaoAcao vida={vida} acao={{ tipo: 'participacao', ofertaId: o.id }} agir={agir} variante="secundario">Comprar a parte</BotaoAcao></span>
-              </li>
-            ))}
-          </ul>
-        </div>
+      {aba === 'abrir' && adulto && (
+        <>
+          <AbrirOuComprar vida={vida} agir={agir} />
+          {ofertas.length > 0 && (
+            <div className="pat-participacoes">
+              <h3 className="subtitulo">Participações à venda na cidade</h3>
+              <p className="nota">Uma parte de uma empresa que outros tocam: você recebe o que eles distribuírem — e não manda em nada. Os números são os dos últimos três anos; os próximos, ninguém sabe.</p>
+              <ul className="ofertas">
+                {ofertas.map(o => (
+                  <li key={o.id} className="oferta oferta--estilo">
+                    <span className="oferta__texto">
+                      <strong>{Math.round(o.parte * 100)}% de {o.nome} ({tipoDeEmpresa(o.tipo).rotulo.toLowerCase()})</strong>
+                      <span>Resultado dos últimos anos: {o.historico.map(x => dinheiroCurto(x)).join(', ')}. A empresa toda vale uns {dinheiroCurto(o.avaliacao)}.</span>
+                    </span>
+                    <span className="oferta__preco">{dinheiroCurto(o.preco)}</span>
+                    <span className="oferta__comprar"><BotaoAcao vida={vida} acao={{ tipo: 'participacao', ofertaId: o.id }} agir={agir} variante="secundario">Comprar a parte</BotaoAcao></span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </>
       )}
     </Secao>
+  );
+}
+
+/** Abrir uma empresa (de balcão) ou fundar/comprar uma grande: duas portas lado a lado. */
+function AbrirOuComprar({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
+  const [qual, setQual] = useState<'pequena' | 'grande' | undefined>();
+  return (
+    <div className="pat-abrir">
+      <div className="esp32__fichas" role="group" aria-label="Que empresa">
+        <button type="button" className="vitrine32__ficha" aria-pressed={qual === 'pequena'} onClick={() => setQual(q => (q === 'pequena' ? undefined : 'pequena'))}>Abrir uma empresa</button>
+        <button type="button" className="vitrine32__ficha" aria-pressed={qual === 'grande'} onClick={() => setQual(q => (q === 'grande' ? undefined : 'grande'))}>Fundar ou comprar uma empresa grande</button>
+      </div>
+      {!qual && <p className="nota">Uma empresa de balcão (padaria, oficina, loja, consultório…) começa pequena e você pode tocar junto com a profissão. Uma grande (indústria, rede, banco…) pede capital e equipe — fundar do zero ou comprar uma que existe.</p>}
+      {qual === 'pequena' && <AbrirEmpresa vida={vida} agir={agir} />}
+      {qual === 'grande' && <FundarOuAdquirir129 vida={vida} agir={agir} />}
+    </div>
   );
 }
 

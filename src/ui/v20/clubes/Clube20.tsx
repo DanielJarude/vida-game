@@ -18,7 +18,8 @@ import { anoDe } from '../../../motor/tempo';
 import { BotaoAcao } from '../../comum';
 import { dinheiroCurto } from '../../apresentar';
 import './clube20.css';
-import { municipio } from '../../../motor/dados/lugares';
+import { municipio, paisDaCidade } from '../../../motor/dados/lugares';
+import '../../v32/esporte/esporte32.css';
 import { desenhoDoClube30, Escudo30 } from '../../v30/escudos/Escudo30';
 
 const C = (oque: OqueClube20): Acao => ({ tipo: 'clube20', oque } as Acao);
@@ -30,40 +31,96 @@ export function Clube20({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean
 }
 export default Clube20;
 
+/* ------------------------------------------------------------------ VIDA 32 · a vitrine dos clubes à venda */
+
+type Ordem32 = 'divisao' | 'barato' | 'caro' | 'receita' | 'nome';
+const PORTE_ROT: Record<string, string> = { grande: 'Grande', tradicional: 'Tradicional', regional: 'Regional' };
+const PORTE_N: Record<string, number> = { grande: 3, tradicional: 2, regional: 1 };
+
+/**
+ * Os clubes à venda como vitrine: cartões com escudo, divisão, porte, preço e o que se paga de entrada — filtrados por
+ * país, divisão, porte e bolso, em ordem escolhida (era uma lista corrida de centenas de linhas).
+ */
 function ComprarClube({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
-  const [aberto, setAberto] = useState(false);
-  const [pais, setPais] = useState('BR');
+  const [pais, setPais] = useState(() => { try { return paisDaCidade(vida.moradia.municipioId); } catch { return 'BR'; } });
   const [busca, setBusca] = useState('');
+  const [div, setDiv] = useState(0);
+  const [porte, setPorte] = useState('');
+  const [bolso, setBolso] = useState(false);
+  const [ordem, setOrdem] = useState<Ordem32>('divisao');
+  const [quantos, setQuantos] = useState(24);
   const [mundo, setMundo] = useState(false);
-  useEffect(() => { if (aberto && !mundo) void carregarMundo().then(() => setMundo(true)); }, [aberto, mundo]);
-  const todos = useMemo(() => (aberto ? clubesAVenda(vida) : []), [aberto, vida, mundo]);
-  const paises = useMemo(() => [...new Set(todos.map(c => c.pais))], [todos]);
-  const lista = todos.filter(c => c.pais === pais && (!busca || c.nome.toLowerCase().includes(busca.toLowerCase()))).sort((a, b) => b.divisao - a.divisao || b.valor - a.valor);
+  const [aberto, setAberto] = useState<string | undefined>();
+  useEffect(() => { if (!mundo) void carregarMundo().then(() => setMundo(true)); }, [mundo]);
+  const todos = useMemo(() => clubesAVenda(vida), [vida, mundo]);
+  const paises = useMemo(() => [...new Set(todos.map(c => c.pais))].sort((a, b) => nomeDoPais(a).localeCompare(nomeDoPais(b))), [todos]);
+  const doPais = todos.filter(c => c.pais === pais);
+  const conta = vida.financas.conta;
+  const cabe = (c: { preco: number }) => conta >= Math.round(c.preco * 0.4);
+  const lista = doPais
+    .filter(c => (!div || c.divisao === div) && (!porte || c.porte === porte) && (!bolso || cabe(c)) && (!busca || `${c.nome} ${c.cidade}`.toLowerCase().includes(busca.toLowerCase())))
+    .sort((a, b) => ordem === 'barato' ? a.preco - b.preco : ordem === 'caro' ? b.preco - a.preco : ordem === 'receita' ? b.receita - a.receita : ordem === 'nome' ? a.nome.localeCompare(b.nome) : b.divisao - a.divisao || b.valor - a.valor);
+  const divisoes = [4, 3, 2, 1].filter(n => doPais.some(c => c.divisao === n));
+  const nomeDiv = (n: number) => (divisaoDoNivel(n, pais) ?? DIV[n]).replace(/^campeonato estadual$/, 'Estadual');
   return (
-    <section className="clube20" aria-labelledby="clube20-titulo">
-      <h3 id="clube20-titulo" className="subtitulo">Clube de futebol</h3>
-      <p className="nota">Todo clube em que dá para jogar está à venda. O preço é o valor do clube menos as dívidas — que vêm junto. A compra pede dinheiro na conta (ou 40% de entrada e o resto financiado pelo banco).</p>
-      <button type="button" className="botao botao--secundario" aria-expanded={aberto} onClick={() => setAberto(x => !x)}>{aberto ? 'Fechar' : 'Ver clubes à venda'}</button>
-      {aberto && (
-        <div className="clube20__venda">
-          <div className="clube20__filtros">
-            <label>País <select value={pais} onChange={e => setPais(e.target.value)}>{paises.map(p => <option key={p} value={p}>{nomeDoPais(p)}</option>)}</select></label>
-            <label>Buscar <input type="search" value={busca} onChange={e => setBusca(e.target.value)} placeholder="nome do clube" /></label>
-          </div>
-          <p className="nota">{todos.length} clubes em {paises.length} países · {lista.length} aqui.</p>
-          <ul className="clube20__lista">
-            {lista.map(c => (
-              <li key={`${c.pais}:${c.nome}`} className="clube20__item">
-                <div className="clube30__venda-nome"><Escudo30 nome={c.nome} tamanho={28} /><strong>{c.nome}</strong> <span className="clube20__meta">{DIV[c.divisao]} · {c.porte} · receita ~{dinheiroCurto(c.receita)}/ano · dívida {dinheiroCurto(c.divida)}</span></div>
-                <div className="clube20__botoes">
-                  <BotaoAcao vida={vida} agir={agir} acao={C({ op: 'comprar', nome: c.nome, pais: c.pais })}>Comprar · {dinheiroCurto(c.preco)}</BotaoAcao>
-                  <BotaoAcao vida={vida} agir={agir} acao={C({ op: 'comprar', nome: c.nome, pais: c.pais, financiar: true })}>Financiado · entrada {dinheiroCurto(Math.round(c.preco * 0.4))}</BotaoAcao>
+    <section className="clube20 vitrine32" aria-labelledby="clube20-titulo">
+      <h3 id="clube20-titulo" className="subtitulo">Comprar um clube de futebol</h3>
+      <p className="nota">Todo clube em que dá para jogar está à venda. O preço é o valor do clube menos as dívidas — que vêm junto. Paga-se à vista ou com 40% de entrada e o resto financiado.</p>
+      <div className="vitrine32__barra">
+        <label className="vitrine32__campo">País <select value={pais} onChange={e => { setPais(e.target.value); setDiv(0); setQuantos(24); }}>{paises.map(p => <option key={p} value={p}>{nomeDoPais(p)}</option>)}</select></label>
+        <label className="vitrine32__campo vitrine32__campo--busca">Buscar <input type="search" value={busca} onChange={e => setBusca(e.target.value)} placeholder="clube ou cidade" /></label>
+        <label className="vitrine32__campo">Ordem <select value={ordem} onChange={e => setOrdem(e.target.value as Ordem32)}>
+          <option value="divisao">Divisão mais alta</option><option value="barato">Mais barato</option><option value="caro">Mais caro</option><option value="receita">Maior receita</option><option value="nome">Nome</option>
+        </select></label>
+      </div>
+      <div className="vitrine32__fichas" role="group" aria-label="Divisão">
+        <button type="button" className="vitrine32__ficha" aria-pressed={div === 0} onClick={() => setDiv(0)}>Todas · {doPais.length}</button>
+        {divisoes.map(n => <button key={n} type="button" className="vitrine32__ficha" aria-pressed={div === n} onClick={() => setDiv(n)}>{nomeDiv(n)} · {doPais.filter(c => c.divisao === n).length}</button>)}
+      </div>
+      <div className="vitrine32__fichas" role="group" aria-label="Porte e bolso">
+        {['', 'grande', 'tradicional', 'regional'].map(p => <button key={p || 'todos'} type="button" className="vitrine32__ficha vitrine32__ficha--leve" aria-pressed={porte === p} onClick={() => setPorte(p)}>{p ? PORTE_ROT[p] : 'Todo porte'}</button>)}
+        <button type="button" className="vitrine32__ficha vitrine32__ficha--leve" aria-pressed={bolso} onClick={() => setBolso(x => !x)}>Cabe no meu bolso</button>
+      </div>
+      <p className="nota">{lista.length} {lista.length === 1 ? 'clube' : 'clubes'} · na conta: {dinheiroCurto(conta)}</p>
+      {lista.length === 0 ? <p className="vazio">Nenhum clube com esses filtros.</p> : (
+        <ul className="vitrine32__grade">
+          {lista.slice(0, quantos).map(c => {
+            const k = `${c.pais}:${c.nome}`;
+            const [cor1, cor2] = coresDoClube(c.nome);
+            return (
+              <li key={k} className={`vitrine32__cartao${cabe(c) ? '' : ' vitrine32__cartao--caro'}`} style={{ ['--c1' as string]: cor1, ['--c2' as string]: cor2 }}>
+                <div className="vitrine32__faixa" aria-hidden="true" />
+                <div className="vitrine32__topo">
+                  <Escudo30 nome={c.nome} tamanho={52} />
+                  <div className="vitrine32__quem">
+                    <strong>{c.nome}</strong>
+                    <span>{c.cidade}</span>
+                  </div>
                 </div>
+                <div className="vitrine32__selos">
+                  <span className={`vitrine32__div vitrine32__div--${c.divisao}`}>{nomeDiv(c.divisao)}</span>
+                  <span className="vitrine32__porte" aria-label={`Porte: ${PORTE_ROT[c.porte]}`}>{PORTE_ROT[c.porte]} <i aria-hidden="true">{'●'.repeat(PORTE_N[c.porte])}{'○'.repeat(3 - PORTE_N[c.porte])}</i></span>
+                </div>
+                <dl className="vitrine32__numeros">
+                  <div><dt>Preço</dt><dd className="vitrine32__preco">{dinheiroCurto(c.preco)}</dd></div>
+                  <div><dt>Receita/ano</dt><dd>{dinheiroCurto(c.receita)}</dd></div>
+                  <div><dt>Dívida</dt><dd>{dinheiroCurto(c.divida)}</dd></div>
+                </dl>
+                {aberto === k ? (
+                  <div className="vitrine32__comprar clube20__botoes">
+                    <BotaoAcao vida={vida} agir={agir} acao={C({ op: 'comprar', nome: c.nome, pais: c.pais })}>À vista · {dinheiroCurto(c.preco)}</BotaoAcao>
+                    <BotaoAcao vida={vida} agir={agir} acao={C({ op: 'comprar', nome: c.nome, pais: c.pais, financiar: true })}>Financiado · entrada {dinheiroCurto(Math.round(c.preco * 0.4))}</BotaoAcao>
+                    <button type="button" className="botao botao--discreto" onClick={() => setAberto(undefined)}>Voltar</button>
+                  </div>
+                ) : (
+                  <button type="button" className="botao botao--secundario vitrine32__abrir" onClick={() => setAberto(k)}>{cabe(c) ? 'Negociar a compra' : 'Ver a proposta'}</button>
+                )}
               </li>
-            ))}
-          </ul>
-        </div>
+            );
+          })}
+        </ul>
       )}
+      {lista.length > quantos && <button type="button" className="botao botao--discreto" onClick={() => setQuantos(q => q + 24)}>Mostrar mais {Math.min(24, lista.length - quantos)}</button>}
     </section>
   );
 }

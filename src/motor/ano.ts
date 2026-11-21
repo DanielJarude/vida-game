@@ -8,6 +8,7 @@
  * Silêncio é permitido: nem todo ano precisa de uma história.
  */
 
+import { processarEquipes32 } from './v32/equipes/equipe32';
 import { iniciativaDasDimensoes, processarRelacoes28 } from './sistemas/relacoes28';
 import { processarBoatos29 } from './sistemas/boatos29';
 import { processarVidas19 } from './v19/npcs/vidas19';
@@ -365,6 +366,7 @@ function viverAno(v: Vida, r: Rng): void {
   processarColecao(v, r);
   processarParalelos(v, r);
   processarEmpresas(v, r);
+  processarEquipes32(v); // VIDA 32: os times de quadra fundados
   processarClube20(v); // VIDA 20: o clube de que é dono (a temporada da liga, o caixa, o elenco, a base, as obras)
   processarAutomobilismo20(v); // VIDA 20: a temporada nas pistas (do kart à F1), o orçamento, as propostas
   processarEsports25(v); // VIDA 25: a temporada de e-sports (o treino, as competições, as equipes, as propostas)

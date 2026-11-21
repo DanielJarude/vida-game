@@ -4158,6 +4158,8 @@ export interface Vida {
   lutas26?: { estilo?: import('./v26/esporte/estilos26').EstiloLuta26; tecnicas?: Partial<Record<import('./v26/esporte/estilos26').EstiloLuta26, number>>; desde?: number; trocas?: number };
   /** VIDA 20 · o clube esportivo de que é dono (`v20/clubes`). Ausente: nenhum. */
   clube20?: import('./dados20/tipos20').Clube20;
+  /** VIDA 32 · os times de quadra (basquete, vôlei, futsal) fundados por você (`v32/equipes`). Ausente: nenhum. */
+  equipes32?: import('./v32/equipes/equipe32').Equipe32[];
   /** REWORK 4: as redes sociais do jogo (simulação interna, sem internet): `sistemas/redes`. Opcional. */
   redes?: { contas: Record<string, ContaSocial> };
   /** REWORK 4: as organizações onde a vida trabalhou (nome, setor, cidade) — `sistemas/organizacoes`. Opcional. */

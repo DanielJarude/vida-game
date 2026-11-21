@@ -29,7 +29,7 @@ import { bloqueio, PERMITIDO, type Veredito } from '../../plausibilidade';
 import { pagar } from '../../sistemas/dinheiro';
 import { lancar } from '../../sistemas/extrato';
 import { clubePorNome, clubesDoPais, oClube, type Clube } from '../../dados/clubes';
-import { paisDaCidade } from '../../dados/lugares';
+import { existeMunicipio, paisDaCidade } from '../../dados/lugares';
 import { paisesVivenciaveis } from '../../mundo/registro';
 import { divisaoDoClube, fecharTemporadasAte, FORCA_DO_DONO, formaNaLiga, ligaDe, temporadaCorrente, ultimaTemporadaDoPais } from '../../sistemas/ligas';
 import { registrarMotivoDoNome } from '../../sistemas/notoriedade';
@@ -111,6 +111,8 @@ export function conflitoDeInteresses(v: Vida, nome: string, pais: string): strin
 
 export type OqueClube20 =
   | { op: 'comprar'; nome: string; pais: string; financiar?: boolean }
+  // VIDA 32 · fundar um clube do zero (entra no campeonato estadual — a última divisão do país)
+  | { op: 'fundar'; nome: string; municipioId: string }
   | { op: 'vender_clube' }
   | { op: 'aportar'; valor: number }
   | { op: 'dividendos' }
@@ -136,6 +138,14 @@ export const custoDaObra = (c: Clube20, qual: 'estadio' | 'ct' | 'base') => Math
 export function disponibilidadeClube20(v: Vida, o: OqueClube20): Veredito {
   if (idade(v) < 18) return bloqueio('requisito', 'Só quem é maior de idade compra um clube.');
   const c = v.clube20;
+  if (o.op === 'fundar') {
+    if (c) return bloqueio('incompativel', `Você já é dono ${oClube(c.nome).replace(/^o /, 'do ').replace(/^a /, 'da ')}: venda antes de fundar outro.`);
+    const erro = problemaNoNome32(v, o.nome, o.municipioId);
+    if (erro) return bloqueio('requisito', erro);
+    const custo = custoDeFundar32(paisDaCidade(o.municipioId));
+    if (v.financas.conta < custo) return bloqueio('requisito', `Fundar um clube custa ${fmt(custo)} (registro, uniforme, um campo alugado e um elenco de começo).`);
+    return PERMITIDO;
+  }
   if (o.op === 'comprar') {
     if (c) return bloqueio('incompativel', `Você já é dono ${oClube(c.nome).replace(/^o /, 'do ').replace(/^a /, 'da ')}: venda antes de comprar outro.`);
     const x = avaliarClube(v, o.nome, o.pais);
@@ -201,6 +211,7 @@ export function disponibilidadeClube20(v: Vida, o: OqueClube20): Veredito {
 export function executarClube20(v: Vida, o: OqueClube20): { texto: string; tom?: 'bom' | 'ruim' | 'neutro' } {
   const ano = anoDe(v.t);
   if (o.op === 'comprar') return comprar(v, o.nome, o.pais, !!o.financiar);
+  if (o.op === 'fundar') return fundar32(v, o.nome.trim(), o.municipioId);
   const c = v.clube20!;
   switch (o.op) {
     case 'vender_clube': {
@@ -339,6 +350,47 @@ function comprar(v: Vida, nome: string, pais: string, financiar: boolean): { tex
   escrever(v, { texto: `Comprou ${oClube(nome)} (${x.divisao === 4 ? 'elite' : `${x.divisao}ª força`} do país) por ${fmt(x.preco)}${financiar ? `, ${fmt(entrada)} de entrada e o resto financiado` : ''}. As dívidas do clube (${fmt(x.divida)}) vieram junto.`, relevancia: 'marco', tema: 'dinheiro', tom: 'bom', escolha: true });
   void ano;
   return { texto: `Agora você é dono ${oClube(nome).replace(/^o /, 'do ').replace(/^a /, 'da ')}.`, tom: 'bom' };
+}
+
+/* ------------------------------------------------------------------ VIDA 32 · fundar um clube */
+
+/** O custo de fundar (registro, uniforme, um campo alugado e um elenco de começo), no mercado do país. */
+export const custoDeFundar32 = (pais: string) => Math.round(2.5e6 * mercado(pais) / 1e5) * 1e5;
+
+/** O nome do clube novo: sem repetir um clube que já existe no país (nem o de outra vida). */
+export function problemaNoNome32(v: Vida, nome: string, municipioId: string): string | undefined {
+  const n = nome.trim();
+  if (n.length < 3) return 'Dê um nome ao clube (pelo menos 3 letras).';
+  if (n.length > 32) return 'O nome é comprido demais (até 32 letras).';
+  if (!existeMunicipio(municipioId)) return 'Cidade não encontrada.';
+  const pais = paisDaCidade(municipioId);
+  const igual = (a: string) => a.toLowerCase() === n.toLowerCase();
+  if (clubesDoPais(pais).some(c => igual(c.nome)) || Object.keys(ligaDe(v, pais).div).some(igual)) return 'Já existe um clube com esse nome no país.';
+  return undefined;
+}
+
+function fundar32(v: Vida, nome: string, municipioId: string): { texto: string; tom: 'bom' } {
+  const pais = paisDaCidade(municipioId);
+  const custo = custoDeFundar32(pais);
+  pagar(v, custo);
+  lancar(v, `Fundação do clube (${nome})`, 'despesa', -custo);
+  const r = rngDe(v.id, 'clube20_fundar', nome);
+  // O clube nasce no fundo: a última divisão (o estadual), elenco de várzea forte, torcida da família e dos amigos.
+  const media = mediaDaForca(1.7);
+  const c: Clube20 = {
+    nome, pais, cidade: municipioDe(municipioId).nome, desde: v.t, preco: custo, caixa: Math.round(custo * 0.3 / 1e5) * 1e5, divida: 0,
+    torcida: 4, reputacao: 8, estadio: 1, ct: 1, base: 1, investimentoBase: 1, elenco: [], juniores: [], historico: [], forcaPorAno: {}, seq: 0, comprados: [], vendas: [], valor: custo,
+    fundado32: { municipioId, t: v.t }
+  };
+  const pos: Setor20[] = ['GOL', 'GOL', 'DEF', 'DEF', 'DEF', 'DEF', 'DEF', 'DEF', 'MEI', 'MEI', 'MEI', 'MEI', 'MEI', 'MEI', 'ATA', 'ATA', 'ATA', 'ATA'];
+  for (const p of pos) c.elenco.push(novoJogador(v, c, r, p, media + r.normal() * 4, 18 + Math.floor(r.next() * 14)));
+  for (let k = 0; k < 4; k++) c.juniores.push(novoJovem(v, c, r));
+  c.forcaPorAno[temporadaCorrente(v)] = forcaDaMedia(media);
+  ligaDe(v, pais).div[nome] = 1;
+  v.clube20 = c;
+  abrirMesa31(v, c, FERRAMENTAS31, 1);
+  escrever(v, { texto: `Fundou ${oClube(nome)}, em ${c.cidade}, por ${fmt(custo)}: começa no campeonato estadual, com um elenco de várzea e a torcida da família. O sonho é subir.`, relevancia: 'marco', tema: 'dinheiro', tom: 'bom', escolha: true });
+  return { texto: `${nome} foi fundado: agora é subir divisão por divisão.`, tom: 'bom' };
 }
 
 /** O que dá para tirar do clube: só sem dívida e acima de uma reserva de um terço da receita do último ano. */
@@ -521,7 +573,7 @@ export function processarClube20(v: Vida): void {
     // VIDA 32: o estadual do ano (Brasil), com a força do elenco do dono — título com troféu próprio.
     if (c.pais === 'BR') {
       let uf: string | undefined;
-      try { uf = ufDoClube(c.nome) ?? (c.cidade ? municipioDe(c.cidade).uf : undefined); } catch { uf = undefined; }
+      try { uf = ufDoClube(c.nome) ?? (c.fundado32 ? municipioDe(c.fundado32.municipioId).uf : undefined); } catch { uf = undefined; }
       const anosF = Object.keys(c.forcaPorAno).map(Number).filter(a => a <= u.ano).sort((a, b) => b - a);
       const fDono = anosF.length ? c.forcaPorAno[anosF[0]] : forcaDaMedia(mediaDoElenco(c));
       const camp = uf ? estadualDoAno(v, uf, u.ano, c.nome, fDono - forcaNaLigaLiga(c.nome, 'BR')) : undefined;

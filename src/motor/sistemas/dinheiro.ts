@@ -440,7 +440,7 @@ export function balanco(v: Vida): Balanco {
   const negocio = n && n.estado !== 'fechado' ? Math.max(0, Math.round(n.caixa ?? 0)) : 0;
   const colecao = Math.round((f.colecao ?? []).reduce((s, c) => s + c.valor, 0));
   // VIDA 20: o clube de que é dono entra como empresa (a avaliação e o caixa dele menos as dívidas dele).
-  const clube = v.clube20 ? Math.max(0, v.clube20.valor + v.clube20.caixa - v.clube20.divida) : 0;
+  const clube = (v.clube20 ? Math.max(0, v.clube20.valor + v.clube20.caixa - v.clube20.divida) : 0) + (v.equipes32 ?? []).reduce((s, e) => s + Math.max(0, e.valor + e.caixa - e.divida), 0);
   const empresas = Math.round((f.empresas ?? []).reduce((s, e) => s + (e.estado === 'encerrada' ? 0 : Math.max(0, e.avaliacao ?? 0) * e.parte), 0) + clube);
   const ativos = Math.max(0, conta) + aplicacoes + imoveis + veiculos + negocio + colecao + empresas;
   const obrigacoes = Math.round(financiamentos + emprestimos + cartao + (v.moradia.atraso ?? 0) * v.moradia.aluguel + Math.max(0, -conta));

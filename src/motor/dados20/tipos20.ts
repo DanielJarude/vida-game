@@ -105,4 +105,6 @@ export interface Clube20 {
   mesaHist31?: { ano: number; tipo: string; titulo: string; texto: string; opcao?: string; ignorado?: boolean }[];
   moral31?: number;
   humorTecnico31?: number;
+  /** VIDA 32 · o clube fundado por você (não comprado): a cidade e quando. */
+  fundado32?: { municipioId: string; t: number };
 }
