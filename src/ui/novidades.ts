@@ -26,6 +26,30 @@ export interface NotaDeVersao {
 
 export const NOTAS: NotaDeVersao[] = [
   {
+    versao: '31',
+    data: '2026-11-21',
+    titulo: 'Um VIDA de cara nova',
+    novidades: [
+      'Visual novo: fundo claro, cartões, cores vivas por área e letra sem serifa — nas quatro paletas.',
+      'Hoje: a tela central do jogo, com o seu retrato, as barras da vida (saúde, felicidade, estresse, forma, dinheiro), o que pede você e o ano que passou. A Biografia e a Retrospectiva continuam nela.',
+      'Você virou Eu: uma página inicial com o seu retrato, os cartões do momento, os próximos passos e um Explorar com busca.',
+      'Caminhos abre na Minha Trajetória: onde você está, quanto falta para o próximo degrau, os próximos passos, as portas abertas e os outros caminhos para explorar.',
+      'Vida e Pessoas também abrem numa página inicial (a rua com a sua casa; a constelação das pessoas), com o Explorar levando a cada seção.',
+      'Aplicativo de namoro: cada perfil tem quatro fotos — o rosto, o corpo inteiro, um lugar que a pessoa curte e sorrindo.',
+      'Futebol: quem ganha a Libertadores (ou a copa continental) disputa o Mundial de Clubes — a Copa Intercontinental até 2004 —, como jogador e como técnico.',
+      'Técnico: agora também disputa a Copa do Brasil e a copa continental quando o time se classifica.',
+      'Dono de clube: os jogadores do elenco e do mercado têm posição, atributos e os mesmos tipos de jogador do atleta (Matador, Garçom, Muralha, Capitão…); a química do elenco pesa na força do time; a aba Comando e negócios traz técnico, capitão, empréstimo de jovens, preço dos ingressos e patrocínio master.',
+      'Tela de abertura nova.'
+    ],
+    melhorias: [
+      'Nenhuma ação aparece mais como texto solto: o que se toca tem cara de botão.',
+      'Abas iguais em todo o jogo; no celular, todas à vista.',
+      'Os processos na Justiça moram em Vida · Dinheiro (antes, em Trabalho).',
+      'No celular, as lojas aparecem em duas colunas e o calendário também.'
+    ],
+    correcoes: []
+  },
+  {
     versao: '30',
     data: '2026-11-20',
     titulo: 'A vida com gente, a fama em pessoa e um campo mais justo',
