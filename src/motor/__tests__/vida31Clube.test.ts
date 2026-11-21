@@ -156,3 +156,16 @@ describe('a mesa do presidente e o mercado com reforços', () => {
     expect(vistas).toBeGreaterThan(0);
   });
 });
+
+import { avancarAno } from '../ano';
+import { temporadaCorrente } from '../sistemas/ligas';
+describe('VIDA 31.2 · as datas do clube', () => {
+  it('o dono registra a mesma temporada que as carreiras fecham no ano (sem atraso)', () => {
+    let v = dono();
+    for (let k = 0; k < 2; k++) {
+      v = avancarAno(v).vida; v.momento = null; (v as { fila?: unknown }).fila = undefined;
+      const h = v.clube20!.historico[v.clube20!.historico.length - 1];
+      expect(h.ano).toBe(temporadaCorrente(v));
+    }
+  });
+});

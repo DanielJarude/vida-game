@@ -9,7 +9,7 @@ import { bonusDoTecnico, clubesAVenda, custoDaObra, dividendosPossiveis, mediaDo
 import { NOME_DO_PAPEL, perfilDoJogador20, perfisDoElenco, quimicaDoElenco, type Perfil31 } from '../../../motor/v20/clubes/perfil31';
 import { arquetipo, nomeDoArquetipo } from '../../../motor/sistemas/arquetipos';
 import './clube31.css';
-import { clubesNaDivisao, forcaNaLiga, formaNaLiga, ligaDe, temporadaCorrente } from '../../../motor/sistemas/ligas';
+import { clubesNaDivisao, forcaNaLiga, formaNaLiga, ligaDe, temporadaCorrente, ultimaTemporadaDoPais } from '../../../motor/sistemas/ligas';
 import { divisaoDoNivel, oClube } from '../../../motor/dados/clubes';
 import { CampeoesDoPais, TabelaDoCampeonato } from '../../jogo/Campeonato';
 import { carregarMundo } from '../../../motor/mundo/carregar';
@@ -438,7 +438,8 @@ function MesaDoPresidente({ vida, agir }: { vida: Vida; agir: (a: Acao) => boole
 function CampeonatoDoClube({ vida }: { vida: Vida }) {
   const c = vida.clube20!;
   const div = ligaDe(vida, c.pais).div[c.nome] ?? 1;
-  const ano = temporadaCorrente(vida);
+  // VIDA 31.2: a temporada que vem (a última fechada + 1) — a mesma régua das carreiras de atleta e de técnico.
+  const ano = (ultimaTemporadaDoPais(vida, c.pais)?.ano ?? temporadaCorrente(vida) - 1) + 1;
   const anos = Object.keys(c.forcaPorAno).map(Number).filter(a => a <= ano).sort((a, b) => b - a);
   const minha = anos.length ? c.forcaPorAno[anos[0]] : undefined;
   const rivais = clubesNaDivisao(vida, div, c.nome, c.pais).map(k => ({ nome: k.nome, forca: Math.round((forcaNaLiga(k.nome, c.pais) + formaNaLiga(vida, c.pais, k.nome)) * 100) / 100 }));

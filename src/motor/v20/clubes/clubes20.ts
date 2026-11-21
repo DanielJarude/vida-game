@@ -31,7 +31,7 @@ import { lancar } from '../../sistemas/extrato';
 import { clubePorNome, clubesDoPais, oClube, type Clube } from '../../dados/clubes';
 import { paisDaCidade } from '../../dados/lugares';
 import { paisesVivenciaveis } from '../../mundo/registro';
-import { divisaoDoClube, FORCA_DO_DONO, formaNaLiga, ligaDe, temporadaCorrente, ultimaTemporadaDoPais } from '../../sistemas/ligas';
+import { divisaoDoClube, fecharTemporadasAte, FORCA_DO_DONO, formaNaLiga, ligaDe, temporadaCorrente, ultimaTemporadaDoPais } from '../../sistemas/ligas';
 import { registrarMotivoDoNome } from '../../sistemas/notoriedade';
 import { sortearNome, sortearSobrenome } from '../../dados/nomes';
 import type { Clube20, Jogador20, Setor20 } from '../../dados20/tipos20';
@@ -485,6 +485,9 @@ export function processarClube20(v: Vida): void {
   c.conflito = conflitoDeInteresses(v, c.nome, c.pais);
   if (c.conflito) escrever(v, { texto: `A federação notificou: ${c.conflito} O clube precisa ser vendido.`, relevancia: 'biografia', tema: 'trabalho', tom: 'ruim' });
   // 1. A temporada que fechou: a liga do país joga (a mesma simulação de todos), e o clube lê onde terminou.
+  // VIDA 31.2: a MESMA temporada que a carreira de atleta ou de técnico fecha neste ano (elas fecham antes, com o resultado
+  // de quem joga ou treina — e aqui só se lê).
+  fecharTemporadasAte(v, c.pais, temporadaCorrente(v));
   const liga = ligaDe(v, c.pais);
   const u = ultimaTemporadaDoPais(v, c.pais);
   const jaContada = c.historico.some(h => h.ano === u?.ano);

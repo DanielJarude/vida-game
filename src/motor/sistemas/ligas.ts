@@ -157,6 +157,17 @@ export function ligaDe(v: Vida, pais: string): LigaDoPais {
   return liga;
 }
 
+/**
+ * VIDA 31.2 · fecha as temporadas do país até `ano` (sem clube fixo: a força de cada um, e a do dono pelo elenco). O dono de
+ * clube fecha a MESMA temporada que o atleta e o técnico fecham no ano (`temporadaCorrente`): antes, ele lia só até a
+ * anterior — as datas do clube vinham um ano atrasadas e, sendo técnico e dono do mesmo clube, a mesa podia contar outro
+ * campeão para o torneio que o técnico ganhou.
+ */
+export function fecharTemporadasAte(v: Vida, pais: string, ano: number): void {
+  const liga = ligaDe(v, pais);
+  if (ano > liga.ano) avancar(v, pais, liga, ano);
+}
+
 /** Em que divisão o clube está nesta temporada (na tabela da vida; fora do catálogo, o que a vida fixou ou o porte). */
 export function divisaoDoClube(v: Vida, clube: string, pais: string): Nivel {
   const liga = ligaDe(v, pais);
@@ -327,6 +338,22 @@ function temporadaDaDivisao(v: Vida, pais: string, ano: number, n: 2 | 3 | 4, di
     const d = Math.abs(p - alvo);
     if (d < dist) { melhor = t; dist = d; }
     if (p > alvo) lo = meio; else if (p < alvo) hi = meio; else { melhor = t; dist = 0; }
+  }
+  // VIDA 31.2: a busca pela força às vezes para a uma posição do alvo (forças empatadas na régua): a tabela fica com o clube
+  // da vida EXATAMENTE onde a carreira terminou — ele troca de linha com quem estava ali (a tabela segue ordenada). Antes,
+  // o técnico terminava em 13º e a tabela (e a mesa do dono) dizia 14º.
+  if (dist > 0) {
+    const i = posicao(melhor) - 1, j = alvo - 1;
+    if (i >= 0 && j < melhor.linhas.length && i !== j) {
+      const linhas = melhor.linhas.map(l => [...l] as typeof l);
+      const a1 = linhas[i][0], b1 = linhas[j][0];
+      linhas[i][0] = b1;
+      linhas[j][0] = a1;
+      // As partidas trocam os nomes junto (a tabela continua sendo a soma dos jogos).
+      const troca = (c: string) => (c === a1 ? b1 : c === b1 ? a1 : c);
+      const rodadas = melhor.rodadas.map(r => r.map(([m, vi, gm, gv]) => [troca(m), troca(vi), gm, gv] as [string, string, number, number]));
+      return { rodadas, linhas };
+    }
   }
   return melhor;
 }

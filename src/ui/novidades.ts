@@ -26,6 +26,19 @@ export interface NotaDeVersao {
 
 export const NOTAS: NotaDeVersao[] = [
   {
+    versao: '31.2',
+    data: '2026-11-21',
+    titulo: 'Troféus e datas no lugar',
+    novidades: [],
+    melhorias: [
+      'Troféus do técnico com a forma de cada competição (liga, copa, Libertadores, Champions, Mundial, seleções), o nome certo, o acesso e as finais perdidas em prata.'
+    ],
+    correcoes: [
+      'O clube do dono fecha a mesma temporada que o atleta e o técnico fecham no ano: as datas não vêm mais um ano atrasadas.',
+      'Técnico e dono do mesmo clube: a tabela, a posição e o campeão são os mesmos nas duas carreiras.'
+    ]
+  },
+  {
     versao: '31.1',
     data: '2026-11-21',
     titulo: 'O clube com vida própria',
