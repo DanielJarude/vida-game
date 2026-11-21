@@ -5,7 +5,7 @@
  */
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
-import { useState } from 'react';
+import { useState, type ReactElement } from 'react';
 import { adulto } from '../../motor/__tests__/cenarios';
 import { executar, disponibilidade, type Acao } from '../../motor/acoes';
 import { podeTentar } from '../../motor/plausibilidade';
@@ -17,7 +17,7 @@ afterEach(() => cleanup());
 const tenta = (v: Vida, a: Acao) => (podeTentar(disponibilidade(v, a)) ? executar(v, a).vida : v);
 const rico = () => { const v = adulto(35, { semente: 33, municipioId: 'campinas-sp' }); v.financas.conta = 2e9; return v; };
 
-function Palco({ inicial, filho }: { inicial: Vida; filho: (v: Vida, agir: (a: Acao) => boolean) => JSX.Element }) {
+function Palco({ inicial, filho }: { inicial: Vida; filho: (v: Vida, agir: (a: Acao) => boolean) => ReactElement }) {
   const [v, setV] = useState(inicial);
   return <main>{filho(v, a => { setV(executar(v, a).vida); return true; })}<output data-testid="org">{v.orgEsports31 ? JSON.stringify({ linhas: v.orgEsports31.linhas.map(l => l.jogo), ofertas: v.orgEsports31.comercial33?.ofertas.length ?? 0, contratos: v.orgEsports31.comercial33?.contratos.length ?? 0 }) : ''}</output><output data-testid="clube">{v.clube20 ? JSON.stringify({ nome: v.clube20.nome, sigla: v.clube20.identidade33?.sigla, estadio: v.clube20.estadio }) : ''}</output></main>;
 }
