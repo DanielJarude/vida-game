@@ -191,6 +191,10 @@ export default defineConfig({
           // VIDA 32: idem (motor/v31/<frente> → motor31-<frente>): a organização de e-sports do dono.
           const v31 = /[\\/]src[\\/]motor[\\/]v31[\\/]([a-z0-9]+)[\\/]/.exec(id);
           if (v31) return `motor31-${v31[1]}`;
+          // VIDA 33: idem (motor/v33/<frente> → motor33-<frente>): o que todo dono de time usa (a identidade visual, os
+          // patrocínios). Folhas: só importam o rng e os tipos.
+          const v33 = /[\\/]src[\\/]motor[\\/]v33[\\/]([a-z0-9]+)[\\/]/.exec(id);
+          if (v33) return `motor33-${v33[1]}`;
           // VIDA 27: idem (motor/v27/<frente> → motor27-<frente>): a saúde mental.
           const v27 = /[\\/]src[\\/]motor[\\/]v27[\\/]([a-z0-9]+)[\\/]/.exec(id);
           if (v27) return `motor27-${v27[1]}`;

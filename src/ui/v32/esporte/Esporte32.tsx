@@ -8,14 +8,18 @@ import type { Acao } from '../../../motor/acoes';
 import { idade } from '../../../motor/nucleo';
 import { anoDe } from '../../../motor/tempo';
 import { cidadesNoMapa, nomeLugar, paisDaCidade } from '../../../motor/dados/lugares';
-import { custoDeFundar32 } from '../../../motor/v20/clubes/clubes20';
+import { previaDaFundacao33 } from '../../../motor/v20/clubes/clubes20';
 import {
-  custoDeFundarEquipe32, custoDoGinasio32, custoDoReforco32, MODALIDADES32, nomeDaDivisao32, nomeDaModalidade32, patrocinioDaEquipe32, tecnicosDaEquipe32,
+  contextoEquipe33, custoDoGinasio32, custoDoReforco32, MODALIDADES32, nomeDaDivisao32, nomeDaModalidade32, previaDaEquipe33, tecnicosDaEquipe32,
   type Equipe32, type Modalidade32
 } from '../../../motor/v32/equipes/equipe32';
 import { BotaoAcao } from '../../comum';
 import { dinheiroCurto } from '../../apresentar';
-import { Escudo30 } from '../../v30/escudos/Escudo30';
+import { Escudo30, registrarIdentidades33 } from '../../v30/escudos/Escudo30';
+import type { Identidade33 } from '../../../motor/v33/dono/identidade33';
+import { EditorIdentidade33, identidadeInicial33 } from '../../v33/dono/EditorIdentidade33';
+import { camisaDaIdentidade33, DesenhoCamisa33 } from '../../v33/dono/Camisa33';
+import { Investimento33, PainelDono33, type Foco33 } from '../../v33/dono/PainelDono33';
 import './esporte32.css';
 
 type Agir = (a: Acao) => boolean;
@@ -38,12 +42,15 @@ function Bola({ m }: { m: Modalidade32 | 'futebol' }) {
   return <svg className="esp32__bola" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="12" cy="12" r="10" />{traco}</svg>;
 }
 
-/** Fundar um time: a modalidade, o nome e a cidade (a sua, a natal ou outra do país). */
+/** Fundar um time: a modalidade, o nome, a cidade, a identidade (escudo, cores, camisa) e o investimento inicial. */
 export function FundarTime32({ vida, agir }: { vida: Vida; agir: Agir }) {
   const [mod, setMod] = useState<Modalidade32 | 'futebol'>(vida.clube20 ? 'basquete' : 'futebol');
   const [nome, setNome] = useState('');
   const [cidade, setCidade] = useState(vida.moradia.municipioId);
   const [busca, setBusca] = useState('');
+  const [ident, setIdent] = useState<Identidade33 | null>(null);
+  const [investimento, setInvestimento] = useState(0);
+  const [foco, setFoco] = useState<Foco33>('equilibrado');
   const pais = paisDaCidade(vida.moradia.municipioId);
   const sugestoes = useMemo(() => {
     if (busca.trim().length < 2) return [];
@@ -51,12 +58,18 @@ export function FundarTime32({ vida, agir }: { vida: Vida; agir: Agir }) {
     return cidadesNoMapa(pais).filter(m => m.nome.toLowerCase().includes(q)).slice(0, 8);
   }, [busca, pais]);
   if (idade(vida) < 18) return null;
-  const custo = mod === 'futebol' ? custoDeFundar32(paisDaCidade(cidade)) : custoDeFundarEquipe32(paisDaCidade(cidade));
-  const acao = mod === 'futebol' ? ({ tipo: 'clube20', oque: { op: 'fundar', nome, municipioId: cidade } } as Acao) : E({ op: 'fundar', modalidade: mod, nome, municipioId: cidade });
+  const nomeVisto = nome.trim() || 'Time novo';
+  const identidade = ident ?? identidadeInicial33(nomeVisto, false);
+  const paisTime = paisDaCidade(cidade);
+  const pf = mod === 'futebol' ? previaDaFundacao33(paisTime, investimento, foco) : undefined;
+  const pq = mod !== 'futebol' ? previaDaEquipe33(paisTime, investimento, foco) : undefined;
+  const custo = pf?.custo ?? pq!.custo;
+  const base = custo - investimento;
+  const acao = mod === 'futebol' ? ({ tipo: 'clube20', oque: { op: 'fundar', nome, municipioId: cidade, investimento, foco, identidade } } as Acao) : E({ op: 'fundar', modalidade: mod, nome, municipioId: cidade, investimento, foco, identidade });
   const opcoes: (Modalidade32 | 'futebol')[] = ['futebol', ...MODALIDADES32.map(m => m.id)];
   const cidades = [...new Set([vida.moradia.municipioId, vida.eu.municipioNatal, cidade])].filter(id => { try { return paisDaCidade(id) === pais; } catch { return false; } });
   return (
-    <BlocoEsporte32 titulo="Fundar um time" icone="+" nota="Do zero: registro na federação, uniforme, um campo ou uma quadra alugada e um elenco de começo. O time nasce na última divisão — e sobe se você investir. (Uma organização de e-sports se funda no bloco E-sports.)">
+    <BlocoEsporte32 titulo="Fundar um time" icone="+" nota="Do zero: registro na federação, uniforme, um campo ou uma quadra alugada e um elenco de começo. O time sempre nasce na última divisão — dinheiro não pula divisão —, mas quem investe forte nasce com elenco para subir rápido. (Uma organização de e-sports se funda no bloco E-sports.)">
       <div className="esp32__fichas" role="group" aria-label="Modalidade">
         {opcoes.map(m => <button key={m} type="button" className="vitrine32__ficha" aria-pressed={mod === m} onClick={() => setMod(m)}><Bola m={m} /> {m === 'futebol' ? 'Futebol' : nomeDaModalidade32(m)}</button>)}
       </div>
@@ -70,10 +83,19 @@ export function FundarTime32({ vida, agir }: { vida: Vida; agir: Agir }) {
           {sugestoes.map(m => <button key={m.id} type="button" className="vitrine32__ficha vitrine32__ficha--leve" onClick={() => { setCidade(m.id); setBusca(''); }}>{nomeLugar(m.id)}</button>)}
         </div>
       )}
+      <details className="esp32__detalhe">
+        <summary>Escudo, cores e identidade</summary>
+        <EditorIdentidade33 nome={nomeVisto} ident={identidade} mudar={setIdent} tipo={mod === 'futebol' ? 'futebol' : 'quadra'} />
+      </details>
+      <Investimento33 valor={investimento} mudar={setInvestimento} conta={vida.financas.conta} base={base} foco={foco} mudarFoco={setFoco}>
+        {pf && <p className="nota">Elenco de {pf.divisaoAlvo} (média {Math.round(pf.media)}), estádio {'★'.repeat(pf.estadio)}, CT {'★'.repeat(pf.ct)}, base {'★'.repeat(pf.base)}, {dinheiroCurto(pf.caixa)} no caixa. Folha estimada: {dinheiroCurto(pf.folha)} por ano — elenco forte custa todo ano.</p>}
+        {pq && <p className="nota">Elenco com força {Math.round(pq.elenco)} (o nível da liga nacional é 70), ginásio {'★'.repeat(pq.ginasio)}, {dinheiroCurto(pq.caixa)} no caixa.</p>}
+      </Investimento33>
       <div className="esp32__fundar">
         <div className="esp32__previa">
-          <Escudo30 nome={nome.trim() || 'Time novo'} tamanho={56} />
-          <div><strong>{nome.trim() || 'Seu time'}</strong><span>{mod === 'futebol' ? 'Futebol' : nomeDaModalidade32(mod)} · {nomeLugar(cidade)}</span><span>Fundação: {dinheiroCurto(custo)}</span></div>
+          <Escudo30 nome={nomeVisto} identidade={identidade} tamanho={56} />
+          <DesenhoCamisa33 camisa={camisaDaIdentidade33(identidade, false)} nome={nomeVisto} identidade={identidade} tamanho={64} />
+          <div><strong>{nome.trim() || 'Seu time'}</strong><span>{mod === 'futebol' ? 'Futebol' : nomeDaModalidade32(mod)} · {nomeLugar(cidade)}{identidade.apelido ? ` · "${identidade.apelido}"` : ''}</span><span>Total: {dinheiroCurto(custo)}</span></div>
         </div>
         <BotaoAcao vida={vida} agir={agir} acao={acao}>Fundar · {dinheiroCurto(custo)}</BotaoAcao>
       </div>
@@ -83,11 +105,10 @@ export function FundarTime32({ vida, agir }: { vida: Vida; agir: Agir }) {
 
 /** O cartão de um time de quadra: a divisão, a força, o caixa, a última temporada e as ações. */
 export function CartaoEquipe32({ vida, agir, e }: { vida: Vida; agir: Agir; e: Equipe32 }) {
-  const [aba, setAba] = useState<'acoes' | 'historia'>('acoes');
+  const [aba, setAba] = useState<'acoes' | 'negocios' | 'historia'>('acoes');
   const ult = e.historico[e.historico.length - 1];
   const titulos = e.historico.filter(h => h.titulo);
   const tecnicos = tecnicosDaEquipe32(vida, e);
-  const pat = patrocinioDaEquipe32(vida, e);
   const ano = anoDe(vida.t);
   return (
     <article className="esp32__equipe">
@@ -107,6 +128,7 @@ export function CartaoEquipe32({ vida, agir, e }: { vida: Vida; agir: Agir; e: E
       <p className="nota">{ult ? `Última temporada (${ult.ano}): ${ult.posicao}º no ${nomeDaDivisao32(e, ult.nivel)}${ult.titulo ? ' — campeão' : ult.acesso ? ' — subiu' : ult.queda ? ' — caiu' : ''}.` : 'A primeira temporada fecha na virada do ano.'} {e.tecnico ? `Técnico: ${e.tecnico.nome} (${'★'.repeat(e.tecnico.nivel)}).` : 'Sem técnico contratado.'}</p>
       <div className="esp32__fichas" role="tablist" aria-label={`O ${e.nome}`}>
         <button type="button" role="tab" aria-selected={aba === 'acoes'} className="vitrine32__ficha vitrine32__ficha--leve" onClick={() => setAba('acoes')}>Comando</button>
+        <button type="button" role="tab" aria-selected={aba === 'negocios'} className="vitrine32__ficha vitrine32__ficha--leve" onClick={() => setAba('negocios')}>Patrocínios, camisa e loja</button>
         <button type="button" role="tab" aria-selected={aba === 'historia'} className="vitrine32__ficha vitrine32__ficha--leve" onClick={() => setAba('historia')}>Temporadas · {e.historico.length}</button>
       </div>
       {aba === 'acoes' ? (
@@ -120,11 +142,12 @@ export function CartaoEquipe32({ vida, agir, e }: { vida: Vida; agir: Agir; e: E
           </ul></div>
           <div className="esp32__grupo"><h4>Ginásio e dinheiro</h4><div className="clube20__botoes">
             <BotaoAcao vida={vida} agir={agir} acao={E({ op: 'ginasio', id: e.id })}>Ampliar o ginásio · {dinheiroCurto(custoDoGinasio32(e))}</BotaoAcao>
-            <BotaoAcao vida={vida} agir={agir} acao={E({ op: 'patrocinio', id: e.id })}>{e.patrocinio && e.patrocinio.ate >= ano ? `Patrocínio: ${e.patrocinio.nome}` : `Fechar com ${pat.nome} · ${dinheiroCurto(pat.valor)}`}</BotaoAcao>
             <BotaoAcao vida={vida} agir={agir} acao={E({ op: 'aportar', id: e.id, valor: Math.max(1e5, custoDoReforco32(e, false)) })}>Aportar {dinheiroCurto(Math.max(1e5, custoDoReforco32(e, false)))}</BotaoAcao>
             <BotaoAcao vida={vida} agir={agir} acao={E({ op: 'vender', id: e.id })} variante="discreto">Vender o time · {dinheiroCurto(Math.max(0, e.valor + e.caixa - e.divida))}</BotaoAcao>
           </div></div>
         </div>
+      ) : aba === 'negocios' ? (
+        <PainelDono33 vida={vida} agir={agir} nome={e.nome} dono={e} ctx={contextoEquipe33(e, ano)} acao={sub => E({ op: 'dono', id: e.id, sub })} anoInicio={anoDe(e.desde)} />
       ) : e.historico.length === 0 ? <p className="vazio">Nenhuma temporada jogada ainda.</p> : (
         <ol className="esp32__temporadas">
           {[...e.historico].reverse().map(h => (
@@ -142,6 +165,7 @@ export function CartaoEquipe32({ vida, agir, e }: { vida: Vida; agir: Agir; e: E
 export function EquipesDeQuadra32({ vida, agir }: { vida: Vida; agir: Agir }) {
   const lista = vida.equipes32 ?? [];
   if (!lista.length) return null;
+  registrarIdentidades33(vida);
   return (
     <BlocoEsporte32 titulo={lista.length === 1 ? 'Seu time de quadra' : 'Seus times de quadra'} icone="◎">
       {lista.map(e => <CartaoEquipe32 key={e.id} vida={vida} agir={agir} e={e} />)}

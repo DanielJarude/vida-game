@@ -26,6 +26,26 @@ export interface NotaDeVersao {
 
 export const NOTAS: NotaDeVersao[] = [
   {
+    versao: '33',
+    data: '2026-11-21',
+    titulo: 'Dono de verdade: escudo, camisa, patrocínios e circuitos reais',
+    novidades: [
+      'Ao fundar um time (futebol, quadra ou e-sports): escolha o escudo (forma, padrão, três cores, símbolo ou sigla, estrela), o apelido da torcida e o nome da casa.',
+      'Investimento inicial: funde com o mínimo ou injete dinheiro para o time nascer forte — no elenco, na estrutura ou nos dois. O futebol ainda começa no estadual (dinheiro não pula divisão), mas sobe rápido; a folha estimada aparece antes.',
+      'Patrocínios de verdade: várias cotas (master, cotas da camisa, material esportivo, naming rights; no e-sports, periféricos, bebida e plataforma). Você busca patrocinadores, compara propostas, negocia, assina, cumpre metas e pode romper. Departamento comercial opcional.',
+      'Camisa e loja: desenhe o uniforme (modelo, gola, padrão, cores, mangas — o escudo e o master aparecem nele) e cuide da loja: produtos, preço e onde vender. As vendas andam com a torcida e o resultado.',
+      'E-sports com circuitos reais: cada jogo tem as suas regiões e ligas da época (CBLOL, LCS, LEC, LCK, VCT Americas, Challengers Brazil, South America League, FNCS, RLCS…). Quem termina nas vagas vai aos internacionais (Mundial, MSI, Masters, Champions, Majors, Six Invitational…).',
+      'Uma organização, vários jogos: entre em outros jogos com a mesma org, cada line na liga da sua região — do zero, comprando a vaga na segunda divisão ou a vaga (franquia) na liga principal.'
+    ],
+    melhorias: [
+      'As lines de e-sports têm os titulares do jogo e no máximo um reserva (5 + 1 no CS, VALORANT, R6 e LoL; 3 + 1 no Rocket); o técnico fica fora da line.',
+      'Ligas fechadas sem queda nem acesso direto (CBLOL e LCK desde 2021, LCS, LEC, LPL, VCT); a Ascension do VALORANT promove de 2023 a 2025.'
+    ],
+    correcoes: [
+      'Organizações reais aparecem na região em que jogam (T1 na Coreia, Sentinels na América do Norte, FaZe no Rainbow Six brasileiro).'
+    ]
+  },
+  {
     versao: '32',
     data: '2026-11-21',
     titulo: 'Fundar times, e-sports e estaduais',

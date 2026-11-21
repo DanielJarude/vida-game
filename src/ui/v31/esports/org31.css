@@ -112,3 +112,13 @@
 .org31__dica { font-size: var(--type-meta); color: var(--tinta-2); }
 .org31__hist summary { cursor: pointer; font-weight: 600; font-size: var(--type-caption); }
 .org31__hist ul { margin: 6px 0 0; padding-left: 16px; display: grid; gap: 4px; font-size: var(--type-caption); color: var(--tinta-2); }
+/* VIDA 33 · como entrar num jogo, as lines no painel, as vagas internacionais */
+.org31__modos { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; }
+.org31__modo { width: 100%; display: grid; gap: 4px; text-align: left; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--borda, rgba(127,127,127,.3)); background: var(--superficie, transparent); color: inherit; cursor: pointer; font: inherit; }
+.org31__modo--ativo { border-color: var(--acento, #3b82f6); box-shadow: 0 0 0 2px var(--acento, #3b82f6) inset; }
+.org31__linhas { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
+.org31__linha-resumo h4 { display: flex; gap: 8px; align-items: center; margin: 0; }
+.org31__linha { display: grid; gap: 12px; }
+.org31__vagas { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+.org31__detalhe summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
+.org31__abas--sub { margin-top: 2px; }

@@ -98,6 +98,7 @@ export interface Clube20 {
   tecnico31?: { nome: string; estilo: 'ofensivo' | 'equilibrado' | 'defensivo'; nivel: number; salario: number; desde: number };
   emprestados31?: { jogador: Jogador20; para: string; ate: number }[];
   ingresso31?: 0 | 1 | 2;
+  /** Até a VIDA 32 (o normalizador do save leva para `comercial33`). */
   patrocinio31?: { nome: string; valor: number; ate: number; rep: number };
   /** VIDA 31 · a mesa do presidente: os assuntos abertos, o que já se decidiu, o clima do vestiário (−3..+3, entra na
    *  força) e o humor do técnico (0..100). */
@@ -107,4 +108,8 @@ export interface Clube20 {
   humorTecnico31?: number;
   /** VIDA 32 · o clube fundado por você (não comprado): a cidade e quando. */
   fundado32?: { municipioId: string; t: number };
+  /** VIDA 33 · o que todo dono tem: a identidade (escudo, cores, apelido, estádio), os patrocínios por cota e a loja. */
+  identidade33?: import('../v33/dono/identidade33').Identidade33;
+  comercial33?: import('../v33/dono/patrocinio33').Comercial33;
+  loja33?: import('../v33/dono/loja33').Loja33;
 }

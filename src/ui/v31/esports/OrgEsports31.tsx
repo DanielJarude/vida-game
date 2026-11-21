@@ -1,22 +1,30 @@
 /**
- * VIDA 32 · A organização de e-sports: comprar uma que existe (as do catálogo de cada jogo, nos anos certos, e outras
- * fictícias por região) ou fundar uma do zero — e dirigi-la: painel, elenco (função, arquétipo, atributos), mercado,
- * temporadas e títulos, comando e negócios, e a mesa do dono. Montado em Vida · Patrimônio · Empresas.
+ * VIDA 32 · A organização de e-sports — e VIDA 33 · uma organização, vários jogos. Comprar uma que existe (cada uma na
+ * região real dela) ou fundar a sua (o nome, o escudo, o jogo, a região do circuito, como entrar — do zero, comprando a
+ * vaga na segunda divisão ou na liga principal — e o investimento). Como dono: o painel com a mesa, uma aba por line
+ * (o time, o elenco, o mercado, o comando, as temporadas), os negócios (patrocínios, camisa e loja, identidade) e a
+ * organização (conteúdo, entrar num jogo novo, aporte, venda). Montado em Vida · Patrimônio · Empresas · Esporte.
  */
 import { useMemo, useState, type ReactNode } from 'react';
 import type { Vida } from '../../../motor/tipos';
 import type { Acao } from '../../../motor/acoes';
 import {
-  bonusDoTecnico31, custoDeFundar31, custoDoBootcamp31, forcaDoTime31, jogosDisponiveis31, mediaDosTitulares31, mercadoOrg31,
-  nomeDaFuncao31, nomeDaLiga31, nomeDoMundial31, NOME_DIVISAO31, NOME_REGIAO31, orgsAVenda31, patrociniosOrg31, perfilDoJogadorOrg31,
-  perfisDoElenco31, quimica31, QUEM_DA_MESA31, tecnicosOrg31, titulares31, valorDoJogador31,
-  type JogadorDoMercado31, type JogadorOrg31, type OqueOrg31, type OrgEsports31, type PerfilOrg31, type Regiao31
+  bonusDoTecnico31, contextoOrg33, custoDeFundar31, custoDoBootcamp31, forcaDoTime31, jogosDisponiveis31, maxElenco31, mediaDosTitulares31, mercadoOrg31,
+  NOME_DIVISAO31, NOME_ENTRADA33, nomeDaFuncao31, nomeDaLiga31, orgsAVenda31, perfilDoJogadorOrg31, perfisDoElenco31, previaDaEntrada33, quimica31,
+  QUEM_DA_MESA31, tecnicosOrg31, titulares31, titularesDoJogo31, valorDaLinha33, valorDoJogador31,
+  type Entrada33, type JogadorDoMercado31, type JogadorOrg31, type LinhaOrg33, type OqueOrg31, type OrgEsports31, type PerfilOrg31
 } from '../../../motor/v31/esports/org31';
+import { ligaFechada33, multDaRegiao33, nomeDaRegiao33, regiaoBrasil33, regioesDoJogo33, regrasDaDivisao33, vagasDaRegiao33 } from '../../../motor/v31/esports/circuitos33';
 import { JOGOS25, NOME_ATRIBUTO25, type JogoId } from '../../../motor/v25/esports/jogos25';
+import type { Identidade33 } from '../../../motor/v33/dono/identidade33';
 import { arquetipo, nomeDoArquetipo } from '../../../motor/sistemas/arquetipos';
 import { anoDe } from '../../../motor/tempo';
 import { BotaoAcao } from '../../comum';
 import { dinheiroCurto } from '../../apresentar';
+import { Escudo30, registrarIdentidades33 } from '../../v30/escudos/Escudo30';
+import { EditorIdentidade33, identidadeInicial33 } from '../../v33/dono/EditorIdentidade33';
+import { camisaDaIdentidade33, DesenhoCamisa33 } from '../../v33/dono/Camisa33';
+import { Investimento33, PainelDono33 } from '../../v33/dono/PainelDono33';
 import './org31.css';
 
 type Agir = (a: Acao) => boolean;
@@ -25,10 +33,11 @@ const nomeDoJogo = (j: JogoId, ano: number) => JOGOS25[j].nome(ano);
 const SIGLA_JOGO: Record<JogoId, string> = { cs: 'CS', r6: 'R6', fortnite: 'FN', valorant: 'VAL', lol: 'LoL', rocket: 'RL' };
 
 export default function OrgEsports31({ vida, agir }: { vida: Vida; agir: Agir }) {
+  registrarIdentidades33(vida);
   return vida.orgEsports31 ? <MinhaOrg vida={vida} agir={agir} /> : <SemOrg vida={vida} agir={agir} />;
 }
 
-/* ------------------------------------------------------------------ o distintivo (sem logotipo: um hexágono com as iniciais) */
+/* ------------------------------------------------------------------ o distintivo (as orgs do catálogo: um hexágono com as iniciais) */
 
 function cores(nome: string): [string, string] {
   let h = 0; for (const ch of nome) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
@@ -36,7 +45,8 @@ function cores(nome: string): [string, string] {
   return [`hsl(${a} 62% 34%)`, `hsl(${b} 70% 62%)`];
 }
 const iniciais = (nome: string) => nome.replace(/[^\p{L}\p{N} ]/gu, '').split(' ').filter(Boolean).slice(0, 2).map(p => p[0]).join('').toUpperCase() || '?';
-export function Distintivo31({ nome, tamanho = 56 }: { nome: string; tamanho?: number }) {
+export function Distintivo31({ nome, tamanho = 56, identidade }: { nome: string; tamanho?: number; identidade?: Identidade33 }) {
+  if (identidade) return <Escudo30 nome={nome} identidade={identidade} tamanho={tamanho} />;
   const [a, b] = cores(nome);
   return (
     <svg className="org31__distintivo" width={tamanho} height={tamanho} viewBox="0 0 100 100" role="img" aria-label={`Distintivo da ${nome}`}>
@@ -47,7 +57,49 @@ export function Distintivo31({ nome, tamanho = 56 }: { nome: string; tamanho?: n
   );
 }
 
-/* ------------------------------------------------------------------ sem organização: comprar ou fundar */
+/* ------------------------------------------------------------------ escolher jogo, região e como entrar (fundar ou line nova) */
+
+function EscolhaDeEntrada({ vida, jogos, jogo, setJogo, regiao, setRegiao, modo, setModo, investimento, setInvestimento, extra = 0 }: {
+  vida: Vida; jogos: JogoId[]; jogo: JogoId; setJogo: (j: JogoId) => void; regiao: string; setRegiao: (r: string) => void;
+  modo: Entrada33; setModo: (m: Entrada33) => void; investimento: number; setInvestimento: (n: number) => void; extra?: number
+}) {
+  const ano = anoDe(vida.t);
+  const regioes = regioesDoJogo33(jogo, ano);
+  const p = previaDaEntrada33(jogo, regiao, modo, investimento, ano);
+  const vagas = vagasDaRegiao33(jogo, regiao, ano);
+  const regras = regrasDaDivisao33(jogo, regiao, p.divisao, ano);
+  return (
+    <>
+      <div className="org31__form">
+        <label>Jogo <select value={jogo} onChange={e => { const j = e.target.value as JogoId; setJogo(j); const rs = regioesDoJogo33(j, ano); if (!rs.some(r => r.id === regiao)) setRegiao(rs.find(r => r.id === regiaoBrasil33(j))?.id ?? rs[0]?.id ?? ''); }}>{jogos.map(j => <option key={j} value={j}>{nomeDoJogo(j, ano)}</option>)}</select></label>
+        <label>Região do circuito <select value={regiao} onChange={e => setRegiao(e.target.value)}>{regioes.map(r => <option key={r.id} value={r.id}>{r.nome}</option>)}</select></label>
+      </div>
+      <ul className="org31__modos" role="radiogroup" aria-label="Como entrar">
+        {(['base', 'acesso', 'elite'] as const).map(m => {
+          const q = previaDaEntrada33(jogo, regiao, m, 0, ano);
+          return (
+            <li key={m}>
+              <button type="button" role="radio" aria-checked={modo === m} className={`org31__modo${modo === m ? ' org31__modo--ativo' : ''}`} onClick={() => setModo(m)}>
+                <strong>{NOME_ENTRADA33[m]}</strong>
+                <span>{q.liga}</span>
+                <span className="org31__meta">{m === 'base' ? 'estrutura e jogadores livres' : m === 'elite' && q.fechada ? 'liga fechada: a franquia de quem sai' : 'a vaga de uma equipe que sai'} · {dinheiroCurto(q.vaga)}</span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+      <Investimento33 valor={investimento} mudar={setInvestimento} conta={vida.financas.conta} base={p.vaga + extra}>
+        <p className="nota">Três quartos em contratações e comissão, um quarto no caixa. A line nasce com força {Math.round(p.forca)} (o campo da {p.liga} é {Math.round(p.campo)}){p.tecnico ? `, técnico ${'★'.repeat(p.tecnico)}` : ', sem técnico'}{p.reserva ? ' e um reserva' : ''}. Folha estimada: {dinheiroCurto(p.folha)} por ano.</p>
+      </Investimento33>
+      <p className="nota">
+        {nomeDaRegiao33(jogo, regiao)} · {p.liga}: {p.divisao === 4 ? (regras.caem ? `os ${regras.caem} últimos caem` : 'liga fechada, sem queda') : regras.acesso ? `liga de cima fechada; o campeão disputa a ${regras.acesso}` : regras.sobem ? `${regras.sobem === 1 ? 'o campeão sobe' : `os ${regras.sobem} primeiros sobem`}` : 'sem acesso direto'}.
+        {vagas.length ? ` Da liga principal da região saem vagas para: ${vagas.map(x => `${x.nome}${x.vezes > 1 ? ` (${x.vezes}×)` : ''} — ${x.vagas ? `top ${x.vagas}` : ''}${x.div3 ? `${x.vagas ? '; ' : ''}o campeão da segunda divisão disputa vaga` : ''}`).join(' · ')}.` : ' Nesta época o jogo ainda não tem torneio internacional oficial.'}
+      </p>
+    </>
+  );
+}
+
+/* ------------------------------------------------------------------ sem organização: fundar ou comprar */
 
 const FAIXAS_PRECO = [{ id: 0, nome: 'Qualquer preço' }, { id: 1e6, nome: 'Até R$ 1 mi' }, { id: 5e6, nome: 'Até R$ 5 mi' }, { id: 20e6, nome: 'Até R$ 20 mi' }, { id: 60e6, nome: 'Até R$ 60 mi' }];
 
@@ -56,28 +108,27 @@ function SemOrg({ vida, agir }: { vida: Vida; agir: Agir }) {
   const jogos = jogosDisponiveis31(ano);
   const [aberto, setAberto] = useState(false);
   const [jogo, setJogo] = useState<JogoId | ''>('');
-  const [regiao, setRegiao] = useState<Regiao31 | ''>('BR');
+  const [regiao, setRegiao] = useState('');
   const [preco, setPreco] = useState(0);
   const [busca, setBusca] = useState('');
   const [mostrar, setMostrar] = useState(24);
   const todas = useMemo(() => (aberto ? orgsAVenda31(vida) : []), [aberto, vida]);
+  const regioes = useMemo(() => [...new Map(todas.filter(o => !jogo || o.jogo === jogo).map(o => [nomeDaRegiao33(o.jogo, o.regiao), o.regiao])).entries()], [todas, jogo]);
   const lista = todas
-    .filter(o => (!jogo || o.jogo === jogo) && (!regiao || o.regiao === regiao) && (!preco || o.preco <= preco) && (!busca || o.nome.toLowerCase().includes(busca.toLowerCase())))
+    .filter(o => (!jogo || o.jogo === jogo) && (!regiao || nomeDaRegiao33(o.jogo, o.regiao) === regiao) && (!preco || o.preco <= preco) && (!busca || o.nome.toLowerCase().includes(busca.toLowerCase())))
     .sort((a, b) => b.divisao - a.divisao || b.valor - a.valor);
   if (!jogos.length) return <section className="org31"><h3 className="subtitulo">Organização de e-sports</h3><p className="nota">Ainda não há jogos com cenário competitivo nesta época.</p></section>;
   return (
     <section className="org31" aria-labelledby="org31-titulo">
       <h3 id="org31-titulo" className="subtitulo">Organização de e-sports</h3>
-      <p className="nota">Compre uma organização que já disputa as ligas de um jogo — o preço é o valor dela menos as dívidas, que vêm junto — ou funde a sua e comece pelo cenário aberto. A compra pede dinheiro na conta (ou 40% de entrada e o resto financiado).</p>
+      <p className="nota">Funde a sua — escolha o escudo, o jogo, a região do circuito e como entrar — ou compre uma organização que já disputa as ligas. Depois, a mesma organização pode entrar em outros jogos, cada line na liga da sua região.</p>
       <Fundar vida={vida} agir={agir} jogos={jogos} />
       <button type="button" className="botao botao--secundario" aria-expanded={aberto} onClick={() => setAberto(x => !x)}>{aberto ? 'Fechar a lista' : 'Ver organizações à venda'}</button>
       {aberto && (
         <>
           <div className="org31__filtros">
-            <label>Jogo <select value={jogo} onChange={e => { setJogo(e.target.value as JogoId | ''); setMostrar(24); }}><option value="">Todos</option>{jogos.map(j => <option key={j} value={j}>{nomeDoJogo(j, ano)}</option>)}</select></label>
-            <div className="escolha" role="group" aria-label="Região">
-              {(['', 'BR', 'INT'] as const).map(r => <button key={r} type="button" className="chip" aria-pressed={regiao === r} onClick={() => { setRegiao(r); setMostrar(24); }}>{r ? NOME_REGIAO31[r] : 'Todas'}</button>)}
-            </div>
+            <label>Jogo <select value={jogo} onChange={e => { setJogo(e.target.value as JogoId | ''); setRegiao(''); setMostrar(24); }}><option value="">Todos</option>{jogos.map(j => <option key={j} value={j}>{nomeDoJogo(j, ano)}</option>)}</select></label>
+            <label>Região <select value={regiao} onChange={e => { setRegiao(e.target.value); setMostrar(24); }}><option value="">Todas</option>{regioes.map(([n]) => <option key={n} value={n}>{n}</option>)}</select></label>
             <label>Preço <select value={preco} onChange={e => setPreco(Number(e.target.value))}>{FAIXAS_PRECO.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}</select></label>
             <label>Buscar <input type="search" value={busca} onChange={e => setBusca(e.target.value)} placeholder="nome da organização" /></label>
           </div>
@@ -87,10 +138,10 @@ function SemOrg({ vida, agir }: { vida: Vida; agir: Agir }) {
               <li key={`${o.jogo}:${o.regiao}:${o.nome}`} className="org31__venda">
                 <div className="org31__venda-topo">
                   <Distintivo31 nome={o.nome} tamanho={44} />
-                  <div className="org31__quem"><strong>{o.nome}</strong><span className="org31__meta">{nomeDoJogo(o.jogo, ano)} · {NOME_REGIAO31[o.regiao]}</span></div>
+                  <div className="org31__quem"><strong>{o.nome}</strong><span className="org31__meta">{nomeDoJogo(o.jogo, ano)} · {nomeDaRegiao33(o.jogo, o.regiao)}</span></div>
                   <span className="org31__selo">{SIGLA_JOGO[o.jogo]}</span>
                 </div>
-                <span className="org31__chip">{NOME_DIVISAO31[o.divisao]}{o.real ? '' : ' · fictícia'}</span>
+                <span className="org31__chip">{nomeDaLiga31(o, ano)}{o.real ? '' : ' · fictícia'}</span>
                 <dl className="org31__mini">
                   <div><dt>Força</dt><dd>{o.forca}</dd></div>
                   <div><dt>Fãs</dt><dd>{o.fas}</dd></div>
@@ -105,7 +156,7 @@ function SemOrg({ vida, agir }: { vida: Vida; agir: Agir }) {
             ))}
           </ul>
           {lista.length > mostrar && <button type="button" className="botao botao--discreto" onClick={() => setMostrar(m => m + 24)}>Mostrar mais ({lista.length - mostrar})</button>}
-          <p className="nota">Os nomes reais vêm do catálogo do cenário e só aparecem nos anos em que a organização existia no jogo. Jogadores, resultados e números são de jogo.</p>
+          <p className="nota">Os nomes reais vêm do catálogo do cenário, cada organização na região em que joga, e só aparecem nos anos em que ela existia no jogo. Jogadores, resultados e números são de jogo.</p>
         </>
       )}
     </section>
@@ -115,28 +166,35 @@ function SemOrg({ vida, agir }: { vida: Vida; agir: Agir }) {
 function Fundar({ vida, agir, jogos }: { vida: Vida; agir: Agir; jogos: JogoId[] }) {
   const ano = anoDe(vida.t);
   const [nome, setNome] = useState('');
-  const [jogo, setJogo] = useState<JogoId>(jogos[jogos.length - 1]);
-  const [regiao, setRegiao] = useState<Regiao31>('BR');
+  const [jogo, setJogo] = useState<JogoId>(jogos.includes('valorant') ? 'valorant' : jogos[jogos.length - 1]);
+  const [regiao, setRegiao] = useState(() => regioesDoJogo33(jogo, ano).find(r => r.id === regiaoBrasil33(jogo))?.id ?? regioesDoJogo33(jogo, ano)[0]?.id ?? 'br');
+  const [modo, setModo] = useState<Entrada33>('base');
+  const [investimento, setInvestimento] = useState(0);
+  const [ident, setIdent] = useState<Identidade33 | null>(null);
+  const nomeVisto = nome.trim() || 'Sua organização';
+  const identidade = ident ?? identidadeInicial33(nomeVisto, true);
+  const registro = custoDeFundar31(multDaRegiao33(jogo, regiao));
+  const p = previaDaEntrada33(jogo, regiao, modo, investimento, ano);
   return (
     <section className="org31__bloco org31__fundar" aria-labelledby="org31-fundar">
       <h4 id="org31-fundar">Fundar uma organização</h4>
       <div className="org31__form">
         <label>Nome <input type="text" value={nome} maxLength={32} onChange={e => setNome(e.target.value)} placeholder="ex.: Carcará Esports" /></label>
-        <label>Jogo <select value={jogo} onChange={e => setJogo(e.target.value as JogoId)}>{jogos.map(j => <option key={j} value={j}>{nomeDoJogo(j, ano)}</option>)}</select></label>
-        <div className="escolha" role="group" aria-label="Região">
-          {(['BR', 'INT'] as const).map(r => <button key={r} type="button" className="chip" aria-pressed={regiao === r} onClick={() => setRegiao(r)}>{NOME_REGIAO31[r]}</button>)}
-        </div>
-        {nome.trim().length >= 2 && <Distintivo31 nome={nome.trim()} tamanho={40} />}
+        <Escudo30 nome={nomeVisto} identidade={identidade} tamanho={44} />
+        <DesenhoCamisa33 camisa={camisaDaIdentidade33(identidade, true)} nome={nomeVisto} identidade={identidade} tamanho={56} />
       </div>
-      <p className="nota">Custa {dinheiroCurto(custoDeFundar31(regiao))}. A organização nova começa no cenário aberto, com um time de jogadores livres, poucos fãs e quase nenhum nome — sobe pelos resultados.</p>
-      <BotaoAcao vida={vida} agir={agir} acao={A({ op: 'fundar', nome, jogo, regiao })} variante="principal">Fundar{nome.trim() ? ` a ${nome.trim()}` : ''}</BotaoAcao>
+      <details className="org31__detalhe">
+        <summary>Escudo, cores e identidade</summary>
+        <EditorIdentidade33 nome={nomeVisto} ident={identidade} mudar={setIdent} tipo="esports" />
+      </details>
+      <EscolhaDeEntrada vida={vida} jogos={jogos} jogo={jogo} setJogo={setJogo} regiao={regiao} setRegiao={setRegiao} modo={modo} setModo={setModo} investimento={investimento} setInvestimento={setInvestimento} extra={registro} />
+      <p className="nota">Registro da organização: {dinheiroCurto(registro)}. Total: {dinheiroCurto(registro + p.total)}.</p>
+      <BotaoAcao vida={vida} agir={agir} acao={A({ op: 'fundar', nome, jogo, regiao, modo, investimento, identidade })} variante="principal">Fundar{nome.trim() ? ` a ${nome.trim()}` : ''} · {dinheiroCurto(registro + p.total)}</BotaoAcao>
     </section>
   );
 }
 
 /* ------------------------------------------------------------------ dono */
-
-type Aba = 'painel' | 'elenco' | 'mercado' | 'temporadas' | 'comando';
 
 function Medidor({ rotulo, valor, texto, tom }: { rotulo: string; valor: number; texto?: string; tom?: 'bom' | 'ruim' | 'atencao' }) {
   return (
@@ -147,88 +205,133 @@ function Medidor({ rotulo, valor, texto, tom }: { rotulo: string; valor: number;
     </div>
   );
 }
+function Num({ rotulo, valor, extra, ruim }: { rotulo: string; valor: string; extra?: string; ruim?: boolean }) {
+  return <div className="org31__num"><span>{rotulo}</span><strong className={ruim ? 'org31__ruim' : undefined}>{valor}</strong>{extra && <small>{extra}</small>}</div>;
+}
+
+type Aba = 'painel' | `linha:${JogoId}` | 'negocios' | 'organizacao';
 
 function MinhaOrg({ vida, agir }: { vida: Vida; agir: Agir }) {
   const o = vida.orgEsports31!;
   const ano = anoDe(vida.t);
   const [aba, setAba] = useState<Aba>('painel');
-  const tit = titulares31(o, ano);
-  const media = mediaDosTitulares31(o, ano);
-  const forca = forcaDoTime31(o, ano);
-  const quimica = quimica31(o, ano);
-  const perfis = useMemo(() => perfisDoElenco31(o, ano), [o, ano]);
-  const h = o.historico[o.historico.length - 1];
-  const folha = o.elenco.reduce((s, j) => s + j.salario, 0);
-  const pesoFolha = h?.receita ? folha / h.receita : 0;
-  const igl = o.elenco.find(j => j.id === o.igl);
-  const ABAS: Record<Aba, string> = { painel: `Painel${o.mesa.length ? ` · ${o.mesa.length} na mesa` : ''}`, elenco: 'Elenco', mercado: 'Mercado', temporadas: 'Temporadas e títulos', comando: 'Comando e negócios' };
+  const titulos = o.linhas.reduce((s, l) => s + l.trofeus.length, 0);
+  const abaValida: Aba = aba.startsWith('linha:') && !o.linhas.some(l => `linha:${l.jogo}` === aba) ? 'painel' : aba;
+  const ABAS: [Aba, string][] = [
+    ['painel', `Painel${o.mesa.length ? ` · ${o.mesa.length} na mesa` : ''}`],
+    ...o.linhas.map(l => [`linha:${l.jogo}`, `${SIGLA_JOGO[l.jogo]} · ${nomeDaLiga31(l, ano)}`] as [Aba, string]),
+    ['negocios', 'Patrocínios, camisa e loja'], ['organizacao', 'Organização']
+  ];
+  const linha = abaValida.startsWith('linha:') ? o.linhas.find(l => `linha:${l.jogo}` === abaValida) : undefined;
   return (
     <section className="org31" aria-labelledby="org31-titulo">
       <header className="org31__capa">
-        <Distintivo31 nome={o.nome} tamanho={64} />
+        <Distintivo31 nome={o.nome} tamanho={64} identidade={o.identidade33} />
         <div>
           <h3 id="org31-titulo" className="subtitulo">{o.nome}</h3>
-          <p className="org31__sub">{nomeDoJogo(o.jogo, ano)} · {nomeDaLiga31(o, ano)} · {NOME_REGIAO31[o.regiao]} · {o.fundada ? 'fundada' : 'comprada'} por você em {anoDe(o.desde)}</p>
-          <span className="org31__chip">{NOME_DIVISAO31[o.divisao]}</span>{o.trofeus.length > 0 && <span className="org31__chip org31__chip--ouro">{o.trofeus.length} título{o.trofeus.length > 1 ? 's' : ''}</span>}
+          <p className="org31__sub">{o.linhas.map(l => nomeDoJogo(l.jogo, ano)).join(' · ')} · {o.fundada ? 'fundada' : 'comprada'} por você em {anoDe(o.desde)}{o.identidade33?.apelido ? ` · "${o.identidade33.apelido}"` : ''}</p>
+          <span className="org31__chip">{o.linhas.length} line{o.linhas.length > 1 ? 's' : ''}</span>{titulos > 0 && <span className="org31__chip org31__chip--ouro">{titulos} título{titulos > 1 ? 's' : ''}</span>}
         </div>
       </header>
       <div className="org31__numeros">
         <Num rotulo="Caixa" valor={dinheiroCurto(o.caixa)} />
-        <Num rotulo="Dívida" valor={dinheiroCurto(o.divida)} ruim={o.divida > (h?.receita ?? 0)} />
+        <Num rotulo="Dívida" valor={dinheiroCurto(o.divida)} ruim={o.divida > o.caixa && o.divida > 0} />
         <Num rotulo="Valor" valor={dinheiroCurto(o.valor)} />
-        <Num rotulo="Força do time" valor={String(Math.round(forca))} extra={`titulares ${Math.round(media)}`} />
-        <Num rotulo="Química" valor={quimica > 0 ? `+${quimica}` : String(quimica)} ruim={quimica < 0} extra={igl ? `IGL: ${igl.nick}` : 'sem IGL escolhido'} />
-        <Num rotulo="Técnico" valor={o.tecnico ? o.tecnico.nome.split(' ')[0] : 'Nenhum'} extra={o.tecnico ? `${'★'.repeat(o.tecnico.nivel)} · ${bonusDoTecnico31(o) >= 0 ? '+' : ''}${Math.round(bonusDoTecnico31(o) * 10) / 10}` : 'contrate em Comando'} />
+        <Num rotulo="Fãs" valor={String(o.fas)} />
+        <Num rotulo="Nome no cenário" valor={String(o.reputacao)} />
       </div>
       <div className="org31__abas" role="tablist">
-        {(Object.keys(ABAS) as Aba[]).map(x => <button key={x} type="button" role="tab" aria-selected={aba === x} className={`org31__aba${aba === x ? ' org31__aba--ativa' : ''}`} onClick={() => setAba(x)}>{ABAS[x]}</button>)}
+        {ABAS.map(([x, rot]) => <button key={x} type="button" role="tab" aria-selected={abaValida === x} className={`org31__aba${abaValida === x ? ' org31__aba--ativa' : ''}`} onClick={() => setAba(x)}>{rot}</button>)}
       </div>
-      {aba === 'painel' && (
+      {abaValida === 'painel' && (
         <>
           <Mesa vida={vida} agir={agir} />
-          <div className="org31__painel">
-            <section className="org31__bloco" aria-label="O time titular">
-              <h4>O time titular</h4>
-              <ul className="org31__line">
-                {tit.map(j => <li key={j.id}><span className="org31__funcao">{nomeDaFuncao31(o.jogo, j.funcao)}</span><strong>{j.nick}</strong>{o.igl === j.id && <span className="org31__igl" title="IGL">IGL</span>}<span className="org31__f">{j.forca}</span></li>)}
-              </ul>
-              <p className="nota">{o.bootcamp === ano ? 'Bootcamp feito nesta temporada: +2 de força. ' : ''}{o.conteudo === 2 ? 'A casa de criadores tira 1 de força. ' : ''}A força entra na liga contra o campo de {nomeDaLiga31(o, ano)}.</p>
-            </section>
-            <section className="org31__bloco" aria-label="A organização">
-              <h4>A organização</h4>
-              <Medidor rotulo="Fãs" valor={o.fas} />
-              <Medidor rotulo="Nome no cenário" valor={o.reputacao} />
-              <Medidor rotulo="Folha / receita" valor={pesoFolha * 100} texto={h ? `${Math.round(pesoFolha * 100)}%` : '—'} tom={pesoFolha > 0.8 ? 'ruim' : pesoFolha > 0.6 ? 'atencao' : 'bom'} />
-              {h ? <p className="nota">Última temporada ({h.ano}): {h.posicao}º de {h.participantes} em {h.liga}{h.mundial ? `; ${h.mundial.colocacao}º no ${h.mundial.nome}` : ''}. Receita {dinheiroCurto(h.receita)}, despesa {dinheiroCurto(h.despesa)}.</p> : <p className="nota">A primeira temporada como dono fecha na virada do ano.</p>}
-              {o.elenco.some(j => j.contratoAte <= ano) && <p className="org31__alerta">{o.elenco.filter(j => j.contratoAte <= ano).length} contrato(s) terminando neste ano — renove no Elenco ou deixe sair.</p>}
-            </section>
-          </div>
+          <ul className="org31__linhas">
+            {o.linhas.map(L => {
+              const h = L.historico[L.historico.length - 1];
+              return (
+                <li key={L.jogo} className="org31__bloco org31__linha-resumo">
+                  <h4><span className="org31__selo">{SIGLA_JOGO[L.jogo]}</span> {nomeDoJogo(L.jogo, ano)}</h4>
+                  <p className="org31__meta">{nomeDaLiga31(L, ano)} · {nomeDaRegiao33(L.jogo, L.regiao)} · {NOME_DIVISAO31[L.divisao]}{ligaFechada33(L.jogo, L.regiao, ano) && L.divisao === 4 ? ' (franquia)' : ''}</p>
+                  <Medidor rotulo="Força" valor={forcaDoTime31(o, L, ano)} />
+                  <p className="nota">{h ? `${h.ano}: ${h.posicao}º de ${h.participantes}${h.titulo ? ' · campeã' : h.subiu ? ' · subiu' : h.caiu ? ' · caiu' : ''}${h.internacionais?.length ? ` · ${h.internacionais.map(i => `${i.colocacao}º no ${i.nome}`).join(', ')}` : h.mundial ? ` · ${h.mundial.colocacao}º no ${h.mundial.nome}` : ''}.` : 'A primeira temporada fecha na virada do ano.'}</p>
+                  <button type="button" className="botao botao--secundario" onClick={() => setAba(`linha:${L.jogo}`)}>Abrir a line</button>
+                </li>
+              );
+            })}
+          </ul>
         </>
       )}
-      {aba === 'elenco' && <Elenco vida={vida} agir={agir} perfis={perfis} />}
-      {aba === 'mercado' && <Mercado vida={vida} agir={agir} />}
-      {aba === 'temporadas' && <Temporadas o={o} />}
-      {aba === 'comando' && <Comando vida={vida} agir={agir} folha={folha} />}
+      {linha && <Linha key={linha.jogo} vida={vida} agir={agir} L={linha} />}
+      {abaValida === 'negocios' && <PainelDono33 vida={vida} agir={agir} nome={o.nome} dono={o} ctx={contextoOrg33(vida)} acao={sub => A({ op: 'dono', sub })} anoInicio={anoDe(o.desde)} />}
+      {abaValida === 'organizacao' && <Organizacao vida={vida} agir={agir} />}
     </section>
   );
 }
 
-function Num({ rotulo, valor, extra, ruim }: { rotulo: string; valor: string; extra?: string; ruim?: boolean }) {
-  return <div className="org31__num"><span>{rotulo}</span><strong className={ruim ? 'org31__ruim' : undefined}>{valor}</strong>{extra && <small>{extra}</small>}</div>;
+/* ------------------------------------------------------------------ uma line */
+
+type SubAba = 'time' | 'elenco' | 'mercado' | 'comando' | 'temporadas';
+
+function Linha({ vida, agir, L }: { vida: Vida; agir: Agir; L: LinhaOrg33 }) {
+  const o = vida.orgEsports31!;
+  const ano = anoDe(vida.t);
+  const [aba, setAba] = useState<SubAba>('time');
+  const tit = titulares31(L, ano);
+  const media = mediaDosTitulares31(L, ano);
+  const forca = forcaDoTime31(o, L, ano);
+  const quimica = quimica31(L, ano);
+  const perfis = useMemo(() => perfisDoElenco31(L, ano), [L, ano]);
+  const igl = L.elenco.find(j => j.id === L.igl);
+  const vagas = vagasDaRegiao33(L.jogo, L.regiao, ano);
+  const regras = regrasDaDivisao33(L.jogo, L.regiao, L.divisao, ano);
+  const SUB: Record<SubAba, string> = { time: 'O time', elenco: `Elenco · ${L.elenco.length}/${maxElenco31(L.jogo, ano)}`, mercado: 'Mercado', comando: 'Comando', temporadas: 'Temporadas e títulos' };
+  return (
+    <div className="org31__linha">
+      <div className="org31__numeros">
+        <Num rotulo="Força da line" valor={String(Math.round(forca))} extra={`titulares ${Math.round(media)}`} />
+        <Num rotulo="Química" valor={quimica > 0 ? `+${quimica}` : String(quimica)} ruim={quimica < 0} extra={igl ? `IGL: ${igl.nick}` : 'sem IGL escolhido'} />
+        <Num rotulo="Técnico" valor={L.tecnico ? L.tecnico.nome.split(' ')[0] : 'Nenhum'} extra={L.tecnico ? `${'★'.repeat(L.tecnico.nivel)} · ${bonusDoTecnico31(L) >= 0 ? '+' : ''}${Math.round(bonusDoTecnico31(L) * 10) / 10}` : 'contrate em Comando'} />
+        <Num rotulo="Liga" valor={nomeDaLiga31(L, ano)} extra={nomeDaRegiao33(L.jogo, L.regiao)} />
+      </div>
+      <div className="org31__abas org31__abas--sub" role="tablist">
+        {(Object.keys(SUB) as SubAba[]).map(x => <button key={x} type="button" role="tab" aria-selected={aba === x} className={`org31__aba${aba === x ? ' org31__aba--ativa' : ''}`} onClick={() => setAba(x)}>{SUB[x]}</button>)}
+      </div>
+      {aba === 'time' && (
+        <div className="org31__painel">
+          <section className="org31__bloco" aria-label="O time titular">
+            <h4>Os titulares</h4>
+            <ul className="org31__line">
+              {tit.map(j => <li key={j.id}><span className="org31__funcao">{nomeDaFuncao31(L.jogo, j.funcao)}</span><strong>{j.nick}</strong>{L.igl === j.id && <span className="org31__igl" title="IGL">IGL</span>}<span className="org31__f">{j.forca}</span></li>)}
+            </ul>
+            <p className="nota">{titularesDoJogo31(L.jogo, ano)} titulares e no máximo 1 reserva; o técnico fica de fora da line. {L.bootcamp === ano ? 'Bootcamp feito nesta temporada: +2 de força. ' : ''}{o.conteudo === 2 ? 'A casa de criadores tira 1 de força. ' : ''}</p>
+          </section>
+          <section className="org31__bloco" aria-label="O circuito">
+            <h4>O circuito</h4>
+            <p className="nota">{nomeDaLiga31(L, ano)} ({NOME_DIVISAO31[L.divisao].toLowerCase()} de {nomeDaRegiao33(L.jogo, L.regiao)}): {L.divisao === 4 ? (regras.caem ? `os ${regras.caem} últimos caem.` : 'liga fechada, sem queda.') : regras.acesso ? `a liga de cima é fechada; o campeão disputa a ${regras.acesso}.` : regras.sobem ? `${regras.sobem === 1 ? 'o campeão sobe' : `os ${regras.sobem} primeiros sobem`}${regras.caem ? `, os ${regras.caem} últimos caem` : ''}.` : 'sem acesso direto.'}</p>
+            {vagas.length > 0 ? <ul className="org31__vagas">{vagas.map(x => <li key={x.nome}><strong>{x.nome}</strong>{x.vezes > 1 ? ` (${x.vezes} por ano)` : ''}: {x.vagas ? `top ${x.vagas} da liga principal` : ''}{x.div3 ? `${x.vagas ? '; ' : ''}o campeão da segunda divisão disputa vaga` : ''}</li>)}</ul> : <p className="nota">Nesta época o jogo não tem torneio internacional oficial.</p>}
+            {L.divisao < 4 && <p className="nota">Os internacionais são para quem joga a liga principal{vagas.some(x => x.div3) ? ' (ou vence a segunda divisão e passa na classificatória)' : ''}.</p>}
+          </section>
+        </div>
+      )}
+      {aba === 'elenco' && <Elenco vida={vida} agir={agir} L={L} perfis={perfis} />}
+      {aba === 'mercado' && <Mercado vida={vida} agir={agir} L={L} />}
+      {aba === 'comando' && <Comando vida={vida} agir={agir} L={L} />}
+      {aba === 'temporadas' && <Temporadas L={L} />}
+    </div>
+  );
 }
 
-/* ------------------------------------------------------------------ o cartão do jogador */
-
-function Cartao({ o, j, ano, perfil, titular, preco, origem, delta, alerta, children }: { o: OrgEsports31; j: JogadorOrg31; ano: number; perfil?: PerfilOrg31; titular?: boolean; preco?: number; origem?: string; delta?: number; alerta?: string; children?: ReactNode }) {
+function Cartao({ L, j, ano, perfil, titular, preco, origem, delta, alerta, children }: { L: LinhaOrg33; j: JogadorOrg31; ano: number; perfil?: PerfilOrg31; titular?: boolean; preco?: number; origem?: string; delta?: number; alerta?: string; children?: ReactNode }) {
   const principal = perfil?.perfil.principal;
   const genero = j.feminino ? 'feminino' : 'masculino';
   return (
-    <li className={`org31__cartao${o.igl === j.id ? ' org31__cartao--igl' : ''}`}>
+    <li className={`org31__cartao${L.igl === j.id ? ' org31__cartao--igl' : ''}`}>
       <div className="org31__cartao-topo">
-        <span className="org31__papel" title={nomeDaFuncao31(o.jogo, j.funcao)}>{nomeDaFuncao31(o.jogo, j.funcao).replace(/\s*\(.*\)/, '').slice(0, 10)}</span>
+        <span className="org31__papel" title={nomeDaFuncao31(L.jogo, j.funcao)}>{nomeDaFuncao31(L.jogo, j.funcao).replace(/\s*\(.*\)/, '').slice(0, 10)}</span>
         <div className="org31__quem">
-          <strong>{j.nick}{o.igl === j.id && <span className="org31__igl" title="IGL: faz as calls">IGL</span>}</strong>
-          <span className="org31__meta">{j.nome} · {ano - anoDe(j.tNasc)} anos{titular !== undefined ? (titular ? ' · titular' : ' · banco') : ''}{j.daAcademia ? ' · da academia' : ''}{origem ? ` · na ${origem}` : ''}</span>
+          <strong>{j.nick}{L.igl === j.id && <span className="org31__igl" title="IGL: faz as calls">IGL</span>}</strong>
+          <span className="org31__meta">{j.nome} · {ano - anoDe(j.tNasc)} anos{titular !== undefined ? (titular ? ' · titular' : ' · reserva') : ''}{j.daAcademia ? ' · da academia' : ''}{origem ? ` · na ${origem}` : ''}</span>
         </div>
         <span className="org31__forca" aria-label={`Força ${j.forca}`}>{j.forca}</span>
       </div>
@@ -249,31 +352,32 @@ function Cartao({ o, j, ano, perfil, titular, preco, origem, delta, alerta, chil
   );
 }
 
-function Elenco({ vida, agir, perfis }: { vida: Vida; agir: Agir; perfis: Map<string, PerfilOrg31> }) {
-  const o = vida.orgEsports31!;
+function Elenco({ vida, agir, L, perfis }: { vida: Vida; agir: Agir; L: LinhaOrg33; perfis: Map<string, PerfilOrg31> }) {
   const ano = anoDe(vida.t);
-  const tit = new Set(titulares31(o, ano).map(j => j.id));
-  const lista = [...o.elenco].sort((a, b) => Number(tit.has(b.id)) - Number(tit.has(a.id)) || b.forca - a.forca);
-  const auge = JOGOS25[o.jogo].auge;
+  const tit = new Set(titulares31(L, ano).map(j => j.id));
+  const lista = [...L.elenco].sort((a, b) => Number(tit.has(b.id)) - Number(tit.has(a.id)) || b.forca - a.forca);
+  const auge = JOGOS25[L.jogo].auge;
+  const mult = multDaRegiao33(L.jogo, L.regiao);
+  const j_ = L.jogo;
   return (
     <>
-      <p className="nota">{JOGOS25[o.jogo].porEquipe(ano)} titulares (o melhor de cada função entra primeiro) e o banco. O tipo de jogador é o mesmo arquétipo do jogador de e-sports da vida; o vestiário que eles fazem é a química do time.</p>
+      <p className="nota">{titularesDoJogo31(L.jogo, ano)} titulares (o melhor de cada função entra primeiro) e no máximo 1 reserva — como nas lines de verdade. O tipo de jogador é o mesmo arquétipo do jogador de e-sports da vida; o vestiário que eles fazem é a química.</p>
       <ul className="org31__cartoes">
         {lista.map(j => (
-          <Cartao key={j.id} o={o} j={j} ano={ano} perfil={perfis.get(j.id)} titular={tit.has(j.id)} alerta={j.contratoAte <= ano ? 'Contrato termina neste ano' : undefined}>
-            <BotaoAcao vida={vida} agir={agir} acao={A({ op: 'renovar', id: j.id })} ocultarBloqueado>Renovar</BotaoAcao>
-            <BotaoAcao vida={vida} agir={agir} acao={A({ op: 'igl', id: j.id })} ocultarBloqueado>Tornar IGL</BotaoAcao>
-            <BotaoAcao vida={vida} agir={agir} acao={A({ op: 'dispensar', id: j.id })}>Dispensar · vale ~{dinheiroCurto(valorDoJogador31(j, ano, o.regiao, auge))}</BotaoAcao>
+          <Cartao key={j.id} L={L} j={j} ano={ano} perfil={perfis.get(j.id)} titular={tit.has(j.id)} alerta={j.contratoAte <= ano ? 'Contrato termina neste ano' : undefined}>
+            <BotaoAcao vida={vida} agir={agir} acao={A({ op: 'renovar', id: j.id, jogo: j_ })} ocultarBloqueado>Renovar</BotaoAcao>
+            <BotaoAcao vida={vida} agir={agir} acao={A({ op: 'igl', id: j.id, jogo: j_ })} ocultarBloqueado>Tornar IGL</BotaoAcao>
+            <BotaoAcao vida={vida} agir={agir} acao={A({ op: 'dispensar', id: j.id, jogo: j_ })}>Dispensar · vale ~{dinheiroCurto(valorDoJogador31(j, ano, mult, auge))}</BotaoAcao>
           </Cartao>
         ))}
       </ul>
       <section className="org31__bloco" aria-labelledby="org31-academia">
         <h4 id="org31-academia">Academia</h4>
         <div className="org31__botoes" role="group" aria-label="Nível da academia">
-          {([0, 1, 2] as const).map(n => <BotaoAcao key={n} vida={vida} agir={agir} acao={A({ op: 'academia', nivel: n })} variante={o.academiaNivel === n ? 'principal' : 'secundario'}>{['Sem academia', 'Básica', 'Forte'][n]}</BotaoAcao>)}
+          {([0, 1, 2] as const).map(n => <BotaoAcao key={n} vida={vida} agir={agir} acao={A({ op: 'academia', nivel: n, jogo: j_ })} variante={L.academiaNivel === n ? 'principal' : 'secundario'}>{['Sem academia', 'Básica', 'Forte'][n]}</BotaoAcao>)}
         </div>
-        {o.academiaNivel === 0 ? <p className="nota">Sem academia, nenhum jovem é revelado. Uma academia custa por ano e revela jogadores com potencial na virada.</p>
-          : o.academia.length ? <ul className="org31__cartoes">{o.academia.map(j => <Cartao key={j.id} o={o} j={j} ano={ano} perfil={perfilDoJogadorOrg31(j, o.jogo, ano, { mediaDoTime: mediaDosTitulares31(o, ano) })}><BotaoAcao vida={vida} agir={agir} acao={A({ op: 'promover', id: j.id })}>Subir ao time principal</BotaoAcao></Cartao>)}</ul>
+        {L.academiaNivel === 0 ? <p className="nota">Sem academia, nenhum jovem é revelado. Uma academia custa por ano e revela jogadores com potencial na virada.</p>
+          : L.academia.length ? <ul className="org31__cartoes">{L.academia.map(j => <Cartao key={j.id} L={L} j={j} ano={ano} perfil={perfilDoJogadorOrg31(j, L.jogo, ano, { mediaDoTime: mediaDosTitulares31(L, ano) })}><BotaoAcao vida={vida} agir={agir} acao={A({ op: 'promover', id: j.id, jogo: j_ })}>Subir para a line</BotaoAcao></Cartao>)}</ul>
             : <p className="nota">Os primeiros jovens chegam na virada do ano.</p>}
       </section>
     </>
@@ -281,33 +385,33 @@ function Elenco({ vida, agir, perfis }: { vida: Vida; agir: Agir; perfis: Map<st
 }
 
 const FAIXA: Record<JogadorDoMercado31['faixa'], string> = { reforco: 'Reforços', nivel: 'Do nível', aposta: 'Apostas', estrela: 'Estrela' };
-function Mercado({ vida, agir }: { vida: Vida; agir: Agir }) {
-  const o = vida.orgEsports31!;
+function Mercado({ vida, agir, L }: { vida: Vida; agir: Agir; L: LinhaOrg33 }) {
   const ano = anoDe(vida.t);
   const [faixa, setFaixa] = useState<'' | JogadorDoMercado31['faixa']>('');
   const [funcao, setFuncao] = useState('');
   const [ordem, setOrdem] = useState<'forca' | 'preco' | 'potencial' | 'idade'>('forca');
-  const mercado = mercadoOrg31(vida);
-  const media = mediaDosTitulares31(o, ano);
-  const tit = titulares31(o, ano);
+  const mercado = mercadoOrg31(vida, L.jogo);
+  const media = mediaDosTitulares31(L, ano);
+  const tit = titulares31(L, ano);
   const titularDa = (f: string) => tit.find(j => j.funcao === f)?.forca ?? Math.min(...tit.map(j => j.forca));
   const lista = mercado.filter(j => (!faixa || j.faixa === faixa) && (!funcao || j.funcao === funcao))
     .sort((a, b) => (ordem === 'forca' ? b.forca - a.forca : ordem === 'preco' ? a.preco - b.preco : ordem === 'potencial' ? b.potencial - a.potencial : b.tNasc - a.tNasc));
+  const cheia = L.elenco.length >= maxElenco31(L.jogo, ano);
   return (
     <>
-      <p className="nota">Jogadores do cenário com a multa rescisória (sai do caixa da organização). Os reforços estão acima do seu time; quanto maior o nome da organização e a divisão, mais alto o nível de quem aceita vir. O mercado muda a cada ano.</p>
+      <p className="nota">Jogadores do cenário de {nomeDaRegiao33(L.jogo, L.regiao)} com a multa rescisória (sai do caixa da organização). {cheia ? 'A line está completa (titulares + 1 reserva): para contratar, dispense alguém antes.' : 'Os reforços estão acima do seu time; quanto maior o nome da organização e a divisão, mais alto o nível de quem aceita vir.'} O mercado muda a cada ano.</p>
       <div className="org31__filtros">
         <div className="escolha" role="group" aria-label="Faixa">
           <button type="button" className="chip" aria-pressed={!faixa} onClick={() => setFaixa('')}>Todos</button>
           {(Object.keys(FAIXA) as JogadorDoMercado31['faixa'][]).map(f => <button key={f} type="button" className="chip" aria-pressed={faixa === f} onClick={() => setFaixa(f)}>{FAIXA[f]}</button>)}
         </div>
-        <label>Função <select value={funcao} onChange={e => setFuncao(e.target.value)}><option value="">Todas</option>{JOGOS25[o.jogo].funcoes.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}</select></label>
+        <label>Função <select value={funcao} onChange={e => setFuncao(e.target.value)}><option value="">Todas</option>{JOGOS25[L.jogo].funcoes.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}</select></label>
         <label>Ordenar <select value={ordem} onChange={e => setOrdem(e.target.value as typeof ordem)}><option value="forca">Força</option><option value="preco">Mais baratos</option><option value="potencial">Potencial</option><option value="idade">Mais novos</option></select></label>
       </div>
       <ul className="org31__cartoes">
         {lista.map(j => (
-          <Cartao key={j.id} o={o} j={j} ano={ano} perfil={perfilDoJogadorOrg31(j, o.jogo, ano, { mediaDoTime: media })} preco={j.preco} origem={j.de} delta={j.forca - titularDa(j.funcao)}>
-            <BotaoAcao vida={vida} agir={agir} acao={A({ op: 'contratar', id: j.id })}>Contratar · {dinheiroCurto(j.preco)}</BotaoAcao>
+          <Cartao key={j.id} L={L} j={j} ano={ano} perfil={perfilDoJogadorOrg31(j, L.jogo, ano, { mediaDoTime: media })} preco={j.preco} origem={j.de} delta={j.forca - titularDa(j.funcao)}>
+            <BotaoAcao vida={vida} agir={agir} acao={A({ op: 'contratar', id: j.id, jogo: L.jogo })}>Contratar · {dinheiroCurto(j.preco)}</BotaoAcao>
           </Cartao>
         ))}
         {!lista.length && <li className="nota">Ninguém no mercado com esse filtro.</li>}
@@ -316,81 +420,107 @@ function Mercado({ vida, agir }: { vida: Vida; agir: Agir }) {
   );
 }
 
-function Temporadas({ o }: { o: OrgEsports31 }) {
-  const hs = o.historico.slice(-12).reverse();
+function Temporadas({ L }: { L: LinhaOrg33 }) {
+  const hs = L.historico.slice(-12).reverse();
   const max = Math.max(1, ...hs.flatMap(h => [h.receita, h.despesa]));
   return (
     <div className="org31__temporadas">
       <section className="org31__bloco" aria-labelledby="org31-trofeus">
         <h4 id="org31-trofeus">Galeria de troféus</h4>
-        {o.trofeus.length ? (
+        {L.trofeus.length ? (
           <ul className="org31__trofeus">
-            {[...o.trofeus].reverse().map((t, k) => <li key={k} className={t.tipo === 'mundial' ? 'org31__trofeu org31__trofeu--mundial' : 'org31__trofeu'}><span className="org31__taca" aria-hidden="true">★</span><strong>{t.nome}</strong><span className="org31__meta">{t.ano}</span></li>)}
+            {[...L.trofeus].reverse().map((t, k) => <li key={k} className={t.tipo === 'mundial' ? 'org31__trofeu org31__trofeu--mundial' : 'org31__trofeu'}><span className="org31__taca" aria-hidden="true">★</span><strong>{t.nome}</strong><span className="org31__meta">{t.ano}</span></li>)}
           </ul>
-        ) : <p className="nota">Nenhum título ainda. A liga se vence em primeiro; o mundial ({nomeDoMundial31(o.jogo, anoDe(o.desde))}) é para as do topo da liga principal.</p>}
+        ) : <p className="nota">Nenhum título ainda. A liga se vence em primeiro; os internacionais são para quem termina nas vagas da liga principal.</p>}
       </section>
       <section className="org31__bloco" aria-labelledby="org31-temps">
-        <h4 id="org31-temps">Temporadas</h4>
+        <h4 id="org31-temps">Temporadas (a line)</h4>
         {!hs.length && <p className="nota">A primeira temporada aparece aqui quando fechar.</p>}
         <ul className="org31__anos">
           {hs.map(h => (
             <li key={h.ano}>
               <span className="org31__ano">{h.ano}</span>
-              <span className="org31__res">{h.posicao}º/{h.participantes} · {h.liga}{h.titulo ? ' · campeã' : h.subiu ? ' · subiu' : h.caiu ? ' · caiu' : ''}{h.mundial ? ` · ${h.mundial.colocacao}º no mundial` : ''}</span>
+              <span className="org31__res">{h.posicao}º/{h.participantes} · {h.liga}{h.titulo ? ' · campeã' : h.subiu ? ' · subiu' : h.caiu ? ' · caiu' : ''}{h.acesso ? ` · ${h.acesso.nome}: ${h.acesso.venceu ? 'venceu' : 'perdeu'}` : ''}{h.internacionais?.length ? ` · ${h.internacionais.map(i => `${i.colocacao}º ${i.nome}`).join(', ')}` : h.mundial ? ` · ${h.mundial.colocacao}º no mundial` : ''}</span>
               <span className="org31__fin" aria-label={`Receita ${dinheiroCurto(h.receita)}, despesa ${dinheiroCurto(h.despesa)}`}><i className="org31__rec" style={{ width: `${(h.receita / max) * 100}%` }} /><i className="org31__desp" style={{ width: `${(h.despesa / max) * 100}%` }} /></span>
               <span className={h.receita >= h.despesa ? 'org31__saldo' : 'org31__saldo org31__ruim'}>{h.receita >= h.despesa ? '+' : '−'}{dinheiroCurto(Math.abs(h.receita - h.despesa))}</span>
             </li>
           ))}
         </ul>
-        {o.vendas.length > 0 && <p className="nota">Vendas: {o.vendas.slice(0, 5).map(x => `${x.nome} → ${x.para} (${dinheiroCurto(x.valor)}, ${x.ano})`).join('; ')}.</p>}
+        <p className="nota">Receita e despesa da line (prêmios, salários, operação). Patrocínios, loja, conteúdo e juros fecham na organização.</p>
+        {L.vendas.length > 0 && <p className="nota">Vendas: {L.vendas.slice(0, 5).map(x => `${x.nome} → ${x.para} (${dinheiroCurto(x.valor)}, ${x.ano})`).join('; ')}.</p>}
       </section>
     </div>
   );
 }
 
-function Comando({ vida, agir, folha }: { vida: Vida; agir: Agir; folha: number }) {
+function Comando({ vida, agir, L }: { vida: Vida; agir: Agir; L: LinhaOrg33 }) {
   const o = vida.orgEsports31!;
   const ano = anoDe(vida.t);
-  const aporte = Math.max(50000, Math.round(folha / 2 / 10000) * 10000);
-  const igl = o.elenco.find(j => j.id === o.igl);
+  const igl = L.elenco.find(j => j.id === L.igl);
   return (
     <div className="org31__comando">
       <section className="org31__bloco" aria-labelledby="org31-tecnico">
         <h4 id="org31-tecnico">O técnico (coach)</h4>
-        <p className="nota">{o.tecnico ? `${o.tecnico.nome} comanda o time desde ${o.tecnico.desde}: soma ${Math.round(bonusDoTecnico31(o) * 10) / 10} na força e custa ${dinheiroCurto(o.tecnico.salario)} por ano.` : 'Sem técnico, os jogadores se organizam sozinhos (nada a mais na força, e os jovens evoluem menos).'}</p>
+        <p className="nota">{L.tecnico ? `${L.tecnico.nome} comanda a line desde ${L.tecnico.desde}: soma ${Math.round(bonusDoTecnico31(L) * 10) / 10} na força e custa ${dinheiroCurto(L.tecnico.salario)} por ano.` : 'Sem técnico, os jogadores se organizam sozinhos (nada a mais na força, e os jovens evoluem menos).'}</p>
         <ul className="org31__ofertas">
-          {tecnicosOrg31(vida).map((t, k) => (
+          {tecnicosOrg31(vida, L.jogo).map((t, k) => (
             <li key={k} className="org31__oferta">
               <strong>{t.nome}</strong>
               <span className="org31__estrelas" aria-label={`Nível ${t.nivel} de 5`}>{'★'.repeat(t.nivel)}<i>{'★'.repeat(5 - t.nivel)}</i></span>
               <span className="org31__meta">{dinheiroCurto(t.salario)}/ano · {(t.nivel - 2) * 1.2 >= 0 ? '+' : ''}{Math.round((t.nivel - 2) * 12) / 10} na força</span>
-              <BotaoAcao vida={vida} agir={agir} acao={A({ op: 'tecnico', i: k })}>Contratar</BotaoAcao>
+              <BotaoAcao vida={vida} agir={agir} acao={A({ op: 'tecnico', i: k, jogo: L.jogo })}>Contratar</BotaoAcao>
             </li>
           ))}
         </ul>
-        {o.tecnico && <BotaoAcao vida={vida} agir={agir} acao={A({ op: 'demitir_tecnico' })} variante="discreto">Demitir {o.tecnico.nome.split(' ')[0]} · multa {dinheiroCurto(Math.round(o.tecnico.salario * 0.5))}</BotaoAcao>}
+        {L.tecnico && <BotaoAcao vida={vida} agir={agir} acao={A({ op: 'demitir_tecnico', jogo: L.jogo })} variante="discreto">Demitir {L.tecnico.nome.split(' ')[0]} · multa {dinheiroCurto(Math.round(L.tecnico.salario * 0.5))}</BotaoAcao>}
       </section>
       <section className="org31__bloco" aria-labelledby="org31-igl">
         <h4 id="org31-igl">IGL e química</h4>
-        <p className="nota">Química {quimica31(o, ano) > 0 ? '+' : ''}{quimica31(o, ano)} na força. {igl ? `${igl.nick} é o IGL: faz as calls dentro da partida.` : 'Sem IGL escolhido, o time joga sem voz (−0,6).'} O IGL se escolhe no Elenco — de preferência entre os titulares.</p>
-      </section>
-      <section className="org31__bloco" aria-labelledby="org31-patro">
-        <h4 id="org31-patro">Patrocínio</h4>
-        {o.patrocinio && o.patrocinio.ate >= ano
-          ? <p className="nota">{o.patrocinio.nome}: {dinheiroCurto(o.patrocinio.valor)} por ano, até {o.patrocinio.ate}.</p>
-          : <ul className="org31__ofertas">{patrociniosOrg31(vida).map((p, k) => <li key={k} className="org31__oferta"><strong>{p.nome}</strong><span className="org31__meta">{dinheiroCurto(p.valor)}/ano · {p.anos} {p.anos === 1 ? 'ano' : 'anos'} · {p.sobre}</span><BotaoAcao vida={vida} agir={agir} acao={A({ op: 'patrocinio', i: k })}>Fechar</BotaoAcao></li>)}</ul>}
+        <p className="nota">Química {quimica31(L, ano) > 0 ? '+' : ''}{quimica31(L, ano)} na força. {igl ? `${igl.nick} é o IGL: faz as calls dentro da partida.` : 'Sem IGL escolhido, o time joga sem voz (−0,6).'} O IGL se escolhe no Elenco — de preferência entre os titulares.</p>
       </section>
       <section className="org31__bloco" aria-labelledby="org31-boot">
         <h4 id="org31-boot">Bootcamp</h4>
-        <p className="nota">Uma semana de treinos contra equipes de fora: +2 de força nesta temporada, o clima melhora e os jovens evoluem mais. Custa {dinheiroCurto(custoDoBootcamp31(o))}.</p>
-        <BotaoAcao vida={vida} agir={agir} acao={A({ op: 'bootcamp' })}>{o.bootcamp === ano ? 'Bootcamp feito' : 'Levar o time ao bootcamp'}</BotaoAcao>
+        <p className="nota">Uma semana de treinos contra equipes de fora: +2 de força nesta temporada, o clima melhora e os jovens evoluem mais. Custa {dinheiroCurto(custoDoBootcamp31(L))}.</p>
+        <BotaoAcao vida={vida} agir={agir} acao={A({ op: 'bootcamp', jogo: L.jogo })}>{L.bootcamp === ano ? 'Bootcamp feito' : 'Levar a line ao bootcamp'}</BotaoAcao>
+      </section>
+      <section className="org31__bloco" aria-labelledby="org31-sair">
+        <h4 id="org31-sair">Sair deste jogo</h4>
+        <p className="nota">Vender a vaga e os contratos da line: o dinheiro vai para o caixa da organização.</p>
+        <BotaoAcao vida={vida} agir={agir} acao={A({ op: 'sair', jogo: L.jogo })} variante="perigo">Vender a line · ~{dinheiroCurto(valorDaLinha33(o, L, ano))}</BotaoAcao>
+      </section>
+    </div>
+  );
+}
+
+function Organizacao({ vida, agir }: { vida: Vida; agir: Agir }) {
+  const o = vida.orgEsports31!;
+  const ano = anoDe(vida.t);
+  const folha = o.linhas.reduce((s, l) => s + l.elenco.reduce((x, j) => x + j.salario, 0), 0);
+  const aporte = Math.max(50000, Math.round(folha / 2 / 10000) * 10000);
+  const livres = jogosDisponiveis31(ano).filter(j => !o.linhas.some(l => l.jogo === j));
+  const [jogo, setJogo] = useState<JogoId>(livres[0] ?? 'cs');
+  const [regiao, setRegiao] = useState(() => regioesDoJogo33(jogo, ano).find(r => r.id === regiaoBrasil33(jogo))?.id ?? regioesDoJogo33(jogo, ano)[0]?.id ?? 'br');
+  const [modo, setModo] = useState<Entrada33>('base');
+  const [investimento, setInvestimento] = useState(0);
+  const p = livres.length ? previaDaEntrada33(jogo, regiao, modo, investimento, ano) : undefined;
+  return (
+    <div className="org31__comando">
+      <section className="org31__bloco" aria-labelledby="org31-novo">
+        <h4 id="org31-novo">Entrar em outro jogo</h4>
+        {livres.length && p ? (
+          <>
+            <p className="nota">Uma organização pode ter uma line em cada jogo, cada uma na liga da sua região (a sua de LoL pode jogar o CBLOL e a de CS, o circuito europeu).</p>
+            <EscolhaDeEntrada vida={vida} jogos={livres} jogo={jogo} setJogo={setJogo} regiao={regiao} setRegiao={setRegiao} modo={modo} setModo={setModo} investimento={investimento} setInvestimento={setInvestimento} />
+            <BotaoAcao vida={vida} agir={agir} acao={A({ op: 'entrar', jogo, regiao, modo, investimento })} variante="principal">Montar a line · {dinheiroCurto(p.total)}</BotaoAcao>
+          </>
+        ) : <p className="nota">A organização já tem line em todos os jogos com cenário nesta época.</p>}
       </section>
       <section className="org31__bloco" aria-labelledby="org31-conteudo">
         <h4 id="org31-conteudo">Conteúdo e streaming</h4>
         <div className="org31__botoes" role="group" aria-label="Conteúdo">
           {([0, 1, 2] as const).map(n => <BotaoAcao key={n} vida={vida} agir={agir} acao={A({ op: 'conteudo', nivel: n })} variante={o.conteudo === n ? 'principal' : 'secundario'}>{['Só treino', 'Lives semanais', 'Casa de criadores'][n]}</BotaoAcao>)}
         </div>
-        <p className="nota">Mais conteúdo traz receita e fãs; a casa de criadores tira horas de treino (−1 de força e evolução mais lenta).</p>
+        <p className="nota">Mais conteúdo traz receita e fãs; a casa de criadores tira horas de treino (−1 de força em todas as lines e evolução mais lenta).</p>
       </section>
       <section className="org31__bloco" aria-labelledby="org31-dono">
         <h4 id="org31-dono">Dinheiro do dono</h4>
@@ -398,7 +528,7 @@ function Comando({ vida, agir, folha }: { vida: Vida; agir: Agir; folha: number 
           <BotaoAcao vida={vida} agir={agir} acao={A({ op: 'aportar', valor: aporte })}>Aportar {dinheiroCurto(aporte)}</BotaoAcao>
           <BotaoAcao vida={vida} agir={agir} acao={A({ op: 'vender_org' })} variante="perigo">Vender a organização · ~{dinheiroCurto(Math.max(0, o.valor + o.caixa - o.divida))}</BotaoAcao>
         </div>
-        <p className="nota">O aporte paga primeiro as dívidas da organização. Na venda, você recebe o valor e o caixa, menos as dívidas.</p>
+        <p className="nota">O aporte paga primeiro as dívidas da organização. Na venda, você recebe o valor (todas as lines, a marca e os títulos) e o caixa, menos as dívidas.</p>
       </section>
     </div>
   );
@@ -408,6 +538,7 @@ function Comando({ vida, agir, folha }: { vida: Vida; agir: Agir; folha: number 
 
 function Mesa({ vida, agir }: { vida: Vida; agir: Agir }) {
   const o = vida.orgEsports31!;
+  const ano = anoDe(vida.t);
   const hist = o.mesaHist.slice(0, 4);
   if (!o.mesa.length && !hist.length) return null;
   return (
@@ -417,7 +548,7 @@ function Mesa({ vida, agir }: { vida: Vida; agir: Agir }) {
       <ul className="org31__assuntos">
         {o.mesa.map(s => (
           <li key={s.id} className={`org31__assunto org31__assunto--${(QUEM_DA_MESA31[s.tipo] ?? 'Comunidade').normalize('NFD').replace(/[^a-zA-Z]/g, '').toLowerCase()}`}>
-            <span className="org31__assunto-quem">{QUEM_DA_MESA31[s.tipo] ?? 'Comunidade'}</span>
+            <span className="org31__assunto-quem">{QUEM_DA_MESA31[s.tipo] ?? 'Comunidade'}{s.jogo ? ` · ${nomeDoJogo(s.jogo, ano)}` : ''}</span>
             <strong>{s.titulo}</strong>
             <p className="org31__assunto-texto">{s.texto}</p>
             <div className="org31__opcoes">

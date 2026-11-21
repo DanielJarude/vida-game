@@ -1,0 +1,39 @@
+/* VIDA 33 · o painel do dono (patrocínios, camisa e loja, identidade), o editor do escudo e o investimento inicial. */
+.dono33 { display: grid; gap: var(--esp-3, 12px); }
+.dono33__abas, .dono33__fichas, .dono33__botoes { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.dono33__resumo { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.dono33__resumo > div { display: grid; gap: 2px; padding: 10px 12px; border: 1px solid var(--borda, rgba(127,127,127,.25)); border-radius: 10px; background: var(--superficie, transparent); }
+.dono33__resumo span { font-size: .8rem; color: var(--texto-suave, inherit); }
+.dono33__resumo small { font-size: .75rem; color: var(--texto-suave, inherit); }
+.dono33__cotas, .dono33__ofertas, .dono33__produtos { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.dono33__cotas { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.dono33__cota { display: grid; gap: 8px; align-content: start; padding: 12px; border: 1px solid var(--borda, rgba(127,127,127,.25)); border-radius: 12px; }
+.dono33__cota header { display: grid; gap: 2px; }
+.dono33__cota--fechada { border-color: var(--bom, #2e7d32); }
+.dono33__contrato { margin: 0; }
+.dono33__oferta { display: grid; gap: 4px; padding: 8px 10px; border-radius: 10px; background: var(--superficie-2, rgba(127,127,127,.08)); }
+.dono33__oferta > div:first-child { display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; }
+.dono33__bloco { display: grid; gap: 8px; }
+.dono33__bloco h4 { margin: 4px 0 0; }
+.dono33__hist ul { margin: 6px 0 0; padding-left: 18px; }
+.dono33__produto { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; padding: 6px 10px; border-radius: 10px; border: 1px solid var(--borda, rgba(127,127,127,.25)); }
+.dono33__produto--ativo { border-color: var(--bom, #2e7d32); }
+.dono33__camisa-area, .dono33__identidade { display: grid; grid-template-columns: minmax(140px, 200px) 1fr; gap: 16px; align-items: start; }
+.dono33__previa-escudo { display: grid; justify-items: center; gap: 6px; }
+.dono33__editor { display: grid; gap: 10px; min-width: 0; }
+.dono33__campo { border: 0; margin: 0; padding: 0; display: grid; gap: 6px; min-width: 0; }
+.dono33__campo legend { font-size: .85rem; font-weight: 600; margin-bottom: 4px; padding: 0; }
+.dono33__paleta { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.dono33__amostra { width: 24px; height: 24px; border-radius: 50%; border: 1px solid rgba(127,127,127,.5); padding: 0; cursor: pointer; }
+.dono33__amostra[aria-pressed='true'] { outline: 3px solid var(--foco, #3b82f6); outline-offset: 1px; }
+.dono33__livre input { width: 32px; height: 26px; padding: 0; border: 0; background: none; cursor: pointer; }
+.dono33__linha { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.dono33__texto { display: grid; gap: 4px; font-size: .85rem; flex: 1 1 180px; }
+.dono33__texto input { min-width: 0; }
+.dono33__check { display: flex; gap: 6px; align-items: center; font-size: .85rem; }
+.dono33__investimento input[type='range'] { width: 100%; }
+.dono33__camisa { display: block; max-width: 100%; height: auto; }
+@media (max-width: 560px) {
+  .dono33__camisa-area, .dono33__identidade { grid-template-columns: 1fr; justify-items: center; }
+  .dono33__editor { width: 100%; }
+}

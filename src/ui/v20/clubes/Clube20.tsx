@@ -5,7 +5,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Vida } from '../../../motor/tipos';
 import type { Acao } from '../../../motor/acoes';
-import { bonusDoTecnico, clubesAVenda, custoDaObra, dividendosPossiveis, mediaDoElenco, mercadoDoAno, patrociniosDoAno, tecnicosDisponiveis, valorDoJogador, type OqueClube20 } from '../../../motor/v20/clubes/clubes20';
+import { bonusDoTecnico, clubesAVenda, custoDaObra, dividendosPossiveis, mediaDoElenco, mercadoDoAno, contextoClube33, tecnicosDisponiveis, valorDoJogador, type OqueClube20 } from '../../../motor/v20/clubes/clubes20';
 import { NOME_DO_PAPEL, perfilDoJogador20, perfisDoElenco, quimicaDoElenco, type Perfil31 } from '../../../motor/v20/clubes/perfil31';
 import { arquetipo, nomeDoArquetipo } from '../../../motor/sistemas/arquetipos';
 import './clube31.css';
@@ -20,13 +20,15 @@ import { dinheiroCurto } from '../../apresentar';
 import './clube20.css';
 import { existeMunicipio, municipio, nomeLugar, paisDaCidade } from '../../../motor/dados/lugares';
 import '../../v32/esporte/esporte32.css';
-import { desenhoDoClube30, Escudo30 } from '../../v30/escudos/Escudo30';
+import { desenhoDoClube30, Escudo30, identidadeRegistrada33, registrarIdentidades33 } from '../../v30/escudos/Escudo30';
+import { PainelDono33 } from '../../v33/dono/PainelDono33';
 
 const C = (oque: OqueClube20): Acao => ({ tipo: 'clube20', oque } as Acao);
 // VIDA 32: o nome de verdade de cada divisão (Série A, B, C; o estadual) — do país do clube.
 const DIV = ['', 'estadual', 'Série C', 'Série B', 'Série A'];
 
 export function Clube20({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
+  registrarIdentidades33(vida);
   return vida.clube20 ? <MeuClube vida={vida} agir={agir} /> : <ComprarClube vida={vida} agir={agir} />;
 }
 export default Clube20;
@@ -128,7 +130,7 @@ function ComprarClube({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }
 /* ------------------------------------------------------------------ VIDA 30 · o clube como painel (não só texto) */
 
 /** As cores do clube (as do escudo: `v30/escudos`), para o campo e as barras. */
-function coresDoClube(nome: string): [string, string] { const d = desenhoDoClube30(nome); return [d[2], d[3]]; }
+function coresDoClube(nome: string): [string, string] { const i = identidadeRegistrada33(nome); if (i) return [i.cor1, i.cor2]; const d = desenhoDoClube30(nome); return [d[2], d[3]]; }
 const Escudo = Escudo30;
 
 function Medidor({ rotulo, valor, max = 100, texto, tom }: { rotulo: string; valor: number; max?: number; texto?: string; tom?: 'bom' | 'ruim' | 'atencao' }) {
@@ -271,7 +273,7 @@ function ordenar<T extends { pos: string; forca: number; potencial: number; tNas
 function MeuClube({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
   const c = vida.clube20!;
   const ano = anoDe(vida.t);
-  const [aba, setAba] = useState<'painel' | 'campeonato' | 'elenco' | 'mercado' | 'base' | 'comando' | 'clube'>('painel');
+  const [aba, setAba] = useState<'painel' | 'campeonato' | 'elenco' | 'mercado' | 'base' | 'comando' | 'negocios' | 'clube'>('painel');
   // VIDA 31: os filtros do elenco e do mercado (o setor, o arquétipo, a ordem).
   const [setorE, setSetorE] = useState(''); const [tipoE, setTipoE] = useState(''); const [ordemE, setOrdemE] = useState<Ordem31>('pos');
   const [setorM, setSetorM] = useState(''); const [tipoM, setTipoM] = useState(''); const [ordemM, setOrdemM] = useState<Ordem31>('forca');
@@ -309,7 +311,7 @@ function MeuClube({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
         <div className="clube30__num"><span>Vestiário</span><strong className={(c.moral31 ?? 0) < 0 ? 'clube30__ruim' : undefined}>{(c.moral31 ?? 0) > 0.5 ? 'Unido' : (c.moral31 ?? 0) < -0.5 ? 'Rachado' : 'Normal'}</strong><small>{(c.moral31 ?? 0) > 0 ? '+' : ''}{c.moral31 ?? 0} na média</small></div>
       </div>
       <div className="clube20__abas" role="tablist">
-        {(['painel', 'campeonato', 'elenco', 'mercado', 'base', 'comando', 'clube'] as const).map(x => <button key={x} type="button" role="tab" aria-selected={aba === x} className={`clube20__aba${aba === x ? ' clube20__aba--ativa' : ''}`} onClick={() => setAba(x)}>{{ painel: `Painel${(c.mesa31?.length ?? 0) ? ` · ${c.mesa31!.length} na mesa` : ''}`, campeonato: 'Campeonato', elenco: 'Elenco', mercado: 'Mercado', base: 'Base', comando: 'Comando e negócios', clube: 'Estrutura e finanças' }[x]}</button>)}
+        {(['painel', 'campeonato', 'elenco', 'mercado', 'base', 'comando', 'negocios', 'clube'] as const).map(x => <button key={x} type="button" role="tab" aria-selected={aba === x} className={`clube20__aba${aba === x ? ' clube20__aba--ativa' : ''}`} onClick={() => setAba(x)}>{{ painel: `Painel${(c.mesa31?.length ?? 0) ? ` · ${c.mesa31!.length} na mesa` : ''}`, campeonato: 'Campeonato', elenco: 'Elenco', mercado: 'Mercado', base: 'Base', comando: 'Comando', negocios: 'Patrocínios, camisa e loja', clube: 'Estrutura e finanças' }[x]}</button>)}
       </div>
       {aba === 'painel' && <MesaDoPresidente vida={vida} agir={agir} />}
       {aba === 'painel' && (
@@ -409,14 +411,6 @@ function MeuClube({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
             <h4 id="cmd31-capitao">A braçadeira e a química</h4>
             <p className="nota">Química {quimica > 0 ? `+${quimica}` : quimica} na média: é o vestiário que os tipos de jogador fazem — o Capitão e o Garçom aproximam, o Marrento desgasta. {c.capitao31 && c.elenco.some(j => j.id === c.capitao31) ? `O capitão é ${c.elenco.find(j => j.id === c.capitao31)!.nome}.` : 'Sem capitão escolhido, o grupo perde um pouco de rumo.'} A braçadeira se dá no Elenco.</p>
           </section>
-          <section className="cmd31__bloco" aria-labelledby="cmd31-patrocinio">
-            <h4 id="cmd31-patrocinio">Patrocínio master</h4>
-            {c.patrocinio31 && c.patrocinio31.ate >= ano
-              ? <p className="nota">{c.patrocinio31.nome}: {dinheiroCurto(c.patrocinio31.valor)} por ano, até {c.patrocinio31.ate}.</p>
-              : <ul className="cmd31__ofertas">{patrociniosDoAno(vida).map((p, k) => (
-                <li key={k} className="cmd31__oferta"><strong>{p.nome}</strong><span className="clube30__meta">{dinheiroCurto(p.valor)}/ano · {p.anos} {p.anos === 1 ? 'ano' : 'anos'} · {p.sobre}</span><BotaoAcao vida={vida} agir={agir} acao={C({ op: 'patrocinio', i: k })}>Fechar</BotaoAcao></li>
-              ))}</ul>}
-          </section>
           <section className="cmd31__bloco" aria-labelledby="cmd31-ingresso">
             <h4 id="cmd31-ingresso">Ingressos</h4>
             <div className="clube20__botoes" role="group" aria-label="Preço do ingresso">
@@ -426,6 +420,7 @@ function MeuClube({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
           </section>
         </div>
       )}
+      {aba === 'negocios' && <PainelDono33 vida={vida} agir={agir} nome={c.nome} dono={c} ctx={contextoClube33(vida)} acao={sub => C({ op: 'dono', sub })} anoInicio={anoDe(c.desde)} />}
       {aba === 'clube' && (
         <div className="clube20__clube">
           <div className="clube30__obras">

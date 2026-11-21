@@ -51,6 +51,7 @@ import { normalizarAtributos26 } from './sistemas/atributosEsportivos';
 import { normalizarLuta26 } from './v26/lutas/luta26';
 import { normalizarVida20Clube } from './v20/clubes/clubes20';
 import { normalizarVida32Org } from './v31/esports/org31';
+import { normalizarEquipes33 } from './v32/equipes/equipe32';
 import { normalizarEspolio21 } from './v21/crime/espolio21';
 import { normalizarVida14Moveis } from './v14/moveis/moveis14';
 import { normalizarVida13Acoes } from './sistemas/desfecho13';
@@ -158,7 +159,7 @@ export function interpretar(bruto: string): Leitura {
   if (r.tipo === 'ok') normalizarVida14Crencas(r.vida);
   if (r.tipo === 'ok') normalizarVida14Dependencias(r.vida);
   // VIDA 20: os estados novos (a carreira nas pistas, o clube) e a regra dos vícios (nenhum antes dos 14).
-  if (r.tipo === 'ok') { normalizarVida20Auto(r.vida); normalizarVida25Esports(r.vida); normalizarLuta26(r.vida); for (const e of [...(r.vida.caminhos.carreirasEsportivas ?? []), ...(r.vida.caminhos.esporte ? [r.vida.caminhos.esporte] : [])]) normalizarAtributos26(e); normalizarVida20Clube(r.vida); normalizarVida32Org(r.vida); semVicioNaInfancia(r.vida); normalizarEspolio21(r.vida); }
+  if (r.tipo === 'ok') { normalizarVida20Auto(r.vida); normalizarVida25Esports(r.vida); normalizarLuta26(r.vida); for (const e of [...(r.vida.caminhos.carreirasEsportivas ?? []), ...(r.vida.caminhos.esporte ? [r.vida.caminhos.esporte] : [])]) normalizarAtributos26(e); normalizarVida20Clube(r.vida); normalizarVida32Org(r.vida); normalizarEquipes33(r.vida); semVicioNaInfancia(r.vida); normalizarEspolio21(r.vida); }
   if (r.tipo === 'ok') normalizarVida14Moveis(r.vida);
   if (r.tipo === 'ok') normalizarVida13Acoes(r.vida);
   if (r.tipo === 'ok') normalizarVida13Aparencia(r.vida);

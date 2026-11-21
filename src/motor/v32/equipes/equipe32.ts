@@ -17,6 +17,10 @@ import { lancar } from '../../sistemas/extrato';
 import { existeMunicipio, municipio, paisDaCidade } from '../../dados/lugares';
 import { divisaoDe } from '../../sistemas/esporte';
 import { clubesDoPais } from '../../dados/clubes';
+import { normalizarIdentidade33, type Identidade33 } from '../../v33/dono/identidade33';
+import { contratoAntigo33, normalizarComercial33, novoComercial33, type Comercial33, type Contexto33 } from '../../v33/dono/patrocinio33';
+import { normalizarLoja33, type Loja33 } from '../../v33/dono/loja33';
+import { executarDono33, fecharAnoDono33, problemaDono33, type OpDono33 } from '../../v33/dono/dono33';
 
 export type Modalidade32 = 'basquete' | 'volei' | 'futsal';
 export const MODALIDADES32: { id: Modalidade32; nome: string }[] = [
@@ -38,7 +42,12 @@ export interface Equipe32 {
   /** A obra do ginásio em andamento (pronta no fim do ano). */
   obra?: number;
   tecnico?: { nome: string; nivel: number; salario: number };
+  /** Até a VIDA 32 (o normalizador leva para `comercial33`). */
   patrocinio?: { nome: string; valor: number; ate: number };
+  /** VIDA 33 · a identidade, os patrocínios por cota e a loja. */
+  identidade33?: Identidade33;
+  comercial33?: Comercial33;
+  loja33?: Loja33;
   historico: TemporadaDaEquipe32[];
   valor: number;
 }
@@ -56,7 +65,6 @@ export const custoDoGinasio32 = (e: Equipe32) => Math.round(1.5e6 * Math.pow(1.9
 export const nomeDaDivisao32 = (e: Pick<Equipe32, 'modalidade' | 'pais'>, nivel: number) => divisaoDe(e.modalidade, nivel, e.pais).replace(/ — .*/, '');
 
 const NOMES_TECNICO = ['Marcos Paiva', 'Renata Lobo', 'Júlio Andrade', 'Paula Siqueira', 'Edson Leite', 'Carla Montenegro', 'Fábio Rangel', 'Lia Duarte', 'Hélio Prates', 'Tânia Vieira', 'Sérgio Bastos', 'Aline Castro'];
-const MARCAS = ['Banco Horizonte', 'Construtora Pilar', 'Supermercados Ideal', 'Farmácias Vida+', 'Rede Sol Postos', 'Lojas Arco', 'Seguros Atlas', 'Telefônica Onda'];
 
 /** Os técnicos disponíveis no ano (estáveis no ano: os mesmos três até virar o ano). */
 export function tecnicosDaEquipe32(v: Vida, e: Equipe32) {
@@ -66,18 +74,29 @@ export function tecnicosDaEquipe32(v: Vida, e: Equipe32) {
     return { nome: NOMES_TECNICO[Math.floor(r.next() * NOMES_TECNICO.length)], nivel, salario: Math.round(RECEITA_DIV[e.nivel] * (0.04 + nivel * 0.035) * mercado(e.pais) / 1e4) * 1e4 };
   });
 }
-/** O patrocínio do ano (um por vez, um ano de contrato). */
-export function patrocinioDaEquipe32(v: Vida, e: Equipe32) {
-  const r = rngDe(v.id, 'equipe32-pat', e.id, anoDe(v.t));
-  return { nome: MARCAS[Math.floor(r.next() * MARCAS.length)], valor: Math.round(RECEITA_DIV[e.nivel] * (0.15 + e.reputacao / 300 + r.next() * 0.1) * mercado(e.pais) / 1e4) * 1e4 };
+/** VIDA 33 · o contexto do dono (patrocínios, loja). */
+export function contextoEquipe33(e: Equipe32, ano: number): Contexto33 {
+  return { tipo: 'quadra', ano, receitaBase: RECEITA_DIV[e.nivel] * (0.5 + e.torcida / 80) * mercado(e.pais), fama: e.torcida, reputacao: e.reputacao, noTopo: e.nivel === 3, temCasa: e.ginasio >= 3 };
+}
+
+/** O que o investimento inicial compra: elenco (+8 de força a cada vez que dobra, até +45), o ginásio, e o caixa. */
+export interface PreviaEquipe33 { custo: number; investimento: number; elenco: number; ginasio: number; caixa: number }
+export function previaDaEquipe33(pais: string, investimento: number, foco: 'elenco' | 'equilibrado' | 'estrutura'): PreviaEquipe33 {
+  const base = custoDeFundarEquipe32(pais);
+  const inv = Math.max(0, Math.round(investimento));
+  const [fe, fg] = foco === 'elenco' ? [0.8, 0] : foco === 'estrutura' ? [0.25, 0.6] : [0.5, 0.3];
+  const elenco = Math.round(Math.min(85, 40 + Math.min(45, 8 * Math.log2(1 + inv * fe / base))) * 10) / 10;
+  let obra = inv * fg, ginasio = 1;
+  while (ginasio < 5) { const c = Math.round(1.5e6 * Math.pow(1.9, ginasio - 1) * mercado(pais) / 1e5) * 1e5; if (c > obra) break; obra -= c; ginasio++; }
+  return { custo: base + inv, investimento: inv, elenco, ginasio, caixa: Math.round((base * 0.4 + inv * (1 - fe - fg) + obra) / 1e4) * 1e4 };
 }
 
 export type OqueEquipe32 =
-  | { op: 'fundar'; modalidade: Modalidade32; nome: string; municipioId: string }
+  | { op: 'fundar'; modalidade: Modalidade32; nome: string; municipioId: string; investimento?: number; foco?: 'elenco' | 'equilibrado' | 'estrutura'; identidade?: Identidade33 }
   | { op: 'reforco'; id: string; pesado: boolean }
   | { op: 'ginasio'; id: string }
   | { op: 'tecnico'; id: string; i: number }
-  | { op: 'patrocinio'; id: string }
+  | { op: 'dono'; id: string; sub: OpDono33 }
   | { op: 'aportar'; id: string; valor: number }
   | { op: 'vender'; id: string };
 
@@ -98,8 +117,8 @@ export function disponibilidadeEquipe32(v: Vida, o: OqueEquipe32): Veredito {
     const pais = paisDaCidade(o.municipioId);
     const erro = nomeLivre32(v, o.nome, pais);
     if (erro) return bloqueio('requisito', erro);
-    const custo = custoDeFundarEquipe32(pais);
-    return v.financas.conta >= custo ? PERMITIDO : bloqueio('requisito', `Fundar o time custa ${fmt(custo)} (registro na federação, uniformes, quadra alugada e o primeiro elenco).`);
+    const custo = custoDeFundarEquipe32(pais) + Math.max(0, Math.round(o.investimento ?? 0));
+    return v.financas.conta >= custo ? PERMITIDO : bloqueio('requisito', `Fundar o time ${o.investimento ? 'com esse investimento ' : ''}custa ${fmt(custo)} (registro na federação, uniformes, quadra alugada e o primeiro elenco${o.investimento ? ', mais o investimento' : ''}).`);
   }
   const e = (v.equipes32 ?? []).find(x => x.id === o.id);
   if (!e) return bloqueio('impossivel', 'Esse time não é seu.');
@@ -107,7 +126,7 @@ export function disponibilidadeEquipe32(v: Vida, o: OqueEquipe32): Veredito {
     case 'reforco': { const c = custoDoReforco32(e, o.pesado); if (e.elenco >= 95) return bloqueio('incompativel', 'O elenco já é dos melhores do país.'); return e.caixa >= c ? PERMITIDO : bloqueio('requisito', `Os reforços custam ${fmt(c)}; o caixa do time tem ${fmt(e.caixa)}.`); }
     case 'ginasio': { if (e.ginasio >= 5) return bloqueio('incompativel', 'A arena já é de ponta.'); if (e.obra) return bloqueio('incompativel', 'A obra do ginásio já está em andamento.'); const c = custoDoGinasio32(e); return e.caixa >= c ? PERMITIDO : bloqueio('requisito', `A obra custa ${fmt(c)}; o caixa não tem.`); }
     case 'tecnico': { const t = tecnicosDaEquipe32(v, e)[o.i]; if (!t) return bloqueio('impossivel', ''); if (e.tecnico?.nome === t.nome) return bloqueio('incompativel', 'Ele já é o técnico.'); return e.caixa >= t.salario * 0.25 ? PERMITIDO : bloqueio('requisito', `As luvas (${fmt(Math.round(t.salario * 0.25))}) não cabem no caixa.`); }
-    case 'patrocinio': return e.patrocinio && e.patrocinio.ate >= anoDe(v.t) ? bloqueio('incompativel', `O contrato com ${e.patrocinio.nome} vai até ${e.patrocinio.ate}.`) : PERMITIDO;
+    case 'dono': { const p = problemaDono33(contextoEquipe33(e, anoDe(v.t)), e, o.sub, e.caixa, anoDe(e.desde)); return p ? bloqueio('requisito', p) : PERMITIDO; }
     case 'aportar': return o.valor > 0 && v.financas.conta >= o.valor ? PERMITIDO : bloqueio('requisito', 'Não há esse dinheiro na conta.');
     case 'vender': return PERMITIDO;
   }
@@ -116,13 +135,17 @@ export function disponibilidadeEquipe32(v: Vida, o: OqueEquipe32): Veredito {
 export function executarEquipe32(v: Vida, o: OqueEquipe32): { texto: string; tom?: 'bom' | 'ruim' | 'neutro' } {
   if (o.op === 'fundar') {
     const pais = paisDaCidade(o.municipioId);
-    const custo = custoDeFundarEquipe32(pais);
+    const p = previaDaEquipe33(pais, o.investimento ?? 0, o.foco ?? 'equilibrado');
+    const custo = p.custo;
     pagar(v, custo);
     lancar(v, `Fundação do time (${o.nome.trim()})`, 'despesa', -custo);
     const e: Equipe32 = {
       id: `eq32_${o.modalidade}_${v.t}`, nome: o.nome.trim(), modalidade: o.modalidade, pais, municipioId: o.municipioId, cidade: municipio(o.municipioId).nome, desde: v.t,
-      nivel: 1, elenco: 40, caixa: Math.round(custo * 0.4 / 1e4) * 1e4, divida: 0, torcida: 5, reputacao: 10, ginasio: 1, historico: [], valor: Math.round(custo * 0.5 / 1e4) * 1e4
+      nivel: 1, elenco: p.elenco, caixa: p.caixa, divida: 0, torcida: 5 + Math.min(8, Math.round(Math.log2(1 + p.investimento / 5e5))), reputacao: 10, ginasio: p.ginasio, historico: [],
+      valor: Math.round((custoDeFundarEquipe32(pais) * 0.5 + p.investimento * 0.5) / 1e4) * 1e4, comercial33: novoComercial33()
     };
+    const ident = normalizarIdentidade33(o.identidade);
+    if (ident) e.identidade33 = ident;
     (v.equipes32 ??= []).push(e);
     escrever(v, { texto: `Fundou o ${e.nome}, time de ${nomeDaModalidade32(e.modalidade).toLowerCase()} de ${e.cidade}: começa no ${nomeDaDivisao32(e, 1)}, numa quadra alugada.`, relevancia: 'marco', tema: 'dinheiro', tom: 'bom', escolha: true });
     return { texto: `O ${e.nome} foi fundado.`, tom: 'bom' };
@@ -139,7 +162,13 @@ export function executarEquipe32(v: Vida, o: OqueEquipe32): { texto: string; tom
     }
     case 'ginasio': { const c = custoDoGinasio32(e); e.caixa -= c; e.obra = e.ginasio + 1; return { texto: `A obra do ginásio começou (${fmt(c)}): fica pronta no fim do ano.`, tom: 'neutro' }; }
     case 'tecnico': { const t = tecnicosDaEquipe32(v, e)[o.i]; e.caixa -= Math.round(t.salario * 0.25); e.tecnico = t; return { texto: `${t.nome} é o técnico do ${e.nome}.`, tom: 'bom' }; }
-    case 'patrocinio': { const p = patrocinioDaEquipe32(v, e); e.patrocinio = { ...p, ate: anoDe(v.t) }; return { texto: `${p.nome} estampa a camisa do ${e.nome}: ${fmt(p.valor)} na temporada.`, tom: 'bom' }; }
+    case 'dono': {
+      const ano = anoDe(v.t);
+      const x = executarDono33(contextoEquipe33(e, ano), e, o.sub, rngDe(v.id, 'equipe33_dono', e.id, ano, e.comercial33?.seq ?? 0, e.comercial33?.buscas.n ?? 0), anoDe(e.desde));
+      e.caixa -= x.custo;
+      if (x.fama) e.torcida = clamp(e.torcida + x.fama);
+      return { texto: x.texto, tom: x.tom };
+    }
     case 'aportar': { pagar(v, o.valor); lancar(v, `Aporte no time (${e.nome})`, 'despesa', -o.valor); e.caixa += o.valor; return { texto: `${fmt(o.valor)} entraram no caixa do ${e.nome}.`, tom: 'neutro' }; }
     case 'vender': {
       const valor = Math.max(0, Math.round((e.valor + e.caixa - e.divida) / 1e4) * 1e4);
@@ -165,10 +194,13 @@ export function processarEquipes32(v: Vida): void {
     const titulo = posicao === 1;
     const acesso = e.nivel < 3 && posicao <= 2;
     const queda = e.nivel > 1 && posicao >= 11;
-    const patrocinio = e.patrocinio && e.patrocinio.ate >= ano ? e.patrocinio.valor : 0;
-    const receita = Math.round((RECEITA_DIV[e.nivel] * (0.5 + e.torcida / 80) * (0.85 + e.ginasio * 0.08) * mercado(e.pais) * (1 + (12 - posicao) * 0.02) + patrocinio) / 1e4) * 1e4;
+    // VIDA 33: os patrocínios (as cotas) e a loja.
+    const dono = fecharAnoDono33(contextoEquipe33(e, ano), contextoEquipe33(e, ano + 1), e, { titulo, subiu: acesso, caiu: queda, topo: posicao <= 4, internacional: false }, rngDe(v.id, 'equipe33_fechar', e.id, ano));
+    for (const t of dono.textos) escrever(v, { texto: `${e.nome}: ${t}`, relevancia: 'cotidiano', tema: 'dinheiro' });
+    if (dono.rep) e.reputacao = clamp(e.reputacao + dono.rep);
+    const receita = Math.round((RECEITA_DIV[e.nivel] * (0.5 + e.torcida / 80) * (0.85 + e.ginasio * 0.08) * mercado(e.pais) * (1 + (12 - posicao) * 0.02) + dono.receita) / 1e4) * 1e4;
     const folha = RECEITA_DIV[e.nivel] * mercado(e.pais) * (0.25 + Math.max(0, e.elenco - FORCA_DIV[e.nivel] + 10) * 0.025);
-    const despesa = Math.round((folha + (e.tecnico?.salario ?? 0) + receita * 0.25 + e.divida * 0.11) / 1e4) * 1e4;
+    const despesa = Math.round((folha + dono.despesa + (e.tecnico?.salario ?? 0) + receita * 0.25 + e.divida * 0.11) / 1e4) * 1e4;
     e.caixa += receita - despesa;
     if (e.caixa < 0) { e.divida += -e.caixa; e.caixa = 0; }
     else if (e.divida > 0) { const a = Math.min(e.divida, Math.round(e.caixa * 0.5)); e.divida -= a; e.caixa -= a; }
@@ -194,3 +226,17 @@ export function processarEquipes32(v: Vida): void {
 
 /** O que os times valem no patrimônio (o valor mais o caixa, menos a dívida). */
 export const valorDasEquipes32 = (v: Vida) => (v.equipes32 ?? []).reduce((s, e) => s + Math.max(0, e.valor + e.caixa - e.divida), 0);
+
+/** Saves: o patrocínio único da VIDA 32 vira a cota master; identidade e loja validadas. */
+export function normalizarEquipes33(v: Vida): void {
+  if (!Array.isArray(v.equipes32)) return;
+  const ano = anoDe(v.t);
+  for (const e of v.equipes32) {
+    e.comercial33 = normalizarComercial33(e.comercial33) ?? novoComercial33();
+    const antigo = contratoAntigo33(e.patrocinio, ano);
+    if (antigo) e.comercial33.contratos.push(antigo);
+    delete e.patrocinio;
+    const id = normalizarIdentidade33(e.identidade33); if (id) e.identidade33 = id; else delete e.identidade33;
+    const loja = normalizarLoja33(e.loja33, ano); if (loja) e.loja33 = loja; else delete e.loja33;
+  }
+}

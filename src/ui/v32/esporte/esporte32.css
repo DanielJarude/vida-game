@@ -53,3 +53,5 @@
 .esp32__bola { vertical-align: -3px; }
 .vitrine32__ficha { display: inline-flex; align-items: center; gap: 6px; }
 @media (max-width: 520px) { .esp32__equipe-topo { grid-template-columns: auto minmax(0, 1fr); } .esp32__equipe-topo > .vitrine32__div { grid-column: 1 / -1; justify-self: start; } }
+/* VIDA 33 · a identidade na fundação */
+.esp32__detalhe summary { cursor: pointer; font-weight: 600; padding: 4px 0; }

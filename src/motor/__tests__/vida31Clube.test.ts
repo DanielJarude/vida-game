@@ -8,7 +8,7 @@ import { executar, disponibilidade, type Acao } from '../acoes';
 import { podeTentar } from '../plausibilidade';
 import { interpretar } from '../save';
 import { anoDe } from '../tempo';
-import { mediaDoElenco, mercadoDoAno, patrociniosDoAno, processarClube20, tecnicosDisponiveis } from '../v20/clubes/clubes20';
+import { mediaDoElenco, mercadoDoAno, processarClube20, tecnicosDisponiveis } from '../v20/clubes/clubes20';
 import { perfilDoJogador20, perfisDoElenco, quimicaDoElenco } from '../v20/clubes/perfil31';
 import { arquetipo } from '../sistemas/arquetipos';
 import type { Vida } from '../tipos';
@@ -103,11 +103,13 @@ describe('o comando do clube', () => {
 
   it('o patrocínio e os ingressos entram na receita do ano; tudo persiste no save', () => {
     const base = dono();
-    const ofertas = patrociniosDoAno(base);
-    expect(ofertas.length).toBe(3);
-    let com = tenta(structuredClone(base), C({ op: 'patrocinio', i: 0 }));
-    expect(com.clube20!.patrocinio31?.valor).toBe(ofertas[0].valor);
-    expect(podeTentar(disponibilidade(com, C({ op: 'patrocinio', i: 1 })))).toBe(false);
+    // VIDA 33: o patrocínio master único virou o departamento comercial (cotas, busca e propostas): buscar, assinar.
+    let com = tenta(structuredClone(base), C({ op: 'dono', sub: { op: 'comercial', sub: { acao: 'buscar', cota: 'master' } } } as never));
+    const ofertas = com.clube20!.comercial33!.ofertas;
+    expect(ofertas.length).toBeGreaterThan(0);
+    com = tenta(com, C({ op: 'dono', sub: { op: 'comercial', sub: { acao: 'aceitar', id: ofertas[0].id } } } as never));
+    expect(com.clube20!.comercial33!.contratos.find(x => x.cota === 'master')?.valor).toBe(ofertas[0].valor);
+    expect(podeTentar(disponibilidade(com, C({ op: 'dono', sub: { op: 'comercial', sub: { acao: 'buscar', cota: 'master' } } } as never)))).toBe(false);
     com = tenta(com, C({ op: 'ingresso', nivel: 0 }));
     expect(com.clube20!.ingresso31).toBe(0);
     expect(interpretar(JSON.stringify(com)).tipo).toBe('ok');
