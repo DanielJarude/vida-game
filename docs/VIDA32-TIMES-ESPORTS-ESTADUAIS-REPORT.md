@@ -15,3 +15,9 @@
 ## Testes
 - Novos: `vida32Fundar`, `vida32Esports`, `vida32Tecnico` (motor e UI). Também os testes de estaduais e Série C em `vida31Copas`.
 - Suíte completa, build (todos os chunks ≤ 800 kB) e smoke: ver a seção Publicação.
+
+## Publicação (2026-11-21)
+- Commit 436fbaf, com fast-forward em `main` e `claude/fix-pos-rework3-playtest`. Produção serve `index-BzeUUvoZ.js`; os 224 arquivos têm sha256 idêntico ao build local.
+- Suíte completa: 3360 testes passaram. Houve 9 timeouts por carga: 4 já conhecidos (fechamentoMundo #4, motor "linguagem de escolha", profissao ×2) e outros 5 que passaram quando rodados isolados (116/116).
+- Build com todos os chunks ≤ 800 kB (o maior é motor, com 795,7 kB). Smoke: 36/36.
+- Tour ao vivo na produção: abas de Empresas, vitrine, fundação de time de basquete e de clube de futebol, sem erros de página.
