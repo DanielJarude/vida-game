@@ -37,3 +37,4 @@
   .dono33__camisa-area, .dono33__identidade { grid-template-columns: 1fr; justify-items: center; }
   .dono33__editor { width: 100%; }
 }
+.dono33__atual { display: inline-flex; align-items: center; gap: 2px; padding: 8px 14px; border-radius: 999px; font-weight: 600; background: var(--texto, #111); color: var(--fundo, #fff); }

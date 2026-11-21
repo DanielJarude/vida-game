@@ -94,7 +94,7 @@ function Patrocinios({ vida, agir, dono, ctx, acao }: Props) {
       <section className="dono33__bloco" aria-label="Departamento comercial">
         <h4>Departamento comercial</h4>
         <div className="dono33__botoes">
-          {([0, 1, 2, 3] as const).map(n => <BotaoAcao key={n} vida={vida} agir={agir} acao={A({ acao: 'departamento', nivel: n })} variante={(c?.departamento ?? 0) === n ? 'principal' : 'secundario'}>{DEPARTAMENTOS33[n]}{n ? ` · ${dinheiroCurto(custoDoDepartamento33(ctx, n))}/ano` : ''}</BotaoAcao>)}
+          {([0, 1, 2, 3] as const).map(n => (c?.departamento ?? 0) === n ? <Atual key={n}>{DEPARTAMENTOS33[n]}{n ? ` · ${dinheiroCurto(custoDoDepartamento33(ctx, n))}/ano` : ''}</Atual> : <BotaoAcao key={n} vida={vida} agir={agir} acao={A({ acao: 'departamento', nivel: n })}>{DEPARTAMENTOS33[n]}{n ? ` · ${dinheiroCurto(custoDoDepartamento33(ctx, n))}/ano` : ''}</BotaoAcao>)}
         </div>
         <p className="nota">O departamento custa por ano e trabalha por você: propostas até 21% maiores, mais buscas por ano, renovação oferecida por quem gostou da parceria e uma proposta espontânea por temporada.</p>
       </section>
@@ -138,9 +138,9 @@ function Loja({ vida, agir, dono, ctx, acao, nome }: Props) {
       </section>
       <section className="dono33__bloco" aria-label="Preço e canais">
         <h4>Preço</h4>
-        <div className="dono33__botoes">{([0, 1, 2] as const).map(n => <BotaoAcao key={n} vida={vida} agir={agir} acao={A({ acao: 'preco', nivel: n })} variante={(l?.preco ?? 1) === n ? 'principal' : 'secundario'}>{PRECOS33[n]}</BotaoAcao>)}</div>
+        <div className="dono33__botoes">{([0, 1, 2] as const).map(n => (l?.preco ?? 1) === n ? <Atual key={n}>{PRECOS33[n]}</Atual> : <BotaoAcao key={n} vida={vida} agir={agir} acao={A({ acao: 'preco', nivel: n })}>{PRECOS33[n]}</BotaoAcao>)}</div>
         <h4>Onde vender</h4>
-        <div className="dono33__botoes">{([0, 1, 2] as const).map(n => <BotaoAcao key={n} vida={vida} agir={agir} acao={A({ acao: 'canal', nivel: n })} variante={(l?.canal ?? 0) === n ? 'principal' : 'secundario'}>{CANAIS33[n]}{n ? ` · ${dinheiroCurto(custoDoCanal33(ctx, n))}/ano` : ''}</BotaoAcao>)}</div>
+        <div className="dono33__botoes">{([0, 1, 2] as const).map(n => (l?.canal ?? 0) === n ? <Atual key={n}>{CANAIS33[n]}{n ? ` · ${dinheiroCurto(custoDoCanal33(ctx, n))}/ano` : ''}</Atual> : <BotaoAcao key={n} vida={vida} agir={agir} acao={A({ acao: 'canal', nivel: n })}>{CANAIS33[n]}{n ? ` · ${dinheiroCurto(custoDoCanal33(ctx, n))}/ano` : ''}</BotaoAcao>)}</div>
         <p className="nota">Popular vende mais com margem menor; premium, o contrário. A loja na casa e o licenciamento vendem mais, mas custam por ano (no licenciamento, a rede fica com uma parte).</p>
       </section>
       <div className="dono33__resumo">
@@ -163,6 +163,11 @@ function Identidade({ vida, agir, dono, ctx, acao, nome, anoInicio }: Props) {
       <p className="nota">{livre ? 'No primeiro ano, mudar o escudo e as cores é de graça.' : 'Depois do primeiro ano, mudar a identidade é um rebranding: custa e parte da torcida estranha.'}</p>
     </>
   );
+}
+
+/** A escolha em vigor (não é botão: não há o que fazer nela). */
+function Atual({ children }: { children: ReactNode }) {
+  return <span className="dono33__atual" aria-current="true"><span aria-hidden="true">✓ </span>{children}</span>;
 }
 
 /* ------------------------------------------------------------------ o investimento da fundação */

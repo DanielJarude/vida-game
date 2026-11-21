@@ -219,7 +219,7 @@ function MinhaOrg({ vida, agir }: { vida: Vida; agir: Agir }) {
   const abaValida: Aba = aba.startsWith('linha:') && !o.linhas.some(l => `linha:${l.jogo}` === aba) ? 'painel' : aba;
   const ABAS: [Aba, string][] = [
     ['painel', `Painel${o.mesa.length ? ` · ${o.mesa.length} na mesa` : ''}`],
-    ...o.linhas.map(l => [`linha:${l.jogo}`, `${SIGLA_JOGO[l.jogo]} · ${nomeDaLiga31(l, ano)}`] as [Aba, string]),
+    ...o.linhas.map(l => [`linha:${l.jogo}`, `${SIGLA_JOGO[l.jogo]} · ${l.divisao === 2 ? NOME_DIVISAO31[2] : nomeDaLiga31(l, ano)}`] as [Aba, string]),
     ['negocios', 'Patrocínios, camisa e loja'], ['organizacao', 'Organização']
   ];
   const linha = abaValida.startsWith('linha:') ? o.linhas.find(l => `linha:${l.jogo}` === abaValida) : undefined;
@@ -308,7 +308,7 @@ function Linha({ vida, agir, L }: { vida: Vida; agir: Agir; L: LinhaOrg33 }) {
           </section>
           <section className="org31__bloco" aria-label="O circuito">
             <h4>O circuito</h4>
-            <p className="nota">{nomeDaLiga31(L, ano)} ({NOME_DIVISAO31[L.divisao].toLowerCase()} de {nomeDaRegiao33(L.jogo, L.regiao)}): {L.divisao === 4 ? (regras.caem ? `os ${regras.caem} últimos caem.` : 'liga fechada, sem queda.') : regras.acesso ? `a liga de cima é fechada; o campeão disputa a ${regras.acesso}.` : regras.sobem ? `${regras.sobem === 1 ? 'o campeão sobe' : `os ${regras.sobem} primeiros sobem`}${regras.caem ? `, os ${regras.caem} últimos caem` : ''}.` : 'sem acesso direto.'}</p>
+            <p className="nota">{nomeDaLiga31(L, ano)} ({NOME_DIVISAO31[L.divisao].toLowerCase()} · {nomeDaRegiao33(L.jogo, L.regiao)}): {L.divisao === 4 ? (regras.caem ? `os ${regras.caem} últimos caem.` : 'liga fechada, sem queda.') : regras.acesso ? `a liga de cima é fechada; o campeão disputa a ${regras.acesso}.` : regras.sobem ? `${regras.sobem === 1 ? 'o campeão sobe' : `os ${regras.sobem} primeiros sobem`}${regras.caem ? `, os ${regras.caem} últimos caem` : ''}.` : 'sem acesso direto.'}</p>
             {vagas.length > 0 ? <ul className="org31__vagas">{vagas.map(x => <li key={x.nome}><strong>{x.nome}</strong>{x.vezes > 1 ? ` (${x.vezes} por ano)` : ''}: {x.vagas ? `top ${x.vagas} da liga principal` : ''}{x.div3 ? `${x.vagas ? '; ' : ''}o campeão da segunda divisão disputa vaga` : ''}</li>)}</ul> : <p className="nota">Nesta época o jogo não tem torneio internacional oficial.</p>}
             {L.divisao < 4 && <p className="nota">Os internacionais são para quem joga a liga principal{vagas.some(x => x.div3) ? ' (ou vence a segunda divisão e passa na classificatória)' : ''}.</p>}
           </section>
