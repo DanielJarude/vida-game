@@ -55,7 +55,7 @@ import { recursosDaFamilia } from './origem';
 import { mudarAgora } from './processos';
 import { registrarTemporada, registrarConquista } from './palmares';
 import { clubesNaDivisao, colocacaoNaTabela, divisaoDoClube } from './ligas';
-import { copaContinental, copaNacional, copasDeQuadra, idDaLiga, mundialDeClubes, nomeDaCompeticao } from './competicoes';
+import { copaContinental, copaNacional, copasDeQuadra, estadualDoAno, idDaLiga, mundialDeClubes, nomeDaCompeticao, ufDoClube } from './competicoes';
 import { desvio, efeitoNaNota, envelhecerAtributos, fotografarAtributos, nivelNaPosicao, perfilDeAtributos, type AtributoId } from './atributosEsportivos';
 import { ESTILOS26 } from '../v26/esporte/estilos26';
 import { avaliacaoDaComissao, lerJovem, prontoParaContrato, type LeituraDoJovem } from './jovemAtleta';
@@ -691,7 +691,9 @@ export function fecharTemporada(v: Vida, r: Rng, e: CarreiraEsportiva): Temporad
   if (futebol) {
     // VIDA 28: o mata-mata é jogo grande — o Decisivo pesa nele.
     const ajusteCopa = ajuste + ef.decisivo * 0.3;
-    const copas = [copaNacional(v, pais, ano, e.clube, e.nivel, ajusteCopa), copaContinental(v, pais, ano, e.clube, ajusteCopa)].filter(c => !!c);
+    // VIDA 32: no Brasil, o estadual do clube abre o ano (Paulista, Carioca, Mineiro…), com troféu próprio.
+    const uf = pais === 'BR' ? ufDoClube(e.clube) : undefined;
+    const copas = [uf ? estadualDoAno(v, uf, ano, e.clube, ajusteCopa) : undefined, copaNacional(v, pais, ano, e.clube, e.nivel, ajusteCopa), copaContinental(v, pais, ano, e.clube, ajusteCopa)].filter(c => !!c);
     // VIDA 31: quem ganhou a copa continental joga o Mundial de Clubes (a Copa Intercontinental, até 2004) no fim do ano.
     if (copas.some(c => c!.id.startsWith('cont:') && c!.fase === 'campeão')) { const m = mundialDeClubes(v, pais, ano, e.clube, ajusteCopa); if (m) copas.push(m); }
     if (copas.length) t.copas = copas.map(c => ({ id: c!.id, fase: c!.fase, jogos: Math.round(c!.jogos * (e.espaco === 'titular' ? disp : 0.3 * disp)), ...(c!.final ? { final: `contra ${c!.final.adversario.startsWith('um') ? c!.final.adversario : oClube(c!.final.adversario)}, ${c!.final.placar}` } : {}), ...(c!.fase === 'vice' && c!.final && !c!.final.adversario.startsWith('um') ? { campeao: c!.final.adversario } : {}) }));

@@ -36,6 +36,9 @@ import { registrarMotivoDoNome } from '../../sistemas/notoriedade';
 import { sortearNome, sortearSobrenome } from '../../dados/nomes';
 import type { Clube20, Jogador20, Setor20 } from '../../dados20/tipos20';
 import { quimicaDoElenco } from './perfil31';
+import { estadualDoAno, nomeDaCompeticao, ufDoClube } from '../../sistemas/competicoes';
+import { municipio as municipioDe } from '../../dados/lugares';
+import { forcaNaLiga as forcaNaLigaLiga } from '../../sistemas/ligas';
 import { abrirMesa31, opcaoValida31, responderMesa31, type Ferramentas31 } from './mesa31';
 
 export type { Clube20, Jogador20 };
@@ -515,8 +518,23 @@ export function processarClube20(v: Vida): void {
     if (patrocinio && c.patrocinio31!.rep) c.reputacao = clamp(c.reputacao + c.patrocinio31!.rep);
     c.reputacao = clamp(Math.round(c.reputacao + (titulo ? 8 : 0) + (acesso ? 5 : 0) - (queda ? 7 : 0) + (posicao ? (10 - posicao) * 0.4 : 0)));
     c.historico.push({ ano: u.ano, divisao: divJogada, posicao, receita, despesa, caixa: c.caixa, forca: Math.round(forcaDaMedia(mediaDoElenco(c)) * 10) / 10, ...(titulo ? { titulo } : {}), ...(acesso ? { acesso } : {}), ...(queda ? { queda } : {}) });
+    // VIDA 32: o estadual do ano (Brasil), com a força do elenco do dono — título com troféu próprio.
+    if (c.pais === 'BR') {
+      let uf: string | undefined;
+      try { uf = ufDoClube(c.nome) ?? (c.cidade ? municipioDe(c.cidade).uf : undefined); } catch { uf = undefined; }
+      const anosF = Object.keys(c.forcaPorAno).map(Number).filter(a => a <= u.ano).sort((a, b) => b - a);
+      const fDono = anosF.length ? c.forcaPorAno[anosF[0]] : forcaDaMedia(mediaDoElenco(c));
+      const camp = uf ? estadualDoAno(v, uf, u.ano, c.nome, fDono - forcaNaLigaLiga(c.nome, 'BR')) : undefined;
+      if (camp) {
+        c.historico[c.historico.length - 1].estadual = camp.fase;
+        if (camp.fase === 'campeão') {
+          c.torcida = clamp(c.torcida + 3); c.reputacao = clamp(c.reputacao + 2);
+          escrever(v, { texto: `${oClube(c.nome).replace(/^./, x => x.toUpperCase())}, o seu clube, é campeão do ${nomeDaCompeticao(camp.id)} de ${u.ano}${camp.final ? ` (final: ${camp.final.placar})` : ''}.`, relevancia: 'biografia', tema: 'trabalho', tom: 'bom' });
+        }
+      }
+    }
     if (c.historico.length > 40) c.historico.splice(0, c.historico.length - 40);
-    const nomeDiv = ['', 'o estadual', 'as divisões de acesso', 'a segunda divisão', 'a elite'][divJogada];
+    const nomeDiv = ['', 'o estadual', 'a terceira divisão', 'a segunda divisão', 'a elite'][divJogada];
     const frase = titulo ? `Campeão! ${oClube(c.nome).replace(/^./, x => x.toUpperCase())}, o seu clube, venceu ${nomeDiv} de ${u.ano}.` : acesso ? `${oClube(c.nome).replace(/^./, x => x.toUpperCase())} subiu de divisão em ${u.ano}.` : queda ? `${oClube(c.nome).replace(/^./, x => x.toUpperCase())} foi rebaixado em ${u.ano}. A torcida protestou na porta do clube.` : `${oClube(c.nome).replace(/^./, x => x.toUpperCase())} terminou ${posicao ? `em ${posicao}º` : 'a temporada'} n${nomeDiv.slice(0, 1) === 'a' ? 'a' : 'o'} ${nomeDiv.replace(/^(o|a|as) /, '')} de ${u.ano}. Receita de ${fmt(receita)}, despesa de ${fmt(despesa)}.`;
     escrever(v, { texto: frase, relevancia: titulo || acesso || queda ? 'marco' : 'cotidiano', tema: 'trabalho', tom: titulo || acesso ? 'bom' : queda ? 'ruim' : undefined });
     // O objetivo da temporada cobrado: a torcida sabe o que foi prometido.

@@ -21,6 +21,7 @@ import { carreirasEsportivas, encerrarCarreira, entrarNaBase, fecharTemporada, p
 import { registrarTemporada } from '../sistemas/palmares';
 import { aceitarPropostaDeTecnico, criarPropostaDeTecnico, decidirFinal, demitirDoComando, ligaAteACrise, linhaDoTecnico, passagemAtual, processarTecnico, propostaDeCrise, resumoDaPassagem, resumoDoTecnico } from '../sistemas/tecnico';
 import { exportarVida, importarVida } from '../save';
+import { nomeDoEstadualDaCidade } from '../sistemas/competicoes';
 import { resolverSituacao, situacaoAberta, trajetoriaDeSituacao } from '../sistemas/situacoes';
 import { trajetoriasDaVida } from '../sistemas/legado';
 import { abrirDecisao, conteudoPorId } from '../conteudo/motor';
@@ -162,10 +163,11 @@ describe('demissão, clube novo, proposta executada como mostrada', () => {
       expect(t.jogos).toBe(antes + 2);
       expect(t.v + t.e + t.d).toBe(t.jogos);
       expect(t.estadual).toBe('campeão');
-      expect(t.titulos?.some(y => /estadual/.test(y))).toBe(true);
+      // VIDA 32: o estadual pelo nome do campeonato do estado do clube (Paulista, Pernambucano…).
+      expect(t.titulos?.some(y => y.includes(nomeDoEstadualDaCidade(p.municipioId)))).toBe(true);
       expect(p.decisao).toBeUndefined();
     }).vida;
-    expect(v.biografia.some(e => /estadual com/.test(e.texto))).toBe(true);
+    expect(v.biografia.some(e => e.texto.includes(`${nomeDoEstadualDaCidade(passagemAtual(v)!.municipioId)} com`))).toBe(true);
   });
 });
 

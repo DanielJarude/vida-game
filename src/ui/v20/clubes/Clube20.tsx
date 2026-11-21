@@ -22,7 +22,8 @@ import { municipio } from '../../../motor/dados/lugares';
 import { desenhoDoClube30, Escudo30 } from '../../v30/escudos/Escudo30';
 
 const C = (oque: OqueClube20): Acao => ({ tipo: 'clube20', oque } as Acao);
-const DIV = ['', 'estadual/regional', 'acesso', '2ª divisão', 'elite'];
+// VIDA 32: o nome de verdade de cada divisão (Série A, B, C; o estadual) — do país do clube.
+const DIV = ['', 'estadual', 'Série C', 'Série B', 'Série A'];
 
 export function Clube20({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
   return vida.clube20 ? <MeuClube vida={vida} agir={agir} /> : <ComprarClube vida={vida} agir={agir} />;
@@ -133,7 +134,7 @@ function Temporadas({ c }: { c: NonNullable<Vida['clube20']> }) {
         {hs.map(h => (
           <li key={h.ano}>
             <span className="clube30__ano">{h.ano}</span>
-            <span className="clube30__res">{DIV[h.divisao]}{h.posicao ? ` · ${h.posicao}º` : ''}{h.titulo ? ' · campeão' : h.acesso ? ' · subiu' : h.queda ? ' · caiu' : ''}</span>
+            <span className="clube30__res">{DIV[h.divisao]}{h.posicao ? ` · ${h.posicao}º` : ''}{h.titulo ? ' · campeão' : h.acesso ? ' · subiu' : h.queda ? ' · caiu' : ''}{h.estadual === 'campeão' ? ' · campeão estadual' : h.estadual === 'vice' ? ' · vice estadual' : ''}</span>
             <span className="clube30__fin" aria-label={`Receita ${dinheiroCurto(h.receita)}, despesa ${dinheiroCurto(h.despesa)}`}>
               <i className="clube30__rec" style={{ width: `${(h.receita / max) * 100}%` }} />
               <i className="clube30__desp" style={{ width: `${(h.despesa / max) * 100}%` }} />

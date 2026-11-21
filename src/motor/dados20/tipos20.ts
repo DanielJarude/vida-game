@@ -64,6 +64,8 @@ export interface Jogador20 {
 export interface TemporadaDoClube20 {
   ano: number; divisao: number; posicao?: number; receita: number; despesa: number; caixa: number; forca: number;
   titulo?: boolean; acesso?: boolean; queda?: boolean;
+  /** VIDA 32: o estadual do ano (Brasil) — até onde o clube foi. */
+  estadual?: import('../tipos').FaseDeCopa;
 }
 export interface Clube20 {
   nome: string; pais: string; cidade: string; desde: number;

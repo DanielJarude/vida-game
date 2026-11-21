@@ -1338,7 +1338,7 @@ const clubeT = (v: Vida) => oClube(pt(v).clube);
 /** O desfecho da final com o placar que o motor jogou (`tecnico.decidirFinal`). */
 const fimDaFinal = (frase: string) => (_v: Vida, d: Dados) => `${frase}${d._placar ? ` ${String(d._placar)}` : ''}`;
 /** "o estadual", "a Coppa Italia" — o torneio da final. */
-const aFinalDe = (d: Dados) => { const n = String(d.competicao ?? 'campeonato estadual'); return n === 'campeonato estadual' ? 'o estadual' : /^(copa nacional)$/.test(n) ? 'a copa nacional' : `a ${n}`; };
+const aFinalDe = (d: Dados) => { const n = String(d.competicao ?? 'campeonato estadual'); return n === 'campeonato estadual' ? 'o estadual' : /^(copa nacional)$/.test(n) ? 'a copa nacional' : /^(campeonato|torneio|mundial)/i.test(n) ? `o ${n}` : `a ${n}`; };
 const capT = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const DT = (otimo: string | ((v: Vida, d: Dados) => string), bom: string | ((v: Vida, d: Dados) => string), ruim: string | ((v: Vida, d: Dados) => string), pessimo: string | ((v: Vida, d: Dados) => string), ef: Partial<Record<Desfecho, Efeitos>>, mem: Partial<Record<Desfecho, string | ((v: Vida, d: Dados) => string)>> = {}): Record<Desfecho, DesfechoModelo> => ({
   otimo: { texto: otimo, efeitos: { humor: 3, ...ef.otimo }, memoria: mem.otimo },

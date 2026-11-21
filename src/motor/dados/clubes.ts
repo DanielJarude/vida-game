@@ -154,7 +154,7 @@ export function clubeDoNivel(nivel: number, h: number, excluir?: string, pais = 
 }
 
 /** Em que divisão o clube joga, no universo do jogo (nunca uma afirmação sobre o clube real). */
-export const DIVISAO_DO_NIVEL = ['', 'campeonato estadual', 'divisões de acesso', 'Série B', 'Série A'];
+export const DIVISAO_DO_NIVEL = ['', 'campeonato estadual', 'Série C', 'Série B', 'Série A'];
 /** A divisão do nível na liga do país ("Série A", "LaLiga", "J1 League"). */
 export const divisaoDoNivel = (nivel: number, pais = paisCorrente()): string =>
   (nivel < 1 ? '' : perfilDoPais(temPerfil(pais) ? pais : PAIS_PADRAO).esporte.divisoes[Math.min(4, nivel) - 1] ?? '');

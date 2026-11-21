@@ -107,12 +107,40 @@ describe('os troféus do técnico', () => {
     const t = trofeusDoTecnico(v);
     const de = (nome: string) => t.find(x => x.nome === nome);
     expect(de('Série A')?.forma).toBe('liga');
-    expect(de('Campeonato estadual')?.forma).toBe('acesso');
+    expect(de('Campeonato estadual')?.forma).toBe('estadual'); // VIDA 32: o estadual tem troféu próprio
     expect(de('Copa do Brasil')?.forma).toBe('urna');
     expect(de('Copa Libertadores')?.forma).toBe('figura');
     expect(de('Mundial de Clubes')?.forma).toBe('mundo');
-    expect(t.filter(x => x.metal === 'prata').map(x => x.nome).sort()).toEqual(['Final: Campeonato estadual', 'Final: Copa do Brasil']);
+    expect(t.filter(x => x.metal === 'prata').map(x => x.nome).sort()).toEqual(['Final: Campeonato Carioca', 'Final: Copa do Brasil']); // VIDA 32: o estadual pelo nome
     expect(t.find(x => x.id.endsWith(':acesso'))?.nome).toMatch(/^Acesso à /);
     expect(t.every(x => !/^(do|da) /.test(x.nome) && x.forma !== 'banco')).toBe(true);
+  });
+});
+
+import { estadualDoAno, idDoEstadual, NOME_DO_ESTADUAL, nomeDoEstadualDaCidade, ufDoClube } from '../sistemas/competicoes';
+import { formaDoTrofeu } from '../../ui/jogo/Galeria';
+import { divisaoDoNivel } from '../dados/clubes';
+describe('VIDA 32 · os estaduais e a Série C', () => {
+  it('cada estado tem o seu campeonato, com troféu próprio; o clube joga o do estado dele', () => {
+    expect(nomeDaCompeticao(idDoEstadual('SP'))).toBe('Campeonato Paulista');
+    expect(aCompeticaoId(idDoEstadual('RJ'))).toBe('o Campeonato Carioca');
+    expect(Object.keys(NOME_DO_ESTADUAL)).toHaveLength(27);
+    expect(ufDoClube('Flamengo')).toBe('RJ');
+    expect(nomeDoEstadualDaCidade('salvador-ba')).toBe('Campeonato Baiano');
+    expect(formaDoTrofeu({ tipo: 'titulo', competicaoId: idDoEstadual('MG'), competicao: 'Campeonato Mineiro' })).toBe('estadual');
+    const v = adulto(30, { semente: 3 });
+    let titulos = 0;
+    for (let ano = 2030; ano < 2060; ano++) {
+      const c = estadualDoAno(v, 'RJ', ano, 'Flamengo', 0)!;
+      expect(c.id).toBe('est:BR:RJ');
+      expect(c.jogos).toBe(c.v + c.e + c.d);
+      if (c.fase === 'campeão') { titulos++; expect(c.final?.placar).toMatch(/\d a \d/); }
+    }
+    expect(titulos).toBeGreaterThan(2);
+    expect(titulos).toBeLessThan(28);
+  });
+  it('o terceiro nível do Brasil é a Série C (não "divisões de acesso")', () => {
+    expect(divisaoDoNivel(2, 'BR')).toBe('Série C');
+    expect(divisaoDoNivel(3, 'BR')).toBe('Série B');
   });
 });

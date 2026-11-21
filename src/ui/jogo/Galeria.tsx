@@ -10,9 +10,9 @@ import type { ConquistaEsportiva, Vida } from '../../motor/tipos';
 import { anoDe } from '../../motor/tempo';
 import { divisaoDoNivel, nivelDaCompeticao } from '../../motor/dados/clubes';
 import { paisDaCidade } from '../../motor/dados/lugares';
-import { nomeDaCompeticao } from '../../motor/sistemas/competicoes';
+import { nomeDaCompeticao, nomeDoEstadualDaCidade } from '../../motor/sistemas/competicoes';
 
-type Forma = 'mundo' | 'selecao' | 'orelhas' | 'figura' | 'urna' | 'liga' | 'acesso' | 'quadra' | 'medalha' | 'estatueta' | 'disco' | 'banco' | 'bola' | 'chuteira' | 'the_best' | 'golden_boy';
+type Forma = 'estadual' | 'mundo' | 'selecao' | 'orelhas' | 'figura' | 'urna' | 'liga' | 'acesso' | 'quadra' | 'medalha' | 'estatueta' | 'disco' | 'banco' | 'bola' | 'chuteira' | 'the_best' | 'golden_boy';
 
 /** A forma pelo id estável (a apresentação muda; o id não). */
 export function formaDoTrofeu(c: Pick<ConquistaEsportiva, 'tipo' | 'competicaoId' | 'competicao'>): Forma {
@@ -26,6 +26,8 @@ export function formaDoTrofeu(c: Pick<ConquistaEsportiva, 'tipo' | 'competicaoId
   if (c.tipo === 'acesso') return 'acesso';
   const id = c.competicaoId ?? '';
   if (id.endsWith(':basquete') || id.endsWith(':volei')) return 'quadra';
+  // VIDA 32: os estaduais (Paulista, Carioca, Mineiro…) têm troféu próprio.
+  if (id.startsWith('est:')) return 'estadual';
   if (id === 'sel:mundial') return 'mundo';
   if (id.startsWith('sel:')) return 'selecao';
   if (id === 'cont:UEFA') return 'orelhas';
@@ -52,7 +54,8 @@ export function formaDoTituloDoTecnico(x: string): Forma {
   if (/Copa América|Eurocopa|Copa Ouro|Copa Africana|Copa da Ásia|seleções/i.test(c)) return 'selecao';
   if (/Champions/i.test(c)) return 'orelhas';
   if (/Libertadores|continental/i.test(c)) return 'figura';
-  if (/estadual|regional/i.test(c)) return 'acesso';
+  if (/^Campeonato [A-ZÁÉÍÓÚÂÊÔÃÕ]|estadual/.test(c)) return 'estadual';
+  if (/regional/i.test(c)) return 'acesso';
   const n = nivelDaCompeticao(c);
   if (n !== undefined) return n >= 4 ? 'liga' : 'acesso';
   if (/^(Copa|Coppa|FA Cup|DFB|Coupe|Taça|U\.S\.)|copa nacional/i.test(c)) return 'urna';
@@ -68,7 +71,7 @@ export function trofeusDoTecnico(v: Vida): ItemDaGaleria[] {
       for (const x of t.titulos ?? []) out.push({ ...base, id: `tec:${p.clube}:${t.ano}:${x}`, forma: formaDoTituloDoTecnico(x), metal: 'ouro', nome: nomeDoTituloDoTecnico(x) });
       if (t.acesso) out.push({ ...base, id: `tec:${p.clube}:${t.ano}:acesso`, forma: 'acesso', metal: 'ouro', nome: `Acesso ${divisaoDoNivel(Math.min(4, t.nivel + 1), pais) ? `à ${divisaoDoNivel(Math.min(4, t.nivel + 1), pais)}` : 'à divisão de cima'}` });
       const finais: [string, Forma][] = [];
-      if (t.estadual === 'vice') finais.push(['Campeonato estadual', 'acesso']);
+      if (t.estadual === 'vice') finais.push([pais === 'BR' ? nomeDoEstadualDaCidade(p.municipioId) : 'Campeonato estadual', 'estadual']);
       for (const c of [t.copa, t.continental, t.mundial]) if (c?.fase === 'vice') finais.push([nomeDaCompeticao(c.id), FORMA_DA_FASE(c.id)]);
       for (const [nome, forma] of finais) out.push({ ...base, id: `tec:${p.clube}:${t.ano}:final:${nome}`, forma, metal: 'prata', nome: `Final: ${nome}` });
     }
@@ -80,6 +83,8 @@ export function trofeusDoTecnico(v: Vida): ItemDaGaleria[] {
 export function Trofeu({ forma, metal = 'ouro', rotulo }: { forma: Forma; metal?: 'ouro' | 'prata' | 'bronze'; rotulo: string }) {
   const corpo = (() => {
     switch (forma) {
+      // VIDA 32: o troféu do estadual — o escudo do estado com a taça em cima.
+      case 'estadual': return <><path d="M13 4 L27 4 L26 14 Q20 19 14 14 Z" /><path d="M10 20 L30 20 L30 28 Q30 35 20 39 Q10 35 10 28 Z" /><path d="M20 24 L21.5 27 L25 27.3 L22.3 29.5 L23.2 33 L20 31 L16.8 33 L17.7 29.5 L15 27.3 L18.5 27 Z" fill="none" strokeWidth="1.1" /><rect x="18.5" y="15" width="3" height="5" /><rect x="12" y="40" width="16" height="4" rx="1" /></>;
       case 'mundo': return <><circle cx="20" cy="12" r="8" /><path d="M14 19 Q20 30 16 38 L24 38 Q20 30 26 19 Z" /><rect x="12" y="38" width="16" height="6" rx="1" /></>;
       case 'selecao': return <><path d="M12 6 L28 6 L26 22 Q20 28 14 22 Z" /><path d="M12 8 Q6 10 10 18 M28 8 Q34 10 30 18" fill="none" strokeWidth="1.6" /><rect x="18" y="26" width="4" height="10" /><rect x="11" y="36" width="18" height="7" rx="1" /></>;
       case 'orelhas': return <><path d="M13 6 L27 6 L26 24 Q20 29 14 24 Z" /><path d="M13 9 Q2 12 12 24 M27 9 Q38 12 28 24" fill="none" strokeWidth="3" /><rect x="17" y="28" width="6" height="8" /><rect x="12" y="36" width="16" height="7" rx="1" /></>;

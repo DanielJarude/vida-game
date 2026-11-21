@@ -25,7 +25,7 @@ import { clubesDoPais, divisaoDoNivel } from '../dados/clubes';
 import { paisDoCatalogo, temPerfil, perfilDoPais } from '../mundo/registro';
 import { forcaNaLiga, ligaDe } from './ligas';
 import { nomeSemCatalogo, SEM_CATALOGO } from './tabelaDaLiga';
-import { cidadesDoPais } from '../dados/lugares';
+import { cidadesDoPais, municipio } from '../dados/lugares';
 import { nomeCompeticaoFutsal, POPULARIDADE_FUTSAL } from '../dados14/esportes/futsal';
 
 export type CompeticaoId = string;
@@ -36,6 +36,23 @@ export const idDaCopa = (pais: string): CompeticaoId => `copa:${pais}`;
 export const idContinental = (c: Confederacao): CompeticaoId => `cont:${c}`;
 export const idDaSelecao = (tipo: 'mundial' | Confederacao): CompeticaoId => `sel:${tipo}`;
 /** VIDA 31: o título mundial de clubes — a Copa Intercontinental (1960–2004, a final entre os campeões da América do Sul e da Europa) e o Mundial de Clubes (de 2005 em diante, com os campeões de todas as confederações). */
+/** VIDA 32: os campeonatos estaduais, cada um com o seu nome (o id leva a UF: `est:BR:SP`). */
+export const NOME_DO_ESTADUAL: Record<string, string> = {
+  SP: 'Campeonato Paulista', RJ: 'Campeonato Carioca', MG: 'Campeonato Mineiro', RS: 'Campeonato Gaúcho', PR: 'Campeonato Paranaense', SC: 'Campeonato Catarinense',
+  BA: 'Campeonato Baiano', PE: 'Campeonato Pernambucano', CE: 'Campeonato Cearense', GO: 'Campeonato Goiano', PA: 'Campeonato Paraense', AL: 'Campeonato Alagoano',
+  MA: 'Campeonato Maranhense', RN: 'Campeonato Potiguar', PB: 'Campeonato Paraibano', AM: 'Campeonato Amazonense', MT: 'Campeonato Mato-Grossense',
+  MS: 'Campeonato Sul-Mato-Grossense', ES: 'Campeonato Capixaba', DF: 'Campeonato Brasiliense', SE: 'Campeonato Sergipano', PI: 'Campeonato Piauiense',
+  TO: 'Campeonato Tocantinense', RO: 'Campeonato Rondoniense', AC: 'Campeonato Acriano', AP: 'Campeonato Amapaense', RR: 'Campeonato Roraimense'
+};
+export const idDoEstadual = (uf: string): CompeticaoId => `est:BR:${uf}`;
+/** A UF do clube (pela cidade dele no catálogo), ou nada. */
+export function ufDoClube(nome: string): string | undefined {
+  const c = clubesDoPais('BR').find(x => x.nome === nome);
+  try { return c ? municipio(c.cidade).uf : undefined; } catch { return undefined; }
+}
+/** O nome do estadual de uma cidade (o campeonato do estado onde o clube joga). */
+export const nomeDoEstadualDaCidade = (municipioId: string): string => { try { return NOME_DO_ESTADUAL[municipio(municipioId).uf] ?? 'campeonato estadual'; } catch { return 'campeonato estadual'; } };
+
 export const idMundialDeClubes = (ano: number): CompeticaoId => (ano < 2005 ? 'mundial:intercontinental' : 'mundial:clubes');
 
 /** A confederação do país (pela região do catálogo; a Austrália joga na Ásia). */
@@ -62,10 +79,11 @@ export function nomeDaCompeticao(id: CompeticaoId): string {
   if (tipo === 'cont') return CONTINENTAIS[a as Confederacao] ?? `copa continental de clubes da ${a}`;
   if (tipo === 'sel') return SELECOES[a as 'mundial' | Confederacao] ?? 'torneio de seleções';
   if (tipo === 'mundial') return a === 'intercontinental' ? 'Copa Intercontinental' : 'Mundial de Clubes';
+  if (tipo === 'est') return NOME_DO_ESTADUAL[b] ?? 'campeonato estadual';
   return id;
 }
 /** Com artigo ("a Copa do Brasil", "o torneio continental..."). Todas as copas nomeadas são femininas. */
-export const aCompeticaoId = (id: CompeticaoId) => { const n = nomeDaCompeticao(id); return /^(torneio|campeonato|Mundial)/.test(n) ? `o ${n}` : `a ${n}`; };
+export const aCompeticaoId = (id: CompeticaoId) => { const n = nomeDaCompeticao(id); return /^(torneio|campeonato|mundial)/i.test(n) ? `o ${n}` : `a ${n}`; };
 export const daCompeticaoId = (id: CompeticaoId) => aCompeticaoId(id).replace(/^o /, 'do ').replace(/^a /, 'da ');
 export const naCompeticaoId = (id: CompeticaoId) => aCompeticaoId(id).replace(/^o /, 'no ').replace(/^a /, 'na ');
 
@@ -197,6 +215,44 @@ export function copaContinental(v: Vida, pais: string, ano: number, clube: strin
   const forca = forcaNaLiga(clube, pais, 4) + forcaDaLigaDoPais(pais) + ajuste + r.normal() * 0.35;
   const lista = clubesDoContinente(conf, pais).filter(x => x.nome !== clube);
   return jogarCampanha(r, idContinental(conf), forca, lista, true, () => ({ nome: 'um campeão de uma liga menor do continente', forca: 3 + forcaDaLigaDoPais('') + r.next() }));
+}
+
+/* ------------------------------------------------------------ VIDA 32: o estadual */
+
+/**
+ * O campeonato estadual do clube no ano (Brasil): a primeira fase (três jogos contra clubes do estado) e o mata-mata
+ * (quartas, semifinal e final), contra os clubes do mesmo estado no catálogo — com a força de cada um. O acaso é o de
+ * `rngDe` (o sorteio do jogo não muda). Sem clubes do estado no catálogo, nada.
+ */
+export function estadualDoAno(v: Vida, uf: string, ano: number, clube: string, ajuste: number): Campanha | undefined {
+  const rivais = clubesDoPais('BR').filter(c => c.nome !== clube && (() => { try { return municipio(c.cidade).uf === uf; } catch { return false; } })());
+  if (!rivais.length) return undefined;
+  const r = rngDe(v.id, 'estadual', uf, ano, clube);
+  const forca = forcaNaLiga(clube, 'BR', 2) + ajuste + r.normal() * 0.35;
+  const lista = rivais.map(c => ({ nome: c.nome, forca: forcaNaLiga(c.nome, 'BR') }));
+  const anonimo = () => ({ nome: 'um time do interior', forca: 1.8 + r.next() * 0.8 });
+  const c: Campanha = { id: idDoEstadual(uf), fase: 'primeira fase', jogos: 0, v: 0, e: 0, d: 0, adversarios: [] };
+  const ja = new Set<string>();
+  let pts = 0;
+  for (let k = 0; k < 3; k++) { const a = adversario(r, lista, 0, ja, anonimo); ja.add(a.nome); const x = partidaDeCopa(r, forca - a.forca); c.jogos++; c[x]++; pts += x === 'v' ? 3 : x === 'e' ? 1 : 0; }
+  if (!(pts >= 5 || (pts >= 4 && r.chance(0.6)))) return c;
+  const fases: FaseDeCopa[] = ['quartas', 'semifinal', 'vice'];
+  for (let k = 0; k < 3; k++) {
+    const a = adversario(r, lista, k + 2, ja, anonimo);
+    ja.add(a.nome); c.adversarios.push(a.nome);
+    const x = partidaDeCopa(r, forca - a.forca);
+    c.jogos++; c[x]++;
+    const passou = x === 'v' || (x === 'e' && passaNosPenaltis(r, forca - a.forca));
+    if (k === 2) {
+      const [p, q] = placarDe(r, x);
+      c.final = { adversario: a.nome, placar: `${p} a ${q}${x === 'e' ? `, ${passou ? 'vitória' : 'derrota'} nos pênaltis` : ''}` };
+      c.fase = passou ? 'campeão' : 'vice';
+      return c;
+    }
+    if (!passou) { c.fase = fases[k]; return c; }
+    c.fase = fases[k + 1];
+  }
+  return c;
 }
 
 /* ------------------------------------------------------------ VIDA 31: o Mundial de Clubes */

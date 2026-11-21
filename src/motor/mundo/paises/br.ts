@@ -90,8 +90,10 @@ export const BRASIL: PerfilDePais = {
   },
   esporte: {
     popularidade: { futebol: 1.25, volei: 1.15, basquete: 0.85, lutas: 1.05, natacao: 0.9, atletismo: 0.9, tenis: 0.8 },
-    divisoes: ['campeonato estadual', 'divisões de acesso', 'Série B', 'Série A'],
-    // A, B e C trocam quatro clubes por ano; o estadual leva às divisões de acesso.
+    // VIDA 32: o terceiro nível é a Série C (antes, "divisões de acesso" — o clube que caía da B parecia ir para o nada).
+    // O primeiro nível são os clubes que só disputam o estadual (e a Série D, que dá as quatro vagas da C).
+    divisoes: ['campeonato estadual', 'Série C', 'Série B', 'Série A'],
+    // A, B e C trocam quatro clubes por ano; do estadual (e da Série D) sobem quatro para a C.
     acesso: { troca: [4, 4, 4] },
     clubes: [] // `dados/clubes`
   },

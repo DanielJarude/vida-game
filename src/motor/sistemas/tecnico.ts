@@ -47,7 +47,7 @@ import { mudarAgora } from './processos';
 import { marcar } from './marcas';
 import { abalar } from './abalo';
 import { clubesNaDivisao, divisaoDoClube, fecharTemporadaDaLiga, forcaDoClube, forcaNaLiga, formaNaLiga, ultimaTemporadaDoPais } from './ligas';
-import { copaContinental, mundialDeClubes } from './competicoes';
+import { copaContinental, mundialDeClubes, nomeDoEstadualDaCidade } from './competicoes';
 import { aCompeticaoId, campanhaDaSelecao, partidaDeCopa, daCompeticaoId, faseDaSelecaoEmPalavras, idDaCopa, nomeDaCompeticao, placarDe, sortearAdversarioDeCopa, torneioDeSelecoes, anotarCopaNoHistorico } from './competicoes';
 import { pesoDaLicenca, vestiarioDeExAtleta } from './oficioDoTecnico';
 import { rngDe } from '../rng';
@@ -85,7 +85,7 @@ const nomeDaDivisao = (nivel: number, pais?: string) => divisaoDoNivel(nivel, pa
 // REWORK 11 · ESP-11.8: fora do Brasil, a copa nacional tem o nome dela (a Coppa Italia, a Copa del Rey — `competicoes`) e é
 // jogada em mata-mata com TODOS os clubes do país, a força pela divisão; o estadual é só do Brasil.
 export const torneioCurto = (municipioId: string) => { const pais = paisDaCidade(municipioId); const id = idDaCopa(pais); return pais === 'BR'
-  ? { nome: 'campeonato estadual', no: 'no campeonato estadual', campeao: 'o estadual', rival: 'um time do interior', unica: false }
+  ? { nome: nomeDoEstadualDaCidade(municipioId), no: `no ${nomeDoEstadualDaCidade(municipioId)}`, campeao: `o ${nomeDoEstadualDaCidade(municipioId)}`, rival: 'um time do interior', unica: false }
   : { nome: nomeDaCompeticao(id), no: `${aCompeticaoId(id).replace(/^a /, 'na ').replace(/^o /, 'no ')}`, campeao: aCompeticaoId(id), rival: 'um time das divisões de baixo', unica: true }; };
 /** "da Série A", "do campeonato estadual", "das divisões de acesso". */
 const daComp = (nivel: number, pais?: string) => daCompeticao(nomeDaDivisao(nivel, pais));
