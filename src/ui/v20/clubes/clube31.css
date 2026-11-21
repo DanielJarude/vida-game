@@ -30,3 +30,27 @@
 #root .jog31 .clube20__botoes { display: flex; flex-wrap: wrap; gap: 6px; flex-direction: row; }
 #root .jog31 .clube20__botoes .botao { min-height: 32px; padding: 4px 10px; font-size: var(--type-caption); border-radius: 999px; }
 #root .jog31 .clube20__botoes .acao { display: contents; }
+/* VIDA 31 · a mesa do presidente e o campeonato do clube. */
+.mesa31 { display: grid; gap: 10px; margin: 0 0 14px; padding: 14px 16px; border-radius: 16px; background: color-mix(in oklab, var(--acao) 6%, var(--superficie)); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--acao) 30%, transparent); }
+.mesa31 h4 { margin: 0; display: flex; align-items: center; gap: 8px; font-size: var(--type-subheading); }
+.mesa31__lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.mesa31__assunto { display: grid; gap: 6px; padding: 12px 14px; border-radius: 12px; background: var(--superficie); box-shadow: inset 0 0 0 1px var(--fio), inset 3px 0 0 var(--acao); }
+.mesa31__assunto--tecnico { box-shadow: inset 0 0 0 1px var(--fio), inset 3px 0 0 var(--info); }
+.mesa31__assunto--jogador, .mesa31__assunto--proposta, .mesa31__assunto--bicho { box-shadow: inset 0 0 0 1px var(--fio), inset 3px 0 0 var(--bom); }
+.mesa31__quem { font-size: var(--type-meta); text-transform: uppercase; letter-spacing: 0.1em; color: var(--tinta-2); font-weight: 600; }
+.mesa31__titulo { font-size: var(--type-body); }
+.mesa31__texto { margin: 0; color: var(--tinta-2); font-size: var(--type-caption); max-width: 70ch; }
+.mesa31__opcoes { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 210px), 1fr)); gap: 8px; }
+.mesa31__opcao { display: grid; gap: 2px; align-content: start; }
+.mesa31__opcao .botao { width: 100%; justify-content: center; text-align: center; }
+.mesa31__dica { font-size: var(--type-meta); color: var(--tinta-2); }
+.mesa31__hist summary { cursor: pointer; font-weight: 600; font-size: var(--type-caption); }
+.mesa31__hist ul { margin: 6px 0 0; padding-left: 16px; display: grid; gap: 4px; font-size: var(--type-caption); color: var(--tinta-2); }
+.camp31 { display: grid; gap: 14px; }
+.camp31__forcas { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.camp31__forcas li { display: grid; grid-template-columns: 24px 20px minmax(0, 1fr) minmax(60px, 40%); gap: 8px; align-items: center; padding: 3px 6px; border-radius: 8px; font-size: var(--type-caption); }
+.camp31__seu { background: var(--tom-wash); box-shadow: inset 0 0 0 1px var(--tom); font-weight: 700; }
+.camp31__pos { color: var(--tinta-2); font-variant-numeric: tabular-nums; text-align: right; }
+.camp31__nome { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.camp31__barra { display: block; height: 8px; border-radius: 8px; background: var(--veu-2); overflow: hidden; }
+.camp31__barra i { display: block; height: 100%; background: var(--tom); }

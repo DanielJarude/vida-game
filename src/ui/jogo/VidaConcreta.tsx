@@ -43,6 +43,7 @@ import { Experiencias } from './Tempo';
 import '../material.css';
 import { sobDemanda } from '../util/sobDemanda';
 import { IconeDaSecao161 } from '../v16/areas/Capas161';
+import { consumirPartePatrimonio } from '../v31/destinoPatrimonio';
 
 /** REWORK 10 · JOG-01: os jogos num pacote à parte (só carregam quando se abre a seção; o service worker guarda para o offline). */
 const Apostas = sobDemanda(() => import('./Apostas').then(m => m.Apostas));
@@ -57,7 +58,7 @@ interface Props { vida: Vida; agir: (a: Acao) => boolean; secao: SecaoVida; irSe
 
 export function VidaConcreta({ vida, agir, secao, irSecao, abrirPessoa }: Props) {
   const [lugar, setLugar] = useState<QualLugar | null>(null);
-  const [partePat, setPartePat] = useState<PartePatrimonio>('resumo');
+  const [partePat, setPartePat] = useState<PartePatrimonio>(() => consumirPartePatrimonio() ?? 'resumo');
   const i = idade(vida);
   return (
     <div className={`vida-concreta vida-concreta--${secao} material`}>

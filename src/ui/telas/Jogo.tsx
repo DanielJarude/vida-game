@@ -414,6 +414,13 @@ function Agora({ vida, area, irPara, abrirPessoa, abrirConvite, agir }: { vida: 
           </ul>
         </>
       )}
+      {/* VIDA 31: os assuntos do clube esperando o presidente (a torcida, o técnico, os jogadores). */}
+      {(vida.clube20?.mesa31?.length ?? 0) > 0 && (
+        <button type="button" className="agora-dinheiro agora-clube" onClick={() => { pedirPartePatrimonio('empresas'); irPara('pertences'); }}>
+          <span className="agora-dinheiro__rotulo">O clube</span>
+          <strong>{vida.clube20!.mesa31!.length} {vida.clube20!.mesa31!.length === 1 ? 'assunto na mesa' : 'assuntos na mesa'}</strong>
+        </button>
+      )}
       {aperta && (
         <button type="button" className="agora-dinheiro" onClick={() => irPara('dinheiro')}>
           <span className="agora-dinheiro__rotulo">O dinheiro</span>
@@ -469,6 +476,7 @@ import { Tempo } from '../jogo/Tempo';
 import { Central26 } from '../v26/central/Central26';
 import { EuInicio31, PessoasInicio31, VidaInicio31 } from '../v31/InicioDasAreas31';
 import { Voltar31 } from '../v31/Inicio31';
+import { pedirPartePatrimonio } from '../v31/destinoPatrimonio';
 import { oportunidadesAbertas } from '../../motor/sistemas/mercados';
 import { DetalheDaOportunidade } from '../jogo/Alcance';
 import { guardarCompras } from '../jogo/memoriaDeCompras';

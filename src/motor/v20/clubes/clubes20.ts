@@ -36,6 +36,7 @@ import { registrarMotivoDoNome } from '../../sistemas/notoriedade';
 import { sortearNome, sortearSobrenome } from '../../dados/nomes';
 import type { Clube20, Jogador20, Setor20 } from '../../dados20/tipos20';
 import { quimicaDoElenco } from './perfil31';
+import { abrirMesa31, opcaoValida31, responderMesa31, type Ferramentas31 } from './mesa31';
 
 export type { Clube20, Jogador20 };
 
@@ -124,7 +125,8 @@ export type OqueClube20 =
   | { op: 'demitir_tecnico' }
   | { op: 'emprestar'; id: string }
   | { op: 'ingresso'; nivel: 0 | 1 | 2 }
-  | { op: 'patrocinio'; i: number };
+  | { op: 'patrocinio'; i: number }
+  | { op: 'responder'; id: string; opcao: string };
 
 export const custoDaObra = (c: Clube20, qual: 'estadio' | 'ct' | 'base') => Math.round((qual === 'estadio' ? 40e6 : qual === 'ct' ? 15e6 : 6e6) * Math.pow(1.9, c[qual] - 1) * mercado(c.pais) / 1e5) * 1e5;
 
@@ -168,6 +170,7 @@ export function disponibilidadeClube20(v: Vida, o: OqueClube20): Veredito {
       return c.caixa >= custo ? PERMITIDO : bloqueio('requisito', `A obra custa ${fmt(custo)}; o caixa do clube não tem.`);
     }
     case 'base': case 'objetivo': case 'ingresso': return PERMITIDO;
+    case 'responder': return opcaoValida31(c, o.id, o.opcao) ? PERMITIDO : bloqueio('impossivel', 'Esse assunto já foi resolvido.');
     case 'capitao': return c.elenco.some(j => j.id === o.id) ? (c.capitao31 === o.id ? bloqueio('incompativel', 'Ele já é o capitão.') : PERMITIDO) : bloqueio('impossivel', '');
     case 'tecnico': {
       const t = tecnicosDisponiveis(v)[o.i];
@@ -266,6 +269,7 @@ export function executarClube20(v: Vida, o: OqueClube20): { texto: string; tom?:
     }
     case 'base': c.investimentoBase = o.nivel; return { texto: o.nivel === 2 ? 'A base recebe investimento forte: mais olheiros, mais estrutura.' : o.nivel === 1 ? 'A base recebe o investimento de sempre.' : 'A base ficou com o mínimo.', tom: 'neutro' };
     case 'objetivo': c.objetivo = o.qual; return { texto: 'Objetivo da temporada definido.', tom: 'neutro' };
+    case 'responder': return responderMesa31(v, c, o.id, o.opcao, FERRAMENTAS31);
     case 'capitao': { const j = c.elenco.find(x => x.id === o.id)!; c.capitao31 = j.id; return { texto: `${j.nome} é o novo capitão: a braçadeira é dele.`, tom: 'bom' }; }
     case 'tecnico': {
       const t = tecnicosDisponiveis(v)[o.i];
@@ -274,12 +278,13 @@ export function executarClube20(v: Vida, o: OqueClube20): { texto: string; tom?:
       c.caixa -= multa + luvas;
       const antes = c.tecnico31?.nome;
       c.tecnico31 = { ...t, desde: ano };
+      c.humorTecnico31 = 65;
       escrever(v, { texto: `${oClube(c.nome).replace(/^./, x => x.toUpperCase())} tem técnico novo: ${t.nome} (${t.estilo}, ${['', 'iniciante', 'de divisão de acesso', 'experiente', 'de elite', 'renomado'][t.nivel]})${antes ? `, no lugar de ${antes}` : ''}.`, relevancia: 'cotidiano', tema: 'trabalho', escolha: true });
       return { texto: `${t.nome} contratado como técnico.`, tom: 'bom' };
     }
     case 'demitir_tecnico': {
       const t = c.tecnico31!; const multa = Math.round(t.salario * 0.5);
-      c.caixa -= multa; c.tecnico31 = undefined;
+      c.caixa -= multa; c.tecnico31 = undefined; c.humorTecnico31 = undefined;
       escrever(v, { texto: `Demitiu o técnico ${t.nome} ${oClube(c.nome).replace(/^o /, 'do ').replace(/^a /, 'da ')} (multa de ${fmt(multa)}). A comissão interina assume.`, relevancia: 'cotidiano', tema: 'trabalho', escolha: true });
       return { texto: `${t.nome} demitido.`, tom: 'neutro' };
     }
@@ -326,6 +331,8 @@ function comprar(v: Vida, nome: string, pais: string, financiar: boolean): { tex
   for (let k = 0; k < 6; k++) c.juniores.push(novoJovem(v, c, r));
   c.forcaPorAno[temporadaCorrente(v)] = forcaDaMedia(media);
   v.clube20 = c;
+  // VIDA 31: o primeiro assunto da mesa (a torcida quer ouvir o novo dono).
+  abrirMesa31(v, c, FERRAMENTAS31, 1);
   escrever(v, { texto: `Comprou ${oClube(nome)} (${x.divisao === 4 ? 'elite' : `${x.divisao}ª força`} do país) por ${fmt(x.preco)}${financiar ? `, ${fmt(entrada)} de entrada e o resto financiado` : ''}. As dívidas do clube (${fmt(x.divida)}) vieram junto.`, relevancia: 'marco', tema: 'dinheiro', tom: 'bom', escolha: true });
   void ano;
   return { texto: `Agora você é dono ${oClube(nome).replace(/^o /, 'do ').replace(/^a /, 'da ')}.`, tom: 'bom' };
@@ -369,7 +376,14 @@ export function mediaDoElenco(c: Clube20): number {
   return xs.reduce((s, x) => s + x, 0) / xs.length - falta * 4;
 }
 
-/** O mercado do ano: jogadores de outros clubes do país, à venda (estáveis no ano; quem foi comprado sai). */
+/**
+ * O mercado do ano (estável no ano; quem foi comprado sai). VIDA 31: em faixas — antes, só apareciam jogadores do nível do
+ * elenco ou abaixo, e não havia como melhorar o time pelo mercado:
+ *   reforços   acima da média do elenco (até onde o nome e a divisão do clube conseguem atrair, e um pouco além);
+ *   do nível   para completar o grupo;
+ *   apostas    jovens baratos, com potencial;
+ *   estrela    às vezes, um jogador de fora bem acima do teto — caro, com salário de estrela.
+ */
 export function mercadoDoAno(v: Vida): (Jogador20 & { preco: number; clube: string })[] {
   const c = v.clube20;
   if (!c) return [];
@@ -377,23 +391,40 @@ export function mercadoDoAno(v: Vida): (Jogador20 & { preco: number; clube: stri
   const r = rngDe(v.id, 'clube20_mercado', c.pais, ano);
   const outros = clubesDoPais(c.pais).filter(x => x.nome !== c.nome);
   const media = mediaDoElenco(c);
-  // Quem aceita vir depende do clube: a divisão e o nome dele limitam o nível de quem está disponível.
   const div = ligaDe(v, c.pais).div[c.nome] ?? 1;
-  // (os melhores do país saem cedo para as ligas mais ricas: a elite brasileira compra até ~80; as ligas grandes, mais)
+  // Quem aceita vir depende do clube: a divisão e o nome dele (os melhores do país saem cedo para as ligas mais ricas).
   const teto = 50 + div * 5 + c.reputacao / 12 + Math.min(8, (mercado(c.pais) - 1) * 3);
+  const alvoReforco = Math.max(media + 7, Math.min(teto + 9, media + 12));
   const lista: (Jogador20 & { preco: number; clube: string })[] = [];
   const fake: Clube20 = { ...c, seq: 0 };
-  for (let k = 0; k < 14; k++) {
-    const idadeJ = 18 + Math.floor(r.next() * 15);
-    const j = novoJogador(v, fake, r, r.pick(['GOL', 'DEF', 'DEF', 'MEI', 'MEI', 'ATA', 'ATA'] as Setor20[]), Math.min(teto + r.normal() * 2, media + (k - 8) * 1.5 + r.normal() * 3), idadeJ);
+  const faixas: { forca: () => number; idade: () => number; pos?: Setor20 }[] = [
+    ...(['GOL', 'DEF', 'DEF', 'MEI', 'MEI', 'ATA', 'ATA'] as Setor20[]).map(p => ({ pos: p, forca: () => alvoReforco - r.next() * 5, idade: () => 22 + Math.floor(r.next() * 9) })),
+    ...[0, 1, 2, 3, 4].map(() => ({ forca: () => media + r.normal() * 2.5, idade: () => 19 + Math.floor(r.next() * 14) })),
+    ...[0, 1, 2, 3].map(() => ({ forca: () => media - 9 + r.normal() * 3, idade: () => 17 + Math.floor(r.next() * 4) }))
+  ];
+  for (const [k, fx] of faixas.entries()) {
+    const idadeJ = fx.idade();
+    const j = novoJogador(v, fake, r, fx.pos ?? r.pick(['GOL', 'DEF', 'DEF', 'MEI', 'MEI', 'ATA', 'ATA'] as Setor20[]), fx.forca(), idadeJ);
     j.id = `m${ano}_${k}`;
     j.contratoAte = ano + 2 + Math.floor(r.next() * 3);
+    if (idadeJ <= 20) j.potencial = clamp(Math.max(j.potencial, j.forca + 10 + Math.round(r.next() * 10)), j.forca, 92);
     const de = outros.length ? outros[Math.floor(r.next() * outros.length)].nome : 'um clube do exterior';
     if (c.comprados.includes(j.id)) continue;
     lista.push({ ...j, preco: Math.round(valorDoJogador(j, ano) * 1.15 / 10000) * 10000, clube: de });
   }
+  // A estrela de fora (um ano sim, outro não): bem acima do que o clube costuma atrair — o preço e o salário dizem quanto.
+  if (r.chance(0.55)) {
+    const j = novoJogador(v, fake, r, r.pick(['MEI', 'ATA', 'ATA', 'DEF'] as Setor20[]), Math.max(teto + 8, media + 10) + r.next() * 4, 26 + Math.floor(r.next() * 6));
+    j.id = `m${ano}_estrela`;
+    j.contratoAte = ano + 2;
+    j.salario = Math.round(j.salario * 1.4 / 1000) * 1000;
+    if (!c.comprados.includes(j.id)) lista.push({ ...j, preco: Math.round(valorDoJogador(j, ano) * 1.5 / 10000) * 10000, clube: r.pick(['um clube de Portugal', 'um clube da Espanha', 'um clube da Itália', 'um clube do México', 'um clube da Arábia Saudita']) });
+  }
   return lista;
 }
+
+/** As ferramentas que a mesa do presidente usa (sem ciclo de módulos). */
+const FERRAMENTAS31: Ferramentas31 = { mercado: v => mercadoDoAno(v), valor: (j, ano) => valorDoJogador(j, ano), media: c => mediaDoElenco(c), comprador: (c, r) => compradorDe(c, r) };
 
 function compradorDe(c: Clube20, r: Rng): string {
   const outros = clubesDoPais(c.pais).filter(x => x.nome !== c.nome && x.porte !== 'regional');
@@ -419,7 +450,7 @@ export function tecnicosDisponiveis(v: Vida): NonNullable<Clube20['tecnico31']>[
   });
 }
 /** O que o técnico soma à média do elenco (o interino da casa é nível 2: abaixo dele, tira). */
-export const bonusDoTecnico = (c: Clube20) => (c.tecnico31 ? (c.tecnico31.nivel - 2) * 1.1 : 0);
+export const bonusDoTecnico = (c: Clube20) => (c.tecnico31 ? (c.tecnico31.nivel - 2) * 1.1 + ((c.humorTecnico31 ?? 60) - 60) / 40 * 0.6 : 0);
 
 /** As propostas de patrocínio master do ano (estáveis no ano): mais dinheiro costuma vir com contrato curto ou com o nome em jogo. */
 export function patrociniosDoAno(v: Vida): { nome: string; valor: number; anos: number; rep: number; sobre: string }[] {
@@ -563,9 +594,13 @@ export function processarClube20(v: Vida): void {
   // 6. As obras ficam prontas.
   if (c.obra && c.obra.ate <= ano) { c[c.obra.qual] = Math.min(5, c[c.obra.qual] + 1); escrever(v, { texto: `Ficou pronta a obra ${c.obra.qual === 'estadio' ? 'do estádio' : c.obra.qual === 'ct' ? 'do centro de treinamento' : 'da base'}.`, relevancia: 'biografia', tema: 'trabalho', tom: 'bom' }); c.obra = undefined; }
   // 7. A força para a temporada que começa (a liga lê daqui) e o valor do clube (o patrimônio lê daqui).
-  // VIDA 31: o técnico e a química do elenco (os perfis dos que jogam) entram na força da temporada.
+  // VIDA 31: a mesa do presidente — os assuntos novos da temporada (o que ficou sem resposta cobra o seu preço).
+  abrirMesa31(v, c, FERRAMENTAS31, c.historico.slice(-1)[0]?.titulo || c.historico.slice(-1)[0]?.queda ? 3 : 2);
+  // VIDA 31: o técnico (e o humor dele), a química do elenco (os perfis dos que jogam) e o clima do vestiário entram na força.
   const mediaNova = mediaDoElenco(c);
-  c.forcaPorAno[temporadaCorrente(v)] = Math.round(forcaDaMedia(mediaNova + bonusDoTecnico(c) + quimicaDoElenco(c, ano, mediaNova)) * 100) / 100;
+  c.forcaPorAno[temporadaCorrente(v)] = Math.round(forcaDaMedia(mediaNova + bonusDoTecnico(c) + quimicaDoElenco(c, ano, mediaNova) + (c.moral31 ?? 0)) * 100) / 100;
+  // O clima do vestiário passa: metade fica para o ano seguinte.
+  if (c.moral31) c.moral31 = Math.round(c.moral31 * 5) / 10;
   const chaves = Object.keys(c.forcaPorAno).map(Number).sort((a, b) => a - b);
   for (const k of chaves.slice(0, Math.max(0, chaves.length - 6))) delete c.forcaPorAno[k];
   const div = liga.div[c.nome] ?? 1;
@@ -588,4 +623,6 @@ export function normalizarVida20Clube(v: Vida): void {
   if (!c) return;
   if (typeof c !== 'object' || !Array.isArray(c.elenco) || typeof c.nome !== 'string') { delete v.clube20; return; }
   c.juniores ??= []; c.historico ??= []; c.forcaPorAno ??= {}; c.comprados ??= []; c.vendas ??= [];
+  // VIDA 31: o clube comprado antes da mesa do presidente já abre com assuntos (sem esperar a temporada fechar).
+  if (c.mesa31 === undefined && c.mesaHist31 === undefined && v.t !== undefined) abrirMesa31(v, c, FERRAMENTAS31, 2);
 }

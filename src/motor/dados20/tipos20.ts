@@ -97,4 +97,10 @@ export interface Clube20 {
   emprestados31?: { jogador: Jogador20; para: string; ate: number }[];
   ingresso31?: 0 | 1 | 2;
   patrocinio31?: { nome: string; valor: number; ate: number; rep: number };
+  /** VIDA 31 · a mesa do presidente: os assuntos abertos, o que já se decidiu, o clima do vestiário (−3..+3, entra na
+   *  força) e o humor do técnico (0..100). */
+  mesa31?: import('../v20/clubes/mesa31').Situacao31[];
+  mesaHist31?: { ano: number; tipo: string; titulo: string; texto: string; opcao?: string; ignorado?: boolean }[];
+  moral31?: number;
+  humorTecnico31?: number;
 }

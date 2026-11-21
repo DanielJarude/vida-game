@@ -408,3 +408,5 @@ html:root, html:root[data-tema], html:root[data-paleta] {
 #root .painel-agora .agora-sinal { padding: var(--space-2) var(--space-3); border-radius: var(--v31-raio-ctl); background: var(--veu-1); margin-bottom: 4px; }
 #root .painel-agora button.agora-sinal:hover { background: var(--tom-wash); }
 #root .painel-agora button.agora-sinal::after { content: ' ›'; color: var(--tom); font-weight: 700; }
+#root .agora-clube strong { color: var(--acao-texto); }
+#root .agora-clube strong::before { content: ''; }

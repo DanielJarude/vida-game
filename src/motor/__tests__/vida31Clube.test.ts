@@ -113,3 +113,46 @@ describe('o comando do clube', () => {
     expect(interpretar(JSON.stringify(com)).tipo).toBe('ok');
   });
 });
+
+describe('a mesa do presidente e o mercado com reforços', () => {
+  it('a compra abre a mesa com a torcida; responder mexe no clube e entra na história', () => {
+    let v = dono();
+    const s = v.clube20!.mesa31![0];
+    expect(s.tipo).toBe('boas_vindas');
+    const torcida = v.clube20!.torcida;
+    v = tenta(v, C({ op: 'responder', id: s.id, opcao: 'titulo' }));
+    expect(v.clube20!.mesa31).toHaveLength(0);
+    expect(v.clube20!.objetivo).toBe('titulo');
+    expect(v.clube20!.torcida).toBeGreaterThan(torcida);
+    expect(v.clube20!.mesaHist31![0].titulo).toBe(s.titulo);
+    expect(podeTentar(disponibilidade(v, C({ op: 'responder', id: s.id, opcao: 'titulo' })))).toBe(false);
+  });
+
+  it('a temporada que fecha traz assuntos novos; o que ficou sem resposta cobra e vai para a história', () => {
+    const v = dono();
+    v.t += 12; processarClube20(v);
+    const c = v.clube20!;
+    expect((c.mesa31 ?? []).length).toBeGreaterThanOrEqual(1);
+    expect(c.mesaHist31?.some(h => h.ignorado && h.tipo === 'boas_vindas')).toBe(true);
+    for (const s of c.mesa31!) { expect(s.opcoes.length).toBeGreaterThanOrEqual(2); expect(s.texto.length).toBeGreaterThan(20); }
+  });
+
+  it('o mercado tem reforços ACIMA do elenco (e o técnico indica alguém melhor do que o titular do setor)', () => {
+    const v = dono(); const c = v.clube20!;
+    const media = mediaDoElenco(c);
+    const m = mercadoDoAno(v);
+    expect(m.filter(j => j.forca > media + 2).length).toBeGreaterThanOrEqual(4);
+    for (const setor of ['GOL', 'DEF', 'MEI', 'ATA'] as const) expect(m.some(j => j.pos === setor)).toBe(true);
+    // Muitas temporadas: quando o técnico sugere alguém, ele é melhor do que o titular daquele setor.
+    let vistas = 0;
+    for (let k = 0; k < 8; k++) {
+      v.t += 12; processarClube20(v);
+      for (const s of v.clube20!.mesa31 ?? []) if (s.tipo === 'tecnico_sugere') {
+        vistas++;
+        const melhor = Math.max(0, ...v.clube20!.elenco.filter(j => j.pos === s.alvo!.pos).map(j => j.forca));
+        expect(s.alvo!.forca).toBeGreaterThan(melhor - 1);
+      }
+    }
+    expect(vistas).toBeGreaterThan(0);
+  });
+});
