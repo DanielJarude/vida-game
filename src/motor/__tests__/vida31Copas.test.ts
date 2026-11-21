@@ -92,3 +92,27 @@ describe('o técnico disputa as copas', () => {
     expect(titulosInternacionais).toBeGreaterThan(0);
   });
 });
+
+import { trofeusDoTecnico } from '../../ui/jogo/Galeria';
+describe('os troféus do técnico', () => {
+  it('cada título com a forma e o nome da competição; o acesso e a final perdida também entram', () => {
+    const v = adulto(50, { semente: 5 });
+    const temp = (o: Record<string, unknown>) => ({ ano: 2040, nivel: 4 as const, jogos: 40, v: 20, e: 10, d: 10, ...o });
+    v.caminhos.tecnico = { tInicio: v.t - 120, origem: 'ex_atleta', reputacao: 70, passagens: [{ clube: 'Flamengo', municipioId: 'rio-de-janeiro-rj', nivel: 4, desde: v.t - 120, ate: v.t, contratoAte: v.t, salario: 1e6, pressao: 20, vestiario: 60, saida: 'saiu', temporadas: [
+      temp({ ano: 2040, titulos: ['Campeão da Série A', 'Campeão do estadual', 'Campeão da Copa do Brasil'], estadual: 'campeão', copa: { id: 'copa:BR', fase: 'campeão' } }),
+      temp({ ano: 2041, titulos: ['Campeão da Copa Libertadores', 'Campeão do Mundial de Clubes'], continental: { id: 'cont:CONMEBOL', fase: 'campeão' }, mundial: { id: 'mundial:clubes', fase: 'campeão' } }),
+      temp({ ano: 2042, copa: { id: 'copa:BR', fase: 'vice' }, estadual: 'vice' }),
+      temp({ ano: 2043, nivel: 3, acesso: true })
+    ] }] } as never;
+    const t = trofeusDoTecnico(v);
+    const de = (nome: string) => t.find(x => x.nome === nome);
+    expect(de('Série A')?.forma).toBe('liga');
+    expect(de('Campeonato estadual')?.forma).toBe('acesso');
+    expect(de('Copa do Brasil')?.forma).toBe('urna');
+    expect(de('Copa Libertadores')?.forma).toBe('figura');
+    expect(de('Mundial de Clubes')?.forma).toBe('mundo');
+    expect(t.filter(x => x.metal === 'prata').map(x => x.nome).sort()).toEqual(['Final: Campeonato estadual', 'Final: Copa do Brasil']);
+    expect(t.find(x => x.id.endsWith(':acesso'))?.nome).toMatch(/^Acesso à /);
+    expect(t.every(x => !/^(do|da) /.test(x.nome) && x.forma !== 'banco')).toBe(true);
+  });
+});

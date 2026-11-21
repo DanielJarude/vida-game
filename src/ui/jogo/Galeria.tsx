@@ -8,6 +8,9 @@
  */
 import type { ConquistaEsportiva, Vida } from '../../motor/tipos';
 import { anoDe } from '../../motor/tempo';
+import { divisaoDoNivel, nivelDaCompeticao } from '../../motor/dados/clubes';
+import { paisDaCidade } from '../../motor/dados/lugares';
+import { nomeDaCompeticao } from '../../motor/sistemas/competicoes';
 
 type Forma = 'mundo' | 'selecao' | 'orelhas' | 'figura' | 'urna' | 'liga' | 'acesso' | 'quadra' | 'medalha' | 'estatueta' | 'disco' | 'banco' | 'bola' | 'chuteira' | 'the_best' | 'golden_boy';
 
@@ -31,6 +34,46 @@ export function formaDoTrofeu(c: Pick<ConquistaEsportiva, 'tipo' | 'competicaoId
   if (id.startsWith('liga:')) return Number(id.split(':')[2]) >= 4 ? 'liga' : 'acesso';
   if (/mundial|copa do mundo/i.test(c.competicao)) return 'mundo';
   return 'liga';
+}
+
+/**
+ * VIDA 31 · OS TROFÉUS DO TÉCNICO: cada título com a forma da competição (antes, todos eram o mesmo desenho genérico e o
+ * nome vinha com a preposição sobrando: "do estadual", "da Copa do Brasil"), o acesso como troféu e a final perdida como
+ * prata — como na galeria do jogador. Tudo lido do que a carreira registrou (os títulos, o acesso, a fase de cada copa).
+ */
+const LIMPA = (x: string) => x.replace(/^Campe(ão|ã) /, '').replace(/^(do|da|dos|das|o|a|os|as) /, '');
+export function nomeDoTituloDoTecnico(x: string): string {
+  const c = LIMPA(x);
+  return c === 'estadual' ? 'Campeonato estadual' : c.charAt(0).toUpperCase() + c.slice(1);
+}
+export function formaDoTituloDoTecnico(x: string): Forma {
+  const c = LIMPA(x);
+  if (/Mundial de Clubes|Copa Intercontinental|Copa do Mundo/i.test(c)) return 'mundo';
+  if (/Copa América|Eurocopa|Copa Ouro|Copa Africana|Copa da Ásia|seleções/i.test(c)) return 'selecao';
+  if (/Champions/i.test(c)) return 'orelhas';
+  if (/Libertadores|continental/i.test(c)) return 'figura';
+  if (/estadual|regional/i.test(c)) return 'acesso';
+  const n = nivelDaCompeticao(c);
+  if (n !== undefined) return n >= 4 ? 'liga' : 'acesso';
+  if (/^(Copa|Coppa|FA Cup|DFB|Coupe|Taça|U\.S\.)|copa nacional/i.test(c)) return 'urna';
+  return 'liga';
+}
+const FORMA_DA_FASE = (id: string): Forma => (id.startsWith('mundial:') ? 'mundo' : id === 'cont:UEFA' ? 'orelhas' : id.startsWith('cont:') ? 'figura' : 'urna');
+export function trofeusDoTecnico(v: Vida): ItemDaGaleria[] {
+  const out: ItemDaGaleria[] = [];
+  for (const p of v.caminhos.tecnico?.passagens ?? []) {
+    const pais = paisDaCidade(p.municipioId);
+    for (const t of p.temporadas) {
+      const base = { ano: t.ano, onde: p.clube, papel: 'no banco', tipo: 'tecnico' as const };
+      for (const x of t.titulos ?? []) out.push({ ...base, id: `tec:${p.clube}:${t.ano}:${x}`, forma: formaDoTituloDoTecnico(x), metal: 'ouro', nome: nomeDoTituloDoTecnico(x) });
+      if (t.acesso) out.push({ ...base, id: `tec:${p.clube}:${t.ano}:acesso`, forma: 'acesso', metal: 'ouro', nome: `Acesso ${divisaoDoNivel(Math.min(4, t.nivel + 1), pais) ? `à ${divisaoDoNivel(Math.min(4, t.nivel + 1), pais)}` : 'à divisão de cima'}` });
+      const finais: [string, Forma][] = [];
+      if (t.estadual === 'vice') finais.push(['Campeonato estadual', 'acesso']);
+      for (const c of [t.copa, t.continental, t.mundial]) if (c?.fase === 'vice') finais.push([nomeDaCompeticao(c.id), FORMA_DA_FASE(c.id)]);
+      for (const [nome, forma] of finais) out.push({ ...base, id: `tec:${p.clube}:${t.ano}:final:${nome}`, forma, metal: 'prata', nome: `Final: ${nome}` });
+    }
+  }
+  return out;
 }
 
 /** O desenho de cada forma (traço simples, a mesma paleta: ouro para o título, prata para a final, bronze para o prêmio). */
@@ -73,7 +116,7 @@ export function itensDaGaleria(v: Vida): ItemDaGaleria[] {
     if (c.tipo !== 'titulo' && c.tipo !== 'premio' && c.tipo !== 'acesso' && c.tipo !== 'final') continue;
     out.push({ id: c.trofeuId ?? `${c.tipo}:${c.competicao}:${c.ano}:${c.texto}`, forma: formaDoTrofeu(c), metal: c.tipo === 'final' ? 'prata' : c.tipo === 'premio' ? (c.competicaoId?.startsWith('premio:') ? 'ouro' : 'bronze') : 'ouro', nome: c.tipo === 'premio' ? c.texto : c.tipo === 'final' ? `Final: ${c.competicao}` : c.tipo === 'acesso' ? c.texto : c.competicao, ano: c.ano, onde: c.clube, papel: c.papel === 'protagonista' ? 'protagonista' : c.papel === 'elenco' ? 'no elenco' : undefined, tipo: c.tipo === 'premio' ? 'individual' : 'coletivo' });
   }
-  for (const p of v.caminhos.tecnico?.passagens ?? []) for (const t of p.temporadas) for (const x of t.titulos ?? []) out.push({ id: `tec:${p.clube}:${t.ano}:${x}`, forma: 'banco', metal: 'ouro', nome: x.replace(/^Campeã?o /, ''), ano: t.ano, onde: p.clube, papel: 'no banco', tipo: 'tecnico' });
+  out.push(...trofeusDoTecnico(v));
   for (const x of v.caminhos.curriculo ?? []) if (x.premio?.venceu) out.push({ id: `cv:${x.t}:${x.titulo}`, forma: 'estatueta', metal: 'ouro', nome: `${x.premio.nome}${x.premio.categoria ? ` · ${x.premio.categoria}` : ''}`, ano: x.premio.edicao ?? anoDe(x.t), onde: `"${x.titulo}"`, papel: x.papel, tipo: 'arte' });
   for (const o of v.caminhos.obras ?? []) if (o.premio?.venceu) out.push({ id: `obra:${o.t}:${o.titulo}`, forma: o.linguagem === 'musica' ? 'disco' : 'estatueta', metal: 'ouro', nome: o.premio.nome, ano: anoDe(o.t), onde: `"${o.titulo}"`, tipo: 'arte' });
   return out.sort((a, b) => b.ano - a.ano);
