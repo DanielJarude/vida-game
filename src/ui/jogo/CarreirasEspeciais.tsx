@@ -25,7 +25,8 @@ import { paisDaCidade } from '../../motor/dados/lugares';
 import { nomePosicao } from '../../motor/sistemas/esporte';
 import { competicaoDe } from '../../motor/sistemas/palmares';
 import { classificadoParaContinental, nomeDaCompeticao, idDaCopa, confederacaoDe, idContinental } from '../../motor/sistemas/competicoes';
-import { EFEITO_DO_ESTILO, FORMACAO_DO_ESTILO, passagemAtual, type EstiloDeJogo } from '../../motor/sistemas/tecnico';
+import { EFEITO_DO_ESTILO, FORMACAO_DO_ESTILO, noComando, passagemAtual, type EstiloDeJogo } from '../../motor/sistemas/tecnico';
+import { AcoesDoTecnico32 } from '../v32/tecnico/AcoesDoTecnico32';
 import { leituraDoTreinadorDeGoleiros } from '../../motor/sistemas/treinadorDeGoleiros';
 import { papelNaMusica, rendaDeDireitos } from '../../motor/sistemas/musica';
 import { leituraDasAliancas } from '../../motor/sistemas/aliancas';
@@ -177,6 +178,8 @@ export function PranchetaDoTecnico({ vida, agir }: { vida: Vida; agir: (a: Acao)
           </dl>
           {ult?.rivais && ult.rivais.length > 0 && <p className="carreira-especial__nota">Os rivais mais fortes da divisão: {ult.rivais.join(', ')}.</p>}
           {c?.proposta && <p className="carreira-especial__nota">Há uma proposta de outro clube na mesa (em "O que dá para fazer agora").</p>}
+          {/* VIDA 32: o dia a dia do técnico — treino, elenco, imprensa, diretoria e carreira. */}
+          {noComando(vida) && <AcoesDoTecnico32 vida={vida} agir={agir} />}
         </>
       )}
       {goleiros && g && (
