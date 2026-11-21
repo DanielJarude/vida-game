@@ -31,3 +31,23 @@ projeto depois de revisão local (http://localhost:4173) em quatro rodadas.
   ao build local.
 - Navegação no site real (computador e celular, duas passadas): nascer, as seis áreas e abas, Caminhos, menu, celular e
   três anos vividos com saves da VIDA 30 (adulta, dona de clube, base) — nenhum erro de página.
+
+## VIDA 31.1 — o clube com vida própria (publicado em 2026-11-21)
+- **Mesa do presidente** (`v20/clubes/mesa31.ts`): de 1 a 3 assuntos por temporada (2 por padrão; 3 depois de título ou
+  queda; 1 na compra): boas-vindas, protesto ou festa da torcida, o técnico pedindo um reforço concreto (o melhor do
+  mercado no setor mais fraco, acima do titular de lá), atrito com o técnico, craque pedindo aumento, indisciplina,
+  proposta da Europa por uma revelação, bicho do clássico. Cada escolha mexe no caixa, na torcida, no nome, no clima do
+  vestiário (`moral31`, −3..+3, na força da temporada; metade passa ao ano seguinte), no humor do técnico
+  (`humorTecnico31`, no bônus dele), no salário/força de um jogador, numa venda ou contratação. Assunto sem resposta
+  até a temporada seguinte cobra um preço e vai para a história. Acaso próprio (`rngDe`). Saves de clube antigos abrem
+  a mesa ao carregar (`normalizarVida20Clube`).
+- **Aba Campeonato**: as forças da divisão nesta temporada (empate é empate; a expectativa sai da diferença para a média
+  da divisão), a tabela da última temporada (`TabelaDoCampeonato`) e os campeões do país.
+- **Mercado em faixas** (`mercadoDoAno`): 7 reforços (um por setor no mínimo) de +2 a +12 acima da média do elenco, 5 do
+  nível, 4 apostas jovens com potencial e, um ano sim outro não, uma estrela de fora acima do teto (cara, salário de
+  estrela).
+- **Hoje**: aviso "O clube · N assuntos na mesa" que abre Vida · Patrimônio · Empresas.
+- Testes: `vida31Clube.test.ts` (9). Suíte completa: 3.327 passaram; 5 limites de tempo sob carga (os 4 de sempre +
+  `fix31`, que passa sozinho: 25/25). Build OK, smoke 36/36.
+- Deploy: `main` e produção em `2f0ef8c`; https://vida-game.pages.dev/ serve `index-BW551TQc.js`, 204 arquivos com sha256
+  idêntico; navegação no site real (dona de clube no computador, adulta no celular, três anos vividos) sem erro.
