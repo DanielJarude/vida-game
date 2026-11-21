@@ -188,6 +188,9 @@ export default defineConfig({
           // VIDA 30: idem (motor/v30/<frente> → motor30-<frente>): o meio famoso.
           const v30 = /[\\/]src[\\/]motor[\\/]v30[\\/]([a-z0-9]+)[\\/]/.exec(id);
           if (v30) return `motor30-${v30[1]}`;
+          // VIDA 32: idem (motor/v31/<frente> → motor31-<frente>): a organização de e-sports do dono.
+          const v31 = /[\\/]src[\\/]motor[\\/]v31[\\/]([a-z0-9]+)[\\/]/.exec(id);
+          if (v31) return `motor31-${v31[1]}`;
           // VIDA 27: idem (motor/v27/<frente> → motor27-<frente>): a saúde mental.
           const v27 = /[\\/]src[\\/]motor[\\/]v27[\\/]([a-z0-9]+)[\\/]/.exec(id);
           if (v27) return `motor27-${v27[1]}`;
