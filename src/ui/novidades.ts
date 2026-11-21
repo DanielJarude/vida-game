@@ -26,6 +26,23 @@ export interface NotaDeVersao {
 
 export const NOTAS: NotaDeVersao[] = [
   {
+    versao: '34',
+    data: '2026-11-21',
+    titulo: 'Seus times organizados, instalações à vista e as cores certas',
+    novidades: [
+      'Instalações desenhadas: veja o estádio (as arquibancadas crescem com o nível, com refletores, telão e cobertura), o centro de treinamento e as categorias de base do clube; o ginásio do time de quadra, com as linhas do basquete, do vôlei ou do futsal; e a gaming house da organização, com um PC por jogador, estúdio, casa de criadores e a estante de troféus.',
+      'Personalize cada lugar: o nome do estádio, do CT e da base, a cor das cadeiras (cores do time, mosaico, neutro), a cobertura, o corte do gramado, a sigla nas cadeiras, o telão; o piso e a arquibancada do ginásio; o estilo, a luz e o mural da gaming house.'
+    ],
+    melhorias: [
+      'Patrimônio · Empresas · Esporte virou uma central: seus times em cartões (escudo, divisão, caixa e o que pede atenção) que abrem o painel de cada um, e as portas para comprar um clube, fundar um time ou montar uma organização. Dentro de um time, “Todos os times” volta e os outros ficam a um toque.',
+      'Dentro do clube, do time de quadra e da organização, as seções ficam em grupos com nome (Visão geral, Time, Competição, Gestão; as lines; o negócio), numa barra de abas própria; os números completos ficam no Painel, e os avisos levam direto à seção certa.'
+    ],
+    correcoes: [
+      'Cores reais nos escudos de 343 clubes de fora do Brasil que apareciam com cores sorteadas (Europa, Américas, África, Ásia e Oceania) e correções em clubes brasileiros e estrangeiros (Fluminense, Botafogo, Santos, São Paulo, Bahia, Fortaleza, Coritiba, Ponte Preta, Bayern, PSG, Ajax, Roma, entre outros).',
+      'As organizações de e-sports reais agora usam as cores da marca (FURIA, LOUD, paiN, MIBR, T1, Natus Vincere, Fnatic, G2…) em vez de cores sorteadas.'
+    ]
+  },
+  {
     versao: '33',
     data: '2026-11-21',
     titulo: 'Dono de verdade: escudo, camisa, patrocínios e circuitos reais',

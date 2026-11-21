@@ -12,6 +12,7 @@ type Desenho = [Forma, Padrao, string, string, boolean?];
 const B = '#ffffff', P = '#111111', V = '#c8102e', VD = '#00813d', AZ = '#0b3d91', AC = '#5aa9e6', AM = '#ffd200', GR = '#7a1c2c', LJ = '#f26b21', RX = '#5b2a86';
 
 import './escudo30.css';
+import { CORRECOES34, ESCUDOS_A, ESCUDOS_B } from './escudosMundo34';
 import type { Identidade33, Simbolo33 } from '../../../motor/v33/dono/identidade33';
 
 /**
@@ -56,11 +57,17 @@ export const ESCUDOS30: Record<string, Desenho> = {
 const FORMAS: Forma[] = ['classico', 'redondo', 'pontudo', 'reto'];
 const PADROES: Padrao[] = ['liso', 'listras', 'faixa', 'metade', 'horizontal', 'tres', 'cruz', 'aro'];
 const PALETA = [V, AZ, VD, P, AM, GR, AC, LJ, RX, '#1e7a3c', '#0b6e8a', '#8b1d2c'];
+/** VIDA 34: cor clara (branco, amarelo, celeste) pede contraste escuro. */
+function claro34(cor: string): boolean {
+  const m = /^#([0-9a-f]{6})$/i.exec(cor); if (!m) return false;
+  const n = parseInt(m[1], 16); return 0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255) > 170;
+}
 function hash(s: string): number { let h = 2166136261; for (let k = 0; k < s.length; k++) { h ^= s.charCodeAt(k); h = Math.imul(h, 16777619); } return h >>> 0; }
 
 /** O desenho de um clube: o da tabela ou um estável pelo nome. */
 export function desenhoDoClube30(nome: string): Desenho {
-  const d = ESCUDOS30[nome];
+  // VIDA 34: as correções de cor (auditoria) e os clubes do mundo que caíam no escudo sorteado.
+  const d = (CORRECOES34[nome] ?? ESCUDOS30[nome] ?? ESCUDOS_A[nome] ?? ESCUDOS_B[nome]) as Desenho | undefined;
   if (d) return d;
   const h = hash(nome);
   const c1 = PALETA[h % PALETA.length];
@@ -104,7 +111,7 @@ export function Escudo30({ nome, tamanho = 64, identidade }: { nome: string; tam
   const vb = redondo ? '0 0 100 106' : '0 0 100 115';
   const contorno = redondo ? 'M50 4 A48 48 0 1 0 50.01 4 Z' : CONTORNO[forma];
   const ini = (ident?.sigla || iniciaisDoClube30(nome)).slice(0, 4);
-  const corTexto = padrao === 'liso' || padrao === 'aro' ? b : a === B ? P : B;
+  const corTexto = padrao === 'liso' || padrao === 'aro' ? (claro34(a) && claro34(b) ? P : b) : claro34(a) ? P : B;
   const detalhe = ident?.cor3;
   const simbolo = ident && ident.simbolo !== 'sigla' ? SIMBOLO[ident.simbolo] : undefined;
   const placa = !simbolo && !(padrao === 'liso' || padrao === 'aro');
@@ -122,10 +129,10 @@ export function Escudo30({ nome, tamanho = 64, identidade }: { nome: string; tam
         {padrao === 'aro' && <circle cx="50" cy="56" r="30" fill="none" stroke={b} strokeWidth="9" />}
       </g>
       <path d={contorno} fill="none" stroke={detalhe ?? (a === B ? P : b === B ? P : B)} strokeWidth="4" />
-      {placa && <rect x="18" y={redondo ? 40 : 44} width="64" height="26" rx="6" fill={a === B ? P : '#ffffff'} opacity="0.92" />}
+      {placa && <rect x="18" y={redondo ? 40 : 44} width="64" height="26" rx="6" fill={claro34(a) ? P : '#ffffff'} opacity="0.92" />}
       {simbolo
         ? <path d={simbolo} fill={detalhe ?? (padrao === 'liso' || padrao === 'aro' ? b : '#ffffff')} fillRule="evenodd" stroke={a === B ? P : 'rgba(0,0,0,.35)'} strokeWidth="1.2" transform={redondo ? 'translate(0 -3)' : undefined} />
-        : <text x="50" y={redondo ? 61 : 65} textAnchor="middle" fontSize={ini.length > 3 ? 18 : ini.length > 2 ? 22 : 26} fontWeight="800" fill={placa ? (ident?.cor3 && ident.cor3 !== '#ffffff' ? ident.cor3 : a === B ? '#ffffff' : a) : (detalhe ?? corTexto)} fontFamily="system-ui, sans-serif">{ini}</text>}
+        : <text x="50" y={redondo ? 61 : 65} textAnchor="middle" fontSize={ini.length > 3 ? 18 : ini.length > 2 ? 22 : 26} fontWeight="800" fill={placa ? (ident?.cor3 && ident.cor3 !== '#ffffff' ? ident.cor3 : claro34(a) ? '#ffffff' : a) : (detalhe ?? corTexto)} fontFamily="system-ui, sans-serif">{ini}</text>}
       {estrela && <path d="M50 10 l3 7 7.5 .5-5.7 4.8 1.8 7.3L50 25.6l-6.6 4 1.8-7.3-5.7-4.8 7.5-.5z" fill={AM} stroke={P} strokeWidth="0.8" transform={redondo ? 'translate(0 -2)' : undefined} />}
     </svg>
   );

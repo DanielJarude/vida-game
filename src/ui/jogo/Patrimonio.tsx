@@ -51,11 +51,9 @@ const GaragemVisual = sobDemanda(() => import('./Garagem129').then(m => m.Garage
 /** VIDA 12.9: a gestão ativa, o fundar/comprar das grandes e o raio-x financeiro (pacote à parte). */
 const PainelDaEmpresa129 = sobDemanda(() => import('./Empresas129').then(m => m.PainelDaEmpresa129));
 const FundarOuAdquirir129 = sobDemanda(() => import('./Empresas129').then(m => m.FundarOuAdquirir129));
-const Clube20 = sobDemanda(() => import('../v20/clubes/Clube20').then(m => m.Clube20));
-// VIDA 32: o esporte do dono (os times de quadra, a fundação de um time) — pacote à parte.
-const EquipesDeQuadra32 = sobDemanda(() => import('../v32/esporte/Esporte32').then(m => m.EquipesDeQuadra32));
-const FundarTime32 = sobDemanda(() => import('../v32/esporte/Esporte32').then(m => m.FundarTime32));
-const OrgEsports31 = sobDemanda(() => import('../v31/esports/OrgEsports31').then(m => m.default));
+// VIDA 34: o esporte do dono numa central (os times em cartões; o clube, os times de quadra, a org de e-sports e a
+// fundação abrem um de cada vez) — pacote à parte.
+const CentralEsporte34 = sobDemanda(() => import('../v34/esporte/CentralEsporte34').then(m => m.default));
 const RaioX129 = sobDemanda(() => import('./Empresas129').then(m => m.RaioX129));
 
 export type PartePatrimonio = 'resumo' | 'imoveis' | 'garagem' | 'colecao' | 'empresas' | 'objetos';
@@ -477,14 +475,7 @@ function Empresas({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
         </>
       )}
       {aba === 'esporte' && (
-        <div className="esp32">
-          {/* VIDA 20: o clube de futebol (comprar — agora em vitrine — ou administrar o seu). */}
-          <Clube20 vida={vida} agir={agir} />
-          <EquipesDeQuadra32 vida={vida} agir={agir} />
-          {/* VIDA 32: a organização de e-sports (comprar, fundar, administrar). */}
-          {adulto || vida.orgEsports31 ? <OrgEsports31 vida={vida} agir={agir} /> : null}
-          <FundarTime32 vida={vida} agir={agir} />
-        </div>
+        <CentralEsporte34 vida={vida} agir={agir} />
       )}
       {aba === 'abrir' && adulto && (
         <>

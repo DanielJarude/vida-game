@@ -1,0 +1,32 @@
+/* VIDA 34 · a barra de seções de um time (grupos com nome, abas sublinhadas) e a trilha de volta. */
+#root .nav34 { min-width: 0; border-bottom: 1px solid var(--fio); margin: 2px 0 4px; }
+#root .nav34__trilho { display: flex; gap: 4px 18px; overflow-x: auto; scrollbar-width: thin; padding-bottom: 0; }
+#root .nav34__grupo { display: grid; gap: 2px; flex: none; }
+#root .nav34__grupo-nome { font-size: var(--type-meta); text-transform: uppercase; letter-spacing: 0.08em; color: var(--tinta-3); padding: 0 6px; }
+#root .nav34__abas { display: flex; gap: 2px; }
+#root .nav34__aba { position: relative; display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 6px 10px 8px; border: 0; border-radius: 8px 8px 0 0; background: transparent; color: var(--tinta-2); font: inherit; font-size: var(--type-caption); font-weight: 600; white-space: nowrap; cursor: pointer; box-shadow: none; }
+#root .nav34__aba:hover { color: var(--tinta); background: var(--veu-1); }
+#root .nav34__aba[aria-selected='true'] { color: var(--tinta); }
+#root .nav34__aba[aria-selected='true']::after { content: ''; position: absolute; left: 6px; right: 6px; bottom: -1px; height: 3px; border-radius: 3px 3px 0 0; background: var(--acao); }
+#root .nav34__aba:focus-visible { outline: 2px solid var(--acao); outline-offset: -2px; }
+#root .nav34__conta { min-width: 18px; padding: 0 5px; border-radius: 999px; background: var(--alerta); color: var(--fundo); font-size: var(--type-meta); line-height: 18px; text-align: center; }
+#root .nav34__selo { padding: 1px 6px; border-radius: 5px; background: var(--tinta); color: var(--fundo, var(--superficie)); font-size: var(--type-meta); font-weight: 700; letter-spacing: 0.04em; }
+/* a sub-navegação (dentro de uma line): pílulas leves num fundo, sem grupos */
+#root .nav34--sub { border-bottom: 0; }
+#root .nav34--sub .nav34__trilho { padding: 4px; border-radius: 12px; background: var(--veu-1); gap: 2px; }
+#root .nav34--sub .nav34__aba { min-height: 34px; padding: 4px 10px; border-radius: 9px; }
+#root .nav34--sub .nav34__aba[aria-selected='true'] { background: var(--superficie); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12), inset 0 0 0 1px var(--fio); }
+#root .nav34--sub .nav34__aba[aria-selected='true']::after { display: none; }
+
+#root .trilha34 { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-size: var(--type-caption); color: var(--tinta-2); }
+#root .trilha34__voltar { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 4px 12px; border: 0; border-radius: 999px; background: var(--veu-2); color: var(--tinta); font: inherit; font-weight: 600; cursor: pointer; }
+#root .trilha34__atual { font-weight: 600; color: var(--tinta); display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+#root .trilha34__outros { margin-left: auto; display: flex; flex-wrap: wrap; gap: 4px; }
+
+/* o clube e a org: a faixa curta de números fora do Painel, os números que levam à seção, os links dos avisos */
+#root .clube34__faixa { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; padding: 8px 12px; border-radius: 12px; background: var(--veu-1); font-size: var(--type-caption); color: var(--tinta-2); }
+#root .clube34__faixa b { color: var(--tinta); font-variant-numeric: tabular-nums; }
+#root button.clube34__ir { font: inherit; text-align: left; color: inherit; cursor: pointer; }
+#root button.clube34__ir:hover { box-shadow: inset 0 0 0 2px var(--acao); }
+#root .clube34__link { padding: 0; border: 0; background: none; color: var(--acao); font: inherit; font-weight: 600; text-decoration: underline; cursor: pointer; min-height: 0; box-shadow: none; }
+#root .org34__linha-cabeca { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 0; font-size: var(--type-body); }

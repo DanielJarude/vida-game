@@ -26,6 +26,9 @@ import { EditorIdentidade33, identidadeInicial33 } from '../../v33/dono/EditorId
 import { camisaDaIdentidade33, DesenhoCamisa33 } from '../../v33/dono/Camisa33';
 import { Investimento33, PainelDono33 } from '../../v33/dono/PainelDono33';
 import './org31.css';
+import { coresDaOrg34 } from './coresOrgs34';
+import { NavTime34, type ItemNav34 } from '../../v34/esporte/NavTime34';
+import { Instalacoes34 } from '../../v34/instalacoes/Instalacoes34';
 
 type Agir = (a: Acao) => boolean;
 const A = (oque: OqueOrg31): Acao => ({ tipo: 'org31', oque } as Acao);
@@ -39,10 +42,12 @@ export default function OrgEsports31({ vida, agir }: { vida: Vida; agir: Agir })
 
 /* ------------------------------------------------------------------ o distintivo (as orgs do catálogo: um hexágono com as iniciais) */
 
-function cores(nome: string): [string, string] {
-  let h = 0; for (const ch of nome) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  const a = h % 360, b = (a + 140 + (h >> 9) % 80) % 360;
-  return [`hsl(${a} 62% 34%)`, `hsl(${b} 70% 62%)`];
+const cores = coresDaOrg34;
+/** Fundo claro (amarelo, verde-limão, branco) pede letra escura. */
+function claro(cor: string): boolean {
+  const m = /^#([0-9a-f]{6})$/i.exec(cor); if (!m) return false;
+  const n = parseInt(m[1], 16); const r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+  return 0.299 * r + 0.587 * g + 0.114 * b > 160;
 }
 const iniciais = (nome: string) => nome.replace(/[^\p{L}\p{N} ]/gu, '').split(' ').filter(Boolean).slice(0, 2).map(p => p[0]).join('').toUpperCase() || '?';
 export function Distintivo31({ nome, tamanho = 56, identidade }: { nome: string; tamanho?: number; identidade?: Identidade33 }) {
@@ -52,7 +57,7 @@ export function Distintivo31({ nome, tamanho = 56, identidade }: { nome: string;
     <svg className="org31__distintivo" width={tamanho} height={tamanho} viewBox="0 0 100 100" role="img" aria-label={`Distintivo da ${nome}`}>
       <polygon points="50,3 93,27 93,73 50,97 7,73 7,27" fill={a} stroke={b} strokeWidth="6" />
       <polygon points="50,18 80,35 80,65 50,82 20,65 20,35" fill="none" stroke={b} strokeWidth="2" opacity="0.6" />
-      <text x="50" y="60" textAnchor="middle" fontSize={iniciais(nome).length > 1 ? 30 : 38} fontWeight="800" fill="white" fontFamily="system-ui, sans-serif">{iniciais(nome)}</text>
+      <text x="50" y="60" textAnchor="middle" fontSize={iniciais(nome).length > 1 ? 30 : 38} fontWeight="800" fill={claro(a) ? '#111111' : '#ffffff'} fontFamily="system-ui, sans-serif">{iniciais(nome)}</text>
     </svg>
   );
 }
@@ -209,7 +214,7 @@ function Num({ rotulo, valor, extra, ruim }: { rotulo: string; valor: string; ex
   return <div className="org31__num"><span>{rotulo}</span><strong className={ruim ? 'org31__ruim' : undefined}>{valor}</strong>{extra && <small>{extra}</small>}</div>;
 }
 
-type Aba = 'painel' | `linha:${JogoId}` | 'negocios' | 'organizacao';
+type Aba = 'painel' | `linha:${JogoId}` | 'casa' | 'negocios' | 'organizacao';
 
 function MinhaOrg({ vida, agir }: { vida: Vida; agir: Agir }) {
   const o = vida.orgEsports31!;
@@ -217,10 +222,11 @@ function MinhaOrg({ vida, agir }: { vida: Vida; agir: Agir }) {
   const [aba, setAba] = useState<Aba>('painel');
   const titulos = o.linhas.reduce((s, l) => s + l.trofeus.length, 0);
   const abaValida: Aba = aba.startsWith('linha:') && !o.linhas.some(l => `linha:${l.jogo}` === aba) ? 'painel' : aba;
-  const ABAS: [Aba, string][] = [
-    ['painel', `Painel${o.mesa.length ? ` · ${o.mesa.length} na mesa` : ''}`],
-    ...o.linhas.map(l => [`linha:${l.jogo}`, `${SIGLA_JOGO[l.jogo]} · ${l.divisao === 2 ? NOME_DIVISAO31[2] : nomeDaLiga31(l, ano)}`] as [Aba, string]),
-    ['negocios', 'Patrocínios, camisa e loja'], ['organizacao', 'Organização']
+  // VIDA 34: as seções em grupos (visão geral · as lines · o negócio), cada line com a liga em que joga.
+  const ABAS: ItemNav34<Aba>[] = [
+    { id: 'painel', rotulo: o.mesa.length ? `Painel · ${o.mesa.length} na mesa` : 'Painel', grupo: 'Visão geral' },
+    ...o.linhas.map(l => ({ id: `linha:${l.jogo}` as Aba, rotulo: `${SIGLA_JOGO[l.jogo]} · ${l.divisao === 2 ? NOME_DIVISAO31[2] : nomeDaLiga31(l, ano)}`, grupo: o.linhas.length > 1 ? 'As lines' : 'A line' })),
+    { id: 'casa', rotulo: 'Gaming house', grupo: 'Negócio' }, { id: 'negocios', rotulo: 'Patrocínios, camisa e loja', grupo: 'Negócio' }, { id: 'organizacao', rotulo: 'Organização', grupo: 'Negócio' }
   ];
   const linha = abaValida.startsWith('linha:') ? o.linhas.find(l => `linha:${l.jogo}` === abaValida) : undefined;
   return (
@@ -233,16 +239,18 @@ function MinhaOrg({ vida, agir }: { vida: Vida; agir: Agir }) {
           <span className="org31__chip">{o.linhas.length} line{o.linhas.length > 1 ? 's' : ''}</span>{titulos > 0 && <span className="org31__chip org31__chip--ouro">{titulos} título{titulos > 1 ? 's' : ''}</span>}
         </div>
       </header>
-      <div className="org31__numeros">
-        <Num rotulo="Caixa" valor={dinheiroCurto(o.caixa)} />
-        <Num rotulo="Dívida" valor={dinheiroCurto(o.divida)} ruim={o.divida > o.caixa && o.divida > 0} />
-        <Num rotulo="Valor" valor={dinheiroCurto(o.valor)} />
-        <Num rotulo="Fãs" valor={String(o.fas)} />
-        <Num rotulo="Nome no cenário" valor={String(o.reputacao)} />
-      </div>
-      <div className="org31__abas" role="tablist">
-        {ABAS.map(([x, rot]) => <button key={x} type="button" role="tab" aria-selected={abaValida === x} className={`org31__aba${abaValida === x ? ' org31__aba--ativa' : ''}`} onClick={() => setAba(x)}>{rot}</button>)}
-      </div>
+      {abaValida === 'painel' ? (
+        <div className="org31__numeros">
+          <Num rotulo="Caixa" valor={dinheiroCurto(o.caixa)} />
+          <Num rotulo="Dívida" valor={dinheiroCurto(o.divida)} ruim={o.divida > o.caixa && o.divida > 0} />
+          <Num rotulo="Valor" valor={dinheiroCurto(o.valor)} />
+          <Num rotulo="Fãs" valor={String(o.fas)} />
+          <Num rotulo="Nome no cenário" valor={String(o.reputacao)} />
+        </div>
+      ) : (
+        <p className="clube34__faixa"><span>Caixa <b className={o.caixa < 0 ? 'org31__ruim' : undefined}>{dinheiroCurto(o.caixa)}</b></span><span>Fãs <b>{o.fas}</b></span><span>Nome no cenário <b>{o.reputacao}</b></span></p>
+      )}
+      <NavTime34 rotulo={`A ${o.nome}`} atual={abaValida} mudar={setAba} itens={ABAS} />
       {abaValida === 'painel' && (
         <>
           <Mesa vida={vida} agir={agir} />
@@ -263,6 +271,7 @@ function MinhaOrg({ vida, agir }: { vida: Vida; agir: Agir }) {
         </>
       )}
       {linha && <Linha key={linha.jogo} vida={vida} agir={agir} L={linha} />}
+      {abaValida === 'casa' && <Instalacoes34 org vida={vida} agir={agir} nome={o.nome} identidade={o.identidade33} inst={o.instalacoes34} acao={sub => A({ op: 'dono', sub })} dados={{ tipo: 'org', nivel: Math.min(5, o.linhas.length + o.conteudo + (o.reputacao >= 60 ? 1 : 0)), pcs: o.linhas.reduce((n, l) => n + l.elenco.length, 0), conteudo: o.conteudo, trofeus: titulos }} />}
       {abaValida === 'negocios' && <PainelDono33 vida={vida} agir={agir} nome={o.nome} dono={o} ctx={contextoOrg33(vida)} acao={sub => A({ op: 'dono', sub })} anoInicio={anoDe(o.desde)} />}
       {abaValida === 'organizacao' && <Organizacao vida={vida} agir={agir} />}
     </section>
@@ -288,15 +297,14 @@ function Linha({ vida, agir, L }: { vida: Vida; agir: Agir; L: LinhaOrg33 }) {
   const SUB: Record<SubAba, string> = { time: 'O time', elenco: `Elenco · ${L.elenco.length}/${maxElenco31(L.jogo, ano)}`, mercado: 'Mercado', comando: 'Comando', temporadas: 'Temporadas e títulos' };
   return (
     <div className="org31__linha">
+      <h4 className="org34__linha-cabeca"><span className="org31__selo">{SIGLA_JOGO[L.jogo]}</span> A line de {nomeDoJogo(L.jogo, ano)} <span className="org31__meta">{nomeDaLiga31(L, ano)} · {nomeDaRegiao33(L.jogo, L.regiao)}</span></h4>
       <div className="org31__numeros">
         <Num rotulo="Força da line" valor={String(Math.round(forca))} extra={`titulares ${Math.round(media)}`} />
         <Num rotulo="Química" valor={quimica > 0 ? `+${quimica}` : String(quimica)} ruim={quimica < 0} extra={igl ? `IGL: ${igl.nick}` : 'sem IGL escolhido'} />
         <Num rotulo="Técnico" valor={L.tecnico ? L.tecnico.nome.split(' ')[0] : 'Nenhum'} extra={L.tecnico ? `${'★'.repeat(L.tecnico.nivel)} · ${bonusDoTecnico31(L) >= 0 ? '+' : ''}${Math.round(bonusDoTecnico31(L) * 10) / 10}` : 'contrate em Comando'} />
         <Num rotulo="Liga" valor={nomeDaLiga31(L, ano)} extra={nomeDaRegiao33(L.jogo, L.regiao)} />
       </div>
-      <div className="org31__abas org31__abas--sub" role="tablist">
-        {(Object.keys(SUB) as SubAba[]).map(x => <button key={x} type="button" role="tab" aria-selected={aba === x} className={`org31__aba${aba === x ? ' org31__aba--ativa' : ''}`} onClick={() => setAba(x)}>{SUB[x]}</button>)}
-      </div>
+      <NavTime34 sub rotulo={`A line de ${nomeDoJogo(L.jogo, ano)}`} atual={aba} mudar={setAba} itens={(Object.keys(SUB) as SubAba[]).map(x => ({ id: x, rotulo: SUB[x] }))} />
       {aba === 'time' && (
         <div className="org31__painel">
           <section className="org31__bloco" aria-label="O time titular">

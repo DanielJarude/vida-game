@@ -22,8 +22,23 @@ import { existeMunicipio, municipio, nomeLugar, paisDaCidade } from '../../../mo
 import '../../v32/esporte/esporte32.css';
 import { desenhoDoClube30, Escudo30, identidadeRegistrada33, registrarIdentidades33 } from '../../v30/escudos/Escudo30';
 import { PainelDono33 } from '../../v33/dono/PainelDono33';
+import { NavTime34, type ItemNav34 } from '../../v34/esporte/NavTime34';
+import { Instalacoes34 } from '../../v34/instalacoes/Instalacoes34';
 
 const C = (oque: OqueClube20): Acao => ({ tipo: 'clube20', oque } as Acao);
+type AbaClube = 'painel' | 'instalacoes' | 'campeonato' | 'elenco' | 'mercado' | 'base' | 'comando' | 'negocios' | 'clube';
+/** VIDA 34 · as seções do clube em grupos: a visão geral, o time, a competição, a gestão. */
+const ABAS_CLUBE34 = (mesa: number, contratos: number): ItemNav34<AbaClube>[] => [
+  { id: 'painel', rotulo: mesa ? `Painel · ${mesa} na mesa` : 'Painel', grupo: 'Visão geral' },
+  { id: 'instalacoes', rotulo: 'Estádio, CT e base', grupo: 'Visão geral' },
+  { id: 'elenco', rotulo: 'Elenco', grupo: 'Time', conta: contratos },
+  { id: 'base', rotulo: 'Base', grupo: 'Time' },
+  { id: 'mercado', rotulo: 'Mercado', grupo: 'Time' },
+  { id: 'campeonato', rotulo: 'Campeonato', grupo: 'Competição' },
+  { id: 'comando', rotulo: 'Comando', grupo: 'Gestão' },
+  { id: 'negocios', rotulo: 'Patrocínios, camisa e loja', grupo: 'Gestão' },
+  { id: 'clube', rotulo: 'Estrutura e finanças', grupo: 'Gestão' }
+];
 // VIDA 32: o nome de verdade de cada divisão (Série A, B, C; o estadual) — do país do clube.
 const DIV = ['', 'estadual', 'Série C', 'Série B', 'Série A'];
 
@@ -273,7 +288,7 @@ function ordenar<T extends { pos: string; forca: number; potencial: number; tNas
 function MeuClube({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
   const c = vida.clube20!;
   const ano = anoDe(vida.t);
-  const [aba, setAba] = useState<'painel' | 'campeonato' | 'elenco' | 'mercado' | 'base' | 'comando' | 'negocios' | 'clube'>('painel');
+  const [aba, setAba] = useState<AbaClube>('painel');
   // VIDA 31: os filtros do elenco e do mercado (o setor, o arquétipo, a ordem).
   const [setorE, setSetorE] = useState(''); const [tipoE, setTipoE] = useState(''); const [ordemE, setOrdemE] = useState<Ordem31>('pos');
   const [setorM, setSetorM] = useState(''); const [tipoM, setTipoM] = useState(''); const [ordemM, setOrdemM] = useState<Ordem31>('forca');
@@ -301,18 +316,20 @@ function MeuClube({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
         </div>
       </header>
       {c.conflito && <p className="clube20__alerta" role="alert">{c.conflito} A federação exige a venda: só vender o clube está liberado.</p>}
-      <div className="clube30__numeros">
-        <div className="clube30__num"><span>Caixa</span><strong className={c.caixa < 0 ? 'clube30__ruim' : undefined}>{dinheiroCurto(c.caixa)}</strong></div>
-        <div className="clube30__num"><span>Dívida</span><strong className={c.divida > receita ? 'clube30__ruim' : undefined}>{dinheiroCurto(c.divida)}</strong></div>
-        <div className="clube30__num"><span>Valor do clube</span><strong>{dinheiroCurto(c.valor)}</strong></div>
-        <div className="clube30__num"><span>Elenco</span><strong>{media}</strong><small>média · {c.elenco.length} jogadores</small></div>
-        <div className="clube30__num"><span>Química</span><strong className={quimica < 0 ? 'clube30__ruim' : undefined}>{quimica > 0 ? `+${quimica}` : quimica}</strong><small>{c.capitao31 && c.elenco.some(j => j.id === c.capitao31) ? `capitão: ${c.elenco.find(j => j.id === c.capitao31)!.nome.split(' ')[0]}` : 'sem capitão escolhido'}</small></div>
-        <div className="clube30__num"><span>Técnico</span><strong>{c.tecnico31 ? c.tecnico31.nome.split(' ')[0] : 'Interino'}</strong><small>{c.tecnico31 ? `${'★'.repeat(c.tecnico31.nivel)} · ${(c.humorTecnico31 ?? 60) >= 70 ? 'satisfeito' : (c.humorTecnico31 ?? 60) >= 45 ? 'tranquilo' : 'insatisfeito'} · ${bonusDoTecnico(c) >= 0 ? '+' : ''}${Math.round(bonusDoTecnico(c) * 10) / 10} na média` : 'contrate em Comando'}</small></div>
-        <div className="clube30__num"><span>Vestiário</span><strong className={(c.moral31 ?? 0) < 0 ? 'clube30__ruim' : undefined}>{(c.moral31 ?? 0) > 0.5 ? 'Unido' : (c.moral31 ?? 0) < -0.5 ? 'Rachado' : 'Normal'}</strong><small>{(c.moral31 ?? 0) > 0 ? '+' : ''}{c.moral31 ?? 0} na média</small></div>
-      </div>
-      <div className="clube20__abas" role="tablist">
-        {(['painel', 'campeonato', 'elenco', 'mercado', 'base', 'comando', 'negocios', 'clube'] as const).map(x => <button key={x} type="button" role="tab" aria-selected={aba === x} className={`clube20__aba${aba === x ? ' clube20__aba--ativa' : ''}`} onClick={() => setAba(x)}>{{ painel: `Painel${(c.mesa31?.length ?? 0) ? ` · ${c.mesa31!.length} na mesa` : ''}`, campeonato: 'Campeonato', elenco: 'Elenco', mercado: 'Mercado', base: 'Base', comando: 'Comando', negocios: 'Patrocínios, camisa e loja', clube: 'Estrutura e finanças' }[x]}</button>)}
-      </div>
+      {aba === 'painel' ? (
+        <div className="clube30__numeros">
+          <div className="clube30__num"><span>Caixa</span><strong className={c.caixa < 0 ? 'clube30__ruim' : undefined}>{dinheiroCurto(c.caixa)}</strong></div>
+          <div className="clube30__num"><span>Dívida</span><strong className={c.divida > receita ? 'clube30__ruim' : undefined}>{dinheiroCurto(c.divida)}</strong></div>
+          <div className="clube30__num"><span>Valor do clube</span><strong>{dinheiroCurto(c.valor)}</strong></div>
+          <button type="button" className="clube30__num clube34__ir" onClick={() => setAba('elenco')}><span>Elenco</span><strong>{media}</strong><small>média · {c.elenco.length} jogadores</small></button>
+          <div className="clube30__num"><span>Química</span><strong className={quimica < 0 ? 'clube30__ruim' : undefined}>{quimica > 0 ? `+${quimica}` : quimica}</strong><small>{c.capitao31 && c.elenco.some(j => j.id === c.capitao31) ? `capitão: ${c.elenco.find(j => j.id === c.capitao31)!.nome.split(' ')[0]}` : 'sem capitão escolhido'}</small></div>
+          <button type="button" className="clube30__num clube34__ir" onClick={() => setAba('comando')}><span>Técnico</span><strong>{c.tecnico31 ? c.tecnico31.nome.split(' ')[0] : 'Interino'}</strong><small>{c.tecnico31 ? `${'★'.repeat(c.tecnico31.nivel)} · ${(c.humorTecnico31 ?? 60) >= 70 ? 'satisfeito' : (c.humorTecnico31 ?? 60) >= 45 ? 'tranquilo' : 'insatisfeito'} · ${bonusDoTecnico(c) >= 0 ? '+' : ''}${Math.round(bonusDoTecnico(c) * 10) / 10} na média` : 'contrate em Comando'}</small></button>
+          <div className="clube30__num"><span>Vestiário</span><strong className={(c.moral31 ?? 0) < 0 ? 'clube30__ruim' : undefined}>{(c.moral31 ?? 0) > 0.5 ? 'Unido' : (c.moral31 ?? 0) < -0.5 ? 'Rachado' : 'Normal'}</strong><small>{(c.moral31 ?? 0) > 0 ? '+' : ''}{c.moral31 ?? 0} na média</small></div>
+        </div>
+      ) : (
+        <p className="clube34__faixa"><span>Caixa <b className={c.caixa < 0 ? 'clube30__ruim' : undefined}>{dinheiroCurto(c.caixa)}</b></span><span>Elenco <b>{media}</b></span><span>Química <b>{quimica > 0 ? `+${quimica}` : quimica}</b></span><span>Técnico <b>{c.tecnico31 ? c.tecnico31.nome.split(' ')[0] : 'interino'}</b></span></p>
+      )}
+      <NavTime34 rotulo={`O ${c.nome}`} atual={aba} mudar={setAba} itens={ABAS_CLUBE34(c.mesa31?.length ?? 0, contratosAcabando)} />
       {aba === 'painel' && <MesaDoPresidente vida={vida} agir={agir} />}
       {aba === 'painel' && (
         <div className="clube30__painel">
@@ -326,15 +343,16 @@ function MeuClube({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
             <Pips rotulo="Base" n={c.base} />
             {(contratosAcabando > 0 || pesoFolha > 0.8 || c.caixa < 0) && (
               <ul className="clube30__alertas" aria-label="O que pede atenção">
-                {contratosAcabando > 0 && <li>{contratosAcabando} contrato{contratosAcabando > 1 ? 's' : ''} terminando neste ano — renove ou deixe sair (Elenco).</li>}
+                {contratosAcabando > 0 && <li>{contratosAcabando} contrato{contratosAcabando > 1 ? 's' : ''} terminando neste ano — renove ou deixe sair. <button type="button" className="clube34__link" onClick={() => setAba('elenco')}>Ver o elenco</button></li>}
                 {pesoFolha > 0.8 && <li>A folha consome {Math.round(pesoFolha * 100)}% da receita: vender ou dispensar alivia; o caixa paga a diferença.</li>}
-                {c.caixa < 0 && <li>Caixa negativo: um aporte ou uma venda evita juros.</li>}
+                {c.caixa < 0 && <li>Caixa negativo: um aporte ou uma venda evita juros. <button type="button" className="clube34__link" onClick={() => setAba('clube')}>Estrutura e finanças</button></li>}
               </ul>
             )}
           </div>
           <section className="clube30__bloco"><h4>Temporadas</h4><Temporadas c={c} /></section>
         </div>
       )}
+      {aba === 'instalacoes' && <Instalacoes34 vida={vida} agir={agir} nome={c.nome} identidade={c.identidade33} inst={c.instalacoes34} acao={sub => C({ op: 'dono', sub })} dados={{ tipo: 'clube', estadio: c.estadio, ct: c.ct, base: c.base, obra: c.obra ? `obra (${{ estadio: 'estádio', ct: 'CT', base: 'base' }[c.obra.qual]}) até o fim de ${c.obra.ate}` : undefined }} />}
       {aba === 'campeonato' && <CampeonatoDoClube vida={vida} />}
       {aba === 'elenco' && (() => {
         const tipos = [...new Set([...perfis.values()].flatMap(p => [p.perfil.principal, ...p.perfil.secundarios]).filter((x): x is string => !!x))];

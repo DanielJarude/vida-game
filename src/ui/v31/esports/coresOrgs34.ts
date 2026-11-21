@@ -1,0 +1,71 @@
+/** VIDA 34 · as cores de marca das organizações reais de e-sports: [fundo, destaque]. */
+export const CORES_ORGS34: Record<string, [string, string]> = {
+  '00 Nation': ['#000000', '#ffffff'], '100 Thieves': ['#e4002b', '#000000'], '2Game Esports': ['#ff6a00', '#111111'], '3DMAX': ['#111111', '#ffcc00'],
+  '9z Team': ['#111111', '#ffffff'], 'Acend': ['#111111', '#00d1ff'], 'Apeks': ['#111111', '#ff4d00'], 'Astralis': ['#e4002b', '#ffffff'],
+  'Atlantis': ['#0b3d91', '#ffffff'], 'Atlético-MG e-Sports': ['#111111', '#ffffff'], 'Aurora Gaming': ['#111111', '#d9ff00'], 'BBL Esports': ['#111111', '#e30613'],
+  'BIG': ['#111111', '#ffffff'], 'BLINK': ['#ff2d55', '#111111'], 'BNK FearX': ['#111111', '#ffcd00'], 'Begrip': ['#111111', '#ffffff'],
+  'Bestia': ['#111111', '#e30613'], 'Big Gods Jaguars': ['#111111', '#f5b700'], 'Bilibili Gaming': ['#00a1d6', '#ffffff'], 'Black Dragons': ['#111111', '#e30613'],
+  'Bleed Esports': ['#c8102e', '#111111'], 'Brave e-Sports': ['#0b3d91', '#ffffff'], 'Built By Gamers': ['#111111', '#ffffff'], 'CAG Osaka': ['#0a3c8c', '#ffffff'],
+  'CNB e-Sports Club': ['#c8102e', '#ffffff'], 'CTBC Flying Oyster': ['#1a1a1a', '#ffd200'], 'Case Esports': ['#ff6600', '#111111'], 'Chiefs Esports Club': ['#111111', '#d4af37'],
+  'Cloud9': ['#1da1f2', '#ffffff'], 'Complexity Gaming': ['#0a1f44', '#c8102e'], 'Copenhagen Flames': ['#ff5a00', '#111111'], 'Corinthians e-Sports': ['#ffffff', '#111111'],
+  'Counter Logic Gaming': ['#0a2a5c', '#5aa9e6'], 'Cruzeiro e-Sports': ['#0033a0', '#ffffff'], 'Cyclops athlete gaming': ['#111111', '#e30613'], 'DRX': ['#1c3bd9', '#ffffff'],
+  'DarkZero Esports': ['#111111', '#7d3cff'], 'DetonatioN FocusMe': ['#111111', '#0091ff'], 'Dignitas': ['#111111', '#ffd200'], 'Dire Wolves': ['#111111', '#f5a700'],
+  'Dplus KIA': ['#111111', '#00d6c2'], 'Dreamers': ['#5b2a86', '#ffffff'], 'ECSTATIC': ['#111111', '#00ff9c'], 'EDward Gaming': ['#111111', '#e60012'],
+  'ENCE': ['#111111', '#ffffff'], 'Ego': ['#111111', '#ffffff'], 'Elevate': ['#111111', '#d4af37'], 'Endpoint': ['#111111', '#f9c400'],
+  'Enterprise Esports': ['#0b3d91', '#ffffff'], 'Estral Esports': ['#111111', '#ffcc00'], 'Eternal Fire': ['#111111', '#e30613'], 'Evil Geniuses': ['#0a2240', '#ffffff'],
+  'Excel Esports': ['#111111', '#ffffff'], 'FURIA': ['#111111', '#ffffff'], 'FURIA Academy': ['#111111', '#ffffff'], 'FUT Esports': ['#111111', '#00e1ff'],
+  'FaZe Clan': ['#e4002b', '#111111'], 'Falkol': ['#111111', '#ffffff'], 'Fire Gamers': ['#e30613', '#111111'], 'Flamengo Esports': ['#c8102e', '#111111'],
+  'Flipsid3 Tactics': ['#111111', '#ffcc00'], 'Fluxo': ['#111111', '#ff2f7a'], 'Fluxo Academy': ['#111111', '#ff2f7a'], 'FlyQuest': ['#005a3c', '#ffffff'],
+  'Fnatic': ['#ff5900', '#111111'], 'Furious Gaming': ['#111111', '#e30613'], 'G2 Esports': ['#111111', '#e30613'], 'GAM Esports': ['#111111', '#ffcc00'],
+  'GIANTX': ['#111111', '#ffffff'], 'GUN5 Esports': ['#111111', '#ff3b30'], 'Gaimin Gladiators': ['#111111', '#c9a227'], 'Galorys': ['#111111', '#00b4ff'],
+  'Gambit Esports': ['#c8102e', '#111111'], 'Gamelanders': ['#111111', '#16e0a0'], 'Gamepro': ['#111111', '#e30613'], 'GamerLegion': ['#111111', '#ffffff'],
+  'Geekay Esports': ['#111111', '#ffd200'], 'Gen.G': ['#111111', '#aa8a00'], 'Gen.G Mobil1 Racing': ['#111111', '#aa8a00'], 'Gentle Mates': ['#111111', '#ffffff'],
+  'Ghost Gaming': ['#111111', '#ffffff'], 'Global Esports': ['#0b3d91', '#ffffff'], 'Guard': ['#111111', '#ffffff'], 'Guild Esports': ['#111111', '#ffffff'],
+  'Hanwha Life Esports': ['#f37321', '#111111'], 'Heroic': ['#111111', '#ff5900'], 'INTZ': ['#111111', '#ffffff'], 'INTZ Academy': ['#111111', '#ffffff'],
+  'Immortals': ['#0a1f44', '#00c2ff'], 'Imperial': ['#111111', '#d4af37'], 'Into the Breach': ['#111111', '#ff6f00'], 'Invictus Gaming': ['#111111', '#ffffff'],
+  'Isurus': ['#0b3d91', '#ffffff'], 'Isurus Gaming': ['#0b3d91', '#ffffff'], 'JD Gaming': ['#c8102e', '#ffffff'], 'KRÜ Esports': ['#e4007c', '#111111'],
+  'KT Rolster': ['#111111', '#e30613'], 'KaBuM! Academy': ['#ff6500', '#0055a5'], 'KaBuM! Esports': ['#ff6500', '#0055a5'], 'KaBuM! e-Sports': ['#ff6500', '#0055a5'],
+  'Kabum! e-Sports': ['#ff6500', '#0055a5'], 'Kaos Latin Gamers': ['#111111', '#00b2ff'], 'Karmine Corp': ['#0a1f44', '#00b6f0'], 'Keyd Stars': ['#5b2a86', '#ffffff'],
+  'Kubix Esports': ['#111111', '#ff3b30'], 'Kwangdong Freecs': ['#e30613', '#111111'], 'LNG Esports': ['#0b3d91', '#ffffff'], 'LOUD': ['#13ff00', '#111111'],
+  'LOUD Academy': ['#13ff00', '#111111'], 'Legacy': ['#111111', '#ffd200'], 'Leisure Club': ['#111111', '#ffffff'], 'Leviatán': ['#111111', '#00d1ff'],
+  'Liberty': ['#0b3d91', '#ffffff'], 'Liberty Academy': ['#0b3d91', '#ffffff'], 'Los Grandes': ['#111111', '#d4af37'], 'Los Grandes Academy': ['#111111', '#d4af37'],
+  'Luminosity Gaming': ['#111111', '#5aa9e6'], 'Lunatik eSports': ['#111111', '#00e5ff'], 'M80': ['#111111', '#ff4d00'], 'MAD Lions KOI': ['#111111', '#e30613'],
+  'MIBR': ['#111111', '#ffffff'], 'MNM Gaming': ['#111111', '#ffffff'], 'MOUZ': ['#e30613', '#111111'], 'Mirage': ['#111111', '#ffffff'],
+  'Mock-It Esports': ['#111111', '#ff9900'], 'Moist Esports': ['#00a2ff', '#111111'], 'Monte': ['#111111', '#ffffff'], 'Moscow Five': ['#111111', '#e30613'],
+  'Movistar KOI': ['#111111', '#7b2cff'], 'Movistar R7': ['#0b3d91', '#ffffff'], 'Movistar Riders': ['#019df4', '#111111'], 'Mythic': ['#111111', '#ffffff'],
+  'NRG': ['#111111', '#ff6a00'], 'Natus Vincere': ['#ffee00', '#111111'], 'Nemiga Gaming': ['#111111', '#e30613'], 'Netshoes Miners': ['#5b2a86', '#ffffff'],
+  'Nexus Gaming': ['#111111', '#ff3b30'], 'Ninjas in Pyjamas': ['#111111', '#ffffff'], 'Nongshim RedForce': ['#e30613', '#111111'], 'Nort Gaming': ['#111111', '#ffffff'],
+  'ODDIK': ['#111111', '#ffffff'], 'OG': ['#111111', '#ffffff'], 'OpTic Gaming': ['#111111', '#93c90e'], 'Operation Kino': ['#111111', '#ffffff'],
+  'Oxygen Esports': ['#0060ff', '#ffffff'], 'PENTA Sports': ['#111111', '#ff6600'], 'PSG Talon': ['#0b2a5b', '#da291c'], 'Paper Rex': ['#111111', '#ff4fa3'],
+  'Passion UA': ['#111111', '#ffd500'], 'Pentanet.GG': ['#111111', '#ff1a1a'], 'Pioneers': ['#111111', '#ffffff'], 'Playzone': ['#111111', '#00c853'],
+  'Preasy': ['#111111', '#ffffff'], 'ProGaming Esports': ['#111111', '#e30613'], 'Quadrant': ['#111111', '#ffffff'], 'Quantic Gaming': ['#111111', '#ffffff'],
+  'RED Academy': ['#e30613', '#111111'], 'RED Canids': ['#e30613', '#111111'], 'Rare Atom': ['#111111', '#00e1ff'], 'Rebellion': ['#111111', '#95d600'],
+  'Rebels Gaming': ['#111111', '#e30613'], 'Red Canids': ['#e30613', '#111111'], 'Remo Brave': ['#0b3d91', '#ffffff'], 'Renault Sport Team Vitality': ['#ffe600', '#111111'],
+  'Rensga Esports': ['#111111', '#ffd200'], 'Rex Regum Qeon': ['#111111', '#ffcc00'], 'Rise Gaming': ['#111111', '#ff6a00'], 'Rogue': ['#111111', '#00a3e0'],
+  'Royal Never Give Up': ['#111111', '#f5c400'], 'Ruby Esports': ['#c8102e', '#ffffff'], 'Rule One': ['#111111', '#ffffff'], 'SANDBOX Gaming': ['#ffcc00', '#111111'],
+  'SAW': ['#111111', '#ff6600'], 'SK Gaming': ['#111111', '#ffffff'], 'Samsung Galaxy': ['#1428a0', '#ffffff'], 'Santos e-Sports': ['#ffffff', '#111111'],
+  'Sashi Esport': ['#111111', '#ffffff'], 'Sentinels': ['#ce0037', '#111111'], 'Sharks Esports': ['#0b3d91', '#ffffff'], 'Shopify Rebellion': ['#111111', '#95d600'],
+  'Solary': ['#111111', '#ffcc00'], 'Soniqs': ['#111111', '#7d3cff'], 'Spacestation Gaming': ['#111111', '#ff6a00'], 'Sprout': ['#111111', '#00c853'],
+  'Stellae Gaming': ['#111111', '#ffd200'], 'T1': ['#e2012d', '#111111'], 'TBK Esports': ['#111111', '#ffffff'], 'TSM': ['#111111', '#ffffff'],
+  'Taipei Assassins': ['#111111', '#e30613'], 'Talon Esports': ['#111111', '#ff6600'], 'Team 3D': ['#111111', '#e30613'], 'Team Alternate': ['#111111', '#e30613'],
+  'Team Aze': ['#111111', '#00e1ff'], 'Team BDS': ['#111111', '#ff2d6f'], 'Team Dignitas': ['#111111', '#ffd200'], 'Team Empire': ['#111111', '#e30613'],
+  'Team Falcons': ['#00a651', '#111111'], 'Team Heretics': ['#111111', '#ffffff'], 'Team Liquid': ['#0c223f', '#00b4e6'], 'Team NoA': ['#111111', '#ffffff'],
+  'Team Queso': ['#ffcc00', '#111111'], 'Team Secret': ['#111111', '#ffffff'], 'Team Solid': ['#111111', '#ffffff'], 'Team SoloMid': ['#111111', '#ffffff'],
+  'Team Spirit': ['#111111', '#ffffff'], 'Team Vitality': ['#ffe600', '#111111'], 'Team WE': ['#e30613', '#111111'], 'Team oNe': ['#111111', '#ffffff'],
+  'TeamOne Academy': ['#111111', '#ffffff'], 'Top Esports': ['#111111', '#e30613'], 'Totem Esports': ['#111111', '#ffffff'], 'Trace Esports': ['#111111', '#00e1ff'],
+  'Twisted Minds': ['#5b2a86', '#ffffff'], 'Ultra Prime': ['#111111', '#ff6a00'], 'Uppercut': ['#111111', '#ffffff'], 'Version1': ['#111111', '#ffffff'],
+  'Virtus.pro': ['#ff6600', '#111111'], 'Vitality': ['#ffe600', '#111111'], 'Vivo Keyd Academy': ['#5b2a86', '#ffffff'], 'Vivo Keyd Stars': ['#5b2a86', '#ffffff'],
+  'Vorax': ['#111111', '#e30613'], 'W7M': ['#111111', '#ffffff'], 'W7M Academy': ['#111111', '#ffffff'], 'Wave Esports': ['#0b3d91', '#ffffff'],
+  'Weibo Gaming': ['#e30613', '#111111'], 'Wildcard': ['#111111', '#ffffff'], 'Wolves Esports': ['#111111', '#ffcc00'], 'XSET': ['#111111', '#ffffff'],
+  'ZETA DIVISION': ['#111111', '#ffffff'], 'g3x': ['#111111', '#ffffff'], 'mTw': ['#0b3d91', '#ffffff'], 'paiN Academy': ['#e30613', '#111111'],
+  'paiN Gaming': ['#e30613', '#111111'], 'w7m esports': ['#111111', '#ffffff'], 'x6tence': ['#111111', '#e30613']
+};
+
+/** As cores de uma org: as da marca, se for real; senão um par estável pelo nome. */
+export function coresDaOrg34(nome: string): [string, string] {
+  const real = CORES_ORGS34[nome];
+  if (real) return real;
+  let h = 0; for (const ch of nome) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  const a = h % 360, b = (a + 140 + (h >> 9) % 80) % 360;
+  return [`hsl(${a} 62% 34%)`, `hsl(${b} 70% 62%)`];
+}

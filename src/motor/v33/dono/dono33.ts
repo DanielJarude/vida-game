@@ -6,10 +6,11 @@
 import type { Rng } from '../../rng';
 import { normalizarIdentidade33, type Identidade33 } from './identidade33';
 import { contratoDaCota33, executarComercial33, fecharAnoComercial33, novoComercial33, problemaComercial33, type Comercial33, type Contexto33, type OpComercial33, type Resultado33 } from './patrocinio33';
+import { normalizarInstalacoes34, type Instalacoes34 } from './instalacoes34';
 import { executarLoja33, fecharAnoLoja33, novaLoja33, problemaLoja33, type Loja33, type OpLoja33 } from './loja33';
 
-export interface Dono33 { identidade33?: Identidade33; comercial33?: Comercial33; loja33?: Loja33; /** `v.t` da fundação/compra (a identidade é livre no primeiro ano). */ desde?: number }
-export type OpDono33 = { op: 'comercial'; sub: OpComercial33 } | { op: 'loja'; sub: OpLoja33 } | { op: 'identidade'; identidade: Identidade33 };
+export interface Dono33 { identidade33?: Identidade33; /** VIDA 34 · as instalações personalizadas. */ instalacoes34?: Instalacoes34; comercial33?: Comercial33; loja33?: Loja33; /** `v.t` da fundação/compra (a identidade é livre no primeiro ano). */ desde?: number }
+export type OpDono33 = { op: 'comercial'; sub: OpComercial33 } | { op: 'loja'; sub: OpLoja33 } | { op: 'identidade'; identidade: Identidade33 } | { op: 'instalacoes'; instalacoes: Instalacoes34 };
 
 /** Mudar o escudo e as cores depois do primeiro ano: agência, registro, uniformes novos — e a torcida estranha. */
 export const custoDoRebranding33 = (ctx: Contexto33) => Math.round(Math.max(30000, ctx.receitaBase * 0.02) / 1e4) * 1e4;
@@ -18,6 +19,7 @@ const livre = (ctx: Contexto33, d: Dono33, d0: number | undefined) => d0 === und
 export function problemaDono33(ctx: Contexto33, d: Dono33, o: OpDono33, caixa: number, anoDeInicio?: number): string | undefined {
   if (o.op === 'comercial') return problemaComercial33(ctx, d.comercial33, o.sub, caixa);
   if (o.op === 'loja') return problemaLoja33(ctx, d.loja33, o.sub, caixa);
+  if (o.op === 'instalacoes') return normalizarInstalacoes34(o.instalacoes) ? undefined : 'Escolhas inválidas.';
   if (!normalizarIdentidade33(o.identidade)) return 'Identidade inválida.';
   if (livre(ctx, d, anoDeInicio)) return undefined;
   const c = custoDoRebranding33(ctx);
@@ -28,6 +30,7 @@ export function problemaDono33(ctx: Contexto33, d: Dono33, o: OpDono33, caixa: n
 export function executarDono33(ctx: Contexto33, d: Dono33, o: OpDono33, r: Rng, anoDeInicio?: number): { texto: string; custo: number; tom: 'bom' | 'ruim' | 'neutro'; fama?: number } {
   if (o.op === 'comercial') return executarComercial33(ctx, d.comercial33 ??= novoComercial33(), o.sub, r);
   if (o.op === 'loja') { const x = executarLoja33(ctx, d.loja33 ??= novaLoja33(), o.sub); return { ...x, tom: 'neutro' }; }
+  if (o.op === 'instalacoes') { d.instalacoes34 = normalizarInstalacoes34(o.instalacoes); return { texto: 'As instalações ficaram do jeito que você quis.', custo: 0, tom: 'bom' }; }
   const gratis = livre(ctx, d, anoDeInicio);
   d.identidade33 = normalizarIdentidade33(o.identidade);
   return gratis ? { texto: 'Escudo, cores e nome da casa atualizados.', custo: 0, tom: 'bom' }

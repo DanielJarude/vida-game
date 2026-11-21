@@ -46,6 +46,7 @@ export interface Equipe32 {
   patrocinio?: { nome: string; valor: number; ate: number };
   /** VIDA 33 · a identidade, os patrocínios por cota e a loja. */
   identidade33?: Identidade33;
+  instalacoes34?: import('../../v33/dono/instalacoes34').Instalacoes34;
   comercial33?: Comercial33;
   loja33?: Loja33;
   historico: TemporadaDaEquipe32[];

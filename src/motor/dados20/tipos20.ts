@@ -110,6 +110,7 @@ export interface Clube20 {
   fundado32?: { municipioId: string; t: number };
   /** VIDA 33 · o que todo dono tem: a identidade (escudo, cores, apelido, estádio), os patrocínios por cota e a loja. */
   identidade33?: import('../v33/dono/identidade33').Identidade33;
+  instalacoes34?: import('../v33/dono/instalacoes34').Instalacoes34;
   comercial33?: import('../v33/dono/patrocinio33').Comercial33;
   loja33?: import('../v33/dono/loja33').Loja33;
 }

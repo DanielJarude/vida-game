@@ -1,0 +1,22 @@
+/* VIDA 34 · as instalações: o desenho grande e o ateliê ao lado (embaixo no celular). */
+#root .inst34 { display: grid; gap: 12px; min-width: 0; }
+#root .inst34__lugares, #root .inst34__fichas { display: flex; flex-wrap: wrap; gap: 6px; }
+#root .inst34__ficha { min-height: 32px; padding: 4px 12px; border: 0; border-radius: 999px; background: var(--veu-2); color: var(--tinta); font: inherit; font-size: var(--type-caption); font-weight: 600; cursor: pointer; box-shadow: inset 0 0 0 1px var(--fio); }
+#root .inst34__ficha[aria-pressed='true'] { background: var(--acao); color: var(--fundo); box-shadow: none; }
+#root .inst34__palco { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 760px) { #root .inst34__palco { grid-template-columns: 1fr; } }
+#root .inst34__figura { margin: 0; display: grid; gap: 6px; }
+#root .inst34__svg { width: 100%; height: auto; border-radius: 14px; box-shadow: inset 0 0 0 1px var(--fio), 0 2px 10px rgba(0, 0, 0, 0.12); display: block; }
+#root .inst34__figura figcaption { font-size: var(--type-caption); color: var(--tinta-2); }
+#root .inst34__atelie { display: grid; gap: 10px; min-width: 0; }
+#root .inst34__sub { margin: 4px 0 0; font-size: var(--type-caption); text-transform: uppercase; letter-spacing: 0.08em; color: var(--tinta-2); }
+#root .inst34__nome { display: grid; gap: 4px; font-size: var(--type-caption); color: var(--tinta-2); }
+#root .inst34__nome input { min-height: 38px; border-radius: 10px; padding: 0 10px; }
+#root .inst34__escolha { display: grid; gap: 4px; }
+#root .inst34__rot { font-size: var(--type-caption); color: var(--tinta-2); }
+#root .inst34__liga { display: inline-flex; align-items: center; gap: 8px; font-size: var(--type-caption); }
+#root .inst34__cor { width: 30px; height: 30px; border-radius: 50%; border: 0; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25); cursor: pointer; }
+#root .inst34__cor[aria-pressed='true'] { outline: 3px solid var(--acao); outline-offset: 2px; }
+#root .inst34__salvar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+#root .inst34__estrelas { color: var(--alerta); letter-spacing: 1px; }
+#root .inst34__estrelas i { font-style: normal; color: var(--fio); }

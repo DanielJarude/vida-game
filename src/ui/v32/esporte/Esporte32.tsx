@@ -21,6 +21,8 @@ import { EditorIdentidade33, identidadeInicial33 } from '../../v33/dono/EditorId
 import { camisaDaIdentidade33, DesenhoCamisa33 } from '../../v33/dono/Camisa33';
 import { Investimento33, PainelDono33, type Foco33 } from '../../v33/dono/PainelDono33';
 import './esporte32.css';
+import { NavTime34 } from '../../v34/esporte/NavTime34';
+import { Instalacoes34 } from '../../v34/instalacoes/Instalacoes34';
 
 type Agir = (a: Acao) => boolean;
 const E = (oque: unknown): Acao => ({ tipo: 'equipe32', oque } as Acao);
@@ -105,7 +107,7 @@ export function FundarTime32({ vida, agir }: { vida: Vida; agir: Agir }) {
 
 /** O cartão de um time de quadra: a divisão, a força, o caixa, a última temporada e as ações. */
 export function CartaoEquipe32({ vida, agir, e }: { vida: Vida; agir: Agir; e: Equipe32 }) {
-  const [aba, setAba] = useState<'acoes' | 'negocios' | 'historia'>('acoes');
+  const [aba, setAba] = useState<'acoes' | 'ginasio' | 'negocios' | 'historia'>('acoes');
   const ult = e.historico[e.historico.length - 1];
   const titulos = e.historico.filter(h => h.titulo);
   const tecnicos = tecnicosDaEquipe32(vida, e);
@@ -126,11 +128,12 @@ export function CartaoEquipe32({ vida, agir, e }: { vida: Vida; agir: Agir; e: E
         <div><dt>Títulos</dt><dd>{titulos.length}</dd></div>
       </dl>
       <p className="nota">{ult ? `Última temporada (${ult.ano}): ${ult.posicao}º no ${nomeDaDivisao32(e, ult.nivel)}${ult.titulo ? ' — campeão' : ult.acesso ? ' — subiu' : ult.queda ? ' — caiu' : ''}.` : 'A primeira temporada fecha na virada do ano.'} {e.tecnico ? `Técnico: ${e.tecnico.nome} (${'★'.repeat(e.tecnico.nivel)}).` : 'Sem técnico contratado.'}</p>
-      <div className="esp32__fichas" role="tablist" aria-label={`O ${e.nome}`}>
-        <button type="button" role="tab" aria-selected={aba === 'acoes'} className="vitrine32__ficha vitrine32__ficha--leve" onClick={() => setAba('acoes')}>Comando</button>
-        <button type="button" role="tab" aria-selected={aba === 'negocios'} className="vitrine32__ficha vitrine32__ficha--leve" onClick={() => setAba('negocios')}>Patrocínios, camisa e loja</button>
-        <button type="button" role="tab" aria-selected={aba === 'historia'} className="vitrine32__ficha vitrine32__ficha--leve" onClick={() => setAba('historia')}>Temporadas · {e.historico.length}</button>
-      </div>
+      <NavTime34 rotulo={`O ${e.nome}`} atual={aba} mudar={setAba} itens={[
+        { id: 'acoes', rotulo: 'Comando', grupo: 'Time' },
+        { id: 'ginasio', rotulo: 'Ginásio', grupo: 'Time' },
+        { id: 'negocios', rotulo: 'Patrocínios, camisa e loja', grupo: 'Negócio' },
+        { id: 'historia', rotulo: `Temporadas · ${e.historico.length}`, grupo: 'Histórico' }
+      ]} />
       {aba === 'acoes' ? (
         <div className="esp32__acoes">
           <div className="esp32__grupo"><h4>Elenco</h4><div className="clube20__botoes">
@@ -146,6 +149,8 @@ export function CartaoEquipe32({ vida, agir, e }: { vida: Vida; agir: Agir; e: E
             <BotaoAcao vida={vida} agir={agir} acao={E({ op: 'vender', id: e.id })} variante="discreto">Vender o time · {dinheiroCurto(Math.max(0, e.valor + e.caixa - e.divida))}</BotaoAcao>
           </div></div>
         </div>
+      ) : aba === 'ginasio' ? (
+        <Instalacoes34 vida={vida} agir={agir} nome={e.nome} identidade={e.identidade33} inst={e.instalacoes34} acao={sub => E({ op: 'dono', id: e.id, sub })} dados={{ tipo: 'quadra', ginasio: e.ginasio, modalidade: e.modalidade, obra: !!e.obra }} />
       ) : aba === 'negocios' ? (
         <PainelDono33 vida={vida} agir={agir} nome={e.nome} dono={e} ctx={contextoEquipe33(e, ano)} acao={sub => E({ op: 'dono', id: e.id, sub })} anoInicio={anoDe(e.desde)} />
       ) : e.historico.length === 0 ? <p className="vazio">Nenhuma temporada jogada ainda.</p> : (

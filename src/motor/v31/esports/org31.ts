@@ -111,6 +111,7 @@ export interface OrgEsports31 {
   mesaHist: { ano: number; tipo: string; titulo: string; texto: string; opcao?: string; ignorado?: boolean }[];
   /** VIDA 33 · o que todo dono tem: a identidade, os patrocínios e a loja. */
   identidade33?: Identidade33;
+  instalacoes34?: import('../../v33/dono/instalacoes34').Instalacoes34;
   comercial33?: Comercial33;
   loja33?: Loja33;
 }
