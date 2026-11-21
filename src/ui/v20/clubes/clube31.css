@@ -1,0 +1,32 @@
+/* VIDA 31 · o elenco e o mercado do clube: o cartão do jogador (posição, arquétipo, atributos), os filtros e o comando. */
+.jog31 { display: grid; gap: 8px; }
+.jog31__topo { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; }
+.jog31__pos { display: inline-grid; place-items: center; min-width: 40px; height: 28px; padding: 0 6px; border-radius: 8px; background: var(--tinta); color: var(--fundo); font-weight: 700; font-size: var(--type-meta); letter-spacing: 0.06em; }
+.jog31__quem { display: grid; min-width: 0; }
+.jog31__quem strong { overflow-wrap: anywhere; }
+.jog31__forca { display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: var(--tom-wash); box-shadow: inset 0 0 0 2px var(--tom); font-weight: 800; font-variant-numeric: tabular-nums; }
+.jog31__bracadeira { display: inline-grid; place-items: center; width: 18px; height: 18px; margin-left: 6px; border-radius: 4px; background: var(--alerta); color: var(--fundo); font-size: 0.7rem; vertical-align: middle; }
+.jog31--capitao { box-shadow: inset 0 0 0 1.5px var(--alerta); }
+.jog31__tipos { display: flex; flex-wrap: wrap; gap: 6px; }
+.jog31__tipo { padding: 3px 10px; border-radius: 999px; background: var(--tom); color: var(--tom-sobre); font-size: var(--type-caption); font-weight: 600; cursor: help; }
+.jog31__tipo--sec { background: var(--tom-wash); color: var(--tinta); box-shadow: inset 0 0 0 1px var(--tom-linha); font-weight: 500; }
+.jog31__tipo--comum { background: var(--veu-2); color: var(--tinta-2); font-weight: 500; }
+.jog31__atributos { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.jog31__atributos li { display: grid; grid-template-columns: 110px minmax(0, 1fr) 28px; gap: 8px; align-items: center; font-size: var(--type-caption); color: var(--tinta-2); }
+.jog31__atributos i { display: block; height: 6px; border-radius: 6px; background: var(--tom); opacity: 0.8; }
+.jog31__atributos b { color: var(--tinta); font-variant-numeric: tabular-nums; text-align: right; }
+.jog31__alerta { font-size: var(--type-caption); color: var(--alerta); font-weight: 600; }
+.jog31__filtros { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin: 4px 0 12px; }
+.jog31__filtros label { display: inline-flex; align-items: center; gap: 6px; font-size: var(--type-caption); color: var(--tinta-2); }
+.jog31__filtros select { min-height: 36px; border-radius: 10px; padding: 0 8px; }
+.cmd31 { display: grid; gap: 14px; }
+.cmd31__bloco { display: grid; gap: 8px; padding: 14px 16px; border-radius: 14px; background: var(--superficie); box-shadow: inset 0 0 0 1px var(--fio); }
+.cmd31__bloco h4 { margin: 0; font-size: var(--type-subheading); }
+.cmd31__ofertas { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: 8px; }
+.cmd31__oferta { display: grid; gap: 4px; align-content: start; padding: 12px; border-radius: 12px; background: var(--veu-1); box-shadow: inset 0 0 0 1px var(--fio); }
+.cmd31__estrelas { color: var(--alerta); letter-spacing: 2px; }
+.cmd31__estrelas i { font-style: normal; color: var(--fio-forte); }
+/* As ações do cartão: fichas pequenas, lado a lado (eram botões cheios, um embaixo do outro). */
+#root .jog31 .clube20__botoes { display: flex; flex-wrap: wrap; gap: 6px; flex-direction: row; }
+#root .jog31 .clube20__botoes .botao { min-height: 32px; padding: 4px 10px; font-size: var(--type-caption); border-radius: 999px; }
+#root .jog31 .clube20__botoes .acao { display: contents; }

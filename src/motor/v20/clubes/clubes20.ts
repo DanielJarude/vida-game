@@ -35,6 +35,7 @@ import { divisaoDoClube, FORCA_DO_DONO, formaNaLiga, ligaDe, temporadaCorrente, 
 import { registrarMotivoDoNome } from '../../sistemas/notoriedade';
 import { sortearNome, sortearSobrenome } from '../../dados/nomes';
 import type { Clube20, Jogador20, Setor20 } from '../../dados20/tipos20';
+import { quimicaDoElenco } from './perfil31';
 
 export type { Clube20, Jogador20 };
 
@@ -116,7 +117,14 @@ export type OqueClube20 =
   | { op: 'dispensar'; id: string }
   | { op: 'obra'; qual: 'estadio' | 'ct' | 'base' }
   | { op: 'base'; nivel: 0 | 1 | 2 }
-  | { op: 'objetivo'; qual: NonNullable<Clube20['objetivo']> };
+  | { op: 'objetivo'; qual: NonNullable<Clube20['objetivo']> }
+  // VIDA 31 · o comando do clube
+  | { op: 'capitao'; id: string }
+  | { op: 'tecnico'; i: number }
+  | { op: 'demitir_tecnico' }
+  | { op: 'emprestar'; id: string }
+  | { op: 'ingresso'; nivel: 0 | 1 | 2 }
+  | { op: 'patrocinio'; i: number };
 
 export const custoDaObra = (c: Clube20, qual: 'estadio' | 'ct' | 'base') => Math.round((qual === 'estadio' ? 40e6 : qual === 'ct' ? 15e6 : 6e6) * Math.pow(1.9, c[qual] - 1) * mercado(c.pais) / 1e5) * 1e5;
 
@@ -159,7 +167,28 @@ export function disponibilidadeClube20(v: Vida, o: OqueClube20): Veredito {
       const custo = custoDaObra(c, o.qual);
       return c.caixa >= custo ? PERMITIDO : bloqueio('requisito', `A obra custa ${fmt(custo)}; o caixa do clube não tem.`);
     }
-    case 'base': case 'objetivo': return PERMITIDO;
+    case 'base': case 'objetivo': case 'ingresso': return PERMITIDO;
+    case 'capitao': return c.elenco.some(j => j.id === o.id) ? (c.capitao31 === o.id ? bloqueio('incompativel', 'Ele já é o capitão.') : PERMITIDO) : bloqueio('impossivel', '');
+    case 'tecnico': {
+      const t = tecnicosDisponiveis(v)[o.i];
+      if (!t) return bloqueio('impossivel', 'Esse técnico já não está disponível.');
+      if (c.tecnico31?.nome === t.nome) return bloqueio('incompativel', 'Ele já é o técnico.');
+      const multa = c.tecnico31 ? Math.round(c.tecnico31.salario * 0.5) : 0;
+      return c.caixa >= multa + t.salario * 0.25 ? PERMITIDO : bloqueio('requisito', `O caixa não cobre ${multa ? 'a multa do técnico de agora e ' : ''}as luvas (${fmt(multa + Math.round(t.salario * 0.25))}).`);
+    }
+    case 'demitir_tecnico': return c.tecnico31 ? (c.caixa >= Math.round(c.tecnico31.salario * 0.5) ? PERMITIDO : bloqueio('requisito', `A multa da demissão é de ${fmt(Math.round(c.tecnico31.salario * 0.5))}; o caixa não tem.`)) : bloqueio('impossivel', 'O clube não tem técnico contratado por você.');
+    case 'emprestar': {
+      const j = c.elenco.find(x => x.id === o.id);
+      if (!j) return bloqueio('impossivel', '');
+      if (ano - anoDe(j.tNasc) > 23) return bloqueio('incompativel', 'Empréstimo é para jovem ganhar minutos (até 23 anos).');
+      if ([...c.elenco].sort((a, b) => b.forca - a.forca).slice(0, 11).includes(j)) return bloqueio('incompativel', 'Ele é titular: emprestar enfraquece o time.');
+      if (c.elenco.length <= 18) return bloqueio('incompativel', 'O elenco ficaria curto demais (mínimo 18 com os emprestados fora).');
+      return PERMITIDO;
+    }
+    case 'patrocinio': {
+      if (c.patrocinio31 && c.patrocinio31.ate >= ano) return bloqueio('incompativel', `O contrato com ${c.patrocinio31.nome.toLowerCase()} vai até ${c.patrocinio31.ate}.`);
+      return patrociniosDoAno(v)[o.i] ? PERMITIDO : bloqueio('impossivel', '');
+    }
   }
 }
 
@@ -195,6 +224,7 @@ export function executarClube20(v: Vida, o: OqueClube20): { texto: string; tom?:
       if (c.comprados.length > 200) c.comprados.splice(0, c.comprados.length - 200);
       const { preco: _p, clube: de, ...j } = m; void _p;
       c.elenco.push(j);
+      (c.chegada31 ??= {})[j.id] = ano;
       escrever(v, { texto: `${oClube(c.nome).replace(/^./, x => x.toUpperCase())} contratou ${j.nome} (${j.pos}, ${ano - anoDe(j.tNasc)} anos), que estava no ${de}, por ${fmt(m.preco)}.`, relevancia: 'cotidiano', tema: 'trabalho', escolha: true });
       return { texto: `${j.nome} contratado.`, tom: 'bom' };
     }
@@ -224,6 +254,7 @@ export function executarClube20(v: Vida, o: OqueClube20): { texto: string; tom?:
       const j = c.juniores.splice(i, 1)[0];
       j.salario = salarioDe(j.forca, c.pais) * 0.6; j.contratoAte = ano + 3;
       c.elenco.push(j);
+      (c.chegada31 ??= {})[j.id] = ano;
       return { texto: `${j.nome} subiu da base para o elenco principal.`, tom: 'bom' };
     }
     case 'obra': {
@@ -235,6 +266,38 @@ export function executarClube20(v: Vida, o: OqueClube20): { texto: string; tom?:
     }
     case 'base': c.investimentoBase = o.nivel; return { texto: o.nivel === 2 ? 'A base recebe investimento forte: mais olheiros, mais estrutura.' : o.nivel === 1 ? 'A base recebe o investimento de sempre.' : 'A base ficou com o mínimo.', tom: 'neutro' };
     case 'objetivo': c.objetivo = o.qual; return { texto: 'Objetivo da temporada definido.', tom: 'neutro' };
+    case 'capitao': { const j = c.elenco.find(x => x.id === o.id)!; c.capitao31 = j.id; return { texto: `${j.nome} é o novo capitão: a braçadeira é dele.`, tom: 'bom' }; }
+    case 'tecnico': {
+      const t = tecnicosDisponiveis(v)[o.i];
+      const multa = c.tecnico31 ? Math.round(c.tecnico31.salario * 0.5) : 0;
+      const luvas = Math.round(t.salario * 0.25);
+      c.caixa -= multa + luvas;
+      const antes = c.tecnico31?.nome;
+      c.tecnico31 = { ...t, desde: ano };
+      escrever(v, { texto: `${oClube(c.nome).replace(/^./, x => x.toUpperCase())} tem técnico novo: ${t.nome} (${t.estilo}, ${['', 'iniciante', 'de divisão de acesso', 'experiente', 'de elite', 'renomado'][t.nivel]})${antes ? `, no lugar de ${antes}` : ''}.`, relevancia: 'cotidiano', tema: 'trabalho', escolha: true });
+      return { texto: `${t.nome} contratado como técnico.`, tom: 'bom' };
+    }
+    case 'demitir_tecnico': {
+      const t = c.tecnico31!; const multa = Math.round(t.salario * 0.5);
+      c.caixa -= multa; c.tecnico31 = undefined;
+      escrever(v, { texto: `Demitiu o técnico ${t.nome} ${oClube(c.nome).replace(/^o /, 'do ').replace(/^a /, 'da ')} (multa de ${fmt(multa)}). A comissão interina assume.`, relevancia: 'cotidiano', tema: 'trabalho', escolha: true });
+      return { texto: `${t.nome} demitido.`, tom: 'neutro' };
+    }
+    case 'emprestar': {
+      const i = c.elenco.findIndex(x => x.id === o.id);
+      const j = c.elenco.splice(i, 1)[0];
+      const para = compradorDe(c, rngDe(v.id, 'clube20_emprestimo', j.id, ano));
+      (c.emprestados31 ??= []).push({ jogador: j, para, ate: ano });
+      if (c.capitao31 === j.id) c.capitao31 = undefined;
+      return { texto: `${j.nome} emprestado a ${para.startsWith('um ') ? para : oClube(para)} até o fim da temporada: joga, e o salário fica com eles.`, tom: 'neutro' };
+    }
+    case 'ingresso': c.ingresso31 = o.nivel; return { texto: o.nivel === 0 ? 'Ingresso popular: estádio cheio, a torcida agradece; a bilheteria rende menos.' : o.nivel === 2 ? 'Ingresso caro: rende mais por jogo, mas a torcida reclama e vai menos.' : 'Ingresso no preço de sempre.', tom: 'neutro' };
+    case 'patrocinio': {
+      const p = patrociniosDoAno(v)[o.i];
+      c.patrocinio31 = { nome: p.nome, valor: p.valor, ate: ano + p.anos - 1, rep: p.rep };
+      escrever(v, { texto: `${oClube(c.nome).replace(/^./, x => x.toUpperCase())} fechou o patrocínio master com ${p.nome.toLowerCase()}: ${fmt(p.valor)} por ano até ${ano + p.anos - 1}.`, relevancia: 'cotidiano', tema: 'dinheiro', escolha: true });
+      return { texto: `Patrocínio fechado: ${fmt(p.valor)} por ano.`, tom: 'bom' };
+    }
   }
 }
 
@@ -337,6 +400,43 @@ function compradorDe(c: Clube20, r: Rng): string {
   return r.chance(0.3) || !outros.length ? r.pick(['um clube da Europa', 'um clube da Arábia Saudita', 'um clube do Japão', 'um clube dos Estados Unidos']) : outros[Math.floor(r.next() * outros.length)].nome;
 }
 
+/* ------------------------------------------------------------------ VIDA 31 · o comando do clube */
+
+const NOMES_DE_TECNICO = ['Abel', 'Renato', 'Dorival', 'Tite', 'Cuca', 'Mano', 'Fernando', 'Rogério', 'Luís', 'Jorge', 'Marcelo', 'Paulo', 'Vanderlei', 'Roger'];
+/** Os técnicos disponíveis no ano (estáveis no ano): o nível que aceita vir depende da divisão e do nome do clube. */
+export function tecnicosDisponiveis(v: Vida): NonNullable<Clube20['tecnico31']>[] {
+  const c = v.clube20;
+  if (!c) return [];
+  const ano = anoDe(v.t);
+  const r = rngDe(v.id, 'clube20_tecnicos', c.nome, ano);
+  const div = ligaDe(v, c.pais).div[c.nome] ?? 1;
+  const teto = clamp(Math.round(div + c.reputacao / 40), 1, 5);
+  const estilos = ['ofensivo', 'equilibrado', 'defensivo'] as const;
+  return [0, 1, 2].map(k => {
+    const nivel = clamp(teto - (k === 0 ? 0 : k === 1 ? r.int(0, 1) : r.int(1, 2)), 1, 5);
+    const nome = `${NOMES_DE_TECNICO[r.int(0, NOMES_DE_TECNICO.length - 1)]} ${sortearSobrenome(r, c.pais)}`;
+    return { nome, estilo: estilos[(k + r.int(0, 2)) % 3], nivel, salario: Math.round([0, 0.4e6, 0.9e6, 2e6, 4.5e6, 9e6][nivel] * mercado(c.pais) / 1e4) * 1e4, desde: ano };
+  });
+}
+/** O que o técnico soma à média do elenco (o interino da casa é nível 2: abaixo dele, tira). */
+export const bonusDoTecnico = (c: Clube20) => (c.tecnico31 ? (c.tecnico31.nivel - 2) * 1.1 : 0);
+
+/** As propostas de patrocínio master do ano (estáveis no ano): mais dinheiro costuma vir com contrato curto ou com o nome em jogo. */
+export function patrociniosDoAno(v: Vida): { nome: string; valor: number; anos: number; rep: number; sobre: string }[] {
+  const c = v.clube20;
+  if (!c) return [];
+  const ano = anoDe(v.t);
+  const r = rngDe(v.id, 'clube20_patrocinio', c.nome, ano);
+  const div = ligaDe(v, c.pais).div[c.nome] ?? 1;
+  const base = receitaDoAno(div, c.torcida, c.estadio, c.reputacao, c.pais) * 0.12 * (0.9 + r.next() * 0.2);
+  const arred = (x: number) => Math.round(x / 1e5) * 1e5;
+  return [
+    { nome: 'Uma fabricante de material esportivo', valor: arred(base), anos: 3, rep: 1, sobre: 'contrato longo, a camisa vende mais' },
+    { nome: 'Uma empresa de tecnologia', valor: arred(base * 1.15), anos: 2, rep: 0, sobre: 'paga um pouco mais, dois anos' },
+    ...(ano >= 2018 ? [{ nome: 'Uma casa de apostas', valor: arred(base * 1.55), anos: 1, rep: -2, sobre: 'paga muito, um ano — e parte da torcida torce o nariz' }] : [{ nome: 'Um banco', valor: arred(base * 1.3), anos: 1, rep: 0, sobre: 'paga bem, um ano só' }])
+  ];
+}
+
 /* ------------------------------------------------------------------ o ano do clube */
 
 FORCA_DO_DONO.f = (v, pais, ano, clube) => {
@@ -366,16 +466,19 @@ export function processarClube20(v: Vida): void {
     // 2. O dinheiro do ano.
     const receitaBase = receitaDoAno(divJogada, c.torcida, c.estadio, c.reputacao, c.pais) * RECEITA_PORTE[porteDe(c.nome, c.pais)];
     const premio = posicao ? Math.round(receitaBase * Math.max(0, (21 - posicao) / 20) * 0.15) : 0;
-    const receita = Math.round((receitaBase + premio) / 1e5) * 1e5;
+    // VIDA 31: o preço do ingresso (a bilheteria) e o patrocínio master entram na receita.
+    const patrocinio = c.patrocinio31 && c.patrocinio31.ate >= u.ano ? c.patrocinio31.valor : 0;
+    const receita = Math.round(((receitaBase + premio) * [0.93, 1, 1.08][c.ingresso31 ?? 1] + patrocinio) / 1e5) * 1e5;
     const folha = c.elenco.reduce((s, j) => s + j.salario, 0) + c.juniores.reduce((s, j) => s + j.salario, 0);
     // Além da folha: a operação (comissão, viagens, impostos, o futebol feminino e o social), ~40% da receita.
-    const despesa = Math.round(folha + receita * 0.5 + (c.estadio + c.ct) * receita * 0.02 + receita * [0.01, 0.03, 0.06][c.investimentoBase] + c.divida * 0.11);
+    const despesa = Math.round(folha + (c.tecnico31?.salario ?? 0) + receita * 0.5 + (c.estadio + c.ct) * receita * 0.02 + receita * [0.01, 0.03, 0.06][c.investimentoBase] + c.divida * 0.11);
     c.caixa += receita - despesa;
     if (c.caixa < 0) { c.divida += -c.caixa; c.caixa = 0; }
     else if (c.divida > 0 && c.caixa > receita * 0.2) { const amort = Math.min(c.divida, Math.round((c.caixa - receita * 0.2) * 0.5)); c.divida -= amort; c.caixa -= amort; }
     // 3. A torcida e o nome andam com o resultado.
     const alvoTorcida = TORCIDA_PORTE[porteDe(c.nome, c.pais)] + (divJogada - 3) * 6 + (titulo ? 8 : 0);
-    c.torcida = clamp(Math.round(c.torcida * 0.85 + alvoTorcida * 0.15 + (acesso ? 3 : 0) - (queda ? 4 : 0)));
+    c.torcida = clamp(Math.round(c.torcida * 0.85 + alvoTorcida * 0.15 + (acesso ? 3 : 0) - (queda ? 4 : 0) + [2, 0, -2][c.ingresso31 ?? 1]));
+    if (patrocinio && c.patrocinio31!.rep) c.reputacao = clamp(c.reputacao + c.patrocinio31!.rep);
     c.reputacao = clamp(Math.round(c.reputacao + (titulo ? 8 : 0) + (acesso ? 5 : 0) - (queda ? 7 : 0) + (posicao ? (10 - posicao) * 0.4 : 0)));
     c.historico.push({ ano: u.ano, divisao: divJogada, posicao, receita, despesa, caixa: c.caixa, forca: Math.round(forcaDaMedia(mediaDoElenco(c)) * 10) / 10, ...(titulo ? { titulo } : {}), ...(acesso ? { acesso } : {}), ...(queda ? { queda } : {}) });
     if (c.historico.length > 40) c.historico.splice(0, c.historico.length - 40);
@@ -414,6 +517,17 @@ export function processarClube20(v: Vida): void {
       escrever(v, { texto: `${j.nome} foi vendido para ${para.startsWith('um ') ? para : `o ${para}`} por ${fmt(valor)}: a proposta de fora foi grande demais para recusar.`, relevancia: valor > 30e6 ? 'biografia' : 'cotidiano', tema: 'trabalho' });
     }
   }
+  // VIDA 31: os emprestados voltam no fim da temporada — com minutos nas pernas (crescem mais do que no banco).
+  if (c.emprestados31?.length) {
+    for (const e of c.emprestados31.filter(x => x.ate < ano)) {
+      const j = e.jogador;
+      j.forca = clamp(Math.round(j.forca + Math.max(1, (j.potencial - j.forca) * 0.25) + r.next() * 2), 30, Math.max(j.forca, j.potencial));
+      c.elenco.push(j);
+      escrever(v, { texto: `${j.nome} voltou do empréstimo ${e.para.startsWith('um ') ? `a ${e.para}` : `ao ${e.para}`} mais rodado: força ${j.forca}.`, relevancia: 'cotidiano', tema: 'trabalho' });
+    }
+    c.emprestados31 = c.emprestados31.filter(x => x.ate >= ano);
+  }
+  if (c.patrocinio31 && c.patrocinio31.ate < ano) { escrever(v, { texto: `Terminou o patrocínio master com ${c.patrocinio31.nome.toLowerCase()}: a camisa está livre para uma nova proposta.`, relevancia: 'cotidiano', tema: 'dinheiro' }); c.patrocinio31 = undefined; }
   // 4. Os jogadores: um ano mais velhos, evoluem (o CT ajuda os jovens), caem com a idade, saem no fim do contrato.
   const evoluir = (j: Jogador20) => {
     const i = ano - anoDe(j.tNasc);
@@ -449,7 +563,9 @@ export function processarClube20(v: Vida): void {
   // 6. As obras ficam prontas.
   if (c.obra && c.obra.ate <= ano) { c[c.obra.qual] = Math.min(5, c[c.obra.qual] + 1); escrever(v, { texto: `Ficou pronta a obra ${c.obra.qual === 'estadio' ? 'do estádio' : c.obra.qual === 'ct' ? 'do centro de treinamento' : 'da base'}.`, relevancia: 'biografia', tema: 'trabalho', tom: 'bom' }); c.obra = undefined; }
   // 7. A força para a temporada que começa (a liga lê daqui) e o valor do clube (o patrimônio lê daqui).
-  c.forcaPorAno[temporadaCorrente(v)] = Math.round(forcaDaMedia(mediaDoElenco(c)) * 100) / 100;
+  // VIDA 31: o técnico e a química do elenco (os perfis dos que jogam) entram na força da temporada.
+  const mediaNova = mediaDoElenco(c);
+  c.forcaPorAno[temporadaCorrente(v)] = Math.round(forcaDaMedia(mediaNova + bonusDoTecnico(c) + quimicaDoElenco(c, ano, mediaNova)) * 100) / 100;
   const chaves = Object.keys(c.forcaPorAno).map(Number).sort((a, b) => a - b);
   for (const k of chaves.slice(0, Math.max(0, chaves.length - 6))) delete c.forcaPorAno[k];
   const div = liga.div[c.nome] ?? 1;

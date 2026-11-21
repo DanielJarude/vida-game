@@ -5,7 +5,10 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Vida } from '../../../motor/tipos';
 import type { Acao } from '../../../motor/acoes';
-import { clubesAVenda, custoDaObra, dividendosPossiveis, mediaDoElenco, mercadoDoAno, valorDoJogador, type OqueClube20 } from '../../../motor/v20/clubes/clubes20';
+import { bonusDoTecnico, clubesAVenda, custoDaObra, dividendosPossiveis, mediaDoElenco, mercadoDoAno, patrociniosDoAno, tecnicosDisponiveis, valorDoJogador, type OqueClube20 } from '../../../motor/v20/clubes/clubes20';
+import { NOME_DO_PAPEL, perfilDoJogador20, perfisDoElenco, quimicaDoElenco, type Perfil31 } from '../../../motor/v20/clubes/perfil31';
+import { arquetipo, nomeDoArquetipo } from '../../../motor/sistemas/arquetipos';
+import './clube31.css';
 import { carregarMundo } from '../../../motor/mundo/carregar';
 import { nomeDoPais } from '../../../motor/mundo/registro';
 import { anoDe } from '../../../motor/tempo';
@@ -141,37 +144,86 @@ function Temporadas({ c }: { c: NonNullable<Vida['clube20']> }) {
   );
 }
 
-function CartaoJogador({ j, ano, titularDaPos, children }: { j: { nome: string; pos: string; forca: number; potencial: number; tNasc: number; salario: number; contratoAte?: number; daBase?: boolean }; ano: number; titularDaPos?: number; children?: ReactNode }) {
+const ROTULO_ATRIBUTO: Record<string, string> = { reflexos: 'Reflexos', posicionamento: 'Posicionamento', saidas: 'Saídas', marcacao: 'Marcação', duelos: 'Duelos', aereo: 'Jogo aéreo', antecipacao: 'Antecipação', resistencia: 'Resistência', cruzamento: 'Cruzamento', cobertura: 'Cobertura', determinacao: 'Determinação', passe: 'Passe', decisao: 'Decisão', criacao: 'Criação', visao: 'Visão', passe_longo: 'Passe longo', movimentacao: 'Movimentação', finalizacao: 'Finalização', compostura: 'Compostura' };
+const SIGLA: Record<string, string> = { goleiro: 'GOL', zagueiro: 'ZAG', lateral: 'LAT', volante: 'VOL', meia: 'MEI', ponta: 'PON', atacante: 'ATA' };
+
+/** VIDA 31 · o cartão do jogador: a posição fina, o arquétipo (o mesmo do atleta da vida), os atributos da posição, a força e o potencial. */
+function CartaoJogador({ j, ano, perfil, titularDaPos, capitao, origem, preco, alerta, children }: { j: { nome: string; pos: string; forca: number; potencial: number; tNasc: number; salario: number; contratoAte?: number; daBase?: boolean }; ano: number; perfil?: Perfil31; titularDaPos?: number; capitao?: boolean; origem?: string; preco?: number; alerta?: string; children?: ReactNode }) {
   const i = ano - anoDe(j.tNasc);
   const delta = titularDaPos !== undefined ? j.forca - titularDaPos : undefined;
+  const principal = perfil?.perfil.principal;
   return (
-    <li className="clube30__cartao">
-      <div className="clube30__cartao-topo">
-        <span className="clube30__pos">{j.pos}</span>
-        <strong>{j.nome}</strong>
-        <span className="clube30__meta">{i} anos{j.daBase ? ' · da base' : ''}</span>
+    <li className={`clube30__cartao jog31${capitao ? ' jog31--capitao' : ''}`}>
+      <div className="jog31__topo">
+        <span className="jog31__pos" title={perfil ? NOME_DO_PAPEL[perfil.papel] : j.pos}>{perfil ? SIGLA[perfil.papel] : j.pos}</span>
+        <div className="jog31__quem">
+          <strong>{j.nome}{capitao && <span className="jog31__bracadeira" title="Capitão">C</span>}</strong>
+          <span className="clube30__meta">{perfil ? NOME_DO_PAPEL[perfil.papel] : ''} · {i} anos{j.daBase ? ' · da base' : ''}{origem ? ` · no ${origem}` : ''}</span>
+        </div>
+        <span className="jog31__forca" aria-label={`Força ${j.forca}`}>{j.forca}</span>
       </div>
+      <div className="jog31__tipos">
+        {principal ? <span className="jog31__tipo" title={arquetipo(principal)?.sobre}>{nomeDoArquetipo(principal)}</span> : <span className="jog31__tipo jog31__tipo--comum" title="Nenhum traço forte o bastante para virar um tipo">Sem perfil marcante</span>}
+        {perfil?.perfil.secundarios.map(x => <span key={x} className="jog31__tipo jog31__tipo--sec" title={arquetipo(x)?.sobre}>{nomeDoArquetipo(x)}</span>)}
+      </div>
+      {perfil && (
+        <ul className="jog31__atributos" aria-label="Os atributos da posição">
+          {perfil.atributos.slice(0, 3).map(a => <li key={a.id}><span>{ROTULO_ATRIBUTO[a.id] ?? a.id}</span><i style={{ width: `${a.valor}%` }} /><b>{a.valor}</b></li>)}
+        </ul>
+      )}
       <div className="clube30__forca" aria-label={`Força ${j.forca}, potencial ${j.potencial}`}>
         <span className="clube30__forca-barra"><i style={{ width: `${j.forca}%` }} />{j.potencial > j.forca && <i className="clube30__pot" style={{ left: `${j.forca}%`, width: `${j.potencial - j.forca}%` }} />}</span>
-        <span>{j.forca}{j.potencial > j.forca ? <small> → {j.potencial}</small> : null}</span>
+        <span>{j.potencial > j.forca ? <small>potencial {j.potencial}</small> : <small>no auge</small>}</span>
         {delta !== undefined && <span className={delta > 0 ? 'clube30__delta clube30__delta--bom' : 'clube30__delta'}>{delta > 0 ? `+${delta}` : delta} vs. titular</span>}
       </div>
-      <span className="clube30__meta">{dinheiroCurto(j.salario)}/ano{j.contratoAte ? ` · contrato até ${j.contratoAte}` : ''}</span>
+      <span className="clube30__meta">{dinheiroCurto(j.salario)}/ano{j.contratoAte ? ` · contrato até ${j.contratoAte}` : ''}{preco ? ` · preço ${dinheiroCurto(preco)}` : ''}</span>
+      {alerta && <span className="jog31__alerta">{alerta}</span>}
       {children && <div className="clube20__botoes">{children}</div>}
     </li>
   );
 }
 
+const SETORES = [{ id: '', nome: 'Todos' }, { id: 'GOL', nome: 'Goleiros' }, { id: 'DEF', nome: 'Defesa' }, { id: 'MEI', nome: 'Meio' }, { id: 'ATA', nome: 'Ataque' }] as const;
+type Ordem31 = 'pos' | 'forca' | 'potencial' | 'idade' | 'salario' | 'contrato';
+const ORDEM: Record<Ordem31, string> = { pos: 'Posição', forca: 'Força', potencial: 'Potencial', idade: 'Mais novos', salario: 'Salário', contrato: 'Contrato acabando' };
+
+/** Os filtros de uma lista de jogadores: o setor, o arquétipo e a ordem. */
+function Filtros31({ setor, setSetor, tipo, setTipo, tipos, ordem, setOrdem, id }: { setor: string; setSetor: (s: string) => void; tipo: string; setTipo: (t: string) => void; tipos: string[]; ordem: Ordem31; setOrdem: (o: Ordem31) => void; id: string }) {
+  return (
+    <div className="jog31__filtros">
+      <div className="escolha" role="group" aria-label="Setor">{SETORES.map(x => <button key={x.id} type="button" className="chip" aria-pressed={setor === x.id} onClick={() => setSetor(x.id)}>{x.nome}</button>)}</div>
+      <label htmlFor={`${id}-tipo`}>Arquétipo <select id={`${id}-tipo`} value={tipo} onChange={e => setTipo(e.target.value)}><option value="">Todos</option>{tipos.map(t => <option key={t} value={t}>{nomeDoArquetipo(t)}</option>)}</select></label>
+      <label htmlFor={`${id}-ordem`}>Ordenar <select id={`${id}-ordem`} value={ordem} onChange={e => setOrdem(e.target.value as Ordem31)}>{(Object.keys(ORDEM) as Ordem31[]).map(o => <option key={o} value={o}>{ORDEM[o]}</option>)}</select></label>
+    </div>
+  );
+}
+
+function ordenar<T extends { pos: string; forca: number; potencial: number; tNasc: number; salario: number; contratoAte?: number }>(xs: T[], o: Ordem31): T[] {
+  const cmp: Record<Ordem31, (a: T, b: T) => number> = {
+    pos: (a, b) => 'GOLDEFMEIATA'.indexOf(a.pos) - 'GOLDEFMEIATA'.indexOf(b.pos) || b.forca - a.forca,
+    forca: (a, b) => b.forca - a.forca, potencial: (a, b) => b.potencial - a.potencial, idade: (a, b) => b.tNasc - a.tNasc,
+    salario: (a, b) => b.salario - a.salario, contrato: (a, b) => (a.contratoAte ?? 9999) - (b.contratoAte ?? 9999)
+  };
+  return [...xs].sort(cmp[o]);
+}
+
 function MeuClube({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
   const c = vida.clube20!;
   const ano = anoDe(vida.t);
-  const [aba, setAba] = useState<'painel' | 'elenco' | 'mercado' | 'base' | 'clube'>('painel');
+  const [aba, setAba] = useState<'painel' | 'elenco' | 'mercado' | 'base' | 'comando' | 'clube'>('painel');
+  // VIDA 31: os filtros do elenco e do mercado (o setor, o arquétipo, a ordem).
+  const [setorE, setSetorE] = useState(''); const [tipoE, setTipoE] = useState(''); const [ordemE, setOrdemE] = useState<Ordem31>('pos');
+  const [setorM, setSetorM] = useState(''); const [tipoM, setTipoM] = useState(''); const [ordemM, setOrdemM] = useState<Ordem31>('forca');
   const mercado = aba === 'mercado' ? mercadoDoAno(vida) : [];
   const h = c.historico[c.historico.length - 1];
   const folha = c.elenco.reduce((s, j) => s + j.salario, 0);
   const receita = h?.receita ?? 0;
   const pesoFolha = receita > 0 ? folha / receita : 0;
-  const media = Math.round(mediaDoElenco(c));
+  const mediaExata = mediaDoElenco(c);
+  const media = Math.round(mediaExata);
+  const perfis = useMemo(() => perfisDoElenco(c, ano, mediaExata), [c, ano, mediaExata]);
+  const quimica = quimicaDoElenco(c, ano, mediaExata);
+  const perfisM = new Map(mercado.map(j => [j.id, perfilDoJogador20(j, ano, { mediaDoTime: mediaExata })]));
   const melhorDa = (pos: string) => Math.max(0, ...c.elenco.filter(j => j.pos === pos).map(j => j.forca));
   const contratosAcabando = c.elenco.filter(j => j.contratoAte <= ano).length;
   const OBJ = { titulo: 'Brigar pelo título', acesso: 'Subir', meio: 'Meio de tabela', permanencia: 'Não cair' } as const;
@@ -191,9 +243,11 @@ function MeuClube({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
         <div className="clube30__num"><span>Dívida</span><strong className={c.divida > receita ? 'clube30__ruim' : undefined}>{dinheiroCurto(c.divida)}</strong></div>
         <div className="clube30__num"><span>Valor do clube</span><strong>{dinheiroCurto(c.valor)}</strong></div>
         <div className="clube30__num"><span>Elenco</span><strong>{media}</strong><small>média · {c.elenco.length} jogadores</small></div>
+        <div className="clube30__num"><span>Química</span><strong className={quimica < 0 ? 'clube30__ruim' : undefined}>{quimica > 0 ? `+${quimica}` : quimica}</strong><small>{c.capitao31 && c.elenco.some(j => j.id === c.capitao31) ? `capitão: ${c.elenco.find(j => j.id === c.capitao31)!.nome.split(' ')[0]}` : 'sem capitão escolhido'}</small></div>
+        <div className="clube30__num"><span>Técnico</span><strong>{c.tecnico31 ? c.tecnico31.nome.split(' ')[0] : 'Interino'}</strong><small>{c.tecnico31 ? `${'★'.repeat(c.tecnico31.nivel)} · ${bonusDoTecnico(c) >= 0 ? '+' : ''}${Math.round(bonusDoTecnico(c) * 10) / 10} na média` : 'contrate em Comando'}</small></div>
       </div>
       <div className="clube20__abas" role="tablist">
-        {(['painel', 'elenco', 'mercado', 'base', 'clube'] as const).map(x => <button key={x} type="button" role="tab" aria-selected={aba === x} className={`clube20__aba${aba === x ? ' clube20__aba--ativa' : ''}`} onClick={() => setAba(x)}>{{ painel: 'Painel', elenco: 'Elenco', mercado: 'Mercado', base: 'Base', clube: 'Estrutura e finanças' }[x]}</button>)}
+        {(['painel', 'elenco', 'mercado', 'base', 'comando', 'clube'] as const).map(x => <button key={x} type="button" role="tab" aria-selected={aba === x} className={`clube20__aba${aba === x ? ' clube20__aba--ativa' : ''}`} onClick={() => setAba(x)}>{{ painel: 'Painel', elenco: 'Elenco', mercado: 'Mercado', base: 'Base', comando: 'Comando e negócios', clube: 'Estrutura e finanças' }[x]}</button>)}
       </div>
       {aba === 'painel' && (
         <div className="clube30__painel">
@@ -216,29 +270,46 @@ function MeuClube({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
           <section className="clube30__bloco"><h4>Temporadas</h4><Temporadas c={c} /></section>
         </div>
       )}
-      {aba === 'elenco' && (
-        <ul className="clube30__cartoes">
-          {[...c.elenco].sort((a, b) => 'GOLDEFMEIATA'.indexOf(a.pos) - 'GOLDEFMEIATA'.indexOf(b.pos) || b.forca - a.forca).map(j => (
-            <CartaoJogador key={j.id} j={j} ano={ano}>
-              <BotaoAcao vida={vida} agir={agir} acao={C({ op: 'renovar', id: j.id })} ocultarBloqueado>Renovar</BotaoAcao>
-              <BotaoAcao vida={vida} agir={agir} acao={C({ op: 'vender', id: j.id })}>Vender · ~{dinheiroCurto(valorDoJogador(j, ano))}</BotaoAcao>
-              <BotaoAcao vida={vida} agir={agir} acao={C({ op: 'dispensar', id: j.id })}>Dispensar</BotaoAcao>
-            </CartaoJogador>
-          ))}
-        </ul>
-      )}
-      {aba === 'mercado' && (
-        <>
-          <p className="nota">Jogadores de outros clubes do país, à venda neste ano. A comparação é com o melhor do seu elenco na mesma posição. O dinheiro sai do caixa do clube.</p>
-          <ul className="clube30__cartoes">
-            {mercado.map(j => (
-              <CartaoJogador key={j.id} j={{ ...j, nome: `${j.nome} · ${j.clube}` }} ano={ano} titularDaPos={melhorDa(j.pos)}>
-                <BotaoAcao vida={vida} agir={agir} acao={C({ op: 'contratar', id: j.id })}>Contratar · {dinheiroCurto(j.preco)}</BotaoAcao>
-              </CartaoJogador>
-            ))}
-          </ul>
-        </>
-      )}
+      {aba === 'elenco' && (() => {
+        const tipos = [...new Set([...perfis.values()].flatMap(p => [p.perfil.principal, ...p.perfil.secundarios]).filter((x): x is string => !!x))];
+        const lista = ordenar(c.elenco.filter(j => (!setorE || j.pos === setorE) && (!tipoE || [perfis.get(j.id)?.perfil.principal, ...(perfis.get(j.id)?.perfil.secundarios ?? [])].includes(tipoE))), ordemE);
+        return (
+          <>
+            <Filtros31 id="elenco31" setor={setorE} setSetor={setSetorE} tipo={tipoE} setTipo={setTipoE} tipos={tipos} ordem={ordemE} setOrdem={setOrdemE} />
+            <ul className="clube30__cartoes">
+              {lista.map(j => (
+                <CartaoJogador key={j.id} j={j} ano={ano} perfil={perfis.get(j.id)} capitao={c.capitao31 === j.id} alerta={j.contratoAte <= ano ? 'Contrato termina neste ano' : undefined}>
+                  <BotaoAcao vida={vida} agir={agir} acao={C({ op: 'renovar', id: j.id })} ocultarBloqueado>Renovar</BotaoAcao>
+                  <BotaoAcao vida={vida} agir={agir} acao={C({ op: 'capitao', id: j.id })} ocultarBloqueado>Dar a braçadeira</BotaoAcao>
+                  <BotaoAcao vida={vida} agir={agir} acao={C({ op: 'emprestar', id: j.id })} ocultarBloqueado>Emprestar</BotaoAcao>
+                  <BotaoAcao vida={vida} agir={agir} acao={C({ op: 'vender', id: j.id })}>Vender · ~{dinheiroCurto(valorDoJogador(j, ano))}</BotaoAcao>
+                  <BotaoAcao vida={vida} agir={agir} acao={C({ op: 'dispensar', id: j.id })}>Dispensar</BotaoAcao>
+                </CartaoJogador>
+              ))}
+              {!lista.length && <li className="nota">Ninguém do elenco com esse filtro.</li>}
+            </ul>
+            {(c.emprestados31?.length ?? 0) > 0 && <p className="nota">Emprestados até o fim da temporada: {c.emprestados31!.map(e => `${e.jogador.nome} (${e.para.startsWith('um ') ? e.para : `no ${e.para}`})`).join('; ')}.</p>}
+          </>
+        );
+      })()}
+      {aba === 'mercado' && (() => {
+        const tipos = [...new Set([...perfisM.values()].flatMap(p => [p.perfil.principal, ...p.perfil.secundarios]).filter((x): x is string => !!x))];
+        const lista = ordenar(mercado.filter(j => (!setorM || j.pos === setorM) && (!tipoM || [perfisM.get(j.id)?.perfil.principal, ...(perfisM.get(j.id)?.perfil.secundarios ?? [])].includes(tipoM))), ordemM);
+        return (
+          <>
+            <p className="nota">Jogadores de outros clubes do país, à venda neste ano — com o tipo de jogador de cada um (os mesmos arquétipos do atleta da vida). A comparação é com o melhor do seu elenco na mesma posição; o dinheiro sai do caixa do clube.</p>
+            <Filtros31 id="mercado31" setor={setorM} setSetor={setSetorM} tipo={tipoM} setTipo={setTipoM} tipos={tipos} ordem={ordemM} setOrdem={setOrdemM} />
+            <ul className="clube30__cartoes">
+              {lista.map(j => (
+                <CartaoJogador key={j.id} j={j} ano={ano} perfil={perfisM.get(j.id)} titularDaPos={melhorDa(j.pos)} origem={j.clube} preco={j.preco}>
+                  <BotaoAcao vida={vida} agir={agir} acao={C({ op: 'contratar', id: j.id })}>Contratar · {dinheiroCurto(j.preco)}</BotaoAcao>
+                </CartaoJogador>
+              ))}
+              {!lista.length && <li className="nota">Ninguém no mercado com esse filtro.</li>}
+            </ul>
+          </>
+        );
+      })()}
       {aba === 'base' && (
         <>
           <div className="clube20__botoes" role="group" aria-label="Investimento na base">
@@ -252,6 +323,44 @@ function MeuClube({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
             ))}
           </ul>
         </>
+      )}
+      {aba === 'comando' && (
+        <div className="cmd31">
+          <section className="cmd31__bloco" aria-labelledby="cmd31-tecnico">
+            <h4 id="cmd31-tecnico">O técnico</h4>
+            <p className="nota">{c.tecnico31 ? `${c.tecnico31.nome} (${c.tecnico31.estilo}) comanda o time desde ${c.tecnico31.desde}: soma ${Math.round(bonusDoTecnico(c) * 10) / 10} na média do elenco e custa ${dinheiroCurto(c.tecnico31.salario)} por ano.` : 'Sem técnico contratado por você, a comissão interina da casa toca o time (sem somar nada à média).'}</p>
+            <ul className="cmd31__ofertas">
+              {tecnicosDisponiveis(vida).map((t, k) => (
+                <li key={k} className="cmd31__oferta">
+                  <strong>{t.nome}</strong>
+                  <span className="cmd31__estrelas" aria-label={`Nível ${t.nivel} de 5`}>{'★'.repeat(t.nivel)}<i>{'★'.repeat(5 - t.nivel)}</i></span>
+                  <span className="clube30__meta">{t.estilo} · {dinheiroCurto(t.salario)}/ano · {(t.nivel - 2) * 1.1 >= 0 ? '+' : ''}{Math.round((t.nivel - 2) * 11) / 10} na média</span>
+                  <BotaoAcao vida={vida} agir={agir} acao={C({ op: 'tecnico', i: k })}>Contratar</BotaoAcao>
+                </li>
+              ))}
+            </ul>
+            {c.tecnico31 && <BotaoAcao vida={vida} agir={agir} acao={C({ op: 'demitir_tecnico' })} variante="discreto">Demitir {c.tecnico31.nome.split(' ')[0]} · multa {dinheiroCurto(Math.round(c.tecnico31.salario * 0.5))}</BotaoAcao>}
+          </section>
+          <section className="cmd31__bloco" aria-labelledby="cmd31-capitao">
+            <h4 id="cmd31-capitao">A braçadeira e a química</h4>
+            <p className="nota">Química {quimica > 0 ? `+${quimica}` : quimica} na média: é o vestiário que os tipos de jogador fazem — o Capitão e o Garçom aproximam, o Marrento desgasta. {c.capitao31 && c.elenco.some(j => j.id === c.capitao31) ? `O capitão é ${c.elenco.find(j => j.id === c.capitao31)!.nome}.` : 'Sem capitão escolhido, o grupo perde um pouco de rumo.'} A braçadeira se dá no Elenco.</p>
+          </section>
+          <section className="cmd31__bloco" aria-labelledby="cmd31-patrocinio">
+            <h4 id="cmd31-patrocinio">Patrocínio master</h4>
+            {c.patrocinio31 && c.patrocinio31.ate >= ano
+              ? <p className="nota">{c.patrocinio31.nome}: {dinheiroCurto(c.patrocinio31.valor)} por ano, até {c.patrocinio31.ate}.</p>
+              : <ul className="cmd31__ofertas">{patrociniosDoAno(vida).map((p, k) => (
+                <li key={k} className="cmd31__oferta"><strong>{p.nome}</strong><span className="clube30__meta">{dinheiroCurto(p.valor)}/ano · {p.anos} {p.anos === 1 ? 'ano' : 'anos'} · {p.sobre}</span><BotaoAcao vida={vida} agir={agir} acao={C({ op: 'patrocinio', i: k })}>Fechar</BotaoAcao></li>
+              ))}</ul>}
+          </section>
+          <section className="cmd31__bloco" aria-labelledby="cmd31-ingresso">
+            <h4 id="cmd31-ingresso">Ingressos</h4>
+            <div className="clube20__botoes" role="group" aria-label="Preço do ingresso">
+              {([0, 1, 2] as const).map(n => <BotaoAcao key={n} vida={vida} agir={agir} acao={C({ op: 'ingresso', nivel: n })} variante={(c.ingresso31 ?? 1) === n ? 'principal' : 'secundario'}>{['Popular', 'Normal', 'Caro'][n]}</BotaoAcao>)}
+            </div>
+            <p className="nota">Popular: bilheteria 7% menor e a torcida cresce. Caro: 8% a mais e a torcida diminui. Vale para a temporada que fecha.</p>
+          </section>
+        </div>
       )}
       {aba === 'clube' && (
         <div className="clube20__clube">

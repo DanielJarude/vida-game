@@ -385,3 +385,26 @@ html:root, html:root[data-tema], html:root[data-paleta] {
   #root .inicio31 { grid-template-columns: minmax(0, 1.1fr) minmax(420px, 1fr); }
   #root .inicio31__marca-bloco { padding: var(--space-9) var(--space-9); }
 }
+
+/* ---------------------------------------------------------------- Nenhuma ação como texto solto (VIDA 31) */
+/* As ações discretas ("Agora não", "Ver o álbum inteiro", "Mudar o que acredita"): um botão de verdade, com contorno. */
+#root :is(main, [role=dialog]) .botao--discreto {
+  min-height: 38px; padding: 6px var(--space-4); text-decoration: none; color: var(--tinta);
+  background: var(--v31-cartao); box-shadow: inset 0 0 0 1px var(--fio-forte); border-radius: var(--v31-raio-ctl);
+}
+#root :is(main, [role=dialog]) .botao--discreto:hover:not(:disabled) { background: var(--tom-wash); box-shadow: inset 0 0 0 1.5px var(--tom); color: var(--tinta); }
+#root :is(main, [role=dialog]) .botao--discreto:disabled { background: transparent; box-shadow: inset 0 0 0 1px var(--fio); }
+/* Os caminhos para outro lugar ("Ver hobbies →", "… em Minha Semana →") e os "ver mais": uma pílula com a cor da área. */
+#root :is(main, [role=dialog]) :is(button.link, .dobra__botao) {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 34px; margin: 2px 0; padding: 4px var(--space-3);
+  border-radius: var(--radius-pill); background: var(--tom-wash); box-shadow: inset 0 0 0 1px var(--tom-linha);
+  color: var(--tinta); text-decoration: none; font-weight: var(--weight-medium); font-size: var(--type-caption); line-height: 1.3; text-align: left;
+}
+#root :is(main, [role=dialog]) :is(button.link, .dobra__botao):hover { background: color-mix(in oklab, var(--tom) 16%, transparent); box-shadow: inset 0 0 0 1.5px var(--tom); }
+#root :is(main, [role=dialog]) :is(button.link, .dobra__botao):focus-visible { outline: 2px solid var(--tom); outline-offset: 2px; }
+/* Itens de lista que são botões (as vagas, os cursos do catálogo, os avisos do Hoje): a linha tem fundo e reage. */
+#root :is(.vaga-resumo, .cat-item__cabeca) { border-radius: var(--v31-raio-ctl); background: var(--veu-1); box-shadow: inset 0 0 0 1px var(--fio); }
+#root :is(.vaga-resumo, .cat-item__cabeca):hover { background: var(--tom-wash); box-shadow: inset 0 0 0 1.5px var(--tom); }
+#root .painel-agora .agora-sinal { padding: var(--space-2) var(--space-3); border-radius: var(--v31-raio-ctl); background: var(--veu-1); margin-bottom: 4px; }
+#root .painel-agora button.agora-sinal:hover { background: var(--tom-wash); }
+#root .painel-agora button.agora-sinal::after { content: ' ›'; color: var(--tom); font-weight: 700; }

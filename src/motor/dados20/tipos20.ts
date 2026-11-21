@@ -89,4 +89,12 @@ export interface Clube20 {
   /** A obra em andamento (estádio, CT ou base), que fica pronta no fim do ano. */
   obra?: { qual: 'estadio' | 'ct' | 'base'; ate: number };
   conflito?: string;
+  /** VIDA 31 · o comando: o capitão escolhido, o ano em que cada um chegou, o técnico contratado, os emprestados, o preço
+   *  dos ingressos e o patrocínio master. Todos opcionais (saves antigos seguem iguais). */
+  capitao31?: string;
+  chegada31?: Record<string, number>;
+  tecnico31?: { nome: string; estilo: 'ofensivo' | 'equilibrado' | 'defensivo'; nivel: number; salario: number; desde: number };
+  emprestados31?: { jogador: Jogador20; para: string; ate: number }[];
+  ingresso31?: 0 | 1 | 2;
+  patrocinio31?: { nome: string; valor: number; ate: number; rep: number };
 }
