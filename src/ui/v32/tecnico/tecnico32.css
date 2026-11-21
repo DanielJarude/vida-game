@@ -1,0 +1,12 @@
+/* VIDA 32 · o dia a dia do técnico — a grade de ações da prancheta, na linguagem do visual31 (só tokens). */
+.tec32 { display: grid; gap: var(--space-4); margin-top: var(--space-4); padding-top: var(--space-4); border-top: 1px solid var(--fio); min-width: 0; }
+.tec32__titulo { margin: 0; font-size: var(--type-subheading); }
+.tec32__vale { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.tec32__vale li { padding: 4px 12px; border-radius: var(--radius-pill); background: var(--tom-wash); box-shadow: inset 0 0 0 1px var(--tom-linha); font-size: var(--type-caption); }
+.tec32__grupo { display: grid; gap: var(--space-2); min-width: 0; }
+.tec32__grupo-nome { margin: 0; font-size: var(--type-meta); letter-spacing: var(--tracking-meta); text-transform: uppercase; color: var(--tinta-2); font-weight: var(--weight-semibold); }
+.tec32__grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: var(--space-3); }
+.tec32__cartao { display: grid; align-content: start; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-radius: var(--v31-raio-ctl, 10px); background: var(--v31-cartao, var(--superficie)); box-shadow: var(--v31-contorno, inset 0 0 0 1px var(--fio)); min-width: 0; }
+.tec32__cartao .acao, .tec32__cartao .botao { width: 100%; }
+.tec32__efeito { margin: 0; font-size: var(--type-caption); color: var(--tinta); overflow-wrap: anywhere; }
+.tec32__limite { margin: 0; font-size: var(--type-meta); color: var(--tinta-2); }

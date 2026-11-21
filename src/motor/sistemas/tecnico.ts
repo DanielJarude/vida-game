@@ -352,11 +352,18 @@ export function encerrarCarreiraDeTecnico(v: Vida, motivo: string): void {
 function jogarTemporada(v: Vida, r: Rng, c: CarreiraDeTecnico, p: PassagemDeTecnico): void {
   const ano = anoDe(v.t - 6);
   const t: TemporadaDeTecnico = { ano, nivel: p.nivel, jogos: 0, v: 0, e: 0, d: 0 };
+  // VIDA 32: o que as ações do técnico deixaram para esta temporada (a comissão, os garotos, o estudo dos decisivos).
+  const x32 = temporadaDoTecnico32(p);
   p.temporadas.push(t);
   const tecnico = trabalhoDoTecnico(v);
   const forma = r.normal() * 1.5;
   const g = ge(v);
-  const nosso = (base: number) => base + tecnico + (p.vestiario - 50) / 12 + (p.ajuste ?? 0) + forma;
+  // VIDA 32: o ajuste é lido AGORA (antes, a função lia `p.ajuste` depois de ele ser apagado — os reforços, a
+  // preparação e os titulares poupados das situações nunca chegavam ao jogo).
+  const ajuste = (p.ajuste ?? 0) + x32.forca;
+  const nosso = (base: number) => base + tecnico + (p.vestiario - 50) / 12 + ajuste + forma;
+  // Os jogos que decidem (o mata-mata das copas, a final): o estudo do adversário soma por cima.
+  const nossoDecisivo = (base: number) => nosso(base) + x32.decisivo;
   p.ajuste = undefined;
   const placar: Jogo = { v: 0, e: 0, d: 0 };
   const conta = (k: 'v' | 'e' | 'd') => { somar(placar, k); t.jogos++; t[k]++; };
@@ -370,10 +377,10 @@ function jogarTemporada(v: Vida, r: Rng, c: CarreiraDeTecnico, p: PassagemDeTecn
   //    nível 1 joga também a liga regional (a liga dele), sem semifinal nem final.
   const paisDoClube = paisDaCidade(p.municipioId);
   if (paisDoClube !== 'BR') {
-    const fora = copaDoTecnico(v, r, c, p, t, nosso, conta);
+    const fora = copaDoTecnico(v, r, c, p, t, nossoDecisivo, conta);
     if (fora === 'demitido') return;
     // VIDA 31: a copa continental (a vaga é da tabela do ano anterior — antes de a liga deste ano fechar).
-    if (p.nivel >= 2) { copasInternacionais(v, c, p, t, nosso); jogarLiga(v, r, c, p, t, nosso, conta); return; }
+    if (p.nivel >= 2) { copasInternacionais(v, c, p, t, nossoDecisivo); jogarLiga(v, r, c, p, t, nosso, conta); return; }
   }
   // 1. O estadual: o porte no estado (o grande da capital contra o time do interior), fase única e mata-mata.
   const uf = municipio(p.municipioId).uf;
@@ -398,7 +405,7 @@ function jogarTemporada(v: Vida, r: Rng, c: CarreiraDeTecnico, p: PassagemDeTecn
       const outros = ordem.slice(0, 4).filter(i => i !== 0 && i !== adv);
       const fin = outros.sort((a, b) => est[b] - est[a])[r.chance(0.65) ? 0 : 1] ?? outros[0];
       t.estadual = 'vice';
-      p.decisao = { competicao: torneioCurto(p.municipioId).nome, adversario: nomes[fin] || torneioCurto(p.municipioId).rival, forca: Math.round((est[0] - est[fin]) * 10) / 10, ano, t: v.t };
+      p.decisao = { competicao: torneioCurto(p.municipioId).nome, adversario: nomes[fin] || torneioCurto(p.municipioId).rival, forca: Math.round((est[0] - est[fin] + x32.decisivo) * 10) / 10, ano, t: v.t };
       escrever(v, { texto: `Na final do estadual com ${oClube(p.clube)}: ${oClube(p.decisao.adversario).replace(/^o um /, 'um ')} do outro lado.`, relevancia: 'cotidiano', tema: 'trabalho' });
     }
   }
@@ -408,7 +415,7 @@ function jogarTemporada(v: Vida, r: Rng, c: CarreiraDeTecnico, p: PassagemDeTecn
   if (checar(v, r, p, t, posEstadual, esperadaNoEstado, porteDe(p.clube) === 'grande' ? 1.3 : p.nivel === 1 ? 1 : 0.6)) return;
 
   // VIDA 31: a Copa do Brasil (quem está nas divisões nacionais), com o acaso dela à parte (o sorteio da liga não muda).
-  if (paisDoClube === 'BR' && p.nivel >= 2) copaDoTecnico(v, rngDe(v.id, 'tec-copa', ano, p.clube), c, p, t, nosso, conta, true);
+  if (paisDoClube === 'BR' && p.nivel >= 2) copaDoTecnico(v, rngDe(v.id, 'tec-copa', ano, p.clube), c, p, t, nossoDecisivo, conta, true);
   // 2. A liga da divisão (o estadual é a liga de quem está no nível 1: os dois primeiros ganham a vaga nas divisões de acesso).
   if (p.nivel === 1) {
     t.colocacao = posEstadual;
@@ -423,8 +430,32 @@ function jogarTemporada(v: Vida, r: Rng, c: CarreiraDeTecnico, p: PassagemDeTecn
     c.reputacao = clamp(c.reputacao + clamp((esperadaNoEstado - posEstadual) * 0.4, -3, 3));
     return;
   }
-  copasInternacionais(v, c, p, t, nosso);
+  copasInternacionais(v, c, p, t, nossoDecisivo);
   jogarLiga(v, r, c, p, t, nosso, conta);
+}
+
+/**
+ * VIDA 32 · o que as ações do técnico (`acoesDoTecnico32`) deixaram para a temporada que começa — lido UMA vez, no
+ * começo dela. Efeitos modestos, nenhum decide título:
+ *   preparador físico na comissão   +0,25 de força por temporada (menos jogadores no departamento médico)
+ *   analista de desempenho          +0,3 nos jogos decisivos por temporada
+ *   auxiliar de confiança           +2 no vestiário por temporada
+ *   os garotos promovidos           o ganho deles (≤ +0,9) quando amadurecem, uma temporada depois da promoção
+ *   o estudo do adversário          o `decisivo` guardado (≤ +1,4), só nesta temporada
+ */
+export function temporadaDoTecnico32(p: PassagemDeTecnico): { forca: number; decisivo: number } {
+  const x = p.v32;
+  if (!x) return { forca: 0, decisivo: 0 };
+  const com = x.comissao ?? [];
+  let forca = 0;
+  let decisivo = x.decisivo ?? 0;
+  if (com.includes('preparador')) forca += 0.25;
+  if (com.includes('analista')) decisivo += 0.3;
+  if (com.includes('auxiliar')) p.vestiario = clamp(p.vestiario + 2);
+  if (x.garotos && p.temporadas.length >= x.garotos.aPartirDe) forca += x.garotos.ganho;
+  x.decisivo = undefined;
+  x.treino = undefined;
+  return { forca: Math.round(forca * 100) / 100, decisivo: Math.round(decisivo * 100) / 100 };
 }
 
 /**
@@ -816,7 +847,10 @@ function jogarAnoDeSelecao(v: Vida, r: Rng, c: CarreiraDeTecnico, p: PassagemDeT
   const t: TemporadaDeTecnico = { ano, nivel: 4, jogos: 0, v: 0, e: 0, d: 0 };
   p.temporadas.push(t);
   const paisSel = nacionalidadesDaVida(v)[0];
-  const forca = 2.5 + trabalhoDoTecnico(v) * 0.6 + (p.vestiario - 50) / 14 + r.normal() * 1.2;
+  // VIDA 32: a preparação (o ajuste, a comissão) também chega à seleção, em escala menor (são poucos dias de treino).
+  const x32 = temporadaDoTecnico32(p);
+  const forca = 2.5 + trabalhoDoTecnico(v) * 0.6 + (p.vestiario - 50) / 14 + ((p.ajuste ?? 0) + x32.forca) * 0.5 + r.normal() * 1.2;
+  p.ajuste = undefined;
   const conta = (k: 'v' | 'e' | 'd') => { t.jogos++; t[k]++; };
   for (let k = 0; k < 10; k++) conta(partida(r, forca - r.normal() * 3, c.estilo));
   // REWORK 11 · ESP-11.4: o torneio pelo nome (a Copa do Mundo, a Copa América, a Eurocopa) e a força do país: a seleção
@@ -825,7 +859,7 @@ function jogarAnoDeSelecao(v: Vida, r: Rng, c: CarreiraDeTecnico, p: PassagemDeT
   if (!id) return;
   const torneio = aCompeticaoId(id);
   t.torneio = torneio;
-  const camp = campanhaDaSelecao(rngDe(v.id, 'selecao_tecnico', ano), id, paisSel, trabalhoDoTecnico(v) * 0.15 + (p.vestiario - 50) / 60);
+  const camp = campanhaDaSelecao(rngDe(v.id, 'selecao_tecnico', ano), id, paisSel, trabalhoDoTecnico(v) * 0.15 + (p.vestiario - 50) / 60 + x32.decisivo * 0.1);
   for (let k = 0; k < camp.v; k++) conta('v');
   for (let k = 0; k < camp.e; k++) conta('e');
   for (let k = 0; k < camp.d; k++) conta('d');

@@ -123,6 +123,7 @@ import { disponibilidadeCrime, executarCrime, type AcaoDoCrime } from './sistema
 import { NOME_DO_RAMO } from './sistemas/ramos';
 import { disponibilidadeAlianca, executarAlianca, type OqueAlianca } from './sistemas/aliancas';
 import { disponibilidadeTatica, mudarTatica, type EstiloDeJogo } from './sistemas/tecnico';
+import { disponibilidadeTecnico32, executarTecnico32, infoTecnico32, type OqueTecnico32 } from './sistemas/acoesDoTecnico32';
 import { disponibilidadeAposta, executarAposta, type OpAposta } from './sistemas/apostas';
 import { bloqueioDaLiberdade, disponibilidadePrisao, executarPrisao, type OquePrisao } from './sistemas/prisao';
 import { comprarColecao, disponibilidadeComprarColecao, disponibilidadeVenderColecao, venderColecao, type ModoDeVenda } from './sistemas/colecao';
@@ -439,6 +440,8 @@ export type Acao =
   | { tipo: 'alianca'; oque: OqueAlianca; id?: string }
   /** REWORK 11.5 · ESP-05: a estratégia do time (a prancheta do técnico): muda o jeito de jogar lido em cada jogo. */
   | { tipo: 'tatica'; estilo: EstiloDeJogo }
+  /** VIDA 32: o dia a dia do técnico (treino, elenco, imprensa, diretoria, carreira) — `sistemas/acoesDoTecnico32`. */
+  | { tipo: 'tecnico32'; oque: OqueTecnico32 }
   /** REWORK 10.5 · ECO-04: o dinheiro da criança (pedir aos responsáveis, brigadeiros com a família, tarefas pagas). */
   | { tipo: 'crianca'; oque: OqueCrianca }
   /** REWORK 10.6 · INF-02: pedir aos responsáveis para comprar algo da loja (inteiro, ou completando o que se tem). */
@@ -511,6 +514,7 @@ export function disponibilidade(v: Vida, a: Acao): Veredito {
     case 'fama22': return disponibilidadeAgenda22(v, a.oque, a.id);
     case 'alianca': return disponibilidadeAlianca(v, a.oque, a.id);
     case 'tatica': return disponibilidadeTatica(v, a.estilo);
+    case 'tecnico32': return disponibilidadeTecnico32(v, a.oque);
     case 'crianca': return disponibilidadeCrianca(v, a.oque);
     case 'pedir_compra': return disponibilidadePedidoDeCompra(v, a.coisaId, !!a.completar, a.responsavelId);
     case 'pedir_veiculo': {
@@ -1261,6 +1265,7 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
     case 'parar_tratamento': return ok(pararTratamento(v, a.condicaoId), 'ruim');
     case 'alianca': return { resultado: executarAlianca(v, a.oque, a.id), titulo: a.oque === 'prometer' ? 'A promessa' : 'A aliança' };
     case 'tatica': return { resultado: mudarTatica(v, a.estilo), titulo: 'A prancheta' };
+    case 'tecnico32': return { resultado: executarTecnico32(v, a.oque), titulo: infoTecnico32(a.oque).rotulo };
     case 'submundo': {
       const x = executarSubmundo(v, r, a.oque, a.ramo, a.pessoaId);
       // O que a ação desencadeou agora (o parceiro pego depois do serviço que deu errado) vira a pergunta na hora.

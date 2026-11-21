@@ -207,7 +207,8 @@ export default defineConfig({
           // importam. Sem ciclo, e o pacote dos textos volta a ter folga sem aumentar o limite.
           if (/[\\/]src[\\/]motor[\\/]conteudo[\\/](base|efeitos|papeis|local|narracao|margem|submundo|aliancas|possibilidades|acontecimentos[a-zA-Z0-9]*)\.ts/.test(id)) return 'motor-acontecimentos';
           if (/[\\/]src[\\/]motor[\\/](conteudo[\\/]|sistemas[\\/](entrevista|cuidados|usos|busca|estilo|independencia|pausa|ambiente|empregabilidade|interacoes|experiencias|autoria|gestos|pertences|presentes|vidaEstudantil|estetica|conversas|conflitos)\.ts)/.test(id)) return 'motor-textos';
-          if (/[\\/]src[\\/]motor[\\/](ano\.ts|acoes\.ts|fachada\.ts|sistemas[\\/]relevancia\.ts|sistemas[\\/]desfecho13\.ts)/.test(id)) return 'motor-conteudo';
+          // VIDA 32: o dia a dia do técnico (só as ações e a prancheta o chamam) vai com as ações — o pacote `motor` não cresce.
+          if (/[\\/]src[\\/]motor[\\/](ano\.ts|acoes\.ts|fachada\.ts|sistemas[\\/]relevancia\.ts|sistemas[\\/]desfecho13\.ts|sistemas[\\/]acoesDoTecnico32\.ts)/.test(id)) return 'motor-conteudo';
           // REWORK 3: o que só a camada de cima usa (salvar, nascer, as ações de cuidado, de estilo, de busca, a
           // entrevista, a leitura da independência) vai com ela — o pacote dos sistemas volta a caber no limite, sem ciclo.
           // FIX 3.1: as interações com pessoas, as experiências e a autoria (só as ações e as telas as chamam) também.
