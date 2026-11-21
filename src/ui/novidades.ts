@@ -26,6 +26,26 @@ export interface NotaDeVersao {
 
 export const NOTAS: NotaDeVersao[] = [
   {
+    versao: '32',
+    data: '2026-11-21',
+    titulo: 'Fundar times, e-sports e estaduais',
+    novidades: [
+      'Fundar um time do zero: futebol (começa no estadual e sobe divisão por divisão), basquete, vôlei ou futsal — com nome e cidade escolhidos.',
+      'Times de quadra do dono: reforços, técnico, ginásio, patrocínio e as temporadas da liga regional até a liga nacional (NBB, Superliga, Liga Nacional de Futsal).',
+      'Organização de e-sports: comprar uma org (as reais, nos anos em que existiram, e outras) ou fundar a sua — elenco, técnico, patrocínio, bootcamp, academia, a liga, o mundial e a mesa do dono.',
+      'Técnico com muito mais ações: foco do treino, estudo dos adversários, garotos da base, capitão, conversa com o elenco, coletivas, pedido de reforço e de comissão técnica à diretoria, licença e entregar o cargo.',
+      'Campeonatos estaduais com nome (Paulista, Carioca, Mineiro… os 27) e troféu próprio — para o jogador, o técnico e o dono.'
+    ],
+    melhorias: [
+      'Patrimônio · Empresas em três abas: Minhas empresas, Esporte e Abrir ou comprar.',
+      'Clubes à venda em vitrine: cartões com escudo, divisão, porte e preço; filtros por país, divisão, porte e bolso; ordem por divisão, preço ou receita.'
+    ],
+    correcoes: [
+      'O terceiro nível do Brasil é a Série C (não mais "divisões de acesso").',
+      'Os ajustes das decisões do técnico (reforço, poupar titulares) agora chegam aos jogos da temporada.'
+    ]
+  },
+  {
     versao: '31.2',
     data: '2026-11-21',
     titulo: 'Troféus e datas no lugar',
