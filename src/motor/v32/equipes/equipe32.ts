@@ -51,7 +51,7 @@ const FORCA_DIV = [0, 45, 58, 70];
 const RECEITA_DIV = [0, 0.6e6, 2.5e6, 9e6];
 
 export const custoDeFundarEquipe32 = (pais: string) => Math.round(8e5 * mercado(pais) / 1e5) * 1e5;
-export const custoDoReforco32 = (e: Equipe32, pesado: boolean) => Math.round((pesado ? 2.2 : 0.7) * RECEITA_DIV[e.nivel] * Math.pow(1.04, Math.max(0, e.elenco - 40)) * mercado(e.pais) / 1e5) * 1e5;
+export const custoDoReforco32 = (e: Equipe32, pesado: boolean) => Math.round((pesado ? 1.2 : 0.4) * RECEITA_DIV[e.nivel] * Math.pow(1.04, Math.max(0, e.elenco - 40)) * mercado(e.pais) / 1e5) * 1e5;
 export const custoDoGinasio32 = (e: Equipe32) => Math.round(1.5e6 * Math.pow(1.9, e.ginasio - 1) * mercado(e.pais) / 1e5) * 1e5;
 export const nomeDaDivisao32 = (e: Pick<Equipe32, 'modalidade' | 'pais'>, nivel: number) => divisaoDe(e.modalidade, nivel, e.pais).replace(/ — .*/, '');
 
@@ -121,7 +121,7 @@ export function executarEquipe32(v: Vida, o: OqueEquipe32): { texto: string; tom
     lancar(v, `Fundação do time (${o.nome.trim()})`, 'despesa', -custo);
     const e: Equipe32 = {
       id: `eq32_${o.modalidade}_${v.t}`, nome: o.nome.trim(), modalidade: o.modalidade, pais, municipioId: o.municipioId, cidade: municipio(o.municipioId).nome, desde: v.t,
-      nivel: 1, elenco: 40, caixa: Math.round(custo * 0.35 / 1e4) * 1e4, divida: 0, torcida: 5, reputacao: 10, ginasio: 1, historico: [], valor: custo
+      nivel: 1, elenco: 40, caixa: Math.round(custo * 0.4 / 1e4) * 1e4, divida: 0, torcida: 5, reputacao: 10, ginasio: 1, historico: [], valor: Math.round(custo * 0.5 / 1e4) * 1e4
     };
     (v.equipes32 ??= []).push(e);
     escrever(v, { texto: `Fundou o ${e.nome}, time de ${nomeDaModalidade32(e.modalidade).toLowerCase()} de ${e.cidade}: começa no ${nomeDaDivisao32(e, 1)}, numa quadra alugada.`, relevancia: 'marco', tema: 'dinheiro', tom: 'bom', escolha: true });

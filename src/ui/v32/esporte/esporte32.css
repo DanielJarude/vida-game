@@ -50,3 +50,6 @@
 .esp32__temp--acesso { box-shadow: inset 3px 0 0 var(--bom); }
 .esp32__temp--queda { box-shadow: inset 3px 0 0 var(--ruim, #c0392b); }
 .emp32__abas { margin-bottom: 12px; }
+.esp32__bola { vertical-align: -3px; }
+.vitrine32__ficha { display: inline-flex; align-items: center; gap: 6px; }
+@media (max-width: 520px) { .esp32__equipe-topo { grid-template-columns: auto minmax(0, 1fr); } .esp32__equipe-topo > .vitrine32__div { grid-column: 1 / -1; justify-self: start; } }

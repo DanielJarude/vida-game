@@ -18,7 +18,7 @@ import { anoDe } from '../../../motor/tempo';
 import { BotaoAcao } from '../../comum';
 import { dinheiroCurto } from '../../apresentar';
 import './clube20.css';
-import { municipio, paisDaCidade } from '../../../motor/dados/lugares';
+import { existeMunicipio, municipio, nomeLugar, paisDaCidade } from '../../../motor/dados/lugares';
 import '../../v32/esporte/esporte32.css';
 import { desenhoDoClube30, Escudo30 } from '../../v30/escudos/Escudo30';
 
@@ -48,7 +48,7 @@ function ComprarClube({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }
   const [porte, setPorte] = useState('');
   const [bolso, setBolso] = useState(false);
   const [ordem, setOrdem] = useState<Ordem32>('divisao');
-  const [quantos, setQuantos] = useState(24);
+  const [quantos, setQuantos] = useState(12);
   const [mundo, setMundo] = useState(false);
   const [aberto, setAberto] = useState<string | undefined>();
   useEffect(() => { if (!mundo) void carregarMundo().then(() => setMundo(true)); }, [mundo]);
@@ -67,7 +67,7 @@ function ComprarClube({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }
       <h3 id="clube20-titulo" className="subtitulo">Comprar um clube de futebol</h3>
       <p className="nota">Todo clube em que dá para jogar está à venda. O preço é o valor do clube menos as dívidas — que vêm junto. Paga-se à vista ou com 40% de entrada e o resto financiado.</p>
       <div className="vitrine32__barra">
-        <label className="vitrine32__campo">País <select value={pais} onChange={e => { setPais(e.target.value); setDiv(0); setQuantos(24); }}>{paises.map(p => <option key={p} value={p}>{nomeDoPais(p)}</option>)}</select></label>
+        <label className="vitrine32__campo">País <select value={pais} onChange={e => { setPais(e.target.value); setDiv(0); setQuantos(12); }}>{paises.map(p => <option key={p} value={p}>{nomeDoPais(p)}</option>)}</select></label>
         <label className="vitrine32__campo vitrine32__campo--busca">Buscar <input type="search" value={busca} onChange={e => setBusca(e.target.value)} placeholder="clube ou cidade" /></label>
         <label className="vitrine32__campo">Ordem <select value={ordem} onChange={e => setOrdem(e.target.value as Ordem32)}>
           <option value="divisao">Divisão mais alta</option><option value="barato">Mais barato</option><option value="caro">Mais caro</option><option value="receita">Maior receita</option><option value="nome">Nome</option>
@@ -94,7 +94,7 @@ function ComprarClube({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }
                   <Escudo30 nome={c.nome} tamanho={52} />
                   <div className="vitrine32__quem">
                     <strong>{c.nome}</strong>
-                    <span>{c.cidade}</span>
+                    <span>{(() => { try { return nomeLugar(c.cidade); } catch { return c.cidade; } })()}</span>
                   </div>
                 </div>
                 <div className="vitrine32__selos">
@@ -120,7 +120,7 @@ function ComprarClube({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }
           })}
         </ul>
       )}
-      {lista.length > quantos && <button type="button" className="botao botao--discreto" onClick={() => setQuantos(q => q + 24)}>Mostrar mais {Math.min(24, lista.length - quantos)}</button>}
+      {lista.length > quantos && <button type="button" className="botao botao--discreto" onClick={() => setQuantos(q => q + 12)}>Mostrar mais {Math.min(12, lista.length - quantos)}</button>}
     </section>
   );
 }
@@ -294,7 +294,7 @@ function MeuClube({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
         <Escudo nome={c.nome} />
         <div>
           <h3 id="clube20-titulo" className="subtitulo">{c.nome}</h3>
-          <p className="clube30__sub">{h ? DIV[h.divisao] : 'temporada em curso'} · {c.cidade ? `${municipio(c.cidade).nome} · ` : ''}você é dono desde {anoDe(c.desde)}</p>
+          <p className="clube30__sub">{h ? DIV[h.divisao] : 'temporada em curso'} · {c.cidade && existeMunicipio(c.cidade) ? `${municipio(c.cidade).nome} · ` : ''}você é dono desde {anoDe(c.desde)}</p>
           {c.objetivo && <span className="clube30__chip">Objetivo: {OBJ[c.objetivo]}</span>}
         </div>
       </header>

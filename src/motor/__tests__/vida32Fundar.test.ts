@@ -77,3 +77,18 @@ describe('fundar um time de quadra', () => {
     expect(interpretar(JSON.stringify(v)).tipo).toBe('ok');
   });
 });
+
+describe('fundar e vender na hora não dá lucro', () => {
+  it('futebol e quadra: a venda imediata devolve menos do que custou', () => {
+    let v = adulto(35, { semente: 14, municipioId: 'campinas-sp' });
+    v.financas.conta = 1e8;
+    const c0 = v.financas.conta;
+    v = tenta(v, C({ op: 'fundar', nome: 'Teste Fundado FC', municipioId: 'campinas-sp' }));
+    v = tenta(v, C({ op: 'vender_clube' }));
+    v = tenta(v, E({ op: 'fundar', modalidade: 'volei', nome: 'Teste Vôlei', municipioId: 'campinas-sp' }));
+    v = tenta(v, E({ op: 'vender', id: v.equipes32![0].id }));
+    expect(v.clube20).toBeUndefined();
+    expect(v.equipes32).toHaveLength(0);
+    expect(v.financas.conta).toBeLessThan(c0);
+  });
+});

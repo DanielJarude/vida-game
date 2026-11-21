@@ -32,7 +32,11 @@ export function BlocoEsporte32({ titulo, icone, nota, children }: { titulo: stri
   );
 }
 
-const ICONE: Record<Modalidade32 | 'futebol', string> = { futebol: '⚽', basquete: '🏀', volei: '🏐', futsal: '🥅' };
+/** O ícone de cada modalidade (desenho, não emoji: nem toda tela tem a fonte). */
+function Bola({ m }: { m: Modalidade32 | 'futebol' }) {
+  const traco = m === 'basquete' ? <><path d="M2 12h20M12 2v20" /><path d="M5 5c4 4 4 10 0 14M19 5c-4 4-4 10 0 14" /></> : m === 'volei' ? <><path d="M12 2c0 6 4 9 9 11M3 8c5 1 9 5 9 14M5 19c3-4 8-6 15-5" /></> : <><path d="M12 7l4 3-1.5 4.5h-5L8 10z" /><path d="M12 2v5M16 10l5-1M14.5 14.5l3 4M9.5 14.5l-3 4M8 10l-5-1" /></>;
+  return <svg className="esp32__bola" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="12" cy="12" r="10" />{traco}</svg>;
+}
 
 /** Fundar um time: a modalidade, o nome e a cidade (a sua, a natal ou outra do país). */
 export function FundarTime32({ vida, agir }: { vida: Vida; agir: Agir }) {
@@ -52,9 +56,9 @@ export function FundarTime32({ vida, agir }: { vida: Vida; agir: Agir }) {
   const opcoes: (Modalidade32 | 'futebol')[] = ['futebol', ...MODALIDADES32.map(m => m.id)];
   const cidades = [...new Set([vida.moradia.municipioId, vida.eu.municipioNatal, cidade])].filter(id => { try { return paisDaCidade(id) === pais; } catch { return false; } });
   return (
-    <BlocoEsporte32 titulo="Fundar um time" icone="✦" nota="Do zero: registro na federação, uniforme, um campo ou uma quadra alugada e um elenco de começo. O time nasce na última divisão — e sobe se você investir. (Uma organização de e-sports se funda no bloco E-sports.)">
+    <BlocoEsporte32 titulo="Fundar um time" icone="+" nota="Do zero: registro na federação, uniforme, um campo ou uma quadra alugada e um elenco de começo. O time nasce na última divisão — e sobe se você investir. (Uma organização de e-sports se funda no bloco E-sports.)">
       <div className="esp32__fichas" role="group" aria-label="Modalidade">
-        {opcoes.map(m => <button key={m} type="button" className="vitrine32__ficha" aria-pressed={mod === m} onClick={() => setMod(m)}><span aria-hidden="true">{ICONE[m]}</span> {m === 'futebol' ? 'Futebol' : nomeDaModalidade32(m)}</button>)}
+        {opcoes.map(m => <button key={m} type="button" className="vitrine32__ficha" aria-pressed={mod === m} onClick={() => setMod(m)}><Bola m={m} /> {m === 'futebol' ? 'Futebol' : nomeDaModalidade32(m)}</button>)}
       </div>
       <div className="esp32__form">
         <label className="vitrine32__campo vitrine32__campo--busca">Nome do time <input value={nome} maxLength={32} onChange={e => setNome(e.target.value)} placeholder={mod === 'futebol' ? 'ex.: Esporte Clube Aurora' : 'ex.: Aurora Basquete'} /></label>
@@ -69,7 +73,7 @@ export function FundarTime32({ vida, agir }: { vida: Vida; agir: Agir }) {
       <div className="esp32__fundar">
         <div className="esp32__previa">
           <Escudo30 nome={nome.trim() || 'Time novo'} tamanho={56} />
-          <div><strong>{nome.trim() || 'Seu time'}</strong><span>{ICONE[mod]} {mod === 'futebol' ? 'Futebol' : nomeDaModalidade32(mod)} · {nomeLugar(cidade)}</span><span>Fundação: {dinheiroCurto(custo)}</span></div>
+          <div><strong>{nome.trim() || 'Seu time'}</strong><span>{mod === 'futebol' ? 'Futebol' : nomeDaModalidade32(mod)} · {nomeLugar(cidade)}</span><span>Fundação: {dinheiroCurto(custo)}</span></div>
         </div>
         <BotaoAcao vida={vida} agir={agir} acao={acao}>Fundar · {dinheiroCurto(custo)}</BotaoAcao>
       </div>
@@ -89,7 +93,7 @@ export function CartaoEquipe32({ vida, agir, e }: { vida: Vida; agir: Agir; e: E
     <article className="esp32__equipe">
       <header className="esp32__equipe-topo">
         <Escudo30 nome={e.nome} tamanho={48} />
-        <div className="vitrine32__quem"><strong>{e.nome}</strong><span>{ICONE[e.modalidade]} {nomeDaModalidade32(e.modalidade)} · {e.cidade} · desde {anoDe(e.desde)}</span></div>
+        <div className="vitrine32__quem"><strong>{e.nome}</strong><span>{nomeDaModalidade32(e.modalidade)} · {e.cidade} · desde {anoDe(e.desde)}</span></div>
         <span className={`vitrine32__div vitrine32__div--${e.nivel + 1}`}>{nomeDaDivisao32(e, e.nivel)}</span>
       </header>
       <dl className="vitrine32__numeros">
@@ -125,7 +129,7 @@ export function CartaoEquipe32({ vida, agir, e }: { vida: Vida; agir: Agir; e: E
         <ol className="esp32__temporadas">
           {[...e.historico].reverse().map(h => (
             <li key={h.ano} className={h.titulo ? 'esp32__temp esp32__temp--titulo' : h.acesso ? 'esp32__temp esp32__temp--acesso' : h.queda ? 'esp32__temp esp32__temp--queda' : 'esp32__temp'}>
-              <b>{h.ano}</b><span>{nomeDaDivisao32(e, h.nivel)}</span><span>{h.posicao}º{h.titulo ? ' · campeão 🏆' : h.acesso ? ' · subiu ▲' : h.queda ? ' · caiu ▼' : ''}</span>
+              <b>{h.ano}</b><span>{nomeDaDivisao32(e, h.nivel)}</span><span>{h.posicao}º{h.titulo ? ' · campeão' : h.acesso ? ' · subiu ▲' : h.queda ? ' · caiu ▼' : ''}</span>
             </li>
           ))}
         </ol>
@@ -139,7 +143,7 @@ export function EquipesDeQuadra32({ vida, agir }: { vida: Vida; agir: Agir }) {
   const lista = vida.equipes32 ?? [];
   if (!lista.length) return null;
   return (
-    <BlocoEsporte32 titulo={lista.length === 1 ? 'Seu time de quadra' : 'Seus times de quadra'} icone="🏀">
+    <BlocoEsporte32 titulo={lista.length === 1 ? 'Seu time de quadra' : 'Seus times de quadra'} icone="◎">
       {lista.map(e => <CartaoEquipe32 key={e.id} vida={vida} agir={agir} e={e} />)}
     </BlocoEsporte32>
   );

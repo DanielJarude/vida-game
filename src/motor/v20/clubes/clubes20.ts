@@ -378,8 +378,8 @@ function fundar32(v: Vida, nome: string, municipioId: string): { texto: string; 
   // O clube nasce no fundo: a última divisão (o estadual), elenco de várzea forte, torcida da família e dos amigos.
   const media = mediaDaForca(1.7);
   const c: Clube20 = {
-    nome, pais, cidade: municipioDe(municipioId).nome, desde: v.t, preco: custo, caixa: Math.round(custo * 0.3 / 1e5) * 1e5, divida: 0,
-    torcida: 4, reputacao: 8, estadio: 1, ct: 1, base: 1, investimentoBase: 1, elenco: [], juniores: [], historico: [], forcaPorAno: {}, seq: 0, comprados: [], vendas: [], valor: custo,
+    nome, pais, cidade: municipioId, desde: v.t, preco: custo, caixa: Math.round(custo * 0.3 / 1e5) * 1e5, divida: 0,
+    torcida: 4, reputacao: 8, estadio: 1, ct: 1, base: 1, investimentoBase: 1, elenco: [], juniores: [], historico: [], forcaPorAno: {}, seq: 0, comprados: [], vendas: [], valor: Math.round(custo * 0.6 / 1e5) * 1e5,
     fundado32: { municipioId, t: v.t }
   };
   const pos: Setor20[] = ['GOL', 'GOL', 'DEF', 'DEF', 'DEF', 'DEF', 'DEF', 'DEF', 'MEI', 'MEI', 'MEI', 'MEI', 'MEI', 'MEI', 'ATA', 'ATA', 'ATA', 'ATA'];
@@ -389,7 +389,7 @@ function fundar32(v: Vida, nome: string, municipioId: string): { texto: string; 
   ligaDe(v, pais).div[nome] = 1;
   v.clube20 = c;
   abrirMesa31(v, c, FERRAMENTAS31, 1);
-  escrever(v, { texto: `Fundou ${oClube(nome)}, em ${c.cidade}, por ${fmt(custo)}: começa no campeonato estadual, com um elenco de várzea e a torcida da família. O sonho é subir.`, relevancia: 'marco', tema: 'dinheiro', tom: 'bom', escolha: true });
+  escrever(v, { texto: `Fundou ${oClube(nome)}, em ${municipioDe(municipioId).nome}, por ${fmt(custo)}: começa no campeonato estadual, com um elenco de várzea e a torcida da família. O sonho é subir.`, relevancia: 'marco', tema: 'dinheiro', tom: 'bom', escolha: true });
   return { texto: `${nome} foi fundado: agora é subir divisão por divisão.`, tom: 'bom' };
 }
 
