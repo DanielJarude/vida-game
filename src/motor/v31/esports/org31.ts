@@ -818,8 +818,8 @@ export function executarOrg31(v: Vida, o: OqueOrg31): { texto: string; tom?: 'bo
       L.torneios35 = [...(L.torneios35 ?? []), { ano, tipo: o.tipo, nome, colocacao: col, participantes: t.equipes, premio }].slice(-20);
       if (col === 1) { L.trofeus.push({ ano, nome, tipo: 'liga' }); org.fas = clamp(org.fas + (o.tipo === 'convite' ? 4 : 2)); org.reputacao = clamp(org.reputacao + (o.tipo === 'convite' ? 3 : 1)); }
       else if (col <= 4) org.fas = clamp(org.fas + 1);
-      escrever(v, { texto: `A line de ${JOGOS25[L.jogo].nome(ano)} da ${org.nome} jogou o ${nome}: ${col === 1 ? 'campeã!' : `${col}º de ${t.equipes}`}${premio ? ` (${fmt(premio)} em prêmio)` : ''}.`, relevancia: col === 1 ? 'marco' : 'cotidiano', tema: 'trabalho', tom: col === 1 ? 'bom' : undefined, escolha: true });
-      return { texto: col === 1 ? `Campeã do ${t.nome}!` : `${col}º lugar no ${t.nome}.`, tom: col <= 3 ? 'bom' : 'neutro' };
+      escrever(v, { texto: `A line de ${JOGOS25[L.jogo].nome(ano)} da ${org.nome} jogou ${t.artigo} ${nome}: ${col === 1 ? 'campeã!' : `${col}º de ${t.equipes}`}${premio ? ` (${fmt(premio)} em prêmio)` : ''}.`, relevancia: col === 1 ? 'marco' : 'cotidiano', tema: 'trabalho', tom: col === 1 ? 'bom' : undefined, escolha: true });
+      return { texto: col === 1 ? `Campeã ${t.artigo === 'a' ? 'da' : 'do'} ${t.nome}!` : `${col}º lugar ${t.artigo === 'a' ? 'na' : 'no'} ${t.nome}.`, tom: col <= 3 ? 'bom' : 'neutro' };
     }
     case 'emprestar': {
       const i = L.elenco.findIndex(j => j.id === o.id); const j = L.elenco.splice(i, 1)[0];

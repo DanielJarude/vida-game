@@ -141,9 +141,9 @@ export const CUSTO_RETIRO35 = 80e3;
 export const CUSTO_PENEIRA35 = 50e3;
 
 export type Torneio35 = 'aberto' | 'convite';
-export const TORNEIOS35: Record<Torneio35, { nome: string; nota: string; inscricao: number; premio: number; minDiv: number; equipes: number; campo: number }> = {
-  aberto: { nome: 'Copa aberta', nota: 'Qualquer equipe se inscreve: campo do seu nível, prêmio pequeno.', inscricao: 15e3, premio: 120e3, minDiv: 2, equipes: 32, campo: 0 },
-  convite: { nome: 'Torneio de convidados', nota: 'Só para quem tem nome: as melhores da região, prêmio e audiência grandes.', inscricao: 60e3, premio: 900e3, minDiv: 3, equipes: 8, campo: 2 }
+export const TORNEIOS35: Record<Torneio35, { nome: string; artigo: 'o' | 'a'; nota: string; inscricao: number; premio: number; minDiv: number; equipes: number; campo: number }> = {
+  aberto: { nome: 'Copa aberta', artigo: 'a', nota: 'Qualquer equipe se inscreve: campo do seu nível, prêmio pequeno.', inscricao: 15e3, premio: 120e3, minDiv: 2, equipes: 32, campo: 0 },
+  convite: { nome: 'Torneio de convidados', artigo: 'o', nota: 'Só para quem tem nome: as melhores da região, prêmio e audiência grandes.', inscricao: 60e3, premio: 900e3, minDiv: 3, equipes: 8, campo: 2 }
 };
 
 export interface Criador35 { id: string; nome: string; fas: number; salario: number }

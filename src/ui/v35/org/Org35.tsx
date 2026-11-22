@@ -73,11 +73,17 @@ export function Equipamento35({ vida, agir, L, nomeOrg }: { vida: Vida; agir: Ag
         <Estacao35 s={s} cor={cor.startsWith('#') ? cor : '#7c3aed'} />
         <div>
           <p className="nota">Cada jogador e o técnico têm a sua estação ({pessoas} {pessoas === 1 ? 'pessoa' : 'pessoas'}). O equipamento soma na força da line — <b>+{bonusAgora}</b> hoje{bonusNovo !== bonusAgora ? <>, <b>+{bonusNovo}</b> com o que você montou</> : ''} — e envelhece: com 3 anos rende metade; com 5, nada.</p>
+          <span className="org35__rot">1. Escolha um pacote pronto — ou ajuste peça por peça abaixo</span>
           <div className="org35__fichas" role="group" aria-label="Pacotes prontos">
             {PACOTES35.map(p => <button key={p.id} type="button" className="org35__ficha" title={p.nota} aria-pressed={PECAS35.every(k => s[k] === p.s[k])} onClick={() => setS(x => ({ ...x, ...p.s }))}>{p.nome}</button>)}
           </div>
+          <div className="org35__resumo">
+            <span>Total: <b>{dinheiroCurto(custo)}</b> · força +{bonusAgora} → <b>+{bonusNovo}</b></span>
+            <BotaoAcao vida={vida} agir={agir} acao={A({ op: 'setup', jogo: L.jogo, setup: s, renovar })} variante="principal">{custo ? 'Comprar' : 'Salvar o visual'}</BotaoAcao>
+          </div>
         </div>
       </div>
+      <span className="org35__rot">2. Peça por peça</span>
       <ul className="org35__pecas">
         {PECAS35.map(p => {
           const estado = estadoDaPeca35(atual, p, ano);
@@ -93,6 +99,7 @@ export function Equipamento35({ vida, agir, L, nomeOrg }: { vida: Vida; agir: Ag
           );
         })}
       </ul>
+      <span className="org35__rot">3. Visual</span>
       <div className="org35__visual">
         <div className="org35__fichas" role="group" aria-label="Gabinete">{(Object.keys(NOME_GABINETE35) as Gabinete35[]).map(g => <button key={g} type="button" className="org35__ficha" aria-pressed={(s.gabinete ?? 'torre') === g} onClick={() => setS(x => ({ ...x, gabinete: g }))}>{NOME_GABINETE35[g]}</button>)}</div>
         <div className="org35__fichas" role="group" aria-label="Cor do RGB">{RGB.map(c => <button key={c} type="button" className="org35__cor" aria-label={c} aria-pressed={s.rgb === c} style={{ background: c }} onClick={() => setS(x => ({ ...x, rgb: c }))} />)}</div>

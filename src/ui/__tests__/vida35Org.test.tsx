@@ -28,7 +28,7 @@ describe('VIDA 35 · telas da org', () => {
   it('equipamento, academy e cômodos', () => {
     render(<Palco inicial={comOrg()} />);
     fireEvent.click(screen.getAllByRole('tab').find(t => /^LoL ·/.test(t.textContent ?? ''))!);
-    fireEvent.click(screen.getByRole('tab', { name: 'Equipamento' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Equipamento (PCs)' }));
     expect(screen.getByRole('img', { name: 'A estação de um jogador' })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Topo de linha' }));
     fireEvent.click(screen.getByRole('button', { name: /^Comprar o equipamento/ }));

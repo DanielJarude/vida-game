@@ -282,7 +282,9 @@ function MinhaOrg({ vida, agir }: { vida: Vida; agir: Agir }) {
 
 /* ------------------------------------------------------------------ uma line */
 
-type SubAba = 'time' | 'elenco' | 'mercado' | 'treino' | 'equipamento' | 'academy' | 'torneios' | 'comando' | 'temporadas';
+type SubAba = 'time' | 'elenco' | 'academy' | 'mercado' | 'treino' | 'equipamento' | 'torneios' | 'temporadas' | 'comando';
+/** VIDA 35.1 · as abas da line em grupos: os jogadores, a preparação, a competição, o comando. */
+const GRUPO_SUB: Record<SubAba, string> = { time: 'Jogadores', elenco: 'Jogadores', academy: 'Jogadores', mercado: 'Jogadores', treino: 'Preparação', equipamento: 'Preparação', torneios: 'Competição', temporadas: 'Competição', comando: 'Gestão' };
 
 function Linha({ vida, agir, L }: { vida: Vida; agir: Agir; L: LinhaOrg33 }) {
   const o = vida.orgEsports31!;
@@ -296,7 +298,7 @@ function Linha({ vida, agir, L }: { vida: Vida; agir: Agir; L: LinhaOrg33 }) {
   const igl = L.elenco.find(j => j.id === L.igl);
   const vagas = vagasDaRegiao33(L.jogo, L.regiao, ano);
   const regras = regrasDaDivisao33(L.jogo, L.regiao, L.divisao, ano);
-  const SUB: Record<SubAba, string> = { time: 'O time', elenco: `Elenco · ${L.elenco.length}/${maxElenco31(L.jogo, ano)}`, mercado: 'Mercado', treino: 'Treino', equipamento: 'Equipamento', academy: L.academy35 ? `Academy · ${L.academy35.elenco.length}` : 'Academy', torneios: 'Torneios', comando: 'Comando', temporadas: 'Temporadas e títulos' };
+  const SUB: Record<SubAba, string> = { time: 'O time', elenco: `Elenco · ${L.elenco.length}/${maxElenco31(L.jogo, ano)}`, academy: L.academy35 ? `Academy · ${L.academy35.elenco.length}` : 'Academy', mercado: 'Mercado', treino: 'Treino', equipamento: 'Equipamento (PCs)', torneios: 'Torneios', temporadas: 'Temporadas e títulos', comando: 'Comando' };
   return (
     <div className="org31__linha">
       <h4 className="org34__linha-cabeca"><span className="org31__selo">{SIGLA_JOGO[L.jogo]}</span> A line de {nomeDoJogo(L.jogo, ano)} <span className="org31__meta">{nomeDaLiga31(L, ano)} · {nomeDaRegiao33(L.jogo, L.regiao)}</span></h4>
@@ -306,7 +308,7 @@ function Linha({ vida, agir, L }: { vida: Vida; agir: Agir; L: LinhaOrg33 }) {
         <Num rotulo="Técnico" valor={L.tecnico ? L.tecnico.nome.split(' ')[0] : 'Nenhum'} extra={L.tecnico ? `${'★'.repeat(L.tecnico.nivel)} · ${bonusDoTecnico31(L) >= 0 ? '+' : ''}${Math.round(bonusDoTecnico31(L) * 10) / 10}` : 'contrate em Comando'} />
         <Num rotulo="Liga" valor={nomeDaLiga31(L, ano)} extra={nomeDaRegiao33(L.jogo, L.regiao)} />
       </div>
-      <NavTime34 sub rotulo={`A line de ${nomeDoJogo(L.jogo, ano)}`} atual={aba} mudar={setAba} itens={(Object.keys(SUB) as SubAba[]).map(x => ({ id: x, rotulo: SUB[x] }))} />
+      <NavTime34 sub rotulo={`A line de ${nomeDoJogo(L.jogo, ano)}`} atual={aba} mudar={setAba} itens={(Object.keys(SUB) as SubAba[]).map(x => ({ id: x, rotulo: SUB[x], grupo: GRUPO_SUB[x] }))} />
       {aba === 'time' && (
         <div className="org31__painel">
           <section className="org31__bloco" aria-label="O time titular">
@@ -513,10 +515,20 @@ function Comando({ vida, agir, L }: { vida: Vida; agir: Agir; L: LinhaOrg33 }) {
 }
 
 function Organizacao({ vida, agir }: { vida: Vida; agir: Agir }) {
+  const [parte, setParte] = useState<'crescer' | 'comunidade' | 'dinheiro'>('crescer');
+  return (
+    <div className="org31__comando">
+      <NavTime34 sub rotulo="A organização" atual={parte} mudar={setParte} itens={[{ id: 'crescer', rotulo: 'Crescer (jogos e lines)' }, { id: 'comunidade', rotulo: 'Comunidade e conteúdo' }, { id: 'dinheiro', rotulo: 'Dinheiro' }]} />
+      {parte === 'crescer' && <OrgCrescer vida={vida} agir={agir} />}
+      {parte === 'comunidade' && <><Negocios35 vida={vida} agir={agir} /><Eventos35 vida={vida} agir={agir} /><OrgConteudo vida={vida} agir={agir} /></>}
+      {parte === 'dinheiro' && <OrgDinheiro vida={vida} agir={agir} />}
+    </div>
+  );
+}
+
+function OrgCrescer({ vida, agir }: { vida: Vida; agir: Agir }) {
   const o = vida.orgEsports31!;
   const ano = anoDe(vida.t);
-  const folha = o.linhas.reduce((s, l) => s + l.elenco.reduce((x, j) => x + j.salario, 0), 0);
-  const aporte = Math.max(50000, Math.round(folha / 2 / 10000) * 10000);
   const livres = jogosDisponiveis31(ano).filter(j => !o.linhas.some(l => l.jogo === j));
   const [jogo, setJogo] = useState<JogoId>(livres[0] ?? 'cs');
   const [regiao, setRegiao] = useState(() => regioesDoJogo33(jogo, ano).find(r => r.id === regiaoBrasil33(jogo))?.id ?? regioesDoJogo33(jogo, ano)[0]?.id ?? 'br');
@@ -536,8 +548,13 @@ function Organizacao({ vida, agir }: { vida: Vida; agir: Agir }) {
         ) : <p className="nota">A organização já tem line em todos os jogos com cenário nesta época.</p>}
       </section>
       <ComprarLinha35 vida={vida} agir={agir} />
-      <Negocios35 vida={vida} agir={agir} />
-      <Eventos35 vida={vida} agir={agir} />
+    </div>
+  );
+}
+
+function OrgConteudo({ vida, agir }: { vida: Vida; agir: Agir }) {
+  const o = vida.orgEsports31!;
+  return (
       <section className="org31__bloco" aria-labelledby="org31-conteudo">
         <h4 id="org31-conteudo">Conteúdo e streaming</h4>
         <div className="org31__botoes" role="group" aria-label="Conteúdo">
@@ -545,6 +562,15 @@ function Organizacao({ vida, agir }: { vida: Vida; agir: Agir }) {
         </div>
         <p className="nota">Mais conteúdo traz receita e fãs; a casa de criadores tira horas de treino (−1 de força em todas as lines e evolução mais lenta).</p>
       </section>
+  );
+}
+
+function OrgDinheiro({ vida, agir }: { vida: Vida; agir: Agir }) {
+  const o = vida.orgEsports31!;
+  const folha = o.linhas.reduce((s, l) => s + l.elenco.reduce((x, j) => x + j.salario, 0), 0);
+  const aporte = Math.max(50000, Math.round(folha / 2 / 10000) * 10000);
+  return (
+    <div className="org31__comando">
       <section className="org31__bloco" aria-labelledby="org31-dono">
         <h4 id="org31-dono">Dinheiro do dono</h4>
         <div className="org31__botoes">

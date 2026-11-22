@@ -27,3 +27,5 @@
 @media (max-width: 520px) { #root .org35__lista li { grid-template-columns: auto minmax(0, 1fr); } #root .org35__lista li > :last-child { grid-column: 1 / -1; justify-self: start; } }
 #root .org35__hist { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 2px; font-size: var(--type-caption); color: var(--tinta-2); }
 #root .org35__vigor { justify-self: end; padding: 4px 12px; border-radius: 999px; background: color-mix(in oklab, var(--bom) 18%, transparent); color: var(--tinta); font-size: var(--type-caption); font-weight: 700; }
+#root .org35__rot { font-size: var(--type-caption); font-weight: 700; color: var(--tinta-2); }
+#root .org35__resumo { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-top: 8px; padding: 8px 12px; border-radius: 12px; background: var(--veu-1); font-size: var(--type-caption); }
