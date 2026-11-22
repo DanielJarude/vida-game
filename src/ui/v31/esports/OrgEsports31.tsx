@@ -29,6 +29,7 @@ import './org31.css';
 import { coresDaOrg34 } from './coresOrgs34';
 import { NavTime34, type ItemNav34 } from '../../v34/esporte/NavTime34';
 import { Instalacoes34 } from '../../v34/instalacoes/Instalacoes34';
+import { Academy35, Comodos35, ComprarLinha35, Equipamento35, Eventos35, Reformular35 } from '../../v35/org/Org35';
 
 type Agir = (a: Acao) => boolean;
 const A = (oque: OqueOrg31): Acao => ({ tipo: 'org31', oque } as Acao);
@@ -271,7 +272,8 @@ function MinhaOrg({ vida, agir }: { vida: Vida; agir: Agir }) {
         </>
       )}
       {linha && <Linha key={linha.jogo} vida={vida} agir={agir} L={linha} />}
-      {abaValida === 'casa' && <Instalacoes34 org vida={vida} agir={agir} nome={o.nome} identidade={o.identidade33} inst={o.instalacoes34} acao={sub => A({ op: 'dono', sub })} dados={{ tipo: 'org', nivel: Math.min(5, o.linhas.length + o.conteudo + (o.reputacao >= 60 ? 1 : 0)), pcs: o.linhas.reduce((n, l) => n + l.elenco.length, 0), conteudo: o.conteudo, trofeus: titulos }} />}
+      {abaValida === 'casa' && <Instalacoes34 org vida={vida} agir={agir} nome={o.nome} identidade={o.identidade33} inst={o.instalacoes34} acao={sub => A({ op: 'dono', sub })} dados={{ tipo: 'org', nivel: Math.min(5, o.linhas.length + o.conteudo + (o.reputacao >= 60 ? 1 : 0)), pcs: o.linhas.reduce((n, l) => n + l.elenco.length, 0), conteudo: o.conteudo, trofeus: titulos, comodos: o.casa35 ?? [], setups: o.linhas.map(l => l.setup35) }} />}
+      {abaValida === 'casa' && <Comodos35 vida={vida} agir={agir} />}
       {abaValida === 'negocios' && <PainelDono33 vida={vida} agir={agir} nome={o.nome} dono={o} ctx={contextoOrg33(vida)} acao={sub => A({ op: 'dono', sub })} anoInicio={anoDe(o.desde)} />}
       {abaValida === 'organizacao' && <Organizacao vida={vida} agir={agir} />}
     </section>
@@ -280,7 +282,7 @@ function MinhaOrg({ vida, agir }: { vida: Vida; agir: Agir }) {
 
 /* ------------------------------------------------------------------ uma line */
 
-type SubAba = 'time' | 'elenco' | 'mercado' | 'comando' | 'temporadas';
+type SubAba = 'time' | 'elenco' | 'mercado' | 'equipamento' | 'academy' | 'comando' | 'temporadas';
 
 function Linha({ vida, agir, L }: { vida: Vida; agir: Agir; L: LinhaOrg33 }) {
   const o = vida.orgEsports31!;
@@ -294,7 +296,7 @@ function Linha({ vida, agir, L }: { vida: Vida; agir: Agir; L: LinhaOrg33 }) {
   const igl = L.elenco.find(j => j.id === L.igl);
   const vagas = vagasDaRegiao33(L.jogo, L.regiao, ano);
   const regras = regrasDaDivisao33(L.jogo, L.regiao, L.divisao, ano);
-  const SUB: Record<SubAba, string> = { time: 'O time', elenco: `Elenco · ${L.elenco.length}/${maxElenco31(L.jogo, ano)}`, mercado: 'Mercado', comando: 'Comando', temporadas: 'Temporadas e títulos' };
+  const SUB: Record<SubAba, string> = { time: 'O time', elenco: `Elenco · ${L.elenco.length}/${maxElenco31(L.jogo, ano)}`, mercado: 'Mercado', equipamento: 'Equipamento', academy: L.academy35 ? `Academy · ${L.academy35.elenco.length}` : 'Academy', comando: 'Comando', temporadas: 'Temporadas e títulos' };
   return (
     <div className="org31__linha">
       <h4 className="org34__linha-cabeca"><span className="org31__selo">{SIGLA_JOGO[L.jogo]}</span> A line de {nomeDoJogo(L.jogo, ano)} <span className="org31__meta">{nomeDaLiga31(L, ano)} · {nomeDaRegiao33(L.jogo, L.regiao)}</span></h4>
@@ -324,6 +326,8 @@ function Linha({ vida, agir, L }: { vida: Vida; agir: Agir; L: LinhaOrg33 }) {
       )}
       {aba === 'elenco' && <Elenco vida={vida} agir={agir} L={L} perfis={perfis} />}
       {aba === 'mercado' && <Mercado vida={vida} agir={agir} L={L} />}
+      {aba === 'equipamento' && <Equipamento35 vida={vida} agir={agir} L={L} nomeOrg={o.nome} />}
+      {aba === 'academy' && <Academy35 vida={vida} agir={agir} L={L} />}
       {aba === 'comando' && <Comando vida={vida} agir={agir} L={L} />}
       {aba === 'temporadas' && <Temporadas L={L} />}
     </div>
@@ -375,17 +379,21 @@ function Elenco({ vida, agir, L, perfis }: { vida: Vida; agir: Agir; L: LinhaOrg
           <Cartao key={j.id} L={L} j={j} ano={ano} perfil={perfis.get(j.id)} titular={tit.has(j.id)} alerta={j.contratoAte <= ano ? 'Contrato termina neste ano' : undefined}>
             <BotaoAcao vida={vida} agir={agir} acao={A({ op: 'renovar', id: j.id, jogo: j_ })} ocultarBloqueado>Renovar</BotaoAcao>
             <BotaoAcao vida={vida} agir={agir} acao={A({ op: 'igl', id: j.id, jogo: j_ })} ocultarBloqueado>Tornar IGL</BotaoAcao>
-            <BotaoAcao vida={vida} agir={agir} acao={A({ op: 'dispensar', id: j.id, jogo: j_ })}>Dispensar · vale ~{dinheiroCurto(valorDoJogador31(j, ano, mult, auge))}</BotaoAcao>
+            <BotaoAcao vida={vida} agir={agir} acao={A({ op: 'vender_jogador', id: j.id, jogo: j_ })} ocultarBloqueado>Vender · ~{dinheiroCurto(valorDoJogador31(j, ano, mult, auge))}</BotaoAcao>
+            <BotaoAcao vida={vida} agir={agir} acao={A({ op: 'emprestar', id: j.id, jogo: j_ })} ocultarBloqueado>Emprestar</BotaoAcao>
+            {L.academy35 && <BotaoAcao vida={vida} agir={agir} acao={A({ op: 'descer', id: j.id, jogo: j_ })} ocultarBloqueado>Descer à academy</BotaoAcao>}
+            <BotaoAcao vida={vida} agir={agir} acao={A({ op: 'dispensar', id: j.id, jogo: j_ })}>Dispensar</BotaoAcao>
           </Cartao>
         ))}
       </ul>
+      {(L.emprestados35?.length ?? 0) > 0 && <p className="nota">Emprestados até o fim da temporada: {L.emprestados35!.map(e => `${e.jogador.nick} (na ${e.para})`).join('; ')}.</p>}
       <section className="org31__bloco" aria-labelledby="org31-academia">
-        <h4 id="org31-academia">Academia</h4>
-        <div className="org31__botoes" role="group" aria-label="Nível da academia">
-          {([0, 1, 2] as const).map(n => <BotaoAcao key={n} vida={vida} agir={agir} acao={A({ op: 'academia', nivel: n, jogo: j_ })} variante={L.academiaNivel === n ? 'principal' : 'secundario'}>{['Sem academia', 'Básica', 'Forte'][n]}</BotaoAcao>)}
+        <h4 id="org31-academia">Peneira de talentos</h4>
+        <div className="org31__botoes" role="group" aria-label="Nível da peneira">
+          {([0, 1, 2] as const).map(n => <BotaoAcao key={n} vida={vida} agir={agir} acao={A({ op: 'academia', nivel: n, jogo: j_ })} variante={L.academiaNivel === n ? 'principal' : 'secundario'}>{['Sem peneira', 'Peneira básica', 'Peneira forte'][n]}</BotaoAcao>)}
         </div>
-        {L.academiaNivel === 0 ? <p className="nota">Sem academia, nenhum jovem é revelado. Uma academia custa por ano e revela jogadores com potencial na virada.</p>
-          : L.academia.length ? <ul className="org31__cartoes">{L.academia.map(j => <Cartao key={j.id} L={L} j={j} ano={ano} perfil={perfilDoJogadorOrg31(j, L.jogo, ano, { mediaDoTime: mediaDosTitulares31(L, ano) })}><BotaoAcao vida={vida} agir={agir} acao={A({ op: 'promover', id: j.id, jogo: j_ })}>Subir para a line</BotaoAcao></Cartao>)}</ul>
+        {L.academiaNivel === 0 ? <p className="nota">Sem peneira, nenhum jovem é revelado. A peneira custa por ano e revela jogadores com potencial na virada — que podem subir para a line ou ir para a line academy (aba Academy).</p>
+          : L.academia.length ? <ul className="org31__cartoes">{L.academia.map(j => <Cartao key={j.id} L={L} j={j} ano={ano} perfil={perfilDoJogadorOrg31(j, L.jogo, ano, { mediaDoTime: mediaDosTitulares31(L, ano) })}><BotaoAcao vida={vida} agir={agir} acao={A({ op: 'promover', id: j.id, jogo: j_ })}>Subir para a line</BotaoAcao>{L.academy35 && <BotaoAcao vida={vida} agir={agir} acao={A({ op: 'promover', id: j.id, jogo: j_, academy: true })} ocultarBloqueado>Para a academy</BotaoAcao>}</Cartao>)}</ul>
             : <p className="nota">Os primeiros jovens chegam na virada do ano.</p>}
       </section>
     </>
@@ -491,6 +499,7 @@ function Comando({ vida, agir, L }: { vida: Vida; agir: Agir; L: LinhaOrg33 }) {
         <p className="nota">Uma semana de treinos contra equipes de fora: +2 de força nesta temporada, o clima melhora e os jovens evoluem mais. Custa {dinheiroCurto(custoDoBootcamp31(L))}.</p>
         <BotaoAcao vida={vida} agir={agir} acao={A({ op: 'bootcamp', jogo: L.jogo })}>{L.bootcamp === ano ? 'Bootcamp feito' : 'Levar a line ao bootcamp'}</BotaoAcao>
       </section>
+      <Reformular35 vida={vida} agir={agir} L={L} />
       <section className="org31__bloco" aria-labelledby="org31-sair">
         <h4 id="org31-sair">Sair deste jogo</h4>
         <p className="nota">Vender a vaga e os contratos da line: o dinheiro vai para o caixa da organização.</p>
@@ -523,6 +532,8 @@ function Organizacao({ vida, agir }: { vida: Vida; agir: Agir }) {
           </>
         ) : <p className="nota">A organização já tem line em todos os jogos com cenário nesta época.</p>}
       </section>
+      <ComprarLinha35 vida={vida} agir={agir} />
+      <Eventos35 vida={vida} agir={agir} />
       <section className="org31__bloco" aria-labelledby="org31-conteudo">
         <h4 id="org31-conteudo">Conteúdo e streaming</h4>
         <div className="org31__botoes" role="group" aria-label="Conteúdo">

@@ -12,6 +12,8 @@ export type Cobertura34 = 'nenhuma' | 'parcial' | 'total';
 export type Piso34 = 'madeira' | 'escura' | 'azul' | 'cores';
 export type Fachada34 = 'time' | 'concreto' | 'vidro' | 'tijolo';
 export type EstiloHouse34 = 'loft' | 'casa' | 'escritorio';
+export type Parede34 = 'time' | 'grafite' | 'branca' | 'tijolo';
+export type Layout34 = 'fileiras' | 'ilha' | 'arena';
 
 export interface Instalacoes34 {
   /** Nome do estádio / ginásio / gaming house (o "nome da casa"). */
@@ -30,6 +32,12 @@ export interface Instalacoes34 {
   /** A cor da luz da gaming house (hex). */
   luz?: string;
   mural?: boolean;
+  /** VIDA 35 · a gaming house: a parede, o arranjo das mesas, o letreiro em neon, as plantas, o sofá. */
+  parede?: Parede34;
+  layout?: Layout34;
+  neon?: boolean;
+  plantas?: boolean;
+  sofa?: boolean;
 }
 
 const ESCOLHAS = {
@@ -38,7 +46,9 @@ const ESCOLHAS = {
   cobertura: ['nenhuma', 'parcial', 'total'],
   piso: ['madeira', 'escura', 'azul', 'cores'],
   fachada: ['time', 'concreto', 'vidro', 'tijolo'],
-  estilo: ['loft', 'casa', 'escritorio']
+  estilo: ['loft', 'casa', 'escritorio'],
+  parede: ['time', 'grafite', 'branca', 'tijolo'],
+  layout: ['fileiras', 'ilha', 'arena']
 } as const;
 
 export const NOMES34: Record<string, string> = {
@@ -47,7 +57,8 @@ export const NOMES34: Record<string, string> = {
   nenhuma: 'Sem cobertura', parcial: 'Só a principal', total: 'Toda coberta',
   madeira: 'Madeira clara', escura: 'Madeira escura', azul: 'Sintético azul', cores: 'Nas cores do time',
   concreto: 'Concreto', vidro: 'Vidro', tijolo: 'Tijolo aparente',
-  loft: 'Loft', casa: 'Casarão', escritorio: 'Andar corporativo'
+  loft: 'Loft', casa: 'Casarão', escritorio: 'Andar corporativo',
+  grafite: 'Grafite', branca: 'Brancas', fileiras: 'Fileiras', ilha: 'Ilhas frente a frente', arena: 'Arena (em U, com telão)'
 };
 export const opcoes34 = <K extends keyof typeof ESCOLHAS>(k: K): readonly string[] => ESCOLHAS[k];
 
@@ -65,6 +76,8 @@ export function normalizarInstalacoes34(x: unknown): Instalacoes34 | undefined {
     fachada: de('fachada', o.fachada) as Fachada34 | undefined, estilo: de('estilo', o.estilo) as EstiloHouse34 | undefined,
     telao: typeof o.telao === 'boolean' ? o.telao : undefined, letreiro: typeof o.letreiro === 'boolean' ? o.letreiro : undefined,
     mural: typeof o.mural === 'boolean' ? o.mural : undefined,
+    parede: de('parede', o.parede) as Parede34 | undefined, layout: de('layout', o.layout) as Layout34 | undefined,
+    neon: typeof o.neon === 'boolean' ? o.neon : undefined, plantas: typeof o.plantas === 'boolean' ? o.plantas : undefined, sofa: typeof o.sofa === 'boolean' ? o.sofa : undefined,
     luz: typeof o.luz === 'string' && /^#[0-9a-f]{6}$/i.test(o.luz) ? o.luz : undefined
   };
   for (const k of Object.keys(r) as (keyof Instalacoes34)[]) if (r[k] === undefined) delete r[k];

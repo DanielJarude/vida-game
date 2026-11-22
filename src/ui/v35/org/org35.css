@@ -1,0 +1,27 @@
+/* VIDA 35 · equipamento, academy, reformulação, compra de line, eventos e cômodos da organização. */
+#root .org35 { display: grid; gap: 12px; min-width: 0; }
+#root .org35__topo { display: grid; grid-template-columns: minmax(0, 240px) minmax(0, 1fr); gap: 14px; align-items: start; }
+@media (max-width: 620px) { #root .org35__topo { grid-template-columns: 1fr; } }
+#root .org35__estacao { width: 100%; height: auto; border-radius: 12px; box-shadow: inset 0 0 0 1px var(--fio); display: block; }
+#root .org35__fichas { display: flex; flex-wrap: wrap; gap: 6px; }
+#root .org35__ficha { min-height: 32px; padding: 4px 11px; border: 0; border-radius: 999px; background: var(--veu-2); color: var(--tinta); font: inherit; font-size: var(--type-caption); font-weight: 600; cursor: pointer; box-shadow: inset 0 0 0 1px var(--fio); }
+#root .org35__ficha small { font-weight: 500; color: inherit; opacity: 0.8; }
+#root .org35__ficha[aria-pressed='true'] { background: var(--acao); color: var(--fundo); box-shadow: none; }
+#root .org35__cor { width: 28px; height: 28px; border-radius: 50%; border: 0; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25); cursor: pointer; }
+#root .org35__cor[aria-pressed='true'] { outline: 3px solid var(--acao); outline-offset: 2px; }
+#root .org35__pecas, #root .org35__lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+#root .org35__peca { display: grid; gap: 6px; padding: 12px; border-radius: 12px; background: var(--superficie); box-shadow: inset 0 0 0 1px var(--fio); }
+#root .org35__peca .nota { margin: 0; }
+#root .org35__peca-cabeca { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+#root .org35__estado { font-size: var(--type-meta); padding: 1px 8px; border-radius: 999px; background: var(--veu-2); }
+#root .org35__estado--defasada { background: color-mix(in oklab, var(--alerta) 25%, transparent); }
+#root .org35__estado--obsoleta { background: color-mix(in oklab, var(--ruim) 25%, transparent); }
+#root .org35__liga { display: inline-flex; gap: 8px; align-items: center; font-size: var(--type-caption); }
+#root .org35__visual, #root .org35__salvar { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+#root .org35__lista li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px 12px; align-items: center; padding: 8px 10px; border-radius: 10px; background: var(--veu-1); }
+#root .org35__lista li > span:first-child:not(.org35__f) { grid-column: 1 / 3; }
+#root .org35__lista li.org35__tem { box-shadow: inset 3px 0 0 var(--bom); }
+#root .org35__f { min-width: 32px; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; padding: 2px 6px; border-radius: 6px; background: var(--tinta); color: var(--fundo, var(--superficie)); }
+#root .org35__campo { display: inline-flex; gap: 6px; align-items: center; font-size: var(--type-caption); color: var(--tinta-2); }
+#root .org35__campo select { min-height: 36px; border-radius: 10px; padding: 0 8px; }
+@media (max-width: 520px) { #root .org35__lista li { grid-template-columns: auto minmax(0, 1fr); } #root .org35__lista li > :last-child { grid-column: 1 / -1; justify-self: start; } }

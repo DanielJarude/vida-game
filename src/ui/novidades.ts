@@ -26,6 +26,21 @@ export interface NotaDeVersao {
 
 export const NOTAS: NotaDeVersao[] = [
   {
+    versao: '35',
+    data: '2026-11-22',
+    titulo: 'A organização de e-sports que você monta',
+    novidades: [
+      'Equipamento de cada line: monte o PC, o monitor (com a taxa de atualização da época), os periféricos e a cadeira de cada jogador — peça por peça ou num pacote (Básico, Competitivo, Padrão de LAN, Topo de linha) — e escolha o gabinete e a cor do RGB. Soma na força e envelhece: com 3 anos rende metade; com 5, nada.',
+      'Line academy: um segundo time que disputa uma divisão abaixo da principal, sobe e cai; os jovens evoluem jogando e quem está mal na principal desce para recuperar a forma.',
+      'Comprar a line de outra organização: a vaga e os jogadores passam a jogar com o seu nome — num jogo novo ou no lugar da sua line.',
+      'Reformular a line: escolha quem fica e o tamanho da ambição (barata com jovens, no mesmo nível, ambiciosa); a prévia mostra quem chega e quanto custa.',
+      'Emprestar e vender jogadores; eventos da organização (encontro com os fãs, watch party, torneio próprio).',
+      'Gaming house com cômodos que mudam o time: sala de análise, academia, chef e nutricionista, psicólogo, fisioterapia, quartos individuais e estúdio profissional — e mais personalização: arranjo das mesas (fileiras, ilhas, arena com telão), paredes, piso, letreiro em neon, plantas e lounge.'
+    ],
+    melhorias: ['A antiga "academia" de jovens virou a Peneira de talentos: os revelados sobem para a line ou vão para a line academy.'],
+    correcoes: []
+  },
+  {
     versao: '34',
     data: '2026-11-21',
     titulo: 'Seus times organizados, instalações à vista e as cores certas',

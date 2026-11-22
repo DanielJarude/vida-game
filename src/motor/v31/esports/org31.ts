@@ -37,6 +37,10 @@ import {
 import { normalizarIdentidade33, type Identidade33 } from '../../v33/dono/identidade33';
 import { contratoAntigo33, normalizarComercial33, novoComercial33, type Comercial33, type Contexto33 } from '../../v33/dono/patrocinio33';
 import { normalizarLoja33, type Loja33 } from '../../v33/dono/loja33';
+import {
+  bonusDaCasa35, bonusDoSetup35, climaDoSetup35, comodo35, custoDoSetup35, EVENTOS35, manutencaoDaCasa35, normalizarSetup35, REFORMULACAO35,
+  type Comodo35, type Evento35, type Gabinete35, type NivelReformulacao35, type Peca35, type Setup35
+} from './org35';
 import { executarDono33, fecharAnoDono33, problemaDono33, type OpDono33 } from '../../v33/dono/dono33';
 
 /* ------------------------------------------------------------------ o estado */
@@ -95,6 +99,16 @@ export interface LinhaOrg33 {
   historico: TemporadaOrg31[]; trofeus: Trofeu31[];
   comprados: string[];
   vendas: { nome: string; para: string; valor: number; ano: number }[];
+  /** VIDA 35 · o equipamento da line, a line academy (um segundo time que compete) e os emprestados. */
+  setup35?: Setup35;
+  academy35?: Academy35;
+  emprestados35?: { jogador: JogadorOrg31; para: string; ate: number }[];
+}
+/** VIDA 35 · a line academy: o time B, que disputa uma divisão abaixo da principal e forma jogadores jogando. */
+export interface Academy35 {
+  desde: number; divisao: Divisao31;
+  elenco: JogadorOrg31[];
+  historico: { ano: number; liga: string; divisao: Divisao31; posicao: number; participantes: number; subiu?: boolean; caiu?: boolean }[];
 }
 export interface OrgEsports31 {
   nome: string;
@@ -114,6 +128,10 @@ export interface OrgEsports31 {
   instalacoes34?: import('../../v33/dono/instalacoes34').Instalacoes34;
   comercial33?: Comercial33;
   loja33?: Loja33;
+  /** VIDA 35 · os cômodos da gaming house, os eventos feitos (ano e tipo) e as orgs cujas lines foram compradas. */
+  casa35?: Comodo35[];
+  eventos35?: { ano: number; tipo: Evento35 }[];
+  absorvidas35?: string[];
 }
 
 /* ------------------------------------------------------------------ as réguas */
@@ -243,8 +261,17 @@ export function quimica31(L: LinhaOrg33, ano: number): number {
 }
 export const bonusDoTecnico31 = (L: Pick<LinhaOrg33, 'tecnico' | 'humorTecnico'>) => (L.tecnico ? (L.tecnico.nivel - 2) * 1.2 + ((L.humorTecnico ?? 60) - 60) / 40 * 0.6 : 0);
 /** A força da line na temporada: os titulares, a química, o técnico, o bootcamp, o clima e o tempo que o conteúdo come. */
-export function forcaDoTime31(o: Pick<OrgEsports31, 'conteudo'>, L: LinhaOrg33, ano: number): number {
-  return Math.round((mediaDosTitulares31(L, ano) + quimica31(L, ano) + bonusDoTecnico31(L) + (L.bootcamp === ano ? 2 : 0) + (L.moral ?? 0) - (o.conteudo === 2 ? 1 : 0)) * 10) / 10;
+export function forcaDoTime31(o: Pick<OrgEsports31, 'conteudo'> & Partial<Pick<OrgEsports31, 'casa35'>>, L: LinhaOrg33, ano: number): number {
+  return Math.round((mediaDosTitulares31(L, ano) + quimica31(L, ano) + bonusDoTecnico31(L) + (L.bootcamp === ano ? 2 : 0) + (L.moral ?? 0) - (o.conteudo === 2 ? 1 : 0)
+    + bonusDoSetup35(L.setup35, ano) + bonusDaCasa35(o.casa35, !!L.tecnico)) * 10) / 10;
+}
+/** VIDA 35 · a força da line academy (os titulares dela). */
+export function forcaDaAcademy35(L: LinhaOrg33, ano: number): number {
+  const a = L.academy35;
+  if (!a?.elenco.length) return 0;
+  const n = titularesDoJogo31(L.jogo, ano);
+  const top = [...a.elenco].sort((x, y) => y.forca - x.forca).slice(0, n);
+  return Math.round((top.reduce((s, j) => s + j.forca, 0) / n + bonusDoSetup35(L.setup35, ano) * 0.5) * 10) / 10;
 }
 
 /* ------------------------------------------------------------------ à venda */
@@ -311,7 +338,7 @@ export function orgsAVenda31(v: Vida, filtro?: { jogo?: JogoId; regiao?: Regiao3
   const ano = anoDe(v.t);
   const jogos = filtro?.jogo ? [filtro.jogo] : jogosDisponiveis31(ano);
   return jogos.filter(j => JOGOS25[j].lancado <= ano)
-    .flatMap(j => catalogo(v, j, ano).filter(x => !filtro?.regiao || x.regiao === filtro.regiao).map(x => avaliar(v, j, x)));
+    .flatMap(j => catalogo(v, j, ano).filter(x => (!filtro?.regiao || x.regiao === filtro.regiao) && !v.orgEsports31?.absorvidas35?.includes(`${j}:${x.nome}`) && x.nome !== v.orgEsports31?.nome).map(x => avaliar(v, j, x)));
 }
 export const avaliarOrg31 = (v: Vida, nome: string, jid: JogoId, regiao: Regiao31) => orgsAVenda31(v, { jogo: jid, regiao }).find(x => x.nome === nome);
 
@@ -357,7 +384,7 @@ export type OqueOrg31 =
   | { op: 'contratar'; id: string; jogo?: JogoId }
   | { op: 'dispensar'; id: string; jogo?: JogoId }
   | { op: 'renovar'; id: string; jogo?: JogoId }
-  | { op: 'promover'; id: string; jogo?: JogoId }
+  | { op: 'promover'; id: string; jogo?: JogoId; academy?: boolean }
   | { op: 'igl'; id: string; jogo?: JogoId }
   | { op: 'tecnico'; i: number; jogo?: JogoId }
   | { op: 'demitir_tecnico'; jogo?: JogoId }
@@ -365,7 +392,18 @@ export type OqueOrg31 =
   | { op: 'academia'; nivel: 0 | 1 | 2; jogo?: JogoId }
   | { op: 'conteudo'; nivel: 0 | 1 | 2 }
   | { op: 'dono'; sub: OpDono33 }
-  | { op: 'responder'; id: string; opcao: string };
+  | { op: 'responder'; id: string; opcao: string }
+  // VIDA 35
+  | { op: 'setup'; jogo?: JogoId; setup: Pick<Setup35, Peca35> & { gabinete?: Gabinete35; rgb?: string }; renovar?: Peca35[] }
+  | { op: 'comodo'; id: Comodo35; construir: boolean }
+  | { op: 'evento'; tipo: Evento35 }
+  | { op: 'comprar_linha'; nome: string; jogo: JogoId; regiao: Regiao31 }
+  | { op: 'reformular'; jogo?: JogoId; manter: string[]; nivel: NivelReformulacao35 }
+  | { op: 'academy'; jogo?: JogoId; ativar: boolean }
+  | { op: 'subir'; jogo?: JogoId; id: string }
+  | { op: 'descer'; jogo?: JogoId; id: string }
+  | { op: 'emprestar'; jogo?: JogoId; id: string }
+  | { op: 'vender_jogador'; jogo?: JogoId; id: string };
 
 export const custoDoBootcamp31 = (L: LinhaOrg33) => arred((L.divisao === 4 ? 250e3 : L.divisao === 3 ? 90e3 : 30e3) * multDe(L) * (1 + L.elenco.length / 10));
 const nomeLimpo = (s: string) => (s ?? '').replace(/\s+/g, ' ').trim();
@@ -436,10 +474,68 @@ export function disponibilidadeOrg31(v: Vida, o: OqueOrg31): Veredito {
     case 'conteudo': return org.conteudo === o.nivel ? bloqueio('incompativel', 'Já é assim.') : PERMITIDO;
     case 'dono': { const p = problemaDono33(contextoOrg33(v), org, o.sub, org.caixa, anoDe(org.desde)); return p ? bloqueio('requisito', p) : PERMITIDO; }
     case 'responder': return org.mesa.find(s => s.id === o.id)?.opcoes.some(x => x.id === o.opcao) ? PERMITIDO : bloqueio('impossivel', 'Esse assunto já foi resolvido.');
+    case 'comodo': {
+      const tem = (org.casa35 ?? []).includes(o.id);
+      if (o.construir === tem) return bloqueio('incompativel', tem ? 'A casa já tem.' : 'A casa não tem.');
+      if (!o.construir) return PERMITIDO;
+      const c = arred(comodo35(o.id).obra * multMedio(org));
+      return org.caixa >= c ? PERMITIDO : bloqueio('requisito', `A obra custa ${fmt(c)}; o caixa da organização não tem (aporte).`);
+    }
+    case 'evento': {
+      if ((org.eventos35 ?? []).some(e => e.ano === ano && e.tipo === o.tipo)) return bloqueio('incompativel', 'Já foi feito neste ano.');
+      const ev = EVENTOS35.find(e => e.id === o.tipo); if (!ev) return bloqueio('impossivel', '');
+      const c = arred(ev.custo * multMedio(org));
+      return org.caixa >= c ? PERMITIDO : bloqueio('requisito', `Custa ${fmt(c)}; o caixa da organização não tem.`);
+    }
+    case 'comprar_linha': {
+      const x = avaliarOrg31(v, o.nome, o.jogo, o.regiao);
+      if (!x) return bloqueio('impossivel', 'Essa organização não está vendendo a line.');
+      const conf = conflito(v, o.jogo, org.nome);
+      if (conf) return bloqueio('incompativel', conf);
+      const atual = linhaDe31(org, o.jogo);
+      const credito = atual ? valorDaLinha33(org, atual, ano) : 0;
+      const custo = Math.max(0, x.preco - credito);
+      return v.financas.conta >= custo ? PERMITIDO : bloqueio('requisito', `Comprar a line custa ${fmt(custo)} em dinheiro${atual ? ' (já descontada a venda da sua line atual)' : ''}.`);
+    }
   }
   const L = linhaDe31(org, o.jogo);
   if (!L) return bloqueio('impossivel', 'Não há line desse jogo.');
   const max = maxElenco31(L.jogo, ano);
+  const titN = titularesDoJogo31(L.jogo, ano);
+  switch (o.op) {
+    case 'setup': {
+      const c = custoDoSetup35(L.setup35, o.setup, o.renovar ?? [], L.elenco.length + (L.tecnico ? 1 : 0), multDe(L));
+      if (c === 0 && JSON.stringify({ g: o.setup.gabinete, r: o.setup.rgb }) === JSON.stringify({ g: L.setup35?.gabinete, r: L.setup35?.rgb }) && !(['pc', 'monitor', 'perifericos', 'cadeira'] as Peca35[]).some(p => (L.setup35?.[p] ?? 0) !== o.setup[p])) return bloqueio('incompativel', 'Nada mudou.');
+      return org.caixa >= c ? PERMITIDO : bloqueio('requisito', `O equipamento custa ${fmt(c)}; o caixa da organização não tem (aporte).`);
+    }
+    case 'reformular': {
+      const plano = planoDaReformulacao35(v, org, L, o.manter, o.nivel);
+      if (o.manter.length >= titN) return bloqueio('incompativel', 'Mantendo todos, não é reformulação: deixe sair ao menos um.');
+      return org.caixa >= plano.custo ? PERMITIDO : bloqueio('requisito', `A reformulação custa ${fmt(plano.custo)} (multas e contratações); o caixa da organização não tem.`);
+    }
+    case 'academy': {
+      if (o.ativar === !!L.academy35) return bloqueio('incompativel', o.ativar ? 'A line academy já existe.' : 'Não há line academy.');
+      if (!o.ativar) return PERMITIDO;
+      if (L.divisao < 3) return bloqueio('requisito', 'Uma line academy disputa uma divisão abaixo da principal: só dá com a line principal na segunda divisão ou na liga principal.');
+      const c = custoDaAcademy35(L, ano);
+      return org.caixa >= c ? PERMITIDO : bloqueio('requisito', `Montar a academy custa ${fmt(c)}; o caixa da organização não tem.`);
+    }
+    case 'subir': {
+      if (!L.academy35?.elenco.some(j => j.id === o.id)) return bloqueio('impossivel', '');
+      return L.elenco.length >= max ? bloqueio('incompativel', 'A line principal está completa: desça ou dispense alguém antes.') : PERMITIDO;
+    }
+    case 'descer': {
+      if (!L.academy35) return bloqueio('requisito', 'Não há line academy para onde descer.');
+      if (!L.elenco.some(j => j.id === o.id)) return bloqueio('impossivel', '');
+      if (L.elenco.length <= titN) return bloqueio('incompativel', 'Sem ele a line principal não tem time completo.');
+      return L.academy35.elenco.length >= max + 1 ? bloqueio('incompativel', 'A academy está cheia.') : PERMITIDO;
+    }
+    case 'emprestar': case 'vender_jogador': {
+      if (!L.elenco.some(j => j.id === o.id)) return bloqueio('impossivel', '');
+      if (L.elenco.length <= titN) return bloqueio('incompativel', 'Sem ele não há time completo para jogar: contrate antes.');
+      return PERMITIDO;
+    }
+  }
   switch (o.op) {
     case 'contratar': {
       const m = mercadoOrg31(v, L.jogo).find(j => j.id === o.id);
@@ -454,7 +550,7 @@ export function disponibilidadeOrg31(v: Vida, o: OqueOrg31): Veredito {
       return PERMITIDO;
     }
     case 'renovar': { const j = L.elenco.find(x => x.id === o.id); return j ? (j.contratoAte > ano + 1 ? bloqueio('incompativel', `O contrato vai até ${j.contratoAte}.`) : PERMITIDO) : bloqueio('impossivel', ''); }
-    case 'promover': return L.academia.some(j => j.id === o.id) ? (L.elenco.length >= max ? bloqueio('incompativel', 'A line está completa: dispense alguém antes.') : PERMITIDO) : bloqueio('impossivel', '');
+    case 'promover': return L.academia.some(j => j.id === o.id) ? (o.academy ? (!L.academy35 ? bloqueio('requisito', 'Não há line academy.') : L.academy35.elenco.length >= max + 1 ? bloqueio('incompativel', 'A academy está cheia.') : PERMITIDO) : L.elenco.length >= max ? bloqueio('incompativel', 'A line está completa: dispense alguém antes.') : PERMITIDO) : bloqueio('impossivel', '');
     case 'igl': return L.elenco.some(j => j.id === o.id) ? (L.igl === o.id ? bloqueio('incompativel', 'Ele já é o IGL.') : PERMITIDO) : bloqueio('impossivel', '');
     case 'tecnico': {
       const t = tecnicosOrg31(v, L.jogo)[o.i];
@@ -511,11 +607,106 @@ export function executarOrg31(v: Vida, o: OqueOrg31): { texto: string; tom?: 'bo
       return { texto: x.texto, tom: x.tom };
     }
     case 'responder': return responderMesa(v, org, o.id, o.opcao);
+    case 'comodo': {
+      const d = comodo35(o.id);
+      if (!o.construir) { org.casa35 = (org.casa35 ?? []).filter(c => c !== o.id); return { texto: `${d.nome}: fechado (sem custo por ano).`, tom: 'neutro' }; }
+      const c = arred(d.obra * multMedio(org));
+      org.caixa -= c; org.casa35 = [...(org.casa35 ?? []), o.id];
+      escrever(v, { texto: `A gaming house da ${org.nome} ganhou: ${d.nome.toLowerCase()} (${fmt(c)}).`, relevancia: 'cotidiano', tema: 'dinheiro', escolha: true });
+      return { texto: `${d.nome} pronto.`, tom: 'bom' };
+    }
+    case 'evento': {
+      const ev = EVENTOS35.find(e => e.id === o.tipo)!;
+      const m = multMedio(org);
+      const c = arred(ev.custo * m);
+      const receita = arred(ev.receita * m * (0.5 + org.fas / 60));
+      org.caixa += receita - c;
+      org.fas = clamp(org.fas + ev.fas); org.reputacao = clamp(org.reputacao + ev.rep);
+      org.eventos35 = [...(org.eventos35 ?? []).filter(e => e.ano >= ano - 3), { ano, tipo: o.tipo }];
+      escrever(v, { texto: `A ${org.nome} fez: ${ev.nome.toLowerCase()}. Custou ${fmt(c)}${receita ? ` e trouxe ${fmt(receita)}` : ''}; a comunidade cresceu.`, relevancia: 'cotidiano', tema: 'trabalho', escolha: true });
+      return { texto: `${ev.nome}: feito.`, tom: 'bom' };
+    }
+    case 'comprar_linha': return comprarLinha35(v, org, o.nome, o.jogo, o.regiao);
   }
   const L = linhaDe31(org, o.jogo)!;
   const auge = jogo(L.jogo).auge;
   const mult = multDe(L);
   switch (o.op) {
+    case 'setup': {
+      const c = custoDoSetup35(L.setup35, o.setup, o.renovar ?? [], L.elenco.length + (L.tecnico ? 1 : 0), mult);
+      const s = L.setup35 ?? { pc: 0, monitor: 0, perifericos: 0, cadeira: 0, anos: {} };
+      const anos = { ...s.anos };
+      for (const p of ['pc', 'monitor', 'perifericos', 'cadeira'] as Peca35[]) if (o.setup[p] !== s[p] || o.renovar?.includes(p)) anos[p] = ano;
+      L.setup35 = normalizarSetup35({ ...o.setup, anos })!;
+      org.caixa -= c;
+      if (c) escrever(v, { texto: `A line de ${JOGOS25[L.jogo].nome(ano)} da ${org.nome} ganhou equipamento novo (${fmt(c)}).`, relevancia: 'cotidiano', tema: 'dinheiro', escolha: true });
+      return { texto: c ? `Equipamento montado: ${fmt(c)}.` : 'Visual dos PCs atualizado.', tom: 'bom' };
+    }
+    case 'reformular': {
+      const plano = planoDaReformulacao35(v, org, L, o.manter, o.nivel);
+      const saem = L.elenco.filter(j => !o.manter.includes(j.id));
+      L.elenco = L.elenco.filter(j => o.manter.includes(j.id));
+      for (const j of saem) L.vendas.unshift({ nome: j.nick, para: 'livre (reformulação)', valor: 0, ano });
+      if (L.vendas.length > 20) L.vendas.length = 20;
+      L.elenco.push(...plano.novos);
+      org.seq = Math.max(org.seq, plano.seq);
+      org.caixa -= plano.custo;
+      if (L.igl && !L.elenco.some(j => j.id === L.igl)) L.igl = undefined;
+      L.igl ??= titulares31(L, ano).find(j => j.funcao === 'igl')?.id ?? titulares31(L, ano)[0]?.id;
+      L.moral = clamp((L.moral ?? 0) * 0.3 - 0.3, -3, 3);
+      escrever(v, { texto: `A ${org.nome} reformulou a line de ${JOGOS25[L.jogo].nome(ano)}: saíram ${saem.map(j => j.nick).join(', ')}; chegaram ${plano.novos.map(j => j.nick).join(', ')} (${fmt(plano.custo)}).`, relevancia: 'marco', tema: 'trabalho', escolha: true });
+      return { texto: `Line reformulada: ${plano.novos.length} chegadas.`, tom: 'neutro' };
+    }
+    case 'academy': {
+      if (!o.ativar) { const n = L.academy35!.elenco.length; L.academy35 = undefined; return { texto: `A line academy foi fechada (${n} contratos encerrados).`, tom: 'neutro' }; }
+      const c = custoDaAcademy35(L, ano);
+      org.caixa -= c;
+      const r = rngDe(v.id, 'org35_academy', org.nome, L.jogo, ano);
+      const a: Academy35 = { desde: v.t, divisao: 2, elenco: [], historico: [] };
+      const fs = funcoesDoJogo(L.jogo);
+      const media = mediaDosTitulares31(L, ano);
+      for (let k = 0; k < titularesDoJogo31(L.jogo, ano); k++) {
+        const j = novoJogador(org, L, r, ano, fs[k % fs.length], media - 9 + r.normal() * 3, jogo(L.jogo).idadePro + r.int(0, 2));
+        j.potencial = clamp(Math.max(j.potencial, j.forca + 10 + r.int(0, 8)), j.forca, 92); j.salario = Math.round(j.salario * 0.4); j.daAcademia = true;
+        a.elenco.push(j);
+      }
+      L.academy35 = a;
+      escrever(v, { texto: `A ${org.nome} montou uma line academy de ${JOGOS25[L.jogo].nome(ano)}: ${a.elenco.map(j => j.nick).join(', ')}, no ${nomeDaLiga31({ jogo: L.jogo, divisao: 2, regiao: L.regiao }, ano)}.`, relevancia: 'cotidiano', tema: 'trabalho', escolha: true });
+      return { texto: 'Line academy montada.', tom: 'bom' };
+    }
+    case 'subir': {
+      const a = L.academy35!; const i = a.elenco.findIndex(j => j.id === o.id); const j = a.elenco.splice(i, 1)[0];
+      j.salario = Math.max(j.salario, Math.round(salarioDe31(j.forca, mult) * 0.7)); j.contratoAte = Math.max(j.contratoAte, ano + 2);
+      L.elenco.push(j);
+      return { texto: `${j.nick} subiu da academy para a line principal.`, tom: 'bom' };
+    }
+    case 'descer': {
+      const i = L.elenco.findIndex(j => j.id === o.id); const j = L.elenco.splice(i, 1)[0];
+      L.academy35!.elenco.push(j); if (L.igl === j.id) L.igl = undefined;
+      L.moral = clamp((L.moral ?? 0) - 0.1, -3, 3);
+      return { texto: `${j.nick} desceu para a academy: vai jogar e recuperar a forma lá.`, tom: 'neutro' };
+    }
+    case 'emprestar': {
+      const i = L.elenco.findIndex(j => j.id === o.id); const j = L.elenco.splice(i, 1)[0];
+      if (L.igl === j.id) L.igl = undefined;
+      const r = rngDe(v.id, 'org35_emprestimo', j.id, ano);
+      const lista = catalogo(v, L.jogo, ano).filter(x => x.nome !== org.nome && x.regiao === L.regiao && x.divisao <= L.divisao);
+      const para = lista.length ? lista[r.int(0, lista.length - 1)].nome : 'uma equipe do cenário';
+      L.emprestados35 = [...(L.emprestados35 ?? []), { jogador: j, para, ate: ano }];
+      return { texto: `${j.nick} foi emprestado à ${para} até o fim da temporada: ela paga o salário, ele ganha minutos.`, tom: 'neutro' };
+    }
+    case 'vender_jogador': {
+      const i = L.elenco.findIndex(j => j.id === o.id); const j = L.elenco.splice(i, 1)[0];
+      if (L.igl === j.id) L.igl = undefined;
+      const r = rngDe(v.id, 'org35_venda', j.id, ano);
+      const lista = catalogo(v, L.jogo, ano).filter(x => x.nome !== org.nome);
+      const para = lista.length ? lista[r.int(0, lista.length - 1)].nome : 'uma equipe do cenário';
+      const valor = arred(valorDoJogador31(j, ano, mult, auge) * (0.8 + r.next() * 0.3), 1000);
+      org.caixa += valor;
+      L.vendas.unshift({ nome: j.nick, para, valor, ano }); if (L.vendas.length > 20) L.vendas.length = 20;
+      escrever(v, { texto: `A ${org.nome} vendeu ${j.nick} para a ${para} por ${fmt(valor)}.`, relevancia: 'cotidiano', tema: 'dinheiro', escolha: true });
+      return { texto: `${j.nick} vendido por ${fmt(valor)}.`, tom: 'neutro' };
+    }
     case 'contratar': {
       const m = mercadoOrg31(v, L.jogo).find(j => j.id === o.id)!;
       org.caixa -= m.preco; L.comprados.push(m.id); if (L.comprados.length > 200) L.comprados.splice(0, L.comprados.length - 200);
@@ -537,6 +728,7 @@ export function executarOrg31(v: Vida, o: OqueOrg31): { texto: string; tom?: 'bo
     }
     case 'promover': {
       const i = L.academia.findIndex(j => j.id === o.id); const j = L.academia.splice(i, 1)[0];
+      if (o.academy) { j.contratoAte = ano + 2; L.academy35!.elenco.push(j); return { texto: `${j.nick} foi para a line academy.`, tom: 'bom' }; }
       j.salario = Math.round(salarioDe31(j.forca, mult) * 0.7); j.contratoAte = ano + 2;
       L.elenco.push(j);
       return { texto: `${j.nick} subiu da academia para a line principal.`, tom: 'bom' };
@@ -652,6 +844,61 @@ function entrar(v: Vida, org: OrgEsports31, jid: JogoId, regiao: Regiao31, modo:
   escrever(v, { texto: `A ${org.nome} entrou em ${JOGOS25[jid].nome(ano)}: ${modo === 'base' ? 'uma line montada do zero no cenário aberto' : `a vaga na ${p.liga}`} (${nomeDaRegiao33(jid, regiao)}), ${fmt(p.total)} no total.`, relevancia: 'marco', tema: 'trabalho', tom: 'bom', escolha: true });
   return { texto: `Line de ${JOGOS25[jid].nome(ano)} montada: ${p.liga}.`, tom: 'bom' };
 }
+
+/* ------------------------------------------------------------------ VIDA 35 · comprar a line de outra org, reformular, a academy */
+
+/** Comprar a line (a vaga e o elenco) de outra organização. Se a sua já joga esse jogo, a sua line é vendida e a comprada entra no lugar. */
+function comprarLinha35(v: Vida, org: OrgEsports31, nome: string, jid: JogoId, regiao: Regiao31): { texto: string; tom: 'bom' } {
+  const ano = anoDe(v.t);
+  const x = avaliarOrg31(v, nome, jid, regiao)!;
+  const atual = linhaDe31(org, jid);
+  const credito = atual ? valorDaLinha33(org, atual, ano) : 0;
+  const custo = Math.max(0, x.preco - credito);
+  pagar(v, custo);
+  lancar(v, `Compra da line de ${JOGOS25[jid].nome(ano)} da ${nome} (${org.nome})`, 'despesa', -custo);
+  org.caixa += Math.max(0, credito - x.preco);
+  org.divida += arred(x.divida * 0.5, 1e4);
+  const L = novaLinha(v, jid, regiao, x.divisao, 'compra');
+  if (atual) { L.academia = atual.academia; L.academiaNivel = atual.academiaNivel; L.trofeus = atual.trofeus; L.historico = atual.historico; L.setup35 = atual.setup35; L.academy35 = atual.academy35; }
+  montarElenco(org, L, rngDe(v.id, 'org35_compra_linha', jid, regiao, nome), ano, x.forca, true);
+  L.igl = titulares31(L, ano).find(j => j.funcao === 'igl')?.id ?? titulares31(L, ano)[0]?.id;
+  org.linhas = atual ? org.linhas.map(l => (l === atual ? L : l)) : [...org.linhas, L];
+  org.absorvidas35 = [...(org.absorvidas35 ?? []), `${jid}:${nome}`];
+  org.fas = clamp(Math.round(org.fas + x.fas * 0.15)); org.reputacao = clamp(Math.max(org.reputacao, Math.round(x.reputacao * 0.6)));
+  atualizarValor(org, ano);
+  escrever(v, { texto: `A ${org.nome} comprou a line de ${JOGOS25[jid].nome(ano)} da ${nome} (${nomeDaLiga31(L, ano)}, ${nomeDaRegiao33(jid, regiao)}): a vaga e os jogadores${atual ? ', no lugar da line antiga, vendida' : ''}. ${fmt(custo)}.`, relevancia: 'marco', tema: 'trabalho', tom: 'bom', escolha: true });
+  return { texto: `A line da ${nome} agora joga pela ${org.nome}.`, tom: 'bom' };
+}
+
+/** O plano da reformulação (o mesmo na prévia e na execução): quem chega, as multas de quem sai e o custo total. */
+export function planoDaReformulacao35(v: Vida, org: OrgEsports31, L: LinhaOrg33, manter: string[], nivel: NivelReformulacao35): { novos: JogadorOrg31[]; multas: number; contratacoes: number; custo: number; seq: number } {
+  const ano = anoDe(v.t);
+  const g = jogo(L.jogo);
+  const mult = multDe(L);
+  const cfg = REFORMULACAO35[nivel];
+  const ficam = L.elenco.filter(j => manter.includes(j.id));
+  const saem = L.elenco.filter(j => !manter.includes(j.id));
+  const multas = saem.reduce((s, j) => s + arred(j.salario * Math.max(0, j.contratoAte - ano) * 0.5, 1000), 0);
+  const media = mediaDosTitulares31(L, ano);
+  const r = rngDe(v.id, 'org35_reformular', org.nome, L.jogo, ano, nivel, [...manter].sort().join(','));
+  const tmp = { seq: org.seq };
+  const fs = funcoesDoJogo(L.jogo);
+  const faltam = fs.filter(f => !ficam.some(j => j.funcao === f));
+  const n = titularesDoJogo31(L.jogo, ano) + 1 - ficam.length;
+  const novos: JogadorOrg31[] = [];
+  for (let k = 0; k < n; k++) {
+    const funcao = faltam[k] ?? fs[k % fs.length];
+    const j = novoJogador(tmp, L, r, ano, funcao, media + cfg.delta + r.normal() * 2, cfg.jovem ? g.idadePro + r.int(0, 2) : g.auge - 3 + r.int(0, 6));
+    if (cfg.jovem) j.potencial = clamp(Math.max(j.potencial, j.forca + 10 + r.int(0, 8)), j.forca, 92);
+    j.contratoAte = ano + 2;
+    novos.push(j);
+  }
+  const contratacoes = novos.reduce((s, j) => s + valorDoJogador31(j, ano, mult, g.auge) * (nivel === 'ambiciosa' ? 1.15 : 0.9), 0);
+  return { novos, multas, contratacoes: arred(contratacoes), custo: arred(multas + contratacoes), seq: tmp.seq };
+}
+
+/** Montar a academy: a estrutura (gaming house B, inscrição) e um ano de salários adiantado. */
+export const custoDaAcademy35 = (L: LinhaOrg33, ano: number) => arred((OPERACAO[2] * 1.5 + salarioDe31(Math.max(30, mediaDosTitulares31(L, ano) - 9), 1) * 0.4 * titularesDoJogo31(L.jogo, ano)) * multDe(L));
 
 /* ------------------------------------------------------------------ o mercado, os técnicos (estáveis no ano) */
 
@@ -911,6 +1158,33 @@ const maiusc = (s: string) => `${s.charAt(0).toUpperCase()}${s.slice(1)}`;
 
 interface ResultadoDaLinha { receita: number; despesa: number; titulo: boolean; subiu: boolean; caiu: boolean; topo: boolean; internacional: boolean; campeaoMundial: boolean }
 
+/** VIDA 35 · a temporada da line academy: a liga uma divisão abaixo da principal; sobe ou cai; nunca na mesma liga da principal. */
+function temporadaDaAcademy35(v: Vida, o: OrgEsports31, L: LinhaOrg33, ano: number): void {
+  const a = L.academy35;
+  if (!a || anoDe(a.desde) > ano || a.historico.some(h => h.ano === ano)) return;
+  const g = jogo(L.jogo);
+  const r = rngDe(v.id, 'org35_academy_ano', o.nome, L.jogo, ano);
+  const teto = Math.max(2, Math.min(3, L.divisao - 1)) as Divisao31;
+  if (a.divisao > teto) a.divisao = teto;
+  const n = clamp(g.niveis[a.divisao - 1].equipes, 8, 16);
+  const posicao = colocacao(r, forcaDaAcademy35(L, ano), forcaDoCampo31(L.jogo, a.divisao, L.regiao), n);
+  const liga = nomeDaLiga31({ jogo: L.jogo, divisao: a.divisao, regiao: L.regiao }, ano);
+  const subiu = a.divisao < teto && posicao <= 2;
+  const caiu = a.divisao === 3 && posicao > n - 2;
+  a.historico.push({ ano, liga, divisao: a.divisao, posicao, participantes: n, ...(subiu ? { subiu } : {}), ...(caiu ? { caiu } : {}) });
+  if (a.historico.length > 20) a.historico.splice(0, a.historico.length - 20);
+  if (subiu) a.divisao = (a.divisao + 1) as Divisao31;
+  if (caiu) a.divisao = (a.divisao - 1) as Divisao31;
+  escrever(v, { texto: `A academy de ${JOGOS25[L.jogo].nome(ano)} da ${o.nome} terminou ${ano} em ${posicao}º de ${n} na ${liga}${subiu ? ' e subiu' : caiu ? ' e caiu' : ''}.`, relevancia: 'cotidiano', tema: 'trabalho' });
+  // Contratos: os jovens ficam; quem passou do auge sai.
+  a.elenco = a.elenco.filter(j => ano + 1 - anoDe(j.tNasc) <= g.auge + 3);
+  const fs = funcoesDoJogo(L.jogo);
+  while (a.elenco.length < titularesDoJogo31(L.jogo, ano + 1)) {
+    const j = novoJogador(o, L, r, ano + 1, fs[a.elenco.length % fs.length], mediaDosTitulares31(L, ano) - 10 + r.normal() * 3, g.idadePro + r.int(0, 1));
+    j.salario = Math.round(j.salario * 0.4); j.daAcademia = true; a.elenco.push(j);
+  }
+}
+
 /** A temporada de uma line: a liga da região, o acesso, os internacionais, o dinheiro da line, a evolução e a academia. */
 function temporadaDaLinha(v: Vida, o: OrgEsports31, L: LinhaOrg33, ano: number): ResultadoDaLinha | undefined {
   if (L.historico.some(h => h.ano === ano) || anoDe(L.desde) > ano) return undefined;
@@ -953,8 +1227,10 @@ function temporadaDaLinha(v: Vida, o: OrgEsports31, L: LinhaOrg33, ano: number):
   const campeaoMundial = internacionais.some(i => i.titulo && i.nome === principal);
   // 3. O dinheiro da line (o da organização — patrocínios, loja, conteúdo, dívida — fecha junto, em `processarOrg31`).
   const receita = arred(receitaBase31(L.divisao, o.fas, o.reputacao, mult) + premio);
-  const folha = L.elenco.reduce((s, j) => s + j.salario, 0) + L.academia.reduce((s, j) => s + j.salario, 0);
-  const despesa = arred(folha + (L.tecnico?.salario ?? 0) + OPERACAO[L.divisao] * mult + receita * 0.3 + [0, 60e3, 200e3][L.academiaNivel] * mult);
+  const folha = L.elenco.reduce((s, j) => s + j.salario, 0) + L.academia.reduce((s, j) => s + j.salario, 0) + (L.academy35?.elenco.reduce((s, j) => s + j.salario, 0) ?? 0);
+  const despesa = arred(folha + (L.tecnico?.salario ?? 0) + OPERACAO[L.divisao] * mult + receita * 0.3 + [0, 60e3, 200e3][L.academiaNivel] * mult + (L.academy35 ? OPERACAO[2] * 0.5 * mult : 0));
+  // VIDA 35: a temporada da academy (uma divisão abaixo da principal, no máximo a segunda).
+  temporadaDaAcademy35(v, o, L, ano);
   // 4. A história e os troféus.
   const div = L.divisao;
   L.historico.push({ ano, divisao: div, liga, posicao, participantes: n, ...(internacionais.length ? { internacionais } : {}), ...(acesso ? { acesso } : {}), premio, receita, despesa, forca, ...(titulo ? { titulo } : {}), ...(subiu ? { subiu } : {}), ...(caiu ? { caiu } : {}), ...(campeaoMundial ? { campeaoMundial } : {}) });
@@ -984,12 +1260,19 @@ function temporadaDaLinha(v: Vida, o: OrgEsports31, L: LinhaOrg33, ano: number):
   const evoluir = (j: JogadorOrg31) => {
     const i = novoAno - anoDe(j.tNasc);
     const ajuda = 0.15 + (L.tecnico?.nivel ?? 1) * 0.02 + (L.bootcamp === ano ? 0.04 : 0) - (o.conteudo === 2 ? 0.04 : 0);
-    if (i <= g.auge) j.forca = clamp(Math.round(j.forca + Math.max(0, (j.potencial - j.forca) * ajuda) + r.normal() * 1.5), 20, j.potencial);
+    if (i <= g.auge) j.forca = clamp(Math.round(j.forca + Math.max(0, (j.potencial - j.forca) * (ajuda + extra)) + r.normal() * 1.5), 20, j.potencial);
     else if (i <= g.auge + 4) j.forca = clamp(Math.round(j.forca + r.normal() * 1.2), 20, 97);
-    else j.forca = clamp(Math.round(j.forca - (i - g.auge - 4) * 0.9 + r.normal()), 20, 97);
+    else j.forca = clamp(Math.round(j.forca - (i - g.auge - 4) * 0.9 * (o.casa35?.includes('fisio') ? 0.7 : 1) + r.normal()), 20, 97);
     if (j.forca > j.potencial) j.potencial = j.forca;
   };
+  let extra = 0;
   L.elenco.forEach(evoluir); L.academia.forEach(evoluir);
+  // VIDA 35: quem joga partidas oficiais (na academy ou emprestado) evolui mais.
+  extra = 0.06;
+  L.academy35?.elenco.forEach(evoluir); L.emprestados35?.forEach(e => evoluir(e.jogador));
+  extra = 0;
+  for (const e of (L.emprestados35 ?? []).filter(x => x.ate <= ano)) (L.academy35 && L.elenco.length >= maxElenco31(L.jogo, novoAno) ? L.academy35.elenco : L.elenco).push(e.jogador);
+  if (L.emprestados35) { L.emprestados35 = L.emprestados35.filter(x => x.ate > ano); if (!L.emprestados35.length) delete L.emprestados35; }
   // Os contratos que acabam: a comissão renova quem é útil; os outros saem.
   const media = mediaDosTitulares31(L, novoAno);
   for (const j of L.elenco) if (j.contratoAte <= ano && novoAno - anoDe(j.tNasc) <= g.auge + 6 && j.forca >= media - 4 && r.chance(0.7)) { j.contratoAte = novoAno + 1; j.salario = salarioDe31(j.forca, mult); }
@@ -1014,6 +1297,10 @@ function temporadaDaLinha(v: Vida, o: OrgEsports31, L: LinhaOrg33, ano: number):
     L.academia = L.academia.filter(j => novoAno - anoDe(j.tNasc) <= g.auge).sort((a, b) => b.potencial - a.potencial).slice(0, 5);
   }
   if (L.moral) L.moral = Math.round(L.moral * 5) / 10;
+  // VIDA 35: o equipamento e a casa no clima da line; o psicólogo segura o clima ruim.
+  const clima = climaDoSetup35(L.setup35, novoAno) + (o.casa35?.includes('academia') ? 0.1 : 0) + (o.casa35?.includes('quartos') ? 0.1 : 0);
+  if (clima) L.moral = clamp(Math.round(((L.moral ?? 0) + clima) * 10) / 10, -3, 3);
+  if (o.casa35?.includes('psicologo') && (L.moral ?? 0) < 0) L.moral = Math.round((L.moral ?? 0) * 5) / 10;
   return { receita, despesa, titulo, subiu, caiu, topo: posicao <= 3, internacional: internacionais.length > 0, campeaoMundial };
 }
 
@@ -1029,15 +1316,16 @@ export function processarOrg31(v: Vida): void {
   const r = rngDe(v.id, 'org33_fechar', o.nome, ano);
   const resumo = { titulo: res.some(x => x.titulo), subiu: res.some(x => x.subiu), caiu: res.some(x => x.caiu), topo: res.some(x => x.topo), internacional: res.some(x => x.internacional) };
   const dono = fecharAnoDono33(ctxAno, contextoOrg33(v, ano + 1), o, resumo, r);
-  const receita = res.reduce((s, x) => s + x.receita, 0) + receitaConteudo(o) + dono.receita;
-  const despesa = res.reduce((s, x) => s + x.despesa, 0) + dono.despesa + o.divida * 0.12;
+  const estudio = o.casa35?.includes('estudio') ? arred(80e3 * multMedio(o) * (0.5 + o.fas / 100)) : 0;
+  const receita = res.reduce((s, x) => s + x.receita, 0) + receitaConteudo(o) + dono.receita + estudio;
+  const despesa = res.reduce((s, x) => s + x.despesa, 0) + dono.despesa + o.divida * 0.12 + manutencaoDaCasa35(o.casa35, multMedio(o));
   o.caixa += receita - despesa;
   if (o.caixa < 0) { o.divida += -o.caixa; o.caixa = 0; }
   else if (o.divida > 0 && o.caixa > receita * 0.2) { const a = Math.min(o.divida, Math.round((o.caixa - receita * 0.2) * 0.5)); o.divida -= a; o.caixa -= a; }
   for (const t of dono.textos) escrever(v, { texto: `${o.nome}: ${t}`, relevancia: 'cotidiano', tema: 'dinheiro' });
   // Os fãs e o nome: a melhor line puxa; cada jogo a mais soma um pouco de público.
   const alvoFas = Math.max(...o.linhas.map(l => [0, 0, 12, 30, 58][l.divisao])) + (resumo.titulo ? 8 : 0) + (resumo.internacional ? 10 : 0) + o.conteudo * 4 + (o.linhas.length - 1) * 3;
-  o.fas = clamp(Math.round(o.fas * 0.8 + alvoFas * 0.2 + (resumo.subiu ? 4 : 0) - (resumo.caiu ? 5 : 0) + (res.some(x => x.campeaoMundial) ? 10 : 0)));
+  o.fas = clamp(Math.round(o.fas * 0.8 + alvoFas * 0.2 + (estudio ? 2 : 0) + (resumo.subiu ? 4 : 0) - (resumo.caiu ? 5 : 0) + (res.some(x => x.campeaoMundial) ? 10 : 0)));
   const delta = res.reduce((s, x) => s + (x.titulo ? 6 : 0) + (x.subiu ? 5 : 0) - (x.caiu ? 7 : 0) + (x.internacional ? (x.campeaoMundial ? 15 : 4) : 0) + (x.topo ? 1 : -0.5), 0);
   o.reputacao = clamp(Math.round(o.reputacao + dono.rep + delta / Math.sqrt(res.length)));
   atualizarValor(o, ano + 1);
@@ -1097,7 +1385,12 @@ export function normalizarVida32Org(v: Vida): void {
     if (l.divisao !== 2 && l.divisao !== 3 && l.divisao !== 4) l.divisao = 2;
     if (typeof l.regiao !== 'string' || !regiaoDoJogo33(l.jogo, l.regiao)) l.regiao = regiaoBrasil33(l.jogo);
     if (typeof l.desde !== 'number') l.desde = o.desde ?? v.t;
+    const st = normalizarSetup35(l.setup35); if (st) l.setup35 = st; else delete l.setup35;
+    if (l.academy35 && (!Array.isArray(l.academy35.elenco) || !Array.isArray(l.academy35.historico))) delete l.academy35;
+    if (l.emprestados35 && !Array.isArray(l.emprestados35)) delete l.emprestados35;
   }
+  if (o.casa35) o.casa35 = Array.isArray(o.casa35) ? o.casa35.filter(c => ['academia', 'chef', 'psicologo', 'analise', 'fisio', 'estudio', 'quartos'].includes(c)) as Comodo35[] : undefined;
+  if (!o.casa35?.length) delete o.casa35;
   o.mesa ??= []; o.mesaHist ??= []; o.conteudo ??= 0; o.seq ??= 1000;
   for (const k of ['caixa', 'divida', 'valor', 'preco', 'fas', 'reputacao'] as const) if (typeof o[k] !== 'number' || !Number.isFinite(o[k])) o[k] = 0;
   if (typeof o.desde !== 'number') o.desde = v.t;

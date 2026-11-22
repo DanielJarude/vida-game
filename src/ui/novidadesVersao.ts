@@ -3,7 +3,7 @@
  * janela sob demanda carrega). Ao cadastrar uma versão nova nas notas, atualize VERSAO_ATUAL aqui — o teste
  * `vida30Novidades` confere que as duas batem.
  */
-export const VERSAO_ATUAL = '34';
+export const VERSAO_ATUAL = '35';
 const CHAVE = 'VIDA_NOVIDADES_VISTAS';
 
 /**
