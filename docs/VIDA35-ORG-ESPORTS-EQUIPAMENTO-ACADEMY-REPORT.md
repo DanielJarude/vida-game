@@ -30,3 +30,10 @@ line para jogar por você, reformular a line, line academy e outras coisas.
 ## QA
 - Suíte completa: 3387 passando; 7 estouros de tempo por carga (os 5 conhecidos + profissao "treinar dobrado" e rework11Relacoes "preservativo", que passam sozinhos).
 - `src/motor/__tests__/vida35Org.test.ts` (7) e `src/ui/__tests__/vida35Org.test.tsx`; screenshots `~/vida-trabalho/v34/org35.mjs`.
+
+## VIDA 35.1 · gaming house em cômodos e o dia a dia (2026-11-22)
+- Pedido: a gaming house estava ruim (cômodos sobrepostos, decoração sem sentido, fora do estilo do jogo) e havia poucas ações.
+- `ui/v35/casa/CasaDaOrg35.tsx`: a casa mostrada com a mesma cena 2.5D dos cômodos da casa (`CenaDoComodo`): miniaturas e um cômodo por vez — treino por line (computador e cadeira por titular), estúdio, análise, academia, fisio, psicólogo, cozinha, quartos, lounge, piscina no casarão. Acabamentos da reforma da casa (parede, inclusive nas cores da org; piso; luz) e decoração do catálogo por cômodo (`Instalacoes34.salas35`). O desenho SVG antigo saiu.
+- Ações novas (org31 + org35): foco do treino, scrims, comissão técnica, retiro, corte de salários, torneios (Copa aberta/Torneio de convidados, resultado na hora), peneira aberta, criadores de conteúdo, bônus por título, collab com a desenvolvedora.
+- Navegação: abas da line em grupos (Jogadores · Preparação · Competição · Gestão); Organização em três seções; Equipamento em três passos com resumo e compra no topo; opção em vigor como selo.
+- Suíte: 3385 passando; estouros de tempo por carga (os conhecidos + pacotePlaytest, profissao loja, rework122, rework1235, que passam sozinhos ou com tempo maior).
