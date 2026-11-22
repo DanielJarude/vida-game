@@ -48,7 +48,7 @@ const parede = (w: number, h: number, alt: number, x: Partial<Medida> = {}): Med
 const sobre = (w: number, d: number, h: number): Medida => ({ w, d, h, m: 'superficie' });
 const SOFAS = ['sofa_designer', 'sofa_retratil', 'sofa_couro', 'sofa', 'sofa_cama', 'sofa_externo'];
 const CAMAS = ['cama_king', 'colchao_hotel', 'colchao', 'cama_box', 'cama_solteiro', 'beliche'];
-const MESAS = ['mesa_executiva', 'escrivaninha', 'home_studio'];
+const MESAS = ['mesa_executiva', 'escrivaninha', 'home_studio', 'mesa_gamer'];
 
 export const MEDIDAS: Record<string, Medida> = {
   // ---------------------------------------------------------- sala
@@ -125,6 +125,9 @@ export const MEDIDAS: Record<string, Medida> = {
   impressora: sobre(0.45, 0.4, 0.25),
   estante_escritorio: chao(1.0, 0.36, 1.9, ['lado', 'fundo'], { topo: 0.75, gira: 'caixa' }),
   computador: sobre(0.6, 0.3, 0.5),
+  // VIDA 35.2 · a sala de treino: a mesa gamer (1,4 m) e a torre do PC no chão, ao lado da mesa.
+  mesa_gamer: chao(1.2, 0.7, 0.76, ['fundo'], { topo: 0.76 }),
+  torre_gamer: chao(0.22, 0.45, 0.47, ['lado', 'fundo'], { gira: 'caixa' }),
   notebook: sobre(0.35, 0.25, 0.22),
   tablet: sobre(0.25, 0.18, 0.05),
   camera: sobre(0.15, 0.1, 0.12),
