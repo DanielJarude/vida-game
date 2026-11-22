@@ -41,7 +41,8 @@ describe('VIDA 35 · telas da org', () => {
     expect(estado().casa.length).toBe(1);
     expect(screen.getByRole('button', { name: /Sala de análise/ })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: /Sala de análise/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'tapete de sala' }));
+    // VIDA 35.2: a decoração depende do cômodo — a sala de análise tem o tapete persa, não o tapete comum.
+    fireEvent.click(screen.getByRole('button', { name: /tapete/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Salvar a casa' }));
     expect(screen.getByRole('button', { name: 'Casa salva' })).toBeTruthy();
     fireEvent.click(screen.getAllByRole('tab').find(t => /^LoL ·/.test(t.textContent ?? ''))!);

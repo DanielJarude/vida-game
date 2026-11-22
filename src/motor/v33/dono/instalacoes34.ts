@@ -14,6 +14,9 @@ export type Fachada34 = 'time' | 'concreto' | 'vidro' | 'tijolo';
 export type EstiloHouse34 = 'loft' | 'casa' | 'escritorio';
 export type Parede34 = 'time' | 'grafite' | 'branca' | 'tijolo';
 export type Layout34 = 'fileiras' | 'ilha' | 'arena';
+export type Telhado35 = 'laje' | 'telha' | 'verde';
+export type Porta35 = 'madeira' | 'vidro' | 'metal';
+export type Jardim35 = 'grama' | 'pedras' | 'deck' | 'nenhum';
 
 export interface Instalacoes34 {
   /** Nome do estádio / ginásio / gaming house (o "nome da casa"). */
@@ -40,10 +43,29 @@ export interface Instalacoes34 {
   sofa?: boolean;
   /** VIDA 35.1 · cada cômodo da gaming house: os acabamentos (os mesmos da casa: parede, piso, luz) e a decoração escolhida. */
   salas35?: Record<string, SalaPersonalizada35>;
+  /** VIDA 35.2 · a fachada da gaming house (por fora): a cobertura, a porta, o jardim e a varanda. A fachada usa o
+   *  `fachada` (o material), o `neon` (o letreiro), as `plantas` e a `luz` (a cor da luz de noite) acima. */
+  telhado?: Telhado35;
+  porta?: Porta35;
+  jardim?: Jardim35;
+  varanda?: boolean;
 }
 export interface SalaPersonalizada35 { parede?: string; piso?: string; luz?: string; extras?: string[] }
 /** O que dá para pôr de decoração num cômodo da gaming house (móveis do catálogo da casa). */
-export const DECORACAO35 = ['plantas', 'vasos_grandes', 'tapete', 'luminaria', 'estante_trofeus', 'poltrona', 'tv_oled', 'videogame', 'cafeteira', 'estante_escritorio', 'sofa'] as const;
+export const DECORACAO35 = ['plantas', 'vasos_grandes', 'tapete', 'tapete_persa', 'quadros', 'objetos_decor', 'estante_trofeus', 'poltrona', 'caixa_som', 'som_hifi', 'cafeteira', 'microondas', 'estante_escritorio', 'espelho_chao', 'pebolim', 'fliperama', 'mesa_jogos', 'sofa', 'tv_oled', 'videogame'] as const;
+/** VIDA 35.2 · a decoração de cada tipo de cômodo: o que faz sentido ali (um quarto não tem fliperama; a sala de treino
+ *  não tem cafeteira). A chave é o tipo do cômodo (`tipo` em `salasDaCasa35`). */
+export const DECORACAO_POR_TIPO35: Record<string, readonly string[]> = {
+  jogos: ['tapete', 'quadros', 'plantas', 'estante_trofeus', 'caixa_som', 'vasos_grandes'],
+  estudio: ['caixa_som', 'som_hifi', 'quadros', 'plantas', 'tapete', 'estante_escritorio'],
+  cinema: ['tapete_persa', 'quadros', 'estante_trofeus', 'plantas', 'poltrona'],
+  academia: ['plantas', 'vasos_grandes', 'caixa_som', 'quadros', 'tapete'],
+  escritorio: ['estante_escritorio', 'plantas', 'quadros', 'poltrona', 'tapete_persa'],
+  cozinha: ['plantas', 'vasos_grandes', 'cafeteira', 'microondas', 'quadros', 'objetos_decor'],
+  quarto: ['tapete', 'quadros', 'plantas', 'espelho_chao', 'estante_trofeus'],
+  sala: ['pebolim', 'fliperama', 'mesa_jogos', 'poltrona', 'tapete_persa', 'plantas', 'caixa_som', 'som_hifi'],
+  piscina: []
+};
 const valido = (x: unknown) => typeof x === 'string' && /^[a-z_]{2,30}$/.test(x) ? x : undefined;
 
 const ESCOLHAS = {
@@ -54,7 +76,10 @@ const ESCOLHAS = {
   fachada: ['time', 'concreto', 'vidro', 'tijolo'],
   estilo: ['loft', 'casa', 'escritorio'],
   parede: ['time', 'grafite', 'branca', 'tijolo'],
-  layout: ['fileiras', 'ilha', 'arena']
+  layout: ['fileiras', 'ilha', 'arena'],
+  telhado: ['laje', 'telha', 'verde'],
+  porta: ['madeira', 'vidro', 'metal'],
+  jardim: ['grama', 'pedras', 'deck', 'nenhum']
 } as const;
 
 export const NOMES34: Record<string, string> = {
@@ -64,7 +89,10 @@ export const NOMES34: Record<string, string> = {
   madeira: 'Madeira clara', escura: 'Madeira escura', azul: 'Sintético azul', cores: 'Nas cores do time',
   concreto: 'Concreto', vidro: 'Vidro', tijolo: 'Tijolo aparente',
   loft: 'Loft', casa: 'Casarão', escritorio: 'Andar corporativo',
-  grafite: 'Grafite', branca: 'Brancas', fileiras: 'Fileiras', ilha: 'Ilhas frente a frente', arena: 'Arena (em U, com telão)'
+  grafite: 'Grafite', branca: 'Brancas', fileiras: 'Fileiras', ilha: 'Ilhas frente a frente', arena: 'Arena (em U, com telão)',
+  laje: 'Laje (teto reto)', telha: 'Telhado de telha', verde: 'Laje verde (com plantas)',
+  metal: 'Metal escuro',
+  grama: 'Gramado', pedras: 'Pedras e brita', deck: 'Deck de madeira', nenhum: 'Sem jardim'
 };
 export const opcoes34 = <K extends keyof typeof ESCOLHAS>(k: K): readonly string[] => ESCOLHAS[k];
 
@@ -84,7 +112,9 @@ export function normalizarInstalacoes34(x: unknown): Instalacoes34 | undefined {
     mural: typeof o.mural === 'boolean' ? o.mural : undefined,
     parede: de('parede', o.parede) as Parede34 | undefined, layout: de('layout', o.layout) as Layout34 | undefined,
     neon: typeof o.neon === 'boolean' ? o.neon : undefined, plantas: typeof o.plantas === 'boolean' ? o.plantas : undefined, sofa: typeof o.sofa === 'boolean' ? o.sofa : undefined,
-    luz: typeof o.luz === 'string' && /^#[0-9a-f]{6}$/i.test(o.luz) ? o.luz : undefined
+    luz: typeof o.luz === 'string' && /^#[0-9a-f]{6}$/i.test(o.luz) ? o.luz : undefined,
+    telhado: de('telhado', o.telhado) as Telhado35 | undefined, porta: de('porta', o.porta) as Porta35 | undefined,
+    jardim: de('jardim', o.jardim) as Jardim35 | undefined, varanda: typeof o.varanda === 'boolean' ? o.varanda : undefined
   };
   if (o.salas35 && typeof o.salas35 === 'object') {
     const salas: Record<string, SalaPersonalizada35> = {};

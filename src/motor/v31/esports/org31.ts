@@ -38,7 +38,7 @@ import { normalizarIdentidade33, type Identidade33 } from '../../v33/dono/identi
 import { contratoAntigo33, normalizarComercial33, novoComercial33, type Comercial33, type Contexto33 } from '../../v33/dono/patrocinio33';
 import { normalizarLoja33, type Loja33 } from '../../v33/dono/loja33';
 import {
-  bonusDaCasa35, bonusDoSetup35, climaDoSetup35, comodo35, criadoresDoAno35, CUSTO_PENEIRA35, CUSTO_RETIRO35, custoDoSetup35, EVENTOS35, foco35, manutencaoDaCasa35, normalizarSetup35,
+  bonusDaCasa35, bonusDoSetup35, climaDoSetup35, comodo35, criadoresDoAno35, CUSTO_PENEIRA35, CUSTO_RETIRO35, custoDoSetup35, EVENTOS35, foco35, manutencaoDaCasa35, modeloPc35, normalizarSetup35,
   REFORMULACAO35, SCRIMS35, STAFF35, TORNEIOS35, type Criador35, type Foco35, type Torneio35,
   type Comodo35, type Evento35, type Gabinete35, type NivelReformulacao35, type Peca35, type Setup35
 } from './org35';
@@ -414,7 +414,7 @@ export type OqueOrg31 =
   | { op: 'dono'; sub: OpDono33 }
   | { op: 'responder'; id: string; opcao: string }
   // VIDA 35
-  | { op: 'setup'; jogo?: JogoId; setup: Pick<Setup35, Peca35> & { gabinete?: Gabinete35; rgb?: string }; renovar?: Peca35[] }
+  | { op: 'setup'; jogo?: JogoId; setup: Pick<Setup35, Peca35> & { gabinete?: Gabinete35; rgb?: string; modeloPc?: string }; renovar?: Peca35[] }
   | { op: 'comodo'; id: Comodo35; construir: boolean }
   | { op: 'evento'; tipo: Evento35 }
   | { op: 'comprar_linha'; nome: string; jogo: JogoId; regiao: Regiao31 }
@@ -549,8 +549,9 @@ export function disponibilidadeOrg31(v: Vida, o: OqueOrg31): Veredito {
   const titN = titularesDoJogo31(L.jogo, ano);
   switch (o.op) {
     case 'setup': {
+      if (o.setup.modeloPc && modeloPc35(o.setup.modeloPc)?.degrau !== o.setup.pc) return bloqueio('incompativel', 'Esse modelo não é do degrau de PC escolhido.');
       const c = custoDoSetup35(L.setup35, o.setup, o.renovar ?? [], L.elenco.length + (L.tecnico ? 1 : 0), multDe(L));
-      if (c === 0 && JSON.stringify({ g: o.setup.gabinete, r: o.setup.rgb }) === JSON.stringify({ g: L.setup35?.gabinete, r: L.setup35?.rgb }) && !(['pc', 'monitor', 'perifericos', 'cadeira'] as Peca35[]).some(p => (L.setup35?.[p] ?? 0) !== o.setup[p])) return bloqueio('incompativel', 'Nada mudou.');
+      if (c === 0 && JSON.stringify({ g: o.setup.gabinete, r: o.setup.rgb, m: o.setup.modeloPc }) === JSON.stringify({ g: L.setup35?.gabinete, r: L.setup35?.rgb, m: L.setup35?.modeloPc }) && !(['pc', 'monitor', 'perifericos', 'cadeira'] as Peca35[]).some(p => (L.setup35?.[p] ?? 0) !== o.setup[p])) return bloqueio('incompativel', 'Nada mudou.');
       return org.caixa >= c ? PERMITIDO : bloqueio('requisito', `O equipamento custa ${fmt(c)}; o caixa da organização não tem (aporte).`);
     }
     case 'reformular': {

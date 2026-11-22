@@ -25,3 +25,10 @@ precache como todo o resto. Quem chega pela primeira vez não recebe notas de um
    quem joga — sem spoilers (nada de prometer conquistas ou finais).
 3. Rode `npx vitest run src/ui/__tests__/rework106.test.tsx` (as versões não se repetem; nenhuma nota fica vazia).
 4. No relatório do pacote, cite a versão cadastrada.
+
+## VIDA 35.2 · gaming house por fora e por dentro, PCs de marcas reais
+
+- Aba **Por fora**: fachada por estilo (loft, casarão com piscina, torre de vidro), material, cobertura, porta, jardim, varandas, plantas, neon e cor da luz.
+- Decoração por tipo de cômodo (`DECORACAO_POR_TIPO35`); a sala de treino tem mesa, PC e cadeira por titular, todos desenhados.
+- PCs por modelo de marca real dentro do degrau (`MODELOS_PC35`); cores de RGB com nome (`RGB35`).
+- Testes: `src/ui/__tests__/vida35_2Casa.test.tsx`; ajuste em `vida35Org.test.tsx` (decoração por cômodo).

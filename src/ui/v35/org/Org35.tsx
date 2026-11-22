@@ -12,7 +12,7 @@ import {
   planoDaReformulacao35, valorDaLinha33, type LinhaOrg33, type OqueOrg31
 } from '../../../motor/v31/esports/org31';
 import {
-  bonusDaCasa35, bonusDoSetup35, COMODOS35, CUSTO_PENEIRA35, CUSTO_RETIRO35, custoDoSetup35, DESCRICAO35, estadoDaPeca35, EVENTOS35, FOCOS35, manutencaoDaCasa35, NOME_GABINETE35, NOME_PECA35,
+  bonusDaCasa35, bonusDoSetup35, COMODOS35, MODELOS_PC35, modeloPc35, RGB35, CUSTO_PENEIRA35, CUSTO_RETIRO35, custoDoSetup35, DESCRICAO35, estadoDaPeca35, EVENTOS35, FOCOS35, manutencaoDaCasa35, NOME_GABINETE35, NOME_PECA35,
   nomeDoDegrau35, PACOTES35, PECAS35, precoDaPeca35, REFORMULACAO35, SCRIMS35, STAFF35, TORNEIOS35, type Gabinete35, type NivelReformulacao35, type Peca35, type Torneio35
 } from '../../../motor/v31/esports/org35';
 import { multDaRegiao33, nomeDaRegiao33 } from '../../../motor/v31/esports/circuitos33';
@@ -23,11 +23,13 @@ import './org35.css';
 
 type Agir = (a: Acao) => boolean;
 const A = (oque: OqueOrg31): Acao => ({ tipo: 'org31', oque } as Acao);
-const RGB = ['#7c3aed', '#06b6d4', '#ef4444', '#22c55e', '#f59e0b', '#ec4899', '#ffffff'];
 
 /** O desenho de uma estação (PC, monitor, periféricos, cadeira) no degrau escolhido. */
-export function Estacao35({ s, cor }: { s: { pc: number; monitor: number; perifericos: number; cadeira: number; gabinete?: Gabinete35; rgb?: string }; cor: string }) {
+export function Estacao35({ s, cor }: { s: { pc: number; monitor: number; perifericos: number; cadeira: number; gabinete?: Gabinete35; rgb?: string; modeloPc?: string }; cor: string }) {
   const luz = s.rgb ?? cor;
+  // VIDA 35.2 · a carcaça é a cor de fábrica do modelo (preta ou branca), e a luz do RGB sai dela.
+  const modelo = modeloPc35(s.modeloPc);
+  const carcaca = modelo?.carcaca === 'branca' ? '#e5e7eb' : '#111827';
   const mw = 46 + s.monitor * 8, mh = 28 + s.monitor * 4;
   const gab = s.gabinete ?? 'torre';
   return (
@@ -40,10 +42,11 @@ export function Estacao35({ s, cor }: { s: { pc: number; monitor: number; perife
       <rect x={100 - mw / 2 + 2} y={86 - mh - 10} width={mw - 4} height={mh - 4} fill={luz} opacity={0.25 + s.monitor * 0.15} />
       <rect x="96" y="74" width="8" height="12" fill="#6b7280" />
       {/* gabinete */}
-      {gab === 'compacto' ? <rect x="150" y="62" width="20" height="26" rx="2" fill="#111827" stroke={luz} strokeWidth={s.pc ? 1.5 : 0.5} />
-        : <g><rect x="148" y={gab === 'aquario' ? 46 : 40} width={gab === 'aquario' ? 30 : 24} height={gab === 'aquario' ? 42 : 48} rx="2" fill={gab === 'aquario' ? '#0f172a' : '#111827'} stroke={luz} strokeWidth={s.pc ? 1.5 : 0.5} />
+      {gab === 'compacto' ? <rect x="150" y="62" width="20" height="26" rx="2" fill={carcaca} stroke={luz} strokeWidth={s.pc ? 1.5 : 0.5} />
+        : <g><rect x="148" y={gab === 'aquario' ? 46 : 40} width={gab === 'aquario' ? 30 : 24} height={gab === 'aquario' ? 42 : 48} rx="2" fill={gab === 'aquario' ? (carcaca === '#111827' ? '#0f172a' : '#f3f4f6') : carcaca} stroke={luz} strokeWidth={s.pc ? 1.5 : 0.5} />
           {gab === 'aquario' && <rect x="151" y="50" width="24" height="34" fill={luz} opacity={0.15 + s.pc * 0.12} />}
-          {s.pc >= 2 && <circle cx={gab === 'aquario' ? 163 : 160} cy={gab === 'aquario' ? 67 : 64} r="5" fill="none" stroke={luz} strokeWidth="2" />}</g>}
+          {s.pc >= 2 && <circle cx={gab === 'aquario' ? 163 : 160} cy={gab === 'aquario' ? 67 : 64} r="5" fill="none" stroke={luz} strokeWidth="2" />}
+          {modelo && <text x="160" y="120" textAnchor="middle" fontSize="6" fill={luz}>{modelo.marca}</text>}</g>}
       {/* teclado e mouse */}
       <rect x="62" y="80" width={40 + s.perifericos * 3} height="6" rx="1" fill="#111827" stroke={s.perifericos >= 2 ? luz : '#374151'} strokeWidth="0.8" />
       <ellipse cx="120" cy="83" rx="4" ry="3" fill="#111827" stroke={s.perifericos >= 1 ? luz : '#374151'} strokeWidth="0.8" />
@@ -59,7 +62,7 @@ export function Estacao35({ s, cor }: { s: { pc: number; monitor: number; perife
 export function Equipamento35({ vida, agir, L, nomeOrg }: { vida: Vida; agir: Agir; L: LinhaOrg33; nomeOrg: string }) {
   const ano = anoDe(vida.t);
   const atual = L.setup35 ?? { pc: 0, monitor: 0, perifericos: 0, cadeira: 0, anos: {} };
-  const [s, setS] = useState({ pc: atual.pc, monitor: atual.monitor, perifericos: atual.perifericos, cadeira: atual.cadeira, gabinete: atual.gabinete, rgb: atual.rgb });
+  const [s, setS] = useState({ pc: atual.pc, monitor: atual.monitor, perifericos: atual.perifericos, cadeira: atual.cadeira, gabinete: atual.gabinete, rgb: atual.rgb, modeloPc: atual.modeloPc });
   const [renovar, setRenovar] = useState<Peca35[]>([]);
   const pessoas = L.elenco.length + (L.tecnico ? 1 : 0);
   const mult = multDaRegiao33(L.jogo, L.regiao);
@@ -92,7 +95,7 @@ export function Equipamento35({ vida, agir, L, nomeOrg }: { vida: Vida; agir: Ag
               <div className="org35__peca-cabeca"><strong>{NOME_PECA35[p]}</strong>{atual[p] > 0 && <span className={`org35__estado org35__estado--${estado}`}>{nomeDoDegrau35(p, atual[p], ano)} · {estado === 'nova' ? `de ${atual.anos[p] ?? ano}` : estado}</span>}</div>
               <p className="nota">{DESCRICAO35[p]}</p>
               <div className="org35__fichas" role="group" aria-label={NOME_PECA35[p]}>
-                {[0, 1, 2, 3].map(d => <button key={d} type="button" className="org35__ficha" aria-pressed={s[p] === d} onClick={() => setS(x => ({ ...x, [p]: d }))}>{nomeDoDegrau35(p, d, ano)}{d ? <small> · {dinheiroCurto(precoDaPeca35(p, d, pessoas, mult))}</small> : null}</button>)}
+                {[0, 1, 2, 3].map(d => <button key={d} type="button" className="org35__ficha" aria-pressed={s[p] === d} onClick={() => setS(x => ({ ...x, [p]: d, ...(p === 'pc' && modeloPc35(x.modeloPc)?.degrau !== d ? { modeloPc: undefined } : {}) }))}>{nomeDoDegrau35(p, d, ano)}{d ? <small> · {dinheiroCurto(precoDaPeca35(p, d, pessoas, mult))}</small> : null}</button>)}
               </div>
               {atual[p] > 0 && s[p] === atual[p] && estado !== 'nova' && <label className="org35__liga"><input type="checkbox" checked={renovar.includes(p)} onChange={e => setRenovar(r => (e.target.checked ? [...r, p] : r.filter(x => x !== p)))} /> Renovar (comprar de novo, no mesmo degrau)</label>}
             </li>
@@ -102,7 +105,11 @@ export function Equipamento35({ vida, agir, L, nomeOrg }: { vida: Vida; agir: Ag
       <span className="org35__rot">3. Visual</span>
       <div className="org35__visual">
         <div className="org35__fichas" role="group" aria-label="Gabinete">{(Object.keys(NOME_GABINETE35) as Gabinete35[]).map(g => <button key={g} type="button" className="org35__ficha" aria-pressed={(s.gabinete ?? 'torre') === g} onClick={() => setS(x => ({ ...x, gabinete: g }))}>{NOME_GABINETE35[g]}</button>)}</div>
-        <div className="org35__fichas" role="group" aria-label="Cor do RGB">{RGB.map(c => <button key={c} type="button" className="org35__cor" aria-label={c} aria-pressed={s.rgb === c} style={{ background: c }} onClick={() => setS(x => ({ ...x, rgb: c }))} />)}</div>
+        <div className="org35__fichas" role="group" aria-label="Modelo do PC">{MODELOS_PC35.filter(m => m.degrau === s.pc).map(m => <button key={m.id} type="button" className="org35__ficha" title={`${m.specs}. ${m.nota}`} aria-pressed={s.modeloPc === m.id} onClick={() => setS(x => ({ ...x, modeloPc: m.id }))}>{m.marca} {m.nome}<small> · {m.specs}</small></button>)}</div>
+        <div className="org35__fichas" role="group" aria-label="Cor do RGB">
+          <button type="button" className="org35__ficha" aria-pressed={!s.rgb} onClick={() => setS(x => ({ ...x, rgb: undefined }))}>Cor da organização</button>
+          {RGB35.map(c => <button key={c.hex} type="button" className="org35__ficha" aria-label={c.nome} aria-pressed={s.rgb === c.hex} onClick={() => setS(x => ({ ...x, rgb: c.hex }))}><span className="org35__cor" style={{ background: c.hex }} aria-hidden /> {c.nome}</button>)}
+        </div>
       </div>
       <div className="org35__salvar">
         <BotaoAcao vida={vida} agir={agir} acao={A({ op: 'setup', jogo: L.jogo, setup: s, renovar })} variante="principal">{custo ? `Comprar o equipamento · ${dinheiroCurto(custo)}` : 'Salvar o visual'}</BotaoAcao>

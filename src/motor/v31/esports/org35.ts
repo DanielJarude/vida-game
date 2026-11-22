@@ -14,6 +14,8 @@ export interface Setup35 {
   anos: Partial<Record<Peca35, number>>;
   gabinete?: Gabinete35;
   rgb?: string;
+  /** VIDA 35.2 · o modelo do PC (marca e configuração reais de referência, dentro do degrau). */
+  modeloPc?: string;
 }
 export const NOME_PECA35: Record<Peca35, string> = { pc: 'Computador', monitor: 'Monitor', perifericos: 'Mouse, teclado e headset', cadeira: 'Cadeira' };
 export const NOME_GABINETE35: Record<Gabinete35, string> = { torre: 'Torre', aquario: 'Aquário (vidro)', compacto: 'Compacto' };
@@ -38,6 +40,30 @@ export const DESCRICAO35: Record<Peca35, string> = {
   perifericos: 'Mouse, teclado e headset: precisão e o som dos passos.',
   cadeira: 'Ergonomia: menos dor e mais horas de treino (o clima melhora, a força não muda).'
 };
+
+/** VIDA 35.2 · os PCs que a organização pode montar: marcas e linhas reais (de referência de mercado), cada uma em um
+ *  degrau. O degrau é o que pesa na força e no preço; o modelo é a escolha da marca e do visual (mesmo preço no degrau).
+ *  `carcaca`: a cor de fábrica do gabinete (o desenho da estação usa). */
+export interface ModeloPc35 { id: string; marca: string; nome: string; degrau: 0 | 1 | 2 | 3; specs: string; carcaca: 'preta' | 'branca'; nota: string }
+export const MODELOS_PC35: ModeloPc35[] = [
+  { id: 'dell_optiplex', marca: 'Dell', nome: 'OptiPlex', degrau: 0, specs: 'Intel Core i5 · gráfico integrado', carcaca: 'preta', nota: 'Escritório de confiança: serve para o dia a dia, não para o jogo competitivo.' },
+  { id: 'hp_prodesk', marca: 'HP', nome: 'ProDesk', degrau: 0, specs: 'Intel Core i3 · gráfico integrado', carcaca: 'preta', nota: 'O computador da recepção: nada de brilho, nada de LED.' },
+  { id: 'acer_nitro', marca: 'Acer', nome: 'Nitro N50', degrau: 1, specs: 'AMD Ryzen 5 · GeForce RTX 4060', carcaca: 'preta', nota: 'A entrada gamer de sempre: roda os jogos de torneio em qualidade média.' },
+  { id: 'lenovo_legion', marca: 'Lenovo', nome: 'Legion Tower 5', degrau: 1, specs: 'AMD Ryzen 5 · Radeon RX 7600', carcaca: 'branca', nota: 'Gabinete branco e silencioso, bom para a sala da line sem barulho de ventoinha.' },
+  { id: 'hp_omen', marca: 'HP', nome: 'Omen 25L', degrau: 1, specs: 'Intel Core i5 · GeForce RTX 4060', carcaca: 'preta', nota: 'Compacto e com boa refrigeração: cabe no canto do cômodo.' },
+  { id: 'corsair_vengeance', marca: 'Corsair', nome: 'Vengeance i7400', degrau: 2, specs: 'Intel Core i7 · GeForce RTX 4070', carcaca: 'preta', nota: 'Competitivo de verdade: a Corsair veste a line de vermelho e preto.' },
+  { id: 'asus_rog', marca: 'ASUS ROG', nome: 'Strix GT', degrau: 2, specs: 'AMD Ryzen 7 · GeForce RTX 4070 Ti', carcaca: 'preta', nota: 'A linha Republic of Gamers: iluminação Aura Sync e vermelho na carcaça.' },
+  { id: 'msi_mag', marca: 'MSI', nome: 'MAG Codex', degrau: 2, specs: 'Intel Core i7 · GeForce RTX 4070 Super', carcaca: 'branca', nota: 'Gabinete branco com a ventilação frontal: o visual limpo do competitivo.' },
+  { id: 'alienware_aurora', marca: 'Alienware', nome: 'Aurora R16', degrau: 3, specs: 'Intel Core i9 · GeForce RTX 4090', carcaca: 'preta', nota: 'O padrão das arenas: a marca do alienígena no painel e a luz da casa inteira.' },
+  { id: 'razer_tomahawk', marca: 'Razer', nome: 'Tomahawk', degrau: 3, specs: 'Intel Core i9 · GeForce RTX 4080 Super', carcaca: 'preta', nota: 'Razer Chroma em toda a estação: o topo do visual, da iluminação ao gabinete.' },
+  { id: 'msi_aegis', marca: 'MSI', nome: 'Aegis RS', degrau: 3, specs: 'AMD Ryzen 9 · GeForce RTX 4090', carcaca: 'preta', nota: 'Refrigeração líquida e o vermelho de guerra: para quem não aceita o segundo lugar.' }
+];
+export const modeloPc35 = (id: string | undefined) => MODELOS_PC35.find(m => m.id === id);
+/** As cores de RGB que a tela oferece (com nome; o padrão é a cor da organização). */
+export const RGB35: { hex: string; nome: string }[] = [
+  { hex: '#ffffff', nome: 'Branco frio' }, { hex: '#ef4444', nome: 'Vermelho' }, { hex: '#3b82f6', nome: 'Azul' },
+  { hex: '#22c55e', nome: 'Verde' }, { hex: '#a855f7', nome: 'Roxo' }, { hex: '#f59e0b', nome: 'Âmbar' }
+];
 
 export const PACOTES35: { id: string; nome: string; nota: string; s: Pick<Setup35, Peca35> }[] = [
   { id: 'basico', nome: 'Básico', nota: 'O que dá para jogar.', s: { pc: 1, monitor: 1, perifericos: 1, cadeira: 1 } },
@@ -114,6 +140,7 @@ export function normalizarSetup35(x: unknown): Setup35 | undefined {
   const s: Setup35 = { pc: d('pc'), monitor: d('monitor'), perifericos: d('perifericos'), cadeira: d('cadeira'), anos };
   if (o.gabinete === 'torre' || o.gabinete === 'aquario' || o.gabinete === 'compacto') s.gabinete = o.gabinete;
   if (typeof o.rgb === 'string' && /^#[0-9a-f]{6}$/i.test(o.rgb)) s.rgb = o.rgb;
+  if (typeof o.modeloPc === 'string' && modeloPc35(o.modeloPc)) s.modeloPc = o.modeloPc;
   return s;
 }
 

@@ -26,6 +26,19 @@ export interface NotaDeVersao {
 
 export const NOTAS: NotaDeVersao[] = [
   {
+    versao: '35.2',
+    data: '2026-11-22',
+    titulo: 'Gaming house por dentro e por fora, PCs de marcas reais',
+    novidades: [
+      'Nova aba Por fora na gaming house: a fachada desenhada conforme o estilo da casa (loft de andares, casarão com piscina ou torre de vidro com o saguão de entrada), com material, cobertura, porta, jardim, varandas, plantas, letreiro em neon e a cor da luz de noite.',
+      'Cada tipo de cômodo tem a sua decoração: a sala de treino pede tapete, quadros e troféus; a cozinha, cafeteira e micro-ondas; o lounge, fliperama e pebolim.',
+      'Os PCs são modelos de marcas reais (Dell, HP, Acer, Lenovo, Corsair, ASUS ROG, MSI, Alienware, Razer), escolhidos dentro do degrau de cada line; a carcaça de fábrica (preta ou branca) aparece na estação.',
+      'As cores do RGB têm nome (branco frio, vermelho, azul, verde, roxo, âmbar) ou seguem a cor da organização.'
+    ],
+    melhorias: ['A sala de treino tem uma mesa para cada estação: o PC fica em cima dela e a cadeira ergonômica na frente, todas desenhadas.'],
+    correcoes: ['A cadeira da sala de treino não aparecia (o desenho dela não existia) e o PC flutuava sem mesa.']
+  },
+  {
     versao: '35.1',
     data: '2026-11-22',
     titulo: 'Gaming house de verdade e o dia a dia da organização',

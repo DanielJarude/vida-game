@@ -22,3 +22,9 @@
 #root .casa35__geral summary { cursor: pointer; font-weight: 600; font-size: var(--type-caption); }
 #root .casa35__geral { display: grid; gap: 8px; }
 #root .casa35__salvar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+/* VIDA 35.2 · a fachada (por fora), as abas Por fora / Por dentro e o cabeçalho com o salvar. */
+#root .casa35__cabeca { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+#root .casa35__abas { display: flex; flex-wrap: wrap; gap: 6px; }
+#root .casa35__fachada svg { border-radius: 14px; }
+#root .casa35__fachada figcaption { font-size: var(--type-caption); color: var(--tinta-2); }
+#root .casa35__fachada figcaption strong { color: var(--tinta); }
