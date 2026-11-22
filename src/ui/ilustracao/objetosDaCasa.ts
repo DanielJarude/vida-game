@@ -1579,27 +1579,21 @@ function lavadoraPressao(cor: string): Amostra {
 
 /* ============================================================== ESCRITÓRIO */
 
-/* VIDA 35.2 · a sala de treino: a mesa gamer (1,4 m, tampo fosco, a faixa de LED embaixo) e a torre do PC no chão, ao lado. */
+/* VIDA 35.2 · a sala de treino: a mesa gamer (1,2 m, a faixa de LED embaixo) com a torre do PC embaixo do tampo. */
 function mesaGamer(cor: string): Amostra {
   return noChao([
     M(ret(4, 46, 112, 6, 1.5), cor, 'tampo'),
     M(ret(4, 52, 112, 4, 1), escurecer(cor, 0.15), 'frente'),
     M(ret(8, 56, 6, 52, 1) + ret(106, 56, 6, 52, 1), escurecer(cor, 0.25), 'pernas'),
     M(ret(14, 84, 92, 3, 1), escurecer(cor, 0.2), 'travessa'),
-    Lz(ret(10, 53, 100, 1.4, 0.5), '#a855f7', { fino: true })
+    Lz(ret(10, 53, 100, 1.4, 0.5), '#a855f7', { fino: true }),
+    // A torre do PC embaixo do tampo, entre as pernas: o vidro e os anéis de LED de frente.
+    M(ret(18, 58, 22, 50, 2), '#2b2826', 'torre'),
+    P(ret(22, 64, 14, 38, 1), '#1e2a36', 'vidro-torre'),
+    Lz(circulo(29, 72, 3.2), '#7cc0d6', { fino: true }),
+    Lz(circulo(29, 86, 3.2), '#c07cd6', { fino: true })
   ], 58);
 }
-function torreGamer(cor: string): Amostra {
-  return noChao([
-    M(ret(26, 4, 48, 106, 3), cor, 'gabinete'),
-    P(ret(32, 12, 36, 92, 2), '#1e2a36', 'vidro'),
-    Lz(circulo(50, 30, 6), '#7cc0d6', { fino: true }),
-    Lz(circulo(50, 50, 6), '#c07cd6', { fino: true }),
-    Lz(circulo(50, 70, 6), '#7cc0d6', { fino: true }),
-    M(ret(34, 100, 32, 4, 1), '#2b2826', 'pes')
-  ], 52);
-}
-
 function mesaExecutiva(cor: string): Amostra {
   return noChao([
     // A mesa de nogueira: o tampo com o couro embutido, os DOIS gaveteiros com os puxadores de latão, a gaveta do meio
@@ -1720,5 +1714,5 @@ export const OBJETOS_DA_CASA: Record<string, (cor: string, variante?: number) =>
   lavadora_pressao: lavadoraPressao,
   // Escritório
   mesa_executiva: mesaExecutiva, cadeira_ergonomica: cadeiraErgonomica, monitores, impressora, estante_escritorio: estanteEscritorio,
-  mesa_gamer: mesaGamer, torre_gamer: torreGamer
+  mesa_gamer: mesaGamer
 };

@@ -35,11 +35,11 @@ export function salasDaCasa35(o: OrgEsports31, ano: number): Sala35[] {
   for (const L of o.linhas) {
     const n = Math.min(5, titularesDoJogo31(L.jogo, ano));
     const s = L.setup35;
-    // VIDA 35.2: cada estação é uma mesa (o home studio, desenhado), o PC em cima dela e a cadeira ergonômica na frente.
+    // VIDA 35.2: cada estação é uma mesa gamer (com a torre do PC embaixo do tampo), os monitores em cima e a cadeira na frente.
     // Antes a base punha o PC sem mesa (ele "voava") e uma cadeira sem desenho (ela não aparecia).
     out.push({
       id: `treino_${L.jogo}`, nome: `Treino · ${SIGLA[L.jogo] ?? JOGOS25[L.jogo].nome(ano)}`, tipo: 'jogos', area: 22 + n * 6,
-      base: [...Array(n)].flatMap(() => ['mesa_gamer', 'monitores', 'torre_gamer', 'cadeira_ergonomica']),
+      base: [...Array(n)].flatMap(() => ['mesa_gamer', 'monitores', 'cadeira_ergonomica']),
       padrao: { parede: 'preto_fosco', piso: 'carpete', luz: ano >= 2008 ? 'fita_led' : 'simples' },
       sobre: `A sala da line de ${JOGOS25[L.jogo].nome(ano)}: ${n} ${n === 1 ? 'estação' : 'estações'} (mesa, PC e cadeira ergonômica de cada titular)${s ? `, ${(s.monitor ?? 0) >= 2 ? 'com monitores de alta taxa' : 'com monitor simples'}` : ' — o equipamento se monta na aba Equipamento da line'}.`,
       decoracao: DECORACAO_POR_TIPO35.jogos

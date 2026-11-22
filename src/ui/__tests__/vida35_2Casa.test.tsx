@@ -11,7 +11,7 @@ import { Estacao35 } from '../v35/org/Org35';
 
 const estacoes = (n: number) => {
   const objs: { id: string; coisaId: string }[] = [];
-  for (let k = 0; k < n; k++) objs.push({ id: `m${k}`, coisaId: 'mesa_gamer' }, { id: `o${k}`, coisaId: 'monitores' }, { id: `p${k}`, coisaId: 'torre_gamer' }, { id: `c${k}`, coisaId: 'cadeira_ergonomica' });
+  for (let k = 0; k < n; k++) objs.push({ id: `m${k}`, coisaId: 'mesa_gamer' }, { id: `o${k}`, coisaId: 'monitores' }, { id: `c${k}`, coisaId: 'cadeira_ergonomica' });
   return objs;
 };
 
@@ -20,20 +20,15 @@ describe('a sala de treino da gaming house', () => {
     it(`${n} estação(ões): tudo cabe, cada PC está em cima de uma mesa e cada titular tem a sua cadeira`, () => {
       const d = disporComodo('jogos', 22 + n * 6, estacoes(n), 'fita_led', 2026);
       expect(d.fora).toEqual([]);
-      // Cada torre fica no chão (encostada, do lado da mesa) e cada par de monitores em cima de uma mesa gamer.
-      const torres = d.postos.filter(p => p.coisaId === 'torre_gamer');
-      expect(torres.length).toBe(n);
-      for (const t of torres) expect(t.montagem).toBe('chao');
+      // Cada par de monitores em cima de uma mesa gamer (e a torre fica embaixo dela, no desenho da mesa).
       const telas = d.postos.filter(p => p.coisaId === 'monitores');
       expect(telas.length).toBe(n);
       for (const t of telas) expect(d.postos.find(p => p.id === t.sobre)?.coisaId).toBe('mesa_gamer');
       expect(d.postos.filter(p => p.coisaId === 'cadeira_ergonomica').length).toBe(n);
     });
   }
-  it('a mesa gamer é maior que a cadeira e a torre tem altura de torre de verdade (proporção)', () => {
+  it('a mesa gamer é maior que a cadeira (proporção)', () => {
     expect(MEDIDAS.mesa_gamer.w).toBeGreaterThan(MEDIDAS.cadeira_ergonomica.w * 1.5);
-    expect(MEDIDAS.torre_gamer.h).toBeGreaterThan(0.4);
-    expect(MEDIDAS.torre_gamer.h).toBeLessThan(0.6);
   });
   it('todo item de decoração de cada cômodo tem medida e desenho próprios (nada cai na caixa genérica)', () => {
     for (const [tipo, ids] of Object.entries(DECORACAO_POR_TIPO35)) {

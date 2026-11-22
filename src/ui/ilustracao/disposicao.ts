@@ -226,10 +226,6 @@ function dispor(tipo: string, area: number | undefined, objetos: ObjetoParaDispo
   const livre = (r: Retangulo, ignorar?: Retangulo, fundoMax = g.Dv) =>
     r.x0 >= 0 && r.x1 <= g.Wm && r.z0 >= 0 && r.z1 <= fundoMax && !chao.some(c => c !== ignorar && !pequeno(c) && cruza(c, r));
 
-  const porId = (coisaIds: string[] | undefined) => {
-    for (const cid of coisaIds ?? []) { const p = postos.find(x => x.coisaId === cid && x.montagem === 'chao'); if (p) return p; }
-    return undefined;
-  };
 
   let rigor = true;
   /** Na tela, um tapa o outro? (a mesma faixa de x, um na frente do outro a menos de 1,6 m, e o de trás se vê por cima) */
@@ -326,31 +322,38 @@ function dispor(tipo: string, area: number | undefined, objetos: ObjetoParaDispo
     const pis = piscina;
     for (const zona of (m.z ?? ['canto', 'lado']) as Zona[]) {
       if (zona === 'junto') {
-        const a = porId(m.de);
-        if (!a) continue;
-        if (m.par) {
-          const e = tenta(a.x0 - w - 0.08, a.z0), dd = tenta(a.x1 + 0.08, a.z0);
-          if (e && dd) return [{ ...e, id: `${o.id}:e`, metade: 'esq' }, { ...dd, id: `${o.id}:d`, metade: 'dir' }];
-          if (e || dd) return [{ ...(e ?? dd)!, metade: e ? 'esq' : 'dir' }];
-          continue;
+        // VIDA 35.2: junto de qualquer um dos móveis de referência (não só o primeiro): a torre vai para a mesa dela.
+        const alvos = (m.de ?? []).flatMap(cid => postos.filter(x => x.coisaId === cid && x.montagem === 'chao'));
+        for (const a of alvos) {
+          if (m.par) {
+            const e = tenta(a.x0 - w - 0.08, a.z0), dd = tenta(a.x1 + 0.08, a.z0);
+            if (e && dd) return [{ ...e, id: `${o.id}:e`, metade: 'esq' }, { ...dd, id: `${o.id}:d`, metade: 'dir' }];
+            if (e || dd) return [{ ...(e ?? dd)!, metade: e ? 'esq' : 'dir' }];
+            continue;
+          }
+          // VIDA 35.2: com vão negativo, o móvel pode ficar embaixo da mesa de referência (a torre do PC, entre as pernas).
+          const debaixo = (m.vao ?? 0) < 0 ? tenta(a.x0 + 0.04, a.z0 + 0.04, a) : undefined;
+          const p = debaixo ?? tenta(a.x1 + 0.08, a.z0) ?? tenta(a.x0 - w - 0.08, a.z0) ?? tenta(a.x1 + 0.08, a.z1 - d);
+          if (p) return p;
         }
-        const p = tenta(a.x1 + 0.08, a.z0) ?? tenta(a.x0 - w - 0.08, a.z0) ?? tenta(a.x1 + 0.08, a.z1 - d);
-        if (p) return p;
         continue;
       }
       if (zona === 'diante') {
-        const a = porId(m.de);
-        if (!a) continue;
-        // 12.9: diante do móvel girado (a cadeira da escrivaninha encostada na parede lateral): ao lado da frente dele.
-        if (a.giro) {
-          const x0 = a.giro === 'esq' ? a.x1 + (m.vao ?? 0.4) : a.x0 - w - (m.vao ?? 0.4);
-          const p = tenta(Math.max(0.02, Math.min(g.Wm - w - 0.02, x0)), Math.max(0.02, (a.z0 + a.z1) / 2 - d / 2), (m.vao ?? 0) < 0 ? a : undefined);
-          if (p) return p;
-          continue;
+        // VIDA 35.2: a cadeira procura a sua mesa entre TODAS as do mesmo tipo (antes, só a primeira: a segunda cadeira em
+        // diante de outra mesa ia parar lá na frente da sala). Uma cadeira por mesa, cada uma encaixada na sua.
+        const alvos = (m.de ?? []).flatMap(cid => postos.filter(x => x.coisaId === cid && x.montagem === 'chao'));
+        for (const a of alvos) {
+          // 12.9: diante do móvel girado (a cadeira da escrivaninha encostada na parede lateral): ao lado da frente dele.
+          if (a.giro) {
+            const x0 = a.giro === 'esq' ? a.x1 + (m.vao ?? 0.4) : a.x0 - w - (m.vao ?? 0.4);
+            const p = tenta(Math.max(0.02, Math.min(g.Wm - w - 0.02, x0)), Math.max(0.02, (a.z0 + a.z1) / 2 - d / 2), (m.vao ?? 0) < 0 ? a : undefined);
+            if (p) return p;
+            continue;
+          }
+          const z0 = a.z1 + (m.vao ?? 0.4);
+          const cx = (a.x0 + a.x1) / 2 - w / 2;
+          for (const x0 of passos(0.02, g.Wm - w - 0.02, cx, 0.1).slice(0, 6)) { const p = tenta(x0, Math.max(0.02, z0), (m.vao ?? 0) < 0 ? a : undefined); if (p) return p; }
         }
-        const z0 = a.z1 + (m.vao ?? 0.4);
-        const cx = (a.x0 + a.x1) / 2 - w / 2;
-        for (const x0 of passos(0.02, g.Wm - w - 0.02, cx, 0.1).slice(0, 6)) { const p = tenta(x0, Math.max(0.02, z0), (m.vao ?? 0) < 0 ? a : undefined); if (p) return p; }
         continue;
       }
       if (zona === 'fundo') {

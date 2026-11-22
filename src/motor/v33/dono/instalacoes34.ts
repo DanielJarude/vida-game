@@ -56,7 +56,8 @@ export const DECORACAO35 = ['plantas', 'vasos_grandes', 'tapete', 'tapete_persa'
 /** VIDA 35.2 · a decoração de cada tipo de cômodo: o que faz sentido ali (um quarto não tem fliperama; a sala de treino
  *  não tem cafeteira). A chave é o tipo do cômodo (`tipo` em `salasDaCasa35`). */
 export const DECORACAO_POR_TIPO35: Record<string, readonly string[]> = {
-  jogos: ['tapete', 'quadros', 'plantas', 'estante_trofeus', 'caixa_som', 'vasos_grandes'],
+  // (só o que não come o espaço das estações: plantas, vasos e estantes grandes empurravam a última mesa para fora)
+  jogos: ['tapete', 'quadros', 'caixa_som'],
   estudio: ['caixa_som', 'som_hifi', 'quadros', 'plantas', 'tapete', 'estante_escritorio'],
   cinema: ['tapete_persa', 'quadros', 'estante_trofeus', 'plantas', 'poltrona'],
   academia: ['plantas', 'vasos_grandes', 'caixa_som', 'quadros', 'tapete'],
