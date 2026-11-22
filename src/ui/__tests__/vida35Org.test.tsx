@@ -39,6 +39,14 @@ describe('VIDA 35 · telas da org', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Gaming house' }));
     fireEvent.click(screen.getAllByRole('button', { name: /^Construir/ })[0]);
     expect(estado().casa.length).toBe(1);
-    expect(screen.getByRole('img', { name: /gaming house com .*análise/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Sala de análise/ })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /Sala de análise/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'tapete de sala' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar a casa' }));
+    expect(screen.getByRole('button', { name: 'Casa salva' })).toBeTruthy();
+    fireEvent.click(screen.getAllByRole('tab').find(t => /^LoL ·/.test(t.textContent ?? ''))!);
+    fireEvent.click(screen.getByRole('tab', { name: 'Treino' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Adotar' })[0]);
+    expect(screen.getAllByText('Em vigor').length).toBeGreaterThan(0);
   });
 });

@@ -8,12 +8,12 @@ import type { Acao } from '../../../motor/acoes';
 import { anoDe } from '../../../motor/tempo';
 import { JOGOS25, type JogoId } from '../../../motor/v25/esports/jogos25';
 import {
-  custoDaAcademy35, forcaDaAcademy35, jogosDisponiveis31, linhaDe31, maxElenco31, mediaDosTitulares31, nomeDaFuncao31, nomeDaLiga31, orgsAVenda31,
+  criadoresDisponiveis35, custoDaAcademy35, forcaDaAcademy35, jogosDisponiveis31, linhaDe31, maxElenco31, mediaDosTitulares31, nomeDaFuncao31, nomeDaLiga31, orgsAVenda31,
   planoDaReformulacao35, valorDaLinha33, type LinhaOrg33, type OqueOrg31
 } from '../../../motor/v31/esports/org31';
 import {
-  bonusDaCasa35, bonusDoSetup35, COMODOS35, custoDoSetup35, DESCRICAO35, estadoDaPeca35, EVENTOS35, manutencaoDaCasa35, NOME_GABINETE35, NOME_PECA35,
-  nomeDoDegrau35, PACOTES35, PECAS35, precoDaPeca35, REFORMULACAO35, type Gabinete35, type NivelReformulacao35, type Peca35
+  bonusDaCasa35, bonusDoSetup35, COMODOS35, CUSTO_PENEIRA35, CUSTO_RETIRO35, custoDoSetup35, DESCRICAO35, estadoDaPeca35, EVENTOS35, FOCOS35, manutencaoDaCasa35, NOME_GABINETE35, NOME_PECA35,
+  nomeDoDegrau35, PACOTES35, PECAS35, precoDaPeca35, REFORMULACAO35, SCRIMS35, STAFF35, TORNEIOS35, type Gabinete35, type NivelReformulacao35, type Peca35, type Torneio35
 } from '../../../motor/v31/esports/org35';
 import { multDaRegiao33, nomeDaRegiao33 } from '../../../motor/v31/esports/circuitos33';
 import { BotaoAcao } from '../../comum';
@@ -243,3 +243,111 @@ export function Comodos35({ vida, agir }: { vida: Vida; agir: Agir }) {
   );
 }
 
+
+/* ------------------------------------------------------------------ VIDA 35.1 · o dia a dia */
+
+/** O treino da line: o foco, os scrims da temporada, a comissão técnica, o retiro, o corte de salários. */
+export function Treino35({ vida, agir, L }: { vida: Vida; agir: Agir; L: LinhaOrg33 }) {
+  const ano = anoDe(vida.t);
+  const mult = multDaRegiao33(L.jogo, L.regiao);
+  const foco = L.foco35 ?? 'equilibrado';
+  const din = (x: number) => dinheiroCurto(Math.round(x * mult / 1e4) * 1e4);
+  return (
+    <div className="org35">
+      <section className="org31__bloco" aria-labelledby="org35-foco">
+        <h4 id="org35-foco">Foco do treino</h4>
+        <ul className="org35__lista">
+          {FOCOS35.map(f => (
+            <li key={f.id} className={foco === f.id ? 'org35__tem' : undefined}>
+              <span><strong>{f.nome}</strong> <span className="org31__meta">{f.nota}</span></span>
+              {foco === f.id ? <span className="org35__vigor">Em vigor</span> : <BotaoAcao vida={vida} agir={agir} acao={A({ op: 'foco', jogo: L.jogo, foco: f.id })} variante="secundario">Adotar</BotaoAcao>}
+            </li>
+          ))}
+        </ul>
+      </section>
+      <section className="org31__bloco" aria-labelledby="org35-scrims">
+        <h4 id="org35-scrims">Scrims da temporada</h4>
+        <p className="nota">{L.scrims35?.ano === ano ? `Marcados: ${SCRIMS35[L.scrims35.nivel - 1].nome.toLowerCase()} (+${SCRIMS35[L.scrims35.nivel - 1].forca}).` : 'Treinos contra outras equipes, a temporada inteira. Uma agenda por temporada.'}</p>
+        <div className="org31__botoes">{SCRIMS35.map(sc => <BotaoAcao key={sc.nivel} vida={vida} agir={agir} acao={A({ op: 'scrims', jogo: L.jogo, nivel: sc.nivel })} variante="secundario">{sc.nome} · +{sc.forca} · {din(sc.custo)}</BotaoAcao>)}</div>
+      </section>
+      <section className="org31__bloco" aria-labelledby="org35-staff">
+        <h4 id="org35-staff">Comissão técnica</h4>
+        <ul className="org35__lista">
+          {STAFF35.map(st => (
+            <li key={st.nivel} className={(L.staff35 ?? 0) === st.nivel ? 'org35__tem' : undefined}>
+              <span><strong>{st.nome}</strong> <span className="org31__meta">{st.forca ? `+${st.forca} na força · ${din(st.salario)}/ano` : 'Sem custo a mais.'}</span></span>
+              {(L.staff35 ?? 0) === st.nivel ? <span className="org35__vigor">Em vigor</span> : <BotaoAcao vida={vida} agir={agir} acao={A({ op: 'staff', jogo: L.jogo, nivel: st.nivel })} variante="secundario">{st.nivel ? 'Montar' : 'Voltar a só o técnico'}</BotaoAcao>}
+            </li>
+          ))}
+        </ul>
+      </section>
+      <section className="org31__bloco" aria-labelledby="org35-clima">
+        <h4 id="org35-clima">Clima e salários</h4>
+        <p className="nota">Clima da line agora: {(L.moral ?? 0) > 0 ? '+' : ''}{L.moral ?? 0} na força.</p>
+        <div className="org31__botoes">
+          <BotaoAcao vida={vida} agir={agir} acao={A({ op: 'retiro', jogo: L.jogo })} variante="secundario">{L.retiro35 === ano ? 'Retiro feito' : `Retiro do time (+0,8 no clima) · ${din(CUSTO_RETIRO35)}`}</BotaoAcao>
+          <BotaoAcao vida={vida} agir={agir} acao={A({ op: 'corte', jogo: L.jogo })} variante="discreto">{L.corte35 === ano ? 'Salários já cortados' : 'Cortar 15% dos salários (o clima cai)'}</BotaoAcao>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+/** Os torneios fora da liga: a copa aberta e o torneio de convidados (resultado na hora). */
+export function Torneios35({ vida, agir, L }: { vida: Vida; agir: Agir; L: LinhaOrg33 }) {
+  const ano = anoDe(vida.t);
+  const mult = multDaRegiao33(L.jogo, L.regiao);
+  const hist = [...(L.torneios35 ?? [])].reverse().slice(0, 8);
+  return (
+    <section className="org31__bloco" aria-labelledby="org35-torneios">
+      <h4 id="org35-torneios">Torneios fora da liga</h4>
+      <ul className="org35__lista">
+        {(Object.keys(TORNEIOS35) as Torneio35[]).map(t => {
+          const x = TORNEIOS35[t];
+          const feito = (L.torneios35 ?? []).find(h => h.ano === ano && h.tipo === t);
+          return (
+            <li key={t}>
+              <span><strong>{x.nome}</strong> <span className="org31__meta">{x.nota} {x.equipes} equipes · prêmio total {dinheiroCurto(Math.round(x.premio * mult / 1e4) * 1e4)}.</span></span>
+              <BotaoAcao vida={vida} agir={agir} acao={A({ op: 'torneio', jogo: L.jogo, tipo: t })} variante="secundario">{feito ? `${feito.colocacao}º neste ano` : `Inscrever · ${dinheiroCurto(Math.round(x.inscricao * mult / 1e4) * 1e4)}`}</BotaoAcao>
+            </li>
+          );
+        })}
+      </ul>
+      {hist.length > 0 && <ul className="org35__hist">{hist.map((h, k) => <li key={k}><b>{h.ano}</b> {h.nome}: {h.colocacao === 1 ? 'campeã' : `${h.colocacao}º de ${h.participantes}`}{h.premio ? ` · ${dinheiroCurto(h.premio)}` : ''}</li>)}</ul>}
+    </section>
+  );
+}
+
+/** Peneira aberta: dois jovens a mais na peneira de talentos, na hora. */
+export function PeneiraAberta35({ vida, agir, L }: { vida: Vida; agir: Agir; L: LinhaOrg33 }) {
+  const ano = anoDe(vida.t);
+  const c = Math.round(CUSTO_PENEIRA35 * multDaRegiao33(L.jogo, L.regiao) / 1e4) * 1e4;
+  return <BotaoAcao vida={vida} agir={agir} acao={A({ op: 'peneira_aberta', jogo: L.jogo })} variante="secundario">{L.peneira35 === ano ? 'Peneira aberta feita neste ano' : `Fazer uma peneira aberta (2 jovens agora) · ${dinheiroCurto(c)}`}</BotaoAcao>;
+}
+
+/** Criadores de conteúdo, bônus por meta e a collab com o jogo. */
+export function Negocios35({ vida, agir }: { vida: Vida; agir: Agir }) {
+  const o = vida.orgEsports31!;
+  const ano = anoDe(vida.t);
+  const disponiveis = criadoresDisponiveis35(vida);
+  return (
+    <>
+      <section className="org31__bloco" aria-labelledby="org35-criadores">
+        <h4 id="org35-criadores">Criadores de conteúdo</h4>
+        <p className="nota">Streamers que fazem conteúdo com o nome da organização: trazem a comunidade deles (fãs todo ano) e receita de conteúdo — e cobram salário. Até três.</p>
+        <ul className="org35__lista">
+          {(o.criadores35 ?? []).map(c => <li key={c.id} className="org35__tem"><span><strong>{c.nome}</strong> <span className="org31__meta">audiência {c.fas} · {dinheiroCurto(c.salario)}/ano</span></span><BotaoAcao vida={vida} agir={agir} acao={A({ op: 'dispensar_criador', id: c.id })} variante="discreto">Dispensar</BotaoAcao></li>)}
+          {disponiveis.map(c => <li key={c.id}><span><strong>{c.nome}</strong> <span className="org31__meta">audiência {c.fas} · {dinheiroCurto(c.salario)}/ano · luvas {dinheiroCurto(c.salario * 0.5)}</span></span><BotaoAcao vida={vida} agir={agir} acao={A({ op: 'criador', id: c.id })} variante="secundario">Assinar</BotaoAcao></li>)}
+        </ul>
+      </section>
+      <section className="org31__bloco" aria-labelledby="org35-bicho">
+        <h4 id="org35-bicho">Bônus por meta e collab</h4>
+        <div className="org31__botoes">
+          <BotaoAcao vida={vida} agir={agir} acao={A({ op: 'bicho', ligar: !o.bicho35 })} variante={o.bicho35 ? 'principal' : 'secundario'}>{o.bicho35 ? 'Bônus por título prometido (desligar)' : 'Prometer bônus por título'}</BotaoAcao>
+          <BotaoAcao vida={vida} agir={agir} acao={A({ op: 'collab' })} variante="secundario">{o.collab35 === ano ? 'Collab deste ano lançada' : 'Fechar collab de itens com a desenvolvedora'}</BotaoAcao>
+        </div>
+        <p className="nota">O bônus melhora o clima de todas as lines; a cada título, 15% da folha da line vira prêmio. A collab (itens com o escudo dentro do jogo) é para quem está numa liga principal — uma por ano, rende pela base de fãs.</p>
+      </section>
+    </>
+  );
+}

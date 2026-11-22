@@ -26,6 +26,20 @@ export interface NotaDeVersao {
 
 export const NOTAS: NotaDeVersao[] = [
   {
+    versao: '35.1',
+    data: '2026-11-22',
+    titulo: 'Gaming house de verdade e o dia a dia da organização',
+    novidades: [
+      'A gaming house agora é mostrada como os cômodos da sua casa: cada cômodo na cena em perspectiva, com móveis de verdade — uma sala de treino por line (computador e cadeira para cada titular), estúdio, sala de análise, academia, fisioterapia, psicólogo, cozinha, quartos, lounge e, no casarão, a piscina. Escolha o cômodo nas miniaturas.',
+      'Personalize cada cômodo com os mesmos acabamentos da reforma da casa (parede — inclusive nas cores da organização —, piso e luz) e decore com móveis do catálogo (plantas, tapete, estante de troféus, TV, videogame, café, sofá…).',
+      'Aba Treino em cada line: foco do treino (mecânica pesada, estratégia e VOD, rotina leve), scrims da temporada (nacionais ou internacionais), comissão técnica (assistente e analista ou comissão completa), retiro do time e corte de salários.',
+      'Aba Torneios: inscreva a line na Copa aberta ou no Torneio de convidados — o resultado sai na hora, com prêmio, fãs e taça na galeria.',
+      'Peneira aberta (dois jovens na hora), criadores de conteúdo contratados (audiência e receita contra salário), bônus por título prometido e collab de itens com a desenvolvedora do jogo.'
+    ],
+    melhorias: ['A opção em vigor (foco, comissão) aparece marcada, não como botão bloqueado.'],
+    correcoes: ['A gaming house não tem mais cômodos sobrepostos nem decoração solta: o desenho antigo saiu.']
+  },
+  {
     versao: '35',
     data: '2026-11-22',
     titulo: 'A organização de e-sports que você monta',

@@ -116,3 +116,47 @@ export function normalizarSetup35(x: unknown): Setup35 | undefined {
   if (typeof o.rgb === 'string' && /^#[0-9a-f]{6}$/i.test(o.rgb)) s.rgb = o.rgb;
   return s;
 }
+
+/* ------------------------------------------------------------------ VIDA 35.1 · o dia a dia da line e da organização */
+
+export type Foco35 = 'equilibrado' | 'mecanica' | 'estrategia' | 'leve';
+export const FOCOS35: { id: Foco35; nome: string; nota: string; forca: number; clima: number; evolucao: number }[] = [
+  { id: 'equilibrado', nome: 'Equilibrado', nota: 'A rotina de sempre.', forca: 0, clima: 0, evolucao: 0 },
+  { id: 'mecanica', nome: 'Mecânica pesada', nota: 'Horas de mira e execução: +0,5 de força e os jovens evoluem mais — o desgaste pesa no clima.', forca: 0.5, clima: -0.2, evolucao: 0.03 },
+  { id: 'estrategia', nome: 'Estratégia e VOD', nota: 'Mais leitura de jogo que horas de servidor: +0,3 de força, sem desgaste.', forca: 0.3, clima: 0, evolucao: 0 },
+  { id: 'leve', nome: 'Rotina leve', nota: 'Menos horas, mais descanso: −0,5 de força, o clima melhora e os veteranos cansam menos.', forca: -0.5, clima: 0.4, evolucao: 0 }
+];
+export const foco35 = (id: Foco35 | undefined) => FOCOS35.find(f => f.id === (id ?? 'equilibrado'))!;
+
+export const SCRIMS35 = [
+  { nivel: 1 as const, nome: 'Scrims com as melhores do país', custo: 40e3, forca: 0.6 },
+  { nivel: 2 as const, nome: 'Scrims internacionais (fuso trocado, viagem)', custo: 160e3, forca: 1.2 }
+];
+export const STAFF35 = [
+  { nivel: 0 as const, nome: 'Só o técnico', salario: 0, forca: 0 },
+  { nivel: 1 as const, nome: 'Assistente e analista', salario: 90e3, forca: 0.3 },
+  { nivel: 2 as const, nome: 'Comissão completa (analista de dados, preparador mental, gerente)', salario: 250e3, forca: 0.6 }
+];
+export const CUSTO_RETIRO35 = 80e3;
+export const CUSTO_PENEIRA35 = 50e3;
+
+export type Torneio35 = 'aberto' | 'convite';
+export const TORNEIOS35: Record<Torneio35, { nome: string; nota: string; inscricao: number; premio: number; minDiv: number; equipes: number; campo: number }> = {
+  aberto: { nome: 'Copa aberta', nota: 'Qualquer equipe se inscreve: campo do seu nível, prêmio pequeno.', inscricao: 15e3, premio: 120e3, minDiv: 2, equipes: 32, campo: 0 },
+  convite: { nome: 'Torneio de convidados', nota: 'Só para quem tem nome: as melhores da região, prêmio e audiência grandes.', inscricao: 60e3, premio: 900e3, minDiv: 3, equipes: 8, campo: 2 }
+};
+
+export interface Criador35 { id: string; nome: string; fas: number; salario: number }
+/** Os criadores de conteúdo que aceitam assinar neste ano (nomes de jogo, sem pessoas reais). */
+export function criadoresDoAno35(semente: number, ano: number, mult: number): Criador35[] {
+  const raizes = ['Vovô', 'Tio', 'Mestre', 'Sombra', 'Pimenta', 'Turbo', 'Caju', 'Neblina', 'Bigode', 'Faísca', 'Pipoca', 'Coruja'];
+  const sufixos = ['Gamer', 'Plays', 'TV', 'Live', 'Zera', 'Clutch', 'GG', 'Ao Vivo'];
+  const out: Criador35[] = [];
+  let h = (semente ^ (ano * 2654435761)) >>> 0;
+  const rnd = () => { h = (Math.imul(h ^ (h >>> 15), 2246822507) + 0x9e3779b9) >>> 0; return h / 4294967296; };
+  for (let k = 0; k < 3; k++) {
+    const fas = Math.round(4 + rnd() * 20 + k * 6);
+    out.push({ id: `cr${ano}_${k}`, nome: `${raizes[Math.floor(rnd() * raizes.length)]} ${sufixos[Math.floor(rnd() * sufixos.length)]}`, fas, salario: Math.round((40e3 + fas * fas * 900) * mult / 1e4) * 1e4 });
+  }
+  return out;
+}

@@ -1,0 +1,24 @@
+/* VIDA 35.1 · a gaming house em cômodos (a cena 2.5D da casa), miniaturas e o ateliê. */
+#root .casa35 { display: grid; gap: 12px; min-width: 0; }
+#root .casa35__cabeca h4 { margin: 0; font-size: var(--type-subheading); }
+#root .casa35__cabeca .nota { margin: 2px 0 0; }
+#root .casa35__miniaturas { list-style: none; margin: 0; padding: 2px 2px 6px; display: flex; gap: 8px; overflow-x: auto; scrollbar-width: thin; }
+#root .casa35__mini { display: grid; gap: 4px; width: 150px; padding: 0 0 6px; border: 0; border-radius: 12px; background: var(--superficie); box-shadow: inset 0 0 0 1px var(--fio); color: var(--tinta); font: inherit; font-size: var(--type-meta); font-weight: 600; cursor: pointer; overflow: hidden; text-align: center; }
+#root .casa35__mini svg { display: block; width: 100%; height: auto; }
+#root .casa35__mini[aria-pressed='true'] { box-shadow: inset 0 0 0 3px var(--acao); }
+#root .casa35__palco { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 820px) { #root .casa35__palco { grid-template-columns: 1fr; } }
+#root .casa35__cena { margin: 0; display: grid; gap: 6px; }
+#root .casa35__cena svg { display: block; width: 100%; height: auto; border-radius: 14px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12); }
+#root .casa35__cena figcaption { font-size: var(--type-caption); color: var(--tinta-2); }
+#root .casa35__atelie { display: grid; gap: 10px; min-width: 0; }
+#root .casa35__campo { display: grid; gap: 4px; font-size: var(--type-caption); color: var(--tinta-2); }
+#root .casa35__campo select, #root .casa35__campo input { min-height: 38px; border-radius: 10px; padding: 0 10px; max-width: 100%; }
+#root .casa35__rot { font-size: var(--type-caption); color: var(--tinta-2); }
+#root .casa35__deco { display: grid; gap: 4px; }
+#root .casa35__fichas { display: flex; flex-wrap: wrap; gap: 6px; }
+#root .casa35__ficha { min-height: 30px; padding: 3px 10px; border: 0; border-radius: 999px; background: var(--veu-2); color: var(--tinta); font: inherit; font-size: var(--type-caption); font-weight: 600; cursor: pointer; box-shadow: inset 0 0 0 1px var(--fio); }
+#root .casa35__ficha[aria-pressed='true'] { background: var(--acao); color: var(--fundo); box-shadow: none; }
+#root .casa35__geral summary { cursor: pointer; font-weight: 600; font-size: var(--type-caption); }
+#root .casa35__geral { display: grid; gap: 8px; }
+#root .casa35__salvar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }

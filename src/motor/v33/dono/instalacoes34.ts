@@ -38,7 +38,13 @@ export interface Instalacoes34 {
   neon?: boolean;
   plantas?: boolean;
   sofa?: boolean;
+  /** VIDA 35.1 · cada cômodo da gaming house: os acabamentos (os mesmos da casa: parede, piso, luz) e a decoração escolhida. */
+  salas35?: Record<string, SalaPersonalizada35>;
 }
+export interface SalaPersonalizada35 { parede?: string; piso?: string; luz?: string; extras?: string[] }
+/** O que dá para pôr de decoração num cômodo da gaming house (móveis do catálogo da casa). */
+export const DECORACAO35 = ['plantas', 'vasos_grandes', 'tapete', 'luminaria', 'estante_trofeus', 'poltrona', 'tv_oled', 'videogame', 'cafeteira', 'estante_escritorio', 'sofa'] as const;
+const valido = (x: unknown) => typeof x === 'string' && /^[a-z_]{2,30}$/.test(x) ? x : undefined;
 
 const ESCOLHAS = {
   cadeiras: ['time', 'cor1', 'cor2', 'mosaico', 'cinza'],
@@ -80,6 +86,17 @@ export function normalizarInstalacoes34(x: unknown): Instalacoes34 | undefined {
     neon: typeof o.neon === 'boolean' ? o.neon : undefined, plantas: typeof o.plantas === 'boolean' ? o.plantas : undefined, sofa: typeof o.sofa === 'boolean' ? o.sofa : undefined,
     luz: typeof o.luz === 'string' && /^#[0-9a-f]{6}$/i.test(o.luz) ? o.luz : undefined
   };
+  if (o.salas35 && typeof o.salas35 === 'object') {
+    const salas: Record<string, SalaPersonalizada35> = {};
+    for (const [k, v] of Object.entries(o.salas35 as Record<string, unknown>).slice(0, 30)) {
+      if (!/^[a-z0-9_:]{2,30}$/.test(k) || !v || typeof v !== 'object') continue;
+      const x = v as Record<string, unknown>;
+      const sala: SalaPersonalizada35 = { parede: valido(x.parede), piso: valido(x.piso), luz: valido(x.luz), extras: Array.isArray(x.extras) ? [...new Set(x.extras.filter(e => (DECORACAO35 as readonly string[]).includes(e as string)) as string[])] : undefined };
+      for (const q of Object.keys(sala) as (keyof SalaPersonalizada35)[]) if (sala[q] === undefined) delete sala[q];
+      if (Object.keys(sala).length) salas[k] = sala;
+    }
+    if (Object.keys(salas).length) r.salas35 = salas;
+  }
   for (const k of Object.keys(r) as (keyof Instalacoes34)[]) if (r[k] === undefined) delete r[k];
   return r;
 }

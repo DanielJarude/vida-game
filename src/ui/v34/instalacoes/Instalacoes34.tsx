@@ -13,17 +13,15 @@ import { NOMES34, opcoes34, type Instalacoes34 } from '../../../motor/v33/dono/i
 import { BotaoAcao } from '../../comum';
 import { desenhoDoClube30, iniciaisDoClube30 } from '../../v30/escudos/Escudo30';
 import { coresDaOrg34 } from '../../v31/esports/coresOrgs34';
-import { Base34, capacidade34, CT34, Estadio34, Ginasio34, GamingHouse34, type Cores34 } from './Desenhos34';
+import { Base34, capacidade34, CT34, Estadio34, Ginasio34, type Cores34 } from './Desenhos34';
 import './instalacoes34.css';
 
 type Agir = (a: Acao) => boolean;
 type Lugar = 'casa' | 'ct' | 'base';
 export type Tipo34 =
   | { tipo: 'clube'; estadio: number; ct: number; base: number; obra?: string }
-  | { tipo: 'quadra'; ginasio: number; modalidade: 'basquete' | 'volei' | 'futsal'; obra?: boolean }
-  | { tipo: 'org'; nivel: number; pcs: number; conteudo: number; trofeus: number; comodos?: string[]; setups?: (import('./Desenhos34').Estacao34 | undefined)[] };
+  | { tipo: 'quadra'; ginasio: number; modalidade: 'basquete' | 'volei' | 'futsal'; obra?: boolean };
 
-const LUZES = ['#7c3aed', '#06b6d4', '#ef4444', '#22c55e', '#f59e0b', '#ec4899', '#ffffff'];
 
 function Escolha<K extends 'cadeiras' | 'gramado' | 'cobertura' | 'piso' | 'fachada' | 'estilo' | 'parede' | 'layout'>({ k, rotulo, valor, mudar }: { k: K; rotulo: string; valor: string | undefined; mudar: (v: string) => void }) {
   return (
@@ -46,7 +44,7 @@ export function Instalacoes34({ vida, agir, nome, identidade, inst, dados, acao,
   const [o1, o2] = org ? coresDaOrg34(nome) : ['', ''];
   const cores: Cores34 = identidade ? { cor1: identidade.cor1, cor2: identidade.cor2, cor3: identidade.cor3 } : d ? { cor1: d[2], cor2: d[3] } : { cor1: o1.startsWith('#') ? o1 : '#3f3f46', cor2: o2.startsWith('#') ? o2 : '#a78bfa' };
   const sigla = (identidade?.sigla || iniciaisDoClube30(nome)).slice(0, 4);
-  const nomeCasaPadrao = identidade?.casa || (dados.tipo === 'clube' ? `Estádio do ${nome}` : dados.tipo === 'quadra' ? `Ginásio do ${nome}` : `Gaming house da ${nome}`);
+  const nomeCasaPadrao = identidade?.casa || (dados.tipo === 'clube' ? `Estádio do ${nome}` : `Ginásio do ${nome}`);
   const nomeCasa = r.nomeCasa || nomeCasaPadrao;
   const mudou = JSON.stringify(r) !== JSON.stringify(inst ?? {});
 
@@ -63,14 +61,10 @@ export function Instalacoes34({ vida, agir, nome, identidade, inst, dados, acao,
     titulo = nomeCasa;
     desenho = <Estadio34 nivel={dados.estadio} i={r} c={cores} sigla={sigla} nome={nomeCasa} />;
     ficha = <p className="nota">Estádio <Estrelas n={dados.estadio} /> · cerca de {capacidade34(dados.estadio).toLocaleString('pt-BR')} lugares{dados.obra ? ` · ${dados.obra}` : ''}. Mais lugares, mais bilheteria e torcida.</p>;
-  } else if (dados.tipo === 'quadra') {
+  } else {
     titulo = nomeCasa;
     desenho = <Ginasio34 nivel={dados.ginasio} modalidade={dados.modalidade} i={r} c={cores} sigla={sigla} nome={nomeCasa} />;
     ficha = <p className="nota">Ginásio <Estrelas n={dados.ginasio} /> · cerca de {[0, 800, 2000, 4500, 8000, 14000][dados.ginasio].toLocaleString('pt-BR')} lugares{dados.obra ? ' · em obra' : ''}.</p>;
-  } else {
-    titulo = nomeCasa;
-    desenho = <GamingHouse34 nivel={dados.nivel} pcs={dados.pcs} conteudo={dados.conteudo} trofeus={dados.trofeus} comodos={dados.comodos} setups={dados.setups} i={r} c={cores} sigla={sigla} nome={nomeCasa} />;
-    ficha = <p className="nota">{dados.pcs} PCs de treino (um por jogador de cada line; o equipamento se monta na aba Equipamento de cada line){dados.conteudo >= 1 ? ' · estúdio de transmissão' : ''}{dados.conteudo >= 2 ? ' · casa de criadores' : ''} · {dados.trofeus} {dados.trofeus === 1 ? 'troféu' : 'troféus'} na estante. Os cômodos com efeito no time ficam logo abaixo.</p>;
   }
 
   return (
@@ -99,25 +93,11 @@ export function Instalacoes34({ vida, agir, nome, identidade, inst, dados, acao,
             <Escolha k="cadeiras" rotulo="Arquibancada" valor={r.cadeiras ?? 'time'} mudar={v => muda({ cadeiras: v as Instalacoes34['cadeiras'] })} />
             <Liga rotulo="Placar suspenso" valor={r.telao ?? dados.ginasio >= 3} mudar={v => muda({ telao: v })} />
           </>}
-          {dados.tipo === 'org' && <>
-            <Escolha k="estilo" rotulo="Estilo da casa" valor={r.estilo ?? 'loft'} mudar={v => muda({ estilo: v as Instalacoes34['estilo'] })} />
-            <div className="inst34__escolha" role="group" aria-label="Luz da sala de treino">
-              <span className="inst34__rot">Luz da sala de treino</span>
-              <div className="inst34__fichas">{LUZES.map(l => <button key={l} type="button" className="inst34__cor" aria-pressed={(r.luz ?? '') === l} aria-label={l} style={{ background: l }} onClick={() => muda({ luz: l })} />)}</div>
-            </div>
-            <Escolha k="layout" rotulo="Mesas da sala de treino" valor={r.layout ?? 'fileiras'} mudar={v => muda({ layout: v as Instalacoes34['layout'] })} />
-            <Escolha k="parede" rotulo="Paredes" valor={r.parede} mudar={v => muda({ parede: v as Instalacoes34['parede'] })} />
-            <Escolha k="piso" rotulo="Piso" valor={r.piso} mudar={v => muda({ piso: v as Instalacoes34['piso'] })} />
-            <Liga rotulo="Mural com o escudo" valor={r.mural ?? true} mudar={v => muda({ mural: v })} />
-            <Liga rotulo="Letreiro em neon" valor={r.neon ?? false} mudar={v => muda({ neon: v })} />
-            <Liga rotulo="Plantas" valor={r.plantas ?? false} mudar={v => muda({ plantas: v })} />
-            <Liga rotulo="Lounge com sofá" valor={r.sofa ?? true} mudar={v => muda({ sofa: v })} />
-          </>}
           <div className="inst34__salvar">
             <BotaoAcao vida={vida} agir={agir} acao={acao({ op: 'instalacoes', instalacoes: r })} variante={mudou ? 'principal' : 'secundario'}>{mudou ? 'Salvar as escolhas' : 'Escolhas salvas'}</BotaoAcao>
             {mudou && <button type="button" className="botao botao--discreto" onClick={() => setR({ ...(inst ?? {}) })}>Desfazer</button>}
           </div>
-          <p className="nota">Personalizar não custa nada nem muda o desempenho. Crescer é obra: {dados.tipo === 'clube' ? 'em Estrutura e finanças' : dados.tipo === 'quadra' ? 'em Comando (ampliar o ginásio)' : 'nos cômodos abaixo, no equipamento de cada line e no conteúdo (Organização)'}.</p>
+          <p className="nota">Personalizar não custa nada nem muda o desempenho. Crescer é obra: {dados.tipo === 'clube' ? 'em Estrutura e finanças' : 'em Comando (ampliar o ginásio)'}.</p>
         </div>
       </div>
     </section>

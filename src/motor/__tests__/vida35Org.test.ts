@@ -9,7 +9,7 @@ import { executar, disponibilidade, type Acao } from '../acoes';
 import { podeTentar } from '../plausibilidade';
 import { exportarVida, importarVida, interpretar } from '../save';
 import { anoDe } from '../tempo';
-import { forcaDoTime31, linhaDe31, orgsAVenda31, planoDaReformulacao35, processarOrg31, titularesDoJogo31, type OqueOrg31 } from '../v31/esports/org31';
+import { criadoresDisponiveis35, forcaDoTime31, linhaDe31, orgsAVenda31, planoDaReformulacao35, processarOrg31, titularesDoJogo31, type OqueOrg31 } from '../v31/esports/org31';
 import { bonusDoSetup35 } from '../v31/esports/org35';
 import type { Vida } from '../tipos';
 
@@ -115,5 +115,41 @@ describe('saves', () => {
     expect(w.orgEsports31!.linhas[0].setup35?.pc).toBe(2);
     expect(w.orgEsports31!.linhas[0].academy35?.elenco.length).toBeGreaterThan(0);
     expect(w.orgEsports31!.casa35).toEqual(['fisio']);
+  });
+});
+
+describe('VIDA 35.1 · o dia a dia', () => {
+  it('foco, scrims e comissão mexem na força; retiro e corte no clima; torneio dá resultado na hora', () => {
+    let v = comOrg(); const ano = anoDe(v.t);
+    const f0 = forcaDoTime31(v.orgEsports31!, L(v), ano);
+    v = tenta(v, A({ op: 'foco', jogo: 'lol', foco: 'mecanica' }));
+    v = tenta(v, A({ op: 'scrims', jogo: 'lol', nivel: 2 }));
+    v = tenta(v, A({ op: 'staff', jogo: 'lol', nivel: 2 }));
+    expect(forcaDoTime31(v.orgEsports31!, L(v), ano)).toBeCloseTo(f0 + 0.5 + 1.2 + 0.6, 1);
+    expect(pode(v, A({ op: 'scrims', jogo: 'lol', nivel: 1 }))).toBe(false);
+    const m0 = L(v).moral ?? 0;
+    v = tenta(v, A({ op: 'retiro', jogo: 'lol' }));
+    expect(L(v).moral).toBeGreaterThan(m0);
+    const sal = L(v).elenco[0].salario;
+    v = tenta(v, A({ op: 'corte', jogo: 'lol' }));
+    expect(L(v).elenco[0].salario).toBeLessThan(sal);
+    v = tenta(v, A({ op: 'torneio', jogo: 'lol', tipo: 'convite' }));
+    expect(L(v).torneios35?.[0].colocacao).toBeGreaterThan(0);
+    expect(pode(v, A({ op: 'torneio', jogo: 'lol', tipo: 'convite' }))).toBe(false);
+    const p0 = L(v).academia.length;
+    v = tenta(v, A({ op: 'peneira_aberta', jogo: 'lol' }));
+    expect(L(v).academia.length).toBe(Math.min(6, p0 + 2));
+  });
+  it('criadores, bônus por meta e collab', () => {
+    let v = comOrg();
+    const c = criadoresDisponiveis35(v)[0];
+    v = tenta(v, A({ op: 'criador', id: c.id }));
+    expect(v.orgEsports31!.criadores35?.[0].nome).toBe(c.nome);
+    v = tenta(v, A({ op: 'bicho', ligar: true }));
+    const cx = v.orgEsports31!.caixa;
+    v = tenta(v, A({ op: 'collab' }));
+    expect(v.orgEsports31!.caixa).toBeGreaterThan(cx);
+    v.t += 12; processarOrg31(v);
+    expect(v.orgEsports31!.criadores35?.length).toBe(1);
   });
 });

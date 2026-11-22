@@ -28,8 +28,8 @@ import { Investimento33, PainelDono33 } from '../../v33/dono/PainelDono33';
 import './org31.css';
 import { coresDaOrg34 } from './coresOrgs34';
 import { NavTime34, type ItemNav34 } from '../../v34/esporte/NavTime34';
-import { Instalacoes34 } from '../../v34/instalacoes/Instalacoes34';
-import { Academy35, Comodos35, ComprarLinha35, Equipamento35, Eventos35, Reformular35 } from '../../v35/org/Org35';
+import { CasaDaOrg35 } from '../../v35/casa/CasaDaOrg35';
+import { Academy35, Comodos35, ComprarLinha35, Equipamento35, Eventos35, Negocios35, PeneiraAberta35, Reformular35, Torneios35, Treino35 } from '../../v35/org/Org35';
 
 type Agir = (a: Acao) => boolean;
 const A = (oque: OqueOrg31): Acao => ({ tipo: 'org31', oque } as Acao);
@@ -272,7 +272,7 @@ function MinhaOrg({ vida, agir }: { vida: Vida; agir: Agir }) {
         </>
       )}
       {linha && <Linha key={linha.jogo} vida={vida} agir={agir} L={linha} />}
-      {abaValida === 'casa' && <Instalacoes34 org vida={vida} agir={agir} nome={o.nome} identidade={o.identidade33} inst={o.instalacoes34} acao={sub => A({ op: 'dono', sub })} dados={{ tipo: 'org', nivel: Math.min(5, o.linhas.length + o.conteudo + (o.reputacao >= 60 ? 1 : 0)), pcs: o.linhas.reduce((n, l) => n + l.elenco.length, 0), conteudo: o.conteudo, trofeus: titulos, comodos: o.casa35 ?? [], setups: o.linhas.map(l => l.setup35) }} />}
+      {abaValida === 'casa' && <CasaDaOrg35 key={JSON.stringify(o.instalacoes34 ?? {})} vida={vida} agir={agir} inst={o.instalacoes34} />}
       {abaValida === 'casa' && <Comodos35 vida={vida} agir={agir} />}
       {abaValida === 'negocios' && <PainelDono33 vida={vida} agir={agir} nome={o.nome} dono={o} ctx={contextoOrg33(vida)} acao={sub => A({ op: 'dono', sub })} anoInicio={anoDe(o.desde)} />}
       {abaValida === 'organizacao' && <Organizacao vida={vida} agir={agir} />}
@@ -282,7 +282,7 @@ function MinhaOrg({ vida, agir }: { vida: Vida; agir: Agir }) {
 
 /* ------------------------------------------------------------------ uma line */
 
-type SubAba = 'time' | 'elenco' | 'mercado' | 'equipamento' | 'academy' | 'comando' | 'temporadas';
+type SubAba = 'time' | 'elenco' | 'mercado' | 'treino' | 'equipamento' | 'academy' | 'torneios' | 'comando' | 'temporadas';
 
 function Linha({ vida, agir, L }: { vida: Vida; agir: Agir; L: LinhaOrg33 }) {
   const o = vida.orgEsports31!;
@@ -296,7 +296,7 @@ function Linha({ vida, agir, L }: { vida: Vida; agir: Agir; L: LinhaOrg33 }) {
   const igl = L.elenco.find(j => j.id === L.igl);
   const vagas = vagasDaRegiao33(L.jogo, L.regiao, ano);
   const regras = regrasDaDivisao33(L.jogo, L.regiao, L.divisao, ano);
-  const SUB: Record<SubAba, string> = { time: 'O time', elenco: `Elenco · ${L.elenco.length}/${maxElenco31(L.jogo, ano)}`, mercado: 'Mercado', equipamento: 'Equipamento', academy: L.academy35 ? `Academy · ${L.academy35.elenco.length}` : 'Academy', comando: 'Comando', temporadas: 'Temporadas e títulos' };
+  const SUB: Record<SubAba, string> = { time: 'O time', elenco: `Elenco · ${L.elenco.length}/${maxElenco31(L.jogo, ano)}`, mercado: 'Mercado', treino: 'Treino', equipamento: 'Equipamento', academy: L.academy35 ? `Academy · ${L.academy35.elenco.length}` : 'Academy', torneios: 'Torneios', comando: 'Comando', temporadas: 'Temporadas e títulos' };
   return (
     <div className="org31__linha">
       <h4 className="org34__linha-cabeca"><span className="org31__selo">{SIGLA_JOGO[L.jogo]}</span> A line de {nomeDoJogo(L.jogo, ano)} <span className="org31__meta">{nomeDaLiga31(L, ano)} · {nomeDaRegiao33(L.jogo, L.regiao)}</span></h4>
@@ -326,6 +326,8 @@ function Linha({ vida, agir, L }: { vida: Vida; agir: Agir; L: LinhaOrg33 }) {
       )}
       {aba === 'elenco' && <Elenco vida={vida} agir={agir} L={L} perfis={perfis} />}
       {aba === 'mercado' && <Mercado vida={vida} agir={agir} L={L} />}
+      {aba === 'treino' && <Treino35 vida={vida} agir={agir} L={L} />}
+      {aba === 'torneios' && <Torneios35 vida={vida} agir={agir} L={L} />}
       {aba === 'equipamento' && <Equipamento35 vida={vida} agir={agir} L={L} nomeOrg={o.nome} />}
       {aba === 'academy' && <Academy35 vida={vida} agir={agir} L={L} />}
       {aba === 'comando' && <Comando vida={vida} agir={agir} L={L} />}
@@ -392,6 +394,7 @@ function Elenco({ vida, agir, L, perfis }: { vida: Vida; agir: Agir; L: LinhaOrg
         <div className="org31__botoes" role="group" aria-label="Nível da peneira">
           {([0, 1, 2] as const).map(n => <BotaoAcao key={n} vida={vida} agir={agir} acao={A({ op: 'academia', nivel: n, jogo: j_ })} variante={L.academiaNivel === n ? 'principal' : 'secundario'}>{['Sem peneira', 'Peneira básica', 'Peneira forte'][n]}</BotaoAcao>)}
         </div>
+        <PeneiraAberta35 vida={vida} agir={agir} L={L} />
         {L.academiaNivel === 0 ? <p className="nota">Sem peneira, nenhum jovem é revelado. A peneira custa por ano e revela jogadores com potencial na virada — que podem subir para a line ou ir para a line academy (aba Academy).</p>
           : L.academia.length ? <ul className="org31__cartoes">{L.academia.map(j => <Cartao key={j.id} L={L} j={j} ano={ano} perfil={perfilDoJogadorOrg31(j, L.jogo, ano, { mediaDoTime: mediaDosTitulares31(L, ano) })}><BotaoAcao vida={vida} agir={agir} acao={A({ op: 'promover', id: j.id, jogo: j_ })}>Subir para a line</BotaoAcao>{L.academy35 && <BotaoAcao vida={vida} agir={agir} acao={A({ op: 'promover', id: j.id, jogo: j_, academy: true })} ocultarBloqueado>Para a academy</BotaoAcao>}</Cartao>)}</ul>
             : <p className="nota">Os primeiros jovens chegam na virada do ano.</p>}
@@ -533,6 +536,7 @@ function Organizacao({ vida, agir }: { vida: Vida; agir: Agir }) {
         ) : <p className="nota">A organização já tem line em todos os jogos com cenário nesta época.</p>}
       </section>
       <ComprarLinha35 vida={vida} agir={agir} />
+      <Negocios35 vida={vida} agir={agir} />
       <Eventos35 vida={vida} agir={agir} />
       <section className="org31__bloco" aria-labelledby="org31-conteudo">
         <h4 id="org31-conteudo">Conteúdo e streaming</h4>

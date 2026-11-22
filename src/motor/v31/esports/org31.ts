@@ -38,7 +38,8 @@ import { normalizarIdentidade33, type Identidade33 } from '../../v33/dono/identi
 import { contratoAntigo33, normalizarComercial33, novoComercial33, type Comercial33, type Contexto33 } from '../../v33/dono/patrocinio33';
 import { normalizarLoja33, type Loja33 } from '../../v33/dono/loja33';
 import {
-  bonusDaCasa35, bonusDoSetup35, climaDoSetup35, comodo35, custoDoSetup35, EVENTOS35, manutencaoDaCasa35, normalizarSetup35, REFORMULACAO35,
+  bonusDaCasa35, bonusDoSetup35, climaDoSetup35, comodo35, criadoresDoAno35, CUSTO_PENEIRA35, CUSTO_RETIRO35, custoDoSetup35, EVENTOS35, foco35, manutencaoDaCasa35, normalizarSetup35,
+  REFORMULACAO35, SCRIMS35, STAFF35, TORNEIOS35, type Criador35, type Foco35, type Torneio35,
   type Comodo35, type Evento35, type Gabinete35, type NivelReformulacao35, type Peca35, type Setup35
 } from './org35';
 import { executarDono33, fecharAnoDono33, problemaDono33, type OpDono33 } from '../../v33/dono/dono33';
@@ -103,6 +104,14 @@ export interface LinhaOrg33 {
   setup35?: Setup35;
   academy35?: Academy35;
   emprestados35?: { jogador: JogadorOrg31; para: string; ate: number }[];
+  /** VIDA 35.1 · o dia a dia: o foco do treino, os scrims da temporada, a comissão, o retiro, o corte, a peneira aberta, os torneios extras. */
+  foco35?: Foco35;
+  scrims35?: { ano: number; nivel: 1 | 2 };
+  staff35?: 0 | 1 | 2;
+  retiro35?: number;
+  corte35?: number;
+  peneira35?: number;
+  torneios35?: { ano: number; tipo: Torneio35; nome: string; colocacao: number; participantes: number; premio: number }[];
 }
 /** VIDA 35 · a line academy: o time B, que disputa uma divisão abaixo da principal e forma jogadores jogando. */
 export interface Academy35 {
@@ -132,6 +141,10 @@ export interface OrgEsports31 {
   casa35?: Comodo35[];
   eventos35?: { ano: number; tipo: Evento35 }[];
   absorvidas35?: string[];
+  /** VIDA 35.1 · os criadores de conteúdo contratados, o bônus por meta e a collab com o jogo (ano). */
+  criadores35?: Criador35[];
+  bicho35?: boolean;
+  collab35?: number;
 }
 
 /* ------------------------------------------------------------------ as réguas */
@@ -139,6 +152,9 @@ export interface OrgEsports31 {
 const RECEITA: Record<Divisao31, number> = { 2: 250e3, 3: 1.2e6, 4: 6e6 };
 const OPERACAO: Record<Divisao31, number> = { 2: 60e3, 3: 250e3, 4: 900e3 };
 const arred = (x: number, a = 1e4) => Math.round(x / a) * a;
+const hashNum = (s: string) => { let h = 2166136261; for (let k = 0; k < s.length; k++) { h ^= s.charCodeAt(k); h = Math.imul(h, 16777619); } return h >>> 0; };
+/** VIDA 35.1 · os criadores que aceitam assinar com a organização neste ano. */
+export const criadoresDisponiveis35 = (v: Vida) => (v.orgEsports31 ? criadoresDoAno35(hashNum(v.id), anoDe(v.t), multMedio(v.orgEsports31)).filter(c => !(v.orgEsports31!.criadores35 ?? []).some(x => x.id === c.id)) : []);
 const jogo = (id: JogoId) => JOGOS25[id];
 const multDe = (L: Pick<LinhaOrg33, 'jogo' | 'regiao'>) => multDaRegiao33(L.jogo, L.regiao);
 export const titularesDoJogo31 = (id: JogoId, ano: number) => jogo(id).porEquipe(ano);
@@ -263,7 +279,11 @@ export const bonusDoTecnico31 = (L: Pick<LinhaOrg33, 'tecnico' | 'humorTecnico'>
 /** A força da line na temporada: os titulares, a química, o técnico, o bootcamp, o clima e o tempo que o conteúdo come. */
 export function forcaDoTime31(o: Pick<OrgEsports31, 'conteudo'> & Partial<Pick<OrgEsports31, 'casa35'>>, L: LinhaOrg33, ano: number): number {
   return Math.round((mediaDosTitulares31(L, ano) + quimica31(L, ano) + bonusDoTecnico31(L) + (L.bootcamp === ano ? 2 : 0) + (L.moral ?? 0) - (o.conteudo === 2 ? 1 : 0)
-    + bonusDoSetup35(L.setup35, ano) + bonusDaCasa35(o.casa35, !!L.tecnico)) * 10) / 10;
+    + bonusDoSetup35(L.setup35, ano) + bonusDaCasa35(o.casa35, !!L.tecnico) + extrasDaLinha35(L, ano)) * 10) / 10;
+}
+/** VIDA 35.1 · o foco do treino, os scrims da temporada e a comissão técnica na força. */
+export function extrasDaLinha35(L: LinhaOrg33, ano: number): number {
+  return Math.round((foco35(L.foco35).forca + (L.scrims35?.ano === ano ? SCRIMS35[L.scrims35.nivel - 1].forca : 0) + STAFF35[L.staff35 ?? 0].forca) * 10) / 10;
 }
 /** VIDA 35 · a força da line academy (os titulares dela). */
 export function forcaDaAcademy35(L: LinhaOrg33, ano: number): number {
@@ -403,7 +423,19 @@ export type OqueOrg31 =
   | { op: 'subir'; jogo?: JogoId; id: string }
   | { op: 'descer'; jogo?: JogoId; id: string }
   | { op: 'emprestar'; jogo?: JogoId; id: string }
-  | { op: 'vender_jogador'; jogo?: JogoId; id: string };
+  | { op: 'vender_jogador'; jogo?: JogoId; id: string }
+  // VIDA 35.1
+  | { op: 'foco'; jogo?: JogoId; foco: Foco35 }
+  | { op: 'scrims'; jogo?: JogoId; nivel: 1 | 2 }
+  | { op: 'staff'; jogo?: JogoId; nivel: 0 | 1 | 2 }
+  | { op: 'retiro'; jogo?: JogoId }
+  | { op: 'corte'; jogo?: JogoId }
+  | { op: 'peneira_aberta'; jogo?: JogoId }
+  | { op: 'torneio'; jogo?: JogoId; tipo: Torneio35 }
+  | { op: 'criador'; id: string }
+  | { op: 'dispensar_criador'; id: string }
+  | { op: 'bicho'; ligar: boolean }
+  | { op: 'collab' };
 
 export const custoDoBootcamp31 = (L: LinhaOrg33) => arred((L.divisao === 4 ? 250e3 : L.divisao === 3 ? 90e3 : 30e3) * multDe(L) * (1 + L.elenco.length / 10));
 const nomeLimpo = (s: string) => (s ?? '').replace(/\s+/g, ' ').trim();
@@ -487,6 +519,19 @@ export function disponibilidadeOrg31(v: Vida, o: OqueOrg31): Veredito {
       const c = arred(ev.custo * multMedio(org));
       return org.caixa >= c ? PERMITIDO : bloqueio('requisito', `Custa ${fmt(c)}; o caixa da organização não tem.`);
     }
+    case 'criador': {
+      if ((org.criadores35 ?? []).some(c => c.id === o.id)) return bloqueio('incompativel', 'Já assinou.');
+      if ((org.criadores35?.length ?? 0) >= 3) return bloqueio('incompativel', 'A casa já tem três criadores: dispense um antes.');
+      const c = criadoresDoAno35(hashNum(v.id), ano, multMedio(org)).find(x => x.id === o.id);
+      if (!c) return bloqueio('impossivel', 'Esse criador já fechou com outra organização.');
+      return org.caixa >= c.salario * 0.5 ? PERMITIDO : bloqueio('requisito', `As luvas são de ${fmt(c.salario * 0.5)}; o caixa não tem.`);
+    }
+    case 'dispensar_criador': return (org.criadores35 ?? []).some(c => c.id === o.id) ? PERMITIDO : bloqueio('impossivel', '');
+    case 'bicho': return !!org.bicho35 === o.ligar ? bloqueio('incompativel', 'Já é assim.') : PERMITIDO;
+    case 'collab': {
+      if (org.collab35 === ano) return bloqueio('incompativel', 'A collab deste ano já saiu.');
+      return org.linhas.some(l => l.divisao === 4) ? PERMITIDO : bloqueio('requisito', 'A desenvolvedora só faz collab com quem está numa liga principal.');
+    }
     case 'comprar_linha': {
       const x = avaliarOrg31(v, o.nome, o.jogo, o.regiao);
       if (!x) return bloqueio('impossivel', 'Essa organização não está vendendo a line.');
@@ -529,6 +574,32 @@ export function disponibilidadeOrg31(v: Vida, o: OqueOrg31): Veredito {
       if (!L.elenco.some(j => j.id === o.id)) return bloqueio('impossivel', '');
       if (L.elenco.length <= titN) return bloqueio('incompativel', 'Sem ele a line principal não tem time completo.');
       return L.academy35.elenco.length >= max + 1 ? bloqueio('incompativel', 'A academy está cheia.') : PERMITIDO;
+    }
+    case 'foco': return (L.foco35 ?? 'equilibrado') === o.foco ? bloqueio('incompativel', 'Já é o foco.') : PERMITIDO;
+    case 'scrims': {
+      if (L.scrims35?.ano === ano) return bloqueio('incompativel', 'Os scrims da temporada já estão marcados.');
+      const c = arred(SCRIMS35[o.nivel - 1].custo * multDe(L));
+      if (o.nivel === 2 && L.divisao < 3) return bloqueio('requisito', 'As equipes de fora só treinam com quem está na segunda divisão ou acima.');
+      return org.caixa >= c ? PERMITIDO : bloqueio('requisito', `Custa ${fmt(c)}; o caixa não tem.`);
+    }
+    case 'staff': return (L.staff35 ?? 0) === o.nivel ? bloqueio('incompativel', 'Já é assim.') : PERMITIDO;
+    case 'retiro': {
+      if (L.retiro35 === ano) return bloqueio('incompativel', 'A line já fez o retiro desta temporada.');
+      const c = arred(CUSTO_RETIRO35 * multDe(L));
+      return org.caixa >= c ? PERMITIDO : bloqueio('requisito', `Custa ${fmt(c)}; o caixa não tem.`);
+    }
+    case 'corte': return L.corte35 === ano ? bloqueio('incompativel', 'Os salários já foram cortados nesta temporada.') : PERMITIDO;
+    case 'peneira_aberta': {
+      if (L.peneira35 === ano) return bloqueio('incompativel', 'A peneira aberta deste ano já foi feita.');
+      const c = arred(CUSTO_PENEIRA35 * multDe(L));
+      return org.caixa >= c ? PERMITIDO : bloqueio('requisito', `Custa ${fmt(c)}; o caixa não tem.`);
+    }
+    case 'torneio': {
+      const t = TORNEIOS35[o.tipo];
+      if ((L.torneios35 ?? []).some(x => x.ano === ano && x.tipo === o.tipo)) return bloqueio('incompativel', 'A line já jogou esse torneio neste ano.');
+      if (L.divisao < t.minDiv) return bloqueio('requisito', 'Só convidam quem está na segunda divisão ou acima.');
+      const c = arred(t.inscricao * multDe(L));
+      return org.caixa >= c ? PERMITIDO : bloqueio('requisito', `A inscrição e a viagem custam ${fmt(c)}; o caixa não tem.`);
     }
     case 'emprestar': case 'vender_jogador': {
       if (!L.elenco.some(j => j.id === o.id)) return bloqueio('impossivel', '');
@@ -627,6 +698,22 @@ export function executarOrg31(v: Vida, o: OqueOrg31): { texto: string; tom?: 'bo
       return { texto: `${ev.nome}: feito.`, tom: 'bom' };
     }
     case 'comprar_linha': return comprarLinha35(v, org, o.nome, o.jogo, o.regiao);
+    case 'criador': {
+      const c = criadoresDoAno35(hashNum(v.id), ano, multMedio(org)).find(x => x.id === o.id)!;
+      org.caixa -= Math.round(c.salario * 0.5); org.criadores35 = [...(org.criadores35 ?? []), c];
+      org.fas = clamp(org.fas + Math.round(c.fas / 6));
+      escrever(v, { texto: `${c.nome} agora faz conteúdo pela ${org.nome}: a comunidade dele vem junto.`, relevancia: 'cotidiano', tema: 'trabalho', escolha: true });
+      return { texto: `${c.nome} assinou (${fmt(c.salario)} por ano).`, tom: 'bom' };
+    }
+    case 'dispensar_criador': { const c = org.criadores35!.find(x => x.id === o.id)!; org.criadores35 = org.criadores35!.filter(x => x.id !== o.id); if (!org.criadores35.length) delete org.criadores35; return { texto: `${c.nome} saiu da organização.`, tom: 'neutro' }; }
+    case 'bicho': org.bicho35 = o.ligar || undefined; return { texto: o.ligar ? 'Bônus por meta prometido: título vale prêmio para a line inteira. O clima sobe.' : 'Sem bônus por meta.', tom: 'neutro' };
+    case 'collab': {
+      const m = multMedio(org);
+      const receita = arred(150e3 * m * (0.5 + org.fas / 50));
+      org.caixa += receita; org.fas = clamp(org.fas + 2); org.collab35 = ano;
+      escrever(v, { texto: `Saiu a collab da ${org.nome} com a desenvolvedora: itens com o escudo dentro do jogo. Rendeu ${fmt(receita)}.`, relevancia: 'cotidiano', tema: 'dinheiro', tom: 'bom', escolha: true });
+      return { texto: `Collab lançada: ${fmt(receita)}.`, tom: 'bom' };
+    }
   }
   const L = linhaDe31(org, o.jogo)!;
   const auge = jogo(L.jogo).auge;
@@ -685,6 +772,54 @@ export function executarOrg31(v: Vida, o: OqueOrg31): { texto: string; tom?: 'bo
       L.academy35!.elenco.push(j); if (L.igl === j.id) L.igl = undefined;
       L.moral = clamp((L.moral ?? 0) - 0.1, -3, 3);
       return { texto: `${j.nick} desceu para a academy: vai jogar e recuperar a forma lá.`, tom: 'neutro' };
+    }
+    case 'foco': L.foco35 = o.foco === 'equilibrado' ? undefined : o.foco; return { texto: `Foco do treino: ${foco35(o.foco).nome.toLowerCase()}.`, tom: 'neutro' };
+    case 'scrims': {
+      const sc = SCRIMS35[o.nivel - 1]; const c = arred(sc.custo * mult);
+      org.caixa -= c; L.scrims35 = { ano, nivel: o.nivel };
+      return { texto: `${sc.nome}: +${sc.forca} de força nesta temporada (${fmt(c)}).`, tom: 'bom' };
+    }
+    case 'staff': { L.staff35 = o.nivel || undefined; return { texto: `${STAFF35[o.nivel].nome}${o.nivel ? ` (${fmt(arred(STAFF35[o.nivel].salario * mult))} por ano)` : ''}.`, tom: 'neutro' }; }
+    case 'retiro': {
+      const c = arred(CUSTO_RETIRO35 * mult);
+      org.caixa -= c; L.retiro35 = ano; L.moral = clamp(Math.round(((L.moral ?? 0) + 0.8) * 10) / 10, -3, 3);
+      escrever(v, { texto: `A line de ${JOGOS25[L.jogo].nome(ano)} da ${org.nome} passou uns dias fora, sem computador: conversa, trilha, churrasco.`, relevancia: 'cotidiano', tema: 'trabalho', escolha: true });
+      return { texto: 'Retiro feito: o clima melhorou.', tom: 'bom' };
+    }
+    case 'corte': {
+      const antes = L.elenco.reduce((s2, j) => s2 + j.salario, 0);
+      for (const j of L.elenco) j.salario = arred(j.salario * 0.85, 1000);
+      L.corte35 = ano; L.moral = clamp(Math.round(((L.moral ?? 0) - 1) * 10) / 10, -3, 3);
+      return { texto: `Salários cortados em 15%: ${fmt(antes - L.elenco.reduce((s2, j) => s2 + j.salario, 0))} a menos por ano. O vestiário não gostou.`, tom: 'ruim' };
+    }
+    case 'peneira_aberta': {
+      const c = arred(CUSTO_PENEIRA35 * mult);
+      org.caixa -= c; L.peneira35 = ano;
+      const r = rngDe(v.id, 'org35_peneira', org.nome, L.jogo, ano);
+      const fs = funcoesDoJogo(L.jogo);
+      const media = mediaDosTitulares31(L, ano);
+      const novos: JogadorOrg31[] = [];
+      for (let k = 0; k < 2; k++) {
+        const j = novoJogador(org, L, r, ano, r.pick(fs), media - 13 + r.normal() * 4, jogo(L.jogo).idadePro - 1 + r.int(0, 2));
+        j.potencial = clamp(Math.round(j.forca + 10 + Math.max(0, r.normal()) * 10), j.forca, r.chance(0.08) ? 94 : 88); j.daAcademia = true; j.salario = Math.round(j.salario * 0.25);
+        novos.push(j);
+      }
+      L.academia = [...L.academia, ...novos].sort((a, b) => b.potencial - a.potencial).slice(0, 6);
+      return { texto: `Peneira aberta: ${novos.map(j => `${j.nick} (potencial ${j.potencial})`).join(' e ')} entraram na peneira de talentos.`, tom: 'bom' };
+    }
+    case 'torneio': {
+      const t = TORNEIOS35[o.tipo];
+      const c = arred(t.inscricao * mult);
+      const r = rngDe(v.id, 'org35_torneio', org.nome, L.jogo, ano, o.tipo);
+      const col = colocacao(r, forcaDoTime31(org, L, ano), forcaDoCampo31(L.jogo, L.divisao, L.regiao) + t.campo, t.equipes);
+      const premio = arred(t.premio * mult * fatia(col, t.equipes));
+      const nome = `${t.nome} ${JOGOS25[L.jogo].nome(ano)} ${ano}`;
+      org.caixa += premio - c;
+      L.torneios35 = [...(L.torneios35 ?? []), { ano, tipo: o.tipo, nome, colocacao: col, participantes: t.equipes, premio }].slice(-20);
+      if (col === 1) { L.trofeus.push({ ano, nome, tipo: 'liga' }); org.fas = clamp(org.fas + (o.tipo === 'convite' ? 4 : 2)); org.reputacao = clamp(org.reputacao + (o.tipo === 'convite' ? 3 : 1)); }
+      else if (col <= 4) org.fas = clamp(org.fas + 1);
+      escrever(v, { texto: `A line de ${JOGOS25[L.jogo].nome(ano)} da ${org.nome} jogou o ${nome}: ${col === 1 ? 'campeã!' : `${col}º de ${t.equipes}`}${premio ? ` (${fmt(premio)} em prêmio)` : ''}.`, relevancia: col === 1 ? 'marco' : 'cotidiano', tema: 'trabalho', tom: col === 1 ? 'bom' : undefined, escolha: true });
+      return { texto: col === 1 ? `Campeã do ${t.nome}!` : `${col}º lugar no ${t.nome}.`, tom: col <= 3 ? 'bom' : 'neutro' };
     }
     case 'emprestar': {
       const i = L.elenco.findIndex(j => j.id === o.id); const j = L.elenco.splice(i, 1)[0];
@@ -1228,7 +1363,9 @@ function temporadaDaLinha(v: Vida, o: OrgEsports31, L: LinhaOrg33, ano: number):
   // 3. O dinheiro da line (o da organização — patrocínios, loja, conteúdo, dívida — fecha junto, em `processarOrg31`).
   const receita = arred(receitaBase31(L.divisao, o.fas, o.reputacao, mult) + premio);
   const folha = L.elenco.reduce((s, j) => s + j.salario, 0) + L.academia.reduce((s, j) => s + j.salario, 0) + (L.academy35?.elenco.reduce((s, j) => s + j.salario, 0) ?? 0);
-  const despesa = arred(folha + (L.tecnico?.salario ?? 0) + OPERACAO[L.divisao] * mult + receita * 0.3 + [0, 60e3, 200e3][L.academiaNivel] * mult + (L.academy35 ? OPERACAO[2] * 0.5 * mult : 0));
+  const bicho = o.bicho35 && posicao === 1 ? arred(L.elenco.reduce((s2, j) => s2 + j.salario, 0) * 0.15) : 0;
+  const despesa = arred(folha + (L.tecnico?.salario ?? 0) + OPERACAO[L.divisao] * mult + receita * 0.3 + [0, 60e3, 200e3][L.academiaNivel] * mult + (L.academy35 ? OPERACAO[2] * 0.5 * mult : 0)
+    + STAFF35[L.staff35 ?? 0].salario * mult + bicho);
   // VIDA 35: a temporada da academy (uma divisão abaixo da principal, no máximo a segunda).
   temporadaDaAcademy35(v, o, L, ano);
   // 4. A história e os troféus.
@@ -1259,10 +1396,10 @@ function temporadaDaLinha(v: Vida, o: OrgEsports31, L: LinhaOrg33, ano: number):
   const novoAno = ano + 1;
   const evoluir = (j: JogadorOrg31) => {
     const i = novoAno - anoDe(j.tNasc);
-    const ajuda = 0.15 + (L.tecnico?.nivel ?? 1) * 0.02 + (L.bootcamp === ano ? 0.04 : 0) - (o.conteudo === 2 ? 0.04 : 0);
+    const ajuda = 0.15 + (L.tecnico?.nivel ?? 1) * 0.02 + (L.bootcamp === ano ? 0.04 : 0) - (o.conteudo === 2 ? 0.04 : 0) + foco35(L.foco35).evolucao;
     if (i <= g.auge) j.forca = clamp(Math.round(j.forca + Math.max(0, (j.potencial - j.forca) * (ajuda + extra)) + r.normal() * 1.5), 20, j.potencial);
     else if (i <= g.auge + 4) j.forca = clamp(Math.round(j.forca + r.normal() * 1.2), 20, 97);
-    else j.forca = clamp(Math.round(j.forca - (i - g.auge - 4) * 0.9 * (o.casa35?.includes('fisio') ? 0.7 : 1) + r.normal()), 20, 97);
+    else j.forca = clamp(Math.round(j.forca - (i - g.auge - 4) * 0.9 * (o.casa35?.includes('fisio') ? 0.7 : 1) * (L.foco35 === 'leve' ? 0.8 : 1) + r.normal()), 20, 97);
     if (j.forca > j.potencial) j.potencial = j.forca;
   };
   let extra = 0;
@@ -1298,7 +1435,7 @@ function temporadaDaLinha(v: Vida, o: OrgEsports31, L: LinhaOrg33, ano: number):
   }
   if (L.moral) L.moral = Math.round(L.moral * 5) / 10;
   // VIDA 35: o equipamento e a casa no clima da line; o psicólogo segura o clima ruim.
-  const clima = climaDoSetup35(L.setup35, novoAno) + (o.casa35?.includes('academia') ? 0.1 : 0) + (o.casa35?.includes('quartos') ? 0.1 : 0);
+  const clima = climaDoSetup35(L.setup35, novoAno) + (o.casa35?.includes('academia') ? 0.1 : 0) + (o.casa35?.includes('quartos') ? 0.1 : 0) + foco35(L.foco35).clima + (o.bicho35 ? 0.3 : 0);
   if (clima) L.moral = clamp(Math.round(((L.moral ?? 0) + clima) * 10) / 10, -3, 3);
   if (o.casa35?.includes('psicologo') && (L.moral ?? 0) < 0) L.moral = Math.round((L.moral ?? 0) * 5) / 10;
   return { receita, despesa, titulo, subiu, caiu, topo: posicao <= 3, internacional: internacionais.length > 0, campeaoMundial };
@@ -1317,15 +1454,19 @@ export function processarOrg31(v: Vida): void {
   const resumo = { titulo: res.some(x => x.titulo), subiu: res.some(x => x.subiu), caiu: res.some(x => x.caiu), topo: res.some(x => x.topo), internacional: res.some(x => x.internacional) };
   const dono = fecharAnoDono33(ctxAno, contextoOrg33(v, ano + 1), o, resumo, r);
   const estudio = o.casa35?.includes('estudio') ? arred(80e3 * multMedio(o) * (0.5 + o.fas / 100)) : 0;
-  const receita = res.reduce((s, x) => s + x.receita, 0) + receitaConteudo(o) + dono.receita + estudio;
-  const despesa = res.reduce((s, x) => s + x.despesa, 0) + dono.despesa + o.divida * 0.12 + manutencaoDaCasa35(o.casa35, multMedio(o));
+  // VIDA 35.1: os criadores de conteúdo — salário de um lado, audiência e receita do outro.
+  const criadores = o.criadores35 ?? [];
+  const recCriadores = arred(criadores.reduce((s2, c) => s2 + c.salario * 1.25 * (0.5 + o.fas / 100), 0));
+  const salCriadores = criadores.reduce((s2, c) => s2 + c.salario, 0);
+  const receita = res.reduce((s, x) => s + x.receita, 0) + receitaConteudo(o) + dono.receita + estudio + recCriadores;
+  const despesa = res.reduce((s, x) => s + x.despesa, 0) + dono.despesa + o.divida * 0.12 + manutencaoDaCasa35(o.casa35, multMedio(o)) + salCriadores;
   o.caixa += receita - despesa;
   if (o.caixa < 0) { o.divida += -o.caixa; o.caixa = 0; }
   else if (o.divida > 0 && o.caixa > receita * 0.2) { const a = Math.min(o.divida, Math.round((o.caixa - receita * 0.2) * 0.5)); o.divida -= a; o.caixa -= a; }
   for (const t of dono.textos) escrever(v, { texto: `${o.nome}: ${t}`, relevancia: 'cotidiano', tema: 'dinheiro' });
   // Os fãs e o nome: a melhor line puxa; cada jogo a mais soma um pouco de público.
   const alvoFas = Math.max(...o.linhas.map(l => [0, 0, 12, 30, 58][l.divisao])) + (resumo.titulo ? 8 : 0) + (resumo.internacional ? 10 : 0) + o.conteudo * 4 + (o.linhas.length - 1) * 3;
-  o.fas = clamp(Math.round(o.fas * 0.8 + alvoFas * 0.2 + (estudio ? 2 : 0) + (resumo.subiu ? 4 : 0) - (resumo.caiu ? 5 : 0) + (res.some(x => x.campeaoMundial) ? 10 : 0)));
+  o.fas = clamp(Math.round(o.fas * 0.8 + alvoFas * 0.2 + (estudio ? 2 : 0) + criadores.reduce((s2, c) => s2 + c.fas / 15, 0) + (resumo.subiu ? 4 : 0) - (resumo.caiu ? 5 : 0) + (res.some(x => x.campeaoMundial) ? 10 : 0)));
   const delta = res.reduce((s, x) => s + (x.titulo ? 6 : 0) + (x.subiu ? 5 : 0) - (x.caiu ? 7 : 0) + (x.internacional ? (x.campeaoMundial ? 15 : 4) : 0) + (x.topo ? 1 : -0.5), 0);
   o.reputacao = clamp(Math.round(o.reputacao + dono.rep + delta / Math.sqrt(res.length)));
   atualizarValor(o, ano + 1);

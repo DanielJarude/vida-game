@@ -1,7 +1,7 @@
 /**
  * VIDA 34 · OS DESENHOS DAS INSTALAÇÕES — vistos de cima, no tamanho que o time tem: o estádio (arquibancadas que
  * crescem do alambrado ao estádio fechado, cadeiras, cobertura, refletores, telão, o gramado cortado), o CT, a base, o
- * ginásio (com as linhas da modalidade) e a gaming house (as salas, os PCs de cada line, o estúdio, os troféus).
+ * ginásio (com as linhas da modalidade). A gaming house usa a cena dos cômodos da casa (VIDA 35.1: `ui/v35/casa`).
  */
 import type { Instalacoes34 } from '../../../motor/v33/dono/instalacoes34';
 
@@ -173,89 +173,6 @@ export function Ginasio34({ nivel, modalidade, i, c, sigla, nome }: { nivel: num
       </g>}
       <text x={x + w / 2} y={y + h / 2 + (modalidade === 'volei' ? 30 : 4)} textAnchor="middle" fontSize="10" fontWeight="800" fill="#ffffff" opacity="0.65" fontFamily="system-ui, sans-serif">{sigla}</text>
       {(i.telao ?? n >= 3) && <g><rect x={x + w / 2 - 22} y="6" width="44" height="18" rx="2" fill="#111827" /><text x={x + w / 2} y="19" textAnchor="middle" fontSize="9" fill="#fbbf24" fontFamily="ui-monospace, monospace">{sigla} 00</text></g>}
-    </svg>
-  );
-}
-
-/** A gaming house: a sala de treino (um PC por jogador de cada line, no arranjo escolhido), os cômodos que a casa tem
- *  (estúdio, criadores, análise, academia, cozinha com chef, psicólogo, fisioterapia, quartos, troféus, lounge). */
-export interface Estacao34 { pc: number; monitor: number; perifericos: number; cadeira: number; rgb?: string }
-type Sala = { nome: string; fundo: string; tinta: string; icone?: 'mesa' | 'peso' | 'panela' | 'cama' | 'taca' | 'cam' | 'tela' | 'sofa' | 'cruz' | 'conversa' };
-const PISO_CASA: Record<string, string> = { madeira: '#d8b98a', escura: '#8a5c31', azul: '#5b7fb8' };
-export function GamingHouse34({ pcs, conteudo, trofeus, comodos = [], setups = [], i, c, sigla, nome }: { nivel: number; pcs: number; conteudo: number; trofeus: number; comodos?: string[]; setups?: (Estacao34 | undefined)[]; i: Instalacoes34; c: Cores34; sigla: string; nome: string }) {
-  const estilo = i.estilo ?? 'loft';
-  const st = setups.filter((x): x is Estacao34 => !!x);
-  const mon = st.length ? st.reduce((a, x) => a + x.monitor, 0) / st.length : 0;
-  const luz = i.luz ?? st.find(x => x.rgb)?.rgb ?? c.cor2;
-  const chao = i.piso === 'cores' ? c.cor2 : i.piso ? PISO_CASA[i.piso] : estilo === 'escritorio' ? '#cfd4da' : estilo === 'casa' ? '#d8c3a0' : '#b8afa6';
-  const parede = i.parede === 'grafite' ? '#27272a' : i.parede === 'branca' ? '#d4d4d8' : i.parede === 'tijolo' ? '#a6533a' : i.parede === 'time' ? c.cor1 : estilo === 'escritorio' ? '#8fc3dd' : '#3f3f46';
-  const layout = i.layout ?? 'fileiras';
-  const n = Math.min(pcs, 18);
-  const mw = 14 + mon * 2.5;
-  const pos: [number, number, number][] = []; // x, y, rotação
-  if (layout === 'fileiras') for (let k = 0; k < n; k++) pos.push([22 + (k % 6) * 26, 30 + Math.floor(k / 6) * 30, 0]);
-  else if (layout === 'ilha') for (let k = 0; k < n; k++) { const g = Math.floor(k / 6), m = k % 6; pos.push([24 + (m % 3) * 24 + (g % 2) * 82, 34 + (m < 3 ? 0 : 26) + Math.floor(g / 2) * 46, m < 3 ? 0 : 180]); }
-  else for (let k = 0; k < n; k++) { const t = n === 1 ? 0.5 : k / (n - 1); const ang = Math.PI * (0.15 + 0.7 * t); pos.push([96 + Math.cos(ang) * 64 - 11, 100 - Math.sin(ang) * 62, 0]); }
-  const mesas = pos.map(([x, y, rot], k) => (
-    <g key={k} transform={rot ? `rotate(180 ${x + 11} ${y + 8})` : undefined}>
-      <rect x={x} y={y} width="22" height="9" fill="#1f2937" />
-      <rect x={x + 11 - mw / 2} y={y + 1} width={mw} height="3" fill={luz} />
-      <circle cx={x + 11} cy={y + 16} r="4.5" fill={c.cor1} stroke="#111" strokeWidth="0.6" />
-    </g>
-  ));
-  // As salas que a casa tem, por ordem de importância (as que não cabem no desenho ficam de fora).
-  const salas: Sala[] = [];
-  if (i.mural ?? true) salas.push({ nome: sigla, fundo: c.cor1, tinta: claro(c.cor1) ? '#111' : '#fff' });
-  if (conteudo >= 1 || comodos.includes('estudio')) salas.push({ nome: comodos.includes('estudio') ? 'estúdio pro' : 'estúdio', fundo: '#1f2937', tinta: '#e5e7eb', icone: 'cam' });
-  if (conteudo >= 2) salas.push({ nome: 'criadores', fundo: '#312e81', tinta: '#e0e7ff', icone: 'cam' });
-  if (comodos.includes('analise')) salas.push({ nome: 'análise', fundo: '#0f172a', tinta: '#e2e8f0', icone: 'tela' });
-  if (comodos.includes('academia')) salas.push({ nome: 'academia', fundo: '#e5e7eb', tinta: '#111827', icone: 'peso' });
-  salas.push({ nome: comodos.includes('chef') ? 'cozinha · chef' : 'cozinha', fundo: '#f3f4f6', tinta: '#374151', icone: 'panela' });
-  if (comodos.includes('psicologo')) salas.push({ nome: 'psicólogo', fundo: '#ecfdf5', tinta: '#065f46', icone: 'conversa' });
-  if (comodos.includes('fisio')) salas.push({ nome: 'fisioterapia', fundo: '#eff6ff', tinta: '#1e3a8a', icone: 'cruz' });
-  if (estilo !== 'escritorio' || comodos.includes('quartos')) salas.push({ nome: comodos.includes('quartos') ? 'quartos individuais' : 'quartos', fundo: '#ede9fe', tinta: '#4c1d95', icone: 'cama' });
-  salas.push({ nome: `troféus · ${trofeus}`, fundo: '#fef3c7', tinta: '#78350f', icone: 'taca' });
-  if (i.sofa ?? true) salas.push({ nome: 'lounge', fundo: '#e5e7eb', tinta: '#374151', icone: 'sofa' });
-  const slots: [number, number, number, number][] = [[182, 18, 60, 50], [246, 18, 60, 50], [182, 70, 60, 50], [246, 70, 60, 50], [14, 124, 56, 72], [73, 124, 56, 72], [132, 124, 56, 72], [191, 124, 56, 72], [250, 124, 56, 72]];
-  const largura = estilo === 'casa' ? 250 : 300;
-  const visiveis = slots.filter(([x, , w]) => x + w <= largura + 10).slice(0, salas.length);
-  const icone = (t: Sala['icone'], x: number, y: number, cor: string) => {
-    switch (t) {
-      case 'peso': return <g stroke={cor} strokeWidth="2.5"><path d={`M${x - 9} ${y} h18`} /><path d={`M${x - 9} ${y - 5} v10 M${x + 9} ${y - 5} v10`} /></g>;
-      case 'panela': return <g fill="none" stroke={cor} strokeWidth="1.6"><path d={`M${x - 8} ${y - 2} h16 v6 a4 4 0 0 1 -4 4 h-8 a4 4 0 0 1 -4 -4z`} /><path d={`M${x - 11} ${y - 1} h3 M${x + 8} ${y - 1} h3`} /></g>;
-      case 'cama': return <g fill={cor} opacity="0.7"><rect x={x - 10} y={y - 6} width="20" height="12" rx="2" /><rect x={x - 9} y={y - 5} width="6" height="4" fill="#fff" /></g>;
-      case 'taca': return Array.from({ length: Math.min(5, Math.max(1, Math.ceil(trofeus / 2))) }, (_, k) => <path key={k} d={`M${x - 16 + k * 8} ${y - 6} h6 v3 a3 3 0 0 1 -6 0z M${x - 14 + k * 8} ${y} h2 v4 h-2z`} fill={trofeus ? '#e0b13a' : '#d1d5db'} />);
-      case 'cam': return <g><circle cx={x} cy={y} r="6" fill="#ef4444" /><rect x={x - 12} y={y - 12} width="24" height="6" fill={luz} opacity="0.7" /></g>;
-      case 'tela': return <g><rect x={x - 14} y={y - 8} width="28" height="14" fill={luz} opacity="0.6" /><path d={`M${x - 10} ${y + 3} l6 -6 5 4 8 -8`} stroke="#fff" fill="none" /></g>;
-      case 'sofa': return <g fill={c.cor1} opacity="0.85"><rect x={x - 14} y={y - 4} width="28" height="9" rx="3" /><rect x={x - 14} y={y - 9} width="28" height="5" rx="2" /></g>;
-      case 'cruz': return <path d={`M${x - 3} ${y - 9} h6 v6 h6 v6 h-6 v6 h-6 v-6 h-6 v-6 h6z`} fill="#3b82f6" />;
-      case 'conversa': return <g fill="none" stroke={cor} strokeWidth="1.6"><circle cx={x - 6} cy={y} r="5" /><circle cx={x + 6} cy={y} r="5" /></g>;
-      default: return null;
-    }
-  };
-  return (
-    <svg viewBox="0 0 320 210" className="inst34__svg" role="img" aria-label={`${nome}: gaming house com ${pcs} PCs de treino${salas.length > 2 ? `, ${salas.slice(1).map(x => x.nome.replace(/ · \d+$/, '')).join(', ')}` : ''}`}>
-      <rect width="320" height="210" fill={estilo === 'casa' ? '#9cc58e' : '#d1d5db'} />
-      {estilo === 'casa' && <g><rect x="266" y="20" width="44" height="90" rx="8" fill="#6cc3e8" stroke="#fff" strokeWidth="2" /><text x="288" y="125" textAnchor="middle" fontSize="7" fill="#1f2937" fontFamily="system-ui, sans-serif">piscina</text><circle cx="280" cy="160" r="9" fill="#4d7c3f" /><circle cx="300" cy="185" r="7" fill="#4d7c3f" /></g>}
-      <rect x="10" y="14" width={largura} height="186" fill={chao} stroke={parede} strokeWidth={estilo === 'escritorio' ? 3 : 5} />
-      <rect x="14" y="18" width="164" height="102" fill={chao} stroke={parede} strokeWidth="2" />
-      <rect x="14" y="18" width="164" height="102" fill={luz} opacity="0.1" />
-      {layout === 'arena' && <rect x="66" y="104" width="60" height="10" fill="#111827" stroke={luz} />}
-      {(i.neon ?? false) && <text x="96" y="27" textAnchor="middle" fontSize="8" fontWeight="800" fill={luz} stroke={luz} strokeWidth="0.3" fontFamily="system-ui, sans-serif" letterSpacing="2" opacity="0.95">{sigla}</text>}
-      {mesas}
-      {(i.plantas ?? false) && [[20, 112], [170, 112], [20, 24], [170, 24]].map(([x, y], k) => <circle key={k} cx={x} cy={y} r="4.5" fill="#3f7d3a" stroke="#285224" />)}
-      <text x="96" y={layout === 'arena' ? 102 : 114} textAnchor="middle" fontSize="7.5" fill="#374151" fontFamily="system-ui, sans-serif">sala de treino · {pcs} PCs</text>
-      {visiveis.map(([x, y, w, h], k) => {
-        const sl = salas[k];
-        const ehMural = k === 0 && (i.mural ?? true);
-        return (
-          <g key={k}>
-            <rect x={x} y={y} width={w} height={h} fill={sl.fundo} stroke={parede} strokeWidth="2" />
-            {ehMural ? <text x={x + w / 2} y={y + h / 2 + 5} textAnchor="middle" fontSize="13" fontWeight="800" fill={sl.tinta} fontFamily="system-ui, sans-serif">{sl.nome}</text>
-              : <>{icone(sl.icone, x + w / 2, y + h / 2 - 4, sl.tinta)}<text x={x + w / 2} y={y + h - 5} textAnchor="middle" fontSize="6.5" fill={sl.tinta} fontFamily="system-ui, sans-serif">{sl.nome}</text></>}
-          </g>
-        );
-      })}
     </svg>
   );
 }
