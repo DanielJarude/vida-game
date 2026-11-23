@@ -57,3 +57,17 @@ describe('VIDA 36 · família: cada familiar reage pelo seu temperamento', () =>
     expect(texto).not.toMatch(/\{/);
   });
 });
+
+import { reagiuConflito } from '../sistemas/conflitos';
+
+describe('VIDA 36 · conflitos: a reação de quem discorda depende do tom dela', () => {
+  const base = Object.values(nova({ semente: 37 }).pessoas)[0] as Pessoa;
+  const com = (t: Partial<Pessoa['temperamento']>): Pessoa => ({ ...base, nome: 'Rui', temperamento: { ...base.temperamento, extroversao: 0, afabilidade: 0, abertura: 0, estabilidade: 0, ...t } });
+  const ctx = (p: Pessoa) => ({ p } as unknown as Parameters<typeof reagiuConflito>[0]);
+  it('o expansivo e o tímido reagem de forma diferente, e o nome aparece', () => {
+    const colher = (p: Pessoa) => { const s = new Set<string>(); for (let k = 0; k < 30; k++) s.add(reagiuConflito(ctx(p), criarRng(k + 7))); return s; };
+    const a = colher(com({ extroversao: 0.7 })), b = colher(com({ extroversao: -0.6 }));
+    for (const x of a) expect(b.has(x)).toBe(false);
+    for (const x of a) { expect(x).toMatch(/Rui/); expect(x).not.toMatch(/\{/); }
+  });
+});

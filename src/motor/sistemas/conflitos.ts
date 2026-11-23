@@ -20,6 +20,23 @@ import { bloqueio, PERMITIDO } from '../plausibilidade';
 import { flex, comPreposicao } from '../texto';
 import type { CtxI, Interacao, Saida } from './interacoes';
 import { assuntoDaDiscussao, desculpar, discutir, ehAmizade, estadoDaRelacao, reconciliar, romper, type DesfechoDaDiscussao } from './lacos';
+import { tomDaPessoa, type TomDaPessoa } from './conversas';
+
+/* VIDA 36 · Frente 1 (conflitos): a reação de quem discorda depende do tom dela (o temperamento real), não de uma frase só. */
+const TOM_CONFLITO: Record<TomDaPessoa, { abre: string[]; corpo: string[] }> = {
+  timido: { abre: ['{n} ficou em silêncio, com o rosto vermelho.', '{n} baixou os olhos e engoliu a resposta.'], corpo: ['e só disse que precisava pensar', 'e deixou o assunto morrer sem concordar'] },
+  desconfiado: { abre: ['{n} cruzou os braços.', '{n} rebateu com ironia.'], corpo: ['e perguntou quem tinha dito isso a você', 'e lembrou de outra vez em que você tinha faltado'] },
+  afetuoso: { abre: ['{n} segurou sua mão antes de responder.', '{n} sentiu de verdade.'], corpo: ['e disse que não queria perder a relação por causa disso', 'e pediu para conversarem sem pressa'] },
+  expansivo: { abre: ['{n} levantou a voz, animad{o} com a discussão.', '{n} respondeu na hora, sem pensar duas vezes.'], corpo: ['e chamou a atenção de todo mundo', 'e foi direto ao ponto, sem rodeios'] },
+  brincalhao: { abre: ['{n} tentou fazer piada para aliviar.', '{n} riu e devolveu a provocação.'], corpo: ['e disse que a briga não valia o tempo', 'e prometeu cobrar a conta depois'] },
+  serio: { abre: ['{n} ouviu sem interromper.', '{n} ficou sério, medindo as palavras.'], corpo: ['e respondeu com argumentos, um por um', 'e disse que ia pensar no que você falou'] },
+  neutro: { abre: ['{n} respondeu com calma.', '{n} não gostou, mas ouviu.'], corpo: ['e explicou o lado dele', 'e pediu um tempo para conversar depois'] }
+};
+export const reagiuConflito = (c: CtxI, r: Rng): string => {
+  const t = TOM_CONFLITO[tomDaPessoa(c.p)];
+  const sub2 = (x: string) => x.replace(/\{n\}/g, c.p.nome).replace(/\{o\}/g, c.p.genero === 'feminino' ? 'a' : 'o');
+  return `${sub2(t.abre[Math.floor(r.next() * t.abre.length)])} ${sub2(t.corpo[Math.floor(r.next() * t.corpo.length)])}.`;
+};
 
 const ele = (c: CtxI) => flex(c.p.genero, 'ele', 'ela', 'elu');
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -35,7 +52,7 @@ const intervalo = (c: CtxI, chave: string, meses: number, motivo: string) => {
 const marcar = (c: CtxI, chave: string) => { c.v.fatos[`${chave}_${c.p.id}`] = c.v.t; };
 
 /** O desfecho de uma discussão, em palavras de gente (e, quando marca, na Linha da Vida). */
-function contar(c: CtxI, d: DesfechoDaDiscussao, assunto: string, cobrou: boolean): Saida {
+function contar(c: CtxI, d: DesfechoDaDiscussao, assunto: string, cobrou: boolean, r: Rng): Saida {
   const tema = c.vin.parentesco ? 'familia' : c.vin.romance ? 'amor' : 'amizade';
   if (d === 'ruptura' || d === 'briga') {
     escrever(c.v, { texto: d === 'ruptura' ? `Brigou feio com ${c.p.nome} por causa ${comPreposicao('de', assunto)}. A amizade acabou ali.` : `Brigou com ${c.p.nome} por causa ${comPreposicao('de', assunto)}.`, relevancia: d === 'ruptura' ? 'biografia' : 'cotidiano', tema, tom: 'ruim', escolha: true, pessoas: [c.p.id] });
@@ -47,7 +64,8 @@ function contar(c: CtxI, d: DesfechoDaDiscussao, assunto: string, cobrou: boolea
       : d === 'briga'
         ? `A conversa virou briga. ${c.p.nome} levantou a voz, você também. Cada um saiu com a sua razão.`
         : `A briga foi longe demais. ${c.p.nome} disse que não dá mais — e foi embora.`;
-  return { resultado, aviso: { texto: d === 'resolveu' ? 'Resolveram' : d === 'desconforto' ? 'Ficou dito' : d === 'briga' ? 'Brigaram' : 'Romperam', tom: d === 'resolveu' ? 'bom' : d === 'desconforto' ? 'neutro' : 'ruim' } };
+  // VIDA 36: a reação de quem ouviu vem antes do desfecho (o tom dela, não um texto só).
+  return { resultado: `${reagiuConflito(c, r)} ${resultado}`, aviso: { texto: d === 'resolveu' ? 'Resolveram' : d === 'desconforto' ? 'Ficou dito' : d === 'briga' ? 'Brigaram' : 'Romperam', tom: d === 'resolveu' ? 'bom' : d === 'desconforto' ? 'neutro' : 'ruim' } };
 }
 
 export const INTERACOES_DE_CONFLITO: Interacao[] = [
@@ -60,7 +78,7 @@ export const INTERACOES_DE_CONFLITO: Interacao[] = [
     executar: (c, r) => {
       const assunto = assuntoDaDiscussao(c.v, c.vin, r);
       marcar(c, 'discutiu');
-      return contar(c, discutir(c.v, r, c.p, c.vin, 1, assunto), assunto, false);
+      return contar(c, discutir(c.v, r, c.p, c.vin, 1, assunto), assunto, false, r);
     }
   },
   {
@@ -73,7 +91,7 @@ export const INTERACOES_DE_CONFLITO: Interacao[] = [
     executar: (c, r) => {
       const assunto = c.vin.conflito?.assunto ?? assuntoDaDiscussao(c.v, c.vin, r);
       marcar(c, 'discutiu');
-      return contar(c, discutir(c.v, r, c.p, c.vin, 2, assunto), assunto, true);
+      return contar(c, discutir(c.v, r, c.p, c.vin, 2, assunto), assunto, true, r);
     }
   },
   {
@@ -88,7 +106,7 @@ export const INTERACOES_DE_CONFLITO: Interacao[] = [
         return { resultado: `${c.p.nome} respondeu, educad${flex(c.p.genero, 'o', 'a', 'e')}, que ainda não está pront${flex(c.p.genero, 'o', 'a', 'e')}. A porta não fechou — só não abriu.`, aviso: { texto: 'Ainda não', tom: 'neutro' } };
       }
       escrever(c.v, { texto: `Fez as pazes com ${c.p.nome}.`, relevancia: 'biografia', tema: c.vin.parentesco ? 'familia' : 'amizade', tom: 'bom', escolha: true, pessoas: [c.p.id], evento: { tipo: 'reconciliacao', pessoaId: c.p.id, peso: 30 } });
-      return { resultado: `Vocês se encontraram. Nas primeiras frases, um cuidado de vidro; depois, a risada antiga voltou. Não é como antes — é outra coisa, com o antes dentro.`, aviso: { texto: 'Fizeram as pazes', tom: 'bom' } };
+      return { resultado: `${reagiuConflito(c, r)} Nas primeiras frases, um cuidado de vidro; depois, a risada antiga voltou. Não é como antes — é outra coisa, com o antes dentro.`, aviso: { texto: 'Fizeram as pazes', tom: 'bom' } };
     }
   },
   {
