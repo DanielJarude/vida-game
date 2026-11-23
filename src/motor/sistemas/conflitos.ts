@@ -68,6 +68,28 @@ function contar(c: CtxI, d: DesfechoDaDiscussao, assunto: string, cobrou: boolea
   return { resultado: `${reagiuConflito(c, r)} ${resultado}`, aviso: { texto: d === 'resolveu' ? 'Resolveram' : d === 'desconforto' ? 'Ficou dito' : d === 'briga' ? 'Brigaram' : 'Romperam', tom: d === 'resolveu' ? 'bom' : d === 'desconforto' ? 'neutro' : 'ruim' } };
 }
 
+
+/* VIDA 36 · Frente 1: provocar e encerrar a amizade têm a reação do tom da pessoa (não duas frases para todos). */
+export const PROVOCA: Record<TomDaPessoa, { devolve: string[]; ignora: string[] }> = {
+  timido: { devolve: ['{n} respondeu baixinho, mas respondeu, e todo mundo ouviu.', '{n} devolveu com um riso sem graça.'], ignora: ['{n} fingiu não ouvir e foi embora da sala.', '{n} ficou vermelho e não olhou mais para você.'] },
+  desconfiado: { devolve: ['{n} devolveu com ironia afiada, medindo a sua reação.', '"Vai ficar nisso mesmo?", respondeu {n}, seco.'], ignora: ['{n} não deu o gosto de responder, e anotou mentalmente.', '{n} ignorou, mas nunca mais esqueceu.'] },
+  afetuoso: { devolve: ['{n} riu e devolveu leve, sem querer briga de verdade.', '{n} respondeu com uma provocação carinhosa.'], ignora: ['{n} não entrou na brincadeira e perguntou se estava tudo bem.', '{n} deixou passar, com um olhar que pedia trégua.'] },
+  expansivo: { devolve: ['{n} devolveu na hora, em voz alta, e a sala inteira riu.', '{n} aumentou a provocação e pediu plateia.'], ignora: ['{n} fingiu desinteresse, mas não parou de olhar para você.', '{n} saiu do assunto e tentou animar outra roda.'] },
+  brincalhao: { devolve: ['{n} devolveu com uma piada melhor que a sua.', '{n} respondeu rindo e desafiou você para a revanche.'], ignora: ['{n} sorriu e disse que aquela você não ganhava.', '{n} fingiu que não tinha ouvido, de propósito.'] },
+  serio: { devolve: ['{n} respondeu com um argumento, sem nenhum sorriso.', '"Não vou entrar nessa", disse {n}, e voltou ao assunto.'], ignora: ['{n} não respondeu, e a provocação morreu sozinha.', '{n} ficou em silêncio e foi cuidar do que importava.'] },
+  neutro: { devolve: ['{n} devolveu, sem muito entusiasmo.', '{n} respondeu, e a conversa seguiu.'], ignora: ['{n} não respondeu.', '{n} mudou de assunto.'] }
+};
+export const ENCERRA: Record<TomDaPessoa, { magoou: string[]; aceitou: string[] }> = {
+  timido: { magoou: ['{n} não disse nada e foi embora sem olhar para trás.', '{n} ficou calad{o} por um bom tempo, e depois pediu desculpas por algo que não fez.'], aceitou: ['{n} disse "tudo bem" baixinho, sem discutir.', '{n} concordou em silêncio e se despediu.'] },
+  desconfiado: { magoou: ['{n} perguntou o que você ganhava com aquilo.', '"Eu já esperava", disse {n}, com um sorriso amargo.'], aceitou: ['"Se é assim, tá bom", disse {n}, sem surpresa.', '{n} disse que já tinha percebido.'] },
+  afetuoso: { magoou: ['{n} chorou e pediu para pensarem juntos antes de decidir.', '{n} disse que não entendia, e perguntou o que tinha feito de errado.'], aceitou: ['{n} disse que ia sentir falta, e te deixou ir.', '{n} aceitou com tristeza e um abraço longo.'] },
+  expansivo: { magoou: ['{n} gritou que você estava sendo injusto e saiu batendo a porta.', '{n} contou para todo mundo, aos berros, o que tinha acontecido.'], aceitou: ['{n} deu de ombros e disse que outro amigo aparece.', '"Tudo bem, então", disse {n}, já procurando outra roda.'] },
+  brincalhao: { magoou: ['{n} tentou rir, mas a piada não saiu.', '{n} disse que não acreditava, e esperou você desmentir.'], aceitou: ['{n} brincou que ia cobrar a amizade depois.', '"Ok, mas não me esquece", riu {n}.'] },
+  serio: { magoou: ['{n} disse que lamentava, e que a decisão era sua.', '{n} ouviu tudo e anotou, em tom calmo, as razões que você deu.'], aceitou: ['{n} disse que respeitava a decisão, sem mais.', '"Entendo", disse {n}, e se despediu com educação.'] },
+  neutro: { magoou: ['{n} ficou chateado e não quis mais conversar naquele dia.', '{n} disse que não esperava aquilo.'], aceitou: ['{n} disse "tudo bem", e seguiu.', '{n} aceitou sem muita reação.'] }
+};
+const pick = (r: Rng, xs: string[], c: CtxI) => xs[Math.floor(r.next() * xs.length)].replace(/\{n\}/g, c.p.nome).replace(/\{o\}/g, c.p.genero === 'feminino' ? 'a' : 'o');
+
 export const INTERACOES_DE_CONFLITO: Interacao[] = [
   {
     // Discordar é parte de qualquer relação de verdade: pode aproximar, incomodar ou virar briga.
@@ -123,7 +145,8 @@ export const INTERACOES_DE_CONFLITO: Interacao[] = [
       if (magoou) c.vin.tensao = clamp(c.vin.tensao + 15);
       escrever(c.v, { texto: `Encerrou a amizade com ${c.p.nome}.`, relevancia: 'biografia', tema: 'amizade', tom: 'ruim', escolha: true, pessoas: [c.p.id], evento: { tipo: 'amizade_fim', pessoaId: c.p.id, peso: 25 } });
       void r;
-      return { resultado: magoou ? `${c.p.nome} não esperava. Perguntou o que tinha feito, e a resposta não coube numa mensagem.` : `${c.p.nome} disse "tudo bem, se é assim". Talvez já soubesse.`, aviso: { texto: 'Amizade encerrada', tom: 'ruim' } };
+      const tomE = ENCERRA[tomDaPessoa(c.p)];
+      return { resultado: magoou ? `${pick(r, tomE.magoou, c)} A resposta não coube numa mensagem.` : `${pick(r, tomE.aceitou, c)} Talvez já soubesse.`, aviso: { texto: 'Amizade encerrada', tom: 'ruim' } };
     }
   },
   {
@@ -137,7 +160,8 @@ export const INTERACOES_DE_CONFLITO: Interacao[] = [
       c.vin.tensao = clamp(c.vin.tensao + 14);
       const respondeu = r.chance(0.5 + Math.max(0, c.p.temperamento.extroversao) * 0.3);
       if (respondeu) lembrarCom(c.v, c.p.id, `A rivalidade com ${c.p.nome} rendeu mais um capítulo.`, 'conflito', 1);
-      return { resultado: respondeu ? `${c.p.nome} devolveu na hora, na frente de todo mundo. Ninguém ganhou; os dois vão lembrar.` : `${c.p.nome} fingiu não ouvir — o que, de certa forma, foi pior.` };
+      const tom = PROVOCA[tomDaPessoa(c.p)];
+      return { resultado: respondeu ? `${pick(r, tom.devolve, c)} Ninguém ganhou; os dois vão lembrar.` : `${pick(r, tom.ignora, c)} O silêncio, de certa forma, foi pior.` };
     }
   }
 ];

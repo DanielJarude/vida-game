@@ -71,3 +71,21 @@ describe('VIDA 36 · conflitos: a reação de quem discorda depende do tom dela'
     for (const x of a) { expect(x).toMatch(/Rui/); expect(x).not.toMatch(/\{/); }
   });
 });
+
+import { PROVOCA, ENCERRA } from '../sistemas/conflitos';
+
+describe('VIDA 36 · provocar e encerrar amizade: a reação é do tom da pessoa', () => {
+  it('cada tom tem falas próprias e nenhuma fala se repete entre tons', () => {
+    const tabelas = [PROVOCA, ENCERRA] as unknown as Record<string, Record<string, string[]>>[];
+    for (const t of tabelas) {
+      const vistas = new Map<string, string>();
+      for (const [tom, grupos] of Object.entries(t)) for (const xs of Object.values(grupos)) {
+        expect(xs.length).toBeGreaterThanOrEqual(2);
+        for (const x of xs) {
+          expect(vistas.get(x) === undefined || vistas.get(x) === tom).toBe(true);
+          vistas.set(x, tom);
+        }
+      }
+    }
+  });
+});
