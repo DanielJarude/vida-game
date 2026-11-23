@@ -24,6 +24,7 @@ import { flex } from '../texto';
 import { pagar, vereditoDePagar } from './dinheiro';
 import { economiaLocal } from '../dados/lugares';
 import { mesmaCidade } from './vinculos';
+import { tomDaPessoa, type TomDaPessoa } from './conversas';
 import { temTatuagemVisivel } from './tatuagens';
 import { anoDe } from '../tempo';
 import {
@@ -176,6 +177,25 @@ const paisDe = (v: Vida, p: Pessoa) => (p.genitores ?? []).map(id => v.pessoas[i
  * VIDA 12.6 — conhecer a família de quem se namora: o resultado sai do que existe (os pais, o jeito deles, a distância,
  * o tempo de namoro, a idade, a diferença de idade, a tatuagem no pescoço) e não de um texto só.
  */
+
+/* VIDA 36 · Frente 1 (família): cada familiar reage do SEU jeito. Abertura (quem é, o papel), corpo (o que faz no almoço)
+ * e fecho (o que pensa de quem chegou, conforme o encontro deu certo ou não). O tom vem do temperamento real. */
+const REACAO_FAMILIA: Record<TomDaPessoa, { abre: string[]; corpo: string[]; bem: string[]; mal: string[] }> = {
+  timido: { abre: ['{r} quase não falou.', '{r} ficou perto da cozinha, observando.', '{r} sorriu sem jeito para você.'], corpo: ['e só perguntou se você queria mais suco', 'e deixou o assunto com {p}', 'e pediu desculpas pela bagunça da mesa'], bem: ['Depois, mandou um "volte logo" pelo {p}.', 'No fim, ficou pensativ{o}, mas gostou.'], mal: ['Ficou na dele o resto da tarde.', 'Não disse nada, e isso pesou.'] },
+  desconfiado: { abre: ['{r} observou cada gesto seu.', '{r} fez perguntas com cara de quem já sabia as respostas.', '{r} quis saber de onde você era.'], corpo: ['e pareceu avaliar cada resposta', 'e lembrou de uma história que não favorecia ninguém', 'e checou duas vezes o que você disse'], bem: ['No fim, admitiu que você não era tão ruim assim.', 'Deixou a porta aberta, com reservas.'], mal: ['Desconfiança que não saiu da mesa.', 'Você sentiu que ia precisar provar muito.'] },
+  afetuoso: { abre: ['{r} te recebeu como se você já fizesse parte.', '{r} abraçou você antes de sentar.', '{r} já tinha guardado um prato para você.'], corpo: ['e contou histórias da infância de {p}', 'e não parou de oferecer comida', 'e perguntou o que você gostava de fazer'], bem: ['Mandou comida para levar, com um bilhete.', 'Na despedida, disse para voltar no próximo domingo.'], mal: ['Tentou ser gentil, mas era evidente que não tinha sido fácil.', 'Ainda assim, a despedida foi carinhosa.'] },
+  expansivo: { abre: ['{r} falou alto desde a porta.', '{r} já te apresentou para os vizinhos.', '{r} puxou assunto com você antes de todo mundo.'], corpo: ['e contou o que {p} aprontou na infância', 'e fez piada com o jeito de {p}', 'e riu de cada resposta sua'], bem: ['Virou a melhor parte da tarde.', 'Saiu dizendo que ia te ligar.'], mal: ['Falou muito, mas o clima da mesa azedou.', 'Tentou animar a conversa e não teve jeito.'] },
+  brincalhao: { abre: ['{r} zoou você na primeira frase.', '{r} fez uma brincadeira com {p} na frente de todo mundo.', '{r} te deu um apelido antes da sobremesa.'], corpo: ['e riu até de si mesm{o}', 'e provocou {p} sem parar', 'e propôs um jogo de cartas'], bem: ['Ficou combinado que você volta para a revanche.', 'O apelido pegou.'], mal: ['A piada ficou sem graça e ninguém riu.', 'A brincadeira passou do ponto.'] },
+  serio: { abre: ['{r} cumprimentou com formalidade.', '{r} foi direto ao assunto: o que você faz da vida.', '{r} ouviu tudo sem interromper.'], corpo: ['e fez uma pergunta sobre planos', 'e comentou o assunto do dia', 'e perguntou sobre compromisso com {p}'], bem: ['No fim, reconheceu que você falou com firmeza.', 'Disse que a conversa tinha sido útil.'], mal: ['Não houve reprovação, só distância.', 'Saiu sem comentário, e ficou a sensação de avaliação.'] },
+  neutro: { abre: ['{r} recebeu você com educação.', '{r} te deu boa-noite.', '{r} não deixou ninguém sem prato.'], corpo: ['e falou sobre a casa e o bairro', 'e perguntou o que {p} estava fazendo', 'e voltou ao assunto da família'], bem: ['Um almoço comum, que acabou bem.', 'Saiu com um convite para voltar.'], mal: ['Almoço de domingo, sem grande história.', 'Ficou um clima morno.'] }
+};
+export const reacaoDoFamiliar = (x: Pessoa, p: Pessoa, r: Rng, deu: boolean): string => {
+  const pc = REACAO_FAMILIA[tomDaPessoa(x)];
+  const papel = x.genero === 'feminino' ? 'A mãe' : 'O pai';
+  const sub = (t: string) => t.replace(/\{r\}/g, papel).replace(/\{p\}/g, p.nome).replace(/\{o\}/g, x.genero === 'feminino' ? 'a' : 'o').replace(/\{m\}/g, x.genero === 'feminino' ? 'a' : 'o');
+  return `${sub(um(r, pc.abre))} ${sub(um(r, pc.corpo))}. ${sub(um(r, deu ? pc.bem : pc.mal))}`;
+};
+
 export function conhecerAFamilia(c: CtxI): Saida {
   const { v, p, vin } = c;
   v.fatos[`conheceu_familia_${p.id}`] = v.t;
@@ -210,6 +230,8 @@ export function conhecerAFamilia(c: CtxI): Saida {
     if (tatu) frases.push(`${dura!.nome} olhou demais para a tatuagem à vista.`);
   }
   const deu = pontos > -0.05;
+  // VIDA 36: cada familiar que estava na mesa reage do seu jeito (até dois), antes do desfecho do encontro.
+  if (vivos.length) for (const x of vivos.slice(0, 2)) frases.push(reacaoDoFamiliar(x, p, r, deu));
   if (deu) {
     vin.confianca = clamp(vin.confianca + (quente ? 7 : 4));
     if (vin.romance) vin.romance.envolvimento = clamp(vin.romance.envolvimento + (quente ? 6 : 3));

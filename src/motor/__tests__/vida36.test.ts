@@ -29,3 +29,31 @@ describe('VIDA 36 · 5.4 quem fechou o próprio negócio não "foi demitido"', (
     expect(JSON.stringify(d)).not.toMatch(/demit|mandad/);
   });
 });
+
+import { nova } from './ajuda';
+import { reacaoDoFamiliar } from '../sistemas/convivio126';
+import { criarRng } from '../rng';
+import type { Pessoa } from '../tipos';
+
+describe('VIDA 36 · família: cada familiar reage pelo seu temperamento', () => {
+  const base = Object.values(nova({ semente: 36 }).pessoas)[0] as Pessoa;
+  const com = (t: Partial<Pessoa['temperamento']>, genero: 'feminino' | 'masculino' = 'masculino'): Pessoa => ({ ...base, nome: 'Sueli', genero, temperamento: { ...base.temperamento, extroversao: 0, afabilidade: 0, abertura: 0, estabilidade: 0, ...t } });
+  const eu = { ...base, nome: 'Léo', genero: 'masculino' as const };
+
+  it('o desconfiado e o afetuoso não saem com a mesma frase', () => {
+    const desconf = com({ afabilidade: -0.6 });
+    const afetuoso = com({ afabilidade: 0.7 });
+    const tirar = (p: Pessoa) => { const outs = new Set<string>(); for (let k = 0; k < 40; k++) outs.add(reacaoDoFamiliar(p, eu, criarRng(k + 1), true)); return outs; };
+    const a = tirar(desconf), b = tirar(afetuoso);
+    for (const x of a) expect(b.has(x)).toBe(false);
+    expect(a.size).toBeGreaterThan(5);
+  });
+
+  it('a reação diz o papel do familiar e o nome de quem chegou', () => {
+    const mae = com({ afabilidade: 0.7 }, 'feminino');
+    const texto = reacaoDoFamiliar(mae, eu, criarRng(3), false);
+    expect(texto).toMatch(/A mãe/);
+    expect(texto).toMatch(/Léo|Sueli/);
+    expect(texto).not.toMatch(/\{/);
+  });
+});
