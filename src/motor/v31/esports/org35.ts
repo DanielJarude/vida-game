@@ -167,11 +167,30 @@ export const STAFF35 = [
 export const CUSTO_RETIRO35 = 80e3;
 export const CUSTO_PENEIRA35 = 50e3;
 
-export type Torneio35 = 'aberto' | 'convite';
+/** VIDA 35.3 · os torneios fora da liga, do barato (online, na semana) ao major. Cada line joga cada um uma vez por ano. */
+export type Torneio35 = 'online' | 'universitario' | 'aberto' | 'regional' | 'convite' | 'lan' | 'major';
 export const TORNEIOS35: Record<Torneio35, { nome: string; artigo: 'o' | 'a'; nota: string; inscricao: number; premio: number; minDiv: number; equipes: number; campo: number }> = {
+  online: { nome: 'Copa online semanal', artigo: 'a', nota: 'Inscrição pelo servidor, sem viagem: campo aberto e prêmio de cartão de jogo.', inscricao: 4e3, premio: 25e3, minDiv: 2, equipes: 64, campo: 0 },
+  universitario: { nome: 'Liga universitária', artigo: 'a', nota: 'Times de faculdade e de cidade: campo fraco, vitrine para os jogadores jovens.', inscricao: 8e3, premio: 50e3, minDiv: 2, equipes: 24, campo: 0 },
   aberto: { nome: 'Copa aberta', artigo: 'a', nota: 'Qualquer equipe se inscreve: campo do seu nível, prêmio pequeno.', inscricao: 15e3, premio: 120e3, minDiv: 2, equipes: 32, campo: 0 },
-  convite: { nome: 'Torneio de convidados', artigo: 'o', nota: 'Só para quem tem nome: as melhores da região, prêmio e audiência grandes.', inscricao: 60e3, premio: 900e3, minDiv: 3, equipes: 8, campo: 2 }
+  regional: { nome: 'Copa regional', artigo: 'a', nota: 'As equipes da região num fim de semana de LAN curta: campo médio e prêmio que paga a viagem.', inscricao: 20e3, premio: 150e3, minDiv: 2, equipes: 16, campo: 1 },
+  convite: { nome: 'Torneio de convidados', artigo: 'o', nota: 'Só para quem tem nome: as melhores da região, prêmio e audiência grandes.', inscricao: 60e3, premio: 900e3, minDiv: 3, equipes: 8, campo: 2 },
+  lan: { nome: 'LAN de estádio', artigo: 'a', nota: 'Três dias no ginásio, plateia de verdade e transmissão ao vivo: campo forte.', inscricao: 150e3, premio: 700e3, minDiv: 3, equipes: 16, campo: 3 },
+  major: { nome: 'Major internacional', artigo: 'o', nota: 'O torneio das regiões: campo de elite e um prêmio que muda a temporada.', inscricao: 400e3, premio: 3.5e6, minDiv: 4, equipes: 16, campo: 4 }
 };
+
+/** VIDA 35.3 · a arena própria: a casa de jogo da org (grande obra, manutenção todo ano, público e receita de ingresso). */
+export const ARENA36 = { obra: 12e6, manutencao: 700e3, receita: 1.5e6, fas: 6, minDiv: 3 };
+
+/** VIDA 35.3 · a sociedade: um fundo entra com uma fatia da org. Ele leva essa fatia do lucro de cada ano e de cada venda. */
+export const PARTES_SOCIO36 = [0.2, 0.35, 0.5] as const;
+export type ParteSocio36 = (typeof PARTES_SOCIO36)[number];
+const FUNDOS36 = ['Fundo Pixel Capital', 'Grupo Neblina Investimentos', 'Aporte Cometa Ventures', 'Holding Arena Partners', 'Sociedade Vértice'];
+export const nomeDoFundo36 = (semente: number) => FUNDOS36[Math.abs(semente) % FUNDOS36.length];
+/** Quanto o fundo paga para entrar: a fatia do valor da org, com desconto (ele também corre o risco). */
+export const entradaDoSocio36 = (valorOrg: number, parte: number) => Math.round((valorOrg * parte * 0.8) / 1e4) * 1e4;
+/** Quanto custa o fundo sair: a fatia com ágio. */
+export const saidaDoSocio36 = (valorOrg: number, parte: number) => Math.round((valorOrg * parte * 1.1) / 1e4) * 1e4;
 
 export interface Criador35 { id: string; nome: string; fas: number; salario: number }
 /** Os criadores de conteúdo que aceitam assinar neste ano (nomes de jogo, sem pessoas reais). */

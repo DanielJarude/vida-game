@@ -29,7 +29,7 @@ import './org31.css';
 import { coresDaOrg34 } from './coresOrgs34';
 import { NavTime34, type ItemNav34 } from '../../v34/esporte/NavTime34';
 import { CasaDaOrg35 } from '../../v35/casa/CasaDaOrg35';
-import { Academy35, Comodos35, ComprarLinha35, Equipamento35, Eventos35, Negocios35, PeneiraAberta35, Reformular35, Torneios35, Treino35 } from '../../v35/org/Org35';
+import { Academy35, Comodos35, ComprarLinha35, Equipamento35, Eventos35, Negocios35, PeneiraAberta35, Reformular35, Sociedade36, Torneios35, Treino35 } from '../../v35/org/Org35';
 
 type Agir = (a: Acao) => boolean;
 const A = (oque: OqueOrg31): Acao => ({ tipo: 'org31', oque } as Acao);
@@ -579,6 +579,7 @@ function OrgDinheiro({ vida, agir }: { vida: Vida; agir: Agir }) {
         </div>
         <p className="nota">O aporte paga primeiro as dívidas da organização. Na venda, você recebe o valor (todas as lines, a marca e os títulos) e o caixa, menos as dívidas.</p>
       </section>
+      <Sociedade36 vida={vida} agir={agir} />
     </div>
   );
 }

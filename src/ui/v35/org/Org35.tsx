@@ -13,7 +13,8 @@ import {
 } from '../../../motor/v31/esports/org31';
 import {
   bonusDaCasa35, bonusDoSetup35, COMODOS35, MODELOS_PC35, modeloPc35, RGB35, CUSTO_PENEIRA35, CUSTO_RETIRO35, custoDoSetup35, DESCRICAO35, estadoDaPeca35, EVENTOS35, FOCOS35, manutencaoDaCasa35, NOME_GABINETE35, NOME_PECA35,
-  nomeDoDegrau35, PACOTES35, PECAS35, precoDaPeca35, REFORMULACAO35, SCRIMS35, STAFF35, TORNEIOS35, type Gabinete35, type NivelReformulacao35, type Peca35, type Torneio35
+  nomeDoDegrau35, PACOTES35, PECAS35, precoDaPeca35, REFORMULACAO35, SCRIMS35, STAFF35, TORNEIOS35, type Gabinete35, type NivelReformulacao35, type Peca35, type Torneio35,
+  ARENA36, PARTES_SOCIO36, entradaDoSocio36, saidaDoSocio36
 } from '../../../motor/v31/esports/org35';
 import { multDaRegiao33, nomeDaRegiao33 } from '../../../motor/v31/esports/circuitos33';
 import { BotaoAcao } from '../../comum';
@@ -253,6 +254,45 @@ export function Comodos35({ vida, agir }: { vida: Vida; agir: Agir }) {
           </li>
         ))}
       </ul>
+      {/* VIDA 35.3 · a arena própria: o gasto grande de quem já tem receita grande, com público e ingresso. */}
+      <h4 id="org36-arena">Arena própria</h4>
+      <ul className="org35__lista" aria-labelledby="org36-arena">
+        <li className={o.arena36 ? 'org35__tem' : undefined}>
+          <span><strong>Arena com o nome da organização</strong> <span className="org31__meta">Casa de jogo para as grandes noites: ingresso, público de casa e fãs todo ano. Exige a segunda divisão ou acima. {o.arena36 ? `Inaugurada em ${o.arena36}; custa ${dinheiroCurto(Math.round(ARENA36.manutencao * mult / 1e4) * 1e4)}/ano.` : `Custa ${dinheiroCurto(Math.round(ARENA36.manutencao * mult / 1e4) * 1e4)}/ano depois de pronta.`}</span></span>
+          {o.arena36
+            ? <span className="dono33__atual" aria-current="true">✓ Inaugurada</span>
+            : <BotaoAcao vida={vida} agir={agir} acao={A({ op: 'arena' })} variante="secundario">Construir · {dinheiroCurto(Math.round(ARENA36.obra * mult / 1e4) * 1e4)}</BotaoAcao>}
+        </li>
+      </ul>
+    </section>
+  );
+}
+
+/** VIDA 35.3 · a sociedade: um fundo entra com dinheiro e leva uma fatia do lucro de cada ano e das vendas. */
+export function Sociedade36({ vida, agir }: { vida: Vida; agir: Agir }) {
+  const o = vida.orgEsports31!;
+  const s = o.socio36;
+  return (
+    <section className="org31__bloco" aria-labelledby="org36-socio">
+      <h4 id="org36-socio">Sócio e divisão</h4>
+      {s ? (
+        <>
+          <p className="nota"><strong>{s.nome}</strong> tem {Math.round(s.parte * 100)}% da organização desde {s.desde}: leva essa fatia do lucro de cada ano e de cada venda (inclusive a venda da organização). Você fica com o resto.</p>
+          <div className="org31__botoes"><BotaoAcao vida={vida} agir={agir} acao={A({ op: 'sociedade', acao: 'encerrar' })} variante="secundario">Recomprar a fatia · ~{dinheiroCurto(Math.round(saidaDoSocio36(o.valor, s.parte) / 1e4) * 1e4)}</BotaoAcao></div>
+        </>
+      ) : (
+        <>
+          <p className="nota">Um fundo entra com dinheiro e leva uma fatia do lucro de cada ano e das vendas. Quanto maior a fatia, mais ele paga na entrada, e mais do lucro sai da sua mão.</p>
+          <ul className="org35__lista">
+            {PARTES_SOCIO36.map(p => (
+              <li key={p}>
+                <span><strong>Vender {Math.round(p * 100)}%</strong> <span className="org31__meta">Entra {dinheiroCurto(entradaDoSocio36(o.valor, p))} no caixa; você fica com {Math.round((1 - p) * 100)}% do lucro e das vendas.</span></span>
+                <BotaoAcao vida={vida} agir={agir} acao={A({ op: 'sociedade', acao: 'abrir', parte: p })} variante="secundario">Abrir sociedade</BotaoAcao>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
     </section>
   );
 }

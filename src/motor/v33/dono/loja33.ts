@@ -18,8 +18,16 @@ export type PadraoCamisa33 = 'liso' | 'listras' | 'horizontal' | 'faixa' | 'meta
 export type Mangas33 = 'cor1' | 'cor2' | 'cor3';
 export interface Camisa33 { modelo: ModeloCamisa33; padrao: PadraoCamisa33; cor1: string; cor2: string; cor3: string; mangas: Mangas33; /** O ano da camisa (a do ano vende mais). */ ano: number }
 export type Produto33 = 'camisa' | 'especial' | 'agasalho' | 'bone' | 'cachecol' | 'mousepad';
+/** VIDA 35.3 · o desenho de cada produto (além da camisa): as cores e a estampa, por temporada. */
+export type EstampaProduto33 = 'liso' | 'listras' | 'faixa' | 'degrade' | 'logo';
+export const ESTAMPAS_PRODUTO33: { id: EstampaProduto33; nome: string }[] = [
+  { id: 'liso', nome: 'Lisa' }, { id: 'listras', nome: 'Listras' }, { id: 'faixa', nome: 'Faixa' }, { id: 'degrade', nome: 'Degradê' }, { id: 'logo', nome: 'Logo grande' }
+];
+export interface DesignProduto33 { cor1: string; cor2: string; cor3: string; estampa: EstampaProduto33; ano: number }
 export interface Loja33 {
   camisa?: Camisa33;
+  /** VIDA 35.3 · os desenhos dos outros produtos (o moletom, o boné, o mousepad...). */
+  designs?: Partial<Record<Produto33, DesignProduto33>>;
   produtos: Produto33[];
   /** 0 popular · 1 normal · 2 premium. */
   preco: 0 | 1 | 2;
@@ -63,19 +71,31 @@ export const custoDaCamisa33 = (ctx: Contexto33) => arred(Math.max(8000, ctx.rec
 /** O canal por ano (o aluguel da loja, a equipe; o licenciamento, o gerente de contas). */
 export const custoDoCanal33 = (ctx: Contexto33, canal: number) => (canal <= 0 ? 0 : arred(ctx.receitaBase * [0, 0.012, 0.02][canal] + [0, 30e3, 60e3][canal]));
 
+/** VIDA 35.3 · cada produto desenhado neste ano (fora a camisa) vende mais: até +20% quando todo o peso da loja tem desenho novo. */
+export function fatorDesenhos33(ctx: Contexto33, l: Loja33): number {
+  const pesoDe = (ids: Produto33[]) => ids.reduce((s, id) => s + (PRODUTOS.find(p => p.id === id)?.peso ?? 0), 0);
+  const total = pesoDe(l.produtos);
+  if (!total || !l.designs) return 1;
+  const feitos = l.produtos.filter(id => id !== 'camisa' && l.designs?.[id]?.ano === ctx.ano);
+  return 1 + 0.2 * pesoDe(feitos) / total;
+}
+/** Desenhar um produto (moletom, boné, mousepad...): o molde e a arte da temporada. */
+export const custoDoDesenho33 = (ctx: Contexto33) => arred(Math.max(6000, ctx.receitaBase * 0.002));
+
 /** A estimativa do ano (a tela mostra antes de fechar). `fornecedor`: há contrato de material esportivo. */
 export function previsaoDaLoja33(ctx: Contexto33, l: Loja33, fornecedor: boolean): { bruto: number; liquido: number; margem: number } {
   const peso = produtosDe33(ctx.tipo).filter(p => l.produtos.includes(p.id)).reduce((s, p) => s + p.peso, 0);
   const fama = clamp(ctx.fama, 0, 100);
   const nova = l.camisa && l.camisa.ano === ctx.ano ? 1.25 : 1;
   const escala = ctx.tipo === 'esports' ? 0.35 : ctx.tipo === 'quadra' ? 0.2 : 0.25;
-  const bruto = ctx.receitaBase * escala * Math.pow(Math.max(1, fama) / 50, 1.3) * peso * DEMANDA_PRECO[l.preco] * DEMANDA_CANAL[l.canal] * nova * (l.camisa ? 1 : 0.8);
+  const bruto = ctx.receitaBase * escala * Math.pow(Math.max(1, fama) / 50, 1.3) * peso * DEMANDA_PRECO[l.preco] * DEMANDA_CANAL[l.canal] * nova * (l.camisa ? 1 : 0.8) * fatorDesenhos33(ctx, l);
   const margem = fornecedor ? MARGEM_PRECO[l.preco] * 0.45 : MARGEM_PRECO[l.preco] * (l.canal === 2 ? 0.75 : 1);
   return { bruto: arred(bruto), liquido: arred(bruto * margem), margem };
 }
 
 export type OpLoja33 =
   | { acao: 'camisa'; camisa: Omit<Camisa33, 'ano'> }
+  | { acao: 'desenho'; produto: Produto33; desenho: Omit<DesignProduto33, 'ano'> }
   | { acao: 'produto'; produto: Produto33; ligar: boolean }
   | { acao: 'preco'; nivel: 0 | 1 | 2 }
   | { acao: 'canal'; nivel: 0 | 1 | 2 };
@@ -94,8 +114,27 @@ export function normalizarCamisa33(x: unknown, ano: number): Camisa33 | undefine
   };
 }
 
+export function normalizarDesenho33(x: unknown, ano: number): DesignProduto33 | undefined {
+  if (!x || typeof x !== 'object') return undefined;
+  const d = x as Partial<DesignProduto33>;
+  const cor = (v: unknown, p: string) => (typeof v === 'string' && HEX.test(v) ? v.toLowerCase() : p);
+  return {
+    cor1: cor(d.cor1, '#0b3d91'), cor2: cor(d.cor2, '#ffffff'), cor3: cor(d.cor3, '#111111'),
+    estampa: ESTAMPAS_PRODUTO33.some(e => e.id === d.estampa) ? d.estampa as EstampaProduto33 : 'liso',
+    ano: typeof d.ano === 'number' ? d.ano : ano
+  };
+}
+
 export function problemaLoja33(ctx: Contexto33, l: Loja33 | undefined, op: OpLoja33, caixa: number): string | undefined {
   switch (op.acao) {
+    case 'desenho': {
+      if (op.produto === 'camisa') return 'A camisa tem o seu próprio desenho.';
+      if (!produtosDe33(ctx.tipo).some(p => p.id === op.produto)) return 'Esse produto não é desta modalidade.';
+      if (!l?.produtos.includes(op.produto)) return 'Lance o produto na loja antes de desenhá-lo.';
+      if (l.designs?.[op.produto]?.ano === ctx.ano) return undefined; // ajustar o desenho do ano não cobra de novo
+      const c = custoDoDesenho33(ctx);
+      return caixa >= c ? undefined : `Desenhar ${nomeDoProduto33(ctx.tipo, op.produto).toLowerCase()} custa ${c.toLocaleString('pt-BR')}; o caixa não tem.`;
+    }
     case 'camisa': {
       if (l?.camisa?.ano === ctx.ano) return undefined; // ajustar a camisa do ano não cobra de novo
       const c = custoDaCamisa33(ctx);
@@ -116,6 +155,11 @@ export function problemaLoja33(ctx: Contexto33, l: Loja33 | undefined, op: OpLoj
 
 export function executarLoja33(ctx: Contexto33, l: Loja33, op: OpLoja33): { texto: string; custo: number } {
   switch (op.acao) {
+    case 'desenho': {
+      const custo = l.designs?.[op.produto]?.ano === ctx.ano ? 0 : custoDoDesenho33(ctx);
+      l.designs = { ...(l.designs ?? {}), [op.produto]: normalizarDesenho33({ ...op.desenho, ano: ctx.ano }, ctx.ano) };
+      return { texto: `${nomeDoProduto33(ctx.tipo, op.produto)} desenhado para ${ctx.ano}${custo ? ': a arte entrou na loja' : ' (ajustado)'}.`, custo };
+    }
     case 'camisa': {
       const custo = l.camisa?.ano === ctx.ano ? 0 : custoDaCamisa33(ctx);
       l.camisa = normalizarCamisa33({ ...op.camisa, ano: ctx.ano }, ctx.ano);
@@ -153,6 +197,18 @@ export function normalizarLoja33(x: unknown, ano: number): Loja33 | undefined {
   return {
     ...(l.camisa ? { camisa: normalizarCamisa33(l.camisa, ano) } : {}),
     produtos, preco: l.preco === 0 || l.preco === 2 ? l.preco : 1, canal: l.canal === 1 || l.canal === 2 ? l.canal : 0,
-    hist: Array.isArray(l.hist) ? l.hist.slice(-20) : []
+    hist: Array.isArray(l.hist) ? l.hist.slice(-20) : [],
+    ...(l.designs && typeof l.designs === 'object' ? { designs: normalizarDesenhos33(l.designs, ano) } : {})
   };
+}
+
+/** Só os produtos da loja (fora a camisa) com desenho válido. */
+function normalizarDesenhos33(x: Partial<Record<Produto33, unknown>>, ano: number): Loja33['designs'] {
+  const out: NonNullable<Loja33['designs']> = {};
+  for (const p of PRODUTOS) {
+    if (p.id === 'camisa') continue;
+    const d = normalizarDesenho33(x[p.id], ano);
+    if (d) out[p.id] = d;
+  }
+  return out;
 }

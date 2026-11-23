@@ -40,6 +40,7 @@ import { normalizarLoja33, type Loja33 } from '../../v33/dono/loja33';
 import {
   bonusDaCasa35, bonusDoSetup35, climaDoSetup35, comodo35, criadoresDoAno35, CUSTO_PENEIRA35, CUSTO_RETIRO35, custoDoSetup35, EVENTOS35, foco35, manutencaoDaCasa35, modeloPc35, normalizarSetup35,
   REFORMULACAO35, SCRIMS35, STAFF35, TORNEIOS35, type Criador35, type Foco35, type Torneio35,
+  ARENA36, PARTES_SOCIO36, type ParteSocio36, nomeDoFundo36, entradaDoSocio36, saidaDoSocio36,
   type Comodo35, type Evento35, type Gabinete35, type NivelReformulacao35, type Peca35, type Setup35
 } from './org35';
 import { executarDono33, fecharAnoDono33, problemaDono33, type OpDono33 } from '../../v33/dono/dono33';
@@ -132,6 +133,9 @@ export interface OrgEsports31 {
   seq: number;
   mesa: SituacaoOrg31[];
   mesaHist: { ano: number; tipo: string; titulo: string; texto: string; opcao?: string; ignorado?: boolean }[];
+  /** VIDA 35.3 · a sociedade (um fundo com uma fatia do lucro e das vendas) e a arena própria (o ano em que foi inaugurada). */
+  socio36?: { nome: string; parte: number; desde: number };
+  arena36?: number;
   /** VIDA 33 · o que todo dono tem: a identidade, os patrocínios e a loja. */
   identidade33?: Identidade33;
   instalacoes34?: import('../../v33/dono/instalacoes34').Instalacoes34;
@@ -435,7 +439,11 @@ export type OqueOrg31 =
   | { op: 'criador'; id: string }
   | { op: 'dispensar_criador'; id: string }
   | { op: 'bicho'; ligar: boolean }
-  | { op: 'collab' };
+  | { op: 'collab' }
+  // VIDA 35.3
+  | { op: 'arena' }
+  | { op: 'sociedade'; acao: 'abrir'; parte: ParteSocio36 }
+  | { op: 'sociedade'; acao: 'encerrar' };
 
 export const custoDoBootcamp31 = (L: LinhaOrg33) => arred((L.divisao === 4 ? 250e3 : L.divisao === 3 ? 90e3 : 30e3) * multDe(L) * (1 + L.elenco.length / 10));
 const nomeLimpo = (s: string) => (s ?? '').replace(/\s+/g, ' ').trim();
@@ -502,6 +510,19 @@ export function disponibilidadeOrg31(v: Vida, o: OqueOrg31): Veredito {
       return org.linhas.length > 1 ? PERMITIDO : bloqueio('incompativel', 'É a única line da organização: para sair, venda a organização.');
     }
     case 'vender_org': return PERMITIDO;
+    case 'arena': {
+      if (org.arena36) return bloqueio('incompativel', 'A arena já foi inaugurada.');
+      if (melhorDivisao(org) < ARENA36.minDiv) return bloqueio('requisito', 'A arena só faz sentido para quem joga a segunda divisão ou acima.');
+      const c = arred(ARENA36.obra * multMedio(org));
+      return org.caixa >= c ? PERMITIDO : bloqueio('requisito', `A obra custa ${fmt(c)}; o caixa da organização não tem (aporte).`);
+    }
+    case 'sociedade': {
+      if (!PARTES_SOCIO36.includes(o.op === 'sociedade' && o.acao === 'abrir' ? o.parte : PARTES_SOCIO36[0])) return bloqueio('impossivel', 'Essa fatia não existe.');
+      if (o.acao === 'abrir') return org.socio36 ? bloqueio('incompativel', `${org.socio36.nome} já tem ${Math.round(org.socio36.parte * 100)}% da organização.`) : PERMITIDO;
+      if (!org.socio36) return bloqueio('impossivel', 'Não há sócio na organização.');
+      const c = saidaDoSocio36(org.valor, org.socio36.parte);
+      return org.caixa >= c ? PERMITIDO : bloqueio('requisito', `Recomprar a fatia custa ${fmt(c)}; o caixa da organização não tem (aporte).`);
+    }
     case 'aportar': return o.valor > 0 && v.financas.conta >= o.valor ? PERMITIDO : bloqueio('requisito', 'Não há esse dinheiro na conta.');
     case 'conteudo': return org.conteudo === o.nivel ? bloqueio('incompativel', 'Já é assim.') : PERMITIDO;
     case 'dono': { const p = problemaDono33(contextoOrg33(v), org, o.sub, org.caixa, anoDe(org.desde)); return p ? bloqueio('requisito', p) : PERMITIDO; }
@@ -660,12 +681,33 @@ export function executarOrg31(v: Vida, o: OqueOrg31): { texto: string; tom?: 'bo
     }
     case 'vender_org': {
       const valor = Math.max(0, arred(org.valor + org.caixa - org.divida, 1e5));
-      v.financas.conta += valor;
-      lancar(v, `Venda da organização (${org.nome})`, 'renda', valor);
+      // VIDA 35.3: o sócio leva a sua fatia da venda.
+      const parteSocio = org.socio36 ? arred(valor * org.socio36.parte, 1e4) : 0;
+      v.financas.conta += valor - parteSocio;
+      lancar(v, `Venda da organização (${org.nome})`, 'renda', valor - parteSocio);
       const titulos = org.linhas.reduce((s, l) => s + l.trofeus.length, 0);
-      escrever(v, { texto: `Vendeu a ${org.nome} depois de ${Math.max(1, ano - anoDe(org.desde))} ano(s) como dono: ${fmt(valor)}${titulos ? `, com ${titulos} título(s) na galeria` : ''}.`, relevancia: 'marco', tema: 'dinheiro', escolha: true });
+      escrever(v, { texto: `Vendeu a ${org.nome} depois de ${Math.max(1, ano - anoDe(org.desde))} ano(s) como dono: ${fmt(valor - parteSocio)}${parteSocio ? ` (${org.socio36!.nome} levou ${fmt(parteSocio)})` : ''}${titulos ? `, com ${titulos} título(s) na galeria` : ''}.`, relevancia: 'marco', tema: 'dinheiro', escolha: true });
       v.orgEsports31 = undefined;
-      return { texto: `Organização vendida por ${fmt(valor)}.`, tom: 'neutro' };
+      return { texto: `Organização vendida por ${fmt(valor - parteSocio)}${parteSocio ? ` (a fatia de ${fmt(parteSocio)} foi do sócio)` : ''}.`, tom: 'neutro' };
+    }
+    case 'arena': {
+      const c = arred(ARENA36.obra * multMedio(org));
+      org.caixa -= c; org.arena36 = ano;
+      escrever(v, { texto: `A ${org.nome} inaugurou a arena própria (${fmt(c)}): o público de casa agora paga ingresso.`, relevancia: 'marco', tema: 'dinheiro', escolha: true });
+      return { texto: `Arena própria inaugurada (${fmt(c)}).`, tom: 'bom' };
+    }
+    case 'sociedade': {
+      if (o.acao === 'abrir') {
+        const entrada = entradaDoSocio36(org.valor, o.parte);
+        const nome = nomeDoFundo36(org.seq + ano);
+        org.caixa += entrada;
+        org.socio36 = { nome, parte: o.parte, desde: ano };
+        return { texto: `${nome} entrou com ${fmt(entrada)} por ${Math.round(o.parte * 100)}% da ${org.nome}: leva essa fatia do lucro e das vendas.`, tom: 'neutro' };
+      }
+      const antigo = org.socio36!;
+      const c = saidaDoSocio36(org.valor, antigo.parte);
+      org.caixa -= c; org.socio36 = undefined;
+      return { texto: `${antigo.nome} saiu: você recomprou a fatia por ${fmt(c)}.`, tom: 'neutro' };
     }
     case 'aportar':
       pagar(v, o.valor); lancar(v, `Aporte na organização (${org.nome})`, 'despesa', -o.valor);
@@ -1455,18 +1497,24 @@ export function processarOrg31(v: Vida): void {
   const resumo = { titulo: res.some(x => x.titulo), subiu: res.some(x => x.subiu), caiu: res.some(x => x.caiu), topo: res.some(x => x.topo), internacional: res.some(x => x.internacional) };
   const dono = fecharAnoDono33(ctxAno, contextoOrg33(v, ano + 1), o, resumo, r);
   const estudio = o.casa35?.includes('estudio') ? arred(80e3 * multMedio(o) * (0.5 + o.fas / 100)) : 0;
+  // VIDA 35.3: a arena própria (ingresso e manutenção todo ano).
+  const arena = o.arena36 ? arred(ARENA36.receita * multMedio(o) * (0.5 + o.fas / 100)) : 0;
+  const manArena = o.arena36 ? arred(ARENA36.manutencao * multMedio(o)) : 0;
   // VIDA 35.1: os criadores de conteúdo — salário de um lado, audiência e receita do outro.
   const criadores = o.criadores35 ?? [];
   const recCriadores = arred(criadores.reduce((s2, c) => s2 + c.salario * 1.25 * (0.5 + o.fas / 100), 0));
   const salCriadores = criadores.reduce((s2, c) => s2 + c.salario, 0);
-  const receita = res.reduce((s, x) => s + x.receita, 0) + receitaConteudo(o) + dono.receita + estudio + recCriadores;
-  const despesa = res.reduce((s, x) => s + x.despesa, 0) + dono.despesa + o.divida * 0.12 + manutencaoDaCasa35(o.casa35, multMedio(o)) + salCriadores;
-  o.caixa += receita - despesa;
+  const receita = res.reduce((s, x) => s + x.receita, 0) + receitaConteudo(o) + dono.receita + estudio + recCriadores + arena;
+  const despesa = res.reduce((s, x) => s + x.despesa, 0) + dono.despesa + o.divida * 0.12 + manutencaoDaCasa35(o.casa35, multMedio(o)) + salCriadores + manArena;
+  // VIDA 35.3: o sócio leva a sua fatia do lucro do ano (se houver lucro).
+  const parcelaSocio = o.socio36 ? arred(Math.max(0, receita - despesa) * o.socio36.parte) : 0;
+  o.caixa += receita - despesa - parcelaSocio;
+  if (o.socio36 && parcelaSocio) escrever(v, { texto: `${o.nome}: ${o.socio36.nome} levou ${fmt(parcelaSocio)} do lucro de ${ano} (${Math.round(o.socio36.parte * 100)}%).`, relevancia: 'cotidiano', tema: 'dinheiro' });
   if (o.caixa < 0) { o.divida += -o.caixa; o.caixa = 0; }
   else if (o.divida > 0 && o.caixa > receita * 0.2) { const a = Math.min(o.divida, Math.round((o.caixa - receita * 0.2) * 0.5)); o.divida -= a; o.caixa -= a; }
   for (const t of dono.textos) escrever(v, { texto: `${o.nome}: ${t}`, relevancia: 'cotidiano', tema: 'dinheiro' });
   // Os fãs e o nome: a melhor line puxa; cada jogo a mais soma um pouco de público.
-  const alvoFas = Math.max(...o.linhas.map(l => [0, 0, 12, 30, 58][l.divisao])) + (resumo.titulo ? 8 : 0) + (resumo.internacional ? 10 : 0) + o.conteudo * 4 + (o.linhas.length - 1) * 3;
+  const alvoFas = Math.max(...o.linhas.map(l => [0, 0, 12, 30, 58][l.divisao])) + (resumo.titulo ? 8 : 0) + (resumo.internacional ? 10 : 0) + o.conteudo * 4 + (o.linhas.length - 1) * 3 + (o.arena36 ? ARENA36.fas : 0);
   o.fas = clamp(Math.round(o.fas * 0.8 + alvoFas * 0.2 + (estudio ? 2 : 0) + criadores.reduce((s2, c) => s2 + c.fas / 15, 0) + (resumo.subiu ? 4 : 0) - (resumo.caiu ? 5 : 0) + (res.some(x => x.campeaoMundial) ? 10 : 0)));
   const delta = res.reduce((s, x) => s + (x.titulo ? 6 : 0) + (x.subiu ? 5 : 0) - (x.caiu ? 7 : 0) + (x.internacional ? (x.campeaoMundial ? 15 : 4) : 0) + (x.topo ? 1 : -0.5), 0);
   o.reputacao = clamp(Math.round(o.reputacao + dono.rep + delta / Math.sqrt(res.length)));
@@ -1539,4 +1587,7 @@ export function normalizarVida32Org(v: Vida): void {
   const id = normalizarIdentidade33(o.identidade33); if (id) o.identidade33 = id; else delete o.identidade33;
   o.comercial33 = normalizarComercial33(o.comercial33) ?? novoComercial33();
   const loja = normalizarLoja33(o.loja33, ano); if (loja) o.loja33 = loja; else delete o.loja33;
+  // VIDA 35.3: a sociedade e a arena (o que vier fora do catálogo sai).
+  if (o.socio36 && (typeof o.socio36.nome !== 'string' || !(PARTES_SOCIO36 as readonly number[]).includes(o.socio36.parte) || typeof o.socio36.desde !== 'number')) delete o.socio36;
+  if (typeof o.arena36 !== 'number' || !Number.isFinite(o.arena36)) delete o.arena36;
 }

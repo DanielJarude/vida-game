@@ -13,11 +13,12 @@ import {
   buscasFeitas33, buscasPorAno33, contratoDaCota33, cotasDe33, cotasDisponiveis33, custoDaBusca33, custoDoDepartamento33, DEPARTAMENTOS33,
   multaDeRompimento33, receitaDePatrocinio33, type Contexto33
 } from '../../../motor/v33/dono/patrocinio33';
-import { CANAIS33, custoDaCamisa33, custoDoCanal33, custoDoProduto33, nomeDoProduto33, PRECOS33, previsaoDaLoja33, produtosDe33, type Camisa33 } from '../../../motor/v33/dono/loja33';
+import { CANAIS33, custoDaCamisa33, custoDoCanal33, custoDoDesenho33, custoDoProduto33, nomeDoProduto33, PRECOS33, previsaoDaLoja33, produtosDe33, type Camisa33, type DesignProduto33, type Produto33 } from '../../../motor/v33/dono/loja33';
 import type { Identidade33 } from '../../../motor/v33/dono/identidade33';
 import { BotaoAcao } from '../../comum';
 import { dinheiroCurto } from '../../apresentar';
 import { camisaDaIdentidade33, DesenhoCamisa33, EditorCamisa33 } from './Camisa33';
+import { EditorDoProduto33 } from './DesenhoProduto33';
 import { EditorIdentidade33, identidadeInicial33 } from './EditorIdentidade33';
 import './dono33.css';
 
@@ -136,6 +137,7 @@ function Loja({ vida, agir, dono, ctx, acao, nome }: Props) {
           })}
         </ul>
       </section>
+      <DesenhosDosProdutos vida={vida} agir={agir} dono={dono} ctx={ctx} acao={acao} nome={nome} />
       <section className="dono33__bloco" aria-label="Preço e canais">
         <h4>Preço</h4>
         <div className="dono33__botoes">{([0, 1, 2] as const).map(n => (l?.preco ?? 1) === n ? <Atual key={n}>{PRECOS33[n]}</Atual> : <BotaoAcao key={n} vida={vida} agir={agir} acao={A({ acao: 'preco', nivel: n })}>{PRECOS33[n]}</BotaoAcao>)}</div>
@@ -150,6 +152,45 @@ function Loja({ vida, agir, dono, ctx, acao, nome }: Props) {
       </div>
       {(l?.hist.length ?? 0) > 0 && <p className="nota">Anos anteriores: {l!.hist.slice(-4).reverse().map(h => `${h.ano}: ${dinheiroCurto(h.bruto)} vendidos${h.encalhe ? ' (encalhe)' : ''}`).join(' · ')}.</p>}
     </>
+  );
+}
+
+/** VIDA 35.3 · cada produto da loja (fora a camisa) tem a sua arte; a do ano vende mais. */
+type PropsDaLoja = Omit<Props, 'anoInicio' | 'abaInicial'>;
+function DesenhosDosProdutos({ vida, agir, dono, ctx, acao, nome }: PropsDaLoja) {
+  const noAr: Produto33[] = (dono.loja33?.produtos ?? []).filter(p => p !== 'camisa');
+  const [escolhido, setEscolhido] = useState<Produto33 | undefined>(noAr[0]);
+  const atual = escolhido && noAr.includes(escolhido) ? escolhido : noAr[0];
+  if (!atual) {
+    return (
+      <section className="dono33__bloco" aria-label="Desenhos dos produtos">
+        <h4>Desenhos dos produtos</h4>
+        <p className="nota">Lance um produto na loja (moletom, boné, cachecol ou mousepad) para desenhá-lo: cada um tem a sua arte.</p>
+      </section>
+    );
+  }
+  return <DesenhoDeUmProduto key={atual} vida={vida} agir={agir} dono={dono} ctx={ctx} acao={acao} nome={nome} produto={atual} noAr={noAr} mudarSel={setEscolhido} />;
+}
+
+function DesenhoDeUmProduto({ vida, agir, dono, ctx, acao, nome, produto, noAr, mudarSel }: PropsDaLoja & { produto: Produto33; noAr: Produto33[]; mudarSel: (p: Produto33) => void }) {
+  const d = dono.loja33?.designs?.[produto];
+  const [rascunho, setRascunho] = useState<Omit<DesignProduto33, 'ano'>>(() => d
+    ? { cor1: d.cor1, cor2: d.cor2, cor3: d.cor3, estampa: d.estampa }
+    : { cor1: dono.identidade33?.cor1 ?? '#0b3d91', cor2: dono.identidade33?.cor2 ?? '#ffffff', cor3: dono.identidade33?.cor3 ?? '#111111', estampa: 'liso' });
+  const doAno = d?.ano === ctx.ano;
+  const nomeP = nomeDoProduto33(ctx.tipo, produto).toLowerCase();
+  return (
+    <section className="dono33__bloco" aria-label="Desenhos dos produtos">
+      <h4>Desenho dos produtos</h4>
+      <div className="dono33__fichas" role="group" aria-label="Escolha o produto">
+        {noAr.map(p => <button key={p} type="button" className="chip" aria-pressed={p === produto} onClick={() => mudarSel(p)}>{nomeDoProduto33(ctx.tipo, p)}{dono.loja33?.designs?.[p]?.ano === ctx.ano ? ' ✓' : ''}</button>)}
+      </div>
+      <EditorDoProduto33 produto={produto} nome={nome} valor={rascunho} mudar={setRascunho} />
+      <BotaoAcao vida={vida} agir={agir} acao={acao({ op: 'loja', sub: { acao: 'desenho', produto, desenho: rascunho } })} variante="principal">
+        {doAno ? `Ajustar o desenho de ${nomeP}` : `Desenhar ${nomeP} de ${ctx.ano} · ${dinheiroCurto(custoDoDesenho33(ctx))}`}
+      </BotaoAcao>
+      <p className="nota">{d ? (doAno ? `O desenho de ${ctx.ano} está na loja: vende mais.` : `O desenho em venda é o de ${d.ano}. Um desenho novo por temporada vende mais.`) : `${nomeP.charAt(0).toUpperCase()}${nomeP.slice(1)} ainda vende com a arte padrão do time.`} Com todos os produtos desenhados no ano, a loja vende até 20% a mais.</p>
+    </section>
   );
 }
 
