@@ -19,7 +19,7 @@ import { interacaoNaPrisao } from './prisao';
 import { dinheiro as moeda } from '../texto';
 import type { Rng } from '../rng';
 import { animal } from '../dados/animais';
-import { clamp } from '../rng';
+import { clamp, rngDe } from '../rng';
 import type { Dominio, Pessoa, Vida, Vinculo } from '../tipos';
 import { praticar } from './frentes';
 import { escrever, idade, idadePessoa, lembrarCom, marcarFato, parceiro, foraDaParceria } from '../nucleo';
@@ -123,8 +123,15 @@ function costume(c: CtxI, vezes: number, quando: number, texto: string): void {
   if (vezes === quando) lembrarCom(c.v, c.p.id, texto, 'ritual', 2);
 }
 
-/** Frase que muda com a repetição (a quinta vez não é descrita como a primeira). */
-const variar = (vezes: number, frases: string[]) => frases[(vezes - 1) % frases.length];
+/**
+ * Frase que muda com a repetição (a quinta vez não é descrita como a primeira) e com a PESSOA. VIDA 36: antes, só a
+ * contagem decidia, então toda pessoa recebia a mesma sequência. Agora cada par (vida, pessoa) começa a sequência num
+ * ponto próprio — derivado, sem tocar no RNG principal — e anda uma casa por vez.
+ */
+const variar = (c: CtxI, vezes: number, frases: string[]) => {
+  const inicio = Math.floor(rngDe('variar', c.v.id, c.p.id).next() * frases.length);
+  return frases[(inicio + vezes - 1) % frases.length];
+};
 
 const ele = (p: Pessoa) => flex(p.genero, 'ele', 'ela', 'elu');
 const dele = (p: Pessoa) => flex(p.genero, 'dele', 'dela', 'delu');
@@ -178,7 +185,7 @@ export const INTERACOES: Interacao[] = [
       if (par && c.p.genitores?.includes(par.p.id) && par.vin.romance) par.vin.romance.envolvimento = clamp(par.vin.romance.envolvimento + 2);
       if (c.papel === 'filho') costume(c, n, 2, c.ip === 0 ? 'As madrugadas com o bebê no colo foram suas também.' : 'O banho e o colo eram com você.');
       else costume(c, n, 2, `Tardes de ${c.p.nome} na sua casa.`);
-      return { resultado: variar(n, c.papel === 'filho'
+      return { resultado: variar(c, n, c.papel === 'filho'
         ? [`Três da manhã, ${c.p.nome} no colo, a casa inteira dormindo. ${capital(ele(c.p))} dormiu no seu ombro.`, 'Fralda, mamadeira, arroto, colo. Repetir.', `Você aprendeu o choro de fome e o choro de sono de ${c.p.nome}.`]
         : [`${c.p.nome} passou a tarde com você e dormiu no sofá, de boca aberta.`, `Uma tarde de papinha e desenho animado com ${c.p.nome}.`]) };
     }
@@ -198,7 +205,7 @@ export const INTERACOES: Interacao[] = [
         : c.eu <= 12
           ? [`Uma tarde inteira de pega-pega com ${c.p.nome}.`, `Montaram uma cabana com lençol e cadeira.`, `Futebol na rua até a luz do poste acender.`]
           : [`Esconde-esconde até escurecer. ${c.p.nome} sempre no mesmo lugar, e você fingindo não saber.`, `Uma tarde de massinha, tinta e bagunça na mesa da cozinha.`, `Bola no quintal com ${c.p.nome} — você perdeu de propósito, e depois não precisou mais.`];
-      return { resultado: variar(n, frases) };
+      return { resultado: variar(c, n, frases) };
     }
   },
   {
@@ -209,7 +216,7 @@ export const INTERACOES: Interacao[] = [
       afeto(c, 5); presente(c, 8);
       if (c.p.vida) c.p.vida.aptidao = Math.min(1, c.p.vida.aptidao + 0.015);
       costume(c, n, 3, 'Ler antes de dormir virou coisa de vocês.');
-      return { resultado: variar(n, [`${c.p.nome} escolheu o livro. Você leu duas vezes; ${ele(c.p)} dormiu antes do fim da segunda.`, `A mesma história de novo — ${c.p.nome} corrigia quando você pulava uma página.`, `${c.p.nome} começou a ler uma página e você a outra.`]) };
+      return { resultado: variar(c, n, [`${c.p.nome} escolheu o livro. Você leu duas vezes; ${ele(c.p)} dormiu antes do fim da segunda.`, `A mesma história de novo — ${c.p.nome} corrigia quando você pulava uma página.`, `${c.p.nome} começou a ler uma página e você a outra.`]) };
     }
   },
 
@@ -222,7 +229,7 @@ export const INTERACOES: Interacao[] = [
       afeto(c, c.ip >= 13 ? 2 : 4); presente(c, 7); confiar(c, 2);
       if (c.p.vida) c.p.vida.aptidao = Math.min(1, c.p.vida.aptidao + 0.02);
       costume(c, n, 3, c.ip <= 11 ? 'A mesa da cozinha, à noite, era o lugar do dever de casa com você.' : 'Estudavam juntos na véspera das provas.');
-      return { resultado: variar(n, c.ip <= 11
+      return { resultado: variar(c, n, c.ip <= 11
         ? ['Tabuada, redação e uma briga com a divisão de dois algarismos. No fim, deu.', `${c.p.nome} entendeu frações com uma pizza desenhada no caderno.`, 'Uma hora de dever na mesa da cozinha.']
         : [`Você não lembrava mais nada de química. Aprenderam juntos, e ${c.p.nome} riu disso.`, 'Uma revisão de véspera, com café e exercício resolvido no guardanapo.']) };
     }
@@ -247,7 +254,7 @@ export const INTERACOES: Interacao[] = [
       afeto(c, 5); presente(c, 6); confiar(c, 2);
       if (c.p.vida) c.p.vida.aptidao = Math.min(1, c.p.vida.aptidao + 0.01);
       costume(c, n, 3, `Você nunca perdeu uma apresentação de ${interesseDe(c.p)} de ${c.p.nome}.`);
-      return { resultado: variar(n, [`Você foi ver ${c.p.nome} e sentou na primeira fila.`, `Compraram juntos o que faltava para ${interesseDe(c.p)}. ${capital(ele(c.p))} passou a semana contando os dias.`, `${c.p.nome} mostrou o que aprendeu. Você fingiu que entendia tudo — e entendia metade.`]) };
+      return { resultado: variar(c, n, [`Você foi ver ${c.p.nome} e sentou na primeira fila.`, `Compraram juntos o que faltava para ${interesseDe(c.p)}. ${capital(ele(c.p))} passou a semana contando os dias.`, `${c.p.nome} mostrou o que aprendeu. Você fingiu que entendia tudo — e entendia metade.`]) };
     }
   },
 
@@ -341,7 +348,7 @@ export const INTERACOES: Interacao[] = [
       afeto(c, 11); confiar(c, 3);
       if (ehDescendente(c.papel)) presente(c, 6);
       costume(c, n, 3, 'As viagens para se ver viraram rotina.');
-      return { resultado: variar(n, [`Rodoviária, estrada, e ${c.p.nome} esperando no portão. Valeu cada hora.`, `Um fim de semana na casa de ${c.p.nome}, dormindo no sofá e conversando até tarde.`, `${c.p.nome} mostrou a cidade como se fosse ${dele(c.p)}.`]) };
+      return { resultado: variar(c, n, [`Rodoviária, estrada, e ${c.p.nome} esperando no portão. Valeu cada hora.`, `Um fim de semana na casa de ${c.p.nome}, dormindo no sofá e conversando até tarde.`, `${c.p.nome} mostrou a cidade como se fosse ${dele(c.p)}.`]) };
     }
   },
   {
@@ -354,7 +361,7 @@ export const INTERACOES: Interacao[] = [
       (c.vin.digital ??= {}).mensagem = c.v.t;
       afeto(c, 3); acalmar(c, 4);
       costume(c, n, 4, 'Uma ligação de vez em quando manteve vocês perto, mesmo longe.');
-      return { resultado: variar(n, [`${c.p.nome} atendeu no segundo toque. Falaram quarenta minutos.`, `Uma troca de mensagens que foi da piada antiga à notícia nova.`, `${c.p.nome} mandou áudio de volta. Longo.`]) };
+      return { resultado: variar(c, n, [`${c.p.nome} atendeu no segundo toque. Falaram quarenta minutos.`, `Uma troca de mensagens que foi da piada antiga à notícia nova.`, `${c.p.nome} mandou áudio de volta. Longo.`]) };
     }
   },
   {
@@ -370,7 +377,7 @@ export const INTERACOES: Interacao[] = [
       aplicarPersonalidade(c.v, 'acao:apoiar', { empatia: 1 });
       // Quem tem apoio atravessa o aperto mais rápido.
       if (c.p.aperto && (tipo === 'fase' || tipo === 'luto' || tipo === 'separacao')) c.p.aperto.t -= 8;
-      return { resultado: variar(1, [resultadoApoio(c)]) };
+      return { resultado: variar(c, 1, [resultadoApoio(c)]) };
     }
   },
   {
@@ -386,7 +393,7 @@ export const INTERACOES: Interacao[] = [
       afeto(c, 3); confiar(c, 4);
       if (!c.vin.historia.some(h => h.tipo === 'apoio' && h.texto.startsWith('Esteve do seu lado') && c.v.t - h.t < 36)) lembrarCom(c.v, c.p.id, 'Esteve do seu lado quando a vida pesou.', 'apoio', 2, c.v.t, 'ela');
       if (!confia) return { resultado: `${c.p.nome} ouviu, mas pareceu não saber o que dizer. Mesmo assim, falar em voz alta ajudou um pouco.` };
-      return { resultado: variar(n, [
+      return { resultado: variar(c, n, [
         `Você falou mais do que pretendia. ${c.p.nome} não tentou resolver nada — só ficou.`,
         `${c.p.nome} escutou até o fim e depois contou de uma fase difícil ${dele(c.p)}. Você não se sentiu tão sozinh${flex(ge(c.v), 'o', 'a', 'e')}.`,
         `Uma conversa longa, café esfriando na mesa. Nada mudou lá fora; aqui dentro, um pouco.`
@@ -431,7 +438,7 @@ export const INTERACOES: Interacao[] = [
       c.p.saude = clamp(c.p.saude + 3);
       aplicarPersonalidade(c.v, 'acao:cuidar_idoso', { familia: 1 });
       costume(c, n, 2, `Era você quem levava ${c.p.nome} às consultas.`);
-      return { resultado: variar(n, [`Sala de espera, senha, uma hora de atraso. ${c.p.nome} contou a vida inteira para a senhora do lado.`, `O médico trocou um remédio. ${c.p.nome} saiu reclamando e segurando seu braço.`]) };
+      return { resultado: variar(c, n, [`Sala de espera, senha, uma hora de atraso. ${c.p.nome} contou a vida inteira para a senhora do lado.`, `O médico trocou um remédio. ${c.p.nome} saiu reclamando e segurando seu braço.`]) };
     }
   },
   {
@@ -535,7 +542,7 @@ export const INTERACOES: Interacao[] = [
       acalmar(c, 10); confiar(c, 5);
       for (const f of filhosMenoresEmComum(c)) { const vf = c.v.vinculos[f.id]; if (vf) { vf.presenca = clamp((vf.presenca ?? 30) + 4); vf.tensao = clamp(vf.tensao - 3); } }
       costume(c, n, 3, `Mesmo separados, vocês combinavam juntos as coisas de ${listaFilhos(c)}.`);
-      return { resultado: variar(n, [`Escola, médico, fim de semana de quem: vocês acertaram a agenda sem levantar a voz.`, `Uma conversa prática, quase de trabalho. ${capital(listaFilhos(c))} nem percebeu que houve — e é esse o ponto.`, `Vocês discordaram de uma coisa e combinaram o resto.`]) };
+      return { resultado: variar(c, n, [`Escola, médico, fim de semana de quem: vocês acertaram a agenda sem levantar a voz.`, `Uma conversa prática, quase de trabalho. ${capital(listaFilhos(c))} nem percebeu que houve — e é esse o ponto.`, `Vocês discordaram de uma coisa e combinaram o resto.`]) };
     }
   },
   {
@@ -625,7 +632,7 @@ export const INTERACOES: Interacao[] = [
       praticar(c.v, r, d, 0.25, 1);
       const n = habito(c, 'treinar_junto');
       costume(c, n, 3, 'O treino a mais virou costume de vocês.');
-      return { resultado: variar(n, [`Ficaram até escurecer. ${c.p.nome} mostrou um jeito de fazer que você não conhecia.`, 'Mais uma tarde de treino a dois: menos conversa, mais repetição.', `${c.p.nome} cobrou, você cobrou de volta — e os dois saíram melhores.`]) };
+      return { resultado: variar(c, n, [`Ficaram até escurecer. ${c.p.nome} mostrou um jeito de fazer que você não conhecia.`, 'Mais uma tarde de treino a dois: menos conversa, mais repetição.', `${c.p.nome} cobrou, você cobrou de volta — e os dois saíram melhores.`]) };
     }
   },
   /*
@@ -800,7 +807,7 @@ export const INTERACOES: Interacao[] = [
       envolver(c, 6); afeto(c, 4); acalmar(c, 4); cuidou(c);
       if (c.papel === 'saindo' && n === 1) return primeiroEncontro(c, r);
       if (parceriaAtiva(c)) costume(c, n, 4, romanceAdolescente(c.v, c.p) ? 'O cinema de sábado era de vocês.' : 'Mantiveram as saídas só de vocês dois, mesmo com a vida corrida.');
-      return { resultado: variar(n, romanceAdolescente(c.v, c.p)
+      return { resultado: variar(c, n, romanceAdolescente(c.v, c.p)
         ? ['Pipoca grande, filme ruim, e a melhor tarde do mês.', 'Andaram pelo shopping sem comprar nada, conversando.']
         : c.papel === 'caso' && !c.vin.romance?.paralelo ? ['Um encontro de duas horas num lugar onde ninguém conhece vocês.', 'Hotel no centro, celular desligado, volta separados.']
           : ['Um jantar sem pressa, sem celular, só vocês.', 'Um bar novo, uma mesa na calçada, e a conversa de quando se conheceram.', 'Saíram para dançar como não faziam há anos.', 'Um fim de semana fora, só os dois.']) };
@@ -815,7 +822,7 @@ export const INTERACOES: Interacao[] = [
       envolver(c, 3); confiar(c, 2); acalmar(c, 3); cuidou(c);
       costume(c, n, 5, 'Os pequenos carinhos do dia a dia nunca sumiram.');
       // REWORK 7.5: o gesto depende do momento do casal (`conversas`): a semana puxada, a relação morna, a lembrança.
-      return { resultado: romanceAdolescente(c.v, c.p) ? variar(n, [`${c.p.nome} respondeu com três corações e uma foto.`, `${c.p.nome} visualizou, demorou, e respondeu: "eu também".`]) : demonstrarCarinho(c, n) };
+      return { resultado: romanceAdolescente(c.v, c.p) ? variar(c, n, [`${c.p.nome} respondeu com três corações e uma foto.`, `${c.p.nome} visualizou, demorou, e respondeu: "eu também".`]) : demonstrarCarinho(c, n) };
     }
   },
   {
@@ -860,7 +867,7 @@ export const INTERACOES: Interacao[] = [
       c.v.financas.conta -= custoViagem(c);
       envolver(c, 9); afeto(c, 5); acalmar(c, 6); cuidou(c);
       costume(c, n, 3, 'As viagens para se ver viraram parte do namoro.');
-      return { resultado: variar(n, [`Rodoviária de madrugada e ${c.p.nome} esperando no desembarque. O fim de semana passou rápido demais.`, `Três dias na cidade de ${c.p.nome}, conhecendo a vida ${dele(c.p)} de perto.`, `A despedida no domingo foi a parte difícil. A distância ficou mais curta por uns dias.`]) };
+      return { resultado: variar(c, n, [`Rodoviária de madrugada e ${c.p.nome} esperando no desembarque. O fim de semana passou rápido demais.`, `Três dias na cidade de ${c.p.nome}, conhecendo a vida ${dele(c.p)} de perto.`, `A despedida no domingo foi a parte difícil. A distância ficou mais curta por uns dias.`]) };
     }
   },
   {
@@ -870,7 +877,7 @@ export const INTERACOES: Interacao[] = [
     executar: c => {
       const n = habito(c, 'ligar_par');
       envolver(c, 4); acalmar(c, 3); cuidou(c);
-      return { resultado: variar(n, [`Uma semana de chamadas até alguém dormir no meio da frase.`, `${c.p.nome} mostrou a casa nova pela câmera, cômodo por cômodo.`, `Vocês viram o mesmo filme ao mesmo tempo, cada um na sua cidade.`]) };
+      return { resultado: variar(c, n, [`Uma semana de chamadas até alguém dormir no meio da frase.`, `${c.p.nome} mostrou a casa nova pela câmera, cômodo por cômodo.`, `Vocês viram o mesmo filme ao mesmo tempo, cada um na sua cidade.`]) };
     }
   },
   {
@@ -1071,7 +1078,7 @@ export const INTERACOES: Interacao[] = [
       const a = animal(c.p.especie);
       afeto(c, a.grupo === 'peixe' ? 3 : a.grupo === 'reptil' ? 4 : 8);
       const extra = c.p.especie === 'cachorro' ? [`Longo passeio com ${c.p.nome}. Voltaram os dois cansados.`, `${c.p.nome} achou um graveto maior do que ${dele(c.p)} e não largou.`] : [];
-      return { resultado: variar(n, [...a.interacao.textos.map(t => t.replace(/\{nome\}/g, c.p.nome)), ...extra]) };
+      return { resultado: variar(c, n, [...a.interacao.textos.map(t => t.replace(/\{nome\}/g, c.p.nome)), ...extra]) };
     }
   },
 
@@ -1148,7 +1155,7 @@ function aproximar(c: CtxI, r: Rng): Saida {
     c.vin.aproximacao = c.v.t;
     afeto(c, 8); confiar(c, 3);
     lembrarCom(c.v, c.p.id, 'Começaram a conversar de verdade.', 'amizade', 1);
-    return { resultado: variar(1 + (habito(c, 'aproximar') - 1), [`${c.p.nome} topou na hora. A conversa foi longe do assunto de sempre.`, `${c.p.nome} veio — e ficou mais do que o combinado.`, `Deu certo: ${c.p.nome} parecia estar esperando alguém chamar.`]) };
+    return { resultado: variar(c, 1 + (habito(c, 'aproximar') - 1), [`${c.p.nome} topou na hora. A conversa foi longe do assunto de sempre.`, `${c.p.nome} veio — e ficou mais do que o combinado.`, `Deu certo: ${c.p.nome} parecia estar esperando alguém chamar.`]) };
   }
   if (x < chance + (1 - chance) * 0.55) {
     afeto(c, 2);
