@@ -166,13 +166,28 @@ export const INTERACOES_DE_CONFLITO: Interacao[] = [
   }
 ];
 
+/* VIDA 36 · Frente 1 (desculpas): a resposta às desculpas sai do tom da pessoa, em cada resultado (aceitas, em parte, não). */
+export const DESCULPAS: Record<TomDaPessoa, { aceitas: string[]; em_parte: string[]; nao: string[] }> = {
+  timido: { aceitas: ['{n} disse "tá bom" baixinho e não falou mais no assunto.', '{n} assentiu, sem olhar para você.'], em_parte: ['{n} agradeceu quase sem voz, e disse que precisava de um tempo.', '{n} ficou pensativ{o} e disse que ainda não sabia.'], nao: ['{n} não respondeu, e se afastou.', '{n} disse que não era hora de falar disso.'] },
+  desconfiado: { aceitas: ['"Vamos ver", disse {n}, e ficou esperando a próxima atitude.', '{n} aceitou, mas anotou mentalmente a data.'], em_parte: ['{n} aceitou em parte e quer ver se vai se repetir.', '"Desculpa aceita, por enquanto", disse {n}.'], nao: ['"Desculpa não apaga nada", respondeu {n}, seco.', '{n} disse que não ia esquecer tão cedo.'] },
+  afetuoso: { aceitas: ['{n} te abraçou e disse que estava tudo bem.', '{n} sorriu, aliviad{o}, e pediu que não repetisse.'], em_parte: ['{n} agradeceu, com a voz embargada, e disse que precisava de um tempo.', '{n} disse que queria, mas que doeu.'], nao: ['{n} chorou e disse que não sabia se conseguiria perdoar.', '{n} pediu que você se afastasse um pouco.'] },
+  expansivo: { aceitas: ['{n} gritou "tá perdoado!" e puxou você para a roda.', '{n} aceitou na hora, com um tapinha nas costas.'], em_parte: ['{n} disse "tá, mas você me deve uma", rindo.', '{n} aceitou pela metade e mudou de assunto em voz alta.'], nao: ['{n} disse, alto, que desculpa não resolvia.', '{n} saiu da sala batendo a porta.'] },
+  brincalhao: { aceitas: ['"Tá perdoado, mas você paga o almoço", brincou {n}.', '{n} fez um gesto de quem aceita e disse "agora você me deve uma".'], em_parte: ['"Meio perdoado. A outra metade você paga em piada", riu {n}.', '{n} disse que vai pensar, e ainda fez uma careta.'], nao: ['{n} tentou rir, mas a piada não saiu.', '"Essa eu não engulo", disse {n}, sem graça.'] },
+  serio: { aceitas: ['{n} disse que aceitava, e que a conversa estava encerrada.', '"Entendi. Obrigad{o} por reconhecer", disse {n}.'], em_parte: ['{n} disse que aceitava a parte que cabia a você.', '"Vou considerar, mas não é imediato", disse {n}.'], nao: ['{n} disse que pedir desculpas não resolvia o que aconteceu.', '"Não agora", respondeu {n}, sem alterar o tom.'] },
+  neutro: { aceitas: ['{n} disse "tudo bem", e seguiu.', '{n} aceitou sem muita reação.'], em_parte: ['{n} agradeceu e disse que levaria um tempo.', '{n} disse que ia pensar.'], nao: ['{n} disse que não era bem assim.', '{n} não aceitou por enquanto.'] }
+};
+const desculpaTom = (c: CtxI, r: Rng, d: 'aceitas' | 'em_parte' | 'nao'): string => {
+  const xs = DESCULPAS[tomDaPessoa(c.p)][d];
+  return xs[Math.floor(r.next() * xs.length)].replace(/\{n\}/g, c.p.nome).replace(/\{o\}/g, c.p.genero === 'feminino' ? 'a' : 'o');
+};
+
 /** Pedir desculpas (substitui o antigo: o resultado é da relação — aceitas, em parte ou recusadas). */
 export function executarDesculpas(c: CtxI, r: Rng): Saida {
   const d = desculpar(c.v, r, c.p, c.vin);
   if (d === 'aceitas') {
     if (c.vin.romance) c.vin.romance.envolvimento = clamp(c.vin.romance.envolvimento + 4);
-    return { resultado: c.vin.confianca >= 50 ? `${c.p.nome} ouviu, ficou quiet${flex(c.p.genero, 'o', 'a', 'e')} um tempo e disse "tá bom". Não precisou de mais.` : `${c.p.nome} aceitou as desculpas — do jeito de quem ainda está esperando para ver.`, aviso: { texto: 'Desculpas aceitas', tom: 'bom' } };
+    return { resultado: desculpaTom(c, r, 'aceitas'), aviso: { texto: 'Desculpas aceitas', tom: 'bom' } };
   }
-  if (d === 'em_parte') return { resultado: `${c.p.nome} agradeceu, mas disse que vai levar um tempo. Aliviou — não resolveu.`, aviso: { texto: 'Aceitas em parte', tom: 'neutro' } };
-  return { resultado: `${c.p.nome} ouviu e disse que pedir desculpas não desfaz o que aconteceu. Talvez outro dia.`, aviso: { texto: 'Ainda não', tom: 'ruim' } };
+  if (d === 'em_parte') return { resultado: desculpaTom(c, r, 'em_parte'), aviso: { texto: 'Aceitas em parte', tom: 'neutro' } };
+  return { resultado: desculpaTom(c, r, 'nao'), aviso: { texto: 'Ainda não', tom: 'ruim' } };
 }

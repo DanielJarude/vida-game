@@ -515,6 +515,28 @@ export function rotuloAgradecer(c: CtxI): string {
 }
 
 /** Agradece: pela ajuda mais recente ainda não agradecida, ou pela companhia. A reação é da pessoa e do momento. */
+/* VIDA 36 · Frente 1 (agradecer): o agradecimento sai do tom de quem recebe (abertura + corpo). A evidência continua
+ * decidindo a ramificação (ajuda registrada ou companhia); o tom só muda a frase. */
+const AGRADECER_TOM: Record<TomDaPessoa, { abre: string[]; corpo: string[] }> = {
+  timido: { abre: ['{n} ficou vermelho.', '{n} baixou os olhos.', '{n} sorriu para o chão.'], corpo: ['e murmurou que não era nada', 'e mudou de assunto', 'e guardou o agradecimento para si'] },
+  desconfiado: { abre: ['{n} olhou de lado.', '"Por quê?", perguntou {n}.'], corpo: ['e esperou para ver o motivo', 'e disse que ainda ia cobrar o favor', 'e agradeceu seco'] },
+  afetuoso: { abre: ['{n} te abraçou.', '{n} segurou sua mão.'], corpo: ['e disse que você nem precisava agradecer', 'e ficou com os olhos cheios', 'e prometeu estar lá do mesmo jeito'] },
+  expansivo: { abre: ['{n} riu alto.', '{n} contou para a roda o que você fez.'], corpo: ['e fez questão que todo mundo ouvisse', 'e devolveu com um elogio ainda maior', 'e puxou outra história para continuar'] },
+  brincalhao: { abre: ['"Ué, agora sou seu credor?", brincou {n}.', '{n} fez uma careta.'], corpo: ['e disse que a conta chega depois', 'e fingiu que estava anotando a dívida', 'e devolveu o agradecimento com uma piada'] },
+  serio: { abre: ['{n} assentiu.', '{n} disse com calma:'], corpo: ['"Fico feliz de ter ajudado"', 'e disse que ia retribuir quando fosse preciso', 'e voltou ao assunto com atenção'] },
+  neutro: { abre: ['{n} respondeu com um sorriso.', '{n} ficou sem graça.'], corpo: ['e disse que faria de novo', 'e depois ficou contente', 'e lembrou de uma vez em que foi você'] }
+};
+const agradeceTom = (c: CtxI, r: Rng, id: string): string => {
+  const t = AGRADECER_TOM[tomDaPessoa(c.p)];
+  const combos: string[] = [];
+  for (const a of t.abre) for (const b of t.corpo) combos.push(`${a} ${b}.`.replace(/\{n\}/g, c.p.nome).replace(/\{o\}/g, c.p.genero === 'feminino' ? 'a' : 'o'));
+  const chaveUltima = `agr:${c.p.id}:${id}`;
+  const livres = combos.map((_, k) => k).filter(k => k !== c.v.fatos[chaveUltima]);
+  const k = r.pick(livres.length ? livres : [0]);
+  c.v.fatos[chaveUltima] = k;
+  return combos[k];
+};
+
 export function agradecer(c: CtxI): string {
   const a = aAgradecer(c.v, c.p)[0];
   const chave = a?.chave ?? 'companhia';
@@ -540,6 +562,6 @@ export function agradecer(c: CtxI): string {
   if (a?.chave === 'criou') return pre + (c.p.temperamento.afabilidade > 0 ? `${c.p.nome} ficou com os olhos cheios. "Não precisava", disse — e precisava.` : `${c.p.nome} desconversou, falou do almoço. Mais tarde, ligou só para perguntar se você tinha chegado bem.`);
   if (antiga) return pre + `"Você ainda lembra disso?" ${c.p.nome} lembrava também — de detalhes que você não sabia.`;
   if (fechada) return pre + escolher('fechada', [`"Imagina", disse ${c.p.nome}, e mudou de assunto. Mas ficou contente; deu para ver.`, `${c.p.nome} só fez que sim com a cabeça. Para ${ele(c.p)}, é muito.`]);
-  if (!a) return escolher('companhia', [`Você disse a ${c.p.nome}, sem motivo especial, que era bom ter ${ele(c.p)} por perto. ${Ele(c.p)} riu, sem graça.`, `"Obrigad${g(c, 'o', 'a', 'e')} por estar sempre aí." ${c.p.nome} respondeu com a mesma frase.`, `Você agradeceu a ${c.p.nome} pelos anos. ${Ele(c.p)} disse que não tinha feito nada demais — e tinha.`]);
-  return pre + escolher('ajuda', [`${c.p.nome} disse que era o mínimo — e que faria de novo.`, `${c.p.nome} riu: "Para isso servem as pessoas, não é?"`, `${c.p.nome} ficou sem graça, e depois muito contente.`, `${c.p.nome} lembrou de uma vez em que foi você quem ajudou.`]);
+  if (!a) return `Você disse a ${c.p.nome}, sem motivo especial, que era bom ter ${ele(c.p)} por perto. ` + agradeceTom(c, r, 'companhia');
+  return pre + agradeceTom(c, r, 'ajuda');
 }

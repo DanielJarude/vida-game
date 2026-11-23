@@ -89,3 +89,15 @@ describe('VIDA 36 · provocar e encerrar amizade: a reação é do tom da pessoa
     }
   });
 });
+
+import { DESCULPAS } from '../sistemas/conflitos';
+
+describe('VIDA 36 · desculpas: a resposta é do tom da pessoa, em cada resultado', () => {
+  it('cada tom tem falas próprias para aceitas, em parte e não; nenhuma se repete entre tons', () => {
+    const vistas = new Map<string, string>();
+    for (const [tom, grupos] of Object.entries(DESCULPAS)) for (const xs of Object.values(grupos)) {
+      expect(xs.length).toBeGreaterThanOrEqual(2);
+      for (const x of xs) { expect(vistas.get(x) === undefined || vistas.get(x) === tom).toBe(true); vistas.set(x, tom); }
+    }
+  });
+});
