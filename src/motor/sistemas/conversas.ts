@@ -136,7 +136,66 @@ export function viverSituacao(c: CtxI, acao: string, cenas: Cena[], vez: number)
 
 const criancaNaConversa = (c: CtxI) => c.ip < 13 || c.eu < 13;
 
+
+/* ------------------------------------------------------------------ O TOM DE CADA PESSOA (VIDA 36) */
+
+/**
+ * VIDA 36 · Frente 1: a mesma situação sai com falas diferentes conforme a PESSOA. O tom vem do temperamento real
+ * (`temperamento`), na ordem: tímido, desconfiado, afetuoso, expansivo, brincalhão, sério; quem não cai em nenhum é neutro.
+ */
+export type TomDaPessoa = 'timido' | 'desconfiado' | 'afetuoso' | 'expansivo' | 'brincalhao' | 'serio' | 'neutro';
+export function tomDaPessoa(p: Pessoa): TomDaPessoa {
+  const t = p.temperamento;
+  if (t.extroversao < -0.3) return 'timido';
+  if (t.afabilidade < -0.25) return 'desconfiado';
+  if (t.afabilidade > 0.35) return 'afetuoso';
+  if (t.extroversao > 0.4) return 'expansivo';
+  if (t.extroversao > 0.1 && t.abertura > 0.3) return 'brincalhao';
+  if (t.abertura < -0.3) return 'serio';
+  return 'neutro';
+}
+
+/**
+ * Falas por tom, em três pedaços (abertura, corpo, fecho): cada situação monta a frase com um pedaço de cada, sorteado.
+ * Assim, o mesmo tom gera muitas combinações (não só três frases). `{n}` é o nome da pessoa.
+ */
+type Pedacos = { abre: string[]; corpo: string[]; fecha: string[] };
+const JEITO_ELOGIO: Record<TomDaPessoa, Pedacos> = {
+  timido: { abre: ['{n} ficou vermelho.', '{n} desviou o olhar, sem jeito.', '{n} sorriu para o chão.'], corpo: ['murmurou um obrigado', 'mudou de assunto em seguida', 'não sabia onde pôr as mãos'], fecha: ['Mas guardou.', 'Gostou, mesmo sem dizer.'] },
+  desconfiado: { abre: ['{n} franziu a testa.', '"Sei", respondeu {n}, sem baixar a guarda.', '{n} olhou de lado.'], corpo: ['perguntou por que estava dizendo isso agora', 'ficou esperando o outro lado da frase', 'agradeceu seco, procurando a pegadinha'], fecha: ['A confiança ainda vai ter que ser conquistada.', 'Nada além disso.'] },
+  afetuoso: { abre: ['{n} segurou sua mão.', '{n} te abraçou.', '{n} sorriu de um jeito que você já conhecia.'], corpo: ['e disse que aquilo significava muito', 'e ficou mais tempo do que o normal', 'e falou que você sempre sabe o que dizer'], fecha: ['Vocês ficaram perto um tempo.', 'Foi um dos melhores momentos da semana.'] },
+  expansivo: { abre: ['{n} soltou uma risada alta.', '"Sério? Repete!", pediu {n}.', '{n} animou-se na hora.'], corpo: ['e contou a todo mundo o que você tinha dito', 'e respondeu com um elogio bem maior que o seu', 'e pediu mais detalhes, empolgad{o}'], fecha: ['A mesa inteira riu junto.', 'Ninguém mais falou de outra coisa por um tempo.'] },
+  brincalhao: { abre: ['"Ué, só agora você percebeu?", brincou {n}.', '{n} fez uma careta engraçada.', '{n} fingiu que anotava num guardanapo.'], corpo: ['e disse que ia cobrar depois', 'e transformou o elogio numa piada interna', 'e pediu que repetisse na frente dos outros'], fecha: ['Riram os dois.', 'O elogio virou piada de casa.'] },
+  serio: { abre: ['{n} assentiu, pensativ{o}.', '{n} não respondeu de imediato.', '"Fico feliz que tenha reparado", disse {n}.'], corpo: ['e disse que levaria aquilo a sério', 'e comentou que era um bom critério para julgar as coisas', 'e voltou ao assunto com mais atenção'], fecha: ['Sem sorriso, mas com interesse.', 'Foi uma conversa curta e boa.'] },
+  neutro: { abre: ['{n} ficou sem graça.', '{n} respondeu, um pouco atrapalhado.', '"Sério?", perguntou {n}.'], corpo: ['e depois ficou muito contente', 'e devolveu um elogio de volta', 'e a conversa seguiu mais leve'], fecha: ['Um dia comum, bom.', 'Ficou registrado.'] }
+};
+const JEITO_CONVERSA: Record<TomDaPessoa, Pedacos> = {
+  timido: { abre: ['{n} falou pouco.', 'A conversa demorou a engrenar.', '{n} ficou calad{o} um bom tempo.'], corpo: ['respondia em frases curtas, mas ouvia tudo', 'só se soltou quando o assunto mudou', 'contou uma coisa que não contava a ninguém'], fecha: ['Vocês se entenderam melhor no fim.', 'Foi um começo de confiança.'] },
+  desconfiado: { abre: ['{n} ouviu medindo cada palavra.', 'Falaram de tudo sem chegar a lugar nenhum.', '"E o que você ganha com isso?", perguntou {n}.'], corpo: ['e você sentiu que precisava provar alguma coisa', 'e guardou as respostas para depois', 'meio brincando, meio não'], fecha: ['A desconfiança ficou de pé.', 'Nada resolvido.'] },
+  afetuoso: { abre: ['A conversa virou um fim de tarde inteiro.', '{n} não largava o assunto.', '{n} lembrou de um detalhe seu.'], corpo: ['e fazia perguntas com carinho', 'e você esqueceu do tempo', 'e disse que sentia falta disso'], fecha: ['Ficaram mais perto.', 'Um encontro que fez bem aos dois.'] },
+  expansivo: { abre: ['{n} falou sem parar.', 'Uma hora virou debate, outra virou piada.', '{n} te interrompeu três vezes.'], corpo: ['com histórias, gestos e opiniões sobre tudo', 'e parecia não ter pressa nenhuma', 'para completar a história, rindo de cada uma'], fecha: ['Você saiu com a cabeça cheia.', 'Ficou gostoso de ouvir.'] },
+  brincalhao: { abre: ['A conversa começou séria.', '{n} transformou tudo em piada.', '"Vamos fazer um trato", disse {n}.'], corpo: ['e terminou imitando alguém da família', 'mas no meio soltou uma verdade bem pensada', 'e a conversa virou uma lista de bobagens combinadas'], fecha: ['Ninguém lembrava como tinha começado.', 'Riram até doer.'] },
+  serio: { abre: ['{n} foi direto ao ponto.', 'Falaram de coisas práticas, sem rodeio.', '{n} pareceu satisfeit{o} com a clareza.'], corpo: ['e só depois de um tempo voltou ao assunto leve', 'e a conversa foi longa e objetiva', 'anotando mentalmente duas ou três coisas'], fecha: ['Saíram com um plano.', 'Sem enfeite, mas útil.'] },
+  neutro: { abre: ['Vocês conversaram sobre a semana.', '{n} contou uma novidade pequena.', 'Papo de sempre.'], corpo: ['e a conversa foi se alongando sem pressa', 'e você contou outra; ficaram nisso um tempo', 'sem grande coisa, mas gostoso'], fecha: ['Foi bom.', 'Ninguém quis ir embora.'] }
+};
+const montarJeito = (tabela: Record<TomDaPessoa, Pedacos>, c: CtxI, r: Rng, ultima?: string): { texto: string; marca: string } => {
+  const p = tabela[tomDaPessoa(c.p)];
+  const k = [0, 1, 2].map(() => Math.floor(r.next() * 3));
+  const marca = k.join('');
+  if (marca === ultima) k[2] = (k[2] + 1) % 3;
+  const txt = (x: string) => x.replace(/\{n\}/g, c.p.nome).replace(/\{o\}/g, c.p.genero === 'feminino' ? 'a' : 'o');
+  const meio = p.corpo[k[1] % p.corpo.length];
+  const fim = p.fecha[k[2] % p.fecha.length];
+  const ini = txt(p.abre[k[0] % p.abre.length]);
+  return { texto: `${ini} ${txt(meio)}. ${txt(fim)}`, marca: [k[0], k[1], k[2]].join('') };
+};
+const falaDoJeito = (familia: 'elogio' | 'conversa' | 'carinho'): Cena => ({
+  id: 'do_jeito', quando: () => true, peso: () => 5,
+  viver: (c, r, ultima) => montarJeito(familia === 'elogio' ? JEITO_ELOGIO : JEITO_CONVERSA, c, r, ultima),
+});
+
 const CONVERSAR: Cena[] = [
+  falaDoJeito('conversa'),
   {
     // Há atrito: a conversa é para acertar as coisas (a de antes do REWORK 7.5, agora uma situação entre outras).
     id: 'acertar', quando: c => c.vin.tensao >= 40, peso: () => 100,
@@ -260,9 +319,21 @@ function alguemNoCaminho(c: CtxI): Pessoa | undefined {
   return ids[0];
 }
 
+/** VIDA 36 · passar um tempo, do jeito de cada pessoa (mesma montagem: abertura, corpo, fecho). */
+const JEITO_TEMPO: Record<TomDaPessoa, Pedacos> = {
+  timido: { abre: ['{n} ficou quieto no começo.', 'O tempo passou devagar, com pouca fala.', '{n} aceitou o convite sem pressa.'], corpo: ['e foi se soltando aos poucos', 'mas gostou de ficar por perto', 'e deixou você escolher o que fazer'], fecha: ['No fim, pareceu mais à vontade.', 'Sem grande história, mas bom.'] },
+  desconfiado: { abre: ['{n} aceitou, mas olhou o relógio.', 'O programa foi correto, sem entusiasmo.', '{n} quis saber o que você queria com aquilo.'], corpo: ['e ficou de lado por um tempo', 'e só relaxou quando o assunto saiu de você', 'e observou tudo com atenção'], fecha: ['A confiança ainda está em construção.', 'Ficou no ar uma pergunta.'] },
+  afetuoso: { abre: ['O tempo passou sem ninguém perceber.', '{n} fez questão de estar ali.', '{n} trouxe um lanche sem avisar.'], corpo: ['e cada um contou um pouco da semana', 'e riram das bobagens de sempre', 'e prometeram repetir logo'], fecha: ['Foi um daqueles dias que fazem falta.', 'Saíram com vontade de voltar.'] },
+  expansivo: { abre: ['{n} chegou animad{o} e já tinha um plano.', 'Foi um programa cheio de ideias.', '{n} não parou de falar.'], corpo: ['e arrastou você para dois lugares diferentes', 'e chamou mais gente no caminho', 'e fez da tarde uma aventura'], fecha: ['Cansaço gostoso no fim.', 'A cidade inteira parecia pequena.'] },
+  brincalhao: { abre: ['{n} inventou um jogo no meio do programa.', 'A tarde virou uma sequência de piadas.', '{n} trouxe uma brincadeira pronta.'], corpo: ['e perdeu de propósito só para ouvir reclamar', 'e ninguém lembrava quem começou', 'e o plano mudou três vezes'], fecha: ['Riram até cansar.', 'Foi a melhor bobagem da semana.'] },
+  serio: { abre: ['{n} propôs algo útil para fazer juntos.', 'O tempo foi organizado, sem perda.', '{n} foi direto ao que queria fazer.'], corpo: ['e cumpriram o combinado sem pressa', 'e conversaram sobre o que importava', 'e voltaram para casa com uma tarefa cumprida'], fecha: ['Um bom dia, sem exagero.', 'Satisfeit{o}, {n} foi embora cedo.'] },
+  neutro: { abre: ['Vocês passaram a tarde juntos.', 'O programa foi simples.', '{n} escolheu o lugar.'], corpo: ['e a conversa foi se alongando', 'e a tarde passou rápido', 'e ninguém quis encerrar cedo'], fecha: ['Foi bom.', 'Um dia comum, bem aproveitado.'] }
+};
+
 function cenasDeTempo(frases: string[]): Cena[] {
   return [
     tempoComum(frases),
+    { id: 'do_jeito', quando: () => true, peso: () => 5, viver: (c, r, ultima) => montarJeito(JEITO_TEMPO, c, r, ultima) },
     {
       id: 'silencio', quando: c => c.vin.proximidade >= 68 && c.eu >= 12 && c.ip >= 12, peso: () => 3,
       viver: (c, r) => { afeto(c, 2); return { texto: r.pick([`Ficaram um bom tempo sem dizer nada — e estava tudo bem.`, `Nenhum dos dois precisou puxar assunto. Com ${c.p.nome}, o silêncio não pesa.`]) }; }
@@ -350,6 +421,7 @@ export function demonstrarCarinho(c: CtxI, vez: number): string {
 /* ------------------------------------------------------------------- ELOGIAR */
 
 const ELOGIO: Cena[] = [
+  falaDoJeito('elogio'),
   {
     id: 'estranho', quando: c => c.vin.tensao >= 35, peso: () => 100,
     viver: (c, r, ultima) => (variante(r, [`${c.p.nome} ouviu, desconfiad${_o(c.p, 'o', 'a', 'e')}. No meio do que anda entre vocês, soou estranho.`, `"Agora?", perguntou ${c.p.nome}. O elogio caiu no meio da briga e não achou lugar.`], ultima))
