@@ -2840,7 +2840,7 @@ export interface Obra {
   /** O que rendeu (reais, no ano). */
   renda: number;
   /** Indicação ou prêmio (fictício, do universo desta vida) que a obra recebeu. */
-  premio?: { nome: string; venceu: boolean };
+  premio?: { nome: string; venceu: boolean; alcance?: 'local' | 'nacional' | 'internacional' };
   /**
    * REWORK 11 · ATR-06: a recepção do PÚBLICO (vendas, plays, bilheteria), separada da crítica (`recepcao`, que segue
    * sendo a nota da crítica e é o que os prêmios leem). Saves de antes: ausente = igual à `recepcao`.
