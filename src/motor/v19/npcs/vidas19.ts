@@ -417,7 +417,8 @@ function negocio(v: Vida, r: Rng, p: Pessoa, n: Npc19, cota: Cota19): void {
     p.renda = 0;
     p.ocupacaoId = undefined;
     p.ocupacao = flex(p.genero, 'desempregado', 'desempregada', 'desempregade');
-    p.aperto = { tipo: 'desemprego', t: v.t };
+    // VIDA 36 · BUG 5.4: quem fechou o próprio negócio não foi demitido: o aperto guarda o motivo (a mensagem usa).
+    p.aperto = { tipo: 'desemprego', t: v.t, motivo: 'negocio' };
     n.meta = 'recomecar'; n.tMeta = v.t;
   }
 }

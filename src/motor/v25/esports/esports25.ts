@@ -716,8 +716,15 @@ function renovarOuSair(v: Vida, e: Esports25, t: Temporada25, zMet: number, r: R
   if (!eq || (eq.contratoAte ?? 0) > v.t + 6) return;
   // VIDA 28: quem segura o grupo (o IGL, o Suporte) é renovado com números piores; o Marrento, não.
   const fica = zMet >= -0.4 - efeitosDoPerfil(e.perfil28).vestiario * 0.12 || (eq.titular && t.competicoes[0].colocacao <= 3) || r.chance(0.25);
-  if (!fica) { sairDaEquipe(v, e, 'contrato não renovado'); escrever(v, { texto: 'O contrato acabou e a equipe não renovou: o ano que vem começa sem equipe.', relevancia: 'biografia', tema: 'trabalho', tom: 'ruim' }); return; }
   const j = jogoDe(e);
+  if (!fica) {
+    // VIDA 36 · BUG 5.3: a não renovação tinha causa (o desempenho abaixo do elenco, `zMet`), mas o texto e o histórico não
+    // diziam. Agora o motivo vai para a mensagem e para a passagem (`saida`), e a equipe comunica o que pesou.
+    const motivo = zMet < -0.4 ? `${j.metrica.nome} do ano ficou entre os piores da equipe` : 'a equipe mudou o elenco e a sua função ficou com outro';
+    sairDaEquipe(v, e, `contrato não renovado: ${motivo}`, true);
+    escrever(v, { texto: `A ${eq.nome} não renovou o seu contrato: ${motivo}. O ano que vem começa sem equipe.`, relevancia: 'biografia', tema: 'trabalho', tom: 'ruim' });
+    return;
+  }
   const n = j.niveis[e.nivel - 1];
   eq.contratoAte = v.t + (e.nivel >= 3 ? 24 : 12);
   if (n.salario[1] > 0 && e.nivel >= 3) {

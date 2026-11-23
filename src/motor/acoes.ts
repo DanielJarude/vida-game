@@ -30,7 +30,7 @@ import { daMoedaLocalDeHoje } from './mundo/moeda';
 import { contrair, dinheiro as moeda } from './texto';
 import { declararIntencao, patrimonioPagaAVida, podeDeclararIntencao, registrarProcura } from './sistemas/intencao';
 import { entrarNaVida, paisDaVida, perfilDaVida } from './mundo/vida';
-import { OCUPACOES_DE_ATLETA } from './sistemas/esporte';
+import { encerrarCarreira, OCUPACOES_DE_ATLETA } from './sistemas/esporte';
 import type { Rng } from './rng';
 import type { AjusteDeEmprego, EstiloDeVida, Imovel, Pessoa, Produto, Ramo, Retorno, TipoMovimento, Veiculo, Vida } from './tipos';
 import { escrever, filhos, idade, idadePessoa, lembrarCom, marcarFato, parceiro, temFato, transacao, vinculosVivos } from './nucleo';
@@ -1340,6 +1340,11 @@ function executarNaTransacao(v: Vida, r: Rng, a: Acao): Saida {
         }
         return ok(`${m.nome} entrou na sua semana (${nivelModelo(m, nivel).rotulo.toLowerCase()}).`);
       }
+      // VIDA 36 · BUG 5.1: parar a modalidade que é a carreira esportiva (a base do clube ou o profissional) encerra a
+      // carreira — antes, só a rotina saía e o personagem continuava vinculado à base. O histórico fica (`encerrarCarreira`
+      // arquiva e escreve a biografia).
+      const es = v.caminhos.esporte;
+      if (es && es.modalidade === a.id && (es.fase === 'base' || es.fase === 'profissional')) encerrarCarreira(v, es, 'escolha');
       v.rotinas = v.rotinas.filter(x => x.id !== a.id);
       // REWORK 11 (pendência 10.6 · A3): a terapia era o tratamento da depressão ou da ansiedade. Largá-la sem plano
       // (sem o acompanhamento médico por fora) é parar o tratamento — registrado como tal.

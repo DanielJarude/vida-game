@@ -204,6 +204,8 @@ export interface InfoPet {
 export interface Aperto {
   tipo: 'desemprego' | 'separacao' | 'doenca' | 'luto' | 'dinheiro' | 'fase';
   t: number;
+  /** VIDA 36 · BUG 5.4: de onde veio o desemprego. Ausente = demissão/perda de emprego; 'negocio' = o próprio negócio fechou (não é demissão). */
+  motivo?: 'negocio' | 'demissao';
   /** Quem foi perdido, no luto. */
   pessoaId?: string;
   /** O peso do laço com quem se foi (um filho pesa mais que um sogro): um luto mais leve não apaga um mais pesado. */

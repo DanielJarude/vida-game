@@ -244,7 +244,8 @@ export function candidatos17(v: Vida, excluir: Set<string>, fama: number): Candi
     const adultoParaMenor = eu < 18 && ip >= 18 && !(papel === 'irmao' && ip <= 25);
     if (eu >= 15 && ip >= 15 && !adultoParaMenor && vin.confianca >= 45 && (proximo || papel === 'amigo_proximo' || (papel === 'filho' && ip >= 18)) && !moraJunto(vin)) {
       const ap = p.aperto && !p.aperto.resolvido && v.t - p.aperto.t <= 18 ? p.aperto : undefined;
-      const sit = ap ? ({ separacao: 'desabafo_separacao', dinheiro: 'desabafo_dinheiro', desemprego: 'desabafo_desemprego', doenca: 'desabafo_saude', fase: 'desabafo_cansaco', luto: '' } as Record<string, string>)[ap.tipo]
+      // VIDA 36 · BUG 5.4: o negócio que fechou não é "fui demitido" — tem o seu próprio desabafo.
+      const sit = ap ? (ap.tipo === 'desemprego' && ap.motivo === 'negocio' ? 'desabafo_negocio' : ({ separacao: 'desabafo_separacao', dinheiro: 'desabafo_dinheiro', desemprego: 'desabafo_desemprego', doenca: 'desabafo_saude', fase: 'desabafo_cansaco', luto: '' } as Record<string, string>)[ap.tipo])
         : p.parceiroId && p.vivo ? 'desabafo_amor' : trabalhaHoje(p, ip) && ip >= 18 ? 'desabafo_trabalho' : vin.confianca >= 60 ? 'desabafo_familia' : 'desabafo_cansaco';
       if (sit) out.push({ tipo: 'desabafo', p, prioridade: ap ? 'alta' : 'normal', peso: (ap ? 1.3 : 0.45) + vin.confianca / 250, montar: rr => ({ de: p.id, sit17: sit, texto: fala(sit, tom, rr, p, v), assunto: ap?.tipo }) });
     }

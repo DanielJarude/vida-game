@@ -70,7 +70,8 @@ function Cena({ vida, comodoId, tipo, nome, coisas, largura, rascunho }: { vida:
   const { area, expostas, objetos } = objetosDaCena(vida, comodoId, tipo, coisas);
   const nomes = [...coisas.map(t => coisa(t.coisaId)?.nome), ...expostas.map(c => c.nome)].filter(Boolean);
   const cena = <CenaDoComodo ano={anoDe(vida.t)} tipo={tipo} parede={asp('parede')} piso={asp('piso')} luz={asp('luz').id} rodape={asp('rodape').id} cortina={asp('cortina').id} luzRegulada={regulada} objetos={objetos} area={area} largura={largura} rotulo={`${cap(nome)}${nomes.length ? `: ${nomes.join(', ')}` : ', sem nada seu'}`} />;
-  if (largura < 300) return cena;
+  // VIDA 36 · BUG 5.2: a nota "não cabe à vista" também aparece na tela estreita (antes, só com ≥ 300 px): o móvel que
+  // não coube na casa nova sumia da cena sem explicação, embora continuasse contado no cômodo.
   // O que não coube à vista não é espremido: a tela diz o quê (continua no cômodo, na lista abaixo).
   const fora = disporComodo(tipo, area, objetos, asp('luz').id, anoDe(vida.t)).fora.map(id => coisas.find(t => t.id === id)?.coisaId ?? expostas.find(c => c.id === id)?.nome).filter(Boolean).map(x => coisa(x!)?.nome ?? x);
   return <>{cena}{fora.length > 0 && <p className="nota pz-fora-da-cena">Não cabe à vista: {fora.join(', ')}.</p>}</>;

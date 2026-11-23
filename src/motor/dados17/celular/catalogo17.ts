@@ -24,6 +24,13 @@ export const FALAS17: Record<string, Falas17> = {
     ironico: ['"Atualização da minha carreira brilhante: hoje fui culpad{po} por um erro do estagiário. Do estagiário de OUTRO setor."', '"Dica de vida: nunca diga \\"pode deixar comigo\\" numa reunião. Tô pagando até hoje."']
   },
   /** VIDA 21: quem perdeu o emprego (antes caía em `desabafo_trabalho`, que é a queixa de quem tem chefe). */
+  /** VIDA 36 · BUG 5.4: o negócio próprio que fechou (dívida e recomeço — nunca "fui demitido"). */
+  desabafo_negocio: {
+    expansivo: ['"Fechei a loja. Anos de trabalho e ficou essa dívida. Tô me sentindo um fracasso!!"', '"Não consigo nem olhar pro caixa do negócio. Me liga?"'],
+    contido: ['"Tive que fechar o negócio. Tô bem, mas precisava contar pra alguém."', '"Tô pensando em recomeçar do zero. Ainda não sei como."'],
+    carinhoso: ['"Não queria te preocupar, mas o negócio não deu certo e fechei. Tô tentando não entrar em pânico."'],
+    ironico: ['"Meu negócio próprio durou menos que a promessa de ser meu próprio chefe."']
+  },
   desabafo_desemprego: {
     expansivo: ['"Fui mandad{po} embora hoje. Assim, do nada. Tô sem chão!!"', '"Demitid{po}. Depois de tudo que eu fiz por aquela empresa. Me liga?"'],
     contido: ['"Perdi o emprego. Tô bem, mas precisava contar pra alguém."', '"Tô procurando trabalho. Se souber de alguma coisa, me avisa."'],
