@@ -84,3 +84,29 @@ describe('VIDA 36 · esportes tradicionais e honras de outras carreiras', () => 
     expect(itens.find(i => i.nome.startsWith('Prêmio de pesquisa'))?.forma).toBe('laurea');
   });
 });
+
+import { siglaDe } from '../jogo/Galeria';
+
+describe('VIDA 36 · identidade por competição', () => {
+  it('a sigla vem das palavras que importam ("Mundial de LoL" → ML)', () => {
+    expect(siglaDe('Mundial de LoL')).toBe('ML');
+    expect(siglaDe('Liga de CS')).toBe('LC');
+    expect(siglaDe('Torneio do Atlântico')).toBe('TA');
+  });
+
+  it('cada jogo tem a sua cor, e o mesmo título sai sempre com a mesma marca', () => {
+    const v = comTitulos(nova({ semente: 38 }));
+    const a = itensDaGaleria(v).filter(i => i.tipo === 'esports');
+    const cores = new Set(a.map(i => i.marca?.cor));
+    expect(cores.size).toBe(3);
+    const de = (n: string) => a.find(i => i.nome === n)?.marca;
+    expect(de('Mundial de LoL')).toEqual(itensDaGaleria(comTitulos(nova({ semente: 38 }))).find(i => i.nome === 'Mundial de LoL')?.marca);
+    expect(de('Mundial de LoL')?.sigla).toBe('ML');
+  });
+
+  it('a marca aparece no desenho do troféu (faixa da cor e a sigla gravada)', () => {
+    const html = renderToStaticMarkup(<Trofeu forma="cristal" rotulo="x" marca={{ cor: '#b8862b', sigla: 'ML' }} />);
+    expect(html).toContain('data-cor="#b8862b"');
+    expect(html).toContain('>ML<');
+  });
+});
