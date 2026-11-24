@@ -20,18 +20,11 @@ import { bloqueio, PERMITIDO } from '../plausibilidade';
 import { flex, comPreposicao } from '../texto';
 import type { CtxI, Interacao, Saida } from './interacoes';
 import { assuntoDaDiscussao, desculpar, discutir, ehAmizade, estadoDaRelacao, reconciliar, romper, type DesfechoDaDiscussao } from './lacos';
-import { tomDaPessoa, type TomDaPessoa } from './conversas';
+import { tomDaPessoa } from './conversas';
+import { DESCULPAS, ENCERRA, PROVOCA, TOM_CONFLITO } from '../dados/tons36';
+export { DESCULPAS, ENCERRA, PROVOCA };
 
 /* VIDA 36 · Frente 1 (conflitos): a reação de quem discorda depende do tom dela (o temperamento real), não de uma frase só. */
-const TOM_CONFLITO: Record<TomDaPessoa, { abre: string[]; corpo: string[] }> = {
-  timido: { abre: ['{n} ficou em silêncio, com o rosto vermelho.', '{n} baixou os olhos e engoliu a resposta.'], corpo: ['e só disse que precisava pensar', 'e deixou o assunto morrer sem concordar'] },
-  desconfiado: { abre: ['{n} cruzou os braços.', '{n} rebateu com ironia.'], corpo: ['e perguntou quem tinha dito isso a você', 'e lembrou de outra vez em que você tinha faltado'] },
-  afetuoso: { abre: ['{n} segurou sua mão antes de responder.', '{n} sentiu de verdade.'], corpo: ['e disse que não queria perder a relação por causa disso', 'e pediu para conversarem sem pressa'] },
-  expansivo: { abre: ['{n} levantou a voz, animad{o} com a discussão.', '{n} respondeu na hora, sem pensar duas vezes.'], corpo: ['e chamou a atenção de todo mundo', 'e foi direto ao ponto, sem rodeios'] },
-  brincalhao: { abre: ['{n} tentou fazer piada para aliviar.', '{n} riu e devolveu a provocação.'], corpo: ['e disse que a briga não valia o tempo', 'e prometeu cobrar a conta depois'] },
-  serio: { abre: ['{n} ouviu sem interromper.', '{n} ficou sério, medindo as palavras.'], corpo: ['e respondeu com argumentos, um por um', 'e disse que ia pensar no que você falou'] },
-  neutro: { abre: ['{n} respondeu com calma.', '{n} não gostou, mas ouviu.'], corpo: ['e explicou o lado dele', 'e pediu um tempo para conversar depois'] }
-};
 export const reagiuConflito = (c: CtxI, r: Rng): string => {
   const t = TOM_CONFLITO[tomDaPessoa(c.p)];
   const sub2 = (x: string) => x.replace(/\{n\}/g, c.p.nome).replace(/\{o\}/g, c.p.genero === 'feminino' ? 'a' : 'o');
@@ -70,24 +63,6 @@ function contar(c: CtxI, d: DesfechoDaDiscussao, assunto: string, cobrou: boolea
 
 
 /* VIDA 36 · Frente 1: provocar e encerrar a amizade têm a reação do tom da pessoa (não duas frases para todos). */
-export const PROVOCA: Record<TomDaPessoa, { devolve: string[]; ignora: string[] }> = {
-  timido: { devolve: ['{n} respondeu baixinho, mas respondeu, e todo mundo ouviu.', '{n} devolveu com um riso sem graça.'], ignora: ['{n} fingiu não ouvir e foi embora da sala.', '{n} ficou vermelho e não olhou mais para você.'] },
-  desconfiado: { devolve: ['{n} devolveu com ironia afiada, medindo a sua reação.', '"Vai ficar nisso mesmo?", respondeu {n}, seco.'], ignora: ['{n} não deu o gosto de responder, e anotou mentalmente.', '{n} ignorou, mas nunca mais esqueceu.'] },
-  afetuoso: { devolve: ['{n} riu e devolveu leve, sem querer briga de verdade.', '{n} respondeu com uma provocação carinhosa.'], ignora: ['{n} não entrou na brincadeira e perguntou se estava tudo bem.', '{n} deixou passar, com um olhar que pedia trégua.'] },
-  expansivo: { devolve: ['{n} devolveu na hora, em voz alta, e a sala inteira riu.', '{n} aumentou a provocação e pediu plateia.'], ignora: ['{n} fingiu desinteresse, mas não parou de olhar para você.', '{n} saiu do assunto e tentou animar outra roda.'] },
-  brincalhao: { devolve: ['{n} devolveu com uma piada melhor que a sua.', '{n} respondeu rindo e desafiou você para a revanche.'], ignora: ['{n} sorriu e disse que aquela você não ganhava.', '{n} fingiu que não tinha ouvido, de propósito.'] },
-  serio: { devolve: ['{n} respondeu com um argumento, sem nenhum sorriso.', '"Não vou entrar nessa", disse {n}, e voltou ao assunto.'], ignora: ['{n} não respondeu, e a provocação morreu sozinha.', '{n} ficou em silêncio e foi cuidar do que importava.'] },
-  neutro: { devolve: ['{n} devolveu, sem muito entusiasmo.', '{n} respondeu, e a conversa seguiu.'], ignora: ['{n} não respondeu.', '{n} mudou de assunto.'] }
-};
-export const ENCERRA: Record<TomDaPessoa, { magoou: string[]; aceitou: string[] }> = {
-  timido: { magoou: ['{n} não disse nada e foi embora sem olhar para trás.', '{n} ficou calad{o} por um bom tempo, e depois pediu desculpas por algo que não fez.'], aceitou: ['{n} disse "tudo bem" baixinho, sem discutir.', '{n} concordou em silêncio e se despediu.'] },
-  desconfiado: { magoou: ['{n} perguntou o que você ganhava com aquilo.', '"Eu já esperava", disse {n}, com um sorriso amargo.'], aceitou: ['"Se é assim, tá bom", disse {n}, sem surpresa.', '{n} disse que já tinha percebido.'] },
-  afetuoso: { magoou: ['{n} chorou e pediu para pensarem juntos antes de decidir.', '{n} disse que não entendia, e perguntou o que tinha feito de errado.'], aceitou: ['{n} disse que ia sentir falta, e te deixou ir.', '{n} aceitou com tristeza e um abraço longo.'] },
-  expansivo: { magoou: ['{n} gritou que você estava sendo injusto e saiu batendo a porta.', '{n} contou para todo mundo, aos berros, o que tinha acontecido.'], aceitou: ['{n} deu de ombros e disse que outro amigo aparece.', '"Tudo bem, então", disse {n}, já procurando outra roda.'] },
-  brincalhao: { magoou: ['{n} tentou rir, mas a piada não saiu.', '{n} disse que não acreditava, e esperou você desmentir.'], aceitou: ['{n} brincou que ia cobrar a amizade depois.', '"Ok, mas não me esquece", riu {n}.'] },
-  serio: { magoou: ['{n} disse que lamentava, e que a decisão era sua.', '{n} ouviu tudo e anotou, em tom calmo, as razões que você deu.'], aceitou: ['{n} disse que respeitava a decisão, sem mais.', '"Entendo", disse {n}, e se despediu com educação.'] },
-  neutro: { magoou: ['{n} ficou chateado e não quis mais conversar naquele dia.', '{n} disse que não esperava aquilo.'], aceitou: ['{n} disse "tudo bem", e seguiu.', '{n} aceitou sem muita reação.'] }
-};
 const pick = (r: Rng, xs: string[], c: CtxI) => xs[Math.floor(r.next() * xs.length)].replace(/\{n\}/g, c.p.nome).replace(/\{o\}/g, c.p.genero === 'feminino' ? 'a' : 'o');
 
 export const INTERACOES_DE_CONFLITO: Interacao[] = [
@@ -167,15 +142,6 @@ export const INTERACOES_DE_CONFLITO: Interacao[] = [
 ];
 
 /* VIDA 36 · Frente 1 (desculpas): a resposta às desculpas sai do tom da pessoa, em cada resultado (aceitas, em parte, não). */
-export const DESCULPAS: Record<TomDaPessoa, { aceitas: string[]; em_parte: string[]; nao: string[] }> = {
-  timido: { aceitas: ['{n} disse "tá bom" baixinho e não falou mais no assunto.', '{n} assentiu, sem olhar para você.'], em_parte: ['{n} agradeceu quase sem voz, e disse que precisava de um tempo.', '{n} ficou pensativ{o} e disse que ainda não sabia.'], nao: ['{n} não respondeu, e se afastou.', '{n} disse que não era hora de falar disso.'] },
-  desconfiado: { aceitas: ['"Vamos ver", disse {n}, e ficou esperando a próxima atitude.', '{n} aceitou, mas anotou mentalmente a data.'], em_parte: ['{n} aceitou em parte e quer ver se vai se repetir.', '"Desculpa aceita, por enquanto", disse {n}.'], nao: ['"Desculpa não apaga nada", respondeu {n}, seco.', '{n} disse que não ia esquecer tão cedo.'] },
-  afetuoso: { aceitas: ['{n} te abraçou e disse que estava tudo bem.', '{n} sorriu, aliviad{o}, e pediu que não repetisse.'], em_parte: ['{n} agradeceu, com a voz embargada, e disse que precisava de um tempo.', '{n} disse que queria, mas que doeu.'], nao: ['{n} chorou e disse que não sabia se conseguiria perdoar.', '{n} pediu que você se afastasse um pouco.'] },
-  expansivo: { aceitas: ['{n} gritou "tá perdoado!" e puxou você para a roda.', '{n} aceitou na hora, com um tapinha nas costas.'], em_parte: ['{n} disse "tá, mas você me deve uma", rindo.', '{n} aceitou pela metade e mudou de assunto em voz alta.'], nao: ['{n} disse, alto, que desculpa não resolvia.', '{n} saiu da sala batendo a porta.'] },
-  brincalhao: { aceitas: ['"Tá perdoado, mas você paga o almoço", brincou {n}.', '{n} fez um gesto de quem aceita e disse "agora você me deve uma".'], em_parte: ['"Meio perdoado. A outra metade você paga em piada", riu {n}.', '{n} disse que vai pensar, e ainda fez uma careta.'], nao: ['{n} tentou rir, mas a piada não saiu.', '"Essa eu não engulo", disse {n}, sem graça.'] },
-  serio: { aceitas: ['{n} disse que aceitava, e que a conversa estava encerrada.', '"Entendi. Obrigad{o} por reconhecer", disse {n}.'], em_parte: ['{n} disse que aceitava a parte que cabia a você.', '"Vou considerar, mas não é imediato", disse {n}.'], nao: ['{n} disse que pedir desculpas não resolvia o que aconteceu.', '"Não agora", respondeu {n}, sem alterar o tom.'] },
-  neutro: { aceitas: ['{n} disse "tudo bem", e seguiu.', '{n} aceitou sem muita reação.'], em_parte: ['{n} agradeceu e disse que levaria um tempo.', '{n} disse que ia pensar.'], nao: ['{n} disse que não era bem assim.', '{n} não aceitou por enquanto.'] }
-};
 const desculpaTom = (c: CtxI, r: Rng, d: 'aceitas' | 'em_parte' | 'nao'): string => {
   const xs = DESCULPAS[tomDaPessoa(c.p)][d];
   return xs[Math.floor(r.next() * xs.length)].replace(/\{n\}/g, c.p.nome).replace(/\{o\}/g, c.p.genero === 'feminino' ? 'a' : 'o');

@@ -29,6 +29,8 @@ import { compatibilidade } from './social';
 import { cenaDaDescoberta, fraseDoSaber, pendentes, revelar } from './conhecimento';
 import { assuntoDaConversa29, esclarecer29 } from './boatos29';
 import type { CtxI } from './interacoes';
+import { AGRADECER_TOM, JEITO_CONVERSA, JEITO_ELOGIO, JEITO_TEMPO, type Pedacos, type TomDaPessoa } from '../dados/tons36';
+export type { TomDaPessoa };
 
 /* ------------------------------------------------------------- Efeitos */
 
@@ -143,7 +145,6 @@ const criancaNaConversa = (c: CtxI) => c.ip < 13 || c.eu < 13;
  * VIDA 36 · Frente 1: a mesma situação sai com falas diferentes conforme a PESSOA. O tom vem do temperamento real
  * (`temperamento`), na ordem: tímido, desconfiado, afetuoso, expansivo, brincalhão, sério; quem não cai em nenhum é neutro.
  */
-export type TomDaPessoa = 'timido' | 'desconfiado' | 'afetuoso' | 'expansivo' | 'brincalhao' | 'serio' | 'neutro';
 export function tomDaPessoa(p: Pessoa): TomDaPessoa {
   const t = p.temperamento;
   if (t.extroversao < -0.3) return 'timido';
@@ -159,25 +160,6 @@ export function tomDaPessoa(p: Pessoa): TomDaPessoa {
  * Falas por tom, em três pedaços (abertura, corpo, fecho): cada situação monta a frase com um pedaço de cada, sorteado.
  * Assim, o mesmo tom gera muitas combinações (não só três frases). `{n}` é o nome da pessoa.
  */
-type Pedacos = { abre: string[]; corpo: string[]; fecha: string[] };
-const JEITO_ELOGIO: Record<TomDaPessoa, Pedacos> = {
-  timido: { abre: ['{n} ficou vermelho.', '{n} desviou o olhar, sem jeito.', '{n} sorriu para o chão.'], corpo: ['murmurou um obrigado', 'mudou de assunto em seguida', 'não sabia onde pôr as mãos'], fecha: ['Mas guardou.', 'Gostou, mesmo sem dizer.'] },
-  desconfiado: { abre: ['{n} franziu a testa.', '"Sei", respondeu {n}, sem baixar a guarda.', '{n} olhou de lado.'], corpo: ['perguntou por que estava dizendo isso agora', 'ficou esperando o outro lado da frase', 'agradeceu seco, procurando a pegadinha'], fecha: ['A confiança ainda vai ter que ser conquistada.', 'Nada além disso.'] },
-  afetuoso: { abre: ['{n} segurou sua mão.', '{n} te abraçou.', '{n} sorriu de um jeito que você já conhecia.'], corpo: ['e disse que aquilo significava muito', 'e ficou mais tempo do que o normal', 'e falou que você sempre sabe o que dizer'], fecha: ['Vocês ficaram perto um tempo.', 'Foi um dos melhores momentos da semana.'] },
-  expansivo: { abre: ['{n} soltou uma risada alta.', '"Sério? Repete!", pediu {n}.', '{n} animou-se na hora.'], corpo: ['e contou a todo mundo o que você tinha dito', 'e respondeu com um elogio bem maior que o seu', 'e pediu mais detalhes, empolgad{o}'], fecha: ['A mesa inteira riu junto.', 'Ninguém mais falou de outra coisa por um tempo.'] },
-  brincalhao: { abre: ['"Ué, só agora você percebeu?", brincou {n}.', '{n} fez uma careta engraçada.', '{n} fingiu que anotava num guardanapo.'], corpo: ['e disse que ia cobrar depois', 'e transformou o elogio numa piada interna', 'e pediu que repetisse na frente dos outros'], fecha: ['Riram os dois.', 'O elogio virou piada de casa.'] },
-  serio: { abre: ['{n} assentiu, pensativ{o}.', '{n} não respondeu de imediato.', '"Fico feliz que tenha reparado", disse {n}.'], corpo: ['e disse que levaria aquilo a sério', 'e comentou que era um bom critério para julgar as coisas', 'e voltou ao assunto com mais atenção'], fecha: ['Sem sorriso, mas com interesse.', 'Foi uma conversa curta e boa.'] },
-  neutro: { abre: ['{n} ficou sem graça.', '{n} respondeu, um pouco atrapalhado.', '"Sério?", perguntou {n}.'], corpo: ['e depois ficou muito contente', 'e devolveu um elogio de volta', 'e a conversa seguiu mais leve'], fecha: ['Um dia comum, bom.', 'Ficou registrado.'] }
-};
-const JEITO_CONVERSA: Record<TomDaPessoa, Pedacos> = {
-  timido: { abre: ['{n} falou pouco.', 'A conversa demorou a engrenar.', '{n} ficou calad{o} um bom tempo.'], corpo: ['respondia em frases curtas, mas ouvia tudo', 'só se soltou quando o assunto mudou', 'contou uma coisa que não contava a ninguém'], fecha: ['Vocês se entenderam melhor no fim.', 'Foi um começo de confiança.'] },
-  desconfiado: { abre: ['{n} ouviu medindo cada palavra.', 'Falaram de tudo sem chegar a lugar nenhum.', '"E o que você ganha com isso?", perguntou {n}.'], corpo: ['e você sentiu que precisava provar alguma coisa', 'e guardou as respostas para depois', 'meio brincando, meio não'], fecha: ['A desconfiança ficou de pé.', 'Nada resolvido.'] },
-  afetuoso: { abre: ['A conversa virou um fim de tarde inteiro.', '{n} não largava o assunto.', '{n} lembrou de um detalhe seu.'], corpo: ['e fazia perguntas com carinho', 'e você esqueceu do tempo', 'e disse que sentia falta disso'], fecha: ['Ficaram mais perto.', 'Um encontro que fez bem aos dois.'] },
-  expansivo: { abre: ['{n} falou sem parar.', 'Uma hora virou debate, outra virou piada.', '{n} te interrompeu três vezes.'], corpo: ['com histórias, gestos e opiniões sobre tudo', 'e parecia não ter pressa nenhuma', 'para completar a história, rindo de cada uma'], fecha: ['Você saiu com a cabeça cheia.', 'Ficou gostoso de ouvir.'] },
-  brincalhao: { abre: ['A conversa começou séria.', '{n} transformou tudo em piada.', '"Vamos fazer um trato", disse {n}.'], corpo: ['e terminou imitando alguém da família', 'mas no meio soltou uma verdade bem pensada', 'e a conversa virou uma lista de bobagens combinadas'], fecha: ['Ninguém lembrava como tinha começado.', 'Riram até doer.'] },
-  serio: { abre: ['{n} foi direto ao ponto.', 'Falaram de coisas práticas, sem rodeio.', '{n} pareceu satisfeit{o} com a clareza.'], corpo: ['e só depois de um tempo voltou ao assunto leve', 'e a conversa foi longa e objetiva', 'anotando mentalmente duas ou três coisas'], fecha: ['Saíram com um plano.', 'Sem enfeite, mas útil.'] },
-  neutro: { abre: ['Vocês conversaram sobre a semana.', '{n} contou uma novidade pequena.', 'Papo de sempre.'], corpo: ['e a conversa foi se alongando sem pressa', 'e você contou outra; ficaram nisso um tempo', 'sem grande coisa, mas gostoso'], fecha: ['Foi bom.', 'Ninguém quis ir embora.'] }
-};
 const montarJeito = (tabela: Record<TomDaPessoa, Pedacos>, c: CtxI, r: Rng, ultima?: string): { texto: string; marca: string } => {
   const p = tabela[tomDaPessoa(c.p)];
   const k = [0, 1, 2].map(() => Math.floor(r.next() * 3));
@@ -320,15 +302,6 @@ function alguemNoCaminho(c: CtxI): Pessoa | undefined {
 }
 
 /** VIDA 36 · passar um tempo, do jeito de cada pessoa (mesma montagem: abertura, corpo, fecho). */
-const JEITO_TEMPO: Record<TomDaPessoa, Pedacos> = {
-  timido: { abre: ['{n} ficou quieto no começo.', 'O tempo passou devagar, com pouca fala.', '{n} aceitou o convite sem pressa.'], corpo: ['e foi se soltando aos poucos', 'mas gostou de ficar por perto', 'e deixou você escolher o que fazer'], fecha: ['No fim, pareceu mais à vontade.', 'Sem grande história, mas bom.'] },
-  desconfiado: { abre: ['{n} aceitou, mas olhou o relógio.', 'O programa foi correto, sem entusiasmo.', '{n} quis saber o que você queria com aquilo.'], corpo: ['e ficou de lado por um tempo', 'e só relaxou quando o assunto saiu de você', 'e observou tudo com atenção'], fecha: ['A confiança ainda está em construção.', 'Ficou no ar uma pergunta.'] },
-  afetuoso: { abre: ['O tempo passou sem ninguém perceber.', '{n} fez questão de estar ali.', '{n} trouxe um lanche sem avisar.'], corpo: ['e cada um contou um pouco da semana', 'e riram das bobagens de sempre', 'e prometeram repetir logo'], fecha: ['Foi um daqueles dias que fazem falta.', 'Saíram com vontade de voltar.'] },
-  expansivo: { abre: ['{n} chegou animad{o} e já tinha um plano.', 'Foi um programa cheio de ideias.', '{n} não parou de falar.'], corpo: ['e arrastou você para dois lugares diferentes', 'e chamou mais gente no caminho', 'e fez da tarde uma aventura'], fecha: ['Cansaço gostoso no fim.', 'A cidade inteira parecia pequena.'] },
-  brincalhao: { abre: ['{n} inventou um jogo no meio do programa.', 'A tarde virou uma sequência de piadas.', '{n} trouxe uma brincadeira pronta.'], corpo: ['e perdeu de propósito só para ouvir reclamar', 'e ninguém lembrava quem começou', 'e o plano mudou três vezes'], fecha: ['Riram até cansar.', 'Foi a melhor bobagem da semana.'] },
-  serio: { abre: ['{n} propôs algo útil para fazer juntos.', 'O tempo foi organizado, sem perda.', '{n} foi direto ao que queria fazer.'], corpo: ['e cumpriram o combinado sem pressa', 'e conversaram sobre o que importava', 'e voltaram para casa com uma tarefa cumprida'], fecha: ['Um bom dia, sem exagero.', 'Satisfeit{o}, {n} foi embora cedo.'] },
-  neutro: { abre: ['Vocês passaram a tarde juntos.', 'O programa foi simples.', '{n} sugeriu o lugar.'], corpo: ['e a conversa foi se alongando', 'e a tarde passou rápido', 'e ninguém quis encerrar cedo'], fecha: ['Foi bom.', 'Um dia comum, bem aproveitado.'] }
-};
 
 function cenasDeTempo(frases: string[]): Cena[] {
   return [
@@ -517,15 +490,6 @@ export function rotuloAgradecer(c: CtxI): string {
 /** Agradece: pela ajuda mais recente ainda não agradecida, ou pela companhia. A reação é da pessoa e do momento. */
 /* VIDA 36 · Frente 1 (agradecer): o agradecimento sai do tom de quem recebe (abertura + corpo). A evidência continua
  * decidindo a ramificação (ajuda registrada ou companhia); o tom só muda a frase. */
-const AGRADECER_TOM: Record<TomDaPessoa, { abre: string[]; corpo: string[] }> = {
-  timido: { abre: ['{n} ficou vermelho.', '{n} baixou os olhos.', '{n} sorriu para o chão.'], corpo: ['e murmurou que não era nada', 'e mudou de assunto', 'e guardou o agradecimento para si'] },
-  desconfiado: { abre: ['{n} olhou de lado.', '"Por quê?", perguntou {n}.'], corpo: ['e esperou para ver o motivo', 'e disse que ainda ia cobrar o favor', 'e agradeceu seco'] },
-  afetuoso: { abre: ['{n} te abraçou.', '{n} segurou sua mão.'], corpo: ['e disse que você nem precisava agradecer', 'e ficou com os olhos cheios', 'e prometeu estar lá do mesmo jeito'] },
-  expansivo: { abre: ['{n} riu alto.', '{n} contou para a roda o que você fez.'], corpo: ['e fez questão que todo mundo ouvisse', 'e devolveu com um elogio ainda maior', 'e puxou outra história para continuar'] },
-  brincalhao: { abre: ['"Ué, agora sou seu credor?", brincou {n}.', '{n} fez uma careta.'], corpo: ['e disse que a conta chega depois', 'e fingiu que estava anotando a dívida', 'e devolveu o agradecimento com uma piada'] },
-  serio: { abre: ['{n} assentiu.', '{n} disse com calma:'], corpo: ['"Fico feliz de ter ajudado"', 'e disse que ia retribuir quando fosse preciso', 'e voltou ao assunto com atenção'] },
-  neutro: { abre: ['{n} respondeu com um sorriso.', '{n} ficou sem graça.'], corpo: ['e disse que faria de novo', 'e depois ficou contente', 'e lembrou de uma vez em que foi você'] }
-};
 const agradeceTom = (c: CtxI, r: Rng, id: string): string => {
   const t = AGRADECER_TOM[tomDaPessoa(c.p)];
   const combos: string[] = [];
