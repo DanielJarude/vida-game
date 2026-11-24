@@ -26,6 +26,26 @@ export interface NotaDeVersao {
 
 export const NOTAS: NotaDeVersao[] = [
   {
+    versao: '36',
+    data: '2026-11-24',
+    titulo: 'Conversas que mudam de pessoa para pessoa, troféus com identidade e veículos navegáveis',
+    novidades: [
+      'Os NPCs reagem pelo jeito de cada um: conversar, passar um tempo, elogiar, agradecer, pedir desculpas, discutir, provocar e encerrar uma amizade têm falas do tom da pessoa (tímida, desconfiada, afetuosa, expansiva, brincalhona, séria).',
+      'Conhecer a família: cada familiar reage pelo seu temperamento, com o papel de cada um (a mãe, o pai).',
+      'Troféus com identidade: cada jogo de e-sports tem a sua forma; cada modalidade tradicional tem a sua; os prêmios de cinema, série, teatro e curta têm silhueta própria; as honras de saúde, educação, jurídico, finanças e outras áreas também. A cor e a sigla de cada competição aparecem no troféu.',
+      'Tatuagens: "Ver no corpo" leva a lupa à região da tatuagem e numera as que estão ali, para distinguir as próximas.',
+      'Carros e motos: a vitrine tem filtro por marca e faixa de preço, ordenação por ano, conforto e nome, e comparação de até três modelos lado a lado.',
+      'Dezoito modelos reais novos de carros e motos, cada um com o seu desenho.'
+    ],
+    melhorias: ['Os filtros e a comparação de veículos continuam como estavam quando você volta da ficha de um veículo.'],
+    correcoes: [
+      'Parar a modalidade esportiva encerra a carreira: o personagem não continua vinculado à base.',
+      'A não renovação de um jogador de e-sports diz o motivo (o desempenho abaixo do elenco).',
+      'Quem fechou o próprio negócio não recebe mais a mensagem de "fui demitido".',
+      'O móvel que não cabe na casa nova continua sendo avisado na tela, também em telas estreitas.'
+    ]
+  },
+  {
     versao: '35.2',
     data: '2026-11-22',
     titulo: 'Gaming house por dentro e por fora, PCs de marcas reais',
