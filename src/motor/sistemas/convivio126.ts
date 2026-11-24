@@ -24,8 +24,7 @@ import { flex } from '../texto';
 import { pagar, vereditoDePagar } from './dinheiro';
 import { economiaLocal } from '../dados/lugares';
 import { mesmaCidade } from './vinculos';
-import { tomDaPessoa } from './conversas';
-import { REACAO_FAMILIA } from '../dados/tons36';
+import { REACAO_FAMILIA, tomDaPessoa } from '../dados/tons36';
 import { temTatuagemVisivel } from './tatuagens';
 import { anoDe } from '../tempo';
 import {

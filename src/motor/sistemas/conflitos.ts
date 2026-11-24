@@ -20,8 +20,7 @@ import { bloqueio, PERMITIDO } from '../plausibilidade';
 import { flex, comPreposicao } from '../texto';
 import type { CtxI, Interacao, Saida } from './interacoes';
 import { assuntoDaDiscussao, desculpar, discutir, ehAmizade, estadoDaRelacao, reconciliar, romper, type DesfechoDaDiscussao } from './lacos';
-import { tomDaPessoa } from './conversas';
-import { DESCULPAS, ENCERRA, PROVOCA, TOM_CONFLITO } from '../dados/tons36';
+import { DESCULPAS, ENCERRA, PROVOCA, TOM_CONFLITO, tomDaPessoa } from '../dados/tons36';
 export { DESCULPAS, ENCERRA, PROVOCA };
 
 /* VIDA 36 · Frente 1 (conflitos): a reação de quem discorda depende do tom dela (o temperamento real), não de uma frase só. */

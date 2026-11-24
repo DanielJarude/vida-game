@@ -3,6 +3,8 @@
  * afetuoso, expansivo, brincalhão, sério, neutro), as falas que a situação monta. Ficam aqui para o pacote de textos do
  * motor não estourar o limite de 800 kB (vão para `motor-casa`, como os outros catálogos).
  */
+import type { Pessoa } from '../tipos';
+
 export type TomDaPessoa = 'timido' | 'desconfiado' | 'afetuoso' | 'expansivo' | 'brincalhao' | 'serio' | 'neutro';
 export type Pedacos = { abre: string[]; corpo: string[]; fecha: string[] };
 
@@ -95,3 +97,15 @@ export const REACAO_FAMILIA: Record<TomDaPessoa, { abre: string[]; corpo: string
   serio: { abre: ['{r} cumprimentou com formalidade.', '{r} foi direto ao assunto: o que você faz da vida.', '{r} ouviu tudo sem interromper.'], corpo: ['e fez uma pergunta sobre planos', 'e comentou o assunto do dia', 'e perguntou sobre compromisso com {p}'], bem: ['No fim, reconheceu que você falou com firmeza.', 'Disse que a conversa tinha sido útil.'], mal: ['Não houve reprovação, só distância.', 'Saiu sem comentário, e ficou a sensação de avaliação.'] },
   neutro: { abre: ['{r} recebeu você com educação.', '{r} te deu boa-noite.', '{r} não deixou ninguém sem prato.'], corpo: ['e falou sobre a casa e o bairro', 'e perguntou o que {p} estava fazendo', 'e voltou ao assunto da família'], bem: ['Um almoço comum, que acabou bem.', 'Saiu com um convite para voltar.'], mal: ['Almoço de domingo, sem grande história.', 'Ficou um clima morno.'] }
 };
+
+/** O tom de quem está na cena (a primeira regra que cabe, nesta ordem). Função pura: nasce aqui para o motor-vida não depender do motor-textos. */
+export function tomDaPessoa(p: Pessoa): TomDaPessoa {
+  const t = p.temperamento;
+  if (t.extroversao < -0.3) return 'timido';
+  if (t.afabilidade < -0.25) return 'desconfiado';
+  if (t.afabilidade > 0.35) return 'afetuoso';
+  if (t.extroversao > 0.4) return 'expansivo';
+  if (t.extroversao > 0.1 && t.abertura > 0.3) return 'brincalhao';
+  if (t.abertura < -0.3) return 'serio';
+  return 'neutro';
+}

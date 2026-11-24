@@ -29,8 +29,9 @@ import { compatibilidade } from './social';
 import { cenaDaDescoberta, fraseDoSaber, pendentes, revelar } from './conhecimento';
 import { assuntoDaConversa29, esclarecer29 } from './boatos29';
 import type { CtxI } from './interacoes';
-import { AGRADECER_TOM, JEITO_CONVERSA, JEITO_ELOGIO, JEITO_TEMPO, type Pedacos, type TomDaPessoa } from '../dados/tons36';
+import { AGRADECER_TOM, JEITO_CONVERSA, JEITO_ELOGIO, JEITO_TEMPO, tomDaPessoa, type Pedacos, type TomDaPessoa } from '../dados/tons36';
 export type { TomDaPessoa };
+export { tomDaPessoa };
 
 /* ------------------------------------------------------------- Efeitos */
 
@@ -145,16 +146,6 @@ const criancaNaConversa = (c: CtxI) => c.ip < 13 || c.eu < 13;
  * VIDA 36 · Frente 1: a mesma situação sai com falas diferentes conforme a PESSOA. O tom vem do temperamento real
  * (`temperamento`), na ordem: tímido, desconfiado, afetuoso, expansivo, brincalhão, sério; quem não cai em nenhum é neutro.
  */
-export function tomDaPessoa(p: Pessoa): TomDaPessoa {
-  const t = p.temperamento;
-  if (t.extroversao < -0.3) return 'timido';
-  if (t.afabilidade < -0.25) return 'desconfiado';
-  if (t.afabilidade > 0.35) return 'afetuoso';
-  if (t.extroversao > 0.4) return 'expansivo';
-  if (t.extroversao > 0.1 && t.abertura > 0.3) return 'brincalhao';
-  if (t.abertura < -0.3) return 'serio';
-  return 'neutro';
-}
 
 /**
  * Falas por tom, em três pedaços (abertura, corpo, fecho): cada situação monta a frase com um pedaço de cada, sorteado.
