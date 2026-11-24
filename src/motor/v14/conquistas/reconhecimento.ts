@@ -83,9 +83,9 @@ export function somarPrestigio14(v: Vida, n: number): void {
   st.prestigio = clamp((st.prestigio ?? 0) + n, 0, PRESTIGIO_MAXIMO14);
 }
 
-export function registrarReconhecimento14(v: Vida, tipo: TipoReconhecimento14, texto: string, peso: 1 | 2 = 1): void {
+export function registrarReconhecimento14(v: Vida, tipo: TipoReconhecimento14, texto: string, peso: 1 | 2 = 1, area?: string): void {
   const lista = (estadoConquistas14(v).reconhecimentos ??= []);
-  lista.push({ t: v.t, tipo, texto, peso });
+  lista.push({ t: v.t, tipo, texto, peso, ...(area ? { area } : {}) });
   if (lista.length > 40) lista.splice(0, lista.length - 40);
 }
 

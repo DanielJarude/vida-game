@@ -59,13 +59,13 @@ export const ACONTECIMENTOS_14_CONQUISTAS: Conteudo[] = [
         resolver: c => {
           const h = meio(c).honra;
           return { texto: 'Você subiu, agradeceu, desceu. No jantar, três pessoas vieram falar com você — e uma deixou o cartão.', memoria: `Recebeu ${h.premio}.`, relevancia: 'marco', tom: 'bom',
-            efeito: () => { dinheiro(c, -local(c, 500)); feliz(c, 5); somarPrestigio14(c.v, 7); registrarReconhecimento14(c.v, 'premio', cap(h.premio), 2); valorizar14(c.v, 0.04); conhecerDoMeio(c.v, `na entrega de ${h.premio}`, 'premio'); marcar(c.v, 'destaque', `Recebeu ${h.premio}.`, 2); } };
+            efeito: () => { dinheiro(c, -local(c, 500)); feliz(c, 5); somarPrestigio14(c.v, 7); registrarReconhecimento14(c.v, 'premio', cap(h.premio), 2, meio(c).area); valorizar14(c.v, 0.04); conhecerDoMeio(c.v, `na entrega de ${h.premio}`, 'premio'); marcar(c.v, 'destaque', `Recebeu ${h.premio}.`, 2); } };
         } },
       { id: 'nao_ir', texto: 'Agradecer e não ir',
         resolver: c => {
           const h = meio(c).honra;
           return { texto: 'O prêmio é seu do mesmo jeito; alguém leu o seu agradecimento ao microfone.', memoria: `Recebeu ${h.premio} (sem ir à cerimônia).`, relevancia: 'biografia', tom: 'bom',
-            efeito: () => { somarPrestigio14(c.v, 4); registrarReconhecimento14(c.v, 'premio', cap(h.premio), 2); valorizar14(c.v, 0.02); } };
+            efeito: () => { somarPrestigio14(c.v, 4); registrarReconhecimento14(c.v, 'premio', cap(h.premio), 2, meio(c).area); valorizar14(c.v, 0.02); } };
         } }
     ]
   },

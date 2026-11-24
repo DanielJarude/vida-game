@@ -38,6 +38,8 @@ export interface Reconhecimento14 {
   texto: string;
   /** Pesa na retrospectiva (prêmio e descoberta = 2). */
   peso: 1 | 2;
+  /** VIDA 36: a área do meio (saude, educacao, juridico...), para o troféu ter a sua forma. Ausente em saves antigos. */
+  area?: string;
 }
 
 export interface Conquistas14 {

@@ -16,7 +16,9 @@ import { nomeDaCompeticao, nomeDoEstadualDaCidade } from '../../motor/sistemas/c
  * obra tem a sua (rolo de filme, televisão, máscaras, claquete). Nada disso é só cor: a silhueta muda. */
 export type Forma = 'estadual' | 'mundo' | 'selecao' | 'orelhas' | 'figura' | 'urna' | 'liga' | 'acesso' | 'quadra' | 'medalha' | 'estatueta' | 'disco' | 'banco' | 'bola' | 'chuteira' | 'the_best' | 'golden_boy'
   | 'cristal' | 'escudo_tatico' | 'agulha' | 'caixa' | 'hexagono' | 'carro' | 'controle'
-  | 'rolo' | 'televisao' | 'mascaras' | 'claquete';
+  | 'rolo' | 'televisao' | 'mascaras' | 'claquete'
+  | 'cesta' | 'rede' | 'raquete' | 'tocha' | 'onda' | 'cinturao'
+  | 'cruz' | 'livro' | 'atomo' | 'obelisco' | 'balanca' | 'seta' | 'pena' | 'paleta' | 'laurea';
 
 /** VIDA 36 · a forma de um título de e-sports: a do jogo (a silhueta é do jogo, não só da cor). */
 export function formaDoTituloEsports(jogo: string): Forma {
@@ -41,8 +43,16 @@ export function formaDoPremioDeObra(tipo: string): Forma {
 /** VIDA 36 · a hierarquia: o alcance e o selo (comum, especial, histórico) que aparecem na ficha do troféu. */
 export const SELO_DO_ALCANCE: Record<'local' | 'nacional' | 'internacional', string> = { local: 'comum', nacional: 'especial', internacional: 'histórico' };
 
+/** VIDA 36 · as modalidades tradicionais: cada uma com a sua forma (o futebol segue com liga, copa e estaduais). */
+const FORMA_DA_MODALIDADE: Record<string, Forma> = { basquete: 'cesta', volei: 'rede', tenis: 'raquete', atletismo: 'tocha', natacao: 'onda', lutas: 'cinturao' };
+/** VIDA 36 · as honras de outras carreiras: a forma pela área (saúde, educação, jurídico...). */
+export function formaDoPremioDeArea(area?: string): Forma {
+  const m: Record<string, Forma> = { saude: 'cruz', educacao: 'livro', tecnologia: 'atomo', engenharia: 'obelisco', juridico: 'balanca', financas: 'seta', comunicacao: 'pena', criativo: 'paleta' };
+  return (area && m[area]) || 'medalha';
+}
+
 /** A forma pelo id estável (a apresentação muda; o id não). */
-export function formaDoTrofeu(c: Pick<ConquistaEsportiva, 'tipo' | 'competicaoId' | 'competicao'>): Forma {
+export function formaDoTrofeu(c: Pick<ConquistaEsportiva, 'tipo' | 'competicaoId' | 'competicao'> & { modalidade?: string }): Forma {
   // HOTFIX 11.5.1: os prêmios do futebol do mundo, cada um com a sua forma (a bola dourada, a chuteira, o globo e a
   // figura do The Best, a figura jovem do Golden Boy); os outros prêmios, a medalha.
   if (c.competicaoId === 'premio:bola_de_ouro') return 'bola';
@@ -51,6 +61,7 @@ export function formaDoTrofeu(c: Pick<ConquistaEsportiva, 'tipo' | 'competicaoId
   if (c.competicaoId === 'premio:golden_boy') return 'golden_boy';
   if (c.tipo === 'premio') return 'medalha';
   if (c.tipo === 'acesso') return 'acesso';
+  if (c.modalidade && FORMA_DA_MODALIDADE[c.modalidade]) return FORMA_DA_MODALIDADE[c.modalidade];
   const id = c.competicaoId ?? '';
   if (id.endsWith(':basquete') || id.endsWith(':volei')) return 'quadra';
   // VIDA 32: os estaduais (Paulista, Carioca, Mineiro…) têm troféu próprio.
@@ -138,13 +149,28 @@ export function Trofeu({ forma, metal = 'ouro', rotulo }: { forma: Forma; metal?
       case 'televisao': return <><path d="M14 4 L20 12 L26 4" fill="none" strokeWidth="1.6" /><rect x="6" y="12" width="28" height="20" rx="2" /><rect x="10" y="16" width="20" height="12" fill="none" strokeWidth="1.2" /><rect x="14" y="34" width="12" height="3" /><rect x="10" y="38" width="20" height="4" rx="1" /></>;
       case 'mascaras': return <><ellipse cx="14" cy="16" rx="9" ry="11" /><ellipse cx="26" cy="20" rx="9" ry="11" fill="none" strokeWidth="1.8" /><path d="M10 15 Q14 19 18 15 M22 19 Q26 23 30 19" fill="none" strokeWidth="1.3" /><rect x="11" y="34" width="18" height="8" rx="1" /></>;
       case 'claquete': return <><path d="M6 12 L34 8 L35 14 L7 18 Z" /><path d="M10 12 L13 10 M18 11 L21 9 M26 10 L29 8" fill="none" strokeWidth="1.6" /><rect x="6" y="19" width="28" height="18" rx="1" /><rect x="10" y="23" width="20" height="3" fill="none" strokeWidth="1" /><rect x="11" y="38" width="18" height="4" rx="1" /></>;
+      case 'cesta': return <><rect x="6" y="4" width="28" height="18" rx="2" /><ellipse cx="20" cy="26" rx="8" ry="2.5" fill="none" strokeWidth="2" /><path d="M13 27 L15 36 M20 28.5 L20 36 M27 27 L25 36" fill="none" strokeWidth="1" /><rect x="17" y="36" width="6" height="7" /></>;
+      case 'rede': return <><circle cx="20" cy="9" r="6" /><path d="M4 20 H36 M10 16 V28 M20 16 V28 M30 16 V28" fill="none" strokeWidth="1" /><path d="M4 16 H36 M4 24 H36" fill="none" strokeWidth="1.6" /><rect x="12" y="32" width="16" height="5" rx="1" /><rect x="10" y="37" width="20" height="6" rx="1" /></>;
+      case 'raquete': return <><ellipse cx="20" cy="14" rx="9" ry="11" /><path d="M13 8 L27 20 M27 8 L13 20" fill="none" strokeWidth="0.8" /><path d="M20 25 L20 35" fill="none" strokeWidth="2.5" /><rect x="14" y="35" width="12" height="4" rx="1" /><rect x="11" y="39" width="18" height="5" rx="1" /></>;
+      case 'tocha': return <><path d="M20 2 Q27 12 22 18 Q30 16 26 26 L14 26 Q10 16 18 12 Q16 8 20 2 Z" /><rect x="15" y="26" width="10" height="13" rx="1" /><rect x="11" y="39" width="18" height="4" rx="1" /></>;
+      case 'onda': return <><path d="M6 8 Q11 4 16 8 T26 8 T36 8 L34 20 Q20 30 6 20 Z" /><path d="M6 14 Q11 10 16 14 T26 14 T36 14" fill="none" strokeWidth="1" /><rect x="16" y="30" width="8" height="8" /><rect x="11" y="38" width="18" height="5" rx="1" /></>;
+      case 'cinturao': return <><path d="M4 16 L36 16 L36 26 L4 26 Z" /><rect x="15" y="13" width="10" height="16" rx="1" fill="none" strokeWidth="1.6" /><path d="M10 6 L20 12 L30 6" fill="none" strokeWidth="2" /><rect x="12" y="34" width="16" height="7" rx="1" /></>;
+      case 'cruz': return <><path d="M16 4 L24 4 L24 14 L34 14 L34 22 L24 22 L24 32 L16 32 L16 22 L6 22 L6 14 L16 14 Z" /><rect x="11" y="34" width="18" height="4" rx="1" /><rect x="9" y="38" width="22" height="5" rx="1" /></>;
+      case 'livro': return <><path d="M4 12 Q12 8 20 12 Q28 8 36 12 L36 32 Q28 28 20 32 Q12 28 4 32 Z" /><path d="M20 12 L20 32" fill="none" strokeWidth="1" /><path d="M26 30 L26 40 L28 37 L30 40 L30 30" /><rect x="10" y="38" width="20" height="5" rx="1" /></>;
+      case 'atomo': return <><circle cx="20" cy="18" r="3.5" /><ellipse cx="20" cy="18" rx="14" ry="5" fill="none" strokeWidth="1.6" /><ellipse cx="20" cy="18" rx="14" ry="5" fill="none" strokeWidth="1.6" transform="rotate(60 20 18)" /><ellipse cx="20" cy="18" rx="14" ry="5" fill="none" strokeWidth="1.6" transform="rotate(-60 20 18)" /><rect x="12" y="36" width="16" height="6" rx="1" /></>;
+      case 'obelisco': return <><path d="M16 4 L24 4 L26 34 L14 34 Z" /><rect x="11" y="34" width="18" height="4" rx="1" /><rect x="8" y="38" width="24" height="5" rx="1" /></>;
+      case 'balanca': return <><path d="M20 4 L20 30" fill="none" strokeWidth="2" /><path d="M6 12 L34 12" fill="none" strokeWidth="2" /><path d="M6 12 L2 24 Q6 28 10 24 Z" /><path d="M34 12 L30 24 Q34 28 38 24 Z" /><rect x="14" y="30" width="12" height="4" rx="1" /><rect x="11" y="36" width="18" height="7" rx="1" /></>;
+      case 'seta': return <><path d="M4 34 L14 22 L21 28 L34 12" fill="none" strokeWidth="3.2" /><path d="M26 10 L36 10 L36 20 Z" /><rect x="10" y="36" width="20" height="7" rx="1" /></>;
+      case 'pena': return <><path d="M30 4 Q18 10 14 28 L12 36 L16 30 Q24 22 32 8 Z" /><path d="M12 36 L8 42" fill="none" strokeWidth="1.4" /><rect x="11" y="38" width="18" height="5" rx="1" /></>;
+      case 'paleta': return <><path d="M20 6 Q36 6 36 20 Q36 30 26 28 Q22 27 22 32 Q22 38 14 38 Q4 38 4 26 Q4 6 20 6 Z" /><circle cx="12" cy="18" r="2.5" fill="none" strokeWidth="1" /><circle cx="20" cy="13" r="2.5" fill="none" strokeWidth="1" /><circle cx="28" cy="16" r="2.5" fill="none" strokeWidth="1" /></>;
+      case 'laurea': return <><path d="M8 10 Q2 22 10 32 M32 10 Q38 22 30 32" fill="none" strokeWidth="2.4" /><rect x="12" y="8" width="16" height="10" rx="1" /><path d="M14 13 L26 13 M14 15.5 L24 15.5" fill="none" strokeWidth="0.9" /><rect x="11" y="36" width="18" height="6" rx="1" /></>;
       case 'banco': return <><path d="M10 6 L30 6 L28 22 Q20 28 12 22 Z" /><path d="M14 12 L26 12" fill="none" strokeWidth="1.4" /><rect x="17" y="26" width="6" height="9" /><rect x="11" y="35" width="18" height="8" rx="1" /></>;
     }
   })();
   return <svg className={`trofeu trofeu--${metal}`} data-forma={forma} viewBox="0 0 40 46" role="img" aria-label={rotulo}>{corpo}</svg>;
 }
 
-export interface ItemDaGaleria { id: string; forma: Forma; metal: 'ouro' | 'prata' | 'bronze'; nome: string; ano: number; onde?: string; papel?: string; tipo: 'coletivo' | 'individual' | 'tecnico' | 'arte' | 'esports'; alcance?: 'local' | 'nacional' | 'internacional' }
+export interface ItemDaGaleria { id: string; forma: Forma; metal: 'ouro' | 'prata' | 'bronze'; nome: string; ano: number; onde?: string; papel?: string; tipo: 'coletivo' | 'individual' | 'tecnico' | 'arte' | 'esports' | 'carreira'; alcance?: 'local' | 'nacional' | 'internacional' }
 
 /** O que a galeria mostra (só o que foi registrado de verdade). */
 export function itensDaGaleria(v: Vida): ItemDaGaleria[] {
@@ -160,6 +186,9 @@ export function itensDaGaleria(v: Vida): ItemDaGaleria[] {
     out.push({ id: c.trofeuId ?? `${c.tipo}:${c.competicao}:${c.ano}:${c.texto}`, forma: formaDoTrofeu(c), metal: c.tipo === 'final' ? 'prata' : c.tipo === 'premio' ? (c.competicaoId?.startsWith('premio:') ? 'ouro' : 'bronze') : 'ouro', nome: c.tipo === 'premio' ? c.texto : c.tipo === 'final' ? `Final: ${c.competicao}` : c.tipo === 'acesso' ? c.texto : c.competicao, ano: c.ano, onde: c.clube, papel: c.papel === 'protagonista' ? 'protagonista' : c.papel === 'elenco' ? 'no elenco' : undefined, tipo: c.tipo === 'premio' ? 'individual' : 'coletivo' });
   }
   out.push(...trofeusDoTecnico(v));
+  // VIDA 36: as honras de outras carreiras (saúde, educação, jurídico, finanças, engenharia...) e os prêmios da pesquisa.
+  for (const x of v.conquistas14?.reconhecimentos ?? []) if (x.tipo === 'premio') out.push({ id: `rec:${x.t}:${x.texto}`, forma: formaDoPremioDeArea(x.area), metal: x.peso === 2 ? 'ouro' : 'prata', nome: x.texto, ano: anoDe(x.t), tipo: 'carreira' });
+  for (const x of v.caminhos.academia?.producao ?? []) if (x.tipo === 'premio') out.push({ id: `acad:${x.t}:${x.titulo}`, forma: 'laurea', metal: 'ouro', nome: x.titulo, ano: anoDe(x.t), onde: x.detalhe, tipo: 'carreira' });
   // VIDA 36: os e-sports (cada jogo, a sua forma; a hierarquia pelo tipo da competição: torneio comum, liga especial, mundial histórico).
   for (const t of v.esports25?.temporadas ?? []) for (const c of t.competicoes) if (c.titulo) {
     const alcance = c.tipo === 'mundial' ? 'internacional' : c.tipo === 'liga' ? 'nacional' : 'local';
@@ -170,12 +199,12 @@ export function itensDaGaleria(v: Vida): ItemDaGaleria[] {
   return out.sort((a, b) => b.ano - a.ano);
 }
 
-const GRUPO: Record<ItemDaGaleria['tipo'], string> = { coletivo: 'Títulos e campanhas', individual: 'Prêmios individuais', tecnico: 'Como técnico', arte: 'Prêmios artísticos', esports: 'E-sports' };
+const GRUPO: Record<ItemDaGaleria['tipo'], string> = { coletivo: 'Títulos e campanhas', individual: 'Prêmios individuais', tecnico: 'Como técnico', arte: 'Prêmios artísticos', esports: 'E-sports', carreira: 'Honras da carreira' };
 
 export function GaleriaDeConquistas({ vida }: { vida: Vida }) {
   const itens = itensDaGaleria(vida);
   if (!itens.length) return null;
-  const grupos = (['esports', 'coletivo', 'individual', 'tecnico', 'arte'] as const).map(g => ({ g, xs: itens.filter(i => i.tipo === g) })).filter(x => x.xs.length);
+  const grupos = (['esports', 'coletivo', 'individual', 'tecnico', 'arte', 'carreira'] as const).map(g => ({ g, xs: itens.filter(i => i.tipo === g) })).filter(x => x.xs.length);
   return (
     <section className="galeria" aria-labelledby="titulo-galeria">
       <h2 id="titulo-galeria" className="secao-fio">A galeria</h2>
