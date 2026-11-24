@@ -112,6 +112,15 @@ export const ARQUETIPOS = {
 } satisfies Record<string, Arquetipo>;
 
 export const MODELOS_13: Record<string, Modelo13> = {
+  /* VIDA 36 · a ampliação do catálogo (modelos reais, cada um com as suas medidas e detalhes). */
+  peugeot_208: { m: { L: 4055, H: 1460, W: 2540, D: 600, bf: 800 }, a: 'hatch', o: { curva: 0.8, tT: 0.9 }, j: { farol: 'fino', lanterna: 'bloco', paraChoque: 'cor', rodas: 'liga', portas: 4 } },
+  byd_dolphin: { m: { L: 4125, H: 1570, W: 2700, D: 600, bf: 830 }, a: 'hatch', o: { curva: 1.0, tT: 0.92 }, j: { farol: 'fino', lanterna: 'barra', paraChoque: 'cor', rodas: 'liga', portas: 4 } },
+  chevrolet_cruze: { m: { L: 4597, H: 1477, W: 2685, D: 640, bf: 900 }, a: 'seda', j: { farol: 'redondo', lanterna: 'fina', paraChoque: 'cor', moldura: 'cromo', rodas: 'liga', portas: 4 } },
+  vw_jetta: { m: { L: 4644, H: 1455, W: 2651, D: 640, bf: 900 }, a: 'seda', j: { farol: 'fino', lanterna: 'fina', paraChoque: 'cor', rodas: 'liga', portas: 4 } },
+  audi_a3_sedan: { m: { L: 4456, H: 1426, W: 2631, D: 620, bf: 880 }, a: 'seda', j: { farol: 'fino', lanterna: 'bloco', paraChoque: 'cor', rodas: 'liga', portas: 4 } },
+  mercedes_classe_c: { m: { L: 4751, H: 1442, W: 2865, D: 640, bf: 950 }, a: 'luxo', j: { farol: 'fino', lanterna: 'fina', paraChoque: 'cor', moldura: 'cromo', rodas: 'liga', portas: 4 } },
+  subaru_wrx: { m: { L: 4670, H: 1465, W: 2675, D: 620, bf: 930 }, a: 'fastback', o: { curva: 0.6 }, j: { farol: 'fino', lanterna: 'vertical', paraChoque: 'cor', rodas: 'liga', portas: 4 } },
+  bmw_x3: { m: { L: 4709, H: 1676, W: 2864, D: 700, bf: 940 }, a: 'suv', o: { tT: 0.95 }, j: { farol: 'fino', lanterna: 'fina', paraChoque: 'cor', rodas: 'liga', rack: true } },
   /* ------------------------------------------------------------ ERAS v3: os carros da época no mundo (`motor/eras/base/veiculosMundo`).
      Medidas das fichas técnicas dos fabricantes e dos museus (mm), arredondadas; a roda de raios e o para-lama solto dos antigos. */
   epm_olds_curved: { m: { L: 2400, H: 1650, W: 1680, D: 720, bf: 300 }, a: 'antigo', o: { tT: 0.7, tras: 0.5 }, j: { capota: '#2b2826', paralamaSolto: true, farol: 'redondo', lanterna: 'redonda', paraChoque: 'preto', rodas: 'raios', raios: 12, portas: 2, espelho: 'nenhum' } },

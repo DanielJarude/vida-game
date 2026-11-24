@@ -31,6 +31,17 @@ export interface PerfilMoto { farol?: 'redondo' | 'anguloso' | 'duplo';
    *  redondo no avental, a Super Cub de escudo claro, o ciclomotor de pedal. */
   antiga?: 'vespa50' | 'lambreta' | 'schwalbe' | 'supercub' | 'ciclomotor' }
 export const MODELOS_MOTO: Record<string, PerfilMoto> = {
+  // VIDA 36 · a ampliação do catálogo (motos de estrada, naked, scooter, custom e turismo).
+  honda_cb650r: { farol: 'redondo', grande: true, robusta: true },
+  kawasaki_ninja650: { farol: 'duplo', carenagem: true, grande: true },
+  yamaha_r3: { farol: 'duplo', carenagem: true },
+  ktm_390_duke: { farol: 'anguloso', robusta: true },
+  yamaha_tenere700: { farol: 'duplo', grande: true, bagageiro: true },
+  royal_enfield_classic350: { farol: 'redondo', aro: 'raios' },
+  dafra_next250: { farol: 'redondo', aro: 'liga', escapeCurto: true },
+  suzuki_gsxs750: { farol: 'duplo', robusta: true, escapeDuplo: true },
+  harley_sportster_s: { custom: true, baixa: true, aro: 'raios' },
+  honda_goldwing: { farol: 'redondo', carenagem: true, grande: true, bagageiro: true },
   honda_pop: { aro: 'raios' }, honda_biz: { aro: 'liga', bau: true },
   honda_pcx: {},
   // ERAS v3: as motonetas e as lambretas da época.

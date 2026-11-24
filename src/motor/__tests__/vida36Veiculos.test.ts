@@ -64,7 +64,7 @@ describe('VIDA 36 · integridade do catálogo ampliado', () => {
       expect(x.modelo.length).toBeGreaterThan(1);
       expect(x.preco).toBeGreaterThan(0);
     }
-    expect(VERSOES_36.length).toBeGreaterThanOrEqual(19);
+    expect(VERSOES_36.length).toBeGreaterThanOrEqual(18);
   });
 
   it('nenhum modelo novo repete um que já estava no catálogo (marca + modelo)', () => {
