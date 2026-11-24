@@ -205,7 +205,8 @@ describe('Loja de veículos: marca e modelo, catálogo completo', () => {
     expect(titulos(folha)).toEqual(usados.slice(0, 20).map(nome));
     // Mais caro primeiro.
     fireEvent.click(within(folha).getByRole('radio', { name: 'Novos e usados' }));
-    fireEvent.click(within(folha).getByRole('button', { name: /Mais barato primeiro/ }));
+    // VIDA 36: a ordem é um seletor (Ordenar), com o mais caro primeiro.
+    fireEvent.change(within(folha).getByLabelText(/Ordenar/), { target: { value: 'caro' } });
     expect(titulos(folha)[0]).toBe(nome(cat[cat.length - 1]));
     // Busca por marca e modelo.
     fireEvent.change(within(folha).getByPlaceholderText('Marca ou modelo'), { target: { value: 'hilux' } });

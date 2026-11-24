@@ -24,8 +24,9 @@ import type { Produto, Vida } from '../../../motor/tipos';
 import { condicoesImovel, condicoesVeiculo, condicoesEmprestimo, disponibilidade, type Acao } from '../../../motor/acoes';
 import { idade, idadePessoa, vinculosVivos } from '../../../motor/nucleo';
 import { podeTentar } from '../../../motor/plausibilidade';
-import { formaDaVersao, modeloMoradia, modeloVeiculo, nomeDaVersao, versaoVeiculo, NOME_CATEGORIA, NOME_FORMA, PALAVRA_FAIXA, type CategoriaVeiculo } from '../../../motor/dados/bens';
+import { formaDaVersao, modeloMoradia, modeloVeiculo, nomeDaVersao, versaoVeiculo, NOME_CATEGORIA, NOME_FORMA, PALAVRA_FAIXA, type CategoriaVeiculo, type FaixaVeiculo } from '../../../motor/dados/bens';
 import { leituraDaHabilitacao, temHabilitacao } from '../../../motor/sistemas/habilitacoes';
+import { compararVeiculos, fichaDoVeiculo, filtrarVeiculos, LIMITE_DE_COMPARACAO, marcasDaVitrine, type FichaDeVeiculo, type OrdemDeVeiculos } from '../../../motor/sistemas/vitrineDeVeiculos36';
 import { economiaLocal } from '../../../motor/dados/lugares';
 import { PRODUTOS, PALAVRA_RISCO, produto } from '../../../motor/dados/investimentos';
 import { animaisParaVoce, imoveisParaVoce, investimentosParaVoce, veiculosParaVoce } from '../../../motor/sistemas/relevancia';
@@ -450,10 +451,12 @@ function AntesDeDecidir({ linhas }: { linhas: { rotulo: string; texto: string }[
 
 type FiltroCategoria = 'todas' | CategoriaVeiculo;
 type FiltroCondicao = 'todos' | 'novos' | 'usados';
-type Ordem = 'barato' | 'caro';
+type Ordem = 'barato' | 'caro' | 'nova' | 'conforto' | 'nome';
+/** VIDA 36 · o estado do catálogo de veículos, guardado por loja (sobrevive a abrir um veículo e voltar). */
+interface EstadoCatalogoVeiculos { categoria: FiltroCategoria; condicao: FiltroCondicao; ordem: Ordem; busca: string; marca: string; faixa: '' | FaixaVeiculo; comparar: string[]; quantos: number }
+const ESTADO_CATALOGO_INICIAL: EstadoCatalogoVeiculos = { categoria: 'todas', condicao: 'todos', ordem: 'barato', busca: '', marca: '', faixa: '', comparar: [], quantos: 20 };
+const ORDEM_DE_VEICULOS: Record<Ordem, OrdemDeVeiculos> = { barato: 'menor', caro: 'maior', nova: 'nova', conforto: 'conforto', nome: 'nome' };
 
-const semAcento = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-const POR_PAGINA = 20;
 
 function Veiculos({ vida, agir, lugar }: { vida: Vida; agir: (a: Acao) => boolean; lugar: OfertaVeiculo['lugar'] }) {
   const { para, resto } = veiculosParaVoce(vida, lugar);
@@ -463,12 +466,16 @@ function Veiculos({ vida, agir, lugar }: { vida: Vida; agir: (a: Acao) => boolea
   const [vista, setVista] = useState<'loja' | 'catalogo'>('loja');
   const [aberta, setAberta] = useState<string | null>(null);
   const [verTudo, setVerTudo] = useState(false);
+  // VIDA 36: os filtros e a comparação ficam aqui (e não no catálogo, que desmonta ao abrir um veículo): voltar mantém tudo.
+  const [estados, setEstados] = useState<Record<string, EstadoCatalogoVeiculos>>({});
+  const estado = estados[lugar] ?? ESTADO_CATALOGO_INICIAL;
+  const mudarEstado = (p: Partial<EstadoCatalogoVeiculos>) => setEstados(x => ({ ...x, [lugar]: { ...(x[lugar] ?? ESTADO_CATALOGO_INICIAL), ...p } }));
   const escolhida = [...para.map(x => x.item), ...resto, ...catalogo].find(o => o.id === aberta);
   if (escolhida) return <DetalheVeiculo vida={vida} agir={agir} o={escolhida} voltar={() => setAberta(null)} />;
   return (
     <>
       <Escolha rotulo="O que ver" valor={vista} aoMudar={setVista} opcoes={[{ id: 'loja', rotulo: 'Para você, agora' }, { id: 'catalogo', rotulo: `Catálogo completo (${catalogo.length})` }]} />
-      {vista === 'catalogo' ? <CatalogoVeiculos ofertas={catalogo} abrir={setAberta} categorias={categorias} /> : (
+      {vista === 'catalogo' ? <CatalogoVeiculos ofertas={catalogo} abrir={setAberta} categorias={categorias} estado={estado} mudar={mudarEstado} /> : (
         <>
           <p className="nota">{lugar === 'usados' ? 'Usado custa menos e dá mais oficina. Cada anúncio tem uma história.' : lugar === 'concessionaria' ? 'Zero quilômetro: garantia, cheiro de novo — e o valor cai assim que sai da loja.' : lugar === 'colecionador' ? 'Superesportivo perde muito valor nos primeiros anos; clássico anda com o mercado de colecionador — pode subir, pode cair. Oficina de marca, peça cara.' : lugar === 'nautica' ? 'Barco é caro de comprar e mais caro de manter: marina, seguro, combustível, o casco que pede cuidado.' : lugar === 'aeroclube' ? 'Avião é raro e caro: hangar, inspeção obrigatória, seguro — uma conta de empresa.' : 'Moto e bicicleta: baratas de manter, expostas no trânsito.'}{!vida.trabalho.licencas.includes('cnh') && (lugar === 'concessionaria' || lugar === 'usados') ? ` Sem ${habilitacaoDaVida(vida).a}, não dá para dirigir.` : !vida.trabalho.licencas.includes('cnh') && lugar === 'motos' ? ` Moto pede ${habilitacaoDaVida(vida).a}; bicicleta, não.` : ''}</p>
           {(lugar === 'nautica' || lugar === 'aeroclube') && (() => { const h = lugar === 'nautica' ? 'nautica' : temHabilitacao(vida, 'piloto') ? 'multimotor' : 'piloto'; return <div className="habilitacao"><p className="nota">Ter não é saber operar. {lugar === 'aeroclube' && h === 'multimotor' ? 'Você tem a licença de piloto. ' : ''}{leituraDaHabilitacao(vida, h)}{lugar === 'aeroclube' ? ' O jato executivo voa com tripulação própria.' : ''}</p><BotaoAcao vida={vida} acao={{ tipo: 'habilitacao', qual: h }} agir={agir} variante="discreto" ocultarBloqueado ocultarImpossivel>{h === 'nautica' ? 'Fazer o curso de habilitação náutica' : h === 'multimotor' ? 'Fazer a habilitação de multimotor' : 'Começar a formação de piloto'}</BotaoAcao></div>; })()}
@@ -494,41 +501,77 @@ function motivoDeNadaCaber(vida: Vida, resto: OfertaVeiculo[]): string {
   return `Nada cabe agora. O mais barato (${dinheiroCurto(barato.preco)}): ${d.motivo ?? 'à vista não dá'}${f.motivo && f.motivo !== d.motivo ? ` Financiado: ${f.motivo.charAt(0).toLowerCase() + f.motivo.slice(1)}` : ''}`;
 }
 
-/** A loja inteira da cidade: tudo o que está à venda, do mais barato ao mais caro, com filtros. */
-export function CatalogoVeiculos({ ofertas, abrir, categorias }: { ofertas: OfertaVeiculo[]; abrir: (id: string) => void; categorias?: CategoriaVeiculo[] }) {
+/** A loja inteira da cidade: tudo o que está à venda, com busca, marca, tipo, faixa, ordem e comparação de até três. */
+export function CatalogoVeiculos({ ofertas, abrir, categorias, estado, mudar }: { ofertas: OfertaVeiculo[]; abrir: (id: string) => void; categorias?: CategoriaVeiculo[]; estado: EstadoCatalogoVeiculos; mudar: (p: Partial<EstadoCatalogoVeiculos>) => void }) {
   // Os filtros de tipo saem das categorias que a loja vende (fonte única: `mercado.CATEGORIAS_DA_LOJA`).
   const cats = categorias ?? ([...new Set(ofertas.map(o => modeloVeiculo(o.modeloId).categoria))] as CategoriaVeiculo[]);
-  const [categoria, setCategoria] = useState<FiltroCategoria>('todas');
-  const [condicao, setCondicao] = useState<FiltroCondicao>('todos');
-  const [ordem, setOrdem] = useState<Ordem>('barato');
-  const [busca, setBusca] = useState('');
-  const [quantos, setQuantos] = useState(POR_PAGINA);
   const idBusca = useId();
-  const termo = semAcento(busca.trim());
-  const lista = ofertas
-    .filter(o => categoria === 'todas' || modeloVeiculo(o.modeloId).categoria === categoria)
-    .filter(o => condicao === 'todos' || (condicao === 'usados') === o.usado)
-    .filter(o => { if (!termo) return true; const x = versaoVeiculo(o.versaoId); return semAcento(`${x ? `${nomeDaVersao(x)} ${x.acabamento ?? ''} ${x.dica}` : ''} ${modeloVeiculo(o.modeloId).nome}`).includes(termo); })
-    .sort((a, b) => (ordem === 'barato' ? a.preco - b.preco : b.preco - a.preco) || a.id.localeCompare(b.id));
-  const mudar = <T,>(f: (x: T) => void) => (x: T) => { f(x); setQuantos(POR_PAGINA); };
+  const idMarca = useId();
+  const idOrdem = useId();
+  const base = ofertas
+    .filter(o => estado.categoria === 'todas' || modeloVeiculo(o.modeloId).categoria === estado.categoria)
+    .filter(o => estado.condicao === 'todos' || (estado.condicao === 'usados') === o.usado);
+  const fichasBase = base.map(fichaDoVeiculo);
+  const lista = filtrarVeiculos(fichasBase, { texto: estado.busca, marca: estado.marca, faixa: estado.faixa, ordem: ORDEM_DE_VEICULOS[estado.ordem] }).map(f => f.oferta);
+  const marcas = marcasDaVitrine(fichasBase);
+  const comparadas = compararVeiculos(fichasBase, estado.comparar);
+  const mudarFiltro = (p: Partial<EstadoCatalogoVeiculos>) => mudar({ ...p, quantos: 20 });
+  const alternarComparacao = (id: string) => {
+    const ja = estado.comparar.includes(id);
+    mudar({ comparar: ja ? estado.comparar.filter(x => x !== id) : estado.comparar.length < LIMITE_DE_COMPARACAO ? [...estado.comparar, id] : estado.comparar });
+  };
   return (
     <div className="catalogo-veiculos">
       <label className="catalogo__busca" htmlFor={idBusca}>
         <span className="sr-only">Procurar por marca ou modelo</span>
         <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round"><circle cx="11" cy="11" r="6.5" /><path d="M16 16l4.5 4.5" /></svg>
-        <input id={idBusca} type="search" value={busca} onChange={e => mudar(setBusca)(e.target.value)} placeholder="Marca ou modelo" autoComplete="off" />
+        <input id={idBusca} type="search" value={estado.busca} onChange={e => mudarFiltro({ busca: e.target.value })} placeholder="Marca ou modelo" autoComplete="off" />
       </label>
-      {cats.length > 1 && <Escolha rotulo="Tipo de veículo" valor={categoria} aoMudar={mudar(setCategoria)} opcoes={[{ id: 'todas', rotulo: 'Todos' }, ...cats.map(c => ({ id: c, rotulo: NOME_CATEGORIA[c].varios }))]} />}
-      <Escolha rotulo="Novo ou usado" valor={condicao} aoMudar={mudar(setCondicao)} opcoes={[{ id: 'todos', rotulo: 'Novos e usados' }, { id: 'novos', rotulo: 'Novos' }, { id: 'usados', rotulo: 'Usados' }]} />
+      {cats.length > 1 && <Escolha rotulo="Tipo de veículo" valor={estado.categoria} aoMudar={c => mudarFiltro({ categoria: c })} opcoes={[{ id: 'todas', rotulo: 'Todos' }, ...cats.map(c => ({ id: c, rotulo: NOME_CATEGORIA[c].varios }))]} />}
+      <Escolha rotulo="Novo ou usado" valor={estado.condicao} aoMudar={c => mudarFiltro({ condicao: c })} opcoes={[{ id: 'todos', rotulo: 'Novos e usados' }, { id: 'novos', rotulo: 'Novos' }, { id: 'usados', rotulo: 'Usados' }]} />
+      <Escolha rotulo="Faixa de preço" valor={estado.faixa || 'qualquer'} aoMudar={f => mudarFiltro({ faixa: f === 'qualquer' ? '' : (f as FaixaVeiculo) })} opcoes={[{ id: 'qualquer', rotulo: 'Qualquer' }, { id: 'economica', rotulo: PALAVRA_FAIXA.economica }, { id: 'intermediaria', rotulo: PALAVRA_FAIXA.intermediaria }, { id: 'alta', rotulo: PALAVRA_FAIXA.alta }]} />
       <div className="catalogo-veiculos__barra">
-        <p className="catalogo__conta" aria-live="polite">{lista.length} à venda{termo ? ` para "${busca.trim()}"` : ''}</p>
-        <button type="button" className="filtro" onClick={() => mudar(setOrdem)(ordem === 'barato' ? 'caro' : 'barato')}>{ordem === 'barato' ? 'Mais barato primeiro' : 'Mais caro primeiro'}<span aria-hidden>{ordem === 'barato' ? ' ↑' : ' ↓'}</span><span className="sr-only"> — tocar para inverter a ordem</span></button>
+        <label htmlFor={idMarca}>Marca <select id={idMarca} value={estado.marca} onChange={e => mudarFiltro({ marca: e.target.value })}><option value="">Todas</option>{marcas.map(m => <option key={m} value={m}>{m}</option>)}</select></label>
+        <label htmlFor={idOrdem}>Ordenar <select id={idOrdem} value={estado.ordem} onChange={e => mudarFiltro({ ordem: e.target.value as Ordem })}><option value="barato">Mais barato</option><option value="caro">Mais caro</option><option value="nova">Ano mais novo</option><option value="conforto">Mais confortável</option><option value="nome">Nome</option></select></label>
+        <p className="catalogo__conta" aria-live="polite">{lista.length} à venda{estado.busca.trim() ? ` para "${estado.busca.trim()}"` : ''}</p>
       </div>
+      {comparadas.length >= 2 && <TabelaDeComparacao fichas={comparadas} tirar={alternarComparacao} />}
       {lista.length === 0 ? <p className="nota">Nada com esse filtro.</p> : (
-        <ul className="ofertas">{lista.slice(0, quantos).map(o => <li key={o.id}><CartaoVeiculo o={o} abrir={() => abrir(o.id)} /></li>)}</ul>
+        <ul className="ofertas">{lista.slice(0, estado.quantos).map(o => (
+          <li key={o.id}>
+            <CartaoVeiculo o={o} abrir={() => abrir(o.id)} />
+            <label className="catalogo__comparar"><input type="checkbox" checked={estado.comparar.includes(o.id)} disabled={!estado.comparar.includes(o.id) && estado.comparar.length >= LIMITE_DE_COMPARACAO} onChange={() => alternarComparacao(o.id)} /> Comparar{!estado.comparar.includes(o.id) && estado.comparar.length >= LIMITE_DE_COMPARACAO ? ` (até ${LIMITE_DE_COMPARACAO})` : ''}</label>
+          </li>
+        ))}</ul>
       )}
-      {lista.length > quantos && <button type="button" className="botao botao--discreto" onClick={() => setQuantos(q => q + POR_PAGINA)}>{`Mostrar mais ${Math.min(POR_PAGINA, lista.length - quantos)} (faltam ${lista.length - quantos})`}</button>}
+      {lista.length > estado.quantos && <button type="button" className="botao botao--discreto" onClick={() => mudar({ quantos: estado.quantos + 20 })}>{`Mostrar mais ${Math.min(20, lista.length - estado.quantos)} (faltam ${lista.length - estado.quantos})`}</button>}
     </div>
+  );
+}
+
+/** VIDA 36 · a comparação lado a lado (até três): o que cada um traz e custa, com os números do catálogo. */
+function TabelaDeComparacao({ fichas, tirar }: { fichas: FichaDeVeiculo[]; tirar: (id: string) => void }) {
+  const pct = (x: number) => `${(x * 100).toFixed(1).replace('.', ',')}% do valor ao ano`;
+  const linhas: { rotulo: string; valor: (f: FichaDeVeiculo) => string }[] = [
+    { rotulo: 'Preço', valor: f => dinheiroCurto(f.preco) },
+    { rotulo: 'Ano', valor: f => String(f.oferta.anoFabricacao) },
+    { rotulo: 'Novo ou usado', valor: f => (f.usado ? 'usado' : 'novo, zero km') },
+    { rotulo: 'Classe', valor: f => f.classe },
+    { rotulo: 'Lugares', valor: f => String(f.lugares) },
+    { rotulo: 'Conforto', valor: f => `${f.conforto} de 5` },
+    { rotulo: 'Habilitação', valor: f => (f.cnh ? 'exige habilitação' : 'não exige') },
+    { rotulo: 'Idade mínima', valor: f => `${f.idadeMin} anos` },
+    { rotulo: 'Custo mensal de uso', valor: f => dinheiroCurto(f.usoMensal) },
+    { rotulo: 'IPVA e seguro', valor: f => pct(f.taxaAnual) },
+  ];
+  return (
+    <section className="comparacao" aria-label="Comparação de veículos">
+      <table className="comparacao__tabela">
+        <caption>Comparando {fichas.length} modelos</caption>
+        <thead><tr><th scope="col">&nbsp;</th>{fichas.map(f => <th scope="col" key={f.oferta.id}>{f.nome}<br /><button type="button" className="botao botao--discreto" onClick={() => tirar(f.oferta.id)}>Tirar da comparação</button></th>)}</tr></thead>
+        <tbody>{linhas.map(l => <tr key={l.rotulo}><th scope="row">{l.rotulo}</th>{fichas.map(f => <td key={f.oferta.id}>{l.valor(f)}</td>)}</tr>)}</tbody>
+      </table>
+    </section>
   );
 }
 

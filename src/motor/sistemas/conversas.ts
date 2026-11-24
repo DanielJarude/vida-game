@@ -327,7 +327,7 @@ const JEITO_TEMPO: Record<TomDaPessoa, Pedacos> = {
   expansivo: { abre: ['{n} chegou animad{o} e já tinha um plano.', 'Foi um programa cheio de ideias.', '{n} não parou de falar.'], corpo: ['e arrastou você para dois lugares diferentes', 'e chamou mais gente no caminho', 'e fez da tarde uma aventura'], fecha: ['Cansaço gostoso no fim.', 'A cidade inteira parecia pequena.'] },
   brincalhao: { abre: ['{n} inventou um jogo no meio do programa.', 'A tarde virou uma sequência de piadas.', '{n} trouxe uma brincadeira pronta.'], corpo: ['e perdeu de propósito só para ouvir reclamar', 'e ninguém lembrava quem começou', 'e o plano mudou três vezes'], fecha: ['Riram até cansar.', 'Foi a melhor bobagem da semana.'] },
   serio: { abre: ['{n} propôs algo útil para fazer juntos.', 'O tempo foi organizado, sem perda.', '{n} foi direto ao que queria fazer.'], corpo: ['e cumpriram o combinado sem pressa', 'e conversaram sobre o que importava', 'e voltaram para casa com uma tarefa cumprida'], fecha: ['Um bom dia, sem exagero.', 'Satisfeit{o}, {n} foi embora cedo.'] },
-  neutro: { abre: ['Vocês passaram a tarde juntos.', 'O programa foi simples.', '{n} escolheu o lugar.'], corpo: ['e a conversa foi se alongando', 'e a tarde passou rápido', 'e ninguém quis encerrar cedo'], fecha: ['Foi bom.', 'Um dia comum, bem aproveitado.'] }
+  neutro: { abre: ['Vocês passaram a tarde juntos.', 'O programa foi simples.', '{n} sugeriu o lugar.'], corpo: ['e a conversa foi se alongando', 'e a tarde passou rápido', 'e ninguém quis encerrar cedo'], fecha: ['Foi bom.', 'Um dia comum, bem aproveitado.'] }
 };
 
 function cenasDeTempo(frases: string[]): Cena[] {
