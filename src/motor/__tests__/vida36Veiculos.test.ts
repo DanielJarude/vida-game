@@ -49,3 +49,26 @@ describe('VIDA 36 · vitrine de veículos', () => {
     expect(cmp.map(f => f.oferta.id)).toEqual([ids[0], ids[1], ids[2]]);
   });
 });
+
+import { VERSOES_VEICULO, VEICULOS } from '../dados/bens';
+import { VERSOES_36 } from '../dados/veiculos36';
+
+describe('VIDA 36 · integridade do catálogo ampliado', () => {
+  it('ids únicos, classe existente, marca e modelo preenchidos, preço positivo', () => {
+    const ids = VERSOES_VEICULO.map(x => x.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    const classes = new Set(VEICULOS.map(m => m.id));
+    for (const x of VERSOES_36) {
+      expect(classes.has(x.classe), `${x.id}: classe ${x.classe}`).toBe(true);
+      expect(x.marca.length).toBeGreaterThan(1);
+      expect(x.modelo.length).toBeGreaterThan(1);
+      expect(x.preco).toBeGreaterThan(0);
+    }
+    expect(VERSOES_36.length).toBeGreaterThanOrEqual(19);
+  });
+
+  it('nenhum modelo novo repete um que já estava no catálogo (marca + modelo)', () => {
+    const antes = new Set(VERSOES_VEICULO.filter(x => !VERSOES_36.includes(x)).map(x => `${x.marca}|${x.modelo}`.toLowerCase()));
+    for (const x of VERSOES_36) expect(antes.has(`${x.marca}|${x.modelo}`.toLowerCase())).toBe(false);
+  });
+});

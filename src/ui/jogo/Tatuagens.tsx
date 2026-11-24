@@ -70,6 +70,7 @@ export function EstudioDeTatuagem({ vida, agir }: { vida: Vida; agir: (a: Acao) 
   const minhas = tatuagensDe(vida);
   const [parte, setParte] = useState<Parte>('nova');
   const [cobrindo, setCobrindo] = useState<string | null>(null);
+  const [vendo, setVendo] = useState<string | null>(null);
   if (i < 16 && !minhas.length) return null;
   const podeTatuar = i >= IDADE_PARA_TATUAR;
   const historico = historicoDeTatuagens(vida);
@@ -84,9 +85,9 @@ export function EstudioDeTatuagem({ vida, agir }: { vida: Vida; agir: (a: Acao) 
           ))}
         </div>
       )}
-      {podeTatuar && parte === 'nova' && <NovaTatuagem vida={vida} agir={agir} cobrindo={cobrindo} aoCancelarCobertura={() => setCobrindo(null)} />}
+      {podeTatuar && parte === 'nova' && <NovaTatuagem vida={vida} agir={agir} cobrindo={cobrindo} aoCancelarCobertura={() => setCobrindo(null)} vendo={vendo} aoVer={setVendo} />}
       {podeTatuar && parte === 'projetos' && <Projetos vida={vida} agir={agir} />}
-      {(parte === 'minhas' || !podeTatuar) && <AsSuas vida={vida} agir={agir} historico={historico} aoCobrir={id => { setCobrindo(id); setParte('nova'); }} podeTatuar={podeTatuar} />}
+      {(parte === 'minhas' || !podeTatuar) && <AsSuas vida={vida} agir={agir} historico={historico} aoCobrir={id => { setCobrindo(id); setParte('nova'); }} aoVer={id => { setVendo(id); setParte('nova'); }} podeTatuar={podeTatuar} />}
     </section>
   );
 }
@@ -95,13 +96,19 @@ export function EstudioDeTatuagem({ vida, agir }: { vida: Vida; agir: (a: Acao) 
 
 type Fig = { visual: Vida['eu']['visual']; genero: Vida['eu']['genero']; idade: number; semente: string; corpo: ReturnType<typeof corpoDaFigura> };
 
-function NovaTatuagem({ vida, agir, cobrindo, aoCancelarCobertura }: { vida: Vida; agir: (a: Acao) => boolean; cobrindo: string | null; aoCancelarCobertura: () => void }) {
+/**
+ * VIDA 36 · VER NO CORPO: a tatuagem escolhida em "As suas" abre a lupa na região dela, com a lista das que estão ali
+ * (numeradas, com nome, tamanho e ano) — assim, as sobrepostas ou próximas se distinguem pelo nome e pela ordem.
+ */
+function NovaTatuagem({ vida, agir, cobrindo, aoCancelarCobertura, vendo, aoVer }: { vida: Vida; agir: (a: Acao) => boolean; cobrindo: string | null; aoCancelarCobertura: () => void; vendo?: string | null; aoVer?: (id: string | null) => void }) {
   const i = idade(vida);
   const alvo = cobrindo ? tatuagensDe(vida).find(x => x.id === cobrindo) : undefined;
+  const visto = !alvo && vendo ? tatuagensDe(vida).find(x => x.id === vendo) : undefined;
   const [regiaoLivre, setRegiao] = useState<RegiaoDeTatuagem>('antebraco');
   const [ladoLivre, setLado] = useState<Lado>('d');
-  const regiao = alvo ? regiaoDe(alvo) : regiaoLivre;
-  const ladoR: Lado | undefined = REGIOES[regiao].lados ? (alvo ? alvo.lado : ladoLivre) : undefined;
+  const regiao = alvo ? regiaoDe(alvo) : visto ? regiaoDe(visto) : regiaoLivre;
+  const ladoR: Lado | undefined = REGIOES[regiao].lados ? (alvo ? alvo.lado : visto ? visto.lado : ladoLivre) : undefined;
+  const naRegiao = tatuagensDe(vida).filter(x => regiaoDe(x) === regiao && (!REGIOES[regiao].lados || x.lado === ladoR) && estadoDaTatuagem(vida, x) !== 'removida' && estadoDaTatuagem(vida, x) !== 'coberta');
   const [estilo, setEstilo] = useState<EstiloDeTatuagem | ''>('');
   const [tema, setTema] = useState<TemaDeTatuagem | ''>('');
   const [referencia, setReferencia] = useState('');
@@ -143,10 +150,19 @@ function NovaTatuagem({ vida, agir, cobrindo, aoCancelarCobertura }: { vida: Vid
   const fora = desenhos.filter(x => !pecas.includes(x));
   // VIDA 13: só setters (a miniatura é memorizada e guarda a primeira versão desta função).
   const escolherDesenho = (id: string) => { setDesenho(id); const n = desenhoDeTatuagem(id)!; setTamanho(n.tamanho); setTexto(''); if (!n.colorida) setCor(c => (c === 'colorida' ? '' : c)); };
-  const escolherRegiao = (r: RegiaoDeTatuagem, l?: Lado) => { if (alvo) return; setRegiao(r); if (l) setLado(l); setAj(a => ({ ...a, x: 0, y: 0 })); setPosLivre(true); };
+  const escolherRegiao = (r: RegiaoDeTatuagem, l?: Lado) => { if (alvo) return; aoVer?.(null); setRegiao(r); if (l) setLado(l); setAj(a => ({ ...a, x: 0, y: 0 })); setPosLivre(true); };
   const grupos = (Object.keys(NOME_GRUPO) as GrupoDoCorpo[]);
   return (
     <div className="estudio-tatuagem__corpo">
+      {visto && (
+        <div className="estudio-tatuagem__vendo" data-vendo={visto.id}>
+          <p><strong>{nomeDaTatuagem(visto)}</strong> {ondeEsta(regiao, ladoR)}. {naRegiao.length > 1 ? `Nesta região há ${naRegiao.length}:` : 'É a única nesta região.'}</p>
+          {naRegiao.length > 1 && <ol className="estudio-tatuagem__numeradas">{naRegiao.map(x => (
+            <li key={x.id}><button type="button" className="botao botao--discreto" aria-pressed={x.id === visto.id} onClick={() => aoVer?.(x.id)}>{nomeDaTatuagem(x)} · {NOME_TAMANHO[tamanhoDe(x)]} · desde {anoDe(x.t)}</button></li>
+          ))}</ol>}
+          <button type="button" className="botao botao--discreto" onClick={() => aoVer?.(null)}>Voltar às suas</button>
+        </div>
+      )}
       <Previa fig={fig} tatuagens={tatuagens} comps={composicoesNaFigura(vida)} regiao={regiao} lado={ladoR} aoEscolherRegiao={alvo ? undefined : escolherRegiao} vida={vida} />
       <div className="estudio-tatuagem__escolhas">
         {alvo && (
@@ -423,7 +439,7 @@ function Projetos({ vida, agir }: { vida: Vida; agir: (a: Acao) => boolean }) {
 
 /* ------------------------------------------------------------------ as suas */
 
-function AsSuas({ vida, agir, historico, aoCobrir, podeTatuar }: { vida: Vida; agir: (a: Acao) => boolean; historico: Tatuagem[]; aoCobrir: (id: string) => void; podeTatuar: boolean }) {
+function AsSuas({ vida, agir, historico, aoCobrir, aoVer, podeTatuar }: { vida: Vida; agir: (a: Acao) => boolean; historico: Tatuagem[]; aoCobrir: (id: string) => void; aoVer: (id: string) => void; podeTatuar: boolean }) {
   const naPele = historico.filter(x => estadoDaTatuagem(vida, x) !== 'removida' && estadoDaTatuagem(vida, x) !== 'coberta');
   const passado = historico.filter(x => !naPele.includes(x));
   if (!historico.length) return <p className="nota">Nenhuma tatuagem ainda.</p>;
@@ -442,6 +458,7 @@ function AsSuas({ vida, agir, historico, aoCobrir, podeTatuar }: { vida: Vida; a
                 <strong>{nomeDaTatuagem(t)}</strong> {ondeEsta(regiaoDe(t), t.lado)}
                 <span className="nota"> · {NOME_TAMANHO[tamanhoDe(t)]} · desde {anoDe(t.t)} ({Math.floor((t.t - nasc) / 12)} anos){sig ? ` · ${sig}` : ''}{t.retoques?.length ? ` · retocada ${t.retoques.length}×` : ''}{t.conjunto ? ' · parte de um projeto' : ''}{saindo ? ' · saindo no laser' : gasto >= 0.28 ? ' · a tinta pede retoque' : gasto >= 0.15 ? ' · a tinta já assentou' : ''}</span>
               </span>
+              <span className="estudio-tatuagem__acoes"><button type="button" className="botao botao--discreto" onClick={() => aoVer(t.id)}>Ver no corpo</button></span>
               {!saindo && podeTatuar && <span className="estudio-tatuagem__acoes">
                 <BotaoAcao vida={vida} acao={{ tipo: 'retocar_tatuagem', id: t.id }} agir={agir} variante="discreto" ocultarImpossivel>{`Retocar (${dinheiroCurto(precoDoRetoque(vida, t))})`}</BotaoAcao>
                 {tamanhoDe(t) < 4 && <button type="button" className="botao botao--discreto" onClick={() => aoCobrir(t.id)}>Cobrir com outra</button>}

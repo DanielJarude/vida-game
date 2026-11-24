@@ -12,6 +12,7 @@
  * Cidade de custo 1,0.
  */
 import { VERSOES_VEICULO_129 } from './veiculos129';
+import { VERSOES_36 } from './veiculos36';
 import { VERSOES_DA_EPOCA } from '../eras/base/veiculos';
 import { VERSOES_DA_EPOCA_MUNDO } from '../eras/base/veiculosMundo';
 import { CLASSE_MOTO_CLASSICA, VERSOES_MOTOS_CLASSICAS } from './motosClassicas1291';
@@ -316,7 +317,7 @@ const VERSOES_DE_ANTES: readonly VersaoVeiculo[] = [
 /** VIDA 12.9: as versões novas (motos, esportivos, luxo, edições limitadas, clássicos) vêm do catálogo `veiculos129`. */
 // ERAS HISTÓRICAS: as versões da época (`eras/base/veiculos`, com `epoca`) entram no catálogo para serem encontradas
 // pelo id (o carro guardado no save), mas NUNCA nas listas de sempre (`VERSOES_ATUAIS`): só a vida histórica as vê.
-export const VERSOES_VEICULO: readonly VersaoVeiculo[] = [...VERSOES_DE_ANTES, ...VERSOES_VEICULO_129, ...VERSOES_MOTOS_CLASSICAS, ...VERSOES_DA_EPOCA, ...VERSOES_DA_EPOCA_MUNDO, ...VERSOES_21];
+export const VERSOES_VEICULO: readonly VersaoVeiculo[] = [...VERSOES_DE_ANTES, ...VERSOES_VEICULO_129, ...VERSOES_MOTOS_CLASSICAS, ...VERSOES_DA_EPOCA, ...VERSOES_DA_EPOCA_MUNDO, ...VERSOES_21, ...VERSOES_36];
 export const VERSOES_ATUAIS: readonly VersaoVeiculo[] = VERSOES_VEICULO.filter(x => !x.epoca);
 
 /** A forma de uma versão (o desenho que a representa). */
