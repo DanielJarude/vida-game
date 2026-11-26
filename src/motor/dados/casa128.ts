@@ -97,6 +97,12 @@ export const USOS_DOS_COMODOS: Partial<Record<string, UsoDoComodo[]>> = {
   ],
   varanda: [
     { id: 'conversar', rotulo: 'Conversar na varanda', com: 'casa', rotuloCom: 'Conversar com {nome} na varanda', prox: 3, feliz: 1, textos: ['Você e {nome} falando de nada até escurecer.', 'Uma conversa que só acontece na varanda, de noite.'] }
+  ],
+  // VIDA 38 · bloco 1: o jardim não tinha nenhum uso (o paisagismo era só custo). Agora cuidar dele descansa e mexe no corpo;
+  // o paisagismo assinado e o jardim botânico rendem mais (qualidade). Uma vez por ano, como os outros cômodos.
+  jardim: [
+    { id: 'cuidar', rotulo: 'Cuidar do jardim', estresse: -3, feliz: 1, forma: 1, qualidade: true, idadeMin: 8, textos: ['Duas horas de terra, poda e regador: a cabeça saiu mais leve que entrou.', 'Uma árvore que você plantou ainda estava pequena, e já dava sombra.', 'O canteiro de sempre, a tesoura, o sol da tarde: o dia rendeu sem pressa.'] },
+    { id: 'cuidar_com', rotulo: 'Cuidar do jardim com alguém', com: 'perto', rotuloCom: 'Cuidar do jardim com {nome}', feliz: 2, prox: 3, qualidade: true, idadeMin: 8, textos: ['{nome} desfez um nó de trepadeira que você nem tinha visto.', 'Você e {nome} plantando mudas e discutindo onde elas iam ficar.'] }
   ]
 };
 

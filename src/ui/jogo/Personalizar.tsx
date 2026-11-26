@@ -724,37 +724,49 @@ export function GostosEPreferencias({ vida, agir }: Props) {
   );
 }
 
-export function AtividadesCulturais({ vida, agir }: Props) {
+/**
+ * VIDA 38 · bloco 1 — o programa cultural (show, roda, baile, exposição) fica em destaque no topo de Você → Gostos e
+ * cultura, e não mais recolhido num detalhe. A ação é a mesma (`cultural`).
+ */
+export function SairParaPrograma({ vida, agir }: Props) {
   const i = idade(vida);
   const [programa, setPrograma] = useState('');
   const [genero, setGenero] = useState('');
   const [com, setCom] = useState('');
-  const [linguagem, setLinguagem] = useState('');
-  if (i < 8) return null;
+  if (i < 14) return null;
   const pref = generosPreferidos(vida, 3);
   const programas = programasPossiveis(vida);
+  if (programas.length === 0) return null;
   const pessoas = pessoasPerto(vida).filter(p => idadePessoa(vida, vida.pessoas[p.id]) >= 14);
-  const oficios = hobbiesQueViramOficio(vida);
   const prog = programa || programas[0]?.id || '';
   const generoShow = genero || pref[0]?.id || '';
+  return (
+    <section className="pz-sair" aria-labelledby="titulo-sair">
+      <h2 id="titulo-sair" className="voce-subtitulo">O que está rolando na cidade</h2>
+      <p className="nota">Show, roda, baile ou exposição. Pago ou grátis, sozinho ou com alguém.</p>
+      <div className="pz-acao-pessoa">
+        <label className="campo"><span className="campo__rotulo">Programa</span>
+          <select value={prog} onChange={e => setPrograma(e.target.value)}>{programas.map(p => <option key={p.id} value={p.id}>{cap(p.nome)} ({p.preco ? dinheiroCurto(precoDoPrograma(vida, p.id)) : 'grátis'})</option>)}</select></label>
+        {prog === 'show' && <label className="campo"><span className="campo__rotulo">De quê</span>
+          <select value={generoShow} onChange={e => setGenero(e.target.value)}>{GENEROS.map(x => <option key={x.id} value={x.id}>{cap(x.nome)}</option>)}</select></label>}
+        {pessoas.length > 0 && <label className="campo"><span className="campo__rotulo">Com quem</span>
+          <select value={com} onChange={e => setCom(e.target.value)}><option value="">Sem companhia</option>{pessoas.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}</select></label>}
+        <BotaoAcao vida={vida} agir={agir} acao={agirCom({ o: 'cultural', oque: prog, ...(prog === 'show' ? { genero: generoShow } : {}), ...(com ? { pessoaId: com } : {}) })} variante="principal">Ir</BotaoAcao>
+      </div>
+    </section>
+  );
+}
+
+export function AtividadesCulturais({ vida, agir }: Props) {
+  const i = idade(vida);
+  const [linguagem, setLinguagem] = useState('');
+  if (i < 8) return null;
+  const oficios = hobbiesQueViramOficio(vida);
   const lingua = linguagem || LINGUAGENS[1].id;
   return (
     <section className="pz-gostos pz-cultura" aria-labelledby="pz-cultura-titulo">
       <h2 id="pz-cultura-titulo" className="voce-subtitulo">Atividades artísticas e culturais</h2>
-      {i >= 14 && programas.length > 0 && (
-        <details className="detalhes pz-detalhes">
-          <summary>Sair: show, roda, baile, exposição</summary>
-          <div className="pz-acao-pessoa">
-            <label className="campo"><span className="campo__rotulo">Programa</span>
-              <select value={prog} onChange={e => setPrograma(e.target.value)}>{programas.map(p => <option key={p.id} value={p.id}>{cap(p.nome)} ({p.preco ? dinheiroCurto(precoDoPrograma(vida, p.id)) : 'grátis'})</option>)}</select></label>
-            {prog === 'show' && <label className="campo"><span className="campo__rotulo">De quê</span>
-              <select value={generoShow} onChange={e => setGenero(e.target.value)}>{GENEROS.map(x => <option key={x.id} value={x.id}>{cap(x.nome)}</option>)}</select></label>}
-            {pessoas.length > 0 && <label className="campo"><span className="campo__rotulo">Com quem</span>
-              <select value={com} onChange={e => setCom(e.target.value)}><option value="">Sem companhia</option>{pessoas.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}</select></label>}
-            <BotaoAcao vida={vida} agir={agir} acao={agirCom({ o: 'cultural', oque: prog, ...(prog === 'show' ? { genero: generoShow } : {}), ...(com ? { pessoaId: com } : {}) })} variante="principal">Ir</BotaoAcao>
-          </div>
-        </details>
-      )}
+      <SairParaPrograma vida={vida} agir={agir} />
       <details className="detalhes pz-detalhes">
         <summary>Produzir uma obra</summary>
         <div className="pz-acao-pessoa">
