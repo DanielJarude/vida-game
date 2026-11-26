@@ -103,7 +103,8 @@ describe('o comando num clube real, com temporadas jogadas', () => {
           if (/estadual/.test(x)) expect(t.estadual).toBe('campeão');
           else if (/Série|divisões/.test(x)) expect(t.colocacao).toBe(1);
         }
-        if (t.estadual === 'campeão') expect((t.titulos ?? []).some(x => /estadual/.test(x))).toBe(true);
+        // VIDA 37: o título do estadual leva o nome do campeonato do estado ("Campeonato Paulista"), como a galeria já reconhece.
+        if (t.estadual === 'campeão') expect((t.titulos ?? []).some(x => /estadual|Campeonato [A-ZÁÉÍÓÚÂÊÔÃÕ]/.test(x))).toBe(true);
         expect(t.acesso && t.rebaixamento).toBeFalsy();
       }
       // O acesso muda a divisão da temporada seguinte na mesma passagem; o rebaixamento, também.

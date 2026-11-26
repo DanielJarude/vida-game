@@ -19,6 +19,14 @@ import { cidadesGrandesLonge, temFesta } from './local';
 import { paisDaVida } from '../mundo/vida';
 
 /** Para onde a família de um amigo de infância se muda: escolhidas à mão (o Brasil) ou as cidades grandes do país onde se mora. */
+/** VIDA 37: a bicicleta sem rodinhas é uma vez só (três acontecimentos a contavam). Funções locais: sem módulo compartilhado (um ciclo de chunks quebraria o app em produção). */
+const CAPITULO_DA_BICICLETA37 = 'aprendeu_bicicleta';
+const jaAprendeuDeBicicleta37 = (v: { fatos: Record<string, number> }): boolean => v.fatos[CAPITULO_DA_BICICLETA37] !== undefined || v.fatos['bicicleta30'] !== undefined || v.fatos['inf15_bicicleta'] !== undefined;
+const fechaCapituloDaBicicleta37 = (v: { fatos: Record<string, number>; t: number }, chave: string): void => {
+  if (v.fatos[chave] === undefined) v.fatos[chave] = v.t;
+  if (v.fatos[CAPITULO_DA_BICICLETA37] === undefined) v.fatos[CAPITULO_DA_BICICLETA37] = v.t;
+};
+
 const MUDANCAS_DE_AMIGO: Record<string, string[]> = { BR: ['sao-paulo-sp', 'curitiba-pr', 'goiania-go', 'salvador-ba', 'manaus-am'] };
 import { rngDe } from '../rng';
 
@@ -246,13 +254,14 @@ export const INFANCIA: Conteudo[] = [
   {
     id: 'inf_bicicleta', tipo: 'acontecimento', idade: [6, 10], tema: 'infancia',
     papeis: { quem: P.qualquer(P.genitorEmCasa, P.avo) },
-    quando: c => c.v.origem.classe !== 'vulneravel' || c.r.chance(0.4),
+    // VIDA 37: o sorteio vem antes da guarda, para a sequência aleatória da vida não mudar quando o capítulo já aconteceu.
+    quando: c => (c.v.origem.classe !== 'vulneravel' || c.r.chance(0.4)) && !jaAprendeuDeBicicleta37(c.v),
     narrar: c => ({
       texto: c.v.origem.classe === 'vulneravel' || c.v.origem.classe === 'trabalhadora'
         ? `${c.p.quem.nome} apareceu com uma bicicleta usada, reformada com peças de outra. Tirou as rodinhas na rua de casa numa tarde de domingo.`
         : `Ganhou bicicleta de aniversário de ${c.p.quem.nome}. As rodinhas saíram numa tarde de domingo, com ${c.p.quem.nome} correndo atrás segurando o banco.`,
       relevancia: 'biografia', tom: 'bom',
-      efeito: () => { prox(c, 'quem', 6); forma(c, 3); fato(c, 'aprendeu_bicicleta'); }
+      efeito: () => { prox(c, 'quem', 6); forma(c, 3); fechaCapituloDaBicicleta37(c.v, 'inf_bicicleta'); }
     })
   },
   {

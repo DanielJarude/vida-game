@@ -167,6 +167,14 @@ export const maxElenco31 = (id: JogoId, ano: number) => titularesDoJogo31(id, an
 /** A força média do campo do degrau na região (a régua de `jogos25` com o peso de cada região). */
 export const forcaDoCampo31 = (id: JogoId, div: number, regiao: Regiao31) => jogo(id).niveis[clamp(div, 1, 5) - 1].forca + ajusteDaRegiao33(id, regiao, div);
 export const forcaDoInternacional31 = (id: JogoId) => jogo(id).niveis[4].forca - 1;
+/** VIDA 37 · o campeonato principal do ano do jogo: o evento de maior peso (o mundial, o Six Invitational, o Major de CS). É o único que dá troféu. */
+export function principalDoAno37(jid: JogoId, ano: number): string | undefined {
+  let best: { nome: string; peso: number } | undefined;
+  for (const e of internacionais33(jid, ano)) if (!best || e.peso > best.peso) best = e;
+  return best?.nome;
+}
+/** VIDA 37 · a reputação de quem o torneio de convidados chama. */
+export const REPUTACAO_DO_CONVITE37 = 50;
 export const nomeDaLiga31 = (L: Pick<LinhaOrg33, 'jogo' | 'divisao' | 'regiao'>, ano: number) => ligaDoCircuito33(L.jogo, L.regiao, L.divisao, ano);
 export const NOME_DIVISAO31: Record<Divisao31, string> = { 2: 'Cenário aberto', 3: 'Segunda divisão', 4: 'Liga principal' };
 export const NOME_ENTRADA33: Record<Entrada33, string> = { base: 'Montar do zero', acesso: 'Comprar uma vaga na segunda divisão', elite: 'Comprar uma vaga na liga principal' };
@@ -282,9 +290,15 @@ export function quimica31(L: LinhaOrg33, ano: number): number {
 export const bonusDoTecnico31 = (L: Pick<LinhaOrg33, 'tecnico' | 'humorTecnico'>) => (L.tecnico ? (L.tecnico.nivel - 2) * 1.2 + ((L.humorTecnico ?? 60) - 60) / 40 * 0.6 : 0);
 /** A força da line na temporada: os titulares, a química, o técnico, o bootcamp, o clima e o tempo que o conteúdo come. */
 export function forcaDoTime31(o: Pick<OrgEsports31, 'conteudo'> & Partial<Pick<OrgEsports31, 'casa35'>>, L: LinhaOrg33, ano: number): number {
-  return Math.round((mediaDosTitulares31(L, ano) + quimica31(L, ano) + bonusDoTecnico31(L) + (L.bootcamp === ano ? 2 : 0) + (L.moral ?? 0) - (o.conteudo === 2 ? 1 : 0)
-    + bonusDoSetup35(L.setup35, ano) + bonusDaCasa35(o.casa35, !!L.tecnico) + extrasDaLinha35(L, ano)) * 10) / 10;
+  const bruta = mediaDosTitulares31(L, ano) + quimica31(L, ano) + bonusDoTecnico31(L) + (L.bootcamp === ano ? 2 : 0) + (L.moral ?? 0) - (o.conteudo === 2 ? 1 : 0)
+    + bonusDoSetup35(L.setup35, ano) + bonusDaCasa35(o.casa35, !!L.tecnico) + extrasDaLinha35(L, ano);
+  const campo = forcaDoCampo31(L.jogo, L.divisao, L.regiao);
+  return Math.round((campo + vantagemContida37(bruta - campo)) * 10) / 10;
 }
+/** VIDA 37 · dinheiro e gestão somam, mas a vantagem sobre o campo rende cada vez menos: um time muito acima da liga ainda perde de vez em quando. */
+export const TETO_DA_VANTAGEM37 = 4;
+export const FATOR_DA_SOBRA37 = 0.25;
+export const vantagemContida37 = (d: number) => (d <= TETO_DA_VANTAGEM37 ? d : TETO_DA_VANTAGEM37 + (d - TETO_DA_VANTAGEM37) * FATOR_DA_SOBRA37);
 /** VIDA 35.1 · o foco do treino, os scrims da temporada e a comissão técnica na força. */
 export function extrasDaLinha35(L: LinhaOrg33, ano: number): number {
   return Math.round((foco35(L.foco35).forca + (L.scrims35?.ano === ano ? SCRIMS35[L.scrims35.nivel - 1].forca : 0) + STAFF35[L.staff35 ?? 0].forca) * 10) / 10;
@@ -361,8 +375,9 @@ export const jogosDisponiveis31 = (ano: number): JogoId[] => LISTA_JOGOS25.filte
 export function orgsAVenda31(v: Vida, filtro?: { jogo?: JogoId; regiao?: Regiao31 }): OrgAVenda31[] {
   const ano = anoDe(v.t);
   const jogos = filtro?.jogo ? [filtro.jogo] : jogosDisponiveis31(ano);
+  // VIDA 37: as organizações reais (a Liquid, a FURIA...) são de fora: não se compra uma line delas. Seguem na liga como rivais.
   return jogos.filter(j => JOGOS25[j].lancado <= ano)
-    .flatMap(j => catalogo(v, j, ano).filter(x => (!filtro?.regiao || x.regiao === filtro.regiao) && !v.orgEsports31?.absorvidas35?.includes(`${j}:${x.nome}`) && x.nome !== v.orgEsports31?.nome).map(x => avaliar(v, j, x)));
+    .flatMap(j => catalogo(v, j, ano).filter(x => !x.real && (!filtro?.regiao || x.regiao === filtro.regiao) && !v.orgEsports31?.absorvidas35?.includes(`${j}:${x.nome}`) && x.nome !== v.orgEsports31?.nome).map(x => avaliar(v, j, x)));
 }
 export const avaliarOrg31 = (v: Vida, nome: string, jid: JogoId, regiao: Regiao31) => orgsAVenda31(v, { jogo: jid, regiao }).find(x => x.nome === nome);
 
@@ -620,6 +635,8 @@ export function disponibilidadeOrg31(v: Vida, o: OqueOrg31): Veredito {
       const t = TORNEIOS35[o.tipo];
       if ((L.torneios35 ?? []).some(x => x.ano === ano && x.tipo === o.tipo)) return bloqueio('incompativel', 'A line já jogou esse torneio neste ano.');
       if (L.divisao < t.minDiv) return bloqueio('requisito', 'Só convidam quem está na segunda divisão ou acima.');
+      // VIDA 37: o convite não se compra: o torneio de convidados chama quem já tem nome.
+      if (o.tipo === 'convite' && org.reputacao < REPUTACAO_DO_CONVITE37) return bloqueio('requisito', `Só convidam quem já tem nome: reputação ${REPUTACAO_DO_CONVITE37} ou mais (a sua é ${org.reputacao}).`);
       const c = arred(t.inscricao * multDe(L));
       return org.caixa >= c ? PERMITIDO : bloqueio('requisito', `A inscrição e a viagem custam ${fmt(c)}; o caixa não tem.`);
     }
@@ -859,7 +876,8 @@ export function executarOrg31(v: Vida, o: OqueOrg31): { texto: string; tom?: 'bo
       const nome = `${t.nome} ${JOGOS25[L.jogo].nome(ano)} ${ano}`;
       org.caixa += premio - c;
       L.torneios35 = [...(L.torneios35 ?? []), { ano, tipo: o.tipo, nome, colocacao: col, participantes: t.equipes, premio }].slice(-20);
-      if (col === 1) { L.trofeus.push({ ano, nome, tipo: 'liga' }); org.fas = clamp(org.fas + (o.tipo === 'convite' ? 4 : 2)); org.reputacao = clamp(org.reputacao + (o.tipo === 'convite' ? 3 : 1)); }
+      // VIDA 37: um torneio de convidados ou uma copa não vira troféu: o que se ganha de verdade é o campeonato principal do jogo.
+      if (col === 1) { org.fas = clamp(org.fas + (o.tipo === 'convite' ? 4 : 2)); org.reputacao = clamp(org.reputacao + (o.tipo === 'convite' ? 3 : 1)); }
       else if (col <= 4) org.fas = clamp(org.fas + 1);
       escrever(v, { texto: `A line de ${JOGOS25[L.jogo].nome(ano)} da ${org.nome} jogou ${t.artigo} ${nome}: ${col === 1 ? 'campeã!' : `${col}º de ${t.equipes}`}${premio ? ` (${fmt(premio)} em prêmio)` : ''}.`, relevancia: col === 1 ? 'marco' : 'cotidiano', tema: 'trabalho', tom: col === 1 ? 'bom' : undefined, escolha: true });
       return { texto: col === 1 ? `Campeã ${t.artigo === 'a' ? 'da' : 'do'} ${t.nome}!` : `${col}º lugar ${t.artigo === 'a' ? 'na' : 'no'} ${t.nome}.`, tom: col <= 3 ? 'bom' : 'neutro' };
@@ -1332,7 +1350,6 @@ function colocacao(r: Rng, forca: number, campo: number, n: number): number {
   for (let k = 0; k < n - 1; k++) if (campo + r.normal() * 5 + r.normal() * 3 > minha) acima++;
   return acima + 1;
 }
-const maiusc = (s: string) => `${s.charAt(0).toUpperCase()}${s.slice(1)}`;
 
 interface ResultadoDaLinha { receita: number; despesa: number; titulo: boolean; subiu: boolean; caiu: boolean; topo: boolean; internacional: boolean; campeaoMundial: boolean }
 
@@ -1387,6 +1404,7 @@ function temporadaDaLinha(v: Vida, o: OrgEsports31, L: LinhaOrg33, ano: number):
   const caiu = regras.caem > 0 && posicao > n - regras.caem;
   // 2. Os internacionais: as vagas da liga principal da região; o campeão da segunda divisão, onde houver, pela classificatória.
   const internacionais: Internacional31[] = [];
+  const principal = principalDoAno37(L.jogo, ano);
   let premio = arred(g.niveis[L.divisao - 1].premio * fatia(posicao, n) * mult);
   for (const ev of internacionais33(L.jogo, ano)) {
     const vagas = L.divisao === 4 ? ev.vagas[L.regiao] ?? 0 : 0;
@@ -1398,11 +1416,10 @@ function temporadaDaLinha(v: Vida, o: OrgEsports31, L: LinhaOrg33, ano: number):
       const nome = ev.vezes > 1 ? `${ev.nome} (${k + 1}ª etapa)` : ev.nome;
       internacionais.push({ nome, colocacao: col, participantes: ev.equipes, ...(col === 1 ? { titulo: true } : {}), ...(via ? { viaQualificatoria: true } : {}) });
       premio += arred(g.niveis[4].premio * ev.peso * fatia(col, ev.equipes));
-      if (col === 1) L.trofeus.push({ ano, nome: ev.vezes > 1 ? `${ev.nome} ${ano} (${k + 1}ª etapa)` : `${ev.nome} ${ano}`, tipo: ev.peso >= 1 ? 'mundial' : 'internacional' });
+      if (col === 1 && ev.nome === principal) L.trofeus.push({ ano, nome: ev.vezes > 1 ? `${ev.nome} ${ano} (${k + 1}ª etapa)` : `${ev.nome} ${ano}`, tipo: 'mundial' });
     }
   }
-  const principal = internacionais33(L.jogo, ano).find(e => e.peso >= 1)?.nome;
-  const campeaoMundial = internacionais.some(i => i.titulo && i.nome === principal);
+  const campeaoMundial = internacionais.some(i => i.titulo && i.nome.replace(/ \(\d+ª etapa\)$/, '') === principal);
   // 3. O dinheiro da line (o da organização — patrocínios, loja, conteúdo, dívida — fecha junto, em `processarOrg31`).
   const receita = arred(receitaBase31(L.divisao, o.fas, o.reputacao, mult) + premio);
   const folha = L.elenco.reduce((s, j) => s + j.salario, 0) + L.academia.reduce((s, j) => s + j.salario, 0) + (L.academy35?.elenco.reduce((s, j) => s + j.salario, 0) ?? 0);
@@ -1415,7 +1432,7 @@ function temporadaDaLinha(v: Vida, o: OrgEsports31, L: LinhaOrg33, ano: number):
   const div = L.divisao;
   L.historico.push({ ano, divisao: div, liga, posicao, participantes: n, ...(internacionais.length ? { internacionais } : {}), ...(acesso ? { acesso } : {}), premio, receita, despesa, forca, ...(titulo ? { titulo } : {}), ...(subiu ? { subiu } : {}), ...(caiu ? { caiu } : {}), ...(campeaoMundial ? { campeaoMundial } : {}) });
   if (L.historico.length > 40) L.historico.splice(0, L.historico.length - 40);
-  if (titulo) L.trofeus.push({ ano, nome: `${maiusc(liga)} ${ano}`, tipo: 'liga' });
+  // VIDA 37: ganhar a liga entra no histórico, não na galeria: o troféu é o campeonato principal do jogo (abaixo).
   const nomeJogo = JOGOS25[L.jogo].nome(ano);
   const melhorInt = [...internacionais].sort((a, b) => a.colocacao - b.colocacao)[0];
   const frase = campeaoMundial ? `Campeã do mundo! A line de ${nomeJogo} da ${o.nome} venceu o ${principal} de ${ano}.`

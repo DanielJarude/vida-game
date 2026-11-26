@@ -18,17 +18,18 @@ export type Forma = 'estadual' | 'mundo' | 'selecao' | 'orelhas' | 'figura' | 'u
   | 'cristal' | 'escudo_tatico' | 'agulha' | 'caixa' | 'hexagono' | 'carro' | 'controle'
   | 'rolo' | 'televisao' | 'mascaras' | 'claquete'
   | 'cesta' | 'rede' | 'raquete' | 'tocha' | 'onda' | 'cinturao'
-  | 'cruz' | 'livro' | 'atomo' | 'obelisco' | 'balanca' | 'seta' | 'pena' | 'paleta' | 'laurea';
+  | 'cruz' | 'livro' | 'atomo' | 'obelisco' | 'balanca' | 'seta' | 'pena' | 'paleta' | 'laurea'
+  | 'torre' | 'coroa' | 'taca_asas';
 
-/** VIDA 36 · a forma de um título de e-sports: a do jogo (a silhueta é do jogo, não só da cor). */
+/** VIDA 36 · a forma de um título de e-sports: a do jogo (a silhueta é do jogo, não só da cor). VIDA 37: as seis são taças. */
 export function formaDoTituloEsports(jogo: string): Forma {
   switch (jogo) {
     case 'lol': return 'cristal';
     case 'cs': return 'escudo_tatico';
-    case 'valorant': return 'agulha';
-    case 'fortnite': return 'caixa';
+    case 'valorant': return 'torre';
+    case 'fortnite': return 'coroa';
     case 'r6': return 'hexagono';
-    case 'rocket': return 'carro';
+    case 'rocket': return 'taca_asas';
     default: return 'controle';
   }
 }
@@ -179,6 +180,10 @@ export function Trofeu({ forma, metal = 'ouro', rotulo, marca }: { forma: Forma;
       case 'pena': return <><path d="M30 4 Q18 10 14 28 L12 36 L16 30 Q24 22 32 8 Z" /><path d="M12 36 L8 42" fill="none" strokeWidth="1.4" /><rect x="11" y="38" width="18" height="5" rx="1" /></>;
       case 'paleta': return <><path d="M20 6 Q36 6 36 20 Q36 30 26 28 Q22 27 22 32 Q22 38 14 38 Q4 38 4 26 Q4 6 20 6 Z" /><circle cx="12" cy="18" r="2.5" fill="none" strokeWidth="1" /><circle cx="20" cy="13" r="2.5" fill="none" strokeWidth="1" /><circle cx="28" cy="16" r="2.5" fill="none" strokeWidth="1" /></>;
       case 'laurea': return <><path d="M8 10 Q2 22 10 32 M32 10 Q38 22 30 32" fill="none" strokeWidth="2.4" /><rect x="12" y="8" width="16" height="10" rx="1" /><path d="M14 13 L26 13 M14 15.5 L24 15.5" fill="none" strokeWidth="0.9" /><rect x="11" y="36" width="18" height="6" rx="1" /></>;
+      // VIDA 37 · as taças dos títulos de e-sports (cada jogo tem a sua): a torre de Valorant, a coroa de Fortnite, a taça alada de Rocket League.
+      case 'torre': return <><path d="M17 2 L23 2 L24 8 L16 8 Z" /><path d="M16 8 L24 8 L26 30 L14 30 Z" /><path d="M18 13 L22 13 M18 19 L22 19 M18 25 L22 25" fill="none" strokeWidth="1" /><rect x="12" y="30" width="16" height="3" rx="1" /><rect x="10" y="33" width="20" height="6" rx="1" /></>;
+      case 'coroa': return <><path d="M6 30 L6 12 L13 20 L20 8 L27 20 L34 12 L34 30 Z" /><rect x="6" y="30" width="28" height="5" rx="1" /><circle cx="20" cy="8" r="2" /><circle cx="6" cy="12" r="1.6" /><circle cx="34" cy="12" r="1.6" /><rect x="10" y="35" width="20" height="4" rx="1" /></>;
+      case 'taca_asas': return <><path d="M4 10 Q2 22 10 26 Q9 18 12 13 Z" /><path d="M36 10 Q38 22 30 26 Q31 18 28 13 Z" /><path d="M13 6 L27 6 Q27 22 20 25 Q13 22 13 6 Z" /><circle cx="20" cy="3" r="2.4" /><rect x="18.5" y="25" width="3" height="7" /><rect x="12" y="32" width="16" height="4" rx="1" /><rect x="10" y="36" width="20" height="4" rx="1" /></>;
       case 'banco': return <><path d="M10 6 L30 6 L28 22 Q20 28 12 22 Z" /><path d="M14 12 L26 12" fill="none" strokeWidth="1.4" /><rect x="17" y="26" width="6" height="9" /><rect x="11" y="35" width="18" height="8" rx="1" /></>;
     }
   })();
@@ -207,7 +212,8 @@ export function itensDaGaleria(v: Vida): ItemDaGaleria[] {
   for (const x of v.conquistas14?.reconhecimentos ?? []) if (x.tipo === 'premio') out.push({ id: `rec:${x.t}:${x.texto}`, forma: formaDoPremioDeArea(x.area), metal: x.peso === 2 ? 'ouro' : 'prata', nome: x.texto, ano: anoDe(x.t), tipo: 'carreira', marca: { cor: COR_DA_AREA[x.area ?? ''] ?? COR_PADRAO, sigla: siglaDe(x.texto) } });
   for (const x of v.caminhos.academia?.producao ?? []) if (x.tipo === 'premio') out.push({ id: `acad:${x.t}:${x.titulo}`, forma: 'laurea', metal: 'ouro', nome: x.titulo, ano: anoDe(x.t), onde: x.detalhe, tipo: 'carreira', marca: { cor: '#5a4a8a', sigla: siglaDe(x.titulo) } });
   // VIDA 36: os e-sports (cada jogo, a sua forma; a hierarquia pelo tipo da competição: torneio comum, liga especial, mundial histórico).
-  for (const t of v.esports25?.temporadas ?? []) for (const c of t.competicoes) if (c.titulo) {
+  // VIDA 37: só o campeonato principal de cada jogo (o mundial) vira troféu; liga e torneio ficam no histórico.
+  for (const t of v.esports25?.temporadas ?? []) for (const c of t.competicoes) if (c.titulo && c.tipo === 'mundial') {
     const alcance = c.tipo === 'mundial' ? 'internacional' : c.tipo === 'liga' ? 'nacional' : 'local';
     out.push({ id: `esp:${t.jogo}:${t.ano}:${c.nome}`, forma: formaDoTituloEsports(t.jogo), metal: 'ouro', nome: c.nome, ano: t.ano, onde: t.equipe, papel: t.papel === 'titular' ? 'titular' : undefined, tipo: 'esports', alcance, marca: { cor: COR_DO_JOGO[t.jogo] ?? COR_PADRAO, sigla: siglaDe(c.nome) } });
   }

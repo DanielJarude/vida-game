@@ -21,6 +21,14 @@ import { flex } from '../../texto';
 import { municipio } from '../../dados/lugares';
 import { ocupacaoOuNula } from '../../dados/ocupacoes';
 
+/** VIDA 37: a bicicleta sem rodinhas é uma vez só (três acontecimentos a contavam). Funções locais: sem módulo compartilhado (um ciclo de chunks quebraria o app em produção). */
+const CAPITULO_DA_BICICLETA37 = 'aprendeu_bicicleta';
+const jaAprendeuDeBicicleta37 = (v: { fatos: Record<string, number> }): boolean => v.fatos[CAPITULO_DA_BICICLETA37] !== undefined || v.fatos['bicicleta30'] !== undefined || v.fatos['inf15_bicicleta'] !== undefined;
+const fechaCapituloDaBicicleta37 = (v: { fatos: Record<string, number>; t: number }, chave: string): void => {
+  if (v.fatos[chave] === undefined) v.fatos[chave] = v.t;
+  if (v.fatos[CAPITULO_DA_BICICLETA37] === undefined) v.fatos[CAPITULO_DA_BICICLETA37] = v.t;
+};
+
 const nome = (c: Ctx, papel: string) => c.p[papel]?.nome ?? '';
 const ele = (c: Ctx, papel: string) => flex(c.p[papel]?.genero ?? 'masculino', 'ele', 'ela', 'elu');
 const uma = <T,>(c: Ctx, chave: string, xs: T[]): T => rngDe(c.v.id, 'ev15', chave).pick(xs);
@@ -72,11 +80,12 @@ export const ACONTECIMENTOS_15: Conteudo[] = [
   {
     id: 'inf15_bicicleta', manual: true, tipo: 'decisao', idade: [4, 9], tema: 'infancia', peso: 1.5, repetir: 0,
     papeis: { quem: fixo(P.qualquer(P.genitorEmCasa, P.irmaoEmCasa)) },
+    quando: c => !jaAprendeuDeBicicleta37(c.v),
     titulo: 'Sem rodinhas',
     texto: c => `${nome(c, 'quem')} tirou as rodinhas da bicicleta. "Eu seguro atrás", ${ele(c, 'quem')} prometeu.`,
     opcoes: [
-      { id: 'insistir', texto: 'Tentar até conseguir', comportamento: { disciplina: 1 }, resolver: c => ({ texto: `Três joelhos ralados depois, você olhou para trás e ${nome(c, 'quem')} estava longe — tinha soltado fazia tempo.`, memoria: `Aprendeu a andar de bicicleta com ${nome(c, 'quem')}.`, lembrar: ['quem', 'Ensinou você a andar de bicicleta.', 'antigo'], efeito: () => { feliz(c, 4); prox(c, 'quem', 3); } }) },
-      { id: 'medo', texto: 'Pedir as rodinhas de volta', resolver: c => ({ texto: 'As rodinhas voltaram por mais um verão. Tinha tempo.', memoria: null, efeito: () => estresse(c, 1) }) }
+      { id: 'insistir', texto: 'Tentar até conseguir', comportamento: { disciplina: 1 }, resolver: c => ({ texto: `Três joelhos ralados depois, você olhou para trás e ${nome(c, 'quem')} estava longe — tinha soltado fazia tempo.`, memoria: `Aprendeu a andar de bicicleta com ${nome(c, 'quem')}.`, lembrar: ['quem', 'Ensinou você a andar de bicicleta.', 'antigo'], efeito: () => { feliz(c, 4); prox(c, 'quem', 3); fechaCapituloDaBicicleta37(c.v, 'inf15_bicicleta'); } }) },
+      { id: 'medo', texto: 'Pedir as rodinhas de volta', resolver: c => ({ texto: 'As rodinhas voltaram por mais um verão. Tinha tempo.', memoria: null, efeito: () => { estresse(c, 1); fechaCapituloDaBicicleta37(c.v, 'inf15_bicicleta'); } }) }
     ]
   },
   {

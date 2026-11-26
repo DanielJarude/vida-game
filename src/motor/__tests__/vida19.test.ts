@@ -183,10 +183,13 @@ describe('VIDA 19 · VIDA Conectada (feed, perfis, interações)', () => {
   it('curtidas e comentários dos outros não viram mensagens nem chamados', () => {
     let { v, chave } = comPost();
     const msgs = v.celular15?.msgs.length ?? 0;
+    // VIDA 37: a vida já pode ter um chamado natural no ano; o que importa é a curtida não criar nenhum.
+    const chamadosDoAno = (x: Vida) => Object.values(x.vinculos).filter(y => y.chamado && y.chamado.t === x.t).length;
+    const antes = chamadosDoAno(v);
     v = ex(v, { tipo: 'conectada19', oque: { op: 'curtir', chave } });
     v = ex(v, { tipo: 'conectada19', oque: { op: 'compartilhar', chave } });
     expect(v.celular15?.msgs.length ?? 0).toBe(msgs);
-    expect(Object.values(v.vinculos).some(x => x.chamado && x.chamado.t === v.t)).toBe(false);
+    expect(chamadosDoAno(v)).toBe(antes);
   });
 
   it('fama muda o alcance: a mesma notícia de uma pessoa famosa alcança muito mais', () => {

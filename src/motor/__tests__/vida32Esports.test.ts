@@ -25,11 +25,14 @@ describe('organizações à venda', () => {
     const v = rico(); const ano = anoDe(v.t);
     const lista = orgsAVenda31(v);
     expect(lista.length).toBeGreaterThan(40);
-    expect(lista.some(x => x.real) && lista.some(x => !x.real)).toBe(true);
+    // VIDA 37: as organizações reais são de fora e não estão à venda; só as fictícias.
+    expect(lista.some(x => x.real)).toBe(false);
+    expect(lista.some(x => !x.real)).toBe(true);
     expect(new Set(lista.map(x => x.regiao)).size).toBeGreaterThan(4);
     for (const x of lista) { expect(x.preco).toBeGreaterThan(0); expect(x.preco).toBeLessThanOrEqual(x.valor); }
     if (ano < 2020) expect(lista.some(x => x.nome === 'LOUD' && x.jogo === 'valorant')).toBe(false);
-    if (ano >= 2015) expect(lista.find(x => x.nome === 'T1' && x.jogo === 'lol')?.regiao).toBe('kr');
+    // VIDA 37: a T1 é uma organização real: fica de fora da venda.
+    expect(lista.find(x => x.nome === 'T1' && x.jogo === 'lol')).toBeUndefined();
   });
 });
 
@@ -128,7 +131,8 @@ describe('elenco, arquétipos e mercado', () => {
 describe('a temporada', () => {
   it('fechar o ano escreve a história, mexe no caixa e abre a mesa; o mesmo ano não conta duas vezes', () => {
     let v = rico();
-    const alvo = orgsAVenda31(v, { regiao: 'br' }).filter(x => x.divisao === 4)[0];
+    // VIDA 37: as à venda são fictícias, de segunda divisão ou cenário aberto (a liga principal se alcança, não se compra).
+    const alvo = orgsAVenda31(v, { regiao: 'br' }).filter(x => x.divisao === 3)[0];
     v = tenta(v, A({ op: 'comprar', nome: alvo.nome, jogo: alvo.jogo, regiao: alvo.regiao }));
     const o = v.orgEsports31!;
     const caixa0 = o.caixa;

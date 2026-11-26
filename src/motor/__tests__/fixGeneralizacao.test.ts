@@ -39,7 +39,8 @@ const recarregar = (v: Vida): Vida => { const l = importarVida(exportarVida(v));
 const abrir = (v: Vida, id: string): Vida => transacao(v, (x, r) => { const d = conteudoPorId(id); if (d?.tipo === 'decisao') abrirDecisao(x, d, contexto(x, r)); }).vida;
 
 let base: Vida | undefined;
-const vinte = (): Vida => structuredClone((base ??= adulto(20, { semente: 31, genero: 'masculino', municipioId: 'campina-grande-pb' })));
+// VIDA 37: semente 32 (era 31): os acontecimentos da bicicleta da infância mudaram o sorteio desta vida; a intenção do teste é a mesma.
+const vinte = (): Vida => structuredClone((base ??= adulto(20, { semente: 32, genero: 'masculino', municipioId: 'campina-grande-pb' })));
 
 /** Um atleta profissional da modalidade, com a técnica e o nível pedidos, e N temporadas jogadas. */
 function atleta(d: Dominio, o: { habilidade?: number; nivel?: number; temporadas?: number } = {}): Vida {

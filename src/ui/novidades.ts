@@ -26,6 +26,21 @@ export interface NotaDeVersao {
 
 export const NOTAS: NotaDeVersao[] = [
   {
+    versao: '37',
+    data: '2026-11-25',
+    titulo: 'E-sports de verdade e uma bicicleta só',
+    novidades: [
+      'Organizações reais de e-sports (a Liquid, a FURIA e as outras) não estão mais à venda: elas seguem na liga como rivais. O que se compra são organizações fictícias.',
+      'O major não se compra: a vaga vem da colocação na liga. O torneio de convidados só chama quem já tem nome (reputação 50 ou mais).',
+      'Troféu só para o campeonato principal de cada jogo (o mundial, o Major, o Six Invitational). Liga e torneio ficam no histórico da organização e da carreira.',
+      'Cada título mundial de e-sports tem a sua taça: a de LoL, a de CS, a torre de Valorant, a coroa de Fortnite, a de R6 e a taça alada de Rocket League.'
+    ],
+    melhorias: ['Uma organização muito acima da liga ainda perde de vez em quando: investir e montar a estrutura continua somando, mas com rendimento decrescente.'],
+    correcoes: [
+      'A história da bicicleta sem rodinhas acontecia duas vezes na infância (dois acontecimentos diferentes podiam cair na mesma vida). Agora é uma vez só.'
+    ]
+  },
+  {
     versao: '36',
     data: '2026-11-24',
     titulo: 'Conversas que mudam de pessoa para pessoa, troféus com identidade e veículos navegáveis',

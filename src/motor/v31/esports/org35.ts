@@ -168,15 +168,14 @@ export const CUSTO_RETIRO35 = 80e3;
 export const CUSTO_PENEIRA35 = 50e3;
 
 /** VIDA 35.3 · os torneios fora da liga, do barato (online, na semana) ao major. Cada line joga cada um uma vez por ano. */
-export type Torneio35 = 'online' | 'universitario' | 'aberto' | 'regional' | 'convite' | 'lan' | 'major';
+export type Torneio35 = 'online' | 'universitario' | 'aberto' | 'regional' | 'convite' | 'lan';
 export const TORNEIOS35: Record<Torneio35, { nome: string; artigo: 'o' | 'a'; nota: string; inscricao: number; premio: number; minDiv: number; equipes: number; campo: number }> = {
   online: { nome: 'Copa online semanal', artigo: 'a', nota: 'Inscrição pelo servidor, sem viagem: campo aberto e prêmio de cartão de jogo.', inscricao: 4e3, premio: 25e3, minDiv: 2, equipes: 64, campo: 0 },
   universitario: { nome: 'Liga universitária', artigo: 'a', nota: 'Times de faculdade e de cidade: campo fraco, vitrine para os jogadores jovens.', inscricao: 8e3, premio: 50e3, minDiv: 2, equipes: 24, campo: 0 },
   aberto: { nome: 'Copa aberta', artigo: 'a', nota: 'Qualquer equipe se inscreve: campo do seu nível, prêmio pequeno.', inscricao: 15e3, premio: 120e3, minDiv: 2, equipes: 32, campo: 0 },
   regional: { nome: 'Copa regional', artigo: 'a', nota: 'As equipes da região num fim de semana de LAN curta: campo médio e prêmio que paga a viagem.', inscricao: 20e3, premio: 150e3, minDiv: 2, equipes: 16, campo: 1 },
-  convite: { nome: 'Torneio de convidados', artigo: 'o', nota: 'Só para quem tem nome: as melhores da região, prêmio e audiência grandes.', inscricao: 60e3, premio: 900e3, minDiv: 3, equipes: 8, campo: 2 },
-  lan: { nome: 'LAN de estádio', artigo: 'a', nota: 'Três dias no ginásio, plateia de verdade e transmissão ao vivo: campo forte.', inscricao: 150e3, premio: 700e3, minDiv: 3, equipes: 16, campo: 3 },
-  major: { nome: 'Major internacional', artigo: 'o', nota: 'O torneio das regiões: campo de elite e um prêmio que muda a temporada.', inscricao: 400e3, premio: 3.5e6, minDiv: 4, equipes: 16, campo: 4 }
+  convite: { nome: 'Torneio de convidados', artigo: 'o', nota: 'Só para quem tem nome (reputação 50 ou mais): as melhores da região, prêmio e audiência grandes. A inscrição cobre só a viagem.', inscricao: 60e3, premio: 900e3, minDiv: 3, equipes: 8, campo: 2 },
+  lan: { nome: 'LAN de estádio', artigo: 'a', nota: 'Três dias no ginásio, plateia de verdade e transmissão ao vivo: campo forte.', inscricao: 150e3, premio: 700e3, minDiv: 3, equipes: 16, campo: 3 }
 };
 
 /** VIDA 35.3 · a arena própria: a casa de jogo da org (grande obra, manutenção todo ano, público e receita de ingresso). */

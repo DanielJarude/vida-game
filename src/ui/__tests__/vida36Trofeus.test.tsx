@@ -26,8 +26,9 @@ describe('VIDA 36 · troféus de e-sports', () => {
     expect(lol?.forma).toBe('cristal');
     expect(lol?.alcance).toBe('internacional');
     expect(SELO_DO_ALCANCE[lol!.alcance!]).toBe('histórico');
-    expect(itens.find(i => i.nome === 'Liga de CS')?.forma).toBe('escudo_tatico');
-    expect(itens.find(i => i.nome === 'Torneio de Valorant')?.alcance).toBe('local');
+    // VIDA 37: só o campeonato principal vira troféu; liga e torneio ficam no histórico.
+    expect(itens.find(i => i.nome === 'Liga de CS')).toBeUndefined();
+    expect(itens.find(i => i.nome === 'Torneio de Valorant')).toBeUndefined();
     expect(itens.map(i => i.forma)).not.toContain('estatueta');
   });
 });
@@ -98,7 +99,7 @@ describe('VIDA 36 · identidade por competição', () => {
     const v = comTitulos(nova({ semente: 38 }));
     const a = itensDaGaleria(v).filter(i => i.tipo === 'esports');
     const cores = new Set(a.map(i => i.marca?.cor));
-    expect(cores.size).toBe(3);
+    expect(cores.size).toBe(1);
     const de = (n: string) => a.find(i => i.nome === n)?.marca;
     expect(de('Mundial de LoL')).toEqual(itensDaGaleria(comTitulos(nova({ semente: 38 }))).find(i => i.nome === 'Mundial de LoL')?.marca);
     expect(de('Mundial de LoL')?.sigla).toBe('ML');

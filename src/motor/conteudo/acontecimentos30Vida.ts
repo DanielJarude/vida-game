@@ -31,6 +31,14 @@ import { idade, idadePessoa, lembrarCom, parceiro, vinculosVivos, filhos } from 
 import { criarPessoa, vincular } from '../pessoas';
 import { anoDe } from '../tempo';
 
+/** VIDA 37: a bicicleta sem rodinhas é uma vez só (três acontecimentos a contavam). Funções locais: sem módulo compartilhado (um ciclo de chunks quebraria o app em produção). */
+const CAPITULO_DA_BICICLETA37 = 'aprendeu_bicicleta';
+const jaAprendeuDeBicicleta37 = (v: { fatos: Record<string, number> }): boolean => v.fatos[CAPITULO_DA_BICICLETA37] !== undefined || v.fatos['bicicleta30'] !== undefined || v.fatos['inf15_bicicleta'] !== undefined;
+const fechaCapituloDaBicicleta37 = (v: { fatos: Record<string, number>; t: number }, chave: string): void => {
+  if (v.fatos[chave] === undefined) v.fatos[chave] = v.t;
+  if (v.fatos[CAPITULO_DA_BICICLETA37] === undefined) v.fatos[CAPITULO_DA_BICICLETA37] = v.t;
+};
+
 const g = (p: Pessoa, m: string, f: string) => (p.genero === 'feminino' ? f : m);
 const eu = (c: Ctx, m: string, f: string) => (c.v.eu.genero === 'feminino' ? f : m);
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -203,14 +211,14 @@ export const ACONTECIMENTOS_30_VIDA: Conteudo[] = [
   {
     id: 'inf30_bicicleta', manual: true, tipo: 'decisao', idade: [5, 9], tema: 'infancia', peso: 2,
     papeis: { adulto: P.genitorEmCasa },
-    quando: c => c.v.fatos['bicicleta30'] === undefined,
+    quando: c => !jaAprendeuDeBicicleta37(c.v),
     titulo: 'Sem rodinhas',
     texto: c => `${c.p.adulto.nome} tirou as rodinhas da bicicleta e segurou no banco: "eu não solto, prometo".`,
     opcoes: [
       { id: 'tentar', texto: 'Pedalar, mesmo com medo', comportamento: { coragem: 1 },
-        resolver: c => ({ texto: `Na terceira volta, você olhou para trás e ${c.p.adulto.nome} estava longe, batendo palma. Tinha soltado havia tempo.`, memoria: `Aprendeu a andar de bicicleta com ${c.p.adulto.nome}.`, relevancia: 'biografia', tom: 'bom', lembrar: ['adulto', 'Soltou o banco da bicicleta sem você perceber.', 'apoio'], efeito: () => { c.v.fatos['bicicleta30'] = c.v.t; feliz(c, 5); prox(c, 'adulto', 5); } }) },
+        resolver: c => ({ texto: `Na terceira volta, você olhou para trás e ${c.p.adulto.nome} estava longe, batendo palma. Tinha soltado havia tempo.`, memoria: `Aprendeu a andar de bicicleta com ${c.p.adulto.nome}.`, relevancia: 'biografia', tom: 'bom', lembrar: ['adulto', 'Soltou o banco da bicicleta sem você perceber.', 'apoio'], efeito: () => { fechaCapituloDaBicicleta37(c.v, 'bicicleta30'); feliz(c, 5); prox(c, 'adulto', 5); } }) },
       { id: 'depois', texto: 'Pedir para pôr as rodinhas de volta', comportamento: { coragem: -1 },
-        resolver: c => ({ texto: 'As rodinhas voltaram. Você aprendeu um ano depois, sozinh' + eu(c, 'o', 'a') + ', escondid' + eu(c, 'o', 'a') + ' na rua de trás.', memoria: null, efeito: () => { c.v.fatos['bicicleta30'] = c.v.t; } }) }
+        resolver: c => ({ texto: 'As rodinhas voltaram. Você aprendeu um ano depois, sozinh' + eu(c, 'o', 'a') + ', escondid' + eu(c, 'o', 'a') + ' na rua de trás.', memoria: null, efeito: () => { fechaCapituloDaBicicleta37(c.v, 'bicicleta30'); } }) }
     ]
   },
   {

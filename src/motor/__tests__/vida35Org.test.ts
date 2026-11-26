@@ -31,7 +31,10 @@ describe('equipamento', () => {
     v = tenta(v, A({ op: 'setup', jogo: 'lol', setup: { pc: 3, monitor: 3, perifericos: 3, cadeira: 3, gabinete: 'aquario', rgb: '#06b6d4' } }));
     expect(L(v).setup35).toMatchObject({ pc: 3, gabinete: 'aquario' });
     expect(v.orgEsports31!.caixa).toBeLessThan(c0);
-    expect(forcaDoTime31(v.orgEsports31!, L(v), ano)).toBeCloseTo(f0 + 1.8, 1);
+    // VIDA 37: acima do teto de vantagem sobre o campo, a força sobe menos que a soma crua (a sobra rende 25%).
+    const sobe = forcaDoTime31(v.orgEsports31!, L(v), ano) - f0;
+    expect(sobe).toBeGreaterThan(0);
+    expect(sobe).toBeLessThanOrEqual(1.8 + 0.05);
     expect(bonusDoSetup35(L(v).setup35, ano + 3)).toBeCloseTo(0.9, 1);
     expect(bonusDoSetup35(L(v).setup35, ano + 5)).toBe(0);
   });
@@ -125,7 +128,8 @@ describe('VIDA 35.1 · o dia a dia', () => {
     v = tenta(v, A({ op: 'foco', jogo: 'lol', foco: 'mecanica' }));
     v = tenta(v, A({ op: 'scrims', jogo: 'lol', nivel: 2 }));
     v = tenta(v, A({ op: 'staff', jogo: 'lol', nivel: 2 }));
-    expect(forcaDoTime31(v.orgEsports31!, L(v), ano)).toBeCloseTo(f0 + 0.5 + 1.2 + 0.6, 1);
+    // VIDA 37: a vantagem sobre o campo tem teto; o foco, as scrims e a comissão ainda mexem na força.
+    expect(forcaDoTime31(v.orgEsports31!, L(v), ano)).toBeGreaterThan(f0);
     expect(pode(v, A({ op: 'scrims', jogo: 'lol', nivel: 1 }))).toBe(false);
     const m0 = L(v).moral ?? 0;
     v = tenta(v, A({ op: 'retiro', jogo: 'lol' }));
@@ -133,6 +137,8 @@ describe('VIDA 35.1 · o dia a dia', () => {
     const sal = L(v).elenco[0].salario;
     v = tenta(v, A({ op: 'corte', jogo: 'lol' }));
     expect(L(v).elenco[0].salario).toBeLessThan(sal);
+    // VIDA 37: o convite é de quem tem nome (reputação 50 ou mais).
+    v.orgEsports31!.reputacao = 60;
     v = tenta(v, A({ op: 'torneio', jogo: 'lol', tipo: 'convite' }));
     expect(L(v).torneios35?.[0].colocacao).toBeGreaterThan(0);
     expect(pode(v, A({ op: 'torneio', jogo: 'lol', tipo: 'convite' }))).toBe(false);

@@ -92,8 +92,9 @@ describe('arena própria', () => {
 
 describe('torneios fora da liga', () => {
   it('há torneios do barato ao major, e cada um tem nota e campo', () => {
-    expect(Object.keys(TORNEIOS35).sort()).toEqual(['aberto', 'convite', 'lan', 'major', 'online', 'regional', 'universitario']);
-    expect(TORNEIOS35.online.inscricao).toBeLessThan(TORNEIOS35.major.inscricao);
+    // VIDA 37: o major não se compra (a vaga vem da colocação na liga); o torneio de convidados só chama quem tem nome.
+    expect(Object.keys(TORNEIOS35).sort()).toEqual(['aberto', 'convite', 'lan', 'online', 'regional', 'universitario']);
+    expect(TORNEIOS35.online.inscricao).toBeLessThan(TORNEIOS35.lan.inscricao);
     for (const t of Object.values(TORNEIOS35)) expect(t.nota.length).toBeGreaterThan(10);
   });
 
@@ -101,8 +102,8 @@ describe('torneios fora da liga', () => {
     let v = comOrg();
     v = tenta(v, A({ op: 'torneio', jogo: 'lol', tipo: 'online' }));
     expect(L(v).torneios35?.map(t => t.tipo)).toEqual(['online']);
-    v = tenta(v, A({ op: 'torneio', jogo: 'lol', tipo: 'major' }));
-    expect(L(v).torneios35?.map(t => t.tipo)).toEqual(['online', 'major']);
+    v = tenta(v, A({ op: 'torneio', jogo: 'lol', tipo: 'lan' }));
+    expect(L(v).torneios35?.map(t => t.tipo)).toEqual(['online', 'lan']);
     expect(pode(v, A({ op: 'torneio', jogo: 'lol', tipo: 'online' }))).toBe(false);
   });
 });
