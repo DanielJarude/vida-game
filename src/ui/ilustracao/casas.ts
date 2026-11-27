@@ -430,7 +430,9 @@ export interface CenaEntrada {
   coisasFora?: string[];
 }
 
-export interface LadoDeFora { fachada?: string; corFachada?: string; cor2Fachada?: string; paisagismo?: string; caminho?: string; corCaminho?: string; luz?: string; portao?: string }
+export interface LadoDeFora { fachada?: string; corFachada?: string; cor2Fachada?: string; paisagismo?: string; caminho?: string; corCaminho?: string; luz?: string; portao?: string;
+  /** VIDA 38 · bloco 2: como está o jardim (do cuidado do dia a dia, não da escolha do paisagismo). */
+  estadoJardim?: 'florido' | 'cuidado' | 'comum' | 'descuidado' }
 
 /** VIDA 12.8 — o que a pessoa escolheu para o lado de fora, desenhado sobre a casa (a parede, o chão da frente). */
 function ladoDeFora(forma: FormaDaCasa, x: LadoDeFora): Peca[] {
@@ -458,6 +460,22 @@ function ladoDeFora(forma: FormaDaCasa, x: LadoDeFora): Peca[] {
   if (p === 'zen') out.push({ tipo: 'massa', d: [0, 1, 2, 3].map(k => elipse(w.x + 6 + k * 7, C - 1.5, 3, 1.6)).join('') + [0, 1, 2].map(k => elipse(w.x + w.l - 8 - k * 7, C - 1.5, 3, 1.6)).join(''), cor: '#cfc8bb', marca: 'seixos' });
   if (p === 'assinado' || p === 'botanico') out.push(arvore(w.x - 16, 14, 18, '#4f7f42'));
   if (p === 'botanico') out.push({ tipo: 'vidro', d: ret(w.x + w.l + 22, C - 22, 28, 22, 2), claro: true, marca: 'estufa' });
+  // VIDA 38 · bloco 2: o jardim como está (cuidado no dia a dia). O paisagismo é a base; isto é o que se vê do cuidado.
+  const est = x.estadoJardim;
+  if (est === 'florido' || est === 'cuidado') {
+    if (!p || p === 'nenhum') out.push({ tipo: 'massa', d: ret(0, C, 312, 3, 0), cor: '#7fa65f', semVolume: true, marca: 'grama' });
+    out.push(arbustos(w.x + 2, Math.min(18, w.l / 4)), arbustos(w.x + w.l - Math.min(18, w.l / 4) - 2, Math.min(18, w.l / 4)));
+  }
+  if (est === 'florido') {
+    const xs = Array.from({ length: Math.max(3, Math.floor(w.l / 12)) }, (_, k) => w.x + 8 + k * 12);
+    out.push({ tipo: 'massa', d: xs.map((x0, k) => circulo(x0, C - 4 - (k % 2) * 3, 1.8)).join(''), cor: '#e05a6a', semVolume: true, marca: 'flores-rosas' });
+    out.push({ tipo: 'massa', d: xs.map((x0, k) => circulo(x0 + 5, C - 7 + (k % 2) * 2, 1.4)).join(''), cor: '#f2c94c', semVolume: true, marca: 'flores-amarelas' });
+  }
+  if (est === 'descuidado') {
+    const touceiras = Array.from({ length: Math.max(3, Math.floor(w.l / 16)) }, (_, k) => w.x + 6 + k * 16);
+    out.push({ tipo: 'linha', d: touceiras.map(x0 => `M${x0} ${C}l-3 -6M${x0} ${C}l0 -8M${x0} ${C}l3 -6`).join(''), larg: 0.7, cor: '#4f6b3a', marca: 'mato' });
+    out.push({ tipo: 'massa', d: touceiras.map(x0 => elipse(x0 + 9, C - 1, 4, 1.2)).join(''), cor: '#b59a5a', semVolume: true, marca: 'grama-seca' });
+  }
   // A luz de fora.
   if (x.luz === 'arandelas' || x.luz === 'projeto') out.push({ tipo: 'luz', d: circulo(cx - 11, w.y + w.a - 26, 2) + circulo(cx + 11, w.y + w.a - 26, 2), cor: LUZ, marca: 'arandela' });
   if (x.luz === 'balizadores' || x.luz === 'projeto') out.push({ tipo: 'luz', d: [-16, -8, 8, 16].map(dx => ret(cx + dx - 1, C - 6, 2, 6, 0.5)).join(''), cor: LUZ, marca: 'balizador' });

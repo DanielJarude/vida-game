@@ -302,7 +302,7 @@ Object.assign(COMODO_DA_COISA, {
   espreguicadeira: ['piscina', 'jardim', 'lazer'], espreguicadeira_teca: ['piscina', 'jardim', 'lazer'], guarda_sol: ['piscina', 'jardim', 'lazer'], ombrelone: ['piscina', 'jardim', 'lazer'],
   mesa_externa: ['lazer', 'jardim', 'piscina'], sofa_externo: ['lazer', 'piscina', 'jardim'], boias: ['piscina'], luz_piscina: ['piscina'], aquecedor_piscina: ['piscina'], capa_piscina: ['piscina'], cascata: ['piscina'], kit_piscina: ['piscina', 'garagem'],
   churrasqueira: ['lazer', 'jardim'], espaco_gourmet: ['lazer', 'jardim'], forno_pizza: ['lazer', 'jardim'], pergolado: ['jardim', 'lazer'], gazebo: ['jardim', 'lazer'], fonte: ['jardim'], escultura_jardim: ['jardim'],
-  plantas: ['jardim', 'sala'], vasos_grandes: ['jardim', 'sala'], luz_jardim: ['jardim'], playground: ['jardim', 'lazer'], cama_elastica: ['jardim', 'lazer'],
+  plantas: ['jardim', 'sala'], vasos_grandes: ['jardim', 'sala'], mudas_flores: ['jardim'], luz_jardim: ['jardim'], playground: ['jardim', 'lazer'], cama_elastica: ['jardim', 'lazer'],
   bilhar_profissional: ['jogos', 'sala'], pebolim: ['jogos', 'garagem'], pingue_pongue: ['jogos', 'garagem'], mesa_jogos: ['jogos', 'sala'], fliperama: ['jogos', 'sala'], poltronas_cinema: ['cinema', 'sala'],
   bicicleta_ergometrica: ['academia', 'quarto'], remo_seco: ['academia', 'sala'], saco_pancada: ['academia', 'garagem'],
   ferramentas: ['garagem', 'cozinha'], bancada_ferramentas: ['garagem'], armario_garagem: ['garagem'], organizadores: ['garagem', 'quarto_extra'], carregador_ev: ['garagem'], lavadora_pressao: ['garagem'],

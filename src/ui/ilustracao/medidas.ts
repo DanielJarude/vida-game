@@ -76,6 +76,7 @@ export const MEDIDAS: Record<string, Medida> = {
   discos: chao(0.65, 0.38, 0.55, ['junto', 'lado', 'canto'], { de: ['som_hifi', 'estante_sala', 'aparador'] }),
   aspirador_robo: chao(0.35, 0.35, 0.1, ['frente', 'canto']),
   plantas: chao(0.95, 0.5, 1.1, ['canto', 'lado']),
+  mudas_flores: chao(0.9, 0.4, 0.35, ['lado', 'canto']), // VIDA 38 · bloco 2: canteiro baixo de mudas
   vasos_grandes: chao(1.2, 0.65, 1.7, ['canto', 'lado', 'deck_lado']),
   vitrine_colecao: chao(1.0, 0.45, 1.9, ['lado', 'fundo'], { topo: 1.05, gira: 'caixa' }),
   estante_trofeus: chao(1.2, 0.38, 1.8, ['lado', 'fundo'], { topo: 1.1, gira: 'caixa' }),

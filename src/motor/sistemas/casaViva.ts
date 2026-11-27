@@ -250,3 +250,22 @@ export function custoMensalDoExterno(v: Vida): { rotulo: string; valor: number }
   return soma > 0 ? [{ rotulo: 'Jardim, fachada e luz de fora (manutenção)', valor: Math.round(soma * custo(v)) }] : [];
 }
 PATRIMONIO_NO_MES.push(custoMensalDoExterno);
+
+/**
+ * VIDA 38 · bloco 2 — o jardim que se vê. O estado sai do próprio histórico: cuidar do jardim (`usarComodo`, uso
+ * `cuidar`) grava o mês em `fatos`. Cuidado nos últimos dois anos → "cuidado"; com mudas de flores no canteiro → "florido";
+ * sem cuidado há mais de dois anos → "descuidado"; nunca cuidado → "comum". Sem jardim na casa → nada (undefined).
+ * Não grava nada novo no save.
+ */
+export type EstadoDoJardim = 'florido' | 'cuidado' | 'comum' | 'descuidado';
+const MESES_SEM_CUIDADO = 24;
+
+export function estadoDoJardim(v: Vida): EstadoDoJardim | undefined {
+  const jardim = comodosDaCasa(v).find(c => c.tipo === 'jardim');
+  if (!jardim) return undefined;
+  const ultimo = v.fatos[chave(jardim, 'cuidar')];
+  if (ultimo === undefined) return 'comum';
+  if (v.t - ultimo > MESES_SEM_CUIDADO) return 'descuidado';
+  const mudas = (coisasPorComodo(v).get(jardim.id) ?? []).some(t => t.coisaId === 'mudas_flores' && t.estado > 0 && !t.lembranca);
+  return mudas ? 'florido' : 'cuidado';
+}

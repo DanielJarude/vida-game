@@ -53,11 +53,11 @@ export function descricaoDaCasa(l: LeituraLar): string {
 }
 
 /** VIDA 12.8 — o lado de fora escolhido (os ids de `dados/casa128`) em desenho: o material e a cor da fachada, o jardim, o caminho, a luz, o portão. */
-export function ladoDeForaDe(ext: Partial<Record<AspectoExterno, string>> | undefined): LadoDeFora | undefined {
-  if (!ext || !Object.keys(ext).length) return undefined;
-  const op = (a: AspectoExterno) => OPCOES_EXTERNAS[a].find(o => o.id === ext[a]);
+export function ladoDeForaDe(ext: Partial<Record<AspectoExterno, string>> | undefined, estadoJardim?: LadoDeFora['estadoJardim']): LadoDeFora | undefined {
+  if ((!ext || !Object.keys(ext).length) && !estadoJardim) return undefined;
+  const op = (a: AspectoExterno) => OPCOES_EXTERNAS[a].find(o => o.id === ext?.[a]);
   const f = op('fachada'), c = op('caminho');
-  return { fachada: f?.desenho, corFachada: f?.cor, cor2Fachada: f?.cor2, paisagismo: op('paisagismo')?.desenho, caminho: c?.desenho, corCaminho: c?.cor, luz: op('luz_externa')?.desenho, portao: op('portao')?.desenho };
+  return { fachada: f?.desenho, corFachada: f?.cor, cor2Fachada: f?.cor2, paisagismo: op('paisagismo')?.desenho, caminho: c?.desenho, corCaminho: c?.cor, luz: op('luz_externa')?.desenho, portao: op('portao')?.desenho, estadoJardim };
 }
 
 export function CenaDaCasa({ l, externo }: { l: LeituraLar; externo?: LadoDeFora }) {

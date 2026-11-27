@@ -191,6 +191,8 @@ export const COISAS: readonly Coisa[] = [
   { id: 'fonte', nome: 'fonte de água', artigo: 'a', loja: 'casa', preco: 5500, vida: 20, idadeMin: 18, nivel: 3, descricao: 'O barulho da água que esconde o da rua.', daCasa: true },
   { id: 'escultura_jardim', nome: 'escultura de jardim', artigo: 'a', loja: 'casa', preco: 25000, vida: 60, idadeMin: 18, nivel: 4, descricao: 'Bronze patinado, assinada, no meio da grama.', daCasa: true },
   { id: 'plantas', nome: 'plantas e vasos', artigo: 'as', loja: 'casa', preco: 600, vida: 5, idadeMin: 18, nivel: 1, descricao: 'Costela-de-adão, espada-de-são-jorge, a samambaia da avó.', daCasa: true },
+  // VIDA 38 · bloco 2: a loja de flores. As mudas no canteiro fazem o jardim florir quando ele é cuidado (sistemas/casaViva).
+  { id: 'mudas_flores', nome: 'mudas de flores e roseiras', artigo: 'as', loja: 'casa', preco: 450, vida: 2, idadeMin: 18, nivel: 1, descricao: 'Rosas, lavanda e cravos em mudas: o canteiro ganha cor quando alguém cuida dele.', daCasa: true },
   { id: 'vasos_grandes', nome: 'vasos grandes de cerâmica', artigo: 'os', loja: 'casa', preco: 1500, vida: 20, idadeMin: 18, nivel: 2, descricao: 'Barro esmaltado, oliveiras dentro.', daCasa: true },
   { id: 'luz_jardim', nome: 'iluminação do jardim', artigo: 'a', loja: 'casa', preco: 2200, vida: 12, idadeMin: 18, nivel: 2, descricao: 'Balizadores no caminho, a árvore acesa de baixo.', daCasa: true },
   { id: 'playground', nome: 'playground infantil', artigo: 'o', loja: 'casa', preco: 4500, vida: 12, idadeMin: 18, nivel: 2, descricao: 'Escorregador, balanço, a casinha em cima.', daCasa: true },

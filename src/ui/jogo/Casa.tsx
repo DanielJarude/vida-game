@@ -27,6 +27,7 @@ import { resultado } from '../../motor/sistemas/investimentos';
 import { BotaoAcao, Secao } from '../comum';
 import { CenaDaCasa, DesenhoVeiculo, Evolucao, Icone, ladoDeForaDe, MiniaturaDaCasa } from './material/Desenhos';
 import { donoDoLar } from '../../motor/sistemas/lar';
+import { estadoDoJardim } from '../../motor/sistemas/casaViva'; // VIDA 38 · bloco 2: o jardim que se vê
 import { NOME_FORMA } from '../../motor/dados/bens';
 import { Lugar, type QualLugar } from './material/Lugares';
 import { dinheiroCheio, dinheiroCurto, formaDoModelo, leituraDaSeguranca, leituraDoLar, leituraDosBens, type LeituraBem } from '../leituraMaterial';
@@ -57,7 +58,7 @@ export function Lar({ vida, agir, abrir }: Props & { abrir: (l: QualLugar) => vo
   const i = idade(vida);
   return (
     <section className="lar" aria-label="Onde você mora">
-      <CenaDaCasa l={l} externo={ladoDeForaDe(donoDoLar(vida)?.lar?.externo)} />
+      <CenaDaCasa l={l} externo={ladoDeForaDe(donoDoLar(vida)?.lar?.externo, estadoDoJardim(vida))} />
       <div className="lar__texto">
         <p className="folio__kicker"><span className="folio__area">Vida · Casa</span> · {l.onde}</p>
         <h1 className="lar__frase">{l.frase}</h1>
