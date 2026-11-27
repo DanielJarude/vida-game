@@ -38,6 +38,7 @@ import { decadaVisual, ICONE_DO_APARELHO, meioDaVida, NOME_DO_APARELHO, nomeDoPa
 import { definirDecadaDaFigura } from '../eras/modaDaDecada';
 import '../eras/eras.css';
 import { seguranca } from '../../motor/sistemas/dinheiro';
+import { PrimeiraEntrada } from '../v38/PrimeiraEntrada'; // VIDA 38: tutorial da primeira entrada (pode pular)
 import { leituraDaSeguranca } from '../leituraMaterial';
 import { Retrato } from '../avatar/Retrato';
 import { Historia, type ParteHistoria } from '../jogo/Historia';
@@ -176,6 +177,7 @@ export function Jogo({ c }: { c: ControleVida }) {
   definirDecadaDaFigura(decadaVisual(vida) ?? null);
   return (
     <div className="jogo" data-clima={climaDe(vida)} {...(decadaVisual(vida) ? { 'data-era': decadaVisual(vida) } : {})}>
+      <PrimeiraEntrada />
       <header className="cabecalho">
         <button type="button" className="marca" onClick={() => setMenu(true)} aria-label="Menu">VIDA</button>
         <nav className="abas" aria-label="Áreas">
