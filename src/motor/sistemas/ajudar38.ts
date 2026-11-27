@@ -5,6 +5,7 @@
  * Ambos ficam na biografia e somam no total da vida (`fatos['ajudar:total']`), para a Retrospectiva e o Legado.
  */
 import type { Vida } from '../tipos';
+import { TEXTOS38 } from '../dados/textos38';
 import { clamp } from '../rng';
 import { escrever, idade } from '../nucleo';
 import { bloqueio, PERMITIDO, type Veredito } from '../plausibilidade';
@@ -48,7 +49,10 @@ export function fazerAjudar(v: Vida, op: OpAjudar): string {
   v.mente.felicidade = clamp(v.mente.felicidade + 3);
   v.mente.estresse = clamp(v.mente.estresse + 2);
   v.fatos['ajudar:total'] = total;
-  const texto = 'Um sábado no mutirão do bairro: massa, tijolo e gente de todo tipo. Voltou cansado e satisfeito.';
+  const texto = TEXTOS38.t17;
   escrever(v, { texto, relevancia: 'biografia', tema: 'escolha', escolha: true });
   return texto;
 }
+
+import { registrarExtra38 } from './extras38';
+registrarExtra38(['ajudar_dinheiro', 'voluntariar'], disponibilidadeAjudar as never, fazerAjudar as never);

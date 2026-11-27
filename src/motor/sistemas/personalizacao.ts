@@ -25,9 +25,9 @@ import { clamp } from '../rng';
 import { escrever, idade, lembrarCom, novoId } from '../nucleo';
 import { bloqueio, PERMITIDO, type Veredito } from '../plausibilidade';
 import { coisa } from '../dados/coisas';
-import { disponibilidadeAjudar, fazerAjudar } from './ajudar38';
-import { disponibilidadeCotidiano38, fazerCotidiano38, type OpCotidiano38 } from './cotidiano38';
-import { disponibilidadeVicio38, fazerVicio38, type OpVicio38 } from './vicios38';
+import { dispExtra38, fazerExtra38 } from './extras38';
+import type { OpCotidiano38 } from './cotidiano38';
+import type { OpVicio38 } from './vicios38';
 import { variantesDaCoisa } from '../dados/pertences';
 import { itemEstilo, estiloDominante, nomeDoEstilo } from '../dados/estilo';
 import { COFRE_ANUAL, COISAS_GRANDES, COMODOS, comodo as modeloComodo, DEPOSITO, plantaDe, VAGA_MENSAL, type TipoComodo } from '../dados/lar';
@@ -342,9 +342,9 @@ export function disponibilidadePersonalizar(v: Vida, op: OpPersonalizar): Veredi
     case 'cultural': return disponibilidadeCultural(v, op.oque, op.genero, op.pessoaId);
     case 'obra': return disponibilidadeObra(v, op.linguagem);
     case 'usar_comodo': return disponibilidadeUsarComodo(v, op.comodo, op.uso, op.pessoaId);
-    case 'ajudar_dinheiro': case 'voluntariar': return disponibilidadeAjudar(v, op);
-    case 'passear': case 'carta': case 'presente': case 'torcida': case 'bico': return disponibilidadeCotidiano38(v, op);
-    case 'vicio': return disponibilidadeVicio38(v, op);
+    case 'ajudar_dinheiro': case 'voluntariar': return dispExtra38(v, op);
+    case 'passear': case 'carta': case 'presente': case 'torcida': case 'bico': return dispExtra38(v, op);
+    case 'vicio': return dispExtra38(v, op);
     case 'reforma_externa': return disponibilidadeReformaExterna(v, op.mudancas);
   }
 }
@@ -597,9 +597,9 @@ export function personalizar(v: Vida, op: OpPersonalizar): string {
     case 'cultural': return fazerCultural(v, op.oque, op.genero, op.pessoaId);
     case 'obra': return produzirObra(v, op.linguagem);
     case 'usar_comodo': return usarComodo(v, op.comodo, op.uso, op.pessoaId);
-    case 'ajudar_dinheiro': case 'voluntariar': return fazerAjudar(v, op);
-    case 'passear': case 'carta': case 'presente': case 'torcida': case 'bico': return fazerCotidiano38(v, op);
-    case 'vicio': return fazerVicio38(v, op);
+    case 'ajudar_dinheiro': case 'voluntariar': return fazerExtra38(v, op);
+    case 'passear': case 'carta': case 'presente': case 'torcida': case 'bico': return fazerExtra38(v, op);
+    case 'vicio': return fazerExtra38(v, op);
     case 'reforma_externa': return fazerReformaExterna(v, op.mudancas);
   }
 }

@@ -4,6 +4,7 @@
  * pessoa para — e parar com nível alto dá abstinência (estresse). Não há recaída automática: é escolha a cada vez.
  */
 import type { Vida } from '../tipos';
+import { TEXTOS38 } from '../dados/textos38';
 import { clamp } from '../rng';
 import { escrever } from '../nucleo';
 import { bloqueio, PERMITIDO, type Veredito } from '../plausibilidade';
@@ -21,7 +22,7 @@ const LIMITE_ALTO = 50;
 
 export function disponibilidadeVicio38(v: Vida, op: OpVicio38): Veredito {
   if (v.justica?.prisao) return bloqueio('incompativel', 'Na prisão, não.');
-  if (op.acao === 'parar') return nivelDe(v, op.substancia) > 0 ? PERMITIDO : bloqueio('incompativel', 'Você não tem esse hábito agora.');
+  if (op.acao === 'parar') return nivelDe(v, op.substancia) > 0 ? PERMITIDO : bloqueio('incompativel', TEXTOS38.t16);
   return vereditoDePagar(v, Math.round(CUSTO[op.substancia] * custo(v) / 10) * 10, 'Custa');
 }
 
@@ -50,3 +51,6 @@ export function fazerVicio38(v: Vida, op: OpVicio38): string {
   }
   return `Um ${NOME[s]} depois do outro: o alívio dura pouco, e o hábito fica.`;
 }
+
+import { registrarExtra38 } from './extras38';
+registrarExtra38(['vicio'], disponibilidadeVicio38 as never, fazerVicio38 as never);

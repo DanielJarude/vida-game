@@ -1,4 +1,5 @@
 /** VIDA 38 · bloco 3 — dependências: usar custa e sobe o nível; nível alto pesa na saúde; parar diminui e pode dar abstinência. */
+import '../sistemas/extrasCarregar38';
 import { describe, expect, it } from 'vitest';
 import { adulto } from './cenarios';
 import { disponibilidade, executar, type Acao } from '../acoes';

@@ -1,4 +1,5 @@
 /** VIDA 38 · bloco 3 — ajudar a cidade: a doação custa e dá alívio; o voluntariado não custa e cansa; uma vez por ano. */
+import '../sistemas/extrasCarregar38';
 import { describe, expect, it } from 'vitest';
 import { adulto } from './cenarios';
 import { disponibilidade, executar, type Acao } from '../acoes';

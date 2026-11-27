@@ -273,6 +273,8 @@ export default defineConfig({
           // para um pacote próprio, ACIMA dos sistemas e abaixo de quem os chama. Ele só depende de pacotes de baixo:
           // sem ciclo. Se um deles passar a importar algo de cima, o build acusa "Circular chunk" e o smoke falha.
           if (/[\\/]src[\\/]motor[\\/]sistemas[\\/](tatuagens|perseguir|gestao|treinadorDeGoleiros|premissas|silhueta)\.ts/.test(id)) return 'motor-folhas';
+          // VIDA 38: os sistemas do dia a dia carregam em pacote próprio (são importados pela interface, não pelo motor).
+          if (/[\\/]src[\\/]motor[\\/]sistemas[\\/](ajudar38|cotidiano38|vicios38|extrasCarregar38)\.ts/.test(id)) return 'motor-extras';
           if (/[\\/]src[\\/]motor[\\/]/.test(id)) return 'motor';
           return undefined;
         }

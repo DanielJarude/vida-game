@@ -22,6 +22,6 @@ let promessa: Promise<Motor> | null = null;
 
 export const motorCarregado = (): Motor | null => cache;
 export function carregarMotor(): Promise<Motor> {
-  return (promessa ??= Promise.all([import('../motor/fachada'), import('../motor/save'), import('../motor/mundo/carregar').then(m => m.carregarMundo())])
+  return (promessa ??= Promise.all([import('../motor/fachada'), import('../motor/save'), import('../motor/mundo/carregar').then(m => m.carregarMundo()), import('../motor/sistemas/extrasCarregar38')])
     .then(([f, s, falhas]) => { regioesQueFaltam = falhas; return (cache = { ...f, interpretar: s.interpretar }); }));
 }
