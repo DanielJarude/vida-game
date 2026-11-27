@@ -11,6 +11,7 @@
  */
 import type { ReactNode } from 'react';
 import type { Vida } from '../../motor/tipos';
+import { MemoriaDeEscolhas } from '../v38/MemoriaDeEscolhas';
 import { idade } from '../../motor/nucleo';
 import { Subnav } from '../comum';
 import { faseDaVida } from '../apresentar';
@@ -64,6 +65,8 @@ export function Historia({ vida, marca, parte, irParte, irPara, abrirPessoa, ano
   return (
     <div className={`historia historia--${parte}`}>
       {parte !== 'biografia' && <FitaDaVida vida={vida} />}
+      {/* VIDA 38 · bloco 3: as escolhas que a pessoa fez, recolhidas, sem repetir a Linha da Vida */}
+      {parte === 'biografia' && <MemoriaDeEscolhas vida={vida} />}
       <header className="folio">
         <p className="folio__kicker"><span className="folio__area">Hoje</span> · {parte === 'biografia' ? 'Biografia' : 'Retrospectiva'} · {i} {i === 1 ? 'ano' : 'anos'} · {faseDaVida(i)}</p>
         <h1 className="folio__titulo">{vida.eu.nome} {vida.eu.sobrenome}</h1>
