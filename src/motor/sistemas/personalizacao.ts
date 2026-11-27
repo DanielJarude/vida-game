@@ -26,6 +26,7 @@ import { escrever, idade, lembrarCom, novoId } from '../nucleo';
 import { bloqueio, PERMITIDO, type Veredito } from '../plausibilidade';
 import { coisa } from '../dados/coisas';
 import { disponibilidadeAjudar, fazerAjudar } from './ajudar38';
+import { disponibilidadeCotidiano38, fazerCotidiano38, type OpCotidiano38 } from './cotidiano38';
 import { variantesDaCoisa } from '../dados/pertences';
 import { itemEstilo, estiloDominante, nomeDoEstilo } from '../dados/estilo';
 import { COFRE_ANUAL, COISAS_GRANDES, COMODOS, comodo as modeloComodo, DEPOSITO, plantaDe, VAGA_MENSAL, type TipoComodo } from '../dados/lar';
@@ -79,6 +80,7 @@ export type OpPersonalizar =
   /** VIDA 12.8: usar um cômodo (a sessão de cinema, o treino em casa, a festa na piscina) — `casaViva`. */
   | { o: 'usar_comodo'; comodo: string; uso: string; pessoaId?: string }
   | { o: 'ajudar_dinheiro'; valor: 'pequena' | 'grande' } | { o: 'voluntariar' } // VIDA 38 · bloco 3
+  | OpCotidiano38 // VIDA 38 · bloco 3: passeios, cartas, torcida, bico
   /** VIDA 12.8: o lado de fora, visto antes na prévia (fachada, jardim, caminho, luz, portão) — uma conta só. */
   | { o: 'reforma_externa'; mudancas: Partial<Record<AspectoExterno, string>> };
 
@@ -339,6 +341,7 @@ export function disponibilidadePersonalizar(v: Vida, op: OpPersonalizar): Veredi
     case 'obra': return disponibilidadeObra(v, op.linguagem);
     case 'usar_comodo': return disponibilidadeUsarComodo(v, op.comodo, op.uso, op.pessoaId);
     case 'ajudar_dinheiro': case 'voluntariar': return disponibilidadeAjudar(v, op);
+    case 'passear': case 'carta': case 'presente': case 'torcida': case 'bico': return disponibilidadeCotidiano38(v, op);
     case 'reforma_externa': return disponibilidadeReformaExterna(v, op.mudancas);
   }
 }
@@ -592,6 +595,7 @@ export function personalizar(v: Vida, op: OpPersonalizar): string {
     case 'obra': return produzirObra(v, op.linguagem);
     case 'usar_comodo': return usarComodo(v, op.comodo, op.uso, op.pessoaId);
     case 'ajudar_dinheiro': case 'voluntariar': return fazerAjudar(v, op);
+    case 'passear': case 'carta': case 'presente': case 'torcida': case 'bico': return fazerCotidiano38(v, op);
     case 'reforma_externa': return fazerReformaExterna(v, op.mudancas);
   }
 }
