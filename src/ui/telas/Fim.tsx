@@ -1,5 +1,6 @@
 /** O fim: um obituário e a vida inteira para ler. */
 
+import { LegadoDaAjuda } from '../v38/LegadoDaAjuda'; // VIDA 38: o que a pessoa fez pela cidade
 import { entrarNaVida } from '../../motor/mundo/vida';
 import type { Vida } from '../../motor/tipos';
 import type { ControleVida } from '../useVida';
@@ -54,6 +55,7 @@ export function Fim({ vida, c }: { vida: Vida; c: ControleVida }) {
         <h2 id="fim-marcas">O que marcou esta vida</h2>
         <ul>{retrospectiva(vida).map((t, k) => <li key={k}>{t}</li>)}</ul>
       </section>
+      <LegadoDaAjuda vida={vida} />
       <section className="fim__legado" aria-labelledby="fim-ficou">
         <h2 id="fim-ficou">O que ficou</h2>
         <ul className="fim__ficou">
