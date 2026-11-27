@@ -43,7 +43,7 @@ const LISTA: Record<Exclude<TipoDeMovel, 'eletro' | 'outros'>, string[]> = {
   closets: ['closet', 'penteadeira', 'espelho_chao', 'expositor_relogios'],
   estantes: ['estante_sala', 'estante_escritorio', 'aparador', 'vitrine_colecao', 'estante_trofeus'],
   iluminacao: ['luz_jardim', 'luz_piscina', 'espelho_led'],
-  decoracao: ['quadros', 'objetos_decor', 'plantas', 'vasos_grandes', 'tapete', 'tapete_persa', 'lareira'],
+  decoracao: ['quadros', 'objetos_decor', 'plantas', 'mudas_flores', 'vasos_grandes', 'tapete', 'tapete_persa', 'lareira'],
   texteis: ['roupa_de_cama', 'toalhas', 'louca_talheres', 'cozinha_equipada'],
   banheiro: ['banheira', 'banheira_pedra', 'ducha', 'gabinete', 'bancada_marmore', 'sauna'],
   externos: ['espreguicadeira', 'espreguicadeira_teca', 'guarda_sol', 'ombrelone', 'mesa_externa', 'sofa_externo', 'churrasqueira', 'espaco_gourmet', 'forno_pizza', 'pergolado', 'gazebo', 'fonte', 'escultura_jardim'],

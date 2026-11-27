@@ -51,7 +51,7 @@ const DO_PRODUTO: Record<string, Ambiente22[]> = {
   // Iluminação
   luz_jardim: ['iluminacao', 'externa'], luz_piscina: ['iluminacao', 'piscina'],
   // Decoração
-  quadros: ['decoracao'], objetos_decor: ['decoracao'], tapete: ['decoracao', 'sala'], tapete_persa: ['decoracao', 'sala'], plantas: ['decoracao', 'externa'], vasos_grandes: ['decoracao', 'externa'],
+  quadros: ['decoracao'], objetos_decor: ['decoracao'], tapete: ['decoracao', 'sala'], tapete_persa: ['decoracao', 'sala'], plantas: ['decoracao', 'externa'], vasos_grandes: ['decoracao', 'externa'], mudas_flores: ['decoracao', 'externa'],
   // Escritório
   escrivaninha: ['escritorio', 'quarto'], mesa_executiva: ['escritorio'], cadeira_ergonomica: ['escritorio'], estante_escritorio: ['escritorio'],
   // Área externa e jardim

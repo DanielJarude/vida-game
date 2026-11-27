@@ -20,7 +20,7 @@ const LISTA: Record<Exclude<CategoriaDaCasa, 'eletro'>, string[]> = {
   escritorio: ['escrivaninha', 'mesa_executiva', 'cadeira_ergonomica', 'estante_escritorio'],
   banheiro: ['banheira', 'banheira_pedra', 'ducha', 'gabinete', 'bancada_marmore', 'espelho_led', 'toalhas', 'sauna'],
   iluminacao: ['luz_jardim', 'luz_piscina'],
-  decoracao: ['quadros', 'objetos_decor', 'plantas', 'vasos_grandes', 'tapete', 'tapete_persa'],
+  decoracao: ['quadros', 'objetos_decor', 'plantas', 'mudas_flores', 'vasos_grandes', 'tapete', 'tapete_persa'],
   externa: ['espreguicadeira', 'espreguicadeira_teca', 'guarda_sol', 'ombrelone', 'mesa_externa', 'sofa_externo', 'boias', 'aquecedor_piscina', 'capa_piscina', 'cascata', 'kit_piscina', 'churrasqueira', 'espaco_gourmet', 'forno_pizza', 'pergolado', 'gazebo', 'fonte', 'escultura_jardim', 'playground', 'cama_elastica'],
   garagem: ['ferramentas', 'bancada_ferramentas', 'armario_garagem', 'organizadores']
 };

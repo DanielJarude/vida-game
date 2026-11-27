@@ -1705,7 +1705,7 @@ export const OBJETOS_DA_CASA: Record<string, (cor: string, variante?: number) =>
   capa_piscina: capaPiscina, cascata, kit_piscina: kitPiscina,
   // Jardim
   churrasqueira, espaco_gourmet: espacoGourmet, forno_pizza: fornoPizza, pergolado, gazebo, fonte, escultura_jardim: esculturaJardim,
-  plantas, vasos_grandes: vasosGrandes, luz_jardim: luzJardim, playground, cama_elastica: camaElastica,
+  plantas, vasos_grandes: vasosGrandes, mudas_flores: mudasDeFlores, luz_jardim: luzJardim, playground, cama_elastica: camaElastica,
   // Lazer
   bilhar_profissional: bilharProfissional, pebolim, pingue_pongue: pinguePongue, mesa_jogos: mesaJogos, fliperama,
   poltronas_cinema: poltronasCinema, bicicleta_ergometrica: bicicletaErgometrica, remo_seco: remoSeco, saco_pancada: sacoPancada,
@@ -1716,3 +1716,15 @@ export const OBJETOS_DA_CASA: Record<string, (cor: string, variante?: number) =>
   mesa_executiva: mesaExecutiva, cadeira_ergonomica: cadeiraErgonomica, monitores, impressora, estante_escritorio: estanteEscritorio,
   mesa_gamer: mesaGamer
 };
+
+/* ---------------------------------------------------------------- VIDA 38 · bloco 2 · as mudas de flores (canteiro baixo) */
+/** Um canteiro de madeira com hastes verdes e flores rosas e amarelas: o que a loja da casa vende para o jardim. */
+function mudasDeFlores(cor: string): Amostra {
+  const hastes = [30, 46, 62, 78, 94];
+  return noChao([
+    M(ret(18, 96, 84, 14, 2), escurecer(cor, 0.1), 'canteiro'),
+    { tipo: 'linha', d: hastes.map((x, k) => `M${x} 96v${-(14 + (k % 2) * 6)}`).join(''), larg: 1.2, cor: '#4f7f42', marca: 'hastes' },
+    M(hastes.map((x, k) => circulo(x, 80 - (k % 2) * 6, 5)).join(''), '#e05a6a', 'flores-rosas'),
+    M(hastes.map((x, k) => circulo(x + 4, 86 - (k % 2) * 4, 2.2)).join(''), '#f2c94c', 'flores-amarelas'),
+  ], 44);
+}
