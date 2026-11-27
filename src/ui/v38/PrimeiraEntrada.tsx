@@ -4,6 +4,8 @@
  * disponível (janela privada, dados bloqueados), o tutorial não aparece — o jogo funciona igual.
  */
 import { useState } from 'react';
+import type { Vida } from '../../motor/tipos';
+import { idade } from '../../motor/nucleo';
 import './primeiraEntrada.css';
 
 const CHAVE = 'vida.tutorial.primeiraEntrada.v1';
@@ -22,8 +24,9 @@ export const PASSOS_DO_TUTORIAL: { titulo: string; texto: string }[] = [
   { titulo: 'Você decide o ritmo', texto: 'Pode pular este tutorial a qualquer momento. Ele não volta sozinho.' },
 ];
 
-export function PrimeiraEntrada() {
-  const [aberto, setAberto] = useState(() => !jaVisto());
+/** Só aparece no começo da vida (menos de dois anos), e só uma vez por navegador. */
+export function PrimeiraEntrada({ vida }: { vida?: Vida }) {
+  const [aberto, setAberto] = useState(() => !jaVisto() && (!vida || idade(vida) < 2));
   const [passo, setPasso] = useState(0);
   if (!aberto) return null;
   const ultimo = passo === PASSOS_DO_TUTORIAL.length - 1;

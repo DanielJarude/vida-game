@@ -3,6 +3,7 @@
 import { describe, expect, it, beforeEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { PrimeiraEntrada, PASSOS_DO_TUTORIAL } from '../v38/PrimeiraEntrada';
+import type { Vida } from '../../motor/tipos';
 
 describe('tutorial da primeira entrada (VIDA 38)', () => {
   beforeEach(() => { cleanup(); window.localStorage.clear(); });
@@ -35,6 +36,15 @@ describe('tutorial da primeira entrada (VIDA 38)', () => {
     for (let k = 0; k < PASSOS_DO_TUTORIAL.length - 1; k++) fireEvent.click(screen.getByRole('button', { name: 'Próximo' }));
     expect(screen.getByRole('button', { name: 'Começar' })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Começar' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+});
+
+describe('o tutorial só aparece no começo da vida (VIDA 38)', () => {
+  it('uma vida de adulto não mostra o tutorial, mesmo sem nunca ter visto', () => {
+    window.localStorage.clear();
+    const v = { t: 40 * 12, eu: { tNasc: 0 } } as unknown as Vida;
+    render(<PrimeiraEntrada vida={v} />);
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 });

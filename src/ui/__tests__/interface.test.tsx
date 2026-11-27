@@ -24,6 +24,8 @@ function adultaSalva(ajuste: (v: Vida) => void): void {
 
 beforeEach(() => {
   localStorage.clear();
+  // VIDA 38: estes testes não são sobre o tutorial da primeira entrada; ele não deve cobrir a interface.
+  localStorage.setItem('vida.tutorial.primeiraEntrada.v1', '1');
   window.scrollTo = () => {};
   window.confirm = () => true;
   // Semente fixa: a vida sorteada ao nascer é sempre a mesma nos testes.

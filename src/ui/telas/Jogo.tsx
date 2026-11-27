@@ -182,7 +182,7 @@ export function Jogo({ c }: { c: ControleVida }) {
   definirDecadaDaFigura(decadaVisual(vida) ?? null);
   return (
     <div className="jogo" data-clima={climaDe(vida)} {...(decadaVisual(vida) ? { 'data-era': decadaVisual(vida) } : {})}>
-      <PrimeiraEntrada />
+      <PrimeiraEntrada vida={vida} />
       <header className="cabecalho">
         <button type="button" className="marca" onClick={() => setMenu(true)} aria-label="Menu">VIDA</button>
         <nav className="abas" aria-label="Áreas">
