@@ -33,6 +33,8 @@ export interface UsoDoComodo {
   feliz?: number;
   estresse?: number;
   forma?: number;
+  /** VIDA 38 · bloco 3: a comida feita em casa mexe na saúde (não só no humor). */
+  saude?: number;
   prox?: number;
   /** Rende no estudo de agora (escola, faculdade). */
   estudo?: number;
@@ -97,6 +99,13 @@ export const USOS_DOS_COMODOS: Partial<Record<string, UsoDoComodo[]>> = {
   ],
   varanda: [
     { id: 'conversar', rotulo: 'Conversar na varanda', com: 'casa', rotuloCom: 'Conversar com {nome} na varanda', prox: 3, feliz: 1, textos: ['Você e {nome} falando de nada até escurecer.', 'Uma conversa que só acontece na varanda, de noite.'] }
+  ],
+  // VIDA 38 · bloco 3: cozinhar e comer fora. A comida feita em casa dá saúde, prazer e tempo com quem está perto; comer
+  // fora custa e dá prazer, sem o efeito na saúde. Cada uso, uma vez por ano, como os outros cômodos.
+  cozinha: [
+    { id: 'cozinhar', rotulo: 'Cozinhar em casa', saude: 3, feliz: 2, estresse: -1, qualidade: true, idadeMin: 10, textos: ['Uma receita que deu certo na primeira tentativa, e o cheiro na casa inteira.', 'Legumes, arroz e um refogado simples: a comida que você sabia fazer desde sempre.', 'A panela no fogo, o rádio baixo, a cozinha limpa no fim.'] },
+    { id: 'cozinhar_com', rotulo: 'Cozinhar com alguém', com: 'perto', rotuloCom: 'Cozinhar com {nome}', saude: 2, feliz: 2, prox: 3, qualidade: true, idadeMin: 10, textos: ['{nome} mexeu o molho e reclamou do sal, e o jantar saiu melhor do que o planejado.', 'Você e {nome} dividindo a faca e a conversa até a panela esvaziar.'] },
+    { id: 'comer_fora', rotulo: 'Jantar fora', feliz: 2, custo: 180, idadeMin: 12, textos: ['Uma mesa no canto do restaurante, a sobremesa que ninguém precisava pedir.', 'Um jantar sem louça para lavar: o prato chegou quente e a conta, um pouco alta.'] }
   ],
   // VIDA 38 · bloco 1: o jardim não tinha nenhum uso (o paisagismo era só custo). Agora cuidar dele descansa e mexe no corpo;
   // o paisagismo assinado e o jardim botânico rendem mais (qualidade). Uma vez por ano, como os outros cômodos.

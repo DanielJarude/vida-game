@@ -117,6 +117,7 @@ export function usarComodo(v: Vida, comodoId: string, usoId: string, pessoaId?: 
   if (u.feliz) v.mente.felicidade = clamp(v.mente.felicidade + Math.round(u.feliz * k));
   if (u.estresse) v.mente.estresse = clamp(v.mente.estresse + Math.round(u.estresse * k));
   if (u.forma) v.corpo.forma = clamp(v.corpo.forma + Math.round(u.forma * k));
+  if (u.saude) v.corpo.saude = clamp(v.corpo.saude + Math.round(u.saude * k));
   if (u.estudo) {
     const m = v.educacao.matricula;
     if (m && !m.trancado) m.desempenho = clamp(m.desempenho + u.estudo);
