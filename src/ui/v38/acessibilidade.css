@@ -1,0 +1,3 @@
+.acess--texto-maior { font-size: 118%; }
+.acess--alto-contraste { --fundo: #000; --texto: #fff; filter: contrast(1.25); }
+.acess--sem-animacao *, .acess--sem-animacao *::before, .acess--sem-animacao *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }

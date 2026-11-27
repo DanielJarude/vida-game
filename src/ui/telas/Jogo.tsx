@@ -40,6 +40,8 @@ import '../eras/eras.css';
 import { seguranca } from '../../motor/sistemas/dinheiro';
 import { PrimeiraEntrada } from '../v38/PrimeiraEntrada'; // VIDA 38: tutorial da primeira entrada (pode pular)
 import { Glossario } from '../v38/glossario'; // VIDA 38: glossário no menu
+import { PreferenciasDeAcesso } from '../v38/PreferenciasDeAcesso';
+import { aplicarPreferencias, lerPreferencias } from '../v38/acessibilidade'; // VIDA 38: texto maior, contraste, sem animações
 import { leituraDaSeguranca } from '../leituraMaterial';
 import { Retrato } from '../avatar/Retrato';
 import { Historia, type ParteHistoria } from '../jogo/Historia';
@@ -77,6 +79,8 @@ export function climaDe(v: Vida): 'dificil' | 'bom' | 'normal' {
 }
 
 export function Jogo({ c }: { c: ControleVida }) {
+  // VIDA 38: as preferências de acessibilidade valem desde a entrada no jogo (não só quando o menu é aberto).
+  useEffect(() => { aplicarPreferencias(lerPreferencias()); }, []);
   const vida = c.vida!;
   const [lugar, setLugar] = useState<Lugar>({ area: 'linha' });
   const [secao, setSecao] = useState<SecaoVida>('casa');
@@ -457,6 +461,7 @@ function Menu({ c, aoFechar, ir }: { c: ControleVida; aoFechar: () => void; ir: 
         <div className="menu menu--jogo">
           <h2 className="subtitulo">O jogo</h2>
           <SeletorTema />
+          <PreferenciasDeAcesso />
           <button type="button" className="botao botao--secundario" onClick={() => setNotas(true)}>Novidades da atualização</button>
           {c.vida && <button type="button" className="botao botao--secundario" onClick={() => setAvisos(true)}>Últimos avisos</button>}
           <button type="button" className="botao botao--secundario" onClick={() => setGlossario(true)}>Glossário: o que cada nome quer dizer</button>
