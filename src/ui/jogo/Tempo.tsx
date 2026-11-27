@@ -65,6 +65,7 @@ import { Passaporte161 } from '../v16/areas/Capas161';
 import { SemanaEmTiras } from '../v17/areas/Capas17';
 import { AjudarACidade } from '../v38/AjudarACidade'; // VIDA 38 · bloco 3
 import { CartasEPresentes, PasseiosETorcida } from '../v38/Cotidiano38'; // VIDA 38 · bloco 3
+import { Vicios38 } from '../v38/Vicios38'; // VIDA 38 · bloco 3
 
 const DE_TEMPO = new Set<string>(SECOES_TEMPO.map(x => x.id));
 
@@ -343,6 +344,7 @@ export function Tempo({ vida, agir, irPara, aba: abaDeFora, irAba, abrirPessoa }
             {aba === 'gente' && i >= 16 && <AjudarACidade vida={vida} agir={agir} />}
             {aba === 'gente' && <CartasEPresentes vida={vida} agir={agir} />}
             {aba === 'atividades' && <PasseiosETorcida vida={vida} agir={agir} />}
+            {aba === 'corpo' && <Vicios38 vida={vida} agir={agir} />}
             <AtividadesAtivas vida={vida} agir={agir} irPara={irPara} abrirPessoa={abrirPessoa} ativas={ativas.filter(x => naAba(aba, x.m))} titulo="O que você já faz aqui" vazio={aba === 'corpo' ? 'Nada de corpo na semana por enquanto.' : aba === 'gente' ? 'Nenhuma atividade com gente na semana por enquanto.' : 'Nenhum hobby na semana por enquanto.'} />
             <Comecar vida={vida} agir={agir} custo={custo} filtro={m => naAba(aba, m)} />
             {/* VIDA 26.1: um hobby pode abrir caminho (sem obrigar) — o explorador mostra como. */}

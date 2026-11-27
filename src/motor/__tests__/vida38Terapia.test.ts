@@ -2,10 +2,11 @@
 import { describe, expect, it } from 'vitest';
 import { adulto } from './cenarios';
 import { ROTINAS } from '../sistemas/rotinas';
+import { criarRng } from '../rng';
 import type { Vida } from '../tipos';
 
 const terapia = ROTINAS.find(r => r.id === 'terapia')!;
-const sessoes = (v: Vida, n: number) => { for (let k = 0; k < n; k++) terapia.efeito(v, 0 as never); };
+const sessoes = (v: Vida, n: number) => { for (let k = 0; k < n; k++) terapia.efeito!(v, criarRng(k + 1), 1); };
 
 describe('a terapia tem progressão (VIDA 38 · bloco 3)', () => {
   it('conta as sessões acumuladas', () => {
