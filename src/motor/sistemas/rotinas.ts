@@ -538,6 +538,23 @@ export const ROTINAS: readonly ModeloRotina[] = [
         if (c.diagnosticada === false) { diagnosticar(v, c, 'consulta'); escrever(v, { texto: `Na terapia, o que vinha sentindo ganhou nome: ${c.nome}.`, relevancia: 'biografia', tema: 'saude' }); }
         c.tratando = true;
       }
+      // VIDA 38 · bloco 3: a terapia tem progressão. As sessões somam; em marcos, a pessoa percebe algo que muda a
+      // casa e a própria cabeça (não é só alívio de estresse). Marcos em sessões acumuladas, sem depender do calendário.
+      const n = (v.fatos['terapia:sessoes'] ?? 0) + 1;
+      v.fatos['terapia:sessoes'] = n;
+      const naCasa = Object.values(v.vinculos).filter(vin => vin.convivio.includes('casa'));
+      if (n === 12) {
+        for (const vin of naCasa) vin.proximidade = clamp(vin.proximidade + 3);
+        v.mente.estresse = clamp(v.mente.estresse - 3);
+        escrever(v, { texto: 'Depois de um ano de terapia, você começou a perceber os próprios padrões, e a conversa em casa ficou mais fácil.', relevancia: 'biografia', tema: 'saude' });
+      } else if (n === 26) {
+        v.mente.felicidade = clamp(v.mente.felicidade + 3);
+        escrever(v, { texto: 'Na terapia, você escolheu um padrão para trabalhar, e passou a notá-lo nos dias de semana.', relevancia: 'biografia', tema: 'escolha', escolha: true });
+      } else if (n === 52) {
+        v.mente.estresse = clamp(v.mente.estresse - 5);
+        for (const vin of naCasa) vin.proximidade = clamp(vin.proximidade + 2);
+        escrever(v, { texto: 'Um ano e meio de terapia: a pressão ainda aparece, mas você já sabe de onde ela vem.', relevancia: 'biografia', tema: 'saude' });
+      }
     }
   },
   {
