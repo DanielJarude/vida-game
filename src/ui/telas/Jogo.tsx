@@ -39,6 +39,7 @@ import { definirDecadaDaFigura } from '../eras/modaDaDecada';
 import '../eras/eras.css';
 import { seguranca } from '../../motor/sistemas/dinheiro';
 import { PrimeiraEntrada } from '../v38/PrimeiraEntrada'; // VIDA 38: tutorial da primeira entrada (pode pular)
+import { Glossario } from '../v38/glossario'; // VIDA 38: glossário no menu
 import { leituraDaSeguranca } from '../leituraMaterial';
 import { Retrato } from '../avatar/Retrato';
 import { Historia, type ParteHistoria } from '../jogo/Historia';
@@ -444,6 +445,8 @@ function Agora({ vida, area, irPara, abrirPessoa, abrirConvite, agir }: { vida: 
 function Menu({ c, aoFechar, ir }: { c: ControleVida; aoFechar: () => void; ir: (l: Lugar) => void }) {
   const [notas, setNotas] = useState(false);
   const [avisos, setAvisos] = useState(false);
+  const [glossario, setGlossario] = useState(false);
+  if (glossario) return <Glossario aoFechar={() => setGlossario(false)} />;
   if (notas) return <Novidades aoFechar={() => setNotas(false)} historico />;
   if (avisos && c.vida) return <UltimosAvisos vida={c.vida} aoFechar={() => setAvisos(false)} />;
   return (
@@ -456,6 +459,7 @@ function Menu({ c, aoFechar, ir }: { c: ControleVida; aoFechar: () => void; ir: 
           <SeletorTema />
           <button type="button" className="botao botao--secundario" onClick={() => setNotas(true)}>Novidades da atualização</button>
           {c.vida && <button type="button" className="botao botao--secundario" onClick={() => setAvisos(true)}>Últimos avisos</button>}
+          <button type="button" className="botao botao--secundario" onClick={() => setGlossario(true)}>Glossário: o que cada nome quer dizer</button>
           <p className="nota">Sua vida é salva a cada passo, neste navegador. Para continuar em outro aparelho, exporte a vida num arquivo e importe lá.</p>
           <button type="button" className="botao botao--secundario" onClick={() => c.exportar()}>Exportar esta vida (arquivo)</button>
           <BaixarApp compacto />
