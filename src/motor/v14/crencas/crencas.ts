@@ -141,6 +141,8 @@ export function mudarCrenca14(v: Vida, para: Crenca14, motivo: MudancaDeCrenca14
   if (!religiosa(para)) definirPratica(v, 'nenhuma');
   else if (e.pratica === 'nenhuma') e.pratica = 'ocasional';
   const info = CRENCAS14[para];
+  const tensao = tensaoDeFe(v, de, para); // VIDA 38: a família sente a mudança de fé
+  if (tensao) escrever(v, { texto: tensao, relevancia: 'marco', tema: 'familia', escolha: false });
   const texto = religiosa(para)
     ? (para === e.familia && motivo === 'retomada' ? `Voltou à fé em que foi criad${v.eu.genero === 'feminino' ? 'a' : 'o'}: ${info.nome.toLowerCase()}.` : `Converteu-se ${info.ao}.`)
     : religiosa(de) ? (para === 'ateismo' ? 'Deixou a religião: passou a se considerar ateu, sem crença em deus.' : para === 'agnosticismo' ? 'Deixou a religião: passou a dizer que não sabe — e que ninguém sabe.' : para === 'espiritualidade' ? 'Deixou a religião de instituição, não a espiritualidade.' : 'Deixou a religião.')
@@ -200,6 +202,7 @@ export function datasDaCrenca14(v: Vida, ano = anoDe(v.t)): { mes: number; dia?:
 export function vidaDeCrencas14<C extends { id: string; tipo: string; manual?: boolean; peso?: unknown }, X extends { p: Record<string, { id: string }> }>(
   v: Vida, catalogo: readonly C[], preparar: (c: C, v: Vida, r: ReturnType<typeof rngDe>) => X | null, abrir: (c: C, ctx: X) => boolean
 ): void {
+  apoioDaComunidade(v); // VIDA 38: a comunidade segura o estresse todo ano (prática regular)
   if (v.morte) return;
   const i = idade(v);
   const e = garantirCrenca14(v);
@@ -245,4 +248,57 @@ export function normalizarVida14Crencas(v: Vida): void {
   e.historia = Array.isArray(e.historia) ? e.historia.filter(h => h && typeof h.t === 'number' && ehCrenca(h.de) && ehCrenca(h.para)) : [];
   if (e.conheceu && !Array.isArray(e.conheceu)) delete e.conheceu;
   if (e.conheceu) e.conheceu = e.conheceu.filter(ehCrenca);
+}
+
+/* ================================================================ VIDA 38 · a fé e os valores com peso */
+
+/**
+ * Os valores da pessoa, derivados do que a vida já registrou (não são um campo novo, não entram no save): a fé (a
+ * prática e a crença), a família (a proximidade com pais, mães e avós), a solidariedade (o voluntariado e as ajudas) e
+ * o peso do que a pessoa escolheu para a própria vida. Cada um vai de 0 a 100.
+ */
+export function valoresDaVida(v: Vida): { fe: number; familia: number; solidariedade: number } {
+  const e = crencaDe(v);
+  const pratica = praticaDe(v);
+  const fe = !religiosa(e.atual) ? 15 : pratica === 'regular' ? 85 : pratica === 'ocasional' ? 55 : 30;
+  const ascendentes = Object.values(v.vinculos).filter(vin => ['pai', 'mae', 'avo'].includes(vin.parentesco ?? ''));
+  const familia = ascendentes.length ? Math.round(ascendentes.reduce((s, vin) => s + vin.proximidade, 0) / ascendentes.length) : 40;
+  const solidariedade = Math.min(100, (v.rotinas.some(r => r.id === 'voluntariado') ? 50 : 0) + Math.min(50, Math.round((v.fatos['ajudar:total'] ?? 0) / 100)));
+  return { fe, familia, solidariedade };
+}
+
+/**
+ * A tensão quando a pessoa deixa a fé da família (ou se converte contra ela): pai, mãe e avós se afastam. Quanto mais
+ * forte era a fé da pessoa (`valoresDaVida`), maior o afastamento. Devolve o texto para a biografia, ou nada.
+ */
+export function tensaoDeFe(v: Vida, de: Crenca14, para: Crenca14): string | undefined {
+  if (!religiosa(de) || de === para) return undefined;
+  const ate = valoresDaVida(v).fe;
+  const forca = ate >= 70 ? 2 : 1;
+  const afastados: string[] = [];
+  for (const [id, vin] of Object.entries(v.vinculos)) {
+    if (!['pai', 'mae', 'avo'].includes(vin.parentesco ?? '')) continue;
+    const pessoa = v.pessoas[id];
+    if (!pessoa || crencaDaPessoa(v, pessoa) !== de) continue;
+    vin.proximidade = clamp(vin.proximidade - 4 * forca);
+    afastados.push(pessoa.nome);
+  }
+  if (!afastados.length) return undefined;
+  return `Deixar a fé da família custou caro: ${afastados.slice(0, 3).join(', ')} se afastou${afastados.length > 1 ? 'aram' : ''} de você.`;
+}
+
+/**
+ * O que a prática regular faz na vida (chamado todo ano pela rotina da igreja): quando o estresse está alto, a
+ * comunidade segura parte dele; e quem frequenta com a pessoa e tem a mesma fé fica mais perto dela.
+ */
+export function apoioDaComunidade(v: Vida): void {
+  if (praticaDe(v) !== 'regular') return;
+  const e = crencaDe(v);
+  if (v.mente.estresse >= 50) v.mente.estresse = clamp(v.mente.estresse - 4);
+  v.mente.felicidade = clamp(v.mente.felicidade + 1);
+  for (const [id, vin] of Object.entries(v.vinculos)) {
+    const p = v.pessoas[id];
+    if (!p || vin.convivio.includes('casa')) continue;
+    if (crencaDaPessoa(v, p) === e.atual) vin.proximidade = clamp(vin.proximidade + 1);
+  }
 }

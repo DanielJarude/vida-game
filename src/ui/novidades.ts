@@ -26,6 +26,32 @@ export interface NotaDeVersao {
 
 export const NOTAS: NotaDeVersao[] = [
   {
+    versao: '38',
+    data: '2026-11-27',
+    titulo: 'Fé e valores com peso, rodadas de outros esportes e a Ajuda à cidade',
+    novidades: [
+      'Ajudar a cidade: doar para uma vaquinha ou uma campanha, ou ser voluntário no mutirão. A doação custa de verdade e fica no total da sua vida.',
+      'Passeios: praia, parque, pesca e caminhada. Cada um dá alívio e um efeito no corpo, e vale uma vez por ano.',
+      'Cartas e presentes para quem está longe: uma carta por ano, e o presente aproxima mais (e custa).',
+      'Torcida organizada: entrar, sair e ir ao jogo. Há risco de confusão na saída do estádio.',
+      'Serviço para vizinhos a partir dos 14 anos: uma renda pequena, sem vínculo fixo.',
+      'Cozinhar em casa dá saúde; comer fora custa e dá prazer.',
+      'Terapia com etapas: a 12, 26 e 52 sessões a pessoa percebe algo que muda a casa e a cabeça.',
+      'Dependências: álcool e cigarro. Usar sobe o nível; nível alto pesa na saúde; parar diminui, com abstinência quando o hábito é forte.',
+      'Religião com peso: deixar a fé da família afasta pais e avós (mais forte para quem tinha fé forte); a comunidade segura o estresse e aproxima quem tem a mesma fé.',
+      'Memória de escolhas na biografia, e um resumo do que a pessoa fez pela cidade na tela de fim.',
+      'Tutorial da primeira entrada, com a opção de pular em qualquer passo (só nos primeiros dois anos).',
+      'Glossário no menu e preferências de acessibilidade: texto maior, alto contraste e sem animações.'
+    ],
+    melhorias: [
+      'O jardim muda de aparência conforme o cuidado: florido, cuidado, comum ou descuidado. A loja de flores vende as mudas.',
+      'Temporadas por rodada para outras modalidades e e-sports: calendário de turno e returno, tabela e séries melhor de três.'
+    ],
+    correcoes: [
+      'Os sistemas do dia a dia carregam junto com o motor, num pacote próprio, para o pacote principal ficar dentro do limite.'
+    ]
+  },
+  {
     versao: '37',
     data: '2026-11-25',
     titulo: 'E-sports de verdade e uma bicicleta só',
