@@ -597,7 +597,7 @@ const perto = (vin: Vinculo | undefined, n: number, contato = true, t?: number) 
 export interface SaidaCelular15 { texto: string; titulo?: string; pessoaId?: string; tom?: 'bom' | 'ruim' | 'neutro' }
 
 /** A resposta: muda a relação, custa o que custa, fica na história dos dois (e na Linha da Vida, quando importa). */
-export function responderMsg15(v: Vida, r: Rng, m: Msg15, op: string): SaidaCelular15 {
+function responderMsg15Base(v: Vida, r: Rng, m: Msg15, op: string): SaidaCelular15 {
   // VIDA 17: as situações novas e as respostas extras são respondidas lá.
   const r17 = responder17(v, r, m, op);
   if (r17) return r17;
@@ -1078,3 +1078,19 @@ export function normalizarCelular15(v: Vida): void {
 }
 
 export type { Celular15, Msg15, PerfilApp15 };
+
+/**
+ * VIDA 39 · a resposta, e o que ela fez com a relação (`resposta.efeito`): quanto a pessoa se aproximou ou se afastou,
+ * quanto a tensão e a confiança mudaram. Guardado na própria resposta, para a tela mostrar o efeito como etiqueta.
+ * Não muda nenhuma regra: só mede o que a resposta já mudou.
+ */
+export function responderMsg15(v: Vida, r: Rng, m: Msg15, op: string): SaidaCelular15 {
+  const vin = m.de ? v.vinculos[m.de] : undefined;
+  const antes = vin ? { prox: vin.proximidade, tensao: vin.tensao, confianca: vin.confianca } : undefined;
+  const saida = responderMsg15Base(v, r, m, op);
+  if (vin && antes && m.resposta) {
+    const efeito = { prox: vin.proximidade - antes.prox, tensao: vin.tensao - antes.tensao, confianca: vin.confianca - antes.confianca };
+    if (efeito.prox || efeito.tensao || efeito.confianca) m.resposta.efeito = efeito;
+  }
+  return saida;
+}

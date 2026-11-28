@@ -68,7 +68,8 @@ export interface Msg15 {
   /** A pessoa famosa do convite (nasce na vida se você for). */
   molde?: Molde15;
   /** A resposta dada (uma só). VIDA 17: `fala` é o que você escreveu (o balão seu). */
-  resposta?: { op: string; t: number; texto: string; fala?: string };
+  /** VIDA 39: o que a resposta fez com a relação (só o que mudou): proximidade, tensão, confiança. Ausente em saves antigos. */
+  resposta?: { op: string; t: number; texto: string; fala?: string; efeito?: { prox: number; tensao: number; confianca: number } };
   /** VIDA 17: a situação do catálogo (`dados17/celular/catalogo17`). */
   sit17?: string;
   /** VIDA 17: o mês do ano (0–11) em que a mensagem chegou — a cota espalha as quatro do ano. */

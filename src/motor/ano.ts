@@ -82,6 +82,7 @@ import { processarSituacoes } from './sistemas/situacoes';
 import { processarTecnico } from './sistemas/tecnico';
 import { processarNegocio } from './sistemas/negocio';
 import { processarOportunidades } from './sistemas/oportunidades';
+import { rodarGanchosDoAno39 } from './sistemas/ganchosDoAno39';
 import { conhecerGente, envelhecerConhecidos, limparApertos, processarSocial, recalcularConvivio } from './sistemas/social';
 import { processarRomance, surgirInteresse } from './sistemas/romance';
 import { processarIniciativas } from './sistemas/iniciativas';
@@ -322,6 +323,8 @@ function viverAno(v: Vida, r: Rng): void {
   processarDescendentes(v, r);
   recalcularConvivio(v);
   processarOportunidades(v, r);
+  // VIDA 39: os sistemas do pacote `motor-extras` (o preconceito do dia a dia) se registram aqui.
+  rodarGanchosDoAno39(v, r);
   processarMundoVivo(v);
   processarVidas19(v); // VIDA 19: o bolso, a meta, a união, os filhos e os laços de quem importa e não é da casa
   processarConectada19(v); // VIDA 19: o que se disse na rede (o apoio, a indireta) mexe nos laços entre as pessoas do mundo

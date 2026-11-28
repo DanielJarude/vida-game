@@ -26,6 +26,24 @@ export interface NotaDeVersao {
 
 export const NOTAS: NotaDeVersao[] = [
   {
+    versao: '39',
+    data: '2026-11-28',
+    titulo: 'Preconceito do dia a dia e respostas que mostram o efeito',
+    novidades: [
+      'Preconceito do dia a dia, por país: cada país tem o seu. No Brasil, o nordestino, o negro, a mulher, quem vem de origem pobre e o estrangeiro; na Itália, o sul italiano e o estrangeiro; na França, nos Estados Unidos, na Alemanha e no Reino Unido, os seus próprios. Pode acontecer uma vez por ano, e pesa no estresse e na felicidade.',
+      'Quem está perto pode ouvir e apoiar. O apoio não é garantido: depende de quão próxima a pessoa é.',
+      'No celular, cada resposta tem a sua fala e um tom (carinho, humor, firmeza, cautela ou aberto).',
+      'Depois de responder, o celular mostra o efeito na relação: mais perto ou mais distante, mais ou menos confiança, tensão que sobe ou desce.',
+      'A caixa de entrada mostra o que você respondeu a cada convite ou proposta.'
+    ],
+    melhorias: [
+      'As respostas do celular deixaram de ser um "Respondido." genérico: cada uma diz o que foi dito.'
+    ],
+    correcoes: [
+      'Respostas novas sem fala própria aparecem com uma fala neutra, em vez de um texto de sistema.'
+    ]
+  },
+  {
     versao: '38',
     data: '2026-11-27',
     titulo: 'Fé e valores com peso, rodadas de outros esportes e a Ajuda à cidade',

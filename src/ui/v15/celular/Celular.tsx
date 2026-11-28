@@ -28,6 +28,7 @@ import { leituraDaFama13 } from '../../../motor/sistemas/reconhecimento13';
 import { matches15, naoLidas15, nivelDaFama15, opcoesDaMsg15, rotuloArea, rotuloDoLugar15, disponibilidadeNamoro15 } from '../../../motor/v15/celular/celular15';
 import { jornal15, ROTULO_EDITORIA15, type Editoria15 } from '../../../motor/v15/celular/noticias15';
 import type { Msg15, PerfilApp15 } from '../../../motor/dados15/celular/tipos';
+import { etiquetasDoEfeito39, FALA_DA_RESPOSTA39, ROTULO_DO_TOM39, TOM_DA_RESPOSTA39 } from './falasDaResposta39';
 import { contatosAutorizados17, ligacoesRestantes17, limiteDeLigacoes17, MOTIVO_PRESO17 } from '../../../motor/v17/prisao/telefone17';
 import { contatos16, historico16, horaDaMsg16, ROTULO_INTENCAO16, type IntencaoMsg16 } from '../../../motor/v16/celular/mensagens16';
 import { Retrato } from '../../avatar/Retrato';
@@ -266,6 +267,8 @@ function Conversa({ vida, agir, fio, voltar, abrirPessoa }: { vida: Vida; agir: 
             {it.m.resposta ? (
               <>
                 <p className="cel__balao cel__balao--minha">{opcaoRotulo(vida, it.m)}</p>
+                {TOM_DA_RESPOSTA39[it.m.resposta.op] && <span className={`cel__tom cel__tom--${TOM_DA_RESPOSTA39[it.m.resposta.op]}`}>{ROTULO_DO_TOM39[TOM_DA_RESPOSTA39[it.m.resposta.op]]}</span>}
+                {etiquetasDoEfeito39(it.m.resposta.efeito).map((x, k) => <span key={k} className={`cel__efeito cel__efeito--`}>{x.texto}</span>)}
                 <p className="cel__narra">{it.m.resposta.texto}</p>
               </>
             ) : it.arquivada ? <p className="cel__narra">Ficou sem resposta.</p> : (
@@ -292,7 +295,8 @@ function Conversa({ vida, agir, fio, voltar, abrirPessoa }: { vida: Vida; agir: 
 function opcaoRotulo(v: Vida, m: Msg15): string {
   const r = m.resposta!;
   const mapa: Record<string, string> = { aceitar: 'Topo!', recusar: 'Obrigado, mas não vai dar.', outro_dia: 'Outro dia?', ligar: '📞 Ligando…', marcar: 'Vamos marcar!', curto: 'Tudo bem por aqui! E você?', adiar: 'Deixa pra depois?', conversar: 'Que bom te ver!', ignorar: '(sem resposta)', cordial: 'Tô bem, sim. Espero que você também.', atender: 'Claro!', ir: 'Estarei lá.', confirmar: 'Sim, estamos juntos.', negar: 'Somos só amigos.', sem_comentar: 'Sem comentários.', cumprimentar: 'Oi! Quanto tempo!', desviar: '(fingiu que não viu)' };
-  return mapa[r.op] ?? (v ? 'Respondido.' : '');
+  // VIDA 39: as falas antigas, a fala do motor (quando há) e as novas; nunca o genérico "Respondido.".
+  return mapa[r.op] ?? r.fala ?? FALA_DA_RESPOSTA39[r.op] ?? (v ? 'Respondi do meu jeito.' : '');
 }
 
 /* ------------------------------------------------------------------ Namoro */
@@ -534,7 +538,7 @@ function Email({ vida, abrir, irMensagens }: { vida: Vida; abrir?: (id: string) 
       ))}
       {propostas.map(m => (
         <li key={m.id}><button type="button" className="email15__item" onClick={irMensagens}>
-          <strong>{m.tipo === 'evento' ? `Convite: ${m.remetente}` : `Proposta de ${m.de ? vida.pessoas[m.de]?.nome : m.remetente}`}</strong><span>{m.texto.replace(/^"|"$/g, '')}</span><span className="cel__quando">{m.resposta ? 'respondido' : 'responder em Mensagens'}</span>
+          <strong>{m.tipo === 'evento' ? `Convite: ${m.remetente}` : `Proposta de ${m.de ? vida.pessoas[m.de]?.nome : m.remetente}`}</strong><span>{m.texto.replace(/^"|"$/g, '')}</span><span className="cel__quando">{m.resposta ? `Você: ${opcaoRotulo(vida, m)}` : 'responder em Mensagens'}</span>
         </button></li>
       ))}
     </ul>

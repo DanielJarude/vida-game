@@ -257,3 +257,16 @@ body.com-celular { overflow: hidden; }
 .namoro30__form select { max-width: 100%; }
 .namoro30__check { grid-column: 1 / -1; }
 .perfil-app__verificado { color: #3d8bfd; }
+
+/* VIDA 39: a etiqueta do tom da resposta (carinho, humor, firmeza, cautela, aberto) — cor e forma, não só texto. */
+.cel__tom { align-self: flex-end; display: inline-flex; align-items: center; gap: 4px; margin: -4px 2px 0 0; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; letter-spacing: 0.02em; border: 1px solid currentColor; }
+.cel__tom::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.cel__tom--carinho { color: #c2406b; }
+.cel__tom--humor { color: #b7791f; }
+.cel__tom--firmeza { color: #2f5fa8; }
+.cel__tom--cautela { color: #6b7280; }
+.cel__tom--disposicao { color: #2f8a5a; }
+/* VIDA 39: o efeito da resposta na relação (mais perto, mais distante, tensão) — etiquetas curtas, com cor. */
+.cel__efeito { align-self: flex-end; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--cel-fundo); margin: 0 2px 0 0; }
+.cel__efeito--bom { color: #2f8a5a; }
+.cel__efeito--ruim { color: #b4442f; }

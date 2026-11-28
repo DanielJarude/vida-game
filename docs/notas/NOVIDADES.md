@@ -26,6 +26,11 @@ precache como todo o resto. Quem chega pela primeira vez não recebe notas de um
 3. Rode `npx vitest run src/ui/__tests__/rework106.test.tsx` (as versões não se repetem; nenhuma nota fica vazia).
 4. No relatório do pacote, cite a versão cadastrada.
 
+## VIDA 39 · preconceito do dia a dia por país e respostas que mostram o efeito
+
+Versão `39` em `src/ui/novidadesVersao.ts` (`VERSAO_ATUAL`) e `NOTAS[0]` em `src/ui/novidades.ts`. Relatório:
+`docs/VIDA39-LOTE-REPORT.md`.
+
 ## VIDA 35.2 · gaming house por fora e por dentro, PCs de marcas reais
 
 - Aba **Por fora**: fachada por estilo (loft, casarão com piscina, torre de vidro), material, cobertura, porta, jardim, varandas, plantas, neon e cor da luz.
