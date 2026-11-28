@@ -44,8 +44,7 @@ export const NOTAS: NotaDeVersao[] = [
       'Glossário no menu e preferências de acessibilidade: texto maior, alto contraste e sem animações.'
     ],
     melhorias: [
-      'O jardim muda de aparência conforme o cuidado: florido, cuidado, comum ou descuidado. A loja de flores vende as mudas.',
-      'Temporadas por rodada para outras modalidades e e-sports: calendário de turno e returno, tabela e séries melhor de três.'
+      'O jardim muda de aparência conforme o cuidado: florido, cuidado, comum ou descuidado. A loja de flores vende as mudas.'
     ],
     correcoes: [
       'Os sistemas do dia a dia carregam junto com o motor, num pacote próprio, para o pacote principal ficar dentro do limite.'
